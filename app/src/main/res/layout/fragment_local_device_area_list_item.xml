@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout android:gravity="center_vertical" android:layout_width="fill_parent" android:layout_height="fill_parent"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <TextView android:textSize="@dimen/fragment_local_device_area_list_item_title_size" android:textColor="@color/pri_text_color" android:gravity="center_vertical" android:id="@id/local_device_area_list_item_title" android:layout_width="wrap_content" android:layout_height="@dimen/fragment_local_device_area_list_item_height" android:layout_marginLeft="@dimen/fragment_local_line_margin" android:layout_alignParentLeft="true" />
+    <ImageView android:gravity="center_vertical" android:id="@id/local_device_area_list_item_select" android:background="@drawable/interphone_seleted" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginRight="@dimen/fragment_local_line_margin" android:layout_alignParentRight="true" android:layout_centerVertical="true" />
+    <View android:background="@color/fragment_local_line_color" android:layout_width="fill_parent" android:layout_height="1.0px" android:layout_marginLeft="@dimen/fragment_local_line_margin" android:layout_marginRight="@dimen/fragment_local_line_margin" android:layout_alignParentBottom="true" />
+</RelativeLayout>

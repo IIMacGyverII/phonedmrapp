@@ -19,6 +19,18 @@ release/
 .gradle/
 build/
 
+# Large downloaded files
+gradle-8.2-bin.zip
+jadx.jar
+jadx.zip
+
+# Decompiled APK output (too large for GitHub)
+decompiled/smali/
+decompiled/smali_classes2/
+decompiled/smali_classes3/
+decompiled/smali_classes4/
+decompiled/unknown/
+
 # Local configuration file (sdk path, etc)
 local.properties
 

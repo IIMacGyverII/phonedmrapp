@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:orientation="vertical" android:background="@color/fragment_local_img_color" android:layout_width="fill_parent" android:layout_height="fill_parent"
+  xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
+    <RelativeLayout android:gravity="center_vertical" android:background="@color/pri_title_background" android:paddingLeft="@dimen/fragment_title_margin_left" android:paddingRight="15.0dip" android:layout_width="fill_parent" android:layout_height="@dimen/fragment_title_height">
+        <TextView android:textSize="@dimen/fragment_title_text_size" android:textColor="@color/pri_text_color" android:id="@id/title" android:layout_width="fill_parent" android:layout_height="wrap_content" />
+        <ImageButton android:id="@id/delete_select" android:background="@drawable/interphone_record_list_delete" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_toLeftOf="@id/select_all" />
+        <CheckBox android:id="@id/select_all" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_alignParentRight="true" android:buttonTint="@android:color/darker_gray" />
+    </RelativeLayout>
+    <androidx.recyclerview.widget.RecyclerView android:id="@id/record_list" android:layout_width="fill_parent" android:layout_height="fill_parent" />
+</LinearLayout>
