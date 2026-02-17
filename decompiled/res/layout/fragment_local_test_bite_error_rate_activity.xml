@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:orientation="vertical" android:layout_width="fill_parent" android:layout_height="fill_parent"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <LinearLayout android:gravity="center_vertical" android:orientation="horizontal" android:paddingLeft="@dimen/fragment_title_margin_left" android:paddingTop="@dimen/fragment_title_margin_top" android:layout_width="fill_parent" android:layout_height="@dimen/fragment_title_height">
+        <TextView android:textSize="@dimen/fragment_title_text_size" android:textColor="@color/pri_text_color" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="15.0dip" android:text="@string/interphone_test_bite_error_rate" />
+    </LinearLayout>
+    <ScrollView android:paddingLeft="10.0dip" android:layout_width="fill_parent" android:layout_height="fill_parent">
+        <TextView android:textSize="@dimen/fragment_title_text_size" android:textColor="@color/pri_text_color" android:id="@id/tv_info" android:layout_width="fill_parent" android:layout_height="fill_parent" />
+    </ScrollView>
+</LinearLayout>

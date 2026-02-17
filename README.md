@@ -1,6 +1,6 @@
 # PrizeInterphone DMR App - Reverse Engineering Project
 
-🚧 **Status**: Project setup complete, BLOCKED on Windows AAPT2 build issue
+🚧 **Status**: WSL2 environment ready, BLOCKED on resource merge conflicts - switching to JADX decompilation approach
 
 ## What is this?
 
@@ -46,8 +46,10 @@ phonedmrapp/
 1. **Repo Reset**: Force-wiped GitHub repo and started fresh
 2. **Decompilation**: Successfully decompiled APK with apktool 2.12.1
 3. **Project Setup**: Created standard Android Gradle project structure
-   - AGP 7.4.2 (downgraded from 8.1.4 to try to fix Windows issue)
-   - Gradle 8.2
+   - AGP 7.4.2, Gradle 8.2
+   - AndroidX dependencies (appcompat, material, constraintlayout, preference)
+4. **WSL2 Environment**: Installed Ubuntu, Java 17, Android SDK
+5. **Resource Cleanup**: Fixed file naming, removed duplicate layouts, cleaned 41 duplicate attributes
    - AndroidX dependencies configured
 4. **Resource Cleanup**:
    - Fixed invalid resource file names (removed "$" prefix from 7 files)
@@ -162,9 +164,11 @@ com.pri.prizeinterphone/
 
 ## Known Issues
 
-1. **Windows AAPT2 Bug**: Cannot build on Windows (see Blocked section above)
-2. **Missing Java Sources**: Only smali bytecode available
-   - Need to convert smali → Java (JADX failed to download)
+1. **Resource Merge Conflicts**: Decompiled APK resources contain 1000+ attributes that duplicate AndroidX dependencies
+   - Current approach (manual cleanup) is not sustainable
+   - **Solution**: Use JADX to decompile to Java, use AndroidX resources instead
+2. **Missing Java Sources**: Only smali bytecode and stub classes available
+   - Need to use JADX GUI to decompile APK to Java sources
    - Current stub classes are minimal placeholders
 3. **System Privileges**: App needs system UID to access serial port
    - Will need to be installed as system app or run on rooted device
@@ -172,15 +176,19 @@ com.pri.prizeinterphone/
 
 ## What's Next?
 
-1. **Get build working** (see Next Steps above)
-2. **Convert smali to Java**: Use JADX GUI or online converters to decompile smali classes
-3. **Implement core functionality**:
-   - Serial port communication
-   - DMR protocol handler
-   - Audio pipeline
-   - UI interactions
+1. **RECOMMENDED: Use JADX for Java decompilation**
+   ```bash
+   # In WSL Ubuntu
+   wget https://github.com/skylot/jadx/releases/download/v1.4.7/jadx-1.4.7.zip
+   unzip jadx-1.4.7.zip -d jadx
+   ./jadx/bin/jadx -d decompiled-java originalapk/com.pri.prizeinterphone.apk
+   cp -r decompiled-java/sources/com app/src/main/java/
+   ```
+2. **Clean up resources**: Keep only app-specific resources, delete framework/library duplicates
+3. **Build APK**: Should succeed with real Java code and AndroidX resources
 4. **Test on phone**: Install and debug on actual hardware
-5. **Document hardware requirements**: Serial port paths, DMR module specs
+5. **Implement missing features**: Serial port, DMR protocol, audio pipeline
+6. **Document hardware**: Serial port paths, DMR module specs
 
 ## Resources
 
@@ -203,4 +211,4 @@ This is a reverse engineering project. The original app is a proprietary system 
 ---
 
 **Last Updated**: 2026-02-17  
-**Status**: Ready for build on Linux/WSL2
+**Status**: WSL2 environment ready, switching to JADX decompilation to avoid resource conflicts

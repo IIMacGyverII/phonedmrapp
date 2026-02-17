@@ -12,7 +12,7 @@
 ✅ **COMPLETED**:
 1. Force wiped GitHub repo and started fresh with clean state
 2. Decompiled APK with apktool 2.12.1
-3. Created standard Android Gradle project structure (AGP 8.1.4, Gradle 8.2)
+3. Created standard Android Gradle project structure (AGP 7.4.2, Gradle 8.2)
 4. Moved resources, assets, and manifest to proper locations
 5. Created stub Java classes for main components:
    - PrizeInterPhoneApp.java (Application class)
@@ -21,15 +21,27 @@
 6. Fixed resource file naming issues (removed "$" prefix from 7 drawable files)
 7. Removed duplicate library resources (AppCompat layouts)
 8. Removed public.xml to avoid conflicts
+9. **Installed WSL2 Ubuntu environment**
+10. **Installed Java 17 (OpenJDK 17.0.18) in WSL**
+11. **Installed Android SDK in WSL** (~/android-sdk)
+   - build-tools 33.0.1
+   - platforms android-34
+   - platform-tools
+12. **Copied project to Linux filesystem** (~/phonedmrapp)
+13. **Added androidx.preference:preference:1.2.1** dependency
+14. **Cleaned 41 duplicate AndroidX attributes** from attrs.xml
+15. Restored colors.xml, styles.xml, dimens.xml from decompiled source
 
 🚧 **IN PROGRESS**:
-- Fixing Windows AAPT2 path/colon issue in values.xml compilation
-- Need to resolve: `java.nio.file.InvalidPathException: Illegal char <:> at index 50`
+- Resolving resource merge conflicts between decompiled APK resources and AndroidX dependencies
+- Current blocker: ~17 additional duplicate attributes still causing build failures
 
-❌ **BLOCKED**:
-- Gradle build fails at mergeDebugResources task
-- WSL2 not installed (recommended workaround for Windows AAPT2 issues)
-- JADX decompiler download failed - using smali code directly
+❌ **CRITICAL ISSUE**:
+- **Decompiled resource XMLs contain 1000+ attribute definitions** that duplicate AndroidX library attributes
+- Surgical removal of duplicates is not sustainable (removed 41, but 17+ more remain)
+- attrs.xml alone has 1,435 lines even after cleanup
+- Each build reveals new conflicts as different resources are processed
+- **Root cause**: apktool extracts ALL resources including framework/library resources that should come from dependencies
 
 ---
 
@@ -233,14 +245,65 @@ ERROR: Execution failed for task ':app:mergeDebugResources'.
 
 ---
 
-## Questions for Grok / Next Session
+## WSL2 Build Environment Setup (COMPLETED)
 
-1. Should we install WSL2 to bypass Windows AAPT2 issues?
-2. Should we downgrade AGP to 7.x?
-3. Should we try building on a Linux VM or container instead?
-4. Which smali classes should be converted to Java first (priority order)?
-5. Does the phone have a physical DMR radio module, or is it software-based?
-6. What are the serial port device paths on the target phone?
+### Environment Details:
+- **OS**: WSL2 Ubuntu on Windows
+- **Java**: OpenJDK 17.0.18
+- **Android SDK**: ~/android-sdk (native Linux filesystem)
+  - build-tools: 33.0.1
+  - platforms: android-34
+  - platform-tools: latest
+- **Gradle**: 8.2 (wrapper)
+- **Project Location**: ~/phonedmrapp (Linux filesystem, not /mnt/c)
+
+### Why Linux Filesystem:
+- Building on /mnt/c (Windows mount) causes "Operation not permitted" errors
+- WSL has permission restrictions on Windows-mounted filesystems
+- Native Linux filesystem (~/phonedmrapp) avoids these issues
+
+### Build Attempts Summary:
+1. **Windows build**: FAILED - AAPT2 path bug with colon characters
+2. **WSL /mnt/c build**: FAILED - File permission errors on assets
+3. **WSL ~/phonedmrapp build**: FAILED - Duplicate resource attributes (41 conflicts)
+4. **After attrs.xml cleanup**: FAILED - 17 additional duplicate attributes found
+
+## Recommended Next Step: JADX Java Decompilation
+
+### Why JADX Instead of Resource Cleanup:
+1. **Problem**: Decompiled APK resources contain 1000+ attribute definitions that conflict with AndroidX
+2. **Current approach**: Manually removing duplicates one-by-one is not sustainable
+3. **Better approach**: Use JADX to decompile APK to Java sources
+   - Get actual Java code instead of stubs
+   - Use only AndroidX standard resources
+   - Create minimal custom resources only for app-specific items (e.g., progress bar attributes)
+   - Avoid resource merge conflicts entirely
+
+### JADX Workflow:
+```bash
+# Download JADX
+wget https://github.com/skylot/jadx/releases/download/v1.4.7/jadx-1.4.7.zip
+unzip jadx-1.4.7.zip -d jadx
+
+# Decompile APK to Java
+./jadx/bin/jadx -d decompiled-java originalapk/com.pri.prizeinterphone.apk
+
+# Copy Java sources to project
+cp -r decompiled-java/sources/com app/src/main/java/
+
+# Keep only app-specific resources, delete framework/library resources
+rm app/src/main/res/values/attrs.xml  # Delete, use AndroidX attributes
+rm app/src/main/res/values/styles.xml # Recreate with only app themes
+rm app/src/main/res/values/colors.xml # Recreate with only app colors
+# Keep: strings.xml, arrays.xml, plurals.xml, layouts, drawables
+```
+
+## Questions for Next Session
+
+1. Does the phone have a physical DMR radio module, or is it software-based?
+2. What are the serial port device paths on the target phone?
+3. Which Java classes are most critical to get working first (priority order)?
+4. Is root access available on the target device (needed for serial port access)?
 
 ---
 
@@ -263,4 +326,6 @@ ERROR: Execution failed for task ':app:mergeDebugResources'.
 ---
 
 **Last Updated**: 2026-02-17  
-**Current Blocker**: Windows AAPT2 path issue - need WSL2 or Linux environment
+**Current Blocker**: Decompiled resource XMLs conflict with AndroidX dependencies (1000+ duplicate attributes)  
+**Recommended Solution**: Use JADX to decompile to Java sources, avoid resource conflicts entirely  
+**Next Action**: Download JADX, decompile APK to Java, replace stubs with real code, rebuild with minimal custom resources

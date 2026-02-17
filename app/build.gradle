@@ -5,6 +5,7 @@ plugins {
 android {
     namespace 'com.pri.prizeinterphone'
     compileSdk 34
+    buildToolsVersion "33.0.1"
 
     defaultConfig {
         applicationId "com.pri.prizeinterphone"

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:orientation="vertical" android:layout_width="fill_parent" android:layout_height="fill_parent"
+  xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
+    <androidx.viewpager.widget.ViewPager android:id="@id/interphone_viewpager" android:layout_width="fill_parent" android:layout_height="fill_parent" android:layout_weight="0.9" app:layout_constraintBottom_toBottomOf="parent" />
+    <LinearLayout android:layout_gravity="center" android:orientation="horizontal" android:id="@id/interphone_tap_view" android:background="@color/pri_title_background" android:layout_width="fill_parent" android:layout_height="@dimen/interphone_tap_height">
+        <LinearLayout android:gravity="center" android:orientation="vertical" android:id="@id/talkback" android:layout_width="wrap_content" android:layout_height="fill_parent" android:layout_weight="0.2" android:onClick="tapOnClick">
+            <ImageView android:id="@id/talkback_img" android:background="@drawable/interphone_tap_talkback_seletor" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            <TextView android:textSize="@dimen/interphone_tap_text_size" android:textColor="@color/pri_tap_text_color_unselected" android:id="@id/talkback_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6.0dip" android:text="@string/fragment_title_tap_talkback" />
+        </LinearLayout>
+        <LinearLayout android:gravity="center" android:orientation="vertical" android:id="@id/channel" android:layout_width="wrap_content" android:layout_height="fill_parent" android:layout_weight="0.2" android:onClick="tapOnClick">
+            <ImageView android:id="@id/channel_img" android:background="@drawable/interphone_tap_channel_seletor" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            <TextView android:textSize="@dimen/interphone_tap_text_size" android:textColor="@color/pri_tap_text_color_unselected" android:id="@id/channel_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6.0dip" android:text="@string/fragment_title_tap_channel" />
+        </LinearLayout>
+        <LinearLayout android:gravity="center" android:orientation="vertical" android:id="@id/contacts" android:layout_width="wrap_content" android:layout_height="fill_parent" android:layout_weight="0.2" android:onClick="tapOnClick">
+            <ImageView android:id="@id/contacts_img" android:background="@drawable/interphone_tap_contact_seletor" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            <TextView android:textSize="@dimen/interphone_tap_text_size" android:textColor="@color/pri_tap_text_color_unselected" android:id="@id/contacts_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6.0dip" android:text="@string/fragment_title_tap_contacts" />
+        </LinearLayout>
+        <LinearLayout android:gravity="center" android:orientation="vertical" android:id="@id/message" android:layout_width="wrap_content" android:layout_height="fill_parent" android:layout_weight="0.2" android:onClick="tapOnClick">
+            <RelativeLayout android:id="@id/message_fragment" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_centerVertical="true">
+                <ImageView android:id="@id/message_img" android:background="@drawable/interphone_tap_message_seletor" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                <TextView android:textSize="9.0sp" android:textColor="@android:color/white" android:gravity="center" android:id="@id/message_unread" android:background="@drawable/shape_red_dot" android:visibility="gone" android:layout_width="15.0dip" android:layout_height="15.0dip" android:text="99" android:layout_alignTop="@id/message_img" android:layout_alignRight="@id/message_img" />
+            </RelativeLayout>
+            <TextView android:textSize="@dimen/interphone_tap_text_size" android:textColor="@color/pri_tap_text_color_unselected" android:id="@id/message_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6.0dip" android:text="@string/fragment_title_tap_message" />
+        </LinearLayout>
+        <LinearLayout android:gravity="center" android:orientation="vertical" android:id="@id/local" android:layout_width="wrap_content" android:layout_height="fill_parent" android:layout_weight="0.2" android:onClick="tapOnClick">
+            <ImageView android:id="@id/local_img" android:background="@drawable/interphone_tap_local_seletor" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            <TextView android:textSize="@dimen/interphone_tap_text_size" android:textColor="@color/pri_tap_text_color_unselected" android:id="@id/local_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6.0dip" android:text="@string/fragment_title_tap_local" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>
