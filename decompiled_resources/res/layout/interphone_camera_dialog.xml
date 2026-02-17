@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout android:orientation="vertical" android:background="@drawable/interphone_dialog_background" android:layout_width="fill_parent" android:layout_height="fill_parent"
-  xmlns:android="http://schemas.android.com/apk/res/android">
-    <TextView android:textSize="18.0sp" android:textColor="@color/pri_text_color" android:gravity="center" android:layout_width="fill_parent" android:layout_height="50.0dip" android:text="@string/fragment_camera_dialog_title" />
-    <TextView android:textSize="16.0sp" android:textColor="@color/pri_tap_text_color_selected" android:gravity="center" android:id="@id/interphone_camera_take_picture" android:layout_width="fill_parent" android:layout_height="50.0dip" android:text="@string/fragment_camera_dialog_takephoto" />
-    <TextView android:textSize="16.0sp" android:textColor="@color/pri_tap_text_color_selected" android:gravity="center" android:id="@id/interphone_camera_seleted_picture" android:layout_width="fill_parent" android:layout_height="50.0dip" android:text="@string/fragment_camera_dialog_selectphoto" />
-</LinearLayout>

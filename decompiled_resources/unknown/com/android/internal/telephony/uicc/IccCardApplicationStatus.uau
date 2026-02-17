@@ -1,4 +1,0 @@
-signature,file,startline,startcol,endline,endcol,properties
-Lcom/android/internal/telephony/uicc/IccCardApplicationStatus;->app_type:Lcom/android/internal/telephony/uicc/IccCardApplicationStatus$AppType;,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/IccCardApplicationStatus.java,158,5,158,88,maxTargetSdk=30&trackingBug=170729553L
-Lcom/android/internal/telephony/uicc/IccCardApplicationStatus;-><init>()V,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/IccCardApplicationStatus.java,172,5,172,88,maxTargetSdk=30&trackingBug=170729553L
-Lcom/android/internal/telephony/uicc/IccCardApplicationStatus;->AppTypeFromRILInt(I)Lcom/android/internal/telephony/uicc/IccCardApplicationStatus$AppType;,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/IccCardApplicationStatus.java,176,5,176,88,maxTargetSdk=30&trackingBug=170729553L

@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<layer-list android:opacity="opaque"
-  xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@drawable/interphone_contacts_people_unselected" />
-    <item android:gravity="center" android:height="33.0dip" android:width="33.0dip" android:drawable="@drawable/interphone_contacts_people_icon" />
-</layer-list>

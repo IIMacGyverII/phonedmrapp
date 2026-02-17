@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout android:orientation="vertical" android:background="@drawable/interphone_dialog_background" android:layout_width="fill_parent" android:layout_height="fill_parent"
-  xmlns:android="http://schemas.android.com/apk/res/android">
-    <TextView android:textSize="18.0sp" android:textColor="@color/pri_text_color" android:gravity="center" android:layout_width="fill_parent" android:layout_height="50.0dip" android:text="@string/fragment_title_tap_contacts" />
-    <TextView android:textSize="16.0sp" android:textColor="@color/pri_tap_text_color_selected" android:gravity="center" android:id="@id/contacts_edit_dialog_use" android:layout_width="fill_parent" android:layout_height="50.0dip" android:text="@string/fragment_local_device_area_use" />
-    <TextView android:textSize="16.0sp" android:textColor="@color/pri_tap_text_color_selected" android:gravity="center" android:id="@id/contacts_edit_dialog_edit" android:layout_width="fill_parent" android:layout_height="50.0dip" android:text="@string/fragment_local_device_area_edit" />
-    <TextView android:textSize="16.0sp" android:textColor="@color/pri_tap_text_color_selected" android:gravity="center" android:id="@id/contacts_edit_dialog_delete" android:layout_width="fill_parent" android:layout_height="50.0dip" android:text="@string/fragment_local_device_area_delete" />
-</LinearLayout>

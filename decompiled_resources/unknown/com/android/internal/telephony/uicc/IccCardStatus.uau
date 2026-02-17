@@ -1,7 +1,0 @@
-signature,file,startline,startcol,endline,endcol,properties
-Lcom/android/internal/telephony/uicc/IccCardStatus;->mCardState:Lcom/android/internal/telephony/uicc/IccCardStatus$CardState;,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/IccCardStatus.java,74,5,74,25,
-Lcom/android/internal/telephony/uicc/IccCardStatus;->mUniversalPinState:Lcom/android/internal/telephony/uicc/IccCardStatus$PinState;,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/IccCardStatus.java,76,5,76,88,maxTargetSdk=30&trackingBug=170729553L
-Lcom/android/internal/telephony/uicc/IccCardStatus;->mGsmUmtsSubscriptionAppIndex:I,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/IccCardStatus.java,78,5,78,88,maxTargetSdk=30&trackingBug=170729553L
-Lcom/android/internal/telephony/uicc/IccCardStatus;->mCdmaSubscriptionAppIndex:I,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/IccCardStatus.java,80,5,80,88,maxTargetSdk=30&trackingBug=170729553L
-Lcom/android/internal/telephony/uicc/IccCardStatus;->mImsSubscriptionAppIndex:I,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/IccCardStatus.java,82,5,82,88,maxTargetSdk=30&trackingBug=170729553L
-Lcom/android/internal/telephony/uicc/IccCardStatus;->mApplications:[Lcom/android/internal/telephony/uicc/IccCardApplicationStatus;,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/IccCardStatus.java,88,5,88,88,maxTargetSdk=30&trackingBug=170729553L

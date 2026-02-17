@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout android:orientation="vertical" android:background="@color/fragment_local_img_color" android:layout_width="fill_parent" android:layout_height="fill_parent"
-  xmlns:android="http://schemas.android.com/apk/res/android">
-    <ListView android:id="@id/fragment_message_listview" android:layout_width="fill_parent" android:layout_height="fill_parent" android:layout_marginLeft="20.0dip" android:layout_marginRight="20.0dip" />
-    <TextView android:textSize="16.0sp" android:textColor="@color/pri_sub_text_color" android:gravity="center" android:id="@id/empty_message_warning" android:layout_width="fill_parent" android:layout_height="fill_parent" android:layout_marginLeft="20.0dip" android:layout_marginRight="20.0dip" android:text="@string/empty_message_warning" />
-</LinearLayout>

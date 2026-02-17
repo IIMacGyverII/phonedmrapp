@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout android:orientation="vertical" android:background="@drawable/interphone_dialog_background" android:layout_width="fill_parent" android:layout_height="fill_parent"
-  xmlns:android="http://schemas.android.com/apk/res/android">
-    <View android:id="@id/interphone_channel_spinner_split" android:background="@color/fragment_local_line_color" android:layout_width="fill_parent" android:layout_height="1.0dip" android:layout_marginLeft="@dimen/interphone_channel_spinner_line_margin" android:layout_marginRight="@dimen/interphone_channel_spinner_line_margin" />
-    <LinearLayout android:gravity="center_vertical" android:orientation="horizontal" android:layout_width="fill_parent" android:layout_height="@dimen/interphone_channel_content_height" android:layout_marginLeft="@dimen/interphone_channel_spinner_line_margin" android:layout_marginRight="@dimen/interphone_channel_spinner_line_margin">
-        <ImageView android:id="@id/interphone_channel_spinner_selete" android:background="@drawable/interphone_local_limit_send_time_dialog_item_seleotor" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-        <TextView android:textSize="@dimen/interphone_channel_content_title_size" android:textColor="@color/pri_text_color" android:id="@id/interphone_channel_spinner_value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="@dimen/interphone_channel_spinner_value_margin" />
-    </LinearLayout>
-</LinearLayout>

@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<shape android:shape="rectangle"
-  xmlns:android="http://schemas.android.com/apk/res/android">
-    <size android:height="20.0dip" />
-    <corners android:radius="18.0dip" />
-    <gradient android:startColor="@color/pri_switch_color_selected" android:endColor="@color/pri_switch_color_selected" />
-</shape>

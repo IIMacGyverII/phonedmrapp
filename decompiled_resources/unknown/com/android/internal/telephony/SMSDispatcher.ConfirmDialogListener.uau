@@ -1,4 +1,0 @@
-signature,file,startline,startcol,endline,endcol,properties
-Lcom/android/internal/telephony/SMSDispatcher$ConfirmDialogListener;->mPositiveButton:Landroid/widget/Button;,frameworks/opt/telephony/src/java/com/android/internal/telephony/SMSDispatcher.java,2657,9,2657,92,maxTargetSdk=30&trackingBug=170729553L
-Lcom/android/internal/telephony/SMSDispatcher$ConfirmDialogListener;->mNegativeButton:Landroid/widget/Button;,frameworks/opt/telephony/src/java/com/android/internal/telephony/SMSDispatcher.java,2659,9,2659,92,maxTargetSdk=30&trackingBug=170729553L
-Lcom/android/internal/telephony/SMSDispatcher$ConfirmDialogListener;->mRememberUndoInstruction:Landroid/widget/TextView;,frameworks/opt/telephony/src/java/com/android/internal/telephony/SMSDispatcher.java,2662,9,2662,92,maxTargetSdk=30&trackingBug=170729553L

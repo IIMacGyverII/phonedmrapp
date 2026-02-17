@@ -1,6 +1,0 @@
-signature,file,startline,startcol,endline,endcol,properties
-Lcom/android/internal/telephony/uicc/IccFileHandler$LoadLinearFixedContext;->mRecordNum:I,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/IccFileHandler.java,117,9,117,92,maxTargetSdk=30&trackingBug=170729553L
-Lcom/android/internal/telephony/uicc/IccFileHandler$LoadLinearFixedContext;->mRecordSize:I,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/IccFileHandler.java,117,9,117,92,maxTargetSdk=30&trackingBug=170729553L
-Lcom/android/internal/telephony/uicc/IccFileHandler$LoadLinearFixedContext;->mCountRecords:I,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/IccFileHandler.java,117,9,117,92,maxTargetSdk=30&trackingBug=170729553L
-Lcom/android/internal/telephony/uicc/IccFileHandler$LoadLinearFixedContext;->results:Ljava/util/ArrayList;,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/IccFileHandler.java,124,9,124,92,maxTargetSdk=30&trackingBug=170729553L
-Lcom/android/internal/telephony/uicc/IccFileHandler$LoadLinearFixedContext;-><init>(IILandroid/os/Message;)V,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/IccFileHandler.java,128,9,128,92,maxTargetSdk=30&trackingBug=170729553L
