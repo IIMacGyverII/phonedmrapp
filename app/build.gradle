@@ -26,7 +26,12 @@ android {
     
     aaptOptions {
         cruncherEnabled = false
+        noCompress ''
     }
+    
+    android.buildFeatures.aidl = false
+    android.buildFeatures.renderScript = false
+    android.buildFeatures.shaders = false
     
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8

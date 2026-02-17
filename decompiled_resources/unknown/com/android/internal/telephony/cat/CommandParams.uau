@@ -1,0 +1,4 @@
+signature,file,startline,startcol,endline,endcol,properties
+Lcom/android/internal/telephony/cat/CommandParams;->mCmdDet:Lcom/android/internal/telephony/cat/CommandDetails;,frameworks/opt/telephony/src/java/com/android/internal/telephony/cat/CommandParams.java,29,5,29,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/cat/CommandParams;-><init>(Lcom/android/internal/telephony/cat/CommandDetails;)V,frameworks/opt/telephony/src/java/com/android/internal/telephony/cat/CommandParams.java,34,5,34,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/cat/CommandParams;->getCommandType()Lcom/android/internal/telephony/cat/AppInterface$CommandType;,frameworks/opt/telephony/src/java/com/android/internal/telephony/cat/CommandParams.java,39,5,39,88,maxTargetSdk=30&trackingBug=170729553L

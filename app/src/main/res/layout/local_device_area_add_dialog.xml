@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:orientation="vertical" android:background="@drawable/interphone_dialog_background" android:layout_width="fill_parent" android:layout_height="fill_parent"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <TextView android:textSize="16.0sp" android:textColor="@color/pri_text_color" android:gravity="center" android:layout_width="fill_parent" android:layout_height="60.0dip" android:text="@string/fragment_local_device_area" />
+    <LinearLayout android:gravity="center_vertical" android:layout_width="fill_parent" android:layout_height="50.0dip" android:paddingStart="30.0dip" android:paddingEnd="28.0dip">
+        <TextView android:textSize="14.0sp" android:textColor="@color/pri_sub_text_color" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/fragment_local_device_area_add_subtitle" />
+        <EditText android:theme="@style/MyEditText" android:textSize="14.0sp" android:textColor="@color/pri_text_color" android:id="@id/local_device_area_edit" android:layout_width="fill_parent" android:layout_height="wrap_content" android:singleLine="true" android:maxLength="13" android:textCursorDrawable="@color/pri_tap_text_color_selected" android:layout_marginStart="3.0dip" />
+    </LinearLayout>
+    <LinearLayout android:orientation="horizontal" android:layout_width="fill_parent" android:layout_height="48.0dip">
+        <Button android:textColor="@drawable/interphone_local_device_id_dialog_button_seletor" android:id="@id/local_device_area_cancle" android:background="@null" android:layout_width="0.0dip" android:layout_height="48.0dip" android:text="@string/fragment_local_setting_device_id_dialog_cancle" android:layout_weight="1.0" />
+        <Button android:textColor="@drawable/interphone_local_device_id_dialog_button_seletor" android:id="@id/local_device_area_ok" android:background="@null" android:layout_width="0.0dip" android:layout_height="48.0dip" android:text="@string/fragment_local_setting_device_id_dialog_ok" android:layout_weight="1.0" />
+    </LinearLayout>
+</LinearLayout>

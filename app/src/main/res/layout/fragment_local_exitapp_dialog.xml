@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:orientation="vertical" android:background="@drawable/interphone_dialog_background" android:layout_width="fill_parent" android:layout_height="fill_parent"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <TextView android:textSize="16.0sp" android:textColor="@color/pri_text_color" android:gravity="center" android:layout_width="fill_parent" android:layout_height="60.0dip" android:text="@string/fragment_local_exit_app_dialog_title" />
+    <TextView android:textSize="14.0sp" android:textColor="@color/pri_sub_text_color" android:gravity="center" android:layout_width="fill_parent" android:layout_height="40.0dip" android:text="@string/fragment_local_exit_app_dialog_content" />
+    <LinearLayout android:orientation="horizontal" android:layout_width="fill_parent" android:layout_height="48.0dip">
+        <Button android:textColor="@drawable/interphone_local_device_id_dialog_button_seletor" android:id="@id/fragment_local_exit_app_cancle" android:background="@null" android:layout_width="0.0dip" android:layout_height="48.0dip" android:text="@string/fragment_local_setting_device_id_dialog_cancle" android:layout_weight="1.0" />
+        <Button android:textColor="@drawable/interphone_local_device_id_dialog_button_seletor" android:id="@id/fragment_local_exit_app_ok" android:background="@null" android:layout_width="0.0dip" android:layout_height="48.0dip" android:text="@string/fragment_local_setting_device_id_dialog_ok" android:layout_weight="1.0" />
+    </LinearLayout>
+</LinearLayout>
