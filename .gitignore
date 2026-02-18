@@ -94,3 +94,7 @@ sources/
 META-INF/
 kotlin/
 signed.apk.idsig
+# JADX binaries (download separately)
+jadx/
+jadx-*.zip
+decompiled-java/
