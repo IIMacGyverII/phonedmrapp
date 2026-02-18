@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" android:compileSdkVersion="33" android:compileSdkVersionCodename="13" android:sharedUserId="android.uid.system" package="com.pri.prizeinterphone" platformBuildVersionCode="33" platformBuildVersionName="13">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" android:compileSdkVersion="33" android:compileSdkVersionCodename="13" android:sharedUserId="android.uid.system" platformBuildVersionCode="33" platformBuildVersionName="13">
     <protected-broadcast android:name="com.action.broadcast.TALK_RECEIVING_UPDATE"/>
     <permission android:name="com.pri.prizeinterphone.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" android:protectionLevel="signature"/>
     <uses-permission android:name="com.pri.prizeinterphone.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"/>

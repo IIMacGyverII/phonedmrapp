@@ -112,6 +112,7 @@
     <string name="fragment_local_factory_reset_progress_dialog_title">Factory reseting...</string>
     <string name="fragment_local_information">Information</string>
     <string name="fragment_local_information_dmr_firmware_version">DMR Firmware version</string>
+    <string name="fragment_local_information_macgyver_mod_version">MacGyver Mod Version</string>
     <string name="fragment_local_information_mcu_firmware_version">MCU Firmware version</string>
     <string name="fragment_local_information_software_version">Software version</string>
     <string name="fragment_local_setting">Setting</string>

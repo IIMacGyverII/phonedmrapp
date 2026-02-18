@@ -12,6 +12,7 @@ import com.pri.prizeinterphone.serial.data.PersonSharePrefData;
 /* loaded from: classes4.dex */
 public class FragmentLocalInformationActivity extends AppCompatActivity implements View.OnClickListener {
     private TextView mTvDmrFirmwareVersion;
+    private TextView mTvMacGyverModVersion;
     private TextView mTvSoftwareVersion;
 
     private void initValue() {
@@ -34,6 +35,7 @@ public class FragmentLocalInformationActivity extends AppCompatActivity implemen
     private void initView() {
         this.mTvSoftwareVersion = (TextView) findViewById(R.id.local_information_software_version_value);
         this.mTvDmrFirmwareVersion = (TextView) findViewById(R.id.local_information_dmrfirmware_version_value);
+        this.mTvMacGyverModVersion = (TextView) findViewById(R.id.local_information_macgyver_mod_version_value);
         String versionName = getVersionName();
         TextView textView = this.mTvSoftwareVersion;
         if (versionName == null) {
@@ -41,6 +43,7 @@ public class FragmentLocalInformationActivity extends AppCompatActivity implemen
         }
         textView.setText(versionName);
         this.mTvDmrFirmwareVersion.setText(getDmrVersion());
+        this.mTvMacGyverModVersion.setText("0.1");
     }
 
     @Override // android.view.View.OnClickListener

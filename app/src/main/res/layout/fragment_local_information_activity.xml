@@ -25,5 +25,12 @@
             <TextView android:textSize="@dimen/fragment_local_information_subtext_size" android:textColor="@color/pri_sub_text_color" android:id="@id/local_information_dmrfirmware_version_value" android:layout_width="wrap_content" android:layout_height="wrap_content" />
         </LinearLayout>
     </RelativeLayout>
+    <View android:background="@color/fragment_local_line_color" android:layout_width="fill_parent" android:layout_height="1.0px" android:layout_marginLeft="@dimen/fragment_local_line_margin" android:layout_marginRight="@dimen/fragment_local_line_margin" />
+    <RelativeLayout android:gravity="center_vertical" android:id="@id/local_information_macgyver_mod_version" android:layout_width="fill_parent" android:layout_height="@dimen/fragment_local_information_height">
+        <LinearLayout android:gravity="center_vertical" android:orientation="vertical" android:layout_width="wrap_content" android:layout_height="fill_parent" android:layout_marginStart="@dimen/fragment_local_line_margin">
+            <TextView android:textSize="@dimen/fragment_local_information_text_size" android:textColor="@color/pri_text_color" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/fragment_local_information_macgyver_mod_version" />
+            <TextView android:textSize="@dimen/fragment_local_information_subtext_size" android:textColor="@color/pri_sub_text_color" android:id="@id/local_information_macgyver_mod_version_value" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+        </LinearLayout>
+    </RelativeLayout>
     <View android:background="@color/fragment_local_line_color" android:visibility="gone" android:layout_width="fill_parent" android:layout_height="1.0px" android:layout_marginLeft="@dimen/fragment_local_line_margin" android:layout_marginRight="@dimen/fragment_local_line_margin" />
 </LinearLayout>
