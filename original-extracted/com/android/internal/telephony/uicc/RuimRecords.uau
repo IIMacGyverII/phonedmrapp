@@ -1,0 +1,14 @@
+signature,file,startline,startcol,endline,endcol,properties
+Lcom/android/internal/telephony/uicc/RuimRecords;->mEFpl:[B,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/RuimRecords.java,66,5,66,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/uicc/RuimRecords;->mEFli:[B,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/RuimRecords.java,68,5,68,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/uicc/RuimRecords;->mMin:Ljava/lang/String;,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/RuimRecords.java,74,5,74,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/uicc/RuimRecords;->mNai:Ljava/lang/String;,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/RuimRecords.java,78,5,78,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/uicc/RuimRecords;->getMdnNumber()Ljava/lang/String;,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/RuimRecords.java,168,5,168,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/uicc/RuimRecords;->getRUIMOperatorNumeric()Ljava/lang/String;,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/RuimRecords.java,216,5,216,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/uicc/RuimRecords;->onGetCSimEprlDone(Landroid/os/AsyncResult;)V,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/RuimRecords.java,518,5,518,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/uicc/RuimRecords;->getAssetLanguages(Landroid/content/Context;)[Ljava/lang/String;,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/RuimRecords.java,748,5,748,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/uicc/RuimRecords;->fetchRuimRecords()V,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/RuimRecords.java,860,5,860,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/uicc/RuimRecords;->getMdn()Ljava/lang/String;,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/RuimRecords.java,955,5,955,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/uicc/RuimRecords;->getCsimSpnDisplayCondition()Z,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/RuimRecords.java,972,5,972,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/uicc/RuimRecords;->log(Ljava/lang/String;)V,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/RuimRecords.java,976,5,976,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/uicc/RuimRecords;->loge(Ljava/lang/String;)V,frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/RuimRecords.java,986,5,986,88,maxTargetSdk=30&trackingBug=170729553L

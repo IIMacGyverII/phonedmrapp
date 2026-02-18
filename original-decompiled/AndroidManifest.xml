@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" android:compileSdkVersion="33" android:compileSdkVersionCodename="13" android:sharedUserId="android.uid.system" package="com.pri.prizeinterphone" platformBuildVersionCode="33" platformBuildVersionName="13">
+    <protected-broadcast android:name="com.action.broadcast.TALK_RECEIVING_UPDATE"/>
+    <permission android:name="com.pri.prizeinterphone.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" android:protectionLevel="signature"/>
+    <uses-permission android:name="com.pri.prizeinterphone.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"/>
+    <application android:allowBackup="true" android:appComponentFactory="androidx.core.app.CoreComponentFactory" android:extractNativeLibs="true" android:icon="@drawable/interphone_app_icon" android:label="@string/app_name" android:name="com.pri.prizeinterphone.PrizeInterPhoneApp" android:requestLegacyExternalStorage="true" android:roundIcon="@drawable/interphone_app_icon" android:supportsRtl="false" android:theme="@style/AppTheme" android:usesNonSdkApi="true">
+        <activity android:configChanges="colorMode|density|fontScale|keyboard|keyboardHidden|layoutDirection|locale|mcc|mnc|orientation|screenLayout|screenSize|smallestScreenSize|touchscreen|uiMode" android:exported="true" android:launchMode="singleTask" android:name="com.pri.prizeinterphone.activity.UpdateFirmwareActivity" android:screenOrientation="portrait" android:theme="@style/AppTheme_Dialog">
+            <intent-filter>
+                <action android:name="prize.intent.action.update.dmr.firmware"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
+        </activity>
+        <activity android:configChanges="colorMode|density|fontScale|keyboard|keyboardHidden|layoutDirection|locale|mcc|mnc|orientation|screenLayout|screenSize|smallestScreenSize|touchscreen|uiMode" android:exported="false" android:name="com.pri.prizeinterphone.activity.MessageContentActivity" android:screenOrientation="portrait"/>
+        <activity android:configChanges="colorMode|density|fontScale|keyboard|keyboardHidden|layoutDirection|locale|mcc|mnc|orientation|screenLayout|screenSize|smallestScreenSize|touchscreen|uiMode" android:exported="false" android:name="com.pri.prizeinterphone.activity.FragmentNewContactsActivity" android:screenOrientation="portrait"/>
+        <activity android:configChanges="colorMode|density|fontScale|keyboard|keyboardHidden|layoutDirection|locale|mcc|mnc|orientation|screenLayout|screenSize|smallestScreenSize|touchscreen|uiMode" android:exported="false" android:name="com.pri.prizeinterphone.activity.InterPhoneChannelActivity" android:screenOrientation="portrait"/>
+        <activity android:configChanges="colorMode|density|fontScale|keyboard|keyboardHidden|layoutDirection|locale|mcc|mnc|orientation|screenLayout|screenSize|smallestScreenSize|touchscreen|uiMode" android:exported="false" android:name="com.pri.prizeinterphone.activity.FragmentLocalDeviceAreaListActivity" android:screenOrientation="portrait"/>
+        <activity android:exported="false" android:label="@string/fragment_local_use_assistant" android:name="com.pri.prizeinterphone.activity.FragmentLocalUseAssistantActivity" android:screenOrientation="portrait"/>
+        <activity android:exported="false" android:label="@string/fragment_local_device_area" android:name="com.pri.prizeinterphone.activity.FragmentLocalDeviceAreaActivity" android:screenOrientation="portrait"/>
+        <activity android:exported="false" android:label="@string/fragment_local_information" android:name="com.pri.prizeinterphone.activity.FragmentLocalInformationActivity" android:screenOrientation="portrait"/>
+        <activity android:exported="false" android:label="@string/fragment_local_setting" android:name="com.pri.prizeinterphone.activity.FragmentLocalSettingsActivity" android:screenOrientation="portrait"/>
+        <activity android:exported="false" android:label="@string/interphone_test_bite_error_rate" android:name="com.pri.prizeinterphone.activity.FragmentLocalTestBiteErrorRateActivity" android:screenOrientation="portrait"/>
+        <activity android:configChanges="colorMode|density|fontScale|keyboard|keyboardHidden|layoutDirection|locale|mcc|mnc|orientation|screenLayout|screenSize|smallestScreenSize|touchscreen|uiMode" android:exported="true" android:name="com.pri.prizeinterphone.InterPhoneHomeActivity" android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <activity android:exported="false" android:label="@string/interphone_record_list_title" android:name="com.pri.prizeinterphone.activity.RecordListActivity"/>
+        <activity android:exported="false" android:launchMode="singleTask" android:name="com.pri.prizeinterphone.activity.DeviceKilledActivity" android:screenOrientation="portrait" android:theme="@style/DeviceKilledDialog">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
+        </activity>
+        <provider android:authorities="com.pri.prizeinterphone.files" android:exported="false" android:grantUriPermissions="true" android:name="androidx.core.content.FileProvider">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths"/>
+        </provider>
+        <service android:enabled="true" android:exported="true" android:name="com.pri.prizeinterphone.InterPhoneService" android:persistent="true" android:priority="1000"/>
+        <provider android:authorities="com.pri.prizeinterphone.androidx-startup" android:exported="false" android:name="androidx.startup.InitializationProvider">
+            <meta-data android:name="androidx.emoji2.text.EmojiCompatInitializer" android:value="androidx.startup"/>
+            <meta-data android:name="androidx.lifecycle.ProcessLifecycleInitializer" android:value="androidx.startup"/>
+        </provider>
+    </application>
+</manifest>

@@ -1,0 +1,4 @@
+signature,file,startline,startcol,endline,endcol,properties
+Lcom/android/internal/telephony/cat/RilMessage;->mId:I,frameworks/opt/telephony/src/java/com/android/internal/telephony/cat/RilMessage.java,22,5,22,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/cat/RilMessage;->mData:Ljava/lang/Object;,frameworks/opt/telephony/src/java/com/android/internal/telephony/cat/RilMessage.java,24,5,24,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/cat/RilMessage;-><init>(ILjava/lang/String;)V,frameworks/opt/telephony/src/java/com/android/internal/telephony/cat/RilMessage.java,28,5,28,88,maxTargetSdk=30&trackingBug=170729553L

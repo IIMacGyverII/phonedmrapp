@@ -1,0 +1,6 @@
+id=macdmrulephone
+name=MacDMRUlephone System App
+version=1.0
+versionCode=1
+author=Joshua MacDMR
+description=Replaces PriInterPhone system app with custom branding. Keeps full DMR functionality with system privileges.

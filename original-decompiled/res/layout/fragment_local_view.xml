@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:orientation="vertical" android:layout_width="fill_parent" android:layout_height="fill_parent"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <RelativeLayout android:background="#ff000000" android:layout_width="fill_parent" android:layout_height="@dimen/fragment_local_img_height">
+        <ImageView android:id="@id/fragment_local_img_show" android:layout_width="fill_parent" android:layout_height="fill_parent" android:scaleType="fitXY" android:adjustViewBounds="true" />
+        <ImageView android:id="@id/fragment_local_img" android:background="@drawable/interphone_big_contacts_default" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_centerInParent="true" />
+        <Button android:id="@id/fragment_local_camera" android:background="@drawable/interphone_small_camera_icon" android:layout_width="30.0dip" android:layout_height="30.0dip" android:layout_marginRight="30.0dip" android:layout_marginBottom="25.0dip" android:layout_alignParentRight="true" android:layout_alignParentBottom="true" />
+    </RelativeLayout>
+    <ScrollView android:layout_width="wrap_content" android:layout_height="wrap_content">
+        <LinearLayout android:orientation="vertical" android:background="@color/fragment_local_background" android:layout_width="fill_parent" android:layout_height="fill_parent">
+            <RelativeLayout android:gravity="center_vertical" android:id="@id/local_seting" android:layout_width="fill_parent" android:layout_height="@dimen/fragment_local_height">
+                <TextView android:textSize="@dimen/fragment_local_text_size" android:textColor="@color/pri_text_color" android:id="@id/local_seting_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/fragment_local_setting" android:layout_marginStart="@dimen/fragment_local_margin_left" />
+                <ImageView android:background="@drawable/interphone_list_arrow" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_alignParentRight="true" android:layout_marginEnd="@dimen/fragment_local_margin_right" />
+            </RelativeLayout>
+            <View android:background="@color/fragment_local_line_color" android:layout_width="fill_parent" android:layout_height="1.0px" android:layout_marginLeft="@dimen/fragment_local_line_margin" android:layout_marginRight="@dimen/fragment_local_line_margin" />
+            <RelativeLayout android:gravity="center_vertical" android:id="@id/local_information" android:layout_width="fill_parent" android:layout_height="@dimen/fragment_local_height">
+                <TextView android:textSize="@dimen/fragment_local_text_size" android:textColor="@color/pri_text_color" android:id="@id/local_information_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/fragment_local_information" android:layout_marginStart="@dimen/fragment_local_margin_left" />
+                <ImageView android:background="@drawable/interphone_list_arrow" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_alignParentRight="true" android:layout_marginEnd="@dimen/fragment_local_margin_right" />
+            </RelativeLayout>
+            <View android:background="@color/fragment_local_line_color" android:layout_width="fill_parent" android:layout_height="1.0px" android:layout_marginLeft="@dimen/fragment_local_line_margin" android:layout_marginRight="@dimen/fragment_local_line_margin" />
+            <RelativeLayout android:gravity="center_vertical" android:id="@id/local_device_area" android:layout_width="fill_parent" android:layout_height="wrap_content" android:minHeight="@dimen/fragment_local_height">
+                <LinearLayout android:gravity="center_horizontal" android:orientation="vertical" android:layout_width="wrap_content" android:layout_height="fill_parent" android:layout_marginTop="10.0dip" android:layout_marginBottom="2.0dip" android:layout_marginStart="@dimen/fragment_local_margin_left">
+                    <TextView android:textSize="@dimen/fragment_local_text_size" android:textColor="@color/pri_text_color" android:id="@id/local_device_area_title" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="@string/fragment_local_device_area" />
+                    <TextView android:textSize="@dimen/fragment_local_sub_text_size" android:textColor="@color/pri_text_color" android:id="@id/local_device_area_setings" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="@string/channel_area_default" />
+                </LinearLayout>
+                <ImageView android:background="@drawable/interphone_list_arrow" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_alignParentRight="true" android:layout_centerVertical="true" android:layout_marginEnd="@dimen/fragment_local_margin_right" />
+            </RelativeLayout>
+            <View android:background="@color/fragment_local_line_color" android:layout_width="fill_parent" android:layout_height="1.0px" android:layout_marginLeft="@dimen/fragment_local_line_margin" android:layout_marginRight="@dimen/fragment_local_line_margin" />
+            <RelativeLayout android:gravity="center_vertical" android:id="@id/local_factory_reset" android:layout_width="fill_parent" android:layout_height="@dimen/fragment_local_height">
+                <TextView android:textSize="@dimen/fragment_local_text_size" android:textColor="@color/pri_text_color" android:id="@id/local_factory_reset_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/fragment_local_factory_reset" android:layout_marginStart="@dimen/fragment_local_margin_left" />
+            </RelativeLayout>
+            <View android:background="@color/fragment_local_line_color" android:layout_width="fill_parent" android:layout_height="1.0px" android:layout_marginLeft="@dimen/fragment_local_line_margin" android:layout_marginRight="@dimen/fragment_local_line_margin" />
+            <RelativeLayout android:gravity="center_vertical" android:id="@id/local_use_assistant" android:layout_width="fill_parent" android:layout_height="@dimen/fragment_local_height">
+                <TextView android:textSize="@dimen/fragment_local_text_size" android:textColor="@color/pri_text_color" android:id="@id/local_use_assistant_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/fragment_local_use_assistant" android:layout_marginStart="@dimen/fragment_local_margin_left" />
+                <ImageView android:background="@drawable/interphone_list_arrow" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_alignParentRight="true" android:layout_marginEnd="@dimen/fragment_local_margin_right" />
+            </RelativeLayout>
+            <View android:background="@color/fragment_local_line_color" android:layout_width="fill_parent" android:layout_height="1.0px" android:layout_marginLeft="@dimen/fragment_local_line_margin" android:layout_marginRight="@dimen/fragment_local_line_margin" />
+            <RelativeLayout android:gravity="center_vertical" android:id="@id/local_exit_app" android:layout_width="fill_parent" android:layout_height="@dimen/fragment_local_height">
+                <TextView android:textSize="@dimen/fragment_local_text_size" android:textColor="@color/pri_text_color" android:id="@id/local_exit_app_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/fragment_local_exit_app" android:layout_marginStart="@dimen/fragment_local_margin_left" />
+            </RelativeLayout>
+            <View android:background="@color/fragment_local_line_color" android:visibility="gone" android:layout_width="fill_parent" android:layout_height="1.0px" android:layout_marginLeft="@dimen/fragment_local_line_margin" android:layout_marginRight="@dimen/fragment_local_line_margin" />
+            <RelativeLayout android:gravity="center_vertical" android:id="@id/local_test_bite_error_rate" android:visibility="gone" android:layout_width="fill_parent" android:layout_height="@dimen/fragment_local_height">
+                <TextView android:textSize="@dimen/fragment_local_text_size" android:textColor="@color/pri_text_color" android:id="@id/local_test_bite_error_rate_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/interphone_test_bite_error_rate" android:layout_marginStart="@dimen/fragment_local_margin_left" />
+                <ImageView android:background="@drawable/interphone_list_arrow" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_alignParentRight="true" android:layout_marginEnd="@dimen/fragment_local_margin_right" />
+            </RelativeLayout>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

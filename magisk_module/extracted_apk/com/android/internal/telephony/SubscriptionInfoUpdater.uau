@@ -1,0 +1,8 @@
+signature,file,startline,startcol,endline,endcol,properties
+Lcom/android/internal/telephony/SubscriptionInfoUpdater;->SUPPORTED_MODEM_COUNT:I,frameworks/opt/telephony/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java,84,5,84,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/SubscriptionInfoUpdater;->sContext:Landroid/content/Context;,frameworks/opt/telephony/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java,123,5,123,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/SubscriptionInfoUpdater;->sIccId:[Ljava/lang/String;,frameworks/opt/telephony/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java,126,5,126,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/SubscriptionInfoUpdater;->mCurrentlyActiveUserId:I,frameworks/opt/telephony/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java,144,5,144,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/SubscriptionInfoUpdater;->isAllIccIdQueryDone()Z,frameworks/opt/telephony/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java,270,5,270,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/SubscriptionInfoUpdater;->broadcastSimStateChanged(ILjava/lang/String;Ljava/lang/String;)V,frameworks/opt/telephony/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java,1308,5,1308,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/SubscriptionInfoUpdater;->logd(Ljava/lang/String;)V,frameworks/opt/telephony/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java,1416,5,1416,88,maxTargetSdk=30&trackingBug=170729553L

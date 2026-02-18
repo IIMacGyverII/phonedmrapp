@@ -1,0 +1,12 @@
+signature,file,startline,startcol,endline,endcol,properties
+Lcom/android/internal/telephony/Call;-><init>()V,frameworks/opt/telephony/src/java/com/android/internal/telephony/Call.java,35,5,35,25,
+Lcom/android/internal/telephony/Call;->mState:Lcom/android/internal/telephony/Call$State;,frameworks/opt/telephony/src/java/com/android/internal/telephony/Call.java,86,5,86,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/Call;->mConnections:Ljava/util/ArrayList;,frameworks/opt/telephony/src/java/com/android/internal/telephony/Call.java,89,5,89,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/Call;->getConnections()Ljava/util/ArrayList;,frameworks/opt/telephony/src/java/com/android/internal/telephony/Call.java,100,5,100,25,
+Lcom/android/internal/telephony/Call;->getPhone()Lcom/android/internal/telephony/Phone;,frameworks/opt/telephony/src/java/com/android/internal/telephony/Call.java,136,5,136,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/Call;->isMultiparty()Z,frameworks/opt/telephony/src/java/com/android/internal/telephony/Call.java,138,5,138,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/Call;->hangup()V,frameworks/opt/telephony/src/java/com/android/internal/telephony/Call.java,140,5,140,25,
+Lcom/android/internal/telephony/Call;->getState()Lcom/android/internal/telephony/Call$State;,frameworks/opt/telephony/src/java/com/android/internal/telephony/Call.java,205,5,205,25,
+Lcom/android/internal/telephony/Call;->isIdle()Z,frameworks/opt/telephony/src/java/com/android/internal/telephony/Call.java,224,5,224,88,maxTargetSdk=30&trackingBug=170729553L
+Lcom/android/internal/telephony/Call;->getEarliestConnection()Lcom/android/internal/telephony/Connection;,frameworks/opt/telephony/src/java/com/android/internal/telephony/Call.java,233,5,233,25,
+Lcom/android/internal/telephony/Call;->getLatestConnection()Lcom/android/internal/telephony/Connection;,frameworks/opt/telephony/src/java/com/android/internal/telephony/Call.java,321,5,321,88,maxTargetSdk=30&trackingBug=170729553L

@@ -546,3 +546,277 @@ We have **fully functional code** that adds "MacGyver Mod Version: 0.1" to the d
 **Current Blocker**: APK signature verification prevents deployment of working code  
 **Commit**: [5249db7c](https://github.com/IIMacGyverII/phonedmrapp/commit/5249db7c) - "MacGyver Mod Version 0.1 - Code Complete, Deployment Blocked"  
 **Next Action**: **Get Grok's expert opinion on signature resolution strategies**
+
+---
+
+## JADX Decompilation & Java Source Integration (2026-02-18)
+
+### Approach Executed
+
+Following the recommended strategy in the previous section, switched from fighting resource conflicts to using JADX for clean Java decompilation.
+
+### Steps Completed
+
+**1. JADX Installation** 
+- Downloaded JADX v1.5.0 (latest release)
+- Installed to WSL native filesystem (~/jadx)
+- Verified: jadx --version  1.5.0
+
+**2. APK Decompilation**   
+``bash
+cd ~/phonedmrapp
+~/jadx/bin/jadx -d decompiled-java com.pri.prizeinterphone.apk
+``
+- **Result**: 3,007 Java source files (81MB)
+- Decompilation errors: 8 (normal for complex apps)
+- **Time**: ~2-3 minutes
+
+**3. Java Source Integration** 
+``bash
+# Backed up stub files
+mv app/src/main/java app/src/main/java.stubs
+
+# Copied JADX sources  
+cp -r decompiled-java/sources/. app/src/main/java
+``
+- All 3,007 .java files copied successfully
+- Real implementation code replaces stubs
+
+**4. Resource Cleanup** 
+**Deleted conflicting resources**:
+- pp/src/main/res/values/attrs.xml (1,435 lines of AndroidX duplicates)
+- 9 library layout files (abc_*, mtrl_*, design_*, etc.)
+
+**Created minimal custom attrs.xml**:
+``xml
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Custom progress bar attributes -->
+    <attr name="progress_current" format="integer" />
+    <attr name="progress_max" format="integer" />
+    <attr name="progress_reached_bar_height" format="dimension" />
+    <attr name="progress_reached_color" format="color" />
+    <attr name="progress_text_color" format="color" />
+    <attr name="progress_text_size" format="dimension" />
+    <attr name="progress_unreached_bar_height" format="dimension" />
+    <attr name="progress_unreached_color" format="color" />
+    
+    <!-- Custom circular progress attrs -->
+    <attr name="progColor" format="color" />
+    <attr name="progress" format="integer" />
+    <attr name="backWidth" format="dimension" />
+    <attr name="backColor" format="color" />
+    <attr name="progWidth" format="dimension" />
+    
+    <!-- Custom theme attribute -->
+    <attr name="themeLineHeight" format="dimension" />
+    
+    <declare-styleable name="NumberProgressBar">
+        <attr name="progress_current" />
+        <attr name="progress_max" />
+        <!-- ... --> 
+    </declare-styleable>
+    
+    <declare-styleable name="CircleProgressBar">
+        <attr name="progColor" />
+        <attr name="progress" />
+        <!-- ... -->
+    </declare-styleable>
+</resources>
+``
+- **Result**: Only app-specific custom attributes, no AndroidX conflicts
+
+**5. Dependency Updates** 
+Added missing library to pp/build.gradle:
+``gradle
+implementation 'androidx.preference:preference:1.2.1'
+``
+- Required for preference screens (Settings activity)
+- Provides all preference-related attributes automatically
+
+**6. Library Code Removal** 
+Removed JADX-decompiled library classes that should come from dependencies:
+``bash
+rm -rf app/src/main/java/kotlin          # Kotlin stdlib (use AndroidX Kotlin)
+rm -rf app/src/main/java/kotlinx        # Kotlin coroutines
+rm -rf app/src/main/java/android         # Android SDK classes
+rm -rf app/src/main/java/androidx        # AndroidX libraries
+rm -rf app/src/main/java/com/android     # Android internal APIs
+rm -rf app/src/main/java/com/google      # Google libraries (Material, Gson)
+rm -rf app/src/main/java/com/mediatek    # MediaTek proprietary framework
+rm -rf app/src/main/java/mediatek        # MediaTek services
+rm -rf app/src/main/java/com/pri/didouix # Third-party UI library
+rm -f  app/src/main/java/com/pri/R.java  # Remove JADX R.java (Gradle generates this)
+``
+- **Remaining packages**: Only app code (com.pri.prizeinterphone, com.serial, com.pri.anim, com.pri.support)
+
+**7. Decompilation Artifact Fixes** 
+Fixed JADX "??" placeholders in 2 files:
+``java
+// Before (JADX artifact):
+?? r3 = 0;  // Type inference failed
+
+// After (manual fix):
+InputStream r3 = null;  // Correct Java type
+``
+- FragmentNewContactsActivity.java:580
+- InterPhoneLocalFragment.java:311
+
+---
+
+### Build Results
+
+**Initial state**: 1,435+ duplicate attribute errors (unsustainable manual cleanup)
+
+**After JADX integration**:
+``
+./gradlew clean assembleDebug
+``
+
+**Resource Processing**:  **SUCCESS**  
+- No resource conflicts
+- No attribute duplication errors  
+- All custom attrs resolved correctly
+
+**Java Compilation**:  **56 errors (down from 754 total)**
+
+**Error Categories**:
+1. **Missing System Classes** (~10 errors):
+   - WindowManagerGlobal (Android internal API)
+   - DisplayManagerGlobal (Android framework)
+   - PrizeTinyService (Custom AIDL service)
+   - ITinyRecvCallback.Stub (AIDL interface)
+
+2. **Decompilation Artifacts** (~30 errors):
+   - 0, 3, 5 variable references (JVM register names)
+   - Type inference failures
+   - Lambda/closure decompilation issues
+
+3. **Missing App Classes** (~16 errors):
+   - LaunchConfig constant class
+   - Package reference errors (e.g., TelephonyProto path in array literal)
+   - Generic type mismatches
+
+**Warnings**: 2 (non-varargs calls - safe to ignore)
+
+---
+
+### Progress Assessment
+
+** MAJOR SUCCESS**: Eliminated all resource conflicts
+- Was: 1,435 lines of duplicate attrs causing 41+ build errors (17+ remained after manual cleanup)
+- Now: 23 lines of custom attrs, zero resource errors
+
+** JADX Approach Validated**:
+- 3,007 Java files successfully decompiled and integrated
+- Real code instead of stubs (can see actual implementation logic)
+- Build progresses through resource compilation to Java compilation
+
+** Remaining Work**: 56 Java compilation errors from JADX artifacts
+- Fixable with manual code review
+- Typical for complex decompilation (JADX can't perfectly reverse-engineer all bytecode)
+- Alternative: Use smali for these specific files, Java for the rest
+
+**Compared to Previous Approach**:
+
+| Metric | Resource Cleanup (Old) | JADX Integration (New) |
+|--------|------------------------|------------------------|
+| Resource errors | 41+, adding more | 0  |
+| Manual fixes | Unsustainable (1,435 lines) | Manageable (56 errors) |
+| Code quality | Stubs (no implementation) | Real decompiled code |
+| Build progress | Blocked at resource merge | Reaches Java compilation |
+| Time investment | Hours of attr cleanup | 15 minutes setup |
+
+---
+
+### Key Learnings
+
+**1. JADX Decompilation Quality**:  
+- Excellent for most code (95%+ success rate)
+- Struggles with: internal APIs, AIDL interfaces, complex lambda/closure patterns, obfuscated code
+- Leaves "??" placeholders when type inference fails (easy to spot and fix)
+
+**2. Library Identification**:  
+Critical to remove decompiled library code:
+- Framework: ndroid.*, com.android.internal.*
+- AndroidX: ndroidx.*
+- Google: com.google.*
+- Kotlin: kotlin.*, kotlinx.*
+- Vendor: com.mediatek.*, mediatek.*
+- Keep only: App packages (com.pri.prizeinterphone.*)
+
+**3. Resource Minimization**:  
+Only define **app-specific** custom attributes. Let AndroidX/Material provide standard ones:
+-  Keep: progress_current, progColor, ackWidth (custom widget attrs)
+-  Delete: All Widget.Material.*, Base.*, TextAppearance.* styles (from libraries)
+
+**4. Iterative Error Resolution**:  
+Build  Identify missing attr  Add to attrs.xml  Rebuild
+- First: preference attrs (missing ndroidx.preference dependency)
+- Second: custom progress attrs (app-specific)
+- Third: theme attrs (app-specific)
+
+---
+
+### Next Steps
+
+**Option A: Manual Error Fixes (Recommended for Learning)**  
+Fix remaining 56 Java errors one-by-one:
+1. Create stub classes for missing system APIs (WindowManagerGlobal, etc.)
+2. Replace r0/r3 variable references with proper types
+3. Add missing app constants (LaunchConfig)
+4. Fix generic type mismatches
+
+**Option B: Hybrid Smali/Java Approach**  
+For files with complex decompilation errors:
+1. Keep those specific files as smali (from apktool)
+2. Use JADX Java for everything else
+3. Gradle supports mixed smali/Java compilation
+
+**Option C: Focus on Core Functionality**  
+Comment out broken peripheral features to get basic build:
+1. PCMReceiveManager (AIDL service - optional)
+2. YModemManager (firmware update - can fix later)
+3. WindowManager calls (display density - use fallback)
+4. Build APK, test core DMR functionality
+
+**Estimated Effort**:
+- Option A: 2-4 hours of manual fixes
+- Option B: 1-2 hours smali integration
+- Option C: 30 minutes commenting, immediate APK build
+
+---
+
+### Files Modified This Session
+
+**Created**:
+- ~/jadx/ (JADX v1.5.0 installation)
+- decompiled-java/ (3,007 Java files, 81MB)
+- pp/src/main/java.stubs/ (backup of original stubs)
+- pp/src/main/res/values/attrs.xml (minimal custom attrs)
+
+**Modified**:
+- pp/src/main/java/ (replaced stubs with JADX sources)
+- pp/build.gradle (added ndroidx.preference:1.2.1)
+- FragmentNewContactsActivity.java:580 (fixed ?? artifact)
+- InterPhoneLocalFragment.java:311 (fixed ?? artifact)
+
+**Deleted**:
+- pp/src/main/java/kotlin/ (library code)
+- pp/src/main/java/androidx/ (library code)
+- pp/src/main/java/com/google/ (library code)  
+- pp/src/main/java/com/android/ (framework code)
+- pp/src/main/java/com/mediatek/ (vendor code)
+- pp/src/main/res/values/*.backup (temp files)
+- 9 library layout XML files
+
+---
+
+**Build Command**:
+``bash
+cd ~/phonedmrapp
+./gradlew clean assembleDebug
+``
+
+**Current Status**: 56 Java compilation errors (all resource errors eliminated )
+
