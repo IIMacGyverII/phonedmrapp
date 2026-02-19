@@ -1601,3 +1601,124 @@ The original system app (`android:sharedUserId="android.uid.system"`) bypasses t
 **Magisk Module Status**: Created and pushed to device, awaiting manual installation
 **Standalone App Status**: BLOCKED by Android 12+ service restrictions + System API dependencies
 **System App Status**: READY - Will work with or without Magisk serial module
+
+---
+
+## System App Deployment Attempt via Magisk - Feb 18, 2026 (Night)
+
+### Systemization Module Approach - FAILED (Bootloop)
+
+**Objective**: Install MacGyverMod-JADX-Fixed.apk as system app using Magisk module overlay
+
+**Implementation**:
+1. Created `magisk-systemizer` module structure
+2. Copied MacGyverMod-JADX-Fixed.apk to `system/priv-app/MacGyverDMR/`
+3. Packaged as `MacGyverDMR-Systemizer.zip` (6.6 MB)
+4. Installed to `/data/adb/modules/macgyver_systemizer/`
+5. Rebooted device
+
+**Result**: ❌ **BOOTLOOP** - Device failed to complete boot
+
+### Root Cause Analysis
+
+**The Problem**: Apps with `android:sharedUserId="android.uid.system"` MUST be signed with the platform certificate.
+
+**What Happened**:
+- MacGyverMod-JADX-Fixed.apk has `android:sharedUserId="android.uid.system"` in manifest
+- APK is signed with debug certificate (not platform certificate)
+- During boot, Android attempts to verify system app signatures
+- Signature mismatch causes boot failure
+
+**Error Chain**:
+```
+System boot → Package Manager scans /system/priv-app/
+  → Finds MacGyverDMR.apk with sharedUserId="android.uid.system"
+    → Verifies signature against platform certificate
+      → SIGNATURE MISMATCH
+        → Boot fails/loops
+```
+
+**Emergency Recovery**:
+```bash
+# Connected during boot cycle
+adb wait-for-device
+adb shell "su -c 'rm -rf /data/adb/modules/macgyver_systemizer'"
+adb shell "su -c 'touch /data/adb/modules/.disable_all'"
+adb reboot
+```
+
+**Recovery Status**: ✅ Device recovered successfully
+- Original system app intact: `/system/priv-app/PriInterPhone/PriInterPhone.apk`
+- All Magisk modules disabled as safety measure
+- No data loss
+
+### Why Systemization Doesn't Work
+
+**Technical Limitation**: Cannot modify apps with `android.uid.system` without platform signing key
+
+**Required for sharedUserId System Apps**:
+1. APK manifest declares `android:sharedUserId="android.uid.system"`
+2. APK MUST be signed with the device's **platform certificate**
+3. Platform certificate private key is not publicly available
+4. Cannot re-sign existing system apps without the key
+
+**What We Have**:
+- ✅ MacGyverMod-JADX-Fixed.apk with code modifications
+- ✅ Correct sharedUserId declaration
+- ❌ Debug certificate (not platform certificate)
+- ❌ Platform certificate private key (unavailable)
+
+**What Would Be Needed**:
+1. Device manufacturer's platform signing keys (proprietary/secret)
+2. OR: Bootloader unlock + custom ROM with known platform keys
+3. OR: Remove `sharedUserId` from manifest (breaks DMR functionality)
+
+### Alternative Approaches Considered
+
+**Option 1: Remove sharedUserId** ❌
+- Would allow installation without platform signature
+- BUT: Loses system UID privileges
+- Result: Same failures as standalone app (service restrictions, API access)
+
+**Option 2: Magisk Module File Overlay** ⚠️ HIGH RISK
+- Overlay individual DEX/SMALI files instead of full APK
+- Requires precise file-level modifications
+- High complexity, high chance of bootloop
+- Not recommended
+
+**Option 3: Direct /system Modification** ⚠️ VERY HIGH RISK
+- Remount /system as read-write
+- Replace files directly in `/system/priv-app/PriInterPhone/`
+- Permanent modification (survives reboot)
+- If failed: Brick potential, requires factory reset/reflash
+- NOT RECOMMENDED without full backup
+
+**Option 4: Accept Limitations** ✅ SAFEST
+- Use original system app unmodified
+- Full DMR functionality works
+- No MacGyver Mod visual changes
+- Serial port auto-initialization works
+- Lowest risk approach
+
+### Files Created (Failed Attempt)
+
+**Module Files**:
+- `magisk-systemizer/` - Module source directory
+- `magisk-systemizer/module.prop` - Module metadata
+- `magisk-systemizer/system/priv-app/MacGyverDMR/MacGyverDMR.apk` - Modified APK (7.9 MB)
+- `MacGyverDMR-Systemizer.zip` - Packaged module (6.6 MB)
+- `create_systemizer_module.py` - Python packaging script
+
+**Status**: All files work correctly, but approach is fundamentally blocked by Android signature verification
+
+### Conclusion
+
+**Systemization via Magisk Module**: ❌ NOT VIABLE for apps with android.uid.system
+
+**Reason**: Signature verification requirement cannot be bypassed
+
+**Recommendation**: 
+- Use **original system app** for full DMR functionality
+- Accept lack of MacGyver Mod visual changes
+- All core features work (serial port, service, DMR radio)
+- Most stable and safe approach

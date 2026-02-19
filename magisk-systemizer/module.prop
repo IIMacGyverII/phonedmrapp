@@ -1,0 +1,6 @@
+id=macgyver_systemizer
+name=MacGyver DMR Systemizer
+version=1.0
+versionCode=1
+author=MacGyver Mod
+description=Installs MacGyver DMR app as system privileged app with android.uid.system for full serial port and service access. Enables automatic DMR radio initialization on boot.
