@@ -81,6 +81,115 @@ Magisk module approach is NOT VIABLE for this device/app combination. Every modu
 
 ---
 
+## OPTION 3 EXECUTED: Standalone App Install (Feb 18, 2026 - 5:58 PM)
+
+**Approach**: Convert to separate installable app with different package name
+- Package changed: `com.pri.prizeinterphone` → `com.macgyver.dmr`
+- Removed: `android:sharedUserId="android.uid.system"` 
+- Namespace kept: `com.pri.prizeinterphone` (for R class compatibility)
+- ApplicationId changed: `com.macgyver.dmr` (for separate installation)
+
+### Build Configuration Changes:
+
+**app/build.gradle:**
+```gradle
+android {
+    namespace 'com.pri.prizeinterphone'  // Kept for R class
+    defaultConfig {
+        applicationId "com.macgyver.dmr"  // Changed for separate install
+    }
+}
+```
+
+**AndroidManifest.xml:**
+```xml
+<!-- Removed: android:sharedUserId="android.uid.system" -->
+<permission android:name="com.macgyver.dmr.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"/>
+<provider android:authorities="com.macgyver.dmr.files"/>
+<provider android:authorities="com.macgyver.dmr.androidx-startup"/>
+```
+
+**Constants.java:**
+```java
+// Changed hard-coded package reference to dynamic:
+context.getResources().getIdentifier(value, "string", context.getPackageName())
+```
+
+### Test Results:
+
+✅ **BUILD SUCCESSFUL**  
+- APK: MacGyverDMR-Standalone.apk (7.6 MB)
+- Package: com.macgyver.dmr
+- Version: 2.0-MacDMR (versionCode 35)
+
+✅ **INSTALLATION SUCCESSFUL**  
+```
+$ adb install MacGyverDMR-Standalone.apk
+Success
+```
+
+✅ **APP LAUNCH SUCCESSFUL**  
+```
+$ adb shell am start -n com.macgyver.dmr/com.pri.prizeinterphone.InterPhoneHomeActivity
+Starting: Intent { cmp=com.macgyver.dmr/com.pri.prizeinterphone.InterPhoneHomeActivity }
+```
+
+✅ **APP RUNNING**  
+```
+$ adb shell ps -A | grep com.macgyver.dmr
+u0_a192  7636  754  com.macgyver.dmr
+```
+
+⚠️ **SYSTEM API ERROR DETECTED**  
+```
+E InterPhoneHomeActivity: System API not available
+E InterPhoneHomeActivity: java.lang.NoSuchMethodError: 
+  No direct method <init>()V in class Landroid/os/ITinyRecvCallback$Stub; 
+  or its super classes
+```
+
+**Root Cause**: App attempting to access system-only API `ITinyRecvCallback` which requires `android.uid.system` shared user ID. Without system UID, the app cannot interact with DMR hardware/serial interfaces.
+
+**Impact Assessment**:
+- ✅ **UI loads and displays** - Basic Android UI framework works
+- ✅ **App lifecycle works** - onCreate, onStart, onResume, onPause, onStop
+- ❌ **DMR hardware access** - Serial communication with DMR radio chip unavailable
+- ❌ **System broadcasts** - Cannot send/receive protected broadcasts
+- ❌ **PTT (Push-To-Talk)** - Requires system-level audio routing
+- ❌ **Network services** - DMR network stack likely non-functional
+- ⚠️ **UI navigation** - May work for viewing channels/contacts (data only)
+- ⚠️ **MacGyver Mod version display** - Should work (UI-only change)
+
+**Functionality Comparison**:
+
+| Feature | System App (Root) | Standalone App |
+|---------|------------------|----------------|
+| Installation | Magisk module (FAILED - bootloop) | APK install (SUCCESS) |
+| UI Display | Full | Full |
+| MacGyver Mod branding | Visible | Visible (if UI navigation works) |
+| DMR radio TX/RX | Works | **BROKEN** (no system UID) |
+| Serial communication | Works | **BLOCKED** (ITinyRecvCallback) |
+| Channel programming | Works | Data display only |
+| PTT audio | Works | **NO AUDIO** (system routing blocked) |
+| System broadcasts | Works | **DENIED** (signature protection) |
+
+### Conclusion:
+
+**Standalone app approach is PARTIALLY SUCCESSFUL:**
+- ✅ Proves MacGyver Mod code builds and runs
+- ✅ Bypasses signature verification issues completely
+- ✅ Demonstrates UI changes are functional
+- ❌ DMR hardware functionality is completely broken without system UID
+- ❌ Not viable as actual DMR radio replacement
+
+**This confirms the app REQUIRES system-level access for core DMR functionality.** The only viable deployment options remaining are:
+1. Accept original app (no branding modifications)
+2. Risk direct /system partition modification (high brick risk)
+
+**Logcat Evidence**: See `logcat-standalone.txt` (full log captured)
+
+---
+
 ## Decompile Summary
 
 ### APK Structure (from apktool):

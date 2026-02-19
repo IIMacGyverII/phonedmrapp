@@ -106,7 +106,7 @@ public class Constants {
                 String value = entry.getValue();
                 if (!TextUtils.isEmpty(value)) {
                     if (value.startsWith(KEY_CHANNEL_AREA_PREFIX)) {
-                        return context.getString(context.getResources().getIdentifier(value, "string", "com.pri.prizeinterphone"));
+                        return context.getString(context.getResources().getIdentifier(value, "string", context.getPackageName()));
                     }
                     str.startsWith(KEY_EXTRA_AREA_CHANNEL);
                     return value;
