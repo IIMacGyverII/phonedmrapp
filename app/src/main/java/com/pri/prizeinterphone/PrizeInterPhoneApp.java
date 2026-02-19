@@ -20,7 +20,7 @@ public class PrizeInterPhoneApp extends Application {
         ProcessLifecycleOwner.get().getLifecycle().addObserver(mAppObserver);
         DmrManager.getInstance().init();
         MyNotificationManager.getInstance().init();
-        // startInterPhoneService(); // Disabled - requires foreground service for non-system apps
+        startInterPhoneService(); // Re-enabled - service starts foreground notification automatically
     }
 
     public static Context getContext() {
@@ -28,7 +28,12 @@ public class PrizeInterPhoneApp extends Application {
     }
 
     private void startInterPhoneService() {
-        startService(new Intent(mContext, InterPhoneService.class));
+        Intent intent = new Intent(mContext, InterPhoneService.class);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            startForegroundService(intent);
+        } else {
+            startService(intent);
+        }
     }
 
     public static boolean isAppFg() {

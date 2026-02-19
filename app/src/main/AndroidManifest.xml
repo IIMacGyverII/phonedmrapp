@@ -3,6 +3,9 @@
     <protected-broadcast android:name="com.action.broadcast.TALK_RECEIVING_UPDATE"/>
     <permission android:name="com.macgyver.dmr.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" android:protectionLevel="signature"/>
     <uses-permission android:name="com.macgyver.dmr.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <application android:allowBackup="true" android:appComponentFactory="androidx.core.app.CoreComponentFactory" android:extractNativeLibs="true" android:icon="@drawable/interphone_app_icon" android:label="@string/app_name" android:name="com.pri.prizeinterphone.PrizeInterPhoneApp" android:requestLegacyExternalStorage="true" android:roundIcon="@drawable/interphone_app_icon" android:supportsRtl="false" android:theme="@style/AppTheme" android:usesNonSdkApi="true">
         <activity android:configChanges="mcc|mnc|locale|touchscreen|keyboard|keyboardHidden|orientation|screenLayout|uiMode|screenSize|smallestScreenSize|density|layoutDirection|colorMode|fontScale" android:exported="true" android:launchMode="singleTask" android:name="com.pri.prizeinterphone.activity.UpdateFirmwareActivity" android:screenOrientation="portrait" android:theme="@style/AppTheme_Dialog">
             <intent-filter>
@@ -35,7 +38,7 @@
         <provider android:authorities="com.macgyver.dmr.files" android:exported="false" android:grantUriPermissions="true" android:name="androidx.core.content.FileProvider">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths"/>
         </provider>
-        <service android:enabled="true" android:exported="true" android:name="com.pri.prizeinterphone.InterPhoneService" android:persistent="true" android:priority="1000"/>
+        <service android:enabled="true" android:exported="true" android:name="com.pri.prizeinterphone.InterPhoneService" android:persistent="true" android:priority="1000" android:foregroundServiceType="microphone"/>
         <provider android:authorities="com.macgyver.dmr.androidx-startup" android:exported="false" android:name="androidx.startup.InitializationProvider">
             <meta-data android:name="androidx.emoji2.text.EmojiCompatInitializer" android:value="androidx.startup"/>
             <meta-data android:name="androidx.lifecycle.ProcessLifecycleInitializer" android:value="androidx.startup"/>

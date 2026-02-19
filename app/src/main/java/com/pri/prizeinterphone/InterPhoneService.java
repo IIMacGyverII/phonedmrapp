@@ -103,7 +103,12 @@ public class InterPhoneService extends Service {
 
     /* JADX INFO: Access modifiers changed from: private */
     public void startForegroundNotification(String str) {
-        startForeground(1, MyNotificationManager.getInstance().getStartHomeLauncherNotification(str));
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            startForeground(1, MyNotificationManager.getInstance().getStartHomeLauncherNotification(str), 
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
+        } else {
+            startForeground(1, MyNotificationManager.getInstance().getStartHomeLauncherNotification(str));
+        }
     }
 
     public void stopForegroundService() {

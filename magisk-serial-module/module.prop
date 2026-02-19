@@ -1,0 +1,6 @@
+id=serial_access_dmr
+name=Serial Port Access for DMR App
+version=1.0
+versionCode=1
+author=Claude Agent
+description=Grants read/write access to /dev/ttyS0 for MacGyver DMR app at boot. Ensures proper permissions for UART serial communication.
