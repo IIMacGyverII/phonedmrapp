@@ -2,9 +2,9 @@
 
 **LSPosed module for modifying the Ulefone PriInterPhone DMR app at runtime**
 
-## Status: ✅ Working
+## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v0.3  
+**Current Version**: v0.9.26  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Requires**: 
@@ -21,35 +21,80 @@
 
 ## Features Implemented
 
-### Phase 1: Framework Setup ✅
-- LSPosed v1.9.2 installed and verified
-- Module architecture established
+### ✅ Complete OpenGD77 CSV Backup/Restore System
 
-### Phase 2: Basic Hooks ✅
-- Startup verification (toast message)
-- Confirms hooks are active
+**Export Features**:
+- ✅ Export all 5 OpenGD77-compatible CSV files (Channels, Contacts, TG_Lists, Zones, DTMF)
+- ✅ Export all 28 channel parameters
+- ✅ Correct Digital/Analog channel type detection (numeric schema: 0=Digital, 1=Analog)
+- ✅ Proper frequency conversion (MHz to Hz in database)
+- ✅ Direct database access without shell commands
 
-### Phase 3: UI Modifications ✅
-- **MacGyver Branding**: Displays custom version on Device Information screen
-- Hooks `FragmentLocalInformationActivity.initView()`
-- Sets version text: "MacGyver v1.0.0-ALPHA"
-- **User Verified**: Working on device
+**Import Features**:
+- ✅ Import all 16 channels from OpenGD77 CSV
+- ✅ Automatic VHF/UHF band detection and allocation
+- ✅ Digital vs Analog field differentiation
+- ✅ Stock contacts preservation (prevents crashes)
+- ✅ All 15 required database fields populated correctly
+- ✅ Auto-refresh channel list after import
+- ✅ Both Digital AND Analog channels activate successfully
+
+**UI Enhancements**:
+- ✅ "Backup/Restore" button in LOCAL tab
+- ✅ BackupActivity with Import/Export functionality
+- ✅ MacGyver branding on Device Information screen
 
 ## Technical Details
 
-### Hooks Implemented
-1. **InterPhoneHomeActivity.onCreate()**
-   - Purpose: Startup verification
-   - Action: Displays toast "✓ DMR Mod Hooks Active!"
-   
-2. **FragmentLocalInformationActivity.onCreate()**
-   - Purpose: Log when info screen is opened
-   - Action: Logs to Xposed
+### Database Schema Discovery
 
-3. **FragmentLocalInformationActivity.initView()**
+**Channel Database**: `/data/user/0/com.pri.prizeinterphone/databases/database_channel_area_default_uhf.db`
+**Contact Database**: `/data/user/0/com.pri.prizeinterphone/databases/contact_database.db`
+
+**Critical Schema Findings**:
+- Channel types: `0` = Digital (DMR), `1` = Analog (FM)
+- Frequencies stored in Hz (multiply CSV MHz values by 1,000,000)
+- Band field: `0` = UHF (400-512 MHz), `1` = VHF (136-174 MHz)
+- Stock contact ID `1` must be preserved to prevent crashes
+
+### Required Database Fields (15 Total)
+
+**Common Fields (same for Digital and Analog)**:
+- `channel_power`, `channel_outBoundSlot`, `channel_mode`, `channel_contactType`
+- `channel_relay = 1` (required for both types)
+- `channel_sq`, `channel_rxType`, `channel_rxSubCode`, `channel_txType`, `channel_txSubCode`
+- `channel_groups` (comma-separated zone assignments)
+
+**Type-Specific Fields**:
+
+| Field | Digital (type=0) | Analog (type=1) |
+|-------|------------------|-----------------|
+| `channel_encryptSw` | 1 | 0 |
+| `channel_encryptKey` | "" (empty) | NULL |
+| `channel_interrupt` | 2 | 0 |
+| `channel_active` | 1 | 0 |
+
+### Hooks Implemented
+
+1. **InterPhoneLocalFragment.initView()**
+   - Purpose: Add "Backup/Restore" button to LOCAL tab
+   - Action: Injects button into fragment layout
+   - Opens: BackupActivity
+
+2. **FragmentLocalInformationActivity.initView()**
    - Purpose: Display MacGyver version
-   - Action: Discovers TextView fields, sets custom version text
-   - Method: Runtime field introspection
+   - Action: Sets custom version text on Device Info screen
+   
+3. **DirectDatabaseExporter (Direct Access)**
+   - Bypasses shell commands
+   - Reads channel/contact databases directly
+   - Exports 5 OpenGD77 CSV files to `/sdcard/DMR_Backups/`
+
+4. **DirectDatabaseImporter (Direct Access)**
+   - Parses OpenGD77 CSV format
+   - Populates all 15 required fields
+   - Differentiates Digital vs Analog field values
+   - Triggers auto-refresh via DmrManager reflection
 
 ### Why LSPosed?
 The PriInterPhone app requires Ulefone's platform certificate to access custom `PrizeTinyService` APIs. Traditional APK modification approaches fail because:
@@ -170,18 +215,20 @@ Output: `app/build/outputs/apk/debug/app-debug.apk`
 
 2. After boot, open PriInterPhone app
 
-3. **You should see**: Toast message "✓ DMR Mod Hooks Active!"
+3. **Navigate to LOCAL tab** - You should see: "Backup/Restore" button
 
-4. Navigate to Device Information screen (Settings → Device Info)
+4. **Test Export**: Tap Backup/Restore → Export to OpenGD77 CSV
+   - Check `/sdcard/DMR_Backups/` for exported CSV files
 
-5. **You should see**: "MacGyver Mod Version: MacGyver v1.0.0-ALPHA"
+5. **Verify version**: Settings → Device Info shows "MacGyver v0.9.26"
 
 ### Troubleshooting
 
-**No toast message on app startup:**
+**No "Backup/Restore" button in LOCAL tab:**
 - Check LSPosed Manager → Modules → verify DMR Mod Hooks is checked
 - Check LSPosed Manager → Logs for errors
 - Verify module scope includes `com.pri.prizeinterphone`
+- Monitor logs: `adb logcat | grep DMRModHooks`
 - Try reboot again
 
 **LSPosed Manager not appearing:**
@@ -230,10 +277,11 @@ Output: `app/build/outputs/apk/debug/app-debug.apk`
    - Reboot device
 
 4. **Test**:
-   - Open PriInterPhone app
-   - Should see startup toast
+   - Open PriInterPhone app → LOCAL tab
+   - Should see "Backup/Restore" button
+   - Test export: Tap Backup/Restore → Export to OpenGD77 CSV
    - Navigate to Device Info screen
-   - Should see MacGyver version
+   - Should see MacGyver v0.9.26
 
 ## Development
 
@@ -274,28 +322,72 @@ Or use LSPosed Manager → Logs
 
 ## Changelog
 
+### v0.9.26 (Feb 2026) ✅ **CURRENT - FULLY WORKING**
+- **COMPLETE OpenGD77 CSV Import/Export Functionality**
+- Fixed Analog/Digital field differentiation (critical fix!)
+- Digital channels: encryptSw=1, interrupt=2, active=1
+- Analog channels: encryptSw=0, interrupt=0, active=0
+- Both channel types import and activate successfully
+- All 16 channels working with proper field values
+
+### v0.9.25 (Feb 2026)
+- Implemented 15 required database fields from diagnostic export
+- Fixed Digital channel activation
+- Analog channels still needed type-specific values
+
+### v0.9.24 (Feb 2026)
+- Added comprehensive diagnostic field export
+- Discovered 15 missing required fields through edit+save comparison
+
+### v0.9.23 (Feb 2026)
+- Fixed Contact ID 1 preservation (prevents crashes)
+- Improved contact database handling
+
+### v0.9.20-v0.9.22 (Feb 2026)
+- Discovered numeric channel type schema (0=Digital, 1=Analog)
+- Fixed channel type detection from CSV
+
+### v0.9.17-v0.9.19 (Feb 2026)
+- Implemented DMR/Analog type handling
+- Added conditional Contact ID assignment
+
+### v0.9.14-v0.9.16 (Feb 2026)
+- Fixed channel activation crashes (NullPointerException)
+- Discovered Contact field requirement
+
+### v0.9.12-v0.9.13 (Feb 2026)
+- Added auto-refresh feature via DmrManager reflection
+- Channel list updates automatically after import
+
+### v0.9.0-v0.9.11 (Feb 2026)
+- Full OpenGD77 CSV import implementation
+- Band field discovery and frequency-based detection
+- All 16 channels importing correctly
+
+### v0.8.7 (Feb 2026)
+- Export functionality complete - all 5 CSV files working
+- Channels.csv (28 parameters), Contacts.csv, TG_Lists.csv, Zones.csv, DTMF.csv
+
 ### v0.3 (Feb 18, 2026)
-- ✅ MacGyver version display working
-- Added field discovery for runtime introspection
-- Enhanced logging for debugging
+- MacGyver version display working
+- Field discovery for runtime introspection
 
 ### v0.2 (Feb 18, 2026)
-- Added FragmentLocalInformationActivity hooks
-- Field discovery implementation
-- Improved error handling
+- FragmentLocalInformationActivity hooks
 
 ### v0.1 (Feb 18, 2026)
 - Initial test module
 - Startup toast verification
-- Basic hook framework
 
-## Next Steps
+## Project Status
 
-Complex modifications planned:
-- DMR protocol changes
-- Frequency/channel modifications
-- Custom UI features
-- Advanced functionality additions
+**✅ COMPLETE**: Full OpenGD77 CSV export/import functionality working
+- All 5 CSV files export correctly
+- All 16 channels import correctly
+- Both Digital and Analog channels activate successfully
+- Auto-refresh working
+- Stock contacts preserved
+- MacGyver branding functional
 
 ## References
 

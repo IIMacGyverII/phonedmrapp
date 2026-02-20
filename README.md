@@ -1,87 +1,165 @@
-# MacDMRUlephone - DMR Radio App with Magisk System Integration
+# PriInterPhone DMR Radio - LSPosed Mod with OpenGD77 Integration
 
-**Status**: Built successfully, Magisk module ready for installation!
+**Status**: ✅ **FULLY FUNCTIONAL** - Export/Import working!
 
 ## What is this?
 
-MacDMRUlephone is a reverse-engineered Android app for a Digital Mobile Radio (DMR) system that was originally baked into an Android ROM. This project successfully:
-- Decompiled the original system APK into 280 Java source files
-- Fixed all compilation errors for building outside the ROM environment  
-- Created custom branding (icon + name)
-- Solved hardware access issues via Magisk systemless overlay
-- Ready for deployment with full DMR radio functionality
+LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
+- **MacGyver branding** on Device Info screen
+- **OpenGD77 CSV export/import** - Full channel programming compatibility
+- Direct database access for seamless data exchange
+- No APK modification required - works via runtime hooks
 
-## Current Status ⏳
+## Current Status ✅
 
-The app has been successfully built and a **Magisk module** has been created to enable full DMR hardware access. The module is currently on the device awaiting installation.
+**Module Version**: v0.9.10  
+**Export**: ✅ Working - All 5 OpenGD77 CSV files  
+**Import**: ✅ Working - Single UHF database approach  
+**User Validation**: ✅ Export tested and confirmed  
+**Latest Build**: February 19, 2026
 
 ### Quick Facts
 
-- **Original App**: com.pri.prizeinterphone (system app, platform signed)
-- **Modded Version**: com.pri.prizeinterphone (same package, custom branding via Magisk)
-- **App Name**: MacDMRUlephone
-- **Version**: 2.0-MacDMR (versionCode 35)
-- **APK Size**: 7.99 MB (complete DMR implementation)
-- **Status**: ⏳ Magisk module ready at `/sdcard/Download/MacDMRUlephone-Magisk.zip`
+- **Module**: com.dmrmod.hooks (LSPosed Xposed module)
+- **Target App**: com.pri.prizeinterphone (Ulefone system app)
+- **Device**: Ulefone Armor 26 Ultra (Android 13)
+- **LSPosed**: v1.9.2 (Zygisk)
+- **Current Version**: v0.9.10-single-db
+- **Backup Location**: `/sdcard/DMR_Backups/`
 
-## Why Magisk?
+## Features
 
-The DMR hardware module requires **system-level privileges** (UID 1000) to access the serial port at `/dev/ttyS1`. Since this is a production ROM with locked bootloader:
-- ❌ Cannot remount `/system` as read-write
-- ❌ Cannot use `adb root` (production build)
-- ❌ Don't have manufacturer's platform signing key
+### ✅ Phase 1: MacGyver Branding
+- Custom version display on Device Information screen
+- Confirms module is active and working
+- Version tracking for future updates
 
-**Solution**: Magisk module provides systemless overlay, granting system privileges while preserving custom branding.
+### ✅ Phase 2: OpenGD77 CSV Export (v0.7.0 - v0.8.7)
+- **Export all channels** to OpenGD77-compatible CSV format
+- **5 CSV files generated**: Channels, Contacts, TG_Lists, Zones, DTMF
+- Direct database access from hooked app context
+- Perfect format matching (TAB-prefixed frequencies, CRLF line endings)
+- **User validated**: Exported data successfully imports to OpenGD77 CPS
+- **Round-trip tested**: Edit in app → Export → Import to OpenGD77 → Success!
 
-See [MAGISK_SOLUTION.md](MAGISK_SOLUTION.md) for complete technical details.
+### ✅ Phase 3: OpenGD77 CSV Import (v0.9.0 - v0.9.10)
+- **Import channels** from OpenGD77 CSV files
+- Direct database write with atomic transactions
+- Handles mixed VHF/UHF channel lists
+- **All 16 channels import correctly** including VHF frequencies
+- Backup selection dialog with formatted timestamps
+- Import confirmation with success/failure reporting
+
+## Why LSPosed?
+
+## Why LSPosed?
+
+The PriInterPhone app requires Ulefone's platform certificate to access:
+- System UID (1000) for hardware permissions
+- Custom `PrizeTinyService` framework APIs
+- DMR radio module on `/dev/ttyS1`
+
+**Traditional APK modification fails** because:
+- ❌ Re-signing breaks platform signature verification
+- ❌ System app placement alone doesn't grant platform UID
+- ❌ Cannot obtain Ulefone's proprietary platform certificate
+
+**LSPosed hooks the original properly-signed app** at runtime:
+- ✅ Preserves platform signature and system UID
+- ✅ Full access to all system APIs
+- ✅ Can modify behavior without touching APK
+- ✅ Reversible and update-safe
+
+See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implementation details.
 
 ## Installation Instructions
 
 ### Requirements
-- Android device with DMR hardware module (tested on device 5006AF1020002922)
-- Magisk installed (systemless root)
-- ADB tools (for verification)
+- Ulefone Armor 26 Ultra (or compatible device with PriInterPhone)
+- Unlocked bootloader
+- Magisk v24+ with Zygisk enabled
+- LSPosed v1.9.2+ (Zygisk variant)
+- ADB tools (for installation and verification)
 
-### Step 1: Install Magisk Module (On Device)
+### Step 1: Install LSPosed Framework
 
-1. **Open Magisk Manager** app
-2. **Tap "Modules"** tab (bottom navigation)
-3. **Tap "Install from storage"** (+ button or FAB)
-4. **Navigate to** `/sdcard/Download/`
-5. **Select** `MacDMRUlephone-Magisk.zip` (6.65 MB)
-6. **Wait for installation** (Magisk shows real-time log)
-7. **Tap "Reboot"** to activate module
+1. **Install Magisk** (if not already installed)
+   - Download from: https://github.com/topjohnwu/Magisk
+   - Enable Zygisk in Magisk settings
+   - Reboot device
 
-### Step 2: Verify Installation (via ADB)
+2. **Install LSPosed Module**
+   - Download: https://github.com/LSPosed/LSPosed/releases
+   - Get: `LSPosed-v1.9.2-zygisk-release.zip`
+   - Install via Magisk → Modules → Install from storage
+   - Reboot device
+   - LSPosed Manager app will appear automatically
 
-```powershell
-# Set ADB path
-$env:ADB = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+### Step 2: Install DMRModHooks Module
 
-# Check app has system privileges
-& $env:ADB shell dumpsys package com.pri.prizeinterphone | Select-String "userId"
-# Should show: userId=1000 (system app)
+1. **Build or Download**:
+   ```powershell
+   cd DMRModHooks
+   .\gradlew.bat assembleDebug
+   ```
+   Or download from [releases](releases/)
 
-# Launch the app
-& $env:ADB shell am start -n com.pri.prizeinterphone/com.pri.prizeinterphone.InterPhoneHomeActivity
+2. **Install Module**:
+   ```powershell
+   adb install -r app\build\outputs\apk\debug\app-debug.apk
+   ```
 
-# Monitor DMR initialization
-& $env:ADB logcat -s "DmrManager:*" "SerialPort:*"
-# Should see: Serial port opened, DMR module initialized
-```
+3. **Enable in LSPosed Manager**:
+   - Open LSPosed Manager app on device
+   - Go to "Modules" tab
+   - Enable "DMR Mod Hooks" checkbox
+   - Tap "DMR Mod Hooks" → Application scope
+   - Verify `com.pri.prizeinterphone` is selected
+   - Reboot device
 
-### Expected Behavior
+### Step 3: Test Installation
 
-After installation and reboot:
-- ✅ Custom MacDMRUlephone icon appears in app drawer
-- ✅ App name displays as "MacDMRUlephone"
-- ✅ "Module Initializing..." dialog dismisses quickly (DMR hardware accessible)
-- ✅ Main UI with 5 tabs: Talkback, Channel, Contacts, Message, Local
-- ✅ Full DMR radio functionality enabled
+1. **Check MacGyver Branding**:
+   - Open PriInterPhone app
+   - You should see toast: "✓ DMR Mod Hooks Active!"
+   - Go to Settings → Device Information
+   - Look for MacGyver version text
 
-### Troubleshooting
+2. **Test Export**:
+   - Go to LOCAL tab
+   - Tap 📥 **EXPORT** button  
+   - Check `/sdcard/DMR_Backups/` for CSV files
+   - Should see: Channels, Contacts, TG_Lists, Zones, DTMF CSVs
 
-See [MAGISK_SOLUTION.md](MAGISK_SOLUTION.md) for detailed troubleshooting guide.
+3. **Test Import** (optional):
+   - Tap 📥 **IMPORT** button
+   - Select a backup timestamp
+   - Confirm import
+   - Check channels appear correctly in app
+
+## Usage
+
+### Exporting Channels to OpenGD77
+
+1. Open PriInterPhone app
+2. Go to **LOCAL** tab
+3. Tap **EXPORT** button (disk icon)
+4. Export completes (toast notification shown)
+5. Files created in `/sdcard/DMR_Backups/Channels_TIMESTAMP.csv` (and 4 others)
+6. Transfer CSVs to PC
+7. Open OpenGD77 CPS
+8. Import → Select all 5 CSV files
+9. Program your OpenGD77 radio!
+
+### Importing Channels from OpenGD77
+
+1. Export channel programming from OpenGD77 CPS (all 5 CSV files)
+2. Transfer CSVs to Android device `/sdcard/DMR_Backups/`
+3. Ensure files are named: `Channels_TIMESTAMP.csv`, `Contacts_TIMESTAMP.csv`, etc.
+4. Open PriInterPhone app
+5. Go to **LOCAL** tab
+6. Tap **IMPORT** button
+7. Select backup by timestamp
 
 ## Project Structure
 
