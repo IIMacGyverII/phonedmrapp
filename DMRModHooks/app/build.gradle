@@ -10,8 +10,8 @@ android {
         applicationId "com.dmrmod.hooks"
         minSdk 26
         targetSdk 34
-        versionCode 74
-        versionName "0.9.26-analog-digital-fix"
+        versionCode 75
+        versionName "0.9.27-folder-backups"
     }
 
     buildTypes {

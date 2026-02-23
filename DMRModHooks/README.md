@@ -4,7 +4,7 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v0.9.26 (February 23, 2026)  
+**Current Version**: v0.9.27 (February 23, 2026)  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Backup Location**: `Download/DMR_Backups/`  
@@ -226,10 +226,10 @@ Output: `app/build/outputs/apk/debug/app-debug.apk`
 3. **Navigate to LOCAL tab** - You should see: "Backup/Restore" button
 
 4. **Test Export**: Tap 📤 EXPORT (OpenGD77) button in LOCAL tab
-   - Check `Download/DMR_Backups/` for exported CSV files
-   - Should see files like: Channels_20260223_140530.csv
+   - Check `Download/DMR_Backups/` for timestamped folder
+   - Should see folder like: `20260223_140530/` containing CSV files
 
-5. **Verify version**: Toast notification shows "✓ DMR Mod Hooks Active! v0.9.26"
+5. **Verify version**: Toast notification shows "✓ DMR Mod Hooks Active! v0.9.27"
 
 ### Troubleshooting
 
@@ -331,7 +331,15 @@ Or use LSPosed Manager → Logs
 
 ## Changelog
 
-### v0.9.26 (Feb 23, 2026) ✅ **CURRENT - FULLY WORKING**
+### v0.9.27 (Feb 23, 2026) ✅ **CURRENT**
+- **New folder-based backup structure**
+- Each backup creates a timestamped folder (e.g., `20260223_140530/`)
+- CSV files inside folders have simple names (Channels.csv, Contacts.csv, etc.)
+- Easier to manage - each backup is self-contained
+- Import dialog lists available backup folders
+- Better organization for multiple backups
+
+### v0.9.26 (Feb 23, 2026)
 - **COMPLETE OpenGD77 CSV Import/Export Functionality**
 - Changed backup location to `Download/DMR_Backups/` for easy user access
 - Fixed Analog/Digital field differentiation (critical fix!)

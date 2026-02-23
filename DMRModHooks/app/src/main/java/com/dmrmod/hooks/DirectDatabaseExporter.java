@@ -55,22 +55,30 @@ public class DirectDatabaseExporter {
             // Output to Download/DMR_Backups for easy user access
             // Using Environment.DIRECTORY_DOWNLOADS ensures compatibility across Android versions
             File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-            File outputDir = new File(downloadDir, "DMR_Backups");
-            if (!outputDir.exists()) {
-                outputDir.mkdirs();
+            File baseBackupDir = new File(downloadDir, "DMR_Backups");
+            if (!baseBackupDir.exists()) {
+                baseBackupDir.mkdirs();
             }
             
-            // Timestamp ensures each export is unique and prevents overwriting
+            // Create timestamped folder for this backup set
             String timestamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
                 .format(new java.util.Date());
+            File outputDir = new File(baseBackupDir, timestamp);
+            if (!outputDir.mkdirs()) {
+                Log.e(TAG, "Failed to create backup folder: " + outputDir.getAbsolutePath());
+                return false;
+            }
+            
+            Log.i(TAG, "Created backup folder: " + outputDir.getAbsolutePath());
             
             // OpenGD77 CPS requires ALL 5 CSV files to be present for a valid codeplug
             // Even if empty, all files must exist or import will fail
-            File channelsFile = new File(outputDir, "Channels_" + timestamp + ".csv");
-            File contactsFile = new File(outputDir, "Contacts_" + timestamp + ".csv");
-            File tgListsFile = new File(outputDir, "TG_Lists_" + timestamp + ".csv");
-            File zonesFile = new File(outputDir, "Zones_" + timestamp + ".csv");
-            File dtmfFile = new File(outputDir, "DTMF_" + timestamp + ".csv");
+            // Files now have simple names without timestamps (folder name IS the timestamp)
+            File channelsFile = new File(outputDir, "Channels.csv");
+            File contactsFile = new File(outputDir, "Contacts.csv");
+            File tgListsFile = new File(outputDir, "TG_Lists.csv");
+            File zonesFile = new File(outputDir, "Zones.csv");
+            File dtmfFile = new File(outputDir, "DTMF.csv");
             
             // Export all 5 required CSV files
             boolean channelsOk = exportChannelsDirect(appContext, channelsFile);

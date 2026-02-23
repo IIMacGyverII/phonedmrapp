@@ -71,7 +71,7 @@ public class DirectDatabaseImporter {
             @Override
             public void run() {
                 try {
-                    // Find available backup sets
+                    // Find available backup sets (now folders instead of files)
                     File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
                     File backupDir = new File(downloadDir, "DMR_Backups");
                     if (!backupDir.exists() || !backupDir.isDirectory()) {
@@ -79,35 +79,38 @@ public class DirectDatabaseImporter {
                         return;
                     }
                     
-                    // Get list of backup timestamps
+                    // Get list of backup folders (each folder name is a timestamp)
                     File[] files = backupDir.listFiles();
                     if (files == null || files.length == 0) {
-                        showError(context, "No backup files found");
+                        showError(context, "No backup folders found");
                         return;
                     }
                     
-                    // Extract unique timestamps (format: YYYYMMDD_HHMMSS)
-                    Set<String> timestamps = new HashSet<>();
+                    // Find all folders with timestamp format (YYYYMMDD_HHMMSS)
+                    List<String> timestamps = new ArrayList<>();
                     for (File file : files) {
-                        String name = file.getName();
-                        if (name.contains("_202") && name.endsWith(".csv")) {
-                            // Extract timestamp: Channels_20260219_160842.csv -> 20260219_160842
-                            int start = name.indexOf("_202");
-                            if (start > 0) {
-                                String timestamp = name.substring(start + 1, start + 16);
-                                timestamps.add(timestamp);
+                        if (file.isDirectory()) {
+                            String name = file.getName();
+                            // Check if folder name matches timestamp format: 20260223_140530
+                            if (name.matches("\\d{8}_\\d{6}")) {
+                                // Verify the folder contains required CSV files
+                                File channelsFile = new File(file, "Channels.csv");
+                                if (channelsFile.exists()) {
+                                    timestamps.add(name);
+                                    Log.i(TAG, "Found backup folder: " + name);
+                                }
                             }
                         }
                     }
                     
                     if (timestamps.isEmpty()) {
-                        showError(context, "No valid backup sets found");
+                        showError(context, "No valid backup folders found");
                         return;
                     }
                     
                     // Sort timestamps (newest first)
-                    final List<String> sortedTimestamps = new ArrayList<>(timestamps);
-                    Collections.sort(sortedTimestamps, Collections.reverseOrder());
+                    Collections.sort(timestamps, Collections.reverseOrder());
+                    final List<String> sortedTimestamps = timestamps;
                     
                     // Format timestamps for display
                     final List<String> displayNames = new ArrayList<>();
@@ -182,16 +185,23 @@ public class DirectDatabaseImporter {
                 try {
                     Log.i(TAG, "Starting import for timestamp: " + timestamp);
                     
-                    // Import from Download/DMR_Backups
+                    // Import from Download/DMR_Backups/[timestamp]/ folder
                     File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-                    File backupDir = new File(downloadDir, "DMR_Backups");
+                    File baseBackupDir = new File(downloadDir, "DMR_Backups");
+                    File backupFolder = new File(baseBackupDir, timestamp);
                     
-                    // Import channels
-                    File channelsFile = new File(backupDir, "Channels_" + timestamp + ".csv");
+                    if (!backupFolder.exists() || !backupFolder.isDirectory()) {
+                        Log.e(TAG, "Backup folder not found: " + backupFolder.getAbsolutePath());
+                        showError(context, "Backup folder not found");
+                        return;
+                    }
+                    
+                    // Import channels (files now in timestamped folder with simple names)
+                    File channelsFile = new File(backupFolder, "Channels.csv");
                     boolean channelsOk = importChannels(context, channelsFile);
                     
                     // Import contacts
-                    File contactsFile = new File(backupDir, "Contacts_" + timestamp + ".csv");
+                    File contactsFile = new File(backupFolder, "Contacts.csv");
                     boolean contactsOk = importContacts(context, contactsFile);
                     
                     // Show result
