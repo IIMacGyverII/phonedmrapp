@@ -229,7 +229,7 @@ Output: `app/build/outputs/apk/debug/app-debug.apk`
    - Check `Download/DMR_Backups/` for timestamped folder
    - Should see folder like: `20260223_140530/` containing CSV files
 
-5. **Verify version**: Toast notification shows "✓ DMR Mod Hooks Active! v0.9.27"
+5. **Verify version**: Toast notification shows "✓ DMR Mod Hooks Active! v0.9.28"
 
 ### Troubleshooting
 
@@ -331,7 +331,16 @@ Or use LSPosed Manager → Logs
 
 ## Changelog
 
-### v0.9.27 (Feb 23, 2026) ✅ **CURRENT**
+### v0.9.28 (Feb 23, 2026) ✅ **CURRENT**
+- **Implemented proper Squelch field support**
+- Export: Reads actual `channel_sq` value from database (0-9)
+- Import: Parses squelch from CSV column 15 and writes to database
+- Previously hardcoded as blank/"Disabled", now preserves actual radio settings
+- Improved Power field parsing - reads from CSV and writes correct values
+- Better OpenGD77 CSV compatibility for round-trip editing
+- Note: TOT (Timeout Timer) remains hardcoded as database doesn't store it
+
+### v0.9.27 (Feb 23, 2026)
 - **New folder-based backup structure**
 - Each backup creates a timestamped folder (e.g., `20260223_140530/`)
 - CSV files inside folders have simple names (Channels.csv, Contacts.csv, etc.)

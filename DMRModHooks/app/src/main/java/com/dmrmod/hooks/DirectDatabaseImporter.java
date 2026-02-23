@@ -344,17 +344,41 @@ public class DirectDatabaseImporter {
                 int band = (rxFreqMHz >= 136 && rxFreqMHz <= 174) ? 1 : 0;
                 values.put("channel_band", band);
                 
+                // Squelch (15) - Read from CSV if present
+                int squelch = 0;
+                try {
+                    String sqStr = fields[15].trim();
+                    if (!sqStr.isEmpty() && !sqStr.equalsIgnoreCase("None") && !sqStr.equalsIgnoreCase("Disabled")) {
+                        squelch = Integer.parseInt(sqStr);
+                    }
+                } catch (Exception e) {
+                    squelch = 0;  // Default to 0 if parsing fails
+                }
+                
+                // Power (16) - Read from CSV if present
+                int power = 1;  // Default to Master/High
+                try {
+                    String powerStr = fields[16].trim();
+                    if (powerStr.equalsIgnoreCase("Low")) {
+                        power = 0;
+                    } else if (powerStr.equalsIgnoreCase("Master") || powerStr.equalsIgnoreCase("High")) {
+                        power = 1;
+                    }
+                } catch (Exception e) {
+                    power = 1;  // Default to high power
+                }
+                
                 // CRITICAL: Set all required fields that app needs for activation
                 // These fields must NOT be NULL or activation fails with "operation failure" toast
                 // IMPORTANT: Digital and Analog channels require DIFFERENT values for some fields!
                 
                 // Fields that are SAME for both Digital and Analog:
-                values.put("channel_power", 0);           // Power level (0=low, 1=high)
+                values.put("channel_power", power);       // Power level (from CSV: 0=low, 1=high/master)
                 values.put("channel_outBoundSlot", 0);    // Outbound timeslot
                 values.put("channel_mode", 0);            // Channel mode
                 values.put("channel_contactType", 0);     // Contact type
                 values.put("channel_relay", 1);           // Relay setting (SAME for both)
-                values.put("channel_sq", 0);              // Squelch level
+                values.put("channel_sq", squelch);        // Squelch level (from CSV)
                 values.put("channel_rxType", 0);          // RX tone type
                 values.put("channel_rxSubCode", 0);       // RX tone code
                 values.put("channel_txType", 0);          // TX tone type
