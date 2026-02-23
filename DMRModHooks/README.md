@@ -4,7 +4,7 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v0.9.27 (February 23, 2026)  
+**Current Version**: v0.9.29 (February 23, 2026)  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Backup Location**: `Download/DMR_Backups/`  
@@ -331,7 +331,19 @@ Or use LSPosed Manager → Logs
 
 ## Changelog
 
-### v0.9.28 (Feb 23, 2026) ✅ **CURRENT**
+### v0.9.29 (Feb 23, 2026) ✅ **CURRENT**
+- **Implemented CTCSS and DCS tone support for analog channels**
+- Export: Reads `channel_rxType/rxSubCode` and `channel_txType/txSubCode` from database
+- Import: Parses RX Tone and TX Tone from CSV columns 13-14
+- Tone format translation:
+  - CTCSS: Database "67.0Hz" ↔ CSV "67.0" (51 standard tones)
+  - DCS Forward: Database "023N" ↔ CSV "D023N" (83 codes, Normal polarity)
+  - DCS Backward: Database "023l" ↔ CSV "D023I" (83 codes, Inverted polarity)
+- Full round-trip support: Export → Edit CTCSS/DCS in OpenGD77 CPS → Import → Tones preserved
+- Created ToneConverter.java utility class for bidirectional translation
+- Previously hardcoded as "None", now exports/imports actual tone settings
+
+### v0.9.28 (Feb 23, 2026)
 - **Implemented proper Squelch field support**
 - Export: Reads actual `channel_sq` value from database (0-9)
 - Import: Parses squelch from CSV column 15 and writes to database

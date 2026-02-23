@@ -10,8 +10,8 @@ android {
         applicationId "com.dmrmod.hooks"
         minSdk 26
         targetSdk 34
-        versionCode 76
-        versionName "0.9.28-squelch-support"
+        versionCode 77
+        versionName "0.9.29-tone-support"
     }
 
     buildTypes {

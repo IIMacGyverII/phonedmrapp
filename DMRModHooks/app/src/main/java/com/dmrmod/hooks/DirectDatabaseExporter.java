@@ -159,6 +159,10 @@ public class DirectDatabaseExporter {
                     int band = cursor.getInt(cursor.getColumnIndex("channel_band"));
                     int squelch = cursor.getInt(cursor.getColumnIndex("channel_sq"));
                     int power = cursor.getInt(cursor.getColumnIndex("channel_power"));
+                    int rxType = cursor.getInt(cursor.getColumnIndex("channel_rxType"));
+                    int rxSubCode = cursor.getInt(cursor.getColumnIndex("channel_rxSubCode"));
+                    int txType = cursor.getInt(cursor.getColumnIndex("channel_txType"));
+                    int txSubCode = cursor.getInt(cursor.getColumnIndex("channel_txSubCode"));
                     
                     // DIAGNOSTIC: Export ALL raw database columns for comparison
                     // This will help us find what changes when user edits+saves a channel
@@ -215,8 +219,10 @@ public class DirectDatabaseExporter {
                     rowBuilder.append("None,");                          // 11. DMR ID
                     rowBuilder.append("Off,");                           // 12. TS1_TA_Tx
                     rowBuilder.append("Off,");                           // 13. TS2_TA_Tx ID
-                    rowBuilder.append(",");                              // 14. RX Tone (blank)
-                    rowBuilder.append(",");                              // 15. TX Tone (blank)
+                    rowBuilder.append("");                               // 14. RX Tone (blank for digital)
+                    rowBuilder.append(",");                              
+                    rowBuilder.append("");                               // 15. TX Tone (blank for digital)
+                    rowBuilder.append(",");                              
                     rowBuilder.append(squelch).append(",");             // 16. Squelch (0-9 value from database)
                     String powerStr = (power == 0) ? "Low" : (power == 1) ? "Master" : "High";
                     rowBuilder.append(powerStr).append(",");            // 17. Power
@@ -234,8 +240,12 @@ public class DirectDatabaseExporter {
                 } else {
                     // Analogue channels
                     rowBuilder.append(",,,,,,,");                       // 7-13. DMR fields (all blank)
-                    rowBuilder.append("None,");                          // 14. RX Tone
-                    rowBuilder.append("None,");                          // 15. TX Tone
+                    // RX Tone - convert from database format to OpenGD77 CSV format
+                    String rxTone = ToneConverter.toCSVFormat(rxType, rxSubCode);
+                    rowBuilder.append(rxTone).append(",");             // 14. RX Tone (None/67.0/D023N/D023I)
+                    // TX Tone - convert from database format to OpenGD77 CSV format
+                    String txTone = ToneConverter.toCSVFormat(txType, txSubCode);
+                    rowBuilder.append(txTone).append(",");             // 15. TX Tone (None/67.0/D023N/D023I)
                     rowBuilder.append(squelch).append(",");             // 16. Squelch (0-9 value from database)
                     String powerStr = (power == 0) ? "Low" : (power == 1) ? "Master" : "High";
                     rowBuilder.append(powerStr).append(",");            // 17. Power

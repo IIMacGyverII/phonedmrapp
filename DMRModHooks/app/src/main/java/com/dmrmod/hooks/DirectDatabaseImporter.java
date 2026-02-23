@@ -344,6 +344,24 @@ public class DirectDatabaseImporter {
                 int band = (rxFreqMHz >= 136 && rxFreqMHz <= 174) ? 1 : 0;
                 values.put("channel_band", band);
                 
+                // RX Tone (13) and TX Tone (14) - Parse CTCSS/DCS codes
+                // OpenGD77 CSV format: "None", "67.0" (CTCSS), "D023N" (DCS Normal), "D023I" (DCS Inverted)
+                int rxType = 0, rxSubCode = 0, txType = 0, txSubCode = 0;
+                try {
+                    String rxTone = fields[13].trim();
+                    rxType = ToneConverter.parseType(rxTone);
+                    rxSubCode = ToneConverter.parseSubCode(rxTone);
+                } catch (Exception e) {
+                    Log.w(TAG, "Error parsing RX Tone, using None: " + e.getMessage());
+                }
+                try {
+                    String txTone = fields[14].trim();
+                    txType = ToneConverter.parseType(txTone);
+                    txSubCode = ToneConverter.parseSubCode(txTone);
+                } catch (Exception e) {
+                    Log.w(TAG, "Error parsing TX Tone, using None: " + e.getMessage());
+                }
+                
                 // Squelch (15) - Read from CSV if present
                 int squelch = 0;
                 try {
@@ -379,10 +397,10 @@ public class DirectDatabaseImporter {
                 values.put("channel_contactType", 0);     // Contact type
                 values.put("channel_relay", 1);           // Relay setting (SAME for both)
                 values.put("channel_sq", squelch);        // Squelch level (from CSV)
-                values.put("channel_rxType", 0);          // RX tone type
-                values.put("channel_rxSubCode", 0);       // RX tone code
-                values.put("channel_txType", 0);          // TX tone type
-                values.put("channel_txSubCode", 0);       // TX tone code
+                values.put("channel_rxType", rxType);     // RX tone type (0=None, 1=CTCSS, 2=FDCS, 3=BDCS)
+                values.put("channel_rxSubCode", rxSubCode); // RX tone code (index into tone array)
+                values.put("channel_txType", txType);     // TX tone type (0=None, 1=CTCSS, 2=FDCS, 3=BDCS)
+                values.put("channel_txSubCode", txSubCode); // TX tone code (index into tone array)
                 values.put("channel_groups", "1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"); // Zone groups
                 
                 // Fields that DIFFER between Digital and Analog:
