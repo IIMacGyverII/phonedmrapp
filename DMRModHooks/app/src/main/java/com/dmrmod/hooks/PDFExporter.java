@@ -14,7 +14,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
+
+import com.dmrmod.hooks.ToneConverter;
 
 /**
  * PDFExporter - Generate PDF summary of backup contents
@@ -122,6 +125,7 @@ public class PDFExporter {
     private static int addChannelSummary(PdfDocument document, int pageNumber, Context context) {
         SQLiteDatabase db = null;
         Cursor cursor = null;
+        PdfDocument.Page page = null;
         
         try {
             File dbFile = context.getDatabasePath("database_channel_area_default_uhf.db");
@@ -136,8 +140,11 @@ public class PDFExporter {
                 return pageNumber;
             }
             
+            // Build contact map before starting PDF page (to catch DB errors first)
+            HashMap<Integer, String> contactMap = buildContactMapPDF(context);
+            
             PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageNumber).create();
-            PdfDocument.Page page = document.startPage(pageInfo);
+            page = document.startPage(pageInfo);
             Canvas canvas = page.getCanvas();
             Paint paint = new Paint();
             
@@ -150,20 +157,22 @@ public class PDFExporter {
             canvas.drawText("Channels (" + cursor.getCount() + " total)", MARGIN, y, paint);
             y += 30;
             
-            // Column headers
+            // Column headers (compact layout for more info)
             paint.setTextSize(SMALL_SIZE);
             paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
-            canvas.drawText("Ch", MARGIN, y, paint);
-            canvas.drawText("Name", MARGIN + 30, y, paint);
-            canvas.drawText("Type", MARGIN + 200, y, paint);
-            canvas.drawText("RX Freq", MARGIN + 260, y, paint);
-            canvas.drawText("TX Freq", MARGIN + 350, y, paint);
-            canvas.drawText("Pwr", MARGIN + 440, y, paint);
+            canvas.drawText("#", MARGIN, y, paint);
+            canvas.drawText("Name", MARGIN + 20, y, paint);
+            canvas.drawText("Type", MARGIN + 150, y, paint);
+            canvas.drawText("RX→TX Freq", MARGIN + 190, y, paint);
+            canvas.drawText("Contact/Tones", MARGIN + 310, y, paint);
+            canvas.drawText("CC/TS", MARGIN + 450, y, paint);
+            canvas.drawText("SQ", MARGIN + 490, y, paint);
+            canvas.drawText("P", MARGIN + 515, y, paint);
             y += 15;
             
             // Channels list
             paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
-            int maxChannelsPerPage = 40;
+            int maxChannelsPerPage = 35;
             int channelCount = 0;
             
             while (cursor.moveToNext()) {
@@ -179,37 +188,80 @@ public class PDFExporter {
                     
                     // Repeat headers
                     paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
-                    canvas.drawText("Ch", MARGIN, y, paint);
-                    canvas.drawText("Name", MARGIN + 30, y, paint);
-                    canvas.drawText("Type", MARGIN + 200, y, paint);
-                    canvas.drawText("RX Freq", MARGIN + 260, y, paint);
-                    canvas.drawText("TX Freq", MARGIN + 350, y, paint);
-                    canvas.drawText("Pwr", MARGIN + 440, y, paint);
+                    canvas.drawText("#", MARGIN, y, paint);
+                    canvas.drawText("Name", MARGIN + 20, y, paint);
+                    canvas.drawText("Type", MARGIN + 150, y, paint);
+                    canvas.drawText("RX→TX Freq", MARGIN + 190, y, paint);
+                    canvas.drawText("Contact/Tones", MARGIN + 310, y, paint);
+                    canvas.drawText("CC/TS", MARGIN + 450, y, paint);
+                    canvas.drawText("SQ", MARGIN + 490, y, paint);
+                    canvas.drawText("P", MARGIN + 515, y, paint);
                     y += 15;
                     paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
                 }
                 
+                // Read all channel fields
                 int chNum = cursor.getInt(cursor.getColumnIndex("channel_number"));
                 String name = cursor.getString(cursor.getColumnIndex("channel_name"));
-                if (name.length() > 22) name = name.substring(0, 22);
+                if (name.length() > 18) name = name.substring(0, 18);
                 int type = cursor.getInt(cursor.getColumnIndex("channel_type"));
                 int rxFreq = cursor.getInt(cursor.getColumnIndex("channel_rxFreq"));
                 int txFreq = cursor.getInt(cursor.getColumnIndex("channel_txFreq"));
                 int power = cursor.getInt(cursor.getColumnIndex("channel_power"));
+                int squelch = cursor.getInt(cursor.getColumnIndex("channel_sq"));
                 
                 String typeStr = (type == 0) ? "DMR" : "FM";
-                String rxStr = String.format(Locale.US, "%.5f", rxFreq / 1000000.0);
-                String txStr = String.format(Locale.US, "%.5f", txFreq / 1000000.0);
+                String freqStr = String.format(Locale.US, "%.4f→%.4f", rxFreq / 1000000.0, txFreq / 1000000.0);
                 String pwrStr = (power == 0) ? "L" : "H";
                 
-                canvas.drawText(String.valueOf(chNum), MARGIN, y, paint);
-                canvas.drawText(name, MARGIN + 30, y, paint);
-                canvas.drawText(typeStr, MARGIN + 200, y, paint);
-                canvas.drawText(rxStr, MARGIN + 260, y, paint);
-                canvas.drawText(txStr, MARGIN + 350, y, paint);
-                canvas.drawText(pwrStr, MARGIN + 440, y, paint);
+                // Type-specific data
+                String extraInfo = "";
+                String ccTs = "";
                 
-                y += 14;
+                if (type == 0) {
+                    // Digital channel - show contact name, color code, timeslot
+                    int contactId = cursor.getInt(cursor.getColumnIndex("channel_txContact"));
+                    String contactName = contactMap.getOrDefault(contactId, "None");
+                    if (contactName.length() > 15) contactName = contactName.substring(0, 15);
+                    extraInfo = contactName;
+                    
+                    int colorCode = cursor.getInt(cursor.getColumnIndex("channel_cc"));
+                    int timeslot = cursor.getInt(cursor.getColumnIndex("channel_outBoundSlot"));
+                    ccTs = colorCode + "/" + timeslot;
+                } else {
+                    // Analog channel - show CTCSS/DCS tones
+                    int rxType = cursor.getInt(cursor.getColumnIndex("channel_rxType"));
+                    int rxSubCode = cursor.getInt(cursor.getColumnIndex("channel_rxSubCode"));
+                    int txType = cursor.getInt(cursor.getColumnIndex("channel_txType"));
+                    int txSubCode = cursor.getInt(cursor.getColumnIndex("channel_txSubCode"));
+                    
+                    String rxTone = ToneConverter.toCSVFormat(rxType, rxSubCode);
+                    String txTone = ToneConverter.toCSVFormat(txType, txSubCode);
+                    
+                    if (rxTone.equals("None") && txTone.equals("None")) {
+                        extraInfo = "No tones";
+                    } else if (rxTone.equals(txTone)) {
+                        extraInfo = rxTone;
+                    } else {
+                        extraInfo = rxTone + "/" + txTone;
+                        if (extraInfo.length() > 15) {
+                            extraInfo = "R:" + rxTone.substring(0, 6);
+                        }
+                    }
+                    ccTs = "-";
+                }
+                
+                // Draw row
+                canvas.drawText(String.valueOf(chNum), MARGIN, y, paint);
+                canvas.drawText(name, MARGIN + 20, y, paint);
+                canvas.drawText(typeStr, MARGIN + 150, y, paint);
+                canvas.drawText(freqStr, MARGIN + 190, y, paint);
+                canvas.drawText(extraInfo, MARGIN + 310, y, paint);
+                canvas.drawText(ccTs, MARGIN + 450, y, paint);
+                canvas.drawText(String.valueOf(squelch), MARGIN + 490, y, paint);
+                canvas.drawText(pwrStr, MARGIN + 515, y, paint);
+                
+                y += 16;
                 channelCount++;
             }
             
@@ -218,6 +270,15 @@ public class PDFExporter {
             
         } catch (Exception e) {
             Log.e(TAG, "Error adding channel summary: " + e.getMessage());
+            e.printStackTrace();
+            // Finish the page if it was started before the error
+            if (page != null) {
+                try {
+                    document.finishPage(page);
+                } catch (Exception ex) {
+                    Log.e(TAG, "Error finishing page in exception handler: " + ex.getMessage());
+                }
+            }
             return pageNumber;
         } finally {
             if (cursor != null) cursor.close();
@@ -231,6 +292,7 @@ public class PDFExporter {
     private static int addContactSummary(PdfDocument document, int pageNumber, Context context) {
         SQLiteDatabase db = null;
         Cursor cursor = null;
+        PdfDocument.Page page = null;
         
         try {
             File dbFile = context.getDatabasePath("contact_database.db");
@@ -246,7 +308,7 @@ public class PDFExporter {
             }
             
             PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageNumber).create();
-            PdfDocument.Page page = document.startPage(pageInfo);
+            page = document.startPage(pageInfo);
             Canvas canvas = page.getCanvas();
             Paint paint = new Paint();
             
@@ -298,6 +360,14 @@ public class PDFExporter {
             
         } catch (Exception e) {
             Log.e(TAG, "Error adding contact summary: " + e.getMessage());
+            e.printStackTrace();
+            if (page != null) {
+                try {
+                    document.finishPage(page);
+                } catch (Exception ex) {
+                    Log.e(TAG, "Error finishing page in exception handler: " + ex.getMessage());
+                }
+            }
             return pageNumber;
         } finally {
             if (cursor != null) cursor.close();
@@ -309,8 +379,11 @@ public class PDFExporter {
      * Add OpenGD77 instructions page
      */
     private static int addInstructions(PdfDocument document, int pageNumber) {
-        PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageNumber).create();
-        PdfDocument.Page page = document.startPage(pageInfo);
+        PdfDocument.Page page = null;
+        
+        try {
+            PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageNumber).create();
+            page = document.startPage(pageInfo);
         Canvas canvas = page.getCanvas();
         Paint paint = new Paint();
         
@@ -387,10 +460,23 @@ public class PDFExporter {
         // Footer
         paint.setTextSize(SMALL_SIZE);
         paint.setColor(Color.GRAY);
-        canvas.drawText("Generated by DMRModHooks v0.9.30 - LSPosed Module for Ulefone PriInterPhone", MARGIN, PAGE_HEIGHT - 30, paint);
+        canvas.drawText("Generated by DMRModHooks v0.9.35 - LSPosed Module for Ulefone PriInterPhone", MARGIN, PAGE_HEIGHT - 30, paint);
         
         document.finishPage(page);
         return pageNumber + 1;
+        
+        } catch (Exception e) {
+            Log.e(TAG, "Error adding instructions: " + e.getMessage());
+            e.printStackTrace();
+            if (page != null) {
+                try {
+                    document.finishPage(page);
+                } catch (Exception ex) {
+                    Log.e(TAG, "Error finishing page in exception handler: " + ex.getMessage());
+                }
+            }
+            return pageNumber;
+        }
     }
     
     /**
@@ -446,5 +532,40 @@ public class PDFExporter {
         } catch (Exception e) {
             return folderName;
         }
+    }
+    
+    /**
+     * Build contact ID to name mapping for PDF display
+     */
+    private static HashMap<Integer, String> buildContactMapPDF(Context context) {
+        HashMap<Integer, String> contactMap = new HashMap<>();
+        SQLiteDatabase db = null;
+        Cursor cursor = null;
+        
+        try {
+            File dbFile = context.getDatabasePath("contact_database.db");
+            if (!dbFile.exists()) {
+                return contactMap;
+            }
+            
+            db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READONLY);
+            cursor = db.query("contact_database", 
+                new String[]{"_id", "contact_name"}, 
+                null, null, null, null, null);
+            
+            while (cursor != null && cursor.moveToNext()) {
+                int id = cursor.getInt(0);
+                String name = cursor.getString(1);
+                contactMap.put(id, name);
+            }
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error building contact map for PDF: " + e.getMessage());
+        } finally {
+            if (cursor != null) cursor.close();
+            if (db != null) db.close();
+        }
+        
+        return contactMap;
     }
 }
