@@ -4,7 +4,7 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v0.9.30 (February 23, 2026)  
+**Current Version**: v0.9.31 (February 23, 2026)  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Backup Location**: `Download/DMR_Backups/`  
@@ -229,7 +229,7 @@ Output: `app/build/outputs/apk/debug/app-debug.apk`
    - Check `Download/DMR_Backups/` for timestamped folder
    - Should see folder like: `20260223_140530/` containing CSV files
 
-5. **Verify version**: Toast notification shows "✓ DMR Mod Hooks Active! v0.9.30"
+5. **Verify version**: Toast notification shows "✓ DMR Mod Hooks Active! v0.9.31"
 
 ### Troubleshooting
 
@@ -331,7 +331,20 @@ Or use LSPosed Manager → Logs
 
 ## Changelog
 
-### v0.9.30 (Feb 23, 2026) ✅ **CURRENT**
+### v0.9.31 (Feb 23, 2026) ✅ **CURRENT**
+- **Implemented comprehensive PDF backup summary**
+- Each backup now includes a detailed PDF report (Backup_Summary.pdf)
+- PDF contains complete channel listing with frequencies, types, and power settings
+- PDF contains contact database summary with DMR IDs and types
+- Includes OpenGD77 CPS download link: https://github.com/LibreDMR/OpenGD77/releases
+- Step-by-step instructions for importing/exporting with OpenGD77 CPS
+- Round-trip workflow documentation (Phone → PC → OpenGD77 → Phone)
+- Important notes about backup safety and CTCSS/DCS support
+- Automatically generated on every export - no manual steps required
+- Professional multi-page PDF with proper formatting and navigation
+- Makes it easy to review channel programming without opening CSV files
+
+### v0.9.30 (Feb 23, 2026)
 - **Implemented contact name lookup for Digital channels**
 - Export: Reads actual contact names from contact database instead of hardcoding "None"
 - Import: Resolves contact names to database IDs for proper channel-contact linking

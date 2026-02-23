@@ -94,6 +94,16 @@ public class DirectDatabaseExporter {
                 Log.i(TAG, "  TG_Lists: " + tgListsFile.getAbsolutePath());
                 Log.i(TAG, "  Zones: " + zonesFile.getAbsolutePath());
                 Log.i(TAG, "  DTMF: " + dtmfFile.getAbsolutePath());
+                
+                // Generate PDF summary with backup info and OpenGD77 instructions
+                Log.i(TAG, "Generating PDF summary...");
+                boolean pdfOk = PDFExporter.exportBackupSummary(appContext, outputDir);
+                if (pdfOk) {
+                    Log.i(TAG, "✓ PDF summary created successfully");
+                } else {
+                    Log.w(TAG, "⚠ PDF summary generation failed (CSV files unaffected)");
+                }
+                
                 return true;
             } else {
                 Log.e(TAG, "Export failed - channels:" + channelsOk + " contacts:" + contactsOk + 

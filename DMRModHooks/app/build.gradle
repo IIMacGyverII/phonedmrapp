@@ -10,8 +10,8 @@ android {
         applicationId "com.dmrmod.hooks"
         minSdk 26
         targetSdk 34
-        versionCode 78
-        versionName "0.9.30-contact-lookup"
+        versionCode 79
+        versionName "0.9.31-pdf-summary"
     }
 
     buildTypes {

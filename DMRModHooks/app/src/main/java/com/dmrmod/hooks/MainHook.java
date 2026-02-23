@@ -46,7 +46,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "0.9.30";
+    private static final String VERSION = "0.9.31";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     @Override

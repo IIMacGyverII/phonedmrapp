@@ -15,8 +15,8 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 
 ## Current Status ✅
 
-**Module Version**: v0.9.27  
-**Export**: ✅ Working - All 5 OpenGD77 CSV files  
+**Module Version**: v0.9.31  
+**Export**: ✅ Working - All 5 OpenGD77 CSV files + PDF summary  
 **Import**: ✅ Working - Full Digital & Analog support  
 **User Validation**: ✅ Export/Import tested and confirmed  
 **Latest Build**: February 23, 2026
@@ -27,13 +27,13 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 - **Target App**: com.pri.prizeinterphone (Ulefone system app)
 - **Device**: Ulefone Armor 26 Ultra (Android 13)
 - **LSPosed**: v1.9.2 (Zygisk)
-- **Current Version**: v0.9.27
+- **Current Version**: v0.9.31
 - **Backup Location**: `Download/DMR_Backups/` (standard Android Downloads folder)
 
 ## Features
 
 ### ✅ Phase 1: MacGyver Branding
-- Startup toast: "✓ DMR Mod Hooks Active! v0.9.27"
+- Startup toast: "✓ DMR Mod Hooks Active! v0.9.31"
 - Custom version display on Device Information screen
 - Confirms module is active and working
 - Version tracking for future updates
