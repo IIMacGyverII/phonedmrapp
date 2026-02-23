@@ -4,9 +4,10 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v0.9.26  
+**Current Version**: v0.9.26 (February 23, 2026)  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
+**Backup Location**: `Download/DMR_Backups/`  
 **Requires**: 
 - LSPosed Framework v1.9.2+ (Zygisk variant)
 - Magisk v24+ with Zygisk enabled
@@ -40,9 +41,16 @@
 - ✅ Both Digital AND Analog channels activate successfully
 
 **UI Enhancements**:
-- ✅ "Backup/Restore" button in LOCAL tab
-- ✅ BackupActivity with Import/Export functionality
+- ✅ Export/Import buttons directly in LOCAL tab
+- ✅ Timestamped backup selection dialog for imports
+- ✅ Toast notifications with version info and backup location
 - ✅ MacGyver branding on Device Information screen
+
+**File Location**:
+- ✅ Backups saved to `Download/DMR_Backups/` for easy access
+- ✅ No special permissions required (standard Download folder)
+- ✅ Easy to transfer files via USB, file manager, or cloud sync
+- ✅ Files visible in Files app and all file managers
 
 ## Technical Details
 
@@ -88,7 +96,7 @@
 3. **DirectDatabaseExporter (Direct Access)**
    - Bypasses shell commands
    - Reads channel/contact databases directly
-   - Exports 5 OpenGD77 CSV files to `/sdcard/DMR_Backups/`
+   - Exports 5 OpenGD77 CSV files to `Download/DMR_Backups/`
 
 4. **DirectDatabaseImporter (Direct Access)**
    - Parses OpenGD77 CSV format
@@ -217,10 +225,11 @@ Output: `app/build/outputs/apk/debug/app-debug.apk`
 
 3. **Navigate to LOCAL tab** - You should see: "Backup/Restore" button
 
-4. **Test Export**: Tap Backup/Restore → Export to OpenGD77 CSV
-   - Check `/sdcard/DMR_Backups/` for exported CSV files
+4. **Test Export**: Tap 📤 EXPORT (OpenGD77) button in LOCAL tab
+   - Check `Download/DMR_Backups/` for exported CSV files
+   - Should see files like: Channels_20260223_140530.csv
 
-5. **Verify version**: Settings → Device Info shows "MacGyver v0.9.26"
+5. **Verify version**: Toast notification shows "✓ DMR Mod Hooks Active! v0.9.26"
 
 ### Troubleshooting
 
@@ -322,13 +331,16 @@ Or use LSPosed Manager → Logs
 
 ## Changelog
 
-### v0.9.26 (Feb 2026) ✅ **CURRENT - FULLY WORKING**
+### v0.9.26 (Feb 23, 2026) ✅ **CURRENT - FULLY WORKING**
 - **COMPLETE OpenGD77 CSV Import/Export Functionality**
+- Changed backup location to `Download/DMR_Backups/` for easy user access
 - Fixed Analog/Digital field differentiation (critical fix!)
 - Digital channels: encryptSw=1, interrupt=2, active=1
 - Analog channels: encryptSw=0, interrupt=0, active=0
 - Both channel types import and activate successfully
-- All 16 channels working with proper field values
+- All channels working with proper field values
+- Comprehensive code documentation added
+- Toast notifications show correct backup path
 
 ### v0.9.25 (Feb 2026)
 - Implemented 15 required database fields from diagnostic export

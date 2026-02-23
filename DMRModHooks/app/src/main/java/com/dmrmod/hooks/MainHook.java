@@ -19,17 +19,29 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 /**
  * DMR Mod Hooks - Main Hook Class
  * 
- * This module provides comprehensive modifications to the PriInterPhone DMR app.
+ * This LSPosed module provides comprehensive modifications to the PriInterPhone DMR app.
  * 
+ * ARCHITECTURE:
+ * - Uses LSPosed/Xposed framework to hook into the running app at runtime
+ * - Preserves the original app's platform signature (required for system-level hardware access)
+ * - Injects UI elements and functionality without modifying the original APK
+ * 
+ * FEATURES:
  * Phase 1: Hook verification and MacGyver branding ✓
- * - Startup toast verification
- * - MacGyver version display on info screen
+ * - Startup toast showing module is active
+ * - MacGyver version display on Local → Information screen
  * 
  * Phase 2: OpenGD77 CSV Export/Import ✓
- * - Export/Import buttons in LOCAL tab
- * - Export all 5 OpenGD77 CSV files (Channels, Contacts, TG_Lists, Zones, DTMF)
- * - Import from backup selection dialog
- * - Full compatibility with OpenGD77 CPS ecosystem
+ * - Export/Import buttons in LOCAL tab of home screen
+ * - Exports all 5 OpenGD77 CSV files (Channels, Contacts, TG_Lists, Zones, DTMF)
+ * - Import from backup selection dialog with timestamp-based versioning
+ * - Full compatibility with OpenGD77 CPS ecosystem for cross-platform codeplug management
+ * - Files saved to Download/DMR_Backups/ for easy user access
+ * 
+ * TECHNICAL NOTES:
+ * - Runs in the target app's process with full database access
+ * - Uses reflection to call app methods for UI refresh after import
+ * - All database operations use transactions for data integrity
  */
 public class MainHook implements IXposedHookLoadPackage {
     
@@ -348,9 +360,12 @@ public class MainHook implements IXposedHookLoadPackage {
                 public void onClick(View v) {
                     XposedBridge.log(TAG + ": Export button clicked");
                    
+                    // Run export in background thread to avoid blocking UI
+                    // The database operations can take a few seconds for large channel lists
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
+                            // DirectDatabaseExporter runs in the app's process with full DB access
                             final boolean success = DirectDatabaseExporter.exportFromAppContext(activity);
                             
                             activity.runOnUiThread(new Runnable() {
@@ -358,7 +373,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 public void run() {
                                     if (success) {
                                         Toast.makeText(activity, 
-                                            "✓ Export successful! v" + VERSION + "\nCheck /sdcard/DMR_Backups/", 
+                                            "✓ Export successful! v" + VERSION + "\nCheck Download/DMR_Backups/", 
                                             Toast.LENGTH_LONG).show();
                                     } else {
                                         Toast.makeText(activity, 
@@ -461,7 +476,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 public void run() {
                                     if (success) {
                                         Toast.makeText(activity, 
-                                            "✓ Export successful! Check /sdcard/DMR_Backups/", 
+                                            "✓ Export successful! Check Download/DMR_Backups/", 
                                             Toast.LENGTH_LONG).show();
                                     } else {
                                         Toast.makeText(activity, 

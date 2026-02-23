@@ -4,7 +4,42 @@ import android.app.AlertDialog;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.Environment;
 import android.util.Log;
+
+/**
+ * DirectDatabaseImporter - Import OpenGD77 CSV files into app database
+ * 
+ * IMPORT STRATEGY:
+ * - Reads OpenGD77-format CSV files from Download/DMR_Backups/
+ * - Shows timestamp-based selection dialog for available backups
+ * - Clears existing channels and imports from CSV (full replace)
+ * - Preserves stock contacts to avoid breaking app functionality
+ * 
+ * CRITICAL: Digital vs Analog Channel Handling
+ * The app database requires DIFFERENT field values for Digital (DMR) vs Analog (FM) channels:
+ * 
+ * Digital (DMR) channels require:
+ *   - channel_type = 0
+ *   - channel_encryptSw = 1
+ *   - channel_interrupt = 2
+ *   - channel_active = 1
+ *   - channel_cc, channel_inBoundSlot set from CSV
+ * 
+ * Analog (FM) channels require:
+ *   - channel_type = 1
+ *   - channel_encryptSw = 0
+ *   - channel_encryptKey = NULL (not set)
+ *   - channel_interrupt = 0
+ *   - channel_active = 0
+ *   - channel_cc, channel_inBoundSlot = 0
+ * 
+ * Setting incorrect values causes "operation failure" toast when activating channels.
+ * 
+ * AUTO-REFRESH:
+ * - Uses reflection to call DmrManager.getDmrManagerInstance().init() after import
+ * - Forces app to reload channels from database without restart
+ */
 import android.widget.ArrayAdapter;
 
 import java.io.BufferedReader;
@@ -37,9 +72,10 @@ public class DirectDatabaseImporter {
             public void run() {
                 try {
                     // Find available backup sets
-                    File backupDir = new File("/sdcard/DMR_Backups");
+                    File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                    File backupDir = new File(downloadDir, "DMR_Backups");
                     if (!backupDir.exists() || !backupDir.isDirectory()) {
-                        showError(context, "No backups found in /sdcard/DMR_Backups/");
+                        showError(context, "No backups found in Download/DMR_Backups/");
                         return;
                     }
                     
@@ -146,12 +182,16 @@ public class DirectDatabaseImporter {
                 try {
                     Log.i(TAG, "Starting import for timestamp: " + timestamp);
                     
+                    // Import from Download/DMR_Backups
+                    File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                    File backupDir = new File(downloadDir, "DMR_Backups");
+                    
                     // Import channels
-                    File channelsFile = new File("/sdcard/DMR_Backups/Channels_" + timestamp + ".csv");
+                    File channelsFile = new File(backupDir, "Channels_" + timestamp + ".csv");
                     boolean channelsOk = importChannels(context, channelsFile);
                     
                     // Import contacts
-                    File contactsFile = new File("/sdcard/DMR_Backups/Contacts_" + timestamp + ".csv");
+                    File contactsFile = new File(backupDir, "Contacts_" + timestamp + ".csv");
                     boolean contactsOk = importContacts(context, contactsFile);
                     
                     // Show result

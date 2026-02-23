@@ -5,18 +5,21 @@
 ## What is this?
 
 LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
-- **MacGyver branding** on Device Info screen
-- **OpenGD77 CSV export/import** - Full channel programming compatibility
-- Direct database access for seamless data exchange
-- No APK modification required - works via runtime hooks
+- **📤 OpenGD77 CSV Export** - Export all channels/contacts to OpenGD77-compatible CSV files
+- **📥 OpenGD77 CSV Import** - Import OpenGD77 codeplugs directly into the app
+- **🔄 Cross-platform programming** - Edit channels in OpenGD77 CPS, import to phone
+- **✓ MacGyver branding** - Custom version display
+- **🗂️ Easy access** - Backups saved to Download folder (easy file transfer)
+- **⚡ Direct database access** - No shell commands, fast and reliable
+- **🔒 No APK modification** - Works via runtime hooks (preserves platform signature)
 
 ## Current Status ✅
 
-**Module Version**: v0.9.10  
+**Module Version**: v0.9.26  
 **Export**: ✅ Working - All 5 OpenGD77 CSV files  
-**Import**: ✅ Working - Single UHF database approach  
-**User Validation**: ✅ Export tested and confirmed  
-**Latest Build**: February 19, 2026
+**Import**: ✅ Working - Full Digital & Analog support  
+**User Validation**: ✅ Export/Import tested and confirmed  
+**Latest Build**: February 23, 2026
 
 ### Quick Facts
 
@@ -24,12 +27,13 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 - **Target App**: com.pri.prizeinterphone (Ulefone system app)
 - **Device**: Ulefone Armor 26 Ultra (Android 13)
 - **LSPosed**: v1.9.2 (Zygisk)
-- **Current Version**: v0.9.10-single-db
-- **Backup Location**: `/sdcard/DMR_Backups/`
+- **Current Version**: v0.9.26
+- **Backup Location**: `Download/DMR_Backups/` (standard Android Downloads folder)
 
 ## Features
 
 ### ✅ Phase 1: MacGyver Branding
+- Startup toast: "✓ DMR Mod Hooks Active! v0.9.26"
 - Custom version display on Device Information screen
 - Confirms module is active and working
 - Version tracking for future updates
@@ -42,13 +46,16 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 - **User validated**: Exported data successfully imports to OpenGD77 CPS
 - **Round-trip tested**: Edit in app → Export → Import to OpenGD77 → Success!
 
-### ✅ Phase 3: OpenGD77 CSV Import (v0.9.0 - v0.9.10)
+### ✅ Phase 3: OpenGD77 CSV Import (v0.9.0 - v0.9.26)
 - **Import channels** from OpenGD77 CSV files
 - Direct database write with atomic transactions
 - Handles mixed VHF/UHF channel lists
-- **All 16 channels import correctly** including VHF frequencies
+- **All channels import correctly** including both Digital (DMR) and Analog (FM)
+- Correct field values for Digital vs Analog channel activation
 - Backup selection dialog with formatted timestamps
+- Auto-refresh after import - no app restart needed
 - Import confirmation with success/failure reporting
+- Files stored in user-friendly Download folder
 
 ## Why LSPosed?
 
@@ -127,15 +134,16 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 
 2. **Test Export**:
    - Go to LOCAL tab
-   - Tap 📥 **EXPORT** button  
-   - Check `/sdcard/DMR_Backups/` for CSV files
-   - Should see: Channels, Contacts, TG_Lists, Zones, DTMF CSVs
+   - Tap � **EXPORT (OpenGD77)** button  
+   - Check `Download/DMR_Backups/` for CSV files (use any file manager)
+   - Should see: Channels, Contacts, TG_Lists, Zones, DTMF CSVs with timestamps
 
 3. **Test Import** (optional):
-   - Tap 📥 **IMPORT** button
-   - Select a backup timestamp
+   - Tap 📥 **IMPORT (OpenGD77)** button
+   - Select a backup timestamp from list
    - Confirm import
-   - Check channels appear correctly in app
+   - Wait for success message
+   - Channels will auto-refresh and appear in app
 
 ## Usage
 
@@ -143,10 +151,10 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 
 1. Open PriInterPhone app
 2. Go to **LOCAL** tab
-3. Tap **EXPORT** button (disk icon)
-4. Export completes (toast notification shown)
-5. Files created in `/sdcard/DMR_Backups/Channels_TIMESTAMP.csv` (and 4 others)
-6. Transfer CSVs to PC
+3. Tap **📤 EXPORT (OpenGD77)** button
+4. Export completes (toast shows: "✓ Export successful! v0.9.26\nCheck Download/DMR_Backups/")
+5. Files created in `Download/DMR_Backups/Channels_TIMESTAMP.csv` (and 4 others)
+6. Transfer CSVs to PC via USB, file manager, or `adb pull /sdcard/Download/DMR_Backups/ .`
 7. Open OpenGD77 CPS
 8. Import → Select all 5 CSV files
 9. Program your OpenGD77 radio!
@@ -154,12 +162,16 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 ### Importing Channels from OpenGD77
 
 1. Export channel programming from OpenGD77 CPS (all 5 CSV files)
-2. Transfer CSVs to Android device `/sdcard/DMR_Backups/`
+2. Transfer CSVs to Android device `Download/DMR_Backups/`
+   - Via USB cable (MTP mode) or `adb push Channels.csv /sdcard/Download/DMR_Backups/`
 3. Ensure files are named: `Channels_TIMESTAMP.csv`, `Contacts_TIMESTAMP.csv`, etc.
+   - Timestamp format: `20260223_140530`
 4. Open PriInterPhone app
 5. Go to **LOCAL** tab
-6. Tap **IMPORT** button
-7. Select backup by timestamp
+6. Tap **📥 IMPORT (OpenGD77)** button
+7. Select backup by timestamp from dialog
+8. Wait for import success notification
+9. Channels auto-refresh - ready to use!
 
 ## Project Structure
 
@@ -293,8 +305,8 @@ phonedmrapp/
    - Performance optimizations
    - OTA update mechanism for Magisk module
 
-**Last Updated**: February 17, 2026  
-**Status**: Magisk module ready for user installation - 95% complete  
+**Last Updated**: February 23, 2026  
+**Status**: LSPosed module fully operational - OpenGD77 export/import working perfectly!  
 **GitHub**: https://github.com/IIMacGyverII/phonedmrapp
 
 For detailed technical information, see [MAGISK_SOLUTION.md](MAGISK_SOLUTION.md) and [STATUS.md](STATUS.md).

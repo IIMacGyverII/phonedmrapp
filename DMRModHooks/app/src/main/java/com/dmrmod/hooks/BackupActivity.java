@@ -20,10 +20,21 @@ import java.util.Date;
 import java.util.Locale;
 
 /**
- * BackupActivity - OpenGD77 CSV Export/Import
+ * BackupActivity - OpenGD77 CSV Export/Import UI
  * 
- * Provides backup/restore functionality for DMR channels and contacts
- * using OpenGD77 CPS-compatible CSV format.
+ * Provides a standalone activity for backup/restore functionality.
+ * 
+ * NOTE: This activity is currently unused in favor of direct hooks in the LOCAL tab.
+ * The DirectDatabaseExporter and DirectDatabaseImporter classes are used instead,
+ * providing a more seamless integration with buttons directly in the app's UI.
+ * 
+ * This file is kept for reference and potential future standalone backup app.
+ * 
+ * FEATURES:
+ * - Export/Import DMR channels and contacts
+ * - OpenGD77 CPS-compatible CSV format
+ * - Files stored in Download/DMR_Backups/
+ * - No special permissions required (uses standard Download folder)
  */
 public class BackupActivity extends Activity {
     
@@ -208,15 +219,14 @@ public class BackupActivity extends Activity {
      */
     private void initializeBackupDirectory() {
         try {
-            // Use app-specific external storage: /sdcard/Android/data/com.dmrmod.hooks/files/DMR_Backups/
-            // This doesn't require WRITE_EXTERNAL_STORAGE permission
-            File appExternalDir = getExternalFilesDir(null);
-            if (appExternalDir == null) {
+            // Use Download/DMR_Backups for easy user access
+            File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            if (downloadDir == null) {
                 log("ERROR: External storage not available");
                 return;
             }
             
-            backupDirectory = new File(appExternalDir, BACKUP_DIR);
+            backupDirectory = new File(downloadDir, BACKUP_DIR);
             
             if (!backupDirectory.exists()) {
                 boolean created = backupDirectory.mkdirs();
@@ -229,7 +239,7 @@ public class BackupActivity extends Activity {
                 log("Backup directory ready: " + backupDirectory.getAbsolutePath());
             }
             
-            log("Access files via file manager: Android/data/com.dmrmod.hooks/files/" + BACKUP_DIR);
+            log("Access files via file manager: Download/" + BACKUP_DIR);
         } catch (Exception e) {
             log("ERROR initializing backup directory: " + e.getMessage());
             e.printStackTrace();

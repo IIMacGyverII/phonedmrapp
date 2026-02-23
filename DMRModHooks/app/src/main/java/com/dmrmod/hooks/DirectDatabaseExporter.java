@@ -3,6 +3,7 @@ package com.dmrmod.hooks;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.Environment;
 import android.util.Log;
 
 import java.io.BufferedWriter;
@@ -13,8 +14,23 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * DirectDatabaseExporter - Export DMR data directly from target app's process
- * This runs IN the target app with full database access
+ * DirectDatabaseExporter - Export DMR data to OpenGD77-compatible CSV files
+ * 
+ * DESIGN:
+ * - Runs directly in the target app's process with full database access
+ * - No need for shell commands or IPC - direct SQLite access
+ * - Exports to Download/DMR_Backups/ for easy user access via file manager
+ * 
+ * OPENGD77 COMPATIBILITY:
+ * - Generates 5 CSV files required by OpenGD77 CPS (Channels, Contacts, TG_Lists, Zones, DTMF)
+ * - Uses exact column headers and format expected by OpenGD77
+ * - Supports both Digital (DMR) and Analog (FM) channel types
+ * - Frequencies converted from Hz (database) to MHz (CSV)
+ * 
+ * OUTPUT FORMAT:
+ * - Files timestamped: Channels_20260223_140530.csv
+ * - Windows CRLF line endings (\r\n) for OpenGD77 compatibility
+ * - UTF-8 encoding for international character support
  */
 public class DirectDatabaseExporter {
     
@@ -36,16 +52,20 @@ public class DirectDatabaseExporter {
         try {
             Log.i(TAG, "Starting direct export from app context");
             
-            // Output to /sdcard where our module can access it
-            File outputDir = new File("/sdcard/DMR_Backups");
+            // Output to Download/DMR_Backups for easy user access
+            // Using Environment.DIRECTORY_DOWNLOADS ensures compatibility across Android versions
+            File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            File outputDir = new File(downloadDir, "DMR_Backups");
             if (!outputDir.exists()) {
                 outputDir.mkdirs();
             }
             
+            // Timestamp ensures each export is unique and prevents overwriting
             String timestamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
                 .format(new java.util.Date());
             
-            // OpenGD77 requires ALL 5 CSV files to be present
+            // OpenGD77 CPS requires ALL 5 CSV files to be present for a valid codeplug
+            // Even if empty, all files must exist or import will fail
             File channelsFile = new File(outputDir, "Channels_" + timestamp + ".csv");
             File contactsFile = new File(outputDir, "Contacts_" + timestamp + ".csv");
             File tgListsFile = new File(outputDir, "TG_Lists_" + timestamp + ".csv");
