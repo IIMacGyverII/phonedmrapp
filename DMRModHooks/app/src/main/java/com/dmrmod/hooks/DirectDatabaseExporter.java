@@ -135,6 +135,9 @@ public class DirectDatabaseExporter {
             
             Log.i(TAG, "Found " + channelCount + " channels");
             
+            // Build contacts lookup map for efficient contact name resolution
+            java.util.Map<Integer, String> contactMap = buildContactMap(context);
+            
             // Write CSV header
             BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
             StringBuilder headerBuilder = new StringBuilder();
@@ -214,7 +217,9 @@ public class DirectDatabaseExporter {
                     // Digital channels
                     rowBuilder.append(colorCode).append(",");           // 7. Colour Code
                     rowBuilder.append(timeslot).append(",");            // 8. Timeslot
-                    rowBuilder.append("None,");                          // 9. Contact
+                    // Look up contact name from ID
+                    String contactName = getContactName(contactMap, contactId);
+                    rowBuilder.append(contactName).append(",");         // 9. Contact
                     rowBuilder.append("None,");                          // 10. TG List
                     rowBuilder.append("None,");                          // 11. DMR ID
                     rowBuilder.append("Off,");                           // 12. TS1_TA_Tx
@@ -424,5 +429,65 @@ public class DirectDatabaseExporter {
             e.printStackTrace();
             return false;
         }
+    }
+    
+    /**
+     * Build a map of contact ID => contact name for efficient lookup
+     * 
+     * @param context Application context
+     * @return Map of contact IDs to names, or empty map if database doesn't exist
+     */
+    private static java.util.Map<Integer, String> buildContactMap(Context context) {
+        java.util.Map<Integer, String> contactMap = new java.util.HashMap<>();
+        SQLiteDatabase db = null;
+        Cursor cursor = null;
+        
+        try {
+            File dbFile = context.getDatabasePath("contact_database.db");
+            if (!dbFile.exists()) {
+                Log.w(TAG, "Contact database not found, contact names will show as 'None'");
+                return contactMap;
+            }
+            
+            db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, 
+                SQLiteDatabase.OPEN_READONLY);
+            
+            cursor = db.query("contact_database", 
+                new String[]{"_id", "contact_name"}, 
+                null, null, null, null, null);
+            
+            if (cursor != null && cursor.moveToFirst()) {
+                do {
+                    int id = cursor.getInt(0);
+                    String name = cursor.getString(1);
+                    contactMap.put(id, name);
+                } while (cursor.moveToNext());
+            }
+            
+            Log.i(TAG, "Loaded " + contactMap.size() + " contacts for lookup");
+            
+        } catch (Exception e) {
+            Log.w(TAG, "Error building contact map: " + e.getMessage());
+        } finally {
+            if (cursor != null) cursor.close();
+            if (db != null) db.close();
+        }
+        
+        return contactMap;
+    }
+    
+    /**
+     * Get contact name by ID from the contact map
+     * 
+     * @param contactMap Map of contact IDs to names
+     * @param contactId Contact ID to lookup
+     * @return Contact name, or "None" if not found
+     */
+    private static String getContactName(java.util.Map<Integer, String> contactMap, int contactId) {
+        if (contactId <= 0) {
+            return "None";
+        }
+        String name = contactMap.get(contactId);
+        return (name != null && !name.trim().isEmpty()) ? name : "None";
     }
 }

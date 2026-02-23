@@ -4,7 +4,7 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v0.9.29 (February 23, 2026)  
+**Current Version**: v0.9.30 (February 23, 2026)  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Backup Location**: `Download/DMR_Backups/`  
@@ -229,7 +229,7 @@ Output: `app/build/outputs/apk/debug/app-debug.apk`
    - Check `Download/DMR_Backups/` for timestamped folder
    - Should see folder like: `20260223_140530/` containing CSV files
 
-5. **Verify version**: Toast notification shows "✓ DMR Mod Hooks Active! v0.9.28"
+5. **Verify version**: Toast notification shows "✓ DMR Mod Hooks Active! v0.9.30"
 
 ### Troubleshooting
 
@@ -331,7 +331,17 @@ Or use LSPosed Manager → Logs
 
 ## Changelog
 
-### v0.9.29 (Feb 23, 2026) ✅ **CURRENT**
+### v0.9.30 (Feb 23, 2026) ✅ **CURRENT**
+- **Implemented contact name lookup for Digital channels**
+- Export: Reads actual contact names from contact database instead of hardcoding "None"
+- Import: Resolves contact names to database IDs for proper channel-contact linking
+- Digital channels now show correct contact names in CSV exports (e.g., "test 1" instead of "None")
+- Analog channels correctly show empty contact field (not applicable)
+- Full round-trip support: Export → Edit contacts in OpenGD77 CPS → Import → Contacts preserved
+- Added buildContactMap() and getContactName() helper methods
+- Better OpenGD77 compatibility for DMR channel programming
+
+### v0.9.29 (Feb 23, 2026)
 - **Implemented CTCSS and DCS tone support for analog channels**
 - Export: Reads `channel_rxType/rxSubCode` and `channel_txType/txSubCode` from database
 - Import: Parses RX Tone and TX Tone from CSV columns 13-14

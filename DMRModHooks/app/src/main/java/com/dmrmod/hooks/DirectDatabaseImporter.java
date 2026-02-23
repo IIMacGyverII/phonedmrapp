@@ -3,6 +3,7 @@ package com.dmrmod.hooks;
 import android.app.AlertDialog;
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Environment;
 import android.util.Log;
@@ -282,6 +283,10 @@ public class DirectDatabaseImporter {
                 
                 // Import all channels to UHF database
                 int importCount = 0;
+                
+                // Build contact name => ID map for lookup
+                java.util.Map<String, Integer> contactMap = buildContactNameMap(context);
+                
                 String line;
                 while ((line = reader.readLine()) != null) {
                 if (line.trim().isEmpty()) continue;
@@ -329,9 +334,10 @@ public class DirectDatabaseImporter {
                     int timeslot = tsStr.isEmpty() ? 1 : Integer.parseInt(tsStr);
                     values.put("channel_inBoundSlot", timeslot);
                     
-                    // Contact (8) -> channel_txContact
-                    // Default contact ID 1 (created during import for "None" contacts)
-                    values.put("channel_txContact", 1);
+                    // Contact (8) -> channel_txContact (lookup ID by name)
+                    String contactName = fields[8].trim();
+                    int contactId = getContactId(contactMap, contactName);
+                    values.put("channel_txContact", contactId);
                 } else {
                     // Analog channels - set DMR fields to 0
                     values.put("channel_cc", 0);
@@ -634,5 +640,70 @@ public class DirectDatabaseImporter {
             e.printStackTrace();
             // Don't show error to user - import still succeeded
         }
+    }
+    
+    /**
+     * Build a map of contact name => contact ID for efficient lookup during import
+     * 
+     * @param context Application context
+     * @return Map of contact names to IDs, or empty map if database doesn't exist
+     */
+    private static java.util.Map<String, Integer> buildContactNameMap(Context context) {
+        java.util.Map<String, Integer> contactMap = new java.util.HashMap<>();
+        SQLiteDatabase db = null;
+        Cursor cursor = null;
+        
+        try {
+            File dbFile = context.getDatabasePath("contact_database.db");
+            if (!dbFile.exists()) {
+                Log.w(TAG, "Contact database not found, all contacts will use default ID");
+                return contactMap;
+            }
+            
+            db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, 
+                SQLiteDatabase.OPEN_READONLY);
+            
+            cursor = db.query("contact_database", 
+                new String[]{"_id", "contact_name"}, 
+                null, null, null, null, null);
+            
+            if (cursor != null && cursor.moveToFirst()) {
+                do {
+                    int id = cursor.getInt(0);
+                    String name = cursor.getString(1);
+                    contactMap.put(name, id);
+                } while (cursor.moveToNext());
+            }
+            
+            Log.i(TAG, "Loaded " + contactMap.size() + " contacts for import lookup");
+            
+        } catch (Exception e) {
+            Log.w(TAG, "Error building contact name map: " + e.getMessage());
+        } finally {
+            if (cursor != null) cursor.close();
+            if (db != null) db.close();
+        }
+        
+        return contactMap;
+    }
+    
+    /**
+     * Get contact ID by name from the contact map
+     * 
+     * @param contactMap Map of contact names to IDs
+     * @param contactName Contact name to lookup
+     * @return Contact ID, or 1 (default) if not found or "None"
+     */
+    private static int getContactId(java.util.Map<String, Integer> contactMap, String contactName) {
+        if (contactName == null || contactName.trim().isEmpty() || contactName.equalsIgnoreCase("None")) {
+            return 1; // Default contact ID
+        }
+        Integer id = contactMap.get(contactName);
+        if (id != null) {
+            Log.d(TAG, "Resolved contact '" + contactName + "' to ID " + id);
+            return id;
+        }
+        Log.w(TAG, "Contact not found: '" + contactName + "', using default ID 1");
+        return 1; // Default if not found
     }
 }
