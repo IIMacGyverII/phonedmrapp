@@ -4,7 +4,7 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v0.9.39 (February 24, 2026)  
+**Current Version**: v0.9.40 (February 24, 2026)  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Backup Location**: `Download/DMR_Backups/`  
@@ -331,7 +331,19 @@ Or use LSPosed Manager → Logs
 
 ## Changelog
 
-### v0.9.39 (Feb 24, 2026) ✅ **CURRENT**
+### v0.9.40 (Feb 24, 2026) ✅ **CURRENT**
+- **Added OpenGD77 power level format conversion**
+- Export: Converts app's power levels to OpenGD77 P1-P9 and +W- format
+  - Low power (0) → P1 (lowest OpenGD77 power level)
+  - High power (1) → +W- (maximum OpenGD77 power level)
+- Import: Converts OpenGD77 power levels to app format with proper range mapping
+  - P1-P4 → Low power (0)
+  - P5-P9, +W-, -W+ → High power (1)
+- Handles legacy Low/Master/High format for backwards compatibility
+- Fixes power level import from OpenGD77-edited CSV files
+- Logged conversion for debugging ("Converted power P1 to level 0")
+
+### v0.9.39 (Feb 24, 2026)
 - **Added squelch percentage conversion for OpenGD77 compatibility**
 - Export: Converts app's 0-9 squelch values to OpenGD77 percentages (0=Disabled, 1=5%, 2=15%, 3=25%...9=85%)
 - Import: Converts OpenGD77 percentages to app's 0-9 range with proper rounding

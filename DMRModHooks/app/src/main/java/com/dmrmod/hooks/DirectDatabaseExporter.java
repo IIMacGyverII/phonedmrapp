@@ -304,7 +304,9 @@ public class DirectDatabaseExporter {
                     rowBuilder.append(",");                              
                     // Digital channels always have squelch disabled in OpenGD77
                     rowBuilder.append("Disabled").append(",");          // 16. Squelch (always Disabled for Digital)
-                    String powerStr = (power == 0) ? "Low" : (power == 1) ? "Master" : "High";
+                    // Convert power to OpenGD77 format: P1-P9 and +W-
+                    // App uses 0=low, 1=high. OpenGD77 uses P1 (lowest) to +W- (max)
+                    String powerStr = (power == 0) ? "P1" : "+W-";
                     rowBuilder.append(powerStr).append(",");            // 17. Power
                     rowBuilder.append("No,");                            // 18. Rx Only
                     rowBuilder.append("No,");                            // 19. Zone Skip
@@ -330,7 +332,9 @@ public class DirectDatabaseExporter {
                     // 0=Disabled, 1=5%, 2=15%, 3=25%, 4=35%, 5=45%, 6=55%, 7=65%, 8=75%, 9=85%
                     String squelchStr = (squelch == 0) ? "Disabled" : String.valueOf((squelch * 10) - 5);
                     rowBuilder.append(squelchStr).append(",");          // 16. Squelch (OpenGD77 percentage format)
-                    String powerStr = (power == 0) ? "Low" : (power == 1) ? "Master" : "High";
+                    // Convert power to OpenGD77 format: P1-P9 and +W-
+                    // App uses 0=low, 1=high. OpenGD77 uses P1 (lowest) to +W- (max)
+                    String powerStr = (power == 0) ? "P1" : "+W-";
                     rowBuilder.append(powerStr).append(",");            // 17. Power
                     rowBuilder.append("No,");                            // 18. Rx Only
                     rowBuilder.append("No,");                            // 19. Zone Skip

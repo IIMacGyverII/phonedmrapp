@@ -407,15 +407,26 @@ public class DirectDatabaseImporter {
                     squelch = 0;  // Default to 0 if parsing fails
                 }
                 
-                // Power (16) - Read from CSV if present
-                int power = 1;  // Default to Master/High
+                // Power (16) - Read from CSV with OpenGD77 P1-P9 and +W- format
+                // OpenGD77 uses P1 (lowest) to P9 and +W- (max)
+                // App uses 0=low, 1=high, so divide range: P1-P4=low, P5-P9 and +W-=high
+                int power = 1;  // Default to high
                 try {
                     String powerStr = fields[16].trim();
-                    if (powerStr.equalsIgnoreCase("Low")) {
+                    // OpenGD77 low power range: P1, P2, P3, P4
+                    if (powerStr.equalsIgnoreCase("P1") || powerStr.equalsIgnoreCase("P2") || 
+                        powerStr.equalsIgnoreCase("P3") || powerStr.equalsIgnoreCase("P4") ||
+                        powerStr.equalsIgnoreCase("Low")) {
                         power = 0;
-                    } else if (powerStr.equalsIgnoreCase("Master") || powerStr.equalsIgnoreCase("High")) {
+                    // OpenGD77 high power range: P5, P6, P7, P8, P9, +W-, -W+
+                    } else if (powerStr.equalsIgnoreCase("P5") || powerStr.equalsIgnoreCase("P6") ||
+                               powerStr.equalsIgnoreCase("P7") || powerStr.equalsIgnoreCase("P8") ||
+                               powerStr.equalsIgnoreCase("P9") || powerStr.equalsIgnoreCase("+W-") ||
+                               powerStr.equalsIgnoreCase("-W+") || powerStr.equalsIgnoreCase("Master") ||
+                               powerStr.equalsIgnoreCase("High")) {
                         power = 1;
                     }
+                    Log.i(TAG, "Converted power " + powerStr + " to level " + power);
                 } catch (Exception e) {
                     power = 1;  // Default to high power
                 }
