@@ -177,7 +177,7 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 1. Export channel programming from OpenGD77 CPS (all 5 CSV files)
 2. Transfer CSVs to Android device `Download/DMR_Backups/`
    - Create a folder with any name (e.g., `MyBackup`, `Test`, or timestamp like `20260223_140530`)
-   - Place all 5 CSV files inside with simple names: `Channels.csv`, `Contacts.csv`, etc.
+   - Place the CSV files inside (OpenGD77 exports them as: `Channels.csv`, `Contacts.csv`, `TG_Lists.csv`, `Zones.csv`, `DTMF.csv`)
    - Via USB cable (MTP mode) or `adb push`
 4. Open PriInterPhone app
 5. Go to **LOCAL** tab
