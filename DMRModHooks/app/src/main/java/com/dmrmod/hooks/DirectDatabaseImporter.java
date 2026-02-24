@@ -368,12 +368,40 @@ public class DirectDatabaseImporter {
                     Log.w(TAG, "Error parsing TX Tone, using None: " + e.getMessage());
                 }
                 
-                // Squelch (15) - Read from CSV if present
+                // Squelch (15) - Read from CSV with OpenGD77 percentage conversion
+                // OpenGD77 uses percentages (5%, 10%, 15%...95%), app uses 0-9
                 int squelch = 0;
                 try {
                     String sqStr = fields[15].trim();
                     if (!sqStr.isEmpty() && !sqStr.equalsIgnoreCase("None") && !sqStr.equalsIgnoreCase("Disabled")) {
-                        squelch = Integer.parseInt(sqStr);
+                        // Remove % sign if present and parse as integer
+                        String cleanSq = sqStr.replace("%", "").trim();
+                        int sqPercent = Integer.parseInt(cleanSq);
+                        
+                        // Convert OpenGD77 percentage to app's 1-9 scale
+                        // 0% or Disabled = 0, 5-10% = 1, 15-20% = 2, etc.
+                        if (sqPercent <= 0) {
+                            squelch = 0;
+                        } else if (sqPercent <= 10) {
+                            squelch = 1;
+                        } else if (sqPercent <= 20) {
+                            squelch = 2;
+                        } else if (sqPercent <= 30) {
+                            squelch = 3;
+                        } else if (sqPercent <= 40) {
+                            squelch = 4;
+                        } else if (sqPercent <= 50) {
+                            squelch = 5;
+                        } else if (sqPercent <= 60) {
+                            squelch = 6;
+                        } else if (sqPercent <= 70) {
+                            squelch = 7;
+                        } else if (sqPercent <= 80) {
+                            squelch = 8;
+                        } else {  // 85-95% or higher
+                            squelch = 9;
+                        }
+                        Log.i(TAG, "Converted squelch " + sqStr + " (" + sqPercent + "%) to level " + squelch);
                     }
                 } catch (Exception e) {
                     squelch = 0;  // Default to 0 if parsing fails

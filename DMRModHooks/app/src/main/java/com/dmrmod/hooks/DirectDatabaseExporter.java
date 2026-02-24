@@ -302,7 +302,10 @@ public class DirectDatabaseExporter {
                     rowBuilder.append(",");                              
                     rowBuilder.append("");                               // 15. TX Tone (blank for digital)
                     rowBuilder.append(",");                              
-                    rowBuilder.append(squelch).append(",");             // 16. Squelch (0-9 value from database)
+                    // Convert squelch from app's 0-9 to OpenGD77 percentage format
+                    // 0=Disabled, 1=5%, 2=15%, 3=25%, 4=35%, 5=45%, 6=55%, 7=65%, 8=75%, 9=85%
+                    String squelchStr = (squelch == 0) ? "Disabled" : String.valueOf((squelch * 10) - 5);
+                    rowBuilder.append(squelchStr).append(",");          // 16. Squelch (OpenGD77 percentage format)
                     String powerStr = (power == 0) ? "Low" : (power == 1) ? "Master" : "High";
                     rowBuilder.append(powerStr).append(",");            // 17. Power
                     rowBuilder.append("No,");                            // 18. Rx Only
@@ -325,7 +328,10 @@ public class DirectDatabaseExporter {
                     // TX Tone - convert from database format to OpenGD77 CSV format
                     String txTone = ToneConverter.toCSVFormat(txType, txSubCode);
                     rowBuilder.append(txTone).append(",");             // 15. TX Tone (None/67.0/D023N/D023I)
-                    rowBuilder.append(squelch).append(",");             // 16. Squelch (0-9 value from database)
+                    // Convert squelch from app's 0-9 to OpenGD77 percentage format
+                    // 0=Disabled, 1=5%, 2=15%, 3=25%, 4=35%, 5=45%, 6=55%, 7=65%, 8=75%, 9=85%
+                    String squelchStr = (squelch == 0) ? "Disabled" : String.valueOf((squelch * 10) - 5);
+                    rowBuilder.append(squelchStr).append(",");          // 16. Squelch (OpenGD77 percentage format)
                     String powerStr = (power == 0) ? "Low" : (power == 1) ? "Master" : "High";
                     rowBuilder.append(powerStr).append(",");            // 17. Power
                     rowBuilder.append("No,");                            // 18. Rx Only

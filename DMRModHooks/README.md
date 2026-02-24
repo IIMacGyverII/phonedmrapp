@@ -4,7 +4,7 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v0.9.38 (February 24, 2026)  
+**Current Version**: v0.9.39 (February 24, 2026)  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Backup Location**: `Download/DMR_Backups/`  
@@ -331,7 +331,16 @@ Or use LSPosed Manager → Logs
 
 ## Changelog
 
-### v0.9.38 (Feb 24, 2026) ✅ **CURRENT**
+### v0.9.39 (Feb 24, 2026) ✅ **CURRENT**
+- **Added squelch percentage conversion for OpenGD77 compatibility**
+- Export: Converts app's 0-9 squelch values to OpenGD77 percentages (0=Disabled, 1=5%, 2=15%, 3=25%...9=85%)
+- Import: Converts OpenGD77 percentages to app's 0-9 range with proper rounding
+- Mapping: 0-10%→1, 11-20%→2, 21-30%→3, etc. up to 81-95%→9
+- Handles "Disabled" keyword and % symbol in CSV files
+- Fixes OpenGD77 round-trip editing - squelch values now preserved correctly
+- Logged conversion for debugging ("Converted squelch 15% to level 2")
+
+### v0.9.38 (Feb 24, 2026)
 - **Updated OpenGD77 download links to working URLs**
 - Primary link: https://www.opengd77.com/downloads/PC_CPS/Latest/OpenGD77CPSInstaller_R2025.03.23.01.exe
 - Alternative link: GitHub-hosted backup in repository
