@@ -420,7 +420,10 @@ public class PDFExporter {
         
         paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
         paint.setColor(Color.BLUE);
-        canvas.drawText("https://github.com/IIMacGyverII/phonedmrapp/raw/main/DMRModHooks/OpenGD77CPSInstaller_R2025.03.23.01.exe", MARGIN, y, paint);
+        // Split long URL across two lines for proper display
+        canvas.drawText("https://github.com/IIMacGyverII/phonedmrapp/raw/main/", MARGIN, y, paint);
+        y += 16;
+        canvas.drawText("DMRModHooks/OpenGD77CPSInstaller_R2025.03.23.01.exe", MARGIN, y, paint);
         y += 20;
         
         paint.setColor(Color.BLACK);
