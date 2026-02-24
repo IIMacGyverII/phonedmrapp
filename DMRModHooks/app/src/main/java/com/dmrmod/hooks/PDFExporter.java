@@ -448,11 +448,18 @@ public class PDFExporter {
         y = drawBulletPoint(canvas, paint, "1. Transfer the backup zip file or folder from your phone to your computer", MARGIN, y, USABLE_WIDTH);
         y = drawBulletPoint(canvas, paint, "2. Extract the zip file if needed, then open OpenGD77 CPS", MARGIN, y, USABLE_WIDTH);
         y = drawBulletPoint(canvas, paint, "3. Go to Menu > Import > Import CSV Files", MARGIN, y, USABLE_WIDTH);
-        y = drawBulletPoint(canvas, paint, "4. Select the Channels.csv and Contacts.csv files from this backup", MARGIN, y, USABLE_WIDTH);
+        y = drawBulletPoint(canvas, paint, "4. Navigate to and select the backup folder - OpenGD77 will import all CSV files", MARGIN, y, USABLE_WIDTH);
         y = drawBulletPoint(canvas, paint, "5. Edit channels, contacts, zones, and settings as needed", MARGIN, y, USABLE_WIDTH);
         y = drawBulletPoint(canvas, paint, "6. Export the modified CSV files", MARGIN, y, USABLE_WIDTH);
         y = drawBulletPoint(canvas, paint, "7. Transfer back to your phone and import using the DMR app", MARGIN, y, USABLE_WIDTH);
-        y += 25;
+        y += 10;
+        
+        paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        canvas.drawText("IMPORTANT:", MARGIN, y, paint);
+        y += 16;
+        paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
+        y = drawWrappedText(canvas, paint, "All 5 CSV files (Channels, Contacts, TG_Lists, Zones, DTMF) must be present in the folder for OpenGD77 to import successfully. Keep all files together.", MARGIN, y, USABLE_WIDTH);
+        y += 20;
         
         // Export instructions
         paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
