@@ -10,8 +10,8 @@ android {
         applicationId "com.dmrmod.hooks"
         minSdk 26
         targetSdk 34
-        versionCode 85
-        versionName "0.9.37-opengd77-installer"
+        versionCode 86
+        versionName "0.9.38-working-links"
     }
 
     buildTypes {

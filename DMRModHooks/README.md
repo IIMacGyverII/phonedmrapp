@@ -4,7 +4,7 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v0.9.37 (February 24, 2026)  
+**Current Version**: v0.9.38 (February 24, 2026)  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Backup Location**: `Download/DMR_Backups/`  
@@ -331,7 +331,15 @@ Or use LSPosed Manager → Logs
 
 ## Changelog
 
-### v0.9.37 (Feb 24, 2026) ✅ **CURRENT**
+### v0.9.38 (Feb 24, 2026) ✅ **CURRENT**
+- **Updated OpenGD77 download links to working URLs**
+- Primary link: https://www.opengd77.com/downloads/PC_CPS/Latest/OpenGD77CPSInstaller_R2025.03.23.01.exe
+- Alternative link: GitHub-hosted backup in repository
+- PDF now shows both download options for redundancy
+- Fixed LibreDMR releases link issue (repository was empty)
+- Users can download from official site or GitHub backup
+
+### v0.9.37 (Feb 24, 2026)
 - **Added OpenGD77 CPS installer to repository for easy access**
 - Included OpenGD77CPSInstaller_R2025.03.23.01.exe (Windows version)
 - Updated PDF download link to point directly to installer in GitHub repository
