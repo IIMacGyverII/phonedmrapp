@@ -302,10 +302,8 @@ public class DirectDatabaseExporter {
                     rowBuilder.append(",");                              
                     rowBuilder.append("");                               // 15. TX Tone (blank for digital)
                     rowBuilder.append(",");                              
-                    // Convert squelch from app's 0-9 to OpenGD77 percentage format
-                    // 0=Disabled, 1=5%, 2=15%, 3=25%, 4=35%, 5=45%, 6=55%, 7=65%, 8=75%, 9=85%
-                    String squelchStr = (squelch == 0) ? "Disabled" : String.valueOf((squelch * 10) - 5);
-                    rowBuilder.append(squelchStr).append(",");          // 16. Squelch (OpenGD77 percentage format)
+                    // Digital channels always have squelch disabled in OpenGD77
+                    rowBuilder.append("Disabled").append(",");          // 16. Squelch (always Disabled for Digital)
                     String powerStr = (power == 0) ? "Low" : (power == 1) ? "Master" : "High";
                     rowBuilder.append(powerStr).append(",");            // 17. Power
                     rowBuilder.append("No,");                            // 18. Rx Only
