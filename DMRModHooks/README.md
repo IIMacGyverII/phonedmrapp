@@ -4,7 +4,7 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v0.9.40 (February 24, 2026)  
+**Current Version**: v0.9.41 (February 24, 2026)  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Backup Location**: `Download/DMR_Backups/`  
@@ -331,7 +331,14 @@ Or use LSPosed Manager → Logs
 
 ## Changelog
 
-### v0.9.40 (Feb 24, 2026) ✅ **CURRENT**
+### v0.9.41 (Feb 24, 2026) ✅ **CURRENT**
+- **Changed high power export to P9 instead of +W-**
+- Export: Low power (0) → P1, High power (1) → P9
+- Import: Still accepts full P1-P9, +W-, -W+ range with proper mapping
+  - P1-P4 → Low power (0)
+  - P5-P9, +W-, -W+ → High power (1)
+
+### v0.9.40 (Feb 24, 2026)
 - **Added OpenGD77 power level format conversion**
 - Export: Converts app's power levels to OpenGD77 P1-P9 and +W- format
   - Low power (0) → P1 (lowest OpenGD77 power level)
