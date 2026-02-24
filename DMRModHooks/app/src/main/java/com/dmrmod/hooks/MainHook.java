@@ -34,7 +34,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
  * Phase 2: OpenGD77 CSV Export/Import ✓
  * - Export/Import buttons in LOCAL tab of home screen
  * - Exports all 5 OpenGD77 CSV files (Channels, Contacts, TG_Lists, Zones, DTMF)
- * - Import from backup selection dialog with timestamp-based versioning
+ * - Import from backup selection dialog (supports any folder name in DMR_Backups/)
  * - Full compatibility with OpenGD77 CPS ecosystem for cross-platform codeplug management
  * - Files saved to Download/DMR_Backups/ for easy user access
  * 
@@ -46,7 +46,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "1.0";
+    private static final String VERSION = "1.1";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     @Override

@@ -14,7 +14,7 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 
 ## Current Status ✅
 
-**Module Version**: v1.0  
+**Module Version**: v1.1  
 **Export**: ✅ Working - All 5 OpenGD77 CSV files + PDF summary  
 **Import**: ✅ Working - Full Digital & Analog support  
 **User Validation**: ✅ Export/Import tested and confirmed  
@@ -26,13 +26,13 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 - **Target App**: com.pri.prizeinterphone (Ulefone system app)
 - **Device**: Ulefone Armor 26 Ultra (Android 13)
 - **LSPosed**: v1.9.2 (Zygisk)
-- **Current Version**: v1.0
+- **Current Version**: v1.1
 - **Backup Location**: `Download/DMR_Backups/` (standard Android Downloads folder)
 
 ## Features
 
 ### ✅ Phase 1: Initial Hook Setup
-- Startup toast: "✓ DMR Mod Hooks Active! v1.0"
+- Startup toast: "✓ DMR Mod Hooks Active! v1.1"
 - Custom version display on Device Information screen
 - Confirms module is active and working
 - Version tracking for future updates
@@ -149,7 +149,7 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 1. Open PriInterPhone app
 2. Go to **LOCAL** tab
 3. Tap **📤 EXPORT (OpenGD77)** button
-4. Export completes (toast shows: "✓ Export successful! v1.0\nCheck Download/DMR_Backups/")
+4. Export completes (toast shows: "✓ Export successful! v1.1\nCheck Download/DMR_Backups/")
 5. Files created in `Download/DMR_Backups/20260223_140530/` folder containing:
    - Channels.csv, Contacts.csv, TG_Lists.csv, Zones.csv, DTMF.csv
 6. Transfer CSVs to PC via USB, file manager, or `adb pull /sdcard/Download/DMR_Backups/ .`

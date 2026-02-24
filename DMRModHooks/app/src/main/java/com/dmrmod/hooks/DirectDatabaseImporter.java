@@ -87,44 +87,58 @@ public class DirectDatabaseImporter {
                         return;
                     }
                     
-                    // Find all folders with timestamp format (YYYYMMDD_HHMMSS)
-                    List<String> timestamps = new ArrayList<>();
+                    // Find all folders that contain backup files
+                    List<String> folderNames = new ArrayList<>();
                     for (File file : files) {
                         if (file.isDirectory()) {
                             String name = file.getName();
-                            // Check if folder name matches timestamp format: 20260223_140530
-                            if (name.matches("\\d{8}_\\d{6}")) {
-                                // Verify the folder contains required CSV files
-                                File channelsFile = new File(file, "Channels.csv");
-                                if (channelsFile.exists()) {
-                                    timestamps.add(name);
-                                    Log.i(TAG, "Found backup folder: " + name);
-                                }
+                            // Verify the folder contains required CSV files
+                            File channelsFile = new File(file, "Channels.csv");
+                            if (channelsFile.exists()) {
+                                folderNames.add(name);
+                                Log.i(TAG, "Found backup folder: " + name);
                             }
                         }
                     }
                     
-                    if (timestamps.isEmpty()) {
+                    if (folderNames.isEmpty()) {
                         showError(context, "No valid backup folders found");
                         return;
                     }
                     
-                    // Sort timestamps (newest first)
-                    Collections.sort(timestamps, Collections.reverseOrder());
-                    final List<String> sortedTimestamps = timestamps;
+                    // Sort folder names (try to parse timestamps for sorting, fall back to alphabetical)
+                    Collections.sort(folderNames, new java.util.Comparator<String>() {
+                        @Override
+                        public int compare(String name1, String name2) {
+                            // Try timestamp-based comparison first
+                            if (name1.matches("\\d{8}_\\d{6}") && name2.matches("\\d{8}_\\d{6}")) {
+                                // Both are timestamps, sort newest first
+                                return name2.compareTo(name1);
+                            }
+                            // Fall back to alphabetical (reverse for newest first)
+                            return name2.compareTo(name1);
+                        }
+                    });
+                    final List<String> sortedFolders = folderNames;
                     
-                    // Format timestamps for display
+                    // Format folder names for display (parse timestamps if possible)
                     final List<String> displayNames = new ArrayList<>();
                     SimpleDateFormat inputFormat = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);
                     SimpleDateFormat outputFormat = new SimpleDateFormat("MMM dd, yyyy HH:mm:ss", Locale.US);
                     
-                    for (String timestamp : sortedTimestamps) {
-                        try {
-                            Date date = inputFormat.parse(timestamp);
-                            String formatted = outputFormat.format(date);
-                            displayNames.add(formatted);
-                        } catch (Exception e) {
-                            displayNames.add(timestamp);
+                    for (String folderName : sortedFolders) {
+                        // Try to parse as timestamp for nice display
+                        if (folderName.matches("\\d{8}_\\d{6}")) {
+                            try {
+                                Date date = inputFormat.parse(folderName);
+                                String formatted = outputFormat.format(date);
+                                displayNames.add(formatted);
+                            } catch (Exception e) {
+                                displayNames.add(folderName);
+                            }
+                        } else {
+                            // Not a timestamp, just use folder name as-is
+                            displayNames.add(folderName);
                         }
                     }
                     
@@ -144,7 +158,7 @@ public class DirectDatabaseImporter {
                             builder.setAdapter(adapter, new android.content.DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(android.content.DialogInterface dialog, int which) {
-                                    final String selectedTimestamp = sortedTimestamps.get(which);
+                                    final String selectedFolder = sortedFolders.get(which);
                                     
                                     // Confirm import
                                     new AlertDialog.Builder(context)
@@ -154,7 +168,7 @@ public class DirectDatabaseImporter {
                                         .setPositiveButton("Import", new android.content.DialogInterface.OnClickListener() {
                                             @Override
                                             public void onClick(android.content.DialogInterface dialog, int which) {
-                                                performImport(context, selectedTimestamp);
+                                                performImport(context, selectedFolder);
                                             }
                                         })
                                         .setNegativeButton("Cancel", null)
@@ -179,17 +193,17 @@ public class DirectDatabaseImporter {
     /**
      * Perform the actual import in background thread
      */
-    private static void performImport(final Context context, final String timestamp) {
+    private static void performImport(final Context context, final String folderName) {
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    Log.i(TAG, "Starting import for timestamp: " + timestamp);
+                    Log.i(TAG, "Starting import for folder: " + folderName);
                     
-                    // Import from Download/DMR_Backups/[timestamp]/ folder
+                    // Import from Download/DMR_Backups/[folderName]/ folder
                     File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
                     File baseBackupDir = new File(downloadDir, "DMR_Backups");
-                    File backupFolder = new File(baseBackupDir, timestamp);
+                    File backupFolder = new File(baseBackupDir, folderName);
                     
                     if (!backupFolder.exists() || !backupFolder.isDirectory()) {
                         Log.e(TAG, "Backup folder not found: " + backupFolder.getAbsolutePath());

@@ -4,7 +4,7 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v1.0 (February 24, 2026)  
+**Current Version**: v1.1 (February 24, 2026)  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Backup Location**: `Download/DMR_Backups/`  
@@ -224,7 +224,7 @@ Output: `app/build/outputs/apk/debug/app-debug.apk`
    - Check `Download/DMR_Backups/` for timestamped folder
    - Should see folder like: `20260223_140530/` containing CSV files
 
-5. **Verify version**: Toast notification shows "✓ DMR Mod Hooks Active! v1.0"
+5. **Verify version**: Toast notification shows "✓ DMR Mod Hooks Active! v1.1"
 
 ### Troubleshooting
 
@@ -324,7 +324,15 @@ Or use LSPosed Manager → Logs
 
 ## Changelog
 
-### v1.0 (Feb 24, 2026) ✅ **CURRENT - STABLE RELEASE**
+### v1.1 (Feb 24, 2026) ✅ **CURRENT**
+- **Import now supports any folder name**
+- Removed timestamp-only restriction for backup folders
+- Import dialog now lists ALL folders in DMR_Backups/ containing Channels.csv
+- Folders with timestamp format still display as formatted dates for convenience
+- Allows custom folder names like "MyBackup", "Test", "Working_Config", etc.
+- Smart sorting: timestamp folders sorted newest first, others alphabetically
+
+### v1.0 (Feb 24, 2026)
 - **First stable release**
 - Complete OpenGD77 CSV export/import functionality
 - Power level conversion: Low → P1, High → P9
