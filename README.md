@@ -45,13 +45,13 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 - **User validated**: Exported data successfully imports to OpenGD77 CPS
 - **Round-trip tested**: Edit in app → Export → Import to OpenGD77 → Success!
 
-### ✅ Phase 3: OpenGD77 CSV Import (v0.9.0 - v1.0)
+### ✅ Phase 3: OpenGD77 CSV Import (v0.9.0 - v1.1)
 - **Import channels** from OpenGD77 CSV files
 - Direct database write with atomic transactions
 - Handles mixed VHF/UHF channel lists
 - **All channels import correctly** including both Digital (DMR) and Analog (FM)
 - Correct field values for Digital vs Analog channel activation
-- Backup selection dialog with formatted timestamps
+- Backup selection dialog (supports any folder name in DMR_Backups/)
 - Auto-refresh after import - no app restart needed
 - Import confirmation with success/failure reporting
 - Files stored in user-friendly Download folder
@@ -161,13 +161,13 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 
 1. Export channel programming from OpenGD77 CPS (all 5 CSV files)
 2. Transfer CSVs to Android device `Download/DMR_Backups/`
-   - Create a timestamped folder (e.g., `20260223_140530`)
+   - Create a folder with any name (e.g., `MyBackup`, `Test`, or timestamp like `20260223_140530`)
    - Place all 5 CSV files inside with simple names: `Channels.csv`, `Contacts.csv`, etc.
    - Via USB cable (MTP mode) or `adb push`
 4. Open PriInterPhone app
 5. Go to **LOCAL** tab
 6. Tap **📥 IMPORT (OpenGD77)** button
-7. Select backup by timestamp from dialog
+7. Select backup folder from dialog (timestamp folders display as formatted dates)
 8. Wait for import success notification
 9. Channels auto-refresh - ready to use!
 
