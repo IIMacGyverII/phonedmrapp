@@ -345,3 +345,9 @@ With LSPosed runtime hooks and full access to the platform-signed app, **anythin
 
 For detailed technical information, see [MAGISK_SOLUTION.md](MAGISK_SOLUTION.md) and [STATUS.md](STATUS.md).
 
+## License
+
+This project is licensed under the **GNU General Public License v3.0** - see the [LICENSE](LICENSE) file for details.
+
+> **Disclaimer**: This tool hooks into the PriInterPhone app at runtime using LSPosed/Xposed. It does NOT modify or redistribute any proprietary code from Ulefone. Users must legally own the PriInterPhone app. For personal, educational, and interoperability purposes only.
+

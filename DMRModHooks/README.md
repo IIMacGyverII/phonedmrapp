@@ -752,3 +752,11 @@ If you're trying to modify a system app:
 5. **Log extensively**: Xposed logs are your friend for debugging
 
 **Bottom Line**: We spent 1.5 days fighting signature verification before realizing runtime hooks were the answer. This documentation exists so you don't make the same mistakes!
+
+---
+
+## License
+
+This project is licensed under the **GNU General Public License v3.0** - see the [LICENSE](LICENSE) file for details.
+
+> **Disclaimer**: This tool hooks into the PriInterPhone app at runtime using LSPosed/Xposed. It does NOT modify or redistribute any proprietary code from Ulefone. Users must legally own the PriInterPhone app. For personal, educational, and interoperability purposes only.
