@@ -297,13 +297,34 @@ phonedmrapp/
 1. **User Action Required**: Install Magisk module on device and reboot
 2. **Testing**: Verify DMR hardware initialization and radio functionality
 3. **Documentation**: Update with test results and user guide
-4. **Future Enhancements**:
-   - Convert to release build with proper signing key
-   - Additional UI customizations
-   - Performance optimizations
-   - OTA update mechanism for Magisk module
 
-**Last Updated**: February 23, 2026  
+## Future Plans
+
+### Expanded DMR Functionality
+- **Real-time Contact Display**: Add live DMR contact receive display showing incoming caller information
+- **Enhanced UI Integration**: Display current DMR contact name, ID, and call status in real-time
+- **Call logging**: Track incoming/outgoing DMR calls with timestamps
+
+### Tier 2 Support
+- **Attempt Tier 2 Implementation**: Investigate and implement advanced DMR Tier 2 features
+- **Enhanced talkgroup support**: Multi-talkgroup scanning and monitoring
+- **IP connectivity**: Explore DMR network connectivity options
+
+### Global DMR Database Integration
+- **RadioID.net Integration**: Add ability to download and sync global DMR contact database
+- **Automatic Updates**: Periodic contact database refresh from radioid.net
+- **Smart Contact Resolution**: Automatically resolve DMR IDs to callsigns and names
+- **Offline Database**: Local caching for fast lookups without internet connection
+
+### The Sky's the Limit
+With LSPosed runtime hooks and full access to the platform-signed app, **anything is possible**:
+- Custom UI themes and branding
+- Advanced automation and scripting
+- Integration with external services and APIs
+- Community-driven feature development
+- Enhanced radio control and monitoring
+
+**Last Updated**: February 24, 2026  
 **Status**: LSPosed module fully operational - OpenGD77 export/import working perfectly!  
 **GitHub**: https://github.com/IIMacGyverII/phonedmrapp
 
