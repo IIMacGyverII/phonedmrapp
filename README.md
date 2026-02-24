@@ -4,7 +4,7 @@
 
 ## Demo
 
-<video src="V1demo.mp4" controls title="DMRModHooks v1.1 Demo" width="800"></video>
+<video src="https://github.com/IIMacGyverII/phonedmrapp/raw/main/V1demo.mp4" controls title="DMRModHooks v1.1 Demo" width="800"></video>
 
 ## What is this?
 
