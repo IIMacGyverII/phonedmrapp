@@ -224,7 +224,7 @@ Output: `app/build/outputs/apk/debug/app-debug.apk`
    - Check `Download/DMR_Backups/` for timestamped folder
    - Should see folder like: `20260223_140530/` containing CSV files
 
-5. **Verify version**: Toast notification shows "✓ DMR Mod Hooks Active! v0.9.31"
+5. **Verify version**: Toast notification shows "✓ DMR Mod Hooks Active! v1.0"
 
 ### Troubleshooting
 
@@ -284,8 +284,6 @@ Output: `app/build/outputs/apk/debug/app-debug.apk`
    - Open PriInterPhone app → LOCAL tab
    - Should see "Backup/Restore" button
    - Test export: Tap Backup/Restore → Export to OpenGD77 CSV
-   - Navigate to Device Info screen
-   - Should see MacGyver v0.9.26
 
 ## Development
 
