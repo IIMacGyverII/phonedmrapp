@@ -4,7 +4,7 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v0.9.36 (February 23, 2026)  
+**Current Version**: v0.9.37 (February 24, 2026)  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Backup Location**: `Download/DMR_Backups/`  
@@ -331,7 +331,16 @@ Or use LSPosed Manager → Logs
 
 ## Changelog
 
-### v0.9.36 (Feb 23, 2026) ✅ **CURRENT**
+### v0.9.37 (Feb 24, 2026) ✅ **CURRENT**
+- **Added OpenGD77 CPS installer to repository for easy access**
+- Included OpenGD77CPSInstaller_R2025.03.23.01.exe (Windows version)
+- Updated PDF download link to point directly to installer in GitHub repository
+- No more broken links - installer hosted alongside the module for convenience
+- PDF now shows: https://github.com/IIMacGyverII/phonedmrapp/raw/main/OpenGD77CPSInstaller_R2025.03.23.01.exe
+- Alternative link to LibreDMR releases mentioned for latest versions and other platforms
+- Makes it easier for users to get started without searching for the software
+
+### v0.9.36 (Feb 23, 2026)
 - **Added automatic zip archive creation for easy backup transfer**
 - Each backup now includes a DMR_Backup_[timestamp].zip file containing all CSV files and PDF
 - Zip file created automatically alongside individual files in the backup folder
