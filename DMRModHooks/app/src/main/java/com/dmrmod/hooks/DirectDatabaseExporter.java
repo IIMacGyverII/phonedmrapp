@@ -8,10 +8,14 @@ import android.util.Log;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 /**
  * DirectDatabaseExporter - Export DMR data to OpenGD77-compatible CSV files
@@ -104,6 +108,15 @@ public class DirectDatabaseExporter {
                     Log.w(TAG, "⚠ PDF summary generation failed (CSV files unaffected)");
                 }
                 
+                // Create zip archive of all backup files for easy transfer
+                Log.i(TAG, "Creating backup archive...");
+                boolean zipOk = createBackupZip(outputDir, timestamp);
+                if (zipOk) {
+                    Log.i(TAG, "✓ Backup archive created successfully");
+                } else {
+                    Log.w(TAG, "⚠ Backup archive creation failed (files unaffected)");
+                }
+                
                 return true;
             } else {
                 Log.e(TAG, "Export failed - channels:" + channelsOk + " contacts:" + contactsOk + 
@@ -113,6 +126,57 @@ public class DirectDatabaseExporter {
             
         } catch (Exception e) {
             Log.e(TAG, "Export error: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    /**
+     * Create a zip archive of all backup files
+     * Makes it easy to transfer the entire backup via USB, email, or cloud storage
+     */
+    private static boolean createBackupZip(File backupDir, String folderName) {
+        try {
+            File zipFile = new File(backupDir, "DMR_Backup_" + folderName + ".zip");
+            FileOutputStream fos = new FileOutputStream(zipFile);
+            ZipOutputStream zos = new ZipOutputStream(fos);
+            
+            // List of files to include in the zip
+            String[] filesToZip = {
+                "Channels.csv",
+                "Contacts.csv",
+                "TG_Lists.csv",
+                "Zones.csv",
+                "DTMF.csv",
+                "Backup_Summary.pdf"
+            };
+            
+            byte[] buffer = new byte[1024];
+            
+            for (String fileName : filesToZip) {
+                File file = new File(backupDir, fileName);
+                if (file.exists()) {
+                    FileInputStream fis = new FileInputStream(file);
+                    zos.putNextEntry(new ZipEntry(fileName));
+                    
+                    int length;
+                    while ((length = fis.read(buffer)) > 0) {
+                        zos.write(buffer, 0, length);
+                    }
+                    
+                    zos.closeEntry();
+                    fis.close();
+                }
+            }
+            
+            zos.close();
+            fos.close();
+            
+            Log.i(TAG, "Zip archive created: " + zipFile.getAbsolutePath());
+            return true;
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error creating backup zip: " + e.getMessage());
             e.printStackTrace();
             return false;
         }

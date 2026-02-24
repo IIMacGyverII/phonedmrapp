@@ -4,7 +4,7 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v0.9.35 (February 23, 2026)  
+**Current Version**: v0.9.36 (February 23, 2026)  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Backup Location**: `Download/DMR_Backups/`  
@@ -331,12 +331,21 @@ Or use LSPosed Manager → Logs
 
 ## Changelog
 
-### v0.9.35 (Feb 23, 2026) ✅ **CURRENT**
+### v0.9.36 (Feb 23, 2026) ✅ **CURRENT**
+- **Added automatic zip archive creation for easy backup transfer**
+- Each backup now includes a DMR_Backup_[timestamp].zip file containing all CSV files and PDF
+- Zip file created automatically alongside individual files in the backup folder
+- Makes it easy to transfer entire backup via USB, email, or cloud storage
+- Updated PDF instructions to mention zip file as recommended transfer method
+- Zip includes: Channels.csv, Contacts.csv, TG_Lists.csv, Zones.csv, DTMF.csv, Backup_Summary.pdf
+- Individual files still available for users who prefer direct access
+- Note: OpenGD77 CSV import functionality still needs testing in OpenGD77 CPS software
+
+### v0.9.35 (Feb 23, 2026)
 - **Fixed PDF channel display bug - all 16 channels now render correctly**
 - Fixed database column name: `channel_cc` (not `channel_colorCode`)
 - PDF now displays all channels with complete details: frequencies, tones, contacts, color codes, timeslots, squelch, power
 - Verified export/import workflow generates complete documentation
-- Note: OpenGD77 CSV import functionality still needs testing in OpenGD77 CPS software
 
 ### v0.9.34 (Feb 23, 2026)
 - Fixed contact database column name in PDF export: `_id` (not `contact_id`)
