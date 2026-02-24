@@ -169,7 +169,7 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
    - Channels.csv, Contacts.csv, TG_Lists.csv, Zones.csv, DTMF.csv
 6. Transfer CSVs to PC via USB, file manager, or `adb pull /sdcard/Download/DMR_Backups/ .`
 7. Open OpenGD77 CPS
-8. Import → Select all 5 CSV files
+8. Import → Select the folder containing all 5 CSV files
 9. Program your OpenGD77 radio!
 
 ### Importing Channels from OpenGD77
