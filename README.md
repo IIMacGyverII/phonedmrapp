@@ -86,7 +86,7 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 - Unlocked bootloader
 - Magisk v24+ with Zygisk enabled
 - LSPosed v1.9.2+ (Zygisk variant)
-- ADB tools (for installation and verification)
+- [ADB tools](https://developer.android.com/tools/releases/platform-tools) (for installation and verification)
 
 ### Step 1: Install LSPosed Framework
 
