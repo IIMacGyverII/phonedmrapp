@@ -10,8 +10,8 @@ android {
         applicationId "com.dmrmod.hooks"
         minSdk 26
         targetSdk 34
-        versionCode 89
-        versionName "0.9.41"
+        versionCode 100
+        versionName "1.0"
     }
 
     buildTypes {

@@ -46,7 +46,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "0.9.41";
+    private static final String VERSION = "1.0";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     @Override
@@ -61,8 +61,7 @@ public class MainHook implements IXposedHookLoadPackage {
         // Hook the main activity's onCreate method
         hookMainActivity(lpparam);
         
-        // Hook the information screen to add MacGyver version
-        hookInformationActivity(lpparam);
+        // Information screen hook (currently disabled)
         
         // Hook the local fragment to add backup/restore button
         hookLocalFragment(lpparam);
@@ -123,7 +122,7 @@ public class MainHook implements IXposedHookLoadPackage {
     }
     
     /**
-     * Hook FragmentLocalInformationActivity to display MacGyver version
+     * Hook FragmentLocalInformationActivity to display module version
      */
     private void hookInformationActivity(XC_LoadPackage.LoadPackageParam lpparam) {
         try {
@@ -159,7 +158,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 new XC_MethodHook() {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                        XposedBridge.log(TAG + ": initView() called, attempting to set MacGyver version...");
+                        XposedBridge.log(TAG + ": initView() called, attempting to set module version...");
                         
                         try {
                             // Try to hook the software version TextView instead
@@ -172,8 +171,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Get current text
                                 String originalText = (String) XposedHelpers.callMethod(tvSoftwareVersion, "getText");
                                 
-                                // Append MacGyver version
-                                String newText = originalText + "\nMacGyver v1.0.0-ALPHA";
+                                // Append module version
+                                String newText = originalText + "\nDMRModHooks v" + VERSION;
                                 
                                 XposedHelpers.callMethod(
                                     tvSoftwareVersion,
@@ -181,7 +180,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     newText
                                 );
                                 
-                                XposedBridge.log(TAG + ": ✓ MacGyver version appended to software version!");
+                                XposedBridge.log(TAG + ": ✓ Module version appended to software version!");
                             } else {
                                 XposedBridge.log(TAG + ": ERROR - mTvSoftwareVersion is null!");
                             }

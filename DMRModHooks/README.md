@@ -4,7 +4,7 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v0.9.41 (February 24, 2026)  
+**Current Version**: v1.0 (February 24, 2026)  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Backup Location**: `Download/DMR_Backups/`  
@@ -44,7 +44,6 @@
 - ✅ Export/Import buttons directly in LOCAL tab
 - ✅ Timestamped backup selection dialog for imports
 - ✅ Toast notifications with version info and backup location
-- ✅ MacGyver branding on Device Information screen
 
 **File Location**:
 - ✅ Backups saved to `Download/DMR_Backups/` for easy access
@@ -89,11 +88,7 @@
    - Action: Injects button into fragment layout
    - Opens: BackupActivity
 
-2. **FragmentLocalInformationActivity.initView()**
-   - Purpose: Display MacGyver version
-   - Action: Sets custom version text on Device Info screen
-   
-3. **DirectDatabaseExporter (Direct Access)**
+2. **DirectDatabaseExporter (Direct Access)**
    - Bypasses shell commands
    - Reads channel/contact databases directly
    - Exports 5 OpenGD77 CSV files to `Download/DMR_Backups/`
@@ -331,7 +326,17 @@ Or use LSPosed Manager → Logs
 
 ## Changelog
 
-### v0.9.41 (Feb 24, 2026) ✅ **CURRENT**
+### v1.0 (Feb 24, 2026) ✅ **CURRENT - STABLE RELEASE**
+- **First stable release**
+- Complete OpenGD77 CSV export/import functionality
+- Power level conversion: Low → P1, High → P9
+- Squelch percentage conversion for analog channels
+- Full support for Digital and Analog channels
+- PDF backup summaries with detailed channel information
+- Automatic zip archive creation
+- Removed development branding
+
+### v0.9.41 (Feb 24, 2026)
 - **Changed high power export to P9 instead of +W-**
 - Export: Low power (0) → P1, High power (1) → P9
 - Import: Still accepts full P1-P9, +W-, -W+ range with proper mapping
