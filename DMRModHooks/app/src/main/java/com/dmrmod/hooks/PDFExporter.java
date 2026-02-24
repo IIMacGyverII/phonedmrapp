@@ -420,11 +420,10 @@ public class PDFExporter {
         
         paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
         paint.setColor(Color.BLUE);
-        // Split long URL across two lines for proper display
-        canvas.drawText("https://github.com/IIMacGyverII/phonedmrapp/raw/main/", MARGIN, y, paint);
-        y += 16;
-        canvas.drawText("DMRModHooks/OpenGD77CPSInstaller_R2025.03.23.01.exe", MARGIN, y, paint);
-        y += 20;
+        paint.setTextSize(9);  // Smaller font for long URL
+        y = drawWrappedText(canvas, paint, "https://github.com/IIMacGyverII/phonedmrapp/raw/main/OpenGD77CPSInstaller_R2025.03.23.01.exe", MARGIN, y, USABLE_WIDTH);
+        paint.setTextSize(BODY_SIZE);  // Reset to normal size
+        y += 5;
         
         paint.setColor(Color.BLACK);
         y = drawWrappedText(canvas, paint, "Download the OpenGD77 CPS installer for Windows from the repository. For the latest version or other platforms (macOS, Linux), visit the LibreDMR GitHub releases page.", MARGIN, y, USABLE_WIDTH);
