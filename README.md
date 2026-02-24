@@ -101,19 +101,33 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 
 ### Step 2: Install DMRModHooks Module
 
-1. **Build or Download**:
+#### Option A: Download Pre-built Release (Recommended)
+
+1. **Download Latest Release**:
+   - Go to [Releases](https://github.com/IIMacGyverII/phonedmrapp/releases/latest)
+   - Download `DMRModHooks-v1.1.apk` (or latest version)
+
+2. **Install Module**:
+   ```powershell
+   adb install -r DMRModHooks-v1.1.apk
+   ```
+
+#### Option B: Build from Source
+
+1. **Build APK**:
    ```powershell
    cd DMRModHooks
    .\gradlew.bat assembleDebug
    ```
-   Or download from [releases](releases/)
 
 2. **Install Module**:
    ```powershell
    adb install -r app\build\outputs\apk\debug\app-debug.apk
    ```
 
-3. **Enable in LSPosed Manager**:
+#### Enable in LSPosed Manager
+
+3. **Activate Module**:
    - Open LSPosed Manager app on device
    - Go to "Modules" tab
    - Enable "DMR Mod Hooks" checkbox
