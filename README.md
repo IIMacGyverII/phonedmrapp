@@ -79,7 +79,8 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 ## Installation Instructions
 
 ### Requirements
-- Ulefone Armor 26 Ultra (or compatible device with PriInterPhone)
+- [Ulefone Armor 26 Ultra](https://xdaforums.com/t/ulefone-armor-26-ultra-walkie-talkie-info-guides-development.4677740/) (or compatible device with PriInterPhone)
+  - **Note**: Check the XDA thread for the latest root procedure specific to your ROM version
 - Unlocked bootloader
 - Magisk v24+ with Zygisk enabled
 - LSPosed v1.9.2+ (Zygisk variant)
