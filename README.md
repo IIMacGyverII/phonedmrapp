@@ -58,8 +58,6 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 
 ## Why LSPosed?
 
-## Why LSPosed?
-
 The PriInterPhone app requires Ulefone's platform certificate to access:
 - System UID (1000) for hardware permissions
 - Custom `PrizeTinyService` framework APIs
