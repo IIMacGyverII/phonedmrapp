@@ -2,6 +2,10 @@
 
 **Status**: ✅ **FULLY FUNCTIONAL** - Export/Import working!
 
+## Demo
+
+<video src="V1demo.mp4" controls title="DMRModHooks v1.1 Demo" width="800"></video>
+
 ## What is this?
 
 LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
