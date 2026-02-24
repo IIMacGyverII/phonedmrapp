@@ -140,11 +140,9 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 
 ### Step 3: Test Installation
 
-1. **Check MacGyver Branding**:
+1. **Verify Module is Active**:
    - Open PriInterPhone app
-   - You should see toast: "✓ DMR Mod Hooks Active!"
-   - Go to Settings → Device Information
-   - Look for MacGyver version text
+   - You should see toast: "✓ DMR Mod Hooks Active! v1.1"
 
 2. **Test Export**:
    - Go to LOCAL tab

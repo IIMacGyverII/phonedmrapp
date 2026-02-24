@@ -524,7 +524,7 @@ Or use LSPosed Manager → Logs
 - Channels.csv (28 parameters), Contacts.csv, TG_Lists.csv, Zones.csv, DTMF.csv
 
 ### v0.3 (Feb 18, 2026)
-- MacGyver version display working
+- Module version display working
 - Field discovery for runtime introspection
 
 ### v0.2 (Feb 18, 2026)
@@ -542,7 +542,6 @@ Or use LSPosed Manager → Logs
 - Both Digital and Analog channels activate successfully
 - Auto-refresh working
 - Stock contacts preserved
-- MacGyver branding functional
 
 ## References
 
@@ -712,7 +711,7 @@ LSPosed hooks the **ORIGINAL properly-signed system app** at runtime:
 - **Day 2 (Feb 18 morning)**: Discovered platform certificate requirement
 - **Day 2 (Feb 18 afternoon)**: Installed LSPosed v1.9.2
 - **Day 2 (Feb 18 evening)**: First successful hook (toast message)
-- **Day 2 (Feb 18 night)**: First UI modification (MacGyver version) - **SUCCESS!**
+- **Day 2 (Feb 18 night)**: First UI modification (module version display) - **SUCCESS!**
 
 ### Key Insights
 
