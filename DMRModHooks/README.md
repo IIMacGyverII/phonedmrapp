@@ -4,7 +4,7 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v1.3.4 (February 26, 2026)  
+**Current Version**: v1.3.5 (February 26, 2026)  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Backup Location**: `Download/DMR_Backups/`  
@@ -87,7 +87,16 @@
 - ✅ Fallback chain: City & State → City Only → Coordinates → Icon
 - ✅ Comprehensive error handling for geocoding failures
 - ✅ Uses Android Geocoder API with US locale
-- ✅ No network requests to external services
+
+**Elevation Display (v1.3.5)**:
+- ✅ Integrated Open-Elevation API (free, no API key required)
+- ✅ Displays elevation in feet(meters) format: "859ft (262m)"
+- ✅ Asynchronous loading: location name appears first, elevation updates after
+- ✅ Worldwide coverage using SRTM dataset
+- ✅ Background thread prevents UI blocking
+- ✅ Graceful fallback if elevation unavailable
+- ✅ Display format: "Minneapolis, Minnesota\n859ft (262m) 📍"
+- ✅ Works with coordinates too: "44.9203, -93.2654\n859ft (262m) 📍"
 
 **Technical Architecture**:
 - Singleton pattern for LocationDatabase access
@@ -100,6 +109,7 @@
 - v1.3.1: Borderbox restored after device reboot (cached state cleared)
 - v1.3.3: Dynamic updates fully functional
 - v1.3.4: Geocoding integrated with fallback safety
+- v1.3.5: Elevation display via Open-Elevation API, async loading, no API key required
 
 **Upcoming Enhancements**:
 - Location editing UI for manual coordinate entry
@@ -329,7 +339,7 @@ Output: `app/build/outputs/apk/debug/app-debug.apk`
    - Check `Download/DMR_Backups/` for timestamped folder
    - Should see folder like: `20260223_140530/` containing CSV files
 
-5. **Verify version**: Toast notification shows "✓ DMR Mod Hooks Active! v1.3.4"
+5. **Verify version**: Toast notification shows "✓ DMR Mod Hooks Active! v1.3.5"
 
 ### Troubleshooting
 
@@ -432,7 +442,19 @@ Or use LSPosed Manager → Logs
 
 ## Changelog
 
-### v1.3.4 (Feb 26, 2026) ✅ **CURRENT**
+### v1.3.5 (Feb 26, 2026) ✅ **CURRENT**
+- **Added elevation display using Open-Elevation API**
+- Integrated free elevation service (no API key or account required)
+- Display format: feet(meters) - "859ft (262m)"
+- Asynchronous loading: city/state appears immediately, elevation updates after
+- Elevation data from https://api.open-elevation.com (worldwide SRTM coverage)
+- Added INTERNET and ACCESS_NETWORK_STATE permissions
+- Background thread implementation prevents UI blocking
+- Comprehensive error handling with graceful fallbacks
+- Works with both geocoded names and raw coordinates
+- CSV format remains at 28 columns for OpenGD77 compatibility
+
+### v1.3.4 (Feb 26, 2026)
 - **Added reverse geocoding for city/state display**
 - Implemented Android Geocoder API to show human-readable location names
 - Display format: "City, State" instead of raw coordinates (e.g., "Minneapolis, Minnesota")
