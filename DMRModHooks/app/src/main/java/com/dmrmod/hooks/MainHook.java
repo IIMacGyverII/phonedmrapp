@@ -15,7 +15,14 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.List;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
@@ -53,7 +60,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "1.3.4";
+    private static final String VERSION = "1.3.5";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     @Override
@@ -393,36 +400,68 @@ public class MainHook implements IXposedHookLoadPackage {
                                 String city = address.getLocality();
                                 String state = address.getAdminArea();
                                 
+                                // Display location name immediately
                                 if (city != null && state != null) {
                                     displayText = city + ", " + state + "\n📍";
                                 } else if (city != null) {
                                     displayText = city + "\n📍";
                                 } else {
-                                    // Fallback to coordinates
                                     displayText = String.format(java.util.Locale.US, 
                                         "%.4f, %.4f\n📍", location.latitude, location.longitude);
                                 }
-                                XposedBridge.log(TAG + ": Geocoded location for channel " + channelNumber + ": " + displayText.replace("\n📍", ""));
+                                locationText.setText(displayText);
+                                
+                                // Fetch elevation in background thread
+                                final String baseText = displayText.replace("\n📍", "");
+                                final TextView textView = locationText;
+                                new Thread(() -> {
+                                    try {
+                                        double elevation = getElevation(location.latitude, location.longitude);
+                                        if (elevation > 0) {
+                                            int elevationFt = (int) (elevation * 3.28084);
+                                            final String elevationStr = String.format(java.util.Locale.US, 
+                                                "%dft (%.0fm)", elevationFt, elevation);
+                                            // Update UI on main thread
+                                            textView.post(() -> {
+                                                textView.setText(baseText + "\n" + elevationStr + " 📍");
+                                            });
+                                        }
+                                    } catch (Exception e) {
+                                        XposedBridge.log(TAG + ": Could not get elevation: " + e.getMessage());
+                                    }
+                                }).start();
+                                
+                                XposedBridge.log(TAG + ": Geocoded location for channel " + channelNumber + ": " + baseText);
                             } else {
                                 // Geocoder returned no results, show coordinates
                                 displayText = String.format(java.util.Locale.US, 
                                     "%.4f, %.4f\n📍", location.latitude, location.longitude);
+                                locationText.setText(displayText);
+                                
+                                // Fetch elevation in background
+                                fetchAndDisplayElevation(location, locationText, displayText.replace("\n📍", ""));
                                 XposedBridge.log(TAG + ": No geocoding results, showing coordinates for channel " + channelNumber);
                             }
                         } else {
-                            // Geocoder not available
+                            // Geocoder not available, show coordinates
                             displayText = String.format(java.util.Locale.US, 
                                 "%.4f, %.4f\n📍", location.latitude, location.longitude);
+                            locationText.setText(displayText);
+                            
+                            // Fetch elevation in background
+                            fetchAndDisplayElevation(location, locationText, displayText.replace("\n📍", ""));
                             XposedBridge.log(TAG + ": Geocoder not available, showing coordinates for channel " + channelNumber);
                         }
                     } catch (Exception e) {
                         // Geocoder failed, fallback to coordinates
                         displayText = String.format(java.util.Locale.US, 
                             "%.4f, %.4f\n📍", location.latitude, location.longitude);
+                        locationText.setText(displayText);
+                        
+                        // Fetch elevation in background
+                        fetchAndDisplayElevation(location, locationText, displayText.replace("\n📍", ""));
                         XposedBridge.log(TAG + ": Geocoder error: " + e.getMessage() + ", showing coordinates");
                     }
-                    
-                    locationText.setText(displayText);
                 } else {
                     locationText.setText("📍");
                     XposedBridge.log(TAG + ": No location for channel " + channelNumber);
@@ -431,6 +470,80 @@ public class MainHook implements IXposedHookLoadPackage {
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error updating location display: " + e.getMessage());
         }
+    }
+    
+    /**
+     * Helper to fetch elevation in background and update TextView
+     */
+    private void fetchAndDisplayElevation(LocationDatabase.Location location, TextView locationText, String baseText) {
+        new Thread(() -> {
+            try {
+                double elevation = getElevation(location.latitude, location.longitude);
+                if (elevation > 0) {
+                    int elevationFt = (int) (elevation * 3.28084);
+                    final String elevationStr = String.format(java.util.Locale.US, 
+                        "%dft (%.0fm)", elevationFt, elevation);
+                    locationText.post(() -> {
+                        locationText.setText(baseText + "\n" + elevationStr + " 📍");
+                    });
+                }
+            } catch (Exception e) {
+                XposedBridge.log(TAG + ": Could not get elevation: " + e.getMessage());
+            }
+        }).start();
+    }
+    
+    /**
+     * Get elevation from Open-Elevation API
+     * @param latitude Latitude in decimal degrees
+     * @param longitude Longitude in decimal degrees
+     * @return Elevation in meters, or 0 if unavailable
+     */
+    private double getElevation(double latitude, double longitude) {
+        HttpURLConnection connection = null;
+        try {
+            // Open-Elevation API endpoint (free, no API key required)
+            String urlString = String.format(java.util.Locale.US, 
+                "https://api.open-elevation.com/api/v1/lookup?locations=%.6f,%.6f",
+                latitude, longitude);
+            
+            URL url = new URL(urlString);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(5000); // 5 second timeout
+            connection.setReadTimeout(5000);
+            
+            int responseCode = connection.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(connection.getInputStream()));
+                StringBuilder response = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
+                }
+                reader.close();
+                
+                // Parse JSON response
+                JSONObject json = new JSONObject(response.toString());
+                JSONArray results = json.getJSONArray("results");
+                if (results.length() > 0) {
+                    JSONObject result = results.getJSONObject(0);
+                    double elevation = result.getDouble("elevation");
+                    XposedBridge.log(TAG + ": Got elevation: " + elevation + "m");
+                    return elevation;
+                }
+            } else {
+                XposedBridge.log(TAG + ": Elevation API returned code: " + responseCode);
+            }
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Elevation API error: " + e.getMessage());
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+        return 0;
     }
     
     /**

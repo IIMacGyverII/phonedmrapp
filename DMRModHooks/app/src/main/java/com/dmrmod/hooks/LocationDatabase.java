@@ -14,13 +14,14 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class LocationDatabase extends SQLiteOpenHelper {
     
     private static final String DATABASE_NAME = "dmrmod_locations.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
     
     // Table and column names
     private static final String TABLE_LOCATIONS = "channel_locations";
     private static final String COLUMN_CHANNEL_NUMBER = "channel_number";
     private static final String COLUMN_LATITUDE = "latitude";
     private static final String COLUMN_LONGITUDE = "longitude";
+    private static final String COLUMN_ELEVATION = "elevation";
     
     private static LocationDatabase instance;
     
@@ -43,25 +44,37 @@ public class LocationDatabase extends SQLiteOpenHelper {
         String createTable = "CREATE TABLE " + TABLE_LOCATIONS + " (" +
                 COLUMN_CHANNEL_NUMBER + " INTEGER PRIMARY KEY, " +
                 COLUMN_LATITUDE + " REAL, " +
-                COLUMN_LONGITUDE + " REAL)";
+                COLUMN_LONGITUDE + " REAL, " +
+                COLUMN_ELEVATION + " REAL DEFAULT 0)";
         db.execSQL(createTable);
     }
     
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_LOCATIONS);
-        onCreate(db);
+        if (oldVersion < 2) {
+            // Add elevation column to existing table
+            db.execSQL("ALTER TABLE " + TABLE_LOCATIONS + " ADD COLUMN " + 
+                    COLUMN_ELEVATION + " REAL DEFAULT 0");
+        }
     }
     
     /**
-     * Save or update location for a channel
+     * Save or update location for a channel (without elevation)
      */
     public void saveLocation(int channelNumber, double latitude, double longitude) {
+        saveLocation(channelNumber, latitude, longitude, 0.0);
+    }
+    
+    /**
+     * Save or update location for a channel (with elevation)
+     */
+    public void saveLocation(int channelNumber, double latitude, double longitude, double elevation) {
         SQLiteDatabase db = getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COLUMN_CHANNEL_NUMBER, channelNumber);
         values.put(COLUMN_LATITUDE, latitude);
         values.put(COLUMN_LONGITUDE, longitude);
+        values.put(COLUMN_ELEVATION, elevation);
         
         db.insertWithOnConflict(TABLE_LOCATIONS, null, values, 
                 SQLiteDatabase.CONFLICT_REPLACE);
@@ -75,7 +88,7 @@ public class LocationDatabase extends SQLiteOpenHelper {
         SQLiteDatabase db = getReadableDatabase();
         Cursor cursor = db.query(
                 TABLE_LOCATIONS,
-                new String[]{COLUMN_LATITUDE, COLUMN_LONGITUDE},
+                new String[]{COLUMN_LATITUDE, COLUMN_LONGITUDE, COLUMN_ELEVATION},
                 COLUMN_CHANNEL_NUMBER + " = ?",
                 new String[]{String.valueOf(channelNumber)},
                 null, null, null
@@ -85,7 +98,8 @@ public class LocationDatabase extends SQLiteOpenHelper {
         if (cursor.moveToFirst()) {
             double latitude = cursor.getDouble(0);
             double longitude = cursor.getDouble(1);
-            location = new Location(latitude, longitude);
+            double elevation = cursor.getDouble(2);
+            location = new Location(latitude, longitude, elevation);
         }
         cursor.close();
         return location;
@@ -115,10 +129,16 @@ public class LocationDatabase extends SQLiteOpenHelper {
     public static class Location {
         public final double latitude;
         public final double longitude;
+        public final double elevation;
         
         public Location(double latitude, double longitude) {
+            this(latitude, longitude, 0.0);
+        }
+        
+        public Location(double latitude, double longitude, double elevation) {
             this.latitude = latitude;
             this.longitude = longitude;
+            this.elevation = elevation;
         }
     }
 }
