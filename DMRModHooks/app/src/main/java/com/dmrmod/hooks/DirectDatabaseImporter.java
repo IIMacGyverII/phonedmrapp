@@ -276,6 +276,11 @@ public class DirectDatabaseImporter {
             File dbFile = context.getDatabasePath("database_channel_area_default_uhf.db");
             db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
             
+            // Initialize LocationDatabase for lat/lon import
+            LocationDatabase locationDb = LocationDatabase.getInstance(context);
+            locationDb.clearAllLocations();  // Clear existing locations before import
+            Log.i(TAG, "LocationDatabase initialized for import");
+            
             // Read CSV file first to parse all data
             reader = new BufferedReader(new FileReader(csvFile));
             String headerLine = reader.readLine(); // Skip header
@@ -483,6 +488,29 @@ public class DirectDatabaseImporter {
                     Log.e(TAG, "FAILED to insert channel " + channelNumber + ": " + channelName);
                 } else {
                     importCount++;
+                    
+                    // Import lat/lon to LocationDatabase if present (columns 25-26)
+                    try {
+                        if (fields.length >= 27) {
+                            String latStr = fields[25].trim();
+                            String lonStr = fields[26].trim();
+                            
+                            // Only save if not default values
+                            if (!latStr.isEmpty() && !lonStr.isEmpty()) {
+                                double lat = Double.parseDouble(latStr);
+                                double lon = Double.parseDouble(lonStr);
+                                
+                                // Don't save default values (0.128, 0.008)
+                                if (Math.abs(lat - 0.128) > 0.001 || Math.abs(lon - 0.008) > 0.001) {
+                                    locationDb.saveLocation(Integer.parseInt(channelNumber), lat, lon);
+                                    Log.i(TAG, "  Saved location for channel " + channelNumber + ": " + lat + ", " + lon);
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        Log.w(TAG, "Could not parse lat/lon for channel " + channelNumber + ": " + e.getMessage());
+                    }
+                    
                     Log.i(TAG, "✓ Inserted channel " + channelNumber + ": " + channelName + 
                         " (" + rxFreqMHz + " MHz, band=" + band + ", rowId=" + rowId + ")");
                 }

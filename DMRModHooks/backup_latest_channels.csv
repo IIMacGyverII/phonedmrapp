@@ -1,0 +1,17 @@
+Channel Number,Channel Name,Channel Type,Rx Frequency,Tx Frequency,Bandwidth (kHz),Colour Code,Timeslot,Contact,TG List,DMR ID,TS1_TA_Tx,TS2_TA_Tx ID,RX Tone,TX Tone,Squelch,Power,Rx Only,Zone Skip,All Skip,TOT,VOX,No Beep,No Eco,APRS,Latitude,Longitude,Use Location
+1,STMA EMS/Fire,Analogue,	154.32500,	154.32500,12.5,,,,,,,,None,None,Disabled,P9,No,No,No,0,Off,No,No,None,44.920271,-90.68057,No
+2,Rockford-K1LEO,Digital,	443.70000,	448.70000,,1,1,test 1,None,None,Off,Off,,,Disabled,P9,No,No,No,0,Off,No,No,None,44.634736,-95.468483,No
+3,Buffalo-N0FWG,Analogue,	444.37500,	449.37500,12.5,,,,,,,,114.8,156.7,5,P9,No,No,No,0,Off,No,No,None,46.673654,-93.666708,No
+4,Medina-N0AGI,Digital,	443.20000,	448.20000,,11,1,test 1,None,None,Off,Off,,,Disabled,P9,No,No,No,0,Off,No,No,None,46.669475,-93.020439,No
+5,MaplePlain-K0LTC,Analogue,	147.00000,	147.60000,12.5,,,,,,,,114.8,114.8,5,P9,No,No,No,0,Off,No,No,None,47.502344,-90.928767,No
+6,GMRS 1,Analogue,	462.56250,	462.56250,12.5,,,,,,,,None,None,5,P9,No,No,No,0,Off,No,No,None,46.220082,-92.631947,No
+7,Channel7,Analogue,	407.02500,	407.02500,12.5,,,,,,,,None,None,85,P9,No,No,No,0,Off,No,No,None,48.837519,-91.622485,No
+8,Channel8,Analogue,	408.02500,	408.02500,12.5,,,,,,,,None,None,75,P9,No,No,No,0,Off,No,No,None,48.627361,-96.170167,No
+9,STMA EMS/Firea,Analogue,	154.32500,	154.32500,12.5,,,,,,,,None,None,5,P9,No,No,No,0,Off,No,No,None,43.675223,-93.964467,No
+10,Weather 5,Analogue,	162.50000,	162.50000,12.5,,,,,,,,None,None,5,P1,No,No,No,0,Off,No,No,None,45.741739,-90.139253,No
+11,Channel11,Analogue,	411.02500,	411.02500,12.5,,,,,,,,None,None,15,P9,No,No,No,0,Off,No,No,None,0.128,0.008,No
+12,Channel12,Analogue,	412.02500,	412.02500,12.5,,,,,,,,None,None,25,P9,No,No,No,0,Off,No,No,None,0.128,0.008,No
+13,Channel13,Analogue,	413.02500,	413.02500,12.5,,,,,,,,None,None,35,P9,No,No,No,0,Off,No,No,None,0.128,0.008,No
+14,Channel14,Analogue,	414.02500,	414.02500,12.5,,,,,,,,None,None,45,P9,No,No,No,0,Off,No,No,None,0.128,0.008,No
+15,Channel15,Analogue,	415.02500,	415.02500,12.5,,,,,,,,None,None,55,P9,No,No,No,0,Off,No,No,None,0.128,0.008,No
+16,Channel16,Analogue,	416.02500,	416.02500,12.5,,,,,,,,None,None,65,P9,No,No,No,0,Off,No,No,None,0.128,0.008,No

@@ -1,13 +1,16 @@
 package com.dmrmod.hooks;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
@@ -46,7 +49,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "1.1";
+    private static final String VERSION = "1.3.1";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     @Override
@@ -61,7 +64,8 @@ public class MainHook implements IXposedHookLoadPackage {
         // Hook the main activity's onCreate method
         hookMainActivity(lpparam);
         
-        // Information screen hook (currently disabled)
+        // Hook the TalkBack fragment to reposition UI elements
+        hookTalkBackFragment(lpparam);
         
         // Hook the local fragment to add backup/restore button
         hookLocalFragment(lpparam);
@@ -117,6 +121,182 @@ public class MainHook implements IXposedHookLoadPackage {
             
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": Error hooking InterPhoneHomeActivity: " + t.getMessage());
+            XposedBridge.log(t);
+        }
+    }
+    
+    /**
+     * Hook InterPhoneTalkBackFragment to add borderbox and reposition PTT button
+     */
+    private void hookTalkBackFragment(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            Class<?> fragmentClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.fragment.InterPhoneTalkBackFragment",
+                lpparam.classLoader
+            );
+            
+            XposedHelpers.findAndHookMethod(
+                fragmentClass,
+                "initView",
+                View.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        XposedBridge.log(TAG + ": InterPhoneTalkBackFragment.initView() called");
+                        
+                        try {
+                            // Get mLocalView
+                            Object mLocalViewObj = XposedHelpers.getObjectField(param.thisObject, "mLocalView");
+                            if (!(mLocalViewObj instanceof ViewGroup)) {
+                                XposedBridge.log(TAG + ": mLocalView is not a ViewGroup");
+                                return;
+                            }
+                            
+                            ViewGroup rootLayout = (ViewGroup) mLocalViewObj;
+                            Context context = rootLayout.getContext();
+                            int margin5dp = (int) (5 * context.getResources().getDisplayMetrics().density);
+                            int margin10dp = (int) (10 * context.getResources().getDisplayMetrics().density);
+                            
+                            int childCount = rootLayout.getChildCount();
+                            XposedBridge.log(TAG + ": Root layout child count: " + childCount);
+                            
+                            // Move channel controls (child 0) to top
+                            if (childCount > 0) {
+                                View channelControls = rootLayout.getChildAt(0);
+                                ViewGroup.LayoutParams params = channelControls.getLayoutParams();
+                                if (params instanceof LinearLayout.LayoutParams) {
+                                    LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams) params;
+                                    layoutParams.topMargin = margin5dp;
+                                    channelControls.setLayoutParams(layoutParams);
+                                    XposedBridge.log(TAG + ": ✓ Moved channel controls up");
+                                }
+                            }
+                            
+                            // Reduce spacing and move info text (child 1) to top
+                            if (childCount > 1) {
+                                View infoText = rootLayout.getChildAt(1);
+                                if (infoText instanceof LinearLayout) {
+                                    LinearLayout infoLayout = (LinearLayout) infoText;
+                                    
+                                    try {
+                                        java.lang.reflect.Method setShowDividers = LinearLayout.class.getMethod("setShowDividers", int.class);
+                                        setShowDividers.invoke(infoLayout, 2);
+                                        
+                                        java.lang.reflect.Method setDividerPadding = LinearLayout.class.getMethod("setDividerPadding", int.class);
+                                        setDividerPadding.invoke(infoLayout, margin5dp);
+                                        
+                                        XposedBridge.log(TAG + ": ✓ Successfully reduced text spacing to 5dp");
+                                    } catch (Exception e) {
+                                        XposedBridge.log(TAG + ": Error setting dividers: " + e.getMessage());
+                                    }
+                                    
+                                    ViewGroup.LayoutParams params = infoText.getLayoutParams();
+                                    if (params instanceof LinearLayout.LayoutParams) {
+                                        LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams) params;
+                                        layoutParams.topMargin = margin5dp;
+                                        infoText.setLayoutParams(layoutParams);
+                                        XposedBridge.log(TAG + ": ✓ Moved info text up");
+                                    }
+                                }
+                            }
+                            
+                            // Add borderbox and move PTT to bottom
+                            if (childCount > 2) {
+                                // Check if already modified
+                                boolean alreadyModified = false;
+                                for (int i = 0; i < rootLayout.getChildCount(); i++) {
+                                    View child = rootLayout.getChildAt(i);
+                                    Object tag = child.getTag();
+                                    if (tag != null && "DMR_SPACER".equals(tag.toString())) {
+                                        alreadyModified = true;
+                                        XposedBridge.log(TAG + ": Layout already modified, skipping");
+                                        break;
+                                    }
+                                }
+                                
+                                if (alreadyModified) {
+                                    return;
+                                }
+                                
+                                View pttButton = rootLayout.getChildAt(2);
+                                XposedBridge.log(TAG + ": PTT button found: " + pttButton.getClass().getSimpleName());
+                                
+                                // Create borderbox (250dp empty FrameLayout)
+                                android.widget.FrameLayout borderBox = new android.widget.FrameLayout(context);
+                                borderBox.setTag("DMR_BORDERBOX");
+                                int height250dp = (int) (250 * context.getResources().getDisplayMetrics().density);
+                                LinearLayout.LayoutParams borderParams = new LinearLayout.LayoutParams(
+                                    LinearLayout.LayoutParams.MATCH_PARENT,
+                                    height250dp
+                                );
+                                borderParams.leftMargin = margin10dp;
+                                borderParams.rightMargin = margin10dp;
+                                borderParams.topMargin = margin10dp;
+                                
+                                // Create gradient drawable
+                                android.graphics.drawable.GradientDrawable gradientDrawable = new android.graphics.drawable.GradientDrawable();
+                                gradientDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                                gradientDrawable.setStroke(
+                                    (int) (2 * context.getResources().getDisplayMetrics().density),
+                                    0xAAFFFFFF
+                                );
+                                gradientDrawable.setCornerRadius(12 * context.getResources().getDisplayMetrics().density);
+                                gradientDrawable.setColors(new int[]{0x15FFFFFF, 0x08FFFFFF});
+                                gradientDrawable.setGradientType(android.graphics.drawable.GradientDrawable.LINEAR_GRADIENT);
+                                gradientDrawable.setOrientation(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM);
+                                
+                                borderBox.setBackground(gradientDrawable);
+                                borderBox.setLayoutParams(borderParams);
+                                borderBox.setClickable(false);
+                                borderBox.setFocusable(false);
+                                
+                                // Insert borderbox at index 2
+                                rootLayout.addView(borderBox, 2);
+                                XposedBridge.log(TAG + ": ✓ Added borderbox at index 2 (250dp)");
+                                
+                                // Create spacer
+                                View spacer = new View(context);
+                                spacer.setTag("DMR_SPACER");
+                                LinearLayout.LayoutParams spacerParams = new LinearLayout.LayoutParams(
+                                    LinearLayout.LayoutParams.MATCH_PARENT,
+                                    0
+                                );
+                                spacerParams.weight = 1.0f;
+                                spacer.setLayoutParams(spacerParams);
+                                
+                                rootLayout.addView(spacer, 3);
+                                XposedBridge.log(TAG + ": ✓ Added spacer at index 3");
+                                
+                                // PTT button now at index 4
+                                ViewGroup.LayoutParams params = pttButton.getLayoutParams();
+                                if (params instanceof LinearLayout.LayoutParams) {
+                                    LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams) params;
+                                    layoutParams.gravity = android.view.Gravity.CENTER_HORIZONTAL;
+                                    layoutParams.bottomMargin = margin10dp;
+                                    layoutParams.weight = 0;
+                                    layoutParams.height = LinearLayout.LayoutParams.WRAP_CONTENT;
+                                    layoutParams.width = LinearLayout.LayoutParams.WRAP_CONTENT;
+                                    pttButton.setLayoutParams(layoutParams);
+                                    pttButton.setVisibility(View.VISIBLE);
+                                    pttButton.bringToFront();
+                                    XposedBridge.log(TAG + ": ✓ PTT button at index 4, visibility=" + pttButton.getVisibility());
+                                }
+                                
+                                XposedBridge.log(TAG + ": Final child count: " + rootLayout.getChildCount());
+                            }
+                            
+                        } catch (Exception e) {
+                            XposedBridge.log(TAG + ": Error modifying TalkBack layout: " + e.getMessage());
+                            XposedBridge.log(TAG + ": " + android.util.Log.getStackTraceString(e));
+                        }
+                    }
+                }
+            );
+            
+            XposedBridge.log(TAG + ": Successfully hooked InterPhoneTalkBackFragment");
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error hooking InterPhoneTalkBackFragment: " + t.getMessage());
             XposedBridge.log(t);
         }
     }

@@ -201,6 +201,10 @@ public class DirectDatabaseExporter {
             cursor = db.query("database_channel_area_default_uhf", null, null, null, 
                 null, null, "channel_number ASC");
             
+            // Initialize LocationDatabase for lat/lon queries
+            LocationDatabase locationDb = LocationDatabase.getInstance(context);
+            Log.i(TAG, "LocationDatabase initialized for export");
+            
             int channelCount = cursor.getCount();
             if (channelCount == 0) {
                 Log.w(TAG, "No channels found in database");
@@ -316,9 +320,18 @@ public class DirectDatabaseExporter {
                     rowBuilder.append("No,");                            // 23. No Beep
                     rowBuilder.append("No,");                            // 24. No Eco
                     rowBuilder.append("None,");                          // 25. APRS
-                    rowBuilder.append("0.128,");                         // 26. Latitude
-                    rowBuilder.append("0.008,");                         // 27. Longitude
-                    rowBuilder.append("No");                             // 28. Use Location
+                    
+                    // Query LocationDatabase for lat/lon (Digital channels)
+                    LocationDatabase.Location location = locationDb.getLocation(channelNumber);
+                    if (location != null) {
+                        rowBuilder.append(String.format(Locale.US, "%.6f", location.latitude)).append(",");
+                        rowBuilder.append(String.format(Locale.US, "%.6f", location.longitude)).append(",");
+                        rowBuilder.append("No");  // Use Location always "No" for compatibility
+                    } else {
+                        rowBuilder.append("0.128,");                         // 26. Latitude (default)
+                        rowBuilder.append("0.008,");                         // 27. Longitude (default)
+                        rowBuilder.append("No");                             // 28. Use Location
+                    }
                 } else {
                     // Analogue channels
                     rowBuilder.append(",,,,,,,");                       // 7-13. DMR fields (all blank)
@@ -344,9 +357,18 @@ public class DirectDatabaseExporter {
                     rowBuilder.append("No,");                            // 23. No Beep
                     rowBuilder.append("No,");                            // 24. No Eco
                     rowBuilder.append("None,");                          // 25. APRS
-                    rowBuilder.append("0.128,");                         // 26. Latitude
-                    rowBuilder.append("0.008,");                         // 27. Longitude
-                    rowBuilder.append("No");                             // 28. Use Location
+                    
+                    // Query LocationDatabase for lat/lon (Analog channels)
+                    LocationDatabase.Location location = locationDb.getLocation(channelNumber);
+                    if (location != null) {
+                        rowBuilder.append(String.format(Locale.US, "%.6f", location.latitude)).append(",");
+                        rowBuilder.append(String.format(Locale.US, "%.6f", location.longitude)).append(",");
+                        rowBuilder.append("No");  // Use Location always "No" for compatibility
+                    } else {
+                        rowBuilder.append("0.128,");                         // 26. Latitude (default)
+                        rowBuilder.append("0.008,");                         // 27. Longitude (default)
+                        rowBuilder.append("No");                             // 28. Use Location
+                    }
                 }
                 
                 writer.write(rowBuilder.toString());
