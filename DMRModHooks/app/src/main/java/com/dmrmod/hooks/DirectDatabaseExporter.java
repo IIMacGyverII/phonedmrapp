@@ -23,7 +23,7 @@ import java.util.zip.ZipOutputStream;
  * DESIGN:
  * - Runs directly in the target app's process with full database access
  * - No need for shell commands or IPC - direct SQLite access
- * - Exports to Download/DMR_Backups/ for easy user access via file manager
+ * - Exports to Download/DMR/DMR_Backups/ for easy user access via file manager
  * 
  * OPENGD77 COMPATIBILITY:
  * - Generates 5 CSV files required by OpenGD77 CPS (Channels, Contacts, TG_Lists, Zones, DTMF)
@@ -39,6 +39,68 @@ import java.util.zip.ZipOutputStream;
 public class DirectDatabaseExporter {
     
     private static final String TAG = "DMRModHooks_DirectExport";
+    
+    /**
+     * Migrate old backups from Download/DMR_Backups/ to Download/DMR/DMR_Backups/
+     * This is called automatically on first export to organize existing backups
+     */
+    private static void migrateOldBackups() {
+        try {
+            File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            File oldBackupDir = new File(downloadDir, "DMR_Backups");
+            File newBackupDir = new File(downloadDir, "DMR/DMR_Backups");
+            
+            // Check if old backup folder exists
+            if (!oldBackupDir.exists()) {
+                Log.i(TAG, "No old backups to migrate");
+                return;
+            }
+            
+            // Create new backup directory structure if it doesn't exist
+            if (!newBackupDir.exists()) {
+                newBackupDir.mkdirs();
+                Log.i(TAG, "Created new backup directory: " + newBackupDir.getAbsolutePath());
+            }
+            
+            // Get all backup folders from old location
+            File[] oldBackups = oldBackupDir.listFiles();
+            if (oldBackups == null || oldBackups.length == 0) {
+                Log.i(TAG, "Old backup folder is empty, deleting it");
+                oldBackupDir.delete();
+                return;
+            }
+            
+            // Move each backup folder to new location
+            int movedCount = 0;
+            for (File backupFolder : oldBackups) {
+                if (backupFolder.isDirectory()) {
+                    File newLocation = new File(newBackupDir, backupFolder.getName());
+                    if (backupFolder.renameTo(newLocation)) {
+                        Log.i(TAG, "Migrated backup: " + backupFolder.getName());
+                        movedCount++;
+                    } else {
+                        Log.w(TAG, "Failed to migrate backup: " + backupFolder.getName());
+                    }
+                }
+            }
+            
+            // Delete old backup folder if it's now empty
+            File[] remaining = oldBackupDir.listFiles();
+            if (remaining == null || remaining.length == 0) {
+                if (oldBackupDir.delete()) {
+                    Log.i(TAG, "Deleted empty old backup folder");
+                } else {
+                    Log.w(TAG, "Could not delete old backup folder (may have system files)");
+                }
+            }
+            
+            Log.i(TAG, "Migration complete: " + movedCount + " backups moved to new location");
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error during backup migration: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
     
     // OpenGD77 CSV Headers (28 columns - matches OpenGD77 CPS export format)
     private static final String CHANNELS_HEADER = 
@@ -56,10 +118,13 @@ public class DirectDatabaseExporter {
         try {
             Log.i(TAG, "Starting direct export from app context");
             
-            // Output to Download/DMR_Backups for easy user access
+            // Migrate old backups to new location if they exist
+            migrateOldBackups();
+            
+            // Output to Download/DMR/DMR_Backups for easy user access
             // Using Environment.DIRECTORY_DOWNLOADS ensures compatibility across Android versions
             File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-            File baseBackupDir = new File(downloadDir, "DMR_Backups");
+            File baseBackupDir = new File(downloadDir, "DMR/DMR_Backups");
             if (!baseBackupDir.exists()) {
                 baseBackupDir.mkdirs();
             }

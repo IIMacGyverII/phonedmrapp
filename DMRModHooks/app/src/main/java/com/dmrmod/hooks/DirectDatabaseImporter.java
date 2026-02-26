@@ -12,7 +12,7 @@ import android.util.Log;
  * DirectDatabaseImporter - Import OpenGD77 CSV files into app database
  * 
  * IMPORT STRATEGY:
- * - Reads OpenGD77-format CSV files from Download/DMR_Backups/
+ * - Reads OpenGD77-format CSV files from Download/DMR/DMR_Backups/
  * - Shows timestamp-based selection dialog for available backups
  * - Clears existing channels and imports from CSV (full replace)
  * - Preserves stock contacts to avoid breaking app functionality
@@ -74,9 +74,9 @@ public class DirectDatabaseImporter {
                 try {
                     // Find available backup sets (now folders instead of files)
                     File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-                    File backupDir = new File(downloadDir, "DMR_Backups");
+                    File backupDir = new File(downloadDir, "DMR/DMR_Backups");
                     if (!backupDir.exists() || !backupDir.isDirectory()) {
-                        showError(context, "No backups found in Download/DMR_Backups/");
+                        showError(context, "No backups found in Download/DMR/DMR_Backups/");
                         return;
                     }
                     
@@ -200,9 +200,9 @@ public class DirectDatabaseImporter {
                 try {
                     Log.i(TAG, "Starting import for folder: " + folderName);
                     
-                    // Import from Download/DMR_Backups/[folderName]/ folder
+                    // Import from Download/DMR/DMR_Backups/[folderName]/ folder
                     File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-                    File baseBackupDir = new File(downloadDir, "DMR_Backups");
+                    File baseBackupDir = new File(downloadDir, "DMR/DMR_Backups");
                     File backupFolder = new File(baseBackupDir, folderName);
                     
                     if (!backupFolder.exists() || !backupFolder.isDirectory()) {

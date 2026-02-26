@@ -7,7 +7,7 @@
 **Current Version**: v1.4.0 (February 26, 2026)  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
-**Backup Location**: `Download/DMR_Backups/`  
+**Backup Location**: `Download/DMR/DMR_Backups/`  
 **Requires**: 
 - LSPosed Framework v1.9.2+ (Zygisk variant)
 - Magisk v24+ with Zygisk enabled
@@ -46,7 +46,7 @@
 - ✅ Toast notifications with version info and backup location
 
 **File Location**:
-- ✅ Backups saved to `Download/DMR_Backups/` for easy access
+- ✅ Backups saved to `Download/DMR/DMR_Backups/` for easy access
 - ✅ No special permissions required (standard Download folder)
 - ✅ Easy to transfer files via USB, file manager, or cloud sync
 - ✅ Files visible in Files app and all file managers
@@ -226,7 +226,7 @@
 5. **DirectDatabaseExporter (Direct Access)**
    - Bypasses shell commands
    - Reads channel/contact databases directly
-   - Exports 5 OpenGD77 CSV files to `Download/DMR_Backups/`
+   - Exports 5 OpenGD77 CSV files to `Download/DMR/DMR_Backups/`
    - Includes latitude/longitude columns (v1.3.x+)
 
 6. **DirectDatabaseImporter (Direct Access)**
@@ -368,7 +368,7 @@ Output: `app/build/outputs/apk/debug/app-debug.apk`
 3. **Navigate to LOCAL tab** - You should see: "Backup/Restore" button
 
 4. **Test Export**: Tap 📤 EXPORT (OpenGD77) button in LOCAL tab
-   - Check `Download/DMR_Backups/` for timestamped folder
+   - Check `Download/DMR/DMR_Backups/` for timestamped folder
    - Should see folder like: `20260223_140530/` containing CSV files
 
 5. **Verify version**: Toast notification shows "✓ DMR Mod Hooks Active! v1.3.5"
@@ -557,7 +557,7 @@ Or use LSPosed Manager → Logs
 ### v1.1 (Feb 24, 2026)
 - **Import now supports any folder name**
 - Removed timestamp-only restriction for backup folders
-- Import dialog now lists ALL folders in DMR_Backups/ containing Channels.csv
+- Import dialog now lists ALL folders in DMR/DMR_Backups/ containing Channels.csv
 - Folders with timestamp format still display as formatted dates for convenience
 - Allows custom folder names like "MyBackup", "Test", "Working_Config", etc.
 - Smart sorting: timestamp folders sorted newest first, others alphabetically
@@ -706,7 +706,7 @@ Or use LSPosed Manager → Logs
 
 ### v0.9.26 (Feb 23, 2026)
 - **COMPLETE OpenGD77 CSV Import/Export Functionality**
-- Changed backup location to `Download/DMR_Backups/` for easy user access
+- Changed backup location to `Download/DMR/DMR_Backups/` for easy user access
 - Fixed Analog/Digital field differentiation (critical fix!)
 - Digital channels: encryptSw=1, interrupt=2, active=1
 - Analog channels: encryptSw=0, interrupt=0, active=0

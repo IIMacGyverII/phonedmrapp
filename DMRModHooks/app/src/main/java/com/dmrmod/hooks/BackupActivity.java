@@ -33,7 +33,7 @@ import java.util.Locale;
  * FEATURES:
  * - Export/Import DMR channels and contacts
  * - OpenGD77 CPS-compatible CSV format
- * - Files stored in Download/DMR_Backups/
+ * - Files stored in Download/DMR/DMR_Backups/
  * - No special permissions required (uses standard Download folder)
  */
 public class BackupActivity extends Activity {
@@ -42,7 +42,7 @@ public class BackupActivity extends Activity {
     private static final int REQUEST_CODE_STORAGE = 1001;
     private static final int REQUEST_CODE_IMPORT = 1002;
     
-    private static final String BACKUP_DIR = "DMR_Backups";
+    private static final String BACKUP_DIR = "DMR/DMR_Backups";
     private static final String CHANNELS_CSV = "Channels.csv";
     private static final String CONTACTS_CSV = "Contacts.csv";
     
@@ -219,12 +219,15 @@ public class BackupActivity extends Activity {
      */
     private void initializeBackupDirectory() {
         try {
-            // Use Download/DMR_Backups for easy user access
+            // Use Download/DMR/DMR_Backups for easy user access
             File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
             if (downloadDir == null) {
                 log("ERROR: External storage not available");
                 return;
             }
+            
+            // Migrate old backups before setting up new directory
+            migrateOldBackupsIfNeeded(downloadDir);
             
             backupDirectory = new File(downloadDir, BACKUP_DIR);
             
@@ -242,6 +245,68 @@ public class BackupActivity extends Activity {
             log("Access files via file manager: Download/" + BACKUP_DIR);
         } catch (Exception e) {
             log("ERROR initializing backup directory: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Migrate old backups from Download/DMR_Backups/ to Download/DMR/DMR_Backups/
+     */
+    private void migrateOldBackupsIfNeeded(File downloadDir) {
+        try {
+            File oldBackupDir = new File(downloadDir, "DMR_Backups");
+            File newBackupDir = new File(downloadDir, "DMR/DMR_Backups");
+            
+            // Check if old backup folder exists
+            if (!oldBackupDir.exists()) {
+                log("No old backups to migrate");
+                return;
+            }
+            
+            log("Migrating old backups to new location...");
+            
+            // Create new backup directory structure if it doesn't exist
+            if (!newBackupDir.exists()) {
+                newBackupDir.mkdirs();
+                log("Created new backup directory structure");
+            }
+            
+            // Get all backup folders from old location
+            File[] oldBackups = oldBackupDir.listFiles();
+            if (oldBackups == null || oldBackups.length == 0) {
+                log("Old backup folder is empty, deleting it");
+                oldBackupDir.delete();
+                return;
+            }
+            
+            // Move each backup folder to new location
+            int movedCount = 0;
+            for (File backupFolder : oldBackups) {
+                if (backupFolder.isDirectory()) {
+                    File newLocation = new File(newBackupDir, backupFolder.getName());
+                    if (backupFolder.renameTo(newLocation)) {
+                        log("✓ Migrated: " + backupFolder.getName());
+                        movedCount++;
+                    } else {
+                        log("✗ Failed to migrate: " + backupFolder.getName());
+                    }
+                }
+            }
+            
+            // Delete old backup folder if it's now empty
+            File[] remaining = oldBackupDir.listFiles();
+            if (remaining == null || remaining.length == 0) {
+                if (oldBackupDir.delete()) {
+                    log("Deleted old backup folder");
+                } else {
+                    log("WARNING: Could not delete old backup folder");
+                }
+            }
+            
+            log("Migration complete: " + movedCount + " backups moved");
+            
+        } catch (Exception e) {
+            log("ERROR during migration: " + e.getMessage());
             e.printStackTrace();
         }
     }

@@ -31,7 +31,7 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 - **Device**: Ulefone Armor 26 Ultra (Android 13)
 - **LSPosed**: v1.9.2 (Zygisk)
 - **Current Version**: v1.1
-- **Backup Location**: `Download/DMR_Backups/` (standard Android Downloads folder)
+- **Backup Location**: `Download/DMR/DMR_Backups/` (standard Android Downloads folder)
 
 ## Features
 
@@ -55,7 +55,7 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 - Handles mixed VHF/UHF channel lists
 - **All channels import correctly** including both Digital (DMR) and Analog (FM)
 - Correct field values for Digital vs Analog channel activation
-- Backup selection dialog (supports any folder name in DMR_Backups/)
+- Backup selection dialog (supports any folder name in DMR/DMR_Backups/)
 - Auto-refresh after import - no app restart needed
 - Import confirmation with success/failure reporting
 - Files stored in user-friendly Download folder
@@ -151,7 +151,7 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 2. **Test Export**:
    - Go to LOCAL tab
    - Tap � **EXPORT (OpenGD77)** button  
-   - Check `Download/DMR_Backups/` for CSV files (use any file manager)
+   - Check `Download/DMR/DMR_Backups/` for CSV files (use any file manager)
    - Should see: Channels, Contacts, TG_Lists, Zones, DTMF CSVs with timestamps
 
 3. **Test Import** (optional):
@@ -168,10 +168,10 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 1. Open PriInterPhone app
 2. Go to **LOCAL** tab
 3. Tap **📤 EXPORT (OpenGD77)** button
-4. Export completes (toast shows: "✓ Export successful! v1.1\nCheck Download/DMR_Backups/")
-5. Files created in `Download/DMR_Backups/20260223_140530/` folder containing:
+4. Export completes (toast shows: "✓ Export successful! v1.1\nCheck Download/DMR/DMR_Backups/")
+5. Files created in `Download/DMR/DMR_Backups/20260223_140530/` folder containing:
    - Channels.csv, Contacts.csv, TG_Lists.csv, Zones.csv, DTMF.csv
-6. Transfer CSVs to PC via USB, file manager, or `adb pull /sdcard/Download/DMR_Backups/ .`
+6. Transfer CSVs to PC via USB, file manager, or `adb pull /sdcard/Download/DMR/ .`
 7. Open OpenGD77 CPS
 8. Import → Select the folder containing all 5 CSV files
 9. Program your OpenGD77 radio!
@@ -179,7 +179,7 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 ### Importing Channels from OpenGD77
 
 1. Export channel programming from OpenGD77 CPS (all 5 CSV files)
-2. Transfer CSVs to Android device `Download/DMR_Backups/`
+2. Transfer CSVs to Android device `Download/DMR/DMR_Backups/`
    - Create a folder with any name (e.g., `MyBackup`, `Test`, or timestamp like `20260223_140530`)
    - Place the CSV files inside (OpenGD77 exports them as: `Channels.csv`, `Contacts.csv`, `TG_Lists.csv`, `Zones.csv`, `DTMF.csv`)
    - Via USB cable (MTP mode) or `adb push`
