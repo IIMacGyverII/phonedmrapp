@@ -4,7 +4,7 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v1.3.5 (February 26, 2026)  
+**Current Version**: v1.3.6 (February 26, 2026)  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Backup Location**: `Download/DMR_Backups/`  
@@ -442,7 +442,17 @@ Or use LSPosed Manager → Logs
 
 ## Changelog
 
-### v1.3.5 (Feb 26, 2026) ✅ **CURRENT**
+### v1.3.6 (Feb 26, 2026) ✅ **CURRENT**
+- **Fixed duplicate contacts in CSV export**
+- Added HashSet deduplication in exportContactsDirect() to prevent duplicate entries
+- Tracks unique contact rows to ensure each contact exported only once
+- Export logs now show unique contact count and duplicates skipped
+- Fixes issue where contacts were exported multiple times (e.g., 2 unique contacts repeated 48 times = 96 total)
+- CSV export now produces minimal, clean files for OpenGD77 CPS
+- File size reduction example: 2.15KB (96 duplicate contacts) → 82 bytes (2 unique contacts)
+- Critical fix for data quality when importing to OpenGD77 CPS
+
+### v1.3.5 (Feb 26, 2026)
 - **Added elevation display using Open-Elevation API**
 - Integrated free elevation service (no API key or account required)
 - Display format: feet(meters) - "859ft (262m)"
