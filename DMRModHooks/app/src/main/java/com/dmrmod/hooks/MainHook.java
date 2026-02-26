@@ -60,8 +60,14 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "1.3.6";
+    private static final String VERSION = "1.3.7";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
+    
+    // Caller identification state
+    private static volatile int currentCallerDmrId = 0;
+    private static volatile String currentCallerName = null;
+    private static volatile boolean isReceiving = false;
+    private static TextView callerDisplayTextView = null;
     
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
@@ -80,6 +86,10 @@ public class MainHook implements IXposedHookLoadPackage {
         
         // Hook the local fragment to add backup/restore button
         hookLocalFragment(lpparam);
+        
+        // Hook for DMR caller identification
+        hookModuleStatusHandler(lpparam);
+        hookDigitalAudioHandler(lpparam);
         
         XposedBridge.log(TAG + ": All hooks installed successfully");
     }
@@ -280,6 +290,27 @@ public class MainHook implements IXposedHookLoadPackage {
                                 
                                 // Update location for current channel
                                 updateLocationDisplay(param.thisObject, locationText, context);
+                                
+                                // Add caller display TextView to borderbox (top-left)
+                                TextView callerText = new TextView(context);
+                                callerText.setTag("DMR_CALLER_TEXT");
+                                FrameLayout.LayoutParams callerParams = new FrameLayout.LayoutParams(
+                                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                                    FrameLayout.LayoutParams.WRAP_CONTENT
+                                );
+                                callerParams.gravity = android.view.Gravity.TOP | android.view.Gravity.START;
+                                callerParams.topMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
+                                callerParams.leftMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
+                                callerText.setLayoutParams(callerParams);
+                                callerText.setTextColor(0xFF00FF00);  // Green text for incoming
+                                callerText.setTextSize(14);
+                                callerText.setText("");  // Empty by default
+                                callerText.setVisibility(View.GONE);  // Hidden initially
+                                
+                                borderBox.addView(callerText);
+                                
+                                // Store reference for updates
+                                callerDisplayTextView = callerText;
                                 
                                 // Insert borderbox at index 2
                                 rootLayout.addView(borderBox, 2);
@@ -971,6 +1002,306 @@ public class MainHook implements IXposedHookLoadPackage {
             }
         }
         return -1;
+    }
+    
+    /**
+     * Hook ModuleStatusMessageHandler to detect incoming DMR transmissions
+     */
+    private void hookModuleStatusHandler(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            Class<?> handlerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.handler.ModuleStatusMessageHandler",
+                lpparam.classLoader
+            );
+            
+            XposedHelpers.findAndHookMethod(
+                handlerClass,
+                "handle",
+                XposedHelpers.findClass("com.pri.prizeinterphone.message.ModuleStatusMessage", lpparam.classLoader),
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        try {
+                            Object message = param.args[0];
+                            byte status = (Byte) XposedHelpers.callMethod(message, "getStatus");
+                            
+                            // RECEIVE_START = 1, RECEIVE_STOP = 2
+                            // MIX_CHECK_DIGITAL_RECEIVE_START = 10, MIX_CHECK_DIGITAL_RECEIVE_STOP = 11
+                            if (status == 1 || status == 10) {
+                                // Receiving started - query for caller info
+                                XposedBridge.log(TAG + ": RECEIVE_START detected, querying caller info...");
+                                isReceiving = true;
+                                queryCallerInfo(lpparam.classLoader);
+                            } else if (status == 2 || status == 11) {
+                                // Receiving stopped - clear caller display
+                                XposedBridge.log(TAG + ": RECEIVE_STOP detected, clearing caller display");
+                                isReceiving = false;
+                                clearCallerDisplay();
+                            }
+                        } catch (Exception e) {
+                            XposedBridge.log(TAG + ": Error in ModuleStatusMessageHandler hook: " + e.getMessage());
+                        }
+                    }
+                }
+            );
+            
+            XposedBridge.log(TAG + ": Successfully hooked ModuleStatusMessageHandler");
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error hooking ModuleStatusMessageHandler: " + t.getMessage());
+            XposedBridge.log(t);
+        }
+    }
+    
+    /**
+     * Hook DigitalAudioMessageHandler to decode caller DMR ID
+     */
+    private void hookDigitalAudioHandler(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            Class<?> handlerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.handler.DigitalAudioMessageHandler",
+                lpparam.classLoader
+            );
+            
+            XposedHelpers.findAndHookMethod(
+                handlerClass,
+                "handle",
+                XposedHelpers.findClass("com.pri.prizeinterphone.message.DigitalAudioMessage", lpparam.classLoader),
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        try {
+                            Object message = param.args[0];
+                            
+                            // Get the packet to extract body data
+                            Object packet = XposedHelpers.getObjectField(message, "packet");
+                            byte[] body = (byte[]) XposedHelpers.getObjectField(packet, "body");
+                            
+                            if (body != null && body.length > 0) {
+                                XposedBridge.log(TAG + ": ===== DigitalAudioMessage Packet Analysis =====");
+                                XposedBridge.log(TAG + ": Body length: " + body.length + " bytes");
+                                XposedBridge.log(TAG + ": Body bytes (hex): " + bytesToHex(body));
+                                
+                                // Try multiple interpretations to find the DMR ID
+                                if (body.length >= 4) {
+                                    // Try little-endian 4-byte int at offset 0
+                                    int le0 = ((body[3] & 0xFF) << 24) | ((body[2] & 0xFF) << 16) | 
+                                             ((body[1] & 0xFF) << 8) | (body[0] & 0xFF);
+                                    XposedBridge.log(TAG + ": Offset 0 Little-Endian 4-byte: " + le0);
+                                    
+                                    // Try big-endian 4-byte int at offset 0
+                                    int be0 = ((body[0] & 0xFF) << 24) | ((body[1] & 0xFF) << 16) | 
+                                             ((body[2] & 0xFF) << 8) | (body[3] & 0xFF);
+                                    XposedBridge.log(TAG + ": Offset 0 Big-Endian 4-byte: " + be0);
+                                    
+                                    // Try little-endian 3-byte (DMR IDs are 24-bit)
+                                    int le3_0 = ((body[2] & 0xFF) << 16) | ((body[1] & 0xFF) << 8) | (body[0] & 0xFF);
+                                    XposedBridge.log(TAG + ": Offset 0 Little-Endian 3-byte: " + le3_0);
+                                    
+                                    // Try big-endian 3-byte
+                                    int be3_0 = ((body[0] & 0xFF) << 16) | ((body[1] & 0xFF) << 8) | (body[2] & 0xFF);
+                                    XposedBridge.log(TAG + ": Offset 0 Big-Endian 3-byte: " + be3_0);
+                                }
+                                
+                                if (body.length >= 6) {
+                                    // Try offset 2 (skip first 2 bytes)
+                                    int le2 = ((body[5] & 0xFF) << 24) | ((body[4] & 0xFF) << 16) | 
+                                             ((body[3] & 0xFF) << 8) | (body[2] & 0xFF);
+                                    XposedBridge.log(TAG + ": Offset 2 Little-Endian 4-byte: " + le2);
+                                    
+                                    int be2 = ((body[2] & 0xFF) << 24) | ((body[3] & 0xFF) << 16) | 
+                                             ((body[4] & 0xFF) << 8) | (body[5] & 0xFF);
+                                    XposedBridge.log(TAG + ": Offset 2 Big-Endian 4-byte: " + be2);
+                                }
+                                
+                                // Try 2-byte (16-bit) interpretations
+                                if (body.length >= 2) {
+                                    int le16_0 = ((body[1] & 0xFF) << 8) | (body[0] & 0xFF);
+                                    XposedBridge.log(TAG + ": Offset 0 Little-Endian 2-byte (16-bit): " + le16_0);
+                                    
+                                    int be16_0 = ((body[0] & 0xFF) << 8) | (body[1] & 0xFF);
+                                    XposedBridge.log(TAG + ": Offset 0 Big-Endian 2-byte (16-bit): " + be16_0);
+                                }
+                                
+                                XposedBridge.log(TAG + ": Expected DMR ID: 64067 (0xFA23)");
+                                XposedBridge.log(TAG + ": =============================================");
+                                
+                                // DMR ID is at offset 1, 2-byte little-endian: bytes[2] << 8 | bytes[1]
+                                if (body.length >= 3) {
+                                    int dmrId = ((body[2] & 0xFF) << 8) | (body[1] & 0xFF);
+                                    
+                                    XposedBridge.log(TAG + ": Decoded DMR ID (offset 1, 2-byte LE): " + dmrId);
+                                    
+                                    if (dmrId > 0 && dmrId < 16777215) {  // Valid DMR ID range
+                                        currentCallerDmrId = dmrId;
+                                        updateCallerInfoAsync(lpparam.classLoader);
+                                    }
+                                }
+                            }
+                        } catch (Exception e) {
+                            XposedBridge.log(TAG + ": Error in DigitalAudioMessageHandler hook: " + e.getMessage());
+                        }
+                    }
+                }
+            );
+            
+            XposedBridge.log(TAG + ": Successfully hooked DigitalAudioMessageHandler");
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error hooking DigitalAudioMessageHandler: " + t.getMessage());
+            XposedBridge.log(t);
+        }
+    }
+    
+    /**
+     * Query for caller information by sending QUERY_DIGITAL_AUDIO_RECEIVE_INFO command
+     */
+    private void queryCallerInfo(ClassLoader classLoader) {
+        try {
+            Class<?> messageClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.message.DigitalAudioMessage",
+                classLoader
+            );
+            
+            Object digitalAudioMessage = XposedHelpers.newInstance(messageClass);
+            XposedHelpers.callMethod(digitalAudioMessage, "send");
+            
+            XposedBridge.log(TAG + ": Sent QUERY_DIGITAL_AUDIO_RECEIVE_INFO");
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error sending caller info query: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Update caller info asynchronously (lookup contact name from database)
+     */
+    private void updateCallerInfoAsync(final ClassLoader classLoader) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    // Get app context
+                    Class<?> appClass = XposedHelpers.findClass(
+                        "com.pri.prizeinterphone.PrizeInterPhoneApp",
+                        classLoader
+                    );
+                    Context context = (Context) XposedHelpers.callStaticMethod(appClass, "getContext");
+                    
+                    if (context != null && currentCallerDmrId > 0) {
+                        // Look up contact name
+                        String contactName = lookupContactName(context, currentCallerDmrId);
+                        currentCallerName = contactName;
+                        
+                        // Update UI on main thread
+                        if (callerDisplayTextView != null) {
+                            callerDisplayTextView.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    updateCallerDisplay();
+                                }
+                            });
+                        }
+                    }
+                } catch (Exception e) {
+                    XposedBridge.log(TAG + ": Error updating caller info: " + e.getMessage());
+                }
+            }
+        }).start();
+    }
+    
+    /**
+     * Lookup contact name from DMR ID in contacts database
+     */
+    private String lookupContactName(Context context, int dmrId) {
+        android.database.Cursor cursor = null;
+        try {
+            android.database.sqlite.SQLiteDatabase db = context.openOrCreateDatabase("dmr_data.db", Context.MODE_PRIVATE, null);
+            
+            cursor = db.rawQuery(
+                "SELECT contact_name FROM contact_database WHERE contact_number = ?",
+                new String[]{String.valueOf(dmrId)}
+            );
+            
+            if (cursor != null && cursor.moveToFirst()) {
+                String name = cursor.getString(0);
+                XposedBridge.log(TAG + ": Found contact: " + name + " for DMR ID: " + dmrId);
+                return name;
+            }
+            
+            XposedBridge.log(TAG + ": No contact found for DMR ID: " + dmrId);
+            return null;
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error looking up contact: " + e.getMessage());
+            return null;
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+    }
+    
+    /**
+     * Update the caller display TextView
+     */
+    private void updateCallerDisplay() {
+        if (callerDisplayTextView == null || !isReceiving) {
+            return;
+        }
+        
+        try {
+            if (currentCallerDmrId > 0) {
+                String displayText;
+                if (currentCallerName != null && !currentCallerName.isEmpty()) {
+                    displayText = "📞 " + currentCallerName + "\nDMR ID: " + currentCallerDmrId;
+                } else {
+                    displayText = "📞 DMR ID: " + currentCallerDmrId;
+                }
+                
+                callerDisplayTextView.setText(displayText);
+                callerDisplayTextView.setVisibility(View.VISIBLE);
+                
+                XposedBridge.log(TAG + ": Updated caller display: " + displayText);
+            }
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error updating caller display: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Clear the caller display
+     */
+    private void clearCallerDisplay() {
+        currentCallerDmrId = 0;
+        currentCallerName = null;
+        
+        if (callerDisplayTextView != null) {
+            try {
+                callerDisplayTextView.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        callerDisplayTextView.setText("");
+                        callerDisplayTextView.setVisibility(View.GONE);
+                    }
+                });
+                
+                XposedBridge.log(TAG + ": Cleared caller display");
+            } catch (Exception e) {
+                XposedBridge.log(TAG + ": Error clearing caller display: " + e.getMessage());
+            }
+        }
+    }
+    
+    /**
+     * Convert byte array to hex string for debugging
+     */
+    private static String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02X ", b));
+        }
+        return sb.toString().trim();
     }
     
     /**
