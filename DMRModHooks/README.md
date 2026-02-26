@@ -4,7 +4,7 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v1.4.8 (February 26, 2026)  
+**Current Version**: v1.4.9 (February 26, 2026)  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Backup Location**: `Download/DMR/DMR_Backups/`  
@@ -144,14 +144,29 @@
 - ✅ Empty recording deletion (files <10KB automatically removed)
 - ✅ Works for both DMR and Analog channels
 
-**Signal Strength Display (v1.4.8)**:
+**Signal Strength Display (v1.4.8-1.4.9)**:
 - ✅ Real-time RSSI (Received Signal Strength Indicator) display
 - ✅ Yellow-bordered box above main caller display
-- ✅ Shows "Signal: X dBm" during reception, hidden when idle
-- ✅ RSSI values captured via SignalMessageHandler hook
-- ✅ Integrated into activity history: "Name HH:mm:ss Activity X dBm"
+- ✅ Shows "Signal: X dBm" during reception, reserved space when idle
+- ✅ RSSI values captured via SignalMessageHandler hook (reads Packet.body[0] directly)
+- ✅ Conversion formula: dBm = -(120 - (raw_value / 2))
+- ✅ Integrated into activity history with database persistence
+- ✅ **RSSI Persistence (v1.4.9)**: Added `rssi_dbm INTEGER` column to database
+- ✅ History format: "Name HH:mm:ss Activity X dBm" persists across channel changes
+- ✅ Database migration: ALTER TABLE automatically adds column to existing databases
+- ✅ RSSI box uses INVISIBLE (not GONE) to reserve space and prevent layout shifts
 - ✅ Works for both DMR and analog channels
 - ✅ Visual feedback: Bold 16sp yellow text on semi-transparent background
+
+**UI Polish (v1.4.9)**:
+- ✅ Channel info spacing completely removed (0dp dividers, margins, padding, line spacing)
+- ✅ Divider drawable cleared to eliminate all visual gaps
+- ✅ Minimum heights set to 0 for compact display
+- ✅ Borderbox spacing optimized (8dp top margin for proper clearance)
+- ✅ RSSI box margins reduced (4dp top, 0dp bottom, 4dp padding) for tight layout
+- ✅ Recording button redesigned: Professional pill-shaped "REC" button
+- ✅ Record button states: Red (enabled) / Gray (disabled) with white borders
+- ✅ Record button size: 70dp × 40dp with bold white text
 
 **Technical Architecture**:
 - Singleton pattern for LocationDatabase access

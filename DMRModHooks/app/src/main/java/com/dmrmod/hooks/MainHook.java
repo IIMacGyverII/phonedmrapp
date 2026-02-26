@@ -271,14 +271,43 @@ public class MainHook implements IXposedHookLoadPackage {
                                     LinearLayout infoLayout = (LinearLayout) infoText;
                                     
                                     try {
+                                        // Completely disable dividers
                                         java.lang.reflect.Method setShowDividers = LinearLayout.class.getMethod("setShowDividers", int.class);
-                                        setShowDividers.invoke(infoLayout, 2);
+                                        setShowDividers.invoke(infoLayout, 0); // SHOW_DIVIDER_NONE
+                                        
+                                        // Remove divider drawable entirely
+                                        java.lang.reflect.Method setDividerDrawable = LinearLayout.class.getMethod("setDividerDrawable", android.graphics.drawable.Drawable.class);
+                                        setDividerDrawable.invoke(infoLayout, (android.graphics.drawable.Drawable) null);
                                         
                                         java.lang.reflect.Method setDividerPadding = LinearLayout.class.getMethod("setDividerPadding", int.class);
-                                        int margin1dp = (int) (1 * context.getResources().getDisplayMetrics().density);
-                                        setDividerPadding.invoke(infoLayout, margin1dp);
+                                        setDividerPadding.invoke(infoLayout, 0);
                                         
-                                        XposedBridge.log(TAG + ": ✓ Successfully reduced text spacing to 1dp");
+                                        // Remove all padding and set minimum height to 0
+                                        infoLayout.setPadding(0, 0, 0, 0);
+                                        infoLayout.setMinimumHeight(0);
+                                        
+                                        // Remove all spacing from child views
+                                        for (int i = 0; i < infoLayout.getChildCount(); i++) {
+                                            View child = infoLayout.getChildAt(i);
+                                            if (child instanceof TextView) {
+                                                TextView tv = (TextView) child;
+                                                // Remove line spacing
+                                                tv.setLineSpacing(0, 1.0f);
+                                                // Remove all padding
+                                                tv.setPadding(0, 0, 0, 0);
+                                                // Remove minimum height
+                                                tv.setMinimumHeight(0);
+                                                tv.setMinHeight(0);
+                                                // Remove margins if any
+                                                if (tv.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
+                                                    ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) tv.getLayoutParams();
+                                                    params.setMargins(0, 0, 0, 0);
+                                                    tv.setLayoutParams(params);
+                                                }
+                                            }
+                                        }
+                                        
+                                        XposedBridge.log(TAG + ": ✓ Successfully removed all channel info spacing (dividers cleared, min heights set to 0)");
                                     } catch (Exception e) {
                                         XposedBridge.log(TAG + ": Error setting dividers: " + e.getMessage());
                                     }
@@ -350,7 +379,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 );
                                 borderParams.leftMargin = margin10dp;
                                 borderParams.rightMargin = margin10dp;
-                                borderParams.topMargin = margin10dp;
+                                borderParams.topMargin = (int) (8 * context.getResources().getDisplayMetrics().density); // 8dp spacing
                                 
                                 // Create gradient drawable
                                 android.graphics.drawable.GradientDrawable gradientDrawable = new android.graphics.drawable.GradientDrawable();
@@ -464,8 +493,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                 );
                                 rssiBoxParams.leftMargin = margin10dp;
                                 rssiBoxParams.rightMargin = margin10dp;
-                                rssiBoxParams.topMargin = margin10dp;
-                                rssiBoxParams.bottomMargin = (int) (4 * context.getResources().getDisplayMetrics().density);
+                                rssiBoxParams.topMargin = (int) (4 * context.getResources().getDisplayMetrics().density);
+                                rssiBoxParams.bottomMargin = 0;
                                 
                                 // Create border for RSSI box
                                 android.graphics.drawable.GradientDrawable rssiBoxDrawable = new android.graphics.drawable.GradientDrawable();
@@ -479,7 +508,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 
                                 rssiBox.setBackground(rssiBoxDrawable);
                                 rssiBox.setLayoutParams(rssiBoxParams);
-                                int rssiPadding = (int) (8 * context.getResources().getDisplayMetrics().density);
+                                int rssiPadding = (int) (4 * context.getResources().getDisplayMetrics().density);
                                 rssiBox.setPadding(rssiPadding, rssiPadding, rssiPadding, rssiPadding);
                                 rssiBox.setGravity(android.view.Gravity.CENTER);
                                 
@@ -493,7 +522,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 rssiText.setGravity(android.view.Gravity.CENTER);
                                 
                                 rssiBox.addView(rssiText);
-                                rssiBox.setVisibility(View.GONE);  // Hidden initially
+                                rssiBox.setVisibility(View.INVISIBLE);  // Hidden but reserves space
                                 
                                 // Store reference for updates
                                 rssiDisplayTextView = rssiText;
@@ -547,18 +576,47 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Create recording toggle button (right-aligned)
                                 android.widget.ToggleButton recordToggle = new android.widget.ToggleButton(context);
                                 recordToggle.setTag("DMR_RECORDING_TOGGLE");
-                                recordToggle.setTextOn("🔴");  // Red circle when recording enabled
-                                recordToggle.setTextOff("⚪");  // White circle when recording disabled
+                                recordToggle.setTextOn("REC");
+                                recordToggle.setTextOff("REC");
                                 recordToggle.setChecked(false);
                                 
                                 FrameLayout.LayoutParams toggleParams = new FrameLayout.LayoutParams(
-                                    (int) (60 * context.getResources().getDisplayMetrics().density),  // 60dp width
-                                    (int) (60 * context.getResources().getDisplayMetrics().density)   // 60dp height
+                                    (int) (70 * context.getResources().getDisplayMetrics().density),  // 70dp width
+                                    (int) (40 * context.getResources().getDisplayMetrics().density)   // 40dp height
                                 );
                                 toggleParams.gravity = android.view.Gravity.END | android.view.Gravity.CENTER_VERTICAL;
                                 toggleParams.rightMargin = (int) (16 * context.getResources().getDisplayMetrics().density);
                                 recordToggle.setLayoutParams(toggleParams);
-                                recordToggle.setTextSize(24);
+                                recordToggle.setTextSize(14);
+                                recordToggle.setTypeface(null, android.graphics.Typeface.BOLD);
+                                recordToggle.setTextColor(0xFFFFFFFF);  // White text
+                                
+                                // Create state list drawable for background
+                                android.graphics.drawable.StateListDrawable stateDrawable = new android.graphics.drawable.StateListDrawable();
+                                
+                                // Checked state (recording enabled) - Red background
+                                android.graphics.drawable.GradientDrawable checkedDrawable = new android.graphics.drawable.GradientDrawable();
+                                checkedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                                checkedDrawable.setColor(0xFFFF0000);  // Solid red
+                                checkedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
+                                checkedDrawable.setStroke(
+                                    (int) (2 * context.getResources().getDisplayMetrics().density),
+                                    0xFFFFFFFF  // White border
+                                );
+                                stateDrawable.addState(new int[]{android.R.attr.state_checked}, checkedDrawable);
+                                
+                                // Unchecked state (recording disabled) - Gray background
+                                android.graphics.drawable.GradientDrawable uncheckedDrawable = new android.graphics.drawable.GradientDrawable();
+                                uncheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                                uncheckedDrawable.setColor(0x80808080);  // Semi-transparent gray
+                                uncheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
+                                uncheckedDrawable.setStroke(
+                                    (int) (2 * context.getResources().getDisplayMetrics().density),
+                                    0x80FFFFFF  // Semi-transparent white border
+                                );
+                                stateDrawable.addState(new int[]{}, uncheckedDrawable);
+                                
+                                recordToggle.setBackground(stateDrawable);
                                 
                                 // Store reference
                                 recordingToggleButton = recordToggle;
@@ -1353,8 +1411,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                         startRecording();
                                     }
                                     
-                                    // Update RSSI display
-                                    updateRssiDisplay();
+                                    // Query RSSI from radio
+                                    queryRssi(lpparam.classLoader);
                                     
                                     if (currentChannelType == 0) {
                                         // Digital channel - query DMR caller info
@@ -1595,6 +1653,28 @@ public class MainHook implements IXposedHookLoadPackage {
     }
     
     /**
+     * Query RSSI (signal strength) from radio
+     */
+    private void queryRssi(ClassLoader classLoader) {
+        try {
+            Class<?> signalMessageClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.message.SignalMessage",
+                classLoader
+            );
+            
+            // Create SignalMessage with fetch=1 to request signal strength
+            Object signalMessage = XposedHelpers.newInstance(signalMessageClass);
+            XposedHelpers.setByteField(signalMessage, "fetch", (byte) 1);
+            XposedHelpers.callMethod(signalMessage, "send");
+            
+            XposedBridge.log(TAG + ": Sent QUERY_SIGNAL_STRENGTH_CMD");
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error sending RSSI query: " + e.getMessage());
+        }
+    }
+    
+    /**
      * Update caller info asynchronously (lookup contact name from database)
      */
     private void updateCallerInfoAsync(final ClassLoader classLoader) {
@@ -1801,7 +1881,7 @@ public class MainHook implements IXposedHookLoadPackage {
             
             // Save to database if we have context
             if (appContext != null) {
-                saveChannelHistoryEntry(currentChannelNumber, dmrIdStr, timestamp, activityType, appContext);
+                saveChannelHistoryEntry(currentChannelNumber, dmrIdStr, timestamp, activityType, currentRssi, appContext);
             }
             
             // Add to history (most recent first)
@@ -1910,11 +1990,19 @@ public class MainHook implements IXposedHookLoadPackage {
                         "dmr_id TEXT, " +
                         "timestamp TEXT, " +
                         "activity_type TEXT, " +
+                        "rssi_dbm INTEGER, " +
                         "created_at INTEGER)");
+                    
+                    // Add rssi_dbm column if it doesn't exist (for existing databases)
+                    try {
+                        db.execSQL("ALTER TABLE channel_history ADD COLUMN rssi_dbm INTEGER");
+                    } catch (Exception e) {
+                        // Column already exists, ignore
+                    }
                     
                     // Load last 3 entries for this channel
                     cursor = db.rawQuery(
-                        "SELECT dmr_id, timestamp, activity_type FROM channel_history " +
+                        "SELECT dmr_id, timestamp, activity_type, rssi_dbm FROM channel_history " +
                         "WHERE channel_number = ? " +
                         "ORDER BY created_at DESC LIMIT ?",
                         new String[]{String.valueOf(channelNumber), String.valueOf(MAX_ACTIVITY_HISTORY)}
@@ -1928,9 +2016,12 @@ public class MainHook implements IXposedHookLoadPackage {
                         String dmrId = cursor.getString(0);
                         String timestamp = cursor.getString(1);
                         String activityType = cursor.getString(2);
+                        Integer rssiDbm = cursor.isNull(3) ? null : cursor.getInt(3);
                         
                         // Format entry based on whether it has a DMR ID or not (Analog channels use "N/A")
                         String entry;
+                        String rssiStr = (rssiDbm != null && rssiDbm != -999) ? " " + rssiDbm + " dBm" : "";
+                        
                         if (dmrId != null && !dmrId.equals("N/A")) {
                             // DMR format - try to look up contact name
                             String displayName = dmrId;
@@ -1943,9 +2034,9 @@ public class MainHook implements IXposedHookLoadPackage {
                             } catch (NumberFormatException e) {
                                 // Keep using dmrId as is
                             }
-                            entry = displayName + " " + timestamp + " " + activityType;
+                            entry = displayName + " " + timestamp + " " + activityType + rssiStr;
                         } else {
-                            entry = timestamp + " " + activityType;  // Analog format (no ID)
+                            entry = timestamp + " " + activityType + rssiStr;  // Analog format (no ID)
                         }
                         
                         activityHistory.addLast(entry);  // Add to end since results are DESC
@@ -2003,7 +2094,7 @@ public class MainHook implements IXposedHookLoadPackage {
     /**
      * Save a DMR activity entry to the channel history database
      */
-    private void saveChannelHistoryEntry(final int channelNumber, final String dmrId, final String timestamp, final String activityType, final android.content.Context context) {
+    private void saveChannelHistoryEntry(final int channelNumber, final String dmrId, final String timestamp, final String activityType, final int rssiDbm, final android.content.Context context) {
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -2022,7 +2113,15 @@ public class MainHook implements IXposedHookLoadPackage {
                         "dmr_id TEXT, " +
                         "timestamp TEXT, " +
                         "activity_type TEXT, " +
+                        "rssi_dbm INTEGER, " +
                         "created_at INTEGER)");
+                    
+                    // Add rssi_dbm column if it doesn't exist (for existing databases)
+                    try {
+                        db.execSQL("ALTER TABLE channel_history ADD COLUMN rssi_dbm INTEGER");
+                    } catch (Exception e) {
+                        // Column already exists, ignore
+                    }
                     
                     // Insert new entry
                     android.content.ContentValues values = new android.content.ContentValues();
@@ -2030,6 +2129,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     values.put("dmr_id", dmrId);
                     values.put("timestamp", timestamp);
                     values.put("activity_type", activityType);
+                    values.put("rssi_dbm", rssiDbm);
                     values.put("created_at", System.currentTimeMillis());
                     
                     db.insert("channel_history", null, values);
@@ -2039,7 +2139,8 @@ public class MainHook implements IXposedHookLoadPackage {
                         "SELECT id FROM channel_history WHERE channel_number = ? ORDER BY created_at DESC LIMIT 100)",
                         new Object[]{channelNumber, channelNumber});
                     
-                    XposedBridge.log(TAG + ": Saved history entry for channel " + channelNumber + ": " + dmrId + " " + timestamp + " " + activityType);
+                    String rssiStr = (rssiDbm != -999) ? " " + rssiDbm + " dBm" : "";
+                    XposedBridge.log(TAG + ": Saved history entry for channel " + channelNumber + ": " + dmrId + " " + timestamp + " " + activityType + rssiStr);
                     
                 } catch (Exception e) {
                     XposedBridge.log(TAG + ": Error saving channel history: " + e.getMessage());
@@ -2422,7 +2523,7 @@ public class MainHook implements IXposedHookLoadPackage {
                         rssiDisplayTextView.setText("Signal: " + currentRssi + " dBm");
                         ((View) rssiDisplayTextView.getParent()).setVisibility(View.VISIBLE);
                     } else {
-                        ((View) rssiDisplayTextView.getParent()).setVisibility(View.GONE);
+                        ((View) rssiDisplayTextView.getParent()).setVisibility(View.INVISIBLE);
                     }
                 }
             });
@@ -2443,7 +2544,7 @@ public class MainHook implements IXposedHookLoadPackage {
             rssiDisplayTextView.post(new Runnable() {
                 @Override
                 public void run() {
-                    ((View) rssiDisplayTextView.getParent()).setVisibility(View.GONE);
+                    ((View) rssiDisplayTextView.getParent()).setVisibility(View.INVISIBLE);
                 }
             });
             
@@ -2474,17 +2575,27 @@ public class MainHook implements IXposedHookLoadPackage {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         try {
-                            // The decode() method returns a SignalMessage object
-                            Object signalMessage = param.getResult();
+                            // Get the Packet parameter (first argument to decode())
+                            Object packet = param.args[0];
                             
-                            if (signalMessage != null) {
-                                // Get the rssi field value (byte)
-                                Object rssiObj = XposedHelpers.getObjectField(signalMessage, "rssi");
+                            if (packet != null) {
+                                // Get body byte array directly from Packet
+                                byte[] body = (byte[]) XposedHelpers.getObjectField(packet, "body");
                                 
-                                if (rssiObj != null) {
-                                    byte rssi = (Byte) rssiObj;
-                                    currentRssi = (int) rssi;
-                                    XposedBridge.log(TAG + ": Captured RSSI: " + currentRssi + " dBm");
+                                if (body != null && body.length > 0) {
+                                    // First byte of body is the RSSI value
+                                    byte rssi = body[0];
+                                    // Convert to unsigned byte value (0-255) then to negative dBm
+                                    int rssiUnsigned = rssi & 0xFF;
+                                    // RSSI values from radio: higher value = stronger signal
+                                    // Convert to negative dBm: typical range -120 to -50 dBm
+                                    currentRssi = rssiUnsigned > 0 ? -(120 - (rssiUnsigned / 2)) : -999;
+                                    XposedBridge.log(TAG + ": Captured RSSI from packet body: raw=" + rssiUnsigned + ", dBm=" + currentRssi);
+                                    
+                                    // Update display immediately when RSSI is captured
+                                    if (rssiUnsigned > 0) {
+                                        updateRssiDisplay();
+                                    }
                                 }
                             }
                         } catch (Exception e) {
