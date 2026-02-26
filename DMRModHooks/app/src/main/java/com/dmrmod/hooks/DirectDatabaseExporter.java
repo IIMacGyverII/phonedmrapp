@@ -432,6 +432,10 @@ public class DirectDatabaseExporter {
             writer.write(CONTACTS_HEADER);
             writer.write("\r\n");  // Windows CRLF for OpenGD77 compatibility
             
+            // Use HashSet to track unique contacts and prevent duplicates
+            java.util.HashSet<String> uniqueContacts = new java.util.HashSet<>();
+            int duplicateCount = 0;
+            
             if (cursor != null && cursor.getCount() > 0) {
                 while (cursor.moveToNext()) {
                     String contactName = cursor.getString(cursor.getColumnIndex("contact_name"));
@@ -445,13 +449,21 @@ public class DirectDatabaseExporter {
                     String row = String.format(Locale.US, "%s,%d,%s,-",
                         contactName, dmrId, idType);
                     
-                    writer.write(row);
-                    writer.write("\r\n");  // Windows CRLF for OpenGD77 compatibility
+                    // Only write if this contact is unique
+                    if (uniqueContacts.add(row)) {
+                        writer.write(row);
+                        writer.write("\r\n");  // Windows CRLF for OpenGD77 compatibility
+                    } else {
+                        duplicateCount++;
+                    }
                 }
             }
             
             writer.close();
-            Log.i(TAG, "✓ Contacts exported to: " + outputFile.getAbsolutePath());
+            Log.i(TAG, "✓ Contacts exported: " + uniqueContacts.size() + " unique contacts");
+            if (duplicateCount > 0) {
+                Log.i(TAG, "  Skipped " + duplicateCount + " duplicate contacts");
+            }
             return true;
             
         } catch (Exception e) {
