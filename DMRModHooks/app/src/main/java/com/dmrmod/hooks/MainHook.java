@@ -49,7 +49,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "1.3.1";
+    private static final String VERSION = "1.3.3";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     @Override
@@ -250,6 +250,26 @@ public class MainHook implements IXposedHookLoadPackage {
                                 borderBox.setClickable(false);
                                 borderBox.setFocusable(false);
                                 
+                                // Add location display TextView to borderbox
+                                TextView locationText = new TextView(context);
+                                locationText.setTag("DMR_LOCATION_TEXT");  // Tag for later updates
+                                FrameLayout.LayoutParams textParams = new FrameLayout.LayoutParams(
+                                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                                    FrameLayout.LayoutParams.WRAP_CONTENT
+                                );
+                                textParams.gravity = android.view.Gravity.TOP | android.view.Gravity.END;
+                                textParams.topMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
+                                textParams.rightMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
+                                locationText.setLayoutParams(textParams);
+                                locationText.setTextColor(0xFFFFFFFF);  // White text
+                                locationText.setTextSize(12);
+                                locationText.setText("📍");  // Default icon
+                                
+                                borderBox.addView(locationText);
+                                
+                                // Update location for current channel
+                                updateLocationDisplay(param.thisObject, locationText, context);
+                                
                                 // Insert borderbox at index 2
                                 rootLayout.addView(borderBox, 2);
                                 XposedBridge.log(TAG + ": ✓ Added borderbox at index 2 (250dp)");
@@ -293,11 +313,82 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             );
             
+            // Hook updateUI to refresh location display when channel changes
+            XposedHelpers.findAndHookMethod(
+                fragmentClass,
+                "updateUI",
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        try {
+                            // Find the location TextView and update it
+                            Object mLocalViewObj = XposedHelpers.getObjectField(param.thisObject, "mLocalView");
+                            if (mLocalViewObj instanceof ViewGroup) {
+                                ViewGroup rootLayout = (ViewGroup) mLocalViewObj;
+                                TextView locationText = findLocationTextView(rootLayout);
+                                if (locationText != null) {
+                                    updateLocationDisplay(param.thisObject, locationText, rootLayout.getContext());
+                                }
+                            }
+                        } catch (Exception e) {
+                            XposedBridge.log(TAG + ": Error updating location in updateUI: " + e.getMessage());
+                        }
+                    }
+                }
+            );
+            
             XposedBridge.log(TAG + ": Successfully hooked InterPhoneTalkBackFragment");
             
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": Error hooking InterPhoneTalkBackFragment: " + t.getMessage());
             XposedBridge.log(t);
+        }
+    }
+    
+    /**
+     * Helper method to find the location TextView in the view hierarchy
+     */
+    private TextView findLocationTextView(ViewGroup rootLayout) {
+        for (int i = 0; i < rootLayout.getChildCount(); i++) {
+            View child = rootLayout.getChildAt(i);
+            if (child instanceof ViewGroup) {
+                ViewGroup group = (ViewGroup) child;
+                for (int j = 0; j < group.getChildCount(); j++) {
+                    View subChild = group.getChildAt(j);
+                    Object tag = subChild.getTag();
+                    if (tag != null && "DMR_LOCATION_TEXT".equals(tag.toString())) {
+                        return (TextView) subChild;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Helper method to update location display for current channel
+     */
+    private void updateLocationDisplay(Object fragment, TextView locationText, Context context) {
+        try {
+            Object mCurrentChannelIndex = XposedHelpers.getObjectField(fragment, "mCurrentChannelIndex");
+            if (mCurrentChannelIndex != null) {
+                int channelNumber = (Integer) mCurrentChannelIndex + 1;
+                
+                LocationDatabase locationDb = LocationDatabase.getInstance(context);
+                LocationDatabase.Location location = locationDb.getLocation(channelNumber);
+                
+                if (location != null) {
+                    String displayText = String.format(java.util.Locale.US, 
+                        "%.4f, %.4f\n📍", location.latitude, location.longitude);
+                    locationText.setText(displayText);
+                    XposedBridge.log(TAG + ": Updated location for channel " + channelNumber + ": " + location.latitude + ", " + location.longitude);
+                } else {
+                    locationText.setText("📍");
+                    XposedBridge.log(TAG + ": No location for channel " + channelNumber);
+                }
+            }
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error updating location display: " + e.getMessage());
         }
     }
     
