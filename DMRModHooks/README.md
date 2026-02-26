@@ -4,10 +4,11 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v1.4.0 (February 26, 2026)  
+**Current Version**: v1.4.8 (February 26, 2026)  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Backup Location**: `Download/DMR/DMR_Backups/`  
+**Recordings Location**: `Download/DMR/Recordings/[ChannelName]/`  
 **Requires**: 
 - LSPosed Framework v1.9.2+ (Zygisk variant)
 - Magisk v24+ with Zygisk enabled
@@ -130,11 +131,34 @@
 - ✅ Analog activities tracked without DMR IDs ("N/A" in database)
 - ✅ Channel type detection via ChannelData.type (0=Digital, 1=Analog)
 
+**Recording System (v1.4.7)**:
+- ✅ Real-time audio recording of received transmissions (RX only)
+- ✅ Recording toggle button right of PTT (⚪ = off, 🔴 = on)
+- ✅ Channel-specific folders: `Download/DMR/Recordings/[ChannelName]/`
+- ✅ Auto-start recording on RECEIVE_START, auto-stop on RECEIVE_STOP
+- ✅ Immediate recording start if enabling toggle during active transmission
+- ✅ PCM audio capture directly from AudioTrack pipeline (16kHz, 16-bit, mono)
+- ✅ WAV format with proper headers (universally compatible)
+- ✅ Filenames include timestamp and DMR ID/contact name
+- ✅ Format: `yyyyMMdd_HHmmss_ContactName.wav` or `yyyyMMdd_HHmmss_DMRID.wav`
+- ✅ Empty recording deletion (files <10KB automatically removed)
+- ✅ Works for both DMR and Analog channels
+
+**Signal Strength Display (v1.4.8)**:
+- ✅ Real-time RSSI (Received Signal Strength Indicator) display
+- ✅ Yellow-bordered box above main caller display
+- ✅ Shows "Signal: X dBm" during reception, hidden when idle
+- ✅ RSSI values captured via SignalMessageHandler hook
+- ✅ Integrated into activity history: "Name HH:mm:ss Activity X dBm"
+- ✅ Works for both DMR and analog channels
+- ✅ Visual feedback: Bold 16sp yellow text on semi-transparent background
+
 **Technical Architecture**:
 - Singleton pattern for LocationDatabase access
 - Helper methods for view hierarchy traversal
-- Tag-based view identification (`DMR_LOCATION_TEXT`, `DMR_SPACER`, `DMR_BORDERBOX`)
+- Tag-based view identification (`DMR_LOCATION_TEXT`, `DMR_SPACER`, `DMR_BORDERBOX`, `DMR_RSSI_BOX`)
 - Non-blocking UI updates with graceful fallbacks
+- Direct PCM audio capture bypasses Android MediaRecorder limitations
 
 **Stability Notes**:
 - v1.2.9: Stable baseline without borderbox
@@ -235,6 +259,42 @@
    - Differentiates Digital vs Analog field values
    - Imports latitude/longitude data to LocationDatabase (v1.3.x+)
    - Triggers auto-refresh via DmrManager reflection
+
+7. **ModuleStatusMessageHandler.onMessage()** *(v1.3.7+)*
+   - Purpose: Detect RECEIVE_START and RECEIVE_STOP events
+   - Actions:
+     - Captures currentChannelType (0=Digital, 1=Analog)
+     - Triggers queryCallerInfo() for digital channels
+     - Clears caller display on RECEIVE_STOP
+     - Updates activity history with timestamps
+   - Events: Case 1/10 (RX START), Case 2/11 (RX STOP)
+
+8. **DigitalAudioMessageHandler.onMessage()** *(v1.3.7+)*
+   - Purpose: Extract DMR caller ID from digital audio packets
+   - Actions:
+     - Decodes DMR ID from byte offset 1 (2-byte little-endian)
+     - Looks up contact name from contact_database.db
+     - Updates caller display with contact name or DMR ID
+     - Saves activity history entry with DMR ID
+   - Format: "📞 Contact Name\nDMR ID: 64067"
+
+9. **PCMReceiveManager.writeAudioTrack()** *(v1.4.7+)*
+   - Purpose: Capture raw PCM audio data from RX audio pipeline
+   - Actions:
+     - Intercepts byte[] audio data before playback
+     - Writes to FileOutputStream when recording enabled
+     - Tracks byte count for WAV header generation
+     - Sample rate: 16kHz, 16-bit, mono
+   - Usage: Bypasses Android MediaRecorder for direct audio capture
+
+10. **SignalMessageHandler.decode()** *(v1.4.8+)*
+    - Purpose: Capture RSSI (Received Signal Strength Indicator) values
+    - Actions:
+      - Extracts rssi field (byte) from SignalMessage objects
+      - Updates currentRssi variable for display
+      - Triggers RSSI display update during reception
+    - Protocol: Command 0x32 (QUERY_SIGNAL_STRENGTH_CMD)
+    - Units: dBm (negative values, e.g., -85 dBm)
 
 ### Helper Methods (v1.3.3+)
 

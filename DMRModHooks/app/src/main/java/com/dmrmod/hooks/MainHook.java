@@ -60,7 +60,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "1.3.9";
+    private static final String VERSION = "1.4.8";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -79,6 +79,23 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile int currentRxToneType = 0; // 0=None, 1=CTCSS, 2=FDCS, 3=BDCS
     private static volatile int currentRxToneSubCode = 0; // Index into tone array
     private static android.content.Context appContext = null;
+    
+    // Audio recording state
+    private static volatile boolean isRecordingEnabled = false;
+    private static volatile boolean isCurrentlyRecording = false;
+    private static volatile String currentRecordingPath = null;
+    private static volatile String currentRecordingTimestamp = null;  // Store timestamp for renaming
+    private static volatile String currentRecordingFolder = null;     // Store folder for renaming
+    private static volatile String currentChannelName = "Unknown";
+    private static android.widget.ToggleButton recordingToggleButton = null;
+    
+    // PCM recording (direct audio capture from AudioTrack)
+    private static volatile java.io.FileOutputStream pcmOutputStream = null;
+    private static volatile long pcmDataSize = 0; // Track written bytes for WAV header
+    
+    // Signal strength (RSSI) state
+    private static volatile int currentRssi = -999;  // dBm value, -999 = no signal
+    private static TextView rssiDisplayTextView = null;
     
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
@@ -101,6 +118,12 @@ public class MainHook implements IXposedHookLoadPackage {
         // Hook for DMR caller identification
         hookModuleStatusHandler(lpparam);
         hookDigitalAudioHandler(lpparam);
+        
+        // Hook for audio recording (capture PCM data from AudioTrack)
+        hookPCMReceiveManager(lpparam);
+        
+        // Hook for signal strength (RSSI) display
+        hookSignalMessageHandler(lpparam);
         
         XposedBridge.log(TAG + ": All hooks installed successfully");
     }
@@ -126,6 +149,25 @@ public class MainHook implements IXposedHookLoadPackage {
                         
                         // Get the activity instance
                         final Activity activity = (Activity) param.thisObject;
+                        
+                        // Create Recordings folder structure
+                        try {
+                            java.io.File downloadDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS);
+                            java.io.File dmrDir = new java.io.File(downloadDir, "DMR");
+                            java.io.File recordingsDir = new java.io.File(dmrDir, "Recordings");
+                            
+                            if (!recordingsDir.exists()) {
+                                if (recordingsDir.mkdirs()) {
+                                    XposedBridge.log(TAG + ": Created Recordings folder: " + recordingsDir.getAbsolutePath());
+                                } else {
+                                    XposedBridge.log(TAG + ": Failed to create Recordings folder");
+                                }
+                            } else {
+                                XposedBridge.log(TAG + ": Recordings folder already exists");
+                            }
+                        } catch (Exception e) {
+                            XposedBridge.log(TAG + ": Error creating Recordings folder: " + e.getMessage());
+                        }
                         
                         // Show a toast message to confirm the hook is working
                         activity.runOnUiThread(new Runnable() {
@@ -412,9 +454,57 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Store reference for updates
                                 dmrActivityIndicator = activityIndicator;
                                 
-                                // Insert borderbox at index 2
-                                rootLayout.addView(borderBox, 2);
-                                XposedBridge.log(TAG + ": ✓ Added borderbox at index 2 (250dp)");
+                                // Create RSSI display box (above the main border box)
+                                LinearLayout rssiBox = new LinearLayout(context);
+                                rssiBox.setOrientation(LinearLayout.HORIZONTAL);
+                                rssiBox.setTag("DMR_RSSI_BOX");
+                                LinearLayout.LayoutParams rssiBoxParams = new LinearLayout.LayoutParams(
+                                    LinearLayout.LayoutParams.MATCH_PARENT,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                );
+                                rssiBoxParams.leftMargin = margin10dp;
+                                rssiBoxParams.rightMargin = margin10dp;
+                                rssiBoxParams.topMargin = margin10dp;
+                                rssiBoxParams.bottomMargin = (int) (4 * context.getResources().getDisplayMetrics().density);
+                                
+                                // Create border for RSSI box
+                                android.graphics.drawable.GradientDrawable rssiBoxDrawable = new android.graphics.drawable.GradientDrawable();
+                                rssiBoxDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                                rssiBoxDrawable.setStroke(
+                                    (int) (2 * context.getResources().getDisplayMetrics().density),
+                                    0xAAFFFF00  // Yellow border
+                                );
+                                rssiBoxDrawable.setCornerRadius(8 * context.getResources().getDisplayMetrics().density);
+                                rssiBoxDrawable.setColor(0x15FFFF00);  // Subtle yellow background
+                                
+                                rssiBox.setBackground(rssiBoxDrawable);
+                                rssiBox.setLayoutParams(rssiBoxParams);
+                                int rssiPadding = (int) (8 * context.getResources().getDisplayMetrics().density);
+                                rssiBox.setPadding(rssiPadding, rssiPadding, rssiPadding, rssiPadding);
+                                rssiBox.setGravity(android.view.Gravity.CENTER);
+                                
+                                // Add RSSI value TextView
+                                TextView rssiText = new TextView(context);
+                                rssiText.setTag("DMR_RSSI_TEXT");
+                                rssiText.setTextColor(0xFFFFFF00);  // Yellow text
+                                rssiText.setTextSize(16);
+                                rssiText.setTypeface(null, android.graphics.Typeface.BOLD);
+                                rssiText.setText("");  // Empty by default
+                                rssiText.setGravity(android.view.Gravity.CENTER);
+                                
+                                rssiBox.addView(rssiText);
+                                rssiBox.setVisibility(View.GONE);  // Hidden initially
+                                
+                                // Store reference for updates
+                                rssiDisplayTextView = rssiText;
+                                
+                                // Insert RSSI box at index 2
+                                rootLayout.addView(rssiBox, 2);
+                                XposedBridge.log(TAG + ": ✓ Added RSSI box at index 2");
+                                
+                                // Insert borderbox at index 3 (pushed down by RSSI box)
+                                rootLayout.addView(borderBox, 3);
+                                XposedBridge.log(TAG + ": ✓ Added borderbox at index 3 (250dp)");
                                 
                                 // Create spacer
                                 View spacer = new View(context);
@@ -426,23 +516,80 @@ public class MainHook implements IXposedHookLoadPackage {
                                 spacerParams.weight = 1.0f;
                                 spacer.setLayoutParams(spacerParams);
                                 
-                                rootLayout.addView(spacer, 3);
-                                XposedBridge.log(TAG + ": ✓ Added spacer at index 3");
+                                rootLayout.addView(spacer, 4);
+                                XposedBridge.log(TAG + ": ✓ Added spacer at index 4");
                                 
-                                // PTT button now at index 4
-                                ViewGroup.LayoutParams params = pttButton.getLayoutParams();
-                                if (params instanceof LinearLayout.LayoutParams) {
-                                    LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams) params;
-                                    layoutParams.gravity = android.view.Gravity.CENTER_HORIZONTAL;
-                                    layoutParams.bottomMargin = margin10dp;
-                                    layoutParams.weight = 0;
-                                    layoutParams.height = LinearLayout.LayoutParams.WRAP_CONTENT;
-                                    layoutParams.width = LinearLayout.LayoutParams.WRAP_CONTENT;
-                                    pttButton.setLayoutParams(layoutParams);
-                                    pttButton.setVisibility(View.VISIBLE);
-                                    pttButton.bringToFront();
-                                    XposedBridge.log(TAG + ": ✓ PTT button at index 4, visibility=" + pttButton.getVisibility());
-                                }
+                                // Create a container for PTT button and recording toggle
+                                FrameLayout buttonContainer = new FrameLayout(context);
+                                LinearLayout.LayoutParams containerParams = new LinearLayout.LayoutParams(
+                                    LinearLayout.LayoutParams.MATCH_PARENT,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                );
+                                containerParams.bottomMargin = margin10dp;
+                                buttonContainer.setLayoutParams(containerParams);
+                                
+                                rootLayout.addView(buttonContainer, 5);
+                                XposedBridge.log(TAG + ": ✓ Added button container at index 5");
+                                
+                                // PTT button now at index 4 (inside container, centered)
+                                rootLayout.removeView(pttButton);
+                                FrameLayout.LayoutParams pttParams = new FrameLayout.LayoutParams(
+                                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                                    FrameLayout.LayoutParams.WRAP_CONTENT
+                                );
+                                pttParams.gravity = android.view.Gravity.CENTER;
+                                pttButton.setLayoutParams(pttParams);
+                                buttonContainer.addView(pttButton);
+                                pttButton.setVisibility(View.VISIBLE);
+                                pttButton.bringToFront();
+                                XposedBridge.log(TAG + ": ✓ PTT button centered in container");
+                                
+                                // Create recording toggle button (right-aligned)
+                                android.widget.ToggleButton recordToggle = new android.widget.ToggleButton(context);
+                                recordToggle.setTag("DMR_RECORDING_TOGGLE");
+                                recordToggle.setTextOn("🔴");  // Red circle when recording enabled
+                                recordToggle.setTextOff("⚪");  // White circle when recording disabled
+                                recordToggle.setChecked(false);
+                                
+                                FrameLayout.LayoutParams toggleParams = new FrameLayout.LayoutParams(
+                                    (int) (60 * context.getResources().getDisplayMetrics().density),  // 60dp width
+                                    (int) (60 * context.getResources().getDisplayMetrics().density)   // 60dp height
+                                );
+                                toggleParams.gravity = android.view.Gravity.END | android.view.Gravity.CENTER_VERTICAL;
+                                toggleParams.rightMargin = (int) (16 * context.getResources().getDisplayMetrics().density);
+                                recordToggle.setLayoutParams(toggleParams);
+                                recordToggle.setTextSize(24);
+                                
+                                // Store reference
+                                recordingToggleButton = recordToggle;
+                                
+                                // Set click listener for toggle
+                                recordToggle.setOnClickListener(new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        isRecordingEnabled = recordToggle.isChecked();
+                                        String status = isRecordingEnabled ? "enabled" : "disabled";
+                                        XposedBridge.log(TAG + ": Recording " + status);
+                                        Toast.makeText(context, 
+                                            "Recording " + status, 
+                                            Toast.LENGTH_SHORT
+                                        ).show();
+                                        
+                                        // Stop any current recording if disabling
+                                        if (!isRecordingEnabled && isCurrentlyRecording) {
+                                            stopRecording();
+                                        }
+                                        
+                                        // Start recording immediately if enabling and already receiving
+                                        if (isRecordingEnabled && isReceiving && !isCurrentlyRecording) {
+                                            XposedBridge.log(TAG + ": Channel already receiving, starting recording immediately");
+                                            startRecording();
+                                        }
+                                    }
+                                });
+                                
+                                buttonContainer.addView(recordToggle);
+                                XposedBridge.log(TAG + ": ✓ Added recording toggle on right side");
                                 
                                 XposedBridge.log(TAG + ": Final child count: " + rootLayout.getChildCount());
                             }
@@ -493,6 +640,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 int channelType = XposedHelpers.getIntField(channelData, "type");  // 0=Digital, 1=Analog
                                 int rxType = XposedHelpers.getIntField(channelData, "rxType");  // 0=None, 1=CTCSS, 2=FDCS, 3=BDCS
                                 int rxSubCode = XposedHelpers.getIntField(channelData, "rxSubCode");  // Tone index
+                                String channelName = (String) XposedHelpers.getObjectField(channelData, "name");  // Channel name for recordings
                                 
                                 // If channel changed, load history for new channel
                                 if (channelNumber != currentChannelNumber) {
@@ -502,6 +650,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     currentChannelType = channelType;
                                     currentRxToneType = rxType;
                                     currentRxToneSubCode = rxSubCode;
+                                    currentChannelName = (channelName != null && !channelName.isEmpty()) ? channelName : ("Channel_" + channelNumber);
                                     
                                     // Clear DMR caller display when switching to analog channel
                                     if (channelType == 1) {  // Analog channel
@@ -1199,6 +1348,14 @@ public class MainHook implements IXposedHookLoadPackage {
                                     XposedBridge.log(TAG + ": RECEIVE_START detected (type: " + currentChannelType + ")");
                                     isReceiving = true;
                                     
+                                    // Start recording if enabled
+                                    if (isRecordingEnabled) {
+                                        startRecording();
+                                    }
+                                    
+                                    // Update RSSI display
+                                    updateRssiDisplay();
+                                    
                                     if (currentChannelType == 0) {
                                         // Digital channel - query DMR caller info
                                         XposedBridge.log(TAG + ": Digital channel - querying caller info");
@@ -1224,6 +1381,15 @@ public class MainHook implements IXposedHookLoadPackage {
                                 case 11: // MIX_CHECK_DIGITAL_RECEIVE_STOP
                                     XposedBridge.log(TAG + ": RECEIVE_STOP detected (type: " + currentChannelType + ")");
                                     isReceiving = false;
+                                    
+                                    // Stop recording if currently recording
+                                    if (isCurrentlyRecording) {
+                                        stopRecording();
+                                    }
+                                    
+                                    // Hide RSSI display
+                                    hideRssiDisplay();
+                                    
                                     clearCallerDisplay();
                                     // Don't clear activity history - let it persist
                                     break;
@@ -1622,11 +1788,15 @@ public class MainHook implements IXposedHookLoadPackage {
                     displayName = dmrIdStr;
                 }
                 
-                entry = displayName + " " + timestamp + " " + activityType;
+                // Add RSSI if available
+                String rssiStr = (currentRssi != -999) ? " " + currentRssi + " dBm" : "";
+                entry = displayName + " " + timestamp + " " + activityType + rssiStr;
             } else {
                 // Analog/FM channel - no caller ID (analog doesn't have individual IDs)
                 dmrIdStr = "N/A";  // Store as N/A for database consistency
-                entry = timestamp + " " + activityType;
+                // Add RSSI if available
+                String rssiStr = (currentRssi != -999) ? " " + currentRssi + " dBm" : "";
+                entry = timestamp + " " + activityType + rssiStr;
             }
             
             // Save to database if we have context
@@ -1918,6 +2088,416 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedBridge.log(TAG + ": Error launching BackupActivity: " + e.getMessage());
             e.printStackTrace();
             Toast.makeText(activity, "Error opening backup: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+    
+    /**
+     * Start audio recording
+     */
+    private static void startRecording() {
+        if (!isRecordingEnabled || isCurrentlyRecording) {
+            return;
+        }
+        
+        try {
+            // Clean channel name for folder (remove special characters)
+            String channelFolderName = currentChannelName.replaceAll("[^a-zA-Z0-9\\s-]", "").trim();
+            if (channelFolderName.isEmpty()) {
+                channelFolderName = "Channel_" + currentChannelNumber;
+            }
+            
+            // Create channel-specific folder in Recordings
+            java.io.File downloadDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS);
+            java.io.File recordingsDir = new java.io.File(downloadDir, "DMR/Recordings/" + channelFolderName);
+            
+            if (!recordingsDir.exists()) {
+                recordingsDir.mkdirs();
+                XposedBridge.log(TAG + ": Created channel recording folder: " + recordingsDir.getAbsolutePath());
+            }
+            
+            // Generate filename with date and time
+            java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US);
+            String timestamp = dateFormat.format(new java.util.Date());
+            
+            // Store timestamp and folder for potential renaming later
+            currentRecordingTimestamp = timestamp;
+            currentRecordingFolder = recordingsDir.getAbsolutePath();
+            
+            // Start with just timestamp, will rename after if we get DMR info
+            // Use .pcm extension temporarily, will convert to .wav when stopping
+            String filename = timestamp + ".pcm";
+            currentRecordingPath = new java.io.File(recordingsDir, filename).getAbsolutePath();
+            
+            // Create FileOutputStream for capturing PCM data from AudioTrack
+            pcmOutputStream = new java.io.FileOutputStream(currentRecordingPath);
+            pcmDataSize = 0; // Reset data size counter
+            
+            isCurrentlyRecording = true;
+            XposedBridge.log(TAG + ": ✓ Started PCM recording: " + currentRecordingPath);
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error starting recording: " + e.getMessage());
+            e.printStackTrace();
+            isCurrentlyRecording = false;
+            if (pcmOutputStream != null) {
+                try {
+                    pcmOutputStream.close();
+                } catch (Exception ignored) {}
+                pcmOutputStream = null;
+            }
+        }
+    }
+    
+    /**
+     * Stop audio recording and convert PCM to WAV
+     */
+    private static void stopRecording() {
+        if (!isCurrentlyRecording || pcmOutputStream == null) {
+            return;
+        }
+        
+        try {
+            // Close PCM stream
+            pcmOutputStream.close();
+            XposedBridge.log(TAG + ": ✓ Stopped PCM recording, size: " + pcmDataSize + " bytes");
+            
+            // Convert PCM to WAV (add headers)
+            java.io.File pcmFile = new java.io.File(currentRecordingPath);
+            if (pcmFile.exists() && pcmDataSize > 0) {
+                // Create WAV filename
+                String wavPath = currentRecordingPath.replace(".pcm", ".wav");
+                java.io.File wavFile = new java.io.File(wavPath);
+                
+                // Write WAV file with headers
+                // Using 16kHz based on observed data rate: 2048 bytes/64ms = 16000 samples/sec
+                convertPCMtoWAV(pcmFile, wavFile, 16000, 1, 16);  // 16kHz, mono, 16-bit
+                
+                // Delete temporary PCM file
+                pcmFile.delete();
+                
+                // Update path to WAV file
+                currentRecordingPath = wavPath;
+                
+                XposedBridge.log(TAG + ": ✓ Converted to WAV: " + wavPath);
+                
+                // Rename file to include DMR ID/contact name if available (digital channel only)
+                java.io.File recordedFile = new java.io.File(currentRecordingPath);
+                if (recordedFile.exists() && currentChannelType == 0 && currentRecordingTimestamp != null && currentRecordingFolder != null) {
+                    String identifierPart = "";
+                    if (currentCallerName != null && !currentCallerName.isEmpty()) {
+                        identifierPart = "_" + currentCallerName.replaceAll("[^a-zA-Z0-9-]", "");
+                    } else if (currentCallerDmrId > 0) {
+                        identifierPart = "_" + currentCallerDmrId;
+                    }
+                    
+                    if (!identifierPart.isEmpty()) {
+                        String newFilename = currentRecordingTimestamp + identifierPart + ".wav";
+                        java.io.File newFile = new java.io.File(currentRecordingFolder, newFilename);
+                        if (recordedFile.renameTo(newFile)) {
+                            XposedBridge.log(TAG + ": ✓ Renamed recording to: " + newFile.getAbsolutePath());
+                            currentRecordingPath = newFile.getAbsolutePath();
+                            recordedFile = newFile;
+                        } else {
+                            XposedBridge.log(TAG + ": Failed to rename recording file");
+                        }
+                    }
+                }
+                
+                // Check file size - delete if too small (likely no audio)
+                if (recordedFile.exists() && recordedFile.length() < 10000) {  // Less than 10KB
+                    recordedFile.delete();
+                    XposedBridge.log(TAG + ": Deleted empty recording file");
+                }
+            }
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error stopping recording: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            pcmOutputStream = null;
+            pcmDataSize = 0;
+            isCurrentlyRecording = false;
+            currentRecordingPath = null;
+            currentRecordingTimestamp = null;
+            currentRecordingFolder = null;
+        }
+    }
+    
+    /**
+     * Convert raw PCM file to MP3 format using MediaCodec
+     * @param pcmFile Input PCM file
+     * @param mp3File Output MP3 file
+     * @param sampleRate Sample rate (16000 Hz for DMR)
+     * @param channels Number of channels (1 = mono)
+     * @param bitsPerSample Bits per sample (16 for PCM_16BIT)
+     */
+    private static void convertPCMtoMP3(java.io.File pcmFile, java.io.File mp3File, int sampleRate, int channels, int bitsPerSample) throws Exception {
+        java.io.FileInputStream pcmIn = new java.io.FileInputStream(pcmFile);
+        java.io.FileOutputStream mp3Out = new java.io.FileOutputStream(mp3File);
+        
+        // Configure MediaCodec for MP3 encoding
+        android.media.MediaFormat format = android.media.MediaFormat.createAudioFormat(
+            android.media.MediaFormat.MIMETYPE_AUDIO_MPEG,  // MP3
+            sampleRate,
+            channels
+        );
+        format.setInteger(android.media.MediaFormat.KEY_BIT_RATE, 64000);  // 64 kbps
+        format.setInteger(android.media.MediaFormat.KEY_PCM_ENCODING, android.media.AudioFormat.ENCODING_PCM_16BIT);
+        
+        android.media.MediaCodec codec = android.media.MediaCodec.createEncoderByType(android.media.MediaFormat.MIMETYPE_AUDIO_MPEG);
+        codec.configure(format, null, null, android.media.MediaCodec.CONFIGURE_FLAG_ENCODE);
+        codec.start();
+        
+        android.media.MediaCodec.BufferInfo bufferInfo = new android.media.MediaCodec.BufferInfo();
+        byte[] pcmBuffer = new byte[4096];
+        boolean inputDone = false;
+        boolean outputDone = false;
+        
+        while (!outputDone) {
+            // Feed input
+            if (!inputDone) {
+                int inputBufferId = codec.dequeueInputBuffer(10000);
+                if (inputBufferId >= 0) {
+                    java.nio.ByteBuffer inputBuffer = codec.getInputBuffer(inputBufferId);
+                    inputBuffer.clear();
+                    int read = pcmIn.read(pcmBuffer);
+                    if (read > 0) {
+                        inputBuffer.put(pcmBuffer, 0, read);
+                        codec.queueInputBuffer(inputBufferId, 0, read, 0, 0);
+                    } else {
+                        codec.queueInputBuffer(inputBufferId, 0, 0, 0, android.media.MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                        inputDone = true;
+                    }
+                }
+            }
+            
+            // Get output
+            int outputBufferId = codec.dequeueOutputBuffer(bufferInfo, 10000);
+            if (outputBufferId >= 0) {
+                java.nio.ByteBuffer outputBuffer = codec.getOutputBuffer(outputBufferId);
+                if (bufferInfo.size > 0) {
+                    byte[] outData = new byte[bufferInfo.size];
+                    outputBuffer.get(outData);
+                    mp3Out.write(outData);
+                }
+                codec.releaseOutputBuffer(outputBufferId, false);
+                
+                if ((bufferInfo.flags & android.media.MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+                    outputDone = true;
+                }
+            }
+        }
+        
+        codec.stop();
+        codec.release();
+        pcmIn.close();
+        mp3Out.close();
+    }
+    
+    /**
+     * Convert raw PCM file to WAV format with headers
+     * @param pcmFile Input PCM file
+     * @param wavFile Output WAV file
+     * @param sampleRate Sample rate (16000 Hz for DMR)
+     * @param channels Number of channels (1 = mono)
+     * @param bitsPerSample Bits per sample (16 for PCM_16BIT)
+     */
+    private static void convertPCMtoWAV(java.io.File pcmFile, java.io.File wavFile, int sampleRate, int channels, int bitsPerSample) throws Exception {
+        java.io.FileInputStream pcmIn = new java.io.FileInputStream(pcmFile);
+        java.io.FileOutputStream wavOut = new java.io.FileOutputStream(wavFile);
+        
+        long pcmLength = pcmFile.length();
+        long dataSize = pcmLength;
+        long fileSize = pcmLength + 36;  // PCM data + 36 bytes of header
+        
+        int byteRate = sampleRate * channels * bitsPerSample / 8;
+        int blockAlign = channels * bitsPerSample / 8;
+        
+        // Write WAV header
+        wavOut.write("RIFF".getBytes());
+        wavOut.write(intToByteArray((int) fileSize), 0, 4);
+        wavOut.write("WAVE".getBytes());
+        wavOut.write("fmt ".getBytes());
+        wavOut.write(intToByteArray(16), 0, 4);  // fmt chunk size
+        wavOut.write(shortToByteArray((short) 1), 0, 2);  // Audio format (1 = PCM)
+        wavOut.write(shortToByteArray((short) channels), 0, 2);  // Number of channels
+        wavOut.write(intToByteArray(sampleRate), 0, 4);  // Sample rate
+        wavOut.write(intToByteArray(byteRate), 0, 4);  // Byte rate
+        wavOut.write(shortToByteArray((short) blockAlign), 0, 2);  // Block align
+        wavOut.write(shortToByteArray((short) bitsPerSample), 0, 2);  // Bits per sample
+        wavOut.write("data".getBytes());
+        wavOut.write(intToByteArray((int) dataSize), 0, 4);  // Data chunk size
+        
+        // Copy PCM data
+        byte[] buffer = new byte[4096];
+        int read;
+        while ((read = pcmIn.read(buffer)) != -1) {
+            wavOut.write(buffer, 0, read);
+        }
+        
+        pcmIn.close();
+        wavOut.close();
+    }
+    
+    /**
+     * Convert int to little-endian byte array
+     */
+    private static byte[] intToByteArray(int value) {
+        return new byte[] {
+            (byte) (value & 0xff),
+            (byte) ((value >> 8) & 0xff),
+            (byte) ((value >> 16) & 0xff),
+            (byte) ((value >> 24) & 0xff)
+        };
+    }
+    
+    /**
+     * Convert short to little-endian byte array
+     */
+    private static byte[] shortToByteArray(short value) {
+        return new byte[] {
+            (byte) (value & 0xff),
+            (byte) ((value >> 8) & 0xff)
+        };
+    }
+    
+    /**
+     * Hook PCMReceiveManager to capture audio data directly from AudioTrack
+     * This captures the PCM audio being played, allowing us to save it to WAV files
+     */
+    private void hookPCMReceiveManager(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            Class<?> pcmManagerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.manager.PCMReceiveManager",
+                lpparam.classLoader
+            );
+            
+            // Hook the writeAudioTrack method which receives all PCM audio data
+            XposedHelpers.findAndHookMethod(
+                pcmManagerClass,
+                "writeAudioTrack",
+                byte[].class,  // PCM data
+                int.class,      // data length
+                new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                        // Only capture if recording is enabled and currently recording
+                        if (isRecordingEnabled && isCurrentlyRecording && pcmOutputStream != null) {
+                            try {
+                                byte[] audioData = (byte[]) param.args[0];
+                                int length = (int) param.args[1];
+                                
+                                // Write PCM data to file
+                                pcmOutputStream.write(audioData, 0, length);
+                                pcmDataSize += length;
+                                
+                            } catch (Exception e) {
+                                XposedBridge.log(TAG + ": Error writing PCM data: " + e.getMessage());
+                            }
+                        }
+                    }
+                }
+            );
+            
+            XposedBridge.log(TAG + ": Successfully hooked PCMReceiveManager.writeAudioTrack");
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Failed to hook PCMReceiveManager: " + t.getMessage());
+        }
+    }
+    
+    /**
+     * Update the RSSI display with current signal strength
+     */
+    private static void updateRssiDisplay() {
+        if (rssiDisplayTextView == null) {
+            return;
+        }
+        
+        try {
+            rssiDisplayTextView.post(new Runnable() {
+                @Override
+                public void run() {
+                    if (currentRssi != -999) {
+                        rssiDisplayTextView.setText("Signal: " + currentRssi + " dBm");
+                        ((View) rssiDisplayTextView.getParent()).setVisibility(View.VISIBLE);
+                    } else {
+                        ((View) rssiDisplayTextView.getParent()).setVisibility(View.GONE);
+                    }
+                }
+            });
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error updating RSSI display: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Hide the RSSI display
+     */
+    private static void hideRssiDisplay() {
+        if (rssiDisplayTextView == null) {
+            return;
+        }
+        
+        try {
+            rssiDisplayTextView.post(new Runnable() {
+                @Override
+                public void run() {
+                    ((View) rssiDisplayTextView.getParent()).setVisibility(View.GONE);
+                }
+            });
+            
+            // Reset RSSI value
+            currentRssi = -999;
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error hiding RSSI display: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Hook SignalMessageHandler to capture RSSI values
+     */
+    private void hookSignalMessageHandler(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            Class<?> signalMessageHandlerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.handler.SignalMessageHandler",
+                lpparam.classLoader
+            );
+            
+            // Hook the decode() method which processes incoming SignalMessage
+            XposedHelpers.findAndHookMethod(
+                signalMessageHandlerClass,
+                "decode",
+                XposedHelpers.findClass("com.pri.prizeinterphone.protocol.Packet", lpparam.classLoader),
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        try {
+                            // The decode() method returns a SignalMessage object
+                            Object signalMessage = param.getResult();
+                            
+                            if (signalMessage != null) {
+                                // Get the rssi field value (byte)
+                                Object rssiObj = XposedHelpers.getObjectField(signalMessage, "rssi");
+                                
+                                if (rssiObj != null) {
+                                    byte rssi = (Byte) rssiObj;
+                                    currentRssi = (int) rssi;
+                                    XposedBridge.log(TAG + ": Captured RSSI: " + currentRssi + " dBm");
+                                }
+                            }
+                        } catch (Exception e) {
+                            XposedBridge.log(TAG + ": Error extracting RSSI: " + e.getMessage());
+                        }
+                    }
+                }
+            );
+            
+            XposedBridge.log(TAG + ": Successfully hooked SignalMessageHandler.decode");
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Failed to hook SignalMessageHandler: " + t.getMessage());
         }
     }
 }
