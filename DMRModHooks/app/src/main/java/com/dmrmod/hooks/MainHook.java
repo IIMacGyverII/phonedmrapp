@@ -3,6 +3,8 @@ package com.dmrmod.hooks;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.location.Address;
+import android.location.Geocoder;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,6 +14,8 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import java.util.List;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
@@ -49,7 +53,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "1.3.3";
+    private static final String VERSION = "1.3.4";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     @Override
@@ -378,10 +382,47 @@ public class MainHook implements IXposedHookLoadPackage {
                 LocationDatabase.Location location = locationDb.getLocation(channelNumber);
                 
                 if (location != null) {
-                    String displayText = String.format(java.util.Locale.US, 
-                        "%.4f, %.4f\n📍", location.latitude, location.longitude);
+                    // Try to get location name using Geocoder
+                    String displayText;
+                    try {
+                        Geocoder geocoder = new Geocoder(context, java.util.Locale.US);
+                        if (geocoder.isPresent()) {
+                            List<Address> addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1);
+                            if (addresses != null && !addresses.isEmpty()) {
+                                Address address = addresses.get(0);
+                                String city = address.getLocality();
+                                String state = address.getAdminArea();
+                                
+                                if (city != null && state != null) {
+                                    displayText = city + ", " + state + "\n📍";
+                                } else if (city != null) {
+                                    displayText = city + "\n📍";
+                                } else {
+                                    // Fallback to coordinates
+                                    displayText = String.format(java.util.Locale.US, 
+                                        "%.4f, %.4f\n📍", location.latitude, location.longitude);
+                                }
+                                XposedBridge.log(TAG + ": Geocoded location for channel " + channelNumber + ": " + displayText.replace("\n📍", ""));
+                            } else {
+                                // Geocoder returned no results, show coordinates
+                                displayText = String.format(java.util.Locale.US, 
+                                    "%.4f, %.4f\n📍", location.latitude, location.longitude);
+                                XposedBridge.log(TAG + ": No geocoding results, showing coordinates for channel " + channelNumber);
+                            }
+                        } else {
+                            // Geocoder not available
+                            displayText = String.format(java.util.Locale.US, 
+                                "%.4f, %.4f\n📍", location.latitude, location.longitude);
+                            XposedBridge.log(TAG + ": Geocoder not available, showing coordinates for channel " + channelNumber);
+                        }
+                    } catch (Exception e) {
+                        // Geocoder failed, fallback to coordinates
+                        displayText = String.format(java.util.Locale.US, 
+                            "%.4f, %.4f\n📍", location.latitude, location.longitude);
+                        XposedBridge.log(TAG + ": Geocoder error: " + e.getMessage() + ", showing coordinates");
+                    }
+                    
                     locationText.setText(displayText);
-                    XposedBridge.log(TAG + ": Updated location for channel " + channelNumber + ": " + location.latitude + ", " + location.longitude);
                 } else {
                     locationText.setText("📍");
                     XposedBridge.log(TAG + ": No location for channel " + channelNumber);
