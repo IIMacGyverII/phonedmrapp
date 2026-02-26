@@ -4,7 +4,7 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v1.3.6 (February 26, 2026)  
+**Current Version**: v1.3.7 (February 26, 2026)  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Backup Location**: `Download/DMR_Backups/`  
@@ -97,6 +97,17 @@
 - ✅ Graceful fallback if elevation unavailable
 - ✅ Display format: "Minneapolis, Minnesota\n859ft (262m) 📍"
 - ✅ Works with coordinates too: "44.9203, -93.2654\n859ft (262m) 📍"
+
+**DMR Caller Identification (v1.3.7)**:
+- ✅ Real-time caller DMR ID detection during incoming transmissions
+- ✅ Automatic contact name lookup from app's contact database
+- ✅ Display in borderbox top-left corner with green text
+- ✅ Format: "📞 Contact Name\nDMR ID: 64067" or "📞 DMR ID: 64067"
+- ✅ Hooks ModuleStatusMessageHandler for RECEIVE_START/STOP events
+- ✅ Decodes DMR ID from DigitalAudioMessage packets (offset 1, 2-byte LE)
+- ✅ Asynchronous contact lookup prevents UI blocking
+- ✅ Display automatically clears when transmission ends
+- ✅ Works with multiple callers, tested and verified
 
 **Technical Architecture**:
 - Singleton pattern for LocationDatabase access
@@ -442,7 +453,20 @@ Or use LSPosed Manager → Logs
 
 ## Changelog
 
-### v1.3.6 (Feb 26, 2026) ✅ **CURRENT**
+### v1.3.7 (Feb 26, 2026) ✅ **CURRENT**
+- **Added DMR caller identification with real-time contact display**
+- Displays incoming caller information in borderbox (top-left corner, green text)
+- Hooked ModuleStatusMessageHandler to detect RECEIVE_START/STOP events
+- Hooked DigitalAudioMessageHandler to decode caller DMR ID from radio module packets
+- DMR ID extraction: offset 1, 2-byte little-endian from Digital Audio packet body
+- Automatic contact name lookup from contact_database table
+- Display format: "📞 Contact Name\nDMR ID: 12345" when contact found
+- Falls back to "📞 DMR ID: 12345" when DMR ID not in contacts
+- Display automatically clears when transmission ends (RECEIVE_STOP)
+- Comprehensive packet analysis logging for debugging and verification
+- Tested with multiple DMR IDs - working correctly with contact resolution
+
+### v1.3.6 (Feb 26, 2026)
 - **Fixed duplicate contacts in CSV export**
 - Added HashSet deduplication in exportContactsDirect() to prevent duplicate entries
 - Tracks unique contact rows to ensure each contact exported only once
