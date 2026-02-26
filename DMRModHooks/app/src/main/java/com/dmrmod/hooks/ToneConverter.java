@@ -181,4 +181,41 @@ public class ToneConverter {
         
         return 0; // Not found, default to index 0
     }
+    
+    /**
+     * Format tone for display on UI
+     * 
+     * @param toneType Tone type (0=None, 1=CTCSS, 2=FDCS, 3=BDCS)
+     * @param subCode Tone index
+     * @return Formatted string like "None", "CTCSS 67.0 Hz", "DCS 023N", "DCS 023I"
+     */
+    public static String formatForDisplay(int toneType, int subCode) {
+        switch (toneType) {
+            case 0: // None
+                return "None";
+                
+            case 1: // CTCSS
+                if (subCode >= 0 && subCode < CTCSS_TONES.length) {
+                    return "CTCSS " + CTCSS_TONES[subCode] + " Hz";
+                }
+                return "CTCSS (Invalid)";
+                
+            case 2: // Forward DCS
+                if (subCode >= 0 && subCode < FDCS_CODES.length) {
+                    String code = FDCS_CODES[subCode];
+                    return "DCS " + code;
+                }
+                return "DCS (Invalid)";
+                
+            case 3: // Backward DCS
+                if (subCode >= 0 && subCode < BDCS_CODES.length) {
+                    String code = BDCS_CODES[subCode];
+                    return "DCS " + code;
+                }
+                return "DCS (Invalid)";
+                
+            default:
+                return "Unknown";
+        }
+    }
 }

@@ -4,7 +4,7 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v1.3.7 (February 26, 2026)  
+**Current Version**: v1.4.0 (February 26, 2026)  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Backup Location**: `Download/DMR_Backups/`  
@@ -98,7 +98,7 @@
 - ✅ Display format: "Minneapolis, Minnesota\n859ft (262m) 📍"
 - ✅ Works with coordinates too: "44.9203, -93.2654\n859ft (262m) 📍"
 
-**DMR Caller Identification (v1.3.7)**:
+**DMR Caller Identification & Activity History (v1.3.7-1.4.0)**:
 - ✅ Real-time caller DMR ID detection during incoming transmissions
 - ✅ Automatic contact name lookup from app's contact database
 - ✅ Display in borderbox top-left corner with green text
@@ -108,6 +108,27 @@
 - ✅ Asynchronous contact lookup prevents UI blocking
 - ✅ Display automatically clears when transmission ends
 - ✅ Works with multiple callers, tested and verified
+
+**Activity History System (v1.3.8-1.4.0)**:
+- ✅ Channel-specific activity tracking (top-right history box)
+- ✅ Persistent history stored in SQLite database (`dmrmod_history.db`)
+- ✅ Shows last 3 activities per channel (FIFO, newest first)
+- ✅ Tracks: Voice TX/RX, SMS, Channel Busy, Low Battery, etc.
+- ✅ Format: "[Contact/DMR ID] HH:mm:ss Activity" for digital channels
+- ✅ Format: "HH:mm:ss Activity" for analog channels
+- ✅ Contact names displayed in history (looks up from contact database)
+- ✅ History persists across channel switches and app restarts
+- ✅ Separate databases for each channel number
+- ✅ Blue-bordered box with dynamic "DMR History" or "Analog History" header
+
+**Analog/Digital Mode Separation (v1.3.9-1.4.0)**:
+- ✅ Complete isolation between analog and digital channels
+- ✅ Analog channels display: "📻 Receiving..." with optional RX tone
+- ✅ Conditional tone display (CTCSS/DCS shown only if configured)
+- ✅ DMR state automatically clears when switching to analog
+- ✅ Three-layer protection prevents stale DMR IDs on analog channels
+- ✅ Analog activities tracked without DMR IDs ("N/A" in database)
+- ✅ Channel type detection via ChannelData.type (0=Digital, 1=Analog)
 
 **Technical Architecture**:
 - Singleton pattern for LocationDatabase access
