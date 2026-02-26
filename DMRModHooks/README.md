@@ -4,7 +4,7 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v1.1 (February 24, 2026)  
+**Current Version**: v1.3.4 (February 26, 2026)  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Backup Location**: `Download/DMR_Backups/`  
@@ -51,18 +51,86 @@
 - ✅ Easy to transfer files via USB, file manager, or cloud sync
 - ✅ Files visible in Files app and all file managers
 
+## Upcoming Version 2 Features 🚀
+
+**In Development - v1.3.x Series (February 2026)**
+
+### Location Tracking & Display System
+
+**LocationDatabase (Separate Storage)**:
+- ✅ Dedicated SQLite database (`dmrmod_locations.db`) for channel locations
+- ✅ Independent from app's main database to prevent conflicts
+- ✅ Stores latitude/longitude per channel number
+- ✅ Full CRUD operations (save, retrieve, delete, clear)
+
+**Location Import/Export**:
+- ✅ Extended CSV format with latitude/longitude columns
+- ✅ Preserves location data through backup/restore cycles
+- ✅ Compatible with OpenGD77 CSV format (additional columns)
+- ✅ Defensive parsing skips default/invalid coordinates
+
+**UI Enhancements (v1.3.x)**:
+- ✅ **Borderbox Overlay**: 250dp semi-transparent gradient panel
+- ✅ **PTT Button Repositioning**: Moved to bottom with spacer for better ergonomics
+- ✅ **Channel Controls**: Repositioned with optimized spacing (5dp margins)
+- ✅ **Info Text Spacing**: Reduced from 10dp to 5dp for compact layout
+
+**Dynamic Location Display (v1.3.3+)**:
+- ✅ Real-time location updates when switching channels
+- ✅ Automatic refresh via `updateUI()` hook
+- ✅ Shows 📍 icon for channels without location data
+- ✅ Top-right corner display (white text, 12sp)
+
+**Reverse Geocoding (v1.3.4)**:
+- ✅ Human-readable location names instead of raw coordinates
+- ✅ Display format: "City, State\n📍" (e.g., "Minneapolis, Minnesota")
+- ✅ Fallback chain: City & State → City Only → Coordinates → Icon
+- ✅ Comprehensive error handling for geocoding failures
+- ✅ Uses Android Geocoder API with US locale
+- ✅ No network requests to external services
+
+**Technical Architecture**:
+- Singleton pattern for LocationDatabase access
+- Helper methods for view hierarchy traversal
+- Tag-based view identification (`DMR_LOCATION_TEXT`, `DMR_SPACER`, `DMR_BORDERBOX`)
+- Non-blocking UI updates with graceful fallbacks
+
+**Stability Notes**:
+- v1.2.9: Stable baseline without borderbox
+- v1.3.1: Borderbox restored after device reboot (cached state cleared)
+- v1.3.3: Dynamic updates fully functional
+- v1.3.4: Geocoding integrated with fallback safety
+
+**Upcoming Enhancements**:
+- Location editing UI for manual coordinate entry
+- GPS acquisition button for current position
+- Map view integration for location selection
+- Location-based features (nearby repeaters, range calculations)
+
 ## Technical Details
 
 ### Database Schema Discovery
 
 **Channel Database**: `/data/user/0/com.pri.prizeinterphone/databases/database_channel_area_default_uhf.db`
 **Contact Database**: `/data/user/0/com.pri.prizeinterphone/databases/contact_database.db`
+**Location Database** *(v1.3.x+)*: `/data/user/0/com.pri.prizeinterphone/databases/dmrmod_locations.db`
 
 **Critical Schema Findings**:
 - Channel types: `0` = Digital (DMR), `1` = Analog (FM)
 - Frequencies stored in Hz (multiply CSV MHz values by 1,000,000)
 - Band field: `0` = UHF (400-512 MHz), `1` = VHF (136-174 MHz)
 - Stock contact ID `1` must be preserved to prevent crashes
+
+**LocationDatabase Schema** *(v1.3.x+)*:
+- **Database**: `dmrmod_locations.db` (separate from app databases)
+- **Table**: `channel_locations`
+- **Columns**:
+  - `channel_number` INTEGER PRIMARY KEY
+  - `latitude` REAL
+  - `longitude` REAL
+- **Purpose**: Store location data independently to avoid conflicts with app's database structure
+- **Access**: Singleton pattern via `LocationDatabase.getInstance(context)`
+- **Methods**: `saveLocation()`, `getLocation()`, `deleteLocation()`, `clearAllLocations()`
 
 ### Required Database Fields (15 Total)
 
@@ -83,21 +151,58 @@
 
 ### Hooks Implemented
 
-1. **InterPhoneLocalFragment.initView()**
+1. **InterPhoneHomeActivity.onCreate()**
+   - Purpose: Display module version notification
+   - Action: Shows toast message on app launch
+   - Info: "✓ DMR Mod Hooks Active! v1.3.4"
+
+2. **InterPhoneTalkBackFragment.initView(View)** *(v1.3.1+)*
+   - Purpose: UI modifications and borderbox creation
+   - Actions:
+     - Repositions channel controls with 5dp top margin
+     - Reduces info text spacing to 5dp
+     - Creates 250dp borderbox with gradient drawable
+     - Adds location TextView tagged "DMR_LOCATION_TEXT"
+     - Inserts spacer view with weight=1.0
+     - Repositions PTT button to bottom with proper margins
+   - Touch handling: setClickable(false) and setFocusable(false) on borderbox
+
+3. **InterPhoneTalkBackFragment.updateUI()** *(v1.3.3+)*
+   - Purpose: Dynamic location display updates on channel change
+   - Actions:
+     - Finds location TextView via helper method
+     - Queries LocationDatabase for current channel
+     - Updates display with city/state name or coordinates (v1.3.4+)
+     - Shows 📍 icon if no location data exists
+   - Triggers: Automatically called when user switches channels
+
+4. **InterPhoneLocalFragment.initView()**
    - Purpose: Add "Backup/Restore" button to LOCAL tab
    - Action: Injects button into fragment layout
    - Opens: BackupActivity
 
-2. **DirectDatabaseExporter (Direct Access)**
+5. **DirectDatabaseExporter (Direct Access)**
    - Bypasses shell commands
    - Reads channel/contact databases directly
    - Exports 5 OpenGD77 CSV files to `Download/DMR_Backups/`
+   - Includes latitude/longitude columns (v1.3.x+)
 
-4. **DirectDatabaseImporter (Direct Access)**
+6. **DirectDatabaseImporter (Direct Access)**
    - Parses OpenGD77 CSV format
    - Populates all 15 required fields
    - Differentiates Digital vs Analog field values
+   - Imports latitude/longitude data to LocationDatabase (v1.3.x+)
    - Triggers auto-refresh via DmrManager reflection
+
+### Helper Methods (v1.3.3+)
+
+- **findLocationTextView(ViewGroup)**: Recursively searches view hierarchy for TextView tagged "DMR_LOCATION_TEXT"
+- **updateLocationDisplay(fragment, TextView, Context)**: 
+  - Retrieves current channel number
+  - Queries LocationDatabase for coordinates
+  - Performs reverse geocoding to get city/state names (v1.3.4+)
+  - Updates TextView with formatted location display
+  - Handles all error cases with graceful fallbacks
 
 ### Why LSPosed?
 The PriInterPhone app requires Ulefone's platform certificate to access custom `PrizeTinyService` APIs. Traditional APK modification approaches fail because:
@@ -224,7 +329,7 @@ Output: `app/build/outputs/apk/debug/app-debug.apk`
    - Check `Download/DMR_Backups/` for timestamped folder
    - Should see folder like: `20260223_140530/` containing CSV files
 
-5. **Verify version**: Toast notification shows "✓ DMR Mod Hooks Active! v1.1"
+5. **Verify version**: Toast notification shows "✓ DMR Mod Hooks Active! v1.3.4"
 
 ### Troubleshooting
 
@@ -297,7 +402,10 @@ DMRModHooks/
 │       ├── assets/
 │       │   └── xposed_init        # com.dmrmod.hooks.MainHook
 │       ├── java/com/dmrmod/hooks/
-│       │   └── MainHook.java      # Hook implementation
+│       │   ├── MainHook.java               # Main hook implementation
+│       │   ├── LocationDatabase.java       # Location storage (v1.3.x+)
+│       │   ├── DirectDatabaseExporter.java # CSV export with location data
+│       │   └── DirectDatabaseImporter.java # CSV import with location data
 │       └── res/values/
 │           └── strings.xml        # Module name, scope
 ├── build.gradle               # Project config
@@ -324,7 +432,52 @@ Or use LSPosed Manager → Logs
 
 ## Changelog
 
-### v1.1 (Feb 24, 2026) ✅ **CURRENT**
+### v1.3.4 (Feb 26, 2026) ✅ **CURRENT**
+- **Added reverse geocoding for city/state display**
+- Implemented Android Geocoder API to show human-readable location names
+- Display format: "City, State" instead of raw coordinates (e.g., "Minneapolis, Minnesota")
+- Comprehensive fallback chain: City & State → City Only → Coordinates → Icon
+- Error handling for geocoding unavailable or failed lookups
+- No external network dependencies (uses Android's built-in geocoding)
+- Tested with Minnesota test data showing proper city/state names
+
+### v1.3.3 (Feb 26, 2026)
+- **Dynamic location display with channel updates**
+- Added hook to `updateUI()` method for automatic location refresh
+- Helper method `findLocationTextView()` searches view hierarchy for tagged TextView
+- Helper method `updateLocationDisplay()` queries LocationDatabase and updates display
+- Location now updates automatically when switching channels
+- Shows 📍 icon for channels without location data
+- Fully tested with channels 1-10 (Minnesota coordinates) updating correctly
+
+### v1.3.2 (Feb 26, 2026)
+- **Added location display to borderbox**
+- TextView with "DMR_LOCATION_TEXT" tag in top-right corner
+- Shows coordinates format: "44.9203, -90.6806\n📍"
+- Queries LocationDatabase for current channel
+- Initial implementation (static display, fixed in v1.3.3)
+
+### v1.3.1 (Feb 26, 2026)
+- **Stable baseline with borderbox and PTT repositioning**
+- Added 250dp FrameLayout borderbox with gradient drawable
+- Border: 2dp semi-transparent white stroke, 12dp corner radius
+- Gradient background: 0x15FFFFFF (top) to 0x08FFFFFF (bottom)
+- Spacer view with weight=1.0 to push PTT button to bottom
+- PTT button repositioned with 10dp margins and proper gravity
+- setClickable(false) and setFocusable(false) on borderbox to pass touch events
+- Discovered: System reboot cleared cached state that was causing freezes in v1.2.8
+- All UI features stable and functional
+
+### v1.2.9 (Feb 25, 2026)
+- **Established stable baseline without borderbox**
+- Removed borderbox due to system freeze issues
+- Channel controls repositioning with 5dp top margin
+- Info text spacing reduced to 5dp with repositioning
+- LocationDatabase architecture implemented
+- Import/export with latitude/longitude preservation working
+- Clean baseline for incremental feature addition
+
+### v1.1 (Feb 24, 2026)
 - **Import now supports any folder name**
 - Removed timestamp-only restriction for backup folders
 - Import dialog now lists ALL folders in DMR_Backups/ containing Channels.csv
