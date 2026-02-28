@@ -1,6 +1,6 @@
-# PriInterPhone DMR Radio - LSPosed Mod with OpenGD77 Integration
+# PriInterPhone DMR Radio - LSPosed Mod with OpenGD77 Integration + Real-time Transcription
 
-**Status**: ✅ **FULLY FUNCTIONAL** - Export/Import working!
+**Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + Real-time Speech-to-Text working!
 
 ## Demo
 
@@ -15,23 +15,30 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 - **🗂️ Easy access** - Backups saved to Download folder (easy file transfer)
 - **⚡ Direct database access** - No shell commands, fast and reliable
 - **🔒 No APK modification** - Works via runtime hooks (preserves platform signature)
+- **🎙️ Real-time Transcription** - Live speech-to-text transcription powered by Google Cloud API
+- **📝 Automatic Logging** - Daily transcription logs organized by channel with timestamps
 
 ## Current Status ✅
 
-**Module Version**: v1.1  
+**Module Version**: v1.6  
 **Export**: ✅ Working - All 5 OpenGD77 CSV files + PDF summary  
 **Import**: ✅ Working - Full Digital & Analog support  
-**User Validation**: ✅ Export/Import tested and confirmed  
-**Latest Build**: February 24, 2026
+**Transcription**: ✅ Working - Real-time speech-to-text with Google Cloud API  
+**Audio Recording**: ✅ Working - Automatic WAV recording organized by channel  
+**Per-Channel History**: ✅ Working - Transcription messages persist per channel  
+**Timestamps**: ✅ Working - All messages include HH:mm:ss timestamps  
+**User Validation**: ✅ Export/Import/Transcription tested and confirmed  
+**Latest Build**: February 27, 2026
 
 ### Quick Facts
 
 - **Module**: com.dmrmod.hooks (LSPosed Xposed module)
 - **Target App**: com.pri.prizeinterphone (Ulefone system app)
+- **Transcription Service**: com.macdmr.transcription (Standalone AIDL service)
 - **Device**: Ulefone Armor 26 Ultra (Android 13)
 - **LSPosed**: v1.9.2 (Zygisk)
-- **Current Version**: v1.1
-- **Backup Location**: `Download/DMR/DMR_Backups/` (standard Android Downloads folder)
+- **Current Version**: v1.6
+- **Storage Location**: `Download/DMR/` (Audio, Transcription, DMR_Backups folders)
 
 ## Features
 
@@ -59,6 +66,24 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 - Auto-refresh after import - no app restart needed
 - Import confirmation with success/failure reporting
 - Files stored in user-friendly Download folder
+
+### ✅ Phase 4: Real-time Speech-to-Text Transcription (v1.2 - v1.6)
+- **Live transcription** of all DMR audio transmissions
+- **Google Cloud Speech-to-Text API** integration for accurate recognition
+- **Automatic audio recording** - All transmissions saved as WAV files
+- **Per-channel message history** - Each channel maintains its own scrollable message list
+- **Channel switching memory** - Return to any channel and see previous messages (up to 10 messages per channel)
+- **Timestamped messages** - Every transcription includes [HH:mm:ss] timestamp
+- **Channel-organized storage**:
+  - Audio recordings: `Download/DMR/Audio/[ChannelName]/`
+  - Transcriptions: `Download/DMR/Transcription/[ChannelName]/`
+- **Daily transcription logs** - Running log files with timestamps and DMR IDs
+- **Format**: `[14:30:22] ID: 123456 - Transcribed text here`
+- **Scrollable UI** - Message list grows dynamically with height cap at 100dp
+- **Network resilience** - Connectivity checking and comprehensive error handling
+- **Secure API key** - Stored in gitignored local.properties file
+- **Cost**: First 60 minutes/month FREE, then $0.006 per 15 seconds
+- **Status**: ✅ Successfully transcribing real DMR audio in production
 
 ## Why LSPosed?
 
@@ -106,30 +131,38 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
    - Reboot device
    - LSPosed Manager app will appear automatically
 
-### Step 2: Install DMRModHooks Module
+### Step 2: Install DMRModHooks Module & Transcription Service
 
 #### Option A: Download Pre-built Release (Recommended)
 
 1. **Download Latest Release**:
    - Go to [Releases](https://github.com/IIMacGyverII/phonedmrapp/releases/latest)
-   - Download `DMRModHooks-v1.1.apk` (or latest version)
+   - Download `DMRModHooks-v1.6.apk` (or latest version)
+   - Download `DMRTranscriptionService-v1.0.apk`
 
-2. **Install Module**:
+2. **Install Both APKs**:
    ```powershell
-   adb install -r DMRModHooks-v1.1.apk
+   adb install -r DMRModHooks-v1.6.apk
+   adb install -r DMRTranscriptionService-v1.0.apk
    ```
 
 #### Option B: Build from Source
 
-1. **Build APK**:
+1. **Build Both APKs**:
    ```powershell
+   # Build DMRModHooks
    cd DMRModHooks
+   .\gradlew.bat assembleDebug
+   
+   # Build TranscriptionService
+   cd ..\DMRTranscriptionService
    .\gradlew.bat assembleDebug
    ```
 
-2. **Install Module**:
+2. **Install Both Modules**:
    ```powershell
-   adb install -r app\build\outputs\apk\debug\app-debug.apk
+   adb install -r DMRModHooks\app\build\outputs\apk\debug\app-debug.apk
+   adb install -r DMRTranscriptionService\app\build\outputs\apk\debug\app-debug.apk
    ```
 
 #### Enable in LSPosed Manager
@@ -140,17 +173,39 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
    - Enable "DMR Mod Hooks" checkbox
    - Tap "DMR Mod Hooks" → Application scope
    - Verify `com.pri.prizeinterphone` is selected
+   - **Important**: Do NOT add `com.macdmr.transcription` to LSPosed scope (it works standalone)
    - Reboot device
 
-### Step 3: Test Installation
+### Step 3: Configure Google Cloud API (for Transcription)
+
+1. **Get API Key**:
+   - Visit https://console.cloud.google.com
+   - Create a project (or use existing)
+   - Enable "Cloud Speech-to-Text API" (free to enable)
+   - Go to "APIs & Services" → "Credentials"
+   - Click "Create Credentials" → "API Key"
+   - Copy the key (starts with `AIza...`)
+
+2. **Configure Transcription Service**:
+   - Copy `DMRTranscriptionService/local.properties.template` to `local.properties`
+   - Edit `local.properties` and replace `YOUR_API_KEY_HERE` with your actual API key
+   - Rebuild and reinstall TranscriptionService APK
+   - **Note**: The API key is gitignored for security
+
+3. **Pricing**:
+   - First 60 minutes/month: **FREE**
+   - After free tier: $0.006 per 15 seconds (~$0.002 per 5-second transmission)
+   - Very affordable for typical DMR usage
+
+### Step 4: Test Installation
 
 1. **Verify Module is Active**:
    - Open PriInterPhone app
-   - You should see toast: "✓ DMR Mod Hooks Active! v1.1"
+   - You should see toast: "✓ DMR Mod Hooks Active! v1.6"
 
 2. **Test Export**:
    - Go to LOCAL tab
-   - Tap � **EXPORT (OpenGD77)** button  
+   - Tap 📤 **EXPORT (OpenGD77)** button  
    - Check `Download/DMR/DMR_Backups/` for CSV files (use any file manager)
    - Should see: Channels, Contacts, TG_Lists, Zones, DTMF CSVs with timestamps
 
@@ -160,6 +215,13 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
    - Confirm import
    - Wait for success message
    - Channels will auto-refresh and appear in app
+
+4. **Test Transcription**:
+   - Go to Settings → Enable **TXT** (text display)
+   - Send or receive a DMR transmission with speech
+   - Transcription appears in real-time below the channel info
+   - Check `Download/DMR/Audio/[ChannelName]/` for WAV recordings
+   - Check `Download/DMR/Transcription/[ChannelName]/transcription_YYYYMMDD.txt` for logs
 
 ## Usage
 
@@ -190,6 +252,48 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 8. Wait for import success notification
 9. Channels auto-refresh - ready to use!
 
+### Using Real-time Transcription
+
+1. **Enable Transcription**:
+   - Open PriInterPhone app
+   - Go to Settings
+   - Enable **TXT** (text display)
+   - Transcription service automatically starts
+
+2. **During Transmissions**:
+   - Real-time transcription appears below channel info
+   - Audio automatically recorded to `Download/DMR/Audio/[ChannelName]/`
+   - Transcription appended to `Download/DMR/Transcription/[ChannelName]/transcription_YYYYMMDD.txt`
+
+3. **File Organization**:
+   ```
+   Download/DMR/
+     Audio/
+       Channel_1/
+         20260227_143022_CallSign_Name.wav
+         20260227_143155_CallSign_Name.wav
+       Repeater_2/
+         20260227_150330_CallSign_Name.wav
+     Transcription/
+       Channel_1/
+         transcription_20260227.txt
+         transcription_20260228.txt
+       Repeater_2/
+         transcription_20260227.txt
+   ```
+
+4. **Transcription Log Format**:
+   ```
+   [14:30:22] ID: 123456 - This is the first transmission
+   [14:31:55] ID: 789012 - Second transmission from different user
+   [14:35:10] ID: 123456 - Another message
+   ```
+
+5. **Disable Transcription**:
+   - Go to Settings → Disable **TXT**
+   - Transcription service stops
+   - Audio recordings will continue if recording is enabled separately
+
 ## Project Structure
 
 ```
@@ -211,6 +315,24 @@ phonedmrapp/
 │   │   │   └── values/strings.xml                   (MacDMRUlephone name)
 │   │   └── AndroidManifest.xml
 │   └── build.gradle                    # Package: com.pri.prizeinterphone
+├── DMRModHooks/                        # LSPosed Xposed Module
+│   ├── app/src/main/java/com/dmrmod/hooks/
+│   │   ├── MainHook.java              # Main hook implementation (3300+ lines)
+│   │   ├── DirectDatabaseExporter.java # OpenGD77 CSV export
+│   │   ├── CSVExporter.java           # CSV file generation
+│   │   └── DirectDatabaseImporter.java # OpenGD77 CSV import
+│   ├── build.gradle
+│   └── README.md                       # Module documentation
+├── DMRTranscriptionService/            # Speech-to-Text Service
+│   ├── app/src/main/
+│   │   ├── java/com/macdmr/transcription/
+│   │   │   └── TranscriptionService.java  # Google Cloud API integration
+│   │   ├── aidl/com/macdmr/transcription/
+│   │   │   └── ITranscriptionService.aidl # Service interface
+│   │   └── AndroidManifest.xml
+│   ├── local.properties               # API key (gitignored)
+│   ├── local.properties.template      # Template for setup
+│   └── build.gradle
 ├── magisk_module/
 │   └── MacDMRUlephone/
 │       ├── module.prop                 # Module metadata
@@ -273,15 +395,45 @@ phonedmrapp/
 - Awaiting user to install and reboot
 - Will enable full DMR hardware access with custom branding
 
+### ✅ Phase 7: Real-time Speech-to-Text Transcription (v1.2 - v1.5)
+- **Problem**: Need speech-to-text for DMR transmissions
+- **Attempted**: ONNX Whisper Base model → Failed (decoder token 0 issue, 155 MB removed)
+- **Attempted**: Android SpeechRecognizer API → Failed (device blocks third-party access, error 10)
+- **Attempted**: LSPosed hooks to bypass restrictions → Failed (system blocks at validation layer below hooks)
+- **Solution Found**: Google Cloud Speech-to-Text API (bypasses all device restrictions)
+- **Implementation**:
+  - Created standalone TranscriptionService APK with AIDL interface
+  - Integrated OkHttp for HTTP requests with 30-second timeouts
+  - PCM to WAV conversion with proper 44-byte header
+  - Base64 encoding for Google Cloud API
+  - JSON request/response handling with error recovery
+  - Network connectivity checking
+  - Secured API key in gitignored local.properties
+- **File Organization**:
+  - Audio recordings organized by channel: `Download/DMR/Audio/[ChannelName]/`
+  - Daily transcription logs by channel: `Download/DMR/Transcription/[ChannelName]/transcription_YYYYMMDD.txt`
+  - Running log format: `[HH:MM:SS] ID: DMRID - Transcription text`
+- **Status**: ✅ Successfully transcribing real DMR audio in production
+
 ## Technical Details
 
 ### Build Environment
 - **Platform**: WSL2 Ubuntu 22.04 + Windows 11
 - **Java**: OpenJDK 17.0.18
 - **Android SDK**: compileSdk 34, minSdk 24, targetSdk 34
-- **Gradle**: 8.2, AGP 7.4.2
+- **Gradle**: 8.2, AGP 7.4.2/8.1.0
 - **Tools**: JADX 1.4.7, ImageMagick, ADB
 - **Device**: 5006AF1020002922 (production ROM, Magisk installed)
+
+### Transcription Architecture
+- **Service**: Standalone AIDL service (com.macdmr.transcription)
+- **API**: Google Cloud Speech-to-Text v1
+- **HTTP Client**: OkHttp 4.12.0 with 30-second timeouts
+- **Audio Format**: PCM 16-bit mono → WAV with proper header → Base64
+- **Network**: Connectivity checking with ACCESS_NETWORK_STATE permission
+- **Security**: API key in gitignored local.properties, injected via BuildConfig
+- **Error Handling**: Comprehensive logging, network error recovery, API error detection
+- **Storage**: Channel-organized folders for audio and transcription logs
 
 ### System API Fixes Implemented
 1. **Background Service Restriction**: Disabled auto-start from Application.onCreate()
@@ -319,10 +471,17 @@ phonedmrapp/
 
 ## Future Plans
 
+### Enhanced Transcription Features
+- **Multi-language support**: Configure language per-channel
+- **Custom vocabulary**: Add DMR-specific terms and callsigns
+- **Offline transcription**: Explore local models for privacy/cost reduction
+- **Voice commands**: Control radio functions via speech recognition
+
 ### Expanded DMR Functionality
-- **Real-time Contact Display**: Add live DMR contact receive display showing incoming caller information
-- **Enhanced UI Integration**: Display current DMR contact name, ID, and call status in real-time
-- **Call logging**: Track incoming/outgoing DMR calls with timestamps
+- **Real-time Contact Display**: Enhanced live DMR contact receive display
+- **Enhanced UI Integration**: Improved display of current DMR contact name, ID, and call status
+- **Call logging**: Track incoming/outgoing DMR calls with detailed timestamps and durations
+- **Statistics dashboard**: Visualize usage patterns and contact activity
 
 ### Tier 2 Support
 - **Attempt Tier 2 Implementation**: Investigate and implement advanced DMR Tier 2 features
@@ -343,8 +502,8 @@ With LSPosed runtime hooks and full access to the platform-signed app, **anythin
 - Community-driven feature development
 - Enhanced radio control and monitoring
 
-**Last Updated**: February 24, 2026  
-**Status**: LSPosed module fully operational - OpenGD77 export/import working perfectly!  
+**Last Updated**: February 27, 2026  
+**Status**: LSPosed module fully operational - OpenGD77 export/import + Real-time transcription working perfectly!  
 **GitHub**: https://github.com/IIMacGyverII/phonedmrapp
 
 For detailed technical information, see [MAGISK_SOLUTION.md](MAGISK_SOLUTION.md) and [STATUS.md](STATUS.md).

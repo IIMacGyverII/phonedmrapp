@@ -19,7 +19,25 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ByteArrayInputStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
+import android.content.ComponentName;
+import android.content.ServiceConnection;
+import android.os.IBinder;
+import android.content.Intent;
+import com.macdmr.transcription.ITranscriptionService;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -60,7 +78,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "1.4.8";
+    private static final String VERSION = "1.6.0";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -84,9 +102,15 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile boolean isRecordingEnabled = false;
     private static volatile boolean isCurrentlyRecording = false;
     private static volatile String currentRecordingPath = null;
+    private static volatile String lastRecordingPathForTranscription = null;  // Saved for async transcription
     private static volatile String currentRecordingTimestamp = null;  // Store timestamp for renaming
     private static volatile String currentRecordingFolder = null;     // Store folder for renaming
     private static volatile String currentChannelName = "Unknown";
+    
+    // Caller info saved for transcription (before clearing)
+    private static volatile int savedCallerDmrIdForTranscription = 0;
+    private static volatile String savedCallerNameForTranscription = null;
+    private static volatile int savedChannelTypeForTranscription = 0;
     private static android.widget.ToggleButton recordingToggleButton = null;
     
     // PCM recording (direct audio capture from AudioTrack)
@@ -97,6 +121,23 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile int currentRssi = -999;  // dBm value, -999 = no signal
     private static TextView rssiDisplayTextView = null;
     
+    // Speech-to-text transcription state (IPC Service)
+    private static volatile boolean isTranscriptionEnabled = false;
+    private static volatile String currentTranscription = "";
+    private static List<Short> audioBuffer = Collections.synchronizedList(new ArrayList<>());
+    private static final int MAX_BUFFER_SIZE = 480000; // 30 seconds at 16kHz (480000 samples)
+    private static ITranscriptionService transcriptionService = null;
+    private static ServiceConnection serviceConnection = null;
+    private static boolean isServiceBound = false;
+    private static LinearLayout transcriptionMessagesContainer = null;  // Container for messages
+    private static android.widget.ScrollView transcriptionScrollView = null;  // Scrollable view
+    private static LinearLayout transcriptionBox = null;  // Outer box
+    private static android.widget.ToggleButton transcriptionToggleButton = null;
+
+    // Per-channel transcription message history
+    private static final java.util.HashMap<Integer, java.util.ArrayList<String>> channelTranscriptionHistory = new java.util.HashMap<>();
+    private static final int MAX_TRANSCRIPTION_HISTORY = 10;
+
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
         // Only hook our target package
@@ -127,6 +168,247 @@ public class MainHook implements IXposedHookLoadPackage {
         
         XposedBridge.log(TAG + ": All hooks installed successfully");
     }
+
+    /**
+     * Hook Android SpeechRecognizer to unlock Google voice services
+     * 
+     * This hook intercepts SpeechRecognizer.createSpeechRecognizer() calls
+     * and forces them to succeed by bypassing service restrictions.
+     * 
+     * ISSUE: Google speech services exist on the device but return null when
+     * third-party apps try to access them. This hook bypasses that restriction.
+     */
+    private void hookSpeechRecognizer(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            XposedBridge.log(TAG + ": Setting up SpeechRecognizer hook for " + lpparam.packageName);
+            
+            Class<?> speechRecognizerClass = XposedHelpers.findClass(
+                "android.speech.SpeechRecognizer",
+                lpparam.classLoader
+            );
+            
+            // Hook createSpeechRecognizer(Context, ComponentName)
+            XposedHelpers.findAndHookMethod(
+                speechRecognizerClass,
+                "createSpeechRecognizer",
+                android.content.Context.class,
+                android.content.ComponentName.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        Object result = param.getResult();
+                        android.content.Context context = (android.content.Context) param.args[0];
+                        android.content.ComponentName component = (android.content.ComponentName) param.args[1];
+                        
+                        // If result is null (service blocked), try to create it directly
+                        if (result == null && context != null) {
+                            XposedBridge.log(TAG + ": SpeechRecognizer returned null for component: " + 
+                                (component != null ? component.flattenToString() : "default"));
+                            
+                            // Try to force creation with the default service
+                            try {
+                                // Use reflection to access the internal constructor
+                                java.lang.reflect.Constructor<?> constructor = speechRecognizerClass.getDeclaredConstructor(
+                                    android.content.Context.class,
+                                    android.content.ComponentName.class
+                                );
+                                constructor.setAccessible(true);
+                                Object newRecognizer = constructor.newInstance(context, component);
+                                
+                                if (newRecognizer != null) {
+                                    param.setResult(newRecognizer);
+                                    XposedBridge.log(TAG + ": ✅ FORCED SpeechRecognizer creation via constructor!");
+                                }
+                            } catch (Exception e) {
+                                XposedBridge.log(TAG + ": ❌ Failed to force create SpeechRecognizer: " + e.getMessage());
+                            }
+                        } else if (result != null) {
+                            XposedBridge.log(TAG + ": ✅ SpeechRecognizer created successfully (no intervention needed)");
+                        }
+                    }
+                }
+            );
+            
+            // Also hook the single-parameter version createSpeechRecognizer(Context)
+            XposedHelpers.findAndHookMethod(
+                speechRecognizerClass,
+                "createSpeechRecognizer",
+                android.content.Context.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        Object result = param.getResult();
+                        android.content.Context context = (android.content.Context) param.args[0];
+                        
+                        if (result == null && context != null) {
+                            XposedBridge.log(TAG + ": SpeechRecognizer returned null for default service");
+                            
+                            try {
+                                java.lang.reflect.Constructor<?> constructor = speechRecognizerClass.getDeclaredConstructor(
+                                    android.content.Context.class,
+                                    android.content.ComponentName.class
+                                );
+                                constructor.setAccessible(true);
+                                Object newRecognizer = constructor.newInstance(context, null);
+                                
+                                if (newRecognizer != null) {
+                                    param.setResult(newRecognizer);
+                                    XposedBridge.log(TAG + ": ✅ FORCED SpeechRecognizer creation (default service)!");
+                                }
+                            } catch (Exception e) {
+                                XposedBridge.log(TAG + ": ❌ Failed to force create default SpeechRecognizer: " + e.getMessage());
+                            }
+                        }
+                    }
+                }
+            );
+            
+            // Hook bindService to allow recognition service binding
+            try {
+                Class<?> contextImplClass = XposedHelpers.findClass(
+                    "android.app.ContextImpl",
+                    lpparam.classLoader
+                );
+                
+                XposedHelpers.findAndHookMethod(
+                    contextImplClass,
+                    "bindService",
+                    android.content.Intent.class,
+                    android.content.ServiceConnection.class,
+                    int.class,
+                    new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            android.content.Intent intent = (android.content.Intent) param.args[0];
+                            if (intent != null) {
+                                // Log all bindService calls to see what we're looking for
+                                String action = intent.getAction();
+                                android.content.ComponentName component = intent.getComponent();
+                                
+                                // Check for speech/recognition service patterns
+                                boolean isSpeechRelated = false;
+                                if (action != null && (action.contains("speech") || action.contains("Speech") || 
+                                    action.contains("Recognition") || action.contains("recognition"))) {
+                                    isSpeechRelated = true;
+                                }
+                                if (component != null && (component.flattenToString().contains("speech") || 
+                                    component.flattenToString().contains("Speech") ||
+                                    component.flattenToString().contains("Recognition") ||
+                                    component.flattenToString().contains("GoogleRecognition"))) {
+                                    isSpeechRelated = true;
+                                }
+                                
+                                if (isSpeechRelated) {
+                                    XposedBridge.log(TAG + ": 🔓 Intercepting speech-related bindService");
+                                    XposedBridge.log(TAG + ":    Action: " + action);
+                                    XposedBridge.log(TAG + ":    Component: " + (component != null ? component.flattenToString() : "null"));
+                                }
+                            }
+                        }
+                        
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            android.content.Intent intent = (android.content.Intent) param.args[0];
+                            if (intent != null) {
+                                String action = intent.getAction();
+                                android.content.ComponentName component = intent.getComponent();
+                                
+                                // Check for speech/recognition service patterns
+                                boolean isSpeechRelated = false;
+                                if (action != null && (action.contains("speech") || action.contains("Speech") || 
+                                    action.contains("Recognition") || action.contains("recognition"))) {
+                                    isSpeechRelated = true;
+                                }
+                                if (component != null && (component.flattenToString().contains("speech") || 
+                                    component.flattenToString().contains("Speech") ||
+                                    component.flattenToString().contains("Recognition") ||
+                                    component.flattenToString().contains("GoogleRecognition"))) {
+                                    isSpeechRelated = true;
+                                }
+                                
+                                if (isSpeechRelated) {
+                                    boolean result = (Boolean) param.getResult();
+                                    if (!result) {
+                                        XposedBridge.log(TAG + ": ⚠️ Speech service bind returned false, forcing true");
+                                        param.setResult(true);
+                                    } else {
+                                        XposedBridge.log(TAG + ": ✅ Speech service bound successfully");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                );
+                
+                XposedBridge.log(TAG + ": ✅ bindService hook installed");
+            } catch (Throwable bindHookError) {
+                XposedBridge.log(TAG + ": ⚠️ Could not hook bindService: " + bindHookError.getMessage());
+            }
+            
+            XposedBridge.log(TAG + ": ✅ SpeechRecognizer hooks installed");
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": ❌ Failed to hook SpeechRecognizer: " + t.getMessage());
+        }
+    }
+    
+    /**
+     * Hook system server to bypass RecognitionService validation
+     * 
+     * The system rejects third-party apps from binding to speech services with:
+     * "serviceComponent is not RecognitionService"
+     * 
+     * This hook bypasses that validation check.
+     */
+    private void hookSystemRecognitionService(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            XposedBridge.log(TAG + ": Setting up system RecognitionService validation bypass");
+            
+            // Try to hook SpeechRecognitionManagerServiceImpl
+            try {
+                Class<?> speechRecognitionManagerClass = XposedHelpers.findClass(
+                    "com.android.server.speech.SpeechRecognitionManagerServiceImpl",
+                    lpparam.classLoader
+                );
+                
+                // Hook the method that binds to the recognition service
+                XposedHelpers.findAndHookMethod(
+                    speechRecognitionManagerClass,
+                    "bindService",
+                    android.content.Intent.class,
+                    android.content.ServiceConnection.class,
+                    new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            android.content.Intent intent = (android.content.Intent) param.args[0];
+                            if (intent != null) {
+                                XposedBridge.log(TAG + ": 🔓 System-level speech service bind intercepted");
+                                XposedBridge.log(TAG + ":    Intent: " + intent.toString());
+                            }
+                        }
+                        
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            boolean result = (Boolean) param.getResult();
+                            if (!result) {
+                                XposedBridge.log(TAG + ": ⚠️ System bind failed, forcing true");
+                                param.setResult(true);
+                            } else {
+                                XposedBridge.log(TAG + ": ✅ System bind succeeded");
+                            }
+                        }
+                    }
+                );
+                
+                XposedBridge.log(TAG + ": ✅ System RecognitionService hook installed");
+            } catch (Throwable hookError) {
+                XposedBridge.log(TAG + ": ⚠️ Could not hook SpeechRecognitionManagerServiceImpl: " + hookError.getMessage());
+            }
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": ❌ Failed to hook system RecognitionService: " + t.getMessage());
+        }
+    }
     
     /**
      * Hook InterPhoneHomeActivity.onCreate() as a verification test
@@ -150,23 +432,34 @@ public class MainHook implements IXposedHookLoadPackage {
                         // Get the activity instance
                         final Activity activity = (Activity) param.thisObject;
                         
-                        // Create Recordings folder structure
+                        // Create Audio and Transcription folder structure
                         try {
                             java.io.File downloadDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS);
                             java.io.File dmrDir = new java.io.File(downloadDir, "DMR");
-                            java.io.File recordingsDir = new java.io.File(dmrDir, "Recordings");
+                            java.io.File audioDir = new java.io.File(dmrDir, "Audio");
+                            java.io.File transcriptionDir = new java.io.File(dmrDir, "Transcription");
                             
-                            if (!recordingsDir.exists()) {
-                                if (recordingsDir.mkdirs()) {
-                                    XposedBridge.log(TAG + ": Created Recordings folder: " + recordingsDir.getAbsolutePath());
+                            if (!audioDir.exists()) {
+                                if (audioDir.mkdirs()) {
+                                    XposedBridge.log(TAG + ": Created Audio folder: " + audioDir.getAbsolutePath());
                                 } else {
-                                    XposedBridge.log(TAG + ": Failed to create Recordings folder");
+                                    XposedBridge.log(TAG + ": Failed to create Audio folder");
                                 }
                             } else {
-                                XposedBridge.log(TAG + ": Recordings folder already exists");
+                                XposedBridge.log(TAG + ": Audio folder already exists");
+                            }
+                            
+                            if (!transcriptionDir.exists()) {
+                                if (transcriptionDir.mkdirs()) {
+                                    XposedBridge.log(TAG + ": Created Transcription folder: " + transcriptionDir.getAbsolutePath());
+                                } else {
+                                    XposedBridge.log(TAG + ": Failed to create Transcription folder");
+                                }
+                            } else {
+                                XposedBridge.log(TAG + ": Transcription folder already exists");
                             }
                         } catch (Exception e) {
-                            XposedBridge.log(TAG + ": Error creating Recordings folder: " + e.getMessage());
+                            XposedBridge.log(TAG + ": Error creating DMR folders: " + e.getMessage());
                         }
                         
                         // Show a toast message to confirm the hook is working
@@ -483,6 +776,84 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Store reference for updates
                                 dmrActivityIndicator = activityIndicator;
                                 
+                                // Create transcription display box (bottom of borderbox)
+                                LinearLayout transcriptionBoxLayout = new LinearLayout(context);
+                                transcriptionBoxLayout.setOrientation(LinearLayout.VERTICAL);
+                                transcriptionBoxLayout.setTag("DMR_TRANSCRIPTION_BOX_LAYOUT");
+                                FrameLayout.LayoutParams transcriptionBoxParams = new FrameLayout.LayoutParams(
+                                    FrameLayout.LayoutParams.MATCH_PARENT,
+                                    FrameLayout.LayoutParams.WRAP_CONTENT
+                                );
+                                transcriptionBoxParams.gravity = android.view.Gravity.BOTTOM;
+                                transcriptionBoxParams.leftMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
+                                transcriptionBoxParams.rightMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
+                                transcriptionBoxParams.bottomMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
+                                
+                                // Create border for transcription box
+                                android.graphics.drawable.GradientDrawable transcriptionBoxDrawable = new android.graphics.drawable.GradientDrawable();
+                                transcriptionBoxDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                                transcriptionBoxDrawable.setStroke(
+                                    (int) (2 * context.getResources().getDisplayMetrics().density),
+                                    0xAA00BFFF  // Cyan border
+                                );
+                                transcriptionBoxDrawable.setCornerRadius(8 * context.getResources().getDisplayMetrics().density);
+                                transcriptionBoxDrawable.setColor(0x1500BFFF);  // Subtle cyan background
+                                
+                                transcriptionBoxLayout.setBackground(transcriptionBoxDrawable);
+                                transcriptionBoxLayout.setLayoutParams(transcriptionBoxParams);
+                                int transcriptionPadding = (int) (8 * context.getResources().getDisplayMetrics().density);
+                                transcriptionBoxLayout.setPadding(transcriptionPadding, transcriptionPadding, transcriptionPadding, transcriptionPadding);
+                                
+                                // Add header TextView
+                                TextView transcriptionHeaderView = new TextView(context);
+                                transcriptionHeaderView.setText("📝 Transcription");
+                                transcriptionHeaderView.setTextColor(0xFF00BFFF);  // Cyan
+                                transcriptionHeaderView.setTextSize(10);
+                                transcriptionHeaderView.setTypeface(null, android.graphics.Typeface.BOLD);
+                                LinearLayout.LayoutParams transcriptionHeaderParams = new LinearLayout.LayoutParams(
+                                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                );
+                                transcriptionHeaderParams.bottomMargin = (int) (4 * context.getResources().getDisplayMetrics().density);
+                                transcriptionHeaderView.setLayoutParams(transcriptionHeaderParams);
+                                transcriptionBoxLayout.addView(transcriptionHeaderView);
+                                
+                                // Add ScrollView for transcription messages
+                                android.widget.ScrollView transcriptionScroll = new android.widget.ScrollView(context);
+                                transcriptionScroll.setTag("DMR_TRANSCRIPTION_SCROLL");
+                                transcriptionScroll.setVerticalScrollBarEnabled(true);
+                                transcriptionScroll.setFillViewport(false);
+                                
+                                // Start with WRAP_CONTENT to grow with messages, will be capped at max height
+                                LinearLayout.LayoutParams scrollParams = new LinearLayout.LayoutParams(
+                                    LinearLayout.LayoutParams.MATCH_PARENT,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                );
+                                transcriptionScroll.setLayoutParams(scrollParams);
+                                
+                                // Container for messages (vertical LinearLayout)
+                                LinearLayout transcriptionMessagesLayout = new LinearLayout(context);
+                                transcriptionMessagesLayout.setOrientation(LinearLayout.VERTICAL);
+                                transcriptionMessagesLayout.setTag("DMR_TRANSCRIPTION_MESSAGES");
+                                LinearLayout.LayoutParams messagesParams = new LinearLayout.LayoutParams(
+                                    LinearLayout.LayoutParams.MATCH_PARENT,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                );
+                                transcriptionMessagesLayout.setLayoutParams(messagesParams);
+                                
+                                transcriptionScroll.addView(transcriptionMessagesLayout);
+                                transcriptionBoxLayout.addView(transcriptionScroll);
+                                
+                                // Initially hidden
+                                transcriptionBoxLayout.setVisibility(View.GONE);
+                                
+                                borderBox.addView(transcriptionBoxLayout);
+                                
+                                // Store references
+                                transcriptionMessagesContainer = transcriptionMessagesLayout;
+                                transcriptionScrollView = transcriptionScroll;
+                                transcriptionBox = transcriptionBoxLayout;
+                                
                                 // Create RSSI display box (above the main border box)
                                 LinearLayout rssiBox = new LinearLayout(context);
                                 rssiBox.setOrientation(LinearLayout.HORIZONTAL);
@@ -572,6 +943,98 @@ public class MainHook implements IXposedHookLoadPackage {
                                 pttButton.setVisibility(View.VISIBLE);
                                 pttButton.bringToFront();
                                 XposedBridge.log(TAG + ": ✓ PTT button centered in container");
+                                
+                                // Create transcription toggle button (left of PTT button)
+                                android.widget.ToggleButton transcriptionToggle = new android.widget.ToggleButton(context);
+                                transcriptionToggle.setTag("DMR_TRANSCRIPTION_TOGGLE");
+                                transcriptionToggle.setTextOn("TXT");
+                                transcriptionToggle.setTextOff("TXT");
+                                transcriptionToggle.setChecked(false);
+                                
+                                FrameLayout.LayoutParams transcriptionToggleParams = new FrameLayout.LayoutParams(
+                                    (int) (70 * context.getResources().getDisplayMetrics().density),  // 70dp width
+                                    (int) (40 * context.getResources().getDisplayMetrics().density)   // 40dp height
+                                );
+                                transcriptionToggleParams.gravity = android.view.Gravity.START | android.view.Gravity.CENTER_VERTICAL;
+                                transcriptionToggleParams.leftMargin = (int) (10 * context.getResources().getDisplayMetrics().density); // 10dp from left edge
+                                transcriptionToggle.setLayoutParams(transcriptionToggleParams);
+                                transcriptionToggle.setTextSize(14);
+                                transcriptionToggle.setTypeface(null, android.graphics.Typeface.BOLD);
+                                transcriptionToggle.setTextColor(0xFFFFFFFF);  // White text
+                                
+                                // Create state list drawable for purple background
+                                android.graphics.drawable.StateListDrawable transcriptionStateDrawable = new android.graphics.drawable.StateListDrawable();
+                                
+                                // Checked state (transcription enabled) - Solid purple background
+                                android.graphics.drawable.GradientDrawable transcriptionCheckedDrawable = new android.graphics.drawable.GradientDrawable();
+                                transcriptionCheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                                transcriptionCheckedDrawable.setColor(0xFF9370DB);  // Medium purple
+                                transcriptionCheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
+                                transcriptionCheckedDrawable.setStroke(
+                                    (int) (2 * context.getResources().getDisplayMetrics().density),
+                                    0xFFFFFFFF  // White border
+                                );
+                                transcriptionStateDrawable.addState(new int[]{android.R.attr.state_checked}, transcriptionCheckedDrawable);
+                                
+                                // Unchecked state (transcription disabled) - Semi-transparent purple background
+                                android.graphics.drawable.GradientDrawable transcriptionUncheckedDrawable = new android.graphics.drawable.GradientDrawable();
+                                transcriptionUncheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                                transcriptionUncheckedDrawable.setColor(0x80800080);  // Semi-transparent purple
+                                transcriptionUncheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
+                                transcriptionUncheckedDrawable.setStroke(
+                                    (int) (2 * context.getResources().getDisplayMetrics().density),
+                                    0x80FFFFFF  // Semi-transparent white border
+                                );
+                                transcriptionStateDrawable.addState(new int[]{}, transcriptionUncheckedDrawable);
+                                
+                                transcriptionToggle.setBackground(transcriptionStateDrawable);
+                                
+                                // Store reference
+                                transcriptionToggleButton = transcriptionToggle;
+                                
+                                // Bind to transcription service (IPC)
+                                bindToTranscriptionService(context);
+                                
+                                // Set click listener for transcription toggle
+                                transcriptionToggle.setOnClickListener(new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        if (transcriptionToggle.isChecked()) {
+                                            // User wants to enable transcription
+                                            if (!isServiceBound || transcriptionService == null) {
+                                                // Service not bound yet
+                                                isTranscriptionEnabled = true;
+                                                Toast.makeText(context, "Connecting to transcription service...", Toast.LENGTH_SHORT).show();
+                                                bindToTranscriptionService(context);
+                                            } else {
+                                                // Service already bound
+                                                isTranscriptionEnabled = true;
+                                                XposedBridge.log(TAG + ": Transcription enabled");
+                                                Toast.makeText(context, "Transcription enabled", Toast.LENGTH_SHORT).show();
+                                            }
+                                        } else {
+                                            // User disabled transcription
+                                            isTranscriptionEnabled = false;
+                                            XposedBridge.log(TAG + ": Transcription disabled");
+                                            Toast.makeText(context, "Transcription disabled", Toast.LENGTH_SHORT).show();
+                                            
+                                            // Clear buffer and display
+                                            audioBuffer.clear();
+                                            currentTranscription = "";
+                                            if (transcriptionMessagesContainer != null) {
+                                                transcriptionMessagesContainer.post(() -> {
+                                                    transcriptionMessagesContainer.removeAllViews();  // Clear all messages
+                                                    if (transcriptionBox != null) {
+                                                        transcriptionBox.setVisibility(View.GONE);
+                                                    }
+                                                });
+                                            }
+                                        }
+                                    }
+                                });
+                                
+                                buttonContainer.addView(transcriptionToggle);
+                                XposedBridge.log(TAG + ": ✓ Added transcription toggle button");
                                 
                                 // Create recording toggle button (right-aligned)
                                 android.widget.ToggleButton recordToggle = new android.widget.ToggleButton(context);
@@ -670,6 +1133,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                     XposedBridge.log(TAG + ": Initial channel: #" + channelNumber + " (" + (channelType == 0 ? "Digital" : "Analog") + "), RX Tone: " + toneInfo);
                                     updateHistoryHeader();
                                     loadChannelHistory(channelNumber, context);
+                                    // Restore transcription history for initial channel
+                                    restoreChannelTranscriptionHistory(channelNumber);
                                 }
                             } catch (Exception e2) {
                                 XposedBridge.log(TAG + ": Error getting initial channel: " + e2.getMessage());
@@ -730,6 +1195,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                     if (mLocalViewObj instanceof ViewGroup) {
                                         ViewGroup rootLayout = (ViewGroup) mLocalViewObj;
                                         loadChannelHistory(channelNumber, rootLayout.getContext());
+                                        // Restore transcription history for new channel
+                                        restoreChannelTranscriptionHistory(channelNumber);
                                     }
                                 }
                             }
@@ -1430,11 +1897,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                             displayText += "\n" + toneDisplay;
                                         }
                                         updateCallerDisplay(displayText);
-                                        // Update activity indicator for analog
-                                        updateActivityIndicator("📻 Analog RX");
+                                        XposedBridge.log(TAG + ": Displayed analog receiving message: " + displayText);
                                     }
                                     break;
-                                    
                                 case 2:  // RECEIVE_STOP (used for both digital AND analog)
                                 case 11: // MIX_CHECK_DIGITAL_RECEIVE_STOP
                                     XposedBridge.log(TAG + ": RECEIVE_STOP detected (type: " + currentChannelType + ")");
@@ -1443,6 +1908,16 @@ public class MainHook implements IXposedHookLoadPackage {
                                     // Stop recording if currently recording
                                     if (isCurrentlyRecording) {
                                         stopRecording();
+                                    }
+                                    
+                                    // Save caller info for transcription before clearing
+                                    savedCallerDmrIdForTranscription = currentCallerDmrId;
+                                    savedCallerNameForTranscription = currentCallerName;
+                                    savedChannelTypeForTranscription = currentChannelType;
+                                    
+                                    // Process transcription if enabled (after transmission ends)
+                                    if (isTranscriptionEnabled && appContext != null) {
+                                        processTranscription(appContext);
                                     }
                                     
                                     // Hide RSSI display
@@ -1991,11 +2466,19 @@ public class MainHook implements IXposedHookLoadPackage {
                         "timestamp TEXT, " +
                         "activity_type TEXT, " +
                         "rssi_dbm INTEGER, " +
+                        "transcription TEXT, " +
                         "created_at INTEGER)");
                     
                     // Add rssi_dbm column if it doesn't exist (for existing databases)
                     try {
                         db.execSQL("ALTER TABLE channel_history ADD COLUMN rssi_dbm INTEGER");
+                    } catch (Exception e) {
+                        // Column already exists, ignore
+                    }
+                    
+                    // Add transcription column if it doesn't exist (for existing databases)
+                    try {
+                        db.execSQL("ALTER TABLE channel_history ADD COLUMN transcription TEXT");
                     } catch (Exception e) {
                         // Column already exists, ignore
                     }
@@ -2114,11 +2597,19 @@ public class MainHook implements IXposedHookLoadPackage {
                         "timestamp TEXT, " +
                         "activity_type TEXT, " +
                         "rssi_dbm INTEGER, " +
+                        "transcription TEXT, " +
                         "created_at INTEGER)");
                     
                     // Add rssi_dbm column if it doesn't exist (for existing databases)
                     try {
                         db.execSQL("ALTER TABLE channel_history ADD COLUMN rssi_dbm INTEGER");
+                    } catch (Exception e) {
+                        // Column already exists, ignore
+                    }
+                    
+                    // Add transcription column if it doesn't exist (for existing databases)
+                    try {
+                        db.execSQL("ALTER TABLE channel_history ADD COLUMN transcription TEXT");
                     } catch (Exception e) {
                         // Column already exists, ignore
                     }
@@ -2207,13 +2698,13 @@ public class MainHook implements IXposedHookLoadPackage {
                 channelFolderName = "Channel_" + currentChannelNumber;
             }
             
-            // Create channel-specific folder in Recordings
+            // Create channel-specific folder in Audio
             java.io.File downloadDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS);
-            java.io.File recordingsDir = new java.io.File(downloadDir, "DMR/Recordings/" + channelFolderName);
+            java.io.File recordingsDir = new java.io.File(downloadDir, "DMR/Audio/" + channelFolderName);
             
             if (!recordingsDir.exists()) {
                 recordingsDir.mkdirs();
-                XposedBridge.log(TAG + ": Created channel recording folder: " + recordingsDir.getAbsolutePath());
+                XposedBridge.log(TAG + ": Created channel audio folder: " + recordingsDir.getAbsolutePath());
             }
             
             // Generate filename with date and time
@@ -2318,6 +2809,10 @@ public class MainHook implements IXposedHookLoadPackage {
             pcmOutputStream = null;
             pcmDataSize = 0;
             isCurrentlyRecording = false;
+            
+            // Save recording path for transcription callback before clearing
+            lastRecordingPathForTranscription = currentRecordingPath;
+            
             currentRecordingPath = null;
             currentRecordingTimestamp = null;
             currentRecordingFolder = null;
@@ -2482,12 +2977,17 @@ public class MainHook implements IXposedHookLoadPackage {
                 new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                        byte[] audioData = (byte[]) param.args[0];
+                        int length = (int) param.args[1];
+                        
+                        // Buffer audio for transcription if enabled
+                        if (isTranscriptionEnabled) {
+                            bufferAudioForTranscription(audioData);
+                        }
+                        
                         // Only capture if recording is enabled and currently recording
                         if (isRecordingEnabled && isCurrentlyRecording && pcmOutputStream != null) {
                             try {
-                                byte[] audioData = (byte[]) param.args[0];
-                                int length = (int) param.args[1];
-                                
                                 // Write PCM data to file
                                 pcmOutputStream.write(audioData, 0, length);
                                 pcmDataSize += length;
@@ -2610,5 +3110,414 @@ public class MainHook implements IXposedHookLoadPackage {
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": Failed to hook SignalMessageHandler: " + t.getMessage());
         }
+    }
+    
+    /**
+     * Bind to DMRTranscriptionService via IPC
+     */
+    private static void bindToTranscriptionService(final Context context) {
+        if (isServiceBound && transcriptionService != null) {
+            XposedBridge.log(TAG + ": Transcription service already bound");
+            return;
+        }
+        
+        try {
+            XposedBridge.log(TAG + ": Binding to DMRTranscriptionService...");
+            
+            // Create service connection
+            serviceConnection = new ServiceConnection() {
+                @Override
+                public void onServiceConnected(ComponentName name, IBinder service) {
+                    XposedBridge.log(TAG + ": ✅ Connected to transcription service");
+                    transcriptionService = ITranscriptionService.Stub.asInterface(service);
+                    isServiceBound = true;
+                    
+                    // Check if service is ready
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                boolean ready = transcriptionService.isReady();
+                                final String msg = ready ? "✅ Transcription ready!" : "Loading model...";
+                                XposedBridge.log(TAG + ": Service ready: " + ready);
+                                
+                                new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            } catch (Exception e) {
+                                XposedBridge.log(TAG + ": Error checking service ready: " + e.getMessage());
+                            }
+                        }
+                    }).start();
+                }
+                
+                @Override
+                public void onServiceDisconnected(ComponentName name) {
+                    XposedBridge.log(TAG + ": ⚠️ Disconnected from transcription service");
+                    transcriptionService = null;
+                    isServiceBound = false;
+                }
+            };
+            
+            // Intent to bind to the service
+            Intent serviceIntent = new Intent();
+            serviceIntent.setComponent(new ComponentName(
+                "com.macdmr.transcription",
+                "com.macdmr.transcription.TranscriptionService"
+            ));
+            
+            // Bind to service
+            boolean bound = context.bindService(
+                serviceIntent,
+                serviceConnection,
+                Context.BIND_AUTO_CREATE
+            );
+            
+            if (bound) {
+                XposedBridge.log(TAG + ": Service binding initiated");
+            } else {
+                XposedBridge.log(TAG + ": ❌ Failed to bind service - is DMRTranscriptionService installed?");
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(context, "❌ Install DMRTranscriptionService first!", Toast.LENGTH_LONG).show();
+                    }
+                });
+            }
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": ❌ Error binding to transcription service: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Buffer audio data for transcription
+     * Called from PCMReceiveManager hook during audio reception
+     */
+    private static void bufferAudioForTranscription(byte[] audioData) {
+        if (!isTranscriptionEnabled) {
+            return;
+        }
+        
+        try {
+            // Check buffer size limit (30 seconds at 16kHz = 480000 samples)
+            if (audioBuffer.size() >= MAX_BUFFER_SIZE) {
+                XposedBridge.log(TAG + ": Audio buffer full, not buffering more");
+                return;
+            }
+            
+            // Convert bytes to shorts (16-bit PCM Little Endian)
+            for (int i = 0; i < audioData.length - 1; i += 2) {
+                short sample = (short) ((audioData[i + 1] << 8) | (audioData[i] & 0xFF));
+                audioBuffer.add(sample);
+            }
+            
+            // Log progress every 5 seconds
+            if (audioBuffer.size() % 80000 == 0) {
+                XposedBridge.log(TAG + ": Buffered " + audioBuffer.size() + " audio samples for transcription");
+            }
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error buffering audio: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Process transcription using TensorFlow Lite
+     * Called when transmission ends (RECEIVE_STOP)
+     */
+    /**
+     * Process audio transcription using IPC to DMRTranscriptionService
+     */
+    private static void processTranscription(Context context) {
+        if (!isTranscriptionEnabled || audioBuffer.isEmpty()) {
+            return;
+        }
+        
+        XposedBridge.log(TAG + ": Processing transcription for " + audioBuffer.size() + " audio samples");
+        
+        if (!isServiceBound || transcriptionService == null) {
+            XposedBridge.log(TAG + ": Transcription service not bound yet");
+            currentTranscription = "[Service not ready - please wait...]";
+            updateTranscriptionDisplay(currentTranscription);
+            audioBuffer.clear();
+            
+            // Try to bind
+            bindToTranscriptionService(context);
+            return;
+        }
+        
+        // Process in background thread to avoid blocking
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    // Convert List<Short> to byte array (16-bit PCM Little Endian)
+                    // Cache size to prevent race condition (audioBuffer grows during iteration)
+                    int bufferSize = audioBuffer.size();
+                    byte[] pcmBytes = new byte[bufferSize * 2];
+                    for (int i = 0; i < bufferSize; i++) {
+                        short sample = audioBuffer.get(i);
+                        pcmBytes[i * 2] = (byte) (sample & 0xFF);          // Low byte
+                        pcmBytes[i * 2 + 1] = (byte) ((sample >> 8) & 0xFF); // High byte
+                    }
+                    
+                    XposedBridge.log(TAG + ": Sending " + pcmBytes.length + " bytes to transcription service");
+                    
+                    // Call service via IPC
+                    String result = transcriptionService.transcribe(pcmBytes, 16000);
+                    
+                    if (result != null && !result.trim().isEmpty()) {
+                        currentTranscription = result;
+                        XposedBridge.log(TAG + ": ✅ Transcription: " + result);
+                    } else {
+                        currentTranscription = "[No speech detected]";
+                        XposedBridge.log(TAG + ": No speech detected in audio");
+                    }
+                    
+                    // Format display message with DMR ID or contact name (digital only)
+                    // Use saved caller info since currentCallerDmrId is cleared after RECEIVE_STOP
+                    String displayMessage = currentTranscription;
+                    XposedBridge.log(TAG + ": Formatting transcription display - channelType=" + savedChannelTypeForTranscription + ", callerDmrId=" + savedCallerDmrIdForTranscription + ", callerName=" + savedCallerNameForTranscription);
+                    
+                    if (savedChannelTypeForTranscription == 0) {  // Digital/DMR only
+                        if (savedCallerNameForTranscription != null && !savedCallerNameForTranscription.isEmpty()) {
+                            displayMessage = savedCallerNameForTranscription + ": " + currentTranscription;
+                            XposedBridge.log(TAG + ": Display with contact name: " + displayMessage);
+                        } else if (savedCallerDmrIdForTranscription > 0) {
+                            displayMessage = "ID " + savedCallerDmrIdForTranscription + ": " + currentTranscription;
+                            XposedBridge.log(TAG + ": Display with DMR ID: " + displayMessage);
+                        } else {
+                            XposedBridge.log(TAG + ": No caller info available for display");
+                        }
+                    } else {
+                        XposedBridge.log(TAG + ": Analog channel - no caller info displayed");
+                    }
+                    
+                    updateTranscriptionDisplay(displayMessage);
+                    
+                    // Save to text file (always save, independent of recording)
+                    saveTranscriptionToFile(currentTranscription, null);
+                    
+                } catch (Exception e) {
+                    XposedBridge.log(TAG + ": ❌ Error processing transcription: " + e.getMessage());
+                    e.printStackTrace();
+                    
+                    currentTranscription = "[IPC error: " + e.getMessage() + "]";
+                    updateTranscriptionDisplay(currentTranscription);
+                } finally {
+                    // Clear buffer for next transmission
+                    audioBuffer.clear();
+                }
+            }
+        }).start();
+    }
+    
+    /**
+     * Update the transcription display with text (adds new message to list)
+     */
+    private static void updateTranscriptionDisplay(final String text) {
+        if (transcriptionMessagesContainer == null || transcriptionBox == null || transcriptionScrollView == null) {
+            return;
+        }
+
+        try {
+            // Create timestamp
+            SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss", Locale.US);
+            String timestamp = timeFormat.format(new Date());
+            final String messageWithTimestamp = "[" + timestamp + "] " + text;
+            
+            // Save message to current channel's history
+            if (currentChannelNumber >= 0 && text != null && !text.isEmpty()) {
+                java.util.ArrayList<String> history = channelTranscriptionHistory.get(currentChannelNumber);
+                if (history == null) {
+                    history = new java.util.ArrayList<>();
+                    channelTranscriptionHistory.put(currentChannelNumber, history);
+                }
+                history.add(messageWithTimestamp);
+                // Keep only last MAX_TRANSCRIPTION_HISTORY messages
+                while (history.size() > MAX_TRANSCRIPTION_HISTORY) {
+                    history.remove(0);
+                }
+            }
+
+            transcriptionMessagesContainer.post(new Runnable() {
+                @Override
+                public void run() {
+                    // Create new message TextView
+                    TextView messageView = new TextView(transcriptionMessagesContainer.getContext());
+                    messageView.setTextColor(0xFFFFFFFF);  // White text
+                    messageView.setTextSize(11);
+                    messageView.setText(messageWithTimestamp);
+                    messageView.setPadding(0, 2, 0, 2);  // Small vertical padding
+                    LinearLayout.LayoutParams messageParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    );
+                    messageParams.bottomMargin = (int) (4 * transcriptionMessagesContainer.getContext().getResources().getDisplayMetrics().density);
+                    messageView.setLayoutParams(messageParams);
+                    
+                    // Add message to container
+                    transcriptionMessagesContainer.addView(messageView);
+
+                    // Show the box
+                    transcriptionBox.setVisibility(View.VISIBLE);
+
+                    // Ensure ScrollView caps at max height and scrolls to bottom
+                    transcriptionScrollView.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            int maxHeightPx = (int) (100 * transcriptionScrollView.getContext().getResources().getDisplayMetrics().density);
+                            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) transcriptionScrollView.getLayoutParams();
+                            if (transcriptionScrollView.getHeight() > maxHeightPx) {
+                                params.height = maxHeightPx;
+                                transcriptionScrollView.setLayoutParams(params);
+                            }
+                            transcriptionScrollView.fullScroll(View.FOCUS_DOWN);
+                        }
+                    });
+                }
+            });
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error updating transcription display: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Restore transcription history for a specific channel
+     */
+    private static void restoreChannelTranscriptionHistory(final int channelNumber) {
+        if (transcriptionMessagesContainer == null || transcriptionBox == null || transcriptionScrollView == null) {
+            return;
+        }
+
+        transcriptionMessagesContainer.post(new Runnable() {
+            @Override
+            public void run() {
+                // Clear existing messages
+                transcriptionMessagesContainer.removeAllViews();
+
+                // Get history for this channel
+                java.util.ArrayList<String> history = channelTranscriptionHistory.get(channelNumber);
+                if (history != null && !history.isEmpty()) {
+                    // Rebuild messages from history
+                    for (String msg : history) {
+                        TextView messageView = new TextView(transcriptionMessagesContainer.getContext());
+                        messageView.setTextColor(0xFFFFFFFF);
+                        messageView.setTextSize(11);
+                        messageView.setText(msg);
+                        messageView.setPadding(0, 2, 0, 2);
+                        LinearLayout.LayoutParams messageParams = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        );
+                        messageParams.bottomMargin = (int) (4 * transcriptionMessagesContainer.getContext().getResources().getDisplayMetrics().density);
+                        messageView.setLayoutParams(messageParams);
+                        transcriptionMessagesContainer.addView(messageView);
+                    }
+                    transcriptionBox.setVisibility(View.VISIBLE);
+                    
+                    // Scroll to bottom and cap height
+                    transcriptionScrollView.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            int maxHeightPx = (int) (100 * transcriptionScrollView.getContext().getResources().getDisplayMetrics().density);
+                            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) transcriptionScrollView.getLayoutParams();
+                            if (transcriptionScrollView.getHeight() > maxHeightPx) {
+                                params.height = maxHeightPx;
+                                transcriptionScrollView.setLayoutParams(params);
+                            }
+                            transcriptionScrollView.fullScroll(View.FOCUS_DOWN);
+                        }
+                    });
+                } else {
+                    // No history for this channel, hide the box
+                    transcriptionBox.setVisibility(View.GONE);
+                }
+            }
+        });
+    }
+    
+    /**
+     * Save transcription to running log file in Transcription folder
+     * Appends to daily transcription log with timestamp and channel info
+     * Each channel gets its own folder
+     */
+    private static void saveTranscriptionToFile(final String transcription, final String recordingPath) {
+        if (transcription == null || transcription.trim().isEmpty()) {
+            return;
+        }
+        
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    // Clean channel name for folder (remove special characters)
+                    String channelFolderName = currentChannelName;
+                    if (channelFolderName != null && !channelFolderName.isEmpty()) {
+                        channelFolderName = channelFolderName.replaceAll("[^a-zA-Z0-9\\s-]", "").trim();
+                    }
+                    if (channelFolderName == null || channelFolderName.isEmpty()) {
+                        channelFolderName = "Channel_" + currentChannelNumber;
+                    }
+                    
+                    // Get Downloads/DMR/Transcription/[ChannelName] folder
+                    java.io.File downloadDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS);
+                    java.io.File transcriptionDir = new java.io.File(downloadDir, "DMR/Transcription/" + channelFolderName);
+                    
+                    if (!transcriptionDir.exists()) {
+                        transcriptionDir.mkdirs();
+                        XposedBridge.log(TAG + ": Created channel transcription folder: " + transcriptionDir.getAbsolutePath());
+                    }
+                    
+                    // Create daily transcription file (e.g., transcription_20260227.txt)
+                    java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US);
+                    java.text.SimpleDateFormat timeFormat = new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US);
+                    String date = dateFormat.format(new java.util.Date());
+                    String time = timeFormat.format(new java.util.Date());
+                    
+                    String filename = "transcription_" + date + ".txt";
+                    File txtFile = new File(transcriptionDir, filename);
+                    
+                    // Append to file (running log)
+                    java.io.FileWriter writer = new java.io.FileWriter(txtFile, true); // true = append mode
+                    
+                    // Write entry with timestamp and transcription
+                    writer.write("[" + time + "] ");
+                    
+                    // Add DMR ID or contact name (digital only)
+                    // Use saved caller info since currentCallerDmrId is cleared after RECEIVE_STOP
+                    XposedBridge.log(TAG + ": Saving transcription - channelType=" + savedChannelTypeForTranscription + ", callerDmrId=" + savedCallerDmrIdForTranscription + ", callerName=" + savedCallerNameForTranscription);
+                    
+                    if (savedChannelTypeForTranscription == 0) {  // Digital/DMR only
+                        if (savedCallerNameForTranscription != null && !savedCallerNameForTranscription.isEmpty()) {
+                            writer.write(savedCallerNameForTranscription + ": ");
+                            XposedBridge.log(TAG + ": Writing with contact name: " + savedCallerNameForTranscription);
+                        } else if (savedCallerDmrIdForTranscription > 0) {
+                            writer.write("ID " + savedCallerDmrIdForTranscription + ": ");
+                            XposedBridge.log(TAG + ": Writing with DMR ID: " + savedCallerDmrIdForTranscription);
+                        } else {
+                            XposedBridge.log(TAG + ": No caller info for file");
+                        }
+                    } else {
+                        XposedBridge.log(TAG + ": Analog - no caller info written");
+                    }
+                    
+                    writer.write(transcription);
+                    writer.write("\n");
+                    writer.close();
+                    
+                    XposedBridge.log(TAG + ": ✅ Saved transcription to: " + txtFile.getAbsolutePath());
+                    
+                } catch (Exception e) {
+                    XposedBridge.log(TAG + ": ❌ Error saving transcription to file: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        }).start();
     }
 }
