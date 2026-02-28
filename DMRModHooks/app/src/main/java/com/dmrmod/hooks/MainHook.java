@@ -1,14 +1,19 @@
 package com.dmrmod.hooks;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.location.Address;
 import android.location.Geocoder;
 import android.os.Bundle;
+import android.os.Environment;
+import android.text.InputType;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -16,6 +21,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -457,6 +464,30 @@ public class MainHook implements IXposedHookLoadPackage {
                                 }
                             } else {
                                 XposedBridge.log(TAG + ": Transcription folder already exists");
+                            }
+                            
+                            // Create api_key.txt file with instructions if it doesn't exist
+                            java.io.File apiKeyFile = new java.io.File(dmrDir, "api_key.txt");
+                            if (!apiKeyFile.exists()) {
+                                try {
+                                    java.io.FileWriter writer = new java.io.FileWriter(apiKeyFile);
+                                    writer.write("YOUR_GOOGLE_CLOUD_API_KEY_HERE\n");
+                                    writer.write("\n");
+                                    writer.write("# To enable transcription:\n");
+                                    writer.write("# 1. Get a Google Cloud API key from: https://console.cloud.google.com\n");
+                                    writer.write("# 2. Enable the 'Cloud Speech-to-Text API'\n");
+                                    writer.write("# 3. Replace the first line with your API key (starts with AIza...)\n");
+                                    writer.write("# 4. Press the TXT button in the app to start transcription\n");
+                                    writer.write("#\n");
+                                    writer.write("# Free tier: 60 minutes/month\n");
+                                    writer.write("# After free tier: $0.006 per 15 seconds (~$1.44/hour)\n");
+                                    writer.close();
+                                    XposedBridge.log(TAG + ": Created api_key.txt with instructions: " + apiKeyFile.getAbsolutePath());
+                                } catch (java.io.IOException e) {
+                                    XposedBridge.log(TAG + ": Failed to create api_key.txt: " + e.getMessage());
+                                }
+                            } else {
+                                XposedBridge.log(TAG + ": api_key.txt already exists");
                             }
                         } catch (Exception e) {
                             XposedBridge.log(TAG + ": Error creating DMR folders: " + e.getMessage());
@@ -1000,6 +1031,15 @@ public class MainHook implements IXposedHookLoadPackage {
                                     @Override
                                     public void onClick(View v) {
                                         if (transcriptionToggle.isChecked()) {
+                                            // Check if API key is configured
+                                            String apiKey = readApiKeyFromFile();
+                                            if (apiKey == null || apiKey.isEmpty() || apiKey.equals("YOUR_GOOGLE_CLOUD_API_KEY_HERE")) {
+                                                // API key not configured - show configuration dialog
+                                                transcriptionToggle.setChecked(false); // Uncheck the button
+                                                showApiKeyConfigDialog(context, transcriptionToggle);
+                                                return;
+                                            }
+                                            
                                             // User wants to enable transcription
                                             if (!isServiceBound || transcriptionService == null) {
                                                 // Service not bound yet
@@ -1030,6 +1070,16 @@ public class MainHook implements IXposedHookLoadPackage {
                                                 });
                                             }
                                         }
+                                    }
+                                });
+                                
+                                // Set long-press listener to reconfigure API key
+                                transcriptionToggle.setOnLongClickListener(new View.OnLongClickListener() {
+                                    @Override
+                                    public boolean onLongClick(View v) {
+                                        // Long press always shows the dialog (even with valid key)
+                                        showApiKeyConfigDialog(context, transcriptionToggle);
+                                        return true; // Consume the event
                                     }
                                 });
                                 
@@ -3315,6 +3365,171 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             }
         }).start();
+    }
+    
+    /**
+     * Read API key from Download/DMR/api_key.txt
+     */
+    private static String readApiKeyFromFile() {
+        try {
+            java.io.File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            java.io.File dmrDir = new java.io.File(downloadDir, "DMR");
+            java.io.File apiKeyFile = new java.io.File(dmrDir, "api_key.txt");
+            
+            if (apiKeyFile.exists()) {
+                BufferedReader reader = new BufferedReader(new FileReader(apiKeyFile));
+                String key = reader.readLine();
+                reader.close();
+                
+                if (key != null) {
+                    return key.trim();
+                }
+            }
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error reading API key: " + e.getMessage());
+        }
+        return null;
+    }
+    
+    /**
+     * Write API key to Download/DMR/api_key.txt
+     */
+    private static boolean writeApiKeyToFile(String apiKey) {
+        try {
+            java.io.File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            java.io.File dmrDir = new java.io.File(downloadDir, "DMR");
+            dmrDir.mkdirs();
+            java.io.File apiKeyFile = new java.io.File(dmrDir, "api_key.txt");
+            
+            FileWriter writer = new FileWriter(apiKeyFile);
+            writer.write(apiKey.trim() + "\n");
+            writer.write("\n");
+            writer.write("# Google Cloud Speech-to-Text API Key\n");
+            writer.write("# Get your API key from: https://console.cloud.google.com\n");
+            writer.write("# Enable 'Cloud Speech-to-Text API'\n");
+            writer.write("# Free tier: 60 minutes/month\n");
+            writer.close();
+            
+            XposedBridge.log(TAG + ": API key saved to " + apiKeyFile.getAbsolutePath());
+            return true;
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error writing API key: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Show API key configuration dialog
+     */
+    private static void showApiKeyConfigDialog(final Context context, final android.widget.ToggleButton toggleButton) {
+        if (!(context instanceof Activity)) {
+            return;
+        }
+        
+        final Activity activity = (Activity) context;
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                builder.setTitle("Google Cloud API Key Required");
+                
+                // Build message with clickable link
+                String htmlMessage = "Transcription requires a Google Cloud Speech-to-Text API key.<br><br>" +
+                        "<b>How to get your API key:</b><br>" +
+                        "1. Visit: <a href='https://console.cloud.google.com'>console.cloud.google.com</a><br>" +
+                        "2. Create/select a project<br>" +
+                        "3. Enable 'Cloud Speech-to-Text API'<br>" +
+                        "4. Go to Credentials → Create API Key<br>" +
+                        "5. Copy the key (starts with AIza...)<br><br>" +
+                        "<b>API Key Storage:</b><br>" +
+                        "Saved to: <font color='#0000FF'>Download/DMR/api_key.txt</font><br>" +
+                        "You can edit this file directly with any text editor.<br>" +
+                        "<i>Tip: Long-press TXT button to reconfigure anytime.</i><br><br>" +
+                        "<b>Cost:</b> First 60 min/month FREE, then $0.006 per 15 sec<br><br>" +
+                        "Enter your API key below:";
+                
+                // Create TextView with clickable links
+                TextView messageView = new TextView(context);
+                messageView.setText(android.text.Html.fromHtml(htmlMessage, android.text.Html.FROM_HTML_MODE_LEGACY));
+                messageView.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
+                messageView.setTextSize(12); // Smaller font size
+                messageView.setPadding(
+                    (int) (20 * context.getResources().getDisplayMetrics().density),
+                    (int) (10 * context.getResources().getDisplayMetrics().density),
+                    (int) (20 * context.getResources().getDisplayMetrics().density),
+                    (int) (10 * context.getResources().getDisplayMetrics().density)
+                );
+                
+                // Create input field
+                final EditText input = new EditText(context);
+                input.setInputType(InputType.TYPE_CLASS_TEXT);
+                input.setHint("AIza...");
+                input.setPadding(
+                    (int) (20 * context.getResources().getDisplayMetrics().density),
+                    (int) (10 * context.getResources().getDisplayMetrics().density),
+                    (int) (20 * context.getResources().getDisplayMetrics().density),
+                    (int) (10 * context.getResources().getDisplayMetrics().density)
+                );
+                
+                // Check if file exists and pre-fill
+                String existingKey = readApiKeyFromFile();
+                if (existingKey != null && !existingKey.isEmpty() && !existingKey.equals("YOUR_GOOGLE_CLOUD_API_KEY_HERE")) {
+                    input.setText(existingKey);
+                }
+                
+                // Create container for message and input
+                LinearLayout container = new LinearLayout(context);
+                container.setOrientation(LinearLayout.VERTICAL);
+                container.addView(messageView);
+                container.addView(input);
+                
+                builder.setView(container);
+                
+                builder.setPositiveButton("Save & Enable", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        String apiKey = input.getText().toString().trim();
+                        if (apiKey.isEmpty()) {
+                            Toast.makeText(context, "API key cannot be empty", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        
+                        if (!apiKey.startsWith("AIza")) {
+                            Toast.makeText(context, "Warning: API key should start with AIza", Toast.LENGTH_LONG).show();
+                        }
+                        
+                        // Save to file
+                        if (writeApiKeyToFile(apiKey)) {
+                            Toast.makeText(context, "API key saved! Enable TXT to start.", Toast.LENGTH_SHORT).show();
+                            
+                            // Don't auto-enable, let user toggle it
+                            // This way long-press doesn't unexpectedly change state
+                        } else {
+                            Toast.makeText(context, "Failed to save API key", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+                
+                builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.cancel();
+                    }
+                });
+                
+                builder.setNeutralButton("Edit File Manually", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        java.io.File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                        java.io.File apiKeyFile = new java.io.File(downloadDir, "DMR/api_key.txt");
+                        Toast.makeText(context, "Edit: " + apiKeyFile.getAbsolutePath(), Toast.LENGTH_LONG).show();
+                        dialog.cancel();
+                    }
+                });
+                
+                builder.show();
+            }
+        });
     }
     
     /**

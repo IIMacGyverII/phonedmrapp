@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">DMR Transcription Service</string>
+    <string name="service_description">Background service for transcribing DMR radio audio using Whisper AI</string>
+</resources>
