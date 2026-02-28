@@ -2,6 +2,9 @@
 
 **Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + Real-time Speech-to-Text working!
 
+> **📦 Current Stable Release: v1.6** - Recommended for all users  
+> **🔬 Development Version: v3.0.1** - Experimental firmware fuzzing (for advanced users building from source)
+
 ## Demo
 
 <video src="https://github.com/user-attachments/assets/d6305a49-c8ed-47dc-a9d8-7e731aa02811" controls title="DMRModHooks v1.1 Demo" width="800"></video>
@@ -20,7 +23,7 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 
 ## Current Status ✅
 
-**Module Version**: v1.6  
+**Stable Release: v1.6** (Recommended)  
 **Export**: ✅ Working - All 5 OpenGD77 CSV files + PDF summary  
 **Import**: ✅ Working - Full Digital & Analog support  
 **Transcription**: ✅ Working - Real-time speech-to-text with Google Cloud API  
@@ -29,6 +32,8 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 **Timestamps**: ✅ Working - All messages include HH:mm:ss timestamps  
 **User Validation**: ✅ Export/Import/Transcription tested and confirmed  
 **Latest Build**: February 27, 2026
+
+> **Note**: v3.0.1 is an experimental development branch for advanced users interested in firmware reverse engineering and command fuzzing. For normal use, stick with v1.6.
 
 ### Quick Facts
 
@@ -133,11 +138,13 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 
 ### Step 2: Install DMRModHooks Module & Transcription Service
 
-#### Option A: Download Pre-built Release (Recommended)
+#### Option A: Download Pre-built Release (✅ Recommended for All Users)
 
-1. **Download Latest Release**:
+**Use v1.6 stable release for production use. Only use newer versions if you want to experiment with development features.**
+
+1. **Download Latest Stable Release**:
    - Go to [Releases](https://github.com/IIMacGyverII/phonedmrapp/releases/latest)
-   - Download `DMRModHooks-v1.6.apk` (or latest version)
+   - Download `DMRModHooks-v1.6.apk` (**recommended stable version**)
    - Download `DMRTranscriptionService-v1.0.apk`
 
 2. **Install Both APKs**:
@@ -146,7 +153,9 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
    adb install -r DMRTranscriptionService-v1.0.apk
    ```
 
-#### Option B: Build from Source
+#### Option B: Build from Source (For Developers & Experimenters)
+
+**Building from source gives you access to experimental features and development branches. The main branch contains v1.6 stable. Development work (v3.0.1+) includes firmware reverse engineering and command fuzzing capabilities.**
 
 1. **Build Both APKs**:
    ```powershell
@@ -502,7 +511,9 @@ With LSPosed runtime hooks and full access to the platform-signed app, **anythin
 - Community-driven feature development
 - Enhanced radio control and monitoring
 
-**Last Updated**: February 27, 2026  
+**Last Updated**: February 28, 2026  
+**Stable Version**: v1.6 (Recommended for all users)  
+**Development Version**: v3.0.1 (Experimental firmware fuzzing - optional)  
 **Status**: LSPosed module fully operational - OpenGD77 export/import + Real-time transcription working perfectly!  
 **GitHub**: https://github.com/IIMacGyverII/phonedmrapp
 
