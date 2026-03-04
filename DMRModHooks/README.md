@@ -157,6 +157,262 @@ All features from v1.0 through v1.7.0 are included, plus:
 
 See [ANALOG_MON_FEATURE.md](ANALOG_MON_FEATURE.md) for complete technical details.
 
+## 📚 How to Use v3.0.2 Features
+
+### 🎙️ Voice Transcription (v1.6.0+)
+
+Real-time speech-to-text transcription of received transmissions using OpenAI Whisper API.
+
+**Setup**:
+1. Get an OpenAI API key from https://platform.openai.com/api-keys
+2. Create file: `/storage/emulated/0/DMR/api_key.txt` (v1.7.0: created automatically)
+3. Paste your API key into the file (one line, no quotes)
+4. Restart the DMR app
+
+**Usage**:
+- **Toggle Button**: "TXT" button below PTT (left side)
+- **States**: 
+  - 🟢 Green = Transcription enabled
+  - ⚪ Gray = Transcription disabled
+- **When Enabled**: Incoming audio automatically transcribed and displayed in borderbox
+- **Per-Channel History**: Last 3 transmissions saved per channel with timestamps
+- **Cost**: ~$0.006 per minute of audio (Whisper API pricing)
+
+**Transcription Display**:
+- Appears in borderbox during/after reception
+- Shows caller name + DMR ID + transcribed text
+- Persists in history (view by switching to/from channel)
+- Format: `[Contact] HH:mm:ss: "transcribed text"` 
+
+**Files**:
+- **Audio**: `/storage/emulated/0/DMR/Recordings/[ChannelName]/audio_YYYYMMDD_HHmmss.wav`
+- **API Key**: `/storage/emulated/0/DMR/api_key.txt`
+- **History**: Stored in `dmrmod_history.db` per channel
+
+**Troubleshooting**:
+- No transcription? Check api_key.txt exists and has valid key
+- Check logcat for errors: `adb logcat | grep DMRModHooks`
+- Verify internet connection (required for Whisper API)
+- REC button must also be enabled (recordings are transcribed)
+
+### 🎤 Audio Recording (v1.4.7+)
+
+Record incoming transmissions to WAV files (RX only - transmit not recorded).
+
+**Usage**:
+- **Toggle Button**: "REC" pill button below PTT (right side of TXT button)
+- **States**:
+  - 🔴 Red = Recording enabled
+  - ⚪ Gray =Recording disabled
+- **Auto-Start**: Begins recording when reception starts (RECEIVE_START)
+- **Auto-Stop**: Stops recording when reception ends (RECEIVE_STOP)
+- **Manual Control**: Can enable/disable mid-transmission
+
+**File Details**:
+- **Format**: WAV (uncompressed, universally compatible)
+- **Quality**: 16kHz, 16-bit, mono PCM
+- **Location**: `/storage/emulated/0/DMR/Recordings/[ChannelName]/`
+- **Naming**: 
+  - With contact: `YYYYMMDD_HHmmss_ContactName.wav`
+  - Without contact: `YYYYMMDD_HHmmss_DMRID.wav`
+- **Cleanup**: Empty files (<10KB) automatically deleted
+
+**Per-Channel Folders**:
+Each channel gets its own subfolder named after the channel:
+```
+/storage/emulated/0/DMR/Recordings/
+├── K0CMH Repeater/
+│   ├── 20260304_093015_TestUser.wav
+│   └── 20260304_094522_JohnDoe.wav
+├── Simplex 446.000/
+│   └── 20260304_101234_64067.wav
+└── Emergency/
+    └── 20260304_113000_EmergencyCall.wav
+```
+
+**Tips**:
+- Recordings work for both DMR and analog channels
+- Files are accessible via USB, file manager, or cloud sync
+- Compatible with any audio player/editor
+- Transcription (TXT button) requires recording enabled
+
+### 📍 Location Display (v1.3.2+)
+
+Shows channel location with city/state and elevation in top-right corner.
+
+**What You See**:
+- **Format**: `City, State\nElevation 📍`
+- **Example**: `Minneapolis, Minnesota\n859ft (262m) 📍`
+- **Updates**: Automatically when switching channels
+- **Fallbacks**: Coordinates → 📍 icon if no location data
+
+**Location Data**:
+Locations are stored during CSV import from OpenGD77 files with latitude/longitude columns.
+
+**Adding Locations**:
+1. Export channels: Backup/Restore → Export
+2. Open Channels.csv in spreadsheet software
+3. Add two columns: `Latitude` and `Longitude`
+4. Enter coordinates (e.g., `44.9203`, `-93.2654`)
+5. Save CSV and import back
+
+**How It Works**:
+- **Geocoding**: Android Geocoder API (no internet required for cached locations)
+- **Elevation**: Open-Elevation API (free, no API key needed)
+- **Storage**: Separate database (`dmrmod_locations.db`)
+- **Updates**: Asynchronous - city/state first, elevation after
+
+**Example CSV**:
+```csv
+Channel Number,Channel Name,RX Frequency,TX Frequency,Latitude,Longitude
+1,K0CMH Repeater,146.940,146.340,44.9203,-93.2654
+2,Simplex 146.52,146.520,146.520,44.9778,-93.2650
+```
+
+### 📊 Signal Strength Meter (RSSI) (v1.4.8+)
+
+Real-time signal strength indicator during reception.
+
+**Display**:
+- **Location**: Yellow-bordered box above caller information
+- **Format**: `Signal: -85 dBm`
+- **Units**: dBm (decibels relative to 1 milliwatt)
+- **Updates**: Real-time during reception
+- **Persistence**: Values saved in activity history with timestamps
+
+**Understanding RSSI**:
+- **-50 to -70 dBm**: Excellent signal (full bars)
+- **-70 to -85 dBm**: Good signal (3-4 bars)
+- **-85 to -95 dBm**: Marginal signal (1-2 bars)
+- **-95 to -110 dBm**: Poor signal (barely usable)
+- **Below -110 dBm**: No signal (reception unlikely)
+
+**Technical Details**:
+- Captured via SignalMessageHandler hook
+- Reads directly from hardware packet (`Packet.body[0]`)
+- Conversion: `dBm = -(120 - (raw_value / 2))`
+- Space reserved even when idle (prevents layout shifts)
+
+**In Activity History**:
+Each entry shows signal strength at time of transmission:
+```
+John Doe 09:15:23 Voice RX -82 dBm
+Test User 09:16:45 Voice RX -75 dBm
+```
+
+### 📜 DMR Activity History (v1.4.0+)
+
+Per-channel activity log showing last 3 transmissions/events.
+
+**Display**:
+- **Location**: Blue-bordered box in top-right (below location)
+- **Header**: "DMR History" or "Analog History" based on channel type
+- **Format**: `[Contact] HH:mm:ss Activity RSSI`
+- **Persistence**: Survives channel switches and app restarts
+
+**Activity Types**:
+- **Voice RX**: Incoming voice transmission
+- **Voice TX**: Outgoing voice transmission
+- **SMS**: Text message received
+- **Channel Busy**: Channel in use by others
+- **Low Battery**: Low battery warning
+
+**Example Display**:
+```
+┌─ DMR History ──────────┐
+│ John Doe 09:15:23      │
+│ Voice RX -82 dBm       │
+│                        │
+│ Test User 09:10:45     │
+│ Voice RX -75 dBm       │
+│                        │
+│ Emergency 08:55:12     │
+│ Voice RX -90 dBm       │
+└────────────────────────┘
+```
+
+**Per-Channel Storage**:
+- Separate history for each channel number
+- Database: `dmrmod_history.db`
+- FIFO order (newest first, oldest dropped when >3)
+- Includes contact names, DMR IDs, timestamps, RSSI
+
+**Analog vs DMR**:
+- **DMR**: Shows contact name + DMR ID
+- **Analog**: Shows "Analog Transmission" (no DMR ID)
+- **RX Tones**: Optional CTCSS/DCS display for analog
+
+### 🏷️ DMR Caller Identification (v1.3.7+)
+
+Real-time caller information during incoming DMR transmissions.
+
+**Display**:
+- **Location**: Top-left of borderbox (green text)
+- **Format**: 
+  - With contact: `📞 Contact Name\nDMR ID: 64067`
+  - Without contact: `📞 DMR ID: 64067`
+- **Updates**: Real-time during reception
+- **Clears**: Automatically when transmission ends
+
+**How It Works**:
+- Hooks ModuleStatusMessageHandler for RECEIVE_START/STOP events
+- Decodes DMR ID from DigitalAudioMessage packets (offset 1, 2-byte LE)
+- Queries contact database for name lookup
+- Asynchronous to prevent UI blocking
+
+**Contact Database**:
+Uses app's built-in contact database at:
+`/data/user/0/com.pri.prizeinterphone/databases/contact_database.db`
+
+Add contacts via app's Contacts menu for automatic name display.
+
+### 📦 CSV Backup/Restore (v1.0+)
+
+Complete channel and contact backup compatible with OpenGD77 CPS.
+
+**Export**:
+1. Open DMR app → LOCAL tab
+2. Tap "Backup/Restore" button
+3. Select "Export to OpenGD77 CSV"
+4. Files saved to `/storage/emulated/0/Download/DMR/DMR_Backups/[timestamp]/`
+
+**Files Created**:
+- `Channels.csv` - All 28 channel parameters
+- `Contacts.csv` - DMR contacts with IDs
+- `TG_Lists.csv` - Talk group lists
+- `Zones.csv` - Zone assignments
+- `DTMF.csv` - DTMF contacts
+- `Backup_Summary.pdf` - Human-readable summary
+- `DMR_Backup_[timestamp].zip` - All files bundled
+
+**Import**:
+1. Open DMR app → LOCAL tab
+2. Tap "Backup/Restore" button
+3. Select "Import from OpenGD77 CSV"
+4. Choose backup folder from list
+5. Channels automatically imported and refreshed
+
+**OpenGD77 CPS Workflow**:
+1. Export from phone (creates CSV files)
+2. Transfer backup folder to PC via USB
+3. Open OpenGD77 CPS software
+4. Import CSV files
+5. Edit channels as needed
+6. Export from OpenGD77 back to CSV
+7. Transfer CSV back to phone's backup folder
+8. Import on phone
+
+**Features**:
+- ✅ Digital/Analog channel support
+- ✅ CTCSS/DCS tone preservation
+- ✅ Power level conversion (Low/High ↔ P1-P9)
+- ✅ Squelch percentage conversion
+- ✅ Contact name lookup and storage
+- ✅ Location data (latitude/longitude columns)
+- ✅ Automatic band detection (VHF/UHF)
+
+See [ANALOG_MON_FEATURE.md](ANALOG_MON_FEATURE.md) for complete technical details.
+
 ## Features Implemented
 
 ### ✅ Complete OpenGD77 CSV Backup/Restore System
