@@ -36,6 +36,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ByteArrayInputStream;
+import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -85,7 +86,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "1.6.0";
+    private static final String VERSION = "3.0.2";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -145,6 +146,11 @@ public class MainHook implements IXposedHookLoadPackage {
     private static final java.util.HashMap<Integer, java.util.ArrayList<String>> channelTranscriptionHistory = new java.util.HashMap<>();
     private static final int MAX_TRANSCRIPTION_HISTORY = 10;
 
+    // Monitoring mode toggle (ALL mode workaround for group call reception + analog squelch open)
+    private static android.widget.CompoundButton monitoringModeToggle = null;
+    private static volatile boolean isMonitoringMode = false;
+    private static int originalSquelchLevel = 2;  // Store original squelch for analog channels
+
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
         // Only hook our target package
@@ -163,6 +169,9 @@ public class MainHook implements IXposedHookLoadPackage {
         // Hook the local fragment to add backup/restore button
         hookLocalFragment(lpparam);
         
+        // Hook information activity to display module version
+        hookInformationActivity(lpparam);
+        
         // Hook for DMR caller identification
         hookModuleStatusHandler(lpparam);
         hookDigitalAudioHandler(lpparam);
@@ -172,6 +181,15 @@ public class MainHook implements IXposedHookLoadPackage {
         
         // Hook for signal strength (RSSI) display
         hookSignalMessageHandler(lpparam);
+        
+        // Hook for DMR channel configuration (debug RX group lists)
+        hookDmrManager(lpparam);
+        
+        // Hook UART serial communication for protocol analysis
+        hookSerialCommunication(lpparam);
+        
+        // Register debug packet broadcast receiver for command fuzzing
+        registerDebugPacketReceiver(lpparam);
         
         XposedBridge.log(TAG + ": All hooks installed successfully");
     }
@@ -1097,8 +1115,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                     (int) (70 * context.getResources().getDisplayMetrics().density),  // 70dp width
                                     (int) (40 * context.getResources().getDisplayMetrics().density)   // 40dp height
                                 );
-                                toggleParams.gravity = android.view.Gravity.END | android.view.Gravity.CENTER_VERTICAL;
+                                toggleParams.gravity = android.view.Gravity.END | android.view.Gravity.TOP;
                                 toggleParams.rightMargin = (int) (16 * context.getResources().getDisplayMetrics().density);
+                                toggleParams.topMargin = (int) (10 * context.getResources().getDisplayMetrics().density); // 10dp from top
                                 recordToggle.setLayoutParams(toggleParams);
                                 recordToggle.setTextSize(14);
                                 recordToggle.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -1161,6 +1180,215 @@ public class MainHook implements IXposedHookLoadPackage {
                                 
                                 buttonContainer.addView(recordToggle);
                                 XposedBridge.log(TAG + ": ✓ Added recording toggle on right side");
+                                
+                                // Create monitoring mode toggle button (below REC button, right side)
+                                android.widget.ToggleButton monitorToggle = new android.widget.ToggleButton(context);
+                                monitorToggle.setTag("DMR_MONITOR_TOGGLE");
+                                monitorToggle.setTextOn("MON");
+                                monitorToggle.setTextOff("MON");
+                                monitorToggle.setChecked(false);
+                                
+                                FrameLayout.LayoutParams monitorToggleParams = new FrameLayout.LayoutParams(
+                                    (int) (70 * context.getResources().getDisplayMetrics().density),  // 70dp width
+                                    (int) (40 * context.getResources().getDisplayMetrics().density)   // 40dp height
+                                );
+                                monitorToggleParams.gravity = android.view.Gravity.END | android.view.Gravity.TOP;
+                                monitorToggleParams.rightMargin = (int) (16 * context.getResources().getDisplayMetrics().density);
+                                monitorToggleParams.topMargin = (int) (60 * context.getResources().getDisplayMetrics().density); // Below REC (10+40+10)
+                                monitorToggle.setLayoutParams(monitorToggleParams);
+                                monitorToggle.setTextSize(14);
+                                monitorToggle.setTypeface(null, android.graphics.Typeface.BOLD);
+                                monitorToggle.setTextColor(0xFFFFFFFF);  // White text
+                                
+                                // Create state list drawable for monitoring mode
+                                android.graphics.drawable.StateListDrawable monitorStateDrawable = new android.graphics.drawable.StateListDrawable();
+                                
+                                // Checked state (monitoring ON - ALL mode) - Orange background
+                                android.graphics.drawable.GradientDrawable monitorCheckedDrawable = new android.graphics.drawable.GradientDrawable();
+                                monitorCheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                                monitorCheckedDrawable.setColor(0xFFFF8C00);  // Dark orange
+                                monitorCheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
+                                monitorCheckedDrawable.setStroke(
+                                    (int) (2 * context.getResources().getDisplayMetrics().density),
+                                    0xFFFFFFFF  // White border
+                                );
+                                monitorStateDrawable.addState(new int[]{android.R.attr.state_checked}, monitorCheckedDrawable);
+                                
+                                // Unchecked state (monitoring OFF - GROUP mode) - Gray background
+                                android.graphics.drawable.GradientDrawable monitorUncheckedDrawable = new android.graphics.drawable.GradientDrawable();
+                                monitorUncheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                                monitorUncheckedDrawable.setColor(0x80808080);  // Semi-transparent gray
+                                monitorUncheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
+                                monitorUncheckedDrawable.setStroke(
+                                    (int) (2 * context.getResources().getDisplayMetrics().density),
+                                    0x80FFFFFF  // Semi-transparent white border
+                                );
+                                monitorStateDrawable.addState(new int[]{}, monitorUncheckedDrawable);
+                                
+                                monitorToggle.setBackground(monitorStateDrawable);
+                                
+                                // Store reference
+                                monitoringModeToggle = monitorToggle;
+                                
+                                // Initialize toggle state from current channel
+                                monitorToggle.post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        try {
+                                            Class<?> dmrManagerClass = XposedHelpers.findClass(
+                                                "com.pri.prizeinterphone.manager.DmrManager",
+                                                context.getClassLoader()
+                                            );
+                                            
+                                            Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+                                            Object currentChannel = XposedHelpers.callMethod(dmrManager, "getCurrentChannel");
+                                            
+                                            if (currentChannel != null) {
+                                                int channelType = XposedHelpers.getIntField(currentChannel, "type");  // 0=Digital, 1=Analog
+                                                
+                                                // Always start with MON OFF
+                                                monitorToggle.setChecked(false);
+                                                monitorToggle.setEnabled(true);
+                                                isMonitoringMode = false;
+                                                
+                                                if (channelType == 0) { // Digital/DMR channel
+                                                    // TODO: DMR MON mode not working yet - hide button until fixed
+                                                    // Re-enable when we return to DMR work and fix ALL mode reception
+                                                    monitorToggle.setVisibility(View.GONE);
+                                                    int contactType = XposedHelpers.getIntField(currentChannel, "contactType");
+                                                    XposedBridge.log(TAG + ": MonitoringMode initialized OFF (DMR) - contactType=" + contactType + " (button hidden)");
+                                                } else { // Analog channel
+                                                    monitorToggle.setVisibility(View.VISIBLE);
+                                                    int squelchLevel = XposedHelpers.getIntField(currentChannel, "sq");
+                                                    originalSquelchLevel = (squelchLevel == 0) ? 2 : squelchLevel; // Store original, default to 2
+                                                    XposedBridge.log(TAG + ": MonitoringMode initialized OFF (Analog) - squelch=" + squelchLevel + ", original=" + originalSquelchLevel);
+                                                }
+                                            }
+                                        } catch (Throwable t) {
+                                            XposedBridge.log(TAG + ": MonitoringMode init error: " + t.getMessage());
+                                        }
+                                    }
+                                });
+                                
+                                // Set click listener
+                                monitorToggle.setOnClickListener(new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        try {
+                                            boolean newState = monitorToggle.isChecked();
+                                            isMonitoringMode = newState;
+                                            
+                                            XposedBridge.log(TAG + ": MonitoringMode toggled: " + (newState ? "ON" : "OFF"));
+                                            
+                                            Class<?> dmrManagerClass = XposedHelpers.findClass(
+                                                "com.pri.prizeinterphone.manager.DmrManager",
+                                                context.getClassLoader()
+                                            );
+                                            
+                                            Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+                                            Object currentChannel = XposedHelpers.callMethod(dmrManager, "getCurrentChannel");
+                                            
+                                            if (currentChannel == null) {
+                                                Toast.makeText(context, "No channel selected", Toast.LENGTH_SHORT).show();
+                                                monitorToggle.setChecked(!newState);
+                                                return;
+                                            }
+                                            
+                                            // Get channel type directly from field (not method)
+                                            int channelType = XposedHelpers.getIntField(currentChannel, "type");  // 0=Digital, 1=Analog
+                                            
+                                            XposedBridge.log(TAG + ": MonitoringMode channel type: " + channelType + " (0=Digital, 1=Analog)");
+                                            
+                                            if (channelType == 0) {
+                                                // Digital/DMR channel - toggle contactType
+                                                // Store original txContact
+                                                int oldTxContact = XposedHelpers.getIntField(currentChannel, "txContact");
+                                                
+                                                // Update channel settings
+                                                int newContactType = newState ? 2 : 1; // 2=ALL, 1=GROUP
+                                                int newTxContact = newState ? 16777215 : oldTxContact;
+                                                
+                                                XposedHelpers.setIntField(currentChannel, "contactType", newContactType);
+                                                XposedHelpers.setIntField(currentChannel, "txContact", newTxContact);
+                                                
+                                                // Update database and sync hardware
+                                                XposedHelpers.callMethod(dmrManager, "updateChannel", currentChannel);
+                                                XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", currentChannel);
+                                                
+                                                String msg = newState ? 
+                                                    "Monitoring Mode ON (receiving all DMR traffic)" : 
+                                                    "Monitoring Mode OFF (group mode)";
+                                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
+                                                
+                                                XposedBridge.log(TAG + ": DMR MonitoringMode updated - contactType=" + newContactType + 
+                                                    ", txContact=" + newTxContact);
+                                                    
+                                            } else {
+                                                // Analog channel - toggle squelch
+                                                int targetSq;
+                                                if (newState) {
+                                                    // MON ON - store original squelch and use 0 (fully open)
+                                                    int currentSq = XposedHelpers.getIntField(currentChannel, "sq");
+                                                    if (currentSq != 0) {
+                                                        originalSquelchLevel = currentSq;
+                                                    }
+                                                    targetSq = 0;
+                                                    XposedBridge.log(TAG + ": Analog MON ON - stored squelch=" + originalSquelchLevel + ", targeting sq=0");
+                                                } else {
+                                                    // MON OFF - restore original squelch
+                                                    targetSq = originalSquelchLevel;
+                                                    XposedBridge.log(TAG + ": Analog MON OFF - restoring squelch=" + originalSquelchLevel);
+                                                }
+                                                
+                                                // Manually construct and send AnalogMessage to avoid database interference
+                                                try {
+                                                    Class<?> analogMessageClass = XposedHelpers.findClass(
+                                                        "com.pri.prizeinterphone.message.AnalogMessage",
+                                                        lpparam.classLoader
+                                                    );
+                                                    Object analogMessage = analogMessageClass.newInstance();
+                                                    
+                                                    // Copy all fields from ChannelData
+                                                    XposedHelpers.callMethod(analogMessage, "setBand", (byte) XposedHelpers.getIntField(currentChannel, "band"));
+                                                    XposedHelpers.callMethod(analogMessage, "setPower", (byte) XposedHelpers.getIntField(currentChannel, "power"));
+                                                    XposedHelpers.callMethod(analogMessage, "setTxFreq", XposedHelpers.getIntField(currentChannel, "txFreq"));
+                                                    XposedHelpers.callMethod(analogMessage, "setRxFreq", XposedHelpers.getIntField(currentChannel, "rxFreq"));
+                                                    XposedHelpers.callMethod(analogMessage, "setSq", (byte) targetSq);  // Use our target squelch!
+                                                    XposedHelpers.callMethod(analogMessage, "setRxType", (byte) XposedHelpers.getIntField(currentChannel, "rxType"));
+                                                    XposedHelpers.callMethod(analogMessage, "setRxSubCode", (byte) XposedHelpers.getIntField(currentChannel, "rxSubCode"));
+                                                    XposedHelpers.callMethod(analogMessage, "setTxType", (byte) XposedHelpers.getIntField(currentChannel, "txType"));
+                                                    XposedHelpers.callMethod(analogMessage, "setTxSubCode", (byte) XposedHelpers.getIntField(currentChannel, "txSubCode"));
+                                                    XposedHelpers.callMethod(analogMessage, "setRelay", (byte) XposedHelpers.getIntField(currentChannel, "relay"));
+                                                    
+                                                    // Send it!
+                                                    XposedHelpers.callMethod(analogMessage, "send");
+                                                    XposedBridge.log(TAG + ": ✅ Directly sent AnalogMessage with sq=" + targetSq);
+                                                    
+                                                } catch (Throwable sendError) {
+                                                    XposedBridge.log(TAG + ": Error sending manual AnalogMessage: " + sendError.getMessage());
+                                                    XposedBridge.log(sendError);
+                                                }
+                                                
+                                                String msg = newState ? 
+                                                    "Monitoring Mode ON (squelch fully open)" : 
+                                                    "Monitoring Mode OFF (squelch: " + originalSquelchLevel + ")";
+                                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
+                                                
+                                                XposedBridge.log(TAG + ": Analog MonitoringMode updated - squelch=" + 
+                                                    (newState ? "0 (open)" : originalSquelchLevel));
+                                            }
+                                            
+                                        } catch (Throwable t) {
+                                            XposedBridge.log(TAG + ": MonitoringMode toggle error: " + t.getMessage());
+                                            XposedBridge.log(t);
+                                            Toast.makeText(context, "Error toggling monitoring mode", Toast.LENGTH_SHORT).show();
+                                            monitorToggle.setChecked(!monitorToggle.isChecked());
+                                        }
+                                    }
+                                });
+                                
+                                buttonContainer.addView(monitorToggle);
+                                XposedBridge.log(TAG + ": ✓ Added monitoring mode toggle below REC button");
                                 
                                 XposedBridge.log(TAG + ": Final child count: " + rootLayout.getChildCount());
                             }
@@ -1237,6 +1465,34 @@ public class MainHook implements IXposedHookLoadPackage {
                                             });
                                         }
                                         XposedBridge.log(TAG + ": Cleared DMR caller display on switch to analog channel");
+                                    }
+                                    
+                                    // Reset MON button to OFF when switching channels
+                                    if (monitoringModeToggle != null) {
+                                        monitoringModeToggle.post(() -> {
+                                            try {
+                                                // Always turn MON OFF on channel change
+                                                monitoringModeToggle.setChecked(false);
+                                                monitoringModeToggle.setEnabled(true);
+                                                monitoringModeToggle.setAlpha(1.0f);
+                                                isMonitoringMode = false;
+                                                
+                                                if (channelType == 0) {
+                                                    // Digital channel - hide MON button (DMR mode not working yet)
+                                                    // TODO: Re-enable when DMR ALL mode is fixed
+                                                    monitoringModeToggle.setVisibility(View.GONE);
+                                                    XposedBridge.log(TAG + ": MON button reset to OFF for digital channel (hidden)");
+                                                } else {
+                                                    // Analog channel - show MON button and store original squelch
+                                                    monitoringModeToggle.setVisibility(View.VISIBLE);
+                                                    int squelchLevel = XposedHelpers.getIntField(channelData, "sq");
+                                                    originalSquelchLevel = (squelchLevel == 0) ? 2 : squelchLevel;
+                                                    XposedBridge.log(TAG + ": MON button reset to OFF for analog channel - squelch=" + originalSquelchLevel);
+                                                }
+                                            } catch (Throwable t) {
+                                                XposedBridge.log(TAG + ": Error updating MON button on channel change: " + t.getMessage());
+                                            }
+                                        });
                                     }
                                     
                                     updateHistoryHeader();
@@ -1475,63 +1731,103 @@ public class MainHook implements IXposedHookLoadPackage {
                 lpparam.classLoader
             );
             
-            // Hook onCreate to log when the screen is opened
-            XposedHelpers.findAndHookMethod(
-                infoActivityClass,
-                "onCreate",
-                Bundle.class,
-                new XC_MethodHook() {
-                    @Override
-                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                        XposedBridge.log(TAG + ": Information screen opened!");
-                        
-                        // List all fields to see what actually exists
-                        XposedBridge.log(TAG + ": === LISTING ALL FIELDS IN ACTIVITY ===");
-                        java.lang.reflect.Field[] fields = param.thisObject.getClass().getDeclaredFields();
-                        for (java.lang.reflect.Field field : fields) {
-                            XposedBridge.log(TAG + ": Field found: " + field.getName() + " (" + field.getType().getSimpleName() + ")");
-                        }
-                        XposedBridge.log(TAG + ": === END FIELD LIST ===");
-                    }
-                }
-            );
-            
             XposedHelpers.findAndHookMethod(
                 infoActivityClass,
                 "initView",
                 new XC_MethodHook() {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                        XposedBridge.log(TAG + ": initView() called, attempting to set module version...");
-                        
                         try {
-                            // Try to hook the software version TextView instead
+                            Context context = (Context) param.thisObject;
+                            Activity activity = (Activity) param.thisObject;
+                            
+                            // Update software version TextView to include module version
                             Object tvSoftwareVersion = XposedHelpers.getObjectField(
                                 param.thisObject,
                                 "mTvSoftwareVersion"
                             );
                             
                             if (tvSoftwareVersion != null) {
-                                // Get current text
                                 String originalText = (String) XposedHelpers.callMethod(tvSoftwareVersion, "getText");
-                                
-                                // Append module version
                                 String newText = originalText + "\nDMRModHooks v" + VERSION;
+                                XposedHelpers.callMethod(tvSoftwareVersion, "setText", newText);
+                            }
+                            
+                            // Create MacGyver Mod Version section dynamically since it doesn't exist in layout
+                            Object tvDmrFirmware = XposedHelpers.getObjectField(param.thisObject, "mTvDmrFirmwareVersion");
+                            if (tvDmrFirmware != null && tvDmrFirmware instanceof TextView) {
+                                TextView dmrFirmwareView = (TextView) tvDmrFirmware;
                                 
-                                XposedHelpers.callMethod(
-                                    tvSoftwareVersion,
-                                    "setText",
-                                    newText
+                                // Get the main container
+                                View dmrRow = (View) dmrFirmwareView.getParent().getParent();
+                                android.view.ViewGroup mainContainer = (android.view.ViewGroup) dmrRow.getParent();
+                                
+                                // Create a new row for MacGyver Mod Version
+                                android.widget.RelativeLayout macGyverRow = new android.widget.RelativeLayout(context);
+                                android.widget.RelativeLayout.LayoutParams rowParams = new android.widget.RelativeLayout.LayoutParams(
+                                    android.widget.RelativeLayout.LayoutParams.MATCH_PARENT,
+                                    (int) (50 * context.getResources().getDisplayMetrics().density) // 50dp height
+                                );
+                                macGyverRow.setLayoutParams(rowParams);
+                                macGyverRow.setPadding(
+                                    (int) (16 * context.getResources().getDisplayMetrics().density),
+                                    0,
+                                    (int) (16 * context.getResources().getDisplayMetrics().density),
+                                    0
                                 );
                                 
-                                XposedBridge.log(TAG + ": ✓ Module version appended to software version!");
-                            } else {
-                                XposedBridge.log(TAG + ": ERROR - mTvSoftwareVersion is null!");
+                                // Create vertical LinearLayout for label + value
+                                android.widget.LinearLayout verticalLayout = new android.widget.LinearLayout(context);
+                                verticalLayout.setOrientation(android.widget.LinearLayout.VERTICAL);
+                                android.widget.RelativeLayout.LayoutParams verticalParams = new android.widget.RelativeLayout.LayoutParams(
+                                    android.widget.RelativeLayout.LayoutParams.WRAP_CONTENT,
+                                    android.widget.RelativeLayout.LayoutParams.WRAP_CONTENT
+                                );
+                                verticalParams.addRule(android.widget.RelativeLayout.CENTER_VERTICAL);
+                                verticalLayout.setLayoutParams(verticalParams);
+                                
+                                // Create label TextView
+                                TextView labelView = new TextView(context);
+                                labelView.setText("MacGyver Mod Version");
+                                labelView.setTextSize(14);
+                                labelView.setTextColor(0xFF666666);
+                                
+                                // Create value TextView (clickable link)
+                                TextView valueView = new TextView(context);
+                                valueView.setText("IIMacGyverII mod v" + VERSION);
+                                valueView.setTextSize(12);
+                                valueView.setTextColor(0xFF1E90FF);  // Blue
+                                valueView.setPaintFlags(valueView.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
+                                valueView.setOnClickListener(new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        try {
+                                            Intent browserIntent = new Intent(
+                                                Intent.ACTION_VIEW,
+                                                android.net.Uri.parse("https://github.com/IIMacGyverII/phonedmrapp")
+                                            );
+                                            context.startActivity(browserIntent);
+                                            Toast.makeText(context, "Opening GitHub...", Toast.LENGTH_SHORT).show();
+                                        } catch (Throwable t) {
+                                            Toast.makeText(context, "Error opening browser", Toast.LENGTH_SHORT).show();
+                                        }
+                                    }
+                                });
+                                
+                                // Add label and value to vertical layout
+                                verticalLayout.addView(labelView);
+                                verticalLayout.addView(valueView);
+                                
+                                // Add vertical layout to row
+                                macGyverRow.addView(verticalLayout);
+                                
+                                // Insert the new row after DMR Firmware row
+                                int dmrRowIndex = mainContainer.indexOfChild(dmrRow);
+                                mainContainer.addView(macGyverRow, dmrRowIndex + 1);
                             }
                             
                         } catch (Throwable t) {
-                            XposedBridge.log(TAG + ": ERROR in initView hook: " + t.getMessage());
-                            XposedBridge.log(t);
+                            XposedBridge.log(TAG + ": ERROR in Information activity hook: " + t.getMessage());
                         }
                     }
                 }
@@ -2069,11 +2365,64 @@ public class MainHook implements IXposedHookLoadPackage {
                 XposedHelpers.findClass("com.pri.prizeinterphone.message.DigitalAudioMessage", lpparam.classLoader),
                 new XC_MethodHook() {
                     @Override
+                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                        try {
+                            Object message = param.args[0];
+                            
+                            // Get the packet to extract and MODIFY body data
+                            Object packet = XposedHelpers.getObjectField(message, "packet");
+                            byte[] body = (byte[]) XposedHelpers.getObjectField(packet, "body");
+                            
+                            if (body != null && body.length >= 9) {
+                                // ===== V2.0.0 FIX: Override hardware's incorrect callType =====
+                                // Hardware bug: Always reports callType=0 (PRIVATE) for all calls
+                                // Solution: Override byte 0 based on current contactType setting
+                                
+                                try {
+                                    // Get DmrManager instance to read current contactType
+                                    Class<?> dmrManagerClass = XposedHelpers.findClass(
+                                        "com.pri.prizeinterphone.manager.DmrManager",
+                                        lpparam.classLoader
+                                    );
+                                    Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+                                    Object currentChannel = XposedHelpers.callMethod(dmrManager, "getCurrentChannel");
+                                    
+                                    if (currentChannel != null) {
+                                        int contactType = (Integer) XposedHelpers.callMethod(currentChannel, "getContactType");
+                                        byte originalCallType = body[0];
+                                        
+                                        // Override based on contactType setting:
+                                        // contactType=2 (ALL): Force callType=2 to accept all calls
+                                        // contactType=1 (GROUP): Force callType=1 for group list checking
+                                        // contactType=0 (PERSON): Keep callType=0 for private only
+                                        if (contactType == 2) {
+                                            // MON button ON - accept all calls
+                                            body[0] = 2;
+                                            XposedBridge.log(TAG + ": CALL TYPE OVERRIDE - contactType=2 (ALL) | Changed callType " + originalCallType + " to 2 (ALL)");
+                                        } else if (contactType == 1) {
+                                            // GROUP mode - let Android check RX group list
+                                            body[0] = 1;
+                                            XposedBridge.log(TAG + ": CALL TYPE OVERRIDE - contactType=1 (GROUP) | Changed callType " + originalCallType + " to 1 (GROUP)");
+                                        } else {
+                                            // PERSON mode - keep private calls only
+                                            XposedBridge.log(TAG + ": CALL TYPE OVERRIDE - contactType=0 (PERSON) | Keeping callType=" + originalCallType + " (PRIVATE)");
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    XposedBridge.log(TAG + ": Failed to override call type: " + e.getMessage());
+                                }
+                            }
+                        } catch (Exception e) {
+                            XposedBridge.log(TAG + ": Error in DigitalAudioMessageHandler beforeHook: " + e.getMessage());
+                        }
+                    }
+                    
+                    @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         try {
                             Object message = param.args[0];
                             
-                            // Get the packet to extract body data
+                            // Get the packet to extract body data (now modified)
                             Object packet = XposedHelpers.getObjectField(message, "packet");
                             byte[] body = (byte[]) XposedHelpers.getObjectField(packet, "body");
                             
@@ -3163,6 +3512,339 @@ public class MainHook implements IXposedHookLoadPackage {
     }
     
     /**
+     * Hook DmrManager to debug RX group list configuration
+     * This helps troubleshoot why group calls aren't being received
+     */
+    private void hookDmrManager(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            Class<?> dmrManagerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.manager.DmrManager",
+                lpparam.classLoader
+            );
+            
+            Class<?> channelDataClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.serial.data.ChannelData",
+                lpparam.classLoader
+            );
+            
+            // Hook sendAnalogMessage to modify monitor field BEFORE encoding
+            XposedHelpers.findAndHookMethod(
+                dmrManagerClass,
+                "sendAnalogMessage",
+                channelDataClass,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        try {
+                            // The AnalogMessage was just created from ChannelData
+                            // We need to modify it BEFORE send() is called
+                            // Get the AnalogMessage that's about to be sent
+                            Object channelData = param.args[0];
+                            int sq = XposedHelpers.getIntField(channelData, "sq");
+                            
+                            XposedBridge.log(TAG + ": === sendAnalogMessage INTERCEPTED ===");
+                            XposedBridge.log(TAG + ": ChannelData sq=" + sq);
+                            
+                            // The method creates an AnalogMessage and calls send()
+                            // We can't easily intercept it here since it's local
+                            // Will use the BaseMessage.send() hook instead, but earlier in the chain
+                            
+                        } catch (Exception e) {
+                            XposedBridge.log(TAG + ": Error in sendAnalogMessage hook: " + e.getMessage());
+                        }
+                    }
+                }
+            );
+            
+            XposedBridge.log(TAG + ": Successfully hooked DmrManager.sendAnalogMessage");
+            
+            // Hook sendDigitalMessage to see what's being sent to hardware
+            XposedHelpers.findAndHookMethod(
+                dmrManagerClass,
+                "sendDigitalMessage",
+                channelDataClass,
+                new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                        try {
+                            Object channelData = param.args[0];
+                            
+                            // Get channel info
+                            int channelId = (Integer) XposedHelpers.callMethod(channelData, "getId");
+                            int contactType = (Integer) XposedHelpers.getObjectField(channelData, "contactType");
+                            int txContact = (Integer) XposedHelpers.callMethod(channelData, "getTxContact");
+                            
+                            XposedBridge.log(TAG + ": === sendDigitalMessage DEBUG ===");
+                            XposedBridge.log(TAG + ": BEFORE: contactType=" + contactType + ", txContact=" + txContact + ", isMonitoringMode=" + isMonitoringMode);
+                            
+                            // Force monitoring mode settings if enabled
+                            if (isMonitoringMode) {
+                                XposedBridge.log(TAG + ": FORCING ALL mode - setting contactType=2, txContact=16777215");
+                                XposedHelpers.setObjectField(channelData, "contactType", 2);
+                                XposedHelpers.callMethod(channelData, "setTxContact", 16777215);
+                                
+                                contactType = 2;
+                                txContact = 16777215;
+                            }
+                            
+                            XposedBridge.log(TAG + ": AFTER: contactType=" + contactType + ", txContact=" + txContact);
+                            
+                            int[] groups = (int[]) XposedHelpers.getObjectField(channelData, "groups");
+                            if (contactType == 1 && groups != null) {
+                                XposedBridge.log(TAG + ": ✓ Will send groupList to hardware (GROUP mode)");
+                            } else if (contactType == 2) {
+                                XposedBridge.log(TAG + ": ✓ ALL mode - hardware will receive ALL DMR traffic on this CC/TS");
+                            }
+                            
+                        } catch (Exception e) {
+                            XposedBridge.log(TAG + ": Error in sendDigitalMessage hook: " + e.getMessage());
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            );
+            
+            XposedBridge.log(TAG + ": Successfully hooked DmrManager.sendDigitalMessage");
+            
+            // Hook DigitalMessage.encodeBody() - this is where contactType is READ and serialized
+            try {
+                Class<?> digitalMessageClass = XposedHelpers.findClass(
+                    "com.pri.prizeinterphone.message.DigitalMessage",
+                    lpparam.classLoader
+                );
+                
+                XposedHelpers.findAndHookMethod(
+                    digitalMessageClass,
+                    "encodeBody",
+                    new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            try {
+                                Object digitalMessage = param.thisObject;
+                                
+                                // Get current values
+                                byte contactType = (Byte) XposedHelpers.getObjectField(digitalMessage, "contactType");
+                                int txContact = (Integer) XposedHelpers.getObjectField(digitalMessage, "txContact");
+                                int rxFreq = (Integer) XposedHelpers.getObjectField(digitalMessage, "rxFreq");
+                                int txFreq = (Integer) XposedHelpers.getObjectField(digitalMessage, "txFreq");
+                                
+                                XposedBridge.log(TAG + ": === encodeBody() BEFORE ===");
+                                XposedBridge.log(TAG + ": rxFreq: " + rxFreq + ", txFreq: " + txFreq);
+                                XposedBridge.log(TAG + ": contactType: " + contactType + ", txContact: " + txContact);
+                                
+                                // FINAL FORCING - right before serialization!
+                                if (isMonitoringMode) {
+                                    XposedBridge.log(TAG + ": 🔥🔥🔥 ULTIMATE FORCE in encodeBody()!");
+                                    XposedHelpers.setObjectField(digitalMessage, "contactType", (byte) 2);
+                                    XposedHelpers.setObjectField(digitalMessage, "txContact", 16777215);
+                                    XposedBridge.log(TAG + ": ✅✅✅ Set contactType=2, txContact=16777215 RIGHT BEFORE SERIALIZATION");
+                                }
+                                
+                            } catch (Exception e) {
+                                XposedBridge.log(TAG + ": Error in encodeBody() beforeHook: " + e.getMessage());
+                }
+                        }
+                        
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            try {
+                                // Get the encoded byte array result
+                                byte[] encodedBytes = (byte[]) param.getResult();
+                                if (encodedBytes != null && encodedBytes.length >= 145) {
+                                    // Layout: rxFreq(4) + txFreq(4) + localId(4) + groupList(128) + txContact(4) + contactType(1)
+                                    // txContact is at offset 140-143 (4 bytes, big endian)
+                                    int txContactInBytes = ((encodedBytes[140] & 0xFF) << 24) |
+                                                          ((encodedBytes[141] & 0xFF) << 16) |
+                                                          ((encodedBytes[142] & 0xFF) << 8) |
+                                                          (encodedBytes[143] & 0xFF);
+                                    // contactType is at offset 144 (1 byte)
+                                    byte contactTypeInBytes = encodedBytes[144];
+                                    
+                                    XposedBridge.log(TAG + ": === encodeBody() AFTER - ACTUAL BYTES ===");
+                                    XposedBridge.log(TAG + ": txContact in packet bytes: " + txContactInBytes);
+                                    XposedBridge.log(TAG + ": contactType in packet bytes: " + contactTypeInBytes);
+                                    
+                                    if (isMonitoringMode && contactTypeInBytes != 2) {
+                                        XposedBridge.log(TAG + ": ❌❌❌ WARNING: Monitoring ON but contactType=" + contactTypeInBytes + " in bytes!");
+                                    }
+                                    if (isMonitoringMode && contactTypeInBytes == 2) {
+                                        XposedBridge.log(TAG + ": ✅✅✅ SUCCESS: contactType=2 AND txContact=" + txContactInBytes + " confirmed in packet bytes!");
+                                    }
+                                }
+                            } catch (Exception e) {
+                                XposedBridge.log(TAG + ": Error in encodeBody() afterHook: " + e.getMessage());
+                            }
+                        }
+                    }
+                );
+                
+                XposedBridge.log(TAG + ": Successfully hooked DigitalMessage.encodeBody()");
+                
+            } catch (Throwable t) {
+                XposedBridge.log(TAG + ": Failed to hook DigitalMessage.encodeBody(): " + t.getMessage());
+            }
+            
+            // Hook AnalogMessage.encodeBody() - modify fields RIGHT BEFORE serialization
+            try {
+                Class<?> analogMessageClass = XposedHelpers.findClass(
+                    "com.pri.prizeinterphone.message.AnalogMessage",
+                    lpparam.classLoader
+                );
+                
+                XposedHelpers.findAndHookMethod(
+                    analogMessageClass,
+                    "encodeBody",
+                    new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            try {
+                                Object analogMessage = param.thisObject;
+                                
+                                // Get current values
+                                byte sq = (Byte) XposedHelpers.getObjectField(analogMessage, "sq");
+                                byte monitor = (Byte) XposedHelpers.getObjectField(analogMessage, "monitor");
+                                
+                                XposedBridge.log(TAG + ": === AnalogMessage.encodeBody() BEFORE ===");
+                                XposedBridge.log(TAG + ": BEFORE - sq=" + sq + ", monitor=" + monitor);
+                                
+                                // Just log, don't modify monitor - sq=0 should be sufficient
+                                XposedBridge.log(TAG + ": AnalogMessage.encodeBody() - sq=" + sq + ", monitor=" + monitor + " (letting hardware handle monitor)");
+                                
+                            } catch (Exception e) {
+                                XposedBridge.log(TAG + ": Error in AnalogMessage.encodeBody() beforeHook: " + e.getMessage());
+                            }
+                        }
+                    }
+                );
+                
+                XposedBridge.log(TAG + ": Successfully hooked AnalogMessage.encodeBody()");
+                
+            } catch (Throwable t) {
+                XposedBridge.log(TAG + ": Failed to hook AnalogMessage.encodeBody(): " + t.getMessage());
+            }
+            
+            // Also hook BaseMessage.send() to see the actual packet being sent
+            try {
+                Class<?> baseMessageClass = XposedHelpers.findClass(
+                    "com.pri.prizeinterphone.message.BaseMessage",
+                    lpparam.classLoader
+                );
+                Class<?> digitalMessageClass = XposedHelpers.findClass(
+                    "com.pri.prizeinterphone.message.DigitalMessage",
+                    lpparam.classLoader
+                );
+                Class<?> analogMessageClass = XposedHelpers.findClass(
+                    "com.pri.prizeinterphone.message.AnalogMessage",
+                    lpparam.classLoader
+                );
+                
+                XposedHelpers.findAndHookMethod(
+                    baseMessageClass,
+                    "send",
+                    new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            try {
+                                Object baseMessage = param.thisObject;
+                                
+                                // Handle AnalogMessage - set monitor field when squelch is open
+                                if (analogMessageClass.isInstance(baseMessage)) {
+                                    Object analogMessage = baseMessage;
+                                    
+                                    byte sq = (Byte) XposedHelpers.getObjectField(analogMessage, "sq");
+                                    byte monitor = (Byte) XposedHelpers.getObjectField(analogMessage, "monitor");
+                                    
+                                    XposedBridge.log(TAG + ": === AnalogMessage.send() ===");
+                                    XposedBridge.log(TAG + ": BEFORE - sq=" + sq + ", monitor=" + monitor);
+                                    
+                                    // Log but don't modify - let sq=0 handle continuous monitoring
+                                    XposedBridge.log(TAG + ": AnalogMessage.send() - sq=" + sq + ", monitor=" + monitor + " (not modifying monitor field)");
+                                    
+                                    XposedBridge.log(TAG + ": AFTER - sq=" + sq + ", monitor=" + monitor);
+                                    return; // Skip DigitalMessage handling
+                                }
+                                
+                                // Check if this is a DigitalMessage (not analog or other message types)
+                                if (!digitalMessageClass.isInstance(baseMessage)) {
+                                    return;
+                                }
+                                
+                                Object digitalMessage = baseMessage;
+                                
+                                // Get all the fields from DigitalMessage
+                                int localId = (Integer) XposedHelpers.getObjectField(digitalMessage, "localId");
+                                byte contactType = (Byte) XposedHelpers.getObjectField(digitalMessage, "contactType");
+                                int txContact = (Integer) XposedHelpers.getObjectField(digitalMessage, "txContact");
+                                int[] groupList = (int[]) XposedHelpers.getObjectField(digitalMessage, "groupList");
+                                
+                                XposedBridge.log(TAG + ": === BaseMessage.send() BEFORE (DigitalMessage) ===");
+                                XposedBridge.log(TAG + ": localId (DMR ID): " + localId);
+                                XposedBridge.log(TAG + ": contactType: " + contactType);
+                                XposedBridge.log(TAG + ": txContact: " + txContact);
+                                
+                                // CRITICAL FIX: Force ALL mode at the last possible point
+                                if (isMonitoringMode) {
+                                    XposedBridge.log(TAG + ": ⚡⚡⚡ FORCING ALL mode in BaseMessage.send() - FINAL POINT!");
+                                    XposedHelpers.setObjectField(digitalMessage, "contactType", (byte) 2);
+                                    XposedHelpers.setObjectField(digitalMessage, "txContact", 16777215);
+                                    contactType = 2;
+                                    txContact = 16777215;
+                                    XposedBridge.log(TAG + ": ✓✓✓ FORCED: contactType=2, txContact=16777215");
+                                }
+                                
+                                XposedBridge.log(TAG + ": === BaseMessage.send() AFTER (DigitalMessage) ===");
+                                XposedBridge.log(TAG + ": contactType: " + contactType);
+                                XposedBridge.log(TAG + ": txContact: " + txContact);
+                                
+                                if (groupList != null) {
+                                    StringBuilder groupsStr = new StringBuilder("[");
+                                    for (int i = 0; i < Math.min(groupList.length, 8); i++) {
+                                        if (i > 0) groupsStr.append(", ");
+                                        groupsStr.append(groupList[i]);
+                                    }
+                                    if (groupList.length > 8) groupsStr.append(", ...");
+                                    groupsStr.append("]");
+                                    XposedBridge.log(TAG + ": groupList in DigitalMessage: " + groupsStr.toString());
+                                    
+                                    // Check if groupList is actually being sent (not all zeros except maybe first)
+                                    boolean hasValidGroups = false;
+                                    for (int i = 0; i < Math.min(groupList.length, 4); i++) {
+                                        if (groupList[i] > 1) {  // Ignore 0 and 1 (defaults)
+                                            hasValidGroups = true;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    if (hasValidGroups) {
+                                        XposedBridge.log(TAG + ": ✓ groupList contains valid TG IDs - SHOULD receive group calls!");
+                                    } else {
+                                        XposedBridge.log(TAG + ": ⚠️ groupList is default/empty - will NOT receive group calls!");
+                                    }
+                                } else {
+                                    XposedBridge.log(TAG + ": ✗ groupList is NULL in DigitalMessage!");
+                                }
+                                
+                                XposedBridge.log(TAG + ": Sending packet to DMR hardware...");
+                                
+                            } catch (Exception e) {
+                                XposedBridge.log(TAG + ": Error in BaseMessage.send() hook: " + e.getMessage());
+                            }
+                        }
+                    }
+                );
+                
+                XposedBridge.log(TAG + ": Successfully hooked BaseMessage.send()");
+                
+            } catch (Throwable t) {
+                XposedBridge.log(TAG + ": Failed to hook BaseMessage.send(): " + t.getMessage());
+            }
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Failed to hook DmrManager: " + t.getMessage());
+        }
+    }
+    
+    /**
      * Bind to DMRTranscriptionService via IPC
      */
     private static void bindToTranscriptionService(final Context context) {
@@ -3734,5 +4416,353 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             }
         }).start();
+    }
+    
+    /**
+     * Hook UART serial communication to log all TX/RX traffic with /dev/ttyS0
+     * This captures the packet-level protocol between Android app and DMR hardware module
+     * Priority #1 from DMR_FIX_ROADMAP.md - foundation for firmware analysis
+     */
+    private void hookSerialCommunication(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            XposedBridge.log(TAG + ": 🔌 Hooking UART serial communication (SerialManager packets)...");
+            
+            // Create log directory
+            final File uartLogDir = new File(Environment.getExternalStorageDirectory(), "DMR/uart_logs");
+            if (!uartLogDir.exists()) {
+                uartLogDir.mkdirs();
+            }
+            
+            // Create timestamped log file
+            final SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);
+            final String timestamp = sdf.format(new Date());
+            final File binaryLogFile = new File(uartLogDir, "uart_" + timestamp + ".bin");
+            final File textLogFile = new File(uartLogDir, "uart_" + timestamp + ".txt");
+            
+            XposedBridge.log(TAG + ": 📝 UART logs will be saved to: " + uartLogDir.getAbsolutePath());
+            
+            // Hook SerialManager.send() to capture TX packets
+            Class<?> serialManagerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.serial.SerialManager",
+                lpparam.classLoader
+            );
+            
+            Class<?> packetClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.protocol.Packet",
+                lpparam.classLoader
+            );
+            
+            XposedHelpers.findAndHookMethod(serialManagerClass, "send", packetClass,
+                new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                        Object packet = param.args[0];
+                        logPacketData("TX", packet, binaryLogFile, textLogFile);
+                    }
+                }
+            );
+            
+            // Hook MessageDispatcher.onReceive() to capture RX packets
+            Class<?> messageDispatcherClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.serial.MessageDispatcher",
+                lpparam.classLoader
+            );
+            
+            Class<?> serialPortClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.serial.port.SerialPort",
+                lpparam.classLoader
+            );
+            
+            XposedHelpers.findAndHookMethod(messageDispatcherClass, "onReceive", 
+                packetClass, serialPortClass,
+                new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                        Object packet = param.args[0];
+                        logPacketData("RX", packet, binaryLogFile, textLogFile);
+                    }
+                }
+            );
+            
+            XposedBridge.log(TAG + ": ✅ UART serial hooks installed successfully!");
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": ❌ Failed to hook Serial communication: " + t.getMessage());
+            t.printStackTrace();
+        }
+    }
+    
+    /**
+     * Log UART packet data to both binary and human-readable text files
+     * Performs real-time packet parsing and interpretation
+     */
+    private void logPacketData(final String direction, final Object packet, final File binaryLog, final File textLog) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    // Extract packet fields using reflection
+                    byte head = (Byte) XposedHelpers.getObjectField(packet, "head");
+                    byte cmd = (Byte) XposedHelpers.getObjectField(packet, "cmd");
+                    byte rw = (Byte) XposedHelpers.getObjectField(packet, "rw");
+                    byte sr = (Byte) XposedHelpers.getObjectField(packet, "sr");
+                    short ckSum = (Short) XposedHelpers.getObjectField(packet, "ckSum");
+                    short len = (Short) XposedHelpers.getObjectField(packet, "len");
+                    byte[] body = (byte[]) XposedHelpers.getObjectField(packet, "body");
+                    byte tail = (Byte) XposedHelpers.getObjectField(packet, "tail");
+                    
+                    long timestamp = System.currentTimeMillis();
+                    
+                    // Append to binary log
+                    FileOutputStream binaryOut = new FileOutputStream(binaryLog, true);
+                    
+                    // Write direction marker (1 byte: 0x01=TX, 0x02=RX)
+                    binaryOut.write(direction.equals("TX") ? 0x01 : 0x02);
+                    
+                    // Write timestamp (8 bytes)
+                    ByteBuffer tsBuffer = ByteBuffer.allocate(8);
+                    tsBuffer.putLong(timestamp);
+                    binaryOut.write(tsBuffer.array());
+                    
+                    // Write packet structure
+                    binaryOut.write(head);
+                    binaryOut.write(cmd);
+                    binaryOut.write(rw);
+                    binaryOut.write(sr);
+                    binaryOut.write((ckSum >> 8) & 0xFF);
+                    binaryOut.write(ckSum & 0xFF);
+                    binaryOut.write((len >> 8) & 0xFF);
+                    binaryOut.write(len & 0xFF);
+                    if (body != null && body.length > 0) {
+                        binaryOut.write(body);
+                    }
+                    binaryOut.write(tail);
+                    binaryOut.close();
+                    
+                    // Append to text log with packet interpretation
+                    FileWriter textWriter = new FileWriter(textLog, true);
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US);
+                    
+                    textWriter.write("\n========================================\n");
+                    textWriter.write(direction + " @ " + sdf.format(new Date(timestamp)) + "\n");
+                    textWriter.write("----------------------------------------\n");
+                    textWriter.write("Packet Structure:\n");
+                    textWriter.write("  Head: 0x" + String.format("%02X", head) + " (" + head + ")\n");
+                    textWriter.write("  CMD: 0x" + String.format("%02X", cmd) + " (" + cmd + ") " + getCmdName(cmd) + "\n");
+                    textWriter.write("  RW: " + rw + "\n");
+                    textWriter.write("  SR: " + sr + "\n");
+                    textWriter.write("  Checksum: 0x" + String.format("%04X", ckSum) + "\n");
+                    textWriter.write("  Length: " + len + " bytes\n");
+                    textWriter.write("  Tail: 0x" + String.format("%02X", tail) + " (" + tail + ")\n");
+                    
+                    // Body hex dump
+                    if (body != null && body.length > 0) {
+                        textWriter.write("----------------------------------------\n");
+                        textWriter.write("Body (" + body.length + " bytes):\n");
+                        textWriter.write("Hex: ");
+                        for (int i = 0; i < body.length; i++) {
+                            textWriter.write(String.format("%02X ", body[i]));
+                            if ((i + 1) % 16 == 0 && i < body.length - 1) {
+                                textWriter.write("\n     ");
+                            }
+                        }
+                        textWriter.write("\n");
+                        
+                        // Try to parse as DigitalMessage (cmd=22, SET_DIGITAL_INFO_CMD)
+                        if (cmd == 22 && body.length >= 163) {
+                            textWriter.write("----------------------------------------\n");
+                            textWriter.write("Parsed as DigitalMessage (SET_DIGITAL_INFO_CMD):\n");
+                            
+                            // Parse fields using big-endian byte order
+                            int rxFreq = ((body[0] & 0xFF) << 24) | ((body[1] & 0xFF) << 16) | 
+                                        ((body[2] & 0xFF) << 8) | (body[3] & 0xFF);
+                            int txFreq = ((body[4] & 0xFF) << 24) | ((body[5] & 0xFF) << 16) | 
+                                        ((body[6] & 0xFF) << 8) | (body[7] & 0xFF);
+                            int localId = ((body[8] & 0xFF) << 24) | ((body[9] & 0xFF) << 16) | 
+                                         ((body[10] & 0xFF) << 8) | (body[11] & 0xFF);
+                            
+                            // Group list (32 groups, 4 bytes each)
+                            int[] groups = new int[32];
+                            for (int i = 0; i < 32; i++) {
+                                int offset = 12 + (i * 4);
+                                groups[i] = ((body[offset] & 0xFF) << 24) | ((body[offset+1] & 0xFF) << 16) | 
+                                           ((body[offset+2] & 0xFF) << 8) | (body[offset+3] & 0xFF);
+                            }
+                            
+                            int txContact = ((body[140] & 0xFF) << 24) | ((body[141] & 0xFF) << 16) | 
+                                           ((body[142] & 0xFF) << 8) | (body[143] & 0xFF);
+                            byte contactType = body[144];
+                            byte power = body[145];
+                            byte colorCode = body[146];
+                            byte slot = body[147];
+                            
+                            textWriter.write("  RX Freq: " + rxFreq + " Hz (" + (rxFreq / 1000000.0) + " MHz)\n");
+                            textWriter.write("  TX Freq: " + txFreq + " Hz (" + (txFreq / 1000000.0) + " MHz)\n");
+                            textWriter.write("  Local ID: " + localId + "\n");
+                            textWriter.write("  TX Contact: " + txContact + "\n");
+                            textWriter.write("  Contact Type: " + contactType + " (" + 
+                                            (contactType == 0 ? "PERSON" : 
+                                             contactType == 1 ? "GROUP" : 
+                                             contactType == 2 ? "ALL" : "UNKNOWN") + ")\n");
+                            textWriter.write("  Power: " + power + "\n");
+                            textWriter.write("  Color Code: " + colorCode + "\n");
+                            textWriter.write("  Slot: " + slot + "\n");
+                            textWriter.write("  Groups: [");
+                            int nonZeroGroups = 0;
+                            for (int g : groups) {
+                                if (g != 0) {
+                                    if (nonZeroGroups > 0) textWriter.write(", ");
+                                    textWriter.write(String.valueOf(g));
+                                    nonZeroGroups++;
+                                }
+                            }
+                            textWriter.write("] (" + nonZeroGroups + " active)\n");
+                            
+                            // Highlight contactType=2 (ALL mode) packets
+                            if (contactType == 2) {
+                                textWriter.write("\n🔥🔥🔥 MONITORING MODE (ALL) PACKET! 🔥🔥🔥\n");
+                            }
+                        }
+                    }
+                    
+                    textWriter.write("========================================\n");
+                    textWriter.close();
+                    
+                    // Also log to Xposed for real-time monitoring
+                    XposedBridge.log(TAG + ": UART " + direction + " cmd=" + cmd + " (" + getCmdName(cmd) + ") len=" + len);
+                    
+                } catch (Exception e) {
+                    XposedBridge.log(TAG + ": ❌ Error logging UART packet: " + e.getMessage());
+                }
+            }
+        }).start();
+    }
+    
+    /**
+     * Get human-readable command name
+     */
+    private String getCmdName(byte cmd) {
+        switch (cmd) {
+            case 1: return "RECEIVE_START";
+            case 2: return "RECEIVE_STOP";
+            case 10: return "MIX_CHECK_DIGITAL_RECEIVE_START";
+            case 22: return "SET_DIGITAL_INFO_CMD";
+            case 35: return "INTERRUPT_TRANSMIT_CMD";
+            case 63: return "TEST_BIT_ERROR_RATE";
+            default: return "UNKNOWN";
+        }
+    }
+    
+    /**
+     * Register broadcast receiver for debug packet sending (command fuzzing)
+     * 
+     * Usage: adb shell am broadcast -a com.dmrmod.SEND_DEBUG_PACKET --ei CMD 0x4D --ei RW 1 --ei SR 1
+     */
+    private void registerDebugPacketReceiver(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            Class<?> applicationClass = XposedHelpers.findClass(
+                "android.app.Application",
+                lpparam.classLoader
+            );
+            
+            XposedHelpers.findAndHookMethod(
+                applicationClass,
+                "onCreate",
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        final android.content.Context context = (android.content.Context) param.thisObject;
+                        
+                        // Register broadcast receiver for debug commands
+                        android.content.BroadcastReceiver debugReceiver = new android.content.BroadcastReceiver() {
+                            @Override
+                            public void onReceive(android.content.Context context, android.content.Intent intent) {
+                                handleDebugPacket(intent, lpparam.classLoader);
+                            }
+                        };
+                        
+                        android.content.IntentFilter filter = new android.content.IntentFilter("com.dmrmod.SEND_DEBUG_PACKET");
+                        context.registerReceiver(debugReceiver, filter, android.content.Context.RECEIVER_EXPORTED);
+                        
+                        XposedBridge.log(TAG + ": ✓ Debug packet receiver registered (EXPORTED for ADB)");
+                    }
+                }
+            );
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": ❌ Failed to register debug packet receiver: " + t.getMessage());
+        }
+    }
+    
+    /**
+     * Handle debug packet broadcast - send custom UART packets for fuzzing
+     */
+    private void handleDebugPacket(android.content.Intent intent, ClassLoader classLoader) {
+        try {
+            // Extract packet parameters from intent
+            int cmd = intent.getIntExtra("CMD", -1);
+            int rw = intent.getIntExtra("RW", 1);  // Default: read/query
+            int sr = intent.getIntExtra("SR", 1);  // Default: set
+            String bodyHex = intent.getStringExtra("BODY"); // Optional hex body
+            
+            if (cmd < 0 || cmd > 255) {
+                XposedBridge.log(TAG + ": Invalid CMD value: " + cmd);
+                return;
+            }
+            
+            XposedBridge.log(TAG + ": 🔍 FUZZING: Sending debug packet CMD=0x" + String.format("%02X", cmd) + 
+                " RW=" + rw + " SR=" + sr);
+            
+            // Create Packet object
+            Class<?> packetClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.protocol.Packet",
+                classLoader
+            );
+            
+            // Constructor: Packet(byte cmd)
+            Object packet = XposedHelpers.newInstance(packetClass, (byte) cmd);
+            
+            // Set RW and SR flags
+            XposedHelpers.setByteField(packet, "rw", (byte) rw);
+            XposedHelpers.setByteField(packet, "sr", (byte) sr);
+            
+            // Set body if provided
+            if (bodyHex != null && !bodyHex.isEmpty()) {
+                byte[] body = hexStringToByteArray(bodyHex);
+                XposedHelpers.setObjectField(packet, "body", body);
+                XposedBridge.log(TAG + ": Body: " + bodyHex + " (" + body.length + " bytes)");
+            } else {
+                // Default body for query commands
+                XposedHelpers.setObjectField(packet, "body", new byte[]{1});
+            }
+            
+            // Send via SerialManager
+            Class<?> serialManagerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.serial.SerialManager",
+                classLoader
+            );
+            Object serialManager = XposedHelpers.callStaticMethod(serialManagerClass, "getInstance");
+            XposedHelpers.callMethod(serialManager, "send", packet);
+            
+            XposedBridge.log(TAG + ": ✓ Debug packet sent successfully");
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": ❌ Failed to send debug packet: " + t.getMessage());
+            XposedBridge.log(t);
+        }
+    }
+    
+    /**
+     * Convert hex string to byte array
+     */
+    private byte[] hexStringToByteArray(String s) {
+        s = s.replaceAll("\\s+", ""); // Remove whitespace
+        int len = s.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+                                 + Character.digit(s.charAt(i+1), 16));
+        }
+        return data;
     }
 }

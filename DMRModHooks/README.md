@@ -4,7 +4,8 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v1.4.9 (February 26, 2026)  
+**Current Version**: v3.0.2 (March 4, 2026) - **Analog MON Button + MacGyver Mod Branding**  
+**Stable Release**: v1.7.0 (February 2026) - Transcription & API key features  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Backup Location**: `Download/DMR/DMR_Backups/`  
@@ -14,12 +15,147 @@
 - Magisk v24+ with Zygisk enabled
 - Rooted device with unlocked bootloader
 
+## 🚀 Why v3.0.2? Skipping v2.x Release
+
+**TL;DR**: Jumped from v1.7.0 → v3.0.2 to get the working analog MON button released while DMR group calling bugs are being investigated.
+
+### Version Strategy Explained
+
+**v1.x Series** (v1.0 - v1.7.0): Stable feature releases
+- ✅ OpenGD77 CSV export/import
+- ✅ Location tracking (city/state, elevation)
+- ✅ RSSI signal strength display
+- ✅ DMR activity history
+- ✅ Per-channel transcription
+- ✅ API key configuration
+
+**v2.x Series** (Planned): DMR enhancements
+- ⏳ **IN DEVELOPMENT**: DMR group calling improvements
+- ⏳ **BLOCKED**: Fixing "All" mode reception issues
+- ⏳ DMR monitoring mode (when group calling fixed)
+- 🔬 Requires extensive hardware-level debugging
+
+**v3.x Series** (Current): Analog features + branding
+- ✅ **v3.0.2 RELEASED**: Analog MON button (fully working)
+- ✅ MacGyver Mod branding in Information page
+- ✅ Stable and production-ready
+
+### Why Skip v2?
+
+DMR group calling debugging is **complex and time-consuming**:
+- Requires deep UART protocol analysis
+- Hardware message timing issues
+- Interaction with firmware quirks
+- Could take weeks to fully resolve
+
+Rather than delay a working feature, I decided to:
+1. ✅ Release v3.0.2 with **fully working analog MON button** NOW
+2. ⏳ Continue DMR group calling investigation separately
+3. 🔜 Release v2.x when DMR issues are resolved
+4. 📋 Re-enable DMR monitoring in future v3.1+ update
+
+**Bottom line**: You get useful features faster, and I can focus on complex DMR debugging without holding up releases!
+
 ## Quick Links
 
 - [Installation Guide](#installation-from-scratch)
 - [Development History](#development-history)
 - [Releases](../../releases) - Download pre-built modules
 - [Technical Details](#technical-details)
+
+## 🎉 What's New in v3.0.2 (vs v1.7.0 Stable)
+
+### 🆕 Major Features Added
+
+#### 1. Analog MON (Monitor) Button ⭐ **NEW!**
+
+A fully functional monitoring button for analog channels - like a scanner mode:
+
+**How It Works**:
+- 📻 **MON ON**: Squelch fully open (sq=0) - hear ALL audio continuously
+- 🔇 **MON OFF**: Normal squelch filtering based on channel settings
+- 🎨 Visual feedback: Orange button = monitoring, Gray = normal
+- 🔄 Auto-resets to OFF when switching channels
+- 📱 Toast notifications confirm state changes
+
+**Technical Implementation**:
+- ✅ Direct hardware messaging (bypasses database sync)
+- ✅ Manual AnalogMessage construction with modified squelch
+- ✅ Preserves all 11 channel parameters
+- ✅ Handles hardware timing correctly
+
+**Current Status**:
+- ✅ **Analog channels**: Fully working and stable
+- ⏸️ **Digital channels**: Button hidden (DMR "All" mode needs fixing)
+- 📝 TODO comments in code for future DMR re-enablement
+
+**Use Cases**:
+- Monitor busy simplex frequencies
+- Listen to repeater traffic continuously  
+- Emergency channel monitoring
+- Amateur radio scanning operations
+
+#### 2. MacGyver Mod Branding 🏷️ **NEW!**
+
+Project identity and attribution in the app:
+
+**What You'll See** (Device → Information page):
+- 🆕 New "MacGyver Mod Version" row
+- 🔗 "IIMacGyverII mod v3.0.2" (blue, underlined, clickable)
+- 🌐 Tapping opens GitHub repository
+- 📍 Appears below DMR Firmware Version
+- 📱 Software Version also shows "DMRModHooks v3.0.2"
+
+**Technical Details**:
+- Dynamically injected at runtime (field doesn't exist in stock APK)
+- Creates RelativeLayout with TextViews programmatically
+- Inserts into existing layout hierarchy
+- Survives ProGuard/R8 optimization
+
+### 📋 Complete Feature List Since v1.7.0
+
+All features from v1.0 through v1.7.0 are included, plus:
+
+**v3.0.2 Additions**:
+- ✅ Analog MON button with continuous monitoring
+- ✅ MacGyver Mod branding in Information page
+- ✅ GitHub repository link (clickable)
+- ✅ Enhanced version display
+
+**Previously Stable** (v1.0 - v1.7.0):
+- ✅ OpenGD77 CSV export/import (all 5 files)
+- ✅ Digital & analog channel import/export
+- ✅ Location tracking (reverse geocoding)
+- ✅ City/state display with channel info
+- ✅ Elevation display via Open-Elevation API
+- ✅ RSSI signal strength indicator
+- ✅ DMR activity history with timestamps
+- ✅ Contact integration (caller ID display)
+- ✅ Per-channel transcription history
+- ✅ User-friendly API key configuration
+- ✅ Audio recording per channel
+- ✅ Backup/restore from Download folder
+
+### 🔧 Bug Fixes & Improvements
+
+- 🐛 Fixed MON button initialization (always starts OFF)
+- 🐛 Fixed database sync interfering with squelch changes
+- 🐛 Fixed hardware message timing issues
+- 🐛 Removed monitor field modifications (hardware rejection)
+- 📝 Added comprehensive logging for debugging
+- 🧹 Cleaned up excessive debug output for production
+
+### ⏳ Known Limitations
+
+**DMR Groups "All" Mode**:
+- ⚠️ Reception issues when monitoring all talk groups
+- 🔬 Under investigation (complex hardware protocol issue)
+- 📅 Will be addressed in future v2.x release
+- 💡 MON button will be re-enabled for DMR once fixed
+
+**Workaround**: Use specific talk group IDs instead of "All" for now.
+
+See [ANALOG_MON_FEATURE.md](ANALOG_MON_FEATURE.md) for complete technical details.
 
 ## Features Implemented
 

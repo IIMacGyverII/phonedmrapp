@@ -1,0 +1,239 @@
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                    DMR MONITORING MODE - FLOW DIAGRAM                    ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          1. USER INTERFACE                               │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   ┌────────────────────────────────────────────────────┐                │
+│   │  PriInterPhone App - TalkBack Fragment (Home)      │                │
+│   │                                                     │                │
+│   │   ┌─────────────────────────────────────┐          │                │
+│   │   │  Main Content Area                  │          │                │
+│   │   │  - Channel selector                 │          │                │
+│   │   │  - PTT button                       │          │                │
+│   │   │  - Status displays                  │          │                │
+│   │   └─────────────────────────────────────┘          │                │
+│   │                                                     │                │
+│   │                               ┌───────────────┐    │                │
+│   │                               │ MONITOR: OFF  │◄───┼─ Toggle Button │
+│   │                               └───────────────┘    │    (bottom-right)
+│   │   ┌─────────────────────────────────────────┐     │                │
+│   │   │  [Talk] [Chnl] [Cont] [Msg] [Local]   │     │                │
+│   │   └─────────────────────────────────────────┘     │                │
+│   │         Bottom Navigation Bar                      │                │
+│   └────────────────────────────────────────────────────┘                │
+│                                                                          │
+│   USER CLICKS TOGGLE → (sends to LSPosed hook)                         │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        2. LSPOSED HOOK LAYER                             │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   DMRModHooks v1.7.0 - MainHook.hookMonitoringModeToggle()             │
+│                                                                          │
+│   ┌───────────────────────────────────────────────────────────┐        │
+│   │  onClick Handler:                                          │        │
+│   │                                                             │        │
+│   │  1. Get DmrManager instance (reflection)                  │        │
+│   │  2. Get current channel (getCurrentChannel)               │        │
+│   │  3. Check channel type (0=DMR, 1=Analog)                 │        │
+│   │  4. Toggle contactType:                                    │        │
+│   │     - OFF → ON:  contactType 1→2, txContact →16777215    │        │
+│   │     - ON → OFF:  contactType 2→1, txContact restore      │        │
+│   │  5. Call DmrManager.updateChannel(channelData)            │        │
+│   │  6. Call DmrManager.syncChannelInfoWithData(channelData)  │        │
+│   │  7. Show Toast notification                               │        │
+│   └───────────────────────────────────────────────────────────┘        │
+│                                                                          │
+│   XposedBridge.log() → "MonitoringMode: toggled to ALL/GROUP mode"     │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                        ┌───────────┴──────────┐
+                        ▼                      ▼
+┌─────────────────────────────────┐  ┌──────────────────────────────────┐
+│  3a. DATABASE UPDATE             │  │  3b. HARDWARE UPDATE              │
+├─────────────────────────────────┤  ├──────────────────────────────────┤
+│                                  │  │                                   │
+│  UtilChannelData.updateChannel() │  │  DmrManager.syncChannelInfo..()  │
+│        ↓                         │  │        ↓                          │
+│  SQLite UPDATE:                  │  │  sendDigitalMessage()            │
+│  database_channel_area_default   │  │        ↓                          │
+│    _uhf.db                       │  │  Build DigitalMessage object:     │
+│                                  │  │  - localId                        │
+│  UPDATE database_... SET         │  │  - rxFreq / txFreq               │
+│    channel_contactType = 2,      │  │  - power, cc, inboundSlot       │
+│    channel_txContact = 16777215  │  │  - contactType = 2 ◄─── KEY     │
+│  WHERE channel_number = 17;      │  │  - txContact = 16777215          │
+│                                  │  │  - groupList (int[32])           │
+│  COMMIT;                         │  │        ↓                          │
+│        ↓                         │  │  encodeBody() - 163 bytes:       │
+│  Persists across app restart    │  │  [rxFreq][txFreq][localId]...    │
+│                                  │  │  [...groupList 128 bytes...]     │
+│                                  │  │  [txContact][contactType=2]...   │
+│                                  │  │        ↓                          │
+│                                  │  │  send() to serial/USB port       │
+│                                  │  │        ↓                          │
+│                                  │  │  ┌────────────────────────┐      │
+│                                  │  │  │  DMR Hardware Module   │      │
+│                                  │  │  │  (Ulefone integrated)  │      │
+│                                  │  │  └────────────────────────┘      │
+└─────────────────────────────────┘  └──────────────────────────────────┘
+                                               │
+                                               ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    4. HARDWARE BEHAVIOR (EXPECTED)                       │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   contactType = 1 (GROUP mode):                                         │
+│   ┌────────────────────────────────────────────────────┐                │
+│   │  Hardware receives DMR packet on configured freq   │                │
+│   │         ↓                                           │                │
+│   │  Check: Does TG ID match groupList[0..31]?        │                │
+│   │         ↓                                           │                │
+│   │  ✘ NO  → Discard (BROKEN on Ulefone)              │                │
+│   │  ✔ YES → Decode audio                              │                │
+│   └────────────────────────────────────────────────────┘                │
+│                                                                          │
+│   contactType = 2 (ALL mode):                                           │
+│   ┌────────────────────────────────────────────────────┐                │
+│   │  Hardware receives DMR packet on configured freq   │                │
+│   │         ↓                                           │                │
+│   │  Check: Correct Color Code + Timeslot?            │                │
+│   │         ↓                                           │                │
+│   │  ✔ YES → Decode audio (bypass groupList check)    │                │
+│   │  ✘ NO  → Discard                                   │                │
+│   └────────────────────────────────────────────────────┘                │
+│                                                                          │
+│   UNKNOWN: Does Ulefone hardware respect contactType=2?                │
+│   - BEST CASE: ✅ Receives all traffic (workaround works)              │
+│   - WORST CASE: ⚠️ Ignores contactType entirely (need alternatives)    │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     5. VERIFICATION & TESTING                            │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   A. Log Verification:                                                  │
+│   ┌─────────────────────────────────────────────────────┐              │
+│   │ adb logcat | Select-String "MonitoringMode"         │              │
+│   │ adb logcat | Select-String "sendDigitalMessage"     │              │
+│   │                                                       │              │
+│   │ Expected:                                             │              │
+│   │ - "MonitoringMode: toggled to ALL mode"             │              │
+│   │ - "contactType: 2 (0=PERSON, 1=GROUP, 2=ALL)"      │              │
+│   │ - "✓ Will send groupList to hardware..."           │              │
+│   └─────────────────────────────────────────────────────┘              │
+│                                                                          │
+│   B. Database Verification:                                             │
+│   ┌─────────────────────────────────────────────────────┐              │
+│   │ adb pull .../database_channel_area_default_uhf.db   │              │
+│   │ python sqlite query:                                 │              │
+│   │   SELECT channel_contactType FROM ... WHERE id=17;  │              │
+│   │                                                       │              │
+│   │ Expected: 2 (when toggle ON)                        │              │
+│   └─────────────────────────────────────────────────────┘              │
+│                                                                          │
+│   C. Field Test:                                                        │
+│   ┌─────────────────────────────────────────────────────┐              │
+│   │ 1. Toggle MONITOR: ON                               │              │
+│   │ 2. Have another radio transmit on TG 64067/55301   │              │
+│   │ 3. Listen for audio on Ulefone                     │              │
+│   │                                                       │              │
+│   │ PASS: ✅ Receive group call audio                   │              │
+│   │ FAIL: ⚠️ No audio (hardware ignores ALL mode)      │              │
+│   └─────────────────────────────────────────────────────┘              │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                        DECISION TREE                                     ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+                        Toggle to ALL mode
+                                │
+                ┌───────────────┴──────────────┐
+                ▼                              ▼
+         GROUP CALLS WORK?              NO GROUP CALLS?
+                │                              │
+                ▼                              ▼
+    ┌───────────────────────┐      ┌──────────────────────────┐
+    │ ✅ SUCCESS!            │      │ ⚠️ HARDWARE LIMITATION   │
+    │                        │      │                          │
+    │ - Use toggle daily     │      │ OPTIONS:                 │
+    │ - Add to other channels│      │                          │
+    │ - Share on XDA         │      │ 1. Software filtering    │
+    │ - Document success     │      │    (hook PCMReceive)     │
+    │                        │      │                          │
+    │ FUTURE:                │      │ 2. Packet interception   │
+    │ - Per-channel state    │      │    (hook encodeBody)     │
+    │ - Visual indicator     │      │                          │
+    │ - Auto-record          │      │ 3. Firmware patch        │
+    │                        │      │    (⚠️ HIGH RISK)        │
+    │                        │      │                          │
+    │                        │      │ 4. Hardware replacement  │
+    │                        │      │    (TYT MD-398, etc.)    │
+    └───────────────────────┘      └──────────────────────────┘
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                      KEY TECHNICAL DETAILS                               ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+contactType Values:
+  0 = PERSON  - Private call to specific DMR ID (works)
+  1 = GROUP   - Group call filtered by RX list (BROKEN on Ulefone)
+  2 = ALL     - Receive all traffic (UNKNOWN if Ulefone respects this)
+
+DigitalMessage Packet Structure (163 bytes):
+  Bytes 0-3:    rxFreq (int32)
+  Bytes 4-7:    txFreq (int32)
+  Bytes 8-11:   localId (int32, your DMR ID)
+  Bytes 12-139: groupList (32 × int32 = 128 bytes) ← RX Group List
+  Bytes 140-143: txContact (int32, target TG/DMR ID)
+  Byte 144:     contactType (byte) ← KEY BYTE FOR MONITORING MODE
+  Byte 145:     power
+  Byte 146:     cc (Color Code)
+  Byte 147:     inboundSlot (Timeslot)
+  ...
+
+Critical Database Fields:
+  channel_contactType: INTEGER (0, 1, or 2)
+  channel_txContact: INTEGER (DMR ID or TG ID)
+  channel_groups: VARCHAR ("64067,55301,0,0,0,...")
+  channel_cc: INTEGER (Color Code, must match repeater)
+  channel_inBoundSlot: INTEGER (0=TS1, 1=TS2)
+
+LSPosed Advantages:
+  ✅ No APK decompilation needed
+  ✅ Preserves platform signature
+  ✅ Runtime modifications
+  ✅ Easy testing/iteration
+  ✅ Can be disabled if needed
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                           QUICK COMMANDS                                 ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+# Test manually (no code):
+adb pull /data/data/com.pri.prizeinterphone/databases/database_channel_area_default_uhf.db
+python -c "import sqlite3; conn = sqlite3.connect('database_channel_area_default_uhf.db'); cursor = conn.cursor(); cursor.execute('UPDATE database_channel_area_default_uhf SET channel_contactType = 2, channel_txContact = 16777215 WHERE channel_number = 17'); conn.commit(); conn.close()"
+adb push database_channel_area_default_uhf.db /data/data/com.pri.prizeinterphone/databases/
+adb shell "am force-stop com.pri.prizeinterphone"
+
+# Build DMRModHooks:
+cd DMRModHooks
+./gradlew assembleDebug
+
+# Install:
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb shell "am force-stop com.pri.prizeinterphone"
+
+# Monitor logs:
+adb logcat | Select-String "MonitoringMode|sendDigitalMessage DEBUG"
+
+# Verify database:
+adb pull /data/data/com.pri.prizeinterphone/databases/database_channel_area_default_uhf.db
+python -c "import sqlite3; conn = sqlite3.connect('database_channel_area_default_uhf.db'); cursor = conn.cursor(); cursor.execute('SELECT channel_number, channel_name, channel_contactType, channel_txContact FROM database_channel_area_default_uhf WHERE channel_number = 17'); print(cursor.fetchone()); conn.close()"

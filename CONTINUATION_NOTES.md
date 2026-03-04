@@ -1,8 +1,26 @@
 # Continuation Notes for Future AI Sessions
 
 **Project**: PrizeInterphone DMR App LSPosed Module  
-**Last Session**: February 2026  
-**Status**: ✅ **PROJECT COMPLETE** - v0.9.26 fully working!
+**Last Session**: February 27, 2026  
+**Status**: ✅ v0.9.26 COMPLETE | 🚧 v1.6.0 Transcription (Proof-of-Concept)
+
+---
+
+## ⚠️ PRIORITY TODO: Dynamic Model Download Feature
+
+**Created**: February 27, 2026  
+**Details**: See [TODO_MODEL_DOWNLOAD.md](TODO_MODEL_DOWNLOAD.md)  
+**Reminder**: User wants models downloaded at runtime, not bundled in APK
+
+### Current Situation:
+- ✅ Whisper Tiny (39 MB) working perfectly with full vocabulary
+- ⏳ Whisper Base (140 MB) - requires download feature or complex conversion
+- 📋 Full implementation plan documented in TODO_MODEL_DOWNLOAD.md
+
+**REMIND USER**: When working on transcription improvements or discussing model upgrades, implement the dynamic download feature first. This will:
+- Keep APK small (~10 MB instead of 180+ MB)
+- Let users choose model quality (Fast/Balanced/Accurate)
+- Enable easy model updates without new APK releases
 
 ---
 

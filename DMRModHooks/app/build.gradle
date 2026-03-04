@@ -10,8 +10,8 @@ android {
         applicationId "com.dmrmod.hooks"
         minSdk 26
         targetSdk 34
-        versionCode 149
-        versionName "1.4.9"
+        versionCode 301
+        versionName "3.0.1"
     }
 
     buildTypes {
@@ -23,6 +23,16 @@ android {
 
     androidResources {
         noCompress += ['resources.arsc']
+    }
+    
+    buildFeatures {
+        aidl = true
+    }
+    
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 
     compileOptions {

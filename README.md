@@ -35,6 +35,35 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 
 > **Note**: v3.0.1 is an experimental development branch for advanced users interested in firmware reverse engineering and command fuzzing. For normal use, stick with v1.6.
 
+## Radio Firmware
+
+The DMR radio module uses ARM Cortex-M firmware that handles all radio protocol operations. The original factory firmware is preserved in this repository for reference and patching experiments.
+
+**Firmware Location**: `radio_firmware/`
+
+- **DMR003.UV4T.V022-ORIGINAL.bin** - Factory firmware (378,620 bytes)
+  - MD5: `4426035392262CA54583C230C9E268E0`
+  - Base address: `0x08000000` (STM32/GD32 flash memory)
+  - Architecture: ARM Cortex-M Thumb mode (mixed 16/32-bit instructions)
+  - RTOS: uC/OS-III (Micrium)
+
+**Testing Modified Firmware Safely**:
+
+The app checks for custom firmware in `/sdcard/DMR/DMRDEBUG.bin` on startup. If found, it transfers this firmware to the radio module via YModem protocol (~2 minutes). This allows safe testing of modified firmware without permanent flashing.
+
+```powershell
+# Deploy custom firmware for testing
+adb push modified_firmware.bin /sdcard/DMR/DMRDEBUG.bin
+
+# Restart app to trigger firmware update
+adb shell am force-stop com.macgyver.dmr
+
+# Remove test firmware to restore original
+adb shell rm /sdcard/DMR/DMRDEBUG.bin
+```
+
+**Current Firmware Reverse Engineering Status**: See [NOTES_FOR_GROK.md](NOTES_FOR_GROK.md) for ongoing work to fix the Monitor Mode (RECEIVE_ALL) group ID extraction bug.
+
 ### Quick Facts
 
 - **Module**: com.dmrmod.hooks (LSPosed Xposed module)

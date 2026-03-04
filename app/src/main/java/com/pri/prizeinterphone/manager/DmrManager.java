@@ -340,11 +340,29 @@ public class DmrManager {
         digitalMessage.channelMode = (byte) channelData.getChannelMode();
         digitalMessage.encryptSw = (byte) channelData.getEncryptSw();
         digitalMessage.encryptKey = !channelData.getEncryptKey().equals("") ? channelData.getEncryptKey().getBytes() : getByteDefault();
+        
+        // DEBUG: Log RX group list configuration
+        android.util.Log.i("DMRModHooks_GroupDebug", "=== sendDigitalMessage DEBUG ===");
+        android.util.Log.i("DMRModHooks_GroupDebug", "Channel: " + channelData.getName() + " (ID: " + channelData.getId() + ")");
+        android.util.Log.i("DMRModHooks_GroupDebug", "contactType: " + channelData.contactType);
+        android.util.Log.i("DMRModHooks_GroupDebug", "txContact: " + channelData.getTxContact());
+        android.util.Log.i("DMRModHooks_GroupDebug", "groups array: " + java.util.Arrays.toString(channelData.groups));
+        
         if (channelData.contactType == 1) {
             digitalMessage.groupList = channelData.groups;
+            android.util.Log.i("DMRModHooks_GroupDebug", "✓ Setting groupList in digitalMessage (contactType==1)");
+            android.util.Log.i("DMRModHooks_GroupDebug", "groupList to send: " + java.util.Arrays.toString(digitalMessage.groupList));
+        } else {
+            android.util.Log.w("DMRModHooks_GroupDebug", "✗ NOT setting groupList (contactType=" + channelData.contactType + ", expected 1 for GROUP)");
+            android.util.Log.w("DMRModHooks_GroupDebug", "Default groupList will be used: " + java.util.Arrays.toString(digitalMessage.groupList));
         }
+        
         digitalMessage.mic = (byte) PersonSharePrefData.getIntData(PrizeInterPhoneApp.getContext(), PersonSharePrefData.PREF_PERSON_MiC_GAN_VALUE, 0);
         digitalMessage.relay = (byte) channelData.getRelay();
+        
+        android.util.Log.i("DMRModHooks_GroupDebug", "Sending digital message to hardware...");
+        android.util.Log.i("DMRModHooks_GroupDebug", digitalMessage.toString());
+        
         digitalMessage.send();
     }
 
