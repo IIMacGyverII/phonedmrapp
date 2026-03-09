@@ -4,8 +4,8 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v3.0.3 (March 9, 2026) - **DMR Audio Fix**  
-**Previous Version**: v3.0.2 (March 4, 2026) - Analog MON Button + MacGyver Mod Branding  
+**Current Version**: v3.0.4 (March 9, 2026) - **GPS Distance Calculation**  
+**Previous Version**: v3.0.3 (March 9, 2026) - DMR Audio Fix  
 **Stable Release**: v1.7.0 (February 2026) - Transcription & API key features  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
@@ -63,6 +63,37 @@ Rather than delay a working feature, I decided to:
 - [Development History](#development-history)
 - [Releases](../../releases) - Download pre-built modules
 - [Technical Details](#technical-details)
+
+## 🎉 What's New in v3.0.4 (March 9, 2026)
+
+### 📍 GPS Distance Calculation
+
+**Real-time distance from your location to channel coordinates**
+- Shows distance to channel's stored GPS location
+- Smart distance formatting:
+  - **< 1km**: Meters (e.g., "250m")
+  - **1-10km**: Kilometers with decimal (e.g., "5.2km")
+  - **> 10km**: Miles with decimal (e.g., "12.5mi")
+- Uses device GPS/network location
+- Updates automatically when switching channels
+- No internet required (uses device LocationManager)
+
+**Display Format**:
+```
+City, State (distance)
+elevation 📍
+```
+
+Example:
+```
+Echo, Minnesota (96.7mi)
+320m (1050ft) 📍
+```
+
+**Requirements**:
+- Device location enabled (GPS or Network)
+- Location permissions granted to app
+- Channel must have GPS coordinates stored
 
 ## 🎉 What's New in v3.0.3 (March 9, 2026)
 

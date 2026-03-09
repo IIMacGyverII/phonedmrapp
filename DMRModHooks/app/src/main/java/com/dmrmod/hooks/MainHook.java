@@ -87,7 +87,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.0.3";
+    private static final String VERSION = "3.0.4";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -152,6 +152,10 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile boolean isMonitoringMode = false;
     private static int originalSquelchLevel = 2;  // Store original squelch for analog channels
     private static int originalTxContact = 1;      // Store original txContact for DMR channels
+
+    // Current GPS location for distance calculations
+    private static volatile android.location.Location currentGpsLocation = null;
+    private static android.location.LocationManager locationManager = null;
 
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
@@ -1603,6 +1607,9 @@ public class MainHook implements IXposedHookLoadPackage {
                 LocationDatabase.Location location = locationDb.getLocation(channelNumber);
                 
                 if (location != null) {
+                    // Get current GPS location for distance calculation
+                    android.location.Location currentLoc = getCurrentLocation(context);
+                    
                     // Try to get location name using Geocoder
                     String displayText;
                     try {
@@ -1614,15 +1621,40 @@ public class MainHook implements IXposedHookLoadPackage {
                                 String city = address.getLocality();
                                 String state = address.getAdminArea();
                                 
-                                // Display location name immediately
+                                // Build display text with city/state
                                 if (city != null && state != null) {
-                                    displayText = city + ", " + state + "\n📍";
+                                    displayText = city + ", " + state;
                                 } else if (city != null) {
-                                    displayText = city + "\n📍";
+                                    displayText = city;
                                 } else {
                                     displayText = String.format(java.util.Locale.US, 
-                                        "%.4f, %.4f\n📍", location.latitude, location.longitude);
+                                        "%.4f, %.4f", location.latitude, location.longitude);
                                 }
+                                
+                                // Add distance if current location is available  
+                                if (currentLoc != null) {
+                                    double distanceMeters = calculateDistance(
+                                       currentLoc.getLatitude(), currentLoc.getLongitude(),
+                                        location.latitude, location.longitude);
+                                    
+                                    String distanceStr;
+                                    if (distanceMeters < 1000) {
+                                        // Less than 1km - show meters
+                                        distanceStr = String.format(java.util.Locale.US, "%.0fm", distanceMeters);
+                                    } else if (distanceMeters < 10000) {
+                                        // 1-10km - show one decimal
+                                        distanceStr = String.format(java.util.Locale.US, "%.1fkm", distanceMeters / 1000);
+                                    } else {
+                                        // Over 10km - show miles
+                                        double distanceMiles = distanceMeters * 0.000621371;
+                                        distanceStr = String.format(java.util.Locale.US, "%.1fmi", distanceMiles);
+                                    }
+                                    
+                                    displayText += " (" + distanceStr + ")";
+                                    XposedBridge.log(TAG + ": Distance to channel " + channelNumber + ": " + distanceStr);
+                                }
+                                
+                                displayText += "\n📍";
                                 locationText.setText(displayText);
                                 
                                 // Fetch elevation in background thread
@@ -1649,7 +1681,18 @@ public class MainHook implements IXposedHookLoadPackage {
                             } else {
                                 // Geocoder returned no results, show coordinates
                                 displayText = String.format(java.util.Locale.US, 
-                                    "%.4f, %.4f\n📍", location.latitude, location.longitude);
+                                    "%.4f, %.4f", location.latitude, location.longitude);
+                                
+                                // Add distance if available
+                                if (currentLoc != null) {
+                                    double distanceMeters = calculateDistance(
+                                        currentLoc.getLatitude(), currentLoc.getLongitude(),
+                                        location.latitude, location.longitude);
+                                    String distanceStr = formatDistance(distanceMeters);
+                                    displayText += " (" + distanceStr + ")";
+                                }
+                                
+                                displayText += "\n📍";
                                 locationText.setText(displayText);
                                 
                                 // Fetch elevation in background
@@ -1659,7 +1702,18 @@ public class MainHook implements IXposedHookLoadPackage {
                         } else {
                             // Geocoder not available, show coordinates
                             displayText = String.format(java.util.Locale.US, 
-                                "%.4f, %.4f\n📍", location.latitude, location.longitude);
+                                "%.4f, %.4f", location.latitude, location.longitude);
+                            
+                            // Add distance if available
+                            if (currentLoc != null) {
+                                double distanceMeters = calculateDistance(
+                                    currentLoc.getLatitude(), currentLoc.getLongitude(),
+                                    location.latitude, location.longitude);
+                                String distanceStr = formatDistance(distanceMeters);
+                                displayText += " (" + distanceStr + ")";
+                            }
+                            
+                            displayText += "\n📍";
                             locationText.setText(displayText);
                             
                             // Fetch elevation in background
@@ -1669,7 +1723,18 @@ public class MainHook implements IXposedHookLoadPackage {
                     } catch (Exception e) {
                         // Geocoder failed, fallback to coordinates
                         displayText = String.format(java.util.Locale.US, 
-                            "%.4f, %.4f\n📍", location.latitude, location.longitude);
+                            "%.4f, %.4f", location.latitude, location.longitude);
+                        
+                        // Add distance if available
+                        if (currentLoc != null) {
+                            double distanceMeters = calculateDistance(
+                                currentLoc.getLatitude(), currentLoc.getLongitude(),
+                                location.latitude, location.longitude);
+                            String distanceStr = formatDistance(distanceMeters);
+                            displayText += " (" + distanceStr + ")";
+                        }
+                        
+                        displayText += "\n📍";
                         locationText.setText(displayText);
                         
                         // Fetch elevation in background
@@ -1683,6 +1748,23 @@ public class MainHook implements IXposedHookLoadPackage {
             }
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error updating location display: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Format distance for display
+     */
+    private String formatDistance(double distanceMeters) {
+        if (distanceMeters < 1000) {
+            // Less than 1km - show meters
+            return String.format(java.util.Locale.US, "%.0fm", distanceMeters);
+        } else if (distanceMeters < 10000) {
+            // 1-10km - show one decimal
+            return String.format(java.util.Locale.US, "%.1fkm", distanceMeters / 1000);
+        } else {
+            // Over 10km - show miles
+            double distanceMiles = distanceMeters * 0.000621371;
+            return String.format(java.util.Locale.US, "%.1fmi", distanceMiles);
         }
     }
     
@@ -1758,6 +1840,103 @@ public class MainHook implements IXposedHookLoadPackage {
             }
         }
         return 0;
+    }
+    
+    /**
+     * Calculate distance between two coordinates using Haversine formula
+     * @param lat1 First point latitude
+     * @param lon1 First point longitude
+     * @param lat2 Second point latitude
+     * @param lon2 Second point longitude
+     * @return Distance in meters
+     */
+    private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+        final double R = 6371000; // Earth's radius in meters
+        
+        double lat1Rad = Math.toRadians(lat1);
+        double lat2Rad = Math.toRadians(lat2);
+        double deltaLat = Math.toRadians(lat2 - lat1);
+        double deltaLon = Math.toRadians(lon2 - lon1);
+        
+        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+                   Math.cos(lat1Rad) * Math.cos(lat2Rad) *
+                   Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+        
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        
+        return R * c;
+    }
+    
+    /**
+     * Get current GPS location
+     * @param context Application context
+     * @return Current location or null if unavailable
+     */
+    private android.location.Location getCurrentLocation(Context context) {
+        try {
+            if (locationManager == null) {
+                locationManager = (android.location.LocationManager) 
+                    context.getSystemService(Context.LOCATION_SERVICE);
+                XposedBridge.log(TAG + ": LocationManager initialized");
+            }
+            
+            if (locationManager == null) {
+                XposedBridge.log(TAG + ": LocationManager not available");
+                return null;
+            }
+            
+            // Try GPS first, then network
+            android.location.Location location = null;
+            
+            try {
+                if (locationManager.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER)) {
+                    location = locationManager.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER);
+                    if (location != null) {
+                        XposedBridge.log(TAG + ": Got GPS location: " + location.getLatitude() + ", " + location.getLongitude());
+                    } else {
+                        XposedBridge.log(TAG + ": GPS provider enabled but no cached location");
+                    }
+                } else {
+                    XposedBridge.log(TAG + ": GPS provider not enabled");
+                }
+            } catch (SecurityException e) {
+                XposedBridge.log(TAG + ": No permission for GPS location: " + e.getMessage());
+            } catch (Exception e) {
+                XposedBridge.log(TAG + ": Error getting GPS location: " + e.getMessage());
+            }
+            
+            if (location == null) {
+                try {
+                    if (locationManager.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER)) {
+                        location = locationManager.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER);
+                        if (location != null) {
+                            XposedBridge.log(TAG + ": Got network location: " + location.getLatitude() + ", " + location.getLongitude());
+                        } else {
+                            XposedBridge.log(TAG + ": Network provider enabled but no cached location");
+                        }
+                    } else {
+                        XposedBridge.log(TAG + ": Network provider not enabled");
+                    }
+                } catch (SecurityException e) {
+                    XposedBridge.log(TAG + ": No permission for network location: " + e.getMessage());
+                } catch (Exception e) {
+                    XposedBridge.log(TAG + ": Error getting network location: " + e.getMessage());
+                }
+            }
+            
+            if (location != null) {
+                currentGpsLocation = location;
+                XposedBridge.log(TAG + ": Cached current location: " + location.getLatitude() + ", " + location.getLongitude());
+            } else {
+                XposedBridge.log(TAG + ": No location available from any provider");
+            }
+            
+            return location;
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error getting current location: " + e.getMessage());
+            XposedBridge.log(e);
+            return null;
+        }
     }
     
     /**
