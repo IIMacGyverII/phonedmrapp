@@ -87,7 +87,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.0.5";
+    private static final String VERSION = "3.0.8";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -156,6 +156,7 @@ public class MainHook implements IXposedHookLoadPackage {
     // Zone selection and filtering
     private static android.widget.Button zoneButton = null;
     private static android.widget.Button channelPageZoneButton = null;  // Zone button on channels page
+    private static Object channelFragmentInstance = null;  // Store channel fragment for refreshing list
     private static volatile long currentZoneId = -1;  // -1 = All Channels (no filter)
     private static volatile String currentZoneName = "All";
     private static volatile java.util.List<Integer> currentZoneChannels = null;  // null = no filter
@@ -215,6 +216,9 @@ public class MainHook implements IXposedHookLoadPackage {
         
         // Hook for adding zone button to channel list page
         hookChannelListUI(lpparam);
+        
+        // Hook for channel edit activity to add zone selector
+        hookChannelEditActivity(lpparam);
         
         // Hook UART serial communication for protocol analysis
         hookSerialCommunication(lpparam);
@@ -5931,6 +5935,9 @@ public class MainHook implements IXposedHookLoadPackage {
                         try {
                             Object fragment = param.thisObject;
                             
+                            // Store fragment reference for refreshing after zone changes
+                            channelFragmentInstance = fragment;
+                            
                             android.content.Context context = (android.content.Context) 
                                 XposedHelpers.callMethod(fragment, "getContext");
                             
@@ -6146,6 +6153,564 @@ public class MainHook implements IXposedHookLoadPackage {
             for (int i = 0; i < group.getChildCount() && i < 10; i++) {
                 logViewHierarchy(group.getChildAt(i), prefix + "  ");
             }
+        }
+    }
+    
+    /**
+     * Show zone selection dialog for channel edit with edit icons and create option
+     */
+    private static void showChannelEditZoneDialog(final android.content.Context context, 
+                                                   final android.app.Activity activity,
+                                                   final android.widget.TextView valueText,
+                                                   final long[] selectedZoneId) {
+        try {
+            final ZoneDatabase db = ZoneDatabase.getInstance(context);
+            final List<ZoneDatabase.Zone> zones = db.getAllZones();
+            
+            // Create custom ListView
+            final android.widget.ListView listView = new android.widget.ListView(context);
+            listView.setDivider(null);
+            
+            // Build item list: None + zones + Create New
+            final List<String> displayItems = new ArrayList<>();
+            final List<Long> itemIds = new ArrayList<>();
+            final List<Boolean> isCreateNew = new ArrayList<>();
+            
+            // Add "None" option
+            displayItems.add("None");
+            itemIds.add(-1L);
+            isCreateNew.add(false);
+            
+            // Add all zones
+            for (ZoneDatabase.Zone zone : zones) {
+                displayItems.add(zone.name);
+                itemIds.add(zone.id);
+                isCreateNew.add(false);
+            }
+            
+            // Add "Create New Zone..." option
+            displayItems.add("Create New Zone...");
+            itemIds.add(-999L);  // Special ID for create new
+            isCreateNew.add(true);
+            
+            // Dialog holder for access in adapter
+            final AlertDialog[] dialogHolder = new AlertDialog[1];
+            
+            // Create custom adapter
+            android.widget.BaseAdapter adapter = new android.widget.BaseAdapter() {
+                @Override
+                public int getCount() {
+                    return displayItems.size();
+                }
+                
+                @Override
+                public Object getItem(int position) {
+                    return displayItems.get(position);
+                }
+                
+                @Override
+                public long getItemId(int position) {
+                    return position;
+                }
+                
+                @Override
+                public android.view.View getView(final int position, android.view.View convertView, android.view.ViewGroup parent) {
+                    LinearLayout row = new LinearLayout(context);
+                    row.setOrientation(LinearLayout.HORIZONTAL);
+                    row.setPadding(40, 30, 40, 30);
+                    row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                    
+                    // Zone name text
+                    TextView nameText = new TextView(context);
+                    nameText.setText(displayItems.get(position));
+                    nameText.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
+                    nameText.setTextColor(0xFF000000);
+                    if (isCreateNew.get(position)) {
+                        nameText.setTextColor(0xFF4169E1);  // Blue for "Create New"
+                        nameText.setTypeface(null, android.graphics.Typeface.BOLD);
+                    }
+                    
+                    LinearLayout.LayoutParams nameParams = new LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1.0f
+                    );
+                    nameText.setLayoutParams(nameParams);
+                    row.addView(nameText);
+                    
+                    // Add edit icon for zones (not for "None" or "Create New")
+                    if (position > 0 && !isCreateNew.get(position)) {
+                        TextView editIcon = new TextView(context);
+                        editIcon.setText("✏");  // Pencil emoji
+                        editIcon.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 20);
+                        editIcon.setTextColor(0xFF666666);
+                        editIcon.setPadding(20, 0, 20, 0);
+                        editIcon.setClickable(true);
+                        editIcon.setFocusable(true);
+                        
+                        // Make edit icon clickable
+                        editIcon.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                // Close the zone selection dialog
+                                if (dialogHolder[0] != null) {
+                                    dialogHolder[0].dismiss();
+                                }
+                                // Show edit zone name dialog
+                                showEditZoneNameDialog(context, activity, itemIds.get(position), 
+                                    displayItems.get(position), valueText, selectedZoneId);
+                            }
+                        });
+                        
+                        row.addView(editIcon);
+                    }
+                    
+                    return row;
+                }
+            };
+            
+            listView.setAdapter(adapter);
+            
+            // Create dialog
+            final AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            builder.setTitle("Select Zone");
+            builder.setView(listView);
+            builder.setNegativeButton("Cancel", null);
+            dialogHolder[0] = builder.create();
+            final AlertDialog dialog = dialogHolder[0];
+            
+            // Handle item clicks
+            listView.setOnItemClickListener(new android.widget.AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                    // Check if edit icon was clicked
+                    if (view instanceof LinearLayout) {
+                        LinearLayout row = (LinearLayout) view;
+                        if (row.getChildCount() > 1) {
+                            View editIcon = row.getChildAt(1);
+                            // Check if touch was on edit icon area (right 20% of row)
+                            // For simplicity, we'll handle edit in a separate way - just select the zone for now
+                        }
+                    }
+                    
+                    if (isCreateNew.get(position)) {
+                        // Show create new zone dialog
+                        dialog.dismiss();
+                        showCreateZoneDialog(context, activity, valueText, selectedZoneId);
+                    } else {
+                        // Select the zone
+                        long oldZoneId = selectedZoneId[0];
+                        selectedZoneId[0] = itemIds.get(position);
+                        valueText.setText(displayItems.get(position));
+                        XposedBridge.log(TAG + ": Zone selection changed from " + oldZoneId + " to " + selectedZoneId[0]);
+                        
+                        // Store in activity instance
+                        XposedHelpers.setAdditionalInstanceField(activity, "dmrmod_selectedZoneId", selectedZoneId[0]);
+                        dialog.dismiss();
+                    }
+                }
+            });
+            
+            // Handle long clicks for editing zone names
+            listView.setOnItemLongClickListener(new android.widget.AdapterView.OnItemLongClickListener() {
+                @Override
+                public boolean onItemLongClick(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                    // Allow editing for zones (not "None" or "Create New")
+                    if (position > 0 && !isCreateNew.get(position)) {
+                        dialogHolder[0].dismiss();
+                        showEditZoneNameDialog(context, activity, itemIds.get(position), displayItems.get(position), valueText, selectedZoneId);
+                        return true;
+                    }
+                    return false;
+                }
+            });
+            
+            dialog.show();
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error showing zone selection dialog: " + t.getMessage());
+            XposedBridge.log(t);
+            Toast.makeText(context, "Error loading zones", Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    /**
+     * Show dialog to create a new zone
+     */
+    private static void showCreateZoneDialog(final android.content.Context context,
+                                             final android.app.Activity activity,
+                                             final android.widget.TextView valueText,
+                                             final long[] selectedZoneId) {
+        try {
+            final android.widget.EditText input = new android.widget.EditText(context);
+            input.setHint("Zone name");
+            input.setSingleLine(true);
+            
+            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            builder.setTitle("Create New Zone");
+            builder.setView(input);
+            builder.setPositiveButton("Create", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    String zoneName = input.getText().toString().trim();
+                    if (zoneName.isEmpty()) {
+                        Toast.makeText(context, "Zone name cannot be empty", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    
+                    try {
+                        ZoneDatabase db = ZoneDatabase.getInstance(context);
+                        // Create new zone with empty channel list
+                        ZoneDatabase.Zone newZone = new ZoneDatabase.Zone(-1, zoneName, new ArrayList<Integer>());
+                        long newZoneId = db.saveZone(newZone);
+                        
+                        // Select the newly created zone
+                        selectedZoneId[0] = newZoneId;
+                        valueText.setText(zoneName);
+                        XposedHelpers.setAdditionalInstanceField(activity, "dmrmod_selectedZoneId", newZoneId);
+                        
+                        Toast.makeText(context, "Zone created: " + zoneName, Toast.LENGTH_SHORT).show();
+                        XposedBridge.log(TAG + ": Created new zone: " + zoneName + " with ID " + newZoneId);
+                    } catch (Throwable t) {
+                        XposedBridge.log(TAG + ": Error creating zone: " + t.getMessage());
+                        Toast.makeText(context, "Error creating zone", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+            builder.setNegativeButton("Cancel", null);
+            builder.show();
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error showing create zone dialog: " + t.getMessage());
+        }
+    }
+    
+    /**
+     * Show dialog to edit zone name
+     */
+    private static void showEditZoneNameDialog(final android.content.Context context,
+                                               final android.app.Activity activity,
+                                               final long zoneId,
+                                               final String currentName,
+                                               final android.widget.TextView valueText,
+                                               final long[] selectedZoneId) {
+        try {
+            final android.widget.EditText input = new android.widget.EditText(context);
+            input.setText(currentName);
+            input.setSelection(currentName.length());  // Put cursor at end
+            input.setSingleLine(true);
+            
+            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            builder.setTitle("Edit Zone Name");
+            builder.setView(input);
+            builder.setPositiveButton("Save", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    String newName = input.getText().toString().trim();
+                    if (newName.isEmpty()) {
+                        Toast.makeText(context, "Zone name cannot be empty", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    
+                    try {
+                        ZoneDatabase db = ZoneDatabase.getInstance(context);
+                        ZoneDatabase.Zone zone = db.getZone(zoneId);
+                        if (zone != null) {
+                            // Update zone name
+                            ZoneDatabase.Zone updatedZone = new ZoneDatabase.Zone(zone.id, newName, zone.getChannelList());
+                            db.saveZone(updatedZone);
+                            
+                            // Update display if this is the selected zone
+                            if (selectedZoneId[0] == zoneId) {
+                                valueText.setText(newName);
+                            }
+                            
+                            Toast.makeText(context, "Zone renamed to: " + newName, Toast.LENGTH_SHORT).show();
+                            XposedBridge.log(TAG + ": Renamed zone " + zoneId + " from '" + currentName + "' to '" + newName + "'");
+                        }
+                    } catch (Throwable t) {
+                        XposedBridge.log(TAG + ": Error renaming zone: " + t.getMessage());
+                        Toast.makeText(context, "Error renaming zone", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+            builder.setNegativeButton("Cancel", null);
+            builder.show();
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error showing edit zone name dialog: " + t.getMessage());
+        }
+    }
+    
+    /**
+     * Hook InterPhoneChannelActivity to add zone selector
+     */
+    private void hookChannelEditActivity(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            final Class<?> channelActivityClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.activity.InterPhoneChannelActivity",
+                lpparam.classLoader
+            );
+            
+            final Class<?> channelDataClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.serial.data.ChannelData",
+                lpparam.classLoader
+            );
+            
+            XposedBridge.log(TAG + ": Hooking InterPhoneChannelActivity.onCreate()");
+            
+            // Hook onCreate to add zone selector UI
+            XposedHelpers.findAndHookMethod(
+                channelActivityClass,
+                "onCreate",
+                Bundle.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        try {
+                            final Activity activity = (Activity) param.thisObject;
+                            final Context context = activity;
+                            
+                            XposedBridge.log(TAG + ": InterPhoneChannelActivity onCreate - adding zone selector");
+                            
+                            // Find the ScrollView containing all channel settings
+                            final int scrollViewId = context.getResources().getIdentifier("all_options", "id", context.getPackageName());
+                            final android.widget.ScrollView scrollView = (android.widget.ScrollView) activity.findViewById(scrollViewId);
+                            
+                            if (scrollView == null) {
+                                XposedBridge.log(TAG + ": Could not find ScrollView");
+                                return;
+                            }
+                            
+                            // Get the LinearLayout inside the ScrollView
+                            ViewGroup container = (ViewGroup) scrollView.getChildAt(0);
+                            if (container == null) {
+                                XposedBridge.log(TAG + ": Could not find container LinearLayout");
+                                return;
+                            }
+                            
+                            // Get the channelData from the activity
+                            final Object channelData = XposedHelpers.getObjectField(param.thisObject, "channelData");
+                            
+                            // Get current channel number
+                            int channelNumber = -1;
+                            if (channelData != null) {
+                                channelNumber = XposedHelpers.getIntField(channelData, "number");
+                            }
+                            
+                            // Get current zone for this channel
+                            ZoneDatabase db = ZoneDatabase.getInstance(context);
+                            final long currentZoneId = db.getZoneIdForChannel(channelNumber);
+                            final String currentZoneName = (currentZoneId > 0) ? db.getZoneName(currentZoneId) : "None";
+                            // Don't close singleton database
+                            
+                            XposedBridge.log(TAG + ": Channel " + channelNumber + " is in zone: " + currentZoneName + " (ID: " + currentZoneId + ")");
+                            
+                            // Create zone selector row (matching the style of other settings)
+                            LinearLayout zoneRow = new LinearLayout(context);
+                            zoneRow.setOrientation(LinearLayout.HORIZONTAL);
+                            zoneRow.setClickable(true);
+                            zoneRow.setFocusable(true);
+                            
+                            // Set background (same as other rows)
+                            int bgResId = context.getResources().getIdentifier("interphone_channel_content_background_seletor", "drawable", context.getPackageName());
+                            zoneRow.setBackgroundResource(bgResId);
+                            
+                            // Set layout params
+                            LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                context.getResources().getDimensionPixelSize(
+                                    context.getResources().getIdentifier("interphone_channel_content_height", "dimen", context.getPackageName())
+                                )
+                            );
+                            int marginLeft = context.getResources().getDimensionPixelSize(
+                                context.getResources().getIdentifier("interphone_channel_content_margin_left", "dimen", context.getPackageName())
+                            );
+                            int marginRight = context.getResources().getDimensionPixelSize(
+                                context.getResources().getIdentifier("interphone_channel_content_margin_right", "dimen", context.getPackageName())
+                            );
+                            rowParams.setMargins(marginLeft, 10, marginRight, 0);
+                            zoneRow.setLayoutParams(rowParams);
+                            
+                            // Create title TextView
+                            TextView titleText = new TextView(context);
+                            titleText.setText("Zone");
+                            titleText.setTextColor(context.getResources().getColor(
+                                context.getResources().getIdentifier("pri_text_color", "color", context.getPackageName())
+                            ));
+                            titleText.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,
+                                context.getResources().getDimensionPixelSize(
+                                    context.getResources().getIdentifier("interphone_channel_content_title_size", "dimen", context.getPackageName())
+                                )
+                            );
+                            titleText.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                            
+                            LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
+                                context.getResources().getDimensionPixelSize(
+                                    context.getResources().getIdentifier("interphone_channel_content_title_width", "dimen", context.getPackageName())
+                                ),
+                                LinearLayout.LayoutParams.WRAP_CONTENT
+                            );
+                            titleParams.leftMargin = context.getResources().getDimensionPixelSize(
+                                context.getResources().getIdentifier("interphone_channel_content_title_margin_left", "dimen", context.getPackageName())
+                            );
+                            titleText.setLayoutParams(titleParams);
+                            
+                            // Create separator View
+                            View separator = new View(context);
+                            int separatorResId = context.getResources().getIdentifier("interphone_channel_more_split", "drawable", context.getPackageName());
+                            separator.setBackgroundResource(separatorResId);
+                            separator.setLayoutParams(new LinearLayout.LayoutParams(7, 13));
+                            ((LinearLayout.LayoutParams) separator.getLayoutParams()).leftMargin = context.getResources().getDimensionPixelSize(
+                                context.getResources().getIdentifier("interphone_channel_content_split_margin_left", "dimen", context.getPackageName())
+                            );
+                            ((LinearLayout.LayoutParams) separator.getLayoutParams()).gravity = android.view.Gravity.CENTER_VERTICAL;
+                            
+                            // Create value TextView
+                            final TextView valueText = new TextView(context);
+                            valueText.setText(currentZoneName);
+                            valueText.setTextColor(context.getResources().getColor(
+                                context.getResources().getIdentifier("pri_text_color", "color", context.getPackageName())
+                            ));
+                            valueText.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,
+                                context.getResources().getDimensionPixelSize(
+                                    context.getResources().getIdentifier("interphone_channel_content_sub_size", "dimen", context.getPackageName())
+                                )
+                            );
+                            valueText.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                            
+                            LinearLayout.LayoutParams valueParams = new LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                LinearLayout.LayoutParams.MATCH_PARENT
+                            );
+                            valueParams.leftMargin = context.getResources().getDimensionPixelSize(
+                                context.getResources().getIdentifier("interphone_channel_content_split_margin_left", "dimen", context.getPackageName())
+                            );
+                            valueParams.rightMargin = context.getResources().getDimensionPixelSize(
+                                context.getResources().getIdentifier("interphone_channel_content_title_margin_left", "dimen", context.getPackageName())
+                            );
+                            valueText.setLayoutParams(valueParams);
+                            
+                            // Assemble the row
+                            zoneRow.addView(titleText);
+                            zoneRow.addView(separator);
+                            zoneRow.addView(valueText);
+                            
+                            // Store selected zone ID
+                            final long[] selectedZoneId = {currentZoneId};
+                            
+                            // Set click listener to show zone selection dialog
+                            zoneRow.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    showChannelEditZoneDialog(context, activity, valueText, selectedZoneId);
+                                }
+                            });
+                            
+                            // Store the initial zone ID in the activity instance
+                            XposedHelpers.setAdditionalInstanceField(activity, "dmrmod_selectedZoneId", currentZoneId);
+                            
+                            // Add the zone row after the channel type row (index 2)
+                            container.addView(zoneRow, 3);
+                            
+                            XposedBridge.log(TAG + ": Zone selector added to channel edit page");
+                            
+                        } catch (Throwable t) {
+                            XposedBridge.log(TAG + ": Error in channel edit hook: " + t.getMessage());
+                            XposedBridge.log(t);
+                        }
+                    }
+                }
+            );
+            
+            // Hook saveChannelData ONCE (globally, not per instance)
+            XposedHelpers.findAndHookMethod(
+                channelActivityClass,
+                "saveChannelData",
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam saveParam) throws Throwable {
+                        try {
+                            Activity activity = (Activity) saveParam.thisObject;
+                            Context context = activity;
+                            
+                            // Get the selected zone ID from the activity instance
+                            Long selectedZoneId = (Long) XposedHelpers.getAdditionalInstanceField(activity, "dmrmod_selectedZoneId");
+                            if (selectedZoneId == null) {
+                                XposedBridge.log(TAG + ": No selectedZoneId found in activity instance, skipping zone save");
+                                return;
+                            }
+                            
+                            XposedBridge.log(TAG + ": saveChannelData called, selectedZoneId = " + selectedZoneId);
+                            
+                            Object channelData = XposedHelpers.getObjectField(saveParam.thisObject, "channelData");
+                            if (channelData != null) {
+                                int channelNumber = XposedHelpers.getIntField(channelData, "number");
+                                XposedBridge.log(TAG + ": Saving zone assignment for channel " + channelNumber);
+                                
+                                ZoneDatabase db = ZoneDatabase.getInstance(context);
+                                
+                                // Log current zone before change
+                                long currentZone = db.getZoneIdForChannel(channelNumber);
+                                XposedBridge.log(TAG + ": Channel " + channelNumber + " currently in zone " + currentZone);
+                                
+                                // Remove channel from old zone
+                                db.removeChannelFromAllZones(channelNumber);
+                                XposedBridge.log(TAG + ": Removed channel " + channelNumber + " from all zones");
+                                
+                                // Add to new zone if one was selected
+                                if (selectedZoneId > 0) {
+                                    boolean success = db.addChannelToZone(selectedZoneId, channelNumber);
+                                    XposedBridge.log(TAG + ": Channel " + channelNumber + " saved to zone ID " + selectedZoneId + ", success=" + success);
+                                    
+                                    // Verify it was saved
+                                    long verifyZone = db.getZoneIdForChannel(channelNumber);
+                                    XposedBridge.log(TAG + ": Verification: channel " + channelNumber + " is now in zone " + verifyZone);
+                                } else {
+                                    XposedBridge.log(TAG + ": Channel " + channelNumber + " removed from all zones (selectedZoneId=" + selectedZoneId + ")");
+                                }
+                                
+                                // Refresh the channel list to reflect the zone change
+                                if (channelFragmentInstance != null) {
+                                    activity.runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            try {
+                                                // Reload the current zone's channel list from database if a zone is active
+                                                if (currentZoneId > 0) {
+                                                    ZoneDatabase.Zone currentZone = db.getZone(currentZoneId);
+                                                    if (currentZone != null) {
+                                                        currentZoneChannels = currentZone.getChannelList();
+                                                        XposedBridge.log(TAG + ": Reloaded zone " + currentZoneId + " channels: " + currentZoneChannels.size());
+                                                    }
+                                                }
+                                                // Now refresh the channel list UI
+                                                XposedHelpers.callMethod(channelFragmentInstance, "initData");
+                                                XposedBridge.log(TAG + ": Channel list refreshed after zone change");
+                                            } catch (Throwable t) {
+                                                XposedBridge.log(TAG + ": Error refreshing channel list: " + t.getMessage());
+                                            }
+                                        }
+                                    });
+                                } else {
+                                    XposedBridge.log(TAG + ": channelFragmentInstance is null, cannot refresh");
+                                }
+                                
+                                // Don't close singleton database
+                            } else {
+                                XposedBridge.log(TAG + ": channelData is null in saveChannelData");
+                            }
+                        } catch (Throwable t) {
+                            XposedBridge.log(TAG + ": Error saving zone assignment: " + t.getMessage());
+                            XposedBridge.log(t);
+                        }
+                    }
+                }
+            );
+            
+            XposedBridge.log(TAG + ": Successfully hooked InterPhoneChannelActivity");
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error hooking channel edit activity: " + t.getMessage());
+            XposedBridge.log(t);
         }
     }
 }

@@ -4,8 +4,8 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v3.0.5 (March 9, 2026) - **Channel Zones**  
-**Previous Version**: v3.0.4 (March 9, 2026) - GPS Distance Calculation  
+**Current Version**: v3.0.8 (March 9, 2026) - **Zone Management**  
+**Previous Version**: v3.0.5 (March 9, 2026) - Channel Zones  
 **Stable Release**: v1.7.0 (February 2026) - Transcription & API key features  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
@@ -64,6 +64,58 @@ Rather than delay a working feature, I decided to:
 - [Releases](../../releases) - Download pre-built modules
 - [Technical Details](#technical-details)
 
+## 🎉 What's New in v3.0.8 (March 9, 2026)
+
+### 🎛️ Zone Management & Channel Edit Zone Selector
+
+**Create, edit, and assign zones directly from the app**
+
+#### **Channel Edit Zone Selector**
+- **Zone row** in channel edit screen (between channel type and frequency)
+- Tap to assign channel to a zone
+- Shows current zone assignment
+- "None" option removes channel from all zones
+- Changes save immediately and persist across restarts
+
+#### **Create New Zones**
+- Tap "Create New Zone..." at bottom of zone list
+- Enter custom zone name
+- Newly created zone is automatically selected
+- Empty zones (no channels) are still saved
+
+#### **Edit Zone Names**
+- **Pencil icon (✏)** next to each zone - tap to rename
+- **Long-press** any zone to edit name
+- Changes reflect immediately in all zone selectors
+- Zone channels preserved when renaming
+
+#### **Automatic List Refresh**
+- Channel list updates instantly after zone changes
+- No need to manually switch zones to see changes
+- Filtered view refreshes automatically
+- Smooth UX - changes apply immediately
+
+#### **Zone Navigation**
+- Zone buttons on both Intercom and Channel pages
+- Intercom zone button navigates to Channel page and opens zone selector
+- Channel arrow buttons filter by active zone
+- Button shows current zone: "Zone: Local Pack"
+- Synchronizes between both pages
+
+#### **Technical Improvements**
+- Fixed critical hook stacking bug (zone save working reliably)
+- Proper instance field management for zone state
+- Singleton database pattern (no close() calls)
+- Zone list reloads from database after changes
+- OpenGD77 CSV import/export fully supported
+
+**Usage**:
+1. **Edit channel zone**: Channel page → Edit channel → Tap Zone row → Select/Create zone
+2. **Create zone**: In zone selector → "Create New Zone..." → Enter name
+3. **Rename zone**: In zone selector → Tap pencil icon (✏) or long-press zone → Edit name
+4. **Navigate zones**: Channel page → Tap ZONE button → Select zone → Arrows filter by zone
+5. **Export/Import**: Zones saved to Zones.csv in OpenGD77 format
+
 ## 🎉 What's New in v3.0.5 (March 9, 2026)
 
 ### 📂 Channel Zones
@@ -74,6 +126,7 @@ Rather than delay a working feature, I decided to:
 - Import/export zones via OpenGD77 Zones.csv format
 - Zones stored in local database (persistent)
 - "All Channels" mode shows all channels (default)
+- Zone-based channel navigation (arrows filter by zone)
 
 **OpenGD77 Zones.csv Format**:
 ```csv
@@ -88,15 +141,15 @@ Travel,US-Wide,Regional 1,Regional 2
 - Import automatically during CSV backup import
 - Export automatically during CSV backup export
 - Zone selector shows channel count: "Local Pack (12)"
+- Arrow buttons only navigate within selected zone
 
 **Usage**:
 1. Import OpenGD77 backup with Zones.csv file
 2. Tap ZONE button on main screen
 3. Select zone from list
 4. Button shows current zone: "Zone: Local Pack"
-5. Select "All Channels" to disable filtering
-
-**Note**: Zone-based channel navigation (filtering channel up/down to stay within zone) will be added in a future update. Currently zones are for organization/display only.
+5. Arrow buttons navigate within zone only
+6. Select "All Channels" to disable filtering
 
 ## 🎉 What's New in v3.0.4 (March 9, 2026)
 

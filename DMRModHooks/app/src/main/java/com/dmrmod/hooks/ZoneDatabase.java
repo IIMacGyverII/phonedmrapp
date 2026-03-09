@@ -207,6 +207,66 @@ public class ZoneDatabase extends SQLiteOpenHelper {
     }
     
     /**
+     * Get zone ID for a given channel (returns first zone containing the channel)
+     * @param channelNumber Channel number to search for
+     * @return Zone ID or -1 if channel not in any zone
+     */
+    public long getZoneIdForChannel(int channelNumber) {
+        List<Zone> zones = getAllZones();
+        for (Zone zone : zones) {
+            if (zone.containsChannel(channelNumber)) {
+                return zone.id;
+            }
+        }
+        return -1;
+    }
+    
+    /**
+     * Get zone name by ID
+     * @param zoneId Zone ID
+     * @return Zone name or null if not found
+     */
+    public String getZoneName(long zoneId) {
+        Zone zone = getZone(zoneId);
+        return zone != null ? zone.name : null;
+    }
+    
+    /**
+     * Remove a channel from all zones
+     * @param channelNumber Channel number to remove
+     */
+    public void removeChannelFromAllZones(int channelNumber) {
+        List<Zone> zones = getAllZones();
+        for (Zone zone : zones) {
+            if (zone.containsChannel(channelNumber)) {
+                List<Integer> channels = zone.getChannelList();
+                channels.remove(Integer.valueOf(channelNumber));
+                saveZone(new Zone(zone.id, zone.name, channels));
+            }
+        }
+    }
+    
+    /**
+     * Add a channel to a zone
+     * @param zoneId Zone ID
+     * @param channelNumber Channel number to add
+     * @return true if successful
+     */
+    public boolean addChannelToZone(long zoneId, int channelNumber) {
+        Zone zone = getZone(zoneId);
+        if (zone == null) {
+            return false;
+        }
+        
+        List<Integer> channels = zone.getChannelList();
+        if (!channels.contains(channelNumber)) {
+            channels.add(channelNumber);
+            saveZone(new Zone(zone.id, zone.name, channels));
+        }
+        return true;
+    }
+    
+    /**
      * Data class for Zone
      * Contains zone ID, name, and list of channel numbers
      */
