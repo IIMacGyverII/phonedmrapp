@@ -52,6 +52,7 @@ import org.json.JSONObject;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XC_MethodReplacement;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
@@ -86,7 +87,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.0.2";
+    private static final String VERSION = "3.0.3";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -150,6 +151,7 @@ public class MainHook implements IXposedHookLoadPackage {
     private static android.widget.CompoundButton monitoringModeToggle = null;
     private static volatile boolean isMonitoringMode = false;
     private static int originalSquelchLevel = 2;  // Store original squelch for analog channels
+    private static int originalTxContact = 1;      // Store original txContact for DMR channels
 
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
@@ -172,6 +174,11 @@ public class MainHook implements IXposedHookLoadPackage {
         // Hook information activity to display module version
         hookInformationActivity(lpparam);
         
+        // Hook UpdateFirmwareActivity to auto-cleanup after patch reload
+        // DISABLED 2026-03-09: Firmware reload feature commented out for future work
+        // See DMR_FIRMWARE_RELOAD_NOTES.md for details on Test 10 success
+        // hookUpdateFirmwareActivity(lpparam);
+        
         // Hook for DMR caller identification
         hookModuleStatusHandler(lpparam);
         hookDigitalAudioHandler(lpparam);
@@ -190,6 +197,10 @@ public class MainHook implements IXposedHookLoadPackage {
         
         // Register debug packet broadcast receiver for command fuzzing
         registerDebugPacketReceiver(lpparam);
+        
+        // Test UART bootloader probe (for permanent flash capability)
+        // DISABLED: Bootloader not accessible from app context (EACCES)
+        // testBootloaderAccess();
         
         XposedBridge.log(TAG + ": All hooks installed successfully");
     }
@@ -456,6 +467,9 @@ public class MainHook implements IXposedHookLoadPackage {
                         
                         // Get the activity instance
                         final Activity activity = (Activity) param.thisObject;
+                        
+                        // NOTE: Auto-refresh feature disabled - causes black screen issues
+                        // User will need to manually restart app after firmware update
                         
                         // Create Audio and Transcription folder structure
                         try {
@@ -1251,14 +1265,22 @@ public class MainHook implements IXposedHookLoadPackage {
                                                 monitorToggle.setEnabled(true);
                                                 isMonitoringMode = false;
                                                 
+                                                // DISABLED 2026-03-09: Hide MON button for DMR channels (debugging audio issues)
+                                                // Only show for analog channels - DMR monitoring mode needs firmware fixes
                                                 if (channelType == 0) { // Digital/DMR channel
-                                                    // TODO: DMR MON mode not working yet - hide button until fixed
-                                                    // Re-enable when we return to DMR work and fix ALL mode reception
                                                     monitorToggle.setVisibility(View.GONE);
-                                                    int contactType = XposedHelpers.getIntField(currentChannel, "contactType");
-                                                    XposedBridge.log(TAG + ": MonitoringMode initialized OFF (DMR) - contactType=" + contactType + " (button hidden)");
                                                 } else { // Analog channel
                                                     monitorToggle.setVisibility(View.VISIBLE);
+                                                }
+                                                
+                                                if (channelType == 0) { // Digital/DMR channel
+                                                    int contactType = XposedHelpers.getIntField(currentChannel, "contactType");
+                                                    int txContact = XposedHelpers.getIntField(currentChannel, "txContact");
+                                                    if (txContact != 16777215) {
+                                                        originalTxContact = txContact;
+                                                    }
+                                                    XposedBridge.log(TAG + ": MonitoringMode initialized OFF (DMR) - contactType=" + contactType + ", stored txContact=" + originalTxContact);
+                                                } else { // Analog channel
                                                     int squelchLevel = XposedHelpers.getIntField(currentChannel, "sq");
                                                     originalSquelchLevel = (squelchLevel == 0) ? 2 : squelchLevel; // Store original, default to 2
                                                     XposedBridge.log(TAG + ": MonitoringMode initialized OFF (Analog) - squelch=" + squelchLevel + ", original=" + originalSquelchLevel);
@@ -1301,12 +1323,19 @@ public class MainHook implements IXposedHookLoadPackage {
                                             
                                             if (channelType == 0) {
                                                 // Digital/DMR channel - toggle contactType
-                                                // Store original txContact
-                                                int oldTxContact = XposedHelpers.getIntField(currentChannel, "txContact");
-                                                
-                                                // Update channel settings
                                                 int newContactType = newState ? 2 : 1; // 2=ALL, 1=GROUP
-                                                int newTxContact = newState ? 16777215 : oldTxContact;
+                                                int newTxContact;
+                                                
+                                                if (newState) {
+                                                    // MON ON - store original txContact and use 16777215 (ALL)
+                                                    originalTxContact = XposedHelpers.getIntField(currentChannel, "txContact");
+                                                    newTxContact = 16777215;
+                                                    XposedBridge.log(TAG + ": DMR MON ON - stored txContact=" + originalTxContact + ", setting to 16777215 (ALL)");
+                                                } else {
+                                                    // MON OFF - restore original txContact
+                                                    newTxContact = originalTxContact;
+                                                    XposedBridge.log(TAG + ": DMR MON OFF - restoring txContact=" + originalTxContact);
+                                                }
                                                 
                                                 XposedHelpers.setIntField(currentChannel, "contactType", newContactType);
                                                 XposedHelpers.setIntField(currentChannel, "txContact", newTxContact);
@@ -1477,14 +1506,24 @@ public class MainHook implements IXposedHookLoadPackage {
                                                 monitoringModeToggle.setAlpha(1.0f);
                                                 isMonitoringMode = false;
                                                 
+                                                // DISABLED 2026-03-09: Hide MON button for DMR channels (debugging audio issues)
+                                                // Only show for analog channels - DMR monitoring mode needs firmware fixes
                                                 if (channelType == 0) {
-                                                    // Digital channel - hide MON button (DMR mode not working yet)
-                                                    // TODO: Re-enable when DMR ALL mode is fixed
                                                     monitoringModeToggle.setVisibility(View.GONE);
-                                                    XposedBridge.log(TAG + ": MON button reset to OFF for digital channel (hidden)");
                                                 } else {
-                                                    // Analog channel - show MON button and store original squelch
                                                     monitoringModeToggle.setVisibility(View.VISIBLE);
+                                                }
+                                                
+                                                if (channelType == 0) {
+                                                    // Digital channel - MON button controls contactType (1=GROUP, 2=ALL)
+                                                    // Store original txContact for restoration
+                                                    int txContact = XposedHelpers.getIntField(channelData, "txContact");
+                                                    if (txContact != 16777215) {
+                                                        originalTxContact = txContact;
+                                                    }
+                                                    XposedBridge.log(TAG + ": MON button reset to OFF for digital channel - stored txContact=" + originalTxContact);
+                                                } else {
+                                                    // Analog channel - MON button controls squelch
                                                     int squelchLevel = XposedHelpers.getIntField(channelData, "sq");
                                                     originalSquelchLevel = (squelchLevel == 0) ? 2 : squelchLevel;
                                                     XposedBridge.log(TAG + ": MON button reset to OFF for analog channel - squelch=" + originalSquelchLevel);
@@ -1824,6 +1863,38 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Insert the new row after DMR Firmware row
                                 int dmrRowIndex = mainContainer.indexOfChild(dmrRow);
                                 mainContainer.addView(macGyverRow, dmrRowIndex + 1);
+                                
+                                // Inject reload button for firmware patch
+                                try {
+                                    // Create container for patch controls
+                                    android.widget.LinearLayout patchContainer = new android.widget.LinearLayout(context);
+                                    patchContainer.setOrientation(android.widget.LinearLayout.VERTICAL);
+                                    android.widget.RelativeLayout.LayoutParams patchParams = new android.widget.RelativeLayout.LayoutParams(
+                                        android.widget.RelativeLayout.LayoutParams.MATCH_PARENT,
+                                        android.widget.RelativeLayout.LayoutParams.WRAP_CONTENT
+                                    );
+                                    patchParams.setMargins(0, (int)(20 * context.getResources().getDisplayMetrics().density), 0, 0);
+                                    patchContainer.setLayoutParams(patchParams);
+                                    patchContainer.setPadding(
+                                        (int)(16 * context.getResources().getDisplayMetrics().density),
+                                        (int)(16 * context.getResources().getDisplayMetrics().density),
+                                        (int)(16 * context.getResources().getDisplayMetrics().density),
+                                        (int)(16 * context.getResources().getDisplayMetrics().density)
+                                    );
+                                    patchContainer.setBackgroundColor(0xFFF5F5F5); // Light gray background
+                                    
+                                    // Inject patch reload controls
+                                    // DISABLED 2026-03-09: Button commented out for future work
+                                    // Test 10 proved repeated QueryInit (cmd=39 x3) prevents radio hang
+                                    // PatchReloadHelper.injectReloadButton(patchContainer, context);
+                                    
+                                    // Add patch container to main layout
+                                    mainContainer.addView(patchContainer, dmrRowIndex + 2);
+                                    
+                                    XposedBridge.log(TAG + ": Patch reload button added to Information screen");
+                                } catch (Throwable t) {
+                                    XposedBridge.log(TAG + ": Failed to add reload button: " + t.getMessage());
+                                }
                             }
                             
                         } catch (Throwable t) {
@@ -1840,6 +1911,185 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedBridge.log(t);
         }
     }
+    
+    /**
+     * Hook UpdateFirmwareActivity to auto-cleanup after patch reload
+     * 
+     * DISABLED 2026-03-09: Feature commented out for future work
+     * 
+     * ACHIEVEMENT: Test 10 (March 6, 2026) successfully prevented radio hang!
+     * - Solution: Send QueryInit command (cmd=39) 3 times with 200ms delays after YModem
+     * - Result: Radio responds normally, no "no reply" errors
+     * - Firmware patch (PATCH14) loads correctly (txContact=11904)
+     * 
+     * REMAINING ISSUES:
+     * - Group calling still not working (may be unrelated to firmware reload)
+     * - UART buffer flush failed (SerialManager class not found)
+     * - sendSetChannelCmdToMdl crashes with NullPointerException
+     * 
+     * FUTURE WORK:
+     * - Fix class name for UART flush
+     * - Handle channel DB not ready on initial load
+     * - Add automatic DMRDEBUG.bin deletion
+     * - Test group calling with properly loaded PATCH14
+     * 
+     * See DMR_FIRMWARE_RELOAD_NOTES.md for complete history and implementation details.
+     * 
+     * YModemTXMsg steps:
+     * - Step 2: Update starting
+     * - Step 4: Initializing
+     * - Step 8: Progress update (0-100%)
+     * - Step 32: SUCCESS - firmware updated
+     * - Step 64: FAILURE - update failed
+     */
+    /* DISABLED - Uncomment to re-enable firmware reload feature
+    private void hookUpdateFirmwareActivity(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            Class<?> updateFirmwareActivityClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.activity.UpdateFirmwareActivity",
+                lpparam.classLoader
+            );
+            
+            Class<?> yModemTXMsgClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.ymodem.YModemTXMsg",
+                lpparam.classLoader
+            );
+            
+            XposedHelpers.findAndHookMethod(
+                updateFirmwareActivityClass,
+                "handleMsgFromSvc",
+                yModemTXMsgClass,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        try {
+                            Object yModemTXMsg = param.args[0];
+                            if (yModemTXMsg == null) return;
+                            
+                            int step = (int) XposedHelpers.callMethod(yModemTXMsg, "getStep");
+                            
+                            // Step 32 = SUCCESS, Step 64 = FAILURE
+                            if (step == 32 || step == 64) {
+                                String status = (step == 32) ? "SUCCESS" : "FAILURE";
+                                XposedBridge.log(TAG + ": Firmware update completed with status: " + status);
+                                
+                                if (step == 32) {
+                                    // Firmware uploaded successfully - TEST 10: Enhanced recovery with UART flush
+                                    final Activity activity = (Activity) param.thisObject;
+                                    final Context context = activity.getApplicationContext();
+                                    
+                                    activity.runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            new android.os.Handler().postDelayed(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    try {
+                                                        XposedBridge.log(TAG + ": === TEST 10: Enhanced DMR Recovery Starting ===");
+                                                        XposedBridge.log(TAG + ": Step 1: Attempting UART buffer flush...");
+                                                        
+                                                        // Step 1: Aggressively flush UART buffers
+                                                        try {
+                                                            Class<?> serialManagerClass = XposedHelpers.findClass(
+                                                                "com.pri.prizeinterphone.manager.SerialManager",
+                                                                context.getClassLoader()
+                                                            );
+                                                            Object serialManager = XposedHelpers.callStaticMethod(
+                                                                serialManagerClass, "getInstance"
+                                                            );
+                                                            
+                                                            // Try to get InputStream - may be mInputStream or similar field
+                                                            Object inputStream = null;
+                                                            try {
+                                                                inputStream = XposedHelpers.getObjectField(serialManager, "mInputStream");
+                                                            } catch (Throwable t1) {
+                                                                try {
+                                                                    inputStream = XposedHelpers.getObjectField(serialManager, "inputStream");
+                                                                } catch (Throwable t2) {
+                                                                    XposedBridge.log(TAG + ": Could not access InputStream field: " + t2.getMessage());
+                                                                }
+                                                            }
+                                                            
+                                                            if (inputStream != null) {
+                                                                int available = (int) XposedHelpers.callMethod(inputStream, "available");
+                                                                XposedBridge.log(TAG + ": Found " + available + " bytes in UART buffer");
+                                                                
+                                                                int flushedBytes = 0;
+                                                                while ((int) XposedHelpers.callMethod(inputStream, "available") > 0) {
+                                                                    XposedHelpers.callMethod(inputStream, "read");
+                                                                    flushedBytes++;
+                                                                    if (flushedBytes > 1000) break; // Safety limit
+                                                                }
+                                                                
+                                                                XposedBridge.log(TAG + ": ✓ Flushed " + flushedBytes + " bytes from UART buffer");
+                                                                Thread.sleep(100); // Small delay after flush
+                                                            } else {
+                                                                XposedBridge.log(TAG + ": ⚠ InputStream not accessible, skipping buffer flush");
+                                                            }
+                                                        } catch (Throwable t) {
+                                                            XposedBridge.log(TAG + ": ⚠ UART flush error (non-fatal): " + t.getMessage());
+                                                        }
+                                                        
+                                                        XposedBridge.log(TAG + ": Step 2: Sending repeated initialization queries...");
+                                                        
+                                                        // Step 2: Get DmrManager instance
+                                                        Class<?> dmrManagerClass = XposedHelpers.findClass(
+                                                            "com.pri.prizeinterphone.manager.DmrManager",
+                                                            context.getClassLoader()
+                                                        );
+                                                        Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+                                                        
+                                                        // Step 3: Send multiple QueryInit commands to wake up module
+                                                        for (int i = 1; i <= 3; i++) {
+                                                            XposedHelpers.callMethod(dmrManager, "sendQueryInitializedCmdToMdl");
+                                                            XposedBridge.log(TAG + ": ✓ Sent QueryInit attempt " + i + "/3");
+                                                            Thread.sleep(200); // 200ms between attempts
+                                                        }
+                                                        
+                                                        XposedBridge.log(TAG + ": Step 3: Waiting 500ms for module response...");
+                                                        Thread.sleep(500);
+                                                        
+                                                        XposedBridge.log(TAG + ": Step 4: Resending channel configuration...");
+                                                        
+                                                        // Step 4: Resend current channel configuration
+                                                        XposedHelpers.callMethod(dmrManager, "sendSetChannelCmdToMdl");
+                                                        XposedBridge.log(TAG + ": ✓ Channel configuration resent");
+                                                        
+                                                        XposedBridge.log(TAG + ": === TEST 10: Recovery sequence complete ===");
+                                                        XposedBridge.log(TAG + ": ✅ DMR module recovery attempted - firmware patch active");
+                                                        XposedBridge.log(TAG + ": 🔍 Monitor for 'no reply' errors to verify success");
+                                                        
+                                                        // Close UpdateFirmwareActivity
+                                                        activity.finish();
+                                                        XposedBridge.log(TAG + ": UpdateFirmwareActivity closed");
+                                                        
+                                                    } catch (Throwable t) {
+                                                        XposedBridge.log(TAG + ": ❌ TEST 10 recovery failed: " + t.getMessage());
+                                                        t.printStackTrace();
+                                                    }
+                                                }
+                                            }, 2000); // Wait 2 seconds after firmware upload completes
+                                        }
+                                    });
+                                }
+                            }
+                            
+                        } catch (Throwable t) {
+                            XposedBridge.log(TAG + ": Error in UpdateFirmwareActivity hook: " + t.getMessage());
+                        }
+                    }
+                }
+            );
+            
+            XposedBridge.log(TAG + ": Successfully hooked UpdateFirmwareActivity");
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error hooking UpdateFirmwareActivity: " + t.getMessage());
+            XposedBridge.log(t);
+        }
+    }
+    END DISABLED CODE - Firmware reload feature */
+    
     
     /**
      * Hook InterPhoneLocalFragment to add backup/restore button to main menu
@@ -2391,21 +2641,17 @@ public class MainHook implements IXposedHookLoadPackage {
                                         int contactType = (Integer) XposedHelpers.callMethod(currentChannel, "getContactType");
                                         byte originalCallType = body[0];
                                         
-                                        // Override based on contactType setting:
-                                        // contactType=2 (ALL): Force callType=2 to accept all calls
-                                        // contactType=1 (GROUP): Force callType=1 for group list checking
-                                        // contactType=0 (PERSON): Keep callType=0 for private only
+                                        // FIXED 2026-03-09: Only override when MON button is explicitly ON
+                                        // Previously overrode callType even in normal mode, breaking audio
+                                        // Now: Only force callType=2 when contactType=2 (MON ON/ALL mode)
+                                        // Otherwise: Let hardware's original callType pass through unmodified
                                         if (contactType == 2) {
                                             // MON button ON - accept all calls
                                             body[0] = 2;
-                                            XposedBridge.log(TAG + ": CALL TYPE OVERRIDE - contactType=2 (ALL) | Changed callType " + originalCallType + " to 2 (ALL)");
-                                        } else if (contactType == 1) {
-                                            // GROUP mode - let Android check RX group list
-                                            body[0] = 1;
-                                            XposedBridge.log(TAG + ": CALL TYPE OVERRIDE - contactType=1 (GROUP) | Changed callType " + originalCallType + " to 1 (GROUP)");
+                                            XposedBridge.log(TAG + ": CALL TYPE OVERRIDE - MON ON (contactType=2) | Changed callType " + originalCallType + " to 2 (ALL)");
                                         } else {
-                                            // PERSON mode - keep private calls only
-                                            XposedBridge.log(TAG + ": CALL TYPE OVERRIDE - contactType=0 (PERSON) | Keeping callType=" + originalCallType + " (PRIVATE)");
+                                            // Normal mode - don't interfere with hardware's callType
+                                            XposedBridge.log(TAG + ": CALL TYPE PASSTHROUGH - contactType=" + contactType + " | Keeping hardware callType=" + originalCallType);
                                         }
                                     }
                                 } catch (Exception e) {
@@ -3839,6 +4085,10 @@ public class MainHook implements IXposedHookLoadPackage {
                 XposedBridge.log(TAG + ": Failed to hook BaseMessage.send(): " + t.getMessage());
             }
             
+            // Note: restartApp() calls System.exit() which kills the app
+            // We can't reliably prevent it without causing crashes
+            // The firmware is already loaded in RAM, so this is acceptable
+            
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": Failed to hook DmrManager: " + t.getMessage());
         }
@@ -4651,6 +4901,66 @@ public class MainHook implements IXposedHookLoadPackage {
             case 63: return "TEST_BIT_ERROR_RATE";
             default: return "UNKNOWN";
         }
+    }
+    
+    /**
+     * Test for STM32 bootloader on radio UART
+     * 
+     * This is called once during app initialization to determine if permanent
+     * firmware flashing is possible via UART bootloader commands.
+     * 
+     * If successful (ACK + Write/Erase support), permanent patch is possible.
+     * If not, we fall back to the one-tap reload button.
+     */
+    private void testBootloaderAccess() {
+        // Run in background to avoid blocking app initialization
+        new Thread(() -> {
+            try {
+                // Wait 5 seconds for app to stabilize
+                Thread.sleep(5000);
+                
+                XposedBridge.log(TAG + ": ========================================");
+                XposedBridge.log(TAG + ": Starting UART bootloader probe...");
+                XposedBridge.log(TAG + ": ========================================");
+                
+                UARTBootloaderProbe.ProbeResult result = UARTBootloaderProbe.probeBootloader();
+                
+                XposedBridge.log(TAG + ": ========================================");
+                XposedBridge.log(TAG + ": PROBE RESULT: " + result.toString());
+                XposedBridge.log(TAG + ": ========================================");
+                
+                if (result.canFlashPermanently()) {
+                    XposedBridge.log(TAG + ": 🎉🎉🎉 BOOTLOADER ACCESSIBLE! 🎉🎉🎉");
+                    XposedBridge.log(TAG + ": ⭐ Permanent flash via UART IS POSSIBLE!");
+                    XposedBridge.log(TAG + ": 📝 Write Memory (0x31) available");
+                    XposedBridge.log(TAG + ": 📝 Erase (0x43) available");
+                    XposedBridge.log(TAG + ": ⚠️  Next step: Implement flash write operations");
+                    XposedBridge.log(TAG + ": ⚠️  See INTEGRATION_GUIDE.md Phase 1B");
+                    
+                    // Optional: Try reading patch location
+                    try {
+                        Thread.sleep(1000);
+                        XposedBridge.log(TAG + ": Testing Read Memory at patch location...");
+                        UARTBootloaderProbe.PatchStatus status = UARTBootloaderProbe.readPatchLocation();
+                        XposedBridge.log(TAG + ": Patch status: " + status.toString());
+                    } catch (Exception e) {
+                        XposedBridge.log(TAG + ": Read test failed: " + e.getMessage());
+                    }
+                    
+                } else {
+                    XposedBridge.log(TAG + ": ❌ Bootloader not accessible");
+                    XposedBridge.log(TAG + ": → Cannot flash permanently via UART");
+                    XposedBridge.log(TAG + ": → Fallback: Implement one-tap reload button");
+                    XposedBridge.log(TAG + ": → See INTEGRATION_GUIDE.md Phase 2");
+                }
+                
+                XposedBridge.log(TAG + ": ========================================");
+                
+            } catch (Exception e) {
+                XposedBridge.log(TAG + ": Bootloader probe exception: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }).start();
     }
     
     /**

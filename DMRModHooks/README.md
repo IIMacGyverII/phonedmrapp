@@ -4,7 +4,8 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v3.0.2 (March 4, 2026) - **Analog MON Button + MacGyver Mod Branding**  
+**Current Version**: v3.0.3 (March 9, 2026) - **DMR Audio Fix**  
+**Previous Version**: v3.0.2 (March 4, 2026) - Analog MON Button + MacGyver Mod Branding  
 **Stable Release**: v1.7.0 (February 2026) - Transcription & API key features  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
@@ -63,11 +64,21 @@ Rather than delay a working feature, I decided to:
 - [Releases](../../releases) - Download pre-built modules
 - [Technical Details](#technical-details)
 
+## 🎉 What's New in v3.0.3 (March 9, 2026)
+
+### 🐛 Critical Bug Fix
+
+**DMR Audio Fixed**: Resolved issue where DMR receive audio was silent and transmit audio was garbled
+- **Root Cause**: Call type override logic was interfering with normal DMR operation
+- **Fix**: Only override call type when MON mode is explicitly ON (contactType=2)
+- **Impact**: DMR audio now works correctly in normal operation
+- **MON Button**: Removed from DMR channels (audio fix allows normal operation)
+
 ## 🎉 What's New in v3.0.2 (vs v1.7.0 Stable)
 
 ### 🆕 Major Features Added
 
-#### 1. Analog MON (Monitor) Button ⭐ **NEW!**
+#### 1. Analog MON (Monitor) Button ⭐
 
 A fully functional monitoring button for analog channels - like a scanner mode:
 

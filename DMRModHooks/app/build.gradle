@@ -10,8 +10,8 @@ android {
         applicationId "com.dmrmod.hooks"
         minSdk 26
         targetSdk 34
-        versionCode 301
-        versionName "3.0.1"
+        versionCode 303
+        versionName "3.0.3"
     }
 
     buildTypes {
