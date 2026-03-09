@@ -219,17 +219,24 @@ public class DirectDatabaseImporter {
                     File contactsFile = new File(backupFolder, "Contacts.csv");
                     boolean contactsOk = importContacts(context, contactsFile);
                     
+                    // Import zones (optional - not all backups have zones)
+                    File zonesFile = new File(backupFolder, "Zones.csv");
+                    boolean zonesOk = importZones(context, zonesFile);
+                    
                     // Show result
                     final String message;
                     final boolean shouldRefresh;
-                    if (channelsOk && contactsOk) {
-                        message = "✓ Import successful!\nChannels and contacts imported.";
+                    if (channelsOk && contactsOk && zonesOk) {
+                        message = "✓ Import successful!\nChannels, contacts, and zones imported.";
+                        shouldRefresh = true;
+                    } else if (channelsOk && contactsOk) {
+                        message = "✓ Import successful!\nChannels and contacts imported (no zones).";
                         shouldRefresh = true;
                     } else if (channelsOk) {
-                        message = "⚠ Import partially successful\nChannels: OK, Contacts: Failed";
+                        message = "⚠ Import partially successful\nChannels: OK, Contacts: Failed, Zones: " + (zonesOk ? "OK" : "Failed");
                         shouldRefresh = true;
                     } else if (contactsOk) {
-                        message = "⚠ Import partially successful\nChannels: Failed, Contacts: OK";
+                        message = "⚠ Import partially successful\nChannels: Failed, Contacts: OK, Zones: " + (zonesOk ? "OK" : "Failed");
                         shouldRefresh = false;
                     } else {
                         message = "❌ Import failed - check logs";
@@ -721,6 +728,163 @@ public class DirectDatabaseImporter {
             e.printStackTrace();
             // Don't show error to user - import still succeeded
         }
+    }
+    
+    /**
+     * Import zones from CSV
+     * 
+     * Zones.csv format (OpenGD77):
+     * Zone Name,Channel1,Channel2,...,Channel80
+     * Example: Local Pack,W9GLO Rptr,W9ZLQ Rptr,Simplex 1,,,
+     * 
+     * Each zone contains up to 80 channel names (not numbers).
+     * We need to map channel names to channel numbers using the database.
+     * 
+     * @param context Application context
+     * @param csvFile Zones.csv file
+     * @return true if successful or no zones file exists, false if error
+     */
+    private static boolean importZones(Context context, File csvFile) {
+        BufferedReader reader = null;
+        
+        try {
+            // Zones are optional - return success if file doesn't exist
+            if (!csvFile.exists()) {
+                Log.i(TAG, "No Zones.csv file found - skipping zone import");
+                return true;
+            }
+            
+            Log.i(TAG, "Importing zones from: " + csvFile.getAbsolutePath());
+            
+            // Initialize ZoneDatabase
+            ZoneDatabase zoneDb = ZoneDatabase.getInstance(context);
+            zoneDb.clearAllZones();  // Clear existing zones before import
+            Log.i(TAG, "ZoneDatabase initialized for import");
+            
+            // Build channel name => channel number map for lookup
+            java.util.Map<String, Integer> channelNameMap = buildChannelNameMap(context);
+            if (channelNameMap.isEmpty()) {
+                Log.w(TAG, "No channels in database - cannot import zones");
+                return false;
+            }
+            
+            // Read CSV file
+            reader = new BufferedReader(new FileReader(csvFile));
+            String headerLine = reader.readLine(); // Skip header
+            
+            int importCount = 0;
+            int skippedCount = 0;
+            
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.trim().isEmpty()) continue;
+                
+                String[] fields = parseCSVLine(line);
+                if (fields.length < 1) {
+                    Log.w(TAG, "Skipping invalid zone line (no zone name): " + line);
+                    skippedCount++;
+                    continue;
+                }
+                
+                // First field is zone name
+                String zoneName = fields[0].trim();
+                if (zoneName.isEmpty()) {
+                    Log.w(TAG, "Skipping zone with empty name");
+                    skippedCount++;
+                    continue;
+                }
+                
+                // Remaining fields (up to 80) are channel names
+                List<Integer> channelNumbers = new ArrayList<>();
+                for (int i = 1; i < fields.length; i++) {
+                    String channelName = fields[i].trim();
+                    if (channelName.isEmpty()) {
+                        continue; // Empty fields are normal (not all zones have 80 channels)
+                    }
+                    
+                    // Look up channel number by name
+                    Integer channelNum = channelNameMap.get(channelName);
+                    if (channelNum != null) {
+                        channelNumbers.add(channelNum);
+                        Log.d(TAG, "Zone '" + zoneName + "': Mapped channel '" + channelName + "' to #" + channelNum);
+                    } else {
+                        Log.w(TAG, "Zone '" + zoneName + "': Channel '" + channelName + "' not found in database");
+                    }
+                }
+                
+                // Save zone if it has at least one channel
+                if (channelNumbers.size() > 0) {
+                    ZoneDatabase.Zone zone = new ZoneDatabase.Zone(zoneName, channelNumbers);
+                    long zoneId = zoneDb.saveZone(zone);
+                    importCount++;
+                    Log.i(TAG, "Imported zone #" + zoneId + " '" + zoneName + "' with " + channelNumbers.size() + " channels");
+                } else {
+                    Log.w(TAG, "Skipping zone '" + zoneName + "' - no valid channels");
+                    skippedCount++;
+                }
+            }
+            
+            Log.i(TAG, "Zone import complete: " + importCount + " zones imported, " + skippedCount + " skipped");
+            return true;
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error importing zones: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        } finally {
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (Exception e) {
+                    // Ignore
+                }
+            }
+        }
+    }
+    
+    /**
+     * Build a map of channel name => channel number for zone import
+     * 
+     * @param context Application context
+     * @return Map of channel names to channel numbers, or empty map if database doesn't exist
+     */
+    private static java.util.Map<String, Integer> buildChannelNameMap(Context context) {
+        java.util.Map<String, Integer> channelMap = new java.util.HashMap<>();
+        SQLiteDatabase db = null;
+        Cursor cursor = null;
+        
+        try {
+            File dbFile = context.getDatabasePath("database_channel_area_default_uhf.db");
+            if (!dbFile.exists()) {
+                Log.w(TAG, "Channel database not found");
+                return channelMap;
+            }
+            
+            db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, 
+                SQLiteDatabase.OPEN_READONLY);
+            
+            cursor = db.query("database_channel_area_default_uhf", 
+                new String[]{"channel_number", "channel_name"}, 
+                null, null, null, null, null);
+            
+            if (cursor != null && cursor.moveToFirst()) {
+                do {
+                    int number = cursor.getInt(0);
+                    String name = cursor.getString(1);
+                    channelMap.put(name, number);
+                } while (cursor.moveToNext());
+            }
+            
+            Log.i(TAG, "Loaded " + channelMap.size() + " channels for zone import lookup");
+            
+        } catch (Exception e) {
+            Log.w(TAG, "Error building channel name map: " + e.getMessage());
+        } finally {
+            if (cursor != null) cursor.close();
+            if (db != null) db.close();
+        }
+        
+        return channelMap;
     }
     
     /**

@@ -12,6 +12,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.zip.ZipEntry;
@@ -153,7 +154,7 @@ public class DirectDatabaseExporter {
             boolean channelsOk = exportChannelsDirect(appContext, channelsFile);
             boolean contactsOk = exportContactsDirect(appContext, contactsFile);
             boolean tgListsOk = exportTGListsCSV(tgListsFile);
-            boolean zonesOk = exportZonesCSV(zonesFile);
+            boolean zonesOk = exportZonesCSV(appContext, zonesFile);
             boolean dtmfOk = exportDTMFCSV(dtmfFile);
             
             if (channelsOk && contactsOk && tgListsOk && zonesOk && dtmfOk) {
@@ -568,12 +569,20 @@ public class DirectDatabaseExporter {
     }
     
     /**
-     * Export Zones.csv - Channel Zones (empty for now)
-     * OpenGD77 requires this file to be present even if empty
+     * Export Zones.csv - Channel Zones
+     * OpenGD77 format: Zone Name,Channel1,Channel2,...,Channel80
+     * 
+     * Reads zones from ZoneDatabase and maps channel numbers back to channel names.
+     * If no zones exist, exports empty file (required by OpenGD77).
      */
-    private static boolean exportZonesCSV(File outputFile) {
+    private static boolean exportZonesCSV(Context context, File outputFile) {
+        BufferedWriter writer = null;
+        
         try {
-            BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
+            // Build channel number => channel name map for export
+            java.util.Map<Integer, String> channelMap = buildChannelNumberMap(context);
+            
+            writer = new BufferedWriter(new FileWriter(outputFile));
             
             // Header: Zone Name + 80 Channel columns
             StringBuilder header = new StringBuilder("Zone Name");
@@ -583,14 +592,107 @@ public class DirectDatabaseExporter {
             writer.write(header.toString());
             writer.write("\r\n");  // Windows CRLF
             
+            // Get zones from ZoneDatabase
+            ZoneDatabase zoneDb = ZoneDatabase.getInstance(context);
+            List<ZoneDatabase.Zone> zones = zoneDb.getAllZones();
+            
+            Log.i(TAG, "Exporting " + zones.size() + " zones to CSV");
+            
+            // Export each zone
+            for (ZoneDatabase.Zone zone : zones) {
+                StringBuilder line = new StringBuilder();
+                line.append(zone.name);
+                
+                // Get channel list for this zone
+                List<Integer> channelNumbers = zone.getChannelList();
+                
+                // Write up to 80 channels (OpenGD77 limit)
+                for (int i = 0; i < 80; i++) {
+                    line.append(",");
+                    if (i < channelNumbers.size()) {
+                        int channelNum = channelNumbers.get(i);
+                        String channelName = channelMap.get(channelNum);
+                        if (channelName != null) {
+                            line.append(channelName);
+                        } else {
+                            Log.w(TAG, "Zone '" + zone.name + "': Channel #" + channelNum + " not found in database");
+                        }
+                    }
+                    // Empty fields for unused channel slots
+                }
+                
+                writer.write(line.toString());
+                writer.write("\r\n");  // Windows CRLF
+                Log.i(TAG, "Exported zone: " + zone.name + " (" + channelNumbers.size() + " channels)");
+            }
+            
             writer.close();
-            Log.i(TAG, "✓ Zones exported: " + outputFile.getAbsolutePath());
+            
+            if (zones.size() > 0) {
+                Log.i(TAG, "✓ Zones exported: " + zones.size() + " zones written to " + outputFile.getAbsolutePath());
+            } else {
+                Log.i(TAG, "✓ Zones exported: Empty file (no zones defined) - " + outputFile.getAbsolutePath());
+            }
             return true;
+            
         } catch (Exception e) {
             Log.e(TAG, "Error exporting Zones: " + e.getMessage());
             e.printStackTrace();
             return false;
+        } finally {
+            if (writer != null) {
+                try {
+                    writer.close();
+                } catch (Exception e) {
+                    // Ignore
+                }
+            }
         }
+    }
+    
+    /**
+     * Build a map of channel number => channel name for zone export
+     * 
+     * @param context Application context
+     * @return Map of channel numbers to names, or empty map if database doesn't exist
+     */
+    private static java.util.Map<Integer, String> buildChannelNumberMap(Context context) {
+        java.util.Map<Integer, String> channelMap = new java.util.HashMap<>();
+        SQLiteDatabase db = null;
+        Cursor cursor = null;
+        
+        try {
+            File dbFile = context.getDatabasePath("database_channel_area_default_uhf.db");
+            if (!dbFile.exists()) {
+                Log.w(TAG, "Channel database not found");
+                return channelMap;
+            }
+            
+            db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, 
+                SQLiteDatabase.OPEN_READONLY);
+            
+            cursor = db.query("database_channel_area_default_uhf", 
+                new String[]{"channel_number", "channel_name"}, 
+                null, null, null, null, null);
+            
+            if (cursor != null && cursor.moveToFirst()) {
+                do {
+                    int number = cursor.getInt(0);
+                    String name = cursor.getString(1);
+                    channelMap.put(number, name);
+                } while (cursor.moveToNext());
+            }
+            
+            Log.i(TAG, "Loaded " + channelMap.size() + " channels for zone export");
+            
+        } catch (Exception e) {
+            Log.w(TAG, "Error building channel number map: " + e.getMessage());
+        } finally {
+            if (cursor != null) cursor.close();
+            if (db != null) db.close();
+        }
+        
+        return channelMap;
     }
     
     /**

@@ -4,8 +4,8 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v3.0.4 (March 9, 2026) - **GPS Distance Calculation**  
-**Previous Version**: v3.0.3 (March 9, 2026) - DMR Audio Fix  
+**Current Version**: v3.0.5 (March 9, 2026) - **Channel Zones**  
+**Previous Version**: v3.0.4 (March 9, 2026) - GPS Distance Calculation  
 **Stable Release**: v1.7.0 (February 2026) - Transcription & API key features  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
@@ -63,6 +63,40 @@ Rather than delay a working feature, I decided to:
 - [Development History](#development-history)
 - [Releases](../../releases) - Download pre-built modules
 - [Technical Details](#technical-details)
+
+## 🎉 What's New in v3.0.5 (March 9, 2026)
+
+### 📂 Channel Zones
+
+**Organize channels into zones (like folders)**
+- **ZONE button** on main screen (below MON button)
+- Tap to select zone from list
+- Import/export zones via OpenGD77 Zones.csv format
+- Zones stored in local database (persistent)
+- "All Channels" mode shows all channels (default)
+
+**OpenGD77 Zones.csv Format**:
+```csv
+Zone Name,Channel1,Channel2,Channel3,...,Channel80
+Local Pack,W9GLO Rptr,W9ZLQ Rptr,Simplex 1
+Travel,US-Wide,Regional 1,Regional 2
+```
+
+**Features**:
+- Each zone contains up to 80 channels (OpenGD77 limit)
+- Channels identified by name (auto-mapped to channel numbers)
+- Import automatically during CSV backup import
+- Export automatically during CSV backup export
+- Zone selector shows channel count: "Local Pack (12)"
+
+**Usage**:
+1. Import OpenGD77 backup with Zones.csv file
+2. Tap ZONE button on main screen
+3. Select zone from list
+4. Button shows current zone: "Zone: Local Pack"
+5. Select "All Channels" to disable filtering
+
+**Note**: Zone-based channel navigation (filtering channel up/down to stay within zone) will be added in a future update. Currently zones are for organization/display only.
 
 ## 🎉 What's New in v3.0.4 (March 9, 2026)
 

@@ -87,7 +87,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.0.4";
+    private static final String VERSION = "3.0.5";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -153,6 +153,17 @@ public class MainHook implements IXposedHookLoadPackage {
     private static int originalSquelchLevel = 2;  // Store original squelch for analog channels
     private static int originalTxContact = 1;      // Store original txContact for DMR channels
 
+    // Zone selection and filtering
+    private static android.widget.Button zoneButton = null;
+    private static android.widget.Button channelPageZoneButton = null;  // Zone button on channels page
+    private static volatile long currentZoneId = -1;  // -1 = All Channels (no filter)
+    private static volatile String currentZoneName = "All";
+    private static volatile java.util.List<Integer> currentZoneChannels = null;  // null = no filter
+    private static ZoneDatabase zoneDatabase = null;
+    private static java.util.Map<Long, Integer> lastUsedChannelPerZone = new java.util.concurrent.ConcurrentHashMap<>();  // Track last channel per zone
+    private static Object talkBackFragmentInstance = null;  // Store fragment reference for channel switching
+    private static volatile boolean isAutoSwitchingZone = false;  // Flag to bypass zone navigation during automatic zone switch
+
     // Current GPS location for distance calculations
     private static volatile android.location.Location currentGpsLocation = null;
     private static android.location.LocationManager locationManager = null;
@@ -195,6 +206,15 @@ public class MainHook implements IXposedHookLoadPackage {
         
         // Hook for DMR channel configuration (debug RX group lists)
         hookDmrManager(lpparam);
+        
+        // Hook for zone-based channel navigation filtering
+        hookChannelNavigation(lpparam);
+        
+        // Hook for zone filtering in channel list page
+        hookChannelListFilter(lpparam);
+        
+        // Hook for adding zone button to channel list page
+        hookChannelListUI(lpparam);
         
         // Hook UART serial communication for protocol analysis
         hookSerialCommunication(lpparam);
@@ -579,6 +599,9 @@ public class MainHook implements IXposedHookLoadPackage {
                         XposedBridge.log(TAG + ": InterPhoneTalkBackFragment.initView() called");
                         
                         try {
+                            // Store fragment reference for zone channel switching
+                            talkBackFragmentInstance = param.thisObject;
+                            
                             // Get mLocalView
                             Object mLocalViewObj = XposedHelpers.getObjectField(param.thisObject, "mLocalView");
                             if (!(mLocalViewObj instanceof ViewGroup)) {
@@ -921,18 +944,30 @@ public class MainHook implements IXposedHookLoadPackage {
                                 transcriptionScrollView = transcriptionScroll;
                                 transcriptionBox = transcriptionBoxLayout;
                                 
-                                // Create RSSI display box (above the main border box)
+                                // Create horizontal container for RSSI box and Zone button
+                                LinearLayout rssiZoneContainer = new LinearLayout(context);
+                                rssiZoneContainer.setOrientation(LinearLayout.HORIZONTAL);
+                                rssiZoneContainer.setTag("DMR_RSSI_ZONE_CONTAINER");
+                                LinearLayout.LayoutParams rssiZoneContainerParams = new LinearLayout.LayoutParams(
+                                    LinearLayout.LayoutParams.MATCH_PARENT,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                );
+                                rssiZoneContainerParams.leftMargin = margin10dp;
+                                rssiZoneContainerParams.rightMargin = margin10dp;
+                                rssiZoneContainerParams.topMargin = (int) (4 * context.getResources().getDisplayMetrics().density);
+                                rssiZoneContainerParams.bottomMargin = 0;
+                                rssiZoneContainer.setLayoutParams(rssiZoneContainerParams);
+                                
+                                // Create RSSI display box (left half)
                                 LinearLayout rssiBox = new LinearLayout(context);
                                 rssiBox.setOrientation(LinearLayout.HORIZONTAL);
                                 rssiBox.setTag("DMR_RSSI_BOX");
                                 LinearLayout.LayoutParams rssiBoxParams = new LinearLayout.LayoutParams(
-                                    LinearLayout.LayoutParams.MATCH_PARENT,
-                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                    0,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                                    0.5f
                                 );
-                                rssiBoxParams.leftMargin = margin10dp;
-                                rssiBoxParams.rightMargin = margin10dp;
-                                rssiBoxParams.topMargin = (int) (4 * context.getResources().getDisplayMetrics().density);
-                                rssiBoxParams.bottomMargin = 0;
+                                rssiBoxParams.rightMargin = (int) (4 * context.getResources().getDisplayMetrics().density);
                                 
                                 // Create border for RSSI box
                                 android.graphics.drawable.GradientDrawable rssiBoxDrawable = new android.graphics.drawable.GradientDrawable();
@@ -965,9 +1000,117 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Store reference for updates
                                 rssiDisplayTextView = rssiText;
                                 
-                                // Insert RSSI box at index 2
-                                rootLayout.addView(rssiBox, 2);
-                                XposedBridge.log(TAG + ": ✓ Added RSSI box at index 2");
+                                // Add RSSI box to container
+                                rssiZoneContainer.addView(rssiBox);
+                                
+                                // Create ZONE selector button (right half)
+                                android.widget.Button zoneButtonWidget = new android.widget.Button(context);
+                                zoneButtonWidget.setTag("DMR_ZONE_SELECTOR");
+                                zoneButtonWidget.setText("Zone: All");
+                                
+                                LinearLayout.LayoutParams zoneButtonParams = new LinearLayout.LayoutParams(
+                                    0,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                                    0.5f
+                                );
+                                zoneButtonParams.leftMargin = (int) (4 * context.getResources().getDisplayMetrics().density);
+                                zoneButtonWidget.setLayoutParams(zoneButtonParams);
+                                zoneButtonWidget.setTextSize(12);
+                                zoneButtonWidget.setTypeface(null, android.graphics.Typeface.BOLD);
+                                zoneButtonWidget.setTextColor(0xFFFFFFFF);  // White text
+                                
+                                // Create drawable for zone selector button
+                                android.graphics.drawable.GradientDrawable zoneSelectorDrawable = new android.graphics.drawable.GradientDrawable();
+                                zoneSelectorDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                                zoneSelectorDrawable.setColor(0xFF4169E1);  // Royal blue
+                                zoneSelectorDrawable.setCornerRadius(8 * context.getResources().getDisplayMetrics().density);
+                                zoneSelectorDrawable.setStroke(
+                                    (int) (2 * context.getResources().getDisplayMetrics().density),
+                                    0xFFFFFFFF  // White border
+                                );
+                                zoneButtonWidget.setBackground(zoneSelectorDrawable);
+                                
+                                // Store reference
+                                zoneButton = zoneButtonWidget;
+                                
+                                // Initialize ZoneDatabase
+                                zoneDatabase = ZoneDatabase.getInstance(context);
+                                
+                                // Set click listener
+                                zoneButtonWidget.setOnClickListener(new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        XposedBridge.log(TAG + ": Intercom zone button clicked!");
+                                        try {
+                                            // Get the activity
+                                            android.app.Activity activity = (android.app.Activity) context;
+                                            XposedBridge.log(TAG + ": Got activity: " + activity.getClass().getName());
+                                            
+                                            // Find and click the channel tab button at the bottom
+                                            try {
+                                                // Find the root view of the activity
+                                                View activityRootView = activity.findViewById(android.R.id.content);
+                                                XposedBridge.log(TAG + ": Got root view: " + (activityRootView != null));
+                                                
+                                                // Try to find the channel button by ID
+                                                // Based on the layout: android:id="@id/channel"
+                                                int channelButtonId = activity.getResources().getIdentifier("channel", "id", activity.getPackageName());
+                                                XposedBridge.log(TAG + ": Channel button ID: " + channelButtonId);
+                                                
+                                                if (channelButtonId != 0) {
+                                                    View channelButton = activity.findViewById(channelButtonId);
+                                                    XposedBridge.log(TAG + ": Channel button found: " + (channelButton != null));
+                                                    
+                                                    if (channelButton != null) {
+                                                        // Click the channel button to switch tabs
+                                                        channelButton.performClick();
+                                                        XposedBridge.log(TAG + ": Clicked channel button");
+                                                        
+                                                        // Post a delayed action to click the channel page zone button
+                                                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+                                                            @Override
+                                                            public void run() {
+                                                                try {
+                                                                    if (channelPageZoneButton != null) {
+                                                                        XposedBridge.log(TAG + ": Clicking channel page zone button");
+                                                                        channelPageZoneButton.performClick();
+                                                                    } else {
+                                                                        XposedBridge.log(TAG + ": Channel page zone button is null");
+                                                                        Toast.makeText(context, "Channel page not ready", Toast.LENGTH_SHORT).show();
+                                                                    }
+                                                                } catch (Throwable t) {
+                                                                    XposedBridge.log(TAG + ": Error clicking channel page zone button: " + t.getMessage());
+                                                                }
+                                                            }
+                                                        }, 300); // 300ms delay to let page switch complete
+                                                        
+                                                        return; // Success, exit early
+                                                    }
+                                                }
+                                                
+                                                XposedBridge.log(TAG + ": Could not find channel button, falling back to dialog");
+                                                // Fallback: just show the dialog on intercom page
+                                                showZoneSelectionDialog(context);
+                                            } catch (Throwable t) {
+                                                XposedBridge.log(TAG + ": Could not switch tabs: " + t.getMessage());
+                                                XposedBridge.log(t);
+                                                // Fallback: just show the dialog on intercom page
+                                                showZoneSelectionDialog(context);
+                                            }
+                                        } catch (Throwable t) {
+                                            XposedBridge.log(TAG + ": Zone selector error: " + t.getMessage());
+                                            XposedBridge.log(t);
+                                            Toast.makeText(context, "Error showing zone selector", Toast.LENGTH_SHORT).show();
+                                        }
+                                    }
+                                });
+                                
+                                // Add zone button to container
+                                rssiZoneContainer.addView(zoneButtonWidget);
+                                
+                                // Insert container at index 2
+                                rootLayout.addView(rssiZoneContainer, 2);
+                                XposedBridge.log(TAG + ": ✓ Added RSSI/Zone container at index 2");
                                 
                                 // Insert borderbox at index 3 (pushed down by RSSI box)
                                 rootLayout.addView(borderBox, 3);
@@ -1423,6 +1566,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                 buttonContainer.addView(monitorToggle);
                                 XposedBridge.log(TAG + ": ✓ Added monitoring mode toggle below REC button");
                                 
+                                // Zone button is now created in RSSI/Zone container above borderbox
+                                
                                 XposedBridge.log(TAG + ": Final child count: " + rootLayout.getChildCount());
                             }
                             
@@ -1485,6 +1630,16 @@ public class MainHook implements IXposedHookLoadPackage {
                                     currentRxToneType = rxType;
                                     currentRxToneSubCode = rxSubCode;
                                     currentChannelName = (channelName != null && !channelName.isEmpty()) ? channelName : ("Channel_" + channelNumber);
+                                    
+                                    // TODO: Channel tracking disabled - causes ListView adapter conflicts
+                                    /*
+                                    // Track last used channel for current zone
+                                    if (currentZoneId != -1) {
+                                        lastUsedChannelPerZone.put(currentZoneId, channelNumber);
+                                        XposedBridge.log(TAG + ": Stored channel " + channelNumber + 
+                                            " as last used for zone " + currentZoneName);
+                                    }
+                                    */
                                     
                                     // Clear DMR caller display when switching to analog channel
                                     if (channelType == 1) {  // Analog channel
@@ -5254,4 +5409,744 @@ public class MainHook implements IXposedHookLoadPackage {
         }
         return data;
     }
+    
+    /**
+     * Show zone selection dialog
+     */
+    private static void showZoneSelectionDialog(final Context context) {
+        try {
+            if (zoneDatabase == null) {
+                zoneDatabase = ZoneDatabase.getInstance(context);
+            }
+            
+            // Get all zones
+            final java.util.List<ZoneDatabase.Zone> zones = zoneDatabase.getAllZones();
+            
+            // Build zone list for dialog (add "All Channels" option at top)
+            final java.util.List<String> zoneNames = new java.util.ArrayList<>();
+            final java.util.List<Long> zoneIds = new java.util.ArrayList<>();
+            
+            zoneNames.add("All Channels");
+            zoneIds.add(-1L);
+            
+            for (ZoneDatabase.Zone zone : zones) {
+                zoneNames.add(zone.name + " (" + zone.getChannelCount() + ")");
+                zoneIds.add(zone.id);
+            }
+            
+            // Show dialog
+            android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(context);
+            builder.setTitle("Select Zone");
+            
+            // Convert to array for dialog
+            final String[] items = zoneNames.toArray(new String[0]);
+            
+            builder.setItems(items, new android.content.DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(android.content.DialogInterface dialog, int which) {
+                    try {
+                        long selectedZoneId = zoneIds.get(which);
+                        String selectedZoneName;
+                        java.util.List<Integer> zoneChannelList;
+                        
+                        if (selectedZoneId == -1) {
+                            // All Channels mode
+                            currentZoneId = -1;
+                            currentZoneName = "All";
+                            currentZoneChannels = null;
+                            selectedZoneName = "All Channels";
+                            XposedBridge.log(TAG + ": Zone filter disabled - showing all channels");
+                        } else {
+                            // Specific zone selected
+                            ZoneDatabase.Zone selectedZone = zoneDatabase.getZone(selectedZoneId);
+                            if (selectedZone != null) {
+                                currentZoneId = selectedZoneId;
+                                currentZoneName = selectedZone.name;
+                                currentZoneChannels = selectedZone.getChannelList();
+                                selectedZoneName = selectedZone.name;
+                                XposedBridge.log(TAG + ": Zone selected: " + selectedZoneName + 
+                                    " (" + currentZoneChannels.size() + " channels)");
+                            } else {
+                                Toast.makeText(context, "Zone not found", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                        }
+                        
+                        // Update button text
+                        if (zoneButton != null) {
+                            zoneButton.setText("Zone: " + currentZoneName);
+                        }
+                        
+                        // Update channel page zone button if it exists
+                        if (channelPageZoneButton != null) {
+                            channelPageZoneButton.setText("Zone: " + currentZoneName);
+                        }
+                        
+                        // Check if we need to switch channels (current channel not in new zone)
+                        if (talkBackFragmentInstance != null && selectedZoneId != -1 && currentZoneChannels != null) {
+                            try {
+                                // Get current channel number
+                                Object currentChannelData = XposedHelpers.getObjectField(talkBackFragmentInstance, "mCurrentChannelData");
+                                if (currentChannelData != null) {
+                                    int currentChannelNumber = XposedHelpers.getIntField(currentChannelData, "number");
+                                    
+                                    // Check if current channel is in the new zone
+                                    if (!currentZoneChannels.contains(currentChannelNumber)) {
+                                        // Current channel NOT in new zone - must switch to first channel in zone
+                                        XposedBridge.log(TAG + ": Current channel " + currentChannelNumber + 
+                                            " not in zone " + selectedZoneName + ", switching to first channel");
+                                        
+                                        final String finalZoneName = selectedZoneName;
+                                        
+                                        // Use Handler to delay channel switch until after dialog closes
+                                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                try {
+                                                    // Get channels list
+                                                    java.util.List<Object> channels = (java.util.List<Object>) 
+                                                        XposedHelpers.getObjectField(talkBackFragmentInstance, "channels");
+                                                    
+                                                    if (channels == null || channels.isEmpty()) {
+                                                        XposedBridge.log(TAG + ": No channels available");
+                                                        return;
+                                                    }
+                                                    
+                                                    // Find first channel in the zone
+                                                    int targetIndex = -1;
+                                                    int targetChannelNumber = -1;
+                                                    for (int i = 0; i < channels.size(); i++) {
+                                                        Object channelData = channels.get(i);
+                                                        int channelNumber = XposedHelpers.getIntField(channelData, "number");
+                                                        if (currentZoneChannels.contains(channelNumber)) {
+                                                            targetIndex = i;
+                                                            targetChannelNumber = channelNumber;
+                                                            break;
+                                                        }
+                                                    }
+                                                    
+                                                    if (targetIndex >= 0) {
+                                                        // Get the target channel data
+                                                        Object targetChannelData = channels.get(targetIndex);
+                                                        
+                                                        final int finalTargetChannelNumber = targetChannelNumber;  // Make final for inner class
+                                                        
+                                                        // Get DmrManager
+                                                        Object dmrManager = XposedHelpers.callStaticMethod(
+                                                            XposedHelpers.findClass("com.pri.prizeinterphone.manager.DmrManager", 
+                                                                context.getClassLoader()),
+                                                            "getInstance"
+                                                        );
+                                                        
+                                                        // Directly set the fragment's channel index and data
+                                                        XposedHelpers.setIntField(talkBackFragmentInstance, "mCurrentChannelIndex", targetIndex);
+                                                        XposedHelpers.setObjectField(talkBackFragmentInstance, "mCurrentChannelData", targetChannelData);
+                                                        
+                                                        // Update the DmrManager with the new channel
+                                                        XposedHelpers.callMethod(dmrManager, "updateChannel", targetChannelData);
+                                                        
+                                                        // Sync to hardware (this sends commands to the radio)
+                                                        XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", targetChannelData);
+                                                        
+                                                        XposedBridge.log(TAG + ": Switched to channel " + targetChannelNumber + 
+                                                            " (index " + targetIndex + ") for zone " + finalZoneName);
+                                                        
+                                                        Toast.makeText(context, "Zone: " + finalZoneName + " → Ch." + targetChannelNumber, 
+                                                            Toast.LENGTH_SHORT).show();
+                                                    } else {
+                                                        XposedBridge.log(TAG + ": No valid channel found in zone " + finalZoneName);
+                                                        Toast.makeText(context, "Zone: " + finalZoneName, Toast.LENGTH_SHORT).show();
+                                                    }
+                                                } catch (Throwable t) {
+                                                    XposedBridge.log(TAG + ": Error switching channel: " + t.getMessage());
+                                                    XposedBridge.log(t);
+                                                    Toast.makeText(context, "Zone: " + finalZoneName, Toast.LENGTH_SHORT).show();
+                                                }
+                                            }
+                                        }, 300); // 300ms delay to let dialog close
+                                        
+                                    } else {
+                                        // Current channel IS in new zone, keep it
+                                        XposedBridge.log(TAG + ": Current channel " + currentChannelNumber + 
+                                            " is in zone " + selectedZoneName + ", keeping it");
+                                        Toast.makeText(context, "Zone: " + selectedZoneName, Toast.LENGTH_SHORT).show();
+                                    }
+                                } else {
+                                    Toast.makeText(context, "Zone: " + selectedZoneName, Toast.LENGTH_SHORT).show();
+                                }
+                            } catch (Throwable t) {
+                                XposedBridge.log(TAG + ": Error checking current channel: " + t.getMessage());
+                                Toast.makeText(context, "Zone: " + selectedZoneName, Toast.LENGTH_SHORT).show();
+                            }
+                        } else {
+                            Toast.makeText(context, "Zone: " + selectedZoneName, Toast.LENGTH_SHORT).show();
+                        }
+                        
+                    } catch (Throwable t) {
+                        XposedBridge.log(TAG + ": Error selecting zone: " + t.getMessage());
+                        XposedBridge.log(t);
+                        Toast.makeText(context, "Error selecting zone", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+            
+            builder.setNegativeButton("Cancel", null);
+            builder.show();
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error showing zone dialog: " + t.getMessage());
+            XposedBridge.log(t);
+            Toast.makeText(context, "Error showing zones", Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    /**
+     * Hook channel navigation to filter by zone
+     */
+    private void hookChannelNavigation(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            Class<?> talkBackFragmentClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.fragment.InterPhoneTalkBackFragment",
+                lpparam.classLoader
+            );
+            
+            // Hook updateChannelId method (takes boolean parameter: true=up, false=down)
+            XposedHelpers.findAndHookMethod(
+                talkBackFragmentClass,
+                "updateChannelId",
+                boolean.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                        // If we're auto-switching zones, bypass zone navigation and let original method run
+                        if (isAutoSwitchingZone) {
+                            return;
+                        }
+                        
+                        // If no zone is selected, let original method run
+                        if (currentZoneChannels == null || currentZoneChannels.isEmpty()) {
+                            return;
+                        }
+                        
+                        boolean isUp = (Boolean) param.args[0];
+                        Object fragment = param.thisObject;
+                        
+                        try {
+                            // Get the channels list from fragment
+                            @SuppressWarnings("unchecked")
+                            java.util.List<Object> channels = (java.util.List<Object>) XposedHelpers.getObjectField(
+                                fragment, "channels");
+                            
+                            if (channels == null || channels.size() <= 1) {
+                                return;
+                            }
+                            
+                            // Get current channel index from fragment
+                            int mCurrentChannelIndex = XposedHelpers.getIntField(fragment, "mCurrentChannelIndex");
+                            int maxChannelId = XposedHelpers.getIntField(fragment, "mMaxChannelId");
+                            
+                            // Get current channel number
+                            Object currentChannelData = channels.get(mCurrentChannelIndex);
+                            int currentChannelNumber = XposedHelpers.getIntField(currentChannelData, "number");
+                            
+                            XposedBridge.log(TAG + ": Zone navigation - current channel: " + currentChannelNumber + 
+                                " (index " + mCurrentChannelIndex + "), direction: " + (isUp ? "UP" : "DOWN"));
+                            
+                            // Find next valid channel in zone
+                            int nextIndex = mCurrentChannelIndex;
+                            int attempts = 0;
+                            while (attempts < maxChannelId) {
+                                // Move in the requested direction
+                                if (isUp) {
+                                    nextIndex++;
+                                    if (nextIndex >= maxChannelId) {
+                                        nextIndex = 0; // Wrap around
+                                    }
+                                } else {
+                                    nextIndex--;
+                                    if (nextIndex < 0) {
+                                        nextIndex = maxChannelId - 1; // Wrap around
+                                    }
+                                }
+                                
+                                // Check if this channel is in the zone
+                                Object channelData = channels.get(nextIndex);
+                                int channelNumber = XposedHelpers.getIntField(channelData, "number");
+                                
+                                if (currentZoneChannels.contains(channelNumber)) {
+                                    // Found a valid channel in the zone!
+                                    XposedBridge.log(TAG + ": Zone navigation - found channel " + channelNumber + 
+                                        " in zone at index " + nextIndex);
+                                    
+                                    // Pre-set the index so the original method will land on our target
+                                    // Original method does: if(isUp) index++; else index--;
+                                    // So we set it to (target - 1) for UP, or (target + 1) for DOWN
+                                    int presetIndex = isUp ? (nextIndex - 1) : (nextIndex + 1);
+                                    
+                                    // Handle wraparound
+                                    if (presetIndex < 0) {
+                                        presetIndex = maxChannelId - 1;
+                                    } else if (presetIndex >= maxChannelId) {
+                                        presetIndex = 0;
+                                    }
+                                    
+                                    XposedHelpers.setIntField(fragment, "mCurrentChannelIndex", presetIndex);
+                                    
+                                    // Let the original method run - it will increment/decrement to nextIndex
+                                    // and handle all the UI and radio updates
+                                    return;
+                                }
+                                
+                                attempts++;
+                            }
+                            
+                            // If we got here, we didn't find any valid channels
+                            XposedBridge.log(TAG + ": Zone navigation - no valid channels found in zone!");
+                            Toast.makeText((android.content.Context) XposedHelpers.callMethod(fragment, "getContext"),
+                                "No channels in zone", Toast.LENGTH_SHORT).show();
+                            param.setResult(null); // Cancel original method
+                            
+                        } catch (Throwable t) {
+                            XposedBridge.log(TAG + ": Error in zone navigation: " + t.getMessage());
+                            XposedBridge.log(t);
+                            // Let original method run on error
+                        }
+                    }
+                }
+            );
+            
+            XposedBridge.log(TAG + ": ✓ Channel navigation hook installed");
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Failed to hook channel navigation: " + t.getMessage());
+            XposedBridge.log(t);
+        }
+    }
+    
+    /**
+     * Hook to filter channel list in InterPhoneChannelFragment based on selected zone
+     */
+    private void hookChannelListFilter(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            Class<?> channelFragmentClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.fragment.InterPhoneChannelFragment",
+                lpparam.classLoader
+            );
+            
+            // Find the inner adapter class
+            Class<?>[] declaredClasses = channelFragmentClass.getDeclaredClasses();
+            Class<?> adapterClass = null;
+            for (Class<?> cls : declaredClasses) {
+                if (cls.getSimpleName().contains("DeviceAreaListAdapter")) {
+                    adapterClass = cls;
+                    break;
+                }
+            }
+            
+            if (adapterClass == null) {
+                XposedBridge.log(TAG + ": Could not find DeviceAreaListAdapter class");
+                return;
+            }
+            
+            // Hook getCount() to return filtered count
+            XposedHelpers.findAndHookMethod(
+                adapterClass,
+                "getCount",
+                new XC_MethodReplacement() {
+                    @Override
+                    protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
+                        try {
+                            // Get the outer fragment instance
+                            Object outerFragment = XposedHelpers.getObjectField(param.thisObject, "this$0");
+                            java.util.List<Object> channels = (java.util.List<Object>) 
+                                XposedHelpers.getObjectField(outerFragment, "channels");
+                            
+                            if (channels == null) {
+                                return 0;
+                            }
+                            
+                            // If no zone selected, return full count
+                            if (currentZoneChannels == null || currentZoneChannels.isEmpty()) {
+                                return channels.size();
+                            }
+                            
+                            // Count channels in current zone
+                            int count = 0;
+                            for (Object channelData : channels) {
+                                int channelNumber = XposedHelpers.getIntField(channelData, "number");
+                                if (currentZoneChannels.contains(channelNumber)) {
+                                    count++;
+                                }
+                            }
+                            return count;
+                            
+                        } catch (Throwable t) {
+                            XposedBridge.log(TAG + ": Error in getCount: " + t.getMessage());
+                            // Fallback to original behavior
+                            Object outerFragment = XposedHelpers.getObjectField(param.thisObject, "this$0");
+                            java.util.List<Object> channels = (java.util.List<Object>) 
+                                XposedHelpers.getObjectField(outerFragment, "channels");
+                            return channels != null ? channels.size() : 0;
+                        }
+                    }
+                }
+            );
+            
+            // Hook getView() to map filtered position to actual channel index
+            XposedHelpers.findAndHookMethod(
+                adapterClass,
+                "getView",
+                int.class,
+                android.view.View.class,
+                android.view.ViewGroup.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                        try {
+                            // If no zone selected, use original position
+                            if (currentZoneChannels == null || currentZoneChannels.isEmpty()) {
+                                return;
+                            }
+                            
+                            int position = (Integer) param.args[0];
+                            
+                            // Get the outer fragment instance
+                            Object outerFragment = XposedHelpers.getObjectField(param.thisObject, "this$0");
+                            java.util.List<Object> channels = (java.util.List<Object>) 
+                                XposedHelpers.getObjectField(outerFragment, "channels");
+                            
+                            if (channels == null) {
+                                return;
+                            }
+                            
+                            // Map filtered position to actual channel index
+                            int actualIndex = 0;
+                            int filteredIndex = 0;
+                            for (int i = 0; i < channels.size(); i++) {
+                                Object channelData = channels.get(i);
+                                int channelNumber = XposedHelpers.getIntField(channelData, "number");
+                                
+                                if (currentZoneChannels.contains(channelNumber)) {
+                                    if (filteredIndex == position) {
+                                        actualIndex = i;
+                                        break;
+                                    }
+                                    filteredIndex++;
+                                }
+                            }
+                            
+                            // Replace the position argument with the actual index
+                            param.args[0] = actualIndex;
+                            
+                        } catch (Throwable t) {
+                            XposedBridge.log(TAG + ": Error mapping position in getView: " + t.getMessage());
+                        }
+                    }
+                }
+            );
+            
+            // Hook onItemClick to map filtered position to actual index for activation
+            XposedHelpers.findAndHookMethod(
+                channelFragmentClass,
+                "onItemClick",
+                android.widget.AdapterView.class,
+                android.view.View.class,
+                int.class,
+                long.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) {
+                        try {
+                            // If no zone selected, use original position
+                            if (currentZoneChannels == null || currentZoneChannels.isEmpty()) {
+                                return;
+                            }
+                            
+                            int position = (Integer) param.args[2];
+                            Object fragment = param.thisObject;
+                            
+                            // Get channels list
+                            java.util.List<Object> channels = (java.util.List<Object>) 
+                                XposedHelpers.getObjectField(fragment, "channels");
+                            
+                            if (channels == null) {
+                                return;
+                            }
+                            
+                            // Map filtered position to actual channel index
+                            // (Same algorithm as getView hook)
+                            int actualIndex = 0;
+                            int filteredIndex = 0;
+                            for (int i = 0; i < channels.size(); i++) {
+                                Object channelData = channels.get(i);
+                                int channelNumber = XposedHelpers.getIntField(channelData, "number");
+                                
+                                if (currentZoneChannels.contains(channelNumber)) {
+                                    if (filteredIndex == position) {
+                                        actualIndex = i;
+                                        break;
+                                    }
+                                    filteredIndex++;
+                                }
+                            }
+                            
+                            // Replace position with actual index
+                            param.args[2] = actualIndex;
+                            
+                            XposedBridge.log(TAG + ": Mapped click position " + position + 
+                                " to actual index " + actualIndex);
+                            
+                        } catch (Throwable t) {
+                            XposedBridge.log(TAG + ": Error mapping click position: " + t.getMessage());
+                        }
+                    }
+                }
+            );
+            
+            XposedBridge.log(TAG + ": ✓ Channel list filter and click hooks installed");
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Failed to hook channel list filter: " + t.getMessage());
+            XposedBridge.log(t);
+        }
+    }
+    
+    /**
+     * Hook to add zone button to InterPhoneChannelFragment
+     */
+    private void hookChannelListUI(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            Class<?> channelFragmentClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.fragment.InterPhoneChannelFragment",
+                lpparam.classLoader
+            );
+            
+            // Hook initData to add zone button after view is initialized
+            XposedHelpers.findAndHookMethod(
+                channelFragmentClass,
+                "initData",
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        try {
+                            Object fragment = param.thisObject;
+                            
+                            android.content.Context context = (android.content.Context) 
+                                XposedHelpers.callMethod(fragment, "getContext");
+                            
+                            if (context == null) {
+                                XposedBridge.log(TAG + ": Context is null in channel fragment");
+                                return;
+                            }
+                            
+                            // Get the mLocalView field which is the fragment's root view
+                            android.view.View rootView = (android.view.View) 
+                                XposedHelpers.getObjectField(fragment, "mLocalView");
+                            
+                            if (rootView == null) {
+                                XposedBridge.log(TAG + ": mLocalView is null in channel fragment");
+                                return;
+                            }
+                            
+                            XposedBridge.log(TAG + ": Adding zone button to channel fragment, root view: " + 
+                                rootView.getClass().getName());
+                            
+                            // Check if button already exists
+                            android.view.View existingButton = rootView.findViewWithTag("DMR_CHANNEL_ZONE_BTN");
+                            if (existingButton != null) {
+                                XposedBridge.log(TAG + ": Zone button already exists, updating text");
+                                if (existingButton instanceof android.widget.Button) {
+                                    ((android.widget.Button) existingButton).setText("Zone: " + currentZoneName);
+                                    channelPageZoneButton = (android.widget.Button) existingButton;  // Store reference
+                                }
+                                return;
+                            }
+                            
+                            // Create zone button
+                            android.widget.Button channelZoneButton = new android.widget.Button(context);
+                            channelZoneButton.setTag("DMR_CHANNEL_ZONE_BTN");
+                            channelZoneButton.setText("Zone: " + currentZoneName);
+                            channelZoneButton.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12);
+                            channelZoneButton.setTextColor(0xFFFFFFFF);
+                            channelZoneButton.setPadding(
+                                (int) (10 * context.getResources().getDisplayMetrics().density),
+                                (int) (5 * context.getResources().getDisplayMetrics().density),
+                                (int) (10 * context.getResources().getDisplayMetrics().density),
+                                (int) (5 * context.getResources().getDisplayMetrics().density)
+                            );
+                            
+                            // Store reference for sync with main zone button
+                            channelPageZoneButton = channelZoneButton;
+                            
+                            // Button styling
+                            android.graphics.drawable.GradientDrawable buttonDrawable = 
+                                new android.graphics.drawable.GradientDrawable();
+                            buttonDrawable.setColor(0xFF4169E1); // Royal blue
+                            buttonDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
+                            channelZoneButton.setBackground(buttonDrawable);
+                            
+                            // Button click listener
+                            channelZoneButton.setOnClickListener(new android.view.View.OnClickListener() {
+                                @Override
+                                public void onClick(android.view.View v) {
+                                    showZoneSelectionDialog(context, channelZoneButton, fragment);
+                                }
+                            });
+                            
+                            // Button layout params - position at top right
+                            android.widget.FrameLayout.LayoutParams buttonParams = 
+                                new android.widget.FrameLayout.LayoutParams(
+                                    (int) (100 * context.getResources().getDisplayMetrics().density),
+                                    android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
+                                );
+                            buttonParams.gravity = android.view.Gravity.TOP | android.view.Gravity.END;
+                            buttonParams.topMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
+                            buttonParams.rightMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
+                            
+                            // Try to add to root view if it's a FrameLayout or ViewGroup
+                            if (rootView instanceof android.widget.FrameLayout) {
+                                ((android.widget.FrameLayout) rootView).addView(channelZoneButton, buttonParams);
+                                XposedBridge.log(TAG + ": ✓ Zone button added to FrameLayout");
+                            } else if (rootView instanceof android.view.ViewGroup) {
+                                // Wrap in FrameLayout and add to parent
+                                android.view.ViewParent parent = rootView.getParent();
+                                if (parent instanceof android.view.ViewGroup) {
+                                    android.widget.FrameLayout overlay = new android.widget.FrameLayout(context);
+                                    overlay.setLayoutParams(new android.view.ViewGroup.LayoutParams(
+                                        android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                                        android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                                    ));
+                                    overlay.addView(channelZoneButton, buttonParams);
+                                    ((android.view.ViewGroup) parent).addView(overlay);
+                                    XposedBridge.log(TAG + ": ✓ Zone button added via overlay to parent ViewGroup");
+                                } else {
+                                    XposedBridge.log(TAG + ": Could not add zone button - no suitable parent");
+                                }
+                            } else {
+                                XposedBridge.log(TAG + ": Could not add zone button - root view is not a ViewGroup");
+                            }
+                            
+                        } catch (Throwable t) {
+                            XposedBridge.log(TAG + ": Error adding zone button to channel list: " + t.getMessage());
+                            XposedBridge.log(t);
+                        }
+                    }
+                }
+            );
+            
+            XposedBridge.log(TAG + ": ✓ Channel list UI hook installed");
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Failed to hook channel list UI: " + t.getMessage());
+            XposedBridge.log(t);
+        }
+    }
+    
+    /**
+     * Show zone selection dialog and refresh channel list after selection
+     */
+    private static void showZoneSelectionDialog(final android.content.Context context, 
+                                               final android.widget.Button button,
+                                               final Object channelFragment) {
+        try {
+            ZoneDatabase zoneDb = ZoneDatabase.getInstance(context);
+            java.util.List<ZoneDatabase.Zone> zones = zoneDb.getAllZones();
+            
+            // Build zone list
+            java.util.List<String> zoneNames = new java.util.ArrayList<>();
+            java.util.List<Long> zoneIds = new java.util.ArrayList<>();
+            
+            zoneNames.add("All Channels");
+            zoneIds.add(-1L);
+            
+            for (ZoneDatabase.Zone zone : zones) {
+                zoneNames.add(zone.name + " (" + zone.getChannelCount() + ")");
+                zoneIds.add(zone.id);
+            }
+            
+            // Show dialog
+            android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(context);
+            builder.setTitle("Select Zone");
+            builder.setItems(zoneNames.toArray(new String[0]), 
+                new android.content.DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(android.content.DialogInterface dialog, int which) {
+                        long selectedZoneId = zoneIds.get(which);
+                        
+                        if (selectedZoneId == -1) {
+                            // All Channels mode
+                            currentZoneId = -1;
+                            currentZoneName = "All";
+                            currentZoneChannels = null;
+                        } else {
+                            // Specific zone
+                            ZoneDatabase.Zone selectedZone = zoneDb.getZone(selectedZoneId);
+                            if (selectedZone != null) {
+                                currentZoneId = selectedZoneId;
+                                currentZoneName = selectedZone.name;
+                                currentZoneChannels = selectedZone.getChannelList();
+                            }
+                        }
+                        
+                        // Update button text
+                        button.setText("Zone: " + currentZoneName);
+                        
+                        // Update the main zone button if it exists
+                        if (zoneButton != null) {
+                            zoneButton.setText("Zone: " + currentZoneName);
+                        }
+                        
+                        // Refresh the channel list
+                        try {
+                            XposedHelpers.callMethod(channelFragment, "initData");
+                        } catch (Throwable t) {
+                            XposedBridge.log(TAG + ": Error refreshing channel list: " + t.getMessage());
+                        }
+                        
+                        dialog.dismiss();
+                    }
+                }
+            );
+            builder.show();
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error showing zone selection dialog: " + t.getMessage());
+            XposedBridge.log(t);
+        }
+    }
+    
+    /**
+     * Helper method to recursively find a RadioGroup in the view hierarchy
+     */
+    private android.widget.RadioGroup findRadioGroupInView(View view) {
+        if (view instanceof android.widget.RadioGroup) {
+            return (android.widget.RadioGroup) view;
+        }
+        
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                android.widget.RadioGroup result = findRadioGroupInView(group.getChildAt(i));
+                if (result != null) {
+                    return result;
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    // Helper method to log view hierarchy for debugging
+    private void logViewHierarchy(View view, String prefix) {
+        XposedBridge.log(TAG + ": " + prefix + " " + view.getClass().getSimpleName() + 
+            " id=" + view.getId() + " " + (view instanceof ViewGroup ? "(" + ((ViewGroup)view).getChildCount() + " children)" : ""));
+        
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount() && i < 10; i++) {
+                logViewHierarchy(group.getChildAt(i), prefix + "  ");
+            }
+        }
+    }
 }
+
