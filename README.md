@@ -1,39 +1,151 @@
-# PriInterPhone DMR Radio - LSPosed Mod with OpenGD77 Integration + Real-time Transcription
+# PriInterPhone DMR Radio - LSPosed Mod with OpenGD77 Integration + Advanced Features
 
-**Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + Real-time Speech-to-Text working!
+**Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription!
 
-> **📦 Current Stable Release: v1.6** - Recommended for all users  
-> **🔬 Development Version: v3.0.1** - Experimental firmware fuzzing (for advanced users building from source)
+> **📦 Current Stable Release: v3.0.9** (March 9, 2026) - GPS Distance Enhancements  
+> **🎯 Previous Major Release: v3.0.8** (March 9, 2026) - Zone Management  
+> **📍 Feature Release: v3.0.5** (March 9, 2026) - Channel Zones  
+> **🎙️ Stable Base: v1.7.0** (February 2026) - Transcription & API Features
 
 ## Demo
 
 <video src="https://github.com/user-attachments/assets/d6305a49-c8ed-47dc-a9d8-7e731aa02811" controls title="DMRModHooks v1.1 Demo" width="800"></video>
 
+## 🎉 What's New in v3.0.9 (March 9, 2026)
+
+### 🧭 GPS Distance Display Enhancements
+
+**Directional arrows, compass bearings, and dual distance units for better situational awareness**
+
+- **8-direction compass arrows**: ↑N, ↗NE, →E, ↘SE, ↓S, ↙SW, ←W, ↖NW
+- Shows direction from your location to the channel
+- Real-time bearing calculation using GPS coordinates
+- **Dual distance display**: 
+  - < 1km: Meters only (e.g., `↑N 250m`)
+  - 1-10km: Kilometers (e.g., `→E 5.2km`)
+  - > 10km: Miles + kilometers (e.g., `↘SE 96.7mi (155.6km)`)
+- Improved UI layout: Widened location area from 30% to 40% width to prevent text wrapping
+- No internet required (uses device location only)
+
+**Display Examples**:
+```
+Echo, Minnesota (↘SE 96.7mi (155.6km))
+320m (1050ft) 📍
+
+Chicago Rptr (↗NE 5.2km)
+180m (590ft) 📍
+
+Local Simplex (↑N 250m)
+210m (689ft) 📍
+```
+
+## 🎉 What's New in v3.0.8 (March 9, 2026)
+
+### 🎛️ Zone Management & Channel Edit Zone Selector
+
+**Create, edit, and assign zones directly from the app!**
+
+- **Zone row in channel edit screen** - Assign channels to zones while editing
+- **Create new zones** - Tap "Create New Zone..." at bottom of zone list
+- **Edit zone names** - Pencil icon (✏) next to each zone or long-press to rename
+- **Automatic list refresh** - Channel list updates instantly after zone changes
+- **Technical improvements**:
+  - Fixed critical hook stacking bug (zone assignments now persistent)
+  - Proper instance field management
+  - Singleton database pattern
+  - OpenGD77 Zones.csv import/export fully supported
+
+**Usage**: Channel page → Edit channel → Tap Zone row → Select/Create/Rename zones
+
+## 🎉 What's New in v3.0.5 (March 9, 2026)
+
+### 📂 Channel Zones
+
+**Organize channels into zones (like folders)**
+
+- **ZONE button** on main screen (below MON button)
+- Import/export zones via OpenGD77 Zones.csv format
+- Zone-based channel navigation (arrows filter by active zone)
+- Up to 80 channels per zone (OpenGD77 limit)
+- Zones stored in local database (persistent)
+
+## 🎉 What's New in v3.0.4 (March 9, 2026)
+
+### 📍 GPS Distance Calculation
+
+- Real-time distance from your location to channel coordinates
+- Smart distance formatting (meters/kilometers/miles based on range)
+- Uses device GPS/network location
+- No internet required
+
+## 🎉 What's New in v3.0.3 (March 9, 2026)
+
+### 🐛 Critical Bug Fix
+
+- **DMR Audio Fixed**: Resolved silent receive audio and garbled transmit audio
+- Call type override logic now only active during MON mode
+
+## 🎉 What's New in v3.0.2 (March 9, 2026)
+
+### 🆕 Major Features
+
+1. **Analog MON (Monitor) Button** ⭐
+   - Squelch fully open (sq=0) for continuous monitoring
+   - Visual feedback: Orange = monitoring, Gray = normal
+   - Perfect for scanning and emergency monitoring
+
+2. **MacGyver Mod Branding** 🏷️
+   - Visible in Device → Information page
+   - "IIMacGyverII mod v3.0.9" with clickable GitHub link
+
+## Complete Feature List (v1.0 - v3.0.9)
+
+### Core Features
+- ✅ **OpenGD77 CSV export/import** - All 5 files (Channels, Contacts, TG_Lists, Zones, DTMF)
+- ✅ **Zone management** - Create, edit, assign zones to channels
+- ✅ **GPS navigation** - Distance, direction, bearing to channels
+- ✅ **Location tracking** - Reverse geocoding, city/state display, elevation
+- ✅ **RSSI signal strength** indicator
+- ✅ **DMR activity history** with timestamps
+- ✅ **Contact integration** - Caller ID display
+- ✅ **Analog MON button** - Open squelch for continuous monitoring
+- ✅ **MacGyver Mod branding** in Information page
+
+### Transcription Features (v1.2 - v1.7.0)
+- ✅ **Real-time speech-to-text** using OpenAI Whisper API
+- ✅ **Automatic audio recording** organized by channel
+- ✅ **Per-channel transcription history** (last 3-10 messages)
+- ✅ **Daily transcription logs** with timestamps and DMR IDs
+- ✅ **User-friendly API key configuration**
+
 ## What is this?
 
 LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
+- **🧭 GPS Navigation** - Directional arrows, compass bearings, distance to channels
+- **📂 Zone Management** - Create, edit, assign channels to zones (folder organization)
 - **📤 OpenGD77 CSV Export** - Export all channels/contacts to OpenGD77-compatible CSV files
 - **📥 OpenGD77 CSV Import** - Import OpenGD77 codeplugs directly into the app
 - **🔄 Cross-platform programming** - Edit channels in OpenGD77 CPS, import to phone
 - **🗂️ Easy access** - Backups saved to Download folder (easy file transfer)
 - **⚡ Direct database access** - No shell commands, fast and reliable
 - **🔒 No APK modification** - Works via runtime hooks (preserves platform signature)
-- **🎙️ Real-time Transcription** - Live speech-to-text transcription powered by Google Cloud API
+- **🎙️ Real-time Transcription** - Live speech-to-text powered by OpenAI Whisper API
 - **📝 Automatic Logging** - Daily transcription logs organized by channel with timestamps
 
 ## Current Status ✅
 
-**Stable Release: v1.6** (Recommended)  
-**Export**: ✅ Working - All 5 OpenGD77 CSV files + PDF summary  
-**Import**: ✅ Working - Full Digital & Analog support  
-**Transcription**: ✅ Working - Real-time speech-to-text with Google Cloud API  
+**Current Release: v3.0.9** (March 9, 2026)  
+**GPS Navigation**: ✅ Working - Directional arrows, compass bearings, distance (m/km/mi)  
+**Zone Management**: ✅ Working - Create, edit, assign zones to channels  
+**Export**: ✅ Working - All 5 OpenGD77 CSV files + PDF summary + Zones.csv  
+**Import**: ✅ Working - Full Digital & Analog support + Zones import  
+**Transcription**: ✅ Working - Real-time speech-to-text with OpenAI Whisper API  
 **Audio Recording**: ✅ Working - Automatic WAV recording organized by channel  
 **Per-Channel History**: ✅ Working - Transcription messages persist per channel  
 **Timestamps**: ✅ Working - All messages include HH:mm:ss timestamps  
-**User Validation**: ✅ Export/Import/Transcription tested and confirmed  
-**Latest Build**: February 27, 2026
-
-> **Note**: v3.0.1 is an experimental development branch for advanced users interested in firmware reverse engineering and command fuzzing. For normal use, stick with v1.6.
+**Analog MON Button**: ✅ Working - Open squelch for continuous monitoring  
+**User Validation**: ✅ All features tested and confirmed working  
+**Latest Build**: March 9, 2026
 
 ## Radio Firmware
 
@@ -71,16 +183,16 @@ adb shell rm /sdcard/DMR/DMRDEBUG.bin
 - **Transcription Service**: com.macdmr.transcription (Standalone AIDL service)
 - **Device**: Ulefone Armor 26 Ultra (Android 13)
 - **LSPosed**: v1.9.2 (Zygisk)
-- **Current Version**: v1.6
+- **Current Version**: v3.0.9 (March 9, 2026)
 - **Storage Location**: `Download/DMR/` (Audio, Transcription, DMR_Backups folders)
 
 ## Features
 
 ### ✅ Phase 1: Initial Hook Setup
-- Startup toast: "✓ DMR Mod Hooks Active! v1.1"
+- Startup toast: "✓ DMR Mod Hooks Active! v3.0.9"
 - Custom version display on Device Information screen
+- MacGyver Mod branding with clickable GitHub link
 - Confirms module is active and working
-- Version tracking for future updates
 
 ### ✅ Phase 2: OpenGD77 CSV Export (v0.7.0 - v0.8.7)
 - **Export all channels** to OpenGD77-compatible CSV format
@@ -101,9 +213,9 @@ adb shell rm /sdcard/DMR/DMRDEBUG.bin
 - Import confirmation with success/failure reporting
 - Files stored in user-friendly Download folder
 
-### ✅ Phase 4: Real-time Speech-to-Text Transcription (v1.2 - v1.6)
+### ✅ Phase 4: Real-time Speech-to-Text Transcription (v1.2 - v1.7.0)
 - **Live transcription** of all DMR audio transmissions
-- **Google Cloud Speech-to-Text API** integration for accurate recognition
+- **OpenAI Whisper API** integration for accurate recognition
 - **Automatic audio recording** - All transmissions saved as WAV files
 - **Per-channel message history** - Each channel maintains its own scrollable message list
 - **Channel switching memory** - Return to any channel and see previous messages (up to 10 messages per channel)
@@ -115,9 +227,43 @@ adb shell rm /sdcard/DMR/DMRDEBUG.bin
 - **Format**: `[14:30:22] ID: 123456 - Transcribed text here`
 - **Scrollable UI** - Message list grows dynamically with height cap at 100dp
 - **Network resilience** - Connectivity checking and comprehensive error handling
-- **Secure API key** - Stored in gitignored local.properties file
-- **Cost**: First 60 minutes/month FREE, then $0.006 per 15 seconds
+- **Secure API key** - Stored in `/sdcard/DMR/api_key.txt` (auto-created on first run)
+- **Cost**: First $5/month FREE credit, then affordable per-second pricing
 - **Status**: ✅ Successfully transcribing real DMR audio in production
+
+### ✅ Phase 5: GPS Navigation & Location Tracking (v3.0.4 - v3.0.9)
+- **Directional compass arrows** - 8-direction arrows (↑N, ↗NE, →E, ↘SE, ↓S, ↙SW, ←W, ↖NW)
+- **Real-time bearing calculation** - Shows direction from your location to channel
+- **Smart distance display**:
+  - < 1km: Meters (e.g., `↑N 250m`)
+  - 1-10km: Kilometers (e.g., `→E 5.2km`)
+  - > 10km: Miles + kilometers (e.g., `↘SE 96.7mi (155.6km)`)
+- **Reverse geocoding** - City, state display for channel coordinates
+- **Elevation display** - Meters and feet via Open-Elevation API
+- **Device location integration** - Uses GPS or network location
+- **No internet required** for distance/bearing calculations
+
+### ✅ Phase 6: Zone Management (v3.0.5 - v3.0.8)
+- **Zone button** on main screen - Tap to select active zone
+- **Zone-based navigation** - Arrow buttons filter by selected zone
+- **Channel edit zone selector** - Assign channels to zones directly in edit screen
+- **Create new zones** - Custom zone names via dialog
+- **Edit zone names** - Pencil icon (✏) or long-press to rename
+- **Automatic list refresh** - Changes apply immediately
+- **OpenGD77 Zones.csv** - Full import/export support
+- **Up to 80 channels per zone** - OpenGD77 limit
+- **Persistent storage** - Zones saved in local SQLite database
+- **Technical improvements**:
+  - Fixed critical hook stacking bug
+  - Proper instance field management
+  - Singleton database pattern
+
+### ✅ Phase 7: Analog MON Button (v3.0.2)
+- **Continuous monitoring** - Squelch fully open (sq=0) on analog channels
+- **Visual feedback** - Orange when monitoring, gray when normal
+- **Auto-reset** - Returns to normal when switching channels
+- **Toast notifications** - Confirms state changes
+- **Perfect for scanning** - Monitor busy frequencies, emergency channels
 
 ## Why LSPosed?
 
@@ -169,22 +315,22 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 
 #### Option A: Download Pre-built Release (✅ Recommended for All Users)
 
-**Use v1.6 stable release for production use. Only use newer versions if you want to experiment with development features.**
+**Use v3.0.9 latest release for all current features including GPS navigation, zone management, and transcription.**
 
-1. **Download Latest Stable Release**:
+1. **Download Latest Release**:
    - Go to [Releases](https://github.com/IIMacGyverII/phonedmrapp/releases/latest)
-   - Download `DMRModHooks-v1.6.apk` (**recommended stable version**)
-   - Download `DMRTranscriptionService-v1.0.apk`
+   - Download `DMRModHooks-v3.0.9.apk` (**latest version**)
+   - Download `DMRTranscriptionService-v1.0.apk` (if using transcription)
 
 2. **Install Both APKs**:
    ```powershell
-   adb install -r DMRModHooks-v1.6.apk
-   adb install -r DMRTranscriptionService-v1.0.apk
+   adb install -r DMRModHooks-v3.0.9.apk
+   adb install -r DMRTranscriptionService-v1.0.apk  # Optional, for transcription only
    ```
 
 #### Option B: Build from Source (For Developers & Experimenters)
 
-**Building from source gives you access to experimental features and development branches. The main branch contains v1.6 stable. Development work (v3.0.1+) includes firmware reverse engineering and command fuzzing capabilities.**
+**Building from source gives you access to the latest development code and experimental features.**
 
 1. **Build Both APKs**:
    ```powershell
@@ -214,54 +360,141 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
    - **Important**: Do NOT add `com.macdmr.transcription` to LSPosed scope (it works standalone)
    - Reboot device
 
-### Step 3: Configure Google Cloud API (for Transcription)
+### Step 3: Configure OpenAI API (for Transcription - Optional)
+
+**Note**: Transcription is optional. GPS navigation, zone management, and all other features work without it.
 
 1. **Get API Key**:
-   - Visit https://console.cloud.google.com
-   - Create a project (or use existing)
-   - Enable "Cloud Speech-to-Text API" (free to enable)
-   - Go to "APIs & Services" → "Credentials"
-   - Click "Create Credentials" → "API Key"
-   - Copy the key (starts with `AIza...`)
+   - Visit https://platform.openai.com/api-keys
+   - Create account or sign in
+   - Click "Create new secret key"
+   - Copy the key (starts with `sk-...`)
 
-2. **Configure Transcription Service**:
-   - Copy `DMRTranscriptionService/local.properties.template` to `local.properties`
-   - Edit `local.properties` and replace `YOUR_API_KEY_HERE` with your actual API key
-   - Rebuild and reinstall TranscriptionService APK
-   - **Note**: The API key is gitignored for security
+2. **Configure API Key**:
+   - Create file: `/sdcard/DMR/api_key.txt`
+   - Paste your API key on first line (one line, no quotes)
+   - The app auto-creates this folder on first run if missing
+   - **Note**: File is device-local, never synced to GitHub
 
 3. **Pricing**:
-   - First 60 minutes/month: **FREE**
-   - After free tier: $0.006 per 15 seconds (~$0.002 per 5-second transmission)
-   - Very affordable for typical DMR usage
+   - Whisper API: $0.006 per minute
+   - First $5 of usage FREE with new accounts
+   - Very affordable for typical DMR usage (~$0.002 per 5-second transmission)
 
 ### Step 4: Test Installation
 
 1. **Verify Module is Active**:
    - Open PriInterPhone app
-   - You should see toast: "✓ DMR Mod Hooks Active! v1.6"
+   - You should see toast: "✓ DMR Mod Hooks Active! v3.0.9"
+   - Go to Device → Information → Verify "MacGyver Mod Version" row shows v3.0.9
 
-2. **Test Export**:
+2. **Test GPS Navigation** (if channels have coordinates):
+   - Enable device location (GPS or Network)
+   - Switch to a channel with GPS coordinates
+   - Should see: City, State, distance with directional arrow (e.g., `↘SE 96.7mi (155.6km)`)
+   - Direction arrow updates based on your location
+
+3. **Test Zone Management**:
+   - Tap ZONE button on main screen
+   - Select "All Channels" or a specific zone
+   - Edit a channel → Tap Zone row → Create/select zone
+   - Verify zone assignment saves and list refreshes
+
+4. **Test Export**:
    - Go to LOCAL tab
    - Tap 📤 **EXPORT (OpenGD77)** button  
    - Check `Download/DMR/DMR_Backups/` for CSV files (use any file manager)
    - Should see: Channels, Contacts, TG_Lists, Zones, DTMF CSVs with timestamps
 
-3. **Test Import** (optional):
+5. **Test Import** (optional):
    - Tap 📥 **IMPORT (OpenGD77)** button
    - Select a backup timestamp from list
    - Confirm import
    - Wait for success message
    - Channels will auto-refresh and appear in app
 
-4. **Test Transcription**:
-   - Go to Settings → Enable **TXT** (text display)
+6. **Test Transcription** (if configured):
+   - Tap TXT button to enable (turns green)
    - Send or receive a DMR transmission with speech
    - Transcription appears in real-time below the channel info
    - Check `Download/DMR/Audio/[ChannelName]/` for WAV recordings
    - Check `Download/DMR/Transcription/[ChannelName]/transcription_YYYYMMDD.txt` for logs
 
+7. **Test Analog MON Button** (analog channels only):
+   - Switch to an analog channel
+   - Tap MON button (turns orange)
+   - Squelch opens completely - hear all audio continuously
+   - Tap again to disable (turns gray)
+
 ## Usage
+
+### Using GPS Navigation
+
+1. **Enable Location**:
+   - Ensure device location is enabled (GPS or Network)
+   - Grant location permissions to PriInterPhone app
+   - Channels must have GPS coordinates stored
+
+2. **View Distance & Direction**:
+   - Switch to any channel with coordinates
+   - Location text shows:
+     - Short distances: `↑N 250m`
+     - Medium distances: `→E 5.2km`
+     - Long distances: `↘SE 96.7mi (155.6km)`
+   - Direction arrow points from your location to the channel
+   - Updates automatically when switching channels
+
+3. **Location Information**:
+   - City, State display via reverse geocoding
+   - Elevation in meters and feet
+   - Pin icon 📍 indicates GPS data available
+
+### Using Zone Management
+
+1. **Select Active Zone**:
+   - Tap **ZONE** button on main screen
+   - Select from list (shows channel count per zone)
+   - Arrow buttons now filter by selected zone only
+   - Button shows current zone: "Zone: Local Pack"
+
+2. **Create New Zone**:
+   - Edit any channel (or from zone selector)
+   - Tap Zone row in edit screen
+   - Scroll to bottom → "Create New Zone..."
+   - Enter zone name → Newly created zone auto-selected
+
+3. **Assign Channels to Zones**:
+   - Edit channel → Tap Zone row
+   - Select zone from list
+   - "None" removes from all zones
+   - Changes save immediately
+
+4. **Rename Zones**:
+   - In zone selector, tap pencil icon (✏) next to zone name
+   - Or long-press zone name
+   - Edit name in dialog
+   - Zone channels preserved
+
+5. **Import/Export Zones**:
+   - Zones automatically included in OpenGD77 export/import
+   - Zones.csv file contains zone definitions
+   - Compatible with OpenGD77 CPS
+
+### Using Analog MON Button
+
+1. **Enable Monitoring** (analog channels only):
+   - Switch to analog channel
+   - Tap **MON** button (turns orange)
+   - Squelch opens completely - hear ALL audio continuously
+   - Perfect for scanning busy frequencies
+
+2. **Disable Monitoring**:
+   - Tap **MON** button again (turns gray)
+   - Returns to normal squelch based on channel settings
+
+3. **Auto-Reset**:
+   - MON automatically resets to OFF when switching channels
+   - Prevents accidentally leaving squelch open
 
 ### Exporting Channels to OpenGD77
 
@@ -293,31 +526,31 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 ### Using Real-time Transcription
 
 1. **Enable Transcription**:
-   - Open PriInterPhone app
-   - Go to Settings
-   - Enable **TXT** (text display)
+   - Tap **TXT** button on main screen (turns green when enabled)
    - Transcription service automatically starts
+   - Ensure `/sdcard/DMR/api_key.txt` contains your OpenAI API key
 
 2. **During Transmissions**:
-   - Real-time transcription appears below channel info
+   - Real-time transcription appears below channel info in borderbox
    - Audio automatically recorded to `Download/DMR/Audio/[ChannelName]/`
    - Transcription appended to `Download/DMR/Transcription/[ChannelName]/transcription_YYYYMMDD.txt`
+   - Last 3-10 messages persist per channel (scroll through history)
 
 3. **File Organization**:
    ```
    Download/DMR/
      Audio/
        Channel_1/
-         20260227_143022_CallSign_Name.wav
-         20260227_143155_CallSign_Name.wav
+         20260309_143022_CallSign_Name.wav
+         20260309_143155_CallSign_Name.wav
        Repeater_2/
-         20260227_150330_CallSign_Name.wav
+         20260309_150330_CallSign_Name.wav
      Transcription/
        Channel_1/
-         transcription_20260227.txt
-         transcription_20260228.txt
+         transcription_20260309.txt
+         transcription_20260310.txt
        Repeater_2/
-         transcription_20260227.txt
+         transcription_20260309.txt
    ```
 
 4. **Transcription Log Format**:
@@ -328,7 +561,7 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
    ```
 
 5. **Disable Transcription**:
-   - Go to Settings → Disable **TXT**
+   - Tap TXT button again (turns gray)
    - Transcription service stops
    - Audio recordings will continue if recording is enabled separately
 
@@ -540,13 +773,34 @@ With LSPosed runtime hooks and full access to the platform-signed app, **anythin
 - Community-driven feature development
 - Enhanced radio control and monitoring
 
-**Last Updated**: February 28, 2026  
-**Stable Version**: v1.6 (Recommended for all users)  
-**Development Version**: v3.0.1 (Experimental firmware fuzzing - optional)  
-**Status**: LSPosed module fully operational - OpenGD77 export/import + Real-time transcription working perfectly!  
+**Last Updated**: March 9, 2026  
+**Current Version**: v3.0.9 - GPS Distance Enhancements  
+**Major Release**: v3.0.8 - Zone Management  
+**Feature Release**: v3.0.5 - Channel Zones  
+**Base Release**: v1.7.0 - Transcription & API Features  
+**Status**: LSPosed module fully operational - All features working perfectly!  
 **GitHub**: https://github.com/IIMacGyverII/phonedmrapp
 
-For detailed technical information, see [MAGISK_SOLUTION.md](MAGISK_SOLUTION.md) and [STATUS.md](STATUS.md).
+### Version History Overview
+
+**v3.0.x Series** (Current): Advanced Features
+- ✅ GPS navigation with directional arrows and bearing
+- ✅ Zone management (create, edit, assign)
+- ✅ Analog MON button for continuous monitoring
+- ✅ MacGyver Mod branding
+
+**v1.x Series** (Stable Base): Core Features
+- ✅ OpenGD77 CSV export/import
+- ✅ Real-time speech-to-text transcription
+- ✅ Location tracking and RSSI display
+- ✅ Audio recording and logging
+
+**v2.x Series** (Planned): DMR Enhancements
+- ⏳ DMR group calling improvements
+- ⏳ DMR monitoring mode
+- 🔬 Requires extensive hardware-level debugging
+
+For detailed technical information, see [DMRModHooks/README.md](DMRModHooks/README.md), [MAGISK_SOLUTION.md](MAGISK_SOLUTION.md), and [STATUS.md](STATUS.md).
 
 ## License
 
