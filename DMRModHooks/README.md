@@ -4,8 +4,9 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
 
-**Current Version**: v3.0.8 (March 9, 2026) - **Zone Management**  
-**Previous Version**: v3.0.5 (March 9, 2026) - Channel Zones  
+**Current Version**: v3.0.9 (March 9, 2026) - **GPS Distance Enhancements**  
+**Previous Version**: v3.0.8 (March 9, 2026) - Zone Management  
+**Stable Release**: v3.0.5 (March 9, 2026) - Channel Zones  
 **Stable Release**: v1.7.0 (February 2026) - Transcription & API key features  
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
@@ -63,6 +64,48 @@ Rather than delay a working feature, I decided to:
 - [Development History](#development-history)
 - [Releases](../../releases) - Download pre-built modules
 - [Technical Details](#technical-details)
+
+## 🎉 What's New in v3.0.9 (March 9, 2026)
+
+### 🧭 GPS Distance Display Enhancements
+
+**Directional arrows, compass bearings, and dual distance units**
+
+#### **Directional Arrows with Compass Bearings**
+- **8-direction compass arrows**: ↑N, ↗NE, →E, ↘SE, ↓S, ↙SW, ←W, ↖NW
+- Shows direction from your location to the channel
+- Real-time bearing calculation using GPS coordinates
+- Visual orientation at a glance
+
+#### **Dual Distance Display**
+- **< 1km**: Shows meters only (e.g., `↑N 250m`)
+- **1-10km**: Shows kilometers (e.g., `→E 5.2km`)
+- **> 10km**: Shows both miles and kilometers (e.g., `↘SE 96.7mi (155.6km)`)
+- Accommodates users familiar with either measurement system
+
+#### **Improved UI Layout**
+- Widened location text area from 30% to 40% screen width
+- Prevents text wrapping on long distance strings
+- Better readability at 12sp font size
+- Maintains right-alignment for clean appearance
+
+**Display Examples**:
+```
+Echo, Minnesota (↘SE 96.7mi (155.6km))
+320m (1050ft) 📍
+
+Chicago Rptr (↗NE 5.2km)
+180m (590ft) 📍
+
+Local Simplex (↑N 250m)
+210m (689ft) 📍
+```
+
+**Technical Details**:
+- Bearing calculated using haversine formula with atan2
+- 45-degree sectors for 8-direction arrow selection
+- Distance format adapts automatically based on range
+- No internet required (uses device location only)
 
 ## 🎉 What's New in v3.0.8 (March 9, 2026)
 

@@ -87,7 +87,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.0.8";
+    private static final String VERSION = "3.0.9";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -700,22 +700,22 @@ public class MainHook implements IXposedHookLoadPackage {
                                     }
                                 }
                                 
-                                // Make infoText take 70% width
+                                // Make infoText take 60% width
                                 LinearLayout.LayoutParams infoParams = new LinearLayout.LayoutParams(
                                     0,
                                     LinearLayout.LayoutParams.WRAP_CONTENT,
-                                    0.7f
+                                    0.6f
                                 );
                                 infoText.setLayoutParams(infoParams);
                                 horizontalContainer.addView(infoText);
                                 
-                                // Create location TextView (30% width, right-aligned)
+                                // Create location TextView (40% width, right-aligned)
                                 TextView locationText = new TextView(context);
                                 locationText.setTag("DMR_LOCATION_TEXT");
                                 LinearLayout.LayoutParams locationParams = new LinearLayout.LayoutParams(
                                     0,
                                     LinearLayout.LayoutParams.WRAP_CONTENT,
-                                    0.3f
+                                    0.4f
                                 );
                                 locationParams.rightMargin = margin10dp;
                                 locationText.setLayoutParams(locationParams);
@@ -1796,17 +1796,24 @@ public class MainHook implements IXposedHookLoadPackage {
                                        currentLoc.getLatitude(), currentLoc.getLongitude(),
                                         location.latitude, location.longitude);
                                     
+                                    double bearing = calculateBearing(
+                                        currentLoc.getLatitude(), currentLoc.getLongitude(),
+                                        location.latitude, location.longitude);
+                                    
+                                    String arrow = getDirectionArrow(bearing);
+                                    
                                     String distanceStr;
                                     if (distanceMeters < 1000) {
-                                        // Less than 1km - show meters
-                                        distanceStr = String.format(java.util.Locale.US, "%.0fm", distanceMeters);
+                                        // Less than 1km - show meters with arrow
+                                        distanceStr = String.format(java.util.Locale.US, "%s %.0fm", arrow, distanceMeters);
                                     } else if (distanceMeters < 10000) {
-                                        // 1-10km - show one decimal
-                                        distanceStr = String.format(java.util.Locale.US, "%.1fkm", distanceMeters / 1000);
+                                        // 1-10km - show one decimal with arrow
+                                        distanceStr = String.format(java.util.Locale.US, "%s %.1fkm", arrow, distanceMeters / 1000);
                                     } else {
-                                        // Over 10km - show miles
+                                        // Over 10km - show miles and km with arrow
                                         double distanceMiles = distanceMeters * 0.000621371;
-                                        distanceStr = String.format(java.util.Locale.US, "%.1fmi", distanceMiles);
+                                        double distanceKm = distanceMeters / 1000;
+                                        distanceStr = String.format(java.util.Locale.US, "%s %.1fmi (%.1fkm)", arrow, distanceMiles, distanceKm);
                                     }
                                     
                                     displayText += " (" + distanceStr + ")";
@@ -1847,7 +1854,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                     double distanceMeters = calculateDistance(
                                         currentLoc.getLatitude(), currentLoc.getLongitude(),
                                         location.latitude, location.longitude);
-                                    String distanceStr = formatDistance(distanceMeters);
+                                    String distanceStr = formatDistance(distanceMeters, 
+                                        currentLoc.getLatitude(), currentLoc.getLongitude(),
+                                        location.latitude, location.longitude);
                                     displayText += " (" + distanceStr + ")";
                                 }
                                 
@@ -1868,7 +1877,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                 double distanceMeters = calculateDistance(
                                     currentLoc.getLatitude(), currentLoc.getLongitude(),
                                     location.latitude, location.longitude);
-                                String distanceStr = formatDistance(distanceMeters);
+                                String distanceStr = formatDistance(distanceMeters,
+                                    currentLoc.getLatitude(), currentLoc.getLongitude(),
+                                    location.latitude, location.longitude);
                                 displayText += " (" + distanceStr + ")";
                             }
                             
@@ -1889,7 +1900,9 @@ public class MainHook implements IXposedHookLoadPackage {
                             double distanceMeters = calculateDistance(
                                 currentLoc.getLatitude(), currentLoc.getLongitude(),
                                 location.latitude, location.longitude);
-                            String distanceStr = formatDistance(distanceMeters);
+                            String distanceStr = formatDistance(distanceMeters,
+                                currentLoc.getLatitude(), currentLoc.getLongitude(),
+                                location.latitude, location.longitude);
                             displayText += " (" + distanceStr + ")";
                         }
                         
@@ -2024,6 +2037,72 @@ public class MainHook implements IXposedHookLoadPackage {
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         
         return R * c;
+    }
+    
+    /**
+     * Calculate bearing from point 1 to point 2
+     * @param lat1 First point latitude
+     * @param lon1 First point longitude
+     * @param lat2 Second point latitude
+     * @param lon2 Second point longitude
+     * @return Bearing in degrees (0-360)
+     */
+    private double calculateBearing(double lat1, double lon1, double lat2, double lon2) {
+        double lat1Rad = Math.toRadians(lat1);
+        double lat2Rad = Math.toRadians(lat2);
+        double deltaLon = Math.toRadians(lon2 - lon1);
+        
+        double y = Math.sin(deltaLon) * Math.cos(lat2Rad);
+        double x = Math.cos(lat1Rad) * Math.sin(lat2Rad) -
+                   Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(deltaLon);
+        
+        double bearing = Math.toDegrees(Math.atan2(y, x));
+        return (bearing + 360) % 360; // Normalize to 0-360
+    }
+    
+    /**
+     * Convert bearing to directional arrow with letter
+     * @param bearing Bearing in degrees (0-360)
+     * @return Arrow with direction letter (↑N, ↗NE, →E, etc.)
+     */
+    private String getDirectionArrow(double bearing) {
+        // 8-direction compass arrows with letters
+        if (bearing >= 337.5 || bearing < 22.5) return "↑N";      // N
+        if (bearing >= 22.5 && bearing < 67.5) return "↗NE";      // NE
+        if (bearing >= 67.5 && bearing < 112.5) return "→E";      // E
+        if (bearing >= 112.5 && bearing < 157.5) return "↘SE";    // SE
+        if (bearing >= 157.5 && bearing < 202.5) return "↓S";     // S
+        if (bearing >= 202.5 && bearing < 247.5) return "↙SW";    // SW
+        if (bearing >= 247.5 && bearing < 292.5) return "←W";     // W
+        if (bearing >= 292.5 && bearing < 337.5) return "↖NW";    // NW
+        return "↑N"; // Default
+    }
+    
+    /**
+     * Format distance with directional arrow
+     * @param distanceMeters Distance in meters
+     * @param fromLat From latitude
+     * @param fromLon From longitude
+     * @param toLat To latitude
+     * @param toLon To longitude
+     * @return Formatted distance string with arrow
+     */
+    private String formatDistance(double distanceMeters, double fromLat, double fromLon, double toLat, double toLon) {
+        double bearing = calculateBearing(fromLat, fromLon, toLat, toLon);
+        String arrow = getDirectionArrow(bearing);
+        
+        if (distanceMeters < 1000) {
+            // Less than 1km - show meters with arrow
+            return String.format(java.util.Locale.US, "%s %.0fm", arrow, distanceMeters);
+        } else if (distanceMeters < 10000) {
+            // 1-10km - show one decimal with arrow
+            return String.format(java.util.Locale.US, "%s %.1fkm", arrow, distanceMeters / 1000);
+        } else {
+            // Over 10km - show miles and km with arrow
+            double distanceMiles = distanceMeters * 0.000621371;
+            double distanceKm = distanceMeters / 1000;
+            return String.format(java.util.Locale.US, "%s %.1fmi (%.1fkm)", arrow, distanceMiles, distanceKm);
+        }
     }
     
     /**
