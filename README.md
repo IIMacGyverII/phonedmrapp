@@ -141,10 +141,6 @@ Local Simplex (↑N 250m)
    - Visual feedback: Orange = monitoring, Gray = normal
    - Perfect for scanning and emergency monitoring
 
-2. **MacGyver Mod Branding** 🏷️
-   - Visible in Device → Information page
-   - "IIMacGyverII mod v3.1.0" with clickable GitHub link
-
 ## Complete Feature List (v1.0 - v3.0.9)
 
 ### Core Features
@@ -156,7 +152,6 @@ Local Simplex (↑N 250m)
 - ✅ **DMR activity history** with timestamps
 - ✅ **Contact integration** - Caller ID display
 - ✅ **Analog MON button** - Open squelch for continuous monitoring
-- ✅ **MacGyver Mod branding** in Information page
 
 ### Transcription Features (v1.2 - v1.7.0)
 - ✅ **Real-time speech-to-text** using OpenAI Whisper API
@@ -215,7 +210,7 @@ The app checks for custom firmware in `/sdcard/DMR/DMRDEBUG.bin` on startup. If 
 adb push modified_firmware.bin /sdcard/DMR/DMRDEBUG.bin
 
 # Restart app to trigger firmware update
-adb shell am force-stop com.macgyver.dmr
+adb shell am force-stop com.pri.prizeinterphone
 
 # Remove test firmware to restore original
 adb shell rm /sdcard/DMR/DMRDEBUG.bin
@@ -238,7 +233,6 @@ adb shell rm /sdcard/DMR/DMRDEBUG.bin
 ### ✅ Phase 1: Initial Hook Setup
 - Startup toast: "✓ DMR Mod Hooks Active! v3.0.9"
 - Custom version display on Device Information screen
-- MacGyver Mod branding with clickable GitHub link
 - Confirms module is active and working
 
 ### ✅ Phase 2: OpenGD77 CSV Export (v0.7.0 - v0.8.7)
@@ -433,7 +427,6 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 1. **Verify Module is Active**:
    - Open PriInterPhone app
    - You should see toast: "✓ DMR Mod Hooks Active! v3.0.9"
-   - Go to Device → Information → Verify "MacGyver Mod Version" row shows v3.0.9
 
 2. **Test GPS Navigation** (if channels have coordinates):
    - Enable device location (GPS or Network)
@@ -834,7 +827,6 @@ With LSPosed runtime hooks and full access to the platform-signed app, **anythin
 - ✅ GPS navigation with directional arrows and bearing
 - ✅ Zone management (create, edit, assign)
 - ✅ Analog MON button for continuous monitoring
-- ✅ MacGyver Mod branding
 
 **v1.x Series** (Stable Base): Core Features
 - ✅ OpenGD77 CSV export/import
