@@ -1,15 +1,62 @@
 # PriInterPhone DMR Radio - LSPosed Mod with OpenGD77 Integration + Advanced Features
 
-**Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription!
+**Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS!
 
-> **📦 Current Stable Release: v3.0.9** (March 9, 2026) - GPS Distance Enhancements  
-> **🎯 Previous Major Release: v3.0.8** (March 9, 2026) - Zone Management  
+> **📦 Current Stable Release: v3.1.0** (March 12, 2026) - APRS Live Monitoring  
+> **🌐 Previous Major Release: v3.0.9** (March 9, 2026) - GPS Distance Enhancements  
+> **🎯 Zone Management: v3.0.8** (March 9, 2026) - Zone Management  
 > **📍 Feature Release: v3.0.5** (March 9, 2026) - Channel Zones  
 > **🎙️ Stable Base: v1.7.0** (February 2026) - Transcription & API Features
 
 ## Demo
 
 <video src="https://github.com/user-attachments/assets/d6305a49-c8ed-47dc-a9d8-7e731aa02811" controls title="DMRModHooks v1.1 Demo" width="800"></video>
+
+## 🎉 What's New in v3.1.0 (March 12, 2026)
+
+### 📡 APRS Live Monitoring Mode
+
+**Real-time APRS packet reception with live dashboard and clickable map links**
+
+- **APRS Button** on intercom page (green button below MON)
+- **Live Monitoring Dashboard**:
+  - Persistent screen that stays open during monitoring
+  - Auto-updates every 2 seconds with new packets
+  - Real-time statistics (total stations, last hour, last 5 minutes)
+  - Shows up to 10 most recent packets
+- **Clickable Station Links**:
+  - Tap any station to open Google Maps at GPS location
+  - Shows callsign, time received, and coordinates
+  - Underlined cyan text indicates clickable links
+- **Automatic Channel Creation**:
+  - Creates hidden APRS channel automatically on first use
+  - Uses frequency from APRS Settings (default: 144.390 MHz)
+  - Channel hidden from UI but accessible for monitoring
+- **Auto-Logging**:
+  - Per-callsign text logs (append mode): `Download/DMR/APRS/CALLSIGN-SSID.txt`
+  - Per-callsign GPX tracks (full movement history): `Download/DMR/APRS/CALLSIGN-SSID.gpx`
+  - Full packet history in database for track visualization
+- **APRS Settings Dialog**:
+  - Configure callsign, SSID, and frequency
+  - Access via APRS Received page or Settings
+- **Channel Management**:
+  - Saves previous channel and returns on stop
+  - Works from both analog and digital channels
+  - No manual channel creation needed
+
+**Usage**: 
+1. Intercom page → Tap APRS button (green, below MON)
+2. Configure settings if needed (callsign optional for RX-only)
+3. Tap "Start Monitoring" → Live dashboard appears
+4. Tap any received station → Opens in Google Maps
+5. Tap "Stop Monitoring" → Returns to previous channel
+
+**Technical Details**:
+- Pure RX-only operation (no transmit capability)
+- Uses device's analog FM receiver tuned to APRS frequency
+- Bell 202 AFSK 1200 baud decoding (AX.25 protocol)
+- APRS channels automatically filtered from channel list
+- Database stores full transmission history per station
 
 ## 🎉 What's New in v3.0.9 (March 9, 2026)
 
@@ -96,7 +143,7 @@ Local Simplex (↑N 250m)
 
 2. **MacGyver Mod Branding** 🏷️
    - Visible in Device → Information page
-   - "IIMacGyverII mod v3.0.9" with clickable GitHub link
+   - "IIMacGyverII mod v3.1.0" with clickable GitHub link
 
 ## Complete Feature List (v1.0 - v3.0.9)
 

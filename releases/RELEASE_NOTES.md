@@ -1,5 +1,86 @@
 # DMRModHooks Release Notes
 
+## v3.1.0 - APRS Live Monitoring (March 12, 2026)
+
+### 📡 APRS Real-Time Reception with Live Dashboard
+
+**MAJOR FEATURE**: Complete APRS packet reception system with live updating dashboard and interactive map links!
+
+### ✨ What's New
+
+**APRS Live Monitoring**:
+- ✅ **Green APRS button** on intercom page (below MON button)
+- ✅ **Live monitoring dashboard** that stays open during reception
+- ✅ **Auto-updates every 2 seconds** with new packets
+- ✅ **Real-time statistics**: Total stations, last hour, last 5 minutes
+- ✅ **Recent packets display**: Up to 10 most recent with timestamps
+- ✅ **Clickable station links**: Tap any station to open Google Maps at GPS location
+- ✅ **Automatic channel creation**: Creates hidden APRS channel on first use
+- ✅ **Smart channel management**: Saves and restores previous channel
+
+**APRS Data Logging**:
+- ✅ **Per-callsign text logs**: Append mode, `CALLSIGN-SSID.txt` format
+- ✅ **Per-callsign GPX tracks**: Full movement history for each station
+- ✅ **Full database history**: Keeps all transmissions for track visualization
+- ✅ **Auto-export on reception**: Files created automatically in `Download/DMR/APRS/`
+
+**APRS Settings**:
+- ✅ **Configuration dialog**: Set callsign, SSID, and frequency
+- ✅ **Default frequency**: 144.390 MHz (standard APRS frequency)
+- ✅ **RX-only operation**: No transmit capability (receive-only system)
+- ✅ **Access points**: APRS Received page or Settings menu
+
+**Technical Implementation**:
+- ✅ **Bell 202 AFSK decoder**: 1200 baud, AX.25 protocol
+- ✅ **Pure Java PLL implementation**: No native code required
+- ✅ **Hidden channel system**: APRS channels filtered from UI
+- ✅ **Database schema**: Auto-increment ID for full history tracking
+- ✅ **Live UI updates**: Handler-based periodic refresh every 2 seconds
+- ✅ **Map integration**: Uses geo: URI to open Google Maps with coordinates
+
+### 🎯 Usage Instructions
+
+1. **Start Monitoring**:
+   - Intercom page → Tap green APRS button (below MON)
+   - Configure settings if needed (optional for RX-only)
+   - Tap "Start Monitoring"
+
+2. **Live Dashboard**:
+   - Displays status, statistics, and recent packets
+   - Updates automatically every 2 seconds
+   - Tap any station entry to view on map
+
+3. **Stop Monitoring**:
+   - Tap "Stop Monitoring" button
+   - Returns to previous channel automatically
+
+4. **View Logs**:
+   - Files: `Download/DMR/APRS/CALLSIGN-SSID.txt`
+   - Tracks: `Download/DMR/APRS/CALLSIGN-SSID.gpx`
+   - Open GPX files in OsmAnd or Maps.me
+
+### 📊 Features Summary
+
+| Feature | Description |
+|---------|-------------|
+| Live Dashboard | Persistent screen with real-time updates |
+| Clickable Links | Tap stations to open in Google Maps |
+| Auto Channel | Creates hidden APRS channel automatically |
+| Text Logs | Per-callsign append-mode logs |
+| GPX Tracks | Per-callsign movement history |
+| Full History | Database keeps all transmissions |
+| Smart Restore | Returns to previous channel on stop |
+
+### 🔧 Technical Details
+
+- **Protocol**: AX.25 (Amateur X.25) with Bell 202 AFSK
+- **Frequency**: Configurable (default 144.390 MHz)
+- **Modulation**: 1200 baud AFSK (1200 Hz mark, 2200 Hz space)
+- **Decoder**: Pure Java PLL-based demodulator
+- **Database**: SQLite with auto-increment primary key
+- **UI Updates**: Handler-based with 2-second interval
+- **Map Intent**: Uses `geo:` URI scheme for universal map app support
+
 ## v0.9.26 - FINAL RELEASE ✅ (February 2026)
 
 ### 🎉 FULLY WORKING - Complete OpenGD77 CSV Export/Import

@@ -13,10 +13,12 @@ import android.text.InputType;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -141,6 +143,11 @@ public class MainHook implements IXposedHookLoadPackage {
     private static LinearLayout transcriptionMessagesContainer = null;  // Container for messages
     private static android.widget.ScrollView transcriptionScrollView = null;  // Scrollable view
     private static LinearLayout transcriptionBox = null;  // Outer box
+    
+    // APRS receive state
+    private static List<Short> aprsAudioBuffer = Collections.synchronizedList(new ArrayList<>());
+    private static final int APRS_BUFFER_SIZE = 32000; // 2 seconds at 16kHz (DMR radio sample rate)
+    private static Object mLocalViewObject = null; // Store for context access
     private static android.widget.ToggleButton transcriptionToggleButton = null;
 
     // Per-channel transcription message history
@@ -168,6 +175,35 @@ public class MainHook implements IXposedHookLoadPackage {
     // Current GPS location for distance calculations
     private static volatile android.location.Location currentGpsLocation = null;
     private static android.location.LocationManager locationManager = null;
+    
+    // APRS monitoring mode state
+    private static volatile boolean isAPRSMonitoringActive = false;
+    private static volatile Object previousChannelBeforeAPRS = null;  // Store channel to return to
+    private static ClassLoader appClassLoader = null;  // Store class loader for APRS monitoring
+    private static AlertDialog aprsMonitoringDialog = null;  // Store dialog for live updates
+    private static android.os.Handler aprsUpdateHandler = null;  // Handler for periodic updates
+    private static Runnable aprsUpdateRunnable = null;  // Runnable for updating dialog
+    
+    /**
+     * Check if a channel is an APRS channel (should be hidden from channel list)
+     */
+    private static boolean isAPRSChannel(Object channelData) {
+        try {
+            String name = (String) XposedHelpers.getObjectField(channelData, "name");
+            if (name != null && name.toUpperCase().contains("APRS")) {
+                return true;
+            }
+            
+            // Also check if it's on APRS frequency (144.390 MHz = 144390000 Hz)
+            int rxFreq = XposedHelpers.getIntField(channelData, "rxFreq");
+            if (rxFreq == 144390000) {
+                return true;
+            }
+        } catch (Throwable t) {
+            // Ignore errors
+        }
+        return false;
+    }
 
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
@@ -177,6 +213,9 @@ public class MainHook implements IXposedHookLoadPackage {
         }
         
         XposedBridge.log(TAG + ": Module loaded for " + TARGET_PACKAGE);
+        
+        // Store class loader for later use (APRS monitoring, etc.)
+        appClassLoader = lpparam.classLoader;
         
         // Hook the main activity's onCreate method
         hookMainActivity(lpparam);
@@ -606,6 +645,7 @@ public class MainHook implements IXposedHookLoadPackage {
                             // Store fragment reference for zone channel switching
                             talkBackFragmentInstance = param.thisObject;
                             
+                            // Capture the fragment's PrizePcmManager for APRS transmission
                             // Get mLocalView
                             Object mLocalViewObj = XposedHelpers.getObjectField(param.thisObject, "mLocalView");
                             if (!(mLocalViewObj instanceof ViewGroup)) {
@@ -1570,6 +1610,45 @@ public class MainHook implements IXposedHookLoadPackage {
                                 buttonContainer.addView(monitorToggle);
                                 XposedBridge.log(TAG + ": ✓ Added monitoring mode toggle below REC button");
                                 
+                                // Create APRS monitoring mode button (below MON button, right side)
+                                android.widget.Button aprsButton = new android.widget.Button(context);
+                                aprsButton.setTag("DMR_APRS_MONITOR_BUTTON");
+                                aprsButton.setText("APRS");
+                                
+                                FrameLayout.LayoutParams aprsButtonParams = new FrameLayout.LayoutParams(
+                                    (int) (70 * context.getResources().getDisplayMetrics().density),  // 70dp width
+                                    (int) (40 * context.getResources().getDisplayMetrics().density)   // 40dp height
+                                );
+                                aprsButtonParams.gravity = android.view.Gravity.END | android.view.Gravity.TOP;
+                                aprsButtonParams.rightMargin = (int) (16 * context.getResources().getDisplayMetrics().density);
+                                aprsButtonParams.topMargin = (int) (110 * context.getResources().getDisplayMetrics().density); // Below MON (60+40+10)
+                                aprsButton.setLayoutParams(aprsButtonParams);
+                                aprsButton.setTextSize(12);
+                                aprsButton.setTypeface(null, android.graphics.Typeface.BOLD);
+                                aprsButton.setTextColor(0xFFFFFFFF);  // White text
+                                
+                                // APRS button drawable - Green background
+                                android.graphics.drawable.GradientDrawable aprsDrawable = new android.graphics.drawable.GradientDrawable();
+                                aprsDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                                aprsDrawable.setColor(0xFF00AA00);  // Green
+                                aprsDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
+                                aprsDrawable.setStroke(
+                                    (int) (2 * context.getResources().getDisplayMetrics().density),
+                                    0xFFFFFFFF  // White border
+                                );
+                                aprsButton.setBackground(aprsDrawable);
+                                
+                                // Set click listener
+                                aprsButton.setOnClickListener(new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        showAPRSMonitoringDialog((Activity) context);
+                                    }
+                                });
+                                
+                                buttonContainer.addView(aprsButton);
+                                XposedBridge.log(TAG + ": ✓ Added APRS monitoring button below MON button");
+                                
                                 // Zone button is now created in RSSI/Zone container above borderbox
                                 
                                 XposedBridge.log(TAG + ": Final child count: " + rootLayout.getChildCount());
@@ -1644,6 +1723,16 @@ public class MainHook implements IXposedHookLoadPackage {
                                             " as last used for zone " + currentZoneName);
                                     }
                                     */
+                                    
+                                    // Store mLocalView for APRS receive context
+                                    try {
+                                        Object mLocalViewObj = XposedHelpers.getObjectField(param.thisObject, "mLocalView");
+                                        if (mLocalViewObj instanceof View) {
+                                            mLocalViewObject = mLocalViewObj;
+                                        }
+                                    } catch (Exception e) {
+                                        XposedBridge.log(TAG + ": Error getting mLocalView: " + e.getMessage());
+                                    }
                                     
                                     // Clear DMR caller display when switching to analog channel
                                     if (channelType == 1) {  // Analog channel
@@ -2709,21 +2798,858 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             });
             
+            // === APRS RECEIVED BUTTON ===
+            Button aprsReceivedButton = new Button(context);
+            aprsReceivedButton.setText("📡 APRS Received");
+            aprsReceivedButton.setTextSize(16);
+            aprsReceivedButton.setAllCaps(false);
+            aprsReceivedButton.setPadding(20, 20, 20, 20);
+            aprsReceivedButton.setLayoutParams(new ViewGroup.LayoutParams(templateParams));
+            
+            aprsReceivedButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    XposedBridge.log(TAG + ": APRS Received button clicked");
+                    showReceivedStationsDialog(activity);
+                }
+            });
+            
+            // === APRS SETTINGS BUTTON ===
+            Button aprsSettingsButton = new Button(context);
+            aprsSettingsButton.setText("⚙️ APRS Settings");
+            aprsSettingsButton.setTextSize(16);
+            aprsSettingsButton.setAllCaps(false);
+            aprsSettingsButton.setPadding(20, 20, 20, 20);
+            aprsSettingsButton.setLayoutParams(new ViewGroup.LayoutParams(templateParams));
+            
+            aprsSettingsButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    XposedBridge.log(TAG + ": APRS Settings button clicked");
+                    showAPRSSettingsDialog(activity);
+                }
+            });
+            
+            // === RECEIVED STATIONS BUTTON (REMOVED - merged into APRS button) ===
+            Button receivedButton = null;
+            /*
+            Button receivedButton = new Button(context);
+            receivedButton.setText("📍 Received Stations");
+            receivedButton.setTextSize(16);
+            receivedButton.setAllCaps(false);
+            receivedButton.setPadding(20, 20, 20, 20);
+            receivedButton.setLayoutParams(new ViewGroup.LayoutParams(templateParams));
+            
+            */
+            
             // Add buttons at specified index
             if (index >= 0) {
                 parentLayout.addView(exportButton, index);
                 parentLayout.addView(importButton, index + 1);
+                parentLayout.addView(aprsReceivedButton, index + 2);
+                parentLayout.addView(aprsSettingsButton, index + 3);
                 XposedBridge.log(TAG + ": ✓ Export button added at index " + index);
                 XposedBridge.log(TAG + ": ✓ Import button added at index " + (index + 1));
+                XposedBridge.log(TAG + ": ✓ APRS Received button added at index " + (index + 2));
+                XposedBridge.log(TAG + ": ✓ APRS Settings button added at index " + (index + 3));
             } else {
                 parentLayout.addView(exportButton);
                 parentLayout.addView(importButton);
-                XposedBridge.log(TAG + ": ✓ Export and Import buttons added at end of layout");
+                parentLayout.addView(aprsReceivedButton);
+                parentLayout.addView(aprsSettingsButton);
+                XposedBridge.log(TAG + ": ✓ Export, Import, APRS Received, and APRS Settings buttons added at end of layout");
             }
             
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error adding buttons to layout: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Show received APRS stations dialog
+     */
+    private void showReceivedStationsDialog(final Activity activity) {
+        try {
+            APRSReceivedDatabase db = APRSReceivedDatabase.getInstance(activity);
+            java.util.List<APRSReceivedDatabase.ReceivedStation> stations = db.getRecentStations();
+            
+            AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+            builder.setTitle("📍 Received APRS Stations (" + stations.size() + ")");
+            
+            ScrollView scrollView = new ScrollView(activity);
+            LinearLayout mainLayout = new LinearLayout(activity);
+            mainLayout.setOrientation(LinearLayout.VERTICAL);
+            mainLayout.setPadding(40, 40, 40, 40);
+            
+            if (stations.isEmpty()) {
+                TextView noStations = new TextView(activity);
+                noStations.setText("No stations received yet.\n\nAPRS receive is passive - stations will appear here when APRS packets are decoded from incoming audio.\n\nAll received packets are automatically logged to:\n• Download/DMR/APRS/CALLSIGN-SSID.txt (text log)\n• Download/DMR/APRS/CALLSIGN-SSID.gpx (track file)\n\nOpen with file manager to view GPX tracks in OsmAnd/Maps.me.");
+                noStations.setTextSize(16);
+                noStations.setPadding(0, 20, 0, 20);
+                mainLayout.addView(noStations);
+            } else {
+                // Export info at top
+                TextView exportInfo = new TextView(activity);
+                exportInfo.setText("📁 Each station auto-exported to Download/DMR/APRS/:\n" +
+                                 "• CALLSIGN-SSID.txt (running log)\n" +
+                                 "• CALLSIGN-SSID.gpx (track - open with file manager)\n" +
+                                 "Tap coordinates below for quick map view.");
+                exportInfo.setTextSize(13);
+                exportInfo.setTextColor(0xFF66FF66);
+                exportInfo.setPadding(0, 0, 0, 20);
+                mainLayout.addView(exportInfo);
+                
+                for (final APRSReceivedDatabase.ReceivedStation station : stations) {
+                    // Station container
+                    LinearLayout stationLayout = new LinearLayout(activity);
+                    stationLayout.setOrientation(LinearLayout.VERTICAL);
+                    stationLayout.setPadding(10, 15, 10, 15);
+                    stationLayout.setBackgroundColor(0xFF2A2A2A);
+                    
+                    LinearLayout.LayoutParams stationParams = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                    );
+                    stationParams.setMargins(0, 0, 0, 10);
+                    stationLayout.setLayoutParams(stationParams);
+                    
+                    // Callsign and time
+                    TextView callsignText = new TextView(activity);
+                    callsignText.setText("📡 " + station.getFullCallsign());
+                    callsignText.setTextSize(18);
+                    callsignText.setTypeface(null, android.graphics.Typeface.BOLD);
+                    callsignText.setTextColor(0xFF66FF66);
+                    stationLayout.addView(callsignText);
+                    
+                    // Time ago
+                    long ageMs = System.currentTimeMillis() - station.timestamp;
+                    String timeAgo;
+                    if (ageMs < 60000) {
+                        timeAgo = (ageMs / 1000) + "s ago";
+                    } else if (ageMs < 3600000) {
+                        timeAgo = (ageMs / 60000) + "m ago";
+                    } else {
+                        timeAgo = (ageMs / 3600000) + "h ago";
+                    }
+                    
+                    TextView timeText = new TextView(activity);
+                    timeText.setText("🕐 " + timeAgo);
+                    timeText.setTextSize(14);
+                    timeText.setTextColor(0xFF999999);
+                    timeText.setPadding(0, 5, 0, 0);
+                    stationLayout.addView(timeText);
+                    
+                    // Clickable location link
+                    TextView locationText = new TextView(activity);
+                    locationText.setText("📍 " + station.getLocationString());
+                    locationText.setTextSize(16);
+                    locationText.setTextColor(0xFF6699FF);
+                    locationText.setPadding(0, 10, 0, 0);
+                    locationText.setClickable(true);
+                    locationText.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            try {
+                                android.content.Intent intent = new android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse(station.getMapUrl())
+                                );
+                                intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                                activity.startActivity(intent);
+                                XposedBridge.log(TAG + ": Opening map for " + station.getFullCallsign());
+                            } catch (Exception e) {
+                                Toast.makeText(activity, "Error opening map", Toast.LENGTH_SHORT).show();
+                                XposedBridge.log(TAG + ": Error opening map: " + e.getMessage());
+                            }
+                        }
+                    });
+                    stationLayout.addView(locationText);
+                    
+                    // Altitude if available
+                    if (station.altitude > 0) {
+                        TextView altText = new TextView(activity);
+                        altText.setText("⛰ " + station.altitude + "m");
+                        altText.setTextSize(14);
+                        altText.setTextColor(0xFF999999);
+                        altText.setPadding(0, 5, 0, 0);
+                        stationLayout.addView(altText);
+                    }
+                    
+                    // Comment if available
+                    if (station.comment != null && !station.comment.isEmpty()) {
+                        TextView commentText = new TextView(activity);
+                        commentText.setText("💬 " + station.comment);
+                        commentText.setTextSize(14);
+                        commentText.setTextColor(0xFFCCCCCC);
+                        commentText.setPadding(0, 5, 0, 0);
+                        stationLayout.addView(commentText);
+                    }
+                    
+                    mainLayout.addView(stationLayout);
+                }
+            }
+            
+            // Clear button
+            builder.setNegativeButton("Clear All", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    APRSReceivedDatabase db = APRSReceivedDatabase.getInstance(activity);
+                    db.clearAll();
+                    Toast.makeText(activity, "Received stations cleared", Toast.LENGTH_SHORT).show();
+                }
+            });
+            
+            builder.setPositiveButton("Close", null);
+            
+            scrollView.addView(mainLayout);
+            builder.setView(scrollView);
+            builder.show();
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error showing received stations dialog: " + e.getMessage());
+            e.printStackTrace();
+            Toast.makeText(activity, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+    
+    /**
+     * Show APRS Settings dialog
+     */
+    private void showAPRSSettingsDialog(final Activity activity) {
+        try {
+            APRSDatabase aprsDb = APRSDatabase.getInstance(activity);
+            
+            AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+            builder.setTitle("⚙️ APRS Settings");
+            
+            ScrollView scrollView = new ScrollView(activity);
+            LinearLayout mainLayout = new LinearLayout(activity);
+            mainLayout.setOrientation(LinearLayout.VERTICAL);
+            mainLayout.setPadding(40, 40, 40, 40);
+            
+            // === Global Settings Section ===
+            TextView globalTitle = new TextView(activity);
+            globalTitle.setText("Global APRS Settings");
+            globalTitle.setTextSize(18);
+            globalTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+            globalTitle.setPadding(0, 10, 0, 10);
+            mainLayout.addView(globalTitle);
+            
+            TextView explanationText = new TextView(activity);
+            explanationText.setText("Your callsign and SSID are used for identification in logs and potential future export features. All received APRS packets are automatically saved to a database with timestamp and location.");
+            explanationText.setTextSize(13);
+            explanationText.setTextColor(0xFF999999);
+            explanationText.setPadding(0, 0, 0, 20);
+            mainLayout.addView(explanationText);
+            
+            // Callsign
+            TextView callsignLabel = new TextView(activity);
+            callsignLabel.setText("Your Callsign:");
+            callsignLabel.setTextSize(14);
+            callsignLabel.setPadding(0, 10, 0, 5);
+            mainLayout.addView(callsignLabel);
+            
+            final EditText callsignEdit = new EditText(activity);
+            callsignEdit.setText(aprsDb.getCallsign());
+            callsignEdit.setHint("N0CALL");
+            callsignEdit.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+            mainLayout.addView(callsignEdit);
+            
+            // SSID
+            TextView ssidLabel = new TextView(activity);
+            ssidLabel.setText("SSID (0-15):");
+            ssidLabel.setTextSize(14);
+            ssidLabel.setPadding(0, 10, 0, 5);
+            mainLayout.addView(ssidLabel);
+            
+            final EditText ssidEdit = new EditText(activity);
+            ssidEdit.setText(String.valueOf(aprsDb.getSSID()));
+            ssidEdit.setHint("7");
+            ssidEdit.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+            mainLayout.addView(ssidEdit);
+            
+            TextView ssidInfo = new TextView(activity);
+            ssidInfo.setText("Common SSIDs: 7=Handheld, 9=Vehicle, 1=Digipeater, 5=Other");
+            ssidInfo.setTextSize(11);
+            ssidInfo.setTextColor(0xFF999999);
+            ssidInfo.setPadding(0, 2, 0, 15);
+            mainLayout.addView(ssidInfo);
+            
+            // APRS Frequency
+            TextView frequencyLabel = new TextView(activity);
+            frequencyLabel.setText("APRS Frequency (MHz):");
+            frequencyLabel.setTextSize(14);
+            frequencyLabel.setPadding(0, 10, 0, 5);
+            mainLayout.addView(frequencyLabel);
+            
+            final EditText frequencyEdit = new EditText(activity);
+            frequencyEdit.setText(aprsDb.getAprsFrequency());
+            frequencyEdit.setHint("144.390");
+            frequencyEdit.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+            mainLayout.addView(frequencyEdit);
+            
+            TextView infoText = new TextView(activity);
+            infoText.setText("\nThe APRS frequency is used by the APRS monitoring mode button on the intercom page.\n\n" +
+                           "📡 RX-Only Mode: This system only receives APRS packets (no transmission).\n" +
+                           "📝 Auto-Logging: All received packets are stored in database with callsign, location, timestamp.\n" +
+                           "🗺️ View History: Use 'APRS Received' button to see recent stations.");
+            infoText.setTextSize(12);
+            infoText.setTextColor(0xFF999999);
+            infoText.setPadding(0, 5, 0, 10);
+            mainLayout.addView(infoText);
+            
+            // Save button
+            builder.setPositiveButton("Save", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    try {
+                        // Save global settings
+                        String callsign = callsignEdit.getText().toString().trim().toUpperCase();
+                        if (callsign.length() > 6) {
+                            Toast.makeText(activity, "Callsign must be 6 chars or less", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        
+                        int ssid = Integer.parseInt(ssidEdit.getText().toString().trim());
+                        if (ssid < 0 || ssid > 15) {
+                            Toast.makeText(activity, "SSID must be 0-15", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        
+                        String frequency = frequencyEdit.getText().toString().trim();
+                        if (frequency.isEmpty()) {
+                            Toast.makeText(activity, "APRS frequency cannot be empty", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        try {
+                            double freq = Double.parseDouble(frequency);
+                            if (freq < 1.0 || freq > 999.999) {
+                                Toast.makeText(activity, "Frequency must be 1.0-999.999 MHz", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                        } catch (NumberFormatException e) {
+                            Toast.makeText(activity, "Invalid frequency format", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        
+                        APRSDatabase aprsDb = APRSDatabase.getInstance(activity);
+                        aprsDb.setCallsign(callsign);
+                        aprsDb.setSSID(ssid);
+                        aprsDb.setAprsFrequency(frequency);
+                        
+                        Toast.makeText(activity, "APRS settings saved!", Toast.LENGTH_SHORT).show();
+                        
+                    } catch (Exception e) {
+                        Toast.makeText(activity, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        XposedBridge.log(TAG + ": Error saving APRS settings: " + e.getMessage());
+                    }
+                }
+            });
+            
+            builder.setNegativeButton("Cancel", null);
+            
+            scrollView.addView(mainLayout);
+            builder.setView(scrollView);
+            builder.show();
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error showing APRS settings dialog: " + e.getMessage());
+            e.printStackTrace();
+            Toast.makeText(activity, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+    
+    /**
+     * Show APRS Monitoring Mode dialog
+     */
+    private void showAPRSMonitoringDialog(final Activity activity) {
+        try {
+            if (isAPRSMonitoringActive && aprsMonitoringDialog != null && aprsMonitoringDialog.isShowing()) {
+                // Dialog already showing - just bring it to front
+                XposedBridge.log(TAG + ": APRS monitoring dialog already visible");
+                return;
+            }
+            
+            if (isAPRSMonitoringActive) {
+                // Show live monitoring screen
+                showAPRSLiveMonitoringScreen(activity);
+            } else {
+                // Show start dialog
+                showAPRSStartDialog(activity);
+            }
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error showing APRS monitoring dialog: " + e.getMessage());
+            XposedBridge.log(e);
+            Toast.makeText(activity, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+    
+    /**
+     * Show start monitoring dialog (before monitoring begins)
+     */
+    private void showAPRSStartDialog(final Activity activity) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+        builder.setTitle("📡 APRS Monitoring Mode");
+        
+        ScrollView scrollView = new ScrollView(activity);
+        LinearLayout mainLayout = new LinearLayout(activity);
+        mainLayout.setOrientation(LinearLayout.VERTICAL);
+        mainLayout.setPadding(40, 40, 40, 40);
+        
+        // Status section
+        TextView statusText = new TextView(activity);
+        statusText.setText("⚫ MONITORING INACTIVE\n\nPress 'Start Monitoring' to begin receiving APRS packets.");
+        statusText.setTextSize(14);
+        statusText.setTextColor(0xFF999999);
+        statusText.setPadding(0, 10, 0, 20);
+        mainLayout.addView(statusText);
+        
+        // Stats section
+        final APRSReceivedDatabase db = APRSReceivedDatabase.getInstance(activity);
+        int totalStations = db.getStationCount();
+        java.util.List<APRSReceivedDatabase.ReceivedStation> recentStations = db.getRecentStations();
+        
+        TextView statsLabel = new TextView(activity);
+        statsLabel.setText("Statistics:");
+        statsLabel.setTextSize(16);
+        statsLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+        mainLayout.addView(statsLabel);
+        
+        TextView statsText = new TextView(activity);
+        statsText.setText("• Total stations: " + totalStations + "\n" +
+                         "• Recent (last hour): " + recentStations.size());
+        statsText.setTextSize(14);
+        statsText.setPadding(0, 10, 0, 20);
+        mainLayout.addView(statsText);
+        
+        // Info section
+        TextView infoText = new TextView(activity);
+        infoText.setText("\nAll received packets are automatically logged to text and GPX files in Download/DMR/APRS/");
+        infoText.setTextSize(12);
+        infoText.setTextColor(0xFF999999);
+        infoText.setPadding(0, 20, 0, 0);
+        mainLayout.addView(infoText);
+        
+        scrollView.addView(mainLayout);
+        builder.setView(scrollView);
+        
+        builder.setPositiveButton("Start Monitoring", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                startAPRSMonitoring(activity);
+                // Show live monitoring screen after starting
+                showAPRSLiveMonitoringScreen(activity);
+            }
+        });
+        
+        builder.setNegativeButton("Close", null);
+        
+        builder.show();
+    }
+    
+    /**
+     * Show live APRS monitoring screen with real-time updates
+     */
+    private void showAPRSLiveMonitoringScreen(final Activity activity) {
+        if (aprsMonitoringDialog != null && aprsMonitoringDialog.isShowing()) {
+            return;  // Already showing
+        }
+        
+        final AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+        builder.setTitle("📡 APRS Live Monitoring");
+        builder.setCancelable(false);  // Prevent dismissing by back button
+        
+        // Create scrollable layout
+        final ScrollView scrollView = new ScrollView(activity);
+        final LinearLayout mainLayout = new LinearLayout(activity);
+        mainLayout.setOrientation(LinearLayout.VERTICAL);
+        mainLayout.setPadding(40, 40, 40, 40);
+        
+        scrollView.addView(mainLayout);
+        builder.setView(scrollView);
+        
+        // Stop monitoring button
+        builder.setPositiveButton("Stop Monitoring", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                stopAPRSMonitoring(activity);
+                // Stop updates
+                if (aprsUpdateHandler != null && aprsUpdateRunnable != null) {
+                    aprsUpdateHandler.removeCallbacks(aprsUpdateRunnable);
+                }
+                aprsMonitoringDialog = null;
+            }
+        });
+        
+        aprsMonitoringDialog = builder.create();
+        aprsMonitoringDialog.show();
+        
+        // Set up periodic updates
+        aprsUpdateHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+        aprsUpdateRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (isAPRSMonitoringActive && aprsMonitoringDialog != null && aprsMonitoringDialog.isShowing()) {
+                    updateAPRSLiveScreen(activity, mainLayout);
+                    aprsUpdateHandler.postDelayed(this, 2000);  // Update every 2 seconds
+                }
+            }
+        };
+        
+        // Initial update and start periodic updates
+        updateAPRSLiveScreen(activity, mainLayout);
+        aprsUpdateHandler.postDelayed(aprsUpdateRunnable, 2000);
+    }
+    
+    /**
+     * Update the live APRS monitoring screen content
+     */
+    private void updateAPRSLiveScreen(final Activity activity, LinearLayout mainLayout) {
+        try {
+            final APRSReceivedDatabase db = APRSReceivedDatabase.getInstance(activity);
+            final APRSDatabase aprsDb = APRSDatabase.getInstance(activity);
+            
+            // Clear existing content
+            mainLayout.removeAllViews();
+            
+            // Status section
+            TextView statusLabel = new TextView(activity);
+            statusLabel.setText("Status:");
+            statusLabel.setTextSize(16);
+            statusLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            mainLayout.addView(statusLabel);
+            
+            TextView statusText = new TextView(activity);
+            String frequency = aprsDb.getAprsFrequency();
+            statusText.setText("🟢 MONITORING ACTIVE\nFrequency: " + frequency + " MHz\nReceiving APRS packets...");
+            statusText.setTextColor(0xFF00FF00);
+            statusText.setTextSize(14);
+            statusText.setPadding(0, 10, 0, 20);
+            mainLayout.addView(statusText);
+            
+            // Stats section
+            int totalStations = db.getStationCount();
+            java.util.List<APRSReceivedDatabase.ReceivedStation> recentStations = db.getRecentStations();
+            
+            TextView statsLabel = new TextView(activity);
+            statsLabel.setText("Statistics:");
+            statsLabel.setTextSize(16);
+            statsLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            mainLayout.addView(statsLabel);
+            
+            TextView statsText = new TextView(activity);
+            long now = System.currentTimeMillis();
+            int last5Min = 0;
+            for (APRSReceivedDatabase.ReceivedStation station : recentStations) {
+                if (now - station.timestamp < 300000) {  // 5 minutes
+                    last5Min++;
+                }
+            }
+            statsText.setText("• Total stations: " + totalStations + "\n" +
+                             "• Last hour: " + recentStations.size() + "\n" +
+                             "• Last 5 min: " + last5Min);
+            statsText.setTextSize(14);
+            statsText.setPadding(0, 10, 0, 20);
+            mainLayout.addView(statsText);
+            
+            // Recent stations list (clickable)
+            if (!recentStations.isEmpty()) {
+                TextView recentLabel = new TextView(activity);
+                recentLabel.setText("Recent Packets (tap to view on map):");
+                recentLabel.setTextSize(16);
+                recentLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+                mainLayout.addView(recentLabel);
+                
+                int displayCount = Math.min(10, recentStations.size());
+                for (int i = 0; i < displayCount; i++) {
+                    final APRSReceivedDatabase.ReceivedStation station = recentStations.get(i);
+                    
+                    TextView stationText = new TextView(activity);
+                    long ageMs = System.currentTimeMillis() - station.timestamp;
+                    String timeAgo;
+                    if (ageMs < 60000) {
+                        timeAgo = (ageMs / 1000) + "s ago";
+                    } else if (ageMs < 3600000) {
+                        timeAgo = (ageMs / 60000) + "m ago";
+                    } else {
+                        timeAgo = (ageMs / 3600000) + "h ago";
+                    }
+                    
+                    stationText.setText("📡 " + station.getFullCallsign() + " - " + timeAgo + 
+                                      "\n   " + String.format("%.6f, %.6f", station.latitude, station.longitude));
+                    stationText.setTextSize(13);
+                    stationText.setTextColor(0xFF66FFFF);
+                    stationText.setPadding(0, 8, 0, 0);
+                    stationText.setClickable(true);
+                    stationText.setFocusable(true);
+                    
+                    // Make it look like a link
+                    stationText.setPaintFlags(stationText.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
+                    
+                    // Click listener to open maps
+                    stationText.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            try {
+                                // Open Google Maps with coordinates
+                                String uri = "geo:" + station.latitude + "," + station.longitude + 
+                                           "?q=" + station.latitude + "," + station.longitude + 
+                                           "(" + station.getFullCallsign() + ")";
+                                android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW);
+                                intent.setData(android.net.Uri.parse(uri));
+                                activity.startActivity(intent);
+                                XposedBridge.log(TAG + ": Opened maps for " + station.getFullCallsign());
+                            } catch (Exception e) {
+                                XposedBridge.log(TAG + ": Error opening maps: " + e.getMessage());
+                                Toast.makeText(activity, "Error opening maps", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    });
+                    
+                    mainLayout.addView(stationText);
+                }
+            } else {
+                TextView noDataText = new TextView(activity);
+                noDataText.setText("\nWaiting for APRS packets...");
+                noDataText.setTextSize(14);
+                noDataText.setTextColor(0xFF999999);
+                noDataText.setTypeface(null, android.graphics.Typeface.ITALIC);
+                mainLayout.addView(noDataText);
+            }
+            
+            // Info section
+            TextView infoText = new TextView(activity);
+            infoText.setText("\n💾 Auto-logging to: Download/DMR/APRS/");
+            infoText.setTextSize(11);
+            infoText.setTextColor(0xFF666666);
+            infoText.setPadding(0, 20, 0, 0);
+            mainLayout.addView(infoText);
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error updating APRS live screen: " + e.getMessage());
+            XposedBridge.log(e);
+        }
+    }
+    
+    /**
+     * Create APRS channel if it doesn't exist
+     */
+    private Object createAPRSChannelIfNeeded(Activity activity, Object dmrManager, java.util.List<Object> channels) throws Exception {
+        // Check if APRS channel already exists
+        for (Object channelData : channels) {
+            if (isAPRSChannel(channelData)) {
+                XposedBridge.log(TAG + ": APRS channel already exists");
+                return channelData;
+            }
+        }
+        
+        // Find the highest channel number to assign the next one
+        int highestChannelNumber = 0;
+        for (Object channelData : channels) {
+            int channelNumber = XposedHelpers.getIntField(channelData, "number");
+            if (channelNumber > highestChannelNumber) {
+                highestChannelNumber = channelNumber;
+            }
+        }
+        
+        int aprsChannelNumber = highestChannelNumber + 1;
+        XposedBridge.log(TAG + ": Creating APRS channel with number " + aprsChannelNumber);
+        
+        // Get APRS frequency from settings
+        APRSDatabase aprsDb = APRSDatabase.getInstance(activity);
+        String frequencyStr = aprsDb.getAprsFrequency();
+        double frequencyMHz = Double.parseDouble(frequencyStr);
+        int frequencyHz = (int) (frequencyMHz * 1000000);
+        
+        // Create new ChannelData for APRS
+        Class<?> channelDataClass = XposedHelpers.findClass(
+            "com.pri.prizeinterphone.serial.data.ChannelData",
+            appClassLoader
+        );
+        Object aprsChannel = channelDataClass.newInstance();
+        
+        // Set basic fields
+        XposedHelpers.setIntField(aprsChannel, "type", 1);  // ANALOG
+        XposedHelpers.setIntField(aprsChannel, "number", aprsChannelNumber);
+        XposedHelpers.setObjectField(aprsChannel, "name", "APRS");
+        XposedHelpers.setIntField(aprsChannel, "rxFreq", frequencyHz);
+        XposedHelpers.setIntField(aprsChannel, "txFreq", frequencyHz);
+        XposedHelpers.setIntField(aprsChannel, "sq", 1);  // Default squelch
+        XposedHelpers.setIntField(aprsChannel, "band", 1);  // VHF
+        XposedHelpers.setIntField(aprsChannel, "power", 1);  // High power
+        XposedHelpers.setIntField(aprsChannel, "rxType", 0);  // No tone
+        XposedHelpers.setIntField(aprsChannel, "rxSubCode", 0);
+        XposedHelpers.setIntField(aprsChannel, "txType", 0);
+        XposedHelpers.setIntField(aprsChannel, "txSubCode", 0);
+        XposedHelpers.setIntField(aprsChannel, "relay", 0);
+        XposedHelpers.setIntField(aprsChannel, "active", 1);  // Active
+        
+        // Add channel to database
+        String dbName = "default";  // Use default channel area
+        XposedHelpers.callMethod(dmrManager, "createChannel", dbName, aprsChannel);
+        
+        XposedBridge.log(TAG + ": Created APRS channel #" + aprsChannelNumber + " at " + frequencyMHz + " MHz");
+        Toast.makeText(activity, "Created APRS channel at " + frequencyMHz + " MHz", Toast.LENGTH_SHORT).show();
+        
+        // Reload channels list
+        XposedHelpers.callMethod(dmrManager, "updateChannelList");
+        
+        return aprsChannel;
+    }
+    
+    /**
+     * Start APRS monitoring mode
+     */
+    private void startAPRSMonitoring(final Activity activity) {
+        try {
+            XposedBridge.log(TAG + ": Starting APRS monitoring mode");
+            
+            // Check if we have talkBackFragmentInstance
+            if (talkBackFragmentInstance == null) {
+                throw new Exception("TalkBack fragment not available");
+            }
+            
+            // Get DmrManager and current channel
+            Class<?> dmrManagerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.manager.DmrManager",
+                appClassLoader
+            );
+            Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+            Object currentChannel = XposedHelpers.callMethod(dmrManager, "getCurrentChannel");
+            
+            if (currentChannel == null) {
+                throw new Exception("Cannot get current channel");
+            }
+            
+            // Save current channel index and data for restore
+            int currentChannelIndex = XposedHelpers.getIntField(talkBackFragmentInstance, "mCurrentChannelIndex");
+            previousChannelBeforeAPRS = currentChannel;
+            XposedBridge.log(TAG + ": Saved current channel: " + 
+                XposedHelpers.getObjectField(currentChannel, "name") + " (index: " + currentChannelIndex + ")");
+            
+            // Get channels list
+            java.util.List<Object> channels = (java.util.List<Object>) 
+                XposedHelpers.getObjectField(talkBackFragmentInstance, "channels");
+            
+            if (channels == null || channels.isEmpty()) {
+                throw new Exception("No channels available");
+            }
+            
+            // Create APRS channel if it doesn't exist
+            Object aprsChannelData = createAPRSChannelIfNeeded(activity, dmrManager, channels);
+            
+            // Refresh channels list after potential creation
+            channels = (java.util.List<Object>) 
+                XposedHelpers.getObjectField(talkBackFragmentInstance, "channels");
+            
+            // Find the APRS channel in the list (should exist now)
+            int aprsChannelIndex = -1;
+            int aprsChannelNumber = -1;
+            
+            for (int i = 0; i < channels.size(); i++) {
+                Object channelData = channels.get(i);
+                if (isAPRSChannel(channelData)) {
+                    aprsChannelIndex = i;
+                    aprsChannelData = channelData;
+                    aprsChannelNumber = XposedHelpers.getIntField(channelData, "number");
+                    break;
+                }
+            }
+            
+            if (aprsChannelIndex < 0 || aprsChannelData == null) {
+                throw new Exception("APRS channel creation failed");
+            }
+            
+            // Switch to APRS channel
+            XposedHelpers.setIntField(talkBackFragmentInstance, "mCurrentChannelIndex", aprsChannelIndex);
+            XposedHelpers.setObjectField(talkBackFragmentInstance, "mCurrentChannelData", aprsChannelData);
+            
+            // Update DmrManager and sync to hardware
+            XposedHelpers.callMethod(dmrManager, "updateChannel", aprsChannelData);
+            XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", aprsChannelData);
+            
+            isAPRSMonitoringActive = true;
+            
+            String aprsChannelName = (String) XposedHelpers.getObjectField(aprsChannelData, "name");
+            Toast.makeText(activity, "APRS Monitoring: Switched to " + aprsChannelName, Toast.LENGTH_SHORT).show();
+            XposedBridge.log(TAG + ": ✅ APRS monitoring active - switched to channel " + aprsChannelNumber + " (" + aprsChannelName + ")");
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error starting APRS monitoring: " + e.getMessage());
+            XposedBridge.log(e);
+            Toast.makeText(activity, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+    
+    /**
+     * Stop APRS monitoring mode
+     */
+    private void stopAPRSMonitoring(final Activity activity) {
+        try {
+            XposedBridge.log(TAG + ": Stopping APRS monitoring");
+            
+            // Check if we have talkBackFragmentInstance
+            if (talkBackFragmentInstance == null) {
+                throw new Exception("TalkBack fragment not available");
+            }
+            
+            // Restore previous channel
+            if (previousChannelBeforeAPRS != null) {
+                // Get DmrManager
+                Class<?> dmrManagerClass = XposedHelpers.findClass(
+                    "com.pri.prizeinterphone.manager.DmrManager",
+                    appClassLoader
+                );
+                Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+                
+                // Get channels list
+                java.util.List<Object> channels = (java.util.List<Object>) 
+                    XposedHelpers.getObjectField(talkBackFragmentInstance, "channels");
+                
+                if (channels != null && !channels.isEmpty()) {
+                    // Find the index of the previous channel
+                    int previousChannelNumber = XposedHelpers.getIntField(previousChannelBeforeAPRS, "number");
+                    int previousChannelIndex = -1;
+                    
+                    for (int i = 0; i < channels.size(); i++) {
+                        Object channelData = channels.get(i);
+                        int channelNumber = XposedHelpers.getIntField(channelData, "number");
+                        if (channelNumber == previousChannelNumber) {
+                            previousChannelIndex = i;
+                            break;
+                        }
+                    }
+                    
+                    if (previousChannelIndex >= 0) {
+                        // Switch back to previous channel
+                        XposedHelpers.setIntField(talkBackFragmentInstance, "mCurrentChannelIndex", previousChannelIndex);
+                        XposedHelpers.setObjectField(talkBackFragmentInstance, "mCurrentChannelData", previousChannelBeforeAPRS);
+                        
+                        // Update DmrManager and sync to hardware
+                        XposedHelpers.callMethod(dmrManager, "updateChannel", previousChannelBeforeAPRS);
+                        XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", previousChannelBeforeAPRS);
+                        
+                        String previousChannelName = (String) XposedHelpers.getObjectField(previousChannelBeforeAPRS, "name");
+                        XposedBridge.log(TAG + ": Restored channel " + previousChannelNumber + " (" + previousChannelName + ")");
+                    } else {
+                        XposedBridge.log(TAG + ": Warning: Could not find previous channel index");
+                    }
+                }
+                
+                previousChannelBeforeAPRS = null;  // Clear saved channel
+            }
+            
+            isAPRSMonitoringActive = false;
+            
+            Toast.makeText(activity, "APRS Monitoring stopped", Toast.LENGTH_SHORT).show();
+            XposedBridge.log(TAG + ": APRS monitoring mode deactivated");
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error stopping APRS monitoring: " + e.getMessage());
+            XposedBridge.log(e);
+            Toast.makeText(activity, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
     
@@ -2918,6 +3844,12 @@ public class MainHook implements IXposedHookLoadPackage {
                                     XposedBridge.log(TAG + ": RECEIVE_STOP detected (type: " + currentChannelType + ")");
                                     isReceiving = false;
                                     
+                                    // Process APRS buffer on receive stop (packets are often shorter than 2 seconds)
+                                    if (aprsAudioBuffer.size() > 0) {
+                                        XposedBridge.log(TAG + ": Processing APRS buffer on RECEIVE_STOP (" + aprsAudioBuffer.size() + " samples)");
+                                        processAPRSBuffer();
+                                    }
+                                    
                                     // Stop recording if currently recording
                                     if (isCurrentlyRecording) {
                                         stopRecording();
@@ -2993,6 +3925,13 @@ public class MainHook implements IXposedHookLoadPackage {
                                 case 13: // MIX_CHECK_ANALOG_RECEIVE_STOP
                                     XposedBridge.log(TAG + ": ANALOG_RECEIVE_STOP detected (type: " + currentChannelType + ")");
                                     isReceiving = false;
+                                    
+                                    // Process APRS buffer on receive stop (packets are often shorter than 2 seconds)
+                                    if (aprsAudioBuffer.size() > 0) {
+                                        XposedBridge.log(TAG + ": Processing APRS buffer on ANALOG_RECEIVE_STOP (" + aprsAudioBuffer.size() + " samples)");
+                                        processAPRSBuffer();
+                                    }
+                                    
                                     clearCallerDisplay();  // Clear the tone display
                                     // Don't clear activity history - let it persist
                                     break;
@@ -4025,10 +4964,14 @@ public class MainHook implements IXposedHookLoadPackage {
      */
     private void hookPCMReceiveManager(XC_LoadPackage.LoadPackageParam lpparam) {
         try {
+            XposedBridge.log(TAG + ": Attempting to hook PCMReceiveManager...");
+            
             Class<?> pcmManagerClass = XposedHelpers.findClass(
                 "com.pri.prizeinterphone.manager.PCMReceiveManager",
                 lpparam.classLoader
             );
+            
+            XposedBridge.log(TAG + ": Found PCMReceiveManager class");
             
             // Hook the writeAudioTrack method which receives all PCM audio data
             XposedHelpers.findAndHookMethod(
@@ -4041,6 +4984,11 @@ public class MainHook implements IXposedHookLoadPackage {
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                         byte[] audioData = (byte[]) param.args[0];
                         int length = (int) param.args[1];
+                        
+                        XposedBridge.log(TAG + ": writeAudioTrack called - " + length + " bytes");
+                        
+                        // Buffer audio for APRS decoding
+                        bufferAudioForAPRS(audioData, length);
                         
                         // Buffer audio for transcription if enabled
                         if (isTranscriptionEnabled) {
@@ -4062,10 +5010,11 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             );
             
-            XposedBridge.log(TAG + ": Successfully hooked PCMReceiveManager.writeAudioTrack");
+            XposedBridge.log(TAG + ": ✓ Successfully hooked PCMReceiveManager.writeAudioTrack");
             
         } catch (Throwable t) {
-            XposedBridge.log(TAG + ": Failed to hook PCMReceiveManager: " + t.getMessage());
+            XposedBridge.log(TAG + ": ✗ Failed to hook PCMReceiveManager: " + t.getMessage());
+            t.printStackTrace();
         }
     }
     
@@ -4623,6 +5572,135 @@ public class MainHook implements IXposedHookLoadPackage {
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error buffering audio: " + e.getMessage());
         }
+    }
+    
+    /**
+     * Buffer audio data for APRS decoding
+     * Called from PCMReceiveManager hook during audio reception
+     */
+    private static void bufferAudioForAPRS(byte[] audioData, int length) {
+        try {
+            XposedBridge.log(TAG + ": bufferAudioForAPRS called - " + length + " bytes");
+            
+            // Always buffer audio, even if no UI context (for autonomous operation)
+            // Context is only needed later for displaying results
+            
+            XposedBridge.log(TAG + ": Buffering APRS audio, current buffer size: " + aprsAudioBuffer.size());
+            
+            // Convert bytes to shorts (16-bit PCM Little Endian)
+            for (int i = 0; i < length - 1; i += 2) {
+                short sample = (short) ((audioData[i + 1] << 8) | (audioData[i] & 0xFF));
+                aprsAudioBuffer.add(sample);
+            }
+            
+            // Process when buffer reaches 2 seconds (32000 samples at 16kHz)
+            if (aprsAudioBuffer.size() >= APRS_BUFFER_SIZE) {
+                processAPRSBuffer();
+            }
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error buffering APRS audio: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Process buffered audio for APRS decoding
+     */
+    private static void processAPRSBuffer() {
+        if (aprsAudioBuffer.isEmpty()) {
+            return;
+        }
+        
+        // Allow processing even without UI context (for autonomous operation)
+        // Context is only needed for displaying results in UI
+        
+        try {
+            XposedBridge.log(TAG + ": Processing APRS buffer (" + aprsAudioBuffer.size() + " samples)");
+            
+            // Convert List<Short> to short array
+            short[] audioSamples = new short[aprsAudioBuffer.size()];
+            for (int i = 0; i < audioSamples.length; i++) {
+                audioSamples[i] = aprsAudioBuffer.get(i);
+            }
+            
+            // ★ RESAMPLE 16kHz → 48kHz (DMR radio audio is 16kHz, APRS decoder expects 48kHz)
+            short[] resampled = resample16to48(audioSamples);
+            XposedBridge.log(TAG + ": Resampled audio from " + audioSamples.length + " to " + resampled.length + " samples");
+            
+            // Get current channel (use currentChannelNumber if available)
+            int channelNumber = currentChannelNumber > 0 ? currentChannelNumber : 0;
+            
+            // Process audio in background thread
+            final short[] samples = resampled;
+            final int channel = channelNumber;
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        // Try to get context if available, otherwise just decode and log
+                        Context context = null;
+                        if (mLocalViewObject instanceof View) {
+                            context = ((View) mLocalViewObject).getContext();
+                        }
+                        
+                        if (context != null) {
+                            APRSReceiver receiver = APRSReceiver.getInstance(context);
+                            XposedBridge.log(TAG + ": Calling APRSReceiver.processAudio()");
+                            receiver.processAudio(samples, channel);
+                        } else {
+                            // No context - just decode and log results
+                            XposedBridge.log(TAG + ": No context available - decoding without UI display");
+                            AFSKDecoder.decode(samples);  // This will log results
+                        }
+                    } catch (Exception e) {
+                        XposedBridge.log(TAG + ": Error processing APRS audio: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                }
+            }).start();
+            
+            // Keep last 0.5 seconds for overlap (8000 samples at 16kHz)
+            int keepSamples = 8000;
+            if (aprsAudioBuffer.size() > keepSamples) {
+                List<Short> newBuffer = new ArrayList<>(aprsAudioBuffer.subList(
+                        aprsAudioBuffer.size() - keepSamples, aprsAudioBuffer.size()));
+                aprsAudioBuffer.clear();
+                aprsAudioBuffer.addAll(newBuffer);
+            }
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error processing APRS buffer: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Resample audio from 16 kHz to 48 kHz using linear interpolation
+     * DMR radio sends 16 kHz audio, but APRS decoder expects 48 kHz
+     */
+    private static short[] resample16to48(short[] input) {
+        // 48kHz / 16kHz = 3x samples
+        int outputLength = input.length * 3;
+        short[] output = new short[outputLength];
+        
+        for (int i = 0; i < input.length - 1; i++) {
+            // Original sample at position i*3
+            output[i * 3] = input[i];
+            
+            // Interpolate 2 samples between input[i] and input[i+1]
+            int sample1 = input[i];
+            int sample2 = input[i + 1];
+            
+            output[i * 3 + 1] = (short) ((2 * sample1 + sample2) / 3);
+            output[i * 3 + 2] = (short) ((sample1 + 2 * sample2) / 3);
+        }
+        
+        // Last sample
+        output[outputLength - 3] = input[input.length - 1];
+        output[outputLength - 2] = input[input.length - 1];
+        output[outputLength - 1] = input[input.length - 1];
+        
+        return output;
     }
     
     /**
@@ -5848,14 +6926,23 @@ public class MainHook implements IXposedHookLoadPackage {
                                 return 0;
                             }
                             
-                            // If no zone selected, return full count
+                            // If no zone selected, count all non-APRS channels
                             if (currentZoneChannels == null || currentZoneChannels.isEmpty()) {
-                                return channels.size();
+                                int count = 0;
+                                for (Object channelData : channels) {
+                                    if (!isAPRSChannel(channelData)) {
+                                        count++;
+                                    }
+                                }
+                                return count;
                             }
                             
-                            // Count channels in current zone
+                            // Count channels in current zone (excluding APRS)
                             int count = 0;
                             for (Object channelData : channels) {
+                                if (isAPRSChannel(channelData)) {
+                                    continue;  // Skip APRS channels
+                                }
                                 int channelNumber = XposedHelpers.getIntField(channelData, "number");
                                 if (currentZoneChannels.contains(channelNumber)) {
                                     count++;
@@ -5886,11 +6973,6 @@ public class MainHook implements IXposedHookLoadPackage {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                         try {
-                            // If no zone selected, use original position
-                            if (currentZoneChannels == null || currentZoneChannels.isEmpty()) {
-                                return;
-                            }
-                            
                             int position = (Integer) param.args[0];
                             
                             // Get the outer fragment instance
@@ -5902,19 +6984,39 @@ public class MainHook implements IXposedHookLoadPackage {
                                 return;
                             }
                             
-                            // Map filtered position to actual channel index
+                            // Map filtered position to actual channel index (excluding APRS)
                             int actualIndex = 0;
                             int filteredIndex = 0;
-                            for (int i = 0; i < channels.size(); i++) {
-                                Object channelData = channels.get(i);
-                                int channelNumber = XposedHelpers.getIntField(channelData, "number");
-                                
-                                if (currentZoneChannels.contains(channelNumber)) {
+                            
+                            if (currentZoneChannels == null || currentZoneChannels.isEmpty()) {
+                                // No zone selected - filter only APRS channels
+                                for (int i = 0; i < channels.size(); i++) {
+                                    Object channelData = channels.get(i);
+                                    if (isAPRSChannel(channelData)) {
+                                        continue;  // Skip APRS channels
+                                    }
                                     if (filteredIndex == position) {
                                         actualIndex = i;
                                         break;
                                     }
                                     filteredIndex++;
+                                }
+                            } else {
+                                // Zone selected - filter by zone AND exclude APRS
+                                for (int i = 0; i < channels.size(); i++) {
+                                    Object channelData = channels.get(i);
+                                    if (isAPRSChannel(channelData)) {
+                                        continue;  // Skip APRS channels
+                                    }
+                                    int channelNumber = XposedHelpers.getIntField(channelData, "number");
+                                    
+                                    if (currentZoneChannels.contains(channelNumber)) {
+                                        if (filteredIndex == position) {
+                                            actualIndex = i;
+                                            break;
+                                        }
+                                        filteredIndex++;
+                                    }
                                 }
                             }
                             
@@ -5940,11 +7042,6 @@ public class MainHook implements IXposedHookLoadPackage {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
                         try {
-                            // If no zone selected, use original position
-                            if (currentZoneChannels == null || currentZoneChannels.isEmpty()) {
-                                return;
-                            }
-                            
                             int position = (Integer) param.args[2];
                             Object fragment = param.thisObject;
                             
@@ -5956,20 +7053,39 @@ public class MainHook implements IXposedHookLoadPackage {
                                 return;
                             }
                             
-                            // Map filtered position to actual channel index
-                            // (Same algorithm as getView hook)
+                            // Map filtered position to actual channel index (excluding APRS)
                             int actualIndex = 0;
                             int filteredIndex = 0;
-                            for (int i = 0; i < channels.size(); i++) {
-                                Object channelData = channels.get(i);
-                                int channelNumber = XposedHelpers.getIntField(channelData, "number");
-                                
-                                if (currentZoneChannels.contains(channelNumber)) {
+                            
+                            if (currentZoneChannels == null || currentZoneChannels.isEmpty()) {
+                                // No zone selected - filter only APRS channels
+                                for (int i = 0; i < channels.size(); i++) {
+                                    Object channelData = channels.get(i);
+                                    if (isAPRSChannel(channelData)) {
+                                        continue;  // Skip APRS channels
+                                    }
                                     if (filteredIndex == position) {
                                         actualIndex = i;
                                         break;
                                     }
                                     filteredIndex++;
+                                }
+                            } else {
+                                // Zone selected - filter by zone AND exclude APRS
+                                for (int i = 0; i < channels.size(); i++) {
+                                    Object channelData = channels.get(i);
+                                    if (isAPRSChannel(channelData)) {
+                                        continue;  // Skip APRS channels
+                                    }
+                                    int channelNumber = XposedHelpers.getIntField(channelData, "number");
+                                    
+                                    if (currentZoneChannels.contains(channelNumber)) {
+                                        if (filteredIndex == position) {
+                                            actualIndex = i;
+                                            break;
+                                        }
+                                        filteredIndex++;
+                                    }
                                 }
                             }
                             
