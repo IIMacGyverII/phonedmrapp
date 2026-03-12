@@ -2,8 +2,9 @@
 
 **Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS!
 
-> **📦 Current Stable Release: v3.1.0** (March 12, 2026) - APRS Live Monitoring  
-> **🌐 Previous Major Release: v3.0.9** (March 9, 2026) - GPS Distance Enhancements  
+> **📦 Current Stable Release: v3.1.1** (March 12, 2026) - APRS Crash Recovery Fixes  
+> **📡 Previous Major Release: v3.1.0** (March 12, 2026) - APRS Live Monitoring  
+> **🌐 GPS Enhancement: v3.0.9** (March 9, 2026) - GPS Distance Enhancements  
 > **🎯 Zone Management: v3.0.8** (March 9, 2026) - Zone Management  
 > **📍 Feature Release: v3.0.5** (March 9, 2026) - Channel Zones  
 > **🎙️ Stable Base: v1.7.0** (February 2026) - Transcription & API Features
@@ -12,11 +13,37 @@
 
 <video src="https://github.com/user-attachments/assets/d6305a49-c8ed-47dc-a9d8-7e731aa02811" controls title="DMRModHooks v1.1 Demo" width="800"></video>
 
-## 🎉 What's New in v3.1.0 (March 12, 2026)
+## 🐛 What's New in v3.1.1 (March 12, 2026)
 
-### 📡 APRS Live Monitoring Mode
+### Critical APRS Bug Fixes
 
-**Real-time APRS packet reception with live dashboard and clickable map links**
+**Reliability improvements for APRS monitoring after crashes and fresh storage**
+
+- **Fixed: Fresh Storage Issue**
+  - APRS monitoring now works correctly after clearing app storage
+  - Uses in-memory channel hijacking instead of database queries
+  - No more ClassNotFoundException errors
+- **Fixed: Crash Recovery**
+  - Channel automatically restored after force-close during monitoring
+  - File-based backup at `/sdcard/aprs_channel_backup.dat`
+  - Detects orphaned APRS channels and restores original within 2 seconds
+- **Fixed: Static Variable Persistence**
+  - State properly resets on every app launch
+  - Fixed Xposed module lifecycle issue (static vars persist across app restarts)
+  - Resets `isAPRSMonitoringActive`, dialog references, and audio buffer
+- **Fixed: APRS Button After Crash**
+  - APRS button works correctly after crash recovery
+  - Monitoring dialog displays properly after app restart
+  - No more phantom audio buffering
+- **Fixed: Dialog State Issues**
+  - Dialog references now reset on app launch
+  - Live monitoring screen appears correctly on restart
+
+---
+
+## 📡 APRS Live Monitoring (v3.1.0)
+
+### Real-time APRS packet reception with live dashboard and clickable map links
 
 - **APRS Button** on intercom page (green button below MON)
 - **Live Monitoring Dashboard**:

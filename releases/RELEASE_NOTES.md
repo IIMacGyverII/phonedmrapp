@@ -1,5 +1,55 @@
 # DMRModHooks Release Notes
 
+## v3.1.1 - APRS Crash Recovery Bug Fixes (March 12, 2026)
+
+### 🐛 Critical Bug Fixes
+
+**APRS Fresh Storage Issue**:
+- ✅ **Fixed**: APRS monitoring now works correctly after clearing app storage
+- ✅ **Solution**: In-memory channel hijacking instead of database queries
+- ✅ **Implementation**: Saves current channel to HashMap, restores on stop
+- ✅ **Benefit**: No ClassNotFoundException, no database access needed
+
+**APRS Crash Recovery**:
+- ✅ **Fixed**: Channel automatically restored after force-close during monitoring
+- ✅ **Fixed**: APRS button works correctly after crash recovery
+- ✅ **Fixed**: Monitoring dialog displays properly after app restart
+- ✅ **Solution**: File-based backup at `/sdcard/aprs_channel_backup.dat`
+- ✅ **Detection**: Orphaned APRS channels identified by name or 144.39 MHz frequency
+- ✅ **Auto-restore**: Runs 2 seconds after app launch (waits for DmrManager init)
+
+**Static Variable Persistence Issue**:
+- ✅ **Fixed**: State now properly resets on every app launch
+- ✅ **Root cause**: Xposed modules persist across app restarts
+- ✅ **Solution**: Reset `isAPRSMonitoringActive`, dialog references, and audio buffer in `MainActivity.onCreate()`
+- ✅ **Cleanup**: Prevents phantom audio buffering and UI state issues
+
+**Audio Buffering Guard**:
+- ✅ **Fixed**: Audio only buffered when monitoring is actually active
+- ✅ **Implementation**: Added `if (isAPRSMonitoringActive)` guard before buffering
+- ✅ **Benefit**: No more phantom buffering after app restart
+
+### 🔧 Technical Details
+
+**Crash Recovery Process**:
+1. App force-closed during monitoring → backup file saved
+2. App relaunches → immediate state reset (all static variables)
+3. 2-second delay → DmrManager initialized
+4. Check for backup file → detect orphaned APRS channel
+5. Restore original channel → delete backup file
+6. User presses APRS button → fresh start dialog shown
+
+**Xposed Module Lifecycle Discovery**:
+- `handleLoadPackage()`: Runs once at system boot when LSPosed loads module
+- `MainActivity.onCreate()`: Runs every time app launches
+- **Static variables persist across app restarts** - must reset in `onCreate()`!
+
+### 📝 Upgraded From v3.1.0
+
+All features from v3.1.0 (APRS Live Monitoring) remain intact with these critical reliability improvements.
+
+---
+
 ## v3.1.0 - APRS Live Monitoring (March 12, 2026)
 
 ### 📡 APRS Real-Time Reception with Live Dashboard

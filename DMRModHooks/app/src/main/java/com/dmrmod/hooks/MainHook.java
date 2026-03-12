@@ -89,7 +89,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.0.9";
+    private static final String VERSION = "3.1.1";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -216,6 +216,17 @@ public class MainHook implements IXposedHookLoadPackage {
         
         // Store class loader for later use (APRS monitoring, etc.)
         appClassLoader = lpparam.classLoader;
+        
+        // Reset APRS state (safety measure - actual reset happens in MainActivity.onCreate)
+        // Note: handleLoadPackage runs once when LSPosed loads module, not on every app restart
+        isAPRSMonitoringActive = false;
+        if (aprsAudioBuffer != null) {
+            aprsAudioBuffer.clear();
+        }
+        aprsMonitoringDialog = null;
+        aprsUpdateHandler = null;
+        aprsUpdateRunnable = null;
+        XposedBridge.log(TAG + ": APRS state reset on module load (one-time)");
         
         // Hook the main activity's onCreate method
         hookMainActivity(lpparam);
@@ -605,6 +616,25 @@ public class MainHook implements IXposedHookLoadPackage {
                                 ).show();
                             }
                         });
+                        
+                        // **IMMEDIATE**: Reset APRS state on every app launch (static vars persist across restarts!)
+                        XposedBridge.log(TAG + ": Resetting APRS state on app launch - was: " + isAPRSMonitoringActive);
+                        isAPRSMonitoringActive = false;
+                        if (aprsAudioBuffer != null) {
+                            aprsAudioBuffer.clear();
+                        }
+                        // Also reset dialog references (they persist across app restarts too!)
+                        aprsMonitoringDialog = null;
+                        aprsUpdateHandler = null;
+                        aprsUpdateRunnable = null;
+                        
+                        // Check for orphaned APRS channel and restore if needed (delayed to ensure DmrManager is ready)
+                        new android.os.Handler().postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                checkAndRestoreAPRSChannelOnStartup();
+                            }
+                        }, 2000);  // 2 second delay
                     }
                     
                     @Override
@@ -3506,75 +3536,51 @@ public class MainHook implements IXposedHookLoadPackage {
         try {
             XposedBridge.log(TAG + ": Starting APRS monitoring mode");
             
-            // Check if we have talkBackFragmentInstance
-            if (talkBackFragmentInstance == null) {
-                throw new Exception("TalkBack fragment not available");
-            }
+            // Get APRS frequency setting
+            APRSDatabase aprsDb = APRSDatabase.getInstance(activity);
+            String frequencyStr = aprsDb.getAprsFrequency();
+            double frequencyMHz = Double.parseDouble(frequencyStr);
+            int frequencyHz = (int) (frequencyMHz * 1000000);
             
-            // Get DmrManager and current channel
+            // Get DmrManager
             Class<?> dmrManagerClass = XposedHelpers.findClass(
                 "com.pri.prizeinterphone.manager.DmrManager",
                 appClassLoader
             );
             Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
-            Object currentChannel = XposedHelpers.callMethod(dmrManager, "getCurrentChannel");
             
+            // Get current channel
+            Object currentChannel = XposedHelpers.callMethod(dmrManager, "getCurrentChannel");
             if (currentChannel == null) {
                 throw new Exception("Cannot get current channel");
             }
             
-            // Save current channel index and data for restore
-            int currentChannelIndex = XposedHelpers.getIntField(talkBackFragmentInstance, "mCurrentChannelIndex");
-            previousChannelBeforeAPRS = currentChannel;
-            XposedBridge.log(TAG + ": Saved current channel: " + 
-                XposedHelpers.getObjectField(currentChannel, "name") + " (index: " + currentChannelIndex + ")");
+            // Save current channel settings in memory
+            saveChannelBackup(currentChannel);
+            XposedBridge.log(TAG + ": Backed up current channel");
             
-            // Get channels list
-            java.util.List<Object> channels = (java.util.List<Object>) 
-                XposedHelpers.getObjectField(talkBackFragmentInstance, "channels");
+            // Hijack current channel with APRS settings
+            XposedHelpers.setIntField(currentChannel, "type", 1);  // ANALOG
+            String originalName = (String) XposedHelpers.getObjectField(currentChannel, "name");
+            XposedHelpers.setObjectField(currentChannel, "name", "APRS (" + originalName + ")");
+            XposedHelpers.setIntField(currentChannel, "rxFreq", frequencyHz);
+            XposedHelpers.setIntField(currentChannel, "txFreq", frequencyHz);
+            XposedHelpers.setIntField(currentChannel, "sq", 1);  // Squelch level 1
+            XposedHelpers.setIntField(currentChannel, "band", 1);  // VHF
+            XposedHelpers.setIntField(currentChannel, "power", 1);  // High power
+            XposedHelpers.setIntField(currentChannel, "rxType", 0);  // No tone
+            XposedHelpers.setIntField(currentChannel, "rxSubCode", 0);
+            XposedHelpers.setIntField(currentChannel, "txType", 0);
+            XposedHelpers.setIntField(currentChannel, "txSubCode", 0);
             
-            if (channels == null || channels.isEmpty()) {
-                throw new Exception("No channels available");
-            }
-            
-            // Create APRS channel if it doesn't exist
-            Object aprsChannelData = createAPRSChannelIfNeeded(activity, dmrManager, channels);
-            
-            // Refresh channels list after potential creation
-            channels = (java.util.List<Object>) 
-                XposedHelpers.getObjectField(talkBackFragmentInstance, "channels");
-            
-            // Find the APRS channel in the list (should exist now)
-            int aprsChannelIndex = -1;
-            int aprsChannelNumber = -1;
-            
-            for (int i = 0; i < channels.size(); i++) {
-                Object channelData = channels.get(i);
-                if (isAPRSChannel(channelData)) {
-                    aprsChannelIndex = i;
-                    aprsChannelData = channelData;
-                    aprsChannelNumber = XposedHelpers.getIntField(channelData, "number");
-                    break;
-                }
-            }
-            
-            if (aprsChannelIndex < 0 || aprsChannelData == null) {
-                throw new Exception("APRS channel creation failed");
-            }
-            
-            // Switch to APRS channel
-            XposedHelpers.setIntField(talkBackFragmentInstance, "mCurrentChannelIndex", aprsChannelIndex);
-            XposedHelpers.setObjectField(talkBackFragmentInstance, "mCurrentChannelData", aprsChannelData);
-            
-            // Update DmrManager and sync to hardware
-            XposedHelpers.callMethod(dmrManager, "updateChannel", aprsChannelData);
-            XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", aprsChannelData);
+            // Update hardware with APRS settings
+            XposedHelpers.callMethod(dmrManager, "updateChannel", currentChannel);
+            XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", currentChannel);
             
             isAPRSMonitoringActive = true;
             
-            String aprsChannelName = (String) XposedHelpers.getObjectField(aprsChannelData, "name");
-            Toast.makeText(activity, "APRS Monitoring: Switched to " + aprsChannelName, Toast.LENGTH_SHORT).show();
-            XposedBridge.log(TAG + ": ✅ APRS monitoring active - switched to channel " + aprsChannelNumber + " (" + aprsChannelName + ")");
+            Toast.makeText(activity, "APRS Monitoring Active at " + frequencyMHz + " MHz", Toast.LENGTH_SHORT).show();
+            XposedBridge.log(TAG + ": ✅ APRS monitoring active - current channel hijacked");
             
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error starting APRS monitoring: " + e.getMessage());
@@ -3590,56 +3596,8 @@ public class MainHook implements IXposedHookLoadPackage {
         try {
             XposedBridge.log(TAG + ": Stopping APRS monitoring");
             
-            // Check if we have talkBackFragmentInstance
-            if (talkBackFragmentInstance == null) {
-                throw new Exception("TalkBack fragment not available");
-            }
-            
-            // Restore previous channel
-            if (previousChannelBeforeAPRS != null) {
-                // Get DmrManager
-                Class<?> dmrManagerClass = XposedHelpers.findClass(
-                    "com.pri.prizeinterphone.manager.DmrManager",
-                    appClassLoader
-                );
-                Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
-                
-                // Get channels list
-                java.util.List<Object> channels = (java.util.List<Object>) 
-                    XposedHelpers.getObjectField(talkBackFragmentInstance, "channels");
-                
-                if (channels != null && !channels.isEmpty()) {
-                    // Find the index of the previous channel
-                    int previousChannelNumber = XposedHelpers.getIntField(previousChannelBeforeAPRS, "number");
-                    int previousChannelIndex = -1;
-                    
-                    for (int i = 0; i < channels.size(); i++) {
-                        Object channelData = channels.get(i);
-                        int channelNumber = XposedHelpers.getIntField(channelData, "number");
-                        if (channelNumber == previousChannelNumber) {
-                            previousChannelIndex = i;
-                            break;
-                        }
-                    }
-                    
-                    if (previousChannelIndex >= 0) {
-                        // Switch back to previous channel
-                        XposedHelpers.setIntField(talkBackFragmentInstance, "mCurrentChannelIndex", previousChannelIndex);
-                        XposedHelpers.setObjectField(talkBackFragmentInstance, "mCurrentChannelData", previousChannelBeforeAPRS);
-                        
-                        // Update DmrManager and sync to hardware
-                        XposedHelpers.callMethod(dmrManager, "updateChannel", previousChannelBeforeAPRS);
-                        XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", previousChannelBeforeAPRS);
-                        
-                        String previousChannelName = (String) XposedHelpers.getObjectField(previousChannelBeforeAPRS, "name");
-                        XposedBridge.log(TAG + ": Restored channel " + previousChannelNumber + " (" + previousChannelName + ")");
-                    } else {
-                        XposedBridge.log(TAG + ": Warning: Could not find previous channel index");
-                    }
-                }
-                
-                previousChannelBeforeAPRS = null;  // Clear saved channel
-            }
+            // Restore channel from backup
+            restoreChannelBackup(activity);
             
             isAPRSMonitoringActive = false;
             
@@ -3649,7 +3607,240 @@ public class MainHook implements IXposedHookLoadPackage {
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error stopping APRS monitoring: " + e.getMessage());
             XposedBridge.log(e);
-            Toast.makeText(activity, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+    
+    // Channel backup storage (in memory and file)
+    private java.util.HashMap<String, Object> channelBackup = null;
+    
+    /**
+     * Save channel settings to memory AND file
+     */
+    private void saveChannelBackup(Object channel) {
+        try {
+            channelBackup = new java.util.HashMap<>();
+            channelBackup.put("number", XposedHelpers.getIntField(channel, "number"));
+            channelBackup.put("type", XposedHelpers.getIntField(channel, "type"));
+            channelBackup.put("name", XposedHelpers.getObjectField(channel, "name"));
+            channelBackup.put("rxFreq", XposedHelpers.getIntField(channel, "rxFreq"));
+            channelBackup.put("txFreq", XposedHelpers.getIntField(channel, "txFreq"));
+            channelBackup.put("sq", XposedHelpers.getIntField(channel, "sq"));
+            channelBackup.put("band", XposedHelpers.getIntField(channel, "band"));
+            channelBackup.put("power", XposedHelpers.getIntField(channel, "power"));
+            channelBackup.put("rxType", XposedHelpers.getIntField(channel, "rxType"));
+            channelBackup.put("rxSubCode", XposedHelpers.getIntField(channel, "rxSubCode"));
+            channelBackup.put("txType", XposedHelpers.getIntField(channel, "txType"));
+            channelBackup.put("txSubCode", XposedHelpers.getIntField(channel, "txSubCode"));
+            
+            // Also save to file for crash recovery
+            saveChannelBackupToFile(channelBackup);
+            
+            XposedBridge.log(TAG + ": Channel backup saved: " + channelBackup.get("name"));
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error saving channel backup: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Save channel backup to file
+     */
+    private void saveChannelBackupToFile(java.util.HashMap<String, Object> backup) {
+        try {
+            java.io.File backupFile = new java.io.File("/sdcard/aprs_channel_backup.dat");
+            java.io.ObjectOutputStream oos = new java.io.ObjectOutputStream(
+                new java.io.FileOutputStream(backupFile));
+            oos.writeObject(backup);
+            oos.close();
+            XposedBridge.log(TAG + ": Channel backup saved to file");
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error saving backup to file: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Load channel backup from file
+     */
+    private java.util.HashMap<String, Object> loadChannelBackupFromFile() {
+        try {
+            java.io.File backupFile = new java.io.File("/sdcard/aprs_channel_backup.dat");
+            if (!backupFile.exists()) {
+                return null;
+            }
+            
+            java.io.ObjectInputStream ois = new java.io.ObjectInputStream(
+                new java.io.FileInputStream(backupFile));
+            @SuppressWarnings("unchecked")
+            java.util.HashMap<String, Object> backup = (java.util.HashMap<String, Object>) ois.readObject();
+            ois.close();
+            
+            XposedBridge.log(TAG + ": Channel backup loaded from file");
+            return backup;
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error loading backup from file: " + e.getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Delete backup file
+     */
+    private void deleteChannelBackupFile() {
+        try {
+            java.io.File backupFile = new java.io.File("/sdcard/aprs_channel_backup.dat");
+            if (backupFile.exists()) {
+                backupFile.delete();
+                XposedBridge.log(TAG + ": Channel backup file deleted");
+            }
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error deleting backup file: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Restore channel from backup
+     */
+    private void restoreChannelBackup(Context context) {
+        try {
+            if (channelBackup == null) {
+                XposedBridge.log(TAG + ": No channel backup found");
+                return;
+            }
+            
+            // Get DmrManager
+            Class<?> dmrManagerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.manager.DmrManager",
+                appClassLoader
+            );
+            Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+            
+            // Get current channel
+            Object currentChannel = XposedHelpers.callMethod(dmrManager, "getCurrentChannel");
+            if (currentChannel == null) {
+                XposedBridge.log(TAG + ": Cannot get current channel for restore");
+                return;
+            }
+            
+            // Restore all fields
+            XposedHelpers.setIntField(currentChannel, "type", (Integer) channelBackup.get("type"));
+            XposedHelpers.setObjectField(currentChannel, "name", channelBackup.get("name"));
+            XposedHelpers.setIntField(currentChannel, "rxFreq", (Integer) channelBackup.get("rxFreq"));
+            XposedHelpers.setIntField(currentChannel, "txFreq", (Integer) channelBackup.get("txFreq"));
+            XposedHelpers.setIntField(currentChannel, "sq", (Integer) channelBackup.get("sq"));
+            XposedHelpers.setIntField(currentChannel, "band", (Integer) channelBackup.get("band"));
+            XposedHelpers.setIntField(currentChannel, "power", (Integer) channelBackup.get("power"));
+            XposedHelpers.setIntField(currentChannel, "rxType", (Integer) channelBackup.get("rxType"));
+            XposedHelpers.setIntField(currentChannel, "rxSubCode", (Integer) channelBackup.get("rxSubCode"));
+            XposedHelpers.setIntField(currentChannel, "txType", (Integer) channelBackup.get("txType"));
+            XposedHelpers.setIntField(currentChannel, "txSubCode", (Integer) channelBackup.get("txSubCode"));
+            
+            // Update hardware
+            XposedHelpers.callMethod(dmrManager, "updateChannel", currentChannel);
+            XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", currentChannel);
+            
+            XposedBridge.log(TAG + ": Channel restored: " + channelBackup.get("name"));
+            channelBackup = null;  // Clear backup
+            
+            // Delete backup file after successful restore
+            deleteChannelBackupFile();
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error restoring channel: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Check on startup if stuck on APRS channel and restore if backup exists
+     */
+    private void checkAndRestoreAPRSChannelOnStartup() {
+        boolean shouldDeleteBackup = false;
+        try {
+            XposedBridge.log(TAG + ": Checking for orphaned APRS channel...");
+            
+            // Note: APRS state already reset immediately in MainActivity.onCreate (before this delayed call)
+            
+            // Check if backup file exists
+            java.io.File backupFile = new java.io.File("/sdcard/aprs_channel_backup.dat");
+            if (!backupFile.exists()) {
+                XposedBridge.log(TAG + ": No APRS backup file found - normal startup");
+                return;
+            }
+            
+            XposedBridge.log(TAG + ": Backup file found - checking if channel needs restore");
+            shouldDeleteBackup = true;  // Always delete backup file after this point
+            
+            // Get DmrManager
+            Class<?> dmrManagerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.manager.DmrManager",
+                appClassLoader
+            );
+            Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+            
+            if (dmrManager == null) {
+                XposedBridge.log(TAG + ": ⚠️ DmrManager not ready yet - will delete backup and skip restore");
+                return;
+            }
+            
+            // Get current channel
+            Object currentChannel = XposedHelpers.callMethod(dmrManager, "getCurrentChannel");
+            if (currentChannel == null) {
+                XposedBridge.log(TAG + ": ⚠️ Cannot get current channel - will delete backup and skip restore");
+                return;
+            }
+            
+            // Check if current channel looks like APRS (name starts with "APRS (" or frequency is 144.39 MHz)
+            String channelName = (String) XposedHelpers.getObjectField(currentChannel, "name");
+            int rxFreq = XposedHelpers.getIntField(currentChannel, "rxFreq");
+            
+            XposedBridge.log(TAG + ": Current channel: " + channelName + " @ " + rxFreq + " Hz");
+            
+            if (channelName.startsWith("APRS (") || rxFreq == 144390000) {
+                XposedBridge.log(TAG + ": ⚠️ Detected orphaned APRS channel - restoring backup...");
+                
+                // Load backup from file
+                channelBackup = loadChannelBackupFromFile();
+                if (channelBackup != null) {
+                    XposedBridge.log(TAG + ": Backup loaded, restoring to: " + channelBackup.get("name"));
+                    
+                    // Restore all fields
+                    XposedHelpers.setIntField(currentChannel, "type", (Integer) channelBackup.get("type"));
+                    XposedHelpers.setObjectField(currentChannel, "name", channelBackup.get("name"));
+                    XposedHelpers.setIntField(currentChannel, "rxFreq", (Integer) channelBackup.get("rxFreq"));
+                    XposedHelpers.setIntField(currentChannel, "txFreq", (Integer) channelBackup.get("txFreq"));
+                    XposedHelpers.setIntField(currentChannel, "sq", (Integer) channelBackup.get("sq"));
+                    XposedHelpers.setIntField(currentChannel, "band", (Integer) channelBackup.get("band"));
+                    XposedHelpers.setIntField(currentChannel, "power", (Integer) channelBackup.get("power"));
+                    XposedHelpers.setIntField(currentChannel, "rxType", (Integer) channelBackup.get("rxType"));
+                    XposedHelpers.setIntField(currentChannel, "rxSubCode", (Integer) channelBackup.get("rxSubCode"));
+                    XposedHelpers.setIntField(currentChannel, "txType", (Integer) channelBackup.get("txType"));
+                    XposedHelpers.setIntField(currentChannel, "txSubCode", (Integer) channelBackup.get("txSubCode"));
+                    
+                    // Update hardware
+                    XposedHelpers.callMethod(dmrManager, "updateChannel", currentChannel);
+                    XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", currentChannel);
+                    
+                    XposedBridge.log(TAG + ": ✅ Channel restored on startup: " + channelBackup.get("name"));
+                    channelBackup = null;
+                } else {
+                    XposedBridge.log(TAG + ": ⚠️ Could not load backup file, but will delete it");
+                }
+            } else {
+                XposedBridge.log(TAG + ": Current channel looks normal - backup file will be deleted");
+            }
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": ❌ Error checking/restoring APRS channel: " + e.getMessage());
+            XposedBridge.log(e);
+        } finally {
+            // ALWAYS delete backup file after startup check
+            if (shouldDeleteBackup) {
+                try {
+                    deleteChannelBackupFile();
+                    XposedBridge.log(TAG + ": Backup file cleanup completed");
+                } catch (Exception e) {
+                    XposedBridge.log(TAG + ": Error deleting backup file: " + e.getMessage());
+                }
+            }
         }
     }
     
@@ -3844,8 +4035,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                     XposedBridge.log(TAG + ": RECEIVE_STOP detected (type: " + currentChannelType + ")");
                                     isReceiving = false;
                                     
-                                    // Process APRS buffer on receive stop (packets are often shorter than 2 seconds)
-                                    if (aprsAudioBuffer.size() > 0) {
+                                    // Process APRS buffer on receive stop ONLY if not in APRS monitoring mode
+                                    // (During APRS monitoring, timer-based processing handles everything)
+                                    if (!isAPRSMonitoringActive && aprsAudioBuffer.size() > 0) {
                                         XposedBridge.log(TAG + ": Processing APRS buffer on RECEIVE_STOP (" + aprsAudioBuffer.size() + " samples)");
                                         processAPRSBuffer();
                                     }
@@ -4987,8 +5179,10 @@ public class MainHook implements IXposedHookLoadPackage {
                         
                         XposedBridge.log(TAG + ": writeAudioTrack called - " + length + " bytes");
                         
-                        // Buffer audio for APRS decoding
-                        bufferAudioForAPRS(audioData, length);
+                        // Buffer audio for APRS decoding (only if monitoring is active)
+                        if (isAPRSMonitoringActive) {
+                            bufferAudioForAPRS(audioData, length);
+                        }
                         
                         // Buffer audio for transcription if enabled
                         if (isTranscriptionEnabled) {
