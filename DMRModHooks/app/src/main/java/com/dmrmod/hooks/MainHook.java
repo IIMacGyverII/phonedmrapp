@@ -198,6 +198,9 @@ public class MainHook implements IXposedHookLoadPackage {
     
     // APRS software squelch state (independent from intercom page squelch)
     private static volatile boolean isAprsSoftwareSquelchEnabled = false;  // Disabled by default
+    
+    // Save intercom squelch threshold before APRS monitoring overwrites it
+    private static int savedIntercomSquelchThreshold = 5;  // Default to 5
 
     // Zone selection and filtering
     private static android.widget.Button zoneButton = null;
@@ -4213,6 +4216,10 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.setIntField(currentChannel, "txType", 0);
             XposedHelpers.setIntField(currentChannel, "txSubCode", 0);
             
+            // Save the intercom squelch threshold before overwriting it
+            savedIntercomSquelchThreshold = softwareSquelchThreshold;
+            XposedBridge.log(TAG + ": Saved intercom squelch threshold: " + savedIntercomSquelchThreshold);
+            
             // Enable software squelch for APRS monitoring
             isSoftwareSquelchEnabled = true;
             currentChannelType = 1;  // Update static variable to match analog channel
@@ -4249,6 +4256,24 @@ public class MainHook implements IXposedHookLoadPackage {
             
             // Restore channel from backup
             restoreChannelBackup(activity);
+            
+            // Restore the intercom squelch threshold
+            softwareSquelchThreshold = savedIntercomSquelchThreshold;
+            XposedBridge.log(TAG + ": Restored intercom squelch threshold: " + softwareSquelchThreshold);
+            
+            // Update the slider and value label on intercom page if they exist
+            if (softwareSquelchContainer != null) {
+                android.widget.SeekBar seekBar = (android.widget.SeekBar) softwareSquelchContainer.findViewWithTag("DMR_SQUELCH_SEEKBAR");
+                TextView valueLabel = (TextView) softwareSquelchContainer.findViewWithTag("DMR_SQUELCH_VALUE");
+                if (seekBar != null) {
+                    seekBar.setProgress(softwareSquelchThreshold);
+                    XposedBridge.log(TAG + ": Updated slider to position " + softwareSquelchThreshold);
+                }
+                if (valueLabel != null) {
+                    valueLabel.setText(String.valueOf(softwareSquelchThreshold));
+                    XposedBridge.log(TAG + ": Updated value label to " + softwareSquelchThreshold);
+                }
+            }
             
             // If Soft SQ toggle was ON, turn it OFF
             if (softwareSquelchToggleButton != null && softwareSquelchToggleButton.isChecked()) {
