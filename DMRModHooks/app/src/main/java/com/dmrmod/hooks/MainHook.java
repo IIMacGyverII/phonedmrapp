@@ -191,6 +191,7 @@ public class MainHook implements IXposedHookLoadPackage {
     
     // Software squelch toggle button
     private static android.widget.ToggleButton softwareSquelchToggleButton = null;
+    private static android.widget.LinearLayout softwareSquelchContainer = null;  // Container for squelch slider
     
     // APRS monitoring toggle button
     private static android.widget.ToggleButton aprsMonitoringToggleButton = null;
@@ -1240,6 +1241,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Create squelch control container (half width, aligned left)
                                 LinearLayout squelchContainer = new LinearLayout(context);
                                 squelchContainer.setTag("DMR_SQUELCH_CONTAINER");
+                                softwareSquelchContainer = squelchContainer;  // Store reference
                                 squelchContainer.setOrientation(LinearLayout.HORIZONTAL);
                                 LinearLayout.LayoutParams squelchContainerParams = new LinearLayout.LayoutParams(
                                     halfScreenWidth,  // Half screen width
@@ -3635,6 +3637,12 @@ public class MainHook implements IXposedHookLoadPackage {
                 if (softwareSquelchToggleButton != null && softwareSquelchToggleButton.isChecked()) {
                     softwareSquelchToggleButton.setChecked(false);
                     isSoftwareSquelchEnabled = false;
+                    // Hide the squelch slider container
+                    if (softwareSquelchContainer != null) {
+                        softwareSquelchContainer.setVisibility(View.GONE);
+                    }
+                    // Restore hardware squelch to default (2)
+                    disableSoftwareSquelchOnCurrentChannel();
                     XposedBridge.log(TAG + ": Disabled Soft SQ before entering APRS monitoring");
                 }
                 
