@@ -4217,6 +4217,12 @@ public class MainHook implements IXposedHookLoadPackage {
             // Restore channel from backup
             restoreChannelBackup(activity);
             
+            // If Soft SQ toggle was ON, turn it OFF
+            if (softwareSquelchToggleButton != null && softwareSquelchToggleButton.isChecked()) {
+                XposedBridge.log(TAG + ": Soft SQ was ON, toggling it OFF");
+                softwareSquelchToggleButton.setChecked(false);
+            }
+            
             isAPRSMonitoringActive = false;
             
             // Update APRS button to unchecked state
