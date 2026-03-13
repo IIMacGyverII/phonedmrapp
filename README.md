@@ -2,8 +2,9 @@
 
 **Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS!
 
-> **📦 Current Stable Release: v3.1.1** (March 12, 2026) - APRS Crash Recovery Fixes  
-> **📡 Previous Major Release: v3.1.0** (March 12, 2026) - APRS Live Monitoring  
+> **📦 Current Stable Release: v3.1.2** (March 13, 2026) - APRS Channel Recovery + Squelch Control  
+> **🔧 Previous Release: v3.1.1** (March 12, 2026) - APRS Crash Recovery Fixes  
+> **📡 Major Feature: v3.1.0** (March 12, 2026) - APRS Live Monitoring  
 > **🌐 GPS Enhancement: v3.0.9** (March 9, 2026) - GPS Distance Enhancements  
 > **🎯 Zone Management: v3.0.8** (March 9, 2026) - Zone Management  
 > **📍 Feature Release: v3.0.5** (March 9, 2026) - Channel Zones  
@@ -13,7 +14,59 @@
 
 <video src="https://github.com/user-attachments/assets/d6305a49-c8ed-47dc-a9d8-7e731aa02811" controls title="DMRModHooks v1.1 Demo" width="800"></video>
 
-## 🐛 What's New in v3.1.1 (March 12, 2026)
+## � What's New in v3.1.2 (March 13, 2026)
+
+### APRS Channel Recovery & Squelch Control Improvements
+
+**Automatic crash recovery with user guidance + hardware-aware squelch control**
+
+#### **Crash Recovery System**
+- **Automatic channel restoration** when app closes during APRS monitoring
+- **AlertDialog notification** explains what happened and how to prevent future issues
+- **Complete field restoration** including frequency, squelch, and all metadata
+- **Comprehensive logging** for debugging crash recovery scenarios
+
+**How It Works:**
+1. Module detects orphaned APRS channel on app startup
+2. Automatically restores original channel settings from backup file
+3. Shows informative dialog with prevention guidance
+4. Prompts to restart the app for clean state
+
+**Backup System:**
+- File: `/sdcard/aprs_channel_backup.dat`
+- Saves: number, type, name, frequencies, squelch, band, power, rx/tx settings
+- Auto-deletes after successful restore
+
+#### **Squelch Control - Hardware Limitation Documentation**
+
+**⚠️ IMPORTANT: Ulefone Armor 26 Ultra Hardware Limitation**
+
+The radio hardware has a unique quirk that affects squelch control:
+- **Only sq=0 (open) and sq=2 work reliably**
+- **sq=1, sq=3-9 are forced to sq=2 by the hardware**
+- This is a **hardware/firmware limitation**, not a software bug
+
+**Impact on Design:**
+- No squelch slider needed - hardware only supports two states
+- **Open Squelch button** toggles between sq=0 (fully open) and sq=2 (tight)
+- Button shows **green** when squelch is open (sq=0)
+- Button shows **gray** when squelch is closed (sq=2)
+- Button state persists across UI refreshes (monitoring page updates every 2 seconds)
+
+**Why This Matters:**
+- Previous attempts at granular squelch control (0-9 slider) were fighting hardware
+- New design works **with** the hardware limitation instead of against it
+- Provides predictable, reliable squelch behavior
+
+**Technical Details:**
+- Direct hardware control via `AnalogMessage.send()`
+- Persistent static state variables survive UI refreshes
+- Works identically to MON button pattern
+- No database updates needed (direct UART communication)
+
+---
+
+## �🐛 What's New in v3.1.1 (March 12, 2026)
 
 ### Critical APRS Bug Fixes
 
