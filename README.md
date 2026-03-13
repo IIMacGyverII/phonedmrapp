@@ -2,8 +2,8 @@
 
 **Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS!
 
-> **📦 Current Stable Release: v3.1.2** (March 13, 2026) - APRS Channel Recovery + Squelch Control  
-> **🔧 Previous Release: v3.1.1** (March 12, 2026) - APRS Crash Recovery Fixes  
+> **📦 Current Stable Release: v3.1.3** (March 13, 2026) - Software Squelch UI Enhancements  
+> **🔧 Previous Release: v3.1.2** (March 13, 2026) - APRS Channel Recovery + Squelch Control  
 > **📡 Major Feature: v3.1.0** (March 12, 2026) - APRS Live Monitoring  
 > **🌐 GPS Enhancement: v3.0.9** (March 9, 2026) - GPS Distance Enhancements  
 > **🎯 Zone Management: v3.0.8** (March 9, 2026) - Zone Management  
@@ -13,6 +13,60 @@
 ## Demo
 
 <video src="https://github.com/user-attachments/assets/d6305a49-c8ed-47dc-a9d8-7e731aa02811" controls title="DMRModHooks v1.1 Demo" width="800"></video>
+
+## 🎨 What's New in v3.1.3 (March 13, 2026)
+
+### Software Squelch UI Enhancements & APRS Toggle
+
+**Complete UI overhaul for software squelch control + APRS monitoring improvements**
+
+#### **Intercom Page Enhancements**
+- **✨ Soft SQ Toggle Button**: Control software squelch on/off
+  - Light blue when OFF (hardware squelch mode)
+  - Blue when ON (software squelch enabled)
+  - Shows/hides slider based on toggle state
+  - OFF: Hardware squelch set to 2 (default)
+  - ON: Hardware squelch set to 0, software takes over
+- **⚡ Performance Optimization**: Slider no longer spams hardware during drag
+  - Hardware squelch only applied on release (onStopTrackingTouch)
+  - Toast notification only on release (no more spam)
+  - Smooth dragging without lag or repeated writes
+- **🎨 Button Visual Improvements**: All toggle buttons use light-colored OFF states
+  - TXT button: Light purple → Purple
+  - Soft SQ button: Light blue → Blue
+  - REC button: Light red → Red
+  - MON button: Light orange → Orange
+  - APRS button: Light green → Green
+- **🔘 APRS Button Enhancement**: Converted to ToggleButton with state management
+  - Auto-toggles with monitoring state
+  - Unchecks when closing monitoring dialog
+  - Proper state sync across app lifecycle
+- **📏 UI Spacing Refinements**:
+  - Slider track now colored full width (white on intercom, black on APRS)
+  - Reduced spacing between SQ: label and value display
+  - Tighter spacing above squelch controls
+  - Vertical spacing added between SQ: label and slider (4dp)
+
+#### **APRS Monitoring Page Enhancements**
+- **✨ Soft SQ Toggle**: Independent software squelch control for APRS
+  - Works identically to intercom page toggle
+  - Light blue when OFF, blue when ON
+  - Shows/hides slider and info text
+  - OFF: Uses hardware squelch (level 2)
+  - ON: Enables hybrid RSSI + Audio RMS squelch
+- **🔧 Independent Control**: APRS and intercom squelch settings are separate
+  - Each page has its own toggle state
+  - Each can use software or hardware squelch independently
+  - Squelch levels saved separately in preferences
+
+#### **Technical Details**
+- Software squelch disabled by default on both pages (user opt-in)
+- Toggle states: `isSoftwareSquelchEnabled` (intercom), `isAprsSoftwareSquelchEnabled` (APRS)
+- Hardware squelch control via direct `AnalogMessage.send()` calls
+- UI updates optimized to reduce redundant hardware writes
+- Full-width slider track using `setProgressBackgroundTintList()`
+
+---
 
 ## � What's New in v3.1.2 (March 13, 2026)
 

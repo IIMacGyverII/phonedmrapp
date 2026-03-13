@@ -4,8 +4,9 @@
 
 ## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import + APRS
 
-**Current Version**: v3.1.2 (March 13, 2026) - **APRS Channel Recovery**  
+**Current Version**: v3.1.3 (March 13, 2026) - **Software Squelch UI Enhancements**  
 **Previous Versions**: 
+- v3.1.2 (March 13, 2026) - APRS Channel Recovery
 - v3.1.1 (March 11, 2026) - APRS Open Squelch Button
 - v3.1.0 (March 10, 2026) - APRS Beaconing
 - v3.0.9 (March 9, 2026) - GPS Distance Enhancements
@@ -69,7 +70,62 @@ Rather than delay a working feature, I decided to:
 - [Releases](../../releases) - Download pre-built modules
 - [Technical Details](#technical-details)
 
-## 🎉 What's New in v3.1.2 (March 13, 2026)
+## 🎨 What's New in v3.1.3 (March 13, 2026)
+
+### 🎨 Software Squelch UI Enhancements & APRS Toggle
+
+**Complete UI overhaul for software squelch control with performance optimization**
+
+#### **Intercom Page Improvements**
+- **✨ Soft SQ Toggle Button**: User control for software squelch on/off
+  - Light blue (OFF) = Hardware squelch mode (level 2)
+  - Blue (ON) = Software squelch enabled (hybrid RSSI + Audio RMS)
+  - Shows/hides slider automatically based on toggle state
+  - Persists state across UI updates
+- **⚡ Performance Fix**: No more squelch spam during slider drag
+  - Hardware squelch **only** applied on release (onStopTrackingTouch)
+  - Toast notification **only** on release (no spam)
+  - Smooth dragging without lag or repeated hardware writes
+- **🎨 Button Visual Consistency**: Light-colored OFF states for all toggles
+  - TXT: Light purple (OFF) → Purple (ON)
+  - Soft SQ: Light blue (OFF) → Blue (ON)
+  - REC: Light red (OFF) → Red (ON)
+  - MON: Light orange (OFF) → Orange (ON)
+  - APRS: Light green (OFF) → Green (ON)
+  - Uses 38% opacity (0x60 alpha) for OFF states
+- **🔘 APRS Button State Management**: Converted to proper ToggleButton
+  - Auto-toggles when monitoring starts/stops
+  - Unchecks when dialog dismissed or cancelled
+  - Proper state sync across app lifecycle
+- **📏 UI Spacing Refinements**:
+  - Full-width slider track coloring (white on intercom, black on APRS)
+  - Reduced label-to-value spacing (4dp → 2dp on intercom, 8dp → 6dp on APRS)
+  - Tighter top spacing (pulled squelch controls closer to signal meter)
+  - Added 4dp vertical gap between SQ: label and slider
+
+#### **APRS Monitoring Page**
+- **✨ Soft SQ Toggle for APRS**: Independent software squelch control
+  - Same UI/behavior as intercom page toggle
+  - Light blue (OFF) = Hardware squelch (level 2)
+  - Blue (ON) = Software squelch with hybrid algorithm
+  - Shows/hides slider and info text automatically
+  - Independent from intercom page setting
+- **🔧 Separate State**: APRS and intercom have independent squelch control
+  - Each page tracks its own toggle state
+  - Each can use software or hardware squelch independently
+  - Squelch levels saved separately in SharedPreferences
+
+#### **Technical Improvements**
+- Software squelch **disabled by default** on both pages (user opt-in model)
+- State variables: `isSoftwareSquelchEnabled` (intercom), `isAprsSoftwareSquelchEnabled` (APRS)
+- Direct hardware control via `AnalogMessage.send()` (bypasses state machine)
+- Slider uses `setProgressBackgroundTintList()` for full-width track color
+- Optimized UI refresh logic to avoid redundant hardware writes
+- Toast notifications moved from drag handler to release handler
+
+---
+
+## 🔧 What's New in v3.1.2 (March 13, 2026)
 
 ### 🔧 APRS Channel Recovery & User Experience Improvements
 
