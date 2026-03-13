@@ -191,6 +191,9 @@ public class MainHook implements IXposedHookLoadPackage {
     
     // Software squelch toggle button
     private static android.widget.ToggleButton softwareSquelchToggleButton = null;
+    
+    // APRS monitoring toggle button
+    private static android.widget.ToggleButton aprsMonitoringToggleButton = null;
 
     // Zone selection and filtering
     private static android.widget.Button zoneButton = null;
@@ -1239,7 +1242,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     halfScreenWidth,  // Half screen width
                                     LinearLayout.LayoutParams.WRAP_CONTENT
                                 );
-                                squelchContainerParams.topMargin = negMargin16dp;  // Pull up closer to RSSI
+                                squelchContainerParams.topMargin = (int)(-18 * context.getResources().getDisplayMetrics().density);  // Pull up closer to RSSI (reduced from -16dp to -18dp)
                                 squelchContainerParams.bottomMargin = (int)(-6 * context.getResources().getDisplayMetrics().density);  // Pull up content below
                                 squelchContainerParams.leftMargin = margin16dp;
                                 squelchContainerParams.rightMargin = 0;  // No right margin
@@ -1258,7 +1261,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     LinearLayout.LayoutParams.WRAP_CONTENT
                                 );
                                 labelParams.gravity = android.view.Gravity.CENTER_VERTICAL;
-                                labelParams.rightMargin = (int) (4 * context.getResources().getDisplayMetrics().density);
+                                labelParams.rightMargin = (int) (2 * context.getResources().getDisplayMetrics().density);  // Reduced from 4dp to 2dp
                                 squelchLabel.setLayoutParams(labelParams);
                                 squelchContainer.addView(squelchLabel);
                                 
@@ -1286,16 +1289,18 @@ public class MainHook implements IXposedHookLoadPackage {
                                     LinearLayout.LayoutParams.WRAP_CONTENT
                                 );
                                 squelchSeekBarParams.weight = 1.0f;
+                                squelchSeekBarParams.topMargin = (int) (4 * context.getResources().getDisplayMetrics().density);
                                 squelchSeekBarParams.leftMargin = margin10dp;
                                 squelchSeekBarParams.rightMargin = margin10dp;
                                 squelchSeekBar.setLayoutParams(squelchSeekBarParams);
                                 squelchSeekBar.setMax(9); // 0-9 squelch levels
                                 squelchSeekBar.setProgress(5); // Default to middle
                                 
-                                // Make slider white for visibility
+                                // Make slider white for visibility (both progress and background)
                                 try {
                                     android.content.res.ColorStateList whiteColor = android.content.res.ColorStateList.valueOf(0xFFFFFFFF);
                                     squelchSeekBar.setProgressTintList(whiteColor);
+                                    squelchSeekBar.setProgressBackgroundTintList(whiteColor);  // Make entire track white
                                     squelchSeekBar.setThumbTintList(whiteColor);
                                 } catch (Exception e) {
                                     XposedBridge.log(TAG + ": Could not set slider color: " + e);
@@ -1460,10 +1465,10 @@ public class MainHook implements IXposedHookLoadPackage {
                                 );
                                 transcriptionStateDrawable.addState(new int[]{android.R.attr.state_checked}, transcriptionCheckedDrawable);
                                 
-                                // Unchecked state (transcription disabled) - Semi-transparent purple background
+                                // Unchecked state (transcription disabled) - Light purple background
                                 android.graphics.drawable.GradientDrawable transcriptionUncheckedDrawable = new android.graphics.drawable.GradientDrawable();
                                 transcriptionUncheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                                transcriptionUncheckedDrawable.setColor(0x80800080);  // Semi-transparent purple
+                                transcriptionUncheckedDrawable.setColor(0x609370DB);  // Light purple (transparent version of ON color)
                                 transcriptionUncheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
                                 transcriptionUncheckedDrawable.setStroke(
                                     (int) (2 * context.getResources().getDisplayMetrics().density),
@@ -1572,10 +1577,10 @@ public class MainHook implements IXposedHookLoadPackage {
                                 );
                                 softSqStateDrawable.addState(new int[]{android.R.attr.state_checked}, softSqCheckedDrawable);
                                 
-                                // Unchecked state (software squelch disabled) - Grey background
+                                // Unchecked state (software squelch disabled) - Light blue background
                                 android.graphics.drawable.GradientDrawable softSqUncheckedDrawable = new android.graphics.drawable.GradientDrawable();
                                 softSqUncheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                                softSqUncheckedDrawable.setColor(0x80808080);  // Semi-transparent gray
+                                softSqUncheckedDrawable.setColor(0x602196F3);  // Light blue (transparent version of ON color)
                                 softSqUncheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
                                 softSqUncheckedDrawable.setStroke(
                                     (int) (2 * context.getResources().getDisplayMetrics().density),
@@ -1663,10 +1668,10 @@ public class MainHook implements IXposedHookLoadPackage {
                                 );
                                 stateDrawable.addState(new int[]{android.R.attr.state_checked}, checkedDrawable);
                                 
-                                // Unchecked state (recording disabled) - Gray background
+                                // Unchecked state (recording disabled) - Light red background
                                 android.graphics.drawable.GradientDrawable uncheckedDrawable = new android.graphics.drawable.GradientDrawable();
                                 uncheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                                uncheckedDrawable.setColor(0x80808080);  // Semi-transparent gray
+                                uncheckedDrawable.setColor(0x60FF0000);  // Light red (transparent version of ON color)
                                 uncheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
                                 uncheckedDrawable.setStroke(
                                     (int) (2 * context.getResources().getDisplayMetrics().density),
@@ -1740,10 +1745,10 @@ public class MainHook implements IXposedHookLoadPackage {
                                 );
                                 monitorStateDrawable.addState(new int[]{android.R.attr.state_checked}, monitorCheckedDrawable);
                                 
-                                // Unchecked state (monitoring OFF - GROUP mode) - Gray background
+                                // Unchecked state (monitoring OFF - GROUP mode) - Light orange background
                                 android.graphics.drawable.GradientDrawable monitorUncheckedDrawable = new android.graphics.drawable.GradientDrawable();
                                 monitorUncheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                                monitorUncheckedDrawable.setColor(0x80808080);  // Semi-transparent gray
+                                monitorUncheckedDrawable.setColor(0x60FF8C00);  // Light orange (transparent version of ON color)
                                 monitorUncheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
                                 monitorUncheckedDrawable.setStroke(
                                     (int) (2 * context.getResources().getDisplayMetrics().density),
@@ -1931,10 +1936,12 @@ public class MainHook implements IXposedHookLoadPackage {
                                 buttonContainer.addView(monitorToggle);
                                 XposedBridge.log(TAG + ": ✓ Added monitoring mode toggle below REC button");
                                 
-                                // Create APRS monitoring mode button (below MON button, right side)
-                                android.widget.Button aprsButton = new android.widget.Button(context);
+                                // Create APRS monitoring mode toggle button (below MON button, right side)
+                                android.widget.ToggleButton aprsButton = new android.widget.ToggleButton(context);
                                 aprsButton.setTag("DMR_APRS_MONITOR_BUTTON");
-                                aprsButton.setText("APRS");
+                                aprsButton.setTextOn("APRS");
+                                aprsButton.setTextOff("APRS");
+                                aprsButton.setChecked(false);
                                 
                                 FrameLayout.LayoutParams aprsButtonParams = new FrameLayout.LayoutParams(
                                     (int) (70 * context.getResources().getDisplayMetrics().density),  // 70dp width
@@ -1948,16 +1955,35 @@ public class MainHook implements IXposedHookLoadPackage {
                                 aprsButton.setTypeface(null, android.graphics.Typeface.BOLD);
                                 aprsButton.setTextColor(0xFFFFFFFF);  // White text
                                 
-                                // APRS button drawable - Green background
-                                android.graphics.drawable.GradientDrawable aprsDrawable = new android.graphics.drawable.GradientDrawable();
-                                aprsDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                                aprsDrawable.setColor(0xFF00AA00);  // Green
-                                aprsDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
-                                aprsDrawable.setStroke(
+                                // Create state list drawable for APRS button
+                                android.graphics.drawable.StateListDrawable aprsStateDrawable = new android.graphics.drawable.StateListDrawable();
+                                
+                                // Checked state (APRS monitoring active) - Green background
+                                android.graphics.drawable.GradientDrawable aprsCheckedDrawable = new android.graphics.drawable.GradientDrawable();
+                                aprsCheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                                aprsCheckedDrawable.setColor(0xFF00AA00);  // Green
+                                aprsCheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
+                                aprsCheckedDrawable.setStroke(
                                     (int) (2 * context.getResources().getDisplayMetrics().density),
                                     0xFFFFFFFF  // White border
                                 );
-                                aprsButton.setBackground(aprsDrawable);
+                                aprsStateDrawable.addState(new int[]{android.R.attr.state_checked}, aprsCheckedDrawable);
+                                
+                                // Unchecked state (APRS monitoring inactive) - Light green background
+                                android.graphics.drawable.GradientDrawable aprsUncheckedDrawable = new android.graphics.drawable.GradientDrawable();
+                                aprsUncheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                                aprsUncheckedDrawable.setColor(0x6000AA00);  // Light green (transparent version of ON color)
+                                aprsUncheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
+                                aprsUncheckedDrawable.setStroke(
+                                    (int) (2 * context.getResources().getDisplayMetrics().density),
+                                    0x80FFFFFF  // Semi-transparent white border
+                                );
+                                aprsStateDrawable.addState(new int[]{}, aprsUncheckedDrawable);
+                                
+                                aprsButton.setBackground(aprsStateDrawable);
+                                
+                                // Store reference
+                                aprsMonitoringToggleButton = aprsButton;
                                 
                                 // Set click listener
                                 aprsButton.setOnClickListener(new View.OnClickListener() {
@@ -1968,7 +1994,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 });
                                 
                                 buttonContainer.addView(aprsButton);
-                                XposedBridge.log(TAG + ": ✓ Added APRS monitoring button below MON button");
+                                XposedBridge.log(TAG + ": ✓ Added APRS monitoring toggle button below MON button");
                                 
                                 // Zone button is now created in RSSI/Zone container above borderbox
                                 
@@ -3608,7 +3634,26 @@ public class MainHook implements IXposedHookLoadPackage {
             }
         });
         
-        builder.setNegativeButton("Close", null);
+        builder.setNegativeButton("Close", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // User closed dialog without starting - uncheck APRS button
+                if (aprsMonitoringToggleButton != null) {
+                    aprsMonitoringToggleButton.setChecked(false);
+                }
+            }
+        });
+        
+        // Also handle back button press
+        builder.setOnCancelListener(new DialogInterface.OnCancelListener() {
+            @Override
+            public void onCancel(DialogInterface dialog) {
+                // User canceled dialog - uncheck APRS button
+                if (aprsMonitoringToggleButton != null) {
+                    aprsMonitoringToggleButton.setChecked(false);
+                }
+            }
+        });
         
         builder.show();
     }
@@ -3648,6 +3693,20 @@ public class MainHook implements IXposedHookLoadPackage {
         });
         
         aprsMonitoringDialog = builder.create();
+        
+        // Handle back button press or dialog dismissal
+        aprsMonitoringDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+            @Override
+            public void onCancel(DialogInterface dialog) {
+                // User dismissed dialog - stop monitoring and uncheck button
+                stopAPRSMonitoring(activity);
+                if (aprsUpdateHandler != null && aprsUpdateRunnable != null) {
+                    aprsUpdateHandler.removeCallbacks(aprsUpdateRunnable);
+                }
+                aprsMonitoringDialog = null;
+            }
+        });
+        
         aprsMonitoringDialog.show();
         
         // Set up periodic updates
@@ -3722,7 +3781,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             );
             labelParams.gravity = android.view.Gravity.CENTER_VERTICAL;
-            labelParams.rightMargin = (int) (8 * activity.getResources().getDisplayMetrics().density);
+            labelParams.rightMargin = (int) (6 * activity.getResources().getDisplayMetrics().density);  // Reduced from 8dp to 6dp
             sqLabel.setLayoutParams(labelParams);
             squelchContainer.addView(sqLabel);
             
@@ -3749,15 +3808,17 @@ public class MainHook implements IXposedHookLoadPackage {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             );
             seekBarParams.weight = 1.0f;
+            seekBarParams.topMargin = (int) (4 * activity.getResources().getDisplayMetrics().density);
             seekBarParams.leftMargin = (int) (10 * activity.getResources().getDisplayMetrics().density);
             squelchSeekBar.setLayoutParams(seekBarParams);
             squelchSeekBar.setMax(9);
             squelchSeekBar.setProgress(savedSquelch);
             
-            // Set slider color to black
+            // Set slider color to black (both progress and background)
             try {
                 android.content.res.ColorStateList blackColor = android.content.res.ColorStateList.valueOf(0xFF000000);
                 squelchSeekBar.setProgressTintList(blackColor);
+                squelchSeekBar.setProgressBackgroundTintList(blackColor);  // Make entire track black
                 squelchSeekBar.setThumbTintList(blackColor);
             } catch (Exception e) {
                 XposedBridge.log(TAG + ": Could not set APRS squelch slider color: " + e);
@@ -4046,6 +4107,11 @@ public class MainHook implements IXposedHookLoadPackage {
             
             isAPRSMonitoringActive = true;
             
+            // Update APRS button to checked state
+            if (aprsMonitoringToggleButton != null) {
+                aprsMonitoringToggleButton.setChecked(true);
+            }
+            
             Toast.makeText(activity, "APRS Monitoring Active at " + frequencyMHz + " MHz\nSoftware Squelch: " + softwareSquelchThreshold, Toast.LENGTH_SHORT).show();
             XposedBridge.log(TAG + ": ✅ APRS monitoring active - current channel hijacked with software squelch");
             
@@ -4067,6 +4133,11 @@ public class MainHook implements IXposedHookLoadPackage {
             restoreChannelBackup(activity);
             
             isAPRSMonitoringActive = false;
+            
+            // Update APRS button to unchecked state
+            if (aprsMonitoringToggleButton != null) {
+                aprsMonitoringToggleButton.setChecked(false);
+            }
             
             // Reset squelch state for next monitoring session
             isAPRSSquelchOpen = false;
