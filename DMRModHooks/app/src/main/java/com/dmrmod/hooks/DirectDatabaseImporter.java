@@ -149,22 +149,71 @@ public class DirectDatabaseImporter {
                             AlertDialog.Builder builder = new AlertDialog.Builder(context);
                             builder.setTitle("Select Backup to Import");
                             
-                            ArrayAdapter<String> adapter = new ArrayAdapter<>(
-                                context,
-                                android.R.layout.select_dialog_item,
-                                displayNames
+                            // Create custom list view that shows delete buttons
+                            final android.widget.ListView listView = new android.widget.ListView(context);
+                            
+                            // Use array wrapper to allow adapter access from inner class
+                            final BackupListAdapter[] adapterHolder = new BackupListAdapter[1];
+                            
+                            // Custom adapter with delete button
+                            adapterHolder[0] = new BackupListAdapter(
+                                context, 
+                                sortedFolders, 
+                                displayNames,
+                                new BackupListAdapter.OnDeleteClickListener() {
+                                    @Override
+                                    public void onDeleteClick(final int position) {
+                                        final String folderToDelete = sortedFolders.get(position);
+                                        final String displayName = displayNames.get(position);
+                                        
+                                        // Show confirmation dialog
+                                        new AlertDialog.Builder(context)
+                                            .setTitle("Delete Backup")
+                                            .setMessage("Are you sure you want to delete this backup?\n\n" 
+                                                + displayName + "\n\nThis cannot be undone.")
+                                            .setPositiveButton("Delete", new android.content.DialogInterface.OnClickListener() {
+                                                @Override
+                                                public void onClick(android.content.DialogInterface dialog, int which) {
+                                                    // Delete the backup folder
+                                                    deleteBackupFolder(context, folderToDelete);
+                                                    
+                                                    // Remove from lists
+                                                    sortedFolders.remove(position);
+                                                    displayNames.remove(position);
+                                                    
+                                                    // Refresh adapter
+                                                    if (adapterHolder[0] != null) {
+                                                        adapterHolder[0].notifyDataSetChanged();
+                                                    }
+                                                    
+                                                    // If no backups left, close dialog
+                                                    if (sortedFolders.isEmpty()) {
+                                                        android.widget.Toast.makeText(context, 
+                                                            "No backups remaining", 
+                                                            android.widget.Toast.LENGTH_SHORT).show();
+                                                    }
+                                                }
+                                            })
+                                            .setNegativeButton("Cancel", null)
+                                            .show();
+                                    }
+                                }
                             );
                             
-                            builder.setAdapter(adapter, new android.content.DialogInterface.OnClickListener() {
+                            listView.setAdapter(adapterHolder[0]);
+                            
+                            // Handle item click for import
+                            listView.setOnItemClickListener(new android.widget.AdapterView.OnItemClickListener() {
                                 @Override
-                                public void onClick(android.content.DialogInterface dialog, int which) {
-                                    final String selectedFolder = sortedFolders.get(which);
+                                public void onItemClick(android.widget.AdapterView<?> parent, android.view.View view, int position, long id) {
+                                    final String selectedFolder = sortedFolders.get(position);
+                                    final String displayName = displayNames.get(position);
                                     
                                     // Confirm import
                                     new AlertDialog.Builder(context)
                                         .setTitle("Confirm Import")
                                         .setMessage("This will REPLACE all current channels and contacts with data from:\n\n" 
-                                            + displayNames.get(which) + "\n\nContinue?")
+                                            + displayName + "\n\nContinue?")
                                         .setPositiveButton("Import", new android.content.DialogInterface.OnClickListener() {
                                             @Override
                                             public void onClick(android.content.DialogInterface dialog, int which) {
@@ -176,6 +225,7 @@ public class DirectDatabaseImporter {
                                 }
                             });
                             
+                            builder.setView(listView);
                             builder.setNegativeButton("Cancel", null);
                             builder.show();
                         }
@@ -969,5 +1019,169 @@ public class DirectDatabaseImporter {
         }
         Log.w(TAG, "Contact not found: '" + contactName + "', using default ID 1");
         return 1; // Default if not found
+    }
+    
+    /**
+     * Delete a backup folder and all its contents
+     */
+    private static void deleteBackupFolder(Context context, String folderName) {
+        try {
+            File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            File backupDir = new File(downloadDir, "DMR/DMR_Backups");
+            File folderToDelete = new File(backupDir, folderName);
+            
+            if (!folderToDelete.exists()) {
+                Log.w(TAG, "Folder to delete doesn't exist: " + folderToDelete.getAbsolutePath());
+                return;
+            }
+            
+            // Delete all files in the folder first
+            if (folderToDelete.isDirectory()) {
+                File[] files = folderToDelete.listFiles();
+                if (files != null) {
+                    for (File file : files) {
+                        if (file.delete()) {
+                            Log.i(TAG, "Deleted file: " + file.getName());
+                        } else {
+                            Log.w(TAG, "Failed to delete file: " + file.getName());
+                        }
+                    }
+                }
+            }
+            
+            // Delete the folder itself
+            if (folderToDelete.delete()) {
+                Log.i(TAG, "Deleted backup folder: " + folderName);
+                android.widget.Toast.makeText(context, 
+                    "✓ Backup deleted: " + folderName, 
+                    android.widget.Toast.LENGTH_SHORT).show();
+            } else {
+                Log.e(TAG, "Failed to delete folder: " + folderName);
+                android.widget.Toast.makeText(context, 
+                    "Failed to delete backup folder", 
+                    android.widget.Toast.LENGTH_SHORT).show();
+            }
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error deleting backup folder: " + e.getMessage());
+            e.printStackTrace();
+            android.widget.Toast.makeText(context, 
+                "Error deleting backup: " + e.getMessage(), 
+                android.widget.Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    /**
+     * Custom adapter for backup list with delete buttons
+     */
+    static class BackupListAdapter extends android.widget.BaseAdapter {
+        private final Context context;
+        private final List<String> folderNames;
+        private final List<String> displayNames;
+        private final OnDeleteClickListener deleteListener;
+        
+        interface OnDeleteClickListener {
+            void onDeleteClick(int position);
+        }
+        
+        BackupListAdapter(Context context, List<String> folderNames, 
+                         List<String> displayNames, OnDeleteClickListener deleteListener) {
+            this.context = context;
+            this.folderNames = folderNames;
+            this.displayNames = displayNames;
+            this.deleteListener = deleteListener;
+        }
+        
+        @Override
+        public int getCount() {
+            return displayNames.size();
+        }
+        
+        @Override
+        public Object getItem(int position) {
+            return displayNames.get(position);
+        }
+        
+        @Override
+        public long getItemId(int position) {
+            return position;
+        }
+        
+        @Override
+        public android.view.View getView(final int position, android.view.View convertView, android.view.ViewGroup parent) {
+            android.view.View view = convertView;
+            
+            if (view == null) {
+                // Create custom layout for list item
+                android.widget.LinearLayout layout = new android.widget.LinearLayout(context);
+                layout.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+                layout.setPadding(20, 15, 20, 15);
+                layout.setLayoutParams(new android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                ));
+                
+                // Text view for backup name
+                android.widget.TextView textView = new android.widget.TextView(context);
+                textView.setId(android.R.id.text1);
+                textView.setTextSize(16);
+                textView.setTextColor(0xFF000000);
+                android.widget.LinearLayout.LayoutParams textParams = new android.widget.LinearLayout.LayoutParams(
+                    0,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+                textParams.weight = 1.0f;
+                textParams.gravity = android.view.Gravity.CENTER_VERTICAL;
+                textView.setLayoutParams(textParams);
+                layout.addView(textView);
+                
+                // Delete button (trash icon)
+                android.widget.Button deleteButton = new android.widget.Button(context);
+                deleteButton.setId(android.R.id.button1);
+                deleteButton.setText("🗑️");
+                deleteButton.setTextSize(20);
+                deleteButton.setPadding(20, 10, 20, 10);
+                android.widget.LinearLayout.LayoutParams buttonParams = new android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+                buttonParams.leftMargin = 20;
+                deleteButton.setLayoutParams(buttonParams);
+                
+                // Style the button
+                android.graphics.drawable.GradientDrawable drawable = new android.graphics.drawable.GradientDrawable();
+                drawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                drawable.setColor(0xFFFF5555);  // Red background
+                drawable.setCornerRadius(10 * context.getResources().getDisplayMetrics().density);
+                deleteButton.setBackground(drawable);
+                deleteButton.setTextColor(0xFFFFFFFF);  // White text
+                
+                // Important: Make button not steal focus from list item clicks
+                deleteButton.setFocusable(false);
+                deleteButton.setFocusableInTouchMode(false);
+                
+                layout.addView(deleteButton);
+                view = layout;
+            }
+            
+            // Set backup name
+            android.widget.TextView textView = view.findViewById(android.R.id.text1);
+            textView.setText(displayNames.get(position));
+            
+            // Set delete button click listener
+            android.widget.Button deleteButton = view.findViewById(android.R.id.button1);
+            deleteButton.setFocusable(false);
+            deleteButton.setFocusableInTouchMode(false);
+            deleteButton.setOnClickListener(new android.view.View.OnClickListener() {
+                @Override
+                public void onClick(android.view.View v) {
+                    if (deleteListener != null) {
+                        deleteListener.onDeleteClick(position);
+                    }
+                }
+            });
+            
+            return view;
+        }
     }
 }
