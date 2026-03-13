@@ -1,0 +1,57 @@
+[
+{
+  "directory": "C:/Users/Joshua/Documents/android/phonedmrapp/DMRModHooks/app/.cxx/Debug/5bem5761/arm64-v8a",
+  "command": "C:\\Users\\Joshua\\AppData\\Local\\Android\\Sdk\\ndk\\25.1.8937393\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=aarch64-none-linux-android26 --sysroot=C:/Users/Joshua/AppData/Local/Android/Sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Ddirewolf_decoder_EXPORTS -IC:/Users/Joshua/Downloads/direwolf/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -std=c++17 -fno-limit-debug-info  -fPIC -o CMakeFiles\\direwolf_decoder.dir\\direwolf_jni.cpp.o -c C:\\Users\\Joshua\\Documents\\android\\phonedmrapp\\DMRModHooks\\app\\src\\main\\cpp\\direwolf_jni.cpp",
+  "file": "C:\\Users\\Joshua\\Documents\\android\\phonedmrapp\\DMRModHooks\\app\\src\\main\\cpp\\direwolf_jni.cpp"
+},
+{
+  "directory": "C:/Users/Joshua/Documents/android/phonedmrapp/DMRModHooks/app/.cxx/Debug/5bem5761/arm64-v8a",
+  "command": "C:\\Users\\Joshua\\AppData\\Local\\Android\\Sdk\\ndk\\25.1.8937393\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=aarch64-none-linux-android26 --sysroot=C:/Users/Joshua/AppData/Local/Android/Sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Ddirewolf_decoder_EXPORTS -IC:/Users/Joshua/Downloads/direwolf/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -o CMakeFiles\\direwolf_decoder.dir\\C_\\Users\\Joshua\\Downloads\\direwolf\\src\\demod_afsk.c.o -c C:\\Users\\Joshua\\Downloads\\direwolf\\src\\demod_afsk.c",
+  "file": "C:\\Users\\Joshua\\Downloads\\direwolf\\src\\demod_afsk.c"
+},
+{
+  "directory": "C:/Users/Joshua/Documents/android/phonedmrapp/DMRModHooks/app/.cxx/Debug/5bem5761/arm64-v8a",
+  "command": "C:\\Users\\Joshua\\AppData\\Local\\Android\\Sdk\\ndk\\25.1.8937393\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=aarch64-none-linux-android26 --sysroot=C:/Users/Joshua/AppData/Local/Android/Sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Ddirewolf_decoder_EXPORTS -IC:/Users/Joshua/Downloads/direwolf/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -o CMakeFiles\\direwolf_decoder.dir\\C_\\Users\\Joshua\\Downloads\\direwolf\\src\\demod.c.o -c C:\\Users\\Joshua\\Downloads\\direwolf\\src\\demod.c",
+  "file": "C:\\Users\\Joshua\\Downloads\\direwolf\\src\\demod.c"
+},
+{
+  "directory": "C:/Users/Joshua/Documents/android/phonedmrapp/DMRModHooks/app/.cxx/Debug/5bem5761/arm64-v8a",
+  "command": "C:\\Users\\Joshua\\AppData\\Local\\Android\\Sdk\\ndk\\25.1.8937393\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=aarch64-none-linux-android26 --sysroot=C:/Users/Joshua/AppData/Local/Android/Sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Ddirewolf_decoder_EXPORTS -IC:/Users/Joshua/Downloads/direwolf/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -o CMakeFiles\\direwolf_decoder.dir\\C_\\Users\\Joshua\\Downloads\\direwolf\\src\\hdlc_rec.c.o -c C:\\Users\\Joshua\\Downloads\\direwolf\\src\\hdlc_rec.c",
+  "file": "C:\\Users\\Joshua\\Downloads\\direwolf\\src\\hdlc_rec.c"
+},
+{
+  "directory": "C:/Users/Joshua/Documents/android/phonedmrapp/DMRModHooks/app/.cxx/Debug/5bem5761/arm64-v8a",
+  "command": "C:\\Users\\Joshua\\AppData\\Local\\Android\\Sdk\\ndk\\25.1.8937393\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=aarch64-none-linux-android26 --sysroot=C:/Users/Joshua/AppData/Local/Android/Sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Ddirewolf_decoder_EXPORTS -IC:/Users/Joshua/Downloads/direwolf/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -o CMakeFiles\\direwolf_decoder.dir\\C_\\Users\\Joshua\\Downloads\\direwolf\\src\\hdlc_rec2.c.o -c C:\\Users\\Joshua\\Downloads\\direwolf\\src\\hdlc_rec2.c",
+  "file": "C:\\Users\\Joshua\\Downloads\\direwolf\\src\\hdlc_rec2.c"
+},
+{
+  "directory": "C:/Users/Joshua/Documents/android/phonedmrapp/DMRModHooks/app/.cxx/Debug/5bem5761/arm64-v8a",
+  "command": "C:\\Users\\Joshua\\AppData\\Local\\Android\\Sdk\\ndk\\25.1.8937393\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=aarch64-none-linux-android26 --sysroot=C:/Users/Joshua/AppData/Local/Android/Sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Ddirewolf_decoder_EXPORTS -IC:/Users/Joshua/Downloads/direwolf/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -o CMakeFiles\\direwolf_decoder.dir\\C_\\Users\\Joshua\\Downloads\\direwolf\\src\\ax25_pad.c.o -c C:\\Users\\Joshua\\Downloads\\direwolf\\src\\ax25_pad.c",
+  "file": "C:\\Users\\Joshua\\Downloads\\direwolf\\src\\ax25_pad.c"
+},
+{
+  "directory": "C:/Users/Joshua/Documents/android/phonedmrapp/DMRModHooks/app/.cxx/Debug/5bem5761/arm64-v8a",
+  "command": "C:\\Users\\Joshua\\AppData\\Local\\Android\\Sdk\\ndk\\25.1.8937393\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=aarch64-none-linux-android26 --sysroot=C:/Users/Joshua/AppData/Local/Android/Sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Ddirewolf_decoder_EXPORTS -IC:/Users/Joshua/Downloads/direwolf/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -o CMakeFiles\\direwolf_decoder.dir\\C_\\Users\\Joshua\\Downloads\\direwolf\\src\\fcs_calc.c.o -c C:\\Users\\Joshua\\Downloads\\direwolf\\src\\fcs_calc.c",
+  "file": "C:\\Users\\Joshua\\Downloads\\direwolf\\src\\fcs_calc.c"
+},
+{
+  "directory": "C:/Users/Joshua/Documents/android/phonedmrapp/DMRModHooks/app/.cxx/Debug/5bem5761/arm64-v8a",
+  "command": "C:\\Users\\Joshua\\AppData\\Local\\Android\\Sdk\\ndk\\25.1.8937393\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=aarch64-none-linux-android26 --sysroot=C:/Users/Joshua/AppData/Local/Android/Sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Ddirewolf_decoder_EXPORTS -IC:/Users/Joshua/Downloads/direwolf/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -o CMakeFiles\\direwolf_decoder.dir\\C_\\Users\\Joshua\\Downloads\\direwolf\\src\\rrbb.c.o -c C:\\Users\\Joshua\\Downloads\\direwolf\\src\\rrbb.c",
+  "file": "C:\\Users\\Joshua\\Downloads\\direwolf\\src\\rrbb.c"
+},
+{
+  "directory": "C:/Users/Joshua/Documents/android/phonedmrapp/DMRModHooks/app/.cxx/Debug/5bem5761/arm64-v8a",
+  "command": "C:\\Users\\Joshua\\AppData\\Local\\Android\\Sdk\\ndk\\25.1.8937393\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=aarch64-none-linux-android26 --sysroot=C:/Users/Joshua/AppData/Local/Android/Sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Ddirewolf_decoder_EXPORTS -IC:/Users/Joshua/Downloads/direwolf/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -o CMakeFiles\\direwolf_decoder.dir\\C_\\Users\\Joshua\\Downloads\\direwolf\\src\\multi_modem.c.o -c C:\\Users\\Joshua\\Downloads\\direwolf\\src\\multi_modem.c",
+  "file": "C:\\Users\\Joshua\\Downloads\\direwolf\\src\\multi_modem.c"
+},
+{
+  "directory": "C:/Users/Joshua/Documents/android/phonedmrapp/DMRModHooks/app/.cxx/Debug/5bem5761/arm64-v8a",
+  "command": "C:\\Users\\Joshua\\AppData\\Local\\Android\\Sdk\\ndk\\25.1.8937393\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=aarch64-none-linux-android26 --sysroot=C:/Users/Joshua/AppData/Local/Android/Sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Ddirewolf_decoder_EXPORTS -IC:/Users/Joshua/Downloads/direwolf/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -o CMakeFiles\\direwolf_decoder.dir\\C_\\Users\\Joshua\\Downloads\\direwolf\\src\\dsp.c.o -c C:\\Users\\Joshua\\Downloads\\direwolf\\src\\dsp.c",
+  "file": "C:\\Users\\Joshua\\Downloads\\direwolf\\src\\dsp.c"
+},
+{
+  "directory": "C:/Users/Joshua/Documents/android/phonedmrapp/DMRModHooks/app/.cxx/Debug/5bem5761/arm64-v8a",
+  "command": "C:\\Users\\Joshua\\AppData\\Local\\Android\\Sdk\\ndk\\25.1.8937393\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=aarch64-none-linux-android26 --sysroot=C:/Users/Joshua/AppData/Local/Android/Sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/windows-x86_64/sysroot -Ddirewolf_decoder_EXPORTS -IC:/Users/Joshua/Downloads/direwolf/src -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -o CMakeFiles\\direwolf_decoder.dir\\C_\\Users\\Joshua\\Downloads\\direwolf\\src\\textcolor.c.o -c C:\\Users\\Joshua\\Downloads\\direwolf\\src\\textcolor.c",
+  "file": "C:\\Users\\Joshua\\Downloads\\direwolf\\src\\textcolor.c"
+}
+]

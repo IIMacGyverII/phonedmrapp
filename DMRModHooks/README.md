@@ -2,12 +2,16 @@
 
 **LSPosed module for modifying the Ulefone PriInterPhone DMR app at runtime**
 
-## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import
+## Status: ✅ FULLY WORKING - Complete OpenGD77 CSV Export/Import + APRS
 
-**Current Version**: v3.0.9 (March 9, 2026) - **GPS Distance Enhancements**  
-**Previous Version**: v3.0.8 (March 9, 2026) - Zone Management  
-**Stable Release**: v3.0.5 (March 9, 2026) - Channel Zones  
-**Stable Release**: v1.7.0 (February 2026) - Transcription & API key features  
+**Current Version**: v3.1.2 (March 13, 2026) - **APRS Channel Recovery**  
+**Previous Versions**: 
+- v3.1.1 (March 11, 2026) - APRS Open Squelch Button
+- v3.1.0 (March 10, 2026) - APRS Beaconing
+- v3.0.9 (March 9, 2026) - GPS Distance Enhancements
+- v3.0.8 (March 9, 2026) - Zone Management  
+- v3.0.5 (March 9, 2026) - Channel Zones  
+
 **Target App**: com.pri.prizeinterphone (Ulefone PriInterPhone)  
 **Device**: Ulefone Armor 26 Ultra (Android 13)  
 **Backup Location**: `Download/DMR/DMR_Backups/`  
@@ -64,6 +68,157 @@ Rather than delay a working feature, I decided to:
 - [Development History](#development-history)
 - [Releases](../../releases) - Download pre-built modules
 - [Technical Details](#technical-details)
+
+## 🎉 What's New in v3.1.2 (March 13, 2026)
+
+### 🔧 APRS Channel Recovery & User Experience Improvements
+
+**Automatic channel restoration when app closes during APRS monitoring**
+
+#### **What's Fixed**
+- **✅ Crash Recovery**: Automatically detects and restores interrupted APRS monitoring sessions
+- **✅ Channel Backup System**: Saves channel configuration to persistent file during APRS monitoring
+- **✅ Startup Detection**: Checks for orphaned APRS channels on app startup
+- **✅ User Notification**: AlertDialog explains what happened and how to prevent future issues
+- **✅ Complete Restoration**: Restores all channel fields including frequency, squelch, and metadata
+- **✅ Open Squelch Button**: Added persistent squelch control to APRS monitoring page
+
+#### **How It Works**
+1. **Before**: If you force-closed the app during APRS monitoring, the channel would be stuck on APRS frequency
+2. **Now**: On app restart, the module:
+   - Detects orphaned APRS channel configuration
+   - Automatically restores your original channel settings
+   - Shows informative dialog explaining what happened
+   - Provides guidance on how to prevent the issue
+
+#### **User Message**
+When crash recovery occurs, you'll see:
+- **Title**: "⚠️ APRS Channel Restored"
+- **Message**: Explains monitoring was interrupted, channel restored automatically
+- **Guidance**: Always stop APRS monitoring before closing the app
+- **Action**: Prompts to restart the app
+
+#### **Technical Details**
+- Backup file: `/sdcard/aprs_channel_backup.dat`
+- Restored fields: number, type, name, frequencies, squelch, band, power, rx/tx settings
+- Logging: Extensive before/after state logging for debugging
+- Cleanup: Backup file automatically deleted after successful restore
+
+## 🎉 Previous Release: v3.1.0 (March 10, 2026)
+
+### 📡 APRS Beaconing (Automatic Packet Reporting System)
+
+**Transmit your GPS position automatically on configured channels**
+
+#### **What is APRS?**
+APRS (Automatic Packet Reporting System) is an amateur radio packet reporting system used for:
+- Position reporting (GPS coordinates broadcast at regular intervals)
+- Tracking mobile stations on maps (APRS.fi, APRS.org)
+- Emergency communications
+- Weather station reporting
+- Telemetry data
+
+#### **Features Implemented**
+- **✅ AX.25 Packet Encoding**: Proper APRS position packets with callsign, SSID, and coordinates
+- **✅ AFSK Audio Generation**: Bell 202 modulation (1200 Hz mark, 2200 Hz space) at 1200 baud
+- **✅ Automatic Beaconing**: Periodic position transmission at configurable intervals
+- **✅ Per-Channel Configuration**: Enable/disable APRS independently for each channel
+- **✅ Global Settings**: Callsign, SSID, default beacon interval
+- **✅ Symbol Support**: Configurable APRS symbols (jogger, car, house, etc.)
+- **✅ OpenGD77 CSV Compatibility**: Import/export APRS settings in CSV format
+- **✅ Test Beacon**: Manual beacon transmission for testing
+- **✅ GPS Integration**: Uses existing LocationDatabase coordinates
+
+#### **How to Use APRS**
+
+**1. Configure Global Settings** (Required)
+- Open **"📡 APRS Settings"** from the LOCAL tab
+- Set your **amateur radio callsign** (e.g., N0CALL)
+- Set your **SSID** (0-15, typically 7 for handhelds, 9 for vehicle)
+- Set **default beacon interval** (minutes)
+- Choose **symbol** (default: `[` = jogger/hiker)
+
+**2. Enable APRS for a Channel**
+- Channel must have **GPS coordinates** set (via Edit Channel or CSV import)
+- Open APRS Settings and enable the switch
+- Configure optional: beacon interval, comment, symbol
+- Click **"Save Settings"**
+
+**3. Automatic Beaconing**
+- When you switch to an APRS-enabled channel, beaconing starts automatically
+- First beacon transmits immediately
+- Subsequent beacons transmit at configured interval
+- Beaconing stops when you switch away from the channel
+
+**4. Test Beacon**
+- Use **"Send Test Beacon"** button to manually transmit
+- Verifies your configuration without waiting for interval
+- Useful for testing APRS reception
+
+#### **APRS Packet Format**
+```
+Example packet for N0CALL-7 at 44.9778, -93.2650:
+!4458.67N/09315.90W[/A=001050 MacGyver Mod
+
+Breakdown:
+! = Position without timestamp (real-time)
+4458.67N = Latitude (44°58.67' North)
+/ = Primary symbol table
+09315.90W = Longitude (93°15.90' West)
+[ = Jogger/hiker symbol
+/A=001050 = Altitude (1050 feet)
+MacGyver Mod = Comment text
+```
+
+#### **Technical Details**
+- **Modulation**: AFSK Bell 202 (1200/2200 Hz at 1200 baud)
+- **Sample Rate**: 48 kHz (high quality audio)
+- **TX Delay**: 200ms pre-transmission for TX stabilization
+- **TX Tail**: 50ms post-transmission delay
+- **Encoding**: NRZI with bit stuffing (proper AX.25)
+- **Path**: WIDE1-1,WIDE2-1 (standard APRS digipeater path)
+- **FCS**: CRC-16-CCITT frame check sequence
+
+#### **Requirements**
+- ✅ **Amateur Radio License**: APRS requires ham radio operator license
+- ✅ **GPS Coordinates**: Channel must have lat/lon set
+- ✅ **VHF/UHF Radio**: Typically 144.390 MHz (North America) or regional APRS frequency
+- ✅ **Audio Output**: Radio audio input must be connected to device audio
+
+#### **Display Examples**
+```
+APRS Settings Screen:
+┌─────────────────────────────────┐
+│ Global Settings                  │
+│   Callsign: N0CALL               │
+│   SSID: 7                        │
+│   Default Interval: 10 minutes   │
+│                                  │
+│ Channel 5 Settings               │
+│   📍 Location: 44.977, -93.265   │
+│   ☑ Enable APRS Beaconing        │
+│   Beacon Interval: 10 minutes    │
+│   Comment: MacGyver Mod          │
+│   Symbol: / [                    │
+│                                  │
+│   [Send Test Beacon]             │
+│   [Save Settings]                │
+└─────────────────────────────────┘
+```
+
+#### **CSV Export/Import**
+APRS settings are now properly exported/imported with OpenGD77 CSV:
+- **Column 25 (APRS)**: "TX" if enabled, "None" if disabled
+- **Columns 26-27**: Latitude, Longitude (existing)
+- Settings preserved across backup/restore
+
+**Known Limitations**:
+- APRS receiving/decoding not implemented (TX only)
+- No smart beaconing (distance/speed-based intervals)
+- No APRS messaging support
+- Manual frequency selection required (app doesn't auto-switch to APRS frequency)
+
+**Safety Note**: Always ensure you're transmitting on the correct APRS frequency for your region and have proper licensing!
 
 ## 🎉 What's New in v3.0.9 (March 9, 2026)
 
@@ -1113,7 +1268,33 @@ Or use LSPosed Manager → Logs
 
 ## Changelog
 
-### v1.3.7 (Feb 26, 2026) ✅ **CURRENT**
+### v3.1.2 (March 13, 2026) ✅ **CURRENT**
+- **Added APRS channel crash recovery system**
+- Automatic backup/restore of channel configuration during APRS monitoring
+- Detects orphaned APRS channels on app startup and restores original settings
+- AlertDialog notification when crash recovery occurs with user guidance
+- Fixed channel restoration to include all fields (number, frequencies, squelch, etc.)
+- Added open squelch button to APRS monitoring page with persistent state
+- Button survives UI refreshes (2-second update cycle)
+- Comprehensive logging for crash recovery debugging (BEFORE/AFTER states)
+- Backup file: /sdcard/aprs_channel_backup.dat
+- User-friendly message explains how to prevent future issues
+
+### v3.1.1 (March 11, 2026)
+- **Added open squelch button to APRS monitoring page**
+- Works identically to MON button (toggles sq=0 for open, stored value for close)
+- Persistent state survives UI refreshes
+- Direct hardware control via AnalogMessage.send()
+
+### v3.1.0 (March 10, 2026)
+- **Added APRS beaconing with automatic position reporting**
+- AX.25 packet encoding with proper APRS position format
+- AFSK audio generation (Bell 202 modulation at 1200 baud)
+- Configurable beacon intervals and symbols
+- Per-channel APRS enable/disable
+- OpenGD77 CSV compatibility for APRS settings
+
+### v1.3.7 (Feb 26, 2026)
 - **Added DMR caller identification with real-time contact display**
 - Displays incoming caller information in borderbox (top-left corner, green text)
 - Hooked ModuleStatusMessageHandler to detect RECEIVE_START/STOP events

@@ -496,6 +496,25 @@ public class DirectDatabaseImporter {
                 } else {
                     importCount++;
                     
+                    // Import APRS setting to APRSDatabase if present (column 24)
+                    try {
+                        if (fields.length >= 25) {
+                            String aprsStr = fields[24].trim();
+                            if (!aprsStr.isEmpty() && !aprsStr.equalsIgnoreCase("None")) {
+                                // APRS enabled if field is "TX", "On", or non-empty
+                                boolean aprsEnabled = aprsStr.equalsIgnoreCase("TX") || 
+                                                     aprsStr.equalsIgnoreCase("On");
+                                if (aprsEnabled) {
+                                    APRSDatabase aprsDb = APRSDatabase.getInstance(context);
+                                    aprsDb.setEnabled(Integer.parseInt(channelNumber), true);
+                                    Log.i(TAG, "  Enabled APRS for channel " + channelNumber);
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        Log.w(TAG, "Could not parse APRS setting for channel " + channelNumber + ": " + e.getMessage());
+                    }
+                    
                     // Import lat/lon to LocationDatabase if present (columns 25-26)
                     try {
                         if (fields.length >= 27) {
