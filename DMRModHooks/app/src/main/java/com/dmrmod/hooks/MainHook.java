@@ -132,6 +132,35 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile int currentRssi = -999;  // dBm value, -999 = no signal
     private static TextView rssiDisplayTextView = null;
     
+    // Software squelch state (Hybrid RSSI + Audio RMS based)
+    private static volatile boolean isSoftwareSquelchEnabled = true;  // Enable by default
+    private static volatile int softwareSquelchThreshold = 2;  // User squelch level (0-9)
+    private static volatile boolean isSquelchOpen = false;  // Current squelch state
+    private static volatile boolean previousSquelchOpen = false;  // Track state changes
+    private static TextView squelchStatusIndicator = null;  // UI indicator for squelch status
+    private static TextView squelchValueTextView = null;  // UI display for squelch value
+    private static TextView squelchStatusTextView = null;  // UI status dot indicator
+    private static volatile long lastRssiQueryTime = 0;  // For periodic RSSI queries
+    private static final long RSSI_QUERY_INTERVAL_MS = 500;  // Query RSSI every 500ms when receiving
+    private static volatile long lastSquelchOpenTime = 0;  // For hang time (tail delay)
+    private static final long SQUELCH_HANG_TIME_MS = 300;  // Hold squelch open 300ms after signal drops
+    private static final int HYSTERESIS_FACTOR = 140;  // ~3dB hysteresis (openThresh / closeThresh = 1.4)
+    
+    // Audio RMS thresholds for squelch levels 0-9 (tuned for 8kHz 16-bit PCM)
+    // Based on real-world values: noise floor ~100-400, weak signal ~800-2000, strong ~4000+
+    private static final int[] AUDIO_SQUELCH_THRESHOLDS = {
+        0,       // 0: Always open (no squelch)
+        200,     // 1: Very sensitive (just above noise floor)
+        500,     // 2: Default (matches typical hardware sq=2)
+        900,     // 3: Moderate-low
+        1500,    // 4: Moderate
+        2500,    // 5: Medium
+        4000,    // 6: Medium-high
+        6500,    // 7: Strong signals only
+        10000,   // 8: Very strong
+        15000    // 9: Exceptionally strong only
+    };
+    
     // Speech-to-text transcription state (IPC Service)
     private static volatile boolean isTranscriptionEnabled = false;
     private static volatile String currentTranscription = "";
@@ -1189,9 +1218,173 @@ public class MainHook implements IXposedHookLoadPackage {
                                 rootLayout.addView(rssiZoneContainer, 2);
                                 XposedBridge.log(TAG + ": ✓ Added RSSI/Zone container at index 2");
                                 
-                                // Insert borderbox at index 3 (pushed down by RSSI box)
-                                rootLayout.addView(borderBox, 3);
-                                XposedBridge.log(TAG + ": ✓ Added borderbox at index 3 (250dp)");
+                                // ========== SOFTWARE SQUELCH SLIDER ==========
+                                // Calculate additional margin values
+                                int margin8dp = (int) (8 * context.getResources().getDisplayMetrics().density);
+                                int margin16dp = (int) (16 * context.getResources().getDisplayMetrics().density);
+                                int negMargin16dp = (int) (-16 * context.getResources().getDisplayMetrics().density);
+                                
+                                // Get screen width for half-width layout
+                                int screenWidth = context.getResources().getDisplayMetrics().widthPixels;
+                                int halfScreenWidth = screenWidth / 2;
+                                
+                                // Create squelch control container (half width, aligned left)
+                                LinearLayout squelchContainer = new LinearLayout(context);
+                                squelchContainer.setTag("DMR_SQUELCH_CONTAINER");
+                                squelchContainer.setOrientation(LinearLayout.HORIZONTAL);
+                                LinearLayout.LayoutParams squelchContainerParams = new LinearLayout.LayoutParams(
+                                    halfScreenWidth,  // Half screen width
+                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                );
+                                squelchContainerParams.topMargin = negMargin16dp;  // Pull up closer to RSSI
+                                squelchContainerParams.bottomMargin = (int)(-6 * context.getResources().getDisplayMetrics().density);  // Pull up content below
+                                squelchContainerParams.leftMargin = margin16dp;
+                                squelchContainerParams.rightMargin = 0;  // No right margin
+                                squelchContainer.setLayoutParams(squelchContainerParams);
+                                // No background - transparent
+                                squelchContainer.setPadding(0, 0, 0, 0);  // No padding
+                                
+                                // Squelch label "SQ:" - LEFT SIDE
+                                TextView squelchLabel = new TextView(context);
+                                squelchLabel.setText("SQ:");
+                                squelchLabel.setTextColor(0xFFFFFFFF);
+                                squelchLabel.setTextSize(14);
+                                squelchLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+                                LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
+                                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                );
+                                labelParams.gravity = android.view.Gravity.CENTER_VERTICAL;
+                                labelParams.rightMargin = (int) (4 * context.getResources().getDisplayMetrics().density);
+                                squelchLabel.setLayoutParams(labelParams);
+                                squelchContainer.addView(squelchLabel);
+                                
+                                // Squelch value label (shows current level) - RIGHT OF "SQ:"
+                                TextView squelchValueLabel = new TextView(context);
+                                squelchValueLabel.setTag("DMR_SQUELCH_VALUE");
+                                squelchValueLabel.setText("5");
+                                squelchValueLabel.setTextColor(0xFF00FF00); // Green
+                                squelchValueLabel.setTextSize(18);
+                                squelchValueLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+                                squelchValueLabel.setGravity(android.view.Gravity.CENTER);
+                                LinearLayout.LayoutParams valueLabelParams = new LinearLayout.LayoutParams(
+                                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                );
+                                valueLabelParams.gravity = android.view.Gravity.CENTER_VERTICAL;
+                                squelchValueLabel.setLayoutParams(valueLabelParams);
+                                squelchContainer.addView(squelchValueLabel);
+                                
+                                // Squelch slider
+                                android.widget.SeekBar squelchSeekBar = new android.widget.SeekBar(context);
+                                squelchSeekBar.setTag("DMR_SQUELCH_SEEKBAR");
+                                LinearLayout.LayoutParams squelchSeekBarParams = new LinearLayout.LayoutParams(
+                                    0,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                );
+                                squelchSeekBarParams.weight = 1.0f;
+                                squelchSeekBarParams.leftMargin = margin10dp;
+                                squelchSeekBarParams.rightMargin = margin10dp;
+                                squelchSeekBar.setLayoutParams(squelchSeekBarParams);
+                                squelchSeekBar.setMax(9); // 0-9 squelch levels
+                                squelchSeekBar.setProgress(5); // Default to middle
+                                
+                                // Make slider white for visibility
+                                try {
+                                    android.content.res.ColorStateList whiteColor = android.content.res.ColorStateList.valueOf(0xFFFFFFFF);
+                                    squelchSeekBar.setProgressTintList(whiteColor);
+                                    squelchSeekBar.setThumbTintList(whiteColor);
+                                } catch (Exception e) {
+                                    XposedBridge.log(TAG + ": Could not set slider color: " + e);
+                                }
+                                
+                                squelchContainer.addView(squelchSeekBar);
+                                
+                                // Store references for later updates
+                                final TextView finalSquelchValueLabel = squelchValueLabel;
+                                squelchValueTextView = squelchValueLabel;
+                                // Note: Status indicator removed for cleaner UI
+                                
+                                // Set up SeekBar listener
+                                squelchSeekBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
+                                    @Override
+                                    public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
+                                        if (fromUser) {
+                                            // Update value display
+                                            finalSquelchValueLabel.setText(String.valueOf(progress));
+                                            
+                                            // Update software squelch threshold (0-9 maps to threshold array)
+                                            softwareSquelchThreshold = progress;
+                                            
+                                            XposedBridge.log(TAG + ": Squelch slider moved to level " + progress + 
+                                                " (RMS threshold: " + getAudioSquelchThreshold() + 
+                                                ", RSSI threshold: " + getRssiThreshold(progress) + ")");
+                                        }
+                                    }
+                                    
+                                    @Override
+                                    public void onStartTrackingTouch(android.widget.SeekBar seekBar) {
+                                        // User started dragging
+                                    }
+                                    
+                                    @Override
+                                    public void onStopTrackingTouch(android.widget.SeekBar seekBar) {
+                                        // User finished dragging - apply hardware squelch and save to preferences
+                                        int progress = seekBar.getProgress();
+                                        
+                                        // If squelch level >= 1, open hardware squelch so software squelch can work
+                                        // If squelch level == 0, leave hardware squelch alone (use channel's setting)
+                                        if (progress >= 1) {
+                                            enableSoftwareSquelchOnCurrentChannel();
+                                            XposedBridge.log(TAG + ": Applied hardware squelch for software squelch level " + progress);
+                                        }
+                                        
+                                        // Save to SharedPreferences for persistence
+                                        try {
+                                            APRSDatabase aprsDb = APRSDatabase.getInstance(context);
+                                            if (aprsDb != null) {
+                                                XposedHelpers.callMethod(aprsDb, "setAprsSquelch", progress);
+                                                XposedBridge.log(TAG + ": Saved software squelch level " + progress + " to preferences");
+                                            }
+                                        } catch (Throwable t) {
+                                            XposedBridge.log(TAG + ": Error saving squelch to preferences: " + t);
+                                        }
+                                    }
+                                });
+                                
+                                // Load saved squelch value from preferences
+                                try {
+                                    APRSDatabase aprsDb = APRSDatabase.getInstance(context);
+                                    if (aprsDb != null) {
+                                        int savedSquelch = (Integer) XposedHelpers.callMethod(aprsDb, "getAprsSquelch");
+                                        squelchSeekBar.setProgress(savedSquelch);
+                                        softwareSquelchThreshold = savedSquelch;
+                                        finalSquelchValueLabel.setText(String.valueOf(savedSquelch));
+                                        XposedBridge.log(TAG + ": Loaded saved squelch level: " + savedSquelch);
+                                        
+                                        // If saved squelch >= 1, open hardware squelch for software squelch to work
+                                        // If saved squelch == 0, leave hardware squelch at channel's setting
+                                        if (savedSquelch >= 1) {
+                                            rootLayout.postDelayed(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    enableSoftwareSquelchOnCurrentChannel();
+                                                    XposedBridge.log(TAG + ": Opened hardware squelch for software squelch (level " + savedSquelch + ")");
+                                                }
+                                            }, 500);
+                                        }
+                                    }
+                                } catch (Throwable t) {
+                                    XposedBridge.log(TAG + ": Could not load saved squelch, using default (5): " + t);
+                                }
+                                
+                                // Insert squelch container at index 3 (initially visible, will hide for digital channels)
+                                rootLayout.addView(squelchContainer, 3);
+                                XposedBridge.log(TAG + ": ✓ Added squelch slider at index 3");
+                                
+                                // Insert borderbox at index 4 (pushed down by squelch slider)
+                                rootLayout.addView(borderBox, 4);
+                                XposedBridge.log(TAG + ": ✓ Added borderbox at index 4 (250dp)");
                                 
                                 // Create spacer
                                 View spacer = new View(context);
@@ -1203,8 +1396,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                 spacerParams.weight = 1.0f;
                                 spacer.setLayoutParams(spacerParams);
                                 
-                                rootLayout.addView(spacer, 4);
-                                XposedBridge.log(TAG + ": ✓ Added spacer at index 4");
+                                rootLayout.addView(spacer, 5);
+                                XposedBridge.log(TAG + ": ✓ Added spacer at index 5");
                                 
                                 // Create a container for PTT button and recording toggle
                                 FrameLayout buttonContainer = new FrameLayout(context);
@@ -1215,8 +1408,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                 containerParams.bottomMargin = margin10dp;
                                 buttonContainer.setLayoutParams(containerParams);
                                 
-                                rootLayout.addView(buttonContainer, 5);
-                                XposedBridge.log(TAG + ": ✓ Added button container at index 5");
+                                rootLayout.addView(buttonContainer, 6);
+                                XposedBridge.log(TAG + ": ✓ Added button container at index 6");
                                 
                                 // PTT button now at index 4 (inside container, centered)
                                 rootLayout.removeView(pttButton);
@@ -1705,6 +1898,15 @@ public class MainHook implements IXposedHookLoadPackage {
                                     XposedBridge.log(TAG + ": Initial channel: #" + channelNumber + " (" + (channelType == 0 ? "Digital" : "Analog") + "), RX Tone: " + toneInfo);
                                     updateHistoryHeader();
                                     loadChannelHistory(channelNumber, context);
+                                    
+                                    // Show/hide squelch slider based on channel type (analog only)
+                                    View squelchContainer = rootLayout.findViewWithTag("DMR_SQUELCH_CONTAINER");
+                                    if (squelchContainer != null) {
+                                        squelchContainer.setVisibility(channelType == 1 ? View.VISIBLE : View.GONE);
+                                        XposedBridge.log(TAG + ": [INIT] Squelch slider " + (channelType == 1 ? "shown" : "hidden") + " for " + (channelType == 0 ? "digital" : "analog") + " channel");
+                                    } else {
+                                        XposedBridge.log(TAG + ": [INIT] Could not find squelch container to set initial visibility");
+                                    }
                                     // Restore transcription history for initial channel
                                     restoreChannelTranscriptionHistory(channelNumber);
                                 }
@@ -1745,6 +1947,23 @@ public class MainHook implements IXposedHookLoadPackage {
                                     currentChannelType = channelType;
                                     currentRxToneType = rxType;
                                     currentRxToneSubCode = rxSubCode;
+                                    
+                                    // Show/hide squelch slider based on channel type (analog only)
+                                    try {
+                                        Object mLocalViewObj = XposedHelpers.getObjectField(param.thisObject, "mLocalView");
+                                        if (mLocalViewObj instanceof ViewGroup) {
+                                            ViewGroup rootLayout = (ViewGroup) mLocalViewObj;
+                                            View squelchContainer = rootLayout.findViewWithTag("DMR_SQUELCH_CONTAINER");
+                                            if (squelchContainer != null) {
+                                                squelchContainer.setVisibility(channelType == 1 ? View.VISIBLE : View.GONE);
+                                                XposedBridge.log(TAG + ": Squelch slider " + (channelType == 1 ? "shown" : "hidden") + " for " + (channelType == 0 ? "digital" : "analog") + " channel");
+                                            } else {
+                                                XposedBridge.log(TAG + ": Could not find squelch container to update visibility");
+                                            }
+                                        }
+                                    } catch (Exception e) {
+                                        XposedBridge.log(TAG + ": Error updating squelch visibility: " + e.getMessage());
+                                    }
                                     currentChannelName = (channelName != null && !channelName.isEmpty()) ? channelName : ("Channel_" + channelNumber);
                                     
                                     // TODO: Channel tracking disabled - causes ListView adapter conflicts
@@ -3362,105 +3581,132 @@ public class MainHook implements IXposedHookLoadPackage {
             statusText.setPadding(0, 10, 0, 20);
             mainLayout.addView(statusText);
             
-            // Open Squelch button (works exactly like MON button, state persists across UI updates)
-            final android.widget.Button openSquelchButton = new android.widget.Button(activity);
-            openSquelchButton.setTextSize(14);
-            openSquelchButton.setTypeface(null, android.graphics.Typeface.BOLD);
-            openSquelchButton.setPadding(20, 15, 20, 15);
-            LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
+            // ========== SOFTWARE SQUELCH SLIDER ==========
+            TextView squelchLabel = new TextView(activity);
+            squelchLabel.setText("Software Squelch:");
+            squelchLabel.setTextSize(16);
+            squelchLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            squelchLabel.setPadding(0, 10, 0, 10);
+            mainLayout.addView(squelchLabel);
+            
+            // Create horizontal container for squelch controls
+            LinearLayout squelchContainer = new LinearLayout(activity);
+            squelchContainer.setOrientation(LinearLayout.HORIZONTAL);
+            squelchContainer.setPadding(0, 0, 0, 20);
+            LinearLayout.LayoutParams squelchContainerParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             );
-            buttonParams.topMargin = 10;
-            buttonParams.bottomMargin = 20;
-            openSquelchButton.setLayoutParams(buttonParams);
+            squelchContainer.setLayoutParams(squelchContainerParams);
             
-            // Set button appearance based on current squelch state
-            if (isAPRSSquelchOpen) {
-                openSquelchButton.setText("🔇 Close Squelch");
-                openSquelchButton.setBackgroundColor(0xFF00AA00);  // Green
-            } else {
-                openSquelchButton.setText("🔊 Open Squelch");
-                openSquelchButton.setBackgroundColor(0xFF555555);  // Gray
+            // "SQ:" label
+            TextView sqLabel = new TextView(activity);
+            sqLabel.setText("SQ:");
+            sqLabel.setTextColor(0xFFFFFFFF);
+            sqLabel.setTextSize(14);
+            sqLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            labelParams.gravity = android.view.Gravity.CENTER_VERTICAL;
+            labelParams.rightMargin = (int) (8 * activity.getResources().getDisplayMetrics().density);
+            sqLabel.setLayoutParams(labelParams);
+            squelchContainer.addView(sqLabel);
+            
+            // Value display
+            final TextView sqValueLabel = new TextView(activity);
+            int savedSquelch = aprsDb.getAprsSquelch();
+            sqValueLabel.setText(String.valueOf(savedSquelch));
+            sqValueLabel.setTextColor(0xFF00FF00);  // Green
+            sqValueLabel.setTextSize(18);
+            sqValueLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            sqValueLabel.setGravity(android.view.Gravity.CENTER);
+            LinearLayout.LayoutParams valueLabelParams = new LinearLayout.LayoutParams(
+                (int) (40 * activity.getResources().getDisplayMetrics().density),
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            valueLabelParams.gravity = android.view.Gravity.CENTER_VERTICAL;
+            sqValueLabel.setLayoutParams(valueLabelParams);
+            squelchContainer.addView(sqValueLabel);
+            
+            // Squelch slider (0-9)
+            final android.widget.SeekBar squelchSeekBar = new android.widget.SeekBar(activity);
+            LinearLayout.LayoutParams seekBarParams = new LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            seekBarParams.weight = 1.0f;
+            seekBarParams.leftMargin = (int) (10 * activity.getResources().getDisplayMetrics().density);
+            squelchSeekBar.setLayoutParams(seekBarParams);
+            squelchSeekBar.setMax(9);
+            squelchSeekBar.setProgress(savedSquelch);
+            
+            // Set slider color to black
+            try {
+                android.content.res.ColorStateList blackColor = android.content.res.ColorStateList.valueOf(0xFF000000);
+                squelchSeekBar.setProgressTintList(blackColor);
+                squelchSeekBar.setThumbTintList(blackColor);
+            } catch (Exception e) {
+                XposedBridge.log(TAG + ": Could not set APRS squelch slider color: " + e);
             }
             
-            openSquelchButton.setOnClickListener(new View.OnClickListener() {
+            // Set up SeekBar listener
+            squelchSeekBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
                 @Override
-                public void onClick(View v) {
-                    try {
-                        // Get current channel (EXACTLY like MON button)
-                        Class<?> dmrManagerClass = XposedHelpers.findClass(
-                            "com.pri.prizeinterphone.manager.DmrManager",
-                            appClassLoader
-                        );
-                        Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
-                        Object currentChannel = XposedHelpers.callMethod(dmrManager, "getCurrentChannel");
+                public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
+                    if (fromUser) {
+                        // Update value display
+                        sqValueLabel.setText(String.valueOf(progress));
                         
-                        if (currentChannel != null) {
-                            // Toggle squelch (EXACTLY like MON button)
-                            isAPRSSquelchOpen = !isAPRSSquelchOpen;
-                            int targetSq;
-                            
-                            if (isAPRSSquelchOpen) {
-                                // Opening - store current squelch and use 0 (fully open)
-                                int currentSq = XposedHelpers.getIntField(currentChannel, "sq");
-                                if (currentSq != 0) {
-                                    aprsStoredSquelch = currentSq;
-                                }
-                                targetSq = 0;
-                                XposedBridge.log(TAG + ": APRS squelch open - stored squelch=" + aprsStoredSquelch + ", targeting sq=0");
-                            } else {
-                                // Closing - restore stored squelch
-                                targetSq = aprsStoredSquelch;
-                                XposedBridge.log(TAG + ": APRS squelch close - restoring squelch=" + aprsStoredSquelch);
-                            }
-                            
-                            // Manually construct and send AnalogMessage (EXACTLY like MON button)
-                            try {
-                                Class<?> analogMessageClass = XposedHelpers.findClass(
-                                    "com.pri.prizeinterphone.message.AnalogMessage",
-                                    appClassLoader
-                                );
-                                Object analogMessage = analogMessageClass.newInstance();
-                                
-                                // Copy all fields from current channel
-                                XposedHelpers.callMethod(analogMessage, "setBand", (byte) XposedHelpers.getIntField(currentChannel, "band"));
-                                XposedHelpers.callMethod(analogMessage, "setPower", (byte) XposedHelpers.getIntField(currentChannel, "power"));
-                                XposedHelpers.callMethod(analogMessage, "setTxFreq", XposedHelpers.getIntField(currentChannel, "txFreq"));
-                                XposedHelpers.callMethod(analogMessage, "setRxFreq", XposedHelpers.getIntField(currentChannel, "rxFreq"));
-                                XposedHelpers.callMethod(analogMessage, "setSq", (byte) targetSq);  // Use our target squelch!
-                                XposedHelpers.callMethod(analogMessage, "setRxType", (byte) XposedHelpers.getIntField(currentChannel, "rxType"));
-                                XposedHelpers.callMethod(analogMessage, "setRxSubCode", (byte) XposedHelpers.getIntField(currentChannel, "rxSubCode"));
-                                XposedHelpers.callMethod(analogMessage, "setTxType", (byte) XposedHelpers.getIntField(currentChannel, "txType"));
-                                XposedHelpers.callMethod(analogMessage, "setTxSubCode", (byte) XposedHelpers.getIntField(currentChannel, "txSubCode"));
-                                XposedHelpers.callMethod(analogMessage, "setRelay", (byte) XposedHelpers.getIntField(currentChannel, "relay"));
-                                
-                                // Send it!
-                                XposedHelpers.callMethod(analogMessage, "send");
-                                XposedBridge.log(TAG + ": ✅ Directly sent AnalogMessage with sq=" + targetSq);
-                                
-                                // Update button appearance (will persist across UI refreshes)
-                                if (isAPRSSquelchOpen) {
-                                    openSquelchButton.setText("🔇 Close Squelch");
-                                    openSquelchButton.setBackgroundColor(0xFF00AA00);  // Green
-                                } else {
-                                    openSquelchButton.setText("🔊 Open Squelch");
-                                    openSquelchButton.setBackgroundColor(0xFF555555);  // Gray
-                                }
-                                
-                            } catch (Throwable sendError) {
-                                XposedBridge.log(TAG + ": Error sending APRS squelch AnalogMessage: " + sendError.getMessage());
-                                XposedBridge.log(sendError);
-                                Toast.makeText(activity, "Error toggling squelch", Toast.LENGTH_SHORT).show();
-                            }
+                        // Update software squelch threshold
+                        softwareSquelchThreshold = progress;
+                        
+                        XposedBridge.log(TAG + ": APRS software squelch changed to level " + progress + 
+                            " (RMS threshold: " + getAudioSquelchThreshold() + 
+                            ", RSSI threshold: " + getRssiThreshold(progress) + " dBm)");
+                        
+                        Toast.makeText(activity, 
+                            "Software Squelch: " + progress, 
+                            Toast.LENGTH_SHORT
+                        ).show();
+                    }
+                }
+                
+                @Override
+                public void onStartTrackingTouch(android.widget.SeekBar seekBar) {
+                    // User started dragging
+                }
+                
+                @Override
+                public void onStopTrackingTouch(android.widget.SeekBar seekBar) {
+                    // Save to preferences when user finishes dragging
+                    int progress = seekBar.getProgress();
+                    try {
+                        APRSDatabase aprsDb = APRSDatabase.getInstance(activity);
+                        if (aprsDb != null) {
+                            XposedHelpers.callMethod(aprsDb, "setAprsSquelch", progress);
+                            XposedBridge.log(TAG + ": Saved APRS software squelch level " + progress + " to preferences");
                         }
-                    } catch (Exception e) {
-                        XposedBridge.log(TAG + ": Error in APRS squelch button: " + e.getMessage());
-                        XposedBridge.log(e);
+                    } catch (Throwable t) {
+                        XposedBridge.log(TAG + ": Error saving APRS squelch to preferences: " + t);
                     }
                 }
             });
-            mainLayout.addView(openSquelchButton);
+            
+            squelchContainer.addView(squelchSeekBar);
+            mainLayout.addView(squelchContainer);
+            
+            // Update softwareSquelchThreshold to match saved value
+            softwareSquelchThreshold = savedSquelch;
+            
+            // Info text explaining software squelch
+            TextView squelchInfo = new TextView(activity);
+            squelchInfo.setText("📊 Hybrid RSSI + Audio RMS squelch\n0=most sensitive, 9=least sensitive");
+            squelchInfo.setTextSize(11);
+            squelchInfo.setTextColor(0xFF999999);
+            squelchInfo.setPadding(0, 0, 0, 20);
+            mainLayout.addView(squelchInfo);
             
             // Stats section
             int totalStations = db.getStationCount();
@@ -3668,7 +3914,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.setObjectField(currentChannel, "name", "APRS (" + originalName + ")");
             XposedHelpers.setIntField(currentChannel, "rxFreq", frequencyHz);
             XposedHelpers.setIntField(currentChannel, "txFreq", frequencyHz);
-            XposedHelpers.setIntField(currentChannel, "sq", 1);  // Squelch level 1
+            XposedHelpers.setIntField(currentChannel, "sq", 0);  // Hardware squelch 0 (fully open - same as MON button)
             XposedHelpers.setIntField(currentChannel, "band", 1);  // VHF
             XposedHelpers.setIntField(currentChannel, "power", 1);  // High power
             XposedHelpers.setIntField(currentChannel, "rxType", 0);  // No tone
@@ -3676,14 +3922,20 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.setIntField(currentChannel, "txType", 0);
             XposedHelpers.setIntField(currentChannel, "txSubCode", 0);
             
+            // Enable software squelch for APRS monitoring
+            isSoftwareSquelchEnabled = true;
+            currentChannelType = 1;  // Update static variable to match analog channel
+            softwareSquelchThreshold = aprsDb.getAprsSquelch();  // Load saved squelch level
+            XposedBridge.log(TAG + ": Enabled software squelch for APRS with level " + softwareSquelchThreshold);
+            
             // Update hardware with APRS settings
             XposedHelpers.callMethod(dmrManager, "updateChannel", currentChannel);
             XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", currentChannel);
             
             isAPRSMonitoringActive = true;
             
-            Toast.makeText(activity, "APRS Monitoring Active at " + frequencyMHz + " MHz", Toast.LENGTH_SHORT).show();
-            XposedBridge.log(TAG + ": ✅ APRS monitoring active - current channel hijacked");
+            Toast.makeText(activity, "APRS Monitoring Active at " + frequencyMHz + " MHz\nSoftware Squelch: " + softwareSquelchThreshold, Toast.LENGTH_SHORT).show();
+            XposedBridge.log(TAG + ": ✅ APRS monitoring active - current channel hijacked with software squelch");
             
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error starting APRS monitoring: " + e.getMessage());
@@ -4166,23 +4418,35 @@ public class MainHook implements IXposedHookLoadPackage {
                                         queryCallerInfo(lpparam.classLoader);
                                         // Activity indicator will be updated in DigitalAudioMessageHandler with DMR ID
                                     } else {
-                                        // Analog channel - show receiving message with tone
-                                        XposedBridge.log(TAG + ": Analog channel - showing receiving message");
+                                        // Analog channel - show receiving message with tone (only if squelch is open)
+                                        XposedBridge.log(TAG + ": Analog channel - checking squelch state");
                                         
-                                        // Only show tone info if a tone is configured (not None)
-                                        String displayText = "📻 Receiving...";
-                                        if (currentRxToneType > 0) {  // 0 = None, 1 = CTCSS, 2 = FDCS, 3 = BDCS
-                                            String toneDisplay = ToneConverter.formatForDisplay(currentRxToneType, currentRxToneSubCode);
-                                            displayText += "\n" + toneDisplay;
+                                        if (isSoftwareSquelchEnabled && !isSquelchOpen) {
+                                            // Squelch is closed - show signal detected but muted
+                                            String displayText = "📡 Signal (squelch)";
+                                            if (currentRxToneType > 0) {
+                                                String toneDisplay = ToneConverter.formatForDisplay(currentRxToneType, currentRxToneSubCode);
+                                                displayText += "\n" + toneDisplay;
+                                            }
+                                            updateCallerDisplay(displayText);
+                                            XposedBridge.log(TAG + ": Signal detected but squelch closed");
+                                        } else {
+                                            // Squelch is open or disabled - show receiving
+                                            String displayText = "📻 Receiving...";
+                                            if (currentRxToneType > 0) {  // 0 = None, 1 = CTCSS, 2 = FDCS, 3 = BDCS
+                                                String toneDisplay = ToneConverter.formatForDisplay(currentRxToneType, currentRxToneSubCode);
+                                                displayText += "\n" + toneDisplay;
+                                            }
+                                            updateCallerDisplay(displayText);
+                                            XposedBridge.log(TAG + ": Displayed analog receiving message: " + displayText);
                                         }
-                                        updateCallerDisplay(displayText);
-                                        XposedBridge.log(TAG + ": Displayed analog receiving message: " + displayText);
                                     }
                                     break;
                                 case 2:  // RECEIVE_STOP (used for both digital AND analog)
                                 case 11: // MIX_CHECK_DIGITAL_RECEIVE_STOP
                                     XposedBridge.log(TAG + ": RECEIVE_STOP detected (type: " + currentChannelType + ")");
                                     isReceiving = false;
+                                    previousSquelchOpen = false;  // Reset squelch state tracking
                                     
                                     // Process APRS buffer on receive stop ONLY if not in APRS monitoring mode
                                     // (During APRS monitoring, timer-based processing handles everything)
@@ -4259,13 +4523,23 @@ public class MainHook implements IXposedHookLoadPackage {
                                     isReceiving = true;
                                     
                                     String toneDisplay = ToneConverter.formatForDisplay(currentRxToneType, currentRxToneSubCode);
-                                    updateCallerDisplay("📻 Receiving...\n" + toneDisplay);
-                                    XposedBridge.log(TAG + ": Displayed analog receiving message with tone: " + toneDisplay);
+                                    
+                                    // Check squelch state before showing "Receiving..." (analog channels only)
+                                    if (currentChannelType == 1 && isSoftwareSquelchEnabled && !isSquelchOpen) {
+                                        // Squelch is closed - show signal detected but muted
+                                        updateCallerDisplay("📡 Signal (squelch)\n" + toneDisplay);
+                                        XposedBridge.log(TAG + ": Signal detected but squelch closed: " + toneDisplay);
+                                    } else {
+                                        // Squelch is open or disabled - show receiving
+                                        updateCallerDisplay("📻 Receiving...\n" + toneDisplay);
+                                        XposedBridge.log(TAG + ": Displayed analog receiving message with tone: " + toneDisplay);
+                                    }
                                     break;
                                     
                                 case 13: // MIX_CHECK_ANALOG_RECEIVE_STOP
                                     XposedBridge.log(TAG + ": ANALOG_RECEIVE_STOP detected (type: " + currentChannelType + ")");
                                     isReceiving = false;
+                                    previousSquelchOpen = false;  // Reset squelch state tracking
                                     
                                     // Process APRS buffer on receive stop (packets are often shorter than 2 seconds)
                                     if (aprsAudioBuffer.size() > 0) {
@@ -5326,23 +5600,123 @@ public class MainHook implements IXposedHookLoadPackage {
                         byte[] audioData = (byte[]) param.args[0];
                         int length = (int) param.args[1];
                         
-                        XposedBridge.log(TAG + ": writeAudioTrack called - " + length + " bytes");
+                        // Make a copy BEFORE any squelch muting for APRS/transcription/recording
+                        // This ensures those features get clean audio regardless of squelch state
+                        byte[] originalAudio = null;
+                        if (isAPRSMonitoringActive || isTranscriptionEnabled || 
+                            (isRecordingEnabled && isCurrentlyRecording)) {
+                            originalAudio = java.util.Arrays.copyOf(audioData, length);
+                        }
+                        
+                        // === SOFTWARE SQUELCH (Hybrid RSSI + Audio RMS) ===
+                        // Note: Squelch level 0 = disabled (pass all audio), 1-9 = enabled with increasing sensitivity
+                        if (isSoftwareSquelchEnabled && (currentChannelType == 1 || isAPRSMonitoringActive) && softwareSquelchThreshold > 0) {  // Skip software squelch if level 0
+                            // Calculate audio amplitude (optimized RMS with peak detection)
+                            int amplitude = calculateAudioAmplitude(audioData, length);
+                            
+                            // Get thresholds with hysteresis
+                            int audioThreshold = getAudioSquelchThreshold();
+                            int audioOpenThresh = audioThreshold;
+                            int audioCloseThresh = (audioThreshold * 100) / HYSTERESIS_FACTOR;  // Lower threshold to close
+                            
+                            // RSSI-based gating (if available)
+                            boolean rssiPass = true;
+                            if (currentRssi != -999) {
+                                int rssiThreshold = getRssiThreshold(softwareSquelchThreshold);
+                                rssiPass = (currentRssi >= rssiThreshold);
+                                
+                                // Periodic RSSI query (every 500ms)
+                                long now = System.currentTimeMillis();
+                                if (now - lastRssiQueryTime > RSSI_QUERY_INTERVAL_MS) {
+                                    querySignalStrength();
+                                }
+                            }
+                            
+                            // Hybrid decision: RSSI gates coarsely, audio RMS fine-tunes
+                            boolean shouldOpen = rssiPass && (amplitude >= audioOpenThresh);
+                            boolean shouldClose = !rssiPass || (amplitude < audioCloseThresh);
+                            
+                            // Apply hysteresis
+                            if (isSquelchOpen) {
+                                if (shouldClose) {
+                                    isSquelchOpen = false;
+                                }
+                            } else {
+                                if (shouldOpen) {
+                                    isSquelchOpen = true;
+                                }
+                            }
+                            
+                            // Apply hang time (hold squelch open for 300ms after signal drops)
+                            if (isSquelchOpen) {
+                                lastSquelchOpenTime = System.currentTimeMillis();
+                            } else if (System.currentTimeMillis() - lastSquelchOpenTime < SQUELCH_HANG_TIME_MS) {
+                                isSquelchOpen = true;  // Force open during hang period
+                            }
+                            
+                            // Mute audio if squelch is closed
+                            if (!isSquelchOpen) {
+                                java.util.Arrays.fill(audioData, 0, length, (byte) 0);
+                            }
+                            
+                            // Update caller display if squelch state changed during reception
+                            if (isReceiving && currentChannelType == 1 && isSquelchOpen != previousSquelchOpen) {
+                                previousSquelchOpen = isSquelchOpen;
+                                
+                                // Update display based on new squelch state
+                                String toneDisplay = ToneConverter.formatForDisplay(currentRxToneType, currentRxToneSubCode);
+                                if (isSquelchOpen) {
+                                    // Squelch just opened - show "Receiving..."
+                                    String displayText = "📻 Receiving...";
+                                    if (currentRxToneType > 0) {
+                                        displayText += "\n" + toneDisplay;
+                                    }
+                                    updateCallerDisplay(displayText);
+                                    XposedBridge.log(TAG + ": Squelch OPENED - now showing Receiving");
+                                } else {
+                                    // Squelch just closed - show "Signal (squelch)"
+                                    String displayText = "📡 Signal (squelch)";
+                                    if (currentRxToneType > 0) {
+                                        displayText += "\n" + toneDisplay;
+                                    }
+                                    updateCallerDisplay(displayText);
+                                    XposedBridge.log(TAG + ": Squelch CLOSED - now showing Signal (squelch)");
+                                }
+                            }
+                            
+                            // Update UI indicator (throttled)
+                            if (System.currentTimeMillis() % 200 < 50) {  // Update ~5 times per second
+                                updateSquelchStatus(isSquelchOpen);
+                            }
+                            
+                            // Debug logging (throttled to avoid spam)
+                            if (System.currentTimeMillis() % 1000 < 50) {  // Log once per second
+                                XposedBridge.log(TAG + ": Squelch - RMS=" + amplitude + 
+                                    ", Thresh=" + audioThreshold + ", RSSI=" + currentRssi + 
+                                    ", Open=" + isSquelchOpen);
+                            }
+                        }
+                        
+                        // === END SOFTWARE SQUELCH ===
+                        
+                        // Use originalAudio for features that need clean audio
+                        byte[] processingAudio = (originalAudio != null) ? originalAudio : audioData;
                         
                         // Buffer audio for APRS decoding (only if monitoring is active)
                         if (isAPRSMonitoringActive) {
-                            bufferAudioForAPRS(audioData, length);
+                            bufferAudioForAPRS(processingAudio, length);
                         }
                         
                         // Buffer audio for transcription if enabled
                         if (isTranscriptionEnabled) {
-                            bufferAudioForTranscription(audioData);
+                            bufferAudioForTranscription(processingAudio);
                         }
                         
                         // Only capture if recording is enabled and currently recording
                         if (isRecordingEnabled && isCurrentlyRecording && pcmOutputStream != null) {
                             try {
-                                // Write PCM data to file
-                                pcmOutputStream.write(audioData, 0, length);
+                                // Write PCM data to file (original unmuted audio)
+                                pcmOutputStream.write(processingAudio, 0, length);
                                 pcmDataSize += length;
                                 
                             } catch (Exception e) {
@@ -5407,6 +5781,283 @@ public class MainHook implements IXposedHookLoadPackage {
             
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error hiding RSSI display: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Calculate audio amplitude using optimized RMS with peak detection
+     * Optimized version: subsamples every 4th sample for speed, uses hybrid RMS+peak
+     * 
+     * @param pcmData PCM audio data (16-bit signed, little endian)
+     * @param length Length of data in bytes
+     * @return Amplitude value (hybrid of RMS and peak)
+     */
+    private static int calculateAudioAmplitude(byte[] pcmData, int length) {
+        if (length < 2 || length % 2 != 0) return 0;
+
+        long sumSquares = 0;
+        int maxAbs = 0;
+        int sampleCount = 0;
+
+        // Process every 4th sample (4× faster, still accurate for squelch)
+        // For 8kHz audio, this still gives 2000 samples/sec which is plenty
+        for (int i = 0; i < length - 1; i += 4) {
+            // Combine 2 bytes into 16-bit signed sample (Little Endian)
+            short sample = (short) ((pcmData[i] & 0xFF) | (pcmData[i + 1] << 8));
+            int abs = Math.abs(sample);
+            if (abs > maxAbs) maxAbs = abs;
+            sumSquares += (long) sample * sample;
+            sampleCount++;
+        }
+
+        if (sampleCount == 0) return 0;
+
+        // RMS (root mean square) - most reliable for squelch
+        double rms = Math.sqrt((double) sumSquares / sampleCount);
+        
+        // Hybrid: use higher of RMS or scaled peak (helps with bursty signals)
+        int hybrid = (int) Math.max(rms, maxAbs * 0.7);
+
+        return hybrid;
+    }
+    
+    /**
+     * Get audio RMS threshold for software squelch based on user squelch level (0-9)
+     * 
+     * @return Audio amplitude threshold
+     */
+    private static int getAudioSquelchThreshold() {
+        int level = Math.max(0, Math.min(softwareSquelchThreshold, 9));  // Clamp to 0-9
+        return AUDIO_SQUELCH_THRESHOLDS[level];
+    }
+    
+    /**
+     * Get RSSI threshold for software squelch based on user squelch level (0-9)
+     * Maps squelch levels to dBm thresholds
+     * 
+     * @param squelchLevel User squelch setting (0-9)
+     * @return RSSI threshold in dBm (negative values)
+     */
+    private static int getRssiThreshold(int squelchLevel) {
+        // Map squelch levels 0-9 to RSSI thresholds (dBm)
+        // 0 = most sensitive (always open, no squelch)
+        // 9 = least sensitive (only very strong signals)
+        //
+        // Typical RSSI range: -120 dBm (very weak) to -50 dBm (very strong)
+        // Good signal: -70 to -90 dBm
+        // Marginal: -90 to -105 dBm
+        // Poor: -105 to -120 dBm
+        
+        int[] thresholds = {
+            -120,  // 0: Always open (accept all signals, even very weak)
+            -110,  // 1: Very sensitive (accept weak signals)
+            -100,  // 2: Default sensitive (was hardware default)
+            -95,   // 3: Moderate-low
+            -90,   // 4: Moderate (good balance)
+            -85,   // 5: Moderate-high
+            -80,   // 6: Strong signals only
+            -75,   // 7: Very strong signals
+            -70,   // 8: Excellent signals only
+            -65    // 9: Only exceptionally strong signals
+        };
+        
+        int level = Math.max(0, Math.min(squelchLevel, 9));  // Clamp to 0-9
+        return thresholds[level];
+    }
+    
+    /**
+     * Query signal strength from the radio
+     * Sends a SignalMessage to request RSSI update
+     */
+    private static void querySignalStrength() {
+        if (appClassLoader == null) {
+            return;
+        }
+        
+        try {
+            Class<?> signalMsgClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.message.SignalMessage",
+                appClassLoader
+            );
+            
+            // Create new SignalMessage with fetch=1 (query signal strength)
+            Object signalMsg = signalMsgClass.newInstance();
+            XposedHelpers.setByteField(signalMsg, "fetch", (byte) 1);
+            
+            // Send the message to radio
+            XposedHelpers.callMethod(signalMsg, "send");
+            
+            lastRssiQueryTime = System.currentTimeMillis();
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error querying signal strength: " + t.getMessage());
+        }
+    }
+    
+    /**
+     * Update squelch status indicator in UI
+     * 
+     * @param open True if squelch is open (signal passing), false if closed (muted)
+     */
+    private static void updateSquelchStatus(final boolean open) {
+        if (squelchStatusIndicator == null) {
+            return;
+        }
+        
+        isSquelchOpen = open;
+        
+        try {
+            squelchStatusIndicator.post(new Runnable() {
+                @Override
+                public void run() {
+                    if (open) {
+                        squelchStatusIndicator.setText("⬤ OPEN");
+                        squelchStatusIndicator.setTextColor(0xFF00FF00);  // Green
+                    } else {
+                        squelchStatusIndicator.setText("⬤ CLOSED");
+                        squelchStatusIndicator.setTextColor(0xFFFF0000);  // Red
+                    }
+                    squelchStatusIndicator.setVisibility(View.VISIBLE);
+                }
+            });
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error updating squelch status: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Enable software squelch by setting hardware squelch to 0 (fully open)
+     * Must be called on current channel after enabling software squelch
+     */
+    private static void enableSoftwareSquelchOnCurrentChannel() {
+        if (appClassLoader == null) {
+            XposedBridge.log(TAG + ": Cannot enable software squelch - appClassLoader is null");
+            return;
+        }
+        
+        try {
+            // Get DmrManager and current channel
+            Class<?> dmrManagerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.manager.DmrManager",
+                appClassLoader
+            );
+            Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+            Object currentChannel = XposedHelpers.callMethod(dmrManager, "getCurrentChannel");
+            
+            if (currentChannel == null) {
+                XposedBridge.log(TAG + ": Cannot set squelch - no current channel");
+                return;
+            }
+            
+            // Only set hardware squelch to 0 for analog channels
+            int channelType = XposedHelpers.getIntField(currentChannel, "type");
+            if (channelType != 1) {  // Not analog
+                XposedBridge.log(TAG + ": Software squelch only applies to analog channels");
+                return;
+            }
+            
+            // Create AnalogMessage with squelch = 0
+            Class<?> analogMessageClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.message.AnalogMessage",
+                appClassLoader
+            );
+            Object analogMessage = analogMessageClass.newInstance();
+            
+            // Copy all channel fields
+            XposedHelpers.callMethod(analogMessage, "setBand", 
+                (byte) XposedHelpers.getIntField(currentChannel, "band"));
+            XposedHelpers.callMethod(analogMessage, "setPower", 
+                (byte) XposedHelpers.getIntField(currentChannel, "power"));
+            XposedHelpers.callMethod(analogMessage, "setTxFreq", 
+                XposedHelpers.getIntField(currentChannel, "txFreq"));
+            XposedHelpers.callMethod(analogMessage, "setRxFreq", 
+                XposedHelpers.getIntField(currentChannel, "rxFreq"));
+            XposedHelpers.callMethod(analogMessage, "setSq", (byte) 0);  // Hardware squelch = 0 (same as MON button)
+            XposedHelpers.callMethod(analogMessage, "setRxType", 
+                (byte) XposedHelpers.getIntField(currentChannel, "rxType"));
+            XposedHelpers.callMethod(analogMessage, "setRxSubCode", 
+                (byte) XposedHelpers.getIntField(currentChannel, "rxSubCode"));
+            XposedHelpers.callMethod(analogMessage, "setTxType", 
+                (byte) XposedHelpers.getIntField(currentChannel, "txType"));
+            XposedHelpers.callMethod(analogMessage, "setTxSubCode", 
+                (byte) XposedHelpers.getIntField(currentChannel, "txSubCode"));
+            XposedHelpers.callMethod(analogMessage, "setRelay", 
+                (byte) XposedHelpers.getIntField(currentChannel, "relay"));
+            
+            // Send to hardware
+            XposedHelpers.callMethod(analogMessage, "send");
+            
+            XposedBridge.log(TAG + ": ✓ Software squelch enabled - hardware sq set to 0 (same as MON button)");
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": ✗ Error enabling software squelch: " + t.getMessage());
+            t.printStackTrace();
+        }
+    }
+    
+    /**
+     * Disable software squelch and restore hardware squelch to saved level
+     */
+    private static void disableSoftwareSquelchOnCurrentChannel() {
+        if (appClassLoader == null) {
+            return;
+        }
+        
+        try {
+            // Get DmrManager and current channel
+            Class<?> dmrManagerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.manager.DmrManager",
+                appClassLoader
+            );
+            Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+            Object currentChannel = XposedHelpers.callMethod(dmrManager, "getCurrentChannel");
+            
+            if (currentChannel == null) {
+                return;
+            }
+            
+            // Only for analog channels
+            int channelType = XposedHelpers.getIntField(currentChannel, "type");
+            if (channelType != 1) {
+                return;
+            }
+            
+            // Create AnalogMessage with software squelch threshold (not hardware sq=2)
+            Class<?> analogMessageClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.message.AnalogMessage",
+                appClassLoader
+            );
+            Object analogMessage = analogMessageClass.newInstance();
+            
+            // Copy all channel fields but use software squelch threshold instead of hardware
+            XposedHelpers.callMethod(analogMessage, "setBand", 
+                (byte) XposedHelpers.getIntField(currentChannel, "band"));
+            XposedHelpers.callMethod(analogMessage, "setPower", 
+                (byte) XposedHelpers.getIntField(currentChannel, "power"));
+            XposedHelpers.callMethod(analogMessage, "setTxFreq", 
+                XposedHelpers.getIntField(currentChannel, "txFreq"));
+            XposedHelpers.callMethod(analogMessage, "setRxFreq", 
+                XposedHelpers.getIntField(currentChannel, "rxFreq"));
+            XposedHelpers.callMethod(analogMessage, "setSq", 
+                (byte) softwareSquelchThreshold);  // Restore to software setting
+            XposedHelpers.callMethod(analogMessage, "setRxType", 
+                (byte) XposedHelpers.getIntField(currentChannel, "rxType"));
+            XposedHelpers.callMethod(analogMessage, "setRxSubCode", 
+                (byte) XposedHelpers.getIntField(currentChannel, "rxSubCode"));
+            XposedHelpers.callMethod(analogMessage, "setTxType", 
+                (byte) XposedHelpers.getIntField(currentChannel, "txType"));
+            XposedHelpers.callMethod(analogMessage, "setTxSubCode", 
+                (byte) XposedHelpers.getIntField(currentChannel, "txSubCode"));
+            XposedHelpers.callMethod(analogMessage, "setRelay", 
+                (byte) XposedHelpers.getIntField(currentChannel, "relay"));
+            
+            // Send to hardware
+            XposedHelpers.callMethod(analogMessage, "send");
+            
+            XposedBridge.log(TAG + ": ✓ Software squelch disabled - hardware sq restored");
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": ✗ Error disabling software squelch: " + t.getMessage());
         }
     }
     
