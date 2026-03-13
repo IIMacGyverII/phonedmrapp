@@ -1,0 +1,1 @@
+C:\Users\Joshua\Documents\android\phonedmrapp\DMRModHooks\app\src\main\cpp\CMakeLists.txt
