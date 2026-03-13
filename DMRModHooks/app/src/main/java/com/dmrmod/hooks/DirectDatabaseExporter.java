@@ -385,7 +385,11 @@ public class DirectDatabaseExporter {
                     rowBuilder.append("Off,");                           // 22. VOX
                     rowBuilder.append("No,");                            // 23. No Beep
                     rowBuilder.append("No,");                            // 24. No Eco
-                    rowBuilder.append("None,");                          // 25. APRS
+                    
+                    // Query APRSDatabase for APRS setting (Digital channels)
+                    APRSDatabase aprsDb = APRSDatabase.getInstance(context);
+                    String aprsStr = aprsDb.isEnabled(channelNumber) ? "TX" : "None";
+                    rowBuilder.append(aprsStr).append(",");              // 25. APRS
                     
                     // Query LocationDatabase for lat/lon (Digital channels)
                     LocationDatabase.Location location = locationDb.getLocation(channelNumber);
@@ -422,7 +426,11 @@ public class DirectDatabaseExporter {
                     rowBuilder.append("Off,");                           // 22. VOX
                     rowBuilder.append("No,");                            // 23. No Beep
                     rowBuilder.append("No,");                            // 24. No Eco
-                    rowBuilder.append("None,");                          // 25. APRS
+                    
+                    // Query APRSDatabase for APRS setting (Analog channels)
+                    APRSDatabase aprsDb2 = APRSDatabase.getInstance(context);
+                    String aprsStr2 = aprsDb2.isEnabled(channelNumber) ? "TX" : "None";
+                    rowBuilder.append(aprsStr2).append(",");             // 25. APRS
                     
                     // Query LocationDatabase for lat/lon (Analog channels)
                     LocationDatabase.Location location = locationDb.getLocation(channelNumber);

@@ -1,0 +1,3454 @@
+﻿
+03-10 20:08:55.459  3873  4567 I LSPosed-Bridge: DMRModHooks: RECEIVE_START 
+detected (type: 1)
+03-10 20:08:55.461  3873  4567 I LSPosed-Bridge: DMRModHooks: Sent 
+QUERY_SIGNAL_STRENGTH_CMD
+03-10 20:08:55.461  3873  4567 I LSPosed-Bridge: DMRModHooks: Analog channel - 
+showing receiving message
+03-10 20:08:55.461  3873  4567 I LSPosed-Bridge: DMRModHooks: Updated caller 
+display: ≡ƒô╗ Receiving...
+03-10 20:08:55.461  3873  4567 I LSPosed-Bridge: DMRModHooks: Displayed analog 
+receiving message: ≡ƒô╗ Receiving...
+03-10 20:08:55.466  3873  6517 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:08:55.468  3873  6519 I LSPosed-Bridge: DMRModHooks: UART TX cmd=50 
+(UNKNOWN) len=0
+03-10 20:08:55.472  3873  6518 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:08:55.502  3873  4562 I LSPosed-Bridge: DMRModHooks: Captured RSSI 
+from packet body: raw=113, dBm=-64
+03-10 20:08:55.514  3873  6521 I LSPosed-Bridge: DMRModHooks: UART RX cmd=50 
+(UNKNOWN) len=1
+03-10 20:08:55.646  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:55.646  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:55.646  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 25024
+03-10 20:08:55.711  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:55.711  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:55.711  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 26048
+03-10 20:08:55.775  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:55.775  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:55.775  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 27072
+03-10 20:08:55.838  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:55.839  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:55.839  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 28096
+03-10 20:08:55.903  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:55.904  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:55.904  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 29120
+03-10 20:08:55.966  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:55.967  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:55.967  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 30144
+03-10 20:08:56.030  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:56.031  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:56.031  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 31168
+03-10 20:08:56.094  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:56.095  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:56.095  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 32192
+03-10 20:08:56.159  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:56.159  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:56.160  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 33216
+03-10 20:08:56.223  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:56.223  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:56.224  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 34240
+03-10 20:08:56.287  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:56.287  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:56.288  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 35264
+03-10 20:08:56.351  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:56.351  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:56.352  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 36288
+03-10 20:08:56.416  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:56.417  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:56.417  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 37312
+03-10 20:08:56.479  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:56.480  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:56.480  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 38336
+03-10 20:08:56.543  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:56.544  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:56.544  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 39360
+03-10 20:08:56.608  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:56.608  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:56.609  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 40384
+03-10 20:08:56.671  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:56.671  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:56.671  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 41408
+03-10 20:08:56.737  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:56.738  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:56.739  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 42432
+03-10 20:08:56.799  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:56.800  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:56.800  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 43456
+03-10 20:08:56.863  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:56.863  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:56.864  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 44480
+03-10 20:08:56.927  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:56.927  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:56.928  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 45504
+03-10 20:08:56.990  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:56.991  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:56.991  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 46528
+03-10 20:08:57.056  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:57.056  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:57.056  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 47552
+03-10 20:08:57.119  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:57.119  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:57.119  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 48576
+03-10 20:08:57.184  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:57.185  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:57.185  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 49600
+03-10 20:08:57.246  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:57.247  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:57.248  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 50624
+03-10 20:08:57.311  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:57.311  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:57.312  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 51648
+03-10 20:08:57.375  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:57.376  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:57.376  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 52672
+03-10 20:08:57.439  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:57.439  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:57.439  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 53696
+03-10 20:08:57.503  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:57.503  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:57.503  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 54720
+03-10 20:08:57.567  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:57.567  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:57.567  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 55744
+03-10 20:08:57.631  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:57.631  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:57.631  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 56768
+03-10 20:08:57.695  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:57.695  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:57.696  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 57792
+03-10 20:08:57.758  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:57.759  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:57.759  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 58816
+03-10 20:08:57.823  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:57.823  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:57.824  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 59840
+03-10 20:08:57.886  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:57.887  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:57.887  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 60864
+03-10 20:08:57.950  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:57.951  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:57.951  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 61888
+03-10 20:08:58.014  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:58.014  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:58.015  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 62912
+03-10 20:08:58.078  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:58.078  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:58.079  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 63936
+03-10 20:08:58.142  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:58.142  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:58.143  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 64960
+03-10 20:08:58.206  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:58.206  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:58.207  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 65984
+03-10 20:08:58.226  3873  6522 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:08:58.228  3873  4567 I LSPosed-Bridge: DMRModHooks: RECEIVE_STOP 
+detected (type: 1)
+03-10 20:08:58.228  3873  4567 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer on RECEIVE_STOP (67008 samples)
+03-10 20:08:58.228  3873  4567 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer (67008 samples)
+03-10 20:08:58.229  3873  6523 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:08:58.245  3873  6524 I LSPosed-Bridge: DMRModHooks: Calling 
+APRSReceiver.processAudio()
+03-10 20:08:58.245  3873  6524 I LSPosed-Bridge: DMRModHooks-APRS-Receiver: 
+Processing 67008 audio samples
+03-10 20:08:58.246  3873  4567 I LSPosed-Bridge: DMRModHooks: Cleared caller 
+display
+03-10 20:08:58.258  3873  6524 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+ΓÿàΓÿàΓÿà Saved audio to /sdcard/aprs_debug/aprs_rx_012.wav (67008 samples)
+03-10 20:08:58.259  3873  6524 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Demodulated 1675 bits
+03-10 20:08:58.259  3873  6524 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+First bits: 1110111011111111010011111110111111111110111011101110111111001111111
+010101111111011101110111011111110
+03-10 20:08:58.259  3873  6524 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+After NRZI: 1110011001111111000101111110011111111110011001100110011111010111111
+000000111111001100110011001111110
+03-10 20:08:58.259  3873  6524 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 32 bits
+03-10 20:08:58.259  3873  6524 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 12 bits
+03-10 20:08:58.259  3873  6524 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 145 bits
+03-10 20:08:58.260  3873  6524 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 330 bits
+03-10 20:08:58.260  3873  6524 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 13 bits
+03-10 20:08:58.260  3873  6524 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 52 bits
+03-10 20:08:58.260  3873  6524 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 16 bits
+03-10 20:08:58.260  3873  6524 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 92 bits
+03-10 20:08:58.260  3873  6524 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 36 bits
+03-10 20:08:58.260  3873  6524 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 147 bits
+03-10 20:08:58.260  3873  6524 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 15 bits
+03-10 20:08:58.260  3873  6524 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Total flags found: 25, packet bit arrays: 11
+03-10 20:08:58.260  3873  6524 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found 11 raw packet bit arrays
+03-10 20:08:58.260  3873  6524 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: RX 
+Packet (40 bytes, LSB-first): 68 C3 46 72 F7 8D 6E 0B B9 3C 7F 1E 9B EB E1 E8 
+DF F3 EF 4B 
+03-10 20:08:58.260  3873  6524 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: FCS 
+mismatch - calculated: 0x333d, transmitted: 0xde76 (bytes: 76 DE)
+03-10 20:08:58.270  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:08:58.271  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:08:58.271  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 24000
+03-10 20:09:28.411  3873  4562 I LSPosed-Bridge: DMRModHooks: RECEIVE_START 
+detected (type: 1)
+03-10 20:09:28.418  3873  4562 I LSPosed-Bridge: DMRModHooks: Sent 
+QUERY_SIGNAL_STRENGTH_CMD
+03-10 20:09:28.418  3873  4562 I LSPosed-Bridge: DMRModHooks: Analog channel - 
+showing receiving message
+03-10 20:09:28.419  3873  4562 I LSPosed-Bridge: DMRModHooks: Updated caller 
+display: ≡ƒô╗ Receiving...
+03-10 20:09:28.419  3873  4562 I LSPosed-Bridge: DMRModHooks: Displayed analog 
+receiving message: ≡ƒô╗ Receiving...
+03-10 20:09:28.421  3873  6526 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:09:28.421  3873  6525 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:09:28.426  3873  6527 I LSPosed-Bridge: DMRModHooks: UART TX cmd=50 
+(UNKNOWN) len=0
+03-10 20:09:28.432  3873  4567 I LSPosed-Bridge: DMRModHooks: Captured RSSI 
+from packet body: raw=111, dBm=-65
+03-10 20:09:28.441  3873  6529 I LSPosed-Bridge: DMRModHooks: UART RX cmd=50 
+(UNKNOWN) len=1
+03-10 20:09:28.619  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:28.619  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:28.619  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 25024
+03-10 20:09:28.682  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:28.683  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:28.683  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 26048
+03-10 20:09:28.746  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:28.747  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:28.747  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 27072
+03-10 20:09:28.810  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:28.811  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:28.811  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 28096
+03-10 20:09:28.876  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:28.876  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:28.876  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 29120
+03-10 20:09:28.939  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:28.940  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:28.940  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 30144
+03-10 20:09:29.004  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:29.004  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:29.004  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 31168
+03-10 20:09:29.067  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:29.068  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:29.068  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 32192
+03-10 20:09:29.132  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:29.132  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:29.132  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 33216
+03-10 20:09:29.196  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:29.196  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:29.196  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 34240
+03-10 20:09:29.260  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:29.260  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:29.260  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 35264
+03-10 20:09:29.324  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:29.324  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:29.325  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 36288
+03-10 20:09:29.387  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:29.387  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:29.387  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 37312
+03-10 20:09:29.452  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:29.452  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:29.452  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 38336
+03-10 20:09:29.516  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:29.516  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:29.517  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 39360
+03-10 20:09:29.579  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:29.580  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:29.580  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 40384
+03-10 20:09:29.643  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:29.643  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:29.643  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 41408
+03-10 20:09:29.706  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:29.707  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:29.707  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 42432
+03-10 20:09:29.772  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:29.772  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:29.772  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 43456
+03-10 20:09:29.835  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:29.835  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:29.835  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 44480
+03-10 20:09:29.899  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:29.899  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:29.899  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 45504
+03-10 20:09:29.964  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:29.964  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:29.964  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 46528
+03-10 20:09:30.028  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:30.029  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:30.029  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 47552
+03-10 20:09:30.092  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:30.093  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:30.093  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 48576
+03-10 20:09:30.155  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:30.156  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:30.156  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 49600
+03-10 20:09:30.219  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:30.220  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:30.220  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 50624
+03-10 20:09:30.284  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:30.284  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:30.285  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 51648
+03-10 20:09:30.347  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:30.347  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:30.348  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 52672
+03-10 20:09:30.411  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:30.412  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:30.412  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 53696
+03-10 20:09:30.475  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:30.476  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:30.477  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 54720
+03-10 20:09:30.540  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:30.540  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:30.541  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 55744
+03-10 20:09:30.603  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:30.604  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:30.604  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 56768
+03-10 20:09:30.667  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:30.667  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:30.668  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 57792
+03-10 20:09:30.731  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:30.732  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:30.732  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 58816
+03-10 20:09:30.796  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:30.796  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:30.797  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 59840
+03-10 20:09:30.859  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:30.859  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:30.860  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 60864
+03-10 20:09:30.924  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:30.924  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:30.925  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 61888
+03-10 20:09:30.987  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:30.988  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:30.988  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 62912
+03-10 20:09:31.051  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:31.051  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:31.052  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 63936
+03-10 20:09:31.099  3873  4562 I LSPosed-Bridge: DMRModHooks: RECEIVE_STOP 
+detected (type: 1)
+03-10 20:09:31.099  3873  4562 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer on RECEIVE_STOP (64960 samples)
+03-10 20:09:31.099  3873  4562 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer (64960 samples)
+03-10 20:09:31.108  3873  6530 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:09:31.108  3873  6531 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:09:31.114  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:09:31.114  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:09:31.114  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 64960
+03-10 20:09:31.123  3873  6532 I LSPosed-Bridge: DMRModHooks: Calling 
+APRSReceiver.processAudio()
+03-10 20:09:31.123  3873  6532 I LSPosed-Bridge: DMRModHooks-APRS-Receiver: 
+Processing 64960 audio samples
+03-10 20:09:31.126  3873  4562 I LSPosed-Bridge: DMRModHooks: Cleared caller 
+display
+03-10 20:09:31.133  3873  6532 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+ΓÿàΓÿàΓÿà Saved audio to /sdcard/aprs_debug/aprs_rx_013.wav (64960 samples)
+03-10 20:09:31.134  3873  6532 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Demodulated 1624 bits
+03-10 20:09:31.134  3873  6532 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+First bits: 0111011101110001111101110111011110111111011101110111101111111111011
+101111011111101110111011100110111
+03-10 20:09:31.134  3873  6532 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+After NRZI: 0011001100110110111100110011001110011111001100110011100111111111001
+100111001111100110011001101010011
+03-10 20:09:31.135  3873  6532 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 68 bits
+03-10 20:09:31.135  3873  6532 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 8 bits
+03-10 20:09:31.135  3873  6532 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 65 bits
+03-10 20:09:31.135  3873  6532 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 116 bits
+03-10 20:09:31.135  3873  6532 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 72 bits
+03-10 20:09:31.135  3873  6532 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Total flags found: 14, packet bit arrays: 5
+03-10 20:09:31.135  3873  6532 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found 5 raw packet bit arrays
+03-10 20:10:07.454  3873  6533 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:10:07.454  3873  6534 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:10:07.457  3873  4567 I LSPosed-Bridge: DMRModHooks: RECEIVE_START 
+detected (type: 1)
+03-10 20:10:07.460  3873  4567 I LSPosed-Bridge: DMRModHooks: Sent 
+QUERY_SIGNAL_STRENGTH_CMD
+03-10 20:10:07.460  3873  4567 I LSPosed-Bridge: DMRModHooks: Analog channel - 
+showing receiving message
+03-10 20:10:07.461  3873  4567 I LSPosed-Bridge: DMRModHooks: Updated caller 
+display: ≡ƒô╗ Receiving...
+03-10 20:10:07.461  3873  4567 I LSPosed-Bridge: DMRModHooks: Displayed analog 
+receiving message: ≡ƒô╗ Receiving...
+03-10 20:10:07.467  3873  6535 I LSPosed-Bridge: DMRModHooks: UART TX cmd=50 
+(UNKNOWN) len=0
+03-10 20:10:07.497  3873  4562 I LSPosed-Bridge: DMRModHooks: Captured RSSI 
+from packet body: raw=113, dBm=-64
+03-10 20:10:07.513  3873  6537 I LSPosed-Bridge: DMRModHooks: UART RX cmd=50 
+(UNKNOWN) len=1
+03-10 20:10:07.620  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:07.620  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:07.620  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 24000
+03-10 20:10:07.716  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:07.716  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:07.716  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 25024
+03-10 20:10:07.780  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:07.780  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:07.780  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 26048
+03-10 20:10:07.844  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:07.844  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:07.844  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 27072
+03-10 20:10:07.908  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:07.908  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:07.908  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 28096
+03-10 20:10:07.972  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:07.972  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:07.972  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 29120
+03-10 20:10:08.035  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:08.035  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:08.035  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 30144
+03-10 20:10:08.100  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:08.100  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:08.100  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 31168
+03-10 20:10:08.163  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:08.164  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:08.164  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 32192
+03-10 20:10:08.228  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:08.228  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:08.229  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 33216
+03-10 20:10:08.292  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:08.293  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:08.293  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 34240
+03-10 20:10:08.356  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:08.357  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:08.358  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 35264
+03-10 20:10:08.420  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:08.420  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:08.421  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 36288
+03-10 20:10:08.461  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:08.462  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:08.468  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 37312
+03-10 20:10:08.547  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:08.548  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:08.548  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 38336
+03-10 20:10:08.611  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:08.611  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:08.611  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 39360
+03-10 20:10:08.674  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:08.675  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:08.675  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 40384
+03-10 20:10:08.739  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:08.740  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:08.740  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 41408
+03-10 20:10:08.803  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:08.803  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:08.803  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 42432
+03-10 20:10:08.867  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:08.867  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:08.867  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 43456
+03-10 20:10:08.931  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:08.931  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:08.932  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 44480
+03-10 20:10:08.974  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:08.974  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:08.974  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 45504
+03-10 20:10:09.061  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:09.061  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:09.061  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 46528
+03-10 20:10:09.125  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:09.126  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:09.126  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 47552
+03-10 20:10:09.188  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:09.189  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:09.189  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 48576
+03-10 20:10:09.252  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:09.252  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:09.252  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 49600
+03-10 20:10:09.315  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:09.316  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:09.316  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 50624
+03-10 20:10:09.380  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:09.380  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:09.380  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 51648
+03-10 20:10:09.444  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:09.444  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:09.444  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 52672
+03-10 20:10:09.508  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:09.508  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:09.508  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 53696
+03-10 20:10:09.572  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:09.573  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:09.573  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 54720
+03-10 20:10:09.635  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:09.636  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:09.636  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 55744
+03-10 20:10:09.700  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:09.700  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:09.700  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 56768
+03-10 20:10:09.764  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:09.764  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:09.765  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 57792
+03-10 20:10:09.827  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:09.827  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:09.828  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 58816
+03-10 20:10:09.892  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:09.892  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:09.892  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 59840
+03-10 20:10:09.956  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:09.956  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:09.956  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 60864
+03-10 20:10:10.020  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:10.020  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:10.020  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 61888
+03-10 20:10:10.083  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:10.083  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:10.084  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 62912
+03-10 20:10:10.120  3873  4567 I LSPosed-Bridge: DMRModHooks: RECEIVE_STOP 
+detected (type: 1)
+03-10 20:10:10.120  3873  4567 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer on RECEIVE_STOP (63936 samples)
+03-10 20:10:10.120  3873  4567 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer (63936 samples)
+03-10 20:10:10.127  3873  6538 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:10:10.133  3873  6539 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:10:10.138  3873  6540 I LSPosed-Bridge: DMRModHooks: Calling 
+APRSReceiver.processAudio()
+03-10 20:10:10.138  3873  6540 I LSPosed-Bridge: DMRModHooks-APRS-Receiver: 
+Processing 63936 audio samples
+03-10 20:10:10.140  3873  4567 I LSPosed-Bridge: DMRModHooks: Cleared caller 
+display
+03-10 20:10:10.145  3873  6540 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+ΓÿàΓÿàΓÿà Saved audio to /sdcard/aprs_debug/aprs_rx_014.wav (63936 samples)
+03-10 20:10:10.146  3873  6540 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Demodulated 1598 bits
+03-10 20:10:10.146  3873  6540 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+First bits: 1110111111001111111111101111111111111111111011111110111011111110111
+111101111111111101111111011111111
+03-10 20:10:10.146  3873  6540 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+After NRZI: 1110011111010111111111100111111111111111111001111110011001111110011
+111100111111111100111111001111111
+03-10 20:10:10.146  3873  6540 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 4 bits
+03-10 20:10:10.146  3873  6540 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 12 bits
+03-10 20:10:10.146  3873  6540 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 10 bits
+03-10 20:10:10.146  3873  6540 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 172 bits
+03-10 20:10:10.146  3873  6540 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 734 bits
+03-10 20:10:10.146  3873  6540 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 166 bits
+03-10 20:10:10.147  3873  6540 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Total flags found: 17, packet bit arrays: 6
+03-10 20:10:10.147  3873  6540 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found 6 raw packet bit arrays
+03-10 20:10:10.147  3873  6540 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: RX 
+Packet (19 bytes, LSB-first): 1E FD 8E 7E 47 BF DF EF F7 FB FD 7E BF DF BF 3A 
+85 CE F5 
+03-10 20:10:10.147  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:10.147  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:10.147  3873  6540 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: FCS 
+mismatch - calculated: 0x6eeb, transmitted: 0xf5ce (bytes: CE F5)
+03-10 20:10:10.147  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 24000
+03-10 20:10:10.147  3873  6540 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: RX 
+Packet (91 bytes, LSB-first): 4C 14 97 B0 A0 78 B8 91 BA 45 DB 3F C5 4F E4 2C 
+FE FF FF FF 
+03-10 20:10:10.147  3873  6540 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: FCS 
+mismatch - calculated: 0x1484, transmitted: 0x3335 (bytes: 35 33)
+03-10 20:10:10.148  3873  6540 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: RX 
+Packet (20 bytes, LSB-first): 4E 48 4E 48 48 74 74 74 74 74 74 74 74 74 74 64 
+A9 FC E7 D1 
+03-10 20:10:10.148  3873  6540 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: FCS 
+mismatch - calculated: 0x94c5, transmitted: 0xd1e7 (bytes: E7 D1)
+03-10 20:10:40.486  3873  4562 I LSPosed-Bridge: DMRModHooks: RECEIVE_START 
+detected (type: 1)
+03-10 20:10:40.489  3873  4562 I LSPosed-Bridge: DMRModHooks: Sent 
+QUERY_SIGNAL_STRENGTH_CMD
+03-10 20:10:40.489  3873  4562 I LSPosed-Bridge: DMRModHooks: Analog channel - 
+showing receiving message
+03-10 20:10:40.490  3873  4562 I LSPosed-Bridge: DMRModHooks: Updated caller 
+display: ≡ƒô╗ Receiving...
+03-10 20:10:40.490  3873  4562 I LSPosed-Bridge: DMRModHooks: Displayed analog 
+receiving message: ≡ƒô╗ Receiving...
+03-10 20:10:40.490  3873  6544 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:10:40.492  3873  6545 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:10:40.497  3873  6546 I LSPosed-Bridge: DMRModHooks: UART TX cmd=50 
+(UNKNOWN) len=0
+03-10 20:10:40.522  3873  4567 I LSPosed-Bridge: DMRModHooks: Captured RSSI 
+from packet body: raw=113, dBm=-64
+03-10 20:10:40.535  3873  6548 I LSPosed-Bridge: DMRModHooks: UART RX cmd=50 
+(UNKNOWN) len=1
+03-10 20:10:40.866  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:40.866  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:40.866  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 25024
+03-10 20:10:40.930  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:40.930  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:40.930  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 26048
+03-10 20:10:40.994  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:40.994  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:40.994  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 27072
+03-10 20:10:41.058  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:41.058  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:41.058  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 28096
+03-10 20:10:41.122  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:41.122  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:41.122  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 29120
+03-10 20:10:41.186  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:41.186  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:41.187  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 30144
+03-10 20:10:41.250  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:41.250  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:41.250  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 31168
+03-10 20:10:41.314  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:41.314  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:41.314  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 32192
+03-10 20:10:41.378  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:41.378  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:41.378  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 33216
+03-10 20:10:41.443  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:41.443  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:41.443  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 34240
+03-10 20:10:41.506  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:41.506  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:41.506  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 35264
+03-10 20:10:41.571  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:41.571  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:41.571  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 36288
+03-10 20:10:41.634  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:41.634  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:41.634  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 37312
+03-10 20:10:41.698  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:41.699  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:41.699  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 38336
+03-10 20:10:41.737  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:41.738  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:41.739  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 39360
+03-10 20:10:41.795  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:41.796  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:41.796  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 40384
+03-10 20:10:41.867  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:41.868  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:41.868  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 41408
+03-10 20:10:41.924  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:41.924  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:41.925  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 42432
+03-10 20:10:41.993  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:41.994  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:41.994  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 43456
+03-10 20:10:42.052  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:42.052  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:42.052  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 44480
+03-10 20:10:42.146  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:42.147  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:42.147  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 45504
+03-10 20:10:42.210  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:42.211  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:42.211  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 46528
+03-10 20:10:42.249  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:42.249  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:42.249  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 47552
+03-10 20:10:42.308  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:42.309  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:42.309  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 48576
+03-10 20:10:42.377  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:42.378  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:42.378  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 49600
+03-10 20:10:42.434  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:42.434  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:42.434  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 50624
+03-10 20:10:42.505  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:42.505  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:42.505  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 51648
+03-10 20:10:42.564  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:42.564  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:42.564  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 52672
+03-10 20:10:42.659  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:42.659  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:42.659  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 53696
+03-10 20:10:42.697  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:42.698  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:42.698  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 54720
+03-10 20:10:42.786  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:42.787  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:42.787  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 55744
+03-10 20:10:42.850  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:42.850  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:42.850  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 56768
+03-10 20:10:42.890  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:42.890  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:42.890  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 57792
+03-10 20:10:42.978  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:42.979  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:42.979  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 58816
+03-10 20:10:43.042  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:43.042  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:43.042  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 59840
+03-10 20:10:43.106  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:43.106  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:43.106  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 60864
+03-10 20:10:43.170  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:43.170  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:43.170  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 61888
+03-10 20:10:43.178  3873  4562 I LSPosed-Bridge: DMRModHooks: RECEIVE_STOP 
+detected (type: 1)
+03-10 20:10:43.178  3873  4562 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer on RECEIVE_STOP (62912 samples)
+03-10 20:10:43.178  3873  4562 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer (62912 samples)
+03-10 20:10:43.183  3873  6552 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:10:43.186  3873  6553 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:10:43.195  3873  6554 I LSPosed-Bridge: DMRModHooks: Calling 
+APRSReceiver.processAudio()
+03-10 20:10:43.195  3873  6554 I LSPosed-Bridge: DMRModHooks-APRS-Receiver: 
+Processing 62912 audio samples
+03-10 20:10:43.198  3873  4562 I LSPosed-Bridge: DMRModHooks: Cleared caller 
+display
+03-10 20:10:43.203  3873  6554 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+ΓÿàΓÿàΓÿà Saved audio to /sdcard/aprs_debug/aprs_rx_015.wav (62912 samples)
+03-10 20:10:43.204  3873  6554 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Demodulated 1572 bits
+03-10 20:10:43.204  3873  6554 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+First bits: 1111111111111111100111111111111101111011111111111111111111011111101
+111111111111001111011011111111111
+03-10 20:10:43.204  3873  6554 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+After NRZI: 1111111111111111101011111111111100111001111111111111111111001111100
+111111111111010111001001111111111
+03-10 20:10:43.204  3873  6554 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 9 bits
+03-10 20:10:43.204  3873  6554 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 112 bits
+03-10 20:10:43.204  3873  6554 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 83 bits
+03-10 20:10:43.204  3873  6554 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 9 bits
+03-10 20:10:43.204  3873  6554 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 48 bits
+03-10 20:10:43.204  3873  6554 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 32 bits
+03-10 20:10:43.204  3873  6554 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 32 bits
+03-10 20:10:43.204  3873  6554 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 12 bits
+03-10 20:10:43.205  3873  6554 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 226 bits
+03-10 20:10:43.205  3873  6554 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Total flags found: 23, packet bit arrays: 9
+03-10 20:10:43.205  3873  6554 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found 9 raw packet bit arrays
+03-10 20:10:43.205  3873  6554 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: RX 
+Packet (26 bytes, LSB-first): E6 E4 4A 47 BF DF EF F7 FB FD 7E BF DF EF F7 FB 
+1D FD 8E 7E 
+03-10 20:10:43.205  3873  6554 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: FCS 
+mismatch - calculated: 0x78f1, transmitted: 0x1fa2 (bytes: A2 1F)
+03-10 20:10:43.234  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:10:43.234  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:10:43.234  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 24000
+03-10 20:11:13.561  3873  4567 I LSPosed-Bridge: DMRModHooks: RECEIVE_START 
+detected (type: 1)
+03-10 20:11:13.568  3873  6555 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:11:13.570  3873  4567 I LSPosed-Bridge: DMRModHooks: Sent 
+QUERY_SIGNAL_STRENGTH_CMD
+03-10 20:11:13.570  3873  4567 I LSPosed-Bridge: DMRModHooks: Analog channel - 
+showing receiving message
+03-10 20:11:13.571  3873  4567 I LSPosed-Bridge: DMRModHooks: Updated caller 
+display: ≡ƒô╗ Receiving...
+03-10 20:11:13.572  3873  4567 I LSPosed-Bridge: DMRModHooks: Displayed analog 
+receiving message: ≡ƒô╗ Receiving...
+03-10 20:11:13.572  3873  6556 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:11:13.574  3873  6557 I LSPosed-Bridge: DMRModHooks: UART TX cmd=50 
+(UNKNOWN) len=0
+03-10 20:11:13.602  3873  4562 I LSPosed-Bridge: DMRModHooks: Captured RSSI 
+from packet body: raw=114, dBm=-63
+03-10 20:11:13.617  3873  6559 I LSPosed-Bridge: DMRModHooks: UART RX cmd=50 
+(UNKNOWN) len=1
+03-10 20:11:13.760  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:13.760  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:13.760  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 25024
+03-10 20:11:13.824  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:13.824  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:13.824  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 26048
+03-10 20:11:13.888  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:13.888  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:13.888  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 27072
+03-10 20:11:13.952  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:13.952  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:13.952  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 28096
+03-10 20:11:14.017  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:14.017  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:14.018  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 29120
+03-10 20:11:14.080  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:14.080  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:14.081  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 30144
+03-10 20:11:14.143  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:14.144  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:14.144  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 31168
+03-10 20:11:14.208  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:14.208  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:14.208  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 32192
+03-10 20:11:14.271  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:14.271  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:14.272  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 33216
+03-10 20:11:14.337  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:14.337  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:14.337  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 34240
+03-10 20:11:14.400  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:14.400  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:14.400  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 35264
+03-10 20:11:14.464  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:14.464  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:14.464  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 36288
+03-10 20:11:14.527  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:14.527  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:14.527  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 37312
+03-10 20:11:14.592  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:14.592  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:14.592  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 38336
+03-10 20:11:14.655  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:14.655  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:14.655  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 39360
+03-10 20:11:14.720  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:14.720  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:14.720  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 40384
+03-10 20:11:14.784  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:14.784  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:14.784  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 41408
+03-10 20:11:14.847  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:14.848  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:14.848  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 42432
+03-10 20:11:14.911  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:14.912  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:14.912  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 43456
+03-10 20:11:14.976  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:14.976  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:14.976  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 44480
+03-10 20:11:15.039  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:15.040  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:15.040  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 45504
+03-10 20:11:15.105  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:15.105  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:15.106  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 46528
+03-10 20:11:15.169  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:15.170  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:15.170  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 47552
+03-10 20:11:15.232  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:15.232  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:15.232  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 48576
+03-10 20:11:15.297  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:15.298  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:15.298  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 49600
+03-10 20:11:15.360  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:15.361  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:15.361  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 50624
+03-10 20:11:15.425  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:15.425  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:15.426  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 51648
+03-10 20:11:15.488  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:15.488  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:15.488  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 52672
+03-10 20:11:15.552  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:15.552  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:15.552  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 53696
+03-10 20:11:15.617  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:15.617  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:15.617  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 54720
+03-10 20:11:15.681  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:15.682  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:15.682  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 55744
+03-10 20:11:15.744  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:15.744  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:15.744  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 56768
+03-10 20:11:15.809  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:15.810  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:15.810  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 57792
+03-10 20:11:15.872  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:15.873  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:15.873  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 58816
+03-10 20:11:15.936  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:15.936  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:15.936  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 59840
+03-10 20:11:16.001  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:16.001  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:16.001  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 60864
+03-10 20:11:16.066  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:16.066  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:16.067  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 61888
+03-10 20:11:16.130  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:16.131  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:16.131  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 62912
+03-10 20:11:16.194  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:16.194  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:16.195  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 63936
+03-10 20:11:16.245  3873  4567 I LSPosed-Bridge: DMRModHooks: RECEIVE_STOP 
+detected (type: 1)
+03-10 20:11:16.245  3873  4567 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer on RECEIVE_STOP (64960 samples)
+03-10 20:11:16.245  3873  4567 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer (64960 samples)
+03-10 20:11:16.257  3873  6561 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:11:16.257  3873  6562 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:11:16.257  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:16.257  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:16.257  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 64960
+03-10 20:11:16.262  3873  6563 I LSPosed-Bridge: DMRModHooks: Calling 
+APRSReceiver.processAudio()
+03-10 20:11:16.262  3873  6563 I LSPosed-Bridge: DMRModHooks-APRS-Receiver: 
+Processing 64960 audio samples
+03-10 20:11:16.264  3873  4567 I LSPosed-Bridge: DMRModHooks: Cleared caller 
+display
+03-10 20:11:16.269  3873  6563 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+ΓÿàΓÿàΓÿà Saved audio to /sdcard/aprs_debug/aprs_rx_016.wav (64960 samples)
+03-10 20:11:16.270  3873  6563 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Demodulated 1624 bits
+03-10 20:11:16.270  3873  6563 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+First bits: 1110110111101110110011101101111011001100111011011111110011111110110
+111101001011111101111110111001100
+03-10 20:11:16.270  3873  6563 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+After NRZI: 1110010011100110010101100100111001010101011001001111110101111110010
+011100010001111100111110011010101
+03-10 20:11:16.270  3873  6563 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 1 bits
+03-10 20:11:16.270  3873  6563 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 408 bits
+03-10 20:11:16.270  3873  6563 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 24 bits
+03-10 20:11:16.270  3873  6563 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 12 bits
+03-10 20:11:16.270  3873  6563 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 4 bits
+03-10 20:11:16.270  3873  6563 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 72 bits
+03-10 20:11:16.270  3873  6563 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 198 bits
+03-10 20:11:16.270  3873  6563 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Total flags found: 17, packet bit arrays: 7
+03-10 20:11:16.270  3873  6563 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found 7 raw packet bit arrays
+03-10 20:11:16.270  3873  6563 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: RX 
+Packet (50 bytes, LSB-first): AE 9C FF 9C 2C F8 9F B9 FD FF 87 1F 37 FE 53 FF 
+69 5F 86 3F 
+03-10 20:11:16.271  3873  6563 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: FCS 
+mismatch - calculated: 0x1c36, transmitted: 0xfe66 (bytes: 66 FE)
+03-10 20:11:16.271  3873  6563 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: RX 
+Packet (24 bytes, LSB-first): 27 E7 FF FF FF FF F9 FF F9 FF 39 21 21 21 21 21 
+21 39 21 B9 
+03-10 20:11:16.271  3873  6563 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: FCS 
+mismatch - calculated: 0xd5c1, transmitted: 0x18a2 (bytes: A2 18)
+03-10 20:11:16.320  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:16.320  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:16.320  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 24000
+03-10 20:11:51.423  3873  4562 I LSPosed-Bridge: DMRModHooks: RECEIVE_START 
+detected (type: 1)
+03-10 20:11:51.425  3873  4562 I LSPosed-Bridge: DMRModHooks: Sent 
+QUERY_SIGNAL_STRENGTH_CMD
+03-10 20:11:51.425  3873  4562 I LSPosed-Bridge: DMRModHooks: Analog channel - 
+showing receiving message
+03-10 20:11:51.425  3873  4562 I LSPosed-Bridge: DMRModHooks: Updated caller 
+display: ≡ƒô╗ Receiving...
+03-10 20:11:51.425  3873  4562 I LSPosed-Bridge: DMRModHooks: Displayed analog 
+receiving message: ≡ƒô╗ Receiving...
+03-10 20:11:51.430  3873  6577 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:11:51.430  3873  6576 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:11:51.435  3873  6578 I LSPosed-Bridge: DMRModHooks: UART TX cmd=50 
+(UNKNOWN) len=0
+03-10 20:11:51.458  3873  4567 I LSPosed-Bridge: DMRModHooks: Captured RSSI 
+from packet body: raw=113, dBm=-64
+03-10 20:11:51.470  3873  6580 I LSPosed-Bridge: DMRModHooks: UART RX cmd=50 
+(UNKNOWN) len=1
+03-10 20:11:51.634  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:51.634  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:51.634  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 25024
+03-10 20:11:51.699  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:51.699  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:51.699  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 26048
+03-10 20:11:51.763  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:51.763  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:51.763  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 27072
+03-10 20:11:51.827  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:51.827  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:51.827  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 28096
+03-10 20:11:51.891  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:51.892  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:51.892  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 29120
+03-10 20:11:51.955  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:51.956  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:51.957  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 30144
+03-10 20:11:52.019  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:52.020  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:52.020  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 31168
+03-10 20:11:52.083  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:52.084  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:52.084  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 32192
+03-10 20:11:52.147  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:52.148  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:52.148  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 33216
+03-10 20:11:52.210  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:52.211  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:52.211  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 34240
+03-10 20:11:52.275  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:52.275  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:52.275  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 35264
+03-10 20:11:52.319  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:52.319  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:52.319  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 36288
+03-10 20:11:52.404  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:52.404  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:52.404  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 37312
+03-10 20:11:52.467  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:52.467  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:52.467  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 38336
+03-10 20:11:52.537  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:52.538  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:52.538  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 39360
+03-10 20:11:52.595  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:52.595  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:52.595  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 40384
+03-10 20:11:52.659  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:52.659  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:52.659  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 41408
+03-10 20:11:52.723  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:52.723  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:52.723  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 42432
+03-10 20:11:52.787  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:52.787  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:52.787  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 43456
+03-10 20:11:52.851  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:52.851  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:52.851  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 44480
+03-10 20:11:52.915  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:52.915  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:52.916  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 45504
+03-10 20:11:52.979  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:52.979  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:52.979  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 46528
+03-10 20:11:53.042  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:53.042  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:53.043  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 47552
+03-10 20:11:53.107  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:53.107  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:53.107  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 48576
+03-10 20:11:53.171  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:53.171  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:53.171  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 49600
+03-10 20:11:53.234  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:53.234  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:53.235  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 50624
+03-10 20:11:53.299  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:53.300  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:53.300  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 51648
+03-10 20:11:53.362  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:53.363  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:53.364  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 52672
+03-10 20:11:53.427  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:53.428  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:53.428  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 53696
+03-10 20:11:53.491  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:53.491  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:53.492  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 54720
+03-10 20:11:53.555  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:53.556  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:53.556  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 55744
+03-10 20:11:53.619  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:53.620  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:53.620  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 56768
+03-10 20:11:53.683  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:53.684  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:53.684  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 57792
+03-10 20:11:53.747  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:53.747  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:53.748  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 58816
+03-10 20:11:53.811  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:53.811  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:53.812  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 59840
+03-10 20:11:53.875  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:53.875  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:53.876  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 60864
+03-10 20:11:53.939  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:53.940  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:53.940  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 61888
+03-10 20:11:54.003  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:54.004  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:54.004  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 62912
+03-10 20:11:54.067  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:54.068  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:54.068  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 63936
+03-10 20:11:54.099  3873  4562 I LSPosed-Bridge: DMRModHooks: RECEIVE_STOP 
+detected (type: 1)
+03-10 20:11:54.100  3873  4562 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer on RECEIVE_STOP (64960 samples)
+03-10 20:11:54.100  3873  4562 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer (64960 samples)
+03-10 20:11:54.103  3873  6581 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:11:54.108  3873  6582 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:11:54.121  3873  6583 I LSPosed-Bridge: DMRModHooks: Calling 
+APRSReceiver.processAudio()
+03-10 20:11:54.121  3873  6583 I LSPosed-Bridge: DMRModHooks-APRS-Receiver: 
+Processing 64960 audio samples
+03-10 20:11:54.122  3873  4562 I LSPosed-Bridge: DMRModHooks: Cleared caller 
+display
+03-10 20:11:54.128  3873  6583 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+ΓÿàΓÿàΓÿà Saved audio to /sdcard/aprs_debug/aprs_rx_017.wav (64960 samples)
+03-10 20:11:54.129  3873  6583 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Demodulated 1624 bits
+03-10 20:11:54.129  3873  6583 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+First bits: 0111111001111011111100111111011110111111011110110111101111110111111
+101111011011101111111011110111111
+03-10 20:11:54.130  3873  6583 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+After NRZI: 0011111010111001111101011111001110011111001110010011100111110011111
+100111001001100111111001110011111
+03-10 20:11:54.130  3873  6583 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 12 bits
+03-10 20:11:54.130  3873  6583 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 424 bits
+03-10 20:11:54.130  3873  6583 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 32 bits
+03-10 20:11:54.130  3873  6583 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 12 bits
+03-10 20:11:54.130  3873  6583 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 12 bits
+03-10 20:11:54.130  3873  6583 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 84 bits
+03-10 20:11:54.130  3873  6583 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 12 bits
+03-10 20:11:54.130  3873  6583 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 32 bits
+03-10 20:11:54.130  3873  6583 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 12 bits
+03-10 20:11:54.130  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:11:54.130  3873  6583 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 116 bits
+03-10 20:11:54.130  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:11:54.130  3873  6583 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Total flags found: 25, packet bit arrays: 10
+03-10 20:11:54.130  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 24000
+03-10 20:11:54.130  3873  6583 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found 10 raw packet bit arrays
+03-10 20:11:54.131  3873  6583 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: RX 
+Packet (52 bytes, LSB-first): 4E 22 39 21 41 41 59 59 59 59 59 59 59 59 59 59 
+59 BF AC DF 
+03-10 20:11:54.131  3873  6583 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: FCS 
+mismatch - calculated: 0x25df, transmitted: 0xffff (bytes: FF FF)
+03-10 20:12:24.508  3873  4567 I LSPosed-Bridge: DMRModHooks: RECEIVE_START 
+detected (type: 1)
+03-10 20:12:24.509  3873  4567 I LSPosed-Bridge: DMRModHooks: Sent 
+QUERY_SIGNAL_STRENGTH_CMD
+03-10 20:12:24.509  3873  4567 I LSPosed-Bridge: DMRModHooks: Analog channel - 
+showing receiving message
+03-10 20:12:24.512  3873  4567 I LSPosed-Bridge: DMRModHooks: Updated caller 
+display: ≡ƒô╗ Receiving...
+03-10 20:12:24.512  3873  4567 I LSPosed-Bridge: DMRModHooks: Displayed analog 
+receiving message: ≡ƒô╗ Receiving...
+03-10 20:12:24.516  3873  6585 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:12:24.518  3873  6587 I LSPosed-Bridge: DMRModHooks: UART TX cmd=50 
+(UNKNOWN) len=0
+03-10 20:12:24.520  3873  6586 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:12:24.546  3873  4562 I LSPosed-Bridge: DMRModHooks: Captured RSSI 
+from packet body: raw=113, dBm=-64
+03-10 20:12:24.554  3873  6589 I LSPosed-Bridge: DMRModHooks: UART RX cmd=50 
+(UNKNOWN) len=1
+03-10 20:12:24.715  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:24.715  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:24.715  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 25024
+03-10 20:12:24.779  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:24.779  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:24.780  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 26048
+03-10 20:12:24.842  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:24.843  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:24.844  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 27072
+03-10 20:12:24.906  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:24.906  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:24.906  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 28096
+03-10 20:12:24.970  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:24.970  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:24.971  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 29120
+03-10 20:12:25.034  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:25.034  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:25.034  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 30144
+03-10 20:12:25.098  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:25.098  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:25.098  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 31168
+03-10 20:12:25.162  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:25.162  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:25.162  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 32192
+03-10 20:12:25.226  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:25.226  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:25.226  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 33216
+03-10 20:12:25.259  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:25.259  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:25.259  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 34240
+03-10 20:12:25.355  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:25.356  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:25.356  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 35264
+03-10 20:12:25.419  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:25.419  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:25.419  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 36288
+03-10 20:12:25.483  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:25.483  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:25.483  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 37312
+03-10 20:12:25.516  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:25.516  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:25.516  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 38336
+03-10 20:12:25.610  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:25.610  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:25.611  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 39360
+03-10 20:12:25.644  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:25.645  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:25.645  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 40384
+03-10 20:12:25.730  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:25.730  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:25.730  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 41408
+03-10 20:12:25.803  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:25.803  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:25.803  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 42432
+03-10 20:12:25.836  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:25.837  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:25.837  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 43456
+03-10 20:12:25.922  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:25.922  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:25.922  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 44480
+03-10 20:12:25.964  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:25.964  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:25.964  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 45504
+03-10 20:12:26.051  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:26.051  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:26.051  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 46528
+03-10 20:12:26.092  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:26.093  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:26.093  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 47552
+03-10 20:12:26.178  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:26.178  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:26.178  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 48576
+03-10 20:12:26.220  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:26.220  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:26.220  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 49600
+03-10 20:12:26.304  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:26.305  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:26.305  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 50624
+03-10 20:12:26.348  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:26.348  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:26.348  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 51648
+03-10 20:12:26.434  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:26.435  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:26.435  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 52672
+03-10 20:12:26.476  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:26.476  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:26.477  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 53696
+03-10 20:12:26.561  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:26.561  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:26.561  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 54720
+03-10 20:12:26.604  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:26.605  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:26.605  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 55744
+03-10 20:12:26.698  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:26.698  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:26.699  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 56768
+03-10 20:12:26.732  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:26.733  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:26.733  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 57792
+03-10 20:12:26.817  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:26.818  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:26.818  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 58816
+03-10 20:12:26.860  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:26.860  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:26.860  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 59840
+03-10 20:12:26.955  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:26.955  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:26.956  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 60864
+03-10 20:12:26.988  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:26.988  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:26.988  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 61888
+03-10 20:12:27.073  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:27.073  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:27.074  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 62912
+03-10 20:12:27.116  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:27.116  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:27.117  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 63936
+03-10 20:12:27.169  3873  4567 I LSPosed-Bridge: DMRModHooks: RECEIVE_STOP 
+detected (type: 1)
+03-10 20:12:27.170  3873  4567 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer on RECEIVE_STOP (64960 samples)
+03-10 20:12:27.170  3873  4567 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer (64960 samples)
+03-10 20:12:27.176  3873  6590 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:12:27.177  3873  6591 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:12:27.187  3873  6592 I LSPosed-Bridge: DMRModHooks: Calling 
+APRSReceiver.processAudio()
+03-10 20:12:27.187  3873  6592 I LSPosed-Bridge: DMRModHooks-APRS-Receiver: 
+Processing 64960 audio samples
+03-10 20:12:27.188  3873  4567 I LSPosed-Bridge: DMRModHooks: Cleared caller 
+display
+03-10 20:12:27.197  3873  6592 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+ΓÿàΓÿàΓÿà Saved audio to /sdcard/aprs_debug/aprs_rx_018.wav (64960 samples)
+03-10 20:12:27.198  3873  6592 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Demodulated 1624 bits
+03-10 20:12:27.198  3873  6592 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+First bits: 1110011110110111011111110111111101110111111001111111011101111110011
+111110111011101110111111111110111
+03-10 20:12:27.198  3873  6592 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+After NRZI: 1110101110010011001111110011111100110011111010111111001100111110101
+111110011001100110011111111110011
+03-10 20:12:27.198  3873  6592 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 12 bits
+03-10 20:12:27.198  3873  6592 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 12 bits
+03-10 20:12:27.198  3873  6592 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 205 bits
+03-10 20:12:27.198  3873  6592 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 6 bits
+03-10 20:12:27.198  3873  6592 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 372 bits
+03-10 20:12:27.198  3873  6592 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Total flags found: 17, packet bit arrays: 5
+03-10 20:12:27.198  3873  6592 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found 5 raw packet bit arrays
+03-10 20:12:27.199  3873  6592 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: RX 
+Packet (25 bytes, LSB-first): F6 91 E4 84 84 D4 B4 D4 DF EB D8 F0 C0 F6 C0 C6 
+C0 C6 C0 C6 
+03-10 20:12:27.199  3873  6592 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: FCS 
+mismatch - calculated: 0x2928, transmitted: 0xbc91 (bytes: 91 BC)
+03-10 20:12:27.199  3873  6592 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: RX 
+Packet (44 bytes, LSB-first): CE E4 77 BE EF F9 7E E7 FB 9D EF 7B FE 5F 27 F3 
+3B FF A9 F5 
+03-10 20:12:27.199  3873  6592 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: FCS 
+mismatch - calculated: 0xb052, transmitted: 0xffff (bytes: FF FF)
+03-10 20:12:27.210  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:27.210  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:27.210  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 24000
+03-10 20:12:27.274  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:27.274  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:27.274  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 25024
+03-10 20:12:57.533  3873  4562 I LSPosed-Bridge: DMRModHooks: RECEIVE_START 
+detected (type: 1)
+03-10 20:12:57.538  3873  4562 I LSPosed-Bridge: DMRModHooks: Sent 
+QUERY_SIGNAL_STRENGTH_CMD
+03-10 20:12:57.538  3873  4562 I LSPosed-Bridge: DMRModHooks: Analog channel - 
+showing receiving message
+03-10 20:12:57.540  3873  4562 I LSPosed-Bridge: DMRModHooks: Updated caller 
+display: ≡ƒô╗ Receiving...
+03-10 20:12:57.540  3873  4562 I LSPosed-Bridge: DMRModHooks: Displayed analog 
+receiving message: ≡ƒô╗ Receiving...
+03-10 20:12:57.542  3873  6593 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:12:57.543  3873  6594 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:12:57.544  3873  6595 I LSPosed-Bridge: DMRModHooks: UART TX cmd=50 
+(UNKNOWN) len=0
+03-10 20:12:57.573  3873  4567 I LSPosed-Bridge: DMRModHooks: Captured RSSI 
+from packet body: raw=113, dBm=-64
+03-10 20:12:57.585  3873  6597 I LSPosed-Bridge: DMRModHooks: UART RX cmd=50 
+(UNKNOWN) len=1
+03-10 20:12:57.742  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:57.742  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:57.742  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 26048
+03-10 20:12:57.806  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:57.806  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:57.806  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 27072
+03-10 20:12:57.870  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:57.870  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:57.870  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 28096
+03-10 20:12:57.934  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:57.934  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:57.935  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 29120
+03-10 20:12:57.998  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:57.998  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:57.998  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 30144
+03-10 20:12:58.062  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:58.062  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:58.063  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 31168
+03-10 20:12:58.126  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:58.126  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:58.126  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 32192
+03-10 20:12:58.190  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:58.191  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:58.191  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 33216
+03-10 20:12:58.254  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:58.255  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:58.256  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 34240
+03-10 20:12:58.319  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:58.319  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:58.320  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 35264
+03-10 20:12:58.382  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:58.383  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:58.384  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 36288
+03-10 20:12:58.446  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:58.447  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:58.448  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 37312
+03-10 20:12:58.510  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:58.511  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:58.511  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 38336
+03-10 20:12:58.573  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:58.574  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:58.574  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 39360
+03-10 20:12:58.638  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:58.639  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:58.639  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 40384
+03-10 20:12:58.702  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:58.703  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:58.704  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 41408
+03-10 20:12:58.766  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:58.767  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:58.768  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 42432
+03-10 20:12:58.830  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:58.831  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:58.831  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 43456
+03-10 20:12:58.894  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:58.895  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:58.895  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 44480
+03-10 20:12:58.959  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:58.959  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:58.960  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 45504
+03-10 20:12:59.022  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:59.023  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:59.024  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 46528
+03-10 20:12:59.086  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:59.087  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:59.087  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 47552
+03-10 20:12:59.150  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:59.150  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:59.151  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 48576
+03-10 20:12:59.214  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:59.214  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:59.215  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 49600
+03-10 20:12:59.278  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:59.278  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:59.278  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 50624
+03-10 20:12:59.342  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:59.342  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:59.342  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 51648
+03-10 20:12:59.406  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:59.406  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:59.407  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 52672
+03-10 20:12:59.471  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:59.471  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:59.472  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 53696
+03-10 20:12:59.534  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:59.534  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:59.534  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 54720
+03-10 20:12:59.597  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:59.598  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:59.598  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 55744
+03-10 20:12:59.662  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:59.663  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:59.663  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 56768
+03-10 20:12:59.726  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:59.726  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:59.727  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 57792
+03-10 20:12:59.790  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:59.790  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:59.790  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 58816
+03-10 20:12:59.854  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:59.855  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:59.855  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 59840
+03-10 20:12:59.918  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:59.918  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:59.918  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 60864
+03-10 20:12:59.981  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:12:59.981  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:12:59.982  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 61888
+03-10 20:13:00.046  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:00.046  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:00.046  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 62912
+03-10 20:13:00.110  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:00.110  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:00.110  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 63936
+03-10 20:13:00.174  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:00.174  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:00.174  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 64960
+03-10 20:13:00.218  3873  4562 I LSPosed-Bridge: DMRModHooks: RECEIVE_STOP 
+detected (type: 1)
+03-10 20:13:00.218  3873  4562 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer on RECEIVE_STOP (65984 samples)
+03-10 20:13:00.218  3873  4562 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer (65984 samples)
+03-10 20:13:00.229  3873  6599 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:13:00.230  3873  6600 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:13:00.236  3873  6601 I LSPosed-Bridge: DMRModHooks: Calling 
+APRSReceiver.processAudio()
+03-10 20:13:00.236  3873  6601 I LSPosed-Bridge: DMRModHooks-APRS-Receiver: 
+Processing 65984 audio samples
+03-10 20:13:00.237  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:00.237  3873  4562 I LSPosed-Bridge: DMRModHooks: Cleared caller 
+display
+03-10 20:13:00.237  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:00.237  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 24000
+03-10 20:13:00.244  3873  6601 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+ΓÿàΓÿàΓÿà Saved audio to /sdcard/aprs_debug/aprs_rx_019.wav (65984 samples)
+03-10 20:13:00.244  3873  6601 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Demodulated 1649 bits
+03-10 20:13:00.244  3873  6601 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+First bits: 1111100111101111111111011001110011111101111110011110111111011111100
+111101101111111111001111011011111
+03-10 20:13:00.245  3873  6601 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+After NRZI: 1111101011100111111111001010110101111100111110101110011111001111101
+011100100111111111010111001001111
+03-10 20:13:00.245  3873  6601 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 8 bits
+03-10 20:13:00.245  3873  6601 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 8 bits
+03-10 20:13:00.245  3873  6601 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 84 bits
+03-10 20:13:00.245  3873  6601 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 72 bits
+03-10 20:13:00.245  3873  6601 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 52 bits
+03-10 20:13:00.245  3873  6601 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 52 bits
+03-10 20:13:00.245  3873  6601 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 24 bits
+03-10 20:13:00.245  3873  6601 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 51 bits
+03-10 20:13:00.245  3873  6601 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 40 bits
+03-10 20:13:00.245  3873  6601 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Total flags found: 21, packet bit arrays: 9
+03-10 20:13:00.245  3873  6601 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found 9 raw packet bit arrays
+03-10 20:13:30.558  3873  4567 I LSPosed-Bridge: DMRModHooks: RECEIVE_START 
+detected (type: 1)
+03-10 20:13:30.560  3873  4567 I LSPosed-Bridge: DMRModHooks: Sent 
+QUERY_SIGNAL_STRENGTH_CMD
+03-10 20:13:30.560  3873  4567 I LSPosed-Bridge: DMRModHooks: Analog channel - 
+showing receiving message
+03-10 20:13:30.561  3873  4567 I LSPosed-Bridge: DMRModHooks: Updated caller 
+display: ≡ƒô╗ Receiving...
+03-10 20:13:30.562  3873  4567 I LSPosed-Bridge: DMRModHooks: Displayed analog 
+receiving message: ≡ƒô╗ Receiving...
+03-10 20:13:30.565  3873  6605 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:13:30.566  3873  6604 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:13:30.570  3873  6606 I LSPosed-Bridge: DMRModHooks: UART TX cmd=50 
+(UNKNOWN) len=0
+03-10 20:13:30.592  3873  4562 I LSPosed-Bridge: DMRModHooks: Captured RSSI 
+from packet body: raw=113, dBm=-64
+03-10 20:13:30.601  3873  6608 I LSPosed-Bridge: DMRModHooks: UART RX cmd=50 
+(UNKNOWN) len=1
+03-10 20:13:30.759  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:30.759  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:30.759  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 25024
+03-10 20:13:30.823  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:30.823  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:30.823  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 26048
+03-10 20:13:30.854  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:30.854  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:30.854  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 27072
+03-10 20:13:30.930  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:30.930  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:30.930  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 28096
+03-10 20:13:31.014  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:31.015  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:31.015  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 29120
+03-10 20:13:31.078  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:31.079  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:31.080  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 30144
+03-10 20:13:31.143  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:31.143  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:31.144  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 31168
+03-10 20:13:31.207  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:31.208  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:31.208  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 32192
+03-10 20:13:31.271  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:31.271  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:31.272  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 33216
+03-10 20:13:31.334  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:31.335  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:31.336  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 34240
+03-10 20:13:31.398  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:31.399  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:31.399  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 35264
+03-10 20:13:31.441  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:31.441  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:31.442  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 36288
+03-10 20:13:31.527  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:31.527  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:31.527  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 37312
+03-10 20:13:31.590  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:31.590  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:31.590  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 38336
+03-10 20:13:31.654  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:31.654  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:31.655  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 39360
+03-10 20:13:31.718  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:31.718  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:31.718  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 40384
+03-10 20:13:31.782  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:31.783  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:31.783  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 41408
+03-10 20:13:31.846  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:31.847  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:31.847  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 42432
+03-10 20:13:31.910  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:31.911  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:31.911  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 43456
+03-10 20:13:31.975  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:31.976  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:31.976  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 44480
+03-10 20:13:32.039  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:32.040  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:32.040  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 45504
+03-10 20:13:32.103  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:32.104  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:32.104  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 46528
+03-10 20:13:32.144  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:32.145  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:32.145  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 47552
+03-10 20:13:32.230  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:32.230  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:32.230  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 48576
+03-10 20:13:32.295  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:32.295  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:32.295  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 49600
+03-10 20:13:32.358  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:32.358  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:32.358  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 50624
+03-10 20:13:32.423  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:32.423  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:32.423  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 51648
+03-10 20:13:32.486  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:32.487  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:32.487  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 52672
+03-10 20:13:32.550  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:32.551  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:32.552  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 53696
+03-10 20:13:32.614  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:32.615  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:32.616  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 54720
+03-10 20:13:32.657  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:32.658  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:32.659  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 55744
+03-10 20:13:32.742  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:32.743  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:32.744  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 56768
+03-10 20:13:32.784  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:32.784  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:32.785  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 57792
+03-10 20:13:32.870  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:32.871  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:32.872  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 58816
+03-10 20:13:32.935  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:32.935  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:32.935  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 59840
+03-10 20:13:32.998  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:32.999  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:32.999  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 60864
+03-10 20:13:33.063  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:33.063  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:33.063  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 61888
+03-10 20:13:33.126  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:33.126  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:33.126  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 62912
+03-10 20:13:33.190  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:33.190  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:33.191  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 63936
+03-10 20:13:33.209  3873  4567 I LSPosed-Bridge: DMRModHooks: RECEIVE_STOP 
+detected (type: 1)
+03-10 20:13:33.209  3873  4567 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer on RECEIVE_STOP (64960 samples)
+03-10 20:13:33.209  3873  4567 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer (64960 samples)
+03-10 20:13:33.212  3873  6609 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:13:33.214  3873  6610 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:13:33.217  3873  6611 I LSPosed-Bridge: DMRModHooks: Calling 
+APRSReceiver.processAudio()
+03-10 20:13:33.217  3873  6611 I LSPosed-Bridge: DMRModHooks-APRS-Receiver: 
+Processing 64960 audio samples
+03-10 20:13:33.219  3873  4567 I LSPosed-Bridge: DMRModHooks: Cleared caller 
+display
+03-10 20:13:33.224  3873  6611 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+ΓÿàΓÿàΓÿà Saved audio to /sdcard/aprs_debug/aprs_rx_020.wav (64960 samples)
+03-10 20:13:33.225  3873  6611 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Demodulated 1624 bits
+03-10 20:13:33.225  3873  6611 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+First bits: 1111111101101111111011111111011111111110111001111111111101101111111
+101111111011011111111111111110110
+03-10 20:13:33.225  3873  6611 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+After NRZI: 1111111100100111111001111111001111111110011010111111111100100111111
+100111111001001111111111111110010
+03-10 20:13:33.225  3873  6611 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 49 bits
+03-10 20:13:33.225  3873  6611 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 38 bits
+03-10 20:13:33.226  3873  6611 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 112 bits
+03-10 20:13:33.226  3873  6611 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 288 bits
+03-10 20:13:33.226  3873  6611 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 4 bits
+03-10 20:13:33.226  3873  6611 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 12 bits
+03-10 20:13:33.226  3873  6611 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 52 bits
+03-10 20:13:33.226  3873  6611 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 12 bits
+03-10 20:13:33.226  3873  6611 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 19 bits
+03-10 20:13:33.226  3873  6611 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Total flags found: 21, packet bit arrays: 9
+03-10 20:13:33.226  3873  6611 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found 9 raw packet bit arrays
+03-10 20:13:33.226  3873  6611 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: RX 
+Packet (35 bytes, LSB-first): 9D 55 AA 7F F3 F6 9A FC 95 FF F5 FF E7 3F FF E7 
+54 15 F8 FF 
+03-10 20:13:33.226  3873  6611 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: FCS 
+mismatch - calculated: 0xb9a4, transmitted: 0xbf7f (bytes: 7F BF)
+03-10 20:13:33.254  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:13:33.254  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:13:33.255  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 24000
+03-10 20:14:03.702  3873  4562 I LSPosed-Bridge: DMRModHooks: RECEIVE_START 
+detected (type: 1)
+03-10 20:14:03.706  3873  6612 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:14:03.707  3873  4562 I LSPosed-Bridge: DMRModHooks: Sent 
+QUERY_SIGNAL_STRENGTH_CMD
+03-10 20:14:03.707  3873  4562 I LSPosed-Bridge: DMRModHooks: Analog channel - 
+showing receiving message
+03-10 20:14:03.707  3873  6613 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:14:03.707  3873  4562 I LSPosed-Bridge: DMRModHooks: Updated caller 
+display: ≡ƒô╗ Receiving...
+03-10 20:14:03.707  3873  4562 I LSPosed-Bridge: DMRModHooks: Displayed analog 
+receiving message: ≡ƒô╗ Receiving...
+03-10 20:14:03.712  3873  6614 I LSPosed-Bridge: DMRModHooks: UART TX cmd=50 
+(UNKNOWN) len=0
+03-10 20:14:03.742  3873  4567 I LSPosed-Bridge: DMRModHooks: Captured RSSI 
+from packet body: raw=115, dBm=-63
+03-10 20:14:03.754  3873  6616 I LSPosed-Bridge: DMRModHooks: UART RX cmd=50 
+(UNKNOWN) len=1
+03-10 20:14:03.901  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:03.901  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:03.901  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 25024
+03-10 20:14:03.934  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:03.934  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:03.934  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 26048
+03-10 20:14:03.997  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:03.998  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:03.998  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 27072
+03-10 20:14:04.062  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:04.063  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:04.063  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 28096
+03-10 20:14:04.125  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:04.126  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:04.126  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 29120
+03-10 20:14:04.221  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:04.221  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:04.222  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 30144
+03-10 20:14:04.285  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:04.285  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:04.285  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 31168
+03-10 20:14:04.349  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:04.349  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:04.349  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 32192
+03-10 20:14:04.381  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:04.382  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:04.382  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 33216
+03-10 20:14:04.477  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:04.477  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:04.478  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 34240
+03-10 20:14:04.541  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:04.541  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:04.541  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 35264
+03-10 20:14:04.574  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:04.574  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:04.575  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 36288
+03-10 20:14:04.669  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:04.670  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:04.670  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 37312
+03-10 20:14:04.702  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:04.703  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:04.703  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 38336
+03-10 20:14:04.764  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:04.765  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:04.765  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 39360
+03-10 20:14:04.864  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:04.865  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:04.865  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 40384
+03-10 20:14:04.893  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:04.894  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:04.894  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 41408
+03-10 20:14:04.989  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:04.989  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:04.989  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 42432
+03-10 20:14:05.021  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:05.021  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:05.022  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 43456
+03-10 20:14:05.085  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:05.086  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:05.086  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 44480
+03-10 20:14:05.149  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:05.150  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:05.150  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 45504
+03-10 20:14:05.214  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:05.214  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:05.215  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 46528
+03-10 20:14:05.309  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:05.309  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:05.309  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 47552
+03-10 20:14:05.342  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:05.342  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:05.342  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 48576
+03-10 20:14:05.405  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:05.406  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:05.406  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 49600
+03-10 20:14:05.470  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:05.470  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:05.470  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 50624
+03-10 20:14:05.533  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:05.533  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:05.533  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 51648
+03-10 20:14:05.596  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:05.597  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:05.597  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 52672
+03-10 20:14:05.662  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:05.662  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:05.662  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 53696
+03-10 20:14:05.725  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:05.726  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:05.726  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 54720
+03-10 20:14:05.790  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:05.790  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:05.790  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 55744
+03-10 20:14:05.854  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:05.854  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:05.854  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 56768
+03-10 20:14:05.948  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:05.948  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:05.949  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 57792
+03-10 20:14:06.013  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:06.013  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:06.013  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 58816
+03-10 20:14:06.077  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:06.078  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:06.078  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 59840
+03-10 20:14:06.140  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:06.140  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:06.140  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 60864
+03-10 20:14:06.205  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:06.205  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:06.205  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 61888
+03-10 20:14:06.268  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:06.269  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:06.269  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 62912
+03-10 20:14:06.300  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:06.300  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:06.300  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 63936
+03-10 20:14:06.399  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:06.399  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:06.399  3873  4562 I LSPosed-Bridge: DMRModHooks: RECEIVE_STOP 
+detected (type: 1)
+03-10 20:14:06.400  3873  4562 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer on RECEIVE_STOP (64960 samples)
+03-10 20:14:06.400  3873  4562 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer (64960 samples)
+03-10 20:14:06.404  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 64960
+03-10 20:14:06.405  3873  6618 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:14:06.406  3873  6617 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:14:06.418  3873  6619 I LSPosed-Bridge: DMRModHooks: Calling 
+APRSReceiver.processAudio()
+03-10 20:14:06.419  3873  6619 I LSPosed-Bridge: DMRModHooks-APRS-Receiver: 
+Processing 64960 audio samples
+03-10 20:14:06.420  3873  4562 I LSPosed-Bridge: DMRModHooks: Cleared caller 
+display
+03-10 20:14:06.425  3873  6619 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+ΓÿàΓÿàΓÿà Saved audio to /sdcard/aprs_debug/aprs_rx_021.wav (64960 samples)
+03-10 20:14:06.426  3873  6619 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Demodulated 1624 bits
+03-10 20:14:06.426  3873  6619 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+First bits: 1111111110111111111011111111101111111110001110111111111111001111101
+110111111111010111011101111111010
+03-10 20:14:06.426  3873  6619 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+After NRZI: 1111111110011111111001111111100111111110110110011111111111010111100
+110011111111000011001100111111000
+03-10 20:14:06.426  3873  6619 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 12 bits
+03-10 20:14:06.426  3873  6619 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 19 bits
+03-10 20:14:06.426  3873  6619 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 78 bits
+03-10 20:14:06.427  3873  6619 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 183 bits
+03-10 20:14:06.427  3873  6619 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 299 bits
+03-10 20:14:06.427  3873  6619 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 124 bits
+03-10 20:14:06.427  3873  6619 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Total flags found: 12, packet bit arrays: 6
+03-10 20:14:06.427  3873  6619 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found 6 raw packet bit arrays
+03-10 20:14:06.427  3873  6619 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: RX 
+Packet (22 bytes, LSB-first): 31 C7 76 6B 2A 7C 53 53 35 05 39 95 88 55 19 9B 
+95 8B 7B 39 
+03-10 20:14:06.427  3873  6619 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: FCS 
+mismatch - calculated: 0xa1cb, transmitted: 0x3359 (bytes: 59 33)
+03-10 20:14:06.427  3873  6619 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: RX 
+Packet (36 bytes, LSB-first): E5 FC 32 1B 27 93 73 32 1F 53 39 59 D5 F5 FB FD 
+7E BF DF EF 
+03-10 20:14:06.427  3873  6619 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: FCS 
+mismatch - calculated: 0xcda6, transmitted: 0xd1a9 (bytes: A9 D1)
+03-10 20:14:06.460  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:06.460  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:06.460  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 24000
+03-10 20:14:36.541  3873  4567 I LSPosed-Bridge: DMRModHooks: RECEIVE_START 
+detected (type: 1)
+03-10 20:14:36.547  3873  4567 I LSPosed-Bridge: DMRModHooks: Sent 
+QUERY_SIGNAL_STRENGTH_CMD
+03-10 20:14:36.547  3873  4567 I LSPosed-Bridge: DMRModHooks: Analog channel - 
+showing receiving message
+03-10 20:14:36.548  3873  4567 I LSPosed-Bridge: DMRModHooks: Updated caller 
+display: ≡ƒô╗ Receiving...
+03-10 20:14:36.548  3873  4567 I LSPosed-Bridge: DMRModHooks: Displayed analog 
+receiving message: ≡ƒô╗ Receiving...
+03-10 20:14:36.549  3873  6620 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:14:36.553  3873  6621 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:14:36.554  3873  6622 I LSPosed-Bridge: DMRModHooks: UART TX cmd=50 
+(UNKNOWN) len=0
+03-10 20:14:36.589  3873  4562 I LSPosed-Bridge: DMRModHooks: Captured RSSI 
+from packet body: raw=112, dBm=-64
+03-10 20:14:36.599  3873  6624 I LSPosed-Bridge: DMRModHooks: UART RX cmd=50 
+(UNKNOWN) len=1
+03-10 20:14:36.714  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:36.714  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:36.714  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 25024
+03-10 20:14:36.810  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:36.811  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:36.811  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 26048
+03-10 20:14:36.875  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:36.875  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:36.875  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 27072
+03-10 20:14:36.939  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:36.940  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:36.940  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 28096
+03-10 20:14:37.002  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:37.003  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:37.004  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 29120
+03-10 20:14:37.065  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:37.066  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:37.066  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 30144
+03-10 20:14:37.129  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:37.129  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:37.130  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 31168
+03-10 20:14:37.194  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:37.195  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:37.195  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 32192
+03-10 20:14:37.257  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:37.257  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:37.257  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 33216
+03-10 20:14:37.321  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:37.321  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:37.321  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 34240
+03-10 20:14:37.386  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:37.386  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:37.387  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 35264
+03-10 20:14:37.449  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:37.450  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:37.450  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 36288
+03-10 20:14:37.515  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:37.516  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:37.516  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 37312
+03-10 20:14:37.577  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:37.577  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:37.578  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 38336
+03-10 20:14:37.641  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:37.641  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:37.642  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 39360
+03-10 20:14:37.706  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:37.706  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:37.707  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 40384
+03-10 20:14:37.770  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:37.770  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:37.771  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 41408
+03-10 20:14:37.835  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:37.836  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:37.836  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 42432
+03-10 20:14:37.897  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:37.897  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:37.897  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 43456
+03-10 20:14:37.963  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:37.963  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:37.964  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 44480
+03-10 20:14:38.027  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:38.027  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:38.028  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 45504
+03-10 20:14:38.091  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:38.092  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:38.092  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 46528
+03-10 20:14:38.155  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:38.156  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:38.156  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 47552
+03-10 20:14:38.219  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:38.220  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:38.220  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 48576
+03-10 20:14:38.283  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:38.284  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:38.284  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 49600
+03-10 20:14:38.347  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:38.347  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:38.347  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 50624
+03-10 20:14:38.411  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:38.411  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:38.412  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 51648
+03-10 20:14:38.475  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:38.475  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:38.475  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 52672
+03-10 20:14:38.539  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:38.540  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:38.540  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 53696
+03-10 20:14:38.602  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:38.603  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:38.603  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 54720
+03-10 20:14:38.664  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:38.664  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:38.664  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 55744
+03-10 20:14:38.729  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:38.729  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:38.729  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 56768
+03-10 20:14:38.793  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:38.794  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:38.794  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 57792
+03-10 20:14:38.858  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:38.859  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:38.859  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 58816
+03-10 20:14:38.921  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:38.921  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:38.921  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 59840
+03-10 20:14:38.985  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:38.986  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:38.986  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 60864
+03-10 20:14:39.049  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:39.050  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:39.050  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 61888
+03-10 20:14:39.113  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:39.113  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:39.113  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 62912
+03-10 20:14:39.177  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:39.177  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:39.177  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 63936
+03-10 20:14:39.241  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:39.241  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:39.241  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 64960
+03-10 20:14:39.275  3873  4567 I LSPosed-Bridge: DMRModHooks: RECEIVE_STOP 
+detected (type: 1)
+03-10 20:14:39.277  3873  4567 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer on RECEIVE_STOP (65984 samples)
+03-10 20:14:39.277  3873  4567 I LSPosed-Bridge: DMRModHooks: Processing APRS 
+buffer (65984 samples)
+03-10 20:14:39.280  3873  6628 I LSPosed-Bridge: DMRModHooks: UART RX cmd=54 
+(UNKNOWN) len=1
+03-10 20:14:39.281  3873  6629 I LSPosed-Bridge: DMRModHooks: UART TX cmd=54 
+(UNKNOWN) len=0
+03-10 20:14:39.306  3873  3907 I LSPosed-Bridge: DMRModHooks: writeAudioTrack 
+called - 2048 bytes
+03-10 20:14:39.306  3873  3907 I LSPosed-Bridge: DMRModHooks: 
+bufferAudioForAPRS called - 2048 bytes
+03-10 20:14:39.306  3873  3907 I LSPosed-Bridge: DMRModHooks: Buffering APRS 
+audio, current buffer size: 65984
+03-10 20:14:39.311  3873  6630 I LSPosed-Bridge: DMRModHooks: Calling 
+APRSReceiver.processAudio()
+03-10 20:14:39.311  3873  4567 I LSPosed-Bridge: DMRModHooks: Cleared caller 
+display
+03-10 20:14:39.311  3873  6630 I LSPosed-Bridge: DMRModHooks-APRS-Receiver: 
+Processing 65984 audio samples
+03-10 20:14:39.348  3873  6630 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+ΓÿàΓÿàΓÿà Saved audio to /sdcard/aprs_debug/aprs_rx_022.wav (65984 samples)
+03-10 20:14:39.349  3873  6630 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Demodulated 1649 bits
+03-10 20:14:39.349  3873  6630 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+First bits: 1110001110111011101110111011101110111011101110111011001110111010001
+110111011101111110011101110111011
+03-10 20:14:39.350  3873  6630 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+After NRZI: 1110110110011001100110011001100110011001100110011001010110011000110
+110011001100111110101100110011001
+03-10 20:14:39.350  3873  6630 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 166 bits
+03-10 20:14:39.350  3873  6630 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 32 bits
+03-10 20:14:39.350  3873  6630 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 132 bits
+03-10 20:14:39.350  3873  6630 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found packet with 214 bits
+03-10 20:14:39.350  3873  6630 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Total flags found: 10, packet bit arrays: 4
+03-10 20:14:39.350  3873  6630 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: 
+Found 4 raw packet bit arrays
+03-10 20:14:39.350  3873  6630 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: RX 
+Packet (20 bytes, LSB-first): F7 E7 65 A6 8B 3F BA 87 82 F2 FB E7 49 D5 11 AD 
+BB CB F5 CD 
+03-10 20:14:39.350  3873  6630 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: FCS 
+mismatch - calculated: 0x9e85, transmitted: 0xcdf5 (bytes: F5 CD)
+03-10 20:14:39.350  3873  6630 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: RX 
+Packet (26 bytes, LSB-first): 2E E6 B7 26 53 2B 23 B5 B4 B4 B4 B4 B4 B4 B4 B4 
+84 84 84 84 
+03-10 20:14:39.350  3873  6630 I LSPosed-Bridge: DMRModHooks-APRS-Decoder: FCS 
+mismatch - calculated: 0xbd2d, transmitted: 0x8484 (bytes: 84 84)
+
+

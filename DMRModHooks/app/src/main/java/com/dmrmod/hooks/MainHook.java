@@ -89,7 +89,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.1.1";
+    private static final String VERSION = "3.1.2";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -183,6 +183,8 @@ public class MainHook implements IXposedHookLoadPackage {
     private static AlertDialog aprsMonitoringDialog = null;  // Store dialog for live updates
     private static android.os.Handler aprsUpdateHandler = null;  // Handler for periodic updates
     private static Runnable aprsUpdateRunnable = null;  // Runnable for updating dialog
+    private static volatile boolean isAPRSSquelchOpen = false;  // Track squelch state across UI updates
+    private static volatile int aprsStoredSquelch = 1;  // Store squelch level to restore
     
     /**
      * Check if a channel is an APRS channel (should be hidden from channel list)
@@ -629,10 +631,11 @@ public class MainHook implements IXposedHookLoadPackage {
                         aprsUpdateRunnable = null;
                         
                         // Check for orphaned APRS channel and restore if needed (delayed to ensure DmrManager is ready)
+                        final Activity activityForRestore = (Activity) param.thisObject;
                         new android.os.Handler().postDelayed(new Runnable() {
                             @Override
                             public void run() {
-                                checkAndRestoreAPRSChannelOnStartup();
+                                checkAndRestoreAPRSChannelOnStartup(activityForRestore);
                             }
                         }, 2000);  // 2 second delay
                     }
@@ -3359,6 +3362,106 @@ public class MainHook implements IXposedHookLoadPackage {
             statusText.setPadding(0, 10, 0, 20);
             mainLayout.addView(statusText);
             
+            // Open Squelch button (works exactly like MON button, state persists across UI updates)
+            final android.widget.Button openSquelchButton = new android.widget.Button(activity);
+            openSquelchButton.setTextSize(14);
+            openSquelchButton.setTypeface(null, android.graphics.Typeface.BOLD);
+            openSquelchButton.setPadding(20, 15, 20, 15);
+            LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            buttonParams.topMargin = 10;
+            buttonParams.bottomMargin = 20;
+            openSquelchButton.setLayoutParams(buttonParams);
+            
+            // Set button appearance based on current squelch state
+            if (isAPRSSquelchOpen) {
+                openSquelchButton.setText("🔇 Close Squelch");
+                openSquelchButton.setBackgroundColor(0xFF00AA00);  // Green
+            } else {
+                openSquelchButton.setText("🔊 Open Squelch");
+                openSquelchButton.setBackgroundColor(0xFF555555);  // Gray
+            }
+            
+            openSquelchButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    try {
+                        // Get current channel (EXACTLY like MON button)
+                        Class<?> dmrManagerClass = XposedHelpers.findClass(
+                            "com.pri.prizeinterphone.manager.DmrManager",
+                            appClassLoader
+                        );
+                        Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+                        Object currentChannel = XposedHelpers.callMethod(dmrManager, "getCurrentChannel");
+                        
+                        if (currentChannel != null) {
+                            // Toggle squelch (EXACTLY like MON button)
+                            isAPRSSquelchOpen = !isAPRSSquelchOpen;
+                            int targetSq;
+                            
+                            if (isAPRSSquelchOpen) {
+                                // Opening - store current squelch and use 0 (fully open)
+                                int currentSq = XposedHelpers.getIntField(currentChannel, "sq");
+                                if (currentSq != 0) {
+                                    aprsStoredSquelch = currentSq;
+                                }
+                                targetSq = 0;
+                                XposedBridge.log(TAG + ": APRS squelch open - stored squelch=" + aprsStoredSquelch + ", targeting sq=0");
+                            } else {
+                                // Closing - restore stored squelch
+                                targetSq = aprsStoredSquelch;
+                                XposedBridge.log(TAG + ": APRS squelch close - restoring squelch=" + aprsStoredSquelch);
+                            }
+                            
+                            // Manually construct and send AnalogMessage (EXACTLY like MON button)
+                            try {
+                                Class<?> analogMessageClass = XposedHelpers.findClass(
+                                    "com.pri.prizeinterphone.message.AnalogMessage",
+                                    appClassLoader
+                                );
+                                Object analogMessage = analogMessageClass.newInstance();
+                                
+                                // Copy all fields from current channel
+                                XposedHelpers.callMethod(analogMessage, "setBand", (byte) XposedHelpers.getIntField(currentChannel, "band"));
+                                XposedHelpers.callMethod(analogMessage, "setPower", (byte) XposedHelpers.getIntField(currentChannel, "power"));
+                                XposedHelpers.callMethod(analogMessage, "setTxFreq", XposedHelpers.getIntField(currentChannel, "txFreq"));
+                                XposedHelpers.callMethod(analogMessage, "setRxFreq", XposedHelpers.getIntField(currentChannel, "rxFreq"));
+                                XposedHelpers.callMethod(analogMessage, "setSq", (byte) targetSq);  // Use our target squelch!
+                                XposedHelpers.callMethod(analogMessage, "setRxType", (byte) XposedHelpers.getIntField(currentChannel, "rxType"));
+                                XposedHelpers.callMethod(analogMessage, "setRxSubCode", (byte) XposedHelpers.getIntField(currentChannel, "rxSubCode"));
+                                XposedHelpers.callMethod(analogMessage, "setTxType", (byte) XposedHelpers.getIntField(currentChannel, "txType"));
+                                XposedHelpers.callMethod(analogMessage, "setTxSubCode", (byte) XposedHelpers.getIntField(currentChannel, "txSubCode"));
+                                XposedHelpers.callMethod(analogMessage, "setRelay", (byte) XposedHelpers.getIntField(currentChannel, "relay"));
+                                
+                                // Send it!
+                                XposedHelpers.callMethod(analogMessage, "send");
+                                XposedBridge.log(TAG + ": ✅ Directly sent AnalogMessage with sq=" + targetSq);
+                                
+                                // Update button appearance (will persist across UI refreshes)
+                                if (isAPRSSquelchOpen) {
+                                    openSquelchButton.setText("🔇 Close Squelch");
+                                    openSquelchButton.setBackgroundColor(0xFF00AA00);  // Green
+                                } else {
+                                    openSquelchButton.setText("🔊 Open Squelch");
+                                    openSquelchButton.setBackgroundColor(0xFF555555);  // Gray
+                                }
+                                
+                            } catch (Throwable sendError) {
+                                XposedBridge.log(TAG + ": Error sending APRS squelch AnalogMessage: " + sendError.getMessage());
+                                XposedBridge.log(sendError);
+                                Toast.makeText(activity, "Error toggling squelch", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    } catch (Exception e) {
+                        XposedBridge.log(TAG + ": Error in APRS squelch button: " + e.getMessage());
+                        XposedBridge.log(e);
+                    }
+                }
+            });
+            mainLayout.addView(openSquelchButton);
+            
             // Stats section
             int totalStations = db.getStationCount();
             java.util.List<APRSReceivedDatabase.ReceivedStation> recentStations = db.getRecentStations();
@@ -3601,6 +3704,10 @@ public class MainHook implements IXposedHookLoadPackage {
             
             isAPRSMonitoringActive = false;
             
+            // Reset squelch state for next monitoring session
+            isAPRSSquelchOpen = false;
+            aprsStoredSquelch = 1;
+            
             Toast.makeText(activity, "APRS Monitoring stopped", Toast.LENGTH_SHORT).show();
             XposedBridge.log(TAG + ": APRS monitoring mode deactivated");
             
@@ -3721,7 +3828,11 @@ public class MainHook implements IXposedHookLoadPackage {
                 return;
             }
             
-            // Restore all fields
+            XposedBridge.log(TAG + ": Restoring channel from backup: " + channelBackup.get("name") + 
+                " @ " + channelBackup.get("rxFreq") + " Hz");
+            
+            // Restore all fields INCLUDING number
+            XposedHelpers.setIntField(currentChannel, "number", (Integer) channelBackup.get("number"));
             XposedHelpers.setIntField(currentChannel, "type", (Integer) channelBackup.get("type"));
             XposedHelpers.setObjectField(currentChannel, "name", channelBackup.get("name"));
             XposedHelpers.setIntField(currentChannel, "rxFreq", (Integer) channelBackup.get("rxFreq"));
@@ -3752,7 +3863,7 @@ public class MainHook implements IXposedHookLoadPackage {
     /**
      * Check on startup if stuck on APRS channel and restore if backup exists
      */
-    private void checkAndRestoreAPRSChannelOnStartup() {
+    private void checkAndRestoreAPRSChannelOnStartup(final Context context) {
         boolean shouldDeleteBackup = false;
         try {
             XposedBridge.log(TAG + ": Checking for orphaned APRS channel...");
@@ -3800,9 +3911,19 @@ public class MainHook implements IXposedHookLoadPackage {
                 // Load backup from file
                 channelBackup = loadChannelBackupFromFile();
                 if (channelBackup != null) {
-                    XposedBridge.log(TAG + ": Backup loaded, restoring to: " + channelBackup.get("name"));
+                    XposedBridge.log(TAG + ": Backup loaded, restoring to: " + channelBackup.get("name") + 
+                        " @ " + channelBackup.get("rxFreq") + " Hz");
                     
-                    // Restore all fields
+                    // Log BEFORE state
+                    XposedBridge.log(TAG + ": BEFORE restore - currentChannel:");
+                    XposedBridge.log(TAG + ":   name: " + XposedHelpers.getObjectField(currentChannel, "name"));
+                    XposedBridge.log(TAG + ":   rxFreq: " + XposedHelpers.getIntField(currentChannel, "rxFreq"));
+                    XposedBridge.log(TAG + ":   txFreq: " + XposedHelpers.getIntField(currentChannel, "txFreq"));
+                    XposedBridge.log(TAG + ":   type: " + XposedHelpers.getIntField(currentChannel, "type"));
+                    XposedBridge.log(TAG + ":   number: " + XposedHelpers.getIntField(currentChannel, "number"));
+                    
+                    // Restore all fields INCLUDING number
+                    XposedHelpers.setIntField(currentChannel, "number", (Integer) channelBackup.get("number"));
                     XposedHelpers.setIntField(currentChannel, "type", (Integer) channelBackup.get("type"));
                     XposedHelpers.setObjectField(currentChannel, "name", channelBackup.get("name"));
                     XposedHelpers.setIntField(currentChannel, "rxFreq", (Integer) channelBackup.get("rxFreq"));
@@ -3815,11 +3936,39 @@ public class MainHook implements IXposedHookLoadPackage {
                     XposedHelpers.setIntField(currentChannel, "txType", (Integer) channelBackup.get("txType"));
                     XposedHelpers.setIntField(currentChannel, "txSubCode", (Integer) channelBackup.get("txSubCode"));
                     
+                    // Log AFTER field set
+                    XposedBridge.log(TAG + ": AFTER setting fields - currentChannel:");
+                    XposedBridge.log(TAG + ":   name: " + XposedHelpers.getObjectField(currentChannel, "name"));
+                    XposedBridge.log(TAG + ":   rxFreq: " + XposedHelpers.getIntField(currentChannel, "rxFreq"));
+                    XposedBridge.log(TAG + ":   txFreq: " + XposedHelpers.getIntField(currentChannel, "txFreq"));
+                    XposedBridge.log(TAG + ":   type: " + XposedHelpers.getIntField(currentChannel, "type"));
+                    XposedBridge.log(TAG + ":   number: " + XposedHelpers.getIntField(currentChannel, "number"));
+                    
                     // Update hardware
                     XposedHelpers.callMethod(dmrManager, "updateChannel", currentChannel);
                     XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", currentChannel);
                     
                     XposedBridge.log(TAG + ": ✅ Channel restored on startup: " + channelBackup.get("name"));
+                    
+                    // Show helpful message to user
+                    if (context != null) {
+                        new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+                            @Override
+                            public void run() {
+                                new AlertDialog.Builder(context)
+                                    .setTitle("⚠️ APRS Channel Restored")
+                                    .setMessage("APRS monitoring was interrupted while the app was closed.\n\n" +
+                                               "Your channel has been restored automatically.\n\n" +
+                                               "To prevent startup errors:\n" +
+                                               "• Always stop APRS monitoring before closing the app\n\n" +
+                                               "Please restart the app now.")
+                                    .setPositiveButton("OK", null)
+                                    .setCancelable(false)
+                                    .show();
+                            }
+                        });
+                    }
+                    
                     channelBackup = null;
                 } else {
                     XposedBridge.log(TAG + ": ⚠️ Could not load backup file, but will delete it");

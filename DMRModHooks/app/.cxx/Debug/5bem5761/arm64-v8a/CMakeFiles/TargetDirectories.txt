@@ -1,0 +1,3 @@
+C:/Users/Joshua/Documents/android/phonedmrapp/DMRModHooks/app/.cxx/Debug/5bem5761/arm64-v8a/CMakeFiles/direwolf_decoder.dir
+C:/Users/Joshua/Documents/android/phonedmrapp/DMRModHooks/app/.cxx/Debug/5bem5761/arm64-v8a/CMakeFiles/edit_cache.dir
+C:/Users/Joshua/Documents/android/phonedmrapp/DMRModHooks/app/.cxx/Debug/5bem5761/arm64-v8a/CMakeFiles/rebuild_cache.dir
