@@ -133,7 +133,7 @@ public class MainHook implements IXposedHookLoadPackage {
     private static TextView rssiDisplayTextView = null;
     
     // Software squelch state (Hybrid RSSI + Audio RMS based)
-    private static volatile boolean isSoftwareSquelchEnabled = true;  // Enable by default
+    private static volatile boolean isSoftwareSquelchEnabled = false;  // Disabled by default
     private static volatile int softwareSquelchThreshold = 2;  // User squelch level (0-9)
     private static volatile boolean isSquelchOpen = false;  // Current squelch state
     private static volatile boolean previousSquelchOpen = false;  // Track state changes
@@ -188,6 +188,9 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile boolean isMonitoringMode = false;
     private static int originalSquelchLevel = 2;  // Store original squelch for analog channels
     private static int originalTxContact = 1;      // Store original txContact for DMR channels
+    
+    // Software squelch toggle button
+    private static android.widget.ToggleButton softwareSquelchToggleButton = null;
 
     // Zone selection and filtering
     private static android.widget.Button zoneButton = null;
@@ -1332,9 +1335,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                         // User finished dragging - apply hardware squelch and save to preferences
                                         int progress = seekBar.getProgress();
                                         
-                                        // If squelch level >= 1, open hardware squelch so software squelch can work
-                                        // If squelch level == 0, leave hardware squelch alone (use channel's setting)
-                                        if (progress >= 1) {
+                                        // If software squelch is enabled and level >= 1, open hardware squelch so software squelch can work
+                                        // If squelch level == 0 or software squelch disabled, leave hardware squelch alone (use channel's setting)
+                                        if (isSoftwareSquelchEnabled && progress >= 1) {
                                             enableSoftwareSquelchOnCurrentChannel();
                                             XposedBridge.log(TAG + ": Applied hardware squelch for software squelch level " + progress);
                                         }
@@ -1362,9 +1365,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                         finalSquelchValueLabel.setText(String.valueOf(savedSquelch));
                                         XposedBridge.log(TAG + ": Loaded saved squelch level: " + savedSquelch);
                                         
-                                        // If saved squelch >= 1, open hardware squelch for software squelch to work
-                                        // If saved squelch == 0, leave hardware squelch at channel's setting
-                                        if (savedSquelch >= 1) {
+                                        // If software squelch enabled and saved squelch >= 1, open hardware squelch for software squelch to work
+                                        // If saved squelch == 0 or software squelch disabled, leave hardware squelch at channel's setting
+                                        if (isSoftwareSquelchEnabled && savedSquelch >= 1) {
                                             rootLayout.postDelayed(new Runnable() {
                                                 @Override
                                                 public void run() {
@@ -1378,9 +1381,10 @@ public class MainHook implements IXposedHookLoadPackage {
                                     XposedBridge.log(TAG + ": Could not load saved squelch, using default (5): " + t);
                                 }
                                 
-                                // Insert squelch container at index 3 (initially visible, will hide for digital channels)
+                                // Insert squelch container at index 3 (initially hidden if software squelch disabled)
+                                squelchContainer.setVisibility(isSoftwareSquelchEnabled ? View.VISIBLE : View.GONE);
                                 rootLayout.addView(squelchContainer, 3);
-                                XposedBridge.log(TAG + ": ✓ Added squelch slider at index 3");
+                                XposedBridge.log(TAG + ": ✓ Added squelch slider at index 3 (initially " + (isSoftwareSquelchEnabled ? "visible" : "hidden") + ")");
                                 
                                 // Insert borderbox at index 4 (pushed down by squelch slider)
                                 rootLayout.addView(borderBox, 4);
@@ -1534,6 +1538,97 @@ public class MainHook implements IXposedHookLoadPackage {
                                 
                                 buttonContainer.addView(transcriptionToggle);
                                 XposedBridge.log(TAG + ": ✓ Added transcription toggle button");
+                                
+                                // Create software squelch toggle button (above TXT button, left side)
+                                android.widget.ToggleButton softSqToggle = new android.widget.ToggleButton(context);
+                                softSqToggle.setTag("DMR_SOFT_SQUELCH_TOGGLE");
+                                softSqToggle.setTextOn("Soft SQ");
+                                softSqToggle.setTextOff("Soft SQ");
+                                softSqToggle.setChecked(isSoftwareSquelchEnabled);
+                                
+                                FrameLayout.LayoutParams softSqToggleParams = new FrameLayout.LayoutParams(
+                                    (int) (90 * context.getResources().getDisplayMetrics().density),  // 90dp width for "Soft SQ"
+                                    (int) (40 * context.getResources().getDisplayMetrics().density)   // 40dp height
+                                );
+                                softSqToggleParams.gravity = android.view.Gravity.START | android.view.Gravity.TOP;
+                                softSqToggleParams.leftMargin = (int) (10 * context.getResources().getDisplayMetrics().density); // 10dp from left edge
+                                softSqToggleParams.topMargin = (int) (10 * context.getResources().getDisplayMetrics().density); // 10dp from top
+                                softSqToggle.setLayoutParams(softSqToggleParams);
+                                softSqToggle.setTextSize(12);  // Slightly smaller for "Soft SQ"
+                                softSqToggle.setTypeface(null, android.graphics.Typeface.BOLD);
+                                softSqToggle.setTextColor(0xFFFFFFFF);  // White text
+                                
+                                // Create state list drawable for software squelch button
+                                android.graphics.drawable.StateListDrawable softSqStateDrawable = new android.graphics.drawable.StateListDrawable();
+                                
+                                // Checked state (software squelch enabled) - Blue background
+                                android.graphics.drawable.GradientDrawable softSqCheckedDrawable = new android.graphics.drawable.GradientDrawable();
+                                softSqCheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                                softSqCheckedDrawable.setColor(0xFF2196F3);  // Material blue
+                                softSqCheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
+                                softSqCheckedDrawable.setStroke(
+                                    (int) (2 * context.getResources().getDisplayMetrics().density),
+                                    0xFFFFFFFF  // White border
+                                );
+                                softSqStateDrawable.addState(new int[]{android.R.attr.state_checked}, softSqCheckedDrawable);
+                                
+                                // Unchecked state (software squelch disabled) - Grey background
+                                android.graphics.drawable.GradientDrawable softSqUncheckedDrawable = new android.graphics.drawable.GradientDrawable();
+                                softSqUncheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                                softSqUncheckedDrawable.setColor(0x80808080);  // Semi-transparent gray
+                                softSqUncheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
+                                softSqUncheckedDrawable.setStroke(
+                                    (int) (2 * context.getResources().getDisplayMetrics().density),
+                                    0x80FFFFFF  // Semi-transparent white border
+                                );
+                                softSqStateDrawable.addState(new int[]{}, softSqUncheckedDrawable);
+                                
+                                softSqToggle.setBackground(softSqStateDrawable);
+                                
+                                // Store reference
+                                softwareSquelchToggleButton = softSqToggle;
+                                
+                                // Set click listener for software squelch toggle
+                                softSqToggle.setOnClickListener(new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        isSoftwareSquelchEnabled = softSqToggle.isChecked();
+                                        
+                                        // Find the squelch slider container
+                                        View squelchContainer = rootLayout.findViewWithTag("DMR_SQUELCH_CONTAINER");
+                                        
+                                        if (isSoftwareSquelchEnabled) {
+                                            // Enabling software squelch
+                                            XposedBridge.log(TAG + ": Software squelch enabled");
+                                            Toast.makeText(context, "Software squelch enabled", Toast.LENGTH_SHORT).show();
+                                            
+                                            // Show the slider
+                                            if (squelchContainer != null && currentChannelType == 1) {
+                                                squelchContainer.setVisibility(View.VISIBLE);
+                                            }
+                                            
+                                            // Set hardware squelch to 0 immediately (if level >= 1)
+                                            if (softwareSquelchThreshold >= 1) {
+                                                enableSoftwareSquelchOnCurrentChannel();
+                                            }
+                                        } else {
+                                            // Disabling software squelch
+                                            XposedBridge.log(TAG + ": Software squelch disabled - reverting to hardware squelch 2");
+                                            Toast.makeText(context, "Hardware squelch enabled", Toast.LENGTH_SHORT).show();
+                                            
+                                            // Hide the slider
+                                            if (squelchContainer != null) {
+                                                squelchContainer.setVisibility(View.GONE);
+                                            }
+                                            
+                                            // Set hardware squelch to 2
+                                            disableSoftwareSquelchOnCurrentChannel();
+                                        }
+                                    }
+                                });
+                                
+                                buttonContainer.addView(softSqToggle);
+                                XposedBridge.log(TAG + ": ✓ Added software squelch toggle button above TXT");
                                 
                                 // Create recording toggle button (right-aligned)
                                 android.widget.ToggleButton recordToggle = new android.widget.ToggleButton(context);
@@ -1899,14 +1994,23 @@ public class MainHook implements IXposedHookLoadPackage {
                                     updateHistoryHeader();
                                     loadChannelHistory(channelNumber, context);
                                     
-                                    // Show/hide squelch slider based on channel type (analog only)
+                                    // Show/hide squelch slider based on channel type (analog only) AND software squelch enabled
                                     View squelchContainer = rootLayout.findViewWithTag("DMR_SQUELCH_CONTAINER");
                                     if (squelchContainer != null) {
-                                        squelchContainer.setVisibility(channelType == 1 ? View.VISIBLE : View.GONE);
-                                        XposedBridge.log(TAG + ": [INIT] Squelch slider " + (channelType == 1 ? "shown" : "hidden") + " for " + (channelType == 0 ? "digital" : "analog") + " channel");
+                                        boolean shouldShow = (channelType == 1 && isSoftwareSquelchEnabled);
+                                        squelchContainer.setVisibility(shouldShow ? View.VISIBLE : View.GONE);
+                                        XposedBridge.log(TAG + ": [INIT] Squelch slider " + (shouldShow ? "shown" : "hidden") + " (analog=" + (channelType == 1) + ", softSqEnabled=" + isSoftwareSquelchEnabled + ")");
                                     } else {
                                         XposedBridge.log(TAG + ": [INIT] Could not find squelch container to set initial visibility");
                                     }
+                                    
+                                    // Show/hide software squelch toggle based on channel type (analog only)
+                                    View softSqToggle = rootLayout.findViewWithTag("DMR_SOFT_SQUELCH_TOGGLE");
+                                    if (softSqToggle != null) {
+                                        softSqToggle.setVisibility(channelType == 1 ? View.VISIBLE : View.GONE);
+                                        XposedBridge.log(TAG + ": [INIT] Software squelch toggle " + (channelType == 1 ? "shown" : "hidden") + " for " + (channelType == 0 ? "digital" : "analog") + " channel");
+                                    }
+                                    
                                     // Restore transcription history for initial channel
                                     restoreChannelTranscriptionHistory(channelNumber);
                                 }
@@ -1948,17 +2052,25 @@ public class MainHook implements IXposedHookLoadPackage {
                                     currentRxToneType = rxType;
                                     currentRxToneSubCode = rxSubCode;
                                     
-                                    // Show/hide squelch slider based on channel type (analog only)
+                                    // Show/hide squelch slider based on channel type (analog only) AND software squelch enabled
                                     try {
                                         Object mLocalViewObj = XposedHelpers.getObjectField(param.thisObject, "mLocalView");
                                         if (mLocalViewObj instanceof ViewGroup) {
                                             ViewGroup rootLayout = (ViewGroup) mLocalViewObj;
                                             View squelchContainer = rootLayout.findViewWithTag("DMR_SQUELCH_CONTAINER");
                                             if (squelchContainer != null) {
-                                                squelchContainer.setVisibility(channelType == 1 ? View.VISIBLE : View.GONE);
-                                                XposedBridge.log(TAG + ": Squelch slider " + (channelType == 1 ? "shown" : "hidden") + " for " + (channelType == 0 ? "digital" : "analog") + " channel");
+                                                boolean shouldShow = (channelType == 1 && isSoftwareSquelchEnabled);
+                                                squelchContainer.setVisibility(shouldShow ? View.VISIBLE : View.GONE);
+                                                XposedBridge.log(TAG + ": Squelch slider " + (shouldShow ? "shown" : "hidden") + " (analog=" + (channelType == 1) + ", softSqEnabled=" + isSoftwareSquelchEnabled + ")");
                                             } else {
                                                 XposedBridge.log(TAG + ": Could not find squelch container to update visibility");
+                                            }
+                                            
+                                            // Show/hide software squelch toggle based on channel type (analog only)
+                                            View softSqToggle = rootLayout.findViewWithTag("DMR_SOFT_SQUELCH_TOGGLE");
+                                            if (softSqToggle != null) {
+                                                softSqToggle.setVisibility(channelType == 1 ? View.VISIBLE : View.GONE);
+                                                XposedBridge.log(TAG + ": Software squelch toggle " + (channelType == 1 ? "shown" : "hidden") + " for " + (channelType == 0 ? "digital" : "analog") + " channel");
                                             }
                                         }
                                     } catch (Exception e) {
@@ -6039,7 +6151,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.callMethod(analogMessage, "setRxFreq", 
                 XposedHelpers.getIntField(currentChannel, "rxFreq"));
             XposedHelpers.callMethod(analogMessage, "setSq", 
-                (byte) softwareSquelchThreshold);  // Restore to software setting
+                (byte) 2);  // Set to hardware squelch 2
             XposedHelpers.callMethod(analogMessage, "setRxType", 
                 (byte) XposedHelpers.getIntField(currentChannel, "rxType"));
             XposedHelpers.callMethod(analogMessage, "setRxSubCode", 
@@ -6054,7 +6166,7 @@ public class MainHook implements IXposedHookLoadPackage {
             // Send to hardware
             XposedHelpers.callMethod(analogMessage, "send");
             
-            XposedBridge.log(TAG + ": ✓ Software squelch disabled - hardware sq restored");
+            XposedBridge.log(TAG + ": ✓ Software squelch disabled - hardware sq set to 2");
             
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": ✗ Error disabling software squelch: " + t.getMessage());
