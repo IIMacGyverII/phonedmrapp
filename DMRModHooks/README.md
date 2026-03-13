@@ -83,6 +83,29 @@ Rather than delay a working feature, I decided to:
 - **✅ Complete Restoration**: Restores all channel fields including frequency, squelch, and metadata
 - **✅ Open Squelch Button**: Added persistent squelch control to APRS monitoring page
 
+#### **Squelch Control - Hardware Limitation**
+
+**⚠️ IMPORTANT: Ulefone Armor 26 Ultra Hardware Limitation**
+
+The radio hardware has a unique squelch behavior:
+- **Only sq=0 (open) and sq=2 work reliably**
+- **sq=1, sq=3-9 are forced to sq=2 by the hardware**
+- This is a **hardware/firmware limitation**, not a software bug
+
+**Design Decision:**
+- No squelch slider needed - hardware only supports two effective states
+- **Open Squelch button** toggles between sq=0 (fully open) and sq=2 (tight)
+- Button shows **green** when squelch is open (sq=0)
+- Button shows **gray** when squelch is closed (sq=2)
+- Button state persists across UI refreshes (monitoring page updates every 2 seconds)
+- Works **with** the hardware instead of fighting against it
+
+**Technical Implementation:**
+- Direct hardware control via `AnalogMessage.send()`
+- Static class-level state variables: `isAPRSSquelchOpen`, `aprsStoredSquelch`
+- State survives UI refreshes (APRS monitoring page recreates UI every 2 seconds)
+- Identical pattern to MON button (proven working implementation)
+
 #### **How It Works**
 1. **Before**: If you force-closed the app during APRS monitoring, the channel would be stuck on APRS frequency
 2. **Now**: On app restart, the module:
@@ -1274,8 +1297,11 @@ Or use LSPosed Manager → Logs
 - Detects orphaned APRS channels on app startup and restores original settings
 - AlertDialog notification when crash recovery occurs with user guidance
 - Fixed channel restoration to include all fields (number, frequencies, squelch, etc.)
-- Added open squelch button to APRS monitoring page with persistent state
+- **Added open squelch button to APRS monitoring page with persistent state**
 - Button survives UI refreshes (2-second update cycle)
+- Works with hardware limitation (only sq=0 and sq=2 supported by Ulefone Armor 26 Ultra)
+- Toggles between sq=0 (fully open) and sq=2 (tight) - hardware forces sq=1,3-9 to sq=2
+- Green button when open, gray when closed
 - Comprehensive logging for crash recovery debugging (BEFORE/AFTER states)
 - Backup file: /sdcard/aprs_channel_backup.dat
 - User-friendly message explains how to prevent future issues
