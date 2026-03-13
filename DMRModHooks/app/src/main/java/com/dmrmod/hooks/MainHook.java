@@ -89,7 +89,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.1.2";
+    private static final String VERSION = "3.1.3";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -194,6 +194,9 @@ public class MainHook implements IXposedHookLoadPackage {
     
     // APRS monitoring toggle button
     private static android.widget.ToggleButton aprsMonitoringToggleButton = null;
+    
+    // APRS software squelch state (independent from intercom page squelch)
+    private static volatile boolean isAprsSoftwareSquelchEnabled = false;  // Disabled by default
 
     // Zone selection and filtering
     private static android.widget.Button zoneButton = null;
@@ -3752,6 +3755,51 @@ public class MainHook implements IXposedHookLoadPackage {
             statusText.setPadding(0, 10, 0, 20);
             mainLayout.addView(statusText);
             
+            // ========== SOFTWARE SQUELCH TOGGLE ==========
+            // Create Soft SQ toggle button
+            android.widget.ToggleButton aprsSoftSqToggle = new android.widget.ToggleButton(activity);
+            aprsSoftSqToggle.setTextOn("Soft SQ");
+            aprsSoftSqToggle.setTextOff("Soft SQ");
+            aprsSoftSqToggle.setChecked(isAprsSoftwareSquelchEnabled);
+            
+            LinearLayout.LayoutParams toggleParams = new LinearLayout.LayoutParams(
+                (int) (90 * activity.getResources().getDisplayMetrics().density),  // 90dp width
+                (int) (40 * activity.getResources().getDisplayMetrics().density)   // 40dp height
+            );
+            toggleParams.bottomMargin = (int) (10 * activity.getResources().getDisplayMetrics().density);
+            aprsSoftSqToggle.setLayoutParams(toggleParams);
+            aprsSoftSqToggle.setTextSize(12);
+            aprsSoftSqToggle.setTypeface(null, android.graphics.Typeface.BOLD);
+            aprsSoftSqToggle.setTextColor(0xFFFFFFFF);  // White text
+            
+            // Create state list drawable for toggle button
+            android.graphics.drawable.StateListDrawable toggleStateDrawable = new android.graphics.drawable.StateListDrawable();
+            
+            // Checked state (software squelch enabled) - Blue background
+            android.graphics.drawable.GradientDrawable checkedDrawable = new android.graphics.drawable.GradientDrawable();
+            checkedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+            checkedDrawable.setColor(0xFF2196F3);  // Material blue
+            checkedDrawable.setCornerRadius(20 * activity.getResources().getDisplayMetrics().density);
+            checkedDrawable.setStroke(
+                (int) (2 * activity.getResources().getDisplayMetrics().density),
+                0xFFFFFFFF  // White border
+            );
+            toggleStateDrawable.addState(new int[]{android.R.attr.state_checked}, checkedDrawable);
+            
+            // Unchecked state (software squelch disabled) - Light blue background
+            android.graphics.drawable.GradientDrawable uncheckedDrawable = new android.graphics.drawable.GradientDrawable();
+            uncheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+            uncheckedDrawable.setColor(0x602196F3);  // Light blue (transparent version of ON color)
+            uncheckedDrawable.setCornerRadius(20 * activity.getResources().getDisplayMetrics().density);
+            uncheckedDrawable.setStroke(
+                (int) (2 * activity.getResources().getDisplayMetrics().density),
+                0x80FFFFFF  // Semi-transparent white border
+            );
+            toggleStateDrawable.addState(new int[]{}, uncheckedDrawable);
+            
+            aprsSoftSqToggle.setBackground(toggleStateDrawable);
+            mainLayout.addView(aprsSoftSqToggle);
+            
             // ========== SOFTWARE SQUELCH SLIDER ==========
             TextView squelchLabel = new TextView(activity);
             squelchLabel.setText("Software Squelch:");
@@ -3761,7 +3809,7 @@ public class MainHook implements IXposedHookLoadPackage {
             mainLayout.addView(squelchLabel);
             
             // Create horizontal container for squelch controls
-            LinearLayout squelchContainer = new LinearLayout(activity);
+            final LinearLayout squelchContainer = new LinearLayout(activity);
             squelchContainer.setOrientation(LinearLayout.HORIZONTAL);
             squelchContainer.setPadding(0, 0, 0, 20);
             LinearLayout.LayoutParams squelchContainerParams = new LinearLayout.LayoutParams(
@@ -3769,6 +3817,8 @@ public class MainHook implements IXposedHookLoadPackage {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             );
             squelchContainer.setLayoutParams(squelchContainerParams);
+            // Set visibility based on toggle state
+            squelchContainer.setVisibility(isAprsSoftwareSquelchEnabled ? View.VISIBLE : View.GONE);
             
             // "SQ:" label
             TextView sqLabel = new TextView(activity);
@@ -3838,11 +3888,6 @@ public class MainHook implements IXposedHookLoadPackage {
                         XposedBridge.log(TAG + ": APRS software squelch changed to level " + progress + 
                             " (RMS threshold: " + getAudioSquelchThreshold() + 
                             ", RSSI threshold: " + getRssiThreshold(progress) + " dBm)");
-                        
-                        Toast.makeText(activity, 
-                            "Software Squelch: " + progress, 
-                            Toast.LENGTH_SHORT
-                        ).show();
                     }
                 }
                 
@@ -3853,13 +3898,18 @@ public class MainHook implements IXposedHookLoadPackage {
                 
                 @Override
                 public void onStopTrackingTouch(android.widget.SeekBar seekBar) {
-                    // Save to preferences when user finishes dragging
+                    // Save to preferences and show toast when user finishes dragging
                     int progress = seekBar.getProgress();
                     try {
                         APRSDatabase aprsDb = APRSDatabase.getInstance(activity);
                         if (aprsDb != null) {
                             XposedHelpers.callMethod(aprsDb, "setAprsSquelch", progress);
                             XposedBridge.log(TAG + ": Saved APRS software squelch level " + progress + " to preferences");
+                            
+                            Toast.makeText(activity, 
+                                "Software Squelch: " + progress, 
+                                Toast.LENGTH_SHORT
+                            ).show();
                         }
                     } catch (Throwable t) {
                         XposedBridge.log(TAG + ": Error saving APRS squelch to preferences: " + t);
@@ -3873,13 +3923,48 @@ public class MainHook implements IXposedHookLoadPackage {
             // Update softwareSquelchThreshold to match saved value
             softwareSquelchThreshold = savedSquelch;
             
-            // Info text explaining software squelch
-            TextView squelchInfo = new TextView(activity);
+            // Info text explaining software squelch (only show when toggle is ON)
+            final TextView squelchInfo = new TextView(activity);
             squelchInfo.setText("📊 Hybrid RSSI + Audio RMS squelch\n0=most sensitive, 9=least sensitive");
             squelchInfo.setTextSize(11);
             squelchInfo.setTextColor(0xFF999999);
             squelchInfo.setPadding(0, 0, 0, 20);
+            squelchInfo.setVisibility(isAprsSoftwareSquelchEnabled ? View.VISIBLE : View.GONE);
             mainLayout.addView(squelchInfo);
+            
+            // Set click listener for Soft SQ toggle
+            aprsSoftSqToggle.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    isAprsSoftwareSquelchEnabled = aprsSoftSqToggle.isChecked();
+                    
+                    if (isAprsSoftwareSquelchEnabled) {
+                        // Enabling software squelch
+                        XposedBridge.log(TAG + ": APRS software squelch enabled");
+                        Toast.makeText(activity, "APRS software squelch enabled", Toast.LENGTH_SHORT).show();
+                        
+                        // Show the slider and info
+                        squelchContainer.setVisibility(View.VISIBLE);
+                        squelchInfo.setVisibility(View.VISIBLE);
+                        
+                        // Set hardware squelch to 0 (if level >= 1)
+                        if (softwareSquelchThreshold >= 1) {
+                            enableSoftwareSquelchOnCurrentChannel();
+                        }
+                    } else {
+                        // Disabling software squelch
+                        XposedBridge.log(TAG + ": APRS software squelch disabled - reverting to hardware squelch 2");
+                        Toast.makeText(activity, "APRS hardware squelch enabled", Toast.LENGTH_SHORT).show();
+                        
+                        // Hide the slider and info
+                        squelchContainer.setVisibility(View.GONE);
+                        squelchInfo.setVisibility(View.GONE);
+                        
+                        // Set hardware squelch to 2
+                        disableSoftwareSquelchOnCurrentChannel();
+                    }
+                }
+            });
             
             // Stats section
             int totalStations = db.getStationCount();
