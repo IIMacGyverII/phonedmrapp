@@ -3631,6 +3631,31 @@ public class MainHook implements IXposedHookLoadPackage {
         builder.setPositiveButton("Start Monitoring", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
+                // Turn off Soft SQ if it's enabled
+                if (softwareSquelchToggleButton != null && softwareSquelchToggleButton.isChecked()) {
+                    softwareSquelchToggleButton.setChecked(false);
+                    isSoftwareSquelchEnabled = false;
+                    XposedBridge.log(TAG + ": Disabled Soft SQ before entering APRS monitoring");
+                }
+                
+                // Turn off REC MON if it's enabled
+                if (recordingToggleButton != null && recordingToggleButton.isChecked()) {
+                    recordingToggleButton.setChecked(false);
+                    isRecordingEnabled = false;
+                    // Stop any current recording
+                    if (isCurrentlyRecording) {
+                        stopRecording();
+                    }
+                    XposedBridge.log(TAG + ": Disabled REC MON before entering APRS monitoring");
+                }
+                
+                // Turn off TXT if it's enabled
+                if (transcriptionToggleButton != null && transcriptionToggleButton.isChecked()) {
+                    transcriptionToggleButton.setChecked(false);
+                    isTranscriptionEnabled = false;
+                    XposedBridge.log(TAG + ": Disabled TXT before entering APRS monitoring");
+                }
+                
                 startAPRSMonitoring(activity);
                 // Show live monitoring screen after starting
                 showAPRSLiveMonitoringScreen(activity);
