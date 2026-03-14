@@ -238,6 +238,37 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile int aprsStoredSquelch = 1;  // Store squelch level to restore
     private static TextView aprsRssiDisplayTextView = null;  // RSSI display in APRS monitoring dialog
     
+    // VFO mode state
+    private static volatile boolean isVFOModeActive = false;
+    private static AlertDialog vfoDialog = null;
+    private static android.widget.ToggleButton vfoModeToggleButton = null;
+    
+    // VFO settings (temporary, not persisted)
+    private static int vfoChannelMode = 1;  // 0=Digital/DMR, 1=Analog (default analog)
+    private static double vfoFrequencyMHz = 146.520;  // Default simplex frequency
+    private static int vfoPowerLevel = 1;  // 0=Low, 1=High
+    
+    // Analog-specific settings
+    private static int vfoRxToneType = 0;  // 0=None, 1=CTCSS, 2=FDCS, 3=BDCS
+    private static int vfoRxToneCode = 0;
+    private static int vfoTxToneType = 0;
+    private static int vfoTxToneCode = 0;
+    private static int vfoBandWidth = 0;   // 0=12.5kHz, 1=25kHz
+    
+    // Digital/DMR-specific settings
+    private static int vfoContactType = 1;  // 0=Private, 1=Group, 2=All
+    private static int vfoTxContact = 9;    // TalkGroup ID (default: Worldwide 9)
+    private static int vfoColorCode = 1;    // 0-15 (default: 1)
+    private static int vfoSlot = 1;         // 0=Slot1, 1=Slot2
+    
+    // Software squelch (like APRS - enabled by default in VFO)
+    private static volatile boolean isVfoSoftwareSquelchEnabled = true;
+    private static volatile int vfoSoftwareSquelchThreshold = 3;  // 0-9 (3 = moderate)
+    private static int savedVfoSquelchThreshold = 3;  // Saved for restore
+    
+    // VFO backup system (same pattern as APRS)
+    private static java.util.HashMap<String, Object> vfoChannelBackup = null;
+    
     /**
      * Check if a channel is an APRS channel (should be hidden from channel list)
      */
@@ -2014,6 +2045,72 @@ public class MainHook implements IXposedHookLoadPackage {
                                 
                                 buttonContainer.addView(aprsButton);
                                 XposedBridge.log(TAG + ": ✓ Added APRS monitoring toggle button below MON button");
+                                
+                                // Create VFO toggle button (below TXT button, left side)
+                                android.widget.ToggleButton vfoButton = new android.widget.ToggleButton(context);
+                                vfoButton.setTag("DMR_VFO_TOGGLE");
+                                vfoButton.setTextOn("VFO");
+                                vfoButton.setTextOff("VFO");
+                                vfoButton.setChecked(false);
+                                
+                                FrameLayout.LayoutParams vfoButtonParams = new FrameLayout.LayoutParams(
+                                    (int) (70 * context.getResources().getDisplayMetrics().density),  // 70dp width
+                                    (int) (40 * context.getResources().getDisplayMetrics().density)   // 40dp height
+                                );
+                                vfoButtonParams.gravity = android.view.Gravity.START | android.view.Gravity.BOTTOM;
+                                vfoButtonParams.leftMargin = (int) (10 * context.getResources().getDisplayMetrics().density);
+                                vfoButtonParams.bottomMargin = (int) (10 * context.getResources().getDisplayMetrics().density);
+                                vfoButton.setLayoutParams(vfoButtonParams);
+                                vfoButton.setTextSize(12);
+                                vfoButton.setTypeface(null, android.graphics.Typeface.BOLD);
+                                vfoButton.setTextColor(0xFFFFFFFF);  // White text
+                                
+                                // Create state list drawable for VFO button
+                                android.graphics.drawable.StateListDrawable vfoStateDrawable = new android.graphics.drawable.StateListDrawable();
+                                
+                                // Checked state (VFO active) - Orange background
+                                android.graphics.drawable.GradientDrawable vfoCheckedDrawable = new android.graphics.drawable.GradientDrawable();
+                                vfoCheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                                vfoCheckedDrawable.setColor(0xFFFF9800);  // Orange
+                                vfoCheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
+                                vfoCheckedDrawable.setStroke(
+                                    (int) (2 * context.getResources().getDisplayMetrics().density),
+                                    0xFFFFFFFF  // White border
+                                );
+                                vfoStateDrawable.addState(new int[]{android.R.attr.state_checked}, vfoCheckedDrawable);
+                                
+                                // Unchecked state (VFO inactive) - Light orange background
+                                android.graphics.drawable.GradientDrawable vfoUncheckedDrawable = new android.graphics.drawable.GradientDrawable();
+                                vfoUncheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                                vfoUncheckedDrawable.setColor(0x60FF9800);  // Light orange
+                                vfoUncheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
+                                vfoUncheckedDrawable.setStroke(
+                                    (int) (2 * context.getResources().getDisplayMetrics().density),
+                                    0x80FFFFFF  // Semi-transparent white border
+                                );
+                                vfoStateDrawable.addState(new int[]{}, vfoUncheckedDrawable);
+                                
+                                vfoButton.setBackground(vfoStateDrawable);
+                                
+                                // Store reference
+                                vfoModeToggleButton = vfoButton;
+                                
+                                // Set click listener
+                                vfoButton.setOnClickListener(new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        if (vfoButton.isChecked()) {
+                                            // Entering VFO mode
+                                            showVFODialog((Activity) context);
+                                        } else {
+                                            // Exiting VFO mode
+                                            stopVFOMode((Activity) context);
+                                        }
+                                    }
+                                });
+                                
+                                buttonContainer.addView(vfoButton);
+                                XposedBridge.log(TAG + ": ✓ Added VFO toggle button below TXT button");
                                 
                                 // Zone button is now created in RSSI/Zone container above borderbox
                                 
@@ -6157,19 +6254,26 @@ public class MainHook implements IXposedHookLoadPackage {
                         
                         // === SOFTWARE SQUELCH (Hybrid RSSI + Audio RMS) ===
                         // Note: Squelch level 0 = disabled (pass all audio), 1-9 = enabled with increasing sensitivity
-                        if (isSoftwareSquelchEnabled && (currentChannelType == 1 || isAPRSMonitoringActive) && softwareSquelchThreshold > 0) {  // Skip software squelch if level 0
+                        // Check for APRS squelch OR VFO squelch (different thresholds)
+                        boolean useAprsSquelch = isSoftwareSquelchEnabled && (currentChannelType == 1 || isAPRSMonitoringActive) && softwareSquelchThreshold > 0;
+                        boolean useVfoSquelch = isVfoSoftwareSquelchEnabled && isVFOModeActive && vfoSoftwareSquelchThreshold > 0;
+                        
+                        if (useAprsSquelch || useVfoSquelch) {
+                            // Determine which threshold to use (APRS vs VFO)
+                            int activeThreshold = useVfoSquelch ? vfoSoftwareSquelchThreshold : softwareSquelchThreshold;
+                            
                             // Calculate audio amplitude (optimized RMS with peak detection)
                             int amplitude = calculateAudioAmplitude(audioData, length);
                             
-                            // Get thresholds with hysteresis
-                            int audioThreshold = getAudioSquelchThreshold();
+                            // Get thresholds with hysteresis (using active threshold)
+                            int audioThreshold = getAudioSquelchThreshold(activeThreshold);
                             int audioOpenThresh = audioThreshold;
                             int audioCloseThresh = (audioThreshold * 100) / HYSTERESIS_FACTOR;  // Lower threshold to close
                             
                             // RSSI-based gating (if available)
                             boolean rssiPass = true;
                             if (currentRssi != -999) {
-                                int rssiThreshold = getRssiThreshold(softwareSquelchThreshold);
+                                int rssiThreshold = getRssiThreshold(activeThreshold);
                                 rssiPass = (currentRssi >= rssiThreshold);
                                 
                                 // Periodic RSSI query (every 500ms)
@@ -6375,6 +6479,14 @@ public class MainHook implements IXposedHookLoadPackage {
      */
     private static int getAudioSquelchThreshold() {
         int level = Math.max(0, Math.min(softwareSquelchThreshold, 9));  // Clamp to 0-9
+        return AUDIO_SQUELCH_THRESHOLDS[level];
+    }
+    
+    /**
+     * Get audio RMS threshold using explicit squelch level (for VFO mode)
+     */
+    private static int getAudioSquelchThreshold(int squelchLevel) {
+        int level = Math.max(0, Math.min(squelchLevel, 9));  // Clamp to 0-9
         return AUDIO_SQUELCH_THRESHOLDS[level];
     }
     
@@ -9454,6 +9566,479 @@ public class MainHook implements IXposedHookLoadPackage {
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": Error hooking channel edit activity: " + t.getMessage());
             XposedBridge.log(t);
+        }
+    }
+    
+    // ============================= VFO MODE METHODS =============================
+    
+    /**
+     * Show VFO dialog with frequency controls
+     */
+    private void showVFODialog(final Activity activity) {
+        try {
+            // Check for conflicts with other modes
+            if (isAPRSMonitoringActive) {
+                Toast.makeText(activity, "Cannot use VFO while APRS is active", Toast.LENGTH_SHORT).show();
+                if (vfoModeToggleButton != null) {
+                    vfoModeToggleButton.setChecked(false);
+                }
+                return;
+            }
+            
+            XposedBridge.log(TAG + ": Showing VFO dialog");
+            
+            // Start VFO mode
+            startVFOMode(activity);
+            
+            Toast.makeText(activity, "VFO Mode Active - Full dialog coming in Phase 2", Toast.LENGTH_SHORT).show();
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error showing VFO dialog: " + e.getMessage());
+            XposedBridge.log(e);
+        }
+    }
+    
+    /**
+     * Start VFO mode - hijack current channel
+     */
+    private void startVFOMode(final Activity activity) {
+        try {
+            XposedBridge.log(TAG + ": Starting VFO mode (type=" + (vfoChannelMode == 0 ? "Digital" : "Analog") + ")");
+            
+            Class<?> dmrManagerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.manager.DmrManager",
+                appClassLoader
+            );
+            Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+            Object currentChannel = XposedHelpers.callMethod(dmrManager, "getCurrentChannel");
+            
+            if (currentChannel == null) {
+                throw new Exception("Cannot get current channel");
+            }
+            
+            // Save backup (includes current squelch state)
+            saveVFOChannelBackup(currentChannel);
+            
+            // Hijack channel with VFO settings
+            XposedHelpers.setIntField(currentChannel, "type", vfoChannelMode);
+            String originalName = (String) XposedHelpers.getObjectField(currentChannel, "name");
+            String modeLabel = (vfoChannelMode == 0) ? "DMR" : "FM";
+            XposedHelpers.setObjectField(currentChannel, "name", "VFO-" + modeLabel + " (" + originalName + ")");
+            
+            int vfoRxFreqHz = (int) (vfoFrequencyMHz * 1000000);
+            int vfoTxFreqHz = vfoRxFreqHz;  // Simplex by default (offset handled separately)
+            
+            XposedHelpers.setIntField(currentChannel, "rxFreq", vfoRxFreqHz);
+            XposedHelpers.setIntField(currentChannel, "txFreq", vfoTxFreqHz);
+            XposedHelpers.setIntField(currentChannel, "band", determineBand(vfoFrequencyMHz));
+            XposedHelpers.setIntField(currentChannel, "power", vfoPowerLevel);
+            
+            if (vfoChannelMode == 1) {
+                // Analog mode - set hardware squelch to 0, use software squelch
+                XposedHelpers.setIntField(currentChannel, "sq", 0);  // Hardware fully open
+                XposedHelpers.setIntField(currentChannel, "rxType", vfoRxToneType);
+                XposedHelpers.setIntField(currentChannel, "rxSubCode", vfoRxToneCode);
+                XposedHelpers.setIntField(currentChannel, "txType", vfoTxToneType);
+                XposedHelpers.setIntField(currentChannel, "txSubCode", vfoTxToneCode);
+            } else {
+                // Digital mode - DMR settings
+                XposedHelpers.setIntField(currentChannel, "contactType", vfoContactType);
+                XposedHelpers.setIntField(currentChannel, "txContact", vfoTxContact);
+                XposedHelpers.setIntField(currentChannel, "colorCode", vfoColorCode);
+                XposedHelpers.setIntField(currentChannel, "inBoundSlot", vfoSlot);
+                XposedHelpers.setIntField(currentChannel, "outBoundSlot", vfoSlot);
+            }
+            
+            // Direct hardware update
+            sendVFOChannelToHardware(currentChannel, vfoChannelMode);
+            
+            isVFOModeActive = true;
+            currentChannelType = vfoChannelMode;
+            
+            // Enable VFO software squelch (analog only)
+            if (vfoChannelMode == 1) {
+                isVfoSoftwareSquelchEnabled = true;
+                XposedBridge.log(TAG + ": VFO software squelch enabled (threshold=" + vfoSoftwareSquelchThreshold + ")");
+            } else {
+                isVfoSoftwareSquelchEnabled = false;
+            }
+            
+            String modeStr = (vfoChannelMode == 0) ? "Digital DMR" : "Analog FM";
+            Toast.makeText(activity, "VFO Mode Active (" + modeStr + "): " + vfoFrequencyMHz + " MHz", Toast.LENGTH_SHORT).show();
+            XposedBridge.log(TAG + ": VFO mode started at " + vfoFrequencyMHz + " MHz (" + modeStr + ")");
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error starting VFO mode: " + e.getMessage());
+            XposedBridge.log(e);
+            Toast.makeText(activity, "VFO Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            if (vfoModeToggleButton != null) {
+                vfoModeToggleButton.setChecked(false);
+            }
+        }
+    }
+    
+    /**
+     * Stop VFO mode - restore channel
+     */
+    private void stopVFOMode(final Activity activity) {
+        try {
+            XposedBridge.log(TAG + ": Stopping VFO mode");
+            
+            restoreVFOChannelBackup(activity);
+            
+            isVFOModeActive = false;
+            isVfoSoftwareSquelchEnabled = false;
+            
+            if (vfoModeToggleButton != null) {
+                vfoModeToggleButton.setChecked(false);
+            }
+            
+            if (vfoDialog != null && vfoDialog.isShowing()) {
+                vfoDialog.dismiss();
+                vfoDialog = null;
+            }
+            
+            Toast.makeText(activity, "VFO Mode exited", Toast.LENGTH_SHORT).show();
+            XposedBridge.log(TAG + ": VFO mode stopped");
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error stopping VFO mode: " + e.getMessage());
+            XposedBridge.log(e);
+        }
+    }
+    
+    /**
+     * Save VFO channel backup (memory + file)
+     */
+    private void saveVFOChannelBackup(Object channel) {
+        try {
+            vfoChannelBackup = new java.util.HashMap<>();
+            vfoChannelBackup.put("number", XposedHelpers.getIntField(channel, "number"));
+            vfoChannelBackup.put("type", XposedHelpers.getIntField(channel, "type"));
+            vfoChannelBackup.put("name", XposedHelpers.getObjectField(channel, "name"));
+            vfoChannelBackup.put("rxFreq", XposedHelpers.getIntField(channel, "rxFreq"));
+            vfoChannelBackup.put("txFreq", XposedHelpers.getIntField(channel, "txFreq"));
+            vfoChannelBackup.put("sq", XposedHelpers.getIntField(channel, "sq"));
+            vfoChannelBackup.put("band", XposedHelpers.getIntField(channel, "band"));
+            vfoChannelBackup.put("power", XposedHelpers.getIntField(channel, "power"));
+            vfoChannelBackup.put("rxType", XposedHelpers.getIntField(channel, "rxType"));
+            vfoChannelBackup.put("rxSubCode", XposedHelpers.getIntField(channel, "rxSubCode"));
+            vfoChannelBackup.put("txType", XposedHelpers.getIntField(channel, "txType"));
+            vfoChannelBackup.put("txSubCode", XposedHelpers.getIntField(channel, "txSubCode"));
+            
+            // DMR-specific fields
+            vfoChannelBackup.put("contactType", XposedHelpers.getIntField(channel, "contactType"));
+            vfoChannelBackup.put("txContact", XposedHelpers.getIntField(channel, "txContact"));
+            vfoChannelBackup.put("colorCode", XposedHelpers.getIntField(channel, "colorCode"));
+            vfoChannelBackup.put("inBoundSlot", XposedHelpers.getIntField(channel, "inBoundSlot"));
+            vfoChannelBackup.put("outBoundSlot", XposedHelpers.getIntField(channel, "outBoundSlot"));
+            
+            // Save current squelch state (software vs hardware)
+            vfoChannelBackup.put("wasSoftwareSquelchEnabled", isSoftwareSquelchEnabled);
+            vfoChannelBackup.put("savedSquelchThreshold", softwareSquelchThreshold);
+            
+            XposedBridge.log(TAG + ": VFO channel backup saved: " + vfoChannelBackup.get("name") + 
+                " (type=" + vfoChannelBackup.get("type") + ")");
+            
+            // Also save to file (crash recovery)
+            saveVFOChannelBackupToFile(vfoChannelBackup);
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error saving VFO channel backup: " + e.getMessage());
+            XposedBridge.log(e);
+        }
+    }
+    
+    /**
+     * Save VFO backup to file
+     */
+    private void saveVFOChannelBackupToFile(java.util.HashMap<String, Object> backup) {
+        try {
+            java.io.File backupFile = new java.io.File("/sdcard/vfo_channel_backup.dat");
+            java.io.ObjectOutputStream oos = new java.io.ObjectOutputStream(
+                new java.io.FileOutputStream(backupFile));
+            oos.writeObject(backup);
+            oos.close();
+            XposedBridge.log(TAG + ": VFO channel backup saved to file");
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error saving VFO backup to file: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Load VFO backup from file
+     */
+    private java.util.HashMap<String, Object> loadVFOChannelBackupFromFile() {
+        try {
+            java.io.File backupFile = new java.io.File("/sdcard/vfo_channel_backup.dat");
+            if (!backupFile.exists()) {
+                return null;
+            }
+            
+            java.io.ObjectInputStream ois = new java.io.ObjectInputStream(
+                new java.io.FileInputStream(backupFile));
+            @SuppressWarnings("unchecked")
+            java.util.HashMap<String, Object> backup = (java.util.HashMap<String, Object>) ois.readObject();
+            ois.close();
+            
+            XposedBridge.log(TAG + ": VFO channel backup loaded from file");
+            return backup;
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error loading VFO backup from file: " + e.getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Delete VFO backup file
+     */
+    private void deleteVFOChannelBackupFile() {
+        try {
+            java.io.File backupFile = new java.io.File("/sdcard/vfo_channel_backup.dat");
+            if (backupFile.exists()) {
+                backupFile.delete();
+                XposedBridge.log(TAG + ": VFO channel backup file deleted");
+            }
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error deleting VFO backup file: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Restore VFO channel from backup
+     */
+    private void restoreVFOChannelBackup(Context context) {
+        try {
+            if (vfoChannelBackup == null) {
+                XposedBridge.log(TAG + ": No VFO channel backup found");
+                return;
+            }
+            
+            Class<?> dmrManagerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.manager.DmrManager",
+                appClassLoader
+            );
+            Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+            Object currentChannel = XposedHelpers.callMethod(dmrManager, "getCurrentChannel");
+            
+            if (currentChannel == null) {
+                XposedBridge.log(TAG + ": Cannot get current channel for VFO restore");
+                return;
+            }
+            
+            XposedBridge.log(TAG + ": Restoring channel from VFO backup: " + vfoChannelBackup.get("name"));
+            
+            // Restore all fields (including channel number)
+            XposedHelpers.setIntField(currentChannel, "number", (Integer) vfoChannelBackup.get("number"));
+            XposedHelpers.setIntField(currentChannel, "type", (Integer) vfoChannelBackup.get("type"));
+            XposedHelpers.setObjectField(currentChannel, "name", vfoChannelBackup.get("name"));
+            XposedHelpers.setIntField(currentChannel, "rxFreq", (Integer) vfoChannelBackup.get("rxFreq"));
+            XposedHelpers.setIntField(currentChannel, "txFreq", (Integer) vfoChannelBackup.get("txFreq"));
+            XposedHelpers.setIntField(currentChannel, "sq", (Integer) vfoChannelBackup.get("sq"));
+            XposedHelpers.setIntField(currentChannel, "band", (Integer) vfoChannelBackup.get("band"));
+            XposedHelpers.setIntField(currentChannel, "power", (Integer) vfoChannelBackup.get("power"));
+            XposedHelpers.setIntField(currentChannel, "rxType", (Integer) vfoChannelBackup.get("rxType"));
+            XposedHelpers.setIntField(currentChannel, "rxSubCode", (Integer) vfoChannelBackup.get("rxSubCode"));
+            XposedHelpers.setIntField(currentChannel, "txType", (Integer) vfoChannelBackup.get("txType"));
+            XposedHelpers.setIntField(currentChannel, "txSubCode", (Integer) vfoChannelBackup.get("txSubCode"));
+            
+            // Restore DMR fields
+            XposedHelpers.setIntField(currentChannel, "contactType", (Integer) vfoChannelBackup.get("contactType"));
+            XposedHelpers.setIntField(currentChannel, "txContact", (Integer) vfoChannelBackup.get("txContact"));
+            XposedHelpers.setIntField(currentChannel, "colorCode", (Integer) vfoChannelBackup.get("colorCode"));
+            XposedHelpers.setIntField(currentChannel, "inBoundSlot", (Integer) vfoChannelBackup.get("inBoundSlot"));
+            XposedHelpers.setIntField(currentChannel, "outBoundSlot", (Integer) vfoChannelBackup.get("outBoundSlot"));
+            
+            // Restore squelch state
+            Boolean wasSoftSqEnabled = (Boolean) vfoChannelBackup.get("wasSoftwareSquelchEnabled");
+            if (wasSoftSqEnabled != null) {
+                isSoftwareSquelchEnabled = wasSoftSqEnabled;
+                Integer savedThreshold = (Integer) vfoChannelBackup.get("savedSquelchThreshold");
+                if (savedThreshold != null) {
+                    softwareSquelchThreshold = savedThreshold;
+                }
+            }
+            
+            // Update hardware
+            int channelType = (Integer) vfoChannelBackup.get("type");
+            if (channelType == 1) {
+                // Analog channel - use AnalogMessage
+                sendVFOChannelToHardware(currentChannel, 1);
+            } else {
+                // Digital channel - use state machine
+                XposedHelpers.callMethod(dmrManager, "updateChannel", currentChannel);
+                XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", currentChannel);
+            }
+            
+            XposedBridge.log(TAG + ": VFO channel restored: " + vfoChannelBackup.get("name"));
+            vfoChannelBackup = null;  // Clear backup
+            
+            deleteVFOChannelBackupFile();
+            Toast.makeText(context, "VFO Mode exited - channel restored", Toast.LENGTH_SHORT).show();
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error restoring VFO channel: " + e.getMessage());
+            XposedBridge.log(e);
+        }
+    }
+    
+    /**
+     * Send VFO settings to hardware
+     */
+    private void sendVFOChannelToHardware(Object channel, int channelType) {
+        try {
+            if (channelType == 1) {
+                // ANALOG MODE - Use AnalogMessage with hardware squelch=0
+                Class<?> analogMessageClass = XposedHelpers.findClass(
+                    "com.pri.prizeinterphone.message.AnalogMessage",
+                    appClassLoader
+                );
+                Object analogMessage = analogMessageClass.newInstance();
+                
+                // Copy all channel fields
+                XposedHelpers.callMethod(analogMessage, "setBand", 
+                    (byte) XposedHelpers.getIntField(channel, "band"));
+                XposedHelpers.callMethod(analogMessage, "setPower", 
+                    (byte) XposedHelpers.getIntField(channel, "power"));
+                XposedHelpers.callMethod(analogMessage, "setTxFreq", 
+                    XposedHelpers.getIntField(channel, "txFreq"));
+                XposedHelpers.callMethod(analogMessage, "setRxFreq", 
+                    XposedHelpers.getIntField(channel, "rxFreq"));
+                XposedHelpers.callMethod(analogMessage, "setSq", (byte) 0);  // ALWAYS 0 for software squelch
+                XposedHelpers.callMethod(analogMessage, "setRxType", 
+                    (byte) XposedHelpers.getIntField(channel, "rxType"));
+                XposedHelpers.callMethod(analogMessage, "setRxSubCode", 
+                    (byte) XposedHelpers.getIntField(channel, "rxSubCode"));
+                XposedHelpers.callMethod(analogMessage, "setTxType", 
+                    (byte) XposedHelpers.getIntField(channel, "txType"));
+                XposedHelpers.callMethod(analogMessage, "setTxSubCode", 
+                    (byte) XposedHelpers.getIntField(channel, "txSubCode"));
+                
+                // Send to hardware
+                XposedHelpers.callMethod(analogMessage, "send");
+                XposedBridge.log(TAG + ": VFO analog settings sent to hardware (hardware sq=0, software sq=" + 
+                    vfoSoftwareSquelchThreshold + ")");
+                
+            } else {
+                // DIGITAL/DMR MODE - Use state machine for DMR
+                Class<?> dmrManagerClass = XposedHelpers.findClass(
+                    "com.pri.prizeinterphone.manager.DmrManager",
+                    appClassLoader
+                );
+                Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+                
+                // Update channel and sync to hardware
+                XposedHelpers.callMethod(dmrManager, "updateChannel", channel);
+                XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", channel);
+                
+                XposedBridge.log(TAG + ": VFO digital settings sent to hardware (TG=" + vfoTxContact + 
+                    ", CC=" + vfoColorCode + ", Slot=" + (vfoSlot + 1) + ")");
+            }
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error sending VFO to hardware: " + e.getMessage());
+            XposedBridge.log(e);
+        }
+    }
+    
+    /**
+     * Determine band from frequency
+     */
+    private int determineBand(double frequencyMHz) {
+        // 0=UHF (400-520 MHz)
+        // 1=VHF (136-174 MHz)
+        
+        if (frequencyMHz >= 136 && frequencyMHz <= 174) {
+            return 1;  // VHF
+        } else if (frequencyMHz >= 400 && frequencyMHz <= 520) {
+            return 0;  // UHF
+        } else {
+            XposedBridge.log(TAG + ": Warning - frequency " + frequencyMHz + " MHz outside normal bands, defaulting to VHF");
+            return 1;  // Default to VHF
+        }
+    }
+    
+    /**
+     * Check and restore VFO channel on startup (crash recovery)
+     */
+    private void checkAndRestoreVFOChannelOnStartup(final Context context) {
+        boolean shouldDeleteBackup = false;
+        try {
+            XposedBridge.log(TAG + ": Checking for orphaned VFO channel...");
+            
+            // Check if backup file exists
+            java.io.File backupFile = new java.io.File("/sdcard/vfo_channel_backup.dat");
+            if (!backupFile.exists()) {
+                XposedBridge.log(TAG + ": No VFO backup file found - normal startup");
+                return;
+            }
+            
+            XposedBridge.log(TAG + ": VFO backup file found - checking if channel needs restore");
+            shouldDeleteBackup = true;
+            
+            // Get DmrManager
+            Class<?> dmrManagerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.manager.DmrManager",
+                appClassLoader
+            );
+            Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+            
+            if (dmrManager == null) {
+                XposedBridge.log(TAG + ": ⚠️ DmrManager not ready yet - will delete backup and skip restore");
+                return;
+            }
+            
+            // Get current channel
+            Object currentChannel = XposedHelpers.callMethod(dmrManager, "getCurrentChannel");
+            if (currentChannel == null) {
+                XposedBridge.log(TAG + ": ⚠️ Cannot get current channel - will delete backup and skip restore");
+                return;
+            }
+            
+            // Check if current channel looks like VFO (name starts with "VFO-" or "VFO (")
+            String channelName = (String) XposedHelpers.getObjectField(currentChannel, "name");
+            
+            XposedBridge.log(TAG + ": Current channel: " + channelName);
+            
+            if (channelName.startsWith("VFO-") || channelName.startsWith("VFO (")) {
+                XposedBridge.log(TAG + ": ⚠️ Detected orphaned VFO channel - restoring backup...");
+                
+                // Load backup from file
+                vfoChannelBackup = loadVFOChannelBackupFromFile();
+                if (vfoChannelBackup != null) {
+                    // Restore channel
+                    restoreVFOChannelBackup(context);
+                    
+                    // Show crash recovery dialog
+                    if (context instanceof Activity) {
+                        ((Activity) context).runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                new AlertDialog.Builder(context)
+                                    .setTitle("⚠️ VFO Mode Crash Recovery")
+                                    .setMessage("The app closed while VFO mode was active.\n\n" +
+                                        "Your original channel has been restored automatically.\n\n" +
+                                        "To avoid losing settings:\n" +
+                                        "• Always exit VFO mode before closing the app\n" +
+                                        "• Press the VFO button again to turn it off")
+                                    .setPositiveButton("OK", null)
+                                    .show();
+                            }
+                        });
+                    }
+                    
+                    XposedBridge.log(TAG + ": VFO crash recovery completed successfully");
+                }
+            } else {
+                XposedBridge.log(TAG + ": Channel is not a VFO channel, deleting orphaned backup");
+            }
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error checking VFO channel on startup: " + e.getMessage());
+            XposedBridge.log(e);
+        } finally {
+            if (shouldDeleteBackup) {
+                deleteVFOChannelBackupFile();
+            }
         }
     }
 }
