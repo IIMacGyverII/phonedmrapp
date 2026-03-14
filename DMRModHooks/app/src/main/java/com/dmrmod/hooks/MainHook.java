@@ -4225,7 +4225,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.setObjectField(currentChannel, "name", "APRS (" + originalName + ")");
             XposedHelpers.setIntField(currentChannel, "rxFreq", frequencyHz);
             XposedHelpers.setIntField(currentChannel, "txFreq", frequencyHz);
-            XposedHelpers.setIntField(currentChannel, "sq", 0);  // Hardware squelch 0 (fully open - same as MON button)
+            XposedHelpers.setIntField(currentChannel, "sq", 2);  // Hardware squelch 2 (default - only 0 or 2 supported)
             XposedHelpers.setIntField(currentChannel, "band", 1);  // VHF
             XposedHelpers.setIntField(currentChannel, "power", 1);  // High power
             XposedHelpers.setIntField(currentChannel, "rxType", 0);  // No tone
@@ -4237,38 +4237,61 @@ public class MainHook implements IXposedHookLoadPackage {
             savedIntercomSquelchThreshold = softwareSquelchThreshold;
             XposedBridge.log(TAG + ": Saved intercom squelch threshold: " + savedIntercomSquelchThreshold);
             
-            // Enable software squelch for APRS monitoring
-            isSoftwareSquelchEnabled = true;
-            isAprsSoftwareSquelchEnabled = true;  // Keep APRS UI toggle in sync
-            currentChannelType = 1;  // Update static variable to match analog channel
-            softwareSquelchThreshold = aprsDb.getAprsSquelch();  // Load saved squelch level
-            XposedBridge.log(TAG + ": Enabled software squelch for APRS with level " + softwareSquelchThreshold);
-            
-            // Update hardware with APRS settings
+            // Update hardware with APRS settings using state machine
             XposedHelpers.callMethod(dmrManager, "updateChannel", currentChannel);
             XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", currentChannel);
             
             isAPRSMonitoringActive = true;
+            currentChannelType = 1;  // Update static variable to match analog channel
             
-            // CRITICAL: Explicitly set hardware squelch to 0 using direct AnalogMessage.send()
-            // The updateChannel/syncChannelInfoWithData above go through state machine which is
-            // unreliable. Use direct send with delay to ensure hardware squelch is actually set
-            // to 0 AFTER the state machine completes.
-            activity.getWindow().getDecorView().postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    enableSoftwareSquelchOnCurrentChannel();
-                    XposedBridge.log(TAG + ": Set hardware squelch to 0 via direct AnalogMessage send (delayed)");
-                }
-            }, 500);  // 500ms delay to let state machine complete
+            // Don't automatically enable software squelch - let user toggle it on manually
+            // This avoids timing issues with audio thread initialization
+            isSoftwareSquelchEnabled = false;
+            isAprsSoftwareSquelchEnabled = false;
+            XposedBridge.log(TAG + ": APRS monitoring started with software squelch OFF (user can toggle on)");
+            
+            // CRITICAL: Send hardware squelch=5 directly to ensure it's applied
+            // State machine is unreliable, use direct AnalogMessage.send()
+            try {
+                Class<?> analogMessageClass = XposedHelpers.findClass(
+                    "com.pri.prizeinterphone.message.AnalogMessage",
+                    appClassLoader
+                );
+                Object analogMessage = analogMessageClass.newInstance();
+                
+                // Copy all channel fields from currentChannel
+                XposedHelpers.callMethod(analogMessage, "setBand", 
+                    (byte) XposedHelpers.getIntField(currentChannel, "band"));
+                XposedHelpers.callMethod(analogMessage, "setPower", 
+                    (byte) XposedHelpers.getIntField(currentChannel, "power"));
+                XposedHelpers.callMethod(analogMessage, "setTxFreq", 
+                    XposedHelpers.getIntField(currentChannel, "txFreq"));
+                XposedHelpers.callMethod(analogMessage, "setRxFreq", 
+                    XposedHelpers.getIntField(currentChannel, "rxFreq"));
+                XposedHelpers.callMethod(analogMessage, "setSq", (byte) 2);  // Hardware squelch = 2 (only 0 or 2 supported)
+                XposedHelpers.callMethod(analogMessage, "setRxType", 
+                    (byte) XposedHelpers.getIntField(currentChannel, "rxType"));
+                XposedHelpers.callMethod(analogMessage, "setRxSubCode", 
+                    (byte) XposedHelpers.getIntField(currentChannel, "rxSubCode"));
+                XposedHelpers.callMethod(analogMessage, "setTxType", 
+                    (byte) XposedHelpers.getIntField(currentChannel, "txType"));
+                XposedHelpers.callMethod(analogMessage, "setTxSubCode", 
+                    (byte) XposedHelpers.getIntField(currentChannel, "txSubCode"));
+                
+                // Send directly to hardware
+                XposedHelpers.callMethod(analogMessage, "send");
+                XposedBridge.log(TAG + ": Set hardware squelch to 2 via direct AnalogMessage send (APRS start)");
+            } catch (Exception e) {
+                XposedBridge.log(TAG + ": Error sending direct AnalogMessage: " + e.getMessage());
+            }
             
             // Update APRS button to checked state
             if (aprsMonitoringToggleButton != null) {
                 aprsMonitoringToggleButton.setChecked(true);
             }
             
-            Toast.makeText(activity, "APRS Monitoring Active at " + frequencyMHz + " MHz\nSoftware Squelch: " + softwareSquelchThreshold, Toast.LENGTH_SHORT).show();
-            XposedBridge.log(TAG + ": ✅ APRS monitoring active - current channel hijacked with software squelch");
+            Toast.makeText(activity, "APRS Monitoring Active at " + frequencyMHz + " MHz\nToggle Soft SQ to enable squelch", Toast.LENGTH_SHORT).show();
+            XposedBridge.log(TAG + ": ✅ APRS monitoring active - software squelch OFF (user can toggle on)");
             
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error starting APRS monitoring: " + e.getMessage());
