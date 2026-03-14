@@ -89,7 +89,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.2.2";
+    private static final String VERSION = "3.2.3";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -270,14 +270,10 @@ public class MainHook implements IXposedHookLoadPackage {
      */
     private static boolean isAPRSChannel(Object channelData) {
         try {
+            // Only hide temporarily hijacked APRS channels (named "APRS (originalName)")
+            // Do NOT hide user-created channels with "APRS" in the name or on 144.390 MHz
             String name = (String) XposedHelpers.getObjectField(channelData, "name");
-            if (name != null && name.toUpperCase().contains("APRS")) {
-                return true;
-            }
-            
-            // Also check if it's on APRS frequency (144.390 MHz = 144390000 Hz)
-            int rxFreq = XposedHelpers.getIntField(channelData, "rxFreq");
-            if (rxFreq == 144390000) {
+            if (name != null && name.startsWith("APRS (")) {
                 return true;
             }
         } catch (Throwable t) {
@@ -1578,8 +1574,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                     (int) (70 * context.getResources().getDisplayMetrics().density),  // 70dp width
                                     (int) (40 * context.getResources().getDisplayMetrics().density)   // 40dp height
                                 );
-                                transcriptionToggleParams.gravity = android.view.Gravity.START | android.view.Gravity.CENTER_VERTICAL;
+                                transcriptionToggleParams.gravity = android.view.Gravity.START | android.view.Gravity.TOP;
                                 transcriptionToggleParams.leftMargin = (int) (10 * context.getResources().getDisplayMetrics().density); // 10dp from left edge
+                                transcriptionToggleParams.topMargin = (int) (60 * context.getResources().getDisplayMetrics().density); // 60dp from top (evenly spaced)
                                 transcriptionToggle.setLayoutParams(transcriptionToggleParams);
                                 transcriptionToggle.setTextSize(14);
                                 transcriptionToggle.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -2140,9 +2137,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                     (int) (70 * context.getResources().getDisplayMetrics().density),  // 70dp width
                                     (int) (40 * context.getResources().getDisplayMetrics().density)   // 40dp height
                                 );
-                                vfoButtonParams.gravity = android.view.Gravity.START | android.view.Gravity.BOTTOM;
+                                vfoButtonParams.gravity = android.view.Gravity.START | android.view.Gravity.TOP;
                                 vfoButtonParams.leftMargin = (int) (10 * context.getResources().getDisplayMetrics().density);
-                                vfoButtonParams.bottomMargin = (int) (10 * context.getResources().getDisplayMetrics().density);
+                                vfoButtonParams.topMargin = (int) (110 * context.getResources().getDisplayMetrics().density); // 110dp from top (evenly spaced)
                                 vfoButton.setLayoutParams(vfoButtonParams);
                                 vfoButton.setTextSize(12);
                                 vfoButton.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -4809,7 +4806,8 @@ public class MainHook implements IXposedHookLoadPackage {
             
             XposedBridge.log(TAG + ": Current channel: " + channelName + " @ " + rxFreq + " Hz");
             
-            if (channelName.startsWith("APRS (") || rxFreq == 144390000) {
+            // Only restore if it's a temporarily hijacked APRS channel (starts with "APRS (")
+            if (channelName.startsWith("APRS (")) {
                 XposedBridge.log(TAG + ": ⚠️ Detected orphaned APRS channel - restoring backup...");
                 
                 // Load backup from file
