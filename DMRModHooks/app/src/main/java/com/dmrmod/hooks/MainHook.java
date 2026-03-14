@@ -1348,9 +1348,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                         // User finished dragging - apply hardware squelch and save to preferences
                                         int progress = seekBar.getProgress();
                                         
-                                        // If software squelch is enabled and level >= 1, open hardware squelch so software squelch can work
-                                        // If squelch level == 0 or software squelch disabled, leave hardware squelch alone (use channel's setting)
-                                        if (isSoftwareSquelchEnabled && progress >= 1) {
+                                        // If software squelch is enabled, ALWAYS set hardware squelch to 0
+                                        // (regardless of threshold - audio processing handles threshold 0)
+                                        if (isSoftwareSquelchEnabled) {
                                             enableSoftwareSquelchOnCurrentChannel();
                                             XposedBridge.log(TAG + ": Applied hardware squelch for software squelch level " + progress);
                                         }
@@ -1378,9 +1378,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                         finalSquelchValueLabel.setText(String.valueOf(savedSquelch));
                                         XposedBridge.log(TAG + ": Loaded saved squelch level: " + savedSquelch);
                                         
-                                        // If software squelch enabled and saved squelch >= 1, open hardware squelch for software squelch to work
-                                        // If saved squelch == 0 or software squelch disabled, leave hardware squelch at channel's setting
-                                        if (isSoftwareSquelchEnabled && savedSquelch >= 1) {
+                                        // If software squelch enabled, ALWAYS set hardware squelch to 0
+                                        // (regardless of threshold - audio processing handles threshold 0)
+                                        if (isSoftwareSquelchEnabled) {
                                             rootLayout.postDelayed(new Runnable() {
                                                 @Override
                                                 public void run() {
@@ -1620,10 +1620,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                                 squelchContainer.setVisibility(View.VISIBLE);
                                             }
                                             
-                                            // Set hardware squelch to 0 immediately (if level >= 1)
-                                            if (softwareSquelchThreshold >= 1) {
-                                                enableSoftwareSquelchOnCurrentChannel();
-                                            }
+                                            // ALWAYS set hardware squelch to 0 when software squelch is enabled
+                                            // (regardless of threshold - audio processing handles threshold 0)
+                                            enableSoftwareSquelchOnCurrentChannel();
                                         } else {
                                             // Disabling software squelch
                                             XposedBridge.log(TAG + ": Software squelch disabled - reverting to hardware squelch 2");
@@ -3980,14 +3979,22 @@ public class MainHook implements IXposedHookLoadPackage {
                         XposedBridge.log(TAG + ": APRS software squelch enabled");
                         Toast.makeText(activity, "APRS software squelch enabled", Toast.LENGTH_SHORT).show();
                         
+                        // Reload APRS squelch threshold from database (not intercom threshold)
+                        try {
+                            APRSDatabase aprsDb = APRSDatabase.getInstance(activity);
+                            softwareSquelchThreshold = aprsDb.getAprsSquelch();
+                            XposedBridge.log(TAG + ": Reloaded APRS squelch threshold: " + softwareSquelchThreshold);
+                        } catch (Exception e) {
+                            XposedBridge.log(TAG + ": Error reloading APRS squelch: " + e.getMessage());
+                        }
+                        
                         // Show the slider and info
                         squelchContainer.setVisibility(View.VISIBLE);
                         squelchInfo.setVisibility(View.VISIBLE);
                         
-                        // Set hardware squelch to 0 (if level >= 1)
-                        if (softwareSquelchThreshold >= 1) {
-                            enableSoftwareSquelchOnCurrentChannel();
-                        }
+                        // ALWAYS set hardware squelch to 0 when software squelch is enabled
+                        // (regardless of threshold - audio processing handles threshold 0)
+                        enableSoftwareSquelchOnCurrentChannel();
                     } else {
                         // Disabling software squelch
                         XposedBridge.log(TAG + ": APRS software squelch disabled - reverting to hardware squelch 2");
