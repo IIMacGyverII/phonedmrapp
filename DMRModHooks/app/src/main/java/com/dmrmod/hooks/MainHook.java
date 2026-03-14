@@ -89,7 +89,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.1.6";
+    private static final String VERSION = "3.2.2";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -309,6 +309,9 @@ public class MainHook implements IXposedHookLoadPackage {
         aprsUpdateRunnable = null;
         aprsRssiDisplayTextView = null;
         XposedBridge.log(TAG + ": APRS state reset on module load (one-time)");
+        
+        // Hook the application's onCreate method (runs BEFORE any Activity)
+        hookApplication(lpparam);
         
         // Hook the main activity's onCreate method
         hookMainActivity(lpparam);
@@ -607,6 +610,73 @@ public class MainHook implements IXposedHookLoadPackage {
     }
     
     /**
+     * Hook PrizeInterPhoneApp.onCreate() to fix SharedPreferences directory corruption
+     * 
+     * CRITICAL FIX: After force-close, Android fails to create shared_prefs directory
+     * causing ViewPager fragments to never initialize (black screen).
+     * 
+     * This runs BEFORE InterPhoneHomeActivity.onCreate() to ensure directory exists.
+     */
+    private void hookApplication(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            Class<?> appClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.PrizeInterPhoneApp",
+                lpparam.classLoader
+            );
+            
+            XposedHelpers.findAndHookMethod(
+                appClass,
+                "onCreate",
+                new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                        XposedBridge.log(TAG + ": PrizeInterPhoneApp.onCreate() - Fixing SharedPreferences directory");
+                        
+                        try {
+                            android.app.Application app = (android.app.Application) param.thisObject;
+                            
+                            // Force recreate shared_prefs directory if missing or corrupted
+                            java.io.File dataDir = app.getApplicationContext().getDataDir();
+                            java.io.File sharedPrefsDir = new java.io.File(dataDir, "shared_prefs");
+                            
+                            if (!sharedPrefsDir.exists()) {
+                                XposedBridge.log(TAG + ": ⚠️ shared_prefs directory missing! Creating...");
+                                if (sharedPrefsDir.mkdirs()) {
+                                    XposedBridge.log(TAG + ": ✅ shared_prefs directory created successfully");
+                                } else {
+                                    XposedBridge.log(TAG + ": ❌ Failed to create shared_prefs directory");
+                                }
+                            } else {
+                                XposedBridge.log(TAG + ": ✓ shared_prefs directory exists");
+                            }
+                            
+                            // Also check/create databases directory
+                            java.io.File databasesDir = new java.io.File(dataDir, "databases");
+                            if (!databasesDir.exists()) {
+                                XposedBridge.log(TAG + ": ⚠️ databases directory missing! Creating...");
+                                if (databasesDir.mkdirs()) {
+                                    XposedBridge.log(TAG + ": ✅ databases directory created successfully");
+                                } else {
+                                    XposedBridge.log(TAG + ": ❌ Failed to create databases directory");
+                                }
+                            }
+                        } catch (Throwable t) {
+                            XposedBridge.log(TAG + ": ❌ Error fixing directories: " + t.getMessage());
+                            XposedBridge.log(t);
+                        }
+                    }
+                }
+            );
+            
+            XposedBridge.log(TAG + ": Successfully hooked PrizeInterPhoneApp.onCreate()");
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error hooking PrizeInterPhoneApp: " + t.getMessage());
+            XposedBridge.log(t);
+        }
+    }
+    
+    /**
      * Hook InterPhoneHomeActivity.onCreate() as a verification test
      */
     private void hookMainActivity(XC_LoadPackage.LoadPackageParam lpparam) {
@@ -624,6 +694,14 @@ public class MainHook implements IXposedHookLoadPackage {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                         XposedBridge.log(TAG + ": InterPhoneHomeActivity.onCreate() called - HOOK VERIFIED!");
+                        
+                        // **CRITICAL FIX**: Force fragment recreation by nulling savedInstanceState
+                        // This prevents UI loading failure caused by corrupted state after force-close
+                        Bundle savedInstanceState = (Bundle) param.args[0];
+                        if (savedInstanceState != null) {
+                            XposedBridge.log(TAG + ": ⚠️ Clearing corrupted savedInstanceState to force fresh UI load");
+                            param.args[0] = null;
+                        }
                         
                         // Get the activity instance
                         final Activity activity = (Activity) param.thisObject;
@@ -710,6 +788,15 @@ public class MainHook implements IXposedHookLoadPackage {
                         aprsUpdateHandler = null;
                         aprsUpdateRunnable = null;
                         aprsRssiDisplayTextView = null;
+                        
+                        // **CRITICAL FIX**: Reset VFO state to prevent UI loading failure
+                        // VFO flag persists in module memory across app restarts!
+                        if (isVFOModeActive) {
+                            XposedBridge.log(TAG + ": ⚠️ VFO flag was stuck from previous session - resetting to prevent UI freeze");
+                            isVFOModeActive = false;
+                        }
+                        // Reset VFO dialog reference (persists across app restarts)
+                        vfoDialog = null;
                         
                         // Check for orphaned APRS channel and restore if needed (delayed to ensure DmrManager is ready)
                         final Activity activityForRestore = (Activity) param.thisObject;
@@ -7072,6 +7159,14 @@ public class MainHook implements IXposedHookLoadPackage {
                                     XposedBridge.log(TAG + ": ✓✓✓ FORCED: contactType=2, txContact=16777215");
                                 }
                                 
+                                // VFO FIX: Override localId when VFO mode is active
+                                if (isVFOModeActive && vfoLocalId > 0) {
+                                    XposedBridge.log(TAG + ": ⚡ VFO OVERRIDE: Replacing localId " + localId + " with VFO localId " + vfoLocalId);
+                                    XposedHelpers.setObjectField(digitalMessage, "localId", vfoLocalId);
+                                    localId = vfoLocalId;
+                                    XposedBridge.log(TAG + ": ✓ VFO localId injected: " + vfoLocalId);
+                                }
+                                
                                 XposedBridge.log(TAG + ": === BaseMessage.send() AFTER (DigitalMessage) ===");
                                 XposedBridge.log(TAG + ": contactType: " + contactType);
                                 XposedBridge.log(TAG + ": txContact: " + txContact);
@@ -10617,7 +10712,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     vfoChannelBackup.put("colorCode", XposedHelpers.getIntField(channel, "cc"));  // Field is "cc" not "colorCode"
                     vfoChannelBackup.put("inBoundSlot", XposedHelpers.getIntField(channel, "inBoundSlot"));
                     vfoChannelBackup.put("outBoundSlot", XposedHelpers.getIntField(channel, "outBoundSlot"));
-                    vfoChannelBackup.put("localId", (vfoLocalId > 0) ? vfoLocalId : 1);  // Use VFO localId or default (ChannelData doesn't store localId)
+                    // NOTE: localId is NOT stored in ChannelData - it comes from DmrManager.getLocalId()
                 } catch (Throwable dmrEx) {
                     XposedBridge.log(TAG + ": Warning - couldn't save DMR fields: " + dmrEx.getMessage());
                     // Set defaults for safety
@@ -10626,7 +10721,6 @@ public class MainHook implements IXposedHookLoadPackage {
                     vfoChannelBackup.put("colorCode", 1);
                     vfoChannelBackup.put("inBoundSlot", 1);
                     vfoChannelBackup.put("outBoundSlot", 1);
-                    vfoChannelBackup.put("localId", 1);
                 }
             } else {
                 // Analog channel - set default DMR values for restore safety
@@ -10763,10 +10857,10 @@ public class MainHook implements IXposedHookLoadPackage {
                 try {
                     XposedHelpers.setIntField(currentChannel, "contactType", (Integer) vfoChannelBackup.get("contactType"));
                     XposedHelpers.setIntField(currentChannel, "txContact", (Integer) vfoChannelBackup.get("txContact"));
-                    XposedHelpers.setIntField(currentChannel, "colorCode", (Integer) vfoChannelBackup.get("colorCode"));
+                    XposedHelpers.setIntField(currentChannel, "cc", (Integer) vfoChannelBackup.get("colorCode"));  // Field is 'cc' not 'colorCode'
                     XposedHelpers.setIntField(currentChannel, "inBoundSlot", (Integer) vfoChannelBackup.get("inBoundSlot"));
                     XposedHelpers.setIntField(currentChannel, "outBoundSlot", (Integer) vfoChannelBackup.get("outBoundSlot"));
-                    XposedHelpers.setIntField(currentChannel, "localId", (Integer) vfoChannelBackup.get("localId"));  // DMR Device ID
+                    // NOTE: localId is NOT a field on ChannelData - it's handled by DmrManager.getLocalId()
                 } catch (Throwable dmrEx) {
                     XposedBridge.log(TAG + ": Warning - couldn't restore DMR fields: " + dmrEx.getMessage());
                 }
@@ -10784,12 +10878,24 @@ public class MainHook implements IXposedHookLoadPackage {
             
             // Update hardware (reuse channelType from above)
             if (channelType == 1) {
-                // Analog channel - use AnalogMessage
+                // Analog channel - use AnalogMessage (direct hardware send, no state machine)
+                // CRITICAL: Do NOT use updateChannel() for analog after VFO digital hijack
+                // The channel object may have leftover digital fields that corrupt SharedPreferences
                 sendVFOChannelToHardware(currentChannel, 1);
+                
+                // Update database only (without syncChannelInfo to avoid SharedPreferences corruption)
+                XposedHelpers.callMethod(dmrManager, "getCurrentDbHelper");
+                Object dbHelper = XposedHelpers.callMethod(dmrManager, "getCurrentDbHelper");
+                XposedHelpers.callMethod(dbHelper, "updateChannel", currentChannel);
+                XposedHelpers.callMethod(dmrManager, "updateChannelList");
+                
+                XposedBridge.log(TAG + ": VFO exit: restored analog channel (direct send, no syncChannelInfo)");
             } else {
-                // Digital channel - use state machine for hardware update only
+                // Digital channel - use updateChannel() (required for digital mode)
+                // NOTE: This MAY cause SharedPreferences issues if backup has stale data,
+                // but there's no alternative - DigitalMessage.send() alone doesn't work
                 XposedHelpers.callMethod(dmrManager, "updateChannel", currentChannel);
-                // DO NOT call syncChannelInfoWithData - triggers state machine override
+                XposedBridge.log(TAG + ": VFO exit: restored digital channel via updateChannel()");
             }
             
             XposedBridge.log(TAG + ": VFO channel restored: " + vfoChannelBackup.get("name"));
@@ -10848,9 +10954,8 @@ public class MainHook implements IXposedHookLoadPackage {
                 XposedBridge.log(TAG + ": VFO analog settings sent to hardware (sq=2, Soft SQ " + (isSoftwareSquelchEnabled ? "ON" : "OFF") + ")");
                 
             } else {
-                // DIGITAL/DMR MODE - Use state machine for proper hardware update
-                // DigitalMessage.send() alone is NOT sufficient for digital channel changes!
-                // Must use DmrManager.updateChannel() which handles the full state machine
+                // DIGITAL/DMR MODE - Must use DmrManager.updateChannel() for digital channels
+                // DigitalMessage doesn't have the same API as AnalogMessage (no setBand, etc)
                 Class<?> dmrManagerClass = XposedHelpers.findClass(
                     "com.pri.prizeinterphone.manager.DmrManager",
                     appClassLoader
@@ -10858,14 +10963,18 @@ public class MainHook implements IXposedHookLoadPackage {
                 Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
                 
                 // Use updateChannel() to properly switch digital channel
-                // The channel object already has all VFO settings applied by applyVFOChanges()
+                // The channel object already has all VFO settings applied
                 XposedHelpers.callMethod(dmrManager, "updateChannel", channel);
                 
-                String contactTypeStr = (vfoContactType == 0) ? "PRIVATE" : 
-                                       (vfoContactType == 1) ? "GROUP" : "ALL";
-                int actualLocalId = (vfoLocalId > 0) ? vfoLocalId : 1;
+                int contactType = XposedHelpers.getIntField(channel, "contactType");
+                String contactTypeStr = (contactType == 0) ? "PRIVATE" : 
+                                       (contactType == 1) ? "GROUP" : "ALL";
+                int txContact = XposedHelpers.getIntField(channel, "txContact");
+                int colorCode = XposedHelpers.getIntField(channel, "cc");  // Field is 'cc' not 'colorCode'
+                int slot = XposedHelpers.getIntField(channel, "outBoundSlot");
+                // localId comes from DmrManager.getLocalId(), not from ChannelData
                 XposedBridge.log(TAG + ": VFO digital settings sent to hardware via DmrManager.updateChannel() (ContactType=" + contactTypeStr + 
-                    ", TX=" + vfoTxContact + ", CC=" + vfoColorCode + ", Slot=" + (vfoSlot + 1) + ", LocalId=" + actualLocalId + ")");
+                    ", TX=" + txContact + ", CC=" + colorCode + ", Slot=" + (slot + 1) + ", LocalId=VFO:" + vfoLocalId + ")");
             }
             
         } catch (Exception e) {
