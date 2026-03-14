@@ -261,11 +261,6 @@ public class MainHook implements IXposedHookLoadPackage {
     private static int vfoColorCode = 1;    // 0-15 (default: 1)
     private static int vfoSlot = 1;         // 0=Slot1, 1=Slot2
     
-    // Software squelch (like APRS - enabled by default in VFO)
-    private static volatile boolean isVfoSoftwareSquelchEnabled = true;
-    private static volatile int vfoSoftwareSquelchThreshold = 3;  // 0-9 (3 = moderate)
-    private static int savedVfoSquelchThreshold = 3;  // Saved for restore
-    
     // VFO backup system (same pattern as APRS)
     private static java.util.HashMap<String, Object> vfoChannelBackup = null;
     
@@ -6254,13 +6249,12 @@ public class MainHook implements IXposedHookLoadPackage {
                         
                         // === SOFTWARE SQUELCH (Hybrid RSSI + Audio RMS) ===
                         // Note: Squelch level 0 = disabled (pass all audio), 1-9 = enabled with increasing sensitivity
-                        // Check for APRS squelch OR VFO squelch (different thresholds)
-                        boolean useAprsSquelch = isSoftwareSquelchEnabled && (currentChannelType == 1 || isAPRSMonitoringActive) && softwareSquelchThreshold > 0;
-                        boolean useVfoSquelch = isVfoSoftwareSquelchEnabled && isVFOModeActive && vfoSoftwareSquelchThreshold > 0;
+                        // APRS mode forces software squelch on, VFO mode uses Soft SQ button setting
+                        boolean useSquelch = (isSoftwareSquelchEnabled || isAPRSMonitoringActive) && softwareSquelchThreshold > 0;
                         
-                        if (useAprsSquelch || useVfoSquelch) {
-                            // Determine which threshold to use (APRS vs VFO)
-                            int activeThreshold = useVfoSquelch ? vfoSoftwareSquelchThreshold : softwareSquelchThreshold;
+                        if (useSquelch) {
+                            // Use the intercom page's Soft SQ threshold
+                            int activeThreshold = softwareSquelchThreshold;
                             
                             // Calculate audio amplitude (optimized RMS with peak detection)
                             int amplitude = calculateAudioAmplitude(audioData, length);
@@ -6650,10 +6644,13 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.callMethod(analogMessage, "setRelay", 
                 (byte) XposedHelpers.getIntField(currentChannel, "relay"));
             
+            // Update the channel object's squelch field to 0 for VFO to read
+            XposedHelpers.setIntField(currentChannel, "sq", 0);
+            
             // Send to hardware
             XposedHelpers.callMethod(analogMessage, "send");
             
-            XposedBridge.log(TAG + ": ✓ Software squelch enabled - hardware sq set to 0 (same as MON button)");
+            XposedBridge.log(TAG + ": ✓ Software squelch enabled - hardware sq set to 0, channel sq updated");
             
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": ✗ Error enabling software squelch: " + t.getMessage());
@@ -6717,10 +6714,13 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.callMethod(analogMessage, "setRelay", 
                 (byte) XposedHelpers.getIntField(currentChannel, "relay"));
             
+            // Update the channel object's squelch field so VFO can read it
+            XposedHelpers.setIntField(currentChannel, "sq", 2);
+            
             // Send to hardware
             XposedHelpers.callMethod(analogMessage, "send");
             
-            XposedBridge.log(TAG + ": ✓ Software squelch disabled - hardware sq set to 2");
+            XposedBridge.log(TAG + ": ✓ Software squelch disabled - hardware sq set to 2, channel sq updated");
             
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": ✗ Error disabling software squelch: " + t.getMessage());
@@ -9587,13 +9587,440 @@ public class MainHook implements IXposedHookLoadPackage {
             
             XposedBridge.log(TAG + ": Showing VFO dialog");
             
-            // Start VFO mode
+            // Start VFO mode first
             startVFOMode(activity);
             
-            Toast.makeText(activity, "VFO Mode Active - Full dialog coming in Phase 2", Toast.LENGTH_SHORT).show();
+            // Show full VFO control dialog
+            showVFOControlDialog(activity);
             
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error showing VFO dialog: " + e.getMessage());
+            XposedBridge.log(e);
+        }
+    }
+    
+    /**
+     * Show full VFO control dialog with all settings
+     */
+    private void showVFOControlDialog(final Activity activity) {
+        try {
+            if (vfoDialog != null && vfoDialog.isShowing()) {
+                return;  // Already showing
+            }
+            
+            AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+            builder.setTitle("📻 VFO Mode");
+            builder.setCancelable(false);
+            
+            ScrollView scrollView = new ScrollView(activity);
+            LinearLayout mainLayout = new LinearLayout(activity);
+            mainLayout.setOrientation(LinearLayout.VERTICAL);
+            mainLayout.setPadding(40, 40, 40, 40);
+            
+            // === Mode Toggle Section ===
+            TextView modeLabel = new TextView(activity);
+            modeLabel.setText("Mode:");
+            modeLabel.setTextSize(16);
+            modeLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            mainLayout.addView(modeLabel);
+            
+            final android.widget.RadioGroup modeRadioGroup = new android.widget.RadioGroup(activity);
+            modeRadioGroup.setOrientation(android.widget.RadioGroup.HORIZONTAL);
+            
+            final android.widget.RadioButton analogRadio = new android.widget.RadioButton(activity);
+            analogRadio.setText("Analog (FM)");
+            analogRadio.setId(View.generateViewId());
+            analogRadio.setChecked(vfoChannelMode == 1);
+            modeRadioGroup.addView(analogRadio);
+            
+            final android.widget.RadioButton digitalRadio = new android.widget.RadioButton(activity);
+            digitalRadio.setText("Digital (DMR)");
+            digitalRadio.setId(View.generateViewId());
+            digitalRadio.setChecked(vfoChannelMode == 0);
+            modeRadioGroup.addView(digitalRadio);
+            
+            mainLayout.addView(modeRadioGroup);
+            
+            // Spacer
+            View spacer1 = new View(activity);
+            spacer1.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 20));
+            mainLayout.addView(spacer1);
+            
+            // === Frequency Section ===
+            TextView freqLabel = new TextView(activity);
+            freqLabel.setText("Frequency (MHz):");
+            freqLabel.setTextSize(16);
+            freqLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            mainLayout.addView(freqLabel);
+            
+            LinearLayout freqControlLayout = new LinearLayout(activity);
+            freqControlLayout.setOrientation(LinearLayout.HORIZONTAL);
+            freqControlLayout.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            
+            final EditText freqEditText = new EditText(activity);
+            freqEditText.setText(String.format("%.4f", vfoFrequencyMHz));
+            freqEditText.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | 
+                                      android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+            freqEditText.setTextSize(18);
+            LinearLayout.LayoutParams freqEditParams = new LinearLayout.LayoutParams(0, 
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
+            freqEditText.setLayoutParams(freqEditParams);
+            freqControlLayout.addView(freqEditText);
+            
+            mainLayout.addView(freqControlLayout);
+            
+            // Frequency step buttons
+            LinearLayout stepButtonLayout = new LinearLayout(activity);
+            stepButtonLayout.setOrientation(LinearLayout.HORIZONTAL);
+            stepButtonLayout.setGravity(android.view.Gravity.CENTER);
+            
+            final String[] stepLabels = {"-5M", "-500k", "-25k", "+25k", "+500k", "+5M"};
+            final double[] stepValues = {-5.0, -0.5, -0.025, 0.025, 0.5, 5.0};
+            
+            for (int i = 0; i < stepLabels.length; i++) {
+                final double stepValue = stepValues[i];
+                Button stepButton = new Button(activity);
+                stepButton.setText(stepLabels[i]);
+                stepButton.setTextSize(10);
+                LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT);
+                btnParams.setMargins(5, 5, 5, 5);
+                stepButton.setLayoutParams(btnParams);
+                stepButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        try {
+                            double currentFreq = Double.parseDouble(freqEditText.getText().toString());
+                            double newFreq = currentFreq + stepValue;
+                            // Limit to valid ranges
+                            if (newFreq >= 136.0 && newFreq <= 174.0) {  // VHF
+                                freqEditText.setText(String.format("%.4f", newFreq));
+                            } else if (newFreq >= 400.0 && newFreq <= 480.0) {  // UHF
+                                freqEditText.setText(String.format("%.4f", newFreq));
+                            } else {
+                                Toast.makeText(activity, "Frequency out of range", Toast.LENGTH_SHORT).show();
+                            }
+                        } catch (Exception e) {
+                            XposedBridge.log(TAG + ": Error adjusting frequency: " + e.getMessage());
+                        }
+                    }
+                });
+                stepButtonLayout.addView(stepButton);
+            }
+            
+            mainLayout.addView(stepButtonLayout);
+            
+            // Spacer
+            View spacer2 = new View(activity);
+            spacer2.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 20));
+            mainLayout.addView(spacer2);
+            
+            // === Power Level Section ===
+            TextView powerLabel = new TextView(activity);
+            powerLabel.setText("Power Level:");
+            powerLabel.setTextSize(14);
+            powerLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            mainLayout.addView(powerLabel);
+            
+            final android.widget.RadioGroup powerRadioGroup = new android.widget.RadioGroup(activity);
+            powerRadioGroup.setOrientation(android.widget.RadioGroup.HORIZONTAL);
+            
+            final android.widget.RadioButton lowPowerRadio = new android.widget.RadioButton(activity);
+            lowPowerRadio.setText("Low");
+            lowPowerRadio.setId(View.generateViewId());
+            lowPowerRadio.setChecked(vfoPowerLevel == 0);
+            powerRadioGroup.addView(lowPowerRadio);
+            
+            final android.widget.RadioButton highPowerRadio = new android.widget.RadioButton(activity);
+            highPowerRadio.setText("High");
+            highPowerRadio.setId(View.generateViewId());
+            highPowerRadio.setChecked(vfoPowerLevel == 1);
+            powerRadioGroup.addView(highPowerRadio);
+            
+            mainLayout.addView(powerRadioGroup);
+            
+            // Spacer
+            View spacer4 = new View(activity);
+            spacer4.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 20));
+            mainLayout.addView(spacer4);
+            
+            // === Analog-Specific Controls ===
+            final LinearLayout analogControlsLayout = new LinearLayout(activity);
+            analogControlsLayout.setOrientation(LinearLayout.VERTICAL);
+            analogControlsLayout.setVisibility(vfoChannelMode == 1 ? View.VISIBLE : View.GONE);
+            
+            TextView toneLabel = new TextView(activity);
+            toneLabel.setText("RX/TX Tones:");
+            toneLabel.setTextSize(14);
+            toneLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            analogControlsLayout.addView(toneLabel);
+            
+            final android.widget.RadioGroup toneRadioGroup = new android.widget.RadioGroup(activity);
+            toneRadioGroup.setOrientation(android.widget.RadioGroup.VERTICAL);
+            
+            android.widget.RadioButton toneNone = new android.widget.RadioButton(activity);
+            toneNone.setText("None");
+            toneNone.setId(View.generateViewId());
+            toneNone.setChecked(vfoRxToneType == 0 && vfoTxToneType == 0);
+            toneRadioGroup.addView(toneNone);
+            
+            android.widget.RadioButton toneCTCSS = new android.widget.RadioButton(activity);
+            toneCTCSS.setText("CTCSS (Tone Squelch)");
+            toneCTCSS.setId(View.generateViewId());
+            toneCTCSS.setChecked(vfoRxToneType == 1 || vfoTxToneType == 1);
+            toneRadioGroup.addView(toneCTCSS);
+            
+            android.widget.RadioButton toneDCS = new android.widget.RadioButton(activity);
+            toneDCS.setText("DCS (Digital Code)");
+            toneDCS.setId(View.generateViewId());
+            toneDCS.setChecked(vfoRxToneType == 2 || vfoTxToneType == 2);
+            toneRadioGroup.addView(toneDCS);
+            
+            analogControlsLayout.addView(toneRadioGroup);
+            
+            mainLayout.addView(analogControlsLayout);
+            
+            // === Digital-Specific Controls ===
+            final LinearLayout digitalControlsLayout = new LinearLayout(activity);
+            digitalControlsLayout.setOrientation(LinearLayout.VERTICAL);
+            digitalControlsLayout.setVisibility(vfoChannelMode == 0 ? View.VISIBLE : View.GONE);
+            
+            TextView tgLabel = new TextView(activity);
+            tgLabel.setText("TalkGroup ID:");
+            tgLabel.setTextSize(14);
+            tgLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            digitalControlsLayout.addView(tgLabel);
+            
+            final EditText tgEditText = new EditText(activity);
+            tgEditText.setText(String.valueOf(vfoTxContact));
+            tgEditText.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+            digitalControlsLayout.addView(tgEditText);
+            
+            TextView ccLabel = new TextView(activity);
+            ccLabel.setText("Color Code (0-15):");
+            ccLabel.setTextSize(14);
+            ccLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            digitalControlsLayout.addView(ccLabel);
+            
+            final EditText ccEditText = new EditText(activity);
+            ccEditText.setText(String.valueOf(vfoColorCode));
+            ccEditText.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+            digitalControlsLayout.addView(ccEditText);
+            
+            TextView slotLabel = new TextView(activity);
+            slotLabel.setText("Timeslot:");
+            slotLabel.setTextSize(14);
+            slotLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            digitalControlsLayout.addView(slotLabel);
+            
+            final android.widget.RadioGroup slotRadioGroup = new android.widget.RadioGroup(activity);
+            slotRadioGroup.setOrientation(android.widget.RadioGroup.HORIZONTAL);
+            
+            android.widget.RadioButton slot1Radio = new android.widget.RadioButton(activity);
+            slot1Radio.setText("Slot 1");
+            slot1Radio.setId(View.generateViewId());
+            slot1Radio.setChecked(vfoSlot == 0);
+            slotRadioGroup.addView(slot1Radio);
+            
+            android.widget.RadioButton slot2Radio = new android.widget.RadioButton(activity);
+            slot2Radio.setText("Slot 2");
+            slot2Radio.setId(View.generateViewId());
+            slot2Radio.setChecked(vfoSlot == 1);
+            slotRadioGroup.addView(slot2Radio);
+            
+            digitalControlsLayout.addView(slotRadioGroup);
+            
+            mainLayout.addView(digitalControlsLayout);
+            
+            // Mode change listener to show/hide mode-specific controls
+            modeRadioGroup.setOnCheckedChangeListener(new android.widget.RadioGroup.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(android.widget.RadioGroup group, int checkedId) {
+                    if (checkedId == analogRadio.getId()) {
+                        analogControlsLayout.setVisibility(View.VISIBLE);
+                        digitalControlsLayout.setVisibility(View.GONE);
+                    } else {
+                        analogControlsLayout.setVisibility(View.GONE);
+                        digitalControlsLayout.setVisibility(View.VISIBLE);
+                    }
+                }
+            });
+            
+            scrollView.addView(mainLayout);
+            builder.setView(scrollView);
+            
+            // Apply button - closes dialog and returns to intercom page
+            builder.setPositiveButton("Apply Changes", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    try {
+                        // Get frequency
+                        double newFreq = Double.parseDouble(freqEditText.getText().toString());
+                        vfoFrequencyMHz = newFreq;
+                        
+                        // Get mode
+                        vfoChannelMode = (modeRadioGroup.getCheckedRadioButtonId() == analogRadio.getId()) ? 1 : 0;
+                        
+                        // Get power
+                        vfoPowerLevel = (powerRadioGroup.getCheckedRadioButtonId() == lowPowerRadio.getId()) ? 0 : 1;
+                        
+                        // Get mode-specific settings
+                        if (vfoChannelMode == 1) {
+                            // Analog tone settings
+                            int toneCheckedId = toneRadioGroup.getCheckedRadioButtonId();
+                            if (toneCheckedId == toneNone.getId()) {
+                                vfoRxToneType = 0;
+                                vfoTxToneType = 0;
+                            } else if (toneCheckedId == toneCTCSS.getId()) {
+                                vfoRxToneType = 1;
+                                vfoTxToneType = 1;
+                            } else if (toneCheckedId == toneDCS.getId()) {
+                                vfoRxToneType = 2;
+                                vfoTxToneType = 2;
+                            }
+                        } else {
+                            // Digital settings
+                            vfoTxContact = Integer.parseInt(tgEditText.getText().toString());
+                            vfoColorCode = Integer.parseInt(ccEditText.getText().toString());
+                            vfoSlot = (slotRadioGroup.getCheckedRadioButtonId() == slot1Radio.getId()) ? 0 : 1;
+                        }
+                        
+                        // Apply changes to hardware
+                        applyVFOChanges(activity);
+                        
+                        Toast.makeText(activity, "VFO settings applied", Toast.LENGTH_SHORT).show();
+                        
+                        // Dialog will auto-dismiss and return to intercom page
+                        vfoDialog = null;
+                        
+                    } catch (Exception e) {
+                        XposedBridge.log(TAG + ": Error applying VFO changes: " + e.getMessage());
+                        Toast.makeText(activity, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+            
+            // Exit VFO button
+            builder.setNegativeButton("Exit VFO", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    stopVFOMode(activity);
+                    vfoDialog = null;
+                }
+            });
+            
+            // Handle back button
+            builder.setOnCancelListener(new DialogInterface.OnCancelListener() {
+                @Override
+                public void onCancel(DialogInterface dialog) {
+                    stopVFOMode(activity);
+                    vfoDialog = null;
+                }
+            });
+            
+            vfoDialog = builder.create();
+            vfoDialog.show();
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error showing VFO control dialog: " + e.getMessage());
+            XposedBridge.log(e);
+        }
+    }
+    
+    /**
+     * Apply VFO changes to hardware
+     */
+    private void applyVFOChanges(final Activity activity) {
+        try {
+            XposedBridge.log(TAG + ": Applying VFO changes");
+            
+            Class<?> dmrManagerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.manager.DmrManager",
+                appClassLoader
+            );
+            Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+            Object currentChannel = XposedHelpers.callMethod(dmrManager, "getCurrentChannel");
+            
+            if (currentChannel == null) {
+                throw new Exception("Cannot get current channel");
+            }
+            
+            // Update channel with new VFO settings
+            XposedHelpers.setIntField(currentChannel, "type", vfoChannelMode);
+            String modeLabel = (vfoChannelMode == 0) ? "DMR" : "FM";
+            XposedHelpers.setObjectField(currentChannel, "name", "VFO-" + modeLabel + " " + String.format("%.4f", vfoFrequencyMHz));
+            
+            int vfoRxFreqHz = (int) (vfoFrequencyMHz * 1000000);
+            int vfoTxFreqHz = vfoRxFreqHz;
+            
+            XposedHelpers.setIntField(currentChannel, "rxFreq", vfoRxFreqHz);
+            XposedHelpers.setIntField(currentChannel, "txFreq", vfoTxFreqHz);
+            XposedHelpers.setIntField(currentChannel, "band", determineBand(vfoFrequencyMHz));
+            XposedHelpers.setIntField(currentChannel, "power", vfoPowerLevel);
+            
+            if (vfoChannelMode == 1) {
+                // Analog mode - set tone settings, leave squelch as-is
+                XposedHelpers.setIntField(currentChannel, "rxType", vfoRxToneType);
+                XposedHelpers.setIntField(currentChannel, "rxSubCode", vfoRxToneCode);
+                XposedHelpers.setIntField(currentChannel, "txType", vfoTxToneType);
+                XposedHelpers.setIntField(currentChannel, "txSubCode", vfoTxToneCode);
+                // Software squelch uses the intercom page's Soft SQ setting
+            } else {
+                // Digital mode
+                XposedHelpers.setIntField(currentChannel, "contactType", vfoContactType);
+                XposedHelpers.setIntField(currentChannel, "txContact", vfoTxContact);
+                XposedHelpers.setIntField(currentChannel, "colorCode", vfoColorCode);
+                XposedHelpers.setIntField(currentChannel, "inBoundSlot", vfoSlot);
+                XposedHelpers.setIntField(currentChannel, "outBoundSlot", vfoSlot);
+            }
+            
+            // Send to hardware
+            sendVFOChannelToHardware(currentChannel, vfoChannelMode);
+            
+            // Trigger UI update to reflect VFO changes (channel name, power, frequency, etc.)
+            try {
+                if (talkBackFragmentInstance != null) {
+                    XposedHelpers.callMethod(talkBackFragmentInstance, "updateUI");
+                    XposedBridge.log(TAG + ": Triggered UI update to display VFO settings");
+                }
+            } catch (Throwable uiEx) {
+                XposedBridge.log(TAG + ": Could not trigger UI update: " + uiEx.getMessage());
+            }
+            
+            // Update button visibility based on VFO mode (analog shows Soft SQ and MON)
+            try {
+                if (mLocalViewObject instanceof View) {
+                    View rootView = (View) mLocalViewObject;
+                    if (rootView.getParent() instanceof ViewGroup) {
+                        ViewGroup rootLayout = (ViewGroup) rootView.getParent();
+                        
+                        // Show/hide Soft SQ button based on VFO mode
+                        View softSqToggle = rootLayout.findViewWithTag("DMR_SOFT_SQUELCH_TOGGLE");
+                        if (softSqToggle != null) {
+                            softSqToggle.setVisibility(vfoChannelMode == 1 ? View.VISIBLE : View.GONE);
+                            XposedBridge.log(TAG + ": VFO Apply: soft SQ button " + (vfoChannelMode == 1 ? "shown" : "hidden"));
+                        }
+                        
+                        // Show/hide MON button based on VFO mode
+                        if (monitoringModeToggle != null) {
+                            monitoringModeToggle.setVisibility(vfoChannelMode == 1 ? View.VISIBLE : View.GONE);
+                            XposedBridge.log(TAG + ": VFO Apply: MON button " + (vfoChannelMode == 1 ? "shown" : "hidden"));
+                        }
+                    }
+                }
+            } catch (Throwable btnEx) {
+                XposedBridge.log(TAG + ": Could not update button visibility: " + btnEx.getMessage());
+            }
+            
+            String modeStr = (vfoChannelMode == 0) ? "Digital DMR" : "Analog FM";
+            XposedBridge.log(TAG + ": VFO changes applied: " + vfoFrequencyMHz + " MHz (" + modeStr + ")");
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error applying VFO changes: " + e.getMessage());
             XposedBridge.log(e);
         }
     }
@@ -9619,11 +10046,38 @@ public class MainHook implements IXposedHookLoadPackage {
             // Save backup (includes current squelch state)
             saveVFOChannelBackup(currentChannel);
             
+            // If Soft SQ is enabled, disable it (as if user pressed the button)
+            if (isSoftwareSquelchEnabled) {
+                XposedBridge.log(TAG + ": VFO disabling Soft SQ (was enabled)");
+                isSoftwareSquelchEnabled = false;
+                
+                // Update the Soft SQ checkbox UI if it exists
+                if (softwareSquelchToggleButton != null) {
+                    softwareSquelchToggleButton.setChecked(false);
+                }
+                
+                // Hide the squelch slider container (same as Soft SQ button does)
+                try {
+                    View rootLayout = activity.getWindow().getDecorView().findViewById(android.R.id.content);
+                    if (rootLayout instanceof ViewGroup) {
+                        View squelchContainer = ((ViewGroup) rootLayout).findViewWithTag("DMR_SQUELCH_CONTAINER");
+                        if (squelchContainer != null) {
+                            squelchContainer.setVisibility(View.GONE);
+                            XposedBridge.log(TAG + ": VFO hid squelch slider container");
+                        }
+                    }
+                } catch (Throwable t) {
+                    XposedBridge.log(TAG + ": Could not hide squelch container: " + t.getMessage());
+                }
+                
+                // Call the same function that Soft SQ button calls when disabling
+                disableSoftwareSquelchOnCurrentChannel();
+            }
+            
             // Hijack channel with VFO settings
             XposedHelpers.setIntField(currentChannel, "type", vfoChannelMode);
-            String originalName = (String) XposedHelpers.getObjectField(currentChannel, "name");
             String modeLabel = (vfoChannelMode == 0) ? "DMR" : "FM";
-            XposedHelpers.setObjectField(currentChannel, "name", "VFO-" + modeLabel + " (" + originalName + ")");
+            XposedHelpers.setObjectField(currentChannel, "name", "VFO-" + modeLabel + " " + String.format("%.4f", vfoFrequencyMHz));
             
             int vfoRxFreqHz = (int) (vfoFrequencyMHz * 1000000);
             int vfoTxFreqHz = vfoRxFreqHz;  // Simplex by default (offset handled separately)
@@ -9634,8 +10088,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.setIntField(currentChannel, "power", vfoPowerLevel);
             
             if (vfoChannelMode == 1) {
-                // Analog mode - set hardware squelch to 0, use software squelch
-                XposedHelpers.setIntField(currentChannel, "sq", 0);  // Hardware fully open
+                // Analog mode - tone settings
                 XposedHelpers.setIntField(currentChannel, "rxType", vfoRxToneType);
                 XposedHelpers.setIntField(currentChannel, "rxSubCode", vfoRxToneCode);
                 XposedHelpers.setIntField(currentChannel, "txType", vfoTxToneType);
@@ -9655,14 +10108,42 @@ public class MainHook implements IXposedHookLoadPackage {
             isVFOModeActive = true;
             currentChannelType = vfoChannelMode;
             
-            // Enable VFO software squelch (analog only)
-            if (vfoChannelMode == 1) {
-                isVfoSoftwareSquelchEnabled = true;
-                XposedBridge.log(TAG + ": VFO software squelch enabled (threshold=" + vfoSoftwareSquelchThreshold + ")");
-            } else {
-                isVfoSoftwareSquelchEnabled = false;
+            // Trigger UI update to display VFO settings
+            try {
+                if (talkBackFragmentInstance != null) {
+                    XposedHelpers.callMethod(talkBackFragmentInstance, "updateUI");
+                    XposedBridge.log(TAG + ": Triggered UI update for VFO start");
+                }
+            } catch (Throwable uiEx) {
+                XposedBridge.log(TAG + ": Could not trigger UI update: " + uiEx.getMessage());
             }
             
+            // Update button visibility based on VFO mode (analog shows Soft SQ and MON)
+            try {
+                if (mLocalViewObject instanceof View) {
+                    View rootView = (View) mLocalViewObject;
+                    if (rootView.getParent() instanceof ViewGroup) {
+                        ViewGroup rootLayout = (ViewGroup) rootView.getParent();
+                        
+                        // Show/hide Soft SQ button based on VFO mode
+                        View softSqToggle = rootLayout.findViewWithTag("DMR_SOFT_SQUELCH_TOGGLE");
+                        if (softSqToggle != null) {
+                            softSqToggle.setVisibility(vfoChannelMode == 1 ? View.VISIBLE : View.GONE);
+                            XposedBridge.log(TAG + ": VFO soft SQ button " + (vfoChannelMode == 1 ? "shown" : "hidden"));
+                        }
+                        
+                        // Show/hide MON button based on VFO mode
+                        if (monitoringModeToggle != null) {
+                            monitoringModeToggle.setVisibility(vfoChannelMode == 1 ? View.VISIBLE : View.GONE);
+                            XposedBridge.log(TAG + ": VFO MON button " + (vfoChannelMode == 1 ? "shown" : "hidden"));
+                        }
+                    }
+                }
+            } catch (Throwable btnEx) {
+                XposedBridge.log(TAG + ": Could not update button visibility: " + btnEx.getMessage());
+            }
+            
+            // VFO does not control squelch - user controls via Soft SQ button
             String modeStr = (vfoChannelMode == 0) ? "Digital DMR" : "Analog FM";
             Toast.makeText(activity, "VFO Mode Active (" + modeStr + "): " + vfoFrequencyMHz + " MHz", Toast.LENGTH_SHORT).show();
             XposedBridge.log(TAG + ": VFO mode started at " + vfoFrequencyMHz + " MHz (" + modeStr + ")");
@@ -9687,7 +10168,41 @@ public class MainHook implements IXposedHookLoadPackage {
             restoreVFOChannelBackup(activity);
             
             isVFOModeActive = false;
-            isVfoSoftwareSquelchEnabled = false;
+            
+            // Trigger UI update to display restored channel info
+            try {
+                if (talkBackFragmentInstance != null) {
+                    XposedHelpers.callMethod(talkBackFragmentInstance, "updateUI");
+                    XposedBridge.log(TAG + ": Triggered UI update for VFO exit");
+                }
+            } catch (Throwable uiEx) {
+                XposedBridge.log(TAG + ": Could not trigger UI update: " + uiEx.getMessage());
+            }
+            
+            // Restore button visibility based on restored channel type (currentChannelType was updated in restore)
+            try {
+                if (mLocalViewObject instanceof View) {
+                    View rootView = (View) mLocalViewObject;
+                    if (rootView.getParent() instanceof ViewGroup) {
+                        ViewGroup rootLayout = (ViewGroup) rootView.getParent();
+                        
+                        // Show/hide Soft SQ button based on restored channel type
+                        View softSqToggle = rootLayout.findViewWithTag("DMR_SOFT_SQUELCH_TOGGLE");
+                        if (softSqToggle != null) {
+                            softSqToggle.setVisibility(currentChannelType == 1 ? View.VISIBLE : View.GONE);
+                            XposedBridge.log(TAG + ": VFO Exit: soft SQ button " + (currentChannelType == 1 ? "shown" : "hidden"));
+                        }
+                        
+                        // Show/hide MON button based on restored channel type
+                        if (monitoringModeToggle != null) {
+                            monitoringModeToggle.setVisibility(currentChannelType == 1 ? View.VISIBLE : View.GONE);
+                            XposedBridge.log(TAG + ": VFO Exit: MON button " + (currentChannelType == 1 ? "shown" : "hidden"));
+                        }
+                    }
+                }
+            } catch (Throwable btnEx) {
+                XposedBridge.log(TAG + ": Could not restore button visibility: " + btnEx.getMessage());
+            }
             
             if (vfoModeToggleButton != null) {
                 vfoModeToggleButton.setChecked(false);
@@ -9923,12 +10438,17 @@ public class MainHook implements IXposedHookLoadPackage {
                 // Analog channel - use AnalogMessage
                 sendVFOChannelToHardware(currentChannel, 1);
             } else {
-                // Digital channel - use state machine
+                // Digital channel - use state machine for hardware update only
                 XposedHelpers.callMethod(dmrManager, "updateChannel", currentChannel);
-                XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", currentChannel);
+                // DO NOT call syncChannelInfoWithData - triggers state machine override
             }
             
             XposedBridge.log(TAG + ": VFO channel restored: " + vfoChannelBackup.get("name"));
+            
+            // Update global currentChannelType to match restored channel
+            currentChannelType = channelType;
+            XposedBridge.log(TAG + ": Restored channel type: " + (channelType == 0 ? "Digital" : "Analog"));
+            
             vfoChannelBackup = null;  // Clear backup
             
             deleteVFOChannelBackupFile();
@@ -9962,7 +10482,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     XposedHelpers.getIntField(channel, "txFreq"));
                 XposedHelpers.callMethod(analogMessage, "setRxFreq", 
                     XposedHelpers.getIntField(channel, "rxFreq"));
-                XposedHelpers.callMethod(analogMessage, "setSq", (byte) 0);  // ALWAYS 0 for software squelch
+                XposedHelpers.callMethod(analogMessage, "setSq", (byte) 2);  // ALWAYS 2 for VFO (works with both Soft SQ on/off)
                 XposedHelpers.callMethod(analogMessage, "setRxType", 
                     (byte) XposedHelpers.getIntField(channel, "rxType"));
                 XposedHelpers.callMethod(analogMessage, "setRxSubCode", 
@@ -9971,11 +10491,12 @@ public class MainHook implements IXposedHookLoadPackage {
                     (byte) XposedHelpers.getIntField(channel, "txType"));
                 XposedHelpers.callMethod(analogMessage, "setTxSubCode", 
                     (byte) XposedHelpers.getIntField(channel, "txSubCode"));
+                XposedHelpers.callMethod(analogMessage, "setRelay", 
+                    (byte) XposedHelpers.getIntField(channel, "relay"));
                 
                 // Send to hardware
                 XposedHelpers.callMethod(analogMessage, "send");
-                XposedBridge.log(TAG + ": VFO analog settings sent to hardware (hardware sq=0, software sq=" + 
-                    vfoSoftwareSquelchThreshold + ")");
+                XposedBridge.log(TAG + ": VFO analog settings sent to hardware (sq=2, Soft SQ " + (isSoftwareSquelchEnabled ? "ON" : "OFF") + ")");
                 
             } else {
                 // DIGITAL/DMR MODE - Use state machine for DMR
