@@ -2,8 +2,9 @@
 
 **Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS!
 
-> **📦 Current Stable Release: v3.1.3** (March 13, 2026) - Software Squelch UI Enhancements  
-> **🔧 Previous Release: v3.1.2** (March 13, 2026) - APRS Channel Recovery + Squelch Control  
+> **📦 Current Stable Release: v3.1.4** (March 13, 2026) - Software Squelch State Fix  
+> **🎨 Previous Release: v3.1.3** (March 13, 2026) - Software Squelch UI Enhancements  
+> **🔧 Stable Release: v3.1.2** (March 13, 2026) - APRS Channel Recovery + Squelch Control  
 > **📡 Major Feature: v3.1.0** (March 12, 2026) - APRS Live Monitoring  
 > **🌐 GPS Enhancement: v3.0.9** (March 9, 2026) - GPS Distance Enhancements  
 > **🎯 Zone Management: v3.0.8** (March 9, 2026) - Zone Management  
@@ -13,6 +14,29 @@
 ## Demo
 
 <video src="https://github.com/user-attachments/assets/d6305a49-c8ed-47dc-a9d8-7e731aa02811" controls title="DMRModHooks v1.1 Demo" width="800"></video>
+
+## 🐛 What's New in v3.1.4 (March 13, 2026)
+
+### Critical Software Squelch State Fix
+
+**Fixed bug where software squelch remained active after stopping APRS monitoring**
+
+#### **Bug Fixed**
+- **🔧 Squelch State Clearing**: Software squelch flags now properly cleared when exiting APRS mode
+  - Previously: `isSoftwareSquelchEnabled` and `isAprsSoftwareSquelchEnabled` stayed `true` after stopping APRS
+  - Result: Audio remained blocked even though UI showed Soft SQ as OFF
+  - Impact: Users couldn't hear audio on intercom after using APRS with Soft SQ enabled
+- **✅ Proper State Reset**: Both flags explicitly set to `false` in `stopAPRSMonitoring()`
+  - Ensures audio processing allows playback when returning to intercom
+  - UI state now matches internal flag state
+  - No more "ghost squelch" blocking audio
+
+#### **User Impact**
+- **Before**: Enable Soft SQ in APRS → Stop APRS → Return to intercom with no audio
+- **After**: Squelch properly disabled when exiting APRS, audio works immediately
+- **Reliability**: State flags and UI now stay synchronized across mode transitions
+
+---
 
 ## 🎨 What's New in v3.1.3 (March 13, 2026)
 
