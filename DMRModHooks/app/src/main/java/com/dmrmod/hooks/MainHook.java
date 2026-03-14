@@ -89,7 +89,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.1.4";
+    private static final String VERSION = "3.1.5";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -9073,6 +9073,8 @@ public class MainHook implements IXposedHookLoadPackage {
                 public android.view.View getView(final int position, android.view.View convertView, android.view.ViewGroup parent) {
                     LinearLayout row = new LinearLayout(context);
                     row.setOrientation(LinearLayout.HORIZONTAL);
+                    row.setClickable(false);  // Allow ListView to handle row clicks
+                    row.setFocusable(false);  // Allow ListView to handle row clicks
                     row.setPadding(40, 30, 40, 30);
                     row.setGravity(android.view.Gravity.CENTER_VERTICAL);
                     
@@ -9081,6 +9083,8 @@ public class MainHook implements IXposedHookLoadPackage {
                     nameText.setText(displayItems.get(position));
                     nameText.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
                     nameText.setTextColor(0xFF000000);
+                    nameText.setClickable(false);  // Let ListView handle clicks
+                    nameText.setFocusable(false);  // Let ListView handle clicks
                     if (isCreateNew.get(position)) {
                         nameText.setTextColor(0xFF4169E1);  // Blue for "Create New"
                         nameText.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -9101,8 +9105,6 @@ public class MainHook implements IXposedHookLoadPackage {
                         editIcon.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 20);
                         editIcon.setTextColor(0xFF666666);
                         editIcon.setPadding(20, 0, 20, 0);
-                        editIcon.setClickable(true);
-                        editIcon.setFocusable(true);
                         
                         // Make edit icon clickable
                         editIcon.setOnClickListener(new View.OnClickListener() {
