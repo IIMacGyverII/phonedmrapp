@@ -3973,6 +3973,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 @Override
                 public void onClick(View v) {
                     isAprsSoftwareSquelchEnabled = aprsSoftSqToggle.isChecked();
+                    isSoftwareSquelchEnabled = aprsSoftSqToggle.isChecked();  // Keep audio processing in sync
                     
                     if (isAprsSoftwareSquelchEnabled) {
                         // Enabling software squelch
@@ -4222,6 +4223,7 @@ public class MainHook implements IXposedHookLoadPackage {
             
             // Enable software squelch for APRS monitoring
             isSoftwareSquelchEnabled = true;
+            isAprsSoftwareSquelchEnabled = true;  // Keep APRS UI toggle in sync
             currentChannelType = 1;  // Update static variable to match analog channel
             softwareSquelchThreshold = aprsDb.getAprsSquelch();  // Load saved squelch level
             XposedBridge.log(TAG + ": Enabled software squelch for APRS with level " + softwareSquelchThreshold);
