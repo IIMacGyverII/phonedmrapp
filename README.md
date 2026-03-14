@@ -1,10 +1,11 @@
 # PriInterPhone DMR Radio - LSPosed Mod with OpenGD77 Integration + Advanced Features
 
-**Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS!
+**Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS + VFO Mode!
 
-> **📦 Current Stable Release: v3.1.4** (March 13, 2026) - Software Squelch State Fix  
-> **🎨 Previous Release: v3.1.3** (March 13, 2026) - Software Squelch UI Enhancements  
-> **🔧 Stable Release: v3.1.2** (March 13, 2026) - APRS Channel Recovery + Squelch Control  
+> **🎛️ Current Stable Release: v3.1.5** (March 14, 2026) - VFO Mode (Variable Frequency Oscillator)  
+> **📦 Previous Release: v3.1.4** (March 13, 2026) - Software Squelch State Fix  
+> **🎨 Stable Release: v3.1.3** (March 13, 2026) - Software Squelch UI Enhancements  
+> **🔧 Feature Release: v3.1.2** (March 13, 2026) - APRS Channel Recovery + Squelch Control  
 > **📡 Major Feature: v3.1.0** (March 12, 2026) - APRS Live Monitoring  
 > **🌐 GPS Enhancement: v3.0.9** (March 9, 2026) - GPS Distance Enhancements  
 > **🎯 Zone Management: v3.0.8** (March 9, 2026) - Zone Management  
@@ -14,6 +15,95 @@
 ## Demo
 
 <video src="https://github.com/user-attachments/assets/d6305a49-c8ed-47dc-a9d8-7e731aa02811" controls title="DMRModHooks v1.1 Demo" width="800"></video>
+
+## 🎛️ What's New in v3.1.5 (March 14, 2026)
+
+### VFO Mode - Variable Frequency Oscillator
+
+**Complete frequency control with temporary channel override for quick QSOs without saving channels**
+
+#### **VFO Button & Dialog**
+- **🎛️ VFO Toggle Button**: New orange button on intercom page (bottom-left, below TXT)
+  - Orange when active, light orange when inactive
+  - Opens comprehensive tuning dialog with all channel parameters
+  - Temporarily hijacks current channel (restores on exit)
+- **📻 Full Control Dialog**: Complete channel configuration without database changes
+  - **Channel Mode**: Analog or Digital/DMR with mode-specific controls
+  - **Frequency**: Numeric input with validation (136-174 MHz, 400-480 MHz)
+  - **Power Level**: Low (1W) or High (5W) selection
+  - **Tone Settings** (Analog): RX/TX tone type (None/CTCSS/DCS) and code selection
+  - **Bandwidth** (Analog): 12.5 kHz or 25 kHz
+  - **DMR Settings** (Digital): Contact type, TalkGroup ID, Color Code (0-15), Timeslot
+  - **DMR ID Override**: Temporary local ID that persists across VFO sessions
+  - **Apply Settings**: Instantly sends configuration to hardware via AnalogMessage/DigitalMessage
+- **🔄 Automatic Restoration**: Original channel settings restored when exiting VFO mode
+  - Backup system preserves all fields (frequency, tones, squelch, power, DMR settings)
+  - Software squelch automatically disabled during VFO (if enabled on main channel)
+  - Button state synchronized with VFO mode status
+
+#### **Key Features**
+- **✨ No Channel Creation**: Tune to any frequency without cluttering channel list
+- **🎯 Quick QSO Mode**: Perfect for simplex contacts, contests, or emergency frequencies
+- **💾 Non-Persistent**: All changes temporary until VFO mode exits
+- **🔧 Hardware Verified**: All settings tested and confirmed working
+  - Analog: Frequency, power, bandwidth, RX/TX tones all functional
+  - Digital: Frequency, Color Code, DMR ID, contact type, TG, slot all functional
+- **🔄 DMR ID Persistence**: Temporary DMR ID persists across VFO close/reopen (until app restart)
+  - Allows testing different DMR IDs without changing system settings
+  - Stored in vfoLocalId variable (independent of system DMR ID)
+  - Defaults to ID 1 if not specified
+
+#### **Critical Bug Fixes**
+- **Fixed: Color Code field name** (`cc` not `colorCode`)
+  - Previous bug: Color Code always transmitted as 0 regardless of UI setting
+  - Impact: Unable to communicate on networks with non-zero Color Codes
+  - Solution: Use correct ChannelData field name "cc"
+- **Fixed: VFO reactivation logic**
+  - Previous bug: Reopening VFO dialog after exit didn't send settings to hardware
+  - Impact: Apply Settings button appeared to do nothing on second open
+  - Solution: Check `isVFOModeActive` flag and reinitialize VFO state if needed
+- **Fixed: Conflicting hardware updates**
+  - Previous bug: `dmrManager.updateChannel()` was overriding `DigitalMessage.send()`
+  - Impact: Settings sent via DigitalMessage were immediately overwritten
+  - Solution: Removed redundant updateChannel() call, rely on direct message send
+- **Fixed: DMR ID field handling**
+  - Previous bug: Tried to read non-existent `localId` field from ChannelData
+  - Impact: NoSuchFieldError crash when using VFO on digital channels
+  - Solution: Use vfoLocalId variable directly, defaults to 1 if not set
+
+#### **Technical Implementation**
+- **Direct Hardware Control**: Uses AnalogMessage.send() and DigitalMessage.send()
+  - Bypasses database and state machine for instant hardware updates
+  - Same reliable pattern as MON button and APRS monitoring
+- **State Management**: isVFOModeActive flag prevents conflicts with normal operations
+  - VFO and APRS are mutually exclusive (can't run both simultaneously)
+  - Software squelch disabled during VFO to avoid interference
+- **Field Validation**: All inputs validated before sending to hardware
+  - Frequency: Checked against radio's supported bands
+  - Color Code: Range 0-15 enforced
+  - DMR ID: Positive integer validation
+  - TalkGroup: Positive integer validation
+
+#### **Usage**
+1. **Intercom page** → Tap **VFO** button (orange, bottom-left)
+2. **Configure settings** in dialog:
+   - Select Analog or Digital mode
+   - Enter frequency (e.g., 146.520 for 2m simplex)
+   - Set power level, tones/DMR settings as needed
+   - Optionally override DMR ID for testing
+3. Tap **Apply Settings** → Settings sent to hardware immediately
+4. Use radio normally with VFO frequency
+5. Tap **Stop VFO** or VFO button again → Original channel restored
+
+#### **Use Cases**
+- **Simplex Contacts**: Quick frequency entry for direct contacts
+- **Contest Operation**: Rapidly tune to contest frequencies
+- **Emergency Communications**: Access emergency frequencies without preset channels
+- **DMR Testing**: Try different Color Codes, TalkGroups, or IDs without channel edits
+- **Repeater Exploration**: Test repeater frequencies before adding to channel list
+- **Travel Mode**: Tune to local frequencies in unfamiliar areas
+
+---
 
 ## 🐛 What's New in v3.1.4 (March 13, 2026)
 
@@ -299,17 +389,29 @@ Local Simplex (↑N 250m)
    - Visual feedback: Orange = monitoring, Gray = normal
    - Perfect for scanning and emergency monitoring
 
-## Complete Feature List (v1.0 - v3.0.9)
+## Complete Feature List (v1.0 - v3.1.5)
 
 ### Core Features
+- ✅ **VFO Mode (v3.1.5)** - Variable Frequency Oscillator with temporary channel override
+- ✅ **APRS Live Monitoring (v3.1.0-v3.1.4)** - Real-time packet reception with dashboard and maps
 - ✅ **OpenGD77 CSV export/import** - All 5 files (Channels, Contacts, TG_Lists, Zones, DTMF)
-- ✅ **Zone management** - Create, edit, assign zones to channels
+- ✅ **Zone management** - Create, edit, assign zones to channels from channel edit page
 - ✅ **GPS navigation** - Distance, direction, bearing to channels
 - ✅ **Location tracking** - Reverse geocoding, city/state display, elevation
 - ✅ **RSSI signal strength** indicator
 - ✅ **DMR activity history** with timestamps
 - ✅ **Contact integration** - Caller ID display
 - ✅ **Analog MON button** - Open squelch for continuous monitoring
+- ✅ **Software Squelch** - Hybrid RSSI + Audio RMS squelch with UI controls
+
+### VFO Mode Features (v3.1.5)
+- ✅ **Temporary frequency tuning** without saving channels
+- ✅ **Analog & Digital/DMR support** with mode-specific controls
+- ✅ **Full parameter control** - Frequency, power, tones, bandwidth, DMR settings
+- ✅ **DMR ID override** - Test different DMR IDs without changing system settings
+- ✅ **Automatic channel restoration** on exit
+- ✅ **Direct hardware communication** - Instant settings application
+- ✅ **Reactivation support** - Reopen and adjust settings without restart
 
 ### Transcription Features (v1.2 - v1.7.0)
 - ✅ **Real-time speech-to-text** using OpenAI Whisper API
@@ -321,6 +423,8 @@ Local Simplex (↑N 250m)
 ## What is this?
 
 LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
+- **🎛️ VFO Mode** - Variable Frequency Oscillator for temporary frequency tuning
+- **📡 APRS Live Monitoring** - Real-time packet reception with live dashboard and GPS mapping
 - **🧭 GPS Navigation** - Directional arrows, compass bearings, distance to channels
 - **📂 Zone Management** - Create, edit, assign channels to zones (folder organization)
 - **📤 OpenGD77 CSV Export** - Export all channels/contacts to OpenGD77-compatible CSV files
@@ -334,9 +438,11 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 
 ## Current Status ✅
 
-**Current Release: v3.0.9** (March 9, 2026)  
+**Current Release: v3.1.5** (March 14, 2026)  
+**VFO Mode**: ✅ Working - Complete frequency control with analog/digital support  
+**APRS Monitoring**: ✅ Working - Live dashboard with GPS mapping and auto-logging  
 **GPS Navigation**: ✅ Working - Directional arrows, compass bearings, distance (m/km/mi)  
-**Zone Management**: ✅ Working - Create, edit, assign zones to channels  
+**Zone Management**: ✅ Working - Create, edit, assign zones from channel edit page  
 **Export**: ✅ Working - All 5 OpenGD77 CSV files + PDF summary + Zones.csv  
 **Import**: ✅ Working - Full Digital & Analog support + Zones import  
 **Transcription**: ✅ Working - Real-time speech-to-text with OpenAI Whisper API  
@@ -344,8 +450,9 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 **Per-Channel History**: ✅ Working - Transcription messages persist per channel  
 **Timestamps**: ✅ Working - All messages include HH:mm:ss timestamps  
 **Analog MON Button**: ✅ Working - Open squelch for continuous monitoring  
+**Software Squelch**: ✅ Working - Hybrid RSSI + Audio RMS squelch with UI controls  
 **User Validation**: ✅ All features tested and confirmed working  
-**Latest Build**: March 9, 2026
+**Latest Build**: March 14, 2026
 
 ## Radio Firmware
 
@@ -383,13 +490,13 @@ adb shell rm /sdcard/DMR/DMRDEBUG.bin
 - **Transcription Service**: com.macdmr.transcription (Standalone AIDL service)
 - **Device**: Ulefone Armor 26 Ultra (Android 13)
 - **LSPosed**: v1.9.2 (Zygisk)
-- **Current Version**: v3.0.9 (March 9, 2026)
-- **Storage Location**: `Download/DMR/` (Audio, Transcription, DMR_Backups folders)
+- **Current Version**: v3.1.5 (March 14, 2026)
+- **Storage Location**: `Download/DMR/` (Audio, Transcription, DMR_Backups, APRS folders)
 
 ## Features
 
 ### ✅ Phase 1: Initial Hook Setup
-- Startup toast: "✓ DMR Mod Hooks Active! v3.0.9"
+- Startup toast: "✓ DMR Mod Hooks Active! v3.1.5"
 - Custom version display on Device Information screen
 - Confirms module is active and working
 
