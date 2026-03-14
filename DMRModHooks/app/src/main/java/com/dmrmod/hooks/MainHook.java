@@ -256,10 +256,11 @@ public class MainHook implements IXposedHookLoadPackage {
     private static int vfoBandWidth = 0;   // 0=12.5kHz, 1=25kHz
     
     // Digital/DMR-specific settings
-    private static int vfoContactType = 1;  // 0=Private, 1=Group, 2=All
-    private static int vfoTxContact = 9;    // TalkGroup ID (default: Worldwide 9)
+    private static int vfoContactType = 1;  // 0=PERSON (Private), 1=GROUP (TalkGroup), 2=ALL (Receive All)
+    private static int vfoTxContact = 9;    // TalkGroup ID or DMR ID (default: Worldwide TG 9)
     private static int vfoColorCode = 1;    // 0-15 (default: 1)
     private static int vfoSlot = 1;         // 0=Slot1, 1=Slot2
+    private static int vfoLocalId = -1;     // -1 = use channel's default, else override DMR ID
     
     // VFO backup system (same pattern as APRS)
     private static java.util.HashMap<String, Object> vfoChannelBackup = null;
@@ -9789,8 +9790,44 @@ public class MainHook implements IXposedHookLoadPackage {
             digitalControlsLayout.setOrientation(LinearLayout.VERTICAL);
             digitalControlsLayout.setVisibility(vfoChannelMode == 0 ? View.VISIBLE : View.GONE);
             
-            TextView tgLabel = new TextView(activity);
-            tgLabel.setText("TalkGroup ID:");
+            // Contact Type Selection
+            TextView contactTypeLabel = new TextView(activity);
+            contactTypeLabel.setText("Contact Type:");
+            contactTypeLabel.setTextSize(14);
+            contactTypeLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            digitalControlsLayout.addView(contactTypeLabel);
+            
+            final android.widget.RadioGroup contactTypeRadioGroup = new android.widget.RadioGroup(activity);
+            contactTypeRadioGroup.setOrientation(android.widget.RadioGroup.VERTICAL);
+            
+            final android.widget.RadioButton contactPrivateRadio = new android.widget.RadioButton(activity);
+            contactPrivateRadio.setText("Private Call (To specific DMR ID)");
+            contactPrivateRadio.setId(View.generateViewId());
+            contactPrivateRadio.setChecked(vfoContactType == 0);
+            contactTypeRadioGroup.addView(contactPrivateRadio);
+            
+            final android.widget.RadioButton contactGroupRadio = new android.widget.RadioButton(activity);
+            contactGroupRadio.setText("Group Call (To TalkGroup)");
+            contactGroupRadio.setId(View.generateViewId());
+            contactGroupRadio.setChecked(vfoContactType == 1);
+            contactTypeRadioGroup.addView(contactGroupRadio);
+            
+            final android.widget.RadioButton contactAllRadio = new android.widget.RadioButton(activity);
+            contactAllRadio.setText("All Call (Monitors TG 1-31)");
+            contactAllRadio.setId(View.generateViewId());
+            contactAllRadio.setChecked(vfoContactType == 2);
+            contactTypeRadioGroup.addView(contactAllRadio);
+            
+            digitalControlsLayout.addView(contactTypeRadioGroup);
+            
+            // Add spacer
+            View contactTypeSpacer = new View(activity);
+            contactTypeSpacer.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 15));
+            digitalControlsLayout.addView(contactTypeSpacer);
+            
+            final TextView tgLabel = new TextView(activity);
+            tgLabel.setText("TX Contact (TalkGroup or DMR ID):");
             tgLabel.setTextSize(14);
             tgLabel.setTypeface(null, android.graphics.Typeface.BOLD);
             digitalControlsLayout.addView(tgLabel);
@@ -9799,6 +9836,36 @@ public class MainHook implements IXposedHookLoadPackage {
             tgEditText.setText(String.valueOf(vfoTxContact));
             tgEditText.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
             digitalControlsLayout.addView(tgEditText);
+            
+            // Add helper text that updates based on contact type
+            final TextView tgHelperText = new TextView(activity);
+            tgHelperText.setTextSize(11);
+            tgHelperText.setTextColor(0xFF888888);
+            if (vfoContactType == 0) {
+                tgHelperText.setText("Enter target DMR ID for private calls");
+            } else if (vfoContactType == 1) {
+                tgHelperText.setText("Enter TalkGroup ID (e.g., 9 for Worldwide)");
+            } else {
+                tgHelperText.setText("Monitors TG 1-31 (hardware limitation)");
+            }
+            digitalControlsLayout.addView(tgHelperText);
+            
+            // Update helper text when contact type changes
+            contactTypeRadioGroup.setOnCheckedChangeListener(new android.widget.RadioGroup.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(android.widget.RadioGroup group, int checkedId) {
+                    if (checkedId == contactPrivateRadio.getId()) {
+                        tgHelperText.setText("Enter target DMR ID for private calls");
+                        tgLabel.setText("TX Contact (Target DMR ID):");
+                    } else if (checkedId == contactGroupRadio.getId()) {
+                        tgHelperText.setText("Enter TalkGroup ID (e.g., 9 for Worldwide)");
+                        tgLabel.setText("TX Contact (TalkGroup ID):");
+                    } else {
+                        tgHelperText.setText("Monitors TG 1-31 (hardware limitation)");
+                        tgLabel.setText("TX Contact:");
+                    }
+                }
+            });
             
             TextView ccLabel = new TextView(activity);
             ccLabel.setText("Color Code (0-15):");
@@ -9833,6 +9900,37 @@ public class MainHook implements IXposedHookLoadPackage {
             slotRadioGroup.addView(slot2Radio);
             
             digitalControlsLayout.addView(slotRadioGroup);
+            
+            // Add spacer before DMR ID
+            View localIdSpacer = new View(activity);
+            localIdSpacer.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 15));
+            digitalControlsLayout.addView(localIdSpacer);
+            
+            // DMR Device ID (localId) - temporary override
+            TextView localIdLabel = new TextView(activity);
+            localIdLabel.setText("DMR Device ID (Local ID):");
+            localIdLabel.setTextSize(14);
+            localIdLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            digitalControlsLayout.addView(localIdLabel);
+            
+            final EditText localIdEditText = new EditText(activity);
+            // Show current localId or get from channel
+            if (vfoLocalId > 0) {
+                localIdEditText.setText(String.valueOf(vfoLocalId));
+            } else {
+                // Use default DMR ID of 1 (ChannelData doesn't store localId)
+                localIdEditText.setText("1");
+            }
+            localIdEditText.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+            digitalControlsLayout.addView(localIdEditText);
+            
+            // Helper text for DMR ID
+            TextView localIdHelperText = new TextView(activity);
+            localIdHelperText.setTextSize(11);
+            localIdHelperText.setTextColor(0xFF888888);
+            localIdHelperText.setText("Your radio's DMR ID (temporary in VFO mode)");
+            digitalControlsLayout.addView(localIdHelperText);
             
             mainLayout.addView(digitalControlsLayout);
             
@@ -9884,9 +9982,26 @@ public class MainHook implements IXposedHookLoadPackage {
                             }
                         } else {
                             // Digital settings
+                            // Get contact type
+                            int contactTypeCheckedId = contactTypeRadioGroup.getCheckedRadioButtonId();
+                            if (contactTypeCheckedId == contactPrivateRadio.getId()) {
+                                vfoContactType = 0;  // Private call
+                            } else if (contactTypeCheckedId == contactGroupRadio.getId()) {
+                                vfoContactType = 1;  // Group call
+                            } else if (contactTypeCheckedId == contactAllRadio.getId()) {
+                                vfoContactType = 2;  // All call
+                            }
+                            
                             vfoTxContact = Integer.parseInt(tgEditText.getText().toString());
                             vfoColorCode = Integer.parseInt(ccEditText.getText().toString());
                             vfoSlot = (slotRadioGroup.getCheckedRadioButtonId() == slot1Radio.getId()) ? 0 : 1;
+                            
+                            // Get DMR Device ID
+                            try {
+                                vfoLocalId = Integer.parseInt(localIdEditText.getText().toString());
+                            } catch (NumberFormatException nfe) {
+                                vfoLocalId = 1;  // Default if invalid
+                            }
                         }
                         
                         // Apply changes to hardware
@@ -9949,6 +10064,51 @@ public class MainHook implements IXposedHookLoadPackage {
                 throw new Exception("Cannot get current channel");
             }
             
+            // CRITICAL: If VFO mode is not active, we need to initialize it first
+            // This handles the case where user exited VFO and reopened the dialog
+            if (!isVFOModeActive) {
+                XposedBridge.log(TAG + ": VFO not active, initializing VFO mode first");
+                
+                // Save backup of current channel (like startVFOMode does)
+                saveVFOChannelBackup(currentChannel);
+                
+                // Initialize vfoLocalId if not already set
+                if (vfoLocalId < 0) {
+                    vfoLocalId = 1;
+                    XposedBridge.log(TAG + ": Initialized vfoLocalId to default: 1");
+                }
+                
+                // Disable software squelch if it was enabled
+                if (isSoftwareSquelchEnabled) {
+                    XposedBridge.log(TAG + ": VFO disabling Soft SQ (was enabled)");
+                    isSoftwareSquelchEnabled = false;
+                    
+                    // Update Soft SQ checkbox if it exists
+                    try {
+                        View rootLayout = activity.getWindow().getDecorView().findViewById(android.R.id.content);
+                        if (rootLayout instanceof ViewGroup) {
+                            CheckBox softSqCheckbox = (CheckBox) ((ViewGroup) rootLayout).findViewWithTag("DMR_SOFT_SQUELCH_CHECKBOX");
+                            if (softSqCheckbox != null) {
+                                softSqCheckbox.setChecked(false);
+                            }
+                            View squelchContainer = ((ViewGroup) rootLayout).findViewWithTag("DMR_SQUELCH_CONTAINER");
+                            if (squelchContainer != null) {
+                                squelchContainer.setVisibility(View.GONE);
+                            }
+                        }
+                    } catch (Throwable t) {
+                        XposedBridge.log(TAG + ": Could not update Soft SQ UI: " + t.getMessage());
+                    }
+                    
+                    disableSoftwareSquelchOnCurrentChannel();
+                }
+                
+                // Mark VFO as active
+                isVFOModeActive = true;
+                currentChannelType = vfoChannelMode;
+                XposedBridge.log(TAG + ": VFO mode initialized (was inactive before Apply)");
+            }
+            
             // Update channel with new VFO settings
             XposedHelpers.setIntField(currentChannel, "type", vfoChannelMode);
             String modeLabel = (vfoChannelMode == 0) ? "DMR" : "FM";
@@ -9970,12 +10130,72 @@ public class MainHook implements IXposedHookLoadPackage {
                 XposedHelpers.setIntField(currentChannel, "txSubCode", vfoTxToneCode);
                 // Software squelch uses the intercom page's Soft SQ setting
             } else {
-                // Digital mode
-                XposedHelpers.setIntField(currentChannel, "contactType", vfoContactType);
-                XposedHelpers.setIntField(currentChannel, "txContact", vfoTxContact);
-                XposedHelpers.setIntField(currentChannel, "colorCode", vfoColorCode);
-                XposedHelpers.setIntField(currentChannel, "inBoundSlot", vfoSlot);
-                XposedHelpers.setIntField(currentChannel, "outBoundSlot", vfoSlot);
+                // Digital mode - wrap in try-catch for field access safety
+                try {
+                    // WORKAROUND: Hardware doesn't support contactType=2 (ALL mode)
+                    // When user selects "All Call", use contactType=1 (GROUP) with wide RX group list
+                    int actualContactType = vfoContactType;
+                    if (vfoContactType == 2) {
+                        actualContactType = 1;  // Use GROUP mode as workaround
+                        XposedBridge.log(TAG + ": ALL mode requested - using GROUP mode workaround with wide RX list");
+                    }
+                    
+                    XposedHelpers.setIntField(currentChannel, "contactType", actualContactType);
+                    XposedHelpers.setIntField(currentChannel, "txContact", vfoTxContact);
+                    XposedHelpers.setIntField(currentChannel, "cc", vfoColorCode);  // Field is 'cc' not 'colorCode'
+                    XposedHelpers.setIntField(currentChannel, "inBoundSlot", vfoSlot);
+                    XposedHelpers.setIntField(currentChannel, "outBoundSlot", vfoSlot);
+                    
+                    // For ALL mode: populate groups array with common talkgroup IDs
+                    if (vfoContactType == 2) {
+                        try {
+                            int[] groups = new int[32];
+                            // Fill with common worldwide talkgroups and local ones (1-31)
+                            for (int i = 0; i < 31; i++) {
+                                groups[i] = i + 1;  // TG 1-31
+                            }
+                            groups[31] = vfoTxContact;  // Also add the TX contact
+                            XposedHelpers.setObjectField(currentChannel, "groups", groups);
+                            XposedBridge.log(TAG + ": ALL mode - populated RX groups with TG 1-31 + " + vfoTxContact);
+                        } catch (Throwable groupEx) {
+                            XposedBridge.log(TAG + ": Error setting groups for ALL mode: " + groupEx.getMessage());
+                        }
+                    } else if (vfoContactType == 1) {
+                        // GROUP mode: Set groups array to include the TX contact
+                        try {
+                            int[] groups = new int[32];
+                            groups[0] = vfoTxContact;  // Add TX contact to RX group list
+                            for (int i = 1; i < 32; i++) {
+                                groups[i] = 0;  // Fill rest with zeros
+                            }
+                            XposedHelpers.setObjectField(currentChannel, "groups", groups);
+                            XposedBridge.log(TAG + ": GROUP mode - set RX groups to [" + vfoTxContact + ", 0, 0, ...]");
+                        } catch (Throwable groupEx) {
+                            XposedBridge.log(TAG + ": Error setting groups for GROUP mode: " + groupEx.getMessage());
+                        }
+                    }
+                    // For PRIVATE mode (contactType=0), groups array is not used
+                    
+                } catch (Throwable digitalEx) {
+                    XposedBridge.log(TAG + ": Error setting digital field: " + digitalEx.getMessage());
+                }
+                
+                // CRITICAL: Always set encryption fields (separate from other digital fields)
+                // These MUST be set to avoid NullPointerException in DmrManager.sendDigitalMessage
+                try {
+                    XposedHelpers.setIntField(currentChannel, "encryptSw", 2);  // 2 = disabled
+                    XposedHelpers.setObjectField(currentChannel, "encryptKey", "");  // Empty string
+                } catch (Throwable encryptEx) {
+                    XposedBridge.log(TAG + ": Error setting encryption fields: " + encryptEx.getMessage());
+                }
+                
+                // VFO local ID will be used when sending to hardware
+                // (ChannelData doesn't store localId, it's only in DigitalMessage)
+                if (vfoLocalId > 0) {
+                    XposedBridge.log(TAG + ": VFO Apply - will use localId (Device ID) = " + vfoLocalId);
+                } else {
+                    XposedBridge.log(TAG + ": VFO Apply - will use default localId = 1");
+                }
             }
             
             // Send to hardware
@@ -10046,6 +10266,12 @@ public class MainHook implements IXposedHookLoadPackage {
             // Save backup (includes current squelch state)
             saveVFOChannelBackup(currentChannel);
             
+            // Initialize vfoLocalId if not already set (ChannelData doesn't store localId)
+            if (vfoLocalId < 0) {
+                vfoLocalId = 1;  // Default DMR ID
+                XposedBridge.log(TAG + ": Initialized vfoLocalId to default: 1");
+            }
+            
             // If Soft SQ is enabled, disable it (as if user pressed the button)
             if (isSoftwareSquelchEnabled) {
                 XposedBridge.log(TAG + ": VFO disabling Soft SQ (was enabled)");
@@ -10089,17 +10315,78 @@ public class MainHook implements IXposedHookLoadPackage {
             
             if (vfoChannelMode == 1) {
                 // Analog mode - tone settings
-                XposedHelpers.setIntField(currentChannel, "rxType", vfoRxToneType);
-                XposedHelpers.setIntField(currentChannel, "rxSubCode", vfoRxToneCode);
-                XposedHelpers.setIntField(currentChannel, "txType", vfoTxToneType);
-                XposedHelpers.setIntField(currentChannel, "txSubCode", vfoTxToneCode);
+                try {
+                    XposedHelpers.setIntField(currentChannel, "rxType", vfoRxToneType);
+                    XposedHelpers.setIntField(currentChannel, "rxSubCode", vfoRxToneCode);
+                    XposedHelpers.setIntField(currentChannel, "txType", vfoTxToneType);
+                    XposedHelpers.setIntField(currentChannel, "txSubCode", vfoTxToneCode);
+                } catch (Throwable analogEx) {
+                    XposedBridge.log(TAG + ": Error setting analog field in startVFO: " + analogEx.getMessage());
+                }
             } else {
-                // Digital mode - DMR settings
-                XposedHelpers.setIntField(currentChannel, "contactType", vfoContactType);
-                XposedHelpers.setIntField(currentChannel, "txContact", vfoTxContact);
-                XposedHelpers.setIntField(currentChannel, "colorCode", vfoColorCode);
-                XposedHelpers.setIntField(currentChannel, "inBoundSlot", vfoSlot);
-                XposedHelpers.setIntField(currentChannel, "outBoundSlot", vfoSlot);
+                // Digital mode - DMR settings (wrap in try-catch for field access safety)
+                try {
+                    // WORKAROUND: Hardware doesn't support contactType=2 (ALL mode)
+                    // When user selects "All Call", use contactType=1 (GROUP) with wide RX group list
+                    int actualContactType = vfoContactType;
+                    if (vfoContactType == 2) {
+                        actualContactType = 1;  // Use GROUP mode as workaround
+                        XposedBridge.log(TAG + ": ALL mode requested - using GROUP mode workaround with wide RX list");
+                    }
+                    
+                    XposedHelpers.setIntField(currentChannel, "contactType", actualContactType);
+                    XposedHelpers.setIntField(currentChannel, "txContact", vfoTxContact);
+                    XposedHelpers.setIntField(currentChannel, "cc", vfoColorCode);  // Field is 'cc' not 'colorCode'
+                    XposedHelpers.setIntField(currentChannel, "inBoundSlot", vfoSlot);
+                    XposedHelpers.setIntField(currentChannel, "outBoundSlot", vfoSlot);
+                    
+                    // For ALL mode: populate groups array with common talkgroup IDs
+                    if (vfoContactType == 2) {
+                        try {
+                            int[] groups = new int[32];
+                            // Fill with common worldwide talkgroups and local ones (1-31)
+                            for (int i = 0; i < 31; i++) {
+                                groups[i] = i + 1;  // TG 1-31
+                            }
+                            groups[31] = vfoTxContact;  // Also add the TX contact
+                            XposedHelpers.setObjectField(currentChannel, "groups", groups);
+                            XposedBridge.log(TAG + ": ALL mode - populated RX groups with TG 1-31 + " + vfoTxContact);
+                        } catch (Throwable groupEx) {
+                            XposedBridge.log(TAG + ": Error setting groups for ALL mode: " + groupEx.getMessage());
+                        }
+                    } else if (vfoContactType == 1) {
+                        // GROUP mode: Set groups array to include the TX contact
+                        try {
+                            int[] groups = new int[32];
+                            groups[0] = vfoTxContact;  // Add TX contact to RX group list
+                            for (int i = 1; i < 32; i++) {
+                                groups[i] = 0;  // Fill rest with zeros
+                            }
+                            XposedHelpers.setObjectField(currentChannel, "groups", groups);
+                            XposedBridge.log(TAG + ": GROUP mode - set RX groups to [" + vfoTxContact + ", 0, 0, ...]");
+                        } catch (Throwable groupEx) {
+                            XposedBridge.log(TAG + ": Error setting groups for GROUP mode: " + groupEx.getMessage());
+                        }
+                    }
+                    // For PRIVATE mode (contactType=0), groups array is not used
+                    
+                } catch (Throwable digitalEx) {
+                    XposedBridge.log(TAG + ": Error setting digital field in startVFO: " + digitalEx.getMessage());
+                }
+                
+                // CRITICAL: Always set encryption fields (separate from other digital fields)
+                // These MUST be set to avoid NullPointerException in DmrManager.sendDigitalMessage
+                try {
+                    XposedHelpers.setIntField(currentChannel, "encryptSw", 2);  // 2 = disabled
+                    XposedHelpers.setObjectField(currentChannel, "encryptKey", "");  // Empty string
+                } catch (Throwable encryptEx) {
+                    XposedBridge.log(TAG + ": Error setting encryption fields in startVFO: " + encryptEx.getMessage());
+                }
+                
+                // VFO local ID will be used when sending to hardware
+                // (ChannelData doesn't store localId, it's only in DigitalMessage)
+                int actualLocalId = (vfoLocalId > 0) ? vfoLocalId : 1;
+                XposedBridge.log(TAG + ": VFO DMR mode - will use localId (Device ID) = " + actualLocalId);
             }
             
             // Direct hardware update
@@ -10143,10 +10430,20 @@ public class MainHook implements IXposedHookLoadPackage {
                 XposedBridge.log(TAG + ": Could not update button visibility: " + btnEx.getMessage());
             }
             
+            // Disable bottom navigation (channel and zone buttons) during VFO mode
+            disableBottomNavigation(activity);
+            
             // VFO does not control squelch - user controls via Soft SQ button
             String modeStr = (vfoChannelMode == 0) ? "Digital DMR" : "Analog FM";
+            String modeDetail = "";
+            if (vfoChannelMode == 0) {
+                // Add DMR details
+                String contactTypeStr = (vfoContactType == 0) ? "PRIVATE" : 
+                                       (vfoContactType == 1) ? "GROUP" : "ALL";
+                modeDetail = " [" + contactTypeStr + " TX=" + vfoTxContact + " CC=" + vfoColorCode + " TS=" + (vfoSlot + 1) + "]";
+            }
             Toast.makeText(activity, "VFO Mode Active (" + modeStr + "): " + vfoFrequencyMHz + " MHz", Toast.LENGTH_SHORT).show();
-            XposedBridge.log(TAG + ": VFO mode started at " + vfoFrequencyMHz + " MHz (" + modeStr + ")");
+            XposedBridge.log(TAG + ": VFO mode started at " + vfoFrequencyMHz + " MHz (" + modeStr + ")" + modeDetail);
             
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error starting VFO mode: " + e.getMessage());
@@ -10168,6 +10465,9 @@ public class MainHook implements IXposedHookLoadPackage {
             restoreVFOChannelBackup(activity);
             
             isVFOModeActive = false;
+            
+            // NOTE: Do NOT reset vfoLocalId here - keep it persistent across VFO sessions
+            // It will only reset when app is killed/restarted
             
             // Trigger UI update to display restored channel info
             try {
@@ -10203,6 +10503,9 @@ public class MainHook implements IXposedHookLoadPackage {
             } catch (Throwable btnEx) {
                 XposedBridge.log(TAG + ": Could not restore button visibility: " + btnEx.getMessage());
             }
+            
+            // Re-enable bottom navigation (channel and zone buttons)
+            enableBottomNavigation(activity);
             
             if (vfoModeToggleButton != null) {
                 vfoModeToggleButton.setChecked(false);
@@ -10269,9 +10572,10 @@ public class MainHook implements IXposedHookLoadPackage {
                 try {
                     vfoChannelBackup.put("contactType", XposedHelpers.getIntField(channel, "contactType"));
                     vfoChannelBackup.put("txContact", XposedHelpers.getIntField(channel, "txContact"));
-                    vfoChannelBackup.put("colorCode", XposedHelpers.getIntField(channel, "colorCode"));
+                    vfoChannelBackup.put("colorCode", XposedHelpers.getIntField(channel, "cc"));  // Field is "cc" not "colorCode"
                     vfoChannelBackup.put("inBoundSlot", XposedHelpers.getIntField(channel, "inBoundSlot"));
                     vfoChannelBackup.put("outBoundSlot", XposedHelpers.getIntField(channel, "outBoundSlot"));
+                    vfoChannelBackup.put("localId", (vfoLocalId > 0) ? vfoLocalId : 1);  // Use VFO localId or default (ChannelData doesn't store localId)
                 } catch (Throwable dmrEx) {
                     XposedBridge.log(TAG + ": Warning - couldn't save DMR fields: " + dmrEx.getMessage());
                     // Set defaults for safety
@@ -10280,6 +10584,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     vfoChannelBackup.put("colorCode", 1);
                     vfoChannelBackup.put("inBoundSlot", 1);
                     vfoChannelBackup.put("outBoundSlot", 1);
+                    vfoChannelBackup.put("localId", 1);
                 }
             } else {
                 // Analog channel - set default DMR values for restore safety
@@ -10288,6 +10593,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 vfoChannelBackup.put("colorCode", 1);
                 vfoChannelBackup.put("inBoundSlot", 1);
                 vfoChannelBackup.put("outBoundSlot", 1);
+                vfoChannelBackup.put("localId", 1);
             }
             
             // Save current squelch state (software vs hardware)
@@ -10418,6 +10724,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     XposedHelpers.setIntField(currentChannel, "colorCode", (Integer) vfoChannelBackup.get("colorCode"));
                     XposedHelpers.setIntField(currentChannel, "inBoundSlot", (Integer) vfoChannelBackup.get("inBoundSlot"));
                     XposedHelpers.setIntField(currentChannel, "outBoundSlot", (Integer) vfoChannelBackup.get("outBoundSlot"));
+                    XposedHelpers.setIntField(currentChannel, "localId", (Integer) vfoChannelBackup.get("localId"));  // DMR Device ID
                 } catch (Throwable dmrEx) {
                     XposedBridge.log(TAG + ": Warning - couldn't restore DMR fields: " + dmrEx.getMessage());
                 }
@@ -10499,24 +10806,168 @@ public class MainHook implements IXposedHookLoadPackage {
                 XposedBridge.log(TAG + ": VFO analog settings sent to hardware (sq=2, Soft SQ " + (isSoftwareSquelchEnabled ? "ON" : "OFF") + ")");
                 
             } else {
-                // DIGITAL/DMR MODE - Use state machine for DMR
-                Class<?> dmrManagerClass = XposedHelpers.findClass(
-                    "com.pri.prizeinterphone.manager.DmrManager",
+                // DIGITAL/DMR MODE - Use DigitalMessage for direct hardware control
+                Class<?> digitalMessageClass = XposedHelpers.findClass(
+                    "com.pri.prizeinterphone.message.DigitalMessage",
                     appClassLoader
                 );
-                Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+                Object digitalMessage = digitalMessageClass.newInstance();
                 
-                // Update channel and sync to hardware
-                XposedHelpers.callMethod(dmrManager, "updateChannel", channel);
-                XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", channel);
+                // Copy all channel fields from the channel object
+                XposedHelpers.setIntField(digitalMessage, "txFreq", 
+                    XposedHelpers.getIntField(channel, "txFreq"));
+                XposedHelpers.setIntField(digitalMessage, "rxFreq", 
+                    XposedHelpers.getIntField(channel, "rxFreq"));
+                XposedHelpers.setByteField(digitalMessage, "power", 
+                    (byte) XposedHelpers.getIntField(channel, "power"));
+                XposedHelpers.setByteField(digitalMessage, "cc", 
+                    (byte) vfoColorCode);
+                XposedHelpers.setByteField(digitalMessage, "contactType", 
+                    (byte) XposedHelpers.getIntField(channel, "contactType"));
+                XposedHelpers.setIntField(digitalMessage, "txContact", 
+                    XposedHelpers.getIntField(channel, "txContact"));
+                // Use vfoLocalId if set, otherwise use default DMR ID of 1
+                int actualLocalId = (vfoLocalId > 0) ? vfoLocalId : 1;
+                XposedHelpers.setIntField(digitalMessage, "localId", actualLocalId);
+                XposedHelpers.setByteField(digitalMessage, "inboundSlot", 
+                    (byte) XposedHelpers.getIntField(channel, "inBoundSlot"));
+                XposedHelpers.setByteField(digitalMessage, "outboundSlot", 
+                    (byte) XposedHelpers.getIntField(channel, "outBoundSlot"));
+                XposedHelpers.setObjectField(digitalMessage, "groupList", 
+                    XposedHelpers.getObjectField(channel, "groups"));
+                XposedHelpers.setByteField(digitalMessage, "relay", 
+                    (byte) XposedHelpers.getIntField(channel, "relay"));
+                XposedHelpers.setByteField(digitalMessage, "encryptSw", 
+                    (byte) XposedHelpers.getIntField(channel, "encryptSw"));
                 
-                XposedBridge.log(TAG + ": VFO digital settings sent to hardware (TG=" + vfoTxContact + 
-                    ", CC=" + vfoColorCode + ", Slot=" + (vfoSlot + 1) + ")");
+                // Handle encryptKey (String to byte array)
+                try {
+                    String encryptKeyStr = (String) XposedHelpers.getObjectField(channel, "encryptKey");
+                    if (encryptKeyStr != null && !encryptKeyStr.isEmpty()) {
+                        XposedHelpers.setObjectField(digitalMessage, "encryptKey", encryptKeyStr.getBytes());
+                    } else {
+                        XposedHelpers.setObjectField(digitalMessage, "encryptKey", new byte[0]);
+                    }
+                } catch (Throwable encEx) {
+                    XposedHelpers.setObjectField(digitalMessage, "encryptKey", new byte[0]);
+                }
+                
+                // Send to hardware
+                XposedHelpers.callMethod(digitalMessage, "send");
+                
+                String contactTypeStr = (vfoContactType == 0) ? "PRIVATE" : 
+                                       (vfoContactType == 1) ? "GROUP" : "ALL";
+                XposedBridge.log(TAG + ": VFO digital settings sent to hardware via DigitalMessage.send() (ContactType=" + contactTypeStr + 
+                    ", TX=" + vfoTxContact + ", CC=" + vfoColorCode + ", Slot=" + (vfoSlot + 1) + ", LocalId=" + actualLocalId + ")");
             }
             
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error sending VFO to hardware: " + e.getMessage());
             XposedBridge.log(e);
+        }
+    }
+    
+    /**
+     * Disable bottom navigation buttons during VFO mode
+     */
+    private void disableBottomNavigation(final Activity activity) {
+        try {
+            // Disable the Zone button on intercom page (if it exists)
+            if (zoneButton != null) {
+                final View.OnClickListener originalZoneListener = (View.OnClickListener) XposedHelpers.getAdditionalInstanceField(zoneButton, "originalOnClickListener");
+                if (originalZoneListener == null) {
+                    // Save original listener before replacing
+                    try {
+                        Object listenerInfo = XposedHelpers.callMethod(zoneButton, "getListenerInfo");
+                        View.OnClickListener listener = (View.OnClickListener) XposedHelpers.getObjectField(listenerInfo, "mOnClickListener");
+                        XposedHelpers.setAdditionalInstanceField(zoneButton, "originalOnClickListener", listener);
+                    } catch (Throwable t) {
+                        XposedBridge.log(TAG + ": Could not save zone button listener: " + t.getMessage());
+                    }
+                }
+                
+                // Set VFO blocking listener
+                zoneButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        Toast.makeText(v.getContext(), "Disable VFO mode to enable zone selection", Toast.LENGTH_SHORT).show();
+                        XposedBridge.log(TAG + ": Zone button blocked - VFO active");
+                    }
+                });
+                XposedBridge.log(TAG + ": Zone button disabled for VFO mode");
+            }
+            
+            // Disable the Channel tab button at the bottom
+            try {
+                int channelButtonId = activity.getResources().getIdentifier("channel", "id", activity.getPackageName());
+                if (channelButtonId != 0) {
+                    final View channelButton = activity.findViewById(channelButtonId);
+                    if (channelButton != null) {
+                        // Save original listener
+                        View.OnClickListener originalChannelListener = (View.OnClickListener) XposedHelpers.getAdditionalInstanceField(channelButton, "originalOnClickListener");
+                        if (originalChannelListener == null) {
+                            try {
+                                Object listenerInfo = XposedHelpers.callMethod(channelButton, "getListenerInfo");
+                                View.OnClickListener listener = (View.OnClickListener) XposedHelpers.getObjectField(listenerInfo, "mOnClickListener");
+                                XposedHelpers.setAdditionalInstanceField(channelButton, "originalOnClickListener", listener);
+                            } catch (Throwable t) {
+                                XposedBridge.log(TAG + ": Could not save channel button listener: " + t.getMessage());
+                            }
+                        }
+                        
+                        // Set VFO blocking listener
+                        channelButton.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                Toast.makeText(v.getContext(), "Disable VFO mode to enable channel selection", Toast.LENGTH_SHORT).show();
+                                XposedBridge.log(TAG + ": Channel button blocked - VFO active");
+                            }
+                        });
+                        XposedBridge.log(TAG + ": Channel button disabled for VFO mode");
+                    }
+                }
+            } catch (Throwable t) {
+                XposedBridge.log(TAG + ": Could not disable channel button: " + t.getMessage());
+            }
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error disabling bottom navigation: " + t.getMessage());
+        }
+    }
+    
+    /**
+     * Enable bottom navigation buttons after VFO mode
+     */
+    private void enableBottomNavigation(final Activity activity) {
+        try {
+            // Restore Zone button listener
+            if (zoneButton != null) {
+                View.OnClickListener originalListener = (View.OnClickListener) XposedHelpers.getAdditionalInstanceField(zoneButton, "originalOnClickListener");
+                if (originalListener != null) {
+                    zoneButton.setOnClickListener(originalListener);
+                    XposedBridge.log(TAG + ": Zone button re-enabled");
+                }
+            }
+            
+            // Restore Channel button listener
+            try {
+                int channelButtonId = activity.getResources().getIdentifier("channel", "id", activity.getPackageName());
+                if (channelButtonId != 0) {
+                    View channelButton = activity.findViewById(channelButtonId);
+                    if (channelButton != null) {
+                        View.OnClickListener originalListener = (View.OnClickListener) XposedHelpers.getAdditionalInstanceField(channelButton, "originalOnClickListener");
+                        if (originalListener != null) {
+                            channelButton.setOnClickListener(originalListener);
+                            XposedBridge.log(TAG + ": Channel button re-enabled");
+                        }
+                    }
+                }
+            } catch (Throwable t) {
+                XposedBridge.log(TAG + ": Could not re-enable channel button: " + t.getMessage());
+            }
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error enabling bottom navigation: " + t.getMessage());
         }
     }
     
