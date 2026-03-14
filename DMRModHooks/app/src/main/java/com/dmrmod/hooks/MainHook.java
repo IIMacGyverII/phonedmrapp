@@ -132,7 +132,16 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile int currentRssi = -999;  // dBm value, -999 = no signal
     private static TextView rssiDisplayTextView = null;
     
-    // Software squelch state (Hybrid RSSI + Audio RMS based)
+    // ============================================================================
+    // SOFTWARE SQUELCH STATE (Hybrid RSSI + Audio RMS based)
+    // ============================================================================
+    // CRITICAL RULE: When software squelch is ENABLED, hardware squelch MUST be 0
+    // (fully open), regardless of threshold level. This allows software to see ALL
+    // audio and make filtering decisions. If hardware squelch is not 0, weak signals
+    // will be blocked by hardware BEFORE software can analyze them.
+    // 
+    // See enableSoftwareSquelchOnCurrentChannel() and disableSoftwareSquelchOnCurrentChannel()
+    // ============================================================================
     private static volatile boolean isSoftwareSquelchEnabled = false;  // Disabled by default
     private static volatile int softwareSquelchThreshold = 2;  // User squelch level (0-9)
     private static volatile boolean isSquelchOpen = false;  // Current squelch state
@@ -6268,7 +6277,14 @@ public class MainHook implements IXposedHookLoadPackage {
     
     /**
      * Enable software squelch by setting hardware squelch to 0 (fully open)
-     * Must be called on current channel after enabling software squelch
+     * 
+     * CRITICAL: Must ALWAYS set hardware squelch to 0 when software squelch is enabled,
+     * regardless of threshold level. If hardware squelch is not 0, weak signals will be
+     * blocked by hardware BEFORE software can analyze them, breaking software squelch.
+     * 
+     * Audio processing code already handles threshold 0 correctly (passes all audio).
+     * 
+     * Must be called on current channel after enabling software squelch.
      */
     private static void enableSoftwareSquelchOnCurrentChannel() {
         if (appClassLoader == null) {
