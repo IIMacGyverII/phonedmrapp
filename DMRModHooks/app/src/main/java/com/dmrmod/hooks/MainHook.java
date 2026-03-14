@@ -9721,13 +9721,34 @@ public class MainHook implements IXposedHookLoadPackage {
             vfoChannelBackup.put("sq", XposedHelpers.getIntField(channel, "sq"));
             vfoChannelBackup.put("band", XposedHelpers.getIntField(channel, "band"));
             vfoChannelBackup.put("power", XposedHelpers.getIntField(channel, "power"));
-            vfoChannelBackup.put("rxType", XposedHelpers.getIntField(channel, "rxType"));
-            vfoChannelBackup.put("rxSubCode", XposedHelpers.getIntField(channel, "rxSubCode"));
-            vfoChannelBackup.put("txType", XposedHelpers.getIntField(channel, "txType"));
-            vfoChannelBackup.put("txSubCode", XposedHelpers.getIntField(channel, "txSubCode"));
+            
+            // Get channel type to determine which fields exist
+            int channelType = XposedHelpers.getIntField(channel, "type");
+            
+            // Analog-specific fields (only exist on analog channels, type=1)
+            if (channelType == 1) {
+                try {
+                    vfoChannelBackup.put("rxType", XposedHelpers.getIntField(channel, "rxType"));
+                    vfoChannelBackup.put("rxSubCode", XposedHelpers.getIntField(channel, "rxSubCode"));
+                    vfoChannelBackup.put("txType", XposedHelpers.getIntField(channel, "txType"));
+                    vfoChannelBackup.put("txSubCode", XposedHelpers.getIntField(channel, "txSubCode"));
+                } catch (Exception analogEx) {
+                    XposedBridge.log(TAG + ": Warning - couldn't save analog tone fields: " + analogEx.getMessage());
+                    // Set defaults
+                    vfoChannelBackup.put("rxType", 0);
+                    vfoChannelBackup.put("rxSubCode", 0);
+                    vfoChannelBackup.put("txType", 0);
+                    vfoChannelBackup.put("txSubCode", 0);
+                }
+            } else {
+                // Digital channel - set default analog values
+                vfoChannelBackup.put("rxType", 0);
+                vfoChannelBackup.put("rxSubCode", 0);
+                vfoChannelBackup.put("txType", 0);
+                vfoChannelBackup.put("txSubCode", 0);
+            }
             
             // DMR-specific fields (only exist on digital channels, type=0)
-            int channelType = XposedHelpers.getIntField(channel, "type");
             if (channelType == 0) {
                 // Digital/DMR channel - save DMR fields
                 try {
@@ -9851,13 +9872,23 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.setIntField(currentChannel, "sq", (Integer) vfoChannelBackup.get("sq"));
             XposedHelpers.setIntField(currentChannel, "band", (Integer) vfoChannelBackup.get("band"));
             XposedHelpers.setIntField(currentChannel, "power", (Integer) vfoChannelBackup.get("power"));
-            XposedHelpers.setIntField(currentChannel, "rxType", (Integer) vfoChannelBackup.get("rxType"));
-            XposedHelpers.setIntField(currentChannel, "rxSubCode", (Integer) vfoChannelBackup.get("rxSubCode"));
-            XposedHelpers.setIntField(currentChannel, "txType", (Integer) vfoChannelBackup.get("txType"));
-            XposedHelpers.setIntField(currentChannel, "txSubCode", (Integer) vfoChannelBackup.get("txSubCode"));
+            
+            // Get channel type to determine which fields to restore
+            int channelType = (Integer) vfoChannelBackup.get("type");
+            
+            // Restore analog-specific fields (only on analog channels, type=1)
+            if (channelType == 1) {
+                try {
+                    XposedHelpers.setIntField(currentChannel, "rxType", (Integer) vfoChannelBackup.get("rxType"));
+                    XposedHelpers.setIntField(currentChannel, "rxSubCode", (Integer) vfoChannelBackup.get("rxSubCode"));
+                    XposedHelpers.setIntField(currentChannel, "txType", (Integer) vfoChannelBackup.get("txType"));
+                    XposedHelpers.setIntField(currentChannel, "txSubCode", (Integer) vfoChannelBackup.get("txSubCode"));
+                } catch (Exception analogEx) {
+                    XposedBridge.log(TAG + ": Warning - couldn't restore analog tone fields: " + analogEx.getMessage());
+                }
+            }
             
             // Restore DMR fields (only on digital channels, type=0)
-            int channelType = (Integer) vfoChannelBackup.get("type");
             if (channelType == 0) {
                 // Digital/DMR channel - restore DMR fields
                 try {
