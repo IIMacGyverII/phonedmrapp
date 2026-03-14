@@ -935,15 +935,19 @@ CREATE TABLE vfo_presets (
 
 ### 12. Implementation Checklist
 
-#### Phase 1: Basic VFO (Essential)
-- [ ] Add VFO button to interface page
-- [ ] Implement VFO dialog with frequency control
-- [ ] Add channel backup/restore system
-- [ ] Implement startVFOMode() and stopVFOMode()
-- [ ] Add crash recovery on startup
-- [ ] Implement mutual exclusion with APRS/MON
-- [ ] Test basic frequency tuning
-- [ ] Test channel restoration
+#### Phase 1: Basic VFO (Essential) - ✅ COMPLETED
+- [x] Add VFO button to interface page
+- [x] Implement VFO dialog with frequency control (Basic version - full dialog in Phase 2)
+- [x] Add channel backup/restore system
+- [x] Implement startVFOMode() and stopVFOMode()
+- [x] Add crash recovery on startup
+- [x] Implement mutual exclusion with APRS/MON
+- [x] Added software squelch support (VFO squelch integration to PCM hook)
+- [ ] Test basic frequency tuning (pending build & deployment)
+- [ ] Test channel restoration (pending build & deployment)
+
+**Implementation Date**: 2026-03-13
+**Status**: Code complete, ready for testing
 
 #### Phase 2: Advanced Controls (Important)
 - [ ] Add squelch control with live updates
