@@ -4559,19 +4559,38 @@ public class MainHook implements IXposedHookLoadPackage {
                     XposedBridge.log(TAG + ":   type: " + XposedHelpers.getIntField(currentChannel, "type"));
                     XposedBridge.log(TAG + ":   number: " + XposedHelpers.getIntField(currentChannel, "number"));
                     
-                    // Restore all fields INCLUDING number
-                    XposedHelpers.setIntField(currentChannel, "number", (Integer) channelBackup.get("number"));
-                    XposedHelpers.setIntField(currentChannel, "type", (Integer) channelBackup.get("type"));
-                    XposedHelpers.setObjectField(currentChannel, "name", channelBackup.get("name"));
-                    XposedHelpers.setIntField(currentChannel, "rxFreq", (Integer) channelBackup.get("rxFreq"));
-                    XposedHelpers.setIntField(currentChannel, "txFreq", (Integer) channelBackup.get("txFreq"));
-                    XposedHelpers.setIntField(currentChannel, "sq", (Integer) channelBackup.get("sq"));
-                    XposedHelpers.setIntField(currentChannel, "band", (Integer) channelBackup.get("band"));
-                    XposedHelpers.setIntField(currentChannel, "power", (Integer) channelBackup.get("power"));
-                    XposedHelpers.setIntField(currentChannel, "rxType", (Integer) channelBackup.get("rxType"));
-                    XposedHelpers.setIntField(currentChannel, "rxSubCode", (Integer) channelBackup.get("rxSubCode"));
-                    XposedHelpers.setIntField(currentChannel, "txType", (Integer) channelBackup.get("txType"));
-                    XposedHelpers.setIntField(currentChannel, "txSubCode", (Integer) channelBackup.get("txSubCode"));
+                    // Restore all fields INCLUDING number (with null checks)
+                    try {
+                        Object numberObj = channelBackup.get("number");
+                        Object typeObj = channelBackup.get("type");
+                        Object nameObj = channelBackup.get("name");
+                        Object rxFreqObj = channelBackup.get("rxFreq");
+                        Object txFreqObj = channelBackup.get("txFreq");
+                        Object sqObj = channelBackup.get("sq");
+                        Object bandObj = channelBackup.get("band");
+                        Object powerObj = channelBackup.get("power");
+                        Object rxTypeObj = channelBackup.get("rxType");
+                        Object rxSubCodeObj = channelBackup.get("rxSubCode");
+                        Object txTypeObj = channelBackup.get("txType");
+                        Object txSubCodeObj = channelBackup.get("txSubCode");
+                        
+                        if (numberObj != null) XposedHelpers.setIntField(currentChannel, "number", (Integer) numberObj);
+                        if (typeObj != null) XposedHelpers.setIntField(currentChannel, "type", (Integer) typeObj);
+                        if (nameObj != null) XposedHelpers.setObjectField(currentChannel, "name", nameObj);
+                        if (rxFreqObj != null) XposedHelpers.setIntField(currentChannel, "rxFreq", (Integer) rxFreqObj);
+                        if (txFreqObj != null) XposedHelpers.setIntField(currentChannel, "txFreq", (Integer) txFreqObj);
+                        if (sqObj != null) XposedHelpers.setIntField(currentChannel, "sq", (Integer) sqObj);
+                        if (bandObj != null) XposedHelpers.setIntField(currentChannel, "band", (Integer) bandObj);
+                        if (powerObj != null) XposedHelpers.setIntField(currentChannel, "power", (Integer) powerObj);
+                        if (rxTypeObj != null) XposedHelpers.setIntField(currentChannel, "rxType", (Integer) rxTypeObj);
+                        if (rxSubCodeObj != null) XposedHelpers.setIntField(currentChannel, "rxSubCode", (Integer) rxSubCodeObj);
+                        if (txTypeObj != null) XposedHelpers.setIntField(currentChannel, "txType", (Integer) txTypeObj);
+                        if (txSubCodeObj != null) XposedHelpers.setIntField(currentChannel, "txSubCode", (Integer) txSubCodeObj);
+                    } catch (Exception fieldEx) {
+                        XposedBridge.log(TAG + ": ⚠️ Error restoring channel fields: " + fieldEx.getMessage());
+                        XposedBridge.log(fieldEx);
+                        // Continue anyway - partial restore is better than nothing
+                    }
                     
                     // Log AFTER field set
                     XposedBridge.log(TAG + ": AFTER setting fields - currentChannel:");
@@ -4581,29 +4600,50 @@ public class MainHook implements IXposedHookLoadPackage {
                     XposedBridge.log(TAG + ":   type: " + XposedHelpers.getIntField(currentChannel, "type"));
                     XposedBridge.log(TAG + ":   number: " + XposedHelpers.getIntField(currentChannel, "number"));
                     
-                    // Update hardware
-                    XposedHelpers.callMethod(dmrManager, "updateChannel", currentChannel);
-                    XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", currentChannel);
+                    // Update hardware (wrap in try-catch in case state machine isn't ready)
+                    try {
+                        XposedHelpers.callMethod(dmrManager, "updateChannel", currentChannel);
+                        XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", currentChannel);
+                        XposedBridge.log(TAG + ": ✅ Channel restored on startup: " + channelBackup.get("name"));
+                    } catch (Exception syncEx) {
+                        XposedBridge.log(TAG + ": ⚠️ Error syncing restored channel (might self-correct): " + syncEx.getMessage());
+                        XposedBridge.log(syncEx);
+                    }
                     
-                    XposedBridge.log(TAG + ": ✅ Channel restored on startup: " + channelBackup.get("name"));
-                    
-                    // Show helpful message to user
+                    // Show helpful message to user (wrap in try-catch in case activity is invalid)
                     if (context != null) {
-                        new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
-                            @Override
-                            public void run() {
-                                new AlertDialog.Builder(context)
-                                    .setTitle("⚠️ APRS Channel Restored")
-                                    .setMessage("APRS monitoring was interrupted while the app was closed.\n\n" +
-                                               "Your channel has been restored automatically.\n\n" +
-                                               "To prevent startup errors:\n" +
-                                               "• Always stop APRS monitoring before closing the app\n\n" +
-                                               "Please restart the app now.")
-                                    .setPositiveButton("OK", null)
-                                    .setCancelable(false)
-                                    .show();
-                            }
-                        });
+                        try {
+                            new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        // Check if activity is still valid and not finishing
+                                        if (context instanceof Activity) {
+                                            Activity activity = (Activity) context;
+                                            if (activity.isFinishing() || activity.isDestroyed()) {
+                                                XposedBridge.log(TAG + ": Activity invalid, skipping dialog");
+                                                return;
+                                            }
+                                        }
+                                        
+                                        new AlertDialog.Builder(context)
+                                            .setTitle("⚠️ APRS Channel Restored")
+                                            .setMessage("APRS monitoring was interrupted while the app was closed.\n\n" +
+                                                       "Your channel has been restored automatically.\n\n" +
+                                                       "To prevent startup errors:\n" +
+                                                       "• Always stop APRS monitoring before closing the app\n\n" +
+                                                       "Please restart the app now.")
+                                            .setPositiveButton("OK", null)
+                                            .setCancelable(false)
+                                            .show();
+                                    } catch (Exception dialogEx) {
+                                        XposedBridge.log(TAG + ": Error showing restore dialog: " + dialogEx.getMessage());
+                                    }
+                                }
+                            });
+                        } catch (Exception handlerEx) {
+                            XposedBridge.log(TAG + ": Error posting dialog to handler: " + handlerEx.getMessage());
+                        }
                     }
                     
                     channelBackup = null;
