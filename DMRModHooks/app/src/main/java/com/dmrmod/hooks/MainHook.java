@@ -236,6 +236,7 @@ public class MainHook implements IXposedHookLoadPackage {
     private static Runnable aprsUpdateRunnable = null;  // Runnable for updating dialog
     private static volatile boolean isAPRSSquelchOpen = false;  // Track squelch state across UI updates
     private static volatile int aprsStoredSquelch = 1;  // Store squelch level to restore
+    private static TextView aprsRssiDisplayTextView = null;  // RSSI display in APRS monitoring dialog
     
     /**
      * Check if a channel is an APRS channel (should be hidden from channel list)
@@ -279,6 +280,7 @@ public class MainHook implements IXposedHookLoadPackage {
         aprsMonitoringDialog = null;
         aprsUpdateHandler = null;
         aprsUpdateRunnable = null;
+        aprsRssiDisplayTextView = null;
         XposedBridge.log(TAG + ": APRS state reset on module load (one-time)");
         
         // Hook the main activity's onCreate method
@@ -680,6 +682,7 @@ public class MainHook implements IXposedHookLoadPackage {
                         aprsMonitoringDialog = null;
                         aprsUpdateHandler = null;
                         aprsUpdateRunnable = null;
+                        aprsRssiDisplayTextView = null;
                         
                         // Check for orphaned APRS channel and restore if needed (delayed to ensure DmrManager is ready)
                         final Activity activityForRestore = (Activity) param.thisObject;
@@ -3736,6 +3739,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     aprsUpdateHandler.removeCallbacks(aprsUpdateRunnable);
                 }
                 aprsMonitoringDialog = null;
+                aprsRssiDisplayTextView = null;
             }
         });
         
@@ -3751,6 +3755,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     aprsUpdateHandler.removeCallbacks(aprsUpdateRunnable);
                 }
                 aprsMonitoringDialog = null;
+                aprsRssiDisplayTextView = null;
             }
         });
         
@@ -3798,6 +3803,54 @@ public class MainHook implements IXposedHookLoadPackage {
             statusText.setTextSize(14);
             statusText.setPadding(0, 10, 0, 20);
             mainLayout.addView(statusText);
+            
+            // ========== RSSI METER ==========
+            // Create RSSI display box (green theme for APRS)
+            LinearLayout rssiBox = new LinearLayout(activity);
+            rssiBox.setOrientation(LinearLayout.HORIZONTAL);
+            LinearLayout.LayoutParams rssiBoxParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            rssiBoxParams.bottomMargin = (int) (15 * activity.getResources().getDisplayMetrics().density);
+            
+            // Create border for RSSI box (green theme)
+            android.graphics.drawable.GradientDrawable rssiBoxDrawable = new android.graphics.drawable.GradientDrawable();
+            rssiBoxDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+            rssiBoxDrawable.setStroke(
+                (int) (2 * activity.getResources().getDisplayMetrics().density),
+                0xAA00FF00  // Green border
+            );
+            rssiBoxDrawable.setCornerRadius(8 * activity.getResources().getDisplayMetrics().density);
+            rssiBoxDrawable.setColor(0x1500FF00);  // Subtle green background
+            
+            rssiBox.setBackground(rssiBoxDrawable);
+            rssiBox.setLayoutParams(rssiBoxParams);
+            int rssiPadding = (int) (8 * activity.getResources().getDisplayMetrics().density);
+            rssiBox.setPadding(rssiPadding, rssiPadding, rssiPadding, rssiPadding);
+            rssiBox.setGravity(android.view.Gravity.CENTER);
+            
+            // Add RSSI value TextView
+            TextView rssiText = new TextView(activity);
+            rssiText.setTextColor(0xFF00FF00);  // Green text
+            rssiText.setTextSize(18);
+            rssiText.setTypeface(null, android.graphics.Typeface.BOLD);
+            rssiText.setGravity(android.view.Gravity.CENTER);
+            
+            // Update text based on current RSSI
+            if (currentRssi != -999) {
+                rssiText.setText("📶 Signal: " + currentRssi + " dBm");
+                rssiBox.setVisibility(View.VISIBLE);
+            } else {
+                rssiText.setText("📶 No Signal");
+                rssiBox.setVisibility(View.INVISIBLE);
+            }
+            
+            rssiBox.addView(rssiText);
+            mainLayout.addView(rssiBox);
+            
+            // Store reference for updates
+            aprsRssiDisplayTextView = rssiText;
             
             // ========== SOFTWARE SQUELCH TOGGLE ==========
             // Create Soft SQ toggle button
