@@ -4408,6 +4408,12 @@ public class MainHook implements IXposedHookLoadPackage {
                 softwareSquelchToggleButton.setChecked(false);
             }
             
+            // CRITICAL: Explicitly clear software squelch flags when stopping APRS
+            // This ensures squelch is fully disabled even if the toggle was already unchecked
+            isSoftwareSquelchEnabled = false;
+            isAprsSoftwareSquelchEnabled = false;
+            XposedBridge.log(TAG + ": Cleared software squelch flags (stopAPRSMonitoring)");
+            
             isAPRSMonitoringActive = false;
             
             // Update APRS button to unchecked state
