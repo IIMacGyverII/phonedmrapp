@@ -4248,6 +4248,12 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.callMethod(dmrManager, "updateChannel", currentChannel);
             XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", currentChannel);
             
+            // CRITICAL: Explicitly set hardware squelch to 0 using direct AnalogMessage.send()
+            // The updateChannel/syncChannelInfoWithData above go through state machine which is
+            // unreliable. Use direct send to ensure hardware squelch is actually set to 0.
+            enableSoftwareSquelchOnCurrentChannel();
+            XposedBridge.log(TAG + ": Set hardware squelch to 0 via direct AnalogMessage send");
+            
             isAPRSMonitoringActive = true;
             
             // Update APRS button to checked state
