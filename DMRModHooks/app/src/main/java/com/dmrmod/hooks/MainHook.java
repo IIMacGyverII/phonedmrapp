@@ -9881,8 +9881,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             }
             
-            // Update hardware
-            int channelType = (Integer) vfoChannelBackup.get("type");
+            // Update hardware (reuse channelType from above)
             if (channelType == 1) {
                 // Analog channel - use AnalogMessage
                 sendVFOChannelToHardware(currentChannel, 1);
