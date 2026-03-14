@@ -9732,7 +9732,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     vfoChannelBackup.put("rxSubCode", XposedHelpers.getIntField(channel, "rxSubCode"));
                     vfoChannelBackup.put("txType", XposedHelpers.getIntField(channel, "txType"));
                     vfoChannelBackup.put("txSubCode", XposedHelpers.getIntField(channel, "txSubCode"));
-                } catch (Exception analogEx) {
+                } catch (Throwable analogEx) {
                     XposedBridge.log(TAG + ": Warning - couldn't save analog tone fields: " + analogEx.getMessage());
                     // Set defaults
                     vfoChannelBackup.put("rxType", 0);
@@ -9757,8 +9757,14 @@ public class MainHook implements IXposedHookLoadPackage {
                     vfoChannelBackup.put("colorCode", XposedHelpers.getIntField(channel, "colorCode"));
                     vfoChannelBackup.put("inBoundSlot", XposedHelpers.getIntField(channel, "inBoundSlot"));
                     vfoChannelBackup.put("outBoundSlot", XposedHelpers.getIntField(channel, "outBoundSlot"));
-                } catch (Exception dmrEx) {
+                } catch (Throwable dmrEx) {
                     XposedBridge.log(TAG + ": Warning - couldn't save DMR fields: " + dmrEx.getMessage());
+                    // Set defaults for safety
+                    vfoChannelBackup.put("contactType", 1);
+                    vfoChannelBackup.put("txContact", 9);
+                    vfoChannelBackup.put("colorCode", 1);
+                    vfoChannelBackup.put("inBoundSlot", 1);
+                    vfoChannelBackup.put("outBoundSlot", 1);
                 }
             } else {
                 // Analog channel - set default DMR values for restore safety
@@ -9883,7 +9889,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     XposedHelpers.setIntField(currentChannel, "rxSubCode", (Integer) vfoChannelBackup.get("rxSubCode"));
                     XposedHelpers.setIntField(currentChannel, "txType", (Integer) vfoChannelBackup.get("txType"));
                     XposedHelpers.setIntField(currentChannel, "txSubCode", (Integer) vfoChannelBackup.get("txSubCode"));
-                } catch (Exception analogEx) {
+                } catch (Throwable analogEx) {
                     XposedBridge.log(TAG + ": Warning - couldn't restore analog tone fields: " + analogEx.getMessage());
                 }
             }
@@ -9897,7 +9903,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     XposedHelpers.setIntField(currentChannel, "colorCode", (Integer) vfoChannelBackup.get("colorCode"));
                     XposedHelpers.setIntField(currentChannel, "inBoundSlot", (Integer) vfoChannelBackup.get("inBoundSlot"));
                     XposedHelpers.setIntField(currentChannel, "outBoundSlot", (Integer) vfoChannelBackup.get("outBoundSlot"));
-                } catch (Exception dmrEx) {
+                } catch (Throwable dmrEx) {
                     XposedBridge.log(TAG + ": Warning - couldn't restore DMR fields: " + dmrEx.getMessage());
                 }
             }
