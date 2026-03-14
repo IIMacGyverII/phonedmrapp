@@ -89,7 +89,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.1.5";
+    private static final String VERSION = "3.1.6";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -2172,6 +2172,13 @@ public class MainHook implements IXposedHookLoadPackage {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         try {
+                            // CRITICAL: Skip channel updates when VFO mode is active
+                            // VFO manages its own channel state and updateUI would reload from database
+                            if (isVFOModeActive) {
+                                XposedBridge.log(TAG + ": updateUI called during VFO mode - skipping channel reload");
+                                return;
+                            }
+                            
                             // Get current channel number and type
                             Object channelData = XposedHelpers.getObjectField(param.thisObject, "mCurrentChannelData");
                             if (channelData != null) {
@@ -9590,8 +9597,11 @@ public class MainHook implements IXposedHookLoadPackage {
             
             XposedBridge.log(TAG + ": Showing VFO dialog");
             
-            // Start VFO mode first
-            startVFOMode(activity);
+            // FIXED: Don't start VFO mode until user clicks "Apply Changes"
+            // Previously this was calling startVFOMode() here, which immediately hijacked
+            // the channel BEFORE the user could see/modify the settings in the dialog.
+            // Now the dialog just shows configuration options, and applyVFOChanges()
+            // will initialize VFO mode when the user actually clicks the button.
             
             // Show full VFO control dialog
             showVFOControlDialog(activity);
@@ -9917,12 +9927,24 @@ public class MainHook implements IXposedHookLoadPackage {
             digitalControlsLayout.addView(localIdLabel);
             
             final EditText localIdEditText = new EditText(activity);
-            // Show current localId or get from channel
+            // Show current localId or get from system settings
             if (vfoLocalId > 0) {
+                // User has set it before in VFO - use that value
                 localIdEditText.setText(String.valueOf(vfoLocalId));
             } else {
-                // Use default DMR ID of 1 (ChannelData doesn't store localId)
-                localIdEditText.setText("1");
+                // First time using VFO - default to system DMR ID from settings
+                try {
+                    Class<?> personSharePrefDataClass = XposedHelpers.findClass(
+                        "com.pri.prizeinterphone.serial.data.PersonSharePrefData", appClassLoader);
+                    int systemDmrId = (Integer) XposedHelpers.callStaticMethod(
+                        personSharePrefDataClass, "getIntData", activity, "pref_person_device_id", 1);
+                    localIdEditText.setText(String.valueOf(systemDmrId));
+                    XposedBridge.log(TAG + ": VFO: Defaulting DMR ID to system setting: " + systemDmrId);
+                } catch (Exception e) {
+                    // Fallback to 1 if we can't get system ID
+                    localIdEditText.setText("1");
+                    XposedBridge.log(TAG + ": VFO: Error getting system DMR ID, using default: " + e.getMessage());
+                }
             }
             localIdEditText.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
             digitalControlsLayout.addView(localIdEditText);
@@ -10076,8 +10098,17 @@ public class MainHook implements IXposedHookLoadPackage {
                 
                 // Initialize vfoLocalId if not already set
                 if (vfoLocalId < 0) {
-                    vfoLocalId = 1;
-                    XposedBridge.log(TAG + ": Initialized vfoLocalId to default: 1");
+                    // Default to system DMR ID from settings
+                    try {
+                        Class<?> personSharePrefDataClass = XposedHelpers.findClass(
+                            "com.pri.prizeinterphone.serial.data.PersonSharePrefData", appClassLoader);
+                        vfoLocalId = (Integer) XposedHelpers.callStaticMethod(
+                            personSharePrefDataClass, "getIntData", activity, "pref_person_device_id", 1);
+                        XposedBridge.log(TAG + ": Initialized vfoLocalId to system DMR ID: " + vfoLocalId);
+                    } catch (Exception e) {
+                        vfoLocalId = 1;  // Fallback
+                        XposedBridge.log(TAG + ": Error getting system DMR ID, using default: " + e.getMessage());
+                    }
                 }
                 
                 // Disable software squelch if it was enabled
@@ -10270,8 +10301,17 @@ public class MainHook implements IXposedHookLoadPackage {
             
             // Initialize vfoLocalId if not already set (ChannelData doesn't store localId)
             if (vfoLocalId < 0) {
-                vfoLocalId = 1;  // Default DMR ID
-                XposedBridge.log(TAG + ": Initialized vfoLocalId to default: 1");
+                // Default to system DMR ID from settings
+                try {
+                    Class<?> personSharePrefDataClass = XposedHelpers.findClass(
+                        "com.pri.prizeinterphone.serial.data.PersonSharePrefData", appClassLoader);
+                    vfoLocalId = (Integer) XposedHelpers.callStaticMethod(
+                        personSharePrefDataClass, "getIntData", activity, "pref_person_device_id", 1);
+                    XposedBridge.log(TAG + ": Initialized vfoLocalId to system DMR ID: " + vfoLocalId);
+                } catch (Exception e) {
+                    vfoLocalId = 1;  // Fallback
+                    XposedBridge.log(TAG + ": Error getting system DMR ID, using default: " + e.getMessage());
+                }
             }
             
             // If Soft SQ is enabled, disable it (as if user pressed the button)
@@ -10808,58 +10848,23 @@ public class MainHook implements IXposedHookLoadPackage {
                 XposedBridge.log(TAG + ": VFO analog settings sent to hardware (sq=2, Soft SQ " + (isSoftwareSquelchEnabled ? "ON" : "OFF") + ")");
                 
             } else {
-                // DIGITAL/DMR MODE - Use DigitalMessage for direct hardware control
-                Class<?> digitalMessageClass = XposedHelpers.findClass(
-                    "com.pri.prizeinterphone.message.DigitalMessage",
+                // DIGITAL/DMR MODE - Use state machine for proper hardware update
+                // DigitalMessage.send() alone is NOT sufficient for digital channel changes!
+                // Must use DmrManager.updateChannel() which handles the full state machine
+                Class<?> dmrManagerClass = XposedHelpers.findClass(
+                    "com.pri.prizeinterphone.manager.DmrManager",
                     appClassLoader
                 );
-                Object digitalMessage = digitalMessageClass.newInstance();
+                Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
                 
-                // Copy all channel fields from the channel object
-                XposedHelpers.setIntField(digitalMessage, "txFreq", 
-                    XposedHelpers.getIntField(channel, "txFreq"));
-                XposedHelpers.setIntField(digitalMessage, "rxFreq", 
-                    XposedHelpers.getIntField(channel, "rxFreq"));
-                XposedHelpers.setByteField(digitalMessage, "power", 
-                    (byte) XposedHelpers.getIntField(channel, "power"));
-                XposedHelpers.setByteField(digitalMessage, "cc", 
-                    (byte) vfoColorCode);
-                XposedHelpers.setByteField(digitalMessage, "contactType", 
-                    (byte) XposedHelpers.getIntField(channel, "contactType"));
-                XposedHelpers.setIntField(digitalMessage, "txContact", 
-                    XposedHelpers.getIntField(channel, "txContact"));
-                // Use vfoLocalId if set, otherwise use default DMR ID of 1
-                int actualLocalId = (vfoLocalId > 0) ? vfoLocalId : 1;
-                XposedHelpers.setIntField(digitalMessage, "localId", actualLocalId);
-                XposedHelpers.setByteField(digitalMessage, "inboundSlot", 
-                    (byte) XposedHelpers.getIntField(channel, "inBoundSlot"));
-                XposedHelpers.setByteField(digitalMessage, "outboundSlot", 
-                    (byte) XposedHelpers.getIntField(channel, "outBoundSlot"));
-                XposedHelpers.setObjectField(digitalMessage, "groupList", 
-                    XposedHelpers.getObjectField(channel, "groups"));
-                XposedHelpers.setByteField(digitalMessage, "relay", 
-                    (byte) XposedHelpers.getIntField(channel, "relay"));
-                XposedHelpers.setByteField(digitalMessage, "encryptSw", 
-                    (byte) XposedHelpers.getIntField(channel, "encryptSw"));
-                
-                // Handle encryptKey (String to byte array)
-                try {
-                    String encryptKeyStr = (String) XposedHelpers.getObjectField(channel, "encryptKey");
-                    if (encryptKeyStr != null && !encryptKeyStr.isEmpty()) {
-                        XposedHelpers.setObjectField(digitalMessage, "encryptKey", encryptKeyStr.getBytes());
-                    } else {
-                        XposedHelpers.setObjectField(digitalMessage, "encryptKey", new byte[0]);
-                    }
-                } catch (Throwable encEx) {
-                    XposedHelpers.setObjectField(digitalMessage, "encryptKey", new byte[0]);
-                }
-                
-                // Send to hardware
-                XposedHelpers.callMethod(digitalMessage, "send");
+                // Use updateChannel() to properly switch digital channel
+                // The channel object already has all VFO settings applied by applyVFOChanges()
+                XposedHelpers.callMethod(dmrManager, "updateChannel", channel);
                 
                 String contactTypeStr = (vfoContactType == 0) ? "PRIVATE" : 
                                        (vfoContactType == 1) ? "GROUP" : "ALL";
-                XposedBridge.log(TAG + ": VFO digital settings sent to hardware via DigitalMessage.send() (ContactType=" + contactTypeStr + 
+                int actualLocalId = (vfoLocalId > 0) ? vfoLocalId : 1;
+                XposedBridge.log(TAG + ": VFO digital settings sent to hardware via DmrManager.updateChannel() (ContactType=" + contactTypeStr + 
                     ", TX=" + vfoTxContact + ", CC=" + vfoColorCode + ", Slot=" + (vfoSlot + 1) + ", LocalId=" + actualLocalId + ")");
             }
             
