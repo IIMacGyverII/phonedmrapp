@@ -9726,12 +9726,27 @@ public class MainHook implements IXposedHookLoadPackage {
             vfoChannelBackup.put("txType", XposedHelpers.getIntField(channel, "txType"));
             vfoChannelBackup.put("txSubCode", XposedHelpers.getIntField(channel, "txSubCode"));
             
-            // DMR-specific fields
-            vfoChannelBackup.put("contactType", XposedHelpers.getIntField(channel, "contactType"));
-            vfoChannelBackup.put("txContact", XposedHelpers.getIntField(channel, "txContact"));
-            vfoChannelBackup.put("colorCode", XposedHelpers.getIntField(channel, "colorCode"));
-            vfoChannelBackup.put("inBoundSlot", XposedHelpers.getIntField(channel, "inBoundSlot"));
-            vfoChannelBackup.put("outBoundSlot", XposedHelpers.getIntField(channel, "outBoundSlot"));
+            // DMR-specific fields (only exist on digital channels, type=0)
+            int channelType = XposedHelpers.getIntField(channel, "type");
+            if (channelType == 0) {
+                // Digital/DMR channel - save DMR fields
+                try {
+                    vfoChannelBackup.put("contactType", XposedHelpers.getIntField(channel, "contactType"));
+                    vfoChannelBackup.put("txContact", XposedHelpers.getIntField(channel, "txContact"));
+                    vfoChannelBackup.put("colorCode", XposedHelpers.getIntField(channel, "colorCode"));
+                    vfoChannelBackup.put("inBoundSlot", XposedHelpers.getIntField(channel, "inBoundSlot"));
+                    vfoChannelBackup.put("outBoundSlot", XposedHelpers.getIntField(channel, "outBoundSlot"));
+                } catch (Exception dmrEx) {
+                    XposedBridge.log(TAG + ": Warning - couldn't save DMR fields: " + dmrEx.getMessage());
+                }
+            } else {
+                // Analog channel - set default DMR values for restore safety
+                vfoChannelBackup.put("contactType", 1);
+                vfoChannelBackup.put("txContact", 9);
+                vfoChannelBackup.put("colorCode", 1);
+                vfoChannelBackup.put("inBoundSlot", 1);
+                vfoChannelBackup.put("outBoundSlot", 1);
+            }
             
             // Save current squelch state (software vs hardware)
             vfoChannelBackup.put("wasSoftwareSquelchEnabled", isSoftwareSquelchEnabled);
@@ -9841,12 +9856,20 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.setIntField(currentChannel, "txType", (Integer) vfoChannelBackup.get("txType"));
             XposedHelpers.setIntField(currentChannel, "txSubCode", (Integer) vfoChannelBackup.get("txSubCode"));
             
-            // Restore DMR fields
-            XposedHelpers.setIntField(currentChannel, "contactType", (Integer) vfoChannelBackup.get("contactType"));
-            XposedHelpers.setIntField(currentChannel, "txContact", (Integer) vfoChannelBackup.get("txContact"));
-            XposedHelpers.setIntField(currentChannel, "colorCode", (Integer) vfoChannelBackup.get("colorCode"));
-            XposedHelpers.setIntField(currentChannel, "inBoundSlot", (Integer) vfoChannelBackup.get("inBoundSlot"));
-            XposedHelpers.setIntField(currentChannel, "outBoundSlot", (Integer) vfoChannelBackup.get("outBoundSlot"));
+            // Restore DMR fields (only on digital channels, type=0)
+            int channelType = (Integer) vfoChannelBackup.get("type");
+            if (channelType == 0) {
+                // Digital/DMR channel - restore DMR fields
+                try {
+                    XposedHelpers.setIntField(currentChannel, "contactType", (Integer) vfoChannelBackup.get("contactType"));
+                    XposedHelpers.setIntField(currentChannel, "txContact", (Integer) vfoChannelBackup.get("txContact"));
+                    XposedHelpers.setIntField(currentChannel, "colorCode", (Integer) vfoChannelBackup.get("colorCode"));
+                    XposedHelpers.setIntField(currentChannel, "inBoundSlot", (Integer) vfoChannelBackup.get("inBoundSlot"));
+                    XposedHelpers.setIntField(currentChannel, "outBoundSlot", (Integer) vfoChannelBackup.get("outBoundSlot"));
+                } catch (Exception dmrEx) {
+                    XposedBridge.log(TAG + ": Warning - couldn't restore DMR fields: " + dmrEx.getMessage());
+                }
+            }
             
             // Restore squelch state
             Boolean wasSoftSqEnabled = (Boolean) vfoChannelBackup.get("wasSoftwareSquelchEnabled");
