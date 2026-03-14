@@ -4632,8 +4632,51 @@ public class MainHook implements IXposedHookLoadPackage {
                                                        "Your channel has been restored automatically.\n\n" +
                                                        "To prevent startup errors:\n" +
                                                        "• Always stop APRS monitoring before closing the app\n\n" +
-                                                       "Please restart the app now.")
-                                            .setPositiveButton("OK", null)
+                                                       "Restart recommended for proper operation.")
+                                            .setPositiveButton("Restart App", new DialogInterface.OnClickListener() {
+                                                @Override
+                                                public void onClick(DialogInterface dialog, int which) {
+                                                    try {
+                                                        // Get the app context and package manager
+                                                        Context appContext = context.getApplicationContext();
+                                                        String packageName = appContext.getPackageName();
+                                                        
+                                                        // Create intent to launch main activity
+                                                        android.content.Intent intent = appContext.getPackageManager()
+                                                            .getLaunchIntentForPackage(packageName);
+                                                        if (intent != null) {
+                                                            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                                                            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                                                            
+                                                            // Create pending intent
+                                                            android.app.PendingIntent pendingIntent = android.app.PendingIntent.getActivity(
+                                                                appContext,
+                                                                0,
+                                                                intent,
+                                                                android.app.PendingIntent.FLAG_ONE_SHOT | android.app.PendingIntent.FLAG_IMMUTABLE
+                                                            );
+                                                            
+                                                            // Schedule restart in 100ms
+                                                            android.app.AlarmManager alarmManager = (android.app.AlarmManager) 
+                                                                appContext.getSystemService(Context.ALARM_SERVICE);
+                                                            alarmManager.set(
+                                                                android.app.AlarmManager.RTC,
+                                                                System.currentTimeMillis() + 100,
+                                                                pendingIntent
+                                                            );
+                                                            
+                                                            XposedBridge.log(TAG + ": Restarting app...");
+                                                            
+                                                            // Exit current process
+                                                            System.exit(0);
+                                                        }
+                                                    } catch (Exception restartEx) {
+                                                        XposedBridge.log(TAG + ": Error restarting app: " + restartEx.getMessage());
+                                                        Toast.makeText(context, "Error restarting app", Toast.LENGTH_SHORT).show();
+                                                    }
+                                                }
+                                            })
+                                            .setNegativeButton("Later", null)
                                             .setCancelable(false)
                                             .show();
                                     } catch (Exception dialogEx) {
