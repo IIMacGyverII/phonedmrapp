@@ -4676,7 +4676,6 @@ public class MainHook implements IXposedHookLoadPackage {
                                                     }
                                                 }
                                             })
-                                            .setNegativeButton("Later", null)
                                             .setCancelable(false)
                                             .show();
                                     } catch (Exception dialogEx) {
