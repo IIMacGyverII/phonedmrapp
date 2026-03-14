@@ -3796,23 +3796,41 @@ public class MainHook implements IXposedHookLoadPackage {
             statusLabel.setTypeface(null, android.graphics.Typeface.BOLD);
             mainLayout.addView(statusLabel);
             
+            // Create horizontal container for status text and RSSI meter
+            LinearLayout statusRssiContainer = new LinearLayout(activity);
+            statusRssiContainer.setOrientation(LinearLayout.HORIZONTAL);
+            LinearLayout.LayoutParams containerParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            containerParams.bottomMargin = (int) (15 * activity.getResources().getDisplayMetrics().density);
+            statusRssiContainer.setLayoutParams(containerParams);
+            
+            // Status text (left side, takes 60% of width)
             TextView statusText = new TextView(activity);
             String frequency = aprsDb.getAprsFrequency();
             statusText.setText("🟢 MONITORING ACTIVE\nFrequency: " + frequency + " MHz\nReceiving APRS packets...");
             statusText.setTextColor(0xFF00FF00);
             statusText.setTextSize(14);
-            statusText.setPadding(0, 10, 0, 20);
-            mainLayout.addView(statusText);
+            statusText.setPadding(0, 10, 0, 0);
+            LinearLayout.LayoutParams statusParams = new LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                0.6f  // 60% of width
+            );
+            statusParams.rightMargin = (int) (8 * activity.getResources().getDisplayMetrics().density);
+            statusText.setLayoutParams(statusParams);
+            statusRssiContainer.addView(statusText);
             
-            // ========== RSSI METER ==========
+            // ========== RSSI METER (right side, takes 40% of width) ==========
             // Create RSSI display box (green theme for APRS)
             LinearLayout rssiBox = new LinearLayout(activity);
             rssiBox.setOrientation(LinearLayout.HORIZONTAL);
             LinearLayout.LayoutParams rssiBoxParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                0.4f  // 40% of width
             );
-            rssiBoxParams.bottomMargin = (int) (15 * activity.getResources().getDisplayMetrics().density);
             
             // Create border for RSSI box (green theme)
             android.graphics.drawable.GradientDrawable rssiBoxDrawable = new android.graphics.drawable.GradientDrawable();
@@ -3826,20 +3844,20 @@ public class MainHook implements IXposedHookLoadPackage {
             
             rssiBox.setBackground(rssiBoxDrawable);
             rssiBox.setLayoutParams(rssiBoxParams);
-            int rssiPadding = (int) (8 * activity.getResources().getDisplayMetrics().density);
+            int rssiPadding = (int) (6 * activity.getResources().getDisplayMetrics().density);
             rssiBox.setPadding(rssiPadding, rssiPadding, rssiPadding, rssiPadding);
             rssiBox.setGravity(android.view.Gravity.CENTER);
             
             // Add RSSI value TextView
             TextView rssiText = new TextView(activity);
             rssiText.setTextColor(0xFF00FF00);  // Green text
-            rssiText.setTextSize(18);
+            rssiText.setTextSize(12);
             rssiText.setTypeface(null, android.graphics.Typeface.BOLD);
             rssiText.setGravity(android.view.Gravity.CENTER);
             
             // Update text based on current RSSI
             if (currentRssi != -999) {
-                rssiText.setText("📶 Signal: " + currentRssi + " dBm");
+                rssiText.setText("📶 " + currentRssi + " dBm");
                 rssiBox.setVisibility(View.VISIBLE);
             } else {
                 rssiText.setText("📶 No Signal");
@@ -3847,7 +3865,10 @@ public class MainHook implements IXposedHookLoadPackage {
             }
             
             rssiBox.addView(rssiText);
-            mainLayout.addView(rssiBox);
+            statusRssiContainer.addView(rssiBox);
+            
+            // Add the horizontal container to main layout
+            mainLayout.addView(statusRssiContainer);
             
             // Store reference for updates
             aprsRssiDisplayTextView = rssiText;
