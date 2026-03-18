@@ -1,4 +1,4 @@
-# DMRModHooks v3.3.3 Release Notes
+# DMRModHooks v3.3.4 Release Notes
 
 ## 🐛 Bug Fix Release
 
@@ -49,12 +49,12 @@ None - this is a targeted bug fix for import error handling.
 
 ### Rollback
 
-If you need to rollback to v3.3.2:
-1. Download v3.3.2 from releases
+If you need to rollback to v3.3.3:
+1. Download v3.3.3 from releases
 2. Uninstall current version
-3. Install v3.3.2 APK
+3. Install v3.3.3 APK
 4. Reactivate in LSPosed and restart target app
 
 ---
 
-**Full Changelog**: v3.3.2...v3.3.3
+**Full Changelog**: v3.3.3...v3.3.4
