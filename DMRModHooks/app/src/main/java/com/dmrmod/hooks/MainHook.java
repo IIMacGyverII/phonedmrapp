@@ -90,7 +90,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.3.2";
+    private static final String VERSION = "3.3.3";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -3607,6 +3607,10 @@ public class MainHook implements IXposedHookLoadPackage {
      * Show APRS Settings dialog
      */
     private void showAPRSSettingsDialog(final Activity activity) {
+        showAPRSSettingsDialog(activity, null);
+    }
+
+    private void showAPRSSettingsDialog(final Activity activity, final Runnable onSaved) {
         try {
             APRSDatabase aprsDb = APRSDatabase.getInstance(activity);
             
@@ -3729,6 +3733,7 @@ public class MainHook implements IXposedHookLoadPackage {
                         aprsDb.setAprsFrequency(frequency);
                         
                         Toast.makeText(activity, "APRS settings saved!", Toast.LENGTH_SHORT).show();
+                        if (onSaved != null) onSaved.run();
                         
                     } catch (Exception e) {
                         Toast.makeText(activity, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -3967,8 +3972,16 @@ public class MainHook implements IXposedHookLoadPackage {
             LinearLayout.LayoutParams.WRAP_CONTENT);
         aprsStParams.topMargin = (int) (4 * activity.getResources().getDisplayMetrics().density);
         aprsSettingsBtn.setLayoutParams(aprsStParams);
+        final AlertDialog[] startDialogHolder = new AlertDialog[1];
         aprsSettingsBtn.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { showAPRSSettingsDialog(activity); }
+            @Override public void onClick(View v) {
+                showAPRSSettingsDialog(activity, new Runnable() {
+                    @Override public void run() {
+                        if (startDialogHolder[0] != null) startDialogHolder[0].dismiss();
+                        showAPRSStartDialog(activity);
+                    }
+                });
+            }
         });
         mainLayout.addView(aprsSettingsBtn);
 
@@ -4036,7 +4049,7 @@ public class MainHook implements IXposedHookLoadPackage {
             }
         });
         
-        builder.show();
+        startDialogHolder[0] = builder.show();
     }
     
     /**
@@ -4814,6 +4827,193 @@ public class MainHook implements IXposedHookLoadPackage {
     }
     
     /**
+     * Show SSTV Settings dialog
+     */
+    private void showSSTVSettingsDialog(final Activity activity) {
+        showSSTVSettingsDialog(activity, null);
+    }
+
+    private void showSSTVSettingsDialog(final Activity activity, final Runnable onSaved) {
+        try {
+            final android.content.SharedPreferences prefs = activity.getSharedPreferences(
+                "dmrmod_sstv_global", android.content.Context.MODE_PRIVATE);
+            String currentFreq = prefs.getString("sstv_frequency", "144.500");
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+            builder.setTitle("⚙️ SSTV Settings");
+
+            ScrollView scrollView = new ScrollView(activity);
+            LinearLayout mainLayout = new LinearLayout(activity);
+            mainLayout.setOrientation(LinearLayout.VERTICAL);
+            mainLayout.setPadding(40, 40, 40, 40);
+
+            TextView titleText = new TextView(activity);
+            titleText.setText("SSTV Monitoring Settings");
+            titleText.setTextSize(18);
+            titleText.setTypeface(null, android.graphics.Typeface.BOLD);
+            titleText.setPadding(0, 10, 0, 10);
+            mainLayout.addView(titleText);
+
+            TextView descText = new TextView(activity);
+            descText.setText("Configure the frequency used for SSTV image reception.\nThe international SSTV calling frequency is 144.500 MHz (VHF).");
+            descText.setTextSize(13);
+            descText.setTextColor(0xFF999999);
+            descText.setPadding(0, 0, 0, 20);
+            mainLayout.addView(descText);
+
+            // SSTV Frequency
+            TextView freqLabel = new TextView(activity);
+            freqLabel.setText("SSTV Frequency (MHz):");
+            freqLabel.setTextSize(14);
+            freqLabel.setPadding(0, 10, 0, 5);
+            mainLayout.addView(freqLabel);
+
+            final EditText freqEdit = new EditText(activity);
+            freqEdit.setText(currentFreq);
+            freqEdit.setHint("144.500");
+            freqEdit.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+            mainLayout.addView(freqEdit);
+
+            TextView freqInfo = new TextView(activity);
+            freqInfo.setText("Common frequencies:\n• 144.500 MHz — VHF International SSTV\n• 432.500 MHz — UHF 70cm SSTV\n• 145.500 MHz — Regional VHF simplex");
+            freqInfo.setTextSize(11);
+            freqInfo.setTextColor(0xFF999999);
+            freqInfo.setPadding(0, 5, 0, 20);
+            mainLayout.addView(freqInfo);
+
+            TextView infoText = new TextView(activity);
+            infoText.setText("📺 RX-Only Mode: This system only receives SSTV images.\n" +
+                "📁 Saved Images: Download/DMR/SSTV/\n" +
+                "📋 Supported Modes: Scottie, Martin, Robot, PD, Wraase");
+            infoText.setTextSize(12);
+            infoText.setTextColor(0xFF999999);
+            infoText.setPadding(0, 5, 0, 10);
+            mainLayout.addView(infoText);
+
+            builder.setPositiveButton("Save", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    String freq = freqEdit.getText().toString().trim();
+                    if (freq.isEmpty()) {
+                        Toast.makeText(activity, "Frequency cannot be empty", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    try {
+                        double f = Double.parseDouble(freq);
+                        boolean inVHF = (f >= 136.0 && f <= 174.0);
+                        boolean inUHF = (f >= 400.0 && f <= 520.0);
+                        if (!inVHF && !inUHF) {
+                            Toast.makeText(activity, "Frequency must be in VHF (136-174 MHz) or UHF (400-520 MHz) range", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                    } catch (NumberFormatException e) {
+                        Toast.makeText(activity, "Invalid frequency format", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    prefs.edit().putString("sstv_frequency", freq).apply();
+                    Toast.makeText(activity, "SSTV settings saved!", Toast.LENGTH_SHORT).show();
+                    if (onSaved != null) onSaved.run();
+                }
+            });
+
+            builder.setNegativeButton("Cancel", null);
+            scrollView.addView(mainLayout);
+            builder.setView(scrollView);
+            builder.show();
+
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error showing SSTV settings dialog: " + e.getMessage());
+            Toast.makeText(activity, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    /**
+     * Show SSTV Received Images dialog — gallery of saved .png files
+     */
+    private void showSSTVReceivedImagesDialog(final Activity activity) {
+        try {
+            AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+            builder.setTitle("📺 SSTV Received Images");
+
+            ScrollView scrollView = new ScrollView(activity);
+            LinearLayout mainLayout = new LinearLayout(activity);
+            mainLayout.setOrientation(LinearLayout.VERTICAL);
+            mainLayout.setPadding(40, 40, 40, 40);
+
+            java.io.File downloadDir = android.os.Environment.getExternalStoragePublicDirectory(
+                android.os.Environment.DIRECTORY_DOWNLOADS);
+            java.io.File sstvDir = new java.io.File(new java.io.File(downloadDir, "DMR"), "SSTV");
+
+            java.io.File[] files = sstvDir.exists() ? sstvDir.listFiles(new java.io.FilenameFilter() {
+                @Override public boolean accept(java.io.File dir, String name) {
+                    return name.endsWith(".png") || name.endsWith(".jpg");
+                }
+            }) : null;
+
+            if (files == null || files.length == 0) {
+                TextView noImagesText = new TextView(activity);
+                noImagesText.setText("📭 No SSTV images received yet.\n\nStart SSTV monitoring to receive images.\nImages are saved to:\nDownload/DMR/SSTV/");
+                noImagesText.setTextSize(14);
+                noImagesText.setTextColor(0xFF999999);
+                noImagesText.setPadding(0, 20, 0, 20);
+                mainLayout.addView(noImagesText);
+            } else {
+                // Sort newest first
+                java.util.Arrays.sort(files, new java.util.Comparator<java.io.File>() {
+                    @Override public int compare(java.io.File a, java.io.File b) {
+                        return Long.compare(b.lastModified(), a.lastModified());
+                    }
+                });
+
+                TextView countText = new TextView(activity);
+                countText.setText(files.length + " image" + (files.length == 1 ? "" : "s") + " in Download/DMR/SSTV/");
+                countText.setTextSize(13);
+                countText.setTextColor(0xFF4CAF50);
+                countText.setPadding(0, 0, 0, 20);
+                mainLayout.addView(countText);
+
+                for (final java.io.File imgFile : files) {
+                    Button imgButton = new Button(activity);
+                    String displayName = imgFile.getName().replace(".png", "").replace(".jpg", "");
+                    imgButton.setText("🖼 " + displayName);
+                    imgButton.setTextSize(13);
+                    imgButton.setAllCaps(false);
+                    imgButton.setPadding(20, 16, 20, 16);
+                    LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT);
+                    btnParams.bottomMargin = (int) (6 * activity.getResources().getDisplayMetrics().density);
+                    imgButton.setLayoutParams(btnParams);
+                    imgButton.setOnClickListener(new View.OnClickListener() {
+                        @Override public void onClick(View v) {
+                            try {
+                                android.net.Uri uri = android.net.Uri.fromFile(imgFile);
+                                android.content.Intent intent = new android.content.Intent(
+                                    android.content.Intent.ACTION_VIEW);
+                                intent.setDataAndType(uri, "image/png");
+                                intent.setFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                                activity.startActivity(intent);
+                            } catch (Exception ex) {
+                                Toast.makeText(activity, "No image viewer found", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    });
+                    mainLayout.addView(imgButton);
+                }
+            }
+
+            builder.setNegativeButton("Close", null);
+            scrollView.addView(mainLayout);
+            builder.setView(scrollView);
+            builder.show();
+
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error showing SSTV received images dialog: " + e.getMessage());
+            Toast.makeText(activity, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    /**
      * Show SSTV Monitoring dialog
      */
     private void showSSTVMonitoringDialog(final Activity activity) {
@@ -4845,14 +5045,17 @@ public class MainHook implements IXposedHookLoadPackage {
     private void showSSTVStartDialog(final Activity activity) {
         AlertDialog.Builder builder = new AlertDialog.Builder(activity);
         builder.setTitle("📺 SSTV Monitoring Mode");
-        
+
         LinearLayout mainLayout = new LinearLayout(activity);
         mainLayout.setOrientation(LinearLayout.VERTICAL);
         mainLayout.setPadding(40, 40, 40, 40);
-        
+
         // Status section
+        android.content.SharedPreferences sstvStartPrefs = activity.getSharedPreferences(
+            "dmrmod_sstv_global", android.content.Context.MODE_PRIVATE);
+        String sstvStartFreq = sstvStartPrefs.getString("sstv_frequency", "144.500");
         TextView statusText = new TextView(activity);
-        statusText.setText("⚫ MONITORING INACTIVE\n\nSSTV (Slow Scan Television) allows amateur radio operators to send and receive images over radio.\n\nPress 'Start Monitoring' to begin receiving SSTV images on 144.500 MHz.");
+        statusText.setText("⚫ MONITORING INACTIVE\n\nSSTV (Slow Scan Television) allows amateur radio operators to send and receive images over radio.\n\nPress 'Start Monitoring' to begin receiving SSTV images on " + sstvStartFreq + " MHz.");
         statusText.setTextSize(14);
         statusText.setTextColor(0xFF999999);
         statusText.setPadding(0, 10, 0, 20);
@@ -4889,11 +5092,49 @@ public class MainHook implements IXposedHookLoadPackage {
         licenseText.setText("\n⚠️ SSTV monitoring requires amateur radio certification. Receive-only monitoring is legal for all users.");
         licenseText.setTextSize(11);
         licenseText.setTextColor(0xFF999999);
-        licenseText.setPadding(0, 20, 0, 0);
+        licenseText.setPadding(0, 20, 0, 20);
         mainLayout.addView(licenseText);
-        
-        builder.setView(mainLayout);
-        
+
+        // Divider
+        View startDivider = new View(activity);
+        startDivider.setBackgroundColor(0x33FFFFFF);
+        startDivider.setLayoutParams(new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, 1));
+        mainLayout.addView(startDivider);
+
+        // === SSTV RECEIVED IMAGES BUTTON ===
+        Button startReceivedBtn = new Button(activity);
+        startReceivedBtn.setText("📺 SSTV Received Images");
+        startReceivedBtn.setTextSize(15);
+        startReceivedBtn.setAllCaps(false);
+        startReceivedBtn.setPadding(20, 20, 20, 20);
+        LinearLayout.LayoutParams startRxParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT);
+        startRxParams.topMargin = (int) (8 * activity.getResources().getDisplayMetrics().density);
+        startReceivedBtn.setLayoutParams(startRxParams);
+        startReceivedBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { showSSTVReceivedImagesDialog(activity); }
+        });
+        mainLayout.addView(startReceivedBtn);
+
+        // === SSTV SETTINGS BUTTON ===
+        final Button startSettingsBtn = new Button(activity);
+        startSettingsBtn.setText("⚙️ SSTV Settings");
+        startSettingsBtn.setTextSize(15);
+        startSettingsBtn.setAllCaps(false);
+        startSettingsBtn.setPadding(20, 20, 20, 20);
+        LinearLayout.LayoutParams startStParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT);
+        startStParams.topMargin = (int) (4 * activity.getResources().getDisplayMetrics().density);
+        startSettingsBtn.setLayoutParams(startStParams);
+        mainLayout.addView(startSettingsBtn);
+
+        ScrollView sstvStartScrollView = new ScrollView(activity);
+        sstvStartScrollView.addView(mainLayout);
+        builder.setView(sstvStartScrollView);
+
         builder.setPositiveButton("Start Monitoring", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
@@ -4902,10 +5143,21 @@ public class MainHook implements IXposedHookLoadPackage {
                 showSSTVLiveMonitoringScreen(activity);
             }
         });
-        
+
         builder.setNegativeButton("Close", null);
-        
-        builder.show();
+
+        final AlertDialog[] startDialogHolder = new AlertDialog[1];
+        startSettingsBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                showSSTVSettingsDialog(activity, new Runnable() {
+                    @Override public void run() {
+                        if (startDialogHolder[0] != null) startDialogHolder[0].dismiss();
+                        showSSTVStartDialog(activity);
+                    }
+                });
+            }
+        });
+        startDialogHolder[0] = builder.show();
     }
     
     /**
@@ -4974,7 +5226,10 @@ public class MainHook implements IXposedHookLoadPackage {
             mainLayout.addView(statusLabel);
             
             TextView statusText = new TextView(activity);
-            statusText.setText("🟢 MONITORING ACTIVE\nFrequency: 144.500 MHz\nHW Squelch: 2");
+            android.content.SharedPreferences sstvLivePrefs = activity.getSharedPreferences(
+                "dmrmod_sstv_global", android.content.Context.MODE_PRIVATE);
+            String sstvLiveFreq = sstvLivePrefs.getString("sstv_frequency", "144.500");
+            statusText.setText("🟢 MONITORING ACTIVE\nFrequency: " + sstvLiveFreq + " MHz\nHW Squelch: 2");
             statusText.setTextColor(0xFF00FF00);
             statusText.setTextSize(14);
             statusText.setPadding(0, 10, 0, 20);
@@ -5231,9 +5486,48 @@ public class MainHook implements IXposedHookLoadPackage {
                     "and reduce false detections.");
             squelchTip.setTextSize(11);
             squelchTip.setTextColor(0xFF888888);
-            squelchTip.setPadding(0, 20, 0, 0);
+            squelchTip.setPadding(0, 20, 0, 20);
             mainLayout.addView(squelchTip);
-            
+
+            // Divider
+            View liveDiv = new View(activity);
+            liveDiv.setBackgroundColor(0x3300FFFF);
+            liveDiv.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 1));
+            mainLayout.addView(liveDiv);
+
+            // === SSTV RECEIVED IMAGES BUTTON ===
+            Button liveReceivedBtn = new Button(activity);
+            liveReceivedBtn.setText("📺 SSTV Received Images");
+            liveReceivedBtn.setTextSize(15);
+            liveReceivedBtn.setAllCaps(false);
+            liveReceivedBtn.setPadding(20, 20, 20, 20);
+            LinearLayout.LayoutParams liveRxParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+            liveRxParams.topMargin = (int) (8 * activity.getResources().getDisplayMetrics().density);
+            liveReceivedBtn.setLayoutParams(liveRxParams);
+            liveReceivedBtn.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { showSSTVReceivedImagesDialog(activity); }
+            });
+            mainLayout.addView(liveReceivedBtn);
+
+            // === SSTV SETTINGS BUTTON ===
+            Button liveSettingsBtn = new Button(activity);
+            liveSettingsBtn.setText("⚙️ SSTV Settings");
+            liveSettingsBtn.setTextSize(15);
+            liveSettingsBtn.setAllCaps(false);
+            liveSettingsBtn.setPadding(20, 20, 20, 20);
+            LinearLayout.LayoutParams liveStParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+            liveStParams.topMargin = (int) (4 * activity.getResources().getDisplayMetrics().density);
+            liveSettingsBtn.setLayoutParams(liveStParams);
+            liveSettingsBtn.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { showSSTVSettingsDialog(activity); }
+            });
+            mainLayout.addView(liveSettingsBtn);
+
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error updating SSTV live screen: " + e.getMessage());
         }
@@ -5487,16 +5781,25 @@ public class MainHook implements IXposedHookLoadPackage {
             saveSSTVChannelBackup(currentChannel);
             XposedBridge.log(TAG + ": Backed up current channel for SSTV");
 
-            // Hijack channel with SSTV settings (144.500 MHz - SSTV calling frequency)
+            // Hijack channel with SSTV settings (configurable frequency, default 144.500 MHz)
+            android.content.SharedPreferences sstvPrefs = activity.getSharedPreferences(
+                "dmrmod_sstv_global", android.content.Context.MODE_PRIVATE);
+            String sstvFreqStr = sstvPrefs.getString("sstv_frequency", "144.500");
+            int sstvFreqHz;
+            try {
+                sstvFreqHz = (int) (Double.parseDouble(sstvFreqStr) * 1_000_000);
+            } catch (NumberFormatException e) {
+                sstvFreqHz = 144500000;  // fallback
+            }
             XposedHelpers.setIntField(currentChannel, "type", 1);  // ANALOG
             // Use the clean name already stored in the backup (strip was done there)
             String originalName = (String) sstvChannelBackup.get("name");
             if (originalName == null || originalName.isEmpty()) originalName = "Channel";
             XposedHelpers.setObjectField(currentChannel, "name", "SSTV (" + originalName + ")");
-            XposedHelpers.setIntField(currentChannel, "rxFreq", 144500000);  // 144.500 MHz
-            XposedHelpers.setIntField(currentChannel, "txFreq", 144500000);
+            XposedHelpers.setIntField(currentChannel, "rxFreq", sstvFreqHz);
+            XposedHelpers.setIntField(currentChannel, "txFreq", sstvFreqHz);
             XposedHelpers.setIntField(currentChannel, "sq", 2);  // Hardware squelch 2 (0 doesn't work)
-            XposedHelpers.setIntField(currentChannel, "band", 1);  // VHF
+            XposedHelpers.setIntField(currentChannel, "band", determineBand(Double.parseDouble(sstvFreqStr)));  // auto VHF/UHF
             XposedHelpers.setIntField(currentChannel, "channelMode", 0);  // Narrow bandwidth (NFM 12.5kHz for SSTV)
             XposedHelpers.setIntField(currentChannel, "power", 1);  // High power
             XposedHelpers.setIntField(currentChannel, "rxType", 0);  // No tone
@@ -5633,7 +5936,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 XposedBridge.log(TAG + ": Error sending direct AnalogMessage: " + e.getMessage());
             }
             
-            Toast.makeText(activity, "SSTV Monitoring Active at 144.500 MHz\nToggle Soft SQ to enable squelch", Toast.LENGTH_SHORT).show();
+            Toast.makeText(activity, "SSTV Monitoring Active at " + sstvFreqStr + " MHz\nToggle Soft SQ to enable squelch", Toast.LENGTH_SHORT).show();
             XposedBridge.log(TAG + ": ✅ SSTV monitoring active - Phase 1 (VIS detection)");
             
         } catch (Exception e) {
