@@ -1,0 +1,2063 @@
+﻿
+03-15 15:15:04.472  1371  1424 I DisplayDeviceRepository: Display device 
+added: DisplayDeviceInfo{"Built-in Screen": uniqueId="local:0", 1080 x 2460, 
+modeId 1, defaultModeId 1, supportedModes [{id=1, width=1080, height=2460, 
+fps=120.00001, alternativeRefreshRates=[60.0, 90.0]}, {id=2, width=1080, 
+height=2460, fps=90.0, alternativeRefreshRates=[60.0, 120.00001]}, {id=3, 
+width=1080, height=2460, fps=60.0, alternativeRefreshRates=[90.0, 
+120.00001]}], colorMode 0, supportedColorModes [0], hdrCapabilities 
+HdrCapabilities{mSupportedHdrTypes=[2, 3, 4], mMaxLuminance=500.0, 
+mMaxAverageLuminance=500.0, mMinLuminance=0.0}, allmSupported false, 
+gameContentTypeSupported false, density 480, 397.565 x 395.468 dpi, 
+appVsyncOff 8333331, presDeadline 14333334, cutout 
+DisplayCutout{insets=Rect(0, 118 - 0, 0) waterfall=Insets{left=0, top=0, 
+right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(540, 65 - 
+593, 118), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} 
+cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 
+displayHeight=2460 physicalDisplayWidth=1080 physicalDisplayHeight=2460 
+density={3.0} cutoutSpec={M26.495,117.433a26.283,26.283,0,1,1,26.5-26.282A26.39
+,26.39,0,0,1,26.495,117.433ZM26.5,89.963a1.19,1.19,0,1,0,1.2,1.19A1.195,1.195,0
+,0,0,26.5,89.963Z} rotation={0} scale={1.0} 
+physicalPixelDisplaySizeRatio={1.0}}}}, touch INTERNAL, rotation 0, type 
+INTERNAL, address {port=0}, deviceProductInfo null, state UNKNOWN, 
+frameRateOverride , brightnessMinimum 0.0, brightnessMaximum 1.0, 
+brightnessDefault 0.4, FLAG_ALLOWED_TO_BE_DEFAULT_DISPLAY, 
+FLAG_ROTATES_WITH_CONTENT, FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, 
+installOrientation 0}
+03-15 15:15:04.475  1371  1424 I LogicalDisplayMapper: Adding new display: 0: 
+DisplayInfo{"Built-in Screen", displayId 0", displayGroupId -1, FLAG_SECURE, 
+FLAG_SUPPORTS_PROTECTED_BUFFERS, FLAG_TRUSTED, real 1080 x 2460, largest app 
+1080 x 2460, smallest app 1080 x 2460, appVsyncOff 8333331, presDeadline 
+14333334, mode 1, defaultMode 1, modes [{id=1, width=1080, height=2460, 
+fps=120.00001, alternativeRefreshRates=[60.0, 90.0]}, {id=2, width=1080, 
+height=2460, fps=90.0, alternativeRefreshRates=[60.0, 120.00001]}, {id=3, 
+width=1080, height=2460, fps=60.0, alternativeRefreshRates=[90.0, 
+120.00001]}], hdrCapabilities HdrCapabilities{mSupportedHdrTypes=[2, 3, 4], 
+mMaxLuminance=500.0, mMaxAverageLuminance=500.0, mMinLuminance=0.0}, 
+userDisabledHdrTypes [], minimalPostProcessingSupported false, rotation 0, 
+state UNKNOWN, type INTERNAL, uniqueId "local:0", app 1080 x 2460, density 480 
+(397.565 x 395.468) dpi, layerStack 0, colorMode 0, supportedColorModes [0], 
+address {port=0}, deviceProductInfo null, removeMode 0, refreshRateOverride 
+0.0, brightnessMinimum 0.0, brightnessMaximum 1.0, brightnessDefault 0.4, 
+installOrientation ROTATION_0}
+03-15 15:15:13.107  1371  1424 I DisplayDeviceRepository: Display device 
+changed: DisplayDeviceInfo{"Built-in Screen": uniqueId="local:0", 1080 x 2460, 
+modeId 3, defaultModeId 1, supportedModes [{id=1, width=1080, height=2460, 
+fps=120.00001, alternativeRefreshRates=[60.0, 90.0]}, {id=2, width=1080, 
+height=2460, fps=90.0, alternativeRefreshRates=[60.0, 120.00001]}, {id=3, 
+width=1080, height=2460, fps=60.0, alternativeRefreshRates=[90.0, 
+120.00001]}], colorMode 0, supportedColorModes [0], hdrCapabilities 
+HdrCapabilities{mSupportedHdrTypes=[2, 3, 4], mMaxLuminance=500.0, 
+mMaxAverageLuminance=500.0, mMinLuminance=0.0}, allmSupported false, 
+gameContentTypeSupported false, density 480, 397.565 x 395.468 dpi, 
+appVsyncOff 1, presDeadline 31000000, cutout DisplayCutout{insets=Rect(0, 118 
+- 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} 
+boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(540, 65 - 593, 118), Rect(0, 0 - 
+0, 0), Rect(0, 0 - 0, 0)]} 
+cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 
+displayHeight=2460 physicalDisplayWidth=1080 physicalDisplayHeight=2460 
+density={3.0} cutoutSpec={M26.495,117.433a26.283,26.283,0,1,1,26.5-26.282A26.39
+,26.39,0,0,1,26.495,117.433ZM26.5,89.963a1.19,1.19,0,1,0,1.2,1.19A1.195,1.195,0
+,0,0,26.5,89.963Z} rotation={0} scale={1.0} 
+physicalPixelDisplaySizeRatio={1.0}}}}, touch INTERNAL, rotation 0, type 
+INTERNAL, address {port=0}, deviceProductInfo null, state ON, 
+frameRateOverride , brightnessMinimum 0.0, brightnessMaximum 1.0, 
+brightnessDefault 0.4, FLAG_ALLOWED_TO_BE_DEFAULT_DISPLAY, 
+FLAG_ROTATES_WITH_CONTENT, FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, 
+installOrientation 0}
+03-15 15:15:13.726  1371  1424 I DisplayDeviceRepository: Display device 
+changed: DisplayDeviceInfo{"Built-in Screen": uniqueId="local:0", 1080 x 2460, 
+modeId 1, defaultModeId 1, supportedModes [{id=1, width=1080, height=2460, 
+fps=120.00001, alternativeRefreshRates=[60.0, 90.0]}, {id=2, width=1080, 
+height=2460, fps=90.0, alternativeRefreshRates=[60.0, 120.00001]}, {id=3, 
+width=1080, height=2460, fps=60.0, alternativeRefreshRates=[90.0, 
+120.00001]}], colorMode 0, supportedColorModes [0], hdrCapabilities 
+HdrCapabilities{mSupportedHdrTypes=[2, 3, 4], mMaxLuminance=500.0, 
+mMaxAverageLuminance=500.0, mMinLuminance=0.0}, allmSupported false, 
+gameContentTypeSupported false, density 480, 397.565 x 395.468 dpi, 
+appVsyncOff 8333331, presDeadline 14333334, cutout 
+DisplayCutout{insets=Rect(0, 118 - 0, 0) waterfall=Insets{left=0, top=0, 
+right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(540, 65 - 
+593, 118), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} 
+cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 
+displayHeight=2460 physicalDisplayWidth=1080 physicalDisplayHeight=2460 
+density={3.0} cutoutSpec={M26.495,117.433a26.283,26.283,0,1,1,26.5-26.282A26.39
+,26.39,0,0,1,26.495,117.433ZM26.5,89.963a1.19,1.19,0,1,0,1.2,1.19A1.195,1.195,0
+,0,0,26.5,89.963Z} rotation={0} scale={1.0} 
+physicalPixelDisplaySizeRatio={1.0}}}}, touch INTERNAL, rotation 0, type 
+INTERNAL, address {port=0}, deviceProductInfo null, state ON, 
+frameRateOverride , brightnessMinimum 0.0, brightnessMaximum 1.0, 
+brightnessDefault 0.4, FLAG_ALLOWED_TO_BE_DEFAULT_DISPLAY, 
+FLAG_ROTATES_WITH_CONTENT, FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, 
+installOrientation 0}
+03-15 15:15:16.635  1371  1424 I DisplayDeviceRepository: Display device 
+changed: DisplayDeviceInfo{"Built-in Screen": uniqueId="local:0", 1080 x 2460, 
+modeId 3, defaultModeId 1, supportedModes [{id=1, width=1080, height=2460, 
+fps=120.00001, alternativeRefreshRates=[60.0, 90.0]}, {id=2, width=1080, 
+height=2460, fps=90.0, alternativeRefreshRates=[60.0, 120.00001]}, {id=3, 
+width=1080, height=2460, fps=60.0, alternativeRefreshRates=[90.0, 
+120.00001]}], colorMode 0, supportedColorModes [0], hdrCapabilities 
+HdrCapabilities{mSupportedHdrTypes=[2, 3, 4], mMaxLuminance=500.0, 
+mMaxAverageLuminance=500.0, mMinLuminance=0.0}, allmSupported false, 
+gameContentTypeSupported false, density 480, 397.565 x 395.468 dpi, 
+appVsyncOff 1, presDeadline 31000000, cutout DisplayCutout{insets=Rect(0, 118 
+- 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} 
+boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(540, 65 - 593, 118), Rect(0, 0 - 
+0, 0), Rect(0, 0 - 0, 0)]} 
+cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 
+displayHeight=2460 physicalDisplayWidth=1080 physicalDisplayHeight=2460 
+density={3.0} cutoutSpec={M26.495,117.433a26.283,26.283,0,1,1,26.5-26.282A26.39
+,26.39,0,0,1,26.495,117.433ZM26.5,89.963a1.19,1.19,0,1,0,1.2,1.19A1.195,1.195,0
+,0,0,26.5,89.963Z} rotation={0} scale={1.0} 
+physicalPixelDisplaySizeRatio={1.0}}}}, touch INTERNAL, rotation 0, type 
+INTERNAL, address {port=0}, deviceProductInfo null, state ON, 
+frameRateOverride , brightnessMinimum 0.0, brightnessMaximum 1.0, 
+brightnessDefault 0.4, FLAG_ALLOWED_TO_BE_DEFAULT_DISPLAY, 
+FLAG_ROTATES_WITH_CONTENT, FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, 
+installOrientation 0}
+03-15 15:15:19.098  1371  1424 I DisplayDeviceRepository: Display device 
+changed: DisplayDeviceInfo{"Built-in Screen": uniqueId="local:0", 1080 x 2460, 
+modeId 1, defaultModeId 1, supportedModes [{id=1, width=1080, height=2460, 
+fps=120.00001, alternativeRefreshRates=[60.0, 90.0]}, {id=2, width=1080, 
+height=2460, fps=90.0, alternativeRefreshRates=[60.0, 120.00001]}, {id=3, 
+width=1080, height=2460, fps=60.0, alternativeRefreshRates=[90.0, 
+120.00001]}], colorMode 0, supportedColorModes [0], hdrCapabilities 
+HdrCapabilities{mSupportedHdrTypes=[2, 3, 4], mMaxLuminance=500.0, 
+mMaxAverageLuminance=500.0, mMinLuminance=0.0}, allmSupported false, 
+gameContentTypeSupported false, density 480, 397.565 x 395.468 dpi, 
+appVsyncOff 8333331, presDeadline 14333334, cutout 
+DisplayCutout{insets=Rect(0, 118 - 0, 0) waterfall=Insets{left=0, top=0, 
+right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(540, 65 - 
+593, 118), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} 
+cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 
+displayHeight=2460 physicalDisplayWidth=1080 physicalDisplayHeight=2460 
+density={3.0} cutoutSpec={M26.495,117.433a26.283,26.283,0,1,1,26.5-26.282A26.39
+,26.39,0,0,1,26.495,117.433ZM26.5,89.963a1.19,1.19,0,1,0,1.2,1.19A1.195,1.195,0
+,0,0,26.5,89.963Z} rotation={0} scale={1.0} 
+physicalPixelDisplaySizeRatio={1.0}}}}, touch INTERNAL, rotation 0, type 
+INTERNAL, address {port=0}, deviceProductInfo null, state ON, 
+frameRateOverride , brightnessMinimum 0.0, brightnessMaximum 1.0, 
+brightnessDefault 0.4, FLAG_ALLOWED_TO_BE_DEFAULT_DISPLAY, 
+FLAG_ROTATES_WITH_CONTENT, FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, 
+installOrientation 0}
+03-15 15:15:20.081  1371  1424 I DisplayDeviceRepository: Display device 
+changed: DisplayDeviceInfo{"Built-in Screen": uniqueId="local:0", 1080 x 2460, 
+modeId 3, defaultModeId 1, supportedModes [{id=1, width=1080, height=2460, 
+fps=120.00001, alternativeRefreshRates=[60.0, 90.0]}, {id=2, width=1080, 
+height=2460, fps=90.0, alternativeRefreshRates=[60.0, 120.00001]}, {id=3, 
+width=1080, height=2460, fps=60.0, alternativeRefreshRates=[90.0, 
+120.00001]}], colorMode 0, supportedColorModes [0], hdrCapabilities 
+HdrCapabilities{mSupportedHdrTypes=[2, 3, 4], mMaxLuminance=500.0, 
+mMaxAverageLuminance=500.0, mMinLuminance=0.0}, allmSupported false, 
+gameContentTypeSupported false, density 480, 397.565 x 395.468 dpi, 
+appVsyncOff 1, presDeadline 31000000, cutout DisplayCutout{insets=Rect(0, 118 
+- 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} 
+boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(540, 65 - 593, 118), Rect(0, 0 - 
+0, 0), Rect(0, 0 - 0, 0)]} 
+cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 
+displayHeight=2460 physicalDisplayWidth=1080 physicalDisplayHeight=2460 
+density={3.0} cutoutSpec={M26.495,117.433a26.283,26.283,0,1,1,26.5-26.282A26.39
+,26.39,0,0,1,26.495,117.433ZM26.5,89.963a1.19,1.19,0,1,0,1.2,1.19A1.195,1.195,0
+,0,0,26.5,89.963Z} rotation={0} scale={1.0} 
+physicalPixelDisplaySizeRatio={1.0}}}}, touch INTERNAL, rotation 0, type 
+INTERNAL, address {port=0}, deviceProductInfo null, state ON, 
+frameRateOverride , brightnessMinimum 0.0, brightnessMaximum 1.0, 
+brightnessDefault 0.4, FLAG_ALLOWED_TO_BE_DEFAULT_DISPLAY, 
+FLAG_ROTATES_WITH_CONTENT, FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, 
+installOrientation 0}
+03-15 15:15:20.288  1371  1424 I DisplayDeviceRepository: Display device 
+changed: DisplayDeviceInfo{"Built-in Screen": uniqueId="local:0", 1080 x 2460, 
+modeId 1, defaultModeId 1, supportedModes [{id=1, width=1080, height=2460, 
+fps=120.00001, alternativeRefreshRates=[60.0, 90.0]}, {id=2, width=1080, 
+height=2460, fps=90.0, alternativeRefreshRates=[60.0, 120.00001]}, {id=3, 
+width=1080, height=2460, fps=60.0, alternativeRefreshRates=[90.0, 
+120.00001]}], colorMode 0, supportedColorModes [0], hdrCapabilities 
+HdrCapabilities{mSupportedHdrTypes=[2, 3, 4], mMaxLuminance=500.0, 
+mMaxAverageLuminance=500.0, mMinLuminance=0.0}, allmSupported false, 
+gameContentTypeSupported false, density 480, 397.565 x 395.468 dpi, 
+appVsyncOff 8333331, presDeadline 14333334, cutout 
+DisplayCutout{insets=Rect(0, 118 - 0, 0) waterfall=Insets{left=0, top=0, 
+right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(540, 65 - 
+593, 118), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} 
+cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 
+displayHeight=2460 physicalDisplayWidth=1080 physicalDisplayHeight=2460 
+density={3.0} cutoutSpec={M26.495,117.433a26.283,26.283,0,1,1,26.5-26.282A26.39
+,26.39,0,0,1,26.495,117.433ZM26.5,89.963a1.19,1.19,0,1,0,1.2,1.19A1.195,1.195,0
+,0,0,26.5,89.963Z} rotation={0} scale={1.0} 
+physicalPixelDisplaySizeRatio={1.0}}}}, touch INTERNAL, rotation 0, type 
+INTERNAL, address {port=0}, deviceProductInfo null, state ON, 
+frameRateOverride , brightnessMinimum 0.0, brightnessMaximum 1.0, 
+brightnessDefault 0.4, FLAG_ALLOWED_TO_BE_DEFAULT_DISPLAY, 
+FLAG_ROTATES_WITH_CONTENT, FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, 
+installOrientation 0}
+03-15 15:15:21.265  1371  1424 I DisplayDeviceRepository: Display device 
+changed: DisplayDeviceInfo{"Built-in Screen": uniqueId="local:0", 1080 x 2460, 
+modeId 3, defaultModeId 1, supportedModes [{id=1, width=1080, height=2460, 
+fps=120.00001, alternativeRefreshRates=[60.0, 90.0]}, {id=2, width=1080, 
+height=2460, fps=90.0, alternativeRefreshRates=[60.0, 120.00001]}, {id=3, 
+width=1080, height=2460, fps=60.0, alternativeRefreshRates=[90.0, 
+120.00001]}], colorMode 0, supportedColorModes [0], hdrCapabilities 
+HdrCapabilities{mSupportedHdrTypes=[2, 3, 4], mMaxLuminance=500.0, 
+mMaxAverageLuminance=500.0, mMinLuminance=0.0}, allmSupported false, 
+gameContentTypeSupported false, density 480, 397.565 x 395.468 dpi, 
+appVsyncOff 1, presDeadline 31000000, cutout DisplayCutout{insets=Rect(0, 118 
+- 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} 
+boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(540, 65 - 593, 118), Rect(0, 0 - 
+0, 0), Rect(0, 0 - 0, 0)]} 
+cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 
+displayHeight=2460 physicalDisplayWidth=1080 physicalDisplayHeight=2460 
+density={3.0} cutoutSpec={M26.495,117.433a26.283,26.283,0,1,1,26.5-26.282A26.39
+,26.39,0,0,1,26.495,117.433ZM26.5,89.963a1.19,1.19,0,1,0,1.2,1.19A1.195,1.195,0
+,0,0,26.5,89.963Z} rotation={0} scale={1.0} 
+physicalPixelDisplaySizeRatio={1.0}}}}, touch INTERNAL, rotation 0, type 
+INTERNAL, address {port=0}, deviceProductInfo null, state ON, 
+frameRateOverride , brightnessMinimum 0.0, brightnessMaximum 1.0, 
+brightnessDefault 0.4, FLAG_ALLOWED_TO_BE_DEFAULT_DISPLAY, 
+FLAG_ROTATES_WITH_CONTENT, FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, 
+installOrientation 0}
+03-15 15:15:21.469  1371  1424 I DisplayDeviceRepository: Display device 
+changed: DisplayDeviceInfo{"Built-in Screen": uniqueId="local:0", 1080 x 2460, 
+modeId 1, defaultModeId 1, supportedModes [{id=1, width=1080, height=2460, 
+fps=120.00001, alternativeRefreshRates=[60.0, 90.0]}, {id=2, width=1080, 
+height=2460, fps=90.0, alternativeRefreshRates=[60.0, 120.00001]}, {id=3, 
+width=1080, height=2460, fps=60.0, alternativeRefreshRates=[90.0, 
+120.00001]}], colorMode 0, supportedColorModes [0], hdrCapabilities 
+HdrCapabilities{mSupportedHdrTypes=[2, 3, 4], mMaxLuminance=500.0, 
+mMaxAverageLuminance=500.0, mMinLuminance=0.0}, allmSupported false, 
+gameContentTypeSupported false, density 480, 397.565 x 395.468 dpi, 
+appVsyncOff 8333331, presDeadline 14333334, cutout 
+DisplayCutout{insets=Rect(0, 118 - 0, 0) waterfall=Insets{left=0, top=0, 
+right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(540, 65 - 
+593, 118), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} 
+cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 
+displayHeight=2460 physicalDisplayWidth=1080 physicalDisplayHeight=2460 
+density={3.0} cutoutSpec={M26.495,117.433a26.283,26.283,0,1,1,26.5-26.282A26.39
+,26.39,0,0,1,26.495,117.433ZM26.5,89.963a1.19,1.19,0,1,0,1.2,1.19A1.195,1.195,0
+,0,0,26.5,89.963Z} rotation={0} scale={1.0} 
+physicalPixelDisplaySizeRatio={1.0}}}}, touch INTERNAL, rotation 0, type 
+INTERNAL, address {port=0}, deviceProductInfo null, state ON, 
+frameRateOverride , brightnessMinimum 0.0, brightnessMaximum 1.0, 
+brightnessDefault 0.4, FLAG_ALLOWED_TO_BE_DEFAULT_DISPLAY, 
+FLAG_ROTATES_WITH_CONTENT, FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, 
+installOrientation 0}
+03-15 15:15:24.596  1371  1424 I DisplayDeviceRepository: Display device 
+changed: DisplayDeviceInfo{"Built-in Screen": uniqueId="local:0", 1080 x 2460, 
+modeId 3, defaultModeId 1, supportedModes [{id=1, width=1080, height=2460, 
+fps=120.00001, alternativeRefreshRates=[60.0, 90.0]}, {id=2, width=1080, 
+height=2460, fps=90.0, alternativeRefreshRates=[60.0, 120.00001]}, {id=3, 
+width=1080, height=2460, fps=60.0, alternativeRefreshRates=[90.0, 
+120.00001]}], colorMode 0, supportedColorModes [0], hdrCapabilities 
+HdrCapabilities{mSupportedHdrTypes=[2, 3, 4], mMaxLuminance=500.0, 
+mMaxAverageLuminance=500.0, mMinLuminance=0.0}, allmSupported false, 
+gameContentTypeSupported false, density 480, 397.565 x 395.468 dpi, 
+appVsyncOff 1, presDeadline 31000000, cutout DisplayCutout{insets=Rect(0, 118 
+- 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} 
+boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(540, 65 - 593, 118), Rect(0, 0 - 
+0, 0), Rect(0, 0 - 0, 0)]} 
+cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 
+displayHeight=2460 physicalDisplayWidth=1080 physicalDisplayHeight=2460 
+density={3.0} cutoutSpec={M26.495,117.433a26.283,26.283,0,1,1,26.5-26.282A26.39
+,26.39,0,0,1,26.495,117.433ZM26.5,89.963a1.19,1.19,0,1,0,1.2,1.19A1.195,1.195,0
+,0,0,26.5,89.963Z} rotation={0} scale={1.0} 
+physicalPixelDisplaySizeRatio={1.0}}}}, touch INTERNAL, rotation 0, type 
+INTERNAL, address {port=0}, deviceProductInfo null, state ON, 
+frameRateOverride , brightnessMinimum 0.0, brightnessMaximum 1.0, 
+brightnessDefault 0.4, FLAG_ALLOWED_TO_BE_DEFAULT_DISPLAY, 
+FLAG_ROTATES_WITH_CONTENT, FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, 
+installOrientation 0}
+03-15 15:15:26.017  1371  1424 I DisplayDeviceRepository: Display device 
+changed: DisplayDeviceInfo{"Built-in Screen": uniqueId="local:0", 1080 x 2460, 
+modeId 1, defaultModeId 1, supportedModes [{id=1, width=1080, height=2460, 
+fps=120.00001, alternativeRefreshRates=[60.0, 90.0]}, {id=2, width=1080, 
+height=2460, fps=90.0, alternativeRefreshRates=[60.0, 120.00001]}, {id=3, 
+width=1080, height=2460, fps=60.0, alternativeRefreshRates=[90.0, 
+120.00001]}], colorMode 0, supportedColorModes [0], hdrCapabilities 
+HdrCapabilities{mSupportedHdrTypes=[2, 3, 4], mMaxLuminance=500.0, 
+mMaxAverageLuminance=500.0, mMinLuminance=0.0}, allmSupported false, 
+gameContentTypeSupported false, density 480, 397.565 x 395.468 dpi, 
+appVsyncOff 8333331, presDeadline 14333334, cutout 
+DisplayCutout{insets=Rect(0, 118 - 0, 0) waterfall=Insets{left=0, top=0, 
+right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(540, 65 - 
+593, 118), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} 
+cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 
+displayHeight=2460 physicalDisplayWidth=1080 physicalDisplayHeight=2460 
+density={3.0} cutoutSpec={M26.495,117.433a26.283,26.283,0,1,1,26.5-26.282A26.39
+,26.39,0,0,1,26.495,117.433ZM26.5,89.963a1.19,1.19,0,1,0,1.2,1.19A1.195,1.195,0
+,0,0,26.5,89.963Z} rotation={0} scale={1.0} 
+physicalPixelDisplaySizeRatio={1.0}}}}, touch INTERNAL, rotation 0, type 
+INTERNAL, address {port=0}, deviceProductInfo null, state ON, 
+frameRateOverride , brightnessMinimum 0.0, brightnessMaximum 1.0, 
+brightnessDefault 0.4, FLAG_ALLOWED_TO_BE_DEFAULT_DISPLAY, 
+FLAG_ROTATES_WITH_CONTENT, FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, 
+installOrientation 0}
+03-15 15:15:27.006  1371  1424 I DisplayDeviceRepository: Display device 
+changed: DisplayDeviceInfo{"Built-in Screen": uniqueId="local:0", 1080 x 2460, 
+modeId 3, defaultModeId 1, supportedModes [{id=1, width=1080, height=2460, 
+fps=120.00001, alternativeRefreshRates=[60.0, 90.0]}, {id=2, width=1080, 
+height=2460, fps=90.0, alternativeRefreshRates=[60.0, 120.00001]}, {id=3, 
+width=1080, height=2460, fps=60.0, alternativeRefreshRates=[90.0, 
+120.00001]}], colorMode 0, supportedColorModes [0], hdrCapabilities 
+HdrCapabilities{mSupportedHdrTypes=[2, 3, 4], mMaxLuminance=500.0, 
+mMaxAverageLuminance=500.0, mMinLuminance=0.0}, allmSupported false, 
+gameContentTypeSupported false, density 480, 397.565 x 395.468 dpi, 
+appVsyncOff 1, presDeadline 31000000, cutout DisplayCutout{insets=Rect(0, 118 
+- 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} 
+boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(540, 65 - 593, 118), Rect(0, 0 - 
+0, 0), Rect(0, 0 - 0, 0)]} 
+cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 
+displayHeight=2460 physicalDisplayWidth=1080 physicalDisplayHeight=2460 
+density={3.0} cutoutSpec={M26.495,117.433a26.283,26.283,0,1,1,26.5-26.282A26.39
+,26.39,0,0,1,26.495,117.433ZM26.5,89.963a1.19,1.19,0,1,0,1.2,1.19A1.195,1.195,0
+,0,0,26.5,89.963Z} rotation={0} scale={1.0} 
+physicalPixelDisplaySizeRatio={1.0}}}}, touch INTERNAL, rotation 0, type 
+INTERNAL, address {port=0}, deviceProductInfo null, state ON, 
+frameRateOverride , brightnessMinimum 0.0, brightnessMaximum 1.0, 
+brightnessDefault 0.4, FLAG_ALLOWED_TO_BE_DEFAULT_DISPLAY, 
+FLAG_ROTATES_WITH_CONTENT, FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, 
+installOrientation 0}
+03-15 15:15:27.609  1371  1424 I DisplayDeviceRepository: Display device 
+changed: DisplayDeviceInfo{"Built-in Screen": uniqueId="local:0", 1080 x 2460, 
+modeId 1, defaultModeId 1, supportedModes [{id=1, width=1080, height=2460, 
+fps=120.00001, alternativeRefreshRates=[60.0, 90.0]}, {id=2, width=1080, 
+height=2460, fps=90.0, alternativeRefreshRates=[60.0, 120.00001]}, {id=3, 
+width=1080, height=2460, fps=60.0, alternativeRefreshRates=[90.0, 
+120.00001]}], colorMode 0, supportedColorModes [0], hdrCapabilities 
+HdrCapabilities{mSupportedHdrTypes=[2, 3, 4], mMaxLuminance=500.0, 
+mMaxAverageLuminance=500.0, mMinLuminance=0.0}, allmSupported false, 
+gameContentTypeSupported false, density 480, 397.565 x 395.468 dpi, 
+appVsyncOff 8333331, presDeadline 14333334, cutout 
+DisplayCutout{insets=Rect(0, 118 - 0, 0) waterfall=Insets{left=0, top=0, 
+right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(540, 65 - 
+593, 118), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} 
+cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 
+displayHeight=2460 physicalDisplayWidth=1080 physicalDisplayHeight=2460 
+density={3.0} cutoutSpec={M26.495,117.433a26.283,26.283,0,1,1,26.5-26.282A26.39
+,26.39,0,0,1,26.495,117.433ZM26.5,89.963a1.19,1.19,0,1,0,1.2,1.19A1.195,1.195,0
+,0,0,26.5,89.963Z} rotation={0} scale={1.0} 
+physicalPixelDisplaySizeRatio={1.0}}}}, touch INTERNAL, rotation 0, type 
+INTERNAL, address {port=0}, deviceProductInfo null, state ON, 
+frameRateOverride , brightnessMinimum 0.0, brightnessMaximum 1.0, 
+brightnessDefault 0.4, FLAG_ALLOWED_TO_BE_DEFAULT_DISPLAY, 
+FLAG_ROTATES_WITH_CONTENT, FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, 
+installOrientation 0}
+03-15 15:15:28.590  1371  1424 I DisplayDeviceRepository: Display device 
+changed: DisplayDeviceInfo{"Built-in Screen": uniqueId="local:0", 1080 x 2460, 
+modeId 3, defaultModeId 1, supportedModes [{id=1, width=1080, height=2460, 
+fps=120.00001, alternativeRefreshRates=[60.0, 90.0]}, {id=2, width=1080, 
+height=2460, fps=90.0, alternativeRefreshRates=[60.0, 120.00001]}, {id=3, 
+width=1080, height=2460, fps=60.0, alternativeRefreshRates=[90.0, 
+120.00001]}], colorMode 0, supportedColorModes [0], hdrCapabilities 
+HdrCapabilities{mSupportedHdrTypes=[2, 3, 4], mMaxLuminance=500.0, 
+mMaxAverageLuminance=500.0, mMinLuminance=0.0}, allmSupported false, 
+gameContentTypeSupported false, density 480, 397.565 x 395.468 dpi, 
+appVsyncOff 1, presDeadline 31000000, cutout DisplayCutout{insets=Rect(0, 118 
+- 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} 
+boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(540, 65 - 593, 118), Rect(0, 0 - 
+0, 0), Rect(0, 0 - 0, 0)]} 
+cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 
+displayHeight=2460 physicalDisplayWidth=1080 physicalDisplayHeight=2460 
+density={3.0} cutoutSpec={M26.495,117.433a26.283,26.283,0,1,1,26.5-26.282A26.39
+,26.39,0,0,1,26.495,117.433ZM26.5,89.963a1.19,1.19,0,1,0,1.2,1.19A1.195,1.195,0
+,0,0,26.5,89.963Z} rotation={0} scale={1.0} 
+physicalPixelDisplaySizeRatio={1.0}}}}, touch INTERNAL, rotation 0, type 
+INTERNAL, address {port=0}, deviceProductInfo null, state ON, 
+frameRateOverride , brightnessMinimum 0.0, brightnessMaximum 1.0, 
+brightnessDefault 0.4, FLAG_ALLOWED_TO_BE_DEFAULT_DISPLAY, 
+FLAG_ROTATES_WITH_CONTENT, FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, 
+installOrientation 0}
+03-15 15:15:38.533  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 33% complete (376832/1136000 bytes)
+03-15 15:15:43.526  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 47% complete (536576/1136000 bytes)
+03-15 15:15:43.594  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 47% complete (538624/1136000 bytes)
+03-15 15:15:48.521  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 61% complete (696320/1136000 bytes)
+03-15 15:15:48.586  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 61% complete (698368/1136000 bytes)
+03-15 15:15:53.522  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 75% complete (856064/1136000 bytes)
+03-15 15:15:53.586  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 75% complete (858112/1136000 bytes)
+03-15 15:15:58.518  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 89% complete (1015808/1136000 bytes)
+03-15 15:15:58.578  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 89% complete (1017856/1136000 bytes)
+03-15 15:16:03.507  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 103% complete (1175552/1136000 bytes)
+03-15 15:16:03.575  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 103% complete (1177600/1136000 bytes)
+03-15 15:16:08.507  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 117% complete (1335296/1136000 bytes)
+03-15 15:16:08.571  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 117% complete (1337344/1136000 bytes)
+03-15 15:16:13.546  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 131% complete (1497088/1136000 bytes)
+03-15 15:16:13.584  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 131% complete (1499136/1136000 bytes)
+03-15 15:16:18.528  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 145% complete (1656832/1136000 bytes)
+03-15 15:16:23.535  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 159% complete (1816576/1136000 bytes)
+03-15 15:16:23.574  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 160% complete (1818624/1136000 bytes)
+03-15 15:16:28.541  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 173% complete (1976320/1136000 bytes)
+03-15 15:16:33.522  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 188% complete (2136064/1136000 bytes)
+03-15 15:16:33.573  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 188% complete (2138112/1136000 bytes)
+03-15 15:16:38.518  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 202% complete (2295808/1136000 bytes)
+03-15 15:16:38.567  3390  3537 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Receiving Scottie S2 - 202% complete (2297856/1136000 bytes)
+03-15 15:16:49.348  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+ΓÅ▒ Timeout - 10 sec silence detected. Transmission ended.
+03-15 15:16:49.348  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Transmission complete - Scottie S2 received in 85852ms (expected: 71000ms)
+03-15 15:16:49.348  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Starting image decode...
+03-15 15:16:49.371  3390  3390 D DMRModHooks-SSTV-FMDemod: Robot36 FM demod 
+initialized:
+03-15 15:16:49.371  3390  3390 D DMRModHooks-SSTV-FMDemod:   Sample rate: 8000 
+Hz
+03-15 15:16:49.371  3390  3390 D DMRModHooks-SSTV-FMDemod:   Center frequency: 
+1900.0 Hz
+03-15 15:16:49.371  3390  3390 D DMRModHooks-SSTV-FMDemod:   Scan line 
+bandwidth: 800.0 Hz
+03-15 15:16:49.372  3390  3390 D DMRModHooks-SSTV-FMDemod:   Low-pass filter: 
+cutoff=900.0 Hz, taps=17
+03-15 15:16:49.382  3390  3390 D DMRModHooks-SSTV-FMDemod: Robot36 FM demod 
+ready
+03-15 15:16:49.383  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Decoder: 
+Starting Scottie decode (1154048 samples, offset=3880)
+03-15 15:16:49.386  3390  3390 D DMRModHooks-SSTV-Goertzel: Goertzel demod 
+initialized (sample rate: 8000 Hz)
+03-15 15:16:49.387  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Decoder: 
+Using Goertzel with 32 sample window
+03-15 15:16:49.387  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Decoder: 
+Timing scale: 1.2091831x (85852ms vs 71000ms)
+03-15 15:16:49.387  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Decoder: 
+Adjusted: sync=87, channel=1412
+03-15 15:16:49.387  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 3880 to 4141 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.387  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 3880 (magnitude: 607.3071905135068)
+03-15 15:16:49.387  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 3880 (magnitude: 607.3071905135068)
+03-15 15:16:49.416  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 8203 to 8464 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.416  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 8203 (magnitude: 666.2102418770235)
+03-15 15:16:49.416  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 8203 (magnitude: 666.2102418770235)
+03-15 15:16:49.431  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 12526 to 12787 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.431  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 12526 (magnitude: 5.322120639912138)
+03-15 15:16:49.431  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 12526 (magnitude: 5.322120639912138)
+03-15 15:16:49.442  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 16849 to 17110 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.442  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 16849 (magnitude: 0.9288539489772131)
+03-15 15:16:49.442  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 16849 (magnitude: 0.9288539489772131)
+03-15 15:16:49.453  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 21172 to 21433 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.453  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 21172 (magnitude: 4.510386334508538)
+03-15 15:16:49.453  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 21172 (magnitude: 4.510386334508538)
+03-15 15:16:49.463  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 25495 to 25756 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.463  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 25495 (magnitude: 4.962219663675704)
+03-15 15:16:49.463  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 25495 (magnitude: 4.962219663675704)
+03-15 15:16:49.472  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 29818 to 30079 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.472  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 29818 (magnitude: 3.9899597503156867)
+03-15 15:16:49.472  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 29818 (magnitude: 3.9899597503156867)
+03-15 15:16:49.480  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 34141 to 34402 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.480  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 34141 (magnitude: 2.6369209143348877)
+03-15 15:16:49.480  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 34141 (magnitude: 2.6369209143348877)
+03-15 15:16:49.489  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 38464 to 38725 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.489  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 38464 (magnitude: 1.958932114480319)
+03-15 15:16:49.489  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 38464 (magnitude: 1.958932114480319)
+03-15 15:16:49.497  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 42787 to 43048 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.497  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 42787 (magnitude: 2083.891485518749)
+03-15 15:16:49.497  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 42787 (magnitude: 2083.891485518749)
+03-15 15:16:49.505  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 47110 to 47371 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.505  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 47110 (magnitude: 2107.6685080445714)
+03-15 15:16:49.505  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 47110 (magnitude: 2107.6685080445714)
+03-15 15:16:49.513  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 51433 to 51694 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.514  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 51433 (magnitude: 1.6453336539769772)
+03-15 15:16:49.514  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 51433 (magnitude: 1.6453336539769772)
+03-15 15:16:49.521  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 55756 to 56017 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.522  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 55756 (magnitude: 2.6027991948508986)
+03-15 15:16:49.522  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 55756 (magnitude: 2.6027991948508986)
+03-15 15:16:49.530  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 60079 to 60340 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.530  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 60079 (magnitude: 2052.119909173257)
+03-15 15:16:49.530  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 60079 (magnitude: 2052.119909173257)
+03-15 15:16:49.538  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 64402 to 64663 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.538  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 64402 (magnitude: 1880.441080462924)
+03-15 15:16:49.538  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 64402 (magnitude: 1880.441080462924)
+03-15 15:16:49.546  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 68725 to 68986 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.546  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 68725 (magnitude: 9.46916693477541)
+03-15 15:16:49.546  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 68725 (magnitude: 9.46916693477541)
+03-15 15:16:49.554  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 73048 to 73309 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.554  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 73048 (magnitude: 5.784971773106604)
+03-15 15:16:49.554  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 73048 (magnitude: 5.784971773106604)
+03-15 15:16:49.562  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 77371 to 77632 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.562  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 77371 (magnitude: 486.9795688383149)
+03-15 15:16:49.562  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 77371 (magnitude: 486.9795688383149)
+03-15 15:16:49.570  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 81694 to 81955 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.571  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 81694 (magnitude: 5.442786111548194)
+03-15 15:16:49.571  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 81694 (magnitude: 5.442786111548194)
+03-15 15:16:49.579  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 86017 to 86278 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.579  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 86017 (magnitude: 3.530483074904768)
+03-15 15:16:49.579  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 86017 (magnitude: 3.530483074904768)
+03-15 15:16:49.587  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Decoder: 
+Decoded 20/256 lines
+03-15 15:16:49.587  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 90340 to 90601 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.587  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 90340 (magnitude: 2.026592902055837)
+03-15 15:16:49.587  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 90340 (magnitude: 2.026592902055837)
+03-15 15:16:49.595  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 94663 to 94924 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.595  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 94663 (magnitude: 211.2943660943186)
+03-15 15:16:49.595  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 94663 (magnitude: 211.2943660943186)
+03-15 15:16:49.603  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 98986 to 99247 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.603  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 98986 (magnitude: 142.93007007407132)
+03-15 15:16:49.603  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 98986 (magnitude: 142.93007007407132)
+03-15 15:16:49.611  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 103309 to 103570 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.611  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 103309 (magnitude: 2072.661922812755)
+03-15 15:16:49.611  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 103309 (magnitude: 2072.661922812755)
+03-15 15:16:49.620  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 107632 to 107893 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.620  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 107632 (magnitude: 576.9566390562924)
+03-15 15:16:49.620  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 107632 (magnitude: 576.9566390562924)
+03-15 15:16:49.628  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 111955 to 112216 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.628  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 111955 (magnitude: 5.205680337663622)
+03-15 15:16:49.628  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 111955 (magnitude: 5.205680337663622)
+03-15 15:16:49.636  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 116278 to 116539 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.636  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 116278 (magnitude: 472.66900773185296)
+03-15 15:16:49.636  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 116278 (magnitude: 472.66900773185296)
+03-15 15:16:49.644  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 120601 to 120862 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.644  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 120601 (magnitude: 472.03141541872594)
+03-15 15:16:49.644  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 120601 (magnitude: 472.03141541872594)
+03-15 15:16:49.652  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 124924 to 125185 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.652  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 124924 (magnitude: 28.228640524945178)
+03-15 15:16:49.652  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 124924 (magnitude: 28.228640524945178)
+03-15 15:16:49.660  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 129247 to 129508 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.660  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 129247 (magnitude: 21.696876212705497)
+03-15 15:16:49.660  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 129247 (magnitude: 21.696876212705497)
+03-15 15:16:49.668  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 133570 to 133831 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.668  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 133570 (magnitude: 793.9698548459002)
+03-15 15:16:49.668  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 133570 (magnitude: 793.9698548459002)
+03-15 15:16:49.676  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 137893 to 138154 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.676  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 137893 (magnitude: 812.0608184714157)
+03-15 15:16:49.676  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 137893 (magnitude: 812.0608184714157)
+03-15 15:16:49.684  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 142216 to 142477 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.684  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 142216 (magnitude: 137.52516903430325)
+03-15 15:16:49.685  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 142216 (magnitude: 137.52516903430325)
+03-15 15:16:49.693  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 146539 to 146800 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.693  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 146539 (magnitude: 732.6845002111046)
+03-15 15:16:49.693  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 146539 (magnitude: 732.6845002111046)
+03-15 15:16:49.701  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 150862 to 151123 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.701  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 150862 (magnitude: 2137.3153512938625)
+03-15 15:16:49.701  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 150862 (magnitude: 2137.3153512938625)
+03-15 15:16:49.709  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 155185 to 155446 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.709  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 155185 (magnitude: 428.2673315163993)
+03-15 15:16:49.709  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 155185 (magnitude: 428.2673315163993)
+03-15 15:16:49.717  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 159508 to 159769 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.717  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 159508 (magnitude: 22.117850295390728)
+03-15 15:16:49.717  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 159508 (magnitude: 22.117850295390728)
+03-15 15:16:49.725  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 163831 to 164092 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.725  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 163831 (magnitude: 5.513476397964565)
+03-15 15:16:49.725  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 163831 (magnitude: 5.513476397964565)
+03-15 15:16:49.733  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 168154 to 168415 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.733  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 168154 (magnitude: 3.8607656929965253)
+03-15 15:16:49.733  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 168154 (magnitude: 3.8607656929965253)
+03-15 15:16:49.741  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 172477 to 172738 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.741  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 172477 (magnitude: 3.435223370829798)
+03-15 15:16:49.741  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 172477 (magnitude: 3.435223370829798)
+03-15 15:16:49.749  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Decoder: 
+Decoded 40/256 lines
+03-15 15:16:49.749  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 176800 to 177061 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.749  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 176800 (magnitude: 875.1729827492903)
+03-15 15:16:49.749  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 176800 (magnitude: 875.1729827492903)
+03-15 15:16:49.757  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 181123 to 181384 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.757  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 181123 (magnitude: 1215.8910303021312)
+03-15 15:16:49.757  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 181123 (magnitude: 1215.8910303021312)
+03-15 15:16:49.765  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 185446 to 185707 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.765  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 185446 (magnitude: 956.6650268595625)
+03-15 15:16:49.765  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 185446 (magnitude: 956.6650268595625)
+03-15 15:16:49.773  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 189769 to 190030 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.774  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 189769 (magnitude: 489.93904860823767)
+03-15 15:16:49.774  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 189769 (magnitude: 489.93904860823767)
+03-15 15:16:49.782  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 194092 to 194353 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.782  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 194092 (magnitude: 83.68560363921573)
+03-15 15:16:49.782  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 194092 (magnitude: 83.68560363921573)
+03-15 15:16:49.790  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 198415 to 198676 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.790  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 198415 (magnitude: 4.478150255618084)
+03-15 15:16:49.790  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 198415 (magnitude: 4.478150255618084)
+03-15 15:16:49.798  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 202738 to 202999 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.798  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 202738 (magnitude: 9.098677776327039)
+03-15 15:16:49.798  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 202738 (magnitude: 9.098677776327039)
+03-15 15:16:49.806  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 207061 to 207322 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.806  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 207061 (magnitude: 5.372325353247321)
+03-15 15:16:49.806  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 207061 (magnitude: 5.372325353247321)
+03-15 15:16:49.814  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 211384 to 211645 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.814  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 211384 (magnitude: 201.99828884194733)
+03-15 15:16:49.814  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 211384 (magnitude: 201.99828884194733)
+03-15 15:16:49.822  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 215707 to 215968 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.822  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 215707 (magnitude: 617.4563929171758)
+03-15 15:16:49.822  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 215707 (magnitude: 617.4563929171758)
+03-15 15:16:49.830  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 220030 to 220291 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.830  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 220030 (magnitude: 2022.3476747464872)
+03-15 15:16:49.830  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 220030 (magnitude: 2022.3476747464872)
+03-15 15:16:49.838  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 224353 to 224614 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.838  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 224353 (magnitude: 14.490549134401208)
+03-15 15:16:49.838  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 224353 (magnitude: 14.490549134401208)
+03-15 15:16:49.846  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 228676 to 228937 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.846  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 228676 (magnitude: 21.793487858719327)
+03-15 15:16:49.846  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 228676 (magnitude: 21.793487858719327)
+03-15 15:16:49.854  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 232999 to 233260 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.854  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 232999 (magnitude: 473.0695084028151)
+03-15 15:16:49.854  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 232999 (magnitude: 473.0695084028151)
+03-15 15:16:49.862  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 237322 to 237583 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.862  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 237322 (magnitude: 0.8079932815043128)
+03-15 15:16:49.862  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 237322 (magnitude: 0.8079932815043128)
+03-15 15:16:49.870  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 241645 to 241906 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.871  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 241645 (magnitude: 1.4602696611859003)
+03-15 15:16:49.871  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 241645 (magnitude: 1.4602696611859003)
+03-15 15:16:49.879  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 245968 to 246229 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.879  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 245968 (magnitude: 1.982194650446323)
+03-15 15:16:49.879  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 245968 (magnitude: 1.982194650446323)
+03-15 15:16:49.887  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 250291 to 250552 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.887  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 250291 (magnitude: 64.18513126526905)
+03-15 15:16:49.887  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 250291 (magnitude: 64.18513126526905)
+03-15 15:16:49.895  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 254614 to 254875 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.895  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 254614 (magnitude: 0.9774332418528963)
+03-15 15:16:49.895  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 254614 (magnitude: 0.9774332418528963)
+03-15 15:16:49.903  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 258937 to 259198 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.903  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 258937 (magnitude: 3.2791013710075836)
+03-15 15:16:49.903  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 258937 (magnitude: 3.2791013710075836)
+03-15 15:16:49.911  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Decoder: 
+Decoded 60/256 lines
+03-15 15:16:49.911  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 263260 to 263521 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.911  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 263260 (magnitude: 4.358892192052005)
+03-15 15:16:49.911  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 263260 (magnitude: 4.358892192052005)
+03-15 15:16:49.919  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 267583 to 267844 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.919  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 267583 (magnitude: 921.3504854472452)
+03-15 15:16:49.919  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 267583 (magnitude: 921.3504854472452)
+03-15 15:16:49.927  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 271906 to 272167 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.927  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 271906 (magnitude: 208.48124689290378)
+03-15 15:16:49.927  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 271906 (magnitude: 208.48124689290378)
+03-15 15:16:49.935  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 276229 to 276490 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.935  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 276229 (magnitude: 781.9137665928515)
+03-15 15:16:49.935  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 276229 (magnitude: 781.9137665928515)
+03-15 15:16:49.943  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 280552 to 280813 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.943  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 280552 (magnitude: 5.945169911962271)
+03-15 15:16:49.943  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 280552 (magnitude: 5.945169911962271)
+03-15 15:16:49.951  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 284875 to 285136 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.951  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 284875 (magnitude: 6.383437156746618)
+03-15 15:16:49.951  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 284875 (magnitude: 6.383437156746618)
+03-15 15:16:49.959  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 289198 to 289459 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.959  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 289198 (magnitude: 670.5566246051995)
+03-15 15:16:49.959  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 289198 (magnitude: 670.5566246051995)
+03-15 15:16:49.967  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 293521 to 293782 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.967  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 293521 (magnitude: 2030.5516361785917)
+03-15 15:16:49.967  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 293521 (magnitude: 2030.5516361785917)
+03-15 15:16:49.975  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 297844 to 298105 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.975  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 297844 (magnitude: 2129.892529557072)
+03-15 15:16:49.975  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 297844 (magnitude: 2129.892529557072)
+03-15 15:16:49.983  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 302167 to 302428 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.984  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 302167 (magnitude: 415.8508935150541)
+03-15 15:16:49.984  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 302167 (magnitude: 415.8508935150541)
+03-15 15:16:49.992  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 306490 to 306751 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:49.992  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 306490 (magnitude: 433.07917677952196)
+03-15 15:16:49.992  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 306490 (magnitude: 433.07917677952196)
+03-15 15:16:50.000  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 310813 to 311074 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.000  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 310813 (magnitude: 225.94578743043996)
+03-15 15:16:50.000  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 310813 (magnitude: 225.94578743043996)
+03-15 15:16:50.008  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 315136 to 315397 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.008  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 315136 (magnitude: 5.518963107285917)
+03-15 15:16:50.008  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 315136 (magnitude: 5.518963107285917)
+03-15 15:16:50.016  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 319459 to 319720 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.016  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 319459 (magnitude: 7.093667318197724)
+03-15 15:16:50.016  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 319459 (magnitude: 7.093667318197724)
+03-15 15:16:50.024  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 323782 to 324043 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.024  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 323782 (magnitude: 3.712327184498034)
+03-15 15:16:50.024  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 323782 (magnitude: 3.712327184498034)
+03-15 15:16:50.032  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 328105 to 328366 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.032  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 328105 (magnitude: 8.293111812169787)
+03-15 15:16:50.032  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 328105 (magnitude: 8.293111812169787)
+03-15 15:16:50.040  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 332428 to 332689 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.040  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 332428 (magnitude: 53.708662635316706)
+03-15 15:16:50.040  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 332428 (magnitude: 53.708662635316706)
+03-15 15:16:50.048  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 336751 to 337012 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.048  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 336751 (magnitude: 2096.911619616026)
+03-15 15:16:50.048  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 336751 (magnitude: 2096.911619616026)
+03-15 15:16:50.056  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 341074 to 341335 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.056  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 341074 (magnitude: 2000.7013516687234)
+03-15 15:16:50.056  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 341074 (magnitude: 2000.7013516687234)
+03-15 15:16:50.064  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 345397 to 345658 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.064  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 345397 (magnitude: 854.2605221442988)
+03-15 15:16:50.064  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 345397 (magnitude: 854.2605221442988)
+03-15 15:16:50.072  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Decoder: 
+Decoded 80/256 lines
+03-15 15:16:50.072  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 349720 to 349981 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.073  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 349720 (magnitude: 332.32203563855194)
+03-15 15:16:50.073  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 349720 (magnitude: 332.32203563855194)
+03-15 15:16:50.081  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 354043 to 354304 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.081  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 354043 (magnitude: 6.5292889858599485)
+03-15 15:16:50.081  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 354043 (magnitude: 6.5292889858599485)
+03-15 15:16:50.089  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 358366 to 358627 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.089  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 358366 (magnitude: 2.4093228888997853)
+03-15 15:16:50.089  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 358366 (magnitude: 2.4093228888997853)
+03-15 15:16:50.097  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 362689 to 362950 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.097  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 362689 (magnitude: 5.5078655855863925)
+03-15 15:16:50.097  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 362689 (magnitude: 5.5078655855863925)
+03-15 15:16:50.105  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 367012 to 367273 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.105  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 367012 (magnitude: 6.749710285324199)
+03-15 15:16:50.105  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 367012 (magnitude: 6.749710285324199)
+03-15 15:16:50.113  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 371335 to 371596 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.113  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 371335 (magnitude: 5.759247606702562)
+03-15 15:16:50.113  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 371335 (magnitude: 5.759247606702562)
+03-15 15:16:50.121  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 375658 to 375919 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.121  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 375658 (magnitude: 708.6460744982477)
+03-15 15:16:50.121  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 375658 (magnitude: 708.6460744982477)
+03-15 15:16:50.129  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 379981 to 380242 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.129  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 379981 (magnitude: 557.8284732789186)
+03-15 15:16:50.129  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 379981 (magnitude: 557.8284732789186)
+03-15 15:16:50.137  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 384304 to 384565 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.137  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 384304 (magnitude: 630.0932049658051)
+03-15 15:16:50.137  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 384304 (magnitude: 630.0932049658051)
+03-15 15:16:50.145  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 388627 to 388888 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.145  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 388627 (magnitude: 482.3886919292694)
+03-15 15:16:50.145  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 388627 (magnitude: 482.3886919292694)
+03-15 15:16:50.153  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 392950 to 393211 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.153  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 392950 (magnitude: 4.076253633248946)
+03-15 15:16:50.153  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 392950 (magnitude: 4.076253633248946)
+03-15 15:16:50.161  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 397273 to 397534 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.161  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 397273 (magnitude: 1.6946605290643075)
+03-15 15:16:50.161  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 397273 (magnitude: 1.6946605290643075)
+03-15 15:16:50.169  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 401596 to 401857 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.169  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 401596 (magnitude: 3.4102419039560337)
+03-15 15:16:50.169  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 401596 (magnitude: 3.4102419039560337)
+03-15 15:16:50.177  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 405919 to 406180 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.177  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 405919 (magnitude: 9.10086973251709)
+03-15 15:16:50.177  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 405919 (magnitude: 9.10086973251709)
+03-15 15:16:50.185  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 410242 to 410503 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.185  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 410242 (magnitude: 282.66859539293864)
+03-15 15:16:50.185  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 410242 (magnitude: 282.66859539293864)
+03-15 15:16:50.193  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 414565 to 414826 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.193  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 414565 (magnitude: 2082.914181099405)
+03-15 15:16:50.193  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 414565 (magnitude: 2082.914181099405)
+03-15 15:16:50.201  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 418888 to 419149 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.201  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 418888 (magnitude: 1928.7919711145728)
+03-15 15:16:50.201  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 418888 (magnitude: 1928.7919711145728)
+03-15 15:16:50.210  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 423211 to 423472 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.210  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 423211 (magnitude: 2036.5828898466943)
+03-15 15:16:50.210  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 423211 (magnitude: 2036.5828898466943)
+03-15 15:16:50.218  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 427534 to 427795 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.218  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 427534 (magnitude: 2135.651046816042)
+03-15 15:16:50.218  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 427534 (magnitude: 2135.651046816042)
+03-15 15:16:50.226  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 431857 to 432118 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.226  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 431857 (magnitude: 681.0131257612769)
+03-15 15:16:50.226  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 431857 (magnitude: 681.0131257612769)
+03-15 15:16:50.234  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Decoder: 
+Decoded 100/256 lines
+03-15 15:16:50.234  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 436180 to 436441 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.234  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 436180 (magnitude: 3.974963476686163)
+03-15 15:16:50.234  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 436180 (magnitude: 3.974963476686163)
+03-15 15:16:50.242  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 440503 to 440764 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.242  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 440503 (magnitude: 183.87919990023187)
+03-15 15:16:50.242  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 440503 (magnitude: 183.87919990023187)
+03-15 15:16:50.250  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 444826 to 445087 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.250  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 444826 (magnitude: 879.7985741770698)
+03-15 15:16:50.250  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 444826 (magnitude: 879.7985741770698)
+03-15 15:16:50.258  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 449149 to 449410 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.258  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 449149 (magnitude: 2015.1256406957657)
+03-15 15:16:50.258  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 449149 (magnitude: 2015.1256406957657)
+03-15 15:16:50.266  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 453472 to 453733 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.266  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 453472 (magnitude: 1827.778632324617)
+03-15 15:16:50.266  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 453472 (magnitude: 1827.778632324617)
+03-15 15:16:50.271  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 457795 to 458056 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.271  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 457795 (magnitude: 2033.6170812703213)
+03-15 15:16:50.271  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 457795 (magnitude: 2033.6170812703213)
+03-15 15:16:50.273  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 462118 to 462379 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.273  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 462118 (magnitude: 440.2009582934989)
+03-15 15:16:50.273  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 462118 (magnitude: 440.2009582934989)
+03-15 15:16:50.275  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 466441 to 466702 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.275  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 466441 (magnitude: 1227.707354633906)
+03-15 15:16:50.275  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 466441 (magnitude: 1227.707354633906)
+03-15 15:16:50.277  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 470764 to 471025 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.277  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 470764 (magnitude: 273.6286690207497)
+03-15 15:16:50.277  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 470764 (magnitude: 273.6286690207497)
+03-15 15:16:50.280  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 475087 to 475348 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.280  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 475087 (magnitude: 2.30860274183858)
+03-15 15:16:50.280  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 475087 (magnitude: 2.30860274183858)
+03-15 15:16:50.282  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 479410 to 479671 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.282  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 479410 (magnitude: 3.4757396931933595)
+03-15 15:16:50.282  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 479410 (magnitude: 3.4757396931933595)
+03-15 15:16:50.284  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 483733 to 483994 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.284  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 483733 (magnitude: 11.074714615711269)
+03-15 15:16:50.284  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 483733 (magnitude: 11.074714615711269)
+03-15 15:16:50.286  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 488056 to 488317 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.286  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 488056 (magnitude: 1002.1981116236934)
+03-15 15:16:50.286  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 488056 (magnitude: 1002.1981116236934)
+03-15 15:16:50.289  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 492379 to 492640 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.289  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 492379 (magnitude: 1067.3506406810134)
+03-15 15:16:50.289  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 492379 (magnitude: 1067.3506406810134)
+03-15 15:16:50.291  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 496702 to 496963 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.291  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 496702 (magnitude: 167.1842679166062)
+03-15 15:16:50.291  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 496702 (magnitude: 167.1842679166062)
+03-15 15:16:50.293  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 501025 to 501286 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.293  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 501025 (magnitude: 1281.8038366097198)
+03-15 15:16:50.293  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 501025 (magnitude: 1281.8038366097198)
+03-15 15:16:50.295  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 505348 to 505609 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.295  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 505348 (magnitude: 351.9834503271597)
+03-15 15:16:50.295  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 505348 (magnitude: 351.9834503271597)
+03-15 15:16:50.297  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 509671 to 509932 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.297  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 509671 (magnitude: 601.2709887952468)
+03-15 15:16:50.297  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 509671 (magnitude: 601.2709887952468)
+03-15 15:16:50.300  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 513994 to 514255 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.300  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 513994 (magnitude: 1.1138299512849144)
+03-15 15:16:50.300  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 513994 (magnitude: 1.1138299512849144)
+03-15 15:16:50.302  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 518317 to 518578 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.302  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 518317 (magnitude: 3.0162848496319037)
+03-15 15:16:50.302  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 518317 (magnitude: 3.0162848496319037)
+03-15 15:16:50.304  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Decoder: 
+Decoded 120/256 lines
+03-15 15:16:50.304  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 522640 to 522901 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.304  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 522640 (magnitude: 38.531693001817715)
+03-15 15:16:50.304  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 522640 (magnitude: 38.531693001817715)
+03-15 15:16:50.306  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 526963 to 527224 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.306  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 526963 (magnitude: 348.97633877239684)
+03-15 15:16:50.306  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 526963 (magnitude: 348.97633877239684)
+03-15 15:16:50.308  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 531286 to 531547 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.308  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 531286 (magnitude: 1842.420362558412)
+03-15 15:16:50.309  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 531286 (magnitude: 1842.420362558412)
+03-15 15:16:50.311  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 535609 to 535870 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.311  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 535609 (magnitude: 1198.0110571415935)
+03-15 15:16:50.311  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 535609 (magnitude: 1198.0110571415935)
+03-15 15:16:50.313  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 539932 to 540193 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.313  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 539932 (magnitude: 698.4614986174654)
+03-15 15:16:50.313  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 539932 (magnitude: 698.4614986174654)
+03-15 15:16:50.315  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 544255 to 544516 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.315  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 544255 (magnitude: 699.6624671655248)
+03-15 15:16:50.315  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 544255 (magnitude: 699.6624671655248)
+03-15 15:16:50.317  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 548578 to 548839 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.317  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 548578 (magnitude: 11.512938951300871)
+03-15 15:16:50.317  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 548578 (magnitude: 11.512938951300871)
+03-15 15:16:50.320  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 552901 to 553162 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.320  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 552901 (magnitude: 482.43501285828705)
+03-15 15:16:50.320  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 552901 (magnitude: 482.43501285828705)
+03-15 15:16:50.322  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 557224 to 557485 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.322  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 557224 (magnitude: 643.6615726242376)
+03-15 15:16:50.322  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 557224 (magnitude: 643.6615726242376)
+03-15 15:16:50.324  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 561547 to 561808 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.324  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 561547 (magnitude: 509.13138854559816)
+03-15 15:16:50.324  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 561547 (magnitude: 509.13138854559816)
+03-15 15:16:50.326  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 565870 to 566131 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.326  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 565870 (magnitude: 788.0616532717202)
+03-15 15:16:50.326  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 565870 (magnitude: 788.0616532717202)
+03-15 15:16:50.328  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 570193 to 570454 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.328  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 570193 (magnitude: 1900.021953135191)
+03-15 15:16:50.328  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 570193 (magnitude: 1900.021953135191)
+03-15 15:16:50.331  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 574516 to 574777 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.331  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 574516 (magnitude: 1840.1864949805804)
+03-15 15:16:50.331  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 574516 (magnitude: 1840.1864949805804)
+03-15 15:16:50.333  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 578839 to 579100 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.333  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 578839 (magnitude: 2048.3032135196545)
+03-15 15:16:50.333  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 578839 (magnitude: 2048.3032135196545)
+03-15 15:16:50.335  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 583162 to 583423 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.335  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 583162 (magnitude: 1842.3124447390496)
+03-15 15:16:50.335  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 583162 (magnitude: 1842.3124447390496)
+03-15 15:16:50.337  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 587485 to 587746 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.337  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 587485 (magnitude: 1217.1538974036453)
+03-15 15:16:50.337  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 587485 (magnitude: 1217.1538974036453)
+03-15 15:16:50.340  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 591808 to 592069 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.340  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 591808 (magnitude: 28.930133530889588)
+03-15 15:16:50.340  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 591808 (magnitude: 28.930133530889588)
+03-15 15:16:50.342  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 596131 to 596392 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.342  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 596131 (magnitude: 1073.9942192220878)
+03-15 15:16:50.342  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 596131 (magnitude: 1073.9942192220878)
+03-15 15:16:50.344  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 600454 to 600715 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.344  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 600454 (magnitude: 829.6160204072388)
+03-15 15:16:50.344  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 600454 (magnitude: 829.6160204072388)
+03-15 15:16:50.346  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 604777 to 605038 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.346  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 604777 (magnitude: 817.2222766158898)
+03-15 15:16:50.346  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 604777 (magnitude: 817.2222766158898)
+03-15 15:16:50.348  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Decoder: 
+Decoded 140/256 lines
+03-15 15:16:50.348  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 609100 to 609361 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.348  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 609100 (magnitude: 262.70963866801776)
+03-15 15:16:50.348  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 609100 (magnitude: 262.70963866801776)
+03-15 15:16:50.351  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 613423 to 613684 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.351  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 613423 (magnitude: 571.9819084443806)
+03-15 15:16:50.351  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 613423 (magnitude: 571.9819084443806)
+03-15 15:16:50.353  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 617746 to 618007 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.353  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 617746 (magnitude: 538.2640935240587)
+03-15 15:16:50.353  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 617746 (magnitude: 538.2640935240587)
+03-15 15:16:50.355  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 622069 to 622330 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.355  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 622069 (magnitude: 333.9011963365898)
+03-15 15:16:50.355  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 622069 (magnitude: 333.9011963365898)
+03-15 15:16:50.357  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 626392 to 626653 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.357  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 626392 (magnitude: 454.6282085882857)
+03-15 15:16:50.357  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 626392 (magnitude: 454.6282085882857)
+03-15 15:16:50.360  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 630715 to 630976 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.360  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 630715 (magnitude: 5.660153012582072)
+03-15 15:16:50.360  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 630715 (magnitude: 5.660153012582072)
+03-15 15:16:50.362  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 635038 to 635299 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.362  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 635038 (magnitude: 5.527515580975657)
+03-15 15:16:50.362  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 635038 (magnitude: 5.527515580975657)
+03-15 15:16:50.364  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 639361 to 639622 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.364  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 639361 (magnitude: 7.748807727160106)
+03-15 15:16:50.364  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 639361 (magnitude: 7.748807727160106)
+03-15 15:16:50.366  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 643684 to 643945 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.366  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 643684 (magnitude: 12.249962356005431)
+03-15 15:16:50.366  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 643684 (magnitude: 12.249962356005431)
+03-15 15:16:50.368  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 648007 to 648268 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.368  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 648007 (magnitude: 217.04047004165594)
+03-15 15:16:50.368  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 648007 (magnitude: 217.04047004165594)
+03-15 15:16:50.371  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 652330 to 652591 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.371  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 652330 (magnitude: 249.91925605332358)
+03-15 15:16:50.371  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 652330 (magnitude: 249.91925605332358)
+03-15 15:16:50.373  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 656653 to 656914 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.373  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 656653 (magnitude: 965.7314550541948)
+03-15 15:16:50.373  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 656653 (magnitude: 965.7314550541948)
+03-15 15:16:50.375  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 660976 to 661237 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.375  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 660976 (magnitude: 633.3913452847976)
+03-15 15:16:50.375  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 660976 (magnitude: 633.3913452847976)
+03-15 15:16:50.377  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 665299 to 665560 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.377  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 665299 (magnitude: 476.344073538532)
+03-15 15:16:50.377  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 665299 (magnitude: 476.344073538532)
+03-15 15:16:50.379  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 669622 to 669883 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.379  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 669622 (magnitude: 1536.8201722144322)
+03-15 15:16:50.379  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 669622 (magnitude: 1536.8201722144322)
+03-15 15:16:50.382  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 673945 to 674206 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.382  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 673945 (magnitude: 886.2547422719347)
+03-15 15:16:50.382  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 673945 (magnitude: 886.2547422719347)
+03-15 15:16:50.384  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 678268 to 678529 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.384  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 678268 (magnitude: 7.259907416831898)
+03-15 15:16:50.384  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 678268 (magnitude: 7.259907416831898)
+03-15 15:16:50.386  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 682591 to 682852 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.386  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 682591 (magnitude: 573.2285047069572)
+03-15 15:16:50.386  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 682591 (magnitude: 573.2285047069572)
+03-15 15:16:50.388  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 686914 to 687175 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.388  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 686914 (magnitude: 2097.5586826395247)
+03-15 15:16:50.388  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 686914 (magnitude: 2097.5586826395247)
+03-15 15:16:50.390  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 691237 to 691498 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.390  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 691237 (magnitude: 2079.425821820142)
+03-15 15:16:50.390  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 691237 (magnitude: 2079.425821820142)
+03-15 15:16:50.393  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Decoder: 
+Decoded 160/256 lines
+03-15 15:16:50.393  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 695560 to 695821 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.393  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 695560 (magnitude: 994.352877189245)
+03-15 15:16:50.393  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 695560 (magnitude: 994.352877189245)
+03-15 15:16:50.395  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 699883 to 700144 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.395  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 699883 (magnitude: 725.8677980793486)
+03-15 15:16:50.395  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 699883 (magnitude: 725.8677980793486)
+03-15 15:16:50.397  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 704206 to 704467 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.397  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 704206 (magnitude: 218.61559109990245)
+03-15 15:16:50.397  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 704206 (magnitude: 218.61559109990245)
+03-15 15:16:50.399  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 708529 to 708790 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.399  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 708529 (magnitude: 331.53195745794625)
+03-15 15:16:50.399  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 708529 (magnitude: 331.53195745794625)
+03-15 15:16:50.401  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 712852 to 713113 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.401  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 712852 (magnitude: 444.6052980305184)
+03-15 15:16:50.401  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 712852 (magnitude: 444.6052980305184)
+03-15 15:16:50.404  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 717175 to 717436 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.404  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 717175 (magnitude: 890.5848096558249)
+03-15 15:16:50.404  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 717175 (magnitude: 890.5848096558249)
+03-15 15:16:50.406  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 721498 to 721759 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.406  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 721498 (magnitude: 751.0045617688061)
+03-15 15:16:50.406  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 721498 (magnitude: 751.0045617688061)
+03-15 15:16:50.408  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 725821 to 726082 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.408  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 725821 (magnitude: 728.7386875018046)
+03-15 15:16:50.408  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 725821 (magnitude: 728.7386875018046)
+03-15 15:16:50.410  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 730144 to 730405 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.410  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 730144 (magnitude: 607.9370159476158)
+03-15 15:16:50.410  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 730144 (magnitude: 607.9370159476158)
+03-15 15:16:50.412  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 734467 to 734728 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.412  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 734467 (magnitude: 2088.430407822409)
+03-15 15:16:50.412  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 734467 (magnitude: 2088.430407822409)
+03-15 15:16:50.414  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 738790 to 739051 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.414  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 738790 (magnitude: 1903.4886678477324)
+03-15 15:16:50.414  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 738790 (magnitude: 1903.4886678477324)
+03-15 15:16:50.417  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 743113 to 743374 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.417  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 743113 (magnitude: 1644.7772430758373)
+03-15 15:16:50.417  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 743113 (magnitude: 1644.7772430758373)
+03-15 15:16:50.419  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 747436 to 747697 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.419  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 747436 (magnitude: 420.4233536806793)
+03-15 15:16:50.419  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 747436 (magnitude: 420.4233536806793)
+03-15 15:16:50.421  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 751759 to 752020 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.421  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 751759 (magnitude: 1192.0745654271327)
+03-15 15:16:50.421  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 751759 (magnitude: 1192.0745654271327)
+03-15 15:16:50.423  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 756082 to 756343 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.423  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 756082 (magnitude: 652.2499630458796)
+03-15 15:16:50.423  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 756082 (magnitude: 652.2499630458796)
+03-15 15:16:50.425  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 760405 to 760666 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.425  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 760405 (magnitude: 59.07433983501698)
+03-15 15:16:50.425  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 760405 (magnitude: 59.07433983501698)
+03-15 15:16:50.428  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 764728 to 764989 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.428  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 764728 (magnitude: 279.871945976824)
+03-15 15:16:50.428  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 764728 (magnitude: 279.871945976824)
+03-15 15:16:50.430  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 769051 to 769312 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.430  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 769051 (magnitude: 741.7244412237748)
+03-15 15:16:50.430  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 769051 (magnitude: 741.7244412237748)
+03-15 15:16:50.432  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 773374 to 773635 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.432  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 773374 (magnitude: 223.1603250464817)
+03-15 15:16:50.432  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 773374 (magnitude: 223.1603250464817)
+03-15 15:16:50.434  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 777697 to 777958 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.434  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 777697 (magnitude: 294.7934964166084)
+03-15 15:16:50.434  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 777697 (magnitude: 294.7934964166084)
+03-15 15:16:50.436  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Decoder: 
+Decoded 180/256 lines
+03-15 15:16:50.436  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 782020 to 782281 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.436  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 782020 (magnitude: 756.8825541741526)
+03-15 15:16:50.436  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 782020 (magnitude: 756.8825541741526)
+03-15 15:16:50.438  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 786343 to 786604 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.438  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 786343 (magnitude: 5.086682945842064)
+03-15 15:16:50.438  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 786343 (magnitude: 5.086682945842064)
+03-15 15:16:50.441  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 790666 to 790927 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.441  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 790666 (magnitude: 4.8369850527961935)
+03-15 15:16:50.441  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 790666 (magnitude: 4.8369850527961935)
+03-15 15:16:50.443  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 794989 to 795250 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.443  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 794989 (magnitude: 6.18714409204466)
+03-15 15:16:50.443  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 794989 (magnitude: 6.18714409204466)
+03-15 15:16:50.445  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 799312 to 799573 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.445  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 799312 (magnitude: 596.5157645436552)
+03-15 15:16:50.445  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 799312 (magnitude: 596.5157645436552)
+03-15 15:16:50.447  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 803635 to 803896 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.447  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 803635 (magnitude: 242.29660564120334)
+03-15 15:16:50.447  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 803635 (magnitude: 242.29660564120334)
+03-15 15:16:50.449  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 807958 to 808219 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.449  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 807958 (magnitude: 832.4304994125414)
+03-15 15:16:50.449  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 807958 (magnitude: 832.4304994125414)
+03-15 15:16:50.452  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 812281 to 812542 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.452  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 812281 (magnitude: 1051.849960233822)
+03-15 15:16:50.452  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 812281 (magnitude: 1051.849960233822)
+03-15 15:16:50.454  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 816604 to 816865 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.454  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 816604 (magnitude: 1065.8617167615407)
+03-15 15:16:50.454  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 816604 (magnitude: 1065.8617167615407)
+03-15 15:16:50.456  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 820927 to 821188 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.456  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 820927 (magnitude: 449.5598002398544)
+03-15 15:16:50.456  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 820927 (magnitude: 449.5598002398544)
+03-15 15:16:50.458  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 825250 to 825511 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.458  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 825250 (magnitude: 1212.275366145324)
+03-15 15:16:50.458  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 825250 (magnitude: 1212.275366145324)
+03-15 15:16:50.460  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 829573 to 829834 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.460  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 829573 (magnitude: 1532.5552706009858)
+03-15 15:16:50.460  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 829573 (magnitude: 1532.5552706009858)
+03-15 15:16:50.462  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 833896 to 834157 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.462  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 833896 (magnitude: 5.684988730668761)
+03-15 15:16:50.462  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 833896 (magnitude: 5.684988730668761)
+03-15 15:16:50.465  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 838219 to 838480 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.465  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 838219 (magnitude: 885.0980228054971)
+03-15 15:16:50.465  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 838219 (magnitude: 885.0980228054971)
+03-15 15:16:50.467  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 842542 to 842803 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.467  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 842542 (magnitude: 1708.3088966512594)
+03-15 15:16:50.467  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 842542 (magnitude: 1708.3088966512594)
+03-15 15:16:50.469  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 846865 to 847126 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.469  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 846865 (magnitude: 2035.2874390548832)
+03-15 15:16:50.469  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 846865 (magnitude: 2035.2874390548832)
+03-15 15:16:50.471  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 851188 to 851449 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.471  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 851188 (magnitude: 81.89946351685909)
+03-15 15:16:50.471  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 851188 (magnitude: 81.89946351685909)
+03-15 15:16:50.473  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 855511 to 855772 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.473  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 855511 (magnitude: 662.6124691069817)
+03-15 15:16:50.473  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 855511 (magnitude: 662.6124691069817)
+03-15 15:16:50.475  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 859834 to 860095 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.476  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 859834 (magnitude: 783.2229313055503)
+03-15 15:16:50.476  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 859834 (magnitude: 783.2229313055503)
+03-15 15:16:50.478  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 864157 to 864418 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.478  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 864157 (magnitude: 736.3804209176881)
+03-15 15:16:50.478  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 864157 (magnitude: 736.3804209176881)
+03-15 15:16:50.480  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Decoder: 
+Decoded 200/256 lines
+03-15 15:16:50.480  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 868480 to 868741 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.480  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 868480 (magnitude: 364.85604273585034)
+03-15 15:16:50.480  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 868480 (magnitude: 364.85604273585034)
+03-15 15:16:50.482  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 872803 to 873064 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.482  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 872803 (magnitude: 856.01377898278)
+03-15 15:16:50.482  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 872803 (magnitude: 856.01377898278)
+03-15 15:16:50.484  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 877126 to 877387 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.484  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 877126 (magnitude: 583.9539029779279)
+03-15 15:16:50.484  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 877126 (magnitude: 583.9539029779279)
+03-15 15:16:50.486  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 881449 to 881710 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.486  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 881449 (magnitude: 345.5499319980776)
+03-15 15:16:50.486  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 881449 (magnitude: 345.5499319980776)
+03-15 15:16:50.489  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 885772 to 886033 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.489  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 885772 (magnitude: 794.5164988888507)
+03-15 15:16:50.489  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 885772 (magnitude: 794.5164988888507)
+03-15 15:16:50.491  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 890095 to 890356 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.491  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 890095 (magnitude: 2081.5884399598685)
+03-15 15:16:50.491  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 890095 (magnitude: 2081.5884399598685)
+03-15 15:16:50.493  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 894418 to 894679 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.493  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 894418 (magnitude: 2124.8318076629603)
+03-15 15:16:50.493  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 894418 (magnitude: 2124.8318076629603)
+03-15 15:16:50.495  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 898741 to 899002 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.495  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 898741 (magnitude: 1944.5564584941446)
+03-15 15:16:50.495  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 898741 (magnitude: 1944.5564584941446)
+03-15 15:16:50.497  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 903064 to 903325 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.497  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 903064 (magnitude: 823.0849398068291)
+03-15 15:16:50.497  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 903064 (magnitude: 823.0849398068291)
+03-15 15:16:50.500  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 907387 to 907648 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.500  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 907387 (magnitude: 1379.1732395023566)
+03-15 15:16:50.500  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 907387 (magnitude: 1379.1732395023566)
+03-15 15:16:50.502  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 911710 to 911971 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.502  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 911710 (magnitude: 65.8962189902151)
+03-15 15:16:50.502  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 911710 (magnitude: 65.8962189902151)
+03-15 15:16:50.504  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 916033 to 916294 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.504  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 916033 (magnitude: 383.2212507303469)
+03-15 15:16:50.504  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 916033 (magnitude: 383.2212507303469)
+03-15 15:16:50.506  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 920356 to 920617 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.506  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 920356 (magnitude: 677.9869637362325)
+03-15 15:16:50.506  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 920356 (magnitude: 677.9869637362325)
+03-15 15:16:50.508  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 924679 to 924940 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.508  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 924679 (magnitude: 807.4361411709932)
+03-15 15:16:50.508  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 924679 (magnitude: 807.4361411709932)
+03-15 15:16:50.510  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 929002 to 929263 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.510  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 929002 (magnitude: 541.0208578984299)
+03-15 15:16:50.510  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 929002 (magnitude: 541.0208578984299)
+03-15 15:16:50.513  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 933325 to 933586 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.513  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 933325 (magnitude: 191.66231398765908)
+03-15 15:16:50.513  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 933325 (magnitude: 191.66231398765908)
+03-15 15:16:50.515  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 937648 to 937909 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.515  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 937648 (magnitude: 1106.6466796580596)
+03-15 15:16:50.515  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 937648 (magnitude: 1106.6466796580596)
+03-15 15:16:50.517  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 941971 to 942232 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.517  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 941971 (magnitude: 1114.0402798928776)
+03-15 15:16:50.517  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 941971 (magnitude: 1114.0402798928776)
+03-15 15:16:50.519  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 946294 to 946555 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.519  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 946294 (magnitude: 1933.9191012021276)
+03-15 15:16:50.519  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 946294 (magnitude: 1933.9191012021276)
+03-15 15:16:50.521  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 950617 to 950878 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.521  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 950617 (magnitude: 1119.1271580496714)
+03-15 15:16:50.521  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 950617 (magnitude: 1119.1271580496714)
+03-15 15:16:50.524  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Decoder: 
+Decoded 220/256 lines
+03-15 15:16:50.524  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 954940 to 955201 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.524  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 954940 (magnitude: 25.588284024003798)
+03-15 15:16:50.524  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 954940 (magnitude: 25.588284024003798)
+03-15 15:16:50.526  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 959263 to 959524 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.526  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 959263 (magnitude: 959.0940031340496)
+03-15 15:16:50.526  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 959263 (magnitude: 959.0940031340496)
+03-15 15:16:50.528  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 963586 to 963847 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.528  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 963586 (magnitude: 425.7481291624318)
+03-15 15:16:50.528  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 963586 (magnitude: 425.7481291624318)
+03-15 15:16:50.530  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 967909 to 968170 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.530  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 967909 (magnitude: 712.6761649298954)
+03-15 15:16:50.530  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 967909 (magnitude: 712.6761649298954)
+03-15 15:16:50.532  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 972232 to 972493 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.532  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 972232 (magnitude: 873.3196689396697)
+03-15 15:16:50.532  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 972232 (magnitude: 873.3196689396697)
+03-15 15:16:50.534  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 976555 to 976816 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.534  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 976555 (magnitude: 852.2645052062306)
+03-15 15:16:50.534  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 976555 (magnitude: 852.2645052062306)
+03-15 15:16:50.537  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 980878 to 981139 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.537  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 980878 (magnitude: 622.0844257474836)
+03-15 15:16:50.537  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 980878 (magnitude: 622.0844257474836)
+03-15 15:16:50.539  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 985201 to 985462 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.539  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 985201 (magnitude: 811.5734054707052)
+03-15 15:16:50.539  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 985201 (magnitude: 811.5734054707052)
+03-15 15:16:50.541  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 989524 to 989785 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.541  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 989524 (magnitude: 1149.3058544731296)
+03-15 15:16:50.541  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 989524 (magnitude: 1149.3058544731296)
+03-15 15:16:50.543  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 993847 to 994108 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.543  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 993847 (magnitude: 874.0173992620854)
+03-15 15:16:50.543  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 993847 (magnitude: 874.0173992620854)
+03-15 15:16:50.545  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 998170 to 998431 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.545  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 998170 (magnitude: 1143.002647892283)
+03-15 15:16:50.545  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 998170 (magnitude: 1143.002647892283)
+03-15 15:16:50.548  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1002493 to 1002754 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.548  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1002493 (magnitude: 400.3855889324131)
+03-15 15:16:50.548  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1002493 (magnitude: 400.3855889324131)
+03-15 15:16:50.550  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1006816 to 1007077 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.550  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1006816 (magnitude: 36.958748513910734)
+03-15 15:16:50.550  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1006816 (magnitude: 36.958748513910734)
+03-15 15:16:50.552  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1011139 to 1011400 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.552  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1011139 (magnitude: 478.494822723536)
+03-15 15:16:50.552  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1011139 (magnitude: 478.494822723536)
+03-15 15:16:50.554  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1015462 to 1015723 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.554  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1015462 (magnitude: 626.4878387416692)
+03-15 15:16:50.554  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1015462 (magnitude: 626.4878387416692)
+03-15 15:16:50.556  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1019785 to 1020046 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.556  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1019785 (magnitude: 622.9848062785579)
+03-15 15:16:50.556  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1019785 (magnitude: 622.9848062785579)
+03-15 15:16:50.558  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1024108 to 1024369 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.558  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1024108 (magnitude: 317.39659828280287)
+03-15 15:16:50.558  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1024108 (magnitude: 317.39659828280287)
+03-15 15:16:50.561  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1028431 to 1028692 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.561  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1028431 (magnitude: 755.4810627975531)
+03-15 15:16:50.561  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1028431 (magnitude: 755.4810627975531)
+03-15 15:16:50.563  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1032754 to 1033015 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.563  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1032754 (magnitude: 314.17735931731016)
+03-15 15:16:50.563  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1032754 (magnitude: 314.17735931731016)
+03-15 15:16:50.565  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1037077 to 1037338 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.565  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1037077 (magnitude: 170.52780884733747)
+03-15 15:16:50.565  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1037077 (magnitude: 170.52780884733747)
+03-15 15:16:50.567  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Decoder: 
+Decoded 240/256 lines
+03-15 15:16:50.567  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1041400 to 1041661 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.567  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1041400 (magnitude: 540.3877504640797)
+03-15 15:16:50.567  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1041400 (magnitude: 540.3877504640797)
+03-15 15:16:50.569  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1045723 to 1045984 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.569  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1045723 (magnitude: 515.9579306230993)
+03-15 15:16:50.569  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1045723 (magnitude: 515.9579306230993)
+03-15 15:16:50.572  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1050046 to 1050307 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.572  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1050046 (magnitude: 553.3674772063621)
+03-15 15:16:50.572  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1050046 (magnitude: 553.3674772063621)
+03-15 15:16:50.574  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1054369 to 1054630 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.574  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1054369 (magnitude: 791.4216152421949)
+03-15 15:16:50.574  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1054369 (magnitude: 791.4216152421949)
+03-15 15:16:50.576  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1058692 to 1058953 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.576  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1058692 (magnitude: 704.7399977257569)
+03-15 15:16:50.576  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1058692 (magnitude: 704.7399977257569)
+03-15 15:16:50.578  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1063015 to 1063276 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.578  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1063015 (magnitude: 285.1463510441267)
+03-15 15:16:50.578  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1063015 (magnitude: 285.1463510441267)
+03-15 15:16:50.580  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1067338 to 1067599 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.580  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1067338 (magnitude: 361.0121357108886)
+03-15 15:16:50.580  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1067338 (magnitude: 361.0121357108886)
+03-15 15:16:50.582  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1071661 to 1071922 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.582  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1071661 (magnitude: 157.68778163598816)
+03-15 15:16:50.582  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1071661 (magnitude: 157.68778163598816)
+03-15 15:16:50.585  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1075984 to 1076245 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.585  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1075984 (magnitude: 234.26615090474203)
+03-15 15:16:50.585  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1075984 (magnitude: 234.26615090474203)
+03-15 15:16:50.587  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1080307 to 1080568 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.587  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1080307 (magnitude: 60.85108045189372)
+03-15 15:16:50.587  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1080307 (magnitude: 60.85108045189372)
+03-15 15:16:50.589  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1084630 to 1084891 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.589  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1084630 (magnitude: 688.0782413816517)
+03-15 15:16:50.589  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1084630 (magnitude: 688.0782413816517)
+03-15 15:16:50.591  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1088953 to 1089214 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.591  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1088953 (magnitude: 797.196443711892)
+03-15 15:16:50.591  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1088953 (magnitude: 797.196443711892)
+03-15 15:16:50.593  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1093276 to 1093537 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.593  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1093276 (magnitude: 1193.4484283842182)
+03-15 15:16:50.593  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1093276 (magnitude: 1193.4484283842182)
+03-15 15:16:50.596  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1097599 to 1097860 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.596  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1097599 (magnitude: 615.4495394029176)
+03-15 15:16:50.596  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1097599 (magnitude: 615.4495394029176)
+03-15 15:16:50.598  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1101922 to 1102183 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.598  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1101922 (magnitude: 468.6740811885163)
+03-15 15:16:50.598  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1101922 (magnitude: 468.6740811885163)
+03-15 15:16:50.600  3390  3390 D DMRModHooks-SSTV-Goertzel: Searching for sync 
+from sample 1106245 to 1106506 (search length: 261, window: 32, threshold: 0.3)
+03-15 15:16:50.600  3390  3390 D DMRModHooks-SSTV-Goertzel: Potential sync at 
+sample 1106245 (magnitude: 211.4597620463593)
+03-15 15:16:50.600  3390  3390 D DMRModHooks-SSTV-Goertzel: Γ£ô Sync confirmed 
+at sample 1106245 (magnitude: 211.4597620463593)
+03-15 15:16:50.602  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Decoder: 
+Scottie decode complete (256 lines)
+03-15 15:16:50.602  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Γ£ô Image decoded successfully (320x256)
+03-15 15:16:50.620  3390  3390 I LSPosed-Bridge: DMRModHooks: Displayed 
+decoded SSTV image
+03-15 15:16:50.620  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+[UI] Transmission Complete: Scottie S2 (0 lines)
+03-15 15:16:50.620  3390  3390 I LSPosed-Bridge: DMRModHooks-SSTV-Receiver: 
+Decoder reset
+03-15 15:16:50.760  1371  1424 I DisplayDeviceRepository: Display device 
+changed: DisplayDeviceInfo{"Built-in Screen": uniqueId="local:0", 1080 x 2460, 
+modeId 1, defaultModeId 1, supportedModes [{id=1, width=1080, height=2460, 
+fps=120.00001, alternativeRefreshRates=[60.0, 90.0]}, {id=2, width=1080, 
+height=2460, fps=90.0, alternativeRefreshRates=[60.0, 120.00001]}, {id=3, 
+width=1080, height=2460, fps=60.0, alternativeRefreshRates=[90.0, 
+120.00001]}], colorMode 0, supportedColorModes [0], hdrCapabilities 
+HdrCapabilities{mSupportedHdrTypes=[2, 3, 4], mMaxLuminance=500.0, 
+mMaxAverageLuminance=500.0, mMinLuminance=0.0}, allmSupported false, 
+gameContentTypeSupported false, density 480, 397.565 x 395.468 dpi, 
+appVsyncOff 8333331, presDeadline 14333334, cutout 
+DisplayCutout{insets=Rect(0, 118 - 0, 0) waterfall=Insets{left=0, top=0, 
+right=0, bottom=0} boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(540, 65 - 
+593, 118), Rect(0, 0 - 0, 0), Rect(0, 0 - 0, 0)]} 
+cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 
+displayHeight=2460 physicalDisplayWidth=1080 physicalDisplayHeight=2460 
+density={3.0} cutoutSpec={M26.495,117.433a26.283,26.283,0,1,1,26.5-26.282A26.39
+,26.39,0,0,1,26.495,117.433ZM26.5,89.963a1.19,1.19,0,1,0,1.2,1.19A1.195,1.195,0
+,0,0,26.5,89.963Z} rotation={0} scale={1.0} 
+physicalPixelDisplaySizeRatio={1.0}}}}, touch INTERNAL, rotation 0, type 
+INTERNAL, address {port=0}, deviceProductInfo null, state ON, 
+frameRateOverride , brightnessMinimum 0.0, brightnessMaximum 1.0, 
+brightnessDefault 0.4, FLAG_ALLOWED_TO_BE_DEFAULT_DISPLAY, 
+FLAG_ROTATES_WITH_CONTENT, FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, 
+installOrientation 0}
+03-15 15:16:51.785  1371  1424 I DisplayDeviceRepository: Display device 
+changed: DisplayDeviceInfo{"Built-in Screen": uniqueId="local:0", 1080 x 2460, 
+modeId 3, defaultModeId 1, supportedModes [{id=1, width=1080, height=2460, 
+fps=120.00001, alternativeRefreshRates=[60.0, 90.0]}, {id=2, width=1080, 
+height=2460, fps=90.0, alternativeRefreshRates=[60.0, 120.00001]}, {id=3, 
+width=1080, height=2460, fps=60.0, alternativeRefreshRates=[90.0, 
+120.00001]}], colorMode 0, supportedColorModes [0], hdrCapabilities 
+HdrCapabilities{mSupportedHdrTypes=[2, 3, 4], mMaxLuminance=500.0, 
+mMaxAverageLuminance=500.0, mMinLuminance=0.0}, allmSupported false, 
+gameContentTypeSupported false, density 480, 397.565 x 395.468 dpi, 
+appVsyncOff 1, presDeadline 31000000, cutout DisplayCutout{insets=Rect(0, 118 
+- 0, 0) waterfall=Insets{left=0, top=0, right=0, bottom=0} 
+boundingRect={Bounds=[Rect(0, 0 - 0, 0), Rect(540, 65 - 593, 118), Rect(0, 0 - 
+0, 0), Rect(0, 0 - 0, 0)]} 
+cutoutPathParserInfo={CutoutPathParserInfo{displayWidth=1080 
+displayHeight=2460 physicalDisplayWidth=1080 physicalDisplayHeight=2460 
+density={3.0} cutoutSpec={M26.495,117.433a26.283,26.283,0,1,1,26.5-26.282A26.39
+,26.39,0,0,1,26.495,117.433ZM26.5,89.963a1.19,1.19,0,1,0,1.2,1.19A1.195,1.195,0
+,0,0,26.5,89.963Z} rotation={0} scale={1.0} 
+physicalPixelDisplaySizeRatio={1.0}}}}, touch INTERNAL, rotation 0, type 
+INTERNAL, address {port=0}, deviceProductInfo null, state ON, 
+frameRateOverride , brightnessMinimum 0.0, brightnessMaximum 1.0, 
+brightnessDefault 0.4, FLAG_ALLOWED_TO_BE_DEFAULT_DISPLAY, 
+FLAG_ROTATES_WITH_CONTENT, FLAG_SECURE, FLAG_SUPPORTS_PROTECTED_BUFFERS, 
+installOrientation 0}
+
+

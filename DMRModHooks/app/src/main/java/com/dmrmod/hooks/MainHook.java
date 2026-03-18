@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.location.Address;
 import android.location.Geocoder;
 import android.os.Bundle;
@@ -89,7 +90,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.2.3";
+    private static final String VERSION = "3.3.0";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -247,6 +248,20 @@ public class MainHook implements IXposedHookLoadPackage {
     private static int vfoChannelMode = 1;  // 0=Digital/DMR, 1=Analog (default analog)
     private static double vfoFrequencyMHz = 146.520;  // Default simplex frequency
     private static int vfoPowerLevel = 1;  // 0=Low, 1=High
+    
+    // SSTV monitoring mode state
+    private static volatile boolean isSSTVMonitoringActive = false;
+    private static volatile Object previousChannelBeforeSTV = null;  // Store channel to return to
+    private static AlertDialog sstvMonitoringDialog = null;  // Store dialog for live updates
+    private static android.os.Handler sstvUpdateHandler = null;  // Handler for periodic updates
+    private static Runnable sstvUpdateRunnable = null;  // Runnable for updating dialog
+    private static SSTVReceiver sstvReceiver = null;  // SSTV audio processor
+
+    // SSTV live image dialog (shown progressively while receiving)
+    private static AlertDialog sstvImageDialog = null;
+    private static android.widget.ImageView sstvLiveImageView = null;
+    private static android.widget.TextView sstvProgressText = null;
+    private static android.widget.TextView sstvImageModeText = null;
     
     // Analog-specific settings
     private static int vfoRxToneType = 0;  // 0=None, 1=CTCSS, 2=FDCS, 3=BDCS
@@ -2066,22 +2081,22 @@ public class MainHook implements IXposedHookLoadPackage {
                                 buttonContainer.addView(monitorToggle);
                                 XposedBridge.log(TAG + ": ✓ Added monitoring mode toggle below REC button");
                                 
-                                // Create APRS monitoring mode toggle button (below MON button, right side)
+                                // Create Packet Radio menu button (below MON button, right side)
                                 android.widget.ToggleButton aprsButton = new android.widget.ToggleButton(context);
-                                aprsButton.setTag("DMR_APRS_MONITOR_BUTTON");
-                                aprsButton.setTextOn("APRS");
-                                aprsButton.setTextOff("APRS");
+                                aprsButton.setTag("DMR_PKT_RAD_BUTTON");
+                                aprsButton.setTextOn("PKT RAD");
+                                aprsButton.setTextOff("PKT RAD");
                                 aprsButton.setChecked(false);
                                 
                                 FrameLayout.LayoutParams aprsButtonParams = new FrameLayout.LayoutParams(
-                                    (int) (70 * context.getResources().getDisplayMetrics().density),  // 70dp width
+                                    (int) (76 * context.getResources().getDisplayMetrics().density),  // 76dp width (20% smaller than 95dp)
                                     (int) (40 * context.getResources().getDisplayMetrics().density)   // 40dp height
                                 );
                                 aprsButtonParams.gravity = android.view.Gravity.END | android.view.Gravity.TOP;
                                 aprsButtonParams.rightMargin = (int) (16 * context.getResources().getDisplayMetrics().density);
                                 aprsButtonParams.topMargin = (int) (110 * context.getResources().getDisplayMetrics().density); // Below MON (60+40+10)
                                 aprsButton.setLayoutParams(aprsButtonParams);
-                                aprsButton.setTextSize(12);
+                                aprsButton.setTextSize(11);  // Slightly smaller to fit better
                                 aprsButton.setTypeface(null, android.graphics.Typeface.BOLD);
                                 aprsButton.setTextColor(0xFFFFFFFF);  // White text
                                 
@@ -2115,16 +2130,18 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Store reference
                                 aprsMonitoringToggleButton = aprsButton;
                                 
-                                // Set click listener
+                                // Set click listener to open packet radio menu
                                 aprsButton.setOnClickListener(new View.OnClickListener() {
                                     @Override
                                     public void onClick(View v) {
-                                        showAPRSMonitoringDialog((Activity) context);
+                                        // Uncheck immediately since this is a menu button, not a toggle
+                                        ((android.widget.ToggleButton) v).setChecked(false);
+                                        showPacketRadioMenu((Activity) context);
                                     }
                                 });
                                 
                                 buttonContainer.addView(aprsButton);
-                                XposedBridge.log(TAG + ": ✓ Added APRS monitoring toggle button below MON button");
+                                XposedBridge.log(TAG + ": ✓ Added Packet Radio (PKT RAD) menu button below MON button");
                                 
                                 // Create VFO toggle button (below TXT button, left side)
                                 android.widget.ToggleButton vfoButton = new android.widget.ToggleButton(context);
@@ -3754,6 +3771,117 @@ public class MainHook implements IXposedHookLoadPackage {
     }
     
     /**
+     * Show Packet Radio Menu - main menu for selecting packet radio modes
+     */
+    private void showPacketRadioMenu(final Activity activity) {
+        try {
+            AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+            builder.setTitle("📡 Packet Radio Modes");
+            
+            // Create main layout
+            LinearLayout mainLayout = new LinearLayout(activity);
+            mainLayout.setOrientation(LinearLayout.VERTICAL);
+            mainLayout.setPadding(40, 40, 40, 40);
+            
+            // Description text
+            TextView descriptionText = new TextView(activity);
+            descriptionText.setText("Select a packet radio mode:");
+            descriptionText.setTextSize(14);
+            descriptionText.setTextColor(0xFF999999);
+            descriptionText.setPadding(0, 0, 0, 30);
+            mainLayout.addView(descriptionText);
+            
+            // APRS button
+            android.widget.Button aprsButton = new android.widget.Button(activity);
+            aprsButton.setText("📡 APRS (Automatic Packet Reporting System)");
+            aprsButton.setTextSize(16);
+            aprsButton.setAllCaps(false);
+            LinearLayout.LayoutParams aprsButtonParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                (int) (60 * activity.getResources().getDisplayMetrics().density)
+            );
+            aprsButtonParams.bottomMargin = (int) (15 * activity.getResources().getDisplayMetrics().density);
+            aprsButton.setLayoutParams(aprsButtonParams);
+            
+            // Style APRS button with green background
+            android.graphics.drawable.GradientDrawable aprsDrawable = new android.graphics.drawable.GradientDrawable();
+            aprsDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+            aprsDrawable.setColor(0xFF00AA00);  // Green
+            aprsDrawable.setCornerRadius(10 * activity.getResources().getDisplayMetrics().density);
+            aprsButton.setBackground(aprsDrawable);
+            aprsButton.setTextColor(0xFFFFFFFF);  // White text
+            
+            aprsButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // Dismiss this menu and show APRS monitoring dialog
+                    showAPRSMonitoringDialog(activity);
+                }
+            });
+            mainLayout.addView(aprsButton);
+            
+            // SSTV button (now enabled!)
+            android.widget.Button sstvButton = new android.widget.Button(activity);
+            sstvButton.setText("📺 SSTV (Slow Scan Television)");
+            sstvButton.setTextSize(16);
+            sstvButton.setAllCaps(false);
+            sstvButton.setEnabled(true);  // ENABLED - Phase 1 VIS detection ready!
+            LinearLayout.LayoutParams sstvButtonParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                (int) (60 * activity.getResources().getDisplayMetrics().density)
+            );
+            sstvButtonParams.bottomMargin = (int) (15 * activity.getResources().getDisplayMetrics().density);
+            sstvButton.setLayoutParams(sstvButtonParams);
+            
+            // Style SSTV button (blue/purple for visual distinction from APRS green)
+            android.graphics.drawable.GradientDrawable sstvDrawable = new android.graphics.drawable.GradientDrawable();
+            sstvDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+            sstvDrawable.setColor(0xFF6B5FD9);  // Purple
+            sstvDrawable.setCornerRadius(10 * activity.getResources().getDisplayMetrics().density);
+            sstvButton.setBackground(sstvDrawable);
+            sstvButton.setTextColor(0xFFFFFFFF);  // White text
+            
+            sstvButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // Dismiss this menu and show SSTV monitoring dialog
+                    showSSTVMonitoringDialog(activity);
+                }
+            });
+            
+            mainLayout.addView(sstvButton);
+            
+            // Info text
+            TextView infoText = new TextView(activity);
+            infoText.setText("\n💡 More modes coming soon...");
+            infoText.setTextSize(12);
+            infoText.setTextColor(0xFF999999);
+            infoText.setPadding(0, 20, 0, 0);
+            mainLayout.addView(infoText);
+            
+            builder.setView(mainLayout);
+            
+            // Close button at bottom
+            builder.setNegativeButton("Close", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss();
+                }
+            });
+            
+            AlertDialog dialog = builder.create();
+            dialog.show();
+            
+            XposedBridge.log(TAG + ": Packet Radio menu displayed");
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error showing packet radio menu: " + e.getMessage());
+            e.printStackTrace();
+            Toast.makeText(activity, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+    
+    /**
      * Show APRS Monitoring Mode dialog
      */
     private void showAPRSMonitoringDialog(final Activity activity) {
@@ -4262,6 +4390,13 @@ public class MainHook implements IXposedHookLoadPackage {
                         // ALWAYS set hardware squelch to 0 when software squelch is enabled
                         // (regardless of threshold - audio processing handles threshold 0)
                         enableSoftwareSquelchOnCurrentChannel();
+                        // Re-apply after 2.5s in case the channel state machine fires late
+                        // and overwrites sq=0 back to sq=2 after the initial start.
+                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+                            @Override public void run() {
+                                if (isSoftwareSquelchEnabled || isAprsSoftwareSquelchEnabled) enableSoftwareSquelchOnCurrentChannel();
+                            }
+                        }, 2500);
                     } else {
                         // Disabling software squelch
                         XposedBridge.log(TAG + ": APRS software squelch disabled - reverting to hardware squelch 2");
@@ -4485,6 +4620,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.setIntField(currentChannel, "txFreq", frequencyHz);
             XposedHelpers.setIntField(currentChannel, "sq", 2);  // Hardware squelch 2 (default - only 0 or 2 supported)
             XposedHelpers.setIntField(currentChannel, "band", 1);  // VHF
+            XposedHelpers.setIntField(currentChannel, "channelMode", 0);  // Narrow bandwidth (NFM 12.5kHz for SSTV)
             XposedHelpers.setIntField(currentChannel, "power", 1);  // High power
             XposedHelpers.setIntField(currentChannel, "rxType", 0);  // No tone
             XposedHelpers.setIntField(currentChannel, "rxSubCode", 0);
@@ -4614,6 +4750,870 @@ public class MainHook implements IXposedHookLoadPackage {
             
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error stopping APRS monitoring: " + e.getMessage());
+            XposedBridge.log(e);
+        }
+    }
+    
+    /**
+     * Show SSTV Monitoring dialog
+     */
+    private void showSSTVMonitoringDialog(final Activity activity) {
+        try {
+            if (isSSTVMonitoringActive && sstvMonitoringDialog != null && sstvMonitoringDialog.isShowing()) {
+                // Dialog already showing - just bring it to front
+                XposedBridge.log(TAG + ": SSTV monitoring dialog already visible");
+                return;
+            }
+            
+            if (isSSTVMonitoringActive) {
+                // Show live monitoring screen
+                showSSTVLiveMonitoringScreen(activity);
+            } else {
+                // Show start dialog
+                showSSTVStartDialog(activity);
+            }
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error showing SSTV monitoring dialog: " + e.getMessage());
+            XposedBridge.log(e);
+            Toast.makeText(activity, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+    
+    /**
+     * Show SSTV start dialog (before monitoring begins)
+     */
+    private void showSSTVStartDialog(final Activity activity) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+        builder.setTitle("📺 SSTV Monitoring Mode");
+        
+        LinearLayout mainLayout = new LinearLayout(activity);
+        mainLayout.setOrientation(LinearLayout.VERTICAL);
+        mainLayout.setPadding(40, 40, 40, 40);
+        
+        // Status section
+        TextView statusText = new TextView(activity);
+        statusText.setText("⚫ MONITORING INACTIVE\n\nSSTV (Slow Scan Television) allows amateur radio operators to send and receive images over radio.\n\nPress 'Start Monitoring' to begin receiving SSTV images on 144.500 MHz.");
+        statusText.setTextSize(14);
+        statusText.setTextColor(0xFF999999);
+        statusText.setPadding(0, 10, 0, 20);
+        mainLayout.addView(statusText);
+        
+        // Supported modes
+        TextView modesLabel = new TextView(activity);
+        modesLabel.setText("Supported Modes (Phase 1 - VIS Detection):");
+        modesLabel.setTextSize(16);
+        modesLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+        mainLayout.addView(modesLabel);
+        
+        TextView modesText = new TextView(activity);
+        modesText.setText("• Robot 36 (320x240, 36 sec) ⭐\n" +
+                         "• Robot 72 (320x240, 72 sec)\n" +
+                         "• Martin M1 (320x256, 114 sec)\n" +
+                         "• Martin M2 (320x256, 58 sec)\n" +
+                         "• Scottie S1/S2\n" +
+                         "• PD 120/180");
+        modesText.setTextSize(14);
+        modesText.setPadding(0, 10, 0, 20);
+        mainLayout.addView(modesText);
+        
+        // Phase 1 info
+        TextView phaseText = new TextView(activity);
+        phaseText.setText("\n📋 Phase 1: VIS Code Detection\n\nThe app will detect SSTV signals and identify the transmission mode. Image decoding coming in Phase 2!");
+        phaseText.setTextSize(12);
+        phaseText.setTextColor(0xFFFFAA00);
+        phaseText.setPadding(0, 20, 0, 0);
+        mainLayout.addView(phaseText);
+        
+        // Ham license warning
+        TextView licenseText = new TextView(activity);
+        licenseText.setText("\n⚠️ SSTV monitoring requires amateur radio certification. Receive-only monitoring is legal for all users.");
+        licenseText.setTextSize(11);
+        licenseText.setTextColor(0xFF999999);
+        licenseText.setPadding(0, 20, 0, 0);
+        mainLayout.addView(licenseText);
+        
+        builder.setView(mainLayout);
+        
+        builder.setPositiveButton("Start Monitoring", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                startSSTVMonitoring(activity);
+                // Show live monitoring screen after starting
+                showSSTVLiveMonitoringScreen(activity);
+            }
+        });
+        
+        builder.setNegativeButton("Close", null);
+        
+        builder.show();
+    }
+    
+    /**
+     * Show SSTV live monitoring screen
+     */
+    private void showSSTVLiveMonitoringScreen(final Activity activity) {
+        if (sstvMonitoringDialog != null && sstvMonitoringDialog.isShowing()) {
+            return;  // Already showing
+        }
+        
+        final AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+        builder.setTitle("📺 SSTV Live Monitoring");
+        builder.setCancelable(false);
+        
+        final ScrollView scrollView = new ScrollView(activity);
+        final LinearLayout mainLayout = new LinearLayout(activity);
+        mainLayout.setOrientation(LinearLayout.VERTICAL);
+        mainLayout.setPadding(40, 40, 40, 40);
+        
+        scrollView.addView(mainLayout);
+        builder.setView(scrollView);
+        
+        builder.setPositiveButton("Stop Monitoring", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                stopSSTVMonitoring(activity);
+                if (sstvUpdateHandler != null && sstvUpdateRunnable != null) {
+                    sstvUpdateHandler.removeCallbacks(sstvUpdateRunnable);
+                }
+                sstvMonitoringDialog = null;
+            }
+        });
+        
+        sstvMonitoringDialog = builder.create();
+        sstvMonitoringDialog.show();
+        
+        // Set up periodic updates
+        sstvUpdateHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+        sstvUpdateRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (isSSTVMonitoringActive && sstvMonitoringDialog != null && sstvMonitoringDialog.isShowing()) {
+                    updateSSTVLiveScreen(activity, mainLayout);
+                    sstvUpdateHandler.postDelayed(this, 1000);  // Update every 1 second
+                }
+            }
+        };
+        
+        // Initial update and start periodic updates
+        updateSSTVLiveScreen(activity, mainLayout);
+        sstvUpdateHandler.postDelayed(sstvUpdateRunnable, 1000);
+    }
+    
+    /**
+     * Update SSTV live monitoring screen
+     */
+    private void updateSSTVLiveScreen(final Activity activity, LinearLayout mainLayout) {
+        try {
+            mainLayout.removeAllViews();
+            
+            // Status
+            TextView statusLabel = new TextView(activity);
+            statusLabel.setText("Status:");
+            statusLabel.setTextSize(16);
+            statusLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            mainLayout.addView(statusLabel);
+            
+            TextView statusText = new TextView(activity);
+            statusText.setText("🟢 MONITORING ACTIVE\nFrequency: 144.500 MHz\nHW Squelch: 2");
+            statusText.setTextColor(0xFF00FF00);
+            statusText.setTextSize(14);
+            statusText.setPadding(0, 10, 0, 20);
+            mainLayout.addView(statusText);
+            
+            // ========== SOFTWARE SQUELCH TOGGLE ==========
+            final android.widget.ToggleButton sstvSoftSqToggle = new android.widget.ToggleButton(activity);
+            sstvSoftSqToggle.setText("Soft SQ");
+            sstvSoftSqToggle.setTextOn("🔇 Soft SQ: ON");
+            sstvSoftSqToggle.setTextOff("🔊 Soft SQ: OFF");
+            sstvSoftSqToggle.setChecked(isSoftwareSquelchEnabled);
+            sstvSoftSqToggle.setTextSize(16);
+            sstvSoftSqToggle.setAllCaps(false);
+            sstvSoftSqToggle.setPadding(20, 20, 20, 20);
+            LinearLayout.LayoutParams toggleParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            toggleParams.setMargins(0, 0, 0, 10);
+            sstvSoftSqToggle.setLayoutParams(toggleParams);
+            
+            // Style the toggle button with state drawable
+            android.graphics.drawable.StateListDrawable toggleStateDrawable = new android.graphics.drawable.StateListDrawable();
+            
+            // Checked state (software squelch enabled) - Green background
+            android.graphics.drawable.GradientDrawable checkedDrawable = new android.graphics.drawable.GradientDrawable();
+            checkedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+            checkedDrawable.setColor(0xFF4CAF50);  // Green
+            checkedDrawable.setCornerRadius(20 * activity.getResources().getDisplayMetrics().density);
+            checkedDrawable.setStroke(
+                (int) (2 * activity.getResources().getDisplayMetrics().density),
+                0xFFFFFFFF  // White border
+            );
+            toggleStateDrawable.addState(new int[]{android.R.attr.state_checked}, checkedDrawable);
+            
+            // Unchecked state (software squelch disabled) - Gray background
+            android.graphics.drawable.GradientDrawable uncheckedDrawable = new android.graphics.drawable.GradientDrawable();
+            uncheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+            uncheckedDrawable.setColor(0xFF666666);  // Gray
+            uncheckedDrawable.setCornerRadius(20 * activity.getResources().getDisplayMetrics().density);
+            uncheckedDrawable.setStroke(
+                (int) (2 * activity.getResources().getDisplayMetrics().density),
+                0x80FFFFFF  // Semi-transparent white border
+            );
+            toggleStateDrawable.addState(new int[]{}, uncheckedDrawable);
+            
+            sstvSoftSqToggle.setBackground(toggleStateDrawable);
+            mainLayout.addView(sstvSoftSqToggle);
+            
+            // ========== SOFTWARE SQUELCH SLIDER ==========
+            TextView squelchLabel = new TextView(activity);
+            squelchLabel.setText("Software Squelch:");
+            squelchLabel.setTextSize(16);
+            squelchLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            squelchLabel.setPadding(0, 10, 0, 10);
+            mainLayout.addView(squelchLabel);
+            
+            // Create horizontal container for squelch controls
+            final LinearLayout squelchContainer = new LinearLayout(activity);
+            squelchContainer.setOrientation(LinearLayout.HORIZONTAL);
+            squelchContainer.setPadding(0, 0, 0, 20);
+            LinearLayout.LayoutParams squelchContainerParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            squelchContainer.setLayoutParams(squelchContainerParams);
+            squelchContainer.setVisibility(isSoftwareSquelchEnabled ? View.VISIBLE : View.GONE);
+            
+            // "SQ:" label
+            TextView sqLabel = new TextView(activity);
+            sqLabel.setText("SQ:");
+            sqLabel.setTextColor(0xFFFFFFFF);
+            sqLabel.setTextSize(14);
+            sqLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            labelParams.gravity = android.view.Gravity.CENTER_VERTICAL;
+            labelParams.rightMargin = (int) (6 * activity.getResources().getDisplayMetrics().density);
+            sqLabel.setLayoutParams(labelParams);
+            squelchContainer.addView(sqLabel);
+            
+            // Value display
+            final TextView sqValueLabel = new TextView(activity);
+            sqValueLabel.setText(String.valueOf(softwareSquelchThreshold));
+            sqValueLabel.setTextColor(0xFF00FF00);  // Green
+            sqValueLabel.setTextSize(18);
+            sqValueLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            sqValueLabel.setGravity(android.view.Gravity.CENTER);
+            LinearLayout.LayoutParams valueLabelParams = new LinearLayout.LayoutParams(
+                (int) (40 * activity.getResources().getDisplayMetrics().density),
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            valueLabelParams.gravity = android.view.Gravity.CENTER_VERTICAL;
+            sqValueLabel.setLayoutParams(valueLabelParams);
+            squelchContainer.addView(sqValueLabel);
+            
+            // Squelch slider (0-9)
+            final android.widget.SeekBar squelchSeekBar = new android.widget.SeekBar(activity);
+            LinearLayout.LayoutParams seekBarParams = new LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            seekBarParams.weight = 1.0f;
+            seekBarParams.topMargin = (int) (4 * activity.getResources().getDisplayMetrics().density);
+            seekBarParams.leftMargin = (int) (10 * activity.getResources().getDisplayMetrics().density);
+            squelchSeekBar.setLayoutParams(seekBarParams);
+            squelchSeekBar.setMax(9);
+            squelchSeekBar.setProgress(softwareSquelchThreshold);
+            
+            // Set slider color to black
+            try {
+                android.content.res.ColorStateList blackColor = android.content.res.ColorStateList.valueOf(0xFF000000);
+                squelchSeekBar.setProgressTintList(blackColor);
+                squelchSeekBar.setProgressBackgroundTintList(blackColor);
+                squelchSeekBar.setThumbTintList(blackColor);
+            } catch (Exception e) {
+                XposedBridge.log(TAG + ": Could not set SSTV squelch slider color: " + e);
+            }
+            
+            // Set up SeekBar listener
+            squelchSeekBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
+                    if (fromUser) {
+                        sqValueLabel.setText(String.valueOf(progress));
+                        softwareSquelchThreshold = progress;
+                        XposedBridge.log(TAG + ": SSTV software squelch changed to level " + progress);
+                    }
+                }
+                
+                @Override
+                public void onStartTrackingTouch(android.widget.SeekBar seekBar) { }
+                
+                @Override
+                public void onStopTrackingTouch(android.widget.SeekBar seekBar) {
+                    int progress = seekBar.getProgress();
+                    Toast.makeText(activity, "Software Squelch: " + progress, Toast.LENGTH_SHORT).show();
+                    XposedBridge.log(TAG + ": SSTV squelch level set to " + progress);
+                }
+            });
+            
+            squelchContainer.addView(squelchSeekBar);
+            mainLayout.addView(squelchContainer);
+            
+            // Info text explaining software squelch
+            final TextView squelchInfo = new TextView(activity);
+            squelchInfo.setText("📊 Hybrid RSSI + Audio RMS squelch\n0=most sensitive, 9=least sensitive");
+            squelchInfo.setTextSize(11);
+            squelchInfo.setTextColor(0xFF999999);
+            squelchInfo.setPadding(0, 0, 0, 20);
+            squelchInfo.setVisibility(isSoftwareSquelchEnabled ? View.VISIBLE : View.GONE);
+            mainLayout.addView(squelchInfo);
+            
+            // Set toggle click listener
+            sstvSoftSqToggle.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    isSoftwareSquelchEnabled = sstvSoftSqToggle.isChecked();
+                    
+                    if (isSoftwareSquelchEnabled) {
+                        enableSoftwareSquelchOnCurrentChannel();
+                        Toast.makeText(activity, "SSTV software squelch enabled", Toast.LENGTH_SHORT).show();
+                        squelchContainer.setVisibility(View.VISIBLE);
+                        squelchInfo.setVisibility(View.VISIBLE);
+                        // Re-apply after 2.5s in case the channel state machine fires late
+                        // and overwrites sq=0 back to sq=2 after the initial start.
+                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+                            @Override public void run() {
+                                if (isSoftwareSquelchEnabled) enableSoftwareSquelchOnCurrentChannel();
+                            }
+                        }, 2500);
+                    } else {
+                        disableSoftwareSquelchOnCurrentChannel();
+                        Toast.makeText(activity, "SSTV hardware squelch enabled", Toast.LENGTH_SHORT).show();
+                        squelchContainer.setVisibility(View.GONE);
+                        squelchInfo.setVisibility(View.GONE);
+                    }
+                }
+            });
+            
+            // Squelch status indicator
+            TextView squelchStatus = new TextView(activity);
+            String sqIndicator = (currentRssi != -999 && Math.abs(currentRssi) < 95) ? "● " : "● ";
+            int sqColor = (currentRssi != -999 && Math.abs(currentRssi) < 95) ? 0xFF00FF00 : 0xFF666666;
+            squelchStatus.setText(sqIndicator + "Signal: " + (currentRssi != -999 ? currentRssi + " dBm" : "---"));
+            squelchStatus.setTextColor(sqColor);
+            squelchStatus.setTextSize(14);
+            squelchStatus.setPadding(0, 10, 0, 20);
+            mainLayout.addView(squelchStatus);
+            
+            // Receiver status
+            if (sstvReceiver != null) {
+                TextView receiverLabel = new TextView(activity);
+                receiverLabel.setText("Decoder Status:");
+                receiverLabel.setTextSize(16);
+                receiverLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+                mainLayout.addView(receiverLabel);
+                
+                TextView receiverText = new TextView(activity);
+                String status = sstvReceiver.getStatus();
+                SSTVMode.Mode mode = sstvReceiver.getCurrentMode();
+                
+                if (mode != null) {
+                    receiverText.setText("📡 " + status + "\n\n" +
+                                       "Mode: " + mode.name + "\n" +
+                                       "Resolution: " + mode.width + "x" + mode.height + "\n" +
+                                       "Duration: " + (mode.durationMs / 1000) + " sec\n" +
+                                       "Color: " + (mode.isRGB ? "RGB" : "YUV"));
+                    receiverText.setTextColor(0xFFFFAA00);
+                } else {
+                    receiverText.setText(status);
+                    receiverText.setTextColor(0xFF999999);
+                }
+                receiverText.setTextSize(14);
+                receiverText.setPadding(0, 10, 0, 20);
+                mainLayout.addView(receiverText);
+                
+                // Audio stats
+                TextView statsText = new TextView(activity);
+                statsText.setText("Audio received: " + 
+                                String.format("%.1f", sstvReceiver.getReceivedDuration()) + " sec");
+                statsText.setTextSize(12);
+                statsText.setTextColor(0xFF999999);
+                mainLayout.addView(statsText);
+            }
+            
+            // Decode status
+            TextView phaseText = new TextView(activity);
+            String decodeStatus;
+            if (sstvReceiver != null && sstvReceiver.getCurrentMode() != null) {
+                SSTVMode.Mode m = sstvReceiver.getCurrentMode();
+                int lines = sstvReceiver.getDecodedLines();
+                int total = m.height;
+                int pct   = total > 0 ? (lines * 100) / total : 0;
+                decodeStatus = "📷 Decoding " + m.name + "  " + lines + "/" + total + " lines (" + pct + "%)"
+                        + (sstvImageDialog != null && sstvImageDialog.isShowing()
+                                ? "\nLive image dialog is open ↗" : "");
+            } else {
+                decodeStatus = "📷 Real-time decode ready — listening for VIS…";
+            }
+            phaseText.setText(decodeStatus);
+            phaseText.setTextSize(12);
+            phaseText.setTextColor(0xFF4CAF50);
+            phaseText.setPadding(0, 30, 0, 0);
+            mainLayout.addView(phaseText);
+
+            // Squelch tip
+            TextView squelchTip = new TextView(activity);
+            squelchTip.setText("⚠ Tip: Leaving the squelch fully open for extended periods increases the " +
+                    "chance of false positives — random noise can occasionally resemble a VIS tone and " +
+                    "trigger a decode attempt. Use the software squelch slider above to gate the signal " +
+                    "and reduce false detections.");
+            squelchTip.setTextSize(11);
+            squelchTip.setTextColor(0xFF888888);
+            squelchTip.setPadding(0, 20, 0, 0);
+            mainLayout.addView(squelchTip);
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error updating SSTV live screen: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Open the live SSTV image dialog immediately when a VIS code is detected.
+     * The ImageView is filled progressively as each scan line is decoded.
+     * If the dialog is already showing the ImageView is just cleared for the new mode.
+     */
+    private void showSSTVLiveImageDialog(final Activity activity, final SSTVMode.Mode mode) {
+        try {
+            // If already showing for a different mode, dismiss and reopen
+            if (sstvImageDialog != null && sstvImageDialog.isShowing()) {
+                sstvImageDialog.dismiss();
+                sstvImageDialog = null;
+            }
+
+            AlertDialog.Builder b = new AlertDialog.Builder(activity);
+            b.setTitle("📡 Receiving: " + mode.name);
+            b.setCancelable(true);
+
+            android.widget.LinearLayout layout = new android.widget.LinearLayout(activity);
+            layout.setOrientation(android.widget.LinearLayout.VERTICAL);
+            layout.setPadding(24, 24, 24, 24);
+
+            // Mode info line
+            sstvImageModeText = new android.widget.TextView(activity);
+            sstvImageModeText.setText(mode.name + "  —  " + mode.width + "×" + mode.height
+                    + "  " + (mode.isRGB ? "RGB" : "YUV")
+                    + "  (" + (mode.durationMs / 1000) + "s)");
+            sstvImageModeText.setTextSize(13);
+            sstvImageModeText.setTextColor(0xFFFFAA00);
+            sstvImageModeText.setPadding(0, 0, 0, 8);
+            layout.addView(sstvImageModeText);
+
+            // Progress text
+            sstvProgressText = new android.widget.TextView(activity);
+            sstvProgressText.setText("⏳ Waiting for first scan line…");
+            sstvProgressText.setTextSize(13);
+            sstvProgressText.setTextColor(0xFF999999);
+            sstvProgressText.setPadding(0, 0, 0, 10);
+            layout.addView(sstvProgressText);
+
+            // Live image view
+            sstvLiveImageView = new android.widget.ImageView(activity);
+            android.graphics.Bitmap placeholder = android.graphics.Bitmap.createBitmap(
+                    mode.width, mode.height, android.graphics.Bitmap.Config.ARGB_8888);
+            placeholder.eraseColor(android.graphics.Color.BLACK);
+            sstvLiveImageView.setImageBitmap(placeholder);
+            sstvLiveImageView.setAdjustViewBounds(true);
+            sstvLiveImageView.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+            android.widget.LinearLayout.LayoutParams ivParams =
+                    new android.widget.LinearLayout.LayoutParams(
+                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
+            sstvLiveImageView.setLayoutParams(ivParams);
+            layout.addView(sstvLiveImageView);
+
+            b.setView(layout);
+            b.setNegativeButton("Hide", null);
+
+            sstvImageDialog = b.create();
+            sstvImageDialog.show();
+            XposedBridge.log(TAG + ": Opened live image dialog for " + mode.name);
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error showing live image dialog: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Show decoded SSTV image in a dialog.
+     * If the live image dialog is already showing it is reused (just update the title/status).
+     */
+    private void showSSTVDecodedImage(final Activity activity, Bitmap image, SSTVMode.Mode mode) {
+        try {
+            // Update the live dialog if already showing instead of creating a new one
+            if (sstvImageDialog != null && sstvImageDialog.isShowing()) {
+                sstvImageDialog.setTitle("✓ SSTV Complete: " + mode.name);
+                if (sstvLiveImageView != null) sstvLiveImageView.setImageBitmap(image);
+                if (sstvProgressText != null) {
+                    sstvProgressText.setText("✓ Decode complete — "
+                            + image.getWidth() + "×" + image.getHeight());
+                    sstvProgressText.setTextColor(0xFF4CAF50);
+                }
+                XposedBridge.log(TAG + ": Updated live dialog with final image");
+                return;
+            }
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+            builder.setTitle("✓ SSTV Decoded: " + mode.name);
+
+            // Create scrollable layout
+            ScrollView scrollView = new ScrollView(activity);
+            LinearLayout layout = new LinearLayout(activity);
+            layout.setOrientation(LinearLayout.VERTICAL);
+            layout.setPadding(40, 40, 40, 40);
+            
+            // Success message
+            TextView successText = new TextView(activity);
+            successText.setText("✓ Successfully decoded " + mode.name + "\n" +
+                              mode.width + "x" + mode.height + ", " +
+                              (mode.isRGB ? "RGB" : "YUV") + " color");
+            successText.setTextSize(16);
+            successText.setTextColor(0xFF4CAF50);
+            successText.setPadding(0, 0, 0, 30);
+            layout.addView(successText);
+
+            // Save path (populated after auto-save)
+            final TextView savePathText = new TextView(activity);
+            savePathText.setTextSize(11);
+            savePathText.setTextColor(0xFF999999);
+            savePathText.setPadding(0, 0, 0, 10);
+            layout.addView(savePathText);
+
+            // Auto-save on open (image was already saved by SSTVReceiver, but
+            // calling again here updates the label with the path)
+            try {
+                String path = saveSSTVImageToGallery(activity, image, mode);
+                if (path != null) {
+                    savePathText.setText("💾 Saved: Downloads/DMR/SSTV/" + new java.io.File(path).getName());
+                } else {
+                    savePathText.setText("⚠️ Auto-save failed — tap Save to retry");
+                    savePathText.setTextColor(0xFFFF6600);
+                }
+            } catch (Exception e) {
+                savePathText.setText("⚠️ Auto-save error: " + e.getMessage());
+                savePathText.setTextColor(0xFFFF6600);
+            }
+            
+            // Display image
+            ImageView imageView = new ImageView(activity);
+            imageView.setImageBitmap(image);
+            imageView.setAdjustViewBounds(true);
+            imageView.setMaxWidth(800);
+            imageView.setMaxHeight(800);
+            imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            layout.addView(imageView);
+            
+            // Image info
+            TextView infoText = new TextView(activity);
+            infoText.setText("📊 Image: " + image.getWidth() + "x" + image.getHeight() + " pixels");
+            infoText.setTextSize(12);
+            infoText.setTextColor(0xFF999999);
+            infoText.setPadding(0, 20, 0, 0);
+            layout.addView(infoText);
+            
+            scrollView.addView(layout);
+            builder.setView(scrollView);
+            
+            // Buttons
+            builder.setPositiveButton("Save Again", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    String path = saveSSTVImageToGallery(activity, image, mode);
+                    if (path != null) {
+                        Toast.makeText(activity,
+                                "💾 Saved to Downloads/DMR/SSTV/" + new java.io.File(path).getName(),
+                                Toast.LENGTH_LONG).show();
+                    } else {
+                        Toast.makeText(activity, "Save failed", Toast.LENGTH_SHORT).show();
+                    }
+                    dialog.dismiss();
+                }
+            });
+            
+            builder.setNegativeButton("Close", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss();
+                }
+            });
+            
+            builder.show();
+            
+            XposedBridge.log(TAG + ": Displayed decoded SSTV image");
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error showing decoded image: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Save a decoded SSTV bitmap to Pictures/SSTV/ with a timestamped filename
+     * and notify the MediaStore. Returns the saved file path or null on failure.
+     */
+    private String saveSSTVImageToGallery(Activity activity, android.graphics.Bitmap bitmap,
+                                           SSTVMode.Mode mode) {
+        try {
+            java.text.SimpleDateFormat sdf =
+                    new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US);
+            String ts      = sdf.format(new java.util.Date());
+            String modeTag = mode.name.replace(" ", "");
+            String fname   = "SSTV_" + modeTag + "_" + ts + ".png";
+
+            java.io.File downloadDir = android.os.Environment.getExternalStoragePublicDirectory(
+                    android.os.Environment.DIRECTORY_DOWNLOADS);
+            java.io.File dir = new java.io.File(new java.io.File(downloadDir, "DMR"), "SSTV");
+            if (!dir.exists() && !dir.mkdirs()) {
+                XposedBridge.log(TAG + ": Cannot create SSTV dir: " + dir);
+                return null;
+            }
+
+            java.io.File outFile = new java.io.File(dir, fname);
+            java.io.FileOutputStream fos = new java.io.FileOutputStream(outFile);
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, fos);
+            fos.flush();
+            fos.close();
+
+            // Notify gallery scanner
+            activity.sendBroadcast(new android.content.Intent(
+                    android.content.Intent.ACTION_MEDIA_SCANNER_SCAN_FILE,
+                    android.net.Uri.fromFile(outFile)));
+
+            XposedBridge.log(TAG + ": ✓ SSTV image saved → " + outFile.getAbsolutePath());
+            return outFile.getAbsolutePath();
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Failed to save SSTV image: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Start SSTV monitoring mode
+     */
+    private void startSSTVMonitoring(final Activity activity) {
+        try {
+            XposedBridge.log(TAG + ": Starting SSTV monitoring mode");
+            
+            // Stop conflicting modes
+            if (isAPRSMonitoringActive) {
+                stopAPRSMonitoring(activity);
+                Toast.makeText(activity, "APRS stopped (SSTV active)", Toast.LENGTH_SHORT).show();
+            }
+            
+            // Get DmrManager
+            Class<?> dmrManagerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.manager.DmrManager",
+                appClassLoader
+            );
+            Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+            
+            // Get current channel
+            Object currentChannel = XposedHelpers.callMethod(dmrManager, "getCurrentChannel");
+            if (currentChannel == null) {
+                throw new Exception("Cannot get current channel");
+            }
+            
+            // Save current channel
+            saveChannelBackup(currentChannel);
+            XposedBridge.log(TAG + ": Backed up current channel");
+            
+            // Hijack channel with SSTV settings (144.500 MHz - SSTV calling frequency)
+            XposedHelpers.setIntField(currentChannel, "type", 1);  // ANALOG
+            String originalName = (String) XposedHelpers.getObjectField(currentChannel, "name");
+            XposedHelpers.setObjectField(currentChannel, "name", "SSTV (" + originalName + ")");
+            XposedHelpers.setIntField(currentChannel, "rxFreq", 144500000);  // 144.500 MHz
+            XposedHelpers.setIntField(currentChannel, "txFreq", 144500000);
+            XposedHelpers.setIntField(currentChannel, "sq", 2);  // Hardware squelch 2 (0 doesn't work)
+            XposedHelpers.setIntField(currentChannel, "band", 1);  // VHF
+            XposedHelpers.setIntField(currentChannel, "channelMode", 0);  // Narrow bandwidth (NFM 12.5kHz for SSTV)
+            XposedHelpers.setIntField(currentChannel, "power", 1);  // High power
+            XposedHelpers.setIntField(currentChannel, "rxType", 0);  // No tone
+            XposedHelpers.setIntField(currentChannel, "rxSubCode", 0);
+            XposedHelpers.setIntField(currentChannel, "txType", 0);
+            XposedHelpers.setIntField(currentChannel, "txSubCode", 0);
+            
+            // Update hardware
+            XposedHelpers.callMethod(dmrManager, "updateChannel", currentChannel);
+            XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", currentChannel);
+            
+            // Initialize SSTV receiver
+            sstvReceiver = SSTVReceiver.getInstance(activity);
+            sstvReceiver.reset();
+
+            // Callback: VIS detected → open live image dialog immediately
+            sstvReceiver.setVISDetectedCallback(new SSTVReceiver.VISDetectedCallback() {
+                @Override
+                public void onVISDetected(final SSTVMode.Mode mode) {
+                    activity.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                Toast.makeText(activity, "📡 SSTV: " + mode.name + " detected!",
+                                        Toast.LENGTH_SHORT).show();
+                                showSSTVLiveImageDialog(activity, mode);
+                            } catch (Exception e) {
+                                XposedBridge.log(TAG + ": VIS callback error: " + e.getMessage());
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Callback: each decoded scan line → update live image view
+            sstvReceiver.setLineDecodeCallback(new SSTVReceiver.LineDecodeCallback() {
+                @Override
+                public void onLineDecode(final int linesDecoded, final int totalLines,
+                                         final Bitmap snapshot) {
+                    activity.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                if (sstvLiveImageView != null) {
+                                    sstvLiveImageView.setImageBitmap(snapshot);
+                                }
+                                if (sstvProgressText != null) {
+                                    int pct = totalLines > 0 ? (linesDecoded * 100) / totalLines : 0;
+                                    sstvProgressText.setText("Decoding: " + linesDecoded + "/"
+                                            + totalLines + " lines  (" + pct + "%)");
+                                    sstvProgressText.setTextColor(0xFF00AAFF);
+                                }
+                            } catch (Exception e) {
+                                XposedBridge.log(TAG + ": Line callback error: " + e.getMessage());
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Callback: mid-stream mode change
+            sstvReceiver.setModeChangeCallback(new SSTVReceiver.ModeChangeCallback() {
+                @Override
+                public void onModeChanged(final SSTVMode.Mode oldMode, final SSTVMode.Mode newMode,
+                                          final int linesInOldMode) {
+                    activity.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                Toast.makeText(activity,
+                                        "⚡ SSTV mode change: " + oldMode.name + " → " + newMode.name,
+                                        Toast.LENGTH_LONG).show();
+                                // Reopen the live image dialog for the new mode
+                                showSSTVLiveImageDialog(activity, newMode);
+                            } catch (Exception e) {
+                                XposedBridge.log(TAG + ": Mode-change callback error: " + e.getMessage());
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Callback: full decode complete
+            sstvReceiver.setImageDecodeCallback(new SSTVReceiver.ImageDecodeCallback() {
+                @Override
+                public void onImageDecoded(final Bitmap image, final SSTVMode.Mode mode) {
+                    activity.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            showSSTVDecodedImage(activity, image, mode);
+                        }
+                    });
+                }
+            });
+            
+            isSSTVMonitoringActive = true;
+            currentChannelType = 1;  // Analog
+            
+            // Enable software squelch by default
+            isSoftwareSquelchEnabled = false;  // Start OFF, user can toggle ON
+            isAprsSoftwareSquelchEnabled = false;
+            XposedBridge.log(TAG + ": SSTV monitoring started with software squelch OFF (user can toggle on)");
+            
+            // Send direct hardware squelch command to ensure it's applied
+            try {
+                Class<?> analogMessageClass = XposedHelpers.findClass(
+                    "com.pri.prizeinterphone.message.AnalogMessage",
+                    appClassLoader
+                );
+                Object analogMessage = analogMessageClass.newInstance();
+                
+                // Copy all channel fields
+                XposedHelpers.callMethod(analogMessage, "setBand", 
+                    (byte) XposedHelpers.getIntField(currentChannel, "band"));
+                XposedHelpers.callMethod(analogMessage, "setPower", 
+                    (byte) XposedHelpers.getIntField(currentChannel, "power"));
+                XposedHelpers.callMethod(analogMessage, "setTxFreq", 
+                    XposedHelpers.getIntField(currentChannel, "txFreq"));
+                XposedHelpers.callMethod(analogMessage, "setRxFreq", 
+                    XposedHelpers.getIntField(currentChannel, "rxFreq"));
+                XposedHelpers.callMethod(analogMessage, "setSq", (byte) 2);
+                XposedHelpers.callMethod(analogMessage, "setRxType", 
+                    (byte) XposedHelpers.getIntField(currentChannel, "rxType"));
+                XposedHelpers.callMethod(analogMessage, "setRxSubCode", 
+                    (byte) XposedHelpers.getIntField(currentChannel, "rxSubCode"));
+                XposedHelpers.callMethod(analogMessage, "setTxType", 
+                    (byte) XposedHelpers.getIntField(currentChannel, "txType"));
+                XposedHelpers.callMethod(analogMessage, "setTxSubCode", 
+                    (byte) XposedHelpers.getIntField(currentChannel, "txSubCode"));
+                
+                XposedHelpers.callMethod(analogMessage, "send");
+                XposedBridge.log(TAG + ": Set hardware squelch to 2 via direct AnalogMessage send (SSTV start)");
+            } catch (Exception e) {
+                XposedBridge.log(TAG + ": Error sending direct AnalogMessage: " + e.getMessage());
+            }
+            
+            Toast.makeText(activity, "SSTV Monitoring Active at 144.500 MHz\nToggle Soft SQ to enable squelch", Toast.LENGTH_SHORT).show();
+            XposedBridge.log(TAG + ": ✅ SSTV monitoring active - Phase 1 (VIS detection)");
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error starting SSTV monitoring: " + e.getMessage());
+            XposedBridge.log(e);
+            Toast.makeText(activity, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+    
+    /**
+     * Stop SSTV monitoring mode
+     */
+    private void stopSSTVMonitoring(final Activity activity) {
+        try {
+            XposedBridge.log(TAG + ": Stopping SSTV monitoring");
+            
+            // Stop timeout checker and cleanup receiver
+            if (sstvReceiver != null) {
+                sstvReceiver.stop();
+            }
+            
+            // Restore channel from backup
+            restoreChannelBackup(activity);
+            
+            // Dismiss live image dialog if showing
+            if (sstvImageDialog != null && sstvImageDialog.isShowing()) {
+                sstvImageDialog.dismiss();
+            }
+            sstvImageDialog = null;
+            sstvLiveImageView = null;
+            sstvProgressText = null;
+            sstvImageModeText = null;
+
+            isSSTVMonitoringActive = false;
+            sstvReceiver = null;
+            
+            Toast.makeText(activity, "SSTV Monitoring stopped", Toast.LENGTH_SHORT).show();
+            XposedBridge.log(TAG + ": SSTV monitoring mode deactivated");
+            
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error stopping SSTV monitoring: " + e.getMessage());
             XposedBridge.log(e);
         }
     }
@@ -6443,6 +7443,11 @@ public class MainHook implements IXposedHookLoadPackage {
                         // Buffer audio for APRS decoding (only if monitoring is active)
                         if (isAPRSMonitoringActive) {
                             bufferAudioForAPRS(processingAudio, length);
+                        }
+                        
+                        // Buffer audio for SSTV decoding (only if monitoring is active)
+                        if (isSSTVMonitoringActive && sstvReceiver != null) {
+                            sstvReceiver.processAudio(processingAudio, length);
                         }
                         
                         // Buffer audio for transcription if enabled
