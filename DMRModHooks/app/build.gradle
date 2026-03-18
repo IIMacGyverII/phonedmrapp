@@ -10,8 +10,8 @@ android {
         applicationId "com.dmrmod.hooks"
         minSdk 26
         targetSdk 34
-        versionCode 322
-        versionName "3.2.2"
+        versionCode 330
+        versionName "3.3.0"
         
         // NDK configuration for Dire Wolf decoder - DISABLED, using pure Java PLL implementation
         /*
@@ -44,6 +44,16 @@ android {
             keyAlias 'dmrmodhooks'
             keyPassword 'android'
         }
+        debug {
+            // ⚠️ CRITICAL: MUST use same keystore as release!
+            // Changing this will cause signature mismatch on install,
+            // forcing user to uninstall and re-enable module in LSPosed.
+            // Always use install.ps1 script which preserves module state.
+            storeFile file('../release.keystore')
+            storePassword 'android'
+            keyAlias 'dmrmodhooks'
+            keyPassword 'android'
+        }
     }
 
     buildTypes {
@@ -51,6 +61,9 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
+        }
+        debug {
+            signingConfig signingConfigs.debug
         }
     }
 

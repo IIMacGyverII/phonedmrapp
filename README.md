@@ -1,20 +1,96 @@
 # PriInterPhone DMR Radio - LSPosed Mod with OpenGD77 Integration + Advanced Features
 
-**Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS + VFO Mode!
+**Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS + VFO Mode + SSTV!
 
-> **🎛️ Current Stable Release: v3.1.5** (March 14, 2026) - VFO Mode (Variable Frequency Oscillator)  
-> **📦 Previous Release: v3.1.4** (March 13, 2026) - Software Squelch State Fix  
-> **🎨 Stable Release: v3.1.3** (March 13, 2026) - Software Squelch UI Enhancements  
-> **🔧 Feature Release: v3.1.2** (March 13, 2026) - APRS Channel Recovery + Squelch Control  
+> **📺 Current Stable Release: v3.3.0** (March 18, 2026) - SSTV Live Monitoring  
+> **🎛️ Previous Release: v3.2.3** (March 16, 2026) - APRS Channel Filtering + Button Spacing  
+> **🔨 Stable Release: v3.2.2** (March 15, 2026) - VFO Digital Mode SharedPreferences Fix  
+> **🎛️ Feature Release: v3.1.5** (March 14, 2026) - VFO Mode (Variable Frequency Oscillator)  
+> **🐛 Bug Fix: v3.1.4** (March 13, 2026) - Software Squelch State Fix  
 > **📡 Major Feature: v3.1.0** (March 12, 2026) - APRS Live Monitoring  
-> **🌐 GPS Enhancement: v3.0.9** (March 9, 2026) - GPS Distance Enhancements  
-> **🎯 Zone Management: v3.0.8** (March 9, 2026) - Zone Management  
-> **📍 Feature Release: v3.0.5** (March 9, 2026) - Channel Zones  
 > **🎙️ Stable Base: v1.7.0** (February 2026) - Transcription & API Features
 
 ## Demo
 
 <video src="https://github.com/user-attachments/assets/d6305a49-c8ed-47dc-a9d8-7e731aa02811" controls title="DMRModHooks v1.1 Demo" width="800"></video>
+
+## 📺 What's New in v3.3.0 (March 18, 2026)
+
+### SSTV Live Monitoring - Slow Scan TV Image Reception
+
+**Receive and decode SSTV transmissions in real-time directly on the radio, with automatic image saving and live display**
+
+#### **SSTV Button & Live Screen**
+- **📺 SSTV Toggle Button**: New teal/cyan button on intercom page
+  - Opens live monitoring screen with real-time decode display
+  - Teal when active, light teal when inactive
+  - Mutually exclusive with APRS and VFO modes
+- **📸 Live Monitoring Screen**:
+  - Real-time decode status and progress
+  - Displays mode, line count, and estimated completion
+  - Auto-updates every 2 seconds
+  - Images saved automatically on completion
+
+#### **Detection & Decoding**
+- **🎯 VIS Tone Detection**: Goertzel algorithm detects the 300ms VIS header tone
+  - Identifies all standard SSTV modes (Scottie S1/S2, Martin M1/M2, Robot 36/72, PD 90/120/160/180, etc.)
+  - Runs in background thread — zero impact on audio playback
+- **🔍 IQ Auto-Detect**: Blind SSTV mode detection without VIS tone
+  - Analyzes spectral content to identify active transmissions
+  - Warmup schedule (3/5/8/12/16s) then every 5s
+- **⚡ Background Thread Architecture**: All Phase 1 detection runs off the audio write thread
+  - Audio write thread stays under 2ms per call — no buffering delay
+  - Eliminated prior 30+ second audio delay from open-squelch sessions
+
+#### **Image Handling**
+- **💾 Auto-Save**: Every decoded image saved to `/sdcard/Download/DMR/SSTV/`
+  - Filename format: `SSTV_YYYYMMDD_HHmmss_MODE.jpg`
+  - JPEG quality 95 for archival fidelity
+- **📋 Session History**: Last 10 received images listed on monitoring screen
+  - Tap any entry to open in gallery
+  - Shows mode, timestamp, and decode quality
+- **🔄 12-second backlog**: Pre-roll feeds up to 12s of buffered audio into decoder
+  - Prevents top-of-image cutoff even when VIS is detected mid-stream
+  - 1-second pre-roll before VIS start sample for header margin
+
+#### **False Positive Guards**
+- **🛡️ Multi-stage validation**: Cross-family checks, leader purity, vote fraction guards
+  - Prevents random noise from triggering decode attempts
+  - CV (coefficient-of-variation) guard on VIS code confidence
+- **⚠️ Open-squelch tip**: Info note on monitoring screen about false positive risk
+  - Recommends software squelch for cleaner detection
+
+#### **Software Squelch Integration**
+- Independent soft-squelch toggle on SSTV monitoring screen
+- 2.5-second delayed re-apply prevents race with `syncChannelInfoWithData` state machine
+  - Ensures squelch stays open even when channel state machine fires after start
+- Pre-squelch audio still fed to decoder and recorder (squelch only gates speaker)
+
+#### **Technical Details**
+- **Sample rate**: 16 kHz, 16-bit mono PCM (matches radio audio pipeline)
+- **Buffer**: Up to 1 MB (~32s) ring buffer with `DirectBAOS` (zero-alloc inner class)
+- **Pre-allocated work buffers**: 2s VIS buffer + 16s auto-detect buffer (no GC pressure)
+- **Goertzel VIS scan**: Every 250ms on background thread, < 1ms each
+- **IQ auto-detect**: Every 5s steady-state, ~ 50ms each — fully off write thread
+- **`imageStartSample` fix**: Auto-detect path correctly anchors start to analyzed window
+  - Prevents full-image decode from defaulting to buffer start (which caused top cutoff)
+
+#### **Usage**
+1. **Intercom page** → Tap **SSTV** button (teal, beside APRS)
+2. Tap **Start Monitoring** on the SSTV live screen
+3. The module listens for VIS tones or auto-detects SSTV transmissions
+4. When a signal is found, decoding begins automatically with progress display
+5. Completed image is saved to `/sdcard/Download/DMR/SSTV/` and shown on screen
+6. Tap **Stop Monitoring** to return to normal intercom operation
+
+#### **Compatible SSTV Modes**
+- Scottie S1, S2, DX
+- Martin M1, M2
+- Robot 36, 72
+- PD 90, 120, 160, 180, 240
+- Wraase SC2-120, SC2-180
+
+---
 
 ## 🎛️ What's New in v3.1.5 (March 14, 2026)
 
@@ -389,9 +465,10 @@ Local Simplex (↑N 250m)
    - Visual feedback: Orange = monitoring, Gray = normal
    - Perfect for scanning and emergency monitoring
 
-## Complete Feature List (v1.0 - v3.1.5)
+## Complete Feature List (v1.0 - v3.3.0)
 
 ### Core Features
+- ✅ **SSTV Live Monitoring (v3.3.0)** - Slow Scan TV image reception with auto-save and live display
 - ✅ **VFO Mode (v3.1.5)** - Variable Frequency Oscillator with temporary channel override
 - ✅ **APRS Live Monitoring (v3.1.0-v3.1.4)** - Real-time packet reception with dashboard and maps
 - ✅ **OpenGD77 CSV export/import** - All 5 files (Channels, Contacts, TG_Lists, Zones, DTMF)
@@ -403,6 +480,16 @@ Local Simplex (↑N 250m)
 - ✅ **Contact integration** - Caller ID display
 - ✅ **Analog MON button** - Open squelch for continuous monitoring
 - ✅ **Software Squelch** - Hybrid RSSI + Audio RMS squelch with UI controls
+
+### SSTV Monitoring Features (v3.3.0)
+- ✅ **VIS tone detection** - Goertzel algorithm identifies all standard SSTV modes
+- ✅ **IQ auto-detect** - Blind detection without VIS for partial transmissions
+- ✅ **Auto-save images** - JPEG to `/sdcard/Download/DMR/SSTV/` on every decode
+- ✅ **12-second pre-roll backlog** - No top-of-image cutoff
+- ✅ **False positive guards** - Multi-stage validation prevents noise triggers
+- ✅ **Background thread decoding** - Zero audio playback delay
+- ✅ **Software squelch integration** - Independent squelch control with race-condition fix
+- ✅ **All major SSTV modes** - Scottie, Martin, Robot, PD, Wraase
 
 ### VFO Mode Features (v3.1.5)
 - ✅ **Temporary frequency tuning** without saving channels
@@ -423,6 +510,7 @@ Local Simplex (↑N 250m)
 ## What is this?
 
 LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
+- **📺 SSTV Live Monitoring** - Receive and decode Slow Scan TV images over the air
 - **🎛️ VFO Mode** - Variable Frequency Oscillator for temporary frequency tuning
 - **📡 APRS Live Monitoring** - Real-time packet reception with live dashboard and GPS mapping
 - **🧭 GPS Navigation** - Directional arrows, compass bearings, distance to channels
@@ -438,7 +526,8 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 
 ## Current Status ✅
 
-**Current Release: v3.1.5** (March 14, 2026)  
+**Current Release: v3.3.0** (March 18, 2026)  
+**SSTV Monitoring**: ✅ Working - VIS detection + IQ auto-detect, auto-save images, all major modes  
 **VFO Mode**: ✅ Working - Complete frequency control with analog/digital support  
 **APRS Monitoring**: ✅ Working - Live dashboard with GPS mapping and auto-logging  
 **GPS Navigation**: ✅ Working - Directional arrows, compass bearings, distance (m/km/mi)  
@@ -452,7 +541,7 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 **Analog MON Button**: ✅ Working - Open squelch for continuous monitoring  
 **Software Squelch**: ✅ Working - Hybrid RSSI + Audio RMS squelch with UI controls  
 **User Validation**: ✅ All features tested and confirmed working  
-**Latest Build**: March 14, 2026
+**Latest Build**: March 18, 2026
 
 ## Radio Firmware
 
@@ -490,13 +579,13 @@ adb shell rm /sdcard/DMR/DMRDEBUG.bin
 - **Transcription Service**: com.macdmr.transcription (Standalone AIDL service)
 - **Device**: Ulefone Armor 26 Ultra (Android 13)
 - **LSPosed**: v1.9.2 (Zygisk)
-- **Current Version**: v3.1.5 (March 14, 2026)
-- **Storage Location**: `Download/DMR/` (Audio, Transcription, DMR_Backups, APRS folders)
+- **Current Version**: v3.3.0 (March 18, 2026)
+- **Storage Location**: `Download/DMR/` (Audio, Transcription, DMR_Backups, APRS, SSTV folders)
 
 ## Features
 
 ### ✅ Phase 1: Initial Hook Setup
-- Startup toast: "✓ DMR Mod Hooks Active! v3.1.5"
+- Startup toast: "✓ DMR Mod Hooks Active! v3.3.0"
 - Custom version display on Device Information screen
 - Confirms module is active and working
 

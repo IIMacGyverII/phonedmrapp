@@ -1,0 +1,258 @@
+package com.dmrmod.hooks;
+
+import de.robv.android.xposed.XposedBridge;
+
+/**
+ * FM Demodulator for SSTV audio signals
+ * Phase-based FM demodulation (based on robot36 decoder)
+ */
+public class SSTVFMDemodulator {
+    private static final String TAG = "DMRModHooks-SSTV-FMDemod";
+    
+    // SSTV frequency mappings
+    private static final float FREQ_SYNC = 1200.0f;   // Sync pulse
+    private static final float FREQ_BLACK = 1500.0f;  // Black level
+    private static final float FREQ_WHITE = 2300.0f;  // White level
+    private static final float FREQ_CENTER = 1900.0f; // Center frequency (1500+2300)/2
+    private static final float BANDWIDTH = FREQ_WHITE - FREQ_BLACK;  // 800 Hz
+    
+    private int sampleRate;
+    private float prevPhase = 0.0f;
+    private float phaseAccum = 0.0f;  // Oscillator phase for mixing down
+    private float fmScale;  // Normalization scale for FM demod
+    private final float Pi = (float) Math.PI;
+    private final float TwoPi = 2.0f * Pi;
+    
+    // Simple exponential moving average for low-pass filtering
+    private float lpfReal = 0.0f;
+    private float lpfImag = 0.0f;
+    private float lpfAlpha = 0.5f;  // Smoothing factor (0-1, lower = more smoothing, try lighter filter)
+    
+    public SSTVFMDemodulator(int sampleRate) {
+        this.sampleRate = sampleRate;
+        // Normalize FM output like robot36: sampleRate / (bandwidth * PI)
+        this.fmScale = sampleRate / (BANDWIDTH * Pi);
+    }
+    
+    private float wrap(float phase) {
+        while (phase > Pi) phase -= TwoPi;
+        while (phase < -Pi) phase += TwoPi;
+        return phase;
+    }
+    
+    /**
+     * Phase-based FM demodulation
+     * More reliable than zero-crossing or Goertzel for continuous FM
+     * 
+     * @param samples Audio samples (16-bit PCM)
+     * @return Array of frequency values normalized to 0-255 (brightness)
+     */
+    public byte[] demodulate(short[] samples) {
+        byte[] output = new byte[samples.length];
+        
+        // Phase increment for mixing down to baseband
+        float omegaCenter = TwoPi * FREQ_CENTER / sampleRate;
+        
+        prevPhase = 0.0f;
+        phaseAccum = 0.0f;
+        lpfReal = 0.0f;
+        lpfImag = 0.0f;
+        
+        // Debug: track normalized frequency range
+        float minNormFreq = Float.MAX_VALUE;
+        float maxNormFreq = Float.MIN_VALUE;
+        
+        for (int i = 0; i < samples.length; i++) {
+            // Normalize sample to -1.0 to +1.0
+            float sample = samples[i] / 32768.0f;
+            
+            // Mix down to baseband (multiply by e^(-j*omega*center*t))
+            float cos = (float) Math.cos(phaseAccum);
+            float sin = (float) Math.sin(phaseAccum);
+            phaseAccum = wrap(phaseAccum + omegaCenter);
+            
+            // Baseband sample
+            float basebandReal = sample * cos;
+            float basebandImag = sample * sin;
+            
+            // Apply exponential moving average low-pass filter to baseband
+            lpfReal = lpfAlpha * basebandReal + (1.0f - lpfAlpha) * lpfReal;
+            lpfImag = lpfAlpha * basebandImag + (1.0f - lpfAlpha) * lpfImag;
+            
+            // Calculate phase of filtered baseband signal
+            float phase = (float) Math.atan2(lpfImag, lpfReal);
+            
+            // FM demodulation: frequency is derivative of phase
+            float phaseDelta = wrap(phase - prevPhase);
+            prevPhase = phase;
+            
+            // Track range for debugging
+            if (normalizedFreq < minNormFreq) minNormFreq = normalizedFreq;
+            if (normalizedFreq > maxNormFreq) maxNormFreq = normalizedFreq;
+            
+            // Map normalized frequency to brightness (0-255)
+            // normalizedFreq: -1=black (1500Hz), +1=white (2300Hz)
+            int brightness = normalizedFreqToBrightness(normalizedFreq);
+            output[i] = (byte) brightness;
+        }
+        
+        XposedBridge.log(TAG + ": Normalized freq range: min=" + minNormFreq + ", max=" + maxNormFreq);   // Map normalized frequency to brightness (0-255)
+            // normalizedFreq: -1=black (1500Hz), +1=white (2300Hz)
+            int brightness = normalizedFreqToBrightness(normalizedFreq);
+            output[i] = (byte) brightness;
+        }
+        
+        return output;
+    }
+    
+    /**
+     * Phase-based FM demodulation with simple moving average smoothing
+     * 
+     * @param samples Audio samples
+     * @param windowSize Smoothing window (e.g., 4 samples)
+     * @return Brightness values
+     */
+    public byte[] demodulateGoertzel(short[] samples, int windowSize) {
+        // Use phase-based demodulation
+        byte[] raw = demodulate(samples);
+        
+        // Apply simple moving average for smoothing
+        byte[] smoothed = new byte[raw.length];
+        int halfWindow = windowSize / 2;
+        
+        int minVal = 255, maxVal = 0;
+        
+        // First pass: smooth and find range
+        for (int i = 0; i < raw.length; i++) {
+            int sum = 0;
+            int count = 0;
+            
+            for (int j = Math.max(0, i - halfWindow); j < Math.min(raw.length, i + halfWindow + 1); j++) {
+                sum += (raw[j] & 0xFF);  // Unsigned byte
+                count++;
+            }
+            
+            int brightness = sum / count;
+            smoothed[i] = (byte) brightness;
+            
+            // Track range
+            if (brightness < minVal) minVal = brightness;
+            if (brightness > maxVal) maxVal = brightness;
+        }
+        
+        XposedBridge.log(TAG + ": Raw brightness range: min=" + minVal + ", max=" + maxVal);
+        
+        // Second pass: normalize to full 0-255 range (removes DC offset)
+        byte[] normalized = new byte[smoothed.length];
+        float range = maxVal - minVal;
+        
+        int blackCount = 0, whiteCount = 0, midCount = 0;
+        
+        if (range > 10) {  // Only normalize if we have real variation
+            for (int i = 0; i < smoothed.length; i++) {
+                int value = (smoothed[i] & 0xFF);
+                // Stretch to 0-255
+                int stretched = (int) (((value - minVal) / range) * 255.0f);
+                stretched = Math.max(0, Math.min(255, stretched));
+                normalized[i] = (byte) stretched;
+                
+                // Track distribution
+                if (stretched < 50) blackCount++;
+                else if (stretched > 200) whiteCount++;
+                else midCount++;
+            }
+        } else {
+            // No variation - just copy
+            System.arraycopy(smoothed, 0, normalized, 0, smoothed.length);
+        }
+        
+        XposedBridge.log(TAG + ": Normalized distribution: black(<50)=" + blackCount + 
+                       ", mid(50-200)=" + midCount + ", white(>200)=" + whiteCount + 
+                       " total=" + normalized.length);
+        
+        return normalized;
+    }
+    
+    /**normalized frequency to brightness (0-255)
+     * Normalized frequency is roughly -1 to +1 centered at 0
+     * -1 = 1500 Hz (black), +1 = 2300 Hz (white)
+     */
+    private int normalizedFreqToBrightness(float normalizedFreq) {
+        // Map from -1..+1 to 0..1 range
+        // Formula: 0.5 * (freq + 1)
+        float level = 0.5f * (normalizedFreq + 1.0f);
+        
+        // Clamp to 0-1
+        level = Math.max(0.0f, Math.min(1.0f, level));
+        
+        // Convert to 0-255
+        int brightness = (int) (level * 255.0f);
+        
+        return Math.max(0, Math.min(255, brightness));
+    }
+    
+    /**
+     * Map frequency to brightness value (0-255) - old method kept for reference
+     * Map frequency to brightness value (0-255)
+     * 1500 Hz = black (0), 2300 Hz = white (255)
+     */
+    private int frequencyToBrightness(float frequency) {
+        // Clamp to valid range
+        if (frequency < FREQ_BLACK) frequency = FREQ_BLACK;
+        if (frequency > FREQ_WHITE) frequency = FREQ_WHITE;
+        
+        // Linear mapping
+        float normalized = (frequency - FREQ_BLACK) / (FREQ_WHITE - FREQ_BLACK);
+        int brightness = (int) (normalized * 255.0f);
+        
+        // Clamp to 0-255
+        return Math.max(0, Math.min(255, brightness));
+    }
+    
+    /**
+     * Detect sync pulses (1200 Hz)
+     * 
+     * @param samples Audio samples
+     * @param start Start position
+     * @param length Window length
+     * @return True if sync pulse detected
+     */
+    public boolean isSyncPulse(short[] samples, int start, int length) {
+        float mag = goertzelMagnitude(samples, start, length, FREQ_SYNC);
+        return mag > 50.0f;  // Threshold for sync detection
+    }
+    
+    /**
+     * Goertzel algorithm for frequency detection (reused from VIS detector)
+     */
+    private float goertzelMagnitude(short[] samples, int start, int length, float frequency) {
+        if (start + length > samples.length) {
+            return 0.0f;
+        }
+        
+        // Goertzel coefficient
+        float k = (int) (0.5 + ((length * frequency) / sampleRate));
+        float w = (2.0f * (float) Math.PI * k) / length;
+        float cosine = (float) Math.cos(w);
+        float coeff = 2.0f * cosine;
+        
+        // Goertzel state variables
+        float q0 = 0.0f;
+        float q1 = 0.0f;
+        float q2 = 0.0f;
+        
+        // Process samples
+        for (int i = 0; i < length; i++) {
+            q0 = coeff * q1 - q2 + samples[start + i];
+            q2 = q1;
+            q1 = q0;
+        }
+        
+        // Calculate magnitude
+        float real = q1 - q2 * cosine;
+        float imag = q2 * (float) Math.sin(w);
+        float magnitude = (float) Math.sqrt(real * real + imag * imag);
+        
+        return magnitude / length;
+    }
+}

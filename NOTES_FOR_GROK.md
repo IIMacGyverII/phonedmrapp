@@ -1,139 +1,233 @@
-﻿# NOTES FOR GROK - DMR Firmware Patching Challenge
+﻿# SSTV Implementation Project - Technical Notes for Grok
 
-**URGENT**: Hardware-level blocker discovered after successful firmware patch. Seeking collaboration ideas.
-
-## Current Crisis: Firmware Reload Catch-22
-
-**Date**: March 6, 2026  
-**Previous Problem**: DMR group ID extraction bug (SOLVED ✅ - PATCH14.bin works)  
-**New Problem**: YModem upload corrupts radio hardware, only device reboot fixes it (which loses RAM-only patch)  
-**Time Invested**: 9 failed recovery attempts (100% failure rate)  
-**Status**: Feature works perfectly except radio becomes unusable after load
+**Date:** March 15, 2026  
+**Project:** SSTV (Slow Scan Television) receiver implementation for Android DMR radio  
+**Status:** Phase 1 (VIS Code Detection) - Debugging signal quality issues
 
 ---
 
-## 🎯 The Goal
+## What We're Trying To Do
 
-Load a runtime firmware patch into the DMR radio module to fix bugs without:
-1. Permanently modifying firmware (warranty concerns)
-2. Requiring complex hardware modifications
-3. Breaking radio functionality after load
+Implement SSTV image reception in an Android DMR radio app using Xposed hooks. The implementation follows the same architecture as the existing APRS packet decoder:
 
----
+### Architecture Overview
+- **Platform:** Android LSPosed module (Xposed framework)
+- **Language:** Java 8
+- **Audio Source:** PCM audio hook at 8kHz 16-bit mono (from `PCMReceiveManager.writeAudioTrack()`)
+- **Integration Point:** `MainHook.java` - hooks into DMR radio app (`com.pri.prizeinterphone`)
 
-## ✅ What We've Successfully Achieved
-
-### Working Firmware Patch (PATCH14.bin)
-- **File**: 378,620 bytes
-- **Modification**: Address 0x08018F2C: `BLS` → `NOP` (2 bytes)
-- **Bug Fixed**: Incorrect group ID extraction (contactType=2 reads wrong bytes)
-- **Verification**: Patch works perfectly when loaded
-- **Evidence**: `txContact` changes from 1 (buggy) to 11904 (correct) after patch
-
-### Working YModem Upload
-- **Method**: Copy PATCH14.bin → `/sdcard/DMR/DMRDEBUG.bin`
-- **Transfer**: Launch UpdateFirmwareActivity → YModem protocol uploads to radio
-- **Duration**: ~2 minutes (378KB at hardware serial speeds)
-- **Success Rate**: 9/9 successful uploads (100%)
-- **Target**: Radio module RAM (not flash storage)
-
-### Working One-Tap Button
-- **Location**: Device → Information page → "DMR Patch" button
-- **Automation**: Copies file, launches activity, triggers upload
-- **User Experience**: One tap, wait 2 minutes, done
-
----
-
-## ❌ The Critical Problem
-
-**After YModem upload completes, the radio hardware enters a corrupted state:**
-
-### Symptoms
+### Phase 1 Goal: VIS Code Detection
+The VIS (Vertical Interval Signaling) code identifies which SSTV mode is being transmitted. Structure:
 ```
-Logcat evidence from Test 9 (13:39:40):
-03-06 13:39:41.614 E CmdStateMachine: set channel no reply, send again
-03-06 13:39:42.619 E CmdStateMachine: SetChannelState processMessage..... MSG_SET_CHANNEL_ERROR
+Leader tone:    1900 Hz for 300ms  (bit sync)
+Break tone:     1200 Hz for 10ms
+Start bit:      1900 Hz for 30ms
+Data bits (7):  1100 Hz = 0, 1300 Hz = 1 (30ms each, LSB first)
+Parity bit:     1100/1300 Hz for 30ms (even parity)
+Stop bit:       1200 Hz for 30ms
 ```
 
-- Radio module stops responding to UART commands
-- Cannot change channels (infinite "no reply" retries)
-- Cannot receive transmissions
-- Cannot transmit
-- UI stays functional (no crashes or black screens after Test 9 improvements)
-- App responds normally, but radio hardware is completely hung
-
-### Root Cause Theory
-YModem firmware upload process corrupts internal radio hardware state that software cannot recover from. The corruption is at a hardware/firmware level below what UART commands can reset.
+**VIS codes we support:**
+- 0x08 = Robot 36 (priority mode)
+- 0x38 = Scottie S2 (56 decimal)
+- 0x3C = Scottie S1 (60 decimal)
+- 0x2C = Martin M1 (44 decimal)
+- 0x28 = Martin M2 (40 decimal)
 
 ---
 
-## 🔒 The Catch-22
+## Technical Implementation
 
-This creates an impossible situation:
+### Files Created
+1. **SSTVMode.java** - VIS code database and mode parameters
+2. **SSTVVISDetector.java** - Goertzel-based tone detector for VIS decoding
+3. **SSTVReceiver.java** - Audio buffer manager and VIS detection coordinator
+4. **MainHook.java** (modified) - Integration with radio app (+350 lines)
 
-1. **Load firmware patch** → YModem succeeds, patch in RAM ✅
-2. **Radio hardware hangs** → Cannot use radio ❌
-3. **Reboot device to fix radio** → Clears RAM, loses patch ❌
-4. **Back to buggy firmware** → Feature is useless ❌
-
-**The only thing that fixes the radio hang is a device reboot, which loses the RAM-only patch.**
-
----
-
-## 🔬 What We've Tried (9 Attempts)
-
-### Test 1-3: App Restart Approaches
-**Method**: Restart activity or app after upload
-- Activity.recreate() with delays (500ms, 3000ms)
-- Process.killProcess() for clean restart
-
-**Results**:
-- ❌ StateMachine crashes (Tests 1-3)
-- ❌ Black screen on auto-restart (Tests 4-5)
-- ❌ Infinite loops (Test 6)
-
-### Test 4-8: Automatic Cleanup + Navigation
-**Methods**:
-- Process termination + automatic app restart
-- SharedPreferences flags + activity.recreate()
-- Intent navigation to home activity
-- Simple activity.finish() with natural backstack
-
-**Results**:
-- ❌ Black screen after app restart (fragments don't initialize)
-- ⚠️ Test 7: Full DMR boot sound played (firmware loaded!) but radio hung anyway
-- ❌ UI corruption persists until device reboot
-
-### Test 9: DMR Hardware Reinitialization
-**Method**: After YModem, call DMR manager reinitialization methods
+### Detection Algorithm (Goertzel)
+Using Goertzel algorithm for efficient single-frequency tone detection:
 ```java
-// Executed after YModem SUCCESS
-DmrManager.getInstance().sendQueryInitializedCmdToMdl();  // Query module status
-DmrManager.getInstance().sendSetChannelCmdToMdl();        // Resend channel config
+// Goertzel coefficient calculation
+float k = (int)(0.5 + ((length * frequency) / sampleRate));
+float w = (2.0f * Math.PI * k) / length;
+float cosine = Math.cos(w);
+float coeff = 2.0f * cosine;
+
+// Process samples
+for (int i = 0; i < length; i++) {
+    q0 = coeff * q1 - q2 + samples[start + i];
+    q2 = q1;
+    q1 = q0;
+}
+
+// Calculate magnitude
+float real = q1 - q2 * cosine;
+float imag = q2 * Math.sin(w);
+float magnitude = Math.sqrt(real * real + imag * imag) / length;
 ```
 
-**UART Evidence**:
-```
-13:36:24.751 - UART TX cmd=39 (QueryInit)
-13:36:25.256 - UART TX cmd=34 (SetChannel)
-13:36:25.244 - ✓ DMR module reinitialized - firmware patch active
-```
+**Detection threshold:** `GOERTZEL_THRESHOLD = 10.0f`  
+**Sample rate:** 8000 Hz  
+**Bit duration:** 240 samples (30ms @ 8kHz)
 
-**Results**:
-- ✅ Firmware patch loaded correctly (`txContact=11904`)
-- ✅ No crashes or black screens (major progress!)
-- ✅ UI fully functional
-- ❌ Radio hardware STILL hung (cannot change channels)
-- ❌ "set channel no reply" errors when user tries to switch channels
+### UI Implementation
+- SSTV button in packet radio menu (purple, 0xFF6B5FD9)
+- Live monitoring dialog with:
+  - Software squelch toggle (green/gray)
+  - Squelch slider (0-9) with live value display
+  - Signal strength indicator (RSSI display)
+  - VIS detection status updates (1-second refresh)
 
-**Conclusion**: Software reinitialization is not sufficient to recover hardware state.
+### Audio Path
+```
+HackRF SDR (144.500 MHz FM)
+    ↓
+DMR Radio (FM demodulator)
+    ↓
+PCMReceiveManager.writeAudioTrack() hook
+    ↓
+SSTVReceiver.processAudio() - buffers to 3MB circular buffer
+    ↓
+SSTVVISDetector.detectVIS() - Goertzel tone analysis
+    ↓
+SSTVMode.getModeByVIS() - identify mode
+```
 
 ---
 
-## 🤔 Questions for Collaboration
+## Current Problem: VIS Detection Accuracy
 
-### 1. Hardware Reset Commands
-**Question**: Are there UART commands that can perform a "soft reset" of the radio hardware without a full device reboot?
+### Test Setup
+- **Transmitter:** HackRF SDR
+- **Mode:** Scottie S2 (VIS code should be **0x38**)
+- **Frequency:** 144.500 MHz FM
+- **User reports:** "Signal is clean and generates good SSTV at Scottie 2"
+
+### What We're Detecting
+**Actual detection:** 0x20 (binary: 0000010)  
+**Expected:** 0x38 (binary: 0111000)
+
+### Detailed Goertzel Analysis (from logs)
+```
+Bit 0: 1100Hz: 219.19 | 1300Hz: 87.23  → Decision: 0 ✓ CORRECT
+Bit 1: 1100Hz: 219.50 | 1300Hz: 85.56  → Decision: 0 ✓ CORRECT
+Bit 2: 1100Hz: 117.86 | 1300Hz: 66.00  → Decision: 0 ✓ CORRECT
+Bit 3: 1100Hz:   1.60 | 1300Hz:  1.58  → Decision: 0 ✗ WRONG (signal dropout!)
+Bit 4: 1100Hz:  36.42 | 1300Hz: 19.37  → Decision: 0 ✗ WRONG (weak signal)
+Bit 5: 1100Hz: 120.07 | 1300Hz: 127.13 → Decision: 1 ✓ CORRECT
+Bit 6: 1100Hz: 117.46 | 1300Hz: 36.93  → Decision: 0 ✓ CORRECT
+```
+
+**Expected bit pattern for 0x38:**  
+`0, 0, 0, 1, 1, 1, 0` (LSB first)
+
+**What we're getting:**  
+`0, 0, 0, 0, 0, 1, 0` (LSB first)
+
+### Root Cause Analysis
+**Bits 3 and 4 have signal dropouts:**
+- Bit 3: Both tones extremely weak (1.6 vs normal 120-220)
+- Bit 4: Weak signals (36 vs normal 120-220)
+- Bits 0, 1, 2, 5, 6: All decode correctly with strong magnitudes
+
+**Possible causes:**
+1. **HackRF timing issue** - Gaps in transmission between bits 2→3→4
+2. **FM path distortion** - Radio's FM demodulator dropping signal during those bits
+3. **Squelch tail** - Hardware squelch cutting in/out (but we use squelch=2 which should be wide open)
+4. **Sample timing offset** - We might be sampling between tones during bit transitions
+
+### What Works Well
+- Leader tone detection (1900Hz): magnitude 26.67 ✓
+- Break tone detection (1200Hz): magnitude 370.76 ✓
+- Start bit (1900Hz): magnitude 35.44 ✓
+- Goertzel algorithm accurately measures frequencies
+- 5 out of 7 bits decode perfectly with strong signals
+
+---
+
+## Tools and Technologies Used
+
+### Development Environment
+- **IDE:** VS Code
+- **Build System:** Gradle 8.1.0
+- **Android SDK:** compileSdk 34
+- **Java:** Source/target compatibility 8
+- **LSPosed:** Xposed framework for Android (module injection)
+
+### Testing Tools
+- **ADB:** Android Debug Bridge for logcat and APK installation
+- **HackRF SDR:** SSTV signal transmission
+- **Logcat:** Real-time debugging (`adb logcat -d | Select-String -Pattern "SSTV-VIS"`)
+
+### Key Dependencies
+- **Xposed Bridge API:** `XposedHelpers`, `XposedBridge` for hooking
+- **Android UI:** `AlertDialog`, `SeekBar`, `ToggleButton` for monitoring interface
+- **APRSDatabase:** SharedPreferences wrapper for settings persistence
+
+### Reference Implementation
+- **Robot36 Android app** (github.com/xdsopl/robot36) - Cloned for FM demodulator reference
+- **APRS decoder** (existing in MainHook.java) - Architecture blueprint
+
+---
+
+## Next Steps / Questions for Investigation
+
+### Option 1: Improve Signal Acquisition
+- [ ] Add pre-filtering (bandpass 1000-2500 Hz) before Goertzel
+- [ ] Implement bit synchronization (resample to exact 30ms boundaries)
+- [ ] Add AGC (automatic gain control) normalization
+- [ ] Try averaging multiple Goertzel windows per bit
+
+### Option 2: Test with Different Sources
+- [ ] Test with clean WAV file (eliminate HackRF variables)
+- [ ] Try different SSTV software (QSSTV, MMSSTV)
+- [ ] Test Robot 36 mode (0x08) instead of Scottie S2
+- [ ] Record audio to file for offline analysis
+
+### Option 3: Improve Decoder Robustness
+- [ ] Add signal strength validation (reject bits with magnitude < 50)
+- [ ] Implement multi-pass detection (scan entire buffer, pick strongest VIS)
+- [ ] Add bit timing calibration (learn actual bit duration from signal)
+- [ ] Try error correction (Hamming distance from known VIS codes)
+
+### Current Hypothesis
+The HackRF transmission may have timing issues or the FM path through the radio is introducing dropouts. The Goertzel detector is working correctly (proven by 5/7 bits decoding perfectly), but the audio signal has quality problems specifically at bits 3-4.
+
+---
+
+## Code Locations
+
+### Key Methods
+- `SSTVVISDetector.detectVIS()` - Main VIS detection entry point
+- `SSTVVISDetector.goertzelMagnitude()` - Single-frequency detector
+- `SSTVVISDetector.decodeBit()` - Compare 1100Hz vs 1300Hz magnitudes
+- `MainHook.startSSTVMonitoring()` - Hijack channel to 144.500 MHz
+- `MainHook.updateSSTVLiveScreen()` - Live monitoring UI updates
+
+### Debug Logging
+All VIS detection steps logged with tag: `DMRModHooks-SSTV-VIS`
+```bash
+adb logcat -d | Select-String -Pattern "SSTV-VIS"
+```
+
+---
+
+## Questions for Debugging
+
+1. **Is the HackRF generating consistent timing between bits?** The dropout at bits 3-4 suggests a timing gap.
+
+2. **Should we lower the detection threshold?** Current threshold is 10.0, but bit 4 only reaches 36.
+
+3. **Is the FM demodulator in the radio introducing distortion?** 5/7 bits are clean, suggesting partial signal loss.
+
+4. **Should we implement bit averaging?** Take multiple Goertzel measurements across each 30ms bit window and average them.
+
+5. **Could this be a squelch issue?** Even though we set squelch=2 (wide open), the firmware might still be gating audio.
+
+---
+
+**Status:** Waiting for clean test signal or different transmission method to isolate whether issue is in HackRF/FM path or detector algorithm.
+
 
 **What we know**:
 - Command 39: Query initialization status (we tried this)
