@@ -295,6 +295,7 @@ public class DirectDatabaseExporter {
             if (cursor.moveToFirst()) {
                 do {
                     // Read channel data
+                    int channelId = cursor.getInt(cursor.getColumnIndex("_id"));
                     int channelNumber = cursor.getInt(cursor.getColumnIndex("channel_number"));
                     String channelName = cursor.getString(cursor.getColumnIndex("channel_name"));
                     String channelType = cursor.getString(cursor.getColumnIndex("channel_type"));
@@ -348,14 +349,14 @@ public class DirectDatabaseExporter {
                 // Determine channel type for OpenGD77 (Analogue vs Digital)
                 String csvChannelType = isDigital ? "Digital" : "Analogue";
                 
-                // Build CSV row (28 columns) matching OpenGD77 CPS format exactly
+                // Build CSV row (28 columns - OpenGD77 compatible format)
                 StringBuilder rowBuilder = new StringBuilder();
-                rowBuilder.append(channelNumber).append(",");
-                rowBuilder.append(channelName).append(",");
-                rowBuilder.append(csvChannelType).append(",");
-                rowBuilder.append(rxFreqMHz).append(",");
-                rowBuilder.append(txFreqMHz).append(",");
-                rowBuilder.append(bandwidth).append(",");
+                rowBuilder.append(channelNumber).append(",");    // 1. Channel Number
+                rowBuilder.append(channelName).append(",");      // 2. Channel Name
+                rowBuilder.append(csvChannelType).append(",");   // 3. Channel Type
+                rowBuilder.append(rxFreqMHz).append(",");        // 4. Rx Frequency
+                rowBuilder.append(txFreqMHz).append(",");        // 5. Tx Frequency
+                rowBuilder.append(bandwidth).append(",");        // 6. Bandwidth (kHz)
                 
                 if (csvChannelType.equals("Digital")) {
                     // Digital channels
@@ -580,15 +581,15 @@ public class DirectDatabaseExporter {
      * Export Zones.csv - Channel Zones
      * OpenGD77 format: Zone Name,Channel1,Channel2,...,Channel80
      * 
-     * Reads zones from ZoneDatabase and maps channel numbers back to channel names.
+     * Reads zones from ZoneDatabase and maps channel IDs (_id) to channel names.
      * If no zones exist, exports empty file (required by OpenGD77).
      */
     private static boolean exportZonesCSV(Context context, File outputFile) {
         BufferedWriter writer = null;
         
         try {
-            // Build channel number => channel name map for export
-            java.util.Map<Integer, String> channelMap = buildChannelNumberMap(context);
+            // Build channel ID => channel name map for export
+            java.util.Map<Integer, String> channelMap = buildChannelIdMap(context);
             
             writer = new BufferedWriter(new FileWriter(outputFile));
             
@@ -611,19 +612,19 @@ public class DirectDatabaseExporter {
                 StringBuilder line = new StringBuilder();
                 line.append(zone.name);
                 
-                // Get channel list for this zone
-                List<Integer> channelNumbers = zone.getChannelList();
+                // Get channel list for this zone (contains _id values)
+                List<Integer> channelIds = zone.getChannelList();
                 
                 // Write up to 80 channels (OpenGD77 limit)
                 for (int i = 0; i < 80; i++) {
                     line.append(",");
-                    if (i < channelNumbers.size()) {
-                        int channelNum = channelNumbers.get(i);
-                        String channelName = channelMap.get(channelNum);
+                    if (i < channelIds.size()) {
+                        int channelId = channelIds.get(i);
+                        String channelName = channelMap.get(channelId);
                         if (channelName != null) {
                             line.append(channelName);
                         } else {
-                            Log.w(TAG, "Zone '" + zone.name + "': Channel #" + channelNum + " not found in database");
+                            Log.w(TAG, "Zone '" + zone.name + "': Channel ID " + channelId + " not found in database");
                         }
                     }
                     // Empty fields for unused channel slots
@@ -631,7 +632,7 @@ public class DirectDatabaseExporter {
                 
                 writer.write(line.toString());
                 writer.write("\r\n");  // Windows CRLF
-                Log.i(TAG, "Exported zone: " + zone.name + " (" + channelNumbers.size() + " channels)");
+                Log.i(TAG, "Exported zone: " + zone.name + " (" + channelIds.size() + " channels)");
             }
             
             writer.close();
@@ -659,12 +660,12 @@ public class DirectDatabaseExporter {
     }
     
     /**
-     * Build a map of channel number => channel name for zone export
+     * Build a map of channel ID => channel name for zone export
      * 
      * @param context Application context
-     * @return Map of channel numbers to names, or empty map if database doesn't exist
+     * @return Map of channel IDs to names, or empty map if database doesn't exist
      */
-    private static java.util.Map<Integer, String> buildChannelNumberMap(Context context) {
+    private static java.util.Map<Integer, String> buildChannelIdMap(Context context) {
         java.util.Map<Integer, String> channelMap = new java.util.HashMap<>();
         SQLiteDatabase db = null;
         Cursor cursor = null;
@@ -680,21 +681,21 @@ public class DirectDatabaseExporter {
                 SQLiteDatabase.OPEN_READONLY);
             
             cursor = db.query("database_channel_area_default_uhf", 
-                new String[]{"channel_number", "channel_name"}, 
+                new String[]{"_id", "channel_name"}, 
                 null, null, null, null, null);
             
             if (cursor != null && cursor.moveToFirst()) {
                 do {
-                    int number = cursor.getInt(0);
+                    int id = cursor.getInt(0);
                     String name = cursor.getString(1);
-                    channelMap.put(number, name);
+                    channelMap.put(id, name);
                 } while (cursor.moveToNext());
             }
             
             Log.i(TAG, "Loaded " + channelMap.size() + " channels for zone export");
             
         } catch (Exception e) {
-            Log.w(TAG, "Error building channel number map: " + e.getMessage());
+            Log.w(TAG, "Error building channel ID map: " + e.getMessage());
         } finally {
             if (cursor != null) cursor.close();
             if (db != null) db.close();
