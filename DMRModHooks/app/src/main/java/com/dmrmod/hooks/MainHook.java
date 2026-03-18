@@ -90,7 +90,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.3.0";
+    private static final String VERSION = "3.3.1";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -808,13 +808,29 @@ public class MainHook implements IXposedHookLoadPackage {
                         }
                         // Reset VFO dialog reference (persists across app restarts)
                         vfoDialog = null;
-                        
-                        // Check for orphaned APRS channel and restore if needed (delayed to ensure DmrManager is ready)
+
+                        // **CRITICAL FIX**: Reset SSTV state (same as APRS/VFO above)
+                        if (isSSTVMonitoringActive) {
+                            XposedBridge.log(TAG + ": ⚠️ SSTV flag was stuck from previous session - resetting");
+                            isSSTVMonitoringActive = false;
+                        }
+                        sstvMonitoringDialog = null;
+                        sstvUpdateHandler = null;
+                        sstvUpdateRunnable = null;
+                        sstvReceiver = null;
+                        sstvImageDialog = null;
+                        sstvLiveImageView = null;
+                        sstvProgressText = null;
+                        sstvImageModeText = null;
+
+                        // Check for orphaned channels and restore if needed (delayed to ensure DmrManager is ready)
                         final Activity activityForRestore = (Activity) param.thisObject;
                         new android.os.Handler().postDelayed(new Runnable() {
                             @Override
                             public void run() {
                                 checkAndRestoreAPRSChannelOnStartup(activityForRestore);
+                                checkAndRestoreSSTVChannelOnStartup(activityForRestore);
+                                checkAndRestoreVFOChannelOnStartup(activityForRestore);
                             }
                         }, 2000);  // 2 second delay
                     }
@@ -4614,7 +4630,8 @@ public class MainHook implements IXposedHookLoadPackage {
             
             // Hijack current channel with APRS settings
             XposedHelpers.setIntField(currentChannel, "type", 1);  // ANALOG
-            String originalName = (String) XposedHelpers.getObjectField(currentChannel, "name");
+            String originalName = (String) channelBackup.get("name");
+            if (originalName == null || originalName.isEmpty()) originalName = "Channel";
             XposedHelpers.setObjectField(currentChannel, "name", "APRS (" + originalName + ")");
             XposedHelpers.setIntField(currentChannel, "rxFreq", frequencyHz);
             XposedHelpers.setIntField(currentChannel, "txFreq", frequencyHz);
@@ -5424,13 +5441,15 @@ public class MainHook implements IXposedHookLoadPackage {
                 throw new Exception("Cannot get current channel");
             }
             
-            // Save current channel
-            saveChannelBackup(currentChannel);
-            XposedBridge.log(TAG + ": Backed up current channel");
-            
+            // Save current channel using the SSTV-specific backup (separate from APRS)
+            saveSSTVChannelBackup(currentChannel);
+            XposedBridge.log(TAG + ": Backed up current channel for SSTV");
+
             // Hijack channel with SSTV settings (144.500 MHz - SSTV calling frequency)
             XposedHelpers.setIntField(currentChannel, "type", 1);  // ANALOG
-            String originalName = (String) XposedHelpers.getObjectField(currentChannel, "name");
+            // Use the clean name already stored in the backup (strip was done there)
+            String originalName = (String) sstvChannelBackup.get("name");
+            if (originalName == null || originalName.isEmpty()) originalName = "Channel";
             XposedHelpers.setObjectField(currentChannel, "name", "SSTV (" + originalName + ")");
             XposedHelpers.setIntField(currentChannel, "rxFreq", 144500000);  // 144.500 MHz
             XposedHelpers.setIntField(currentChannel, "txFreq", 144500000);
@@ -5594,8 +5613,8 @@ public class MainHook implements IXposedHookLoadPackage {
                 sstvReceiver.stop();
             }
             
-            // Restore channel from backup
-            restoreChannelBackup(activity);
+            // Restore channel from SSTV-specific backup
+            restoreSSTVChannelBackup(activity);
             
             // Dismiss live image dialog if showing
             if (sstvImageDialog != null && sstvImageDialog.isShowing()) {
@@ -5760,7 +5779,204 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedBridge.log(TAG + ": Error restoring channel: " + e.getMessage());
         }
     }
-    
+
+    // -----------------------------------------------------------------------
+    // SSTV-specific channel backup (separate from APRS, uses sstv_channel_backup.dat)
+    // -----------------------------------------------------------------------
+    private java.util.HashMap<String, Object> sstvChannelBackup = null;
+
+    private void saveSSTVChannelBackup(Object channel) {
+        try {
+            sstvChannelBackup = new java.util.HashMap<>();
+            sstvChannelBackup.put("number", XposedHelpers.getIntField(channel, "number"));
+            sstvChannelBackup.put("type", XposedHelpers.getIntField(channel, "type"));
+            sstvChannelBackup.put("name", XposedHelpers.getObjectField(channel, "name"));
+            sstvChannelBackup.put("rxFreq", XposedHelpers.getIntField(channel, "rxFreq"));
+            sstvChannelBackup.put("txFreq", XposedHelpers.getIntField(channel, "txFreq"));
+            sstvChannelBackup.put("sq", XposedHelpers.getIntField(channel, "sq"));
+            sstvChannelBackup.put("band", XposedHelpers.getIntField(channel, "band"));
+            sstvChannelBackup.put("power", XposedHelpers.getIntField(channel, "power"));
+            try {
+                sstvChannelBackup.put("rxType", XposedHelpers.getIntField(channel, "rxType"));
+                sstvChannelBackup.put("rxSubCode", XposedHelpers.getIntField(channel, "rxSubCode"));
+                sstvChannelBackup.put("txType", XposedHelpers.getIntField(channel, "txType"));
+                sstvChannelBackup.put("txSubCode", XposedHelpers.getIntField(channel, "txSubCode"));
+            } catch (Throwable t) {
+                sstvChannelBackup.put("rxType", 0); sstvChannelBackup.put("rxSubCode", 0);
+                sstvChannelBackup.put("txType", 0); sstvChannelBackup.put("txSubCode", 0);
+            }
+            // Save to dedicated file
+            java.io.File backupFile = new java.io.File("/sdcard/sstv_channel_backup.dat");
+            java.io.ObjectOutputStream oos = new java.io.ObjectOutputStream(
+                new java.io.FileOutputStream(backupFile));
+            oos.writeObject(sstvChannelBackup);
+            oos.close();
+            XposedBridge.log(TAG + ": SSTV channel backup saved: " + sstvChannelBackup.get("name"));
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error saving SSTV channel backup: " + e.getMessage());
+        }
+    }
+
+    private void restoreSSTVChannelBackup(Context context) {
+        try {
+            if (sstvChannelBackup == null) {
+                // Try loading from file (crash recovery path)
+                java.io.File backupFile = new java.io.File("/sdcard/sstv_channel_backup.dat");
+                if (backupFile.exists()) {
+                    java.io.ObjectInputStream ois = new java.io.ObjectInputStream(
+                        new java.io.FileInputStream(backupFile));
+                    @SuppressWarnings("unchecked")
+                    java.util.HashMap<String, Object> loaded =
+                        (java.util.HashMap<String, Object>) ois.readObject();
+                    ois.close();
+                    sstvChannelBackup = loaded;
+                    XposedBridge.log(TAG + ": SSTV channel backup loaded from file");
+                } else {
+                    XposedBridge.log(TAG + ": No SSTV channel backup found");
+                    return;
+                }
+            }
+            Class<?> dmrManagerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.manager.DmrManager", appClassLoader);
+            Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+            Object currentChannel = XposedHelpers.callMethod(dmrManager, "getCurrentChannel");
+            if (currentChannel == null) {
+                XposedBridge.log(TAG + ": Cannot get current channel for SSTV restore"); return;
+            }
+            XposedBridge.log(TAG + ": Restoring channel from SSTV backup: " + sstvChannelBackup.get("name"));
+            Object n = sstvChannelBackup.get("number"); if (n != null) XposedHelpers.setIntField(currentChannel, "number", (Integer) n);
+            Object tp = sstvChannelBackup.get("type"); if (tp != null) XposedHelpers.setIntField(currentChannel, "type", (Integer) tp);
+            Object nm = sstvChannelBackup.get("name");
+            XposedHelpers.setObjectField(currentChannel, "name", nm != null ? (String) nm : "Channel");
+            Object rf = sstvChannelBackup.get("rxFreq"); if (rf != null) XposedHelpers.setIntField(currentChannel, "rxFreq", (Integer) rf);
+            Object tf = sstvChannelBackup.get("txFreq"); if (tf != null) XposedHelpers.setIntField(currentChannel, "txFreq", (Integer) tf);
+            Object sq = sstvChannelBackup.get("sq"); if (sq != null) XposedHelpers.setIntField(currentChannel, "sq", (Integer) sq);
+            Object bd = sstvChannelBackup.get("band"); if (bd != null) XposedHelpers.setIntField(currentChannel, "band", (Integer) bd);
+            Object pw = sstvChannelBackup.get("power"); if (pw != null) XposedHelpers.setIntField(currentChannel, "power", (Integer) pw);
+            Object rt = sstvChannelBackup.get("rxType"); if (rt != null) XposedHelpers.setIntField(currentChannel, "rxType", (Integer) rt);
+            Object rs = sstvChannelBackup.get("rxSubCode"); if (rs != null) XposedHelpers.setIntField(currentChannel, "rxSubCode", (Integer) rs);
+            Object tt = sstvChannelBackup.get("txType"); if (tt != null) XposedHelpers.setIntField(currentChannel, "txType", (Integer) tt);
+            Object ts = sstvChannelBackup.get("txSubCode"); if (ts != null) XposedHelpers.setIntField(currentChannel, "txSubCode", (Integer) ts);
+            try {
+                XposedHelpers.callMethod(dmrManager, "updateChannel", currentChannel);
+                XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", currentChannel);
+            } catch (Throwable syncEx) {
+                XposedBridge.log(TAG + ": Warning: SSTV restore sync error: " + syncEx.getMessage());
+            }
+            XposedBridge.log(TAG + ": SSTV channel restored: " + sstvChannelBackup.get("name"));
+            sstvChannelBackup = null;
+            // Delete backup file
+            new java.io.File("/sdcard/sstv_channel_backup.dat").delete();
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error restoring SSTV channel: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Check on startup if stuck on SSTV channel and restore if backup exists
+     */
+    private void checkAndRestoreSSTVChannelOnStartup(final Context context) {
+        boolean shouldDeleteBackup = false;
+        try {
+            XposedBridge.log(TAG + ": Checking for orphaned SSTV channel...");
+            java.io.File backupFile = new java.io.File("/sdcard/sstv_channel_backup.dat");
+            if (!backupFile.exists()) {
+                XposedBridge.log(TAG + ": No SSTV backup file found - normal startup");
+                return;
+            }
+            XposedBridge.log(TAG + ": SSTV backup file found - checking if channel needs restore");
+            shouldDeleteBackup = true;
+
+            Class<?> dmrManagerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.manager.DmrManager", appClassLoader);
+            Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+            if (dmrManager == null) {
+                XposedBridge.log(TAG + ": DmrManager not ready - deleting SSTV backup and skipping restore");
+                return;
+            }
+            Object currentChannel = XposedHelpers.callMethod(dmrManager, "getCurrentChannel");
+            if (currentChannel == null) {
+                XposedBridge.log(TAG + ": Cannot get current channel - deleting SSTV backup"); return;
+            }
+            String channelName = (String) XposedHelpers.getObjectField(currentChannel, "name");
+            XposedBridge.log(TAG + ": Current channel for SSTV check: " + channelName);
+
+            if (channelName != null && channelName.startsWith("SSTV (")) {
+                XposedBridge.log(TAG + ": Detected orphaned SSTV channel - restoring backup...");
+                java.io.ObjectInputStream ois = new java.io.ObjectInputStream(
+                    new java.io.FileInputStream(backupFile));
+                @SuppressWarnings("unchecked")
+                java.util.HashMap<String, Object> backup =
+                    (java.util.HashMap<String, Object>) ois.readObject();
+                ois.close();
+                sstvChannelBackup = backup;
+                restoreSSTVChannelBackup(context);
+                shouldDeleteBackup = false;  // restoreSSTVChannelBackup already deletes it
+                if (context instanceof Activity) {
+                    ((Activity) context).runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                if (context instanceof Activity) {
+                                    Activity a = (Activity) context;
+                                    if (a.isFinishing() || a.isDestroyed()) return;
+                                }
+                                new AlertDialog.Builder(context)
+                                    .setTitle("\u26a0\ufe0f SSTV Channel Restored")
+                                    .setMessage("SSTV monitoring was interrupted while the app was closed.\n\n" +
+                                        "Your original channel has been restored automatically.\n\n" +
+                                        "To prevent this:\n" +
+                                        "\u2022 Always stop SSTV monitoring before closing the app\n\n" +
+                                        "Restart recommended for proper operation.")
+                                    .setPositiveButton("Restart App", new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            try {
+                                                Context appContext = context.getApplicationContext();
+                                                String packageName = appContext.getPackageName();
+                                                android.content.Intent intent = appContext.getPackageManager()
+                                                    .getLaunchIntentForPackage(packageName);
+                                                if (intent != null) {
+                                                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                                                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                                                    android.app.PendingIntent pendingIntent = android.app.PendingIntent.getActivity(
+                                                        appContext, 0, intent,
+                                                        android.app.PendingIntent.FLAG_ONE_SHOT | android.app.PendingIntent.FLAG_IMMUTABLE);
+                                                    android.app.AlarmManager alarmManager = (android.app.AlarmManager)
+                                                        appContext.getSystemService(Context.ALARM_SERVICE);
+                                                    alarmManager.set(android.app.AlarmManager.RTC,
+                                                        System.currentTimeMillis() + 100, pendingIntent);
+                                                    XposedBridge.log(TAG + ": Restarting app after SSTV recovery...");
+                                                    System.exit(0);
+                                                }
+                                            } catch (Exception restartEx) {
+                                                XposedBridge.log(TAG + ": Error restarting app: " + restartEx.getMessage());
+                                                Toast.makeText(context, "Error restarting app", Toast.LENGTH_SHORT).show();
+                                            }
+                                        }
+                                    })
+                                    .setCancelable(false)
+                                    .show();
+                            } catch (Exception ex) {
+                                XposedBridge.log(TAG + ": Error showing SSTV restore dialog: " + ex.getMessage());
+                            }
+                        }
+                    });
+                }
+                XposedBridge.log(TAG + ": SSTV crash recovery completed");
+            } else {
+                XposedBridge.log(TAG + ": Channel is not an SSTV channel, deleting orphaned backup");
+            }
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error checking SSTV channel on startup: " + e.getMessage());
+            XposedBridge.log(e);
+        } finally {
+            if (shouldDeleteBackup) {
+                try { new java.io.File("/sdcard/sstv_channel_backup.dat").delete(); } catch (Exception ignored) {}
+            }
+        }
+    }
+
     /**
      * Check on startup if stuck on APRS channel and restore if backup exists
      */
@@ -12159,21 +12375,61 @@ public class MainHook implements IXposedHookLoadPackage {
                     restoreVFOChannelBackup(context);
                     
                     // Show crash recovery dialog
-                    if (context instanceof Activity) {
-                        ((Activity) context).runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                new AlertDialog.Builder(context)
-                                    .setTitle("⚠️ VFO Mode Crash Recovery")
-                                    .setMessage("The app closed while VFO mode was active.\n\n" +
-                                        "Your original channel has been restored automatically.\n\n" +
-                                        "To avoid losing settings:\n" +
-                                        "• Always exit VFO mode before closing the app\n" +
-                                        "• Press the VFO button again to turn it off")
-                                    .setPositiveButton("OK", null)
-                                    .show();
-                            }
-                        });
+                    if (context != null) {
+                        try {
+                            new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        if (context instanceof Activity) {
+                                            Activity a = (Activity) context;
+                                            if (a.isFinishing() || a.isDestroyed()) return;
+                                        }
+                                        new AlertDialog.Builder(context)
+                                            .setTitle("⚠️ VFO Mode Crash Recovery")
+                                            .setMessage("The app closed while VFO mode was active.\n\n" +
+                                                "Your original channel has been restored automatically.\n\n" +
+                                                "To avoid losing settings:\n" +
+                                                "• Always exit VFO mode before closing the app\n" +
+                                                "• Press the VFO button again to turn it off\n\n" +
+                                                "Restart recommended for proper operation.")
+                                            .setPositiveButton("Restart App", new DialogInterface.OnClickListener() {
+                                                @Override
+                                                public void onClick(DialogInterface dialog, int which) {
+                                                    try {
+                                                        Context appContext = context.getApplicationContext();
+                                                        String packageName = appContext.getPackageName();
+                                                        android.content.Intent intent = appContext.getPackageManager()
+                                                            .getLaunchIntentForPackage(packageName);
+                                                        if (intent != null) {
+                                                            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                                                            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                                                            android.app.PendingIntent pendingIntent = android.app.PendingIntent.getActivity(
+                                                                appContext, 0, intent,
+                                                                android.app.PendingIntent.FLAG_ONE_SHOT | android.app.PendingIntent.FLAG_IMMUTABLE);
+                                                            android.app.AlarmManager alarmManager = (android.app.AlarmManager)
+                                                                appContext.getSystemService(Context.ALARM_SERVICE);
+                                                            alarmManager.set(android.app.AlarmManager.RTC,
+                                                                System.currentTimeMillis() + 100, pendingIntent);
+                                                            XposedBridge.log(TAG + ": Restarting app after VFO recovery...");
+                                                            System.exit(0);
+                                                        }
+                                                    } catch (Exception restartEx) {
+                                                        XposedBridge.log(TAG + ": Error restarting app: " + restartEx.getMessage());
+                                                        Toast.makeText(context, "Error restarting app", Toast.LENGTH_SHORT).show();
+                                                    }
+                                                }
+                                            })
+                                            .setCancelable(false)
+                                            .show();
+                                    } catch (Exception dialogEx) {
+                                        XposedBridge.log(TAG + ": Error showing VFO restore dialog: " + dialogEx.getMessage());
+                                    }
+                                }
+                            });
+                        } catch (Exception handlerEx) {
+                            XposedBridge.log(TAG + ": Error posting VFO dialog to handler: " + handlerEx.getMessage());
+                        }
                     }
                     
                     XposedBridge.log(TAG + ": VFO crash recovery completed successfully");

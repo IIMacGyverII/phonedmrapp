@@ -2,9 +2,9 @@
 
 **Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS + VFO Mode + SSTV!
 
-> **📺 Current Stable Release: v3.3.0** (March 18, 2026) - SSTV Live Monitoring  
-> **🎛️ Previous Release: v3.2.3** (March 16, 2026) - APRS Channel Filtering + Button Spacing  
-> **🔨 Stable Release: v3.2.2** (March 15, 2026) - VFO Digital Mode SharedPreferences Fix  
+> **� Current Stable Release: v3.3.1** (March 18, 2026) - Crash Recovery Improvements  
+> **📺 Previous Release: v3.3.0** (March 18, 2026) - SSTV Live Monitoring  
+> **🎛️ Prior Release: v3.2.3** (March 16, 2026) - APRS Channel Filtering + Button Spacing  
 > **🎛️ Feature Release: v3.1.5** (March 14, 2026) - VFO Mode (Variable Frequency Oscillator)  
 > **🐛 Bug Fix: v3.1.4** (March 13, 2026) - Software Squelch State Fix  
 > **📡 Major Feature: v3.1.0** (March 12, 2026) - APRS Live Monitoring  
@@ -14,7 +14,28 @@
 
 <video src="https://github.com/user-attachments/assets/d6305a49-c8ed-47dc-a9d8-7e731aa02811" controls title="DMRModHooks v1.1 Demo" width="800"></video>
 
-## 📺 What's New in v3.3.0 (March 18, 2026)
+## � What's New in v3.3.1 (March 18, 2026)
+
+### Crash Recovery Improvements — Restart App Button + Channel Name Fix
+
+**Hardened crash recovery for APRS, SSTV, and VFO modes with a proper Restart App button and a data-integrity fix**
+
+#### **Crash Recovery Dialog — Restart App Button**
+- All three recovery dialogs (APRS, SSTV, VFO) now show a **"Restart App"** button instead of plain "OK"
+  - Tap to immediately restart the app for a clean state after channel restore
+  - Dialog is non-cancellable so users can't accidentally dismiss it
+  - VFO dialog upgraded to use `Handler(Looper.getMainLooper())` and activity validity check (consistent with APRS/SSTV)
+
+#### **Channel Name Integrity Fix**
+- **Bug fixed**: Backup functions were stripping `APRS (`, `SSTV (`, or `VFO-` prefixes from channel names before saving
+  - Impact: A channel legitimately named `"APRS (local)"`, `"SSTV transmit"`, or `"VFO-Station"` would have its name mangled in the backup and restore incorrectly
+  - Root cause: Defensive stripping was added in a prior session as a guard against double-nesting, but was applied unconditionally — not just when the name was already hijacked
+  - Fix: Removed all stripping. The backup is always saved **before** the name hijack, so the live channel name is always clean at save time — no stripping was ever needed
+- Affects `saveChannelBackup` (APRS), `saveSSTVChannelBackup`, `saveVFOChannelBackup`, `restoreSSTVChannelBackup`, `restoreVFOChannelBackup`, `checkAndRestoreAPRSChannelOnStartup`, `checkAndRestoreSSTVChannelOnStartup`, `checkAndRestoreVFOChannelOnStartup`
+
+---
+
+## �📺 What's New in v3.3.0 (March 18, 2026)
 
 ### SSTV Live Monitoring - Slow Scan TV Image Reception
 
@@ -465,9 +486,10 @@ Local Simplex (↑N 250m)
    - Visual feedback: Orange = monitoring, Gray = normal
    - Perfect for scanning and emergency monitoring
 
-## Complete Feature List (v1.0 - v3.3.0)
+## Complete Feature List (v1.0 - v3.3.1)
 
 ### Core Features
+- ✅ **Crash Recovery Improvements (v3.3.1)** - Restart App button, channel name integrity fix
 - ✅ **SSTV Live Monitoring (v3.3.0)** - Slow Scan TV image reception with auto-save and live display
 - ✅ **VFO Mode (v3.1.5)** - Variable Frequency Oscillator with temporary channel override
 - ✅ **APRS Live Monitoring (v3.1.0-v3.1.4)** - Real-time packet reception with dashboard and maps
@@ -526,7 +548,8 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 
 ## Current Status ✅
 
-**Current Release: v3.3.0** (March 18, 2026)  
+**Current Release: v3.3.1** (March 18, 2026)  
+**Crash Recovery**: ✅ Improved — Restart App button on all recovery dialogs, channel name integrity fix  
 **SSTV Monitoring**: ✅ Working - VIS detection + IQ auto-detect, auto-save images, all major modes  
 **VFO Mode**: ✅ Working - Complete frequency control with analog/digital support  
 **APRS Monitoring**: ✅ Working - Live dashboard with GPS mapping and auto-logging  
@@ -579,13 +602,13 @@ adb shell rm /sdcard/DMR/DMRDEBUG.bin
 - **Transcription Service**: com.macdmr.transcription (Standalone AIDL service)
 - **Device**: Ulefone Armor 26 Ultra (Android 13)
 - **LSPosed**: v1.9.2 (Zygisk)
-- **Current Version**: v3.3.0 (March 18, 2026)
+- **Current Version**: v3.3.1 (March 18, 2026)
 - **Storage Location**: `Download/DMR/` (Audio, Transcription, DMR_Backups, APRS, SSTV folders)
 
 ## Features
 
 ### ✅ Phase 1: Initial Hook Setup
-- Startup toast: "✓ DMR Mod Hooks Active! v3.3.0"
+- Startup toast: "✓ DMR Mod Hooks Active! v3.3.1"
 - Custom version display on Device Information screen
 - Confirms module is active and working
 
