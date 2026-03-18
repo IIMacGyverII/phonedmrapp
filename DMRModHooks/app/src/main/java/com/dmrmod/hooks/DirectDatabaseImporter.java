@@ -375,42 +375,45 @@ public class DirectDatabaseImporter {
                 
                 ContentValues values = new ContentValues();
                 
-                // Channel Number (0) -> channel_number
+                // Check if this is the new format with _ID field (29+ columns)
+                // New format: _ID, Channel Number, Channel Name, ...
+                // OpenGD77 format: Channel Number, Channel Name, ...
+                // Channel Number -> channel_number
                 String channelNumber = fields[0].trim();
                 values.put("channel_number", Integer.parseInt(channelNumber));
                 
-                // Channel Name (1) -> channel_name
+                // Channel Name -> channel_name
                 String channelName = fields[1].trim();
                 values.put("channel_name", channelName);
                 
-                // Channel Type (2) -> channel_type (Database uses: 0=Digital, 1=Analog)
+                // Channel Type -> channel_type (Database uses: 0=Digital, 1=Analog)
                 String channelType = fields[2].trim();
                 boolean isDMR = channelType.equalsIgnoreCase("Digital");
                 values.put("channel_type", isDMR ? "0" : "1");  // Database uses numeric values
                 
-                // Rx Frequency (3) -> channel_rxFreq (MHz to Hz)
+                // Rx Frequency -> channel_rxFreq (MHz to Hz)
                 String rxFreq = fields[3].trim().replace("\t", "");
                 double rxFreqMHz = Double.parseDouble(rxFreq);
                 long rxFreqHz = (long)(rxFreqMHz * 1000000);
                 values.put("channel_rxFreq", rxFreqHz);
                 
-                // Tx Frequency (4) -> channel_txFreq (MHz to Hz)
+                // Tx Frequency -> channel_txFreq (MHz to Hz)
                 String txFreq = fields[4].trim().replace("\t", "");
                 values.put("channel_txFreq", (long)(Double.parseDouble(txFreq) * 1000000));
                 
                 // DMR-specific fields - ONLY set for Digital channels
                 if (isDMR) {
-                    // Color Code (6) -> channel_cc
+                    // Color Code -> channel_cc
                     String ccStr = fields[6].trim();
                     int colorCode = ccStr.isEmpty() ? 1 : Integer.parseInt(ccStr);
                     values.put("channel_cc", colorCode);
                     
-                    // Timeslot (7) -> channel_inBoundSlot
+                    // Timeslot -> channel_inBoundSlot
                     String tsStr = fields[7].trim();
                     int timeslot = tsStr.isEmpty() ? 1 : Integer.parseInt(tsStr);
                     values.put("channel_inBoundSlot", timeslot);
                     
-                    // Contact (8) -> channel_txContact (lookup ID by name)
+                    // Contact -> channel_txContact (lookup ID by name)
                     String contactName = fields[8].trim();
                     int contactId = getContactId(contactMap, contactName);
                     values.put("channel_txContact", contactId);
@@ -426,7 +429,7 @@ public class DirectDatabaseImporter {
                 int band = (rxFreqMHz >= 136 && rxFreqMHz <= 174) ? 1 : 0;
                 values.put("channel_band", band);
                 
-                // RX Tone (13) and TX Tone (14) - Parse CTCSS/DCS codes
+                // RX Tone and TX Tone - Parse CTCSS/DCS codes
                 // OpenGD77 CSV format: "None", "67.0" (CTCSS), "D023N" (DCS Normal), "D023I" (DCS Inverted)
                 int rxType = 0, rxSubCode = 0, txType = 0, txSubCode = 0;
                 try {
@@ -539,17 +542,25 @@ public class DirectDatabaseImporter {
                     values.put("channel_active", 0);          // Inactive by default
                 }
                 
-                // Insert into database
+                // Insert into database (auto-increment _id)
                 long rowId = db.insert("database_channel_area_default_uhf", null, values);
+                if (rowId > 0) {
+                    Log.i(TAG, "✓ Inserted channel " + channelNumber + ": " + channelName + " (ID: " + rowId + ")");
+                }
+                
                 if (rowId == -1) {
                     Log.e(TAG, "FAILED to insert channel " + channelNumber + ": " + channelName);
                 } else {
                     importCount++;
                     
-                    // Import APRS setting to APRSDatabase if present (column 24)
+                    // Store the rowId (_id) for zone import later
+                    final long finalRowId = rowId;
+                    
+                    // Import APRS setting to APRSDatabase if present
                     try {
-                        if (fields.length >= 25) {
-                            String aprsStr = fields[24].trim();
+                        int aprsFieldIndex = 24;
+                        if (fields.length > aprsFieldIndex) {
+                            String aprsStr = fields[aprsFieldIndex].trim();
                             if (!aprsStr.isEmpty() && !aprsStr.equalsIgnoreCase("None")) {
                                 // APRS enabled if field is "TX", "On", or non-empty
                                 boolean aprsEnabled = aprsStr.equalsIgnoreCase("TX") || 
@@ -565,11 +576,13 @@ public class DirectDatabaseImporter {
                         Log.w(TAG, "Could not parse APRS setting for channel " + channelNumber + ": " + e.getMessage());
                     }
                     
-                    // Import lat/lon to LocationDatabase if present (columns 25-26)
+                    // Import lat/lon to LocationDatabase if present
                     try {
-                        if (fields.length >= 27) {
-                            String latStr = fields[25].trim();
-                            String lonStr = fields[26].trim();
+                        int latFieldIndex = 25;
+                        int lonFieldIndex = 26;
+                        if (fields.length > lonFieldIndex) {
+                            String latStr = fields[latFieldIndex].trim();
+                            String lonStr = fields[lonFieldIndex].trim();
                             
                             // Only save if not default values
                             if (!latStr.isEmpty() && !lonStr.isEmpty()) {
@@ -864,29 +877,29 @@ public class DirectDatabaseImporter {
                 }
                 
                 // Remaining fields (up to 80) are channel names
-                List<Integer> channelNumbers = new ArrayList<>();
+                List<Integer> channelIds = new ArrayList<>();
                 for (int i = 1; i < fields.length; i++) {
                     String channelName = fields[i].trim();
                     if (channelName.isEmpty()) {
                         continue; // Empty fields are normal (not all zones have 80 channels)
                     }
                     
-                    // Look up channel number by name
-                    Integer channelNum = channelNameMap.get(channelName);
-                    if (channelNum != null) {
-                        channelNumbers.add(channelNum);
-                        Log.d(TAG, "Zone '" + zoneName + "': Mapped channel '" + channelName + "' to #" + channelNum);
+                    // Look up channel ID by name
+                    Integer channelId = channelNameMap.get(channelName);
+                    if (channelId != null) {
+                        channelIds.add(channelId);
+                        Log.d(TAG, "Zone '" + zoneName + "': Mapped channel '" + channelName + "' to ID " + channelId);
                     } else {
                         Log.w(TAG, "Zone '" + zoneName + "': Channel '" + channelName + "' not found in database");
                     }
                 }
                 
                 // Save zone if it has at least one channel
-                if (channelNumbers.size() > 0) {
-                    ZoneDatabase.Zone zone = new ZoneDatabase.Zone(zoneName, channelNumbers);
+                if (channelIds.size() > 0) {
+                    ZoneDatabase.Zone zone = new ZoneDatabase.Zone(zoneName, channelIds);
                     long zoneId = zoneDb.saveZone(zone);
                     importCount++;
-                    Log.i(TAG, "Imported zone #" + zoneId + " '" + zoneName + "' with " + channelNumbers.size() + " channels");
+                    Log.i(TAG, "Imported zone #" + zoneId + " '" + zoneName + "' with " + channelIds.size() + " channels");
                 } else {
                     Log.w(TAG, "Skipping zone '" + zoneName + "' - no valid channels");
                     skippedCount++;
@@ -912,10 +925,10 @@ public class DirectDatabaseImporter {
     }
     
     /**
-     * Build a map of channel name => channel number for zone import
+     * Build a map of channel name => channel ID (_id) for zone import
      * 
      * @param context Application context
-     * @return Map of channel names to channel numbers, or empty map if database doesn't exist
+     * @return Map of channel names to channel IDs, or empty map if database doesn't exist
      */
     private static java.util.Map<String, Integer> buildChannelNameMap(Context context) {
         java.util.Map<String, Integer> channelMap = new java.util.HashMap<>();
@@ -933,14 +946,14 @@ public class DirectDatabaseImporter {
                 SQLiteDatabase.OPEN_READONLY);
             
             cursor = db.query("database_channel_area_default_uhf", 
-                new String[]{"channel_number", "channel_name"}, 
+                new String[]{"_id", "channel_name"}, 
                 null, null, null, null, null);
             
             if (cursor != null && cursor.moveToFirst()) {
                 do {
-                    int number = cursor.getInt(0);
+                    int id = cursor.getInt(0);
                     String name = cursor.getString(1);
-                    channelMap.put(name, number);
+                    channelMap.put(name, id);
                 } while (cursor.moveToNext());
             }
             
