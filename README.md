@@ -1,46 +1,75 @@
-# PriInterPhone DMR Radio - LSPosed Mod with OpenGD77 Integration + Advanced Features
+﻿# PriInterPhone DMR Radio - LSPosed Mod with OpenGD77 Integration + Advanced Features
 
-**Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS + VFO Mode + SSTV!
+**Status**: âœ… **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS + VFO Mode + SSTV!
 
-> **� Current Stable Release: v3.3.2** (March 19, 2026) - APRS Buttons Moved to Monitoring Page  
-> **🔧 Previous Release: v3.3.1** (March 18, 2026) - Crash Recovery Improvements  
-> **📺 Prior Release: v3.3.0** (March 18, 2026) - SSTV Live Monitoring  
-> **🎛️ Prior Release: v3.2.3** (March 16, 2026) - APRS Channel Filtering + Button Spacing  
-> **🎛️ Feature Release: v3.1.5** (March 14, 2026) - VFO Mode (Variable Frequency Oscillator)  
-> **🐛 Bug Fix: v3.1.4** (March 13, 2026) - Software Squelch State Fix  
-> **📡 Major Feature: v3.1.0** (March 12, 2026) - APRS Live Monitoring  
-> **🎙️ Stable Base: v1.7.0** (February 2026) - Transcription & API Features
+> **ï¿½ Current Stable Release: v3.3.3** (March 18, 2026) - SSTV Settings + APRS/SSTV Dialog Refresh Fix  
+> **ðŸ“¦ Previous Release: v3.3.2** (March 19, 2026) - APRS Buttons Moved to Monitoring Page  
+> **ðŸ”§ Prior Release: v3.3.1** (March 18, 2026) - Crash Recovery Improvements  
+> **ðŸ“º Prior Release: v3.3.0** (March 18, 2026) - SSTV Live Monitoring  
+> **ðŸŽ›ï¸ Prior Release: v3.2.3** (March 16, 2026) - APRS Channel Filtering + Button Spacing  
+> **ðŸŽ›ï¸ Feature Release: v3.1.5** (March 14, 2026) - VFO Mode (Variable Frequency Oscillator)  
+> **ðŸ› Bug Fix: v3.1.4** (March 13, 2026) - Software Squelch State Fix  
+> **ðŸ“¡ Major Feature: v3.1.0** (March 12, 2026) - APRS Live Monitoring  
+> **ðŸŽ™ï¸ Stable Base: v1.7.0** (February 2026) - Transcription & API Features
 
 ## Demo
 
 <video src="https://github.com/user-attachments/assets/d6305a49-c8ed-47dc-a9d8-7e731aa02811" controls title="DMRModHooks v1.1 Demo" width="800"></video>
 
-## 📡 What's New in v3.3.2 (March 19, 2026)
+## 📺 What's New in v3.3.3 (March 18, 2026)
+
+### SSTV Settings & Received Images Dialogs + Dialog Refresh Fix
+
+**Added configurable SSTV settings (frequency with VHF/UHF support), a received images browser, and fixed stale-data dialogs for both SSTV and APRS**
+
+#### **SSTV Settings Dialog**
+- New **⚙️ SSTV Settings** button on both the SSTV start dialog and SSTV live monitoring screen
+- Configure SSTV frequency (supports both **VHF 136–174 MHz** and **UHF 400–520 MHz**)
+- Default frequency: `144.500 MHz` (persisted across sessions via SharedPreferences)
+- Frequency validated to prevent out-of-range entry
+- Hint text updated to show both VHF (`144.500`) and UHF (`432.500`) examples
+
+#### **SSTV Received Images Dialog**
+- New **📸 SSTV Received** button on both the SSTV start dialog and live monitoring screen
+- Lists all saved SSTV images from `Download/DMR/SSTV/`, sorted newest-first
+- Tap any entry to open in the device gallery app
+- Shows "no images yet" placeholder when folder is empty
+
+#### **Dialog Refresh Fix (SSTV + APRS)**
+- **Problem**: Opening Settings from a start dialog, saving a new frequency, then returning showed the old value — the start dialog was built once and never refreshed
+- **Fix**: Both **SSTV** and **APRS** start dialogs now use a holder+callback pattern
+  - When Settings is opened from a start dialog, saving dismisses the stale start dialog and reopens it fresh
+  - The newly opened dialog reads the latest saved values from SharedPreferences / APRSDatabase
+  - Live monitoring screens are unaffected (they auto-refresh via their periodic handler)
+
+---
+
+## ðŸ“¡ What's New in v3.3.2 (March 19, 2026)
 
 ### APRS Received + APRS Settings Buttons Moved to Monitoring Page
 
-**Relocated the `📡 APRS Received` and `⚙️ APRS Settings` buttons from the general settings/channels page directly onto the APRS Monitoring Mode dialogs for better contextual access**
+**Relocated the `ðŸ“¡ APRS Received` and `âš™ï¸ APRS Settings` buttons from the general settings/channels page directly onto the APRS Monitoring Mode dialogs for better contextual access**
 
 #### **What Changed**
 - **Removed** both buttons from the general Export/Import settings page
-- **Added** both buttons to the **APRS Start Dialog** (before monitoring starts) — displayed below the packet statistics and logging note, above the Start/Close buttons
-- **Added** both buttons to the **APRS Live Monitoring Screen** (while monitoring is active) — displayed below the auto-logging info footer
+- **Added** both buttons to the **APRS Start Dialog** (before monitoring starts) â€” displayed below the packet statistics and logging note, above the Start/Close buttons
+- **Added** both buttons to the **APRS Live Monitoring Screen** (while monitoring is active) â€” displayed below the auto-logging info footer
 - A subtle visual divider separates the action buttons from the informational text on each screen
 
 #### **Why This Improves the UX**
-- `📡 APRS Received` and `⚙️ APRS Settings` are APRS-specific — they belong on the APRS page, not alongside Export/Import
+- `ðŸ“¡ APRS Received` and `âš™ï¸ APRS Settings` are APRS-specific â€” they belong on the APRS page, not alongside Export/Import
 - Users no longer need to leave the APRS flow to check received stations or adjust settings
 - Both buttons accessible at all times during the APRS workflow: before starting and while actively monitoring
 
 ---
 
-## � What's New in v3.3.1 (March 18, 2026)
+## ï¿½ What's New in v3.3.1 (March 18, 2026)
 
-### Crash Recovery Improvements — Restart App Button + Channel Name Fix
+### Crash Recovery Improvements â€” Restart App Button + Channel Name Fix
 
 **Hardened crash recovery for APRS, SSTV, and VFO modes with a proper Restart App button and a data-integrity fix**
 
-#### **Crash Recovery Dialog — Restart App Button**
+#### **Crash Recovery Dialog â€” Restart App Button**
 - All three recovery dialogs (APRS, SSTV, VFO) now show a **"Restart App"** button instead of plain "OK"
   - Tap to immediately restart the app for a clean state after channel restore
   - Dialog is non-cancellable so users can't accidentally dismiss it
@@ -49,56 +78,56 @@
 #### **Channel Name Integrity Fix**
 - **Bug fixed**: Backup functions were stripping `APRS (`, `SSTV (`, or `VFO-` prefixes from channel names before saving
   - Impact: A channel legitimately named `"APRS (local)"`, `"SSTV transmit"`, or `"VFO-Station"` would have its name mangled in the backup and restore incorrectly
-  - Root cause: Defensive stripping was added in a prior session as a guard against double-nesting, but was applied unconditionally — not just when the name was already hijacked
-  - Fix: Removed all stripping. The backup is always saved **before** the name hijack, so the live channel name is always clean at save time — no stripping was ever needed
+  - Root cause: Defensive stripping was added in a prior session as a guard against double-nesting, but was applied unconditionally â€” not just when the name was already hijacked
+  - Fix: Removed all stripping. The backup is always saved **before** the name hijack, so the live channel name is always clean at save time â€” no stripping was ever needed
 - Affects `saveChannelBackup` (APRS), `saveSSTVChannelBackup`, `saveVFOChannelBackup`, `restoreSSTVChannelBackup`, `restoreVFOChannelBackup`, `checkAndRestoreAPRSChannelOnStartup`, `checkAndRestoreSSTVChannelOnStartup`, `checkAndRestoreVFOChannelOnStartup`
 
 ---
 
-## �📺 What's New in v3.3.0 (March 18, 2026)
+## ï¿½ðŸ“º What's New in v3.3.0 (March 18, 2026)
 
 ### SSTV Live Monitoring - Slow Scan TV Image Reception
 
 **Receive and decode SSTV transmissions in real-time directly on the radio, with automatic image saving and live display**
 
 #### **SSTV Button & Live Screen**
-- **📺 SSTV Toggle Button**: New teal/cyan button on intercom page
+- **ðŸ“º SSTV Toggle Button**: New teal/cyan button on intercom page
   - Opens live monitoring screen with real-time decode display
   - Teal when active, light teal when inactive
   - Mutually exclusive with APRS and VFO modes
-- **📸 Live Monitoring Screen**:
+- **ðŸ“¸ Live Monitoring Screen**:
   - Real-time decode status and progress
   - Displays mode, line count, and estimated completion
   - Auto-updates every 2 seconds
   - Images saved automatically on completion
 
 #### **Detection & Decoding**
-- **🎯 VIS Tone Detection**: Goertzel algorithm detects the 300ms VIS header tone
+- **ðŸŽ¯ VIS Tone Detection**: Goertzel algorithm detects the 300ms VIS header tone
   - Identifies all standard SSTV modes (Scottie S1/S2, Martin M1/M2, Robot 36/72, PD 90/120/160/180, etc.)
-  - Runs in background thread — zero impact on audio playback
-- **🔍 IQ Auto-Detect**: Blind SSTV mode detection without VIS tone
+  - Runs in background thread â€” zero impact on audio playback
+- **ðŸ” IQ Auto-Detect**: Blind SSTV mode detection without VIS tone
   - Analyzes spectral content to identify active transmissions
   - Warmup schedule (3/5/8/12/16s) then every 5s
-- **⚡ Background Thread Architecture**: All Phase 1 detection runs off the audio write thread
-  - Audio write thread stays under 2ms per call — no buffering delay
+- **âš¡ Background Thread Architecture**: All Phase 1 detection runs off the audio write thread
+  - Audio write thread stays under 2ms per call â€” no buffering delay
   - Eliminated prior 30+ second audio delay from open-squelch sessions
 
 #### **Image Handling**
-- **💾 Auto-Save**: Every decoded image saved to `/sdcard/Download/DMR/SSTV/`
+- **ðŸ’¾ Auto-Save**: Every decoded image saved to `/sdcard/Download/DMR/SSTV/`
   - Filename format: `SSTV_YYYYMMDD_HHmmss_MODE.jpg`
   - JPEG quality 95 for archival fidelity
-- **📋 Session History**: Last 10 received images listed on monitoring screen
+- **ðŸ“‹ Session History**: Last 10 received images listed on monitoring screen
   - Tap any entry to open in gallery
   - Shows mode, timestamp, and decode quality
-- **🔄 12-second backlog**: Pre-roll feeds up to 12s of buffered audio into decoder
+- **ðŸ”„ 12-second backlog**: Pre-roll feeds up to 12s of buffered audio into decoder
   - Prevents top-of-image cutoff even when VIS is detected mid-stream
   - 1-second pre-roll before VIS start sample for header margin
 
 #### **False Positive Guards**
-- **🛡️ Multi-stage validation**: Cross-family checks, leader purity, vote fraction guards
+- **ðŸ›¡ï¸ Multi-stage validation**: Cross-family checks, leader purity, vote fraction guards
   - Prevents random noise from triggering decode attempts
   - CV (coefficient-of-variation) guard on VIS code confidence
-- **⚠️ Open-squelch tip**: Info note on monitoring screen about false positive risk
+- **âš ï¸ Open-squelch tip**: Info note on monitoring screen about false positive risk
   - Recommends software squelch for cleaner detection
 
 #### **Software Squelch Integration**
@@ -112,12 +141,12 @@
 - **Buffer**: Up to 1 MB (~32s) ring buffer with `DirectBAOS` (zero-alloc inner class)
 - **Pre-allocated work buffers**: 2s VIS buffer + 16s auto-detect buffer (no GC pressure)
 - **Goertzel VIS scan**: Every 250ms on background thread, < 1ms each
-- **IQ auto-detect**: Every 5s steady-state, ~ 50ms each — fully off write thread
+- **IQ auto-detect**: Every 5s steady-state, ~ 50ms each â€” fully off write thread
 - **`imageStartSample` fix**: Auto-detect path correctly anchors start to analyzed window
   - Prevents full-image decode from defaulting to buffer start (which caused top cutoff)
 
 #### **Usage**
-1. **Intercom page** → Tap **SSTV** button (teal, beside APRS)
+1. **Intercom page** â†’ Tap **SSTV** button (teal, beside APRS)
 2. Tap **Start Monitoring** on the SSTV live screen
 3. The module listens for VIS tones or auto-detects SSTV transmissions
 4. When a signal is found, decoding begins automatically with progress display
@@ -133,18 +162,18 @@
 
 ---
 
-## 🎛️ What's New in v3.1.5 (March 14, 2026)
+## ðŸŽ›ï¸ What's New in v3.1.5 (March 14, 2026)
 
 ### VFO Mode - Variable Frequency Oscillator
 
 **Complete frequency control with temporary channel override for quick QSOs without saving channels**
 
 #### **VFO Button & Dialog**
-- **🎛️ VFO Toggle Button**: New orange button on intercom page (bottom-left, below TXT)
+- **ðŸŽ›ï¸ VFO Toggle Button**: New orange button on intercom page (bottom-left, below TXT)
   - Orange when active, light orange when inactive
   - Opens comprehensive tuning dialog with all channel parameters
   - Temporarily hijacks current channel (restores on exit)
-- **📻 Full Control Dialog**: Complete channel configuration without database changes
+- **ðŸ“» Full Control Dialog**: Complete channel configuration without database changes
   - **Channel Mode**: Analog or Digital/DMR with mode-specific controls
   - **Frequency**: Numeric input with validation (136-174 MHz, 400-480 MHz)
   - **Power Level**: Low (1W) or High (5W) selection
@@ -153,19 +182,19 @@
   - **DMR Settings** (Digital): Contact type, TalkGroup ID, Color Code (0-15), Timeslot
   - **DMR ID Override**: Temporary local ID that persists across VFO sessions
   - **Apply Settings**: Instantly sends configuration to hardware via AnalogMessage/DigitalMessage
-- **🔄 Automatic Restoration**: Original channel settings restored when exiting VFO mode
+- **ðŸ”„ Automatic Restoration**: Original channel settings restored when exiting VFO mode
   - Backup system preserves all fields (frequency, tones, squelch, power, DMR settings)
   - Software squelch automatically disabled during VFO (if enabled on main channel)
   - Button state synchronized with VFO mode status
 
 #### **Key Features**
-- **✨ No Channel Creation**: Tune to any frequency without cluttering channel list
-- **🎯 Quick QSO Mode**: Perfect for simplex contacts, contests, or emergency frequencies
-- **💾 Non-Persistent**: All changes temporary until VFO mode exits
-- **🔧 Hardware Verified**: All settings tested and confirmed working
+- **âœ¨ No Channel Creation**: Tune to any frequency without cluttering channel list
+- **ðŸŽ¯ Quick QSO Mode**: Perfect for simplex contacts, contests, or emergency frequencies
+- **ðŸ’¾ Non-Persistent**: All changes temporary until VFO mode exits
+- **ðŸ”§ Hardware Verified**: All settings tested and confirmed working
   - Analog: Frequency, power, bandwidth, RX/TX tones all functional
   - Digital: Frequency, Color Code, DMR ID, contact type, TG, slot all functional
-- **🔄 DMR ID Persistence**: Temporary DMR ID persists across VFO close/reopen (until app restart)
+- **ðŸ”„ DMR ID Persistence**: Temporary DMR ID persists across VFO close/reopen (until app restart)
   - Allows testing different DMR IDs without changing system settings
   - Stored in vfoLocalId variable (independent of system DMR ID)
   - Defaults to ID 1 if not specified
@@ -202,15 +231,15 @@
   - TalkGroup: Positive integer validation
 
 #### **Usage**
-1. **Intercom page** → Tap **VFO** button (orange, bottom-left)
+1. **Intercom page** â†’ Tap **VFO** button (orange, bottom-left)
 2. **Configure settings** in dialog:
    - Select Analog or Digital mode
    - Enter frequency (e.g., 146.520 for 2m simplex)
    - Set power level, tones/DMR settings as needed
    - Optionally override DMR ID for testing
-3. Tap **Apply Settings** → Settings sent to hardware immediately
+3. Tap **Apply Settings** â†’ Settings sent to hardware immediately
 4. Use radio normally with VFO frequency
-5. Tap **Stop VFO** or VFO button again → Original channel restored
+5. Tap **Stop VFO** or VFO button again â†’ Original channel restored
 
 #### **Use Cases**
 - **Simplex Contacts**: Quick frequency entry for direct contacts
@@ -222,70 +251,70 @@
 
 ---
 
-## 🐛 What's New in v3.1.4 (March 13, 2026)
+## ðŸ› What's New in v3.1.4 (March 13, 2026)
 
 ### Critical Software Squelch State Fix
 
 **Fixed bug where software squelch remained active after stopping APRS monitoring**
 
 #### **Bug Fixed**
-- **🔧 Squelch State Clearing**: Software squelch flags now properly cleared when exiting APRS mode
+- **ðŸ”§ Squelch State Clearing**: Software squelch flags now properly cleared when exiting APRS mode
   - Previously: `isSoftwareSquelchEnabled` and `isAprsSoftwareSquelchEnabled` stayed `true` after stopping APRS
   - Result: Audio remained blocked even though UI showed Soft SQ as OFF
   - Impact: Users couldn't hear audio on intercom after using APRS with Soft SQ enabled
-- **✅ Proper State Reset**: Both flags explicitly set to `false` in `stopAPRSMonitoring()`
+- **âœ… Proper State Reset**: Both flags explicitly set to `false` in `stopAPRSMonitoring()`
   - Ensures audio processing allows playback when returning to intercom
   - UI state now matches internal flag state
   - No more "ghost squelch" blocking audio
 
 #### **User Impact**
-- **Before**: Enable Soft SQ in APRS → Stop APRS → Return to intercom with no audio
+- **Before**: Enable Soft SQ in APRS â†’ Stop APRS â†’ Return to intercom with no audio
 - **After**: Squelch properly disabled when exiting APRS, audio works immediately
 - **Reliability**: State flags and UI now stay synchronized across mode transitions
 
 ---
 
-## 🎨 What's New in v3.1.3 (March 13, 2026)
+## ðŸŽ¨ What's New in v3.1.3 (March 13, 2026)
 
 ### Software Squelch UI Enhancements & APRS Toggle
 
 **Complete UI overhaul for software squelch control + APRS monitoring improvements**
 
 #### **Intercom Page Enhancements**
-- **✨ Soft SQ Toggle Button**: Control software squelch on/off
+- **âœ¨ Soft SQ Toggle Button**: Control software squelch on/off
   - Light blue when OFF (hardware squelch mode)
   - Blue when ON (software squelch enabled)
   - Shows/hides slider based on toggle state
   - OFF: Hardware squelch set to 2 (default)
   - ON: Hardware squelch set to 0, software takes over
-- **⚡ Performance Optimization**: Slider no longer spams hardware during drag
+- **âš¡ Performance Optimization**: Slider no longer spams hardware during drag
   - Hardware squelch only applied on release (onStopTrackingTouch)
   - Toast notification only on release (no more spam)
   - Smooth dragging without lag or repeated writes
-- **🎨 Button Visual Improvements**: All toggle buttons use light-colored OFF states
-  - TXT button: Light purple → Purple
-  - Soft SQ button: Light blue → Blue
-  - REC button: Light red → Red
-  - MON button: Light orange → Orange
-  - APRS button: Light green → Green
-- **🔘 APRS Button Enhancement**: Converted to ToggleButton with state management
+- **ðŸŽ¨ Button Visual Improvements**: All toggle buttons use light-colored OFF states
+  - TXT button: Light purple â†’ Purple
+  - Soft SQ button: Light blue â†’ Blue
+  - REC button: Light red â†’ Red
+  - MON button: Light orange â†’ Orange
+  - APRS button: Light green â†’ Green
+- **ðŸ”˜ APRS Button Enhancement**: Converted to ToggleButton with state management
   - Auto-toggles with monitoring state
   - Unchecks when closing monitoring dialog
   - Proper state sync across app lifecycle
-- **📏 UI Spacing Refinements**:
+- **ðŸ“ UI Spacing Refinements**:
   - Slider track now colored full width (white on intercom, black on APRS)
   - Reduced spacing between SQ: label and value display
   - Tighter spacing above squelch controls
   - Vertical spacing added between SQ: label and slider (4dp)
 
 #### **APRS Monitoring Page Enhancements**
-- **✨ Soft SQ Toggle**: Independent software squelch control for APRS
+- **âœ¨ Soft SQ Toggle**: Independent software squelch control for APRS
   - Works identically to intercom page toggle
   - Light blue when OFF, blue when ON
   - Shows/hides slider and info text
   - OFF: Uses hardware squelch (level 2)
   - ON: Enables hybrid RSSI + Audio RMS squelch
-- **🔧 Independent Control**: APRS and intercom squelch settings are separate
+- **ðŸ”§ Independent Control**: APRS and intercom squelch settings are separate
   - Each page has its own toggle state
   - Each can use software or hardware squelch independently
   - Squelch levels saved separately in preferences
@@ -299,7 +328,7 @@
 
 ---
 
-## � What's New in v3.1.2 (March 13, 2026)
+## ï¿½ What's New in v3.1.2 (March 13, 2026)
 
 ### APRS Channel Recovery & Squelch Control Improvements
 
@@ -324,7 +353,7 @@
 
 #### **Squelch Control - Hardware Limitation Documentation**
 
-**⚠️ IMPORTANT: Ulefone Armor 26 Ultra Hardware Limitation**
+**âš ï¸ IMPORTANT: Ulefone Armor 26 Ultra Hardware Limitation**
 
 The radio hardware has a unique quirk that affects squelch control:
 - **Only sq=0 (open) and sq=2 work reliably**
@@ -351,7 +380,7 @@ The radio hardware has a unique quirk that affects squelch control:
 
 ---
 
-## �🐛 What's New in v3.1.1 (March 12, 2026)
+## ï¿½ðŸ› What's New in v3.1.1 (March 12, 2026)
 
 ### Critical APRS Bug Fixes
 
@@ -379,7 +408,7 @@ The radio hardware has a unique quirk that affects squelch control:
 
 ---
 
-## 📡 APRS Live Monitoring (v3.1.0)
+## ðŸ“¡ APRS Live Monitoring (v3.1.0)
 
 ### Real-time APRS packet reception with live dashboard and clickable map links
 
@@ -410,11 +439,11 @@ The radio hardware has a unique quirk that affects squelch control:
   - No manual channel creation needed
 
 **Usage**: 
-1. Intercom page → Tap APRS button (green, below MON)
+1. Intercom page â†’ Tap APRS button (green, below MON)
 2. Configure settings if needed (callsign optional for RX-only)
-3. Tap "Start Monitoring" → Live dashboard appears
-4. Tap any received station → Opens in Google Maps
-5. Tap "Stop Monitoring" → Returns to previous channel
+3. Tap "Start Monitoring" â†’ Live dashboard appears
+4. Tap any received station â†’ Opens in Google Maps
+5. Tap "Stop Monitoring" â†’ Returns to previous channel
 
 **Technical Details**:
 - Pure RX-only operation (no transmit capability)
@@ -423,43 +452,43 @@ The radio hardware has a unique quirk that affects squelch control:
 - APRS channels automatically filtered from channel list
 - Database stores full transmission history per station
 
-## 🎉 What's New in v3.0.9 (March 9, 2026)
+## ðŸŽ‰ What's New in v3.0.9 (March 9, 2026)
 
-### 🧭 GPS Distance Display Enhancements
+### ðŸ§­ GPS Distance Display Enhancements
 
 **Directional arrows, compass bearings, and dual distance units for better situational awareness**
 
-- **8-direction compass arrows**: ↑N, ↗NE, →E, ↘SE, ↓S, ↙SW, ←W, ↖NW
+- **8-direction compass arrows**: â†‘N, â†—NE, â†’E, â†˜SE, â†“S, â†™SW, â†W, â†–NW
 - Shows direction from your location to the channel
 - Real-time bearing calculation using GPS coordinates
 - **Dual distance display**: 
-  - < 1km: Meters only (e.g., `↑N 250m`)
-  - 1-10km: Kilometers (e.g., `→E 5.2km`)
-  - > 10km: Miles + kilometers (e.g., `↘SE 96.7mi (155.6km)`)
+  - < 1km: Meters only (e.g., `â†‘N 250m`)
+  - 1-10km: Kilometers (e.g., `â†’E 5.2km`)
+  - > 10km: Miles + kilometers (e.g., `â†˜SE 96.7mi (155.6km)`)
 - Improved UI layout: Widened location area from 30% to 40% width to prevent text wrapping
 - No internet required (uses device location only)
 
 **Display Examples**:
 ```
-Echo, Minnesota (↘SE 96.7mi (155.6km))
-320m (1050ft) 📍
+Echo, Minnesota (â†˜SE 96.7mi (155.6km))
+320m (1050ft) ðŸ“
 
-Chicago Rptr (↗NE 5.2km)
-180m (590ft) 📍
+Chicago Rptr (â†—NE 5.2km)
+180m (590ft) ðŸ“
 
-Local Simplex (↑N 250m)
-210m (689ft) 📍
+Local Simplex (â†‘N 250m)
+210m (689ft) ðŸ“
 ```
 
-## 🎉 What's New in v3.0.8 (March 9, 2026)
+## ðŸŽ‰ What's New in v3.0.8 (March 9, 2026)
 
-### 🎛️ Zone Management & Channel Edit Zone Selector
+### ðŸŽ›ï¸ Zone Management & Channel Edit Zone Selector
 
 **Create, edit, and assign zones directly from the app!**
 
 - **Zone row in channel edit screen** - Assign channels to zones while editing
 - **Create new zones** - Tap "Create New Zone..." at bottom of zone list
-- **Edit zone names** - Pencil icon (✏) next to each zone or long-press to rename
+- **Edit zone names** - Pencil icon (âœ) next to each zone or long-press to rename
 - **Automatic list refresh** - Channel list updates instantly after zone changes
 - **Technical improvements**:
   - Fixed critical hook stacking bug (zone assignments now persistent)
@@ -467,11 +496,11 @@ Local Simplex (↑N 250m)
   - Singleton database pattern
   - OpenGD77 Zones.csv import/export fully supported
 
-**Usage**: Channel page → Edit channel → Tap Zone row → Select/Create/Rename zones
+**Usage**: Channel page â†’ Edit channel â†’ Tap Zone row â†’ Select/Create/Rename zones
 
-## 🎉 What's New in v3.0.5 (March 9, 2026)
+## ðŸŽ‰ What's New in v3.0.5 (March 9, 2026)
 
-### 📂 Channel Zones
+### ðŸ“‚ Channel Zones
 
 **Organize channels into zones (like folders)**
 
@@ -481,27 +510,27 @@ Local Simplex (↑N 250m)
 - Up to 80 channels per zone (OpenGD77 limit)
 - Zones stored in local database (persistent)
 
-## 🎉 What's New in v3.0.4 (March 9, 2026)
+## ðŸŽ‰ What's New in v3.0.4 (March 9, 2026)
 
-### 📍 GPS Distance Calculation
+### ðŸ“ GPS Distance Calculation
 
 - Real-time distance from your location to channel coordinates
 - Smart distance formatting (meters/kilometers/miles based on range)
 - Uses device GPS/network location
 - No internet required
 
-## 🎉 What's New in v3.0.3 (March 9, 2026)
+## ðŸŽ‰ What's New in v3.0.3 (March 9, 2026)
 
-### 🐛 Critical Bug Fix
+### ðŸ› Critical Bug Fix
 
 - **DMR Audio Fixed**: Resolved silent receive audio and garbled transmit audio
 - Call type override logic now only active during MON mode
 
-## 🎉 What's New in v3.0.2 (March 9, 2026)
+## ðŸŽ‰ What's New in v3.0.2 (March 9, 2026)
 
-### 🆕 Major Features
+### ðŸ†• Major Features
 
-1. **Analog MON (Monitor) Button** ⭐
+1. **Analog MON (Monitor) Button** â­
    - Squelch fully open (sq=0) for continuous monitoring
    - Visual feedback: Orange = monitoring, Gray = normal
    - Perfect for scanning and emergency monitoring
@@ -509,83 +538,83 @@ Local Simplex (↑N 250m)
 ## Complete Feature List (v1.0 - v3.3.2)
 
 ### Core Features
-- ✅ **APRS Button Reorganization (v3.3.2)** - APRS Received + Settings buttons moved to monitoring page
-- ✅ **Crash Recovery Improvements (v3.3.1)** - Restart App button, channel name integrity fix
-- ✅ **SSTV Live Monitoring (v3.3.0)** - Slow Scan TV image reception with auto-save and live display
-- ✅ **VFO Mode (v3.1.5)** - Variable Frequency Oscillator with temporary channel override
-- ✅ **APRS Live Monitoring (v3.1.0-v3.1.4)** - Real-time packet reception with dashboard and maps
-- ✅ **OpenGD77 CSV export/import** - All 5 files (Channels, Contacts, TG_Lists, Zones, DTMF)
-- ✅ **Zone management** - Create, edit, assign zones to channels from channel edit page
-- ✅ **GPS navigation** - Distance, direction, bearing to channels
-- ✅ **Location tracking** - Reverse geocoding, city/state display, elevation
-- ✅ **RSSI signal strength** indicator
-- ✅ **DMR activity history** with timestamps
-- ✅ **Contact integration** - Caller ID display
-- ✅ **Analog MON button** - Open squelch for continuous monitoring
-- ✅ **Software Squelch** - Hybrid RSSI + Audio RMS squelch with UI controls
+- âœ… **APRS Button Reorganization (v3.3.2)** - APRS Received + Settings buttons moved to monitoring page
+- âœ… **Crash Recovery Improvements (v3.3.1)** - Restart App button, channel name integrity fix
+- âœ… **SSTV Live Monitoring (v3.3.0)** - Slow Scan TV image reception with auto-save and live display
+- âœ… **VFO Mode (v3.1.5)** - Variable Frequency Oscillator with temporary channel override
+- âœ… **APRS Live Monitoring (v3.1.0-v3.1.4)** - Real-time packet reception with dashboard and maps
+- âœ… **OpenGD77 CSV export/import** - All 5 files (Channels, Contacts, TG_Lists, Zones, DTMF)
+- âœ… **Zone management** - Create, edit, assign zones to channels from channel edit page
+- âœ… **GPS navigation** - Distance, direction, bearing to channels
+- âœ… **Location tracking** - Reverse geocoding, city/state display, elevation
+- âœ… **RSSI signal strength** indicator
+- âœ… **DMR activity history** with timestamps
+- âœ… **Contact integration** - Caller ID display
+- âœ… **Analog MON button** - Open squelch for continuous monitoring
+- âœ… **Software Squelch** - Hybrid RSSI + Audio RMS squelch with UI controls
 
 ### SSTV Monitoring Features (v3.3.0)
-- ✅ **VIS tone detection** - Goertzel algorithm identifies all standard SSTV modes
-- ✅ **IQ auto-detect** - Blind detection without VIS for partial transmissions
-- ✅ **Auto-save images** - JPEG to `/sdcard/Download/DMR/SSTV/` on every decode
-- ✅ **12-second pre-roll backlog** - No top-of-image cutoff
-- ✅ **False positive guards** - Multi-stage validation prevents noise triggers
-- ✅ **Background thread decoding** - Zero audio playback delay
-- ✅ **Software squelch integration** - Independent squelch control with race-condition fix
-- ✅ **All major SSTV modes** - Scottie, Martin, Robot, PD, Wraase
+- âœ… **VIS tone detection** - Goertzel algorithm identifies all standard SSTV modes
+- âœ… **IQ auto-detect** - Blind detection without VIS for partial transmissions
+- âœ… **Auto-save images** - JPEG to `/sdcard/Download/DMR/SSTV/` on every decode
+- âœ… **12-second pre-roll backlog** - No top-of-image cutoff
+- âœ… **False positive guards** - Multi-stage validation prevents noise triggers
+- âœ… **Background thread decoding** - Zero audio playback delay
+- âœ… **Software squelch integration** - Independent squelch control with race-condition fix
+- âœ… **All major SSTV modes** - Scottie, Martin, Robot, PD, Wraase
 
 ### VFO Mode Features (v3.1.5)
-- ✅ **Temporary frequency tuning** without saving channels
-- ✅ **Analog & Digital/DMR support** with mode-specific controls
-- ✅ **Full parameter control** - Frequency, power, tones, bandwidth, DMR settings
-- ✅ **DMR ID override** - Test different DMR IDs without changing system settings
-- ✅ **Automatic channel restoration** on exit
-- ✅ **Direct hardware communication** - Instant settings application
-- ✅ **Reactivation support** - Reopen and adjust settings without restart
+- âœ… **Temporary frequency tuning** without saving channels
+- âœ… **Analog & Digital/DMR support** with mode-specific controls
+- âœ… **Full parameter control** - Frequency, power, tones, bandwidth, DMR settings
+- âœ… **DMR ID override** - Test different DMR IDs without changing system settings
+- âœ… **Automatic channel restoration** on exit
+- âœ… **Direct hardware communication** - Instant settings application
+- âœ… **Reactivation support** - Reopen and adjust settings without restart
 
 ### Transcription Features (v1.2 - v1.7.0)
-- ✅ **Real-time speech-to-text** using OpenAI Whisper API
-- ✅ **Automatic audio recording** organized by channel
-- ✅ **Per-channel transcription history** (last 3-10 messages)
-- ✅ **Daily transcription logs** with timestamps and DMR IDs
-- ✅ **User-friendly API key configuration**
+- âœ… **Real-time speech-to-text** using OpenAI Whisper API
+- âœ… **Automatic audio recording** organized by channel
+- âœ… **Per-channel transcription history** (last 3-10 messages)
+- âœ… **Daily transcription logs** with timestamps and DMR IDs
+- âœ… **User-friendly API key configuration**
 
 ## What is this?
 
 LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
-- **📺 SSTV Live Monitoring** - Receive and decode Slow Scan TV images over the air
-- **🎛️ VFO Mode** - Variable Frequency Oscillator for temporary frequency tuning
-- **📡 APRS Live Monitoring** - Real-time packet reception with live dashboard and GPS mapping
-- **🧭 GPS Navigation** - Directional arrows, compass bearings, distance to channels
-- **📂 Zone Management** - Create, edit, assign channels to zones (folder organization)
-- **📤 OpenGD77 CSV Export** - Export all channels/contacts to OpenGD77-compatible CSV files
-- **📥 OpenGD77 CSV Import** - Import OpenGD77 codeplugs directly into the app
-- **🔄 Cross-platform programming** - Edit channels in OpenGD77 CPS, import to phone
-- **🗂️ Easy access** - Backups saved to Download folder (easy file transfer)
-- **⚡ Direct database access** - No shell commands, fast and reliable
-- **🔒 No APK modification** - Works via runtime hooks (preserves platform signature)
-- **🎙️ Real-time Transcription** - Live speech-to-text powered by OpenAI Whisper API
-- **📝 Automatic Logging** - Daily transcription logs organized by channel with timestamps
+- **ðŸ“º SSTV Live Monitoring** - Receive and decode Slow Scan TV images over the air
+- **ðŸŽ›ï¸ VFO Mode** - Variable Frequency Oscillator for temporary frequency tuning
+- **ðŸ“¡ APRS Live Monitoring** - Real-time packet reception with live dashboard and GPS mapping
+- **ðŸ§­ GPS Navigation** - Directional arrows, compass bearings, distance to channels
+- **ðŸ“‚ Zone Management** - Create, edit, assign channels to zones (folder organization)
+- **ðŸ“¤ OpenGD77 CSV Export** - Export all channels/contacts to OpenGD77-compatible CSV files
+- **ðŸ“¥ OpenGD77 CSV Import** - Import OpenGD77 codeplugs directly into the app
+- **ðŸ”„ Cross-platform programming** - Edit channels in OpenGD77 CPS, import to phone
+- **ðŸ—‚ï¸ Easy access** - Backups saved to Download folder (easy file transfer)
+- **âš¡ Direct database access** - No shell commands, fast and reliable
+- **ðŸ”’ No APK modification** - Works via runtime hooks (preserves platform signature)
+- **ðŸŽ™ï¸ Real-time Transcription** - Live speech-to-text powered by OpenAI Whisper API
+- **ðŸ“ Automatic Logging** - Daily transcription logs organized by channel with timestamps
 
-## Current Status ✅
+## Current Status âœ…
 
 **Current Release: v3.3.2** (March 19, 2026)  
-**APRS UX**: ✅ APRS Received + Settings buttons moved to monitoring page  
-**Crash Recovery**: ✅ Improved — Restart App button on all recovery dialogs, channel name integrity fix  
-**SSTV Monitoring**: ✅ Working - VIS detection + IQ auto-detect, auto-save images, all major modes  
-**VFO Mode**: ✅ Working - Complete frequency control with analog/digital support  
-**APRS Monitoring**: ✅ Working - Live dashboard with GPS mapping and auto-logging  
-**GPS Navigation**: ✅ Working - Directional arrows, compass bearings, distance (m/km/mi)  
-**Zone Management**: ✅ Working - Create, edit, assign zones from channel edit page  
-**Export**: ✅ Working - All 5 OpenGD77 CSV files + PDF summary + Zones.csv  
-**Import**: ✅ Working - Full Digital & Analog support + Zones import  
-**Transcription**: ✅ Working - Real-time speech-to-text with OpenAI Whisper API  
-**Audio Recording**: ✅ Working - Automatic WAV recording organized by channel  
-**Per-Channel History**: ✅ Working - Transcription messages persist per channel  
-**Timestamps**: ✅ Working - All messages include HH:mm:ss timestamps  
-**Analog MON Button**: ✅ Working - Open squelch for continuous monitoring  
-**Software Squelch**: ✅ Working - Hybrid RSSI + Audio RMS squelch with UI controls  
-**User Validation**: ✅ All features tested and confirmed working  
+**APRS UX**: âœ… APRS Received + Settings buttons moved to monitoring page  
+**Crash Recovery**: âœ… Improved â€” Restart App button on all recovery dialogs, channel name integrity fix  
+**SSTV Monitoring**: âœ… Working - VIS detection + IQ auto-detect, auto-save images, all major modes  
+**VFO Mode**: âœ… Working - Complete frequency control with analog/digital support  
+**APRS Monitoring**: âœ… Working - Live dashboard with GPS mapping and auto-logging  
+**GPS Navigation**: âœ… Working - Directional arrows, compass bearings, distance (m/km/mi)  
+**Zone Management**: âœ… Working - Create, edit, assign zones from channel edit page  
+**Export**: âœ… Working - All 5 OpenGD77 CSV files + PDF summary + Zones.csv  
+**Import**: âœ… Working - Full Digital & Analog support + Zones import  
+**Transcription**: âœ… Working - Real-time speech-to-text with OpenAI Whisper API  
+**Audio Recording**: âœ… Working - Automatic WAV recording organized by channel  
+**Per-Channel History**: âœ… Working - Transcription messages persist per channel  
+**Timestamps**: âœ… Working - All messages include HH:mm:ss timestamps  
+**Analog MON Button**: âœ… Working - Open squelch for continuous monitoring  
+**Software Squelch**: âœ… Working - Hybrid RSSI + Audio RMS squelch with UI controls  
+**User Validation**: âœ… All features tested and confirmed working  
 **Latest Build**: March 18, 2026
 
 ## Radio Firmware
@@ -629,20 +658,20 @@ adb shell rm /sdcard/DMR/DMRDEBUG.bin
 
 ## Features
 
-### ✅ Phase 1: Initial Hook Setup
-- Startup toast: "✓ DMR Mod Hooks Active! v3.3.2"
+### âœ… Phase 1: Initial Hook Setup
+- Startup toast: "âœ“ DMR Mod Hooks Active! v3.3.2"
 - Custom version display on Device Information screen
 - Confirms module is active and working
 
-### ✅ Phase 2: OpenGD77 CSV Export (v0.7.0 - v0.8.7)
+### âœ… Phase 2: OpenGD77 CSV Export (v0.7.0 - v0.8.7)
 - **Export all channels** to OpenGD77-compatible CSV format
 - **5 CSV files generated**: Channels, Contacts, TG_Lists, Zones, DTMF
 - Direct database access from hooked app context
 - Perfect format matching (TAB-prefixed frequencies, CRLF line endings)
 - **User validated**: Exported data successfully imports to OpenGD77 CPS
-- **Round-trip tested**: Edit in app → Export → Import to OpenGD77 → Success!
+- **Round-trip tested**: Edit in app â†’ Export â†’ Import to OpenGD77 â†’ Success!
 
-### ✅ Phase 3: OpenGD77 CSV Import (v0.9.0 - v1.1)
+### âœ… Phase 3: OpenGD77 CSV Import (v0.9.0 - v1.1)
 - **Import channels** from OpenGD77 CSV files
 - Direct database write with atomic transactions
 - Handles mixed VHF/UHF channel lists
@@ -653,7 +682,7 @@ adb shell rm /sdcard/DMR/DMRDEBUG.bin
 - Import confirmation with success/failure reporting
 - Files stored in user-friendly Download folder
 
-### ✅ Phase 4: Real-time Speech-to-Text Transcription (v1.2 - v1.7.0)
+### âœ… Phase 4: Real-time Speech-to-Text Transcription (v1.2 - v1.7.0)
 - **Live transcription** of all DMR audio transmissions
 - **OpenAI Whisper API** integration for accurate recognition
 - **Automatic audio recording** - All transmissions saved as WAV files
@@ -669,26 +698,26 @@ adb shell rm /sdcard/DMR/DMRDEBUG.bin
 - **Network resilience** - Connectivity checking and comprehensive error handling
 - **Secure API key** - Stored in `/sdcard/DMR/api_key.txt` (auto-created on first run)
 - **Cost**: First $5/month FREE credit, then affordable per-second pricing
-- **Status**: ✅ Successfully transcribing real DMR audio in production
+- **Status**: âœ… Successfully transcribing real DMR audio in production
 
-### ✅ Phase 5: GPS Navigation & Location Tracking (v3.0.4 - v3.0.9)
-- **Directional compass arrows** - 8-direction arrows (↑N, ↗NE, →E, ↘SE, ↓S, ↙SW, ←W, ↖NW)
+### âœ… Phase 5: GPS Navigation & Location Tracking (v3.0.4 - v3.0.9)
+- **Directional compass arrows** - 8-direction arrows (â†‘N, â†—NE, â†’E, â†˜SE, â†“S, â†™SW, â†W, â†–NW)
 - **Real-time bearing calculation** - Shows direction from your location to channel
 - **Smart distance display**:
-  - < 1km: Meters (e.g., `↑N 250m`)
-  - 1-10km: Kilometers (e.g., `→E 5.2km`)
-  - > 10km: Miles + kilometers (e.g., `↘SE 96.7mi (155.6km)`)
+  - < 1km: Meters (e.g., `â†‘N 250m`)
+  - 1-10km: Kilometers (e.g., `â†’E 5.2km`)
+  - > 10km: Miles + kilometers (e.g., `â†˜SE 96.7mi (155.6km)`)
 - **Reverse geocoding** - City, state display for channel coordinates
 - **Elevation display** - Meters and feet via Open-Elevation API
 - **Device location integration** - Uses GPS or network location
 - **No internet required** for distance/bearing calculations
 
-### ✅ Phase 6: Zone Management (v3.0.5 - v3.0.8)
+### âœ… Phase 6: Zone Management (v3.0.5 - v3.0.8)
 - **Zone button** on main screen - Tap to select active zone
 - **Zone-based navigation** - Arrow buttons filter by selected zone
 - **Channel edit zone selector** - Assign channels to zones directly in edit screen
 - **Create new zones** - Custom zone names via dialog
-- **Edit zone names** - Pencil icon (✏) or long-press to rename
+- **Edit zone names** - Pencil icon (âœ) or long-press to rename
 - **Automatic list refresh** - Changes apply immediately
 - **OpenGD77 Zones.csv** - Full import/export support
 - **Up to 80 channels per zone** - OpenGD77 limit
@@ -698,7 +727,7 @@ adb shell rm /sdcard/DMR/DMRDEBUG.bin
   - Proper instance field management
   - Singleton database pattern
 
-### ✅ Phase 7: Analog MON Button (v3.0.2)
+### âœ… Phase 7: Analog MON Button (v3.0.2)
 - **Continuous monitoring** - Squelch fully open (sq=0) on analog channels
 - **Visual feedback** - Orange when monitoring, gray when normal
 - **Auto-reset** - Returns to normal when switching channels
@@ -713,15 +742,15 @@ The PriInterPhone app requires Ulefone's platform certificate to access:
 - DMR radio module on `/dev/ttyS1`
 
 **Traditional APK modification fails** because:
-- ❌ Re-signing breaks platform signature verification
-- ❌ System app placement alone doesn't grant platform UID
-- ❌ Cannot obtain Ulefone's proprietary platform certificate
+- âŒ Re-signing breaks platform signature verification
+- âŒ System app placement alone doesn't grant platform UID
+- âŒ Cannot obtain Ulefone's proprietary platform certificate
 
 **LSPosed hooks the original properly-signed app** at runtime:
-- ✅ Preserves platform signature and system UID
-- ✅ Full access to all system APIs
-- ✅ Can modify behavior without touching APK
-- ✅ Reversible and update-safe
+- âœ… Preserves platform signature and system UID
+- âœ… Full access to all system APIs
+- âœ… Can modify behavior without touching APK
+- âœ… Reversible and update-safe
 
 See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implementation details.
 
@@ -747,13 +776,13 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 2. **Install LSPosed Module**
    - Download: https://github.com/LSPosed/LSPosed/releases
    - Get: `LSPosed-v1.9.2-zygisk-release.zip`
-   - Install via Magisk → Modules → Install from storage
+   - Install via Magisk â†’ Modules â†’ Install from storage
    - Reboot device
    - LSPosed Manager app will appear automatically
 
 ### Step 2: Install DMRModHooks Module & Transcription Service
 
-#### Option A: Download Pre-built Release (✅ Recommended for All Users)
+#### Option A: Download Pre-built Release (âœ… Recommended for All Users)
 
 **Use v3.0.9 latest release for all current features including GPS navigation, zone management, and transcription.**
 
@@ -795,7 +824,7 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
    - Open LSPosed Manager app on device
    - Go to "Modules" tab
    - Enable "DMR Mod Hooks" checkbox
-   - Tap "DMR Mod Hooks" → Application scope
+   - Tap "DMR Mod Hooks" â†’ Application scope
    - Verify `com.pri.prizeinterphone` is selected
    - **Important**: Do NOT add `com.macdmr.transcription` to LSPosed scope (it works standalone)
    - Reboot device
@@ -825,28 +854,28 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 
 1. **Verify Module is Active**:
    - Open PriInterPhone app
-   - You should see toast: "✓ DMR Mod Hooks Active! v3.0.9"
+   - You should see toast: "âœ“ DMR Mod Hooks Active! v3.0.9"
 
 2. **Test GPS Navigation** (if channels have coordinates):
    - Enable device location (GPS or Network)
    - Switch to a channel with GPS coordinates
-   - Should see: City, State, distance with directional arrow (e.g., `↘SE 96.7mi (155.6km)`)
+   - Should see: City, State, distance with directional arrow (e.g., `â†˜SE 96.7mi (155.6km)`)
    - Direction arrow updates based on your location
 
 3. **Test Zone Management**:
    - Tap ZONE button on main screen
    - Select "All Channels" or a specific zone
-   - Edit a channel → Tap Zone row → Create/select zone
+   - Edit a channel â†’ Tap Zone row â†’ Create/select zone
    - Verify zone assignment saves and list refreshes
 
 4. **Test Export**:
    - Go to LOCAL tab
-   - Tap 📤 **EXPORT (OpenGD77)** button  
+   - Tap ðŸ“¤ **EXPORT (OpenGD77)** button  
    - Check `Download/DMR/DMR_Backups/` for CSV files (use any file manager)
    - Should see: Channels, Contacts, TG_Lists, Zones, DTMF CSVs with timestamps
 
 5. **Test Import** (optional):
-   - Tap 📥 **IMPORT (OpenGD77)** button
+   - Tap ðŸ“¥ **IMPORT (OpenGD77)** button
    - Select a backup timestamp from list
    - Confirm import
    - Wait for success message
@@ -877,16 +906,16 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 2. **View Distance & Direction**:
    - Switch to any channel with coordinates
    - Location text shows:
-     - Short distances: `↑N 250m`
-     - Medium distances: `→E 5.2km`
-     - Long distances: `↘SE 96.7mi (155.6km)`
+     - Short distances: `â†‘N 250m`
+     - Medium distances: `â†’E 5.2km`
+     - Long distances: `â†˜SE 96.7mi (155.6km)`
    - Direction arrow points from your location to the channel
    - Updates automatically when switching channels
 
 3. **Location Information**:
    - City, State display via reverse geocoding
    - Elevation in meters and feet
-   - Pin icon 📍 indicates GPS data available
+   - Pin icon ðŸ“ indicates GPS data available
 
 ### Using Zone Management
 
@@ -899,17 +928,17 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 2. **Create New Zone**:
    - Edit any channel (or from zone selector)
    - Tap Zone row in edit screen
-   - Scroll to bottom → "Create New Zone..."
-   - Enter zone name → Newly created zone auto-selected
+   - Scroll to bottom â†’ "Create New Zone..."
+   - Enter zone name â†’ Newly created zone auto-selected
 
 3. **Assign Channels to Zones**:
-   - Edit channel → Tap Zone row
+   - Edit channel â†’ Tap Zone row
    - Select zone from list
    - "None" removes from all zones
    - Changes save immediately
 
 4. **Rename Zones**:
-   - In zone selector, tap pencil icon (✏) next to zone name
+   - In zone selector, tap pencil icon (âœ) next to zone name
    - Or long-press zone name
    - Edit name in dialog
    - Zone channels preserved
@@ -939,13 +968,13 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 
 1. Open PriInterPhone app
 2. Go to **LOCAL** tab
-3. Tap **📤 EXPORT (OpenGD77)** button
-4. Export completes (toast shows: "✓ Export successful! v1.1\nCheck Download/DMR/DMR_Backups/")
+3. Tap **ðŸ“¤ EXPORT (OpenGD77)** button
+4. Export completes (toast shows: "âœ“ Export successful! v1.1\nCheck Download/DMR/DMR_Backups/")
 5. Files created in `Download/DMR/DMR_Backups/20260223_140530/` folder containing:
    - Channels.csv, Contacts.csv, TG_Lists.csv, Zones.csv, DTMF.csv
 6. Transfer CSVs to PC via USB, file manager, or `adb pull /sdcard/Download/DMR/ .`
 7. Open OpenGD77 CPS
-8. Import → Select the folder containing all 5 CSV files
+8. Import â†’ Select the folder containing all 5 CSV files
 9. Program your OpenGD77 radio!
 
 ### Importing Channels from OpenGD77
@@ -957,7 +986,7 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
    - Via USB cable (MTP mode) or `adb push`
 4. Open PriInterPhone app
 5. Go to **LOCAL** tab
-6. Tap **📥 IMPORT (OpenGD77)** button
+6. Tap **ðŸ“¥ IMPORT (OpenGD77)** button
 7. Select backup folder from dialog (timestamp folders display as formatted dates)
 8. Wait for import success notification
 9. Channels auto-refresh - ready to use!
@@ -1008,79 +1037,79 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 
 ```
 phonedmrapp/
-├── originalapk/
-│   └── com.pri.prizeinterphone.apk    # Original system APK (8.1 MB)
-├── app/                                # Android Gradle project
-│   ├── src/main/
-│   │   ├── java/                       # 280 Java source files (JADX decompiled)
-│   │   │   └── com/pri/prizeinterphone/
-│   │   │       ├── InterPhoneHomeActivity.java  (Main UI - 567 lines)
-│   │   │       ├── manager/
-│   │   │       │   ├── DmrManager.java          (DMR control)
-│   │   │       │   ├── SerialPort.java          (UART /dev/ttyS1)
-│   │   │       │   └── CmdStateMachine.java     (Protocol)
-│   │   │       └── ... (all DMR implementation)
-│   │   ├── res/
-│   │   │   ├── drawable-*/interphone_app_icon.png  (Custom icon, 5 densities)
-│   │   │   └── values/strings.xml                   (MacDMRUlephone name)
-│   │   └── AndroidManifest.xml
-│   └── build.gradle                    # Package: com.pri.prizeinterphone
-├── DMRModHooks/                        # LSPosed Xposed Module
-│   ├── app/src/main/java/com/dmrmod/hooks/
-│   │   ├── MainHook.java              # Main hook implementation (3300+ lines)
-│   │   ├── DirectDatabaseExporter.java # OpenGD77 CSV export
-│   │   ├── CSVExporter.java           # CSV file generation
-│   │   └── DirectDatabaseImporter.java # OpenGD77 CSV import
-│   ├── build.gradle
-│   └── README.md                       # Module documentation
-├── DMRTranscriptionService/            # Speech-to-Text Service
-│   ├── app/src/main/
-│   │   ├── java/com/macdmr/transcription/
-│   │   │   └── TranscriptionService.java  # Google Cloud API integration
-│   │   ├── aidl/com/macdmr/transcription/
-│   │   │   └── ITranscriptionService.aidl # Service interface
-│   │   └── AndroidManifest.xml
-│   ├── local.properties               # API key (gitignored)
-│   ├── local.properties.template      # Template for setup
-│   └── build.gradle
-├── magisk_module/
-│   └── MacDMRUlephone/
-│       ├── module.prop                 # Module metadata
-│       ├── install.sh                  # Installation script
-│       └── system/priv-app/PriInterPhone/
-│           └── PriInterPhone.apk       # Custom APK (7.99 MB)
-├── MacDMRUlephone-Magisk.zip          # Packaged module (6.65 MB)
-├── icon.jpg                            # Custom icon source (784x1168)
-├── MAGISK_SOLUTION.md                  # Magisk implementation guide
-├── STATUS.md                           # Complete development timeline
-├── QUICK_REFERENCE.md                  # ADB commands & debugging
-└── README.md                           # This file
+â”œâ”€â”€ originalapk/
+â”‚   â””â”€â”€ com.pri.prizeinterphone.apk    # Original system APK (8.1 MB)
+â”œâ”€â”€ app/                                # Android Gradle project
+â”‚   â”œâ”€â”€ src/main/
+â”‚   â”‚   â”œâ”€â”€ java/                       # 280 Java source files (JADX decompiled)
+â”‚   â”‚   â”‚   â””â”€â”€ com/pri/prizeinterphone/
+â”‚   â”‚   â”‚       â”œâ”€â”€ InterPhoneHomeActivity.java  (Main UI - 567 lines)
+â”‚   â”‚   â”‚       â”œâ”€â”€ manager/
+â”‚   â”‚   â”‚       â”‚   â”œâ”€â”€ DmrManager.java          (DMR control)
+â”‚   â”‚   â”‚       â”‚   â”œâ”€â”€ SerialPort.java          (UART /dev/ttyS1)
+â”‚   â”‚   â”‚       â”‚   â””â”€â”€ CmdStateMachine.java     (Protocol)
+â”‚   â”‚   â”‚       â””â”€â”€ ... (all DMR implementation)
+â”‚   â”‚   â”œâ”€â”€ res/
+â”‚   â”‚   â”‚   â”œâ”€â”€ drawable-*/interphone_app_icon.png  (Custom icon, 5 densities)
+â”‚   â”‚   â”‚   â””â”€â”€ values/strings.xml                   (MacDMRUlephone name)
+â”‚   â”‚   â””â”€â”€ AndroidManifest.xml
+â”‚   â””â”€â”€ build.gradle                    # Package: com.pri.prizeinterphone
+â”œâ”€â”€ DMRModHooks/                        # LSPosed Xposed Module
+â”‚   â”œâ”€â”€ app/src/main/java/com/dmrmod/hooks/
+â”‚   â”‚   â”œâ”€â”€ MainHook.java              # Main hook implementation (3300+ lines)
+â”‚   â”‚   â”œâ”€â”€ DirectDatabaseExporter.java # OpenGD77 CSV export
+â”‚   â”‚   â”œâ”€â”€ CSVExporter.java           # CSV file generation
+â”‚   â”‚   â””â”€â”€ DirectDatabaseImporter.java # OpenGD77 CSV import
+â”‚   â”œâ”€â”€ build.gradle
+â”‚   â””â”€â”€ README.md                       # Module documentation
+â”œâ”€â”€ DMRTranscriptionService/            # Speech-to-Text Service
+â”‚   â”œâ”€â”€ app/src/main/
+â”‚   â”‚   â”œâ”€â”€ java/com/macdmr/transcription/
+â”‚   â”‚   â”‚   â””â”€â”€ TranscriptionService.java  # Google Cloud API integration
+â”‚   â”‚   â”œâ”€â”€ aidl/com/macdmr/transcription/
+â”‚   â”‚   â”‚   â””â”€â”€ ITranscriptionService.aidl # Service interface
+â”‚   â”‚   â””â”€â”€ AndroidManifest.xml
+â”‚   â”œâ”€â”€ local.properties               # API key (gitignored)
+â”‚   â”œâ”€â”€ local.properties.template      # Template for setup
+â”‚   â””â”€â”€ build.gradle
+â”œâ”€â”€ magisk_module/
+â”‚   â””â”€â”€ MacDMRUlephone/
+â”‚       â”œâ”€â”€ module.prop                 # Module metadata
+â”‚       â”œâ”€â”€ install.sh                  # Installation script
+â”‚       â””â”€â”€ system/priv-app/PriInterPhone/
+â”‚           â””â”€â”€ PriInterPhone.apk       # Custom APK (7.99 MB)
+â”œâ”€â”€ MacDMRUlephone-Magisk.zip          # Packaged module (6.65 MB)
+â”œâ”€â”€ icon.jpg                            # Custom icon source (784x1168)
+â”œâ”€â”€ MAGISK_SOLUTION.md                  # Magisk implementation guide
+â”œâ”€â”€ STATUS.md                           # Complete development timeline
+â”œâ”€â”€ QUICK_REFERENCE.md                  # ADB commands & debugging
+â””â”€â”€ README.md                           # This file
 ```
 
 ## Development Timeline
 
-### ✅ Phase 1: Decompilation & Build
-- Decompiled original APK with JADX → 280 Java source files (complete DMR stack)
+### âœ… Phase 1: Decompilation & Build
+- Decompiled original APK with JADX â†’ 280 Java source files (complete DMR stack)
 - Created Android Gradle project (WSL2, Java 17, Gradle 8.2, AGP 7.4.2)
 - Fixed 15+ compilation errors
 - Created 10 stub classes for missing ROM APIs
 - Resolved 58+ AndroidX resource attribute duplicates
 - Built working APK
 
-### ✅ Phase 2: Custom Branding
+### âœ… Phase 2: Custom Branding
 - Custom app name: MacDMRUlephone
 - Custom icon from icon.jpg (all 5 Android densities)
 - Package initially rebranded to `.modded` for side-by-side testing
 - Resolved 5 manifest conflicts
 - Fixed 4 system API compatibility issues
 
-### ✅ Phase 3: GitHub Repository
+### âœ… Phase 3: GitHub Repository
 - Created repository: https://github.com/IIMacGyverII/phonedmrapp
 - Removed large files (gradle-8.2-bin.zip, jadx.zip - 197 MB)
 - Pushed commit 5456fcac (16,278 files)
 - Comprehensive documentation created
 
-### ✅ Phase 4: DMR Hardware Investigation
+### âœ… Phase 4: DMR Hardware Investigation
 - **Problem Discovered**: App stuck on "Module Initializing..." dialog
 - **Root Cause**: Permission mismatch
   - Original app: userId=1000 (system)
@@ -1090,9 +1119,9 @@ phonedmrapp/
 - **Solution**: Robocopy synced all 280 files (2.36 MB)
 - **Rebuild**: APK now contains complete DMR implementation
 
-### ✅ Phase 5: System Access Solution
-- **Attempted**: Direct system installation → Failed (production ROM locked)
-- **Attempted**: Platform signing → Not viable (no manufacturer key)
+### âœ… Phase 5: System Access Solution
+- **Attempted**: Direct system installation â†’ Failed (production ROM locked)
+- **Attempted**: Platform signing â†’ Not viable (no manufacturer key)
 - **Solution Found**: Magisk systemless overlay
 - **Implementation**: Created Magisk module
   - Reverted package to `com.pri.prizeinterphone`
@@ -1100,16 +1129,16 @@ phonedmrapp/
   - Packaged as Magisk module (6.65 MB)
   - Transferred to device: `/sdcard/Download/MacDMRUlephone-Magisk.zip`
 
-### ⏳ Phase 6: Deployment (Pending User Action)
+### â³ Phase 6: Deployment (Pending User Action)
 - Module ready for installation via Magisk Manager
 - Awaiting user to install and reboot
 - Will enable full DMR hardware access with custom branding
 
-### ✅ Phase 7: Real-time Speech-to-Text Transcription (v1.2 - v1.5)
+### âœ… Phase 7: Real-time Speech-to-Text Transcription (v1.2 - v1.5)
 - **Problem**: Need speech-to-text for DMR transmissions
-- **Attempted**: ONNX Whisper Base model → Failed (decoder token 0 issue, 155 MB removed)
-- **Attempted**: Android SpeechRecognizer API → Failed (device blocks third-party access, error 10)
-- **Attempted**: LSPosed hooks to bypass restrictions → Failed (system blocks at validation layer below hooks)
+- **Attempted**: ONNX Whisper Base model â†’ Failed (decoder token 0 issue, 155 MB removed)
+- **Attempted**: Android SpeechRecognizer API â†’ Failed (device blocks third-party access, error 10)
+- **Attempted**: LSPosed hooks to bypass restrictions â†’ Failed (system blocks at validation layer below hooks)
 - **Solution Found**: Google Cloud Speech-to-Text API (bypasses all device restrictions)
 - **Implementation**:
   - Created standalone TranscriptionService APK with AIDL interface
@@ -1123,7 +1152,7 @@ phonedmrapp/
   - Audio recordings organized by channel: `Download/DMR/Audio/[ChannelName]/`
   - Daily transcription logs by channel: `Download/DMR/Transcription/[ChannelName]/transcription_YYYYMMDD.txt`
   - Running log format: `[HH:MM:SS] ID: DMRID - Transcription text`
-- **Status**: ✅ Successfully transcribing real DMR audio in production
+- **Status**: âœ… Successfully transcribing real DMR audio in production
 
 ## Technical Details
 
@@ -1139,7 +1168,7 @@ phonedmrapp/
 - **Service**: Standalone AIDL service (com.macdmr.transcription)
 - **API**: Google Cloud Speech-to-Text v1
 - **HTTP Client**: OkHttp 4.12.0 with 30-second timeouts
-- **Audio Format**: PCM 16-bit mono → WAV with proper header → Base64
+- **Audio Format**: PCM 16-bit mono â†’ WAV with proper header â†’ Base64
 - **Network**: Connectivity checking with ACCESS_NETWORK_STATE permission
 - **Security**: API key in gitignored local.properties, injected via BuildConfig
 - **Error Handling**: Comprehensive logging, network error recovery, API error detection
@@ -1223,20 +1252,20 @@ With LSPosed runtime hooks and full access to the platform-signed app, **anythin
 ### Version History Overview
 
 **v3.0.x Series** (Current): Advanced Features
-- ✅ GPS navigation with directional arrows and bearing
-- ✅ Zone management (create, edit, assign)
-- ✅ Analog MON button for continuous monitoring
+- âœ… GPS navigation with directional arrows and bearing
+- âœ… Zone management (create, edit, assign)
+- âœ… Analog MON button for continuous monitoring
 
 **v1.x Series** (Stable Base): Core Features
-- ✅ OpenGD77 CSV export/import
-- ✅ Real-time speech-to-text transcription
-- ✅ Location tracking and RSSI display
-- ✅ Audio recording and logging
+- âœ… OpenGD77 CSV export/import
+- âœ… Real-time speech-to-text transcription
+- âœ… Location tracking and RSSI display
+- âœ… Audio recording and logging
 
 **v2.x Series** (Planned): DMR Enhancements
-- ⏳ DMR group calling improvements
-- ⏳ DMR monitoring mode
-- 🔬 Requires extensive hardware-level debugging
+- â³ DMR group calling improvements
+- â³ DMR monitoring mode
+- ðŸ”¬ Requires extensive hardware-level debugging
 
 For detailed technical information, see [DMRModHooks/README.md](DMRModHooks/README.md), [MAGISK_SOLUTION.md](MAGISK_SOLUTION.md), and [STATUS.md](STATUS.md).
 
