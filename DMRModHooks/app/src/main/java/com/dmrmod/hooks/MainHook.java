@@ -3438,66 +3438,16 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             });
             
-            // === APRS RECEIVED BUTTON ===
-            Button aprsReceivedButton = new Button(context);
-            aprsReceivedButton.setText("📡 APRS Received");
-            aprsReceivedButton.setTextSize(16);
-            aprsReceivedButton.setAllCaps(false);
-            aprsReceivedButton.setPadding(20, 20, 20, 20);
-            aprsReceivedButton.setLayoutParams(new ViewGroup.LayoutParams(templateParams));
-            
-            aprsReceivedButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    XposedBridge.log(TAG + ": APRS Received button clicked");
-                    showReceivedStationsDialog(activity);
-                }
-            });
-            
-            // === APRS SETTINGS BUTTON ===
-            Button aprsSettingsButton = new Button(context);
-            aprsSettingsButton.setText("⚙️ APRS Settings");
-            aprsSettingsButton.setTextSize(16);
-            aprsSettingsButton.setAllCaps(false);
-            aprsSettingsButton.setPadding(20, 20, 20, 20);
-            aprsSettingsButton.setLayoutParams(new ViewGroup.LayoutParams(templateParams));
-            
-            aprsSettingsButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    XposedBridge.log(TAG + ": APRS Settings button clicked");
-                    showAPRSSettingsDialog(activity);
-                }
-            });
-            
-            // === RECEIVED STATIONS BUTTON (REMOVED - merged into APRS button) ===
-            Button receivedButton = null;
-            /*
-            Button receivedButton = new Button(context);
-            receivedButton.setText("📍 Received Stations");
-            receivedButton.setTextSize(16);
-            receivedButton.setAllCaps(false);
-            receivedButton.setPadding(20, 20, 20, 20);
-            receivedButton.setLayoutParams(new ViewGroup.LayoutParams(templateParams));
-            
-            */
-            
             // Add buttons at specified index
             if (index >= 0) {
                 parentLayout.addView(exportButton, index);
                 parentLayout.addView(importButton, index + 1);
-                parentLayout.addView(aprsReceivedButton, index + 2);
-                parentLayout.addView(aprsSettingsButton, index + 3);
                 XposedBridge.log(TAG + ": ✓ Export button added at index " + index);
                 XposedBridge.log(TAG + ": ✓ Import button added at index " + (index + 1));
-                XposedBridge.log(TAG + ": ✓ APRS Received button added at index " + (index + 2));
-                XposedBridge.log(TAG + ": ✓ APRS Settings button added at index " + (index + 3));
             } else {
                 parentLayout.addView(exportButton);
                 parentLayout.addView(importButton);
-                parentLayout.addView(aprsReceivedButton);
-                parentLayout.addView(aprsSettingsButton);
-                XposedBridge.log(TAG + ": ✓ Export, Import, APRS Received, and APRS Settings buttons added at end of layout");
+                XposedBridge.log(TAG + ": ✓ Export and Import buttons added at end of layout");
             }
             
         } catch (Exception e) {
@@ -3980,9 +3930,48 @@ public class MainHook implements IXposedHookLoadPackage {
         infoText.setText("\nAll received packets are automatically logged to text and GPX files in Download/DMR/APRS/");
         infoText.setTextSize(12);
         infoText.setTextColor(0xFF999999);
-        infoText.setPadding(0, 20, 0, 0);
+        infoText.setPadding(0, 20, 0, 20);
         mainLayout.addView(infoText);
-        
+
+        // Divider
+        View divider = new View(activity);
+        divider.setBackgroundColor(0x33FFFFFF);
+        divider.setLayoutParams(new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, 1));
+        mainLayout.addView(divider);
+
+        // === APRS RECEIVED BUTTON ===
+        Button aprsReceivedBtn = new Button(activity);
+        aprsReceivedBtn.setText("📡 APRS Received");
+        aprsReceivedBtn.setTextSize(15);
+        aprsReceivedBtn.setAllCaps(false);
+        aprsReceivedBtn.setPadding(20, 20, 20, 20);
+        LinearLayout.LayoutParams aprsRxParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT);
+        aprsRxParams.topMargin = (int) (8 * activity.getResources().getDisplayMetrics().density);
+        aprsReceivedBtn.setLayoutParams(aprsRxParams);
+        aprsReceivedBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { showReceivedStationsDialog(activity); }
+        });
+        mainLayout.addView(aprsReceivedBtn);
+
+        // === APRS SETTINGS BUTTON ===
+        Button aprsSettingsBtn = new Button(activity);
+        aprsSettingsBtn.setText("⚙️ APRS Settings");
+        aprsSettingsBtn.setTextSize(15);
+        aprsSettingsBtn.setAllCaps(false);
+        aprsSettingsBtn.setPadding(20, 20, 20, 20);
+        LinearLayout.LayoutParams aprsStParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT);
+        aprsStParams.topMargin = (int) (4 * activity.getResources().getDisplayMetrics().density);
+        aprsSettingsBtn.setLayoutParams(aprsStParams);
+        aprsSettingsBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { showAPRSSettingsDialog(activity); }
+        });
+        mainLayout.addView(aprsSettingsBtn);
+
         scrollView.addView(mainLayout);
         builder.setView(scrollView);
         
@@ -4537,9 +4526,48 @@ public class MainHook implements IXposedHookLoadPackage {
             infoText.setText("\n💾 Auto-logging to: Download/DMR/APRS/");
             infoText.setTextSize(11);
             infoText.setTextColor(0xFF666666);
-            infoText.setPadding(0, 20, 0, 0);
+            infoText.setPadding(0, 20, 0, 20);
             mainLayout.addView(infoText);
-            
+
+            // Divider
+            View liveDiv = new View(activity);
+            liveDiv.setBackgroundColor(0x3300FF00);
+            liveDiv.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 1));
+            mainLayout.addView(liveDiv);
+
+            // === APRS RECEIVED BUTTON ===
+            Button liveReceivedBtn = new Button(activity);
+            liveReceivedBtn.setText("📡 APRS Received");
+            liveReceivedBtn.setTextSize(15);
+            liveReceivedBtn.setAllCaps(false);
+            liveReceivedBtn.setPadding(20, 20, 20, 20);
+            LinearLayout.LayoutParams liveRxParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+            liveRxParams.topMargin = (int) (8 * activity.getResources().getDisplayMetrics().density);
+            liveReceivedBtn.setLayoutParams(liveRxParams);
+            liveReceivedBtn.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { showReceivedStationsDialog(activity); }
+            });
+            mainLayout.addView(liveReceivedBtn);
+
+            // === APRS SETTINGS BUTTON ===
+            Button liveSettingsBtn = new Button(activity);
+            liveSettingsBtn.setText("⚙️ APRS Settings");
+            liveSettingsBtn.setTextSize(15);
+            liveSettingsBtn.setAllCaps(false);
+            liveSettingsBtn.setPadding(20, 20, 20, 20);
+            LinearLayout.LayoutParams liveStParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+            liveStParams.topMargin = (int) (4 * activity.getResources().getDisplayMetrics().density);
+            liveSettingsBtn.setLayoutParams(liveStParams);
+            liveSettingsBtn.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { showAPRSSettingsDialog(activity); }
+            });
+            mainLayout.addView(liveSettingsBtn);
+
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error updating APRS live screen: " + e.getMessage());
             XposedBridge.log(e);
