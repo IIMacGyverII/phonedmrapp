@@ -262,7 +262,17 @@ public class MainHook implements IXposedHookLoadPackage {
     private static android.widget.ImageView sstvLiveImageView = null;
     private static android.widget.TextView sstvProgressText = null;
     private static android.widget.TextView sstvImageModeText = null;
-    
+
+    // NOAA APT monitoring mode state
+    private static volatile boolean isNOAAMonitoringActive = false;
+    private static AlertDialog noaaMonitoringDialog = null;
+    private static android.os.Handler noaaUpdateHandler = null;
+    private static Runnable noaaUpdateRunnable = null;
+    private static NOAAReceiver noaaReceiver = null;  // NOAA APT audio processor
+    private static android.widget.ImageView noaaLiveImageView = null;
+    private static android.widget.TextView noaaProgressText = null;
+    private static java.util.HashMap<String, Object> noaaChannelBackup = null;
+
     // Analog-specific settings
     private static int vfoRxToneType = 0;  // 0=None, 1=CTCSS, 2=FDCS, 3=BDCS
     private static int vfoRxToneCode = 0;
@@ -837,6 +847,18 @@ public class MainHook implements IXposedHookLoadPackage {
                         sstvProgressText = null;
                         sstvImageModeText = null;
 
+                        // **CRITICAL FIX**: Reset NOAA state (same pattern as SSTV above)
+                        if (isNOAAMonitoringActive) {
+                            XposedBridge.log(TAG + ": ⚠️ NOAA flag was stuck from previous session - resetting");
+                            isNOAAMonitoringActive = false;
+                        }
+                        noaaMonitoringDialog = null;
+                        noaaUpdateHandler = null;
+                        noaaUpdateRunnable = null;
+                        noaaReceiver = null;
+                        noaaLiveImageView = null;
+                        noaaProgressText = null;
+
                         // Check for orphaned channels and restore if needed (delayed to ensure DmrManager is ready)
                         final Activity activityForRestore = (Activity) param.thisObject;
                         new android.os.Handler().postDelayed(new Runnable() {
@@ -845,6 +867,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 checkAndRestoreAPRSChannelOnStartup(activityForRestore);
                                 checkAndRestoreSSTVChannelOnStartup(activityForRestore);
                                 checkAndRestoreVFOChannelOnStartup(activityForRestore);
+                                checkAndRestoreNOAAChannelOnStartup(activityForRestore);
                             }
                         }, 2000);  // 2 second delay
                     }
@@ -3835,10 +3858,39 @@ public class MainHook implements IXposedHookLoadPackage {
             });
             
             mainLayout.addView(sstvButton);
-            
+
+            // NOAA APT button
+            android.widget.Button noaaButton = new android.widget.Button(activity);
+            noaaButton.setText("\uD83D\uDEF0\uFE0F NOAA APT (Weather Satellite Images)");
+            noaaButton.setTextSize(16);
+            noaaButton.setAllCaps(false);
+            LinearLayout.LayoutParams noaaButtonParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                (int) (60 * activity.getResources().getDisplayMetrics().density)
+            );
+            noaaButtonParams.bottomMargin = (int) (15 * activity.getResources().getDisplayMetrics().density);
+            noaaButton.setLayoutParams(noaaButtonParams);
+
+            // Teal / deep-sky-blue background (distinct from APRS green and SSTV purple)
+            android.graphics.drawable.GradientDrawable noaaDrawable = new android.graphics.drawable.GradientDrawable();
+            noaaDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+            noaaDrawable.setColor(0xFF007B9E);  // Teal-blue
+            noaaDrawable.setCornerRadius(10 * activity.getResources().getDisplayMetrics().density);
+            noaaButton.setBackground(noaaDrawable);
+            noaaButton.setTextColor(0xFFFFFFFF);
+
+            noaaButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    showNOAAMonitoringDialog(activity);
+                }
+            });
+
+            mainLayout.addView(noaaButton);
+
             // Info text
             TextView infoText = new TextView(activity);
-            infoText.setText("\n💡 More modes coming soon...");
+            infoText.setText("\n\uD83D\uDCA1 More modes coming soon...");
             infoText.setTextSize(12);
             infoText.setTextColor(0xFF999999);
             infoText.setPadding(0, 20, 0, 0);
@@ -6538,6 +6590,752 @@ public class MainHook implements IXposedHookLoadPackage {
         }
     }
     
+    // =========================================================================
+    // NOAA APT monitoring  ─  follows exact SSTV pattern
+    // =========================================================================
+
+    /** Entry point: show start or live-monitoring dialog, whichever applies. */
+    private void showNOAAMonitoringDialog(final Activity activity) {
+        try {
+            if (isNOAAMonitoringActive && noaaMonitoringDialog != null
+                    && noaaMonitoringDialog.isShowing()) {
+                return;   // Already visible
+            }
+            if (isNOAAMonitoringActive) {
+                showNOAALiveMonitoringScreen(activity);
+            } else {
+                showNOAAStartDialog(activity);
+            }
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error in showNOAAMonitoringDialog: " + e.getMessage());
+            Toast.makeText(activity, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    /** "Before monitoring" dialog: frequency info, Start button, Settings. */
+    private void showNOAAStartDialog(final Activity activity) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+        builder.setTitle("\uD83D\uDEF0\uFE0F NOAA APT Monitoring");
+
+        LinearLayout layout = new LinearLayout(activity);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(40, 40, 40, 40);
+
+        android.content.SharedPreferences prefs = activity.getSharedPreferences(
+            "dmrmod_noaa_global", android.content.Context.MODE_PRIVATE);
+        String freq = prefs.getString("noaa_frequency", "137.100");
+
+        TextView statusText = new TextView(activity);
+        statusText.setText("\u26AB MONITORING INACTIVE\n\n"
+            + "NOAA weather satellites transmit APT (Automatic Picture Transmission) "
+            + "continuously on VHF.\n\n"
+            + "Current frequency: " + freq + " MHz\n\n"
+            + "Satellites:\n"
+            + "\u2022 NOAA-19  137.100 MHz (default, most active)\n"
+            + "\u2022 NOAA-15  137.620 MHz\n"
+            + "\u2022 NOAA-18  137.9125 MHz\n\n"
+            + "Images update every ~15 seconds (30 scan lines).\n"
+            + "A complete pass takes ~15 minutes (1800 lines).\n\n"
+            + "Press \u2018Start Monitoring\u2019 to begin.");
+        statusText.setTextSize(14);
+        statusText.setTextColor(0xFF999999);
+        statusText.setPadding(0, 10, 0, 20);
+        layout.addView(statusText);
+
+        // Divider
+        View div = new View(activity);
+        div.setBackgroundColor(0x33FFFFFF);
+        LinearLayout.LayoutParams divParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, 1);
+        divParams.bottomMargin = 20;
+        div.setLayoutParams(divParams);
+        layout.addView(div);
+
+        // Settings button
+        android.widget.Button settingsBtn = new android.widget.Button(activity);
+        settingsBtn.setText("\u2699\uFE0F NOAA Settings");
+        settingsBtn.setAllCaps(false);
+        settingsBtn.setTextSize(14);
+        layout.addView(settingsBtn);
+
+        // Received images button
+        android.widget.Button receivedBtn = new android.widget.Button(activity);
+        receivedBtn.setText("\uD83D\uDDBC\uFE0F Received Images");
+        receivedBtn.setAllCaps(false);
+        receivedBtn.setTextSize(14);
+        LinearLayout.LayoutParams rBtnParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT);
+        rBtnParams.topMargin = 10;
+        receivedBtn.setLayoutParams(rBtnParams);
+        layout.addView(receivedBtn);
+
+        // Next Passes button
+        android.widget.Button passesBtn = new android.widget.Button(activity);
+        passesBtn.setText("\uD83D\uDCC5 Next Satellite Passes");
+        passesBtn.setAllCaps(false);
+        passesBtn.setTextSize(14);
+        LinearLayout.LayoutParams passBtnParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT);
+        passBtnParams.topMargin = 10;
+        passesBtn.setLayoutParams(passBtnParams);
+        layout.addView(passesBtn);
+
+        AlertDialog[] dialogHolder = new AlertDialog[1];
+
+        settingsBtn.setOnClickListener(v -> showNOAASettingsDialog(activity, null));
+        receivedBtn.setOnClickListener(v -> showNOAAReceivedImagesDialog(activity));
+        passesBtn.setOnClickListener(v -> showNOAANextPassesDialog(activity));
+
+        builder.setView(layout);
+        builder.setPositiveButton("Start Monitoring", (d, w) -> {
+            if (dialogHolder[0] != null) dialogHolder[0].dismiss();
+            startNOAAMonitoring(activity);
+            showNOAALiveMonitoringScreen(activity);
+        });
+        builder.setNegativeButton("Close", null);
+
+        dialogHolder[0] = builder.create();
+        dialogHolder[0].show();
+    }
+
+    /** Live monitoring screen shown while NOAA is active. */
+    private void showNOAALiveMonitoringScreen(final Activity activity) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+        builder.setTitle("\uD83D\uDEF0\uFE0F NOAA APT — Live");
+
+        LinearLayout layout = new LinearLayout(activity);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(30, 30, 30, 30);
+
+        // Progress text
+        noaaProgressText = new android.widget.TextView(activity);
+        noaaProgressText.setText("Calibrating sync...");
+        noaaProgressText.setTextSize(14);
+        noaaProgressText.setTextColor(0xFF00AAFF);
+        noaaProgressText.setPadding(0, 0, 0, 15);
+        layout.addView(noaaProgressText);
+
+        // Live image view (1818 wide, scales to screen width)
+        noaaLiveImageView = new android.widget.ImageView(activity);
+        int displayWidth = activity.getResources().getDisplayMetrics().widthPixels - 80;
+        LinearLayout.LayoutParams imgParams = new LinearLayout.LayoutParams(
+            displayWidth, displayWidth / 2);   // 1818:909 is ~2:1
+        imgParams.bottomMargin = 15;
+        noaaLiveImageView.setLayoutParams(imgParams);
+        noaaLiveImageView.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        noaaLiveImageView.setBackgroundColor(0xFF111111);
+        layout.addView(noaaLiveImageView);
+
+        // Info
+        android.content.SharedPreferences prefs = activity.getSharedPreferences(
+            "dmrmod_noaa_global", android.content.Context.MODE_PRIVATE);
+        TextView infoText = new TextView(activity);
+        infoText.setText("Frequency: "
+            + prefs.getString("noaa_frequency", "137.100") + " MHz"
+            + "\nLeft = Channel A (visible/IR)  |  Right = Channel B (thermal)");
+        infoText.setTextSize(12);
+        infoText.setTextColor(0xFF999999);
+        layout.addView(infoText);
+
+        builder.setView(layout);
+        builder.setNegativeButton("Stop", (d, w) -> stopNOAAMonitoring(activity));
+        builder.setNeutralButton("Save Now", (d, w) -> {
+            if (noaaReceiver != null) {
+                String path = noaaReceiver.saveFinalImage();
+                Toast.makeText(activity,
+                    path != null ? "Saved: " + path : "No image yet", Toast.LENGTH_LONG).show();
+            }
+        });
+        builder.setCancelable(false);
+
+        noaaMonitoringDialog = builder.create();
+        noaaMonitoringDialog.show();
+
+        // Periodic UI update every 2 seconds
+        noaaUpdateHandler  = new android.os.Handler(android.os.Looper.getMainLooper());
+        noaaUpdateRunnable = new Runnable() {
+            @Override public void run() {
+                if (isNOAAMonitoringActive) {
+                    updateNOAALiveScreen();
+                    noaaUpdateHandler.postDelayed(this, 2000);
+                }
+            }
+        };
+        noaaUpdateHandler.postDelayed(noaaUpdateRunnable, 2000);
+    }
+
+    /** Refresh the live image and progress text. */
+    private void updateNOAALiveScreen() {
+        if (noaaReceiver == null) return;
+        try {
+            if (noaaProgressText != null) {
+                int lines = noaaReceiver.getDecodedLines();
+                noaaProgressText.setText(noaaReceiver.getStatus()
+                    + (lines > 0 ? "  (" + lines + " lines ≈ " + (lines / 2) + " sec)" : ""));
+            }
+            if (noaaLiveImageView != null) {
+                Bitmap snap = noaaReceiver.getLiveBitmap();
+                if (snap != null) noaaLiveImageView.setImageBitmap(snap);
+            }
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": updateNOAALiveScreen error: " + e.getMessage());
+        }
+    }
+
+    /** Settings dialog for NOAA frequency etc. */
+    private void showNOAASettingsDialog(final Activity activity) {
+        showNOAASettingsDialog(activity, null);
+    }
+
+    private void showNOAASettingsDialog(final Activity activity, final Runnable onSaved) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+        builder.setTitle("\u2699\uFE0F NOAA APT Settings");
+
+        LinearLayout layout = new LinearLayout(activity);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(40, 40, 40, 40);
+
+        android.content.SharedPreferences prefs = activity.getSharedPreferences(
+            "dmrmod_noaa_global", android.content.Context.MODE_PRIVATE);
+
+        TextView freqLabel = new TextView(activity);
+        freqLabel.setText("NOAA Satellite Frequency (MHz):");
+        freqLabel.setTextSize(14);
+        freqLabel.setPadding(0, 10, 0, 5);
+        layout.addView(freqLabel);
+
+        final EditText freqEdit = new EditText(activity);
+        freqEdit.setText(prefs.getString("noaa_frequency", "137.100"));
+        freqEdit.setInputType(android.text.InputType.TYPE_CLASS_NUMBER
+            | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        layout.addView(freqEdit);
+
+        TextView infoText = new TextView(activity);
+        infoText.setText("\nSatellite frequencies:\n"
+            + "\u2022 NOAA-19  137.100 MHz  (recommended, most active)\n"
+            + "\u2022 NOAA-15  137.620 MHz\n"
+            + "\u2022 NOAA-18  137.9125 MHz\n\n"
+            + "Images are saved automatically to:\nDownload/DMR/NOAA/");
+        infoText.setTextSize(13);
+        infoText.setTextColor(0xFF999999);
+        layout.addView(infoText);
+
+        builder.setView(new android.widget.ScrollView(activity) {{ addView(layout); }});
+        builder.setPositiveButton("Save", (d, w) -> {
+            String freqStr = freqEdit.getText().toString().trim();
+            try {
+                double f = Double.parseDouble(freqStr);
+                if (f < 100 || f > 180) {
+                    Toast.makeText(activity, "Frequency out of VHF range (100-180 MHz)",
+                        Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                prefs.edit().putString("noaa_frequency", freqStr).apply();
+                Toast.makeText(activity, "NOAA settings saved", Toast.LENGTH_SHORT).show();
+                if (onSaved != null) onSaved.run();
+            } catch (NumberFormatException e) {
+                Toast.makeText(activity, "Invalid frequency format", Toast.LENGTH_SHORT).show();
+            }
+        });
+        builder.setNegativeButton("Cancel", null);
+        builder.create().show();
+    }
+
+    /** Show upcoming NOAA satellite passes based on GPS location. */
+    private void showNOAANextPassesDialog(final Activity activity) {
+        // Show a "Calculating..." dialog immediately, then compute on background thread
+        AlertDialog.Builder loadingBuilder = new AlertDialog.Builder(activity);
+        loadingBuilder.setTitle("\uD83D\uDCC5 Next Satellite Passes");
+        TextView loadingText = new TextView(activity);
+        loadingText.setText("Getting GPS location and calculating passes...\n\nThis may take a few seconds.");
+        loadingText.setPadding(60, 40, 60, 40);
+        loadingText.setTextSize(14);
+        loadingBuilder.setView(loadingText);
+        loadingBuilder.setCancelable(true);
+        loadingBuilder.setNegativeButton("Cancel", null);
+        AlertDialog loadingDialog = loadingBuilder.create();
+        loadingDialog.show();
+
+        // Fetch fresh TLEs + compute passes on background thread
+        new Thread(() -> {
+            try {
+                // Try refreshing TLEs first (non-blocking if it fails)
+                try { SatellitePassPredictor.fetchFreshTles(); } catch (Exception ignored) {}
+
+                // Get GPS
+                android.location.Location loc = SatellitePassPredictor.getLastLocation(activity);
+                final double lat, lon, alt;
+                final String locStr;
+                if (loc != null) {
+                    lat = loc.getLatitude();
+                    lon = loc.getLongitude();
+                    alt = loc.getAltitude();
+                    locStr = String.format(java.util.Locale.US, "%.4f°, %.4f°  alt=%.0fm",
+                        lat, lon, alt);
+                } else {
+                    // Fallback: use a default if GPS unavailable
+                    lat = 0; lon = 0; alt = 0;
+                    locStr = "GPS unavailable — showing passes for 0°,0° (equator)";
+                }
+
+                final java.util.List<SatellitePassPredictor.Pass> passes =
+                    SatellitePassPredictor.findPasses(lat, lon, alt, 3, 5.0);
+
+                activity.runOnUiThread(() -> {
+                    if (!loadingDialog.isShowing()) return;
+                    loadingDialog.dismiss();
+                    showNOAAPassListDialog(activity, passes, locStr);
+                });
+
+            } catch (Exception e) {
+                XposedBridge.log(TAG + ": showNOAANextPassesDialog error: " + e);
+                activity.runOnUiThread(() -> {
+                    loadingDialog.dismiss();
+                    Toast.makeText(activity, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+            }
+        }).start();
+    }
+
+    /** Render the pass list dialog once results are ready. */
+    private void showNOAAPassListDialog(final Activity activity,
+                                         final java.util.List<SatellitePassPredictor.Pass> passes,
+                                         final String locStr) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+        builder.setTitle("\uD83D\uDCC5 Next Satellite Passes");
+
+        android.widget.ScrollView scroll = new android.widget.ScrollView(activity);
+        LinearLayout layout = new LinearLayout(activity);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(30, 30, 30, 20);
+        scroll.addView(layout);
+
+        // Location info
+        TextView locView = new TextView(activity);
+        locView.setText("\uD83D\uDCCD " + locStr);
+        locView.setTextSize(12);
+        locView.setTextColor(0xFF888888);
+        locView.setPadding(0, 0, 0, 16);
+        layout.addView(locView);
+
+        if (passes == null || passes.isEmpty()) {
+            TextView empty = new TextView(activity);
+            empty.setText("No passes above 5° elevation in the next 3 days.\n\n"
+                + "This may indicate stale TLE data or a GPS issue.\n\n"
+                + "Expected approximate passes per day:\n"
+                + "\u2022 NOAA-19  ~14\n"
+                + "\u2022 NOAA-18  ~14\n"
+                + "\u2022 NOAA-15  ~14\n\n"
+                + "Passes with elevation < 5° are filtered out.");
+            empty.setTextSize(13);
+            empty.setTextColor(0xFF999999);
+            empty.setPadding(0, 10, 0, 10);
+            layout.addView(empty);
+        } else {
+            // Column headers
+            android.widget.TableLayout table = new android.widget.TableLayout(activity);
+            table.setStretchAllColumns(true);
+            addPassTableHeader(table, activity);
+
+            String lastDate = "";
+            for (SatellitePassPredictor.Pass pass : passes) {
+                String date = pass.getDateString();
+                if (!date.equals(lastDate)) {
+                    // Date separator
+                    android.widget.TableRow sep = new android.widget.TableRow(activity);
+                    TextView dateLabel = new TextView(activity);
+                    dateLabel.setText("── " + date + " UTC ──");
+                    dateLabel.setTextSize(11);
+                    dateLabel.setTextColor(0xFF5599AA);
+                    dateLabel.setPadding(4, 14, 4, 4);
+                    android.widget.TableRow.LayoutParams spanParams =
+                        new android.widget.TableRow.LayoutParams();
+                    spanParams.span = 5;
+                    sep.addView(dateLabel, spanParams);
+                    table.addView(sep);
+                    lastDate = date;
+                }
+                addPassTableRow(table, activity, pass);
+            }
+            layout.addView(table);
+
+            TextView hint = new TextView(activity);
+            hint.setText("\nTimes are UTC  \u2022  Elevations <5° filtered  \u2022  "
+                + "Tap \"Start Mon\" to listen at AOS");
+            hint.setTextSize(11);
+            hint.setTextColor(0xFF666666);
+            hint.setPadding(0, 12, 0, 0);
+            layout.addView(hint);
+        }
+
+        builder.setView(scroll);
+        builder.setPositiveButton("Close", null);
+        builder.create().show();
+    }
+
+    private void addPassTableHeader(android.widget.TableLayout table, Activity activity) {
+        android.widget.TableRow row = new android.widget.TableRow(activity);
+        String[] cols = {"Satellite", "AOS (UTC)", "Max El", "LOS (UTC)", "Dur"};
+        for (String col : cols) {
+            TextView tv = new TextView(activity);
+            tv.setText(col);
+            tv.setTextSize(11);
+            tv.setTextColor(0xFF00AACC);
+            tv.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            tv.setPadding(4, 4, 4, 8);
+            row.addView(tv);
+        }
+        table.addView(row);
+    }
+
+    private void addPassTableRow(android.widget.TableLayout table, Activity activity,
+                                  SatellitePassPredictor.Pass pass) {
+        android.widget.TableRow row = new android.widget.TableRow(activity);
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("HH:mm:ss",
+            java.util.Locale.US);
+        sdf.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+
+        String[] cells = {
+            pass.name,
+            sdf.format(new java.util.Date(pass.aosMs)),
+            String.format(java.util.Locale.US, "%.0f°", pass.maxElDeg),
+            sdf.format(new java.util.Date(pass.losMs)),
+            (pass.durationSec / 60) + "m" + String.format("%02d", pass.durationSec % 60) + "s"
+        };
+
+        // Colour-code by max elevation
+        int elColor;
+        if      (pass.maxElDeg >= 60) elColor = 0xFF00FF88;   // excellent
+        else if (pass.maxElDeg >= 30) elColor = 0xFF88FF44;   // good
+        else if (pass.maxElDeg >= 15) elColor = 0xFFFFCC00;   // fair
+        else                          elColor = 0xFFAAAAAA;   // low
+
+        for (int i = 0; i < cells.length; i++) {
+            TextView tv = new TextView(activity);
+            tv.setText(cells[i]);
+            tv.setTextSize(12);
+            tv.setTextColor(i == 2 ? elColor : 0xFFDDDDDD);
+            tv.setPadding(4, 6, 4, 6);
+            row.addView(tv);
+        }
+        table.addView(row);
+    }
+
+    /** Browse saved NOAA images. */
+    private void showNOAAReceivedImagesDialog(final Activity activity) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+        builder.setTitle("\uD83D\uDDBC\uFE0F Saved NOAA Images");
+
+        java.io.File dir = new java.io.File(
+            android.os.Environment.getExternalStoragePublicDirectory(
+                android.os.Environment.DIRECTORY_DOWNLOADS),
+            "DMR/NOAA");
+
+        android.widget.ScrollView scroll = new android.widget.ScrollView(activity);
+        LinearLayout layout = new LinearLayout(activity);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(30, 30, 30, 30);
+        scroll.addView(layout);
+
+        java.io.File[] files = dir.isDirectory() ? dir.listFiles() : null;
+
+        if (files == null || files.length == 0) {
+            TextView empty = new TextView(activity);
+            empty.setText("No saved images yet.\n\nImages are auto-saved every 300 decoded lines"
+                + " (~5 min) to:\nDownload/DMR/NOAA/");
+            empty.setTextSize(14);
+            empty.setPadding(0, 20, 0, 20);
+            layout.addView(empty);
+        } else {
+            java.util.Arrays.sort(files, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+            for (java.io.File f : files) {
+                if (!f.getName().endsWith(".png")) continue;
+                android.widget.Button btn = new android.widget.Button(activity);
+                btn.setText("\uD83D\uDDBC\uFE0F " + f.getName()
+                    + "  (" + (f.length() / 1024) + " KB)");
+                btn.setAllCaps(false);
+                btn.setTextSize(13);
+                final java.io.File file = f;
+                btn.setOnClickListener(v -> {
+                    try {
+                        android.content.Intent intent = new android.content.Intent(
+                            android.content.Intent.ACTION_VIEW);
+                        android.net.Uri uri = android.net.Uri.fromFile(file);
+                        intent.setDataAndType(uri, "image/png");
+                        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                        activity.startActivity(intent);
+                    } catch (Exception e) {
+                        Toast.makeText(activity, "Cannot open image: " + e.getMessage(),
+                            Toast.LENGTH_SHORT).show();
+                    }
+                });
+                layout.addView(btn);
+            }
+        }
+
+        builder.setView(scroll);
+        builder.setPositiveButton("Close", null);
+        builder.create().show();
+    }
+
+    /** Start NOAA monitoring: hijack channel to NOAA frequency, init receiver. */
+    private void startNOAAMonitoring(final Activity activity) {
+        try {
+            XposedBridge.log(TAG + ": Starting NOAA APT monitoring");
+
+            // Stop conflicting modes
+            if (isAPRSMonitoringActive)  stopAPRSMonitoring(activity);
+            if (isSSTVMonitoringActive)  stopSSTVMonitoring(activity);
+
+            Class<?> dmrManagerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.manager.DmrManager", appClassLoader);
+            Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+            Object channel    = XposedHelpers.callMethod(dmrManager, "getCurrentChannel");
+            if (channel == null) throw new Exception("Cannot get current channel");
+
+            // Back up original channel
+            saveNOAAChannelBackup(channel);
+
+            // Determine target frequency
+            android.content.SharedPreferences prefs = activity.getSharedPreferences(
+                "dmrmod_noaa_global", android.content.Context.MODE_PRIVATE);
+            String freqStr = prefs.getString("noaa_frequency", "137.100");
+            int freqHz;
+            try {
+                freqHz = (int) (Double.parseDouble(freqStr) * 1_000_000);
+            } catch (NumberFormatException e) {
+                freqHz = 137_100_000;
+            }
+
+            // Hijack channel with NOAA settings
+            String origName = (String) noaaChannelBackup.get("name");
+            if (origName == null || origName.isEmpty()) origName = "Channel";
+            XposedHelpers.setIntField(channel, "type",   1);    // ANALOG
+            XposedHelpers.setObjectField(channel, "name", "NOAA (" + origName + ")");
+            XposedHelpers.setIntField(channel, "rxFreq", freqHz);
+            XposedHelpers.setIntField(channel, "txFreq", freqHz);
+            XposedHelpers.setIntField(channel, "sq",     2);
+            XposedHelpers.setIntField(channel, "band",   determineBand(Double.parseDouble(freqStr)));
+            XposedHelpers.setIntField(channel, "channelMode", 1);  // Wide FM (25 kHz) for NOAA
+            XposedHelpers.setIntField(channel, "power",  1);
+            XposedHelpers.setIntField(channel, "rxType", 0);
+            XposedHelpers.setIntField(channel, "rxSubCode", 0);
+            XposedHelpers.setIntField(channel, "txType", 0);
+            XposedHelpers.setIntField(channel, "txSubCode", 0);
+
+            XposedHelpers.callMethod(dmrManager, "updateChannel", channel);
+            XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", channel);
+
+            // Init NOAA receiver
+            noaaReceiver = NOAAReceiver.getInstance(activity);
+            noaaReceiver.reset();
+
+            noaaReceiver.setLineDecodeCallback((lineNum, snap) -> {
+                activity.runOnUiThread(() -> {
+                    try {
+                        if (noaaLiveImageView != null && snap != null) {
+                            noaaLiveImageView.setImageBitmap(snap);
+                        }
+                        if (noaaProgressText != null) {
+                            noaaProgressText.setText("Decoding — " + lineNum + " lines  ("
+                                + (lineNum / 2) + " sec)");
+                            noaaProgressText.setTextColor(0xFF00AAFF);
+                        }
+                    } catch (Exception e) {
+                        XposedBridge.log(TAG + ": NOAA line callback error: " + e);
+                    }
+                });
+            });
+
+            noaaReceiver.setImageSavedCallback((path, totalLines) ->
+                activity.runOnUiThread(() ->
+                    Toast.makeText(activity,
+                        "\uD83D\uDEF0\uFE0F NOAA: saved " + totalLines + " lines → " + path,
+                        Toast.LENGTH_LONG).show()));
+
+            isNOAAMonitoringActive = true;
+            currentChannelType = 1;  // Analog
+
+            XposedBridge.log(TAG + ": NOAA monitoring active at " + freqStr + " MHz");
+            Toast.makeText(activity, "NOAA Monitoring Active at " + freqStr + " MHz",
+                Toast.LENGTH_SHORT).show();
+
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error starting NOAA monitoring: " + e.getMessage());
+            XposedBridge.log(e);
+            Toast.makeText(activity, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    /** Stop NOAA monitoring and restore original channel. */
+    private void stopNOAAMonitoring(final Activity activity) {
+        try {
+            XposedBridge.log(TAG + ": Stopping NOAA monitoring");
+
+            if (noaaReceiver != null) {
+                noaaReceiver.saveFinalImage();
+                noaaReceiver.stop();
+            }
+
+            // Dismiss dialog
+            if (noaaMonitoringDialog != null && noaaMonitoringDialog.isShowing()) {
+                noaaMonitoringDialog.dismiss();
+            }
+            noaaMonitoringDialog  = null;
+            noaaLiveImageView     = null;
+            noaaProgressText      = null;
+
+            // Cancel update handler
+            if (noaaUpdateHandler != null && noaaUpdateRunnable != null) {
+                noaaUpdateHandler.removeCallbacks(noaaUpdateRunnable);
+            }
+            noaaUpdateHandler  = null;
+            noaaUpdateRunnable = null;
+
+            isNOAAMonitoringActive = false;
+
+            restoreNOAAChannelBackup(activity);
+
+            Toast.makeText(activity, "NOAA Monitoring Stopped", Toast.LENGTH_SHORT).show();
+            XposedBridge.log(TAG + ": NOAA monitoring stopped");
+
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error stopping NOAA monitoring: " + e.getMessage());
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // NOAA channel backup / restore  (same pattern as SSTV)
+    // -----------------------------------------------------------------------
+
+    private void saveNOAAChannelBackup(Object channel) {
+        try {
+            noaaChannelBackup = new java.util.HashMap<>();
+            noaaChannelBackup.put("number",  XposedHelpers.getIntField(channel, "number"));
+            noaaChannelBackup.put("type",    XposedHelpers.getIntField(channel, "type"));
+            noaaChannelBackup.put("name",    XposedHelpers.getObjectField(channel, "name"));
+            noaaChannelBackup.put("rxFreq",  XposedHelpers.getIntField(channel, "rxFreq"));
+            noaaChannelBackup.put("txFreq",  XposedHelpers.getIntField(channel, "txFreq"));
+            noaaChannelBackup.put("sq",      XposedHelpers.getIntField(channel, "sq"));
+            noaaChannelBackup.put("band",    XposedHelpers.getIntField(channel, "band"));
+            noaaChannelBackup.put("power",   XposedHelpers.getIntField(channel, "power"));
+            try {
+                noaaChannelBackup.put("rxType",    XposedHelpers.getIntField(channel, "rxType"));
+                noaaChannelBackup.put("rxSubCode", XposedHelpers.getIntField(channel, "rxSubCode"));
+                noaaChannelBackup.put("txType",    XposedHelpers.getIntField(channel, "txType"));
+                noaaChannelBackup.put("txSubCode", XposedHelpers.getIntField(channel, "txSubCode"));
+            } catch (Throwable t) {
+                noaaChannelBackup.put("rxType", 0); noaaChannelBackup.put("rxSubCode", 0);
+                noaaChannelBackup.put("txType", 0); noaaChannelBackup.put("txSubCode", 0);
+            }
+            java.io.ObjectOutputStream oos = new java.io.ObjectOutputStream(
+                new java.io.FileOutputStream("/sdcard/noaa_channel_backup.dat"));
+            oos.writeObject(noaaChannelBackup);
+            oos.close();
+            XposedBridge.log(TAG + ": NOAA channel backup saved: " + noaaChannelBackup.get("name"));
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error saving NOAA channel backup: " + e.getMessage());
+        }
+    }
+
+    private void restoreNOAAChannelBackup(Context context) {
+        try {
+            if (noaaChannelBackup == null) {
+                java.io.File f = new java.io.File("/sdcard/noaa_channel_backup.dat");
+                if (!f.exists()) { XposedBridge.log(TAG + ": No NOAA backup file"); return; }
+                java.io.ObjectInputStream ois = new java.io.ObjectInputStream(
+                    new java.io.FileInputStream(f));
+                @SuppressWarnings("unchecked")
+                java.util.HashMap<String, Object> loaded =
+                    (java.util.HashMap<String, Object>) ois.readObject();
+                ois.close();
+                noaaChannelBackup = loaded;
+            }
+            Class<?> dmrClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.manager.DmrManager", appClassLoader);
+            Object mgr = XposedHelpers.callStaticMethod(dmrClass, "getInstance");
+            Object ch  = XposedHelpers.callMethod(mgr, "getCurrentChannel");
+            if (ch == null) { XposedBridge.log(TAG + ": Cannot get channel for NOAA restore"); return; }
+            Object n = noaaChannelBackup.get("number"); if (n != null) XposedHelpers.setIntField(ch, "number", (Integer) n);
+            Object tp = noaaChannelBackup.get("type");  if (tp != null) XposedHelpers.setIntField(ch, "type",  (Integer) tp);
+            Object nm = noaaChannelBackup.get("name");  XposedHelpers.setObjectField(ch, "name", nm != null ? (String) nm : "Channel");
+            Object rf = noaaChannelBackup.get("rxFreq"); if (rf != null) XposedHelpers.setIntField(ch, "rxFreq", (Integer) rf);
+            Object tf = noaaChannelBackup.get("txFreq"); if (tf != null) XposedHelpers.setIntField(ch, "txFreq", (Integer) tf);
+            Object sq = noaaChannelBackup.get("sq");    if (sq != null) XposedHelpers.setIntField(ch, "sq",    (Integer) sq);
+            Object bd = noaaChannelBackup.get("band");  if (bd != null) XposedHelpers.setIntField(ch, "band",  (Integer) bd);
+            Object pw = noaaChannelBackup.get("power"); if (pw != null) XposedHelpers.setIntField(ch, "power", (Integer) pw);
+            Object rt = noaaChannelBackup.get("rxType");    if (rt != null) XposedHelpers.setIntField(ch, "rxType",    (Integer) rt);
+            Object rs = noaaChannelBackup.get("rxSubCode"); if (rs != null) XposedHelpers.setIntField(ch, "rxSubCode", (Integer) rs);
+            Object tt = noaaChannelBackup.get("txType");    if (tt != null) XposedHelpers.setIntField(ch, "txType",    (Integer) tt);
+            Object ts = noaaChannelBackup.get("txSubCode"); if (ts != null) XposedHelpers.setIntField(ch, "txSubCode", (Integer) ts);
+            try {
+                XposedHelpers.callMethod(mgr, "updateChannel", ch);
+                XposedHelpers.callMethod(mgr, "syncChannelInfoWithData", ch);
+            } catch (Throwable t) {
+                XposedBridge.log(TAG + ": NOAA restore sync warning: " + t.getMessage());
+            }
+            XposedBridge.log(TAG + ": NOAA channel restored: " + noaaChannelBackup.get("name"));
+            noaaChannelBackup = null;
+            new java.io.File("/sdcard/noaa_channel_backup.dat").delete();
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Error restoring NOAA channel: " + e.getMessage());
+        }
+    }
+
+    /** Called on app startup: detect and repair orphaned NOAA channel. */
+    private void checkAndRestoreNOAAChannelOnStartup(final Context context) {
+        boolean deleteBackup = false;
+        try {
+            java.io.File bf = new java.io.File("/sdcard/noaa_channel_backup.dat");
+            if (!bf.exists()) return;
+            deleteBackup = true;
+
+            Class<?> dmrClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.manager.DmrManager", appClassLoader);
+            Object mgr = XposedHelpers.callStaticMethod(dmrClass, "getInstance");
+            if (mgr == null) return;
+            Object ch = XposedHelpers.callMethod(mgr, "getCurrentChannel");
+            if (ch == null) return;
+
+            String name = (String) XposedHelpers.getObjectField(ch, "name");
+            XposedBridge.log(TAG + ": NOAA startup check — channel: " + name);
+
+            if (name != null && name.startsWith("NOAA (")) {
+                XposedBridge.log(TAG + ": Restoring orphaned NOAA channel...");
+                java.io.ObjectInputStream ois = new java.io.ObjectInputStream(
+                    new java.io.FileInputStream(bf));
+                @SuppressWarnings("unchecked")
+                java.util.HashMap<String, Object> backup =
+                    (java.util.HashMap<String, Object>) ois.readObject();
+                ois.close();
+                noaaChannelBackup = backup;
+                restoreNOAAChannelBackup(context);
+                deleteBackup = false;  // restoreNOAAChannelBackup already deletes it
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                    try {
+                        if (context instanceof Activity) {
+                            Activity a = (Activity) context;
+                            if (!a.isFinishing())
+                                Toast.makeText(a, "\u26a0\ufe0f NOAA channel restored", Toast.LENGTH_LONG).show();
+                        }
+                    } catch (Exception ignored) {}
+                });
+            }
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": NOAA startup check error: " + e.getMessage());
+        } finally {
+            if (deleteBackup) {
+                try { new java.io.File("/sdcard/noaa_channel_backup.dat").delete(); } catch (Exception ignored) {}
+            }
+        }
+    }
+
+    // =========================================================================
+    // END NOAA APT monitoring
+    // =========================================================================
+
     /**
      * LEGACY: Add backup/restore button to settings screen (not used)
      */
@@ -7893,10 +8691,11 @@ public class MainHook implements IXposedHookLoadPackage {
                         byte[] audioData = (byte[]) param.args[0];
                         int length = (int) param.args[1];
                         
-                        // Make a copy BEFORE any squelch muting for APRS/transcription/recording
+                        // Make a copy BEFORE any squelch muting for APRS/SSTV/NOAA/transcription/recording
                         // This ensures those features get clean audio regardless of squelch state
                         byte[] originalAudio = null;
                         if (isAPRSMonitoringActive || isTranscriptionEnabled || 
+                            isSSTVMonitoringActive || isNOAAMonitoringActive ||
                             (isRecordingEnabled && isCurrentlyRecording)) {
                             originalAudio = java.util.Arrays.copyOf(audioData, length);
                         }
@@ -8010,7 +8809,12 @@ public class MainHook implements IXposedHookLoadPackage {
                         if (isSSTVMonitoringActive && sstvReceiver != null) {
                             sstvReceiver.processAudio(processingAudio, length);
                         }
-                        
+
+                        // Buffer audio for NOAA APT satellite decoding
+                        if (isNOAAMonitoringActive && noaaReceiver != null) {
+                            noaaReceiver.processAudio(processingAudio, length);
+                        }
+
                         // Buffer audio for transcription if enabled
                         if (isTranscriptionEnabled) {
                             bufferAudioForTranscription(processingAudio);

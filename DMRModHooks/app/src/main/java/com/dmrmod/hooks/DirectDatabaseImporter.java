@@ -364,27 +364,31 @@ public class DirectDatabaseImporter {
                 java.util.Map<String, Integer> contactMap = buildContactNameMap(context);
                 
                 String line;
+                int skippedCount = 0;
                 while ((line = reader.readLine()) != null) {
                 if (line.trim().isEmpty()) continue;
                 
                 String[] fields = parseCSVLine(line);
                 if (fields.length < 28) {
                     Log.w(TAG, "Skipping invalid line (not enough fields): " + line);
+                    skippedCount++;
                     continue;
                 }
                 
-                ContentValues values = new ContentValues();
-                
-                // Check if this is the new format with _ID field (29+ columns)
-                // New format: _ID, Channel Number, Channel Name, ...
-                // OpenGD77 format: Channel Number, Channel Name, ...
-                // Channel Number -> channel_number
-                String channelNumber = fields[0].trim();
-                values.put("channel_number", Integer.parseInt(channelNumber));
-                
-                // Channel Name -> channel_name
-                String channelName = fields[1].trim();
-                values.put("channel_name", channelName);
+                // Wrap each channel import in try-catch to handle parsing errors gracefully
+                try {
+                    ContentValues values = new ContentValues();
+                    
+                    // Check if this is the new format with _ID field (29+ columns)
+                    // New format: _ID, Channel Number, Channel Name, ...
+                    // OpenGD77 format: Channel Number, Channel Name, ...
+                    // Channel Number -> channel_number
+                    String channelNumber = fields[0].trim();
+                    values.put("channel_number", Integer.parseInt(channelNumber));
+                    
+                    // Channel Name -> channel_name
+                    String channelName = fields[1].trim();
+                    values.put("channel_name", channelName);
                 
                 // Channel Type -> channel_type (Database uses: 0=Digital, 1=Analog)
                 String channelType = fields[2].trim();
@@ -603,11 +607,27 @@ public class DirectDatabaseImporter {
                     Log.i(TAG, "✓ Inserted channel " + channelNumber + ": " + channelName + 
                         " (" + rxFreqMHz + " MHz, band=" + band + ", rowId=" + rowId + ")");
                 }
+                
+                } catch (NumberFormatException e) {
+                    // Handle parsing errors for numbers (frequencies, channel number, etc.)
+                    String channelInfo = fields.length > 1 ? fields[1] : "unknown";
+                    Log.e(TAG, "✗ Failed to parse numeric field for channel '" + channelInfo + "': " + e.getMessage());
+                    skippedCount++;
+                } catch (Exception e) {
+                    // Handle any other errors during channel import
+                    String channelInfo = fields.length > 1 ? fields[1] : "unknown";
+                    Log.e(TAG, "✗ Failed to import channel '" + channelInfo + "': " + e.getMessage());
+                    skippedCount++;
+                }
             }
             
             // Mark transaction as successful
             db.setTransactionSuccessful();
-            Log.i(TAG, "✓ Imported " + importCount + " channels");
+            if (skippedCount > 0) {
+                Log.w(TAG, "⚠ Imported " + importCount + " channels, skipped " + skippedCount + " channels due to errors");
+            } else {
+                Log.i(TAG, "✓ Imported " + importCount + " channels");
+            }
             
             } finally {
                 // End transaction
