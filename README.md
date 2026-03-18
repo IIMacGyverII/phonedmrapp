@@ -2,8 +2,9 @@
 
 **Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS + VFO Mode + SSTV!
 
-> **� Current Stable Release: v3.3.1** (March 18, 2026) - Crash Recovery Improvements  
-> **📺 Previous Release: v3.3.0** (March 18, 2026) - SSTV Live Monitoring  
+> **� Current Stable Release: v3.3.2** (March 19, 2026) - APRS Buttons Moved to Monitoring Page  
+> **🔧 Previous Release: v3.3.1** (March 18, 2026) - Crash Recovery Improvements  
+> **📺 Prior Release: v3.3.0** (March 18, 2026) - SSTV Live Monitoring  
 > **🎛️ Prior Release: v3.2.3** (March 16, 2026) - APRS Channel Filtering + Button Spacing  
 > **🎛️ Feature Release: v3.1.5** (March 14, 2026) - VFO Mode (Variable Frequency Oscillator)  
 > **🐛 Bug Fix: v3.1.4** (March 13, 2026) - Software Squelch State Fix  
@@ -13,6 +14,25 @@
 ## Demo
 
 <video src="https://github.com/user-attachments/assets/d6305a49-c8ed-47dc-a9d8-7e731aa02811" controls title="DMRModHooks v1.1 Demo" width="800"></video>
+
+## 📡 What's New in v3.3.2 (March 19, 2026)
+
+### APRS Received + APRS Settings Buttons Moved to Monitoring Page
+
+**Relocated the `📡 APRS Received` and `⚙️ APRS Settings` buttons from the general settings/channels page directly onto the APRS Monitoring Mode dialogs for better contextual access**
+
+#### **What Changed**
+- **Removed** both buttons from the general Export/Import settings page
+- **Added** both buttons to the **APRS Start Dialog** (before monitoring starts) — displayed below the packet statistics and logging note, above the Start/Close buttons
+- **Added** both buttons to the **APRS Live Monitoring Screen** (while monitoring is active) — displayed below the auto-logging info footer
+- A subtle visual divider separates the action buttons from the informational text on each screen
+
+#### **Why This Improves the UX**
+- `📡 APRS Received` and `⚙️ APRS Settings` are APRS-specific — they belong on the APRS page, not alongside Export/Import
+- Users no longer need to leave the APRS flow to check received stations or adjust settings
+- Both buttons accessible at all times during the APRS workflow: before starting and while actively monitoring
+
+---
 
 ## � What's New in v3.3.1 (March 18, 2026)
 
@@ -486,9 +506,10 @@ Local Simplex (↑N 250m)
    - Visual feedback: Orange = monitoring, Gray = normal
    - Perfect for scanning and emergency monitoring
 
-## Complete Feature List (v1.0 - v3.3.1)
+## Complete Feature List (v1.0 - v3.3.2)
 
 ### Core Features
+- ✅ **APRS Button Reorganization (v3.3.2)** - APRS Received + Settings buttons moved to monitoring page
 - ✅ **Crash Recovery Improvements (v3.3.1)** - Restart App button, channel name integrity fix
 - ✅ **SSTV Live Monitoring (v3.3.0)** - Slow Scan TV image reception with auto-save and live display
 - ✅ **VFO Mode (v3.1.5)** - Variable Frequency Oscillator with temporary channel override
@@ -548,7 +569,8 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 
 ## Current Status ✅
 
-**Current Release: v3.3.1** (March 18, 2026)  
+**Current Release: v3.3.2** (March 19, 2026)  
+**APRS UX**: ✅ APRS Received + Settings buttons moved to monitoring page  
 **Crash Recovery**: ✅ Improved — Restart App button on all recovery dialogs, channel name integrity fix  
 **SSTV Monitoring**: ✅ Working - VIS detection + IQ auto-detect, auto-save images, all major modes  
 **VFO Mode**: ✅ Working - Complete frequency control with analog/digital support  
@@ -602,13 +624,13 @@ adb shell rm /sdcard/DMR/DMRDEBUG.bin
 - **Transcription Service**: com.macdmr.transcription (Standalone AIDL service)
 - **Device**: Ulefone Armor 26 Ultra (Android 13)
 - **LSPosed**: v1.9.2 (Zygisk)
-- **Current Version**: v3.3.1 (March 18, 2026)
+- **Current Version**: v3.3.2 (March 19, 2026)
 - **Storage Location**: `Download/DMR/` (Audio, Transcription, DMR_Backups, APRS, SSTV folders)
 
 ## Features
 
 ### ✅ Phase 1: Initial Hook Setup
-- Startup toast: "✓ DMR Mod Hooks Active! v3.3.1"
+- Startup toast: "✓ DMR Mod Hooks Active! v3.3.2"
 - Custom version display on Device Information screen
 - Confirms module is active and working
 
