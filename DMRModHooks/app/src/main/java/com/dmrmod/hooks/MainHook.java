@@ -90,7 +90,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.3.1";
+    private static final String VERSION = "3.3.2";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -671,8 +671,22 @@ public class MainHook implements IXposedHookLoadPackage {
                                     XposedBridge.log(TAG + ": ❌ Failed to create databases directory");
                                 }
                             }
+                            
+                            // Migrate zones from channel_number to _id format (one-time migration)
+                            try {
+                                ZoneDatabase zoneDb = ZoneDatabase.getInstance(app.getApplicationContext());
+                                boolean migrated = zoneDb.migrateZonesFromNumberToId(app.getApplicationContext());
+                                if (migrated) {
+                                    XposedBridge.log(TAG + ": ✓ Zone database migrated to _id format");
+                                } else {
+                                    XposedBridge.log(TAG + ": ✓ Zone database already uses _id format");
+                                }
+                            } catch (Throwable t) {
+                                XposedBridge.log(TAG + ": ❌ Error migrating zones: " + t.getMessage());
+                                XposedBridge.log(t);
+                            }
                         } catch (Throwable t) {
-                            XposedBridge.log(TAG + ": ❌ Error fixing directories: " + t.getMessage());
+                            XposedBridge.log(TAG + ": ❌ Error during application initialization: " + t.getMessage());
                             XposedBridge.log(t);
                         }
                     }
@@ -9628,15 +9642,15 @@ public class MainHook implements IXposedHookLoadPackage {
                         // Check if we need to switch channels (current channel not in new zone)
                         if (talkBackFragmentInstance != null && selectedZoneId != -1 && currentZoneChannels != null) {
                             try {
-                                // Get current channel number
+                                // Get current channel ID
                                 Object currentChannelData = XposedHelpers.getObjectField(talkBackFragmentInstance, "mCurrentChannelData");
                                 if (currentChannelData != null) {
-                                    int currentChannelNumber = XposedHelpers.getIntField(currentChannelData, "number");
+                                    int currentChannelId = XposedHelpers.getIntField(currentChannelData, "_id");
                                     
                                     // Check if current channel is in the new zone
-                                    if (!currentZoneChannels.contains(currentChannelNumber)) {
+                                    if (!currentZoneChannels.contains(currentChannelId)) {
                                         // Current channel NOT in new zone - must switch to first channel in zone
-                                        XposedBridge.log(TAG + ": Current channel " + currentChannelNumber + 
+                                        XposedBridge.log(TAG + ": Current channel ID " + currentChannelId + 
                                             " not in zone " + selectedZoneName + ", switching to first channel");
                                         
                                         final String finalZoneName = selectedZoneName;
@@ -9660,10 +9674,10 @@ public class MainHook implements IXposedHookLoadPackage {
                                                     int targetChannelNumber = -1;
                                                     for (int i = 0; i < channels.size(); i++) {
                                                         Object channelData = channels.get(i);
-                                                        int channelNumber = XposedHelpers.getIntField(channelData, "number");
-                                                        if (currentZoneChannels.contains(channelNumber)) {
+                                                        int channelId = XposedHelpers.getIntField(channelData, "_id");
+                                                        if (currentZoneChannels.contains(channelId)) {
                                                             targetIndex = i;
-                                                            targetChannelNumber = channelNumber;
+                                                            targetChannelNumber = XposedHelpers.getIntField(channelData, "number");  // Get number for display
                                                             break;
                                                         }
                                                     }
@@ -9788,9 +9802,10 @@ public class MainHook implements IXposedHookLoadPackage {
                             int mCurrentChannelIndex = XposedHelpers.getIntField(fragment, "mCurrentChannelIndex");
                             int maxChannelId = XposedHelpers.getIntField(fragment, "mMaxChannelId");
                             
-                            // Get current channel number
+                            // Get current channel ID
                             Object currentChannelData = channels.get(mCurrentChannelIndex);
-                            int currentChannelNumber = XposedHelpers.getIntField(currentChannelData, "number");
+                            int currentChannelId = XposedHelpers.getIntField(currentChannelData, "_id");
+                            int currentChannelNumber = XposedHelpers.getIntField(currentChannelData, "number");  // For display only
                             
                             XposedBridge.log(TAG + ": Zone navigation - current channel: " + currentChannelNumber + 
                                 " (index " + mCurrentChannelIndex + "), direction: " + (isUp ? "UP" : "DOWN"));
@@ -9814,10 +9829,11 @@ public class MainHook implements IXposedHookLoadPackage {
                                 
                                 // Check if this channel is in the zone
                                 Object channelData = channels.get(nextIndex);
-                                int channelNumber = XposedHelpers.getIntField(channelData, "number");
+                                int channelId = XposedHelpers.getIntField(channelData, "_id");
                                 
-                                if (currentZoneChannels.contains(channelNumber)) {
+                                if (currentZoneChannels.contains(channelId)) {
                                     // Found a valid channel in the zone!
+                                    int channelNumber = XposedHelpers.getIntField(channelData, "number");  // For display
                                     XposedBridge.log(TAG + ": Zone navigation - found channel " + channelNumber + 
                                         " in zone at index " + nextIndex);
                                     
@@ -9925,8 +9941,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                 if (isAPRSChannel(channelData)) {
                                     continue;  // Skip APRS channels
                                 }
-                                int channelNumber = XposedHelpers.getIntField(channelData, "number");
-                                if (currentZoneChannels.contains(channelNumber)) {
+                                int channelId = XposedHelpers.getIntField(channelData, "_id");
+                                if (currentZoneChannels.contains(channelId)) {
                                     count++;
                                 }
                             }
@@ -9990,9 +10006,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                     if (isAPRSChannel(channelData)) {
                                         continue;  // Skip APRS channels
                                     }
-                                    int channelNumber = XposedHelpers.getIntField(channelData, "number");
+                                    int channelId = XposedHelpers.getIntField(channelData, "_id");
                                     
-                                    if (currentZoneChannels.contains(channelNumber)) {
+                                    if (currentZoneChannels.contains(channelId)) {
                                         if (filteredIndex == position) {
                                             actualIndex = i;
                                             break;
@@ -10059,9 +10075,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                     if (isAPRSChannel(channelData)) {
                                         continue;  // Skip APRS channels
                                     }
-                                    int channelNumber = XposedHelpers.getIntField(channelData, "number");
+                                    int channelId = XposedHelpers.getIntField(channelData, "_id");
                                     
-                                    if (currentZoneChannels.contains(channelNumber)) {
+                                    if (currentZoneChannels.contains(channelId)) {
                                         if (filteredIndex == position) {
                                             actualIndex = i;
                                             break;
@@ -10669,19 +10685,21 @@ public class MainHook implements IXposedHookLoadPackage {
                             // Get the channelData from the activity
                             final Object channelData = XposedHelpers.getObjectField(param.thisObject, "channelData");
                             
-                            // Get current channel number
-                            int channelNumber = -1;
+                            // Get current channel ID
+                            int channelId = -1;
+                            int channelNumber = -1;  // For display only
                             if (channelData != null) {
+                                channelId = XposedHelpers.getIntField(channelData, "_id");
                                 channelNumber = XposedHelpers.getIntField(channelData, "number");
                             }
                             
                             // Get current zone for this channel
                             ZoneDatabase db = ZoneDatabase.getInstance(context);
-                            final long currentZoneId = db.getZoneIdForChannel(channelNumber);
+                            final long currentZoneId = db.getZoneIdForChannel(channelId);
                             final String currentZoneName = (currentZoneId > 0) ? db.getZoneName(currentZoneId) : "None";
                             // Don't close singleton database
                             
-                            XposedBridge.log(TAG + ": Channel " + channelNumber + " is in zone: " + currentZoneName + " (ID: " + currentZoneId + ")");
+                            XposedBridge.log(TAG + ": Channel " + channelNumber + " (ID: " + channelId + ") is in zone: " + currentZoneName + " (ID: " + currentZoneId + ")");
                             
                             // Create zone selector row (matching the style of other settings)
                             LinearLayout zoneRow = new LinearLayout(context);
@@ -10822,29 +10840,30 @@ public class MainHook implements IXposedHookLoadPackage {
                             
                             Object channelData = XposedHelpers.getObjectField(saveParam.thisObject, "channelData");
                             if (channelData != null) {
-                                int channelNumber = XposedHelpers.getIntField(channelData, "number");
-                                XposedBridge.log(TAG + ": Saving zone assignment for channel " + channelNumber);
+                                int channelId = XposedHelpers.getIntField(channelData, "_id");
+                                int channelNumber = XposedHelpers.getIntField(channelData, "number");  // For display
+                                XposedBridge.log(TAG + ": Saving zone assignment for channel " + channelNumber + " (ID: " + channelId + ")");
                                 
                                 ZoneDatabase db = ZoneDatabase.getInstance(context);
                                 
                                 // Log current zone before change
-                                long currentZone = db.getZoneIdForChannel(channelNumber);
-                                XposedBridge.log(TAG + ": Channel " + channelNumber + " currently in zone " + currentZone);
+                                long currentZone = db.getZoneIdForChannel(channelId);
+                                XposedBridge.log(TAG + ": Channel " + channelNumber + " (ID: " + channelId + ") currently in zone " + currentZone);
                                 
                                 // Remove channel from old zone
-                                db.removeChannelFromAllZones(channelNumber);
-                                XposedBridge.log(TAG + ": Removed channel " + channelNumber + " from all zones");
+                                db.removeChannelFromAllZones(channelId);
+                                XposedBridge.log(TAG + ": Removed channel " + channelNumber + " (ID: " + channelId + ") from all zones");
                                 
                                 // Add to new zone if one was selected
                                 if (selectedZoneId > 0) {
-                                    boolean success = db.addChannelToZone(selectedZoneId, channelNumber);
-                                    XposedBridge.log(TAG + ": Channel " + channelNumber + " saved to zone ID " + selectedZoneId + ", success=" + success);
+                                    boolean success = db.addChannelToZone(selectedZoneId, channelId);
+                                    XposedBridge.log(TAG + ": Channel " + channelNumber + " (ID: " + channelId + ") saved to zone ID " + selectedZoneId + ", success=" + success);
                                     
                                     // Verify it was saved
-                                    long verifyZone = db.getZoneIdForChannel(channelNumber);
-                                    XposedBridge.log(TAG + ": Verification: channel " + channelNumber + " is now in zone " + verifyZone);
+                                    long verifyZone = db.getZoneIdForChannel(channelId);
+                                    XposedBridge.log(TAG + ": Verification: channel " + channelNumber + " (ID: " + channelId + ") is now in zone " + verifyZone);
                                 } else {
-                                    XposedBridge.log(TAG + ": Channel " + channelNumber + " removed from all zones (selectedZoneId=" + selectedZoneId + ")");
+                                    XposedBridge.log(TAG + ": Channel " + channelNumber + " (ID: " + channelId + ") removed from all zones (selectedZoneId=" + selectedZoneId + ")");
                                 }
                                 
                                 // Refresh the channel list to reflect the zone change
