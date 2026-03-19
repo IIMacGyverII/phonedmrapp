@@ -90,7 +90,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.3.5";
+    private static final String VERSION = "3.3.6";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -220,6 +220,9 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile String currentZoneName = "All";
     private static volatile java.util.List<Integer> currentZoneChannels = null;  // null = no filter
     private static ZoneDatabase zoneDatabase = null;
+    private static TGListDatabase tgListDatabase = null;  // Named TG lists for DMR channels
+    // Active TG list for the current channel (null = no list assigned)
+    private static volatile TGListDatabase.TGList activeTGList = null;
     private static java.util.Map<Long, Integer> lastUsedChannelPerZone = new java.util.concurrent.ConcurrentHashMap<>();  // Track last channel per zone
     private static Object talkBackFragmentInstance = null;  // Store fragment reference for channel switching
     private static volatile boolean isAutoSwitchingZone = false;  // Flag to bypass zone navigation during automatic zone switch
@@ -1347,8 +1350,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Store reference
                                 zoneButton = zoneButtonWidget;
                                 
-                                // Initialize ZoneDatabase
+                                // Initialize ZoneDatabase and TGListDatabase
                                 zoneDatabase = ZoneDatabase.getInstance(context);
+                                tgListDatabase = TGListDatabase.getInstance(context);
                                 
                                 // Set click listener
                                 zoneButtonWidget.setOnClickListener(new View.OnClickListener() {
@@ -9568,7 +9572,7 @@ public class MainHook implements IXposedHookLoadPackage {
                             }
                             
                             XposedBridge.log(TAG + ": AFTER: contactType=" + contactType + ", txContact=" + txContact);
-                            
+
                             int[] groups = (int[]) XposedHelpers.getObjectField(channelData, "groups");
                             if (contactType == 1 && groups != null) {
                                 XposedBridge.log(TAG + ": ✓ Will send groupList to hardware (GROUP mode)");
@@ -11729,6 +11733,398 @@ public class MainHook implements IXposedHookLoadPackage {
         }
     }
     
+    // =====================================================================
+    //  TG List dialogs
+    // =====================================================================
+
+    /**
+     * Show TG list selection dialog for channel edit.
+     * Lists all named TG lists from TGListDatabase, with options to create new or edit existing.
+     * selectedTGListId[0] is updated in-place and the activity instance field is written too.
+     */
+    private static void showChannelEditTGListDialog(final android.content.Context context,
+                                                    final android.app.Activity activity,
+                                                    final android.widget.TextView valueText,
+                                                    final long[] selectedTGListId) {
+        try {
+            final TGListDatabase db = TGListDatabase.getInstance(context);
+            final List<TGListDatabase.TGList> lists = db.getAllTGLists();
+
+            final android.widget.ListView listView = new android.widget.ListView(context);
+            listView.setDivider(null);
+
+            final List<String> displayItems = new ArrayList<>();
+            final List<Long>   itemIds      = new ArrayList<>();
+            final List<Boolean> isCreateNew = new ArrayList<>();
+
+            // "None" option
+            displayItems.add("None");
+            itemIds.add(-1L);
+            isCreateNew.add(false);
+
+            // All existing TG lists
+            for (TGListDatabase.TGList tgl : lists) {
+                displayItems.add(tgl.name + "  (" + tgl.size() + " TGs)");
+                itemIds.add(tgl.id);
+                isCreateNew.add(false);
+            }
+
+            // "Create New TG List…"
+            displayItems.add("Create New TG List\u2026");
+            itemIds.add(-999L);
+            isCreateNew.add(true);
+
+            final AlertDialog[] dialogHolder = new AlertDialog[1];
+
+            android.widget.BaseAdapter adapter = new android.widget.BaseAdapter() {
+                @Override public int getCount()                { return displayItems.size(); }
+                @Override public Object getItem(int pos)       { return displayItems.get(pos); }
+                @Override public long getItemId(int pos)       { return pos; }
+
+                @Override
+                public android.view.View getView(final int position, android.view.View convertView,
+                                                 android.view.ViewGroup parent) {
+                    LinearLayout row = new LinearLayout(context);
+                    row.setOrientation(LinearLayout.HORIZONTAL);
+                    row.setClickable(false);
+                    row.setFocusable(false);
+                    row.setPadding(40, 30, 40, 30);
+                    row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+
+                    android.widget.TextView nameText = new android.widget.TextView(context);
+                    nameText.setText(displayItems.get(position));
+                    nameText.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
+                    nameText.setTextColor(0xFF000000);
+                    nameText.setClickable(false);
+                    nameText.setFocusable(false);
+                    if (isCreateNew.get(position)) {
+                        nameText.setTextColor(0xFF4169E1);
+                        nameText.setTypeface(null, android.graphics.Typeface.BOLD);
+                    }
+                    LinearLayout.LayoutParams nameParams = new LinearLayout.LayoutParams(
+                        0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
+                    nameText.setLayoutParams(nameParams);
+                    row.addView(nameText);
+
+                    // Edit button for real TG lists (not None or Create New)
+                    if (position > 0 && !isCreateNew.get(position)) {
+                        android.widget.TextView editBtn = new android.widget.TextView(context);
+                        editBtn.setText("\u270F");  // ✏
+                        editBtn.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 20);
+                        editBtn.setTextColor(0xFF666666);
+                        editBtn.setPadding(20, 0, 20, 0);
+                        editBtn.setOnClickListener(new android.view.View.OnClickListener() {
+                            @Override
+                            public void onClick(android.view.View v) {
+                                if (dialogHolder[0] != null) dialogHolder[0].dismiss();
+                                TGListDatabase.TGList tgl = db.getTGList(itemIds.get(position));
+                                if (tgl != null) {
+                                    showTGListEditorDialog(context, activity, valueText,
+                                        selectedTGListId, tgl);
+                                }
+                            }
+                        });
+                        row.addView(editBtn);
+                    }
+                    return row;
+                }
+            };
+
+            listView.setAdapter(adapter);
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            builder.setTitle("Select TG List");
+            builder.setView(listView);
+            builder.setNegativeButton("Cancel", null);
+            dialogHolder[0] = builder.create();
+            final AlertDialog dialog = dialogHolder[0];
+
+            listView.setOnItemClickListener(new android.widget.AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(android.widget.AdapterView<?> parent,
+                                        android.view.View view, int position, long id) {
+                    if (isCreateNew.get(position)) {
+                        dialog.dismiss();
+                        showCreateTGListDialog(context, activity, valueText, selectedTGListId);
+                    } else {
+                        selectedTGListId[0] = itemIds.get(position);
+                        // Display name: strip the " (N TGs)" suffix for the row label
+                        String label = position == 0 ? "None" : lists.get(position - 1).name;
+                        valueText.setText(label);
+                        XposedHelpers.setAdditionalInstanceField(activity,
+                            "dmrmod_selectedTGListId", selectedTGListId[0]);
+                        XposedBridge.log(TAG + ": TG list selection: id=" + selectedTGListId[0] + " name=" + label);
+                        // Refresh the native group grid immediately
+                        int[] newGroups = new int[32];
+                        if (selectedTGListId[0] > 0) {
+                            TGListDatabase.TGList sel = db.getTGList(selectedTGListId[0]);
+                            if (sel != null) newGroups = sel.getHardwareGroups();
+                        }
+                        refreshGroupGrid(context, activity, newGroups);
+                        dialog.dismiss();
+                    }
+                }
+            });
+
+            // Long-press → edit
+            listView.setOnItemLongClickListener(new android.widget.AdapterView.OnItemLongClickListener() {
+                @Override
+                public boolean onItemLongClick(android.widget.AdapterView<?> parent,
+                                               android.view.View view, int position, long id) {
+                    if (position > 0 && !isCreateNew.get(position)) {
+                        dialogHolder[0].dismiss();
+                        TGListDatabase.TGList tgl = db.getTGList(itemIds.get(position));
+                        if (tgl != null) {
+                            showTGListEditorDialog(context, activity, valueText, selectedTGListId, tgl);
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            });
+
+            dialog.show();
+
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error showing TG list selection dialog: " + t.getMessage());
+            android.widget.Toast.makeText(context, "Error loading TG lists", android.widget.Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * Show a dialog to create a brand-new named TG list.
+     * The user types a name; an editor then opens for the TG IDs.
+     */
+    private static void showCreateTGListDialog(final android.content.Context context,
+                                               final android.app.Activity activity,
+                                               final android.widget.TextView valueText,
+                                               final long[] selectedTGListId) {
+        try {
+            final android.widget.EditText nameInput = new android.widget.EditText(context);
+            nameInput.setHint("TG List name");
+            nameInput.setSingleLine(true);
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            builder.setTitle("Create New TG List");
+            builder.setView(nameInput);
+            builder.setPositiveButton("Next", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    String name = nameInput.getText().toString().trim();
+                    if (name.isEmpty()) {
+                        android.widget.Toast.makeText(context, "Name cannot be empty",
+                            android.widget.Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    TGListDatabase db = TGListDatabase.getInstance(context);
+                    if (db.tgListExists(name)) {
+                        android.widget.Toast.makeText(context, "A TG list named \"" + name + "\" already exists",
+                            android.widget.Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    // Create an empty list first so it gets an id
+                    long newId = db.saveTGList(name, "");
+                    TGListDatabase.TGList newList = db.getTGList(newId);
+                    if (newList != null) {
+                        showTGListEditorDialog(context, activity, valueText, selectedTGListId, newList);
+                    }
+                }
+            });
+            builder.setNegativeButton("Cancel", null);
+            builder.show();
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error in showCreateTGListDialog: " + t.getMessage());
+        }
+    }
+
+    /**
+     * Show an editor dialog for a TG list's comma-separated DMR IDs.
+     * After saving the list is automatically selected for the current channel.
+     *
+     * @param existingList  The TG list to edit (id must be valid in the database).
+     */
+    private static void showTGListEditorDialog(final android.content.Context context,
+                                               final android.app.Activity activity,
+                                               final android.widget.TextView valueText,
+                                               final long[] selectedTGListId,
+                                               final TGListDatabase.TGList existingList) {
+        try {
+            LinearLayout layout = new LinearLayout(context);
+            layout.setOrientation(LinearLayout.VERTICAL);
+            layout.setPadding(40, 20, 40, 10);
+
+            // Header — name (read-only label)
+            android.widget.TextView headerLabel = new android.widget.TextView(context);
+            headerLabel.setText("TG List: " + existingList.name);
+            headerLabel.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14);
+            headerLabel.setTextColor(0xFF888888);
+            headerLabel.setPadding(0, 0, 0, 10);
+            layout.addView(headerLabel);
+
+            // Instructions
+            android.widget.TextView instrLabel = new android.widget.TextView(context);
+            instrLabel.setText("Enter DMR TalkGroup IDs separated by commas.\nFirst 32 will be sent to hardware.");
+            instrLabel.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 13);
+            instrLabel.setTextColor(0xFF555555);
+            instrLabel.setPadding(0, 0, 0, 8);
+            layout.addView(instrLabel);
+
+            // TG ID multi-line input
+            final android.widget.EditText tgInput = new android.widget.EditText(context);
+            tgInput.setHint("e.g. 91,93,310,3100");
+            tgInput.setText(existingList.getTgIdsString());
+            tgInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+            tgInput.setLines(4);
+            tgInput.setMaxLines(8);
+            tgInput.setGravity(android.view.Gravity.TOP | android.view.Gravity.START);
+            tgInput.setHorizontalScrollBarEnabled(false);
+            layout.addView(tgInput);
+
+            // Size hint label — updated live
+            final android.widget.TextView sizeLabel = new android.widget.TextView(context);
+            int currentSize = existingList.size();
+            sizeLabel.setText(currentSize + " TGs" + (existingList.exceedsHardwareLimit()
+                ? " (\u26A0 " + (currentSize - TGListDatabase.HARDWARE_MAX_GROUPS) + " beyond HW limit)" : ""));
+            sizeLabel.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12);
+            sizeLabel.setTextColor(existingList.exceedsHardwareLimit() ? 0xFFCC6600 : 0xFF555555);
+            sizeLabel.setPadding(0, 4, 0, 0);
+            layout.addView(sizeLabel);
+
+            tgInput.addTextChangedListener(new android.text.TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                @Override
+                public void afterTextChanged(android.text.Editable s) {
+                    List<Integer> parsed = TGListDatabase.TGList.parseTgIds(s.toString());
+                    int sz = parsed.size();
+                    boolean over = sz > TGListDatabase.HARDWARE_MAX_GROUPS;
+                    sizeLabel.setText(sz + " TGs" + (over
+                        ? " (\u26A0 " + (sz - TGListDatabase.HARDWARE_MAX_GROUPS) + " beyond HW limit)" : ""));
+                    sizeLabel.setTextColor(over ? 0xFFCC6600 : 0xFF555555);
+                }
+            });
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            builder.setTitle("Edit TG List");
+            builder.setView(layout);
+            builder.setPositiveButton("Save", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    String raw = tgInput.getText().toString().trim();
+                    try {
+                        TGListDatabase db = TGListDatabase.getInstance(context);
+                        // Build the updated list object and save
+                        TGListDatabase.TGList updated = new TGListDatabase.TGList(
+                            existingList.id, existingList.name, existingList.description, raw);
+                        db.saveTGList(updated);
+
+                        // Auto-select this list for the channel
+                        selectedTGListId[0] = existingList.id;
+                        valueText.setText(existingList.name);
+                        XposedHelpers.setAdditionalInstanceField(activity,
+                            "dmrmod_selectedTGListId", existingList.id);
+                        // Refresh the native group grid with the new TG IDs
+                        refreshGroupGrid(context, activity, updated.getHardwareGroups());
+                        XposedBridge.log(TAG + ": Updated TG list '" + existingList.name
+                            + "' id=" + existingList.id + " with " + updated.size() + " TGs");
+                        android.widget.Toast.makeText(context,
+                            "TG list \"" + existingList.name + "\" saved (" + updated.size() + " TGs)",
+                            android.widget.Toast.LENGTH_SHORT).show();
+                    } catch (Throwable t) {
+                        XposedBridge.log(TAG + ": Error saving TG list: " + t.getMessage());
+                        android.widget.Toast.makeText(context, "Error saving TG list",
+                            android.widget.Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+            builder.setNegativeButton("Cancel", null);
+            builder.setNeutralButton("Delete List", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    // Confirm before deleting
+                    new AlertDialog.Builder(context)
+                        .setTitle("Delete TG List")
+                        .setMessage("Delete \"" + existingList.name + "\"? This cannot be undone.")
+                        .setPositiveButton("Delete", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface d2, int w2) {
+                                TGListDatabase db = TGListDatabase.getInstance(context);
+                                db.deleteTGList(existingList.id);
+                                // If this was the currently selected list, reset to none
+                                if (selectedTGListId[0] == existingList.id) {
+                                    selectedTGListId[0] = -1;
+                                    valueText.setText("None");
+                                    XposedHelpers.setAdditionalInstanceField(activity,
+                                        "dmrmod_selectedTGListId", -1L);
+                                }
+                                XposedBridge.log(TAG + ": Deleted TG list '" + existingList.name + "' id=" + existingList.id);
+                                android.widget.Toast.makeText(context,
+                                    "TG list \"" + existingList.name + "\" deleted",
+                                    android.widget.Toast.LENGTH_SHORT).show();
+                            }
+                        })
+                        .setNegativeButton("Cancel", null)
+                        .show();
+                }
+            });
+            builder.show();
+
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error in showTGListEditorDialog: " + t.getMessage());
+        }
+    }
+
+    /**
+     * Refreshes the native interphone_channel_group_grid with the given TG ID array.
+     * Called whenever the user picks or edits a TG list on the channel edit screen.
+     */
+    private static void refreshGroupGrid(final android.content.Context context,
+                                         final android.app.Activity activity,
+                                         final int[] groups) {
+        try {
+            final int gridResId = context.getResources().getIdentifier(
+                "interphone_channel_group_grid", "id", context.getPackageName());
+            final android.widget.GridView groupGrid =
+                (android.widget.GridView) activity.findViewById(gridResId);
+            if (groupGrid == null) {
+                XposedBridge.log(TAG + ": refreshGroupGrid: grid not found");
+                return;
+            }
+            final int itemLayoutId = context.getResources().getIdentifier(
+                "interphone_channel_group_item", "layout", context.getPackageName());
+            final int editTextId = context.getResources().getIdentifier(
+                "interphone_channel_group_number_set", "id", context.getPackageName());
+            activity.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    groupGrid.setAdapter(new android.widget.BaseAdapter() {
+                        @Override public int getCount() { return 32; }
+                        @Override public Object getItem(int pos) { return groups[pos]; }
+                        @Override public long getItemId(int pos) { return pos; }
+                        @Override
+                        public android.view.View getView(int pos, android.view.View convertView,
+                                                         android.view.ViewGroup parent) {
+                            if (convertView == null) {
+                                convertView = android.view.LayoutInflater.from(context)
+                                    .inflate(itemLayoutId, parent, false);
+                            }
+                            android.widget.EditText et =
+                                (android.widget.EditText) convertView.findViewById(editTextId);
+                            if (et != null) {
+                                int tgId = groups[pos];
+                                et.setText(String.valueOf(tgId));
+                            }
+                            return convertView;
+                        }
+                    });
+                }
+            });
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error refreshing group grid: " + t.getMessage());
+        }
+    }
+
     /**
      * Show zone selection dialog for channel edit with edit icons and create option
      */
@@ -12189,6 +12585,79 @@ public class MainHook implements IXposedHookLoadPackage {
                             container.addView(zoneRow, 3);
                             
                             XposedBridge.log(TAG + ": Zone selector added to channel edit page");
+
+                            // ── TG List row (Digital channels only) ──────────────────────────
+                            try {
+                                int channelTypeFlag = (channelData != null)
+                                        ? XposedHelpers.getIntField(channelData, "type") : -1;
+                                // type 0 = Digital/DMR, 1 = Analog
+                                if (channelTypeFlag == 0) {
+                                    TGListDatabase tgDb = TGListDatabase.getInstance(context);
+                                    final String currentTGListName = tgDb.getTGListNameForChannel(channelId);
+
+                                    // Reuse of createChannelEditRow helper to keep visual consistency
+                                    LinearLayout tgRow = new LinearLayout(context);
+                                    tgRow.setOrientation(LinearLayout.HORIZONTAL);
+                                    tgRow.setClickable(true);
+                                    tgRow.setFocusable(true);
+                                    tgRow.setBackgroundResource(bgResId);
+                                    tgRow.setLayoutParams(rowParams);
+
+                                    TextView tgTitleText = new TextView(context);
+                                    tgTitleText.setText("TG List");
+                                    tgTitleText.setTextColor(context.getResources().getColor(
+                                        context.getResources().getIdentifier("pri_text_color", "color", context.getPackageName())
+                                    ));
+                                    tgTitleText.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,
+                                        context.getResources().getDimensionPixelSize(
+                                            context.getResources().getIdentifier("interphone_channel_content_title_size", "dimen", context.getPackageName())
+                                        )
+                                    );
+                                    tgTitleText.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                                    tgTitleText.setLayoutParams(titleParams);
+
+                                    View tgSeparator = new View(context);
+                                    tgSeparator.setBackgroundResource(separatorResId);
+                                    tgSeparator.setLayoutParams(new LinearLayout.LayoutParams(7, 13));
+                                    ((LinearLayout.LayoutParams) tgSeparator.getLayoutParams()).leftMargin = ((LinearLayout.LayoutParams) separator.getLayoutParams()).leftMargin;
+                                    ((LinearLayout.LayoutParams) tgSeparator.getLayoutParams()).gravity = android.view.Gravity.CENTER_VERTICAL;
+
+                                    final TextView tgValueText = new TextView(context);
+                                    tgValueText.setText(currentTGListName);
+                                    tgValueText.setTextColor(context.getResources().getColor(
+                                        context.getResources().getIdentifier("pri_text_color", "color", context.getPackageName())
+                                    ));
+                                    tgValueText.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,
+                                        context.getResources().getDimensionPixelSize(
+                                            context.getResources().getIdentifier("interphone_channel_content_sub_size", "dimen", context.getPackageName())
+                                        )
+                                    );
+                                    tgValueText.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                                    tgValueText.setLayoutParams(valueParams);
+
+                                    tgRow.addView(tgTitleText);
+                                    tgRow.addView(tgSeparator);
+                                    tgRow.addView(tgValueText);
+
+                                    // Store the current TG list id for save
+                                    final long currentTGListId = tgDb.getTGListIdForChannel(channelId);
+                                    final long[] selectedTGListId = {currentTGListId};
+                                    XposedHelpers.setAdditionalInstanceField(activity, "dmrmod_selectedTGListId", currentTGListId);
+
+                                    tgRow.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            showChannelEditTGListDialog(context, activity, tgValueText, selectedTGListId);
+                                        }
+                                    });
+
+                                    // Insert after zone row (zone is at index 3, so we go at index 4)
+                                    container.addView(tgRow, 4);
+                                    XposedBridge.log(TAG + ": TG List selector added to channel edit page");
+                                }
+                            } catch (Throwable tge) {
+                                XposedBridge.log(TAG + ": Error adding TG List row: " + tge.getMessage());
+                            }
                             
                         } catch (Throwable t) {
                             XposedBridge.log(TAG + ": Error in channel edit hook: " + t.getMessage());
@@ -12215,7 +12684,6 @@ public class MainHook implements IXposedHookLoadPackage {
                                 XposedBridge.log(TAG + ": No selectedZoneId found in activity instance, skipping zone save");
                                 return;
                             }
-                            
                             XposedBridge.log(TAG + ": saveChannelData called, selectedZoneId = " + selectedZoneId);
                             
                             Object channelData = XposedHelpers.getObjectField(saveParam.thisObject, "channelData");
@@ -12272,6 +12740,37 @@ public class MainHook implements IXposedHookLoadPackage {
                                     XposedBridge.log(TAG + ": channelFragmentInstance is null, cannot refresh");
                                 }
                                 
+                                // Save TG list assignment and write IDs directly into channel_groups
+                                try {
+                                    Long selectedTGListId = (Long) XposedHelpers.getAdditionalInstanceField(activity, "dmrmod_selectedTGListId");
+                                    if (selectedTGListId != null) {
+                                        TGListDatabase tgDb = TGListDatabase.getInstance(context);
+                                        if (selectedTGListId > 0) {
+                                            tgDb.assignTGListToChannel(channelId, selectedTGListId);
+                                            TGListDatabase.TGList tgList = tgDb.getTGList(selectedTGListId);
+                                            if (tgList != null) {
+                                                // Write TG IDs directly into the channel's native groups array and persist to DB
+                                                int[] hwGroups = tgList.getHardwareGroups();
+                                                XposedHelpers.setObjectField(channelData, "groups", hwGroups);
+                                                Class<?> dmrMgrClass = XposedHelpers.findClass(
+                                                    "com.pri.prizeinterphone.manager.DmrManager",
+                                                    context.getClassLoader());
+                                                Object mgr = XposedHelpers.callStaticMethod(dmrMgrClass, "getInstance");
+                                                XposedHelpers.callMethod(mgr, "updateChannel", channelData);
+                                                XposedBridge.log(TAG + ": Wrote TG list '" + tgList.name + "' (" + tgList.size() + " TGs) into channel_groups for channel id=" + channelId);
+                                                if (tgList.exceedsHardwareLimit()) {
+                                                    XposedBridge.log(TAG + ": [WARN] List has " + tgList.size() + " TGs; only first " + TGListDatabase.HARDWARE_MAX_GROUPS + " written to hardware");
+                                                }
+                                            }
+                                        } else {
+                                            tgDb.removeAssignmentForChannel(channelId);
+                                            XposedBridge.log(TAG + ": Removed TG list assignment for channel id=" + channelId);
+                                        }
+                                    }
+                                } catch (Throwable tgSaveErr) {
+                                    XposedBridge.log(TAG + ": Error saving TG list to channel_groups: " + tgSaveErr.getMessage());
+                                }
+
                                 // Don't close singleton database
                             } else {
                                 XposedBridge.log(TAG + ": channelData is null in saveChannelData");
