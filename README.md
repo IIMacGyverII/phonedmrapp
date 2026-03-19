@@ -1,21 +1,95 @@
 ﻿# PriInterPhone DMR Radio - LSPosed Mod with OpenGD77 Integration + Advanced Features
 
-**Status**: âœ… **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS + VFO Mode + SSTV!
+**Status**: âœ… **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS + VFO Mode + SSTV + NOAA APT!
 
-> **ï¿½ Current Stable Release: v3.3.3** (March 18, 2026) - SSTV Settings + APRS/SSTV Dialog Refresh Fix  
-> **ðŸ“¦ Previous Release: v3.3.2** (March 19, 2026) - APRS Buttons Moved to Monitoring Page  
-> **ðŸ”§ Prior Release: v3.3.1** (March 18, 2026) - Crash Recovery Improvements  
-> **ðŸ“º Prior Release: v3.3.0** (March 18, 2026) - SSTV Live Monitoring  
-> **ðŸŽ›ï¸ Prior Release: v3.2.3** (March 16, 2026) - APRS Channel Filtering + Button Spacing  
-> **ðŸŽ›ï¸ Feature Release: v3.1.5** (March 14, 2026) - VFO Mode (Variable Frequency Oscillator)  
-> **ðŸ› Bug Fix: v3.1.4** (March 13, 2026) - Software Squelch State Fix  
-> **ðŸ“¡ Major Feature: v3.1.0** (March 12, 2026) - APRS Live Monitoring  
-> **ðŸŽ™ï¸ Stable Base: v1.7.0** (February 2026) - Transcription & API Features
+> **🛰️ Current Stable Release: v3.3.5** (March 19, 2026) - NOAA APT Software Squelch Slider  
+> **🛰️ Previous Release: v3.3.4** (March 19, 2026) - NOAA APT Live Monitoring  
+> **📺 Prior Release: v3.3.3** (March 18, 2026) - SSTV Settings + APRS/SSTV Dialog Refresh Fix  
+> **📦 Prior Release: v3.3.2** (March 19, 2026) - APRS Buttons Moved to Monitoring Page  
+> **🔧 Prior Release: v3.3.1** (March 18, 2026) - Crash Recovery Improvements  
+> **📺 Prior Release: v3.3.0** (March 18, 2026) - SSTV Live Monitoring  
+> **🎛️ Prior Release: v3.2.3** (March 16, 2026) - APRS Channel Filtering + Button Spacing  
+> **🎛️ Feature Release: v3.1.5** (March 14, 2026) - VFO Mode (Variable Frequency Oscillator)  
+> **🐛 Bug Fix: v3.1.4** (March 13, 2026) - Software Squelch State Fix  
+> **📡 Major Feature: v3.1.0** (March 12, 2026) - APRS Live Monitoring  
+> **🎙️ Stable Base: v1.7.0** (February 2026) - Transcription and API Features
 
 ## Demo
 
 <video src="https://github.com/user-attachments/assets/d6305a49-c8ed-47dc-a9d8-7e731aa02811" controls title="DMRModHooks v1.1 Demo" width="800"></video>
 
+## 🛰️ What's New in v3.3.5 (March 19, 2026)
+
+### NOAA APT â€” Software Squelch Slider Added to Live Monitoring Screen
+
+**Full software squelch control (toggle + slider) is now available on the NOAA APT live monitoring screen, matching the SSTV and APRS experience**
+
+#### **Software Squelch Toggle + Slider**
+- **🔇 Soft SQ toggle button** â€” shown on the NOAA live monitoring screen below the satellite info text
+  - Green when ON, gray when OFF; initialized from current software squelch state
+  - Enabling calls `enableSoftwareSquelchOnCurrentChannel()` + a 2.5s delayed re-apply to survive late channel state-machine updates
+  - Disabling calls `disableSoftwareSquelchOnCurrentChannel()` to restore hardware squelch
+- **Squelch slider** (0â€“9) â€” visible only when soft SQ is ON
+  - "SQ:" label + green live value display + SeekBar (black tint, 0â€“9)
+  - Adjusting updates `softwareSquelchThreshold` immediately (shared with APRS/SSTV)
+  - Toast on release: "Software Squelch: N"
+- Info text when ON: "Hybrid RSSI + Audio RMS squelch â€” 0=most sensitive, 9=least sensitive"
+- **Auto-disable on stop**: Stopping NOAA monitoring disables soft SQ if active, preventing bleed onto the restored channel
+
+#### **Hardware Squelch Note**
+- Hardware squelch is set to `sq=2` during NOAA monitoring (same as SSTV)
+- `sq=0` kills audio on this hardware â€” software squelch is the correct approach for open-squelch satellite monitoring
+- The software squelch layer uses hybrid RSSI + audio RMS (identical to APRS/SSTV implementation)
+
+---
+
+## 🛰️ What's New in v3.3.4 (March 19, 2026)
+
+### NOAA APT Satellite Image Reception â€” Live Monitoring
+
+**Receive and decode NOAA weather satellite APT transmissions in real-time, with live image display, automatic saving, and pass prediction**
+
+#### **NOAA Button and Live Screen**
+- **🛰️ NOAA Toggle Button**: New slate-blue button on intercom page
+  - Opens live monitoring screen with real-time image decode
+  - Mutually exclusive with APRS, SSTV, and VFO modes
+- **Live Monitoring Screen**:
+  - Real-time APT image decode with live bitmap display (square preview box)
+  - Timer showing elapsed decode time from first decoded line
+  - Progress: decoded line count + approximate seconds elapsed
+  - Color mode cycling: Gray â†’ Thermal IR â†’ Color (MSA)
+  - Auto-updates every 2 seconds
+
+#### **APT Decoding**
+- **Sync detection**: Frame sync pattern matching locks onto the 2400 Hz sync tone
+- **Line-by-line decode**: Standard 2080 samples-per-line APT format
+- **Color modes**: Grayscale, thermal IR color map, and NOAA MSA false-color palette
+- **Dual-channel image**: Left = Channel A (visible/near-IR), Right = Channel B (thermal IR)
+
+#### **Image Handling**
+- **Auto-Save**: Completed images saved to `/sdcard/Download/DMR/NOAA/`
+  - Filename format: `NOAA_YYYYMMDD_HHmmss.png`
+  - Periodic auto-save every 300 decoded lines (~5 min) prevents data loss
+- **Save Now** button: Force-save current partial image at any time
+- **Saved Images browser**: Browse and tap to open any saved NOAA image
+
+#### **Pass Prediction**
+- Built-in pass predictor on the NOAA settings dialog
+  - Shows next visible passes for NOAA-15, NOAA-18, NOAA-19
+  - AOS/LOS times, max elevation, and color-coded quality
+- Uses simplified SGP4-like orbital mechanics (no external library dependency)
+
+#### **Settings**
+- Configurable receive frequency (default `137.100 MHz`)
+  - Common frequencies: NOAA-15 137.620, NOAA-18 137.9125, NOAA-19 137.100 MHz
+- Frequency persisted via SharedPreferences across sessions
+
+#### **Channel Backup and Restore**
+- Full channel backup before hijacking to NOAA frequency
+- Automatic restoration on stop (same pattern as SSTV/APRS/VFO)
+- Crash-recovery dialog on next app start if restore did not complete
+
+---
 ## 📺 What's New in v3.3.3 (March 18, 2026)
 
 ### SSTV Settings & Received Images Dialogs + Dialog Refresh Fix

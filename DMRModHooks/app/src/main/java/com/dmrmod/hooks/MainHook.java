@@ -90,7 +90,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.3.4";
+    private static final String VERSION = "3.3.5";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -271,6 +271,9 @@ public class MainHook implements IXposedHookLoadPackage {
     private static NOAAReceiver noaaReceiver = null;  // NOAA APT audio processor
     private static android.widget.ImageView noaaLiveImageView = null;
     private static android.widget.TextView noaaProgressText = null;
+    private static android.widget.TextView noaaTimerText = null;
+    private static android.widget.Button noaaColorModeButton = null;
+    private static long noaaSignalStartTime = 0;   // ms since epoch when first line decoded
     private static java.util.HashMap<String, Object> noaaChannelBackup = null;
 
     // Analog-specific settings
@@ -858,6 +861,8 @@ public class MainHook implements IXposedHookLoadPackage {
                         noaaReceiver = null;
                         noaaLiveImageView = null;
                         noaaProgressText = null;
+                        noaaTimerText = null;
+                        noaaSignalStartTime = 0;
 
                         // Check for orphaned channels and restore if needed (delayed to ensure DmrManager is ready)
                         final Activity activityForRestore = (Activity) param.thisObject;
@@ -6709,6 +6714,15 @@ public class MainHook implements IXposedHookLoadPackage {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(30, 30, 30, 30);
 
+        // Timer text (top right, counts from first decoded line)
+        noaaSignalStartTime = 0;
+        noaaTimerText = new android.widget.TextView(activity);
+        noaaTimerText.setText("⏱ Waiting...");
+        noaaTimerText.setTextSize(14);
+        noaaTimerText.setTextColor(0xFFFFAA00);
+        noaaTimerText.setPadding(0, 0, 0, 4);
+        layout.addView(noaaTimerText);
+
         // Progress text
         noaaProgressText = new android.widget.TextView(activity);
         noaaProgressText.setText("Calibrating sync...");
@@ -6717,14 +6731,14 @@ public class MainHook implements IXposedHookLoadPackage {
         noaaProgressText.setPadding(0, 0, 0, 15);
         layout.addView(noaaProgressText);
 
-        // Live image view (1818 wide, scales to screen width)
+        // Live image view — FIT_XY fills the box so even a few decoded lines are visible
         noaaLiveImageView = new android.widget.ImageView(activity);
         int displayWidth = activity.getResources().getDisplayMetrics().widthPixels - 80;
         LinearLayout.LayoutParams imgParams = new LinearLayout.LayoutParams(
-            displayWidth, displayWidth / 2);   // 1818:909 is ~2:1
+            displayWidth, displayWidth);   // square box; final APT image is ~1:1
         imgParams.bottomMargin = 15;
         noaaLiveImageView.setLayoutParams(imgParams);
-        noaaLiveImageView.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        noaaLiveImageView.setScaleType(android.widget.ImageView.ScaleType.FIT_XY);
         noaaLiveImageView.setBackgroundColor(0xFF111111);
         layout.addView(noaaLiveImageView);
 
@@ -6738,6 +6752,163 @@ public class MainHook implements IXposedHookLoadPackage {
         infoText.setTextSize(12);
         infoText.setTextColor(0xFF999999);
         layout.addView(infoText);
+
+        // ========== SOFTWARE SQUELCH TOGGLE ==========
+        final android.widget.ToggleButton noaaSoftSqToggle = new android.widget.ToggleButton(activity);
+        noaaSoftSqToggle.setText("Soft SQ");
+        noaaSoftSqToggle.setTextOn("🔇 Soft SQ: ON");
+        noaaSoftSqToggle.setTextOff("🔊 Soft SQ: OFF");
+        noaaSoftSqToggle.setChecked(isSoftwareSquelchEnabled);
+        noaaSoftSqToggle.setTextSize(16);
+        noaaSoftSqToggle.setAllCaps(false);
+        noaaSoftSqToggle.setPadding(20, 20, 20, 20);
+        LinearLayout.LayoutParams noaaToggleParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        noaaToggleParams.setMargins(0, 10, 0, 10);
+        noaaSoftSqToggle.setLayoutParams(noaaToggleParams);
+
+        android.graphics.drawable.StateListDrawable noaaToggleDrawable = new android.graphics.drawable.StateListDrawable();
+        android.graphics.drawable.GradientDrawable noaaCheckedDrawable = new android.graphics.drawable.GradientDrawable();
+        noaaCheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+        noaaCheckedDrawable.setColor(0xFF4CAF50);
+        noaaCheckedDrawable.setCornerRadius(20 * activity.getResources().getDisplayMetrics().density);
+        noaaCheckedDrawable.setStroke(
+            (int) (2 * activity.getResources().getDisplayMetrics().density), 0xFFFFFFFF);
+        noaaToggleDrawable.addState(new int[]{android.R.attr.state_checked}, noaaCheckedDrawable);
+        android.graphics.drawable.GradientDrawable noaaUncheckedDrawable = new android.graphics.drawable.GradientDrawable();
+        noaaUncheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+        noaaUncheckedDrawable.setColor(0xFF666666);
+        noaaUncheckedDrawable.setCornerRadius(20 * activity.getResources().getDisplayMetrics().density);
+        noaaUncheckedDrawable.setStroke(
+            (int) (2 * activity.getResources().getDisplayMetrics().density), 0x80FFFFFF);
+        noaaToggleDrawable.addState(new int[]{}, noaaUncheckedDrawable);
+        noaaSoftSqToggle.setBackground(noaaToggleDrawable);
+        layout.addView(noaaSoftSqToggle);
+
+        // ========== SOFTWARE SQUELCH SLIDER ==========
+        final LinearLayout noaaSqContainer = new LinearLayout(activity);
+        noaaSqContainer.setOrientation(LinearLayout.HORIZONTAL);
+        noaaSqContainer.setPadding(0, 0, 0, 10);
+        noaaSqContainer.setLayoutParams(new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        noaaSqContainer.setVisibility(isSoftwareSquelchEnabled ? View.VISIBLE : View.GONE);
+
+        TextView noaaSqLabel = new TextView(activity);
+        noaaSqLabel.setText("SQ:");
+        noaaSqLabel.setTextColor(0xFFFFFFFF);
+        noaaSqLabel.setTextSize(14);
+        noaaSqLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+        LinearLayout.LayoutParams noaaSqLabelParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        noaaSqLabelParams.gravity = android.view.Gravity.CENTER_VERTICAL;
+        noaaSqLabelParams.rightMargin = (int) (6 * activity.getResources().getDisplayMetrics().density);
+        noaaSqLabel.setLayoutParams(noaaSqLabelParams);
+        noaaSqContainer.addView(noaaSqLabel);
+
+        final TextView noaaSqValueLabel = new TextView(activity);
+        noaaSqValueLabel.setText(String.valueOf(softwareSquelchThreshold));
+        noaaSqValueLabel.setTextColor(0xFF00FF00);
+        noaaSqValueLabel.setTextSize(18);
+        noaaSqValueLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+        noaaSqValueLabel.setGravity(android.view.Gravity.CENTER);
+        LinearLayout.LayoutParams noaaSqValueParams = new LinearLayout.LayoutParams(
+            (int) (40 * activity.getResources().getDisplayMetrics().density),
+            LinearLayout.LayoutParams.WRAP_CONTENT);
+        noaaSqValueParams.gravity = android.view.Gravity.CENTER_VERTICAL;
+        noaaSqValueLabel.setLayoutParams(noaaSqValueParams);
+        noaaSqContainer.addView(noaaSqValueLabel);
+
+        final android.widget.SeekBar noaaSqSeekBar = new android.widget.SeekBar(activity);
+        LinearLayout.LayoutParams noaaSqSeekParams = new LinearLayout.LayoutParams(
+            0, LinearLayout.LayoutParams.WRAP_CONTENT);
+        noaaSqSeekParams.weight = 1.0f;
+        noaaSqSeekParams.topMargin = (int) (4 * activity.getResources().getDisplayMetrics().density);
+        noaaSqSeekParams.leftMargin = (int) (10 * activity.getResources().getDisplayMetrics().density);
+        noaaSqSeekBar.setLayoutParams(noaaSqSeekParams);
+        noaaSqSeekBar.setMax(9);
+        noaaSqSeekBar.setProgress(softwareSquelchThreshold);
+        try {
+            android.content.res.ColorStateList blackColor = android.content.res.ColorStateList.valueOf(0xFF000000);
+            noaaSqSeekBar.setProgressTintList(blackColor);
+            noaaSqSeekBar.setProgressBackgroundTintList(blackColor);
+            noaaSqSeekBar.setThumbTintList(blackColor);
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Could not set NOAA squelch slider color: " + e);
+        }
+        noaaSqSeekBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(android.widget.SeekBar seekBar, int progress, boolean fromUser) {
+                if (fromUser) {
+                    noaaSqValueLabel.setText(String.valueOf(progress));
+                    softwareSquelchThreshold = progress;
+                }
+            }
+            @Override public void onStartTrackingTouch(android.widget.SeekBar seekBar) { }
+            @Override
+            public void onStopTrackingTouch(android.widget.SeekBar seekBar) {
+                Toast.makeText(activity, "Software Squelch: " + seekBar.getProgress(), Toast.LENGTH_SHORT).show();
+                XposedBridge.log(TAG + ": NOAA squelch level set to " + seekBar.getProgress());
+            }
+        });
+        noaaSqContainer.addView(noaaSqSeekBar);
+        layout.addView(noaaSqContainer);
+
+        final TextView noaaSqInfo = new TextView(activity);
+        noaaSqInfo.setText("📊 Hybrid RSSI + Audio RMS squelch\n0=most sensitive, 9=least sensitive");
+        noaaSqInfo.setTextSize(11);
+        noaaSqInfo.setTextColor(0xFF999999);
+        noaaSqInfo.setPadding(0, 0, 0, 10);
+        noaaSqInfo.setVisibility(isSoftwareSquelchEnabled ? View.VISIBLE : View.GONE);
+        layout.addView(noaaSqInfo);
+
+        noaaSoftSqToggle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                isSoftwareSquelchEnabled = noaaSoftSqToggle.isChecked();
+                if (isSoftwareSquelchEnabled) {
+                    enableSoftwareSquelchOnCurrentChannel();
+                    Toast.makeText(activity, "NOAA software squelch enabled", Toast.LENGTH_SHORT).show();
+                    noaaSqContainer.setVisibility(View.VISIBLE);
+                    noaaSqInfo.setVisibility(View.VISIBLE);
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+                        @Override public void run() {
+                            if (isSoftwareSquelchEnabled) enableSoftwareSquelchOnCurrentChannel();
+                        }
+                    }, 2500);
+                } else {
+                    disableSoftwareSquelchOnCurrentChannel();
+                    Toast.makeText(activity, "NOAA hardware squelch enabled", Toast.LENGTH_SHORT).show();
+                    noaaSqContainer.setVisibility(View.GONE);
+                    noaaSqInfo.setVisibility(View.GONE);
+                }
+            }
+        });
+
+        // Color mode toggle button
+        noaaColorModeButton = new android.widget.Button(activity);
+        noaaColorModeButton.setText("🎸 Gray");
+        noaaColorModeButton.setTextSize(13);
+        LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT);
+        btnParams.topMargin = 10;
+        noaaColorModeButton.setLayoutParams(btnParams);
+        noaaColorModeButton.setOnClickListener(v -> {
+            if (noaaReceiver == null) return;
+            int next = (noaaReceiver.getColorMode() + 1) % 3;
+            noaaReceiver.setColorMode(next);
+            switch (next) {
+                case NOAAReceiver.COLOR_GRAY:    noaaColorModeButton.setText("🎸 Gray");           break;
+                case NOAAReceiver.COLOR_THERMAL: noaaColorModeButton.setText("🌡️ Thermal IR");      break;
+                case NOAAReceiver.COLOR_MSA:     noaaColorModeButton.setText("🌈 Color (MSA)");       break;
+            }
+            // Force immediate redraw with new color mode
+            Bitmap snap = noaaReceiver.getLiveBitmap();
+            if (snap != null && noaaLiveImageView != null) noaaLiveImageView.setImageBitmap(snap);
+        });
+        layout.addView(noaaColorModeButton);
 
         builder.setView(layout);
         builder.setNegativeButton("Stop", (d, w) -> stopNOAAMonitoring(activity));
@@ -6770,10 +6941,26 @@ public class MainHook implements IXposedHookLoadPackage {
     private void updateNOAALiveScreen() {
         if (noaaReceiver == null) return;
         try {
+            if (noaaTimerText != null) {
+                if (noaaSignalStartTime > 0) {
+                    long elapsed = (System.currentTimeMillis() - noaaSignalStartTime) / 1000;
+                    long h = elapsed / 3600;
+                    long m = (elapsed % 3600) / 60;
+                    long s = elapsed % 60;
+                    String ts = h > 0
+                        ? String.format(java.util.Locale.US, "\u23f1 %d:%02d:%02d", h, m, s)
+                        : String.format(java.util.Locale.US, "\u23f1 %d:%02d", m, s);
+                    noaaTimerText.setText(ts);
+                    noaaTimerText.setTextColor(0xFF00CC44);
+                } else {
+                    noaaTimerText.setText("\u23f1 Waiting for signal...");
+                    noaaTimerText.setTextColor(0xFFFFAA00);
+                }
+            }
             if (noaaProgressText != null) {
                 int lines = noaaReceiver.getDecodedLines();
                 noaaProgressText.setText(noaaReceiver.getStatus()
-                    + (lines > 0 ? "  (" + lines + " lines ≈ " + (lines / 2) + " sec)" : ""));
+                    + (lines > 0 ? "  (" + lines + " lines \u2248 " + (lines / 2) + " sec)" : ""));
             }
             if (noaaLiveImageView != null) {
                 Bitmap snap = noaaReceiver.getLiveBitmap();
@@ -7116,7 +7303,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.setObjectField(channel, "name", "NOAA (" + origName + ")");
             XposedHelpers.setIntField(channel, "rxFreq", freqHz);
             XposedHelpers.setIntField(channel, "txFreq", freqHz);
-            XposedHelpers.setIntField(channel, "sq",     2);
+            XposedHelpers.setIntField(channel, "sq",     2);  // sq=2 (0 kills audio on this hardware)
             XposedHelpers.setIntField(channel, "band",   determineBand(Double.parseDouble(freqStr)));
             XposedHelpers.setIntField(channel, "channelMode", 1);  // Wide FM (25 kHz) for NOAA
             XposedHelpers.setIntField(channel, "power",  1);
@@ -7135,6 +7322,10 @@ public class MainHook implements IXposedHookLoadPackage {
             noaaReceiver.setLineDecodeCallback((lineNum, snap) -> {
                 activity.runOnUiThread(() -> {
                     try {
+                        // Record the moment the first line arrives (signal confirmed)
+                        if (noaaSignalStartTime == 0) {
+                            noaaSignalStartTime = System.currentTimeMillis();
+                        }
                         if (noaaLiveImageView != null && snap != null) {
                             noaaLiveImageView.setImageBitmap(snap);
                         }
@@ -7186,6 +7377,7 @@ public class MainHook implements IXposedHookLoadPackage {
             noaaMonitoringDialog  = null;
             noaaLiveImageView     = null;
             noaaProgressText      = null;
+            noaaColorModeButton   = null;
 
             // Cancel update handler
             if (noaaUpdateHandler != null && noaaUpdateRunnable != null) {
@@ -7195,6 +7387,11 @@ public class MainHook implements IXposedHookLoadPackage {
             noaaUpdateRunnable = null;
 
             isNOAAMonitoringActive = false;
+
+            if (isSoftwareSquelchEnabled) {
+                isSoftwareSquelchEnabled = false;
+                disableSoftwareSquelchOnCurrentChannel();
+            }
 
             restoreNOAAChannelBackup(activity);
 
@@ -7213,14 +7410,17 @@ public class MainHook implements IXposedHookLoadPackage {
     private void saveNOAAChannelBackup(Object channel) {
         try {
             noaaChannelBackup = new java.util.HashMap<>();
-            noaaChannelBackup.put("number",  XposedHelpers.getIntField(channel, "number"));
-            noaaChannelBackup.put("type",    XposedHelpers.getIntField(channel, "type"));
-            noaaChannelBackup.put("name",    XposedHelpers.getObjectField(channel, "name"));
-            noaaChannelBackup.put("rxFreq",  XposedHelpers.getIntField(channel, "rxFreq"));
-            noaaChannelBackup.put("txFreq",  XposedHelpers.getIntField(channel, "txFreq"));
-            noaaChannelBackup.put("sq",      XposedHelpers.getIntField(channel, "sq"));
-            noaaChannelBackup.put("band",    XposedHelpers.getIntField(channel, "band"));
-            noaaChannelBackup.put("power",   XposedHelpers.getIntField(channel, "power"));
+            noaaChannelBackup.put("number",      XposedHelpers.getIntField(channel, "number"));
+            noaaChannelBackup.put("type",        XposedHelpers.getIntField(channel, "type"));
+            noaaChannelBackup.put("name",        XposedHelpers.getObjectField(channel, "name"));
+            noaaChannelBackup.put("rxFreq",      XposedHelpers.getIntField(channel, "rxFreq"));
+            noaaChannelBackup.put("txFreq",      XposedHelpers.getIntField(channel, "txFreq"));
+            noaaChannelBackup.put("sq",          XposedHelpers.getIntField(channel, "sq"));
+            noaaChannelBackup.put("band",        XposedHelpers.getIntField(channel, "band"));
+            noaaChannelBackup.put("power",       XposedHelpers.getIntField(channel, "power"));
+            try {
+                noaaChannelBackup.put("channelMode", XposedHelpers.getIntField(channel, "channelMode"));
+            } catch (Throwable t) { noaaChannelBackup.put("channelMode", 0); }
             try {
                 noaaChannelBackup.put("rxType",    XposedHelpers.getIntField(channel, "rxType"));
                 noaaChannelBackup.put("rxSubCode", XposedHelpers.getIntField(channel, "rxSubCode"));
@@ -7266,6 +7466,8 @@ public class MainHook implements IXposedHookLoadPackage {
             Object sq = noaaChannelBackup.get("sq");    if (sq != null) XposedHelpers.setIntField(ch, "sq",    (Integer) sq);
             Object bd = noaaChannelBackup.get("band");  if (bd != null) XposedHelpers.setIntField(ch, "band",  (Integer) bd);
             Object pw = noaaChannelBackup.get("power"); if (pw != null) XposedHelpers.setIntField(ch, "power", (Integer) pw);
+            Object cm = noaaChannelBackup.get("channelMode");
+            try { if (cm != null) XposedHelpers.setIntField(ch, "channelMode", (Integer) cm); } catch (Throwable ignored) {}
             Object rt = noaaChannelBackup.get("rxType");    if (rt != null) XposedHelpers.setIntField(ch, "rxType",    (Integer) rt);
             Object rs = noaaChannelBackup.get("rxSubCode"); if (rs != null) XposedHelpers.setIntField(ch, "rxSubCode", (Integer) rs);
             Object tt = noaaChannelBackup.get("txType");    if (tt != null) XposedHelpers.setIntField(ch, "txType",    (Integer) tt);
@@ -7313,15 +7515,58 @@ public class MainHook implements IXposedHookLoadPackage {
                 noaaChannelBackup = backup;
                 restoreNOAAChannelBackup(context);
                 deleteBackup = false;  // restoreNOAAChannelBackup already deletes it
-                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
-                    try {
-                        if (context instanceof Activity) {
-                            Activity a = (Activity) context;
-                            if (!a.isFinishing())
-                                Toast.makeText(a, "\u26a0\ufe0f NOAA channel restored", Toast.LENGTH_LONG).show();
+                if (context instanceof Activity) {
+                    ((Activity) context).runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                if (context instanceof Activity) {
+                                    Activity a = (Activity) context;
+                                    if (a.isFinishing() || a.isDestroyed()) return;
+                                }
+                                new AlertDialog.Builder(context)
+                                    .setTitle("\u26a0\ufe0f NOAA Channel Restored")
+                                    .setMessage("NOAA APT monitoring was interrupted while the app was closed.\n\n" +
+                                        "Your original channel has been restored automatically.\n\n" +
+                                        "To prevent this:\n" +
+                                        "\u2022 Always stop NOAA monitoring before closing the app\n\n" +
+                                        "Restart recommended for proper operation.")
+                                    .setPositiveButton("Restart App", new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            try {
+                                                Context appContext = context.getApplicationContext();
+                                                String packageName = appContext.getPackageName();
+                                                android.content.Intent intent = appContext.getPackageManager()
+                                                    .getLaunchIntentForPackage(packageName);
+                                                if (intent != null) {
+                                                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                                                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                                                    android.app.PendingIntent pendingIntent = android.app.PendingIntent.getActivity(
+                                                        appContext, 0, intent,
+                                                        android.app.PendingIntent.FLAG_ONE_SHOT | android.app.PendingIntent.FLAG_IMMUTABLE);
+                                                    android.app.AlarmManager alarmManager = (android.app.AlarmManager)
+                                                        appContext.getSystemService(Context.ALARM_SERVICE);
+                                                    alarmManager.set(android.app.AlarmManager.RTC,
+                                                        System.currentTimeMillis() + 100, pendingIntent);
+                                                    XposedBridge.log(TAG + ": Restarting app after NOAA recovery...");
+                                                    System.exit(0);
+                                                }
+                                            } catch (Exception restartEx) {
+                                                XposedBridge.log(TAG + ": Error restarting app: " + restartEx.getMessage());
+                                                Toast.makeText(context, "Error restarting app", Toast.LENGTH_SHORT).show();
+                                            }
+                                        }
+                                    })
+                                    .setCancelable(false)
+                                    .show();
+                            } catch (Exception ex) {
+                                XposedBridge.log(TAG + ": Error showing NOAA restore dialog: " + ex.getMessage());
+                            }
                         }
-                    } catch (Exception ignored) {}
-                });
+                    });
+                }
+                XposedBridge.log(TAG + ": NOAA crash recovery completed");
             }
         } catch (Exception e) {
             XposedBridge.log(TAG + ": NOAA startup check error: " + e.getMessage());
