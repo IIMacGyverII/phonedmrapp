@@ -195,6 +195,7 @@ public class MainHook implements IXposedHookLoadPackage {
 
     // Monitoring mode toggle (ALL mode workaround for group call reception + analog squelch open)
     private static android.widget.CompoundButton monitoringModeToggle = null;
+    private static android.widget.Button gpsSendButton = null;
     private static volatile boolean isMonitoringMode = false;
     private static int originalSquelchLevel = 2;  // Store original squelch for analog channels
     private static int originalTxContact = 1;      // Store original txContact for DMR channels
@@ -1989,14 +1990,15 @@ public class MainHook implements IXposedHookLoadPackage {
                                                 monitorToggle.setEnabled(true);
                                                 isMonitoringMode = false;
                                                 
-                                                // DISABLED 2026-03-09: Hide MON button for DMR channels (debugging audio issues)
-                                                // Only show for analog channels - DMR monitoring mode needs firmware fixes
+                                                // MON = analog only; GPS POS = digital only (same right-side slot)
                                                 if (channelType == 0) { // Digital/DMR channel
                                                     monitorToggle.setVisibility(View.GONE);
+                                                    if (gpsSendButton != null) gpsSendButton.setVisibility(View.VISIBLE);
                                                 } else { // Analog channel
                                                     monitorToggle.setVisibility(View.VISIBLE);
+                                                    if (gpsSendButton != null) gpsSendButton.setVisibility(View.GONE);
                                                 }
-                                                
+
                                                 if (channelType == 0) { // Digital/DMR channel
                                                     int contactType = XposedHelpers.getIntField(currentChannel, "contactType");
                                                     int txContact = XposedHelpers.getIntField(currentChannel, "txContact");
@@ -2270,7 +2272,84 @@ public class MainHook implements IXposedHookLoadPackage {
                                 
                                 buttonContainer.addView(vfoButton);
                                 XposedBridge.log(TAG + ": ✓ Added VFO toggle button below TXT button");
-                                
+
+                                // Create GPS position send button (same slot as MON, right side — shown on digital, hidden on analog)
+                                android.widget.Button gpsSendButton = new android.widget.Button(context);
+                                gpsSendButton.setTag("DMR_GPS_SEND_BUTTON");
+                                gpsSendButton.setText("📍 POS");
+
+                                FrameLayout.LayoutParams gpsSendParams = new FrameLayout.LayoutParams(
+                                    (int) (70 * context.getResources().getDisplayMetrics().density),
+                                    (int) (40 * context.getResources().getDisplayMetrics().density)
+                                );
+                                gpsSendParams.gravity = android.view.Gravity.END | android.view.Gravity.TOP;
+                                gpsSendParams.rightMargin = (int) (16 * context.getResources().getDisplayMetrics().density);
+                                gpsSendParams.topMargin = (int) (60 * context.getResources().getDisplayMetrics().density); // Same slot as MON
+                                gpsSendButton.setLayoutParams(gpsSendParams);
+                                gpsSendButton.setTextSize(12);
+                                gpsSendButton.setTypeface(null, android.graphics.Typeface.BOLD);
+                                gpsSendButton.setTextColor(0xFFFFFFFF);
+                                gpsSendButton.setPadding(0, 0, 0, 0);
+
+                                android.graphics.drawable.GradientDrawable gpsButtonDrawable = new android.graphics.drawable.GradientDrawable();
+                                gpsButtonDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                                gpsButtonDrawable.setColor(0xFF4CAF50); // Material green
+                                gpsButtonDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
+                                gpsButtonDrawable.setStroke(
+                                    (int) (2 * context.getResources().getDisplayMetrics().density),
+                                    0xFFFFFFFF
+                                );
+                                gpsSendButton.setBackground(gpsButtonDrawable);
+
+                                gpsSendButton.setOnClickListener(new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        try {
+                                            android.location.Location loc = getCurrentLocation(context);
+                                            if (loc == null) {
+                                                Toast.makeText(context, "GPS unavailable", Toast.LENGTH_SHORT).show();
+                                                return;
+                                            }
+
+                                            String gpsText = String.format(java.util.Locale.US,
+                                                "GPS:%.6f,%.6f acc:%dm",
+                                                loc.getLatitude(), loc.getLongitude(),
+                                                (int) loc.getAccuracy());
+
+                                            // Send via DmrManager.saveSms() — stores in history and sends over air
+                                            Class<?> dmrManagerClass = XposedHelpers.findClass(
+                                                "com.pri.prizeinterphone.manager.DmrManager",
+                                                lpparam.classLoader);
+                                            Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+
+                                            Class<?> messageDataClass = XposedHelpers.findClass(
+                                                "com.pri.prizeinterphone.serial.data.MessageData",
+                                                lpparam.classLoader);
+                                            Object msgData = messageDataClass.newInstance();
+                                            XposedHelpers.callMethod(msgData, "setDirection", 0);  // 0 = outgoing
+                                            XposedHelpers.callMethod(msgData, "setStatus", 0);
+                                            XposedHelpers.callMethod(msgData, "setContent", gpsText);
+                                            XposedHelpers.callMethod(msgData, "setTimestamp", System.currentTimeMillis());
+
+                                            XposedHelpers.callMethod(dmrManager, "saveSms", msgData);
+
+                                            XposedBridge.log(TAG + ": GPS position sent: " + gpsText);
+                                            Toast.makeText(context, "Position sent: " + gpsText, Toast.LENGTH_LONG).show();
+
+                                        } catch (Throwable t) {
+                                            XposedBridge.log(TAG + ": GPS send error: " + t.getMessage());
+                                            Toast.makeText(context, "GPS send failed: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                                        }
+                                    }
+                                });
+
+                                // Store static reference and hide until channel type is known
+                                MainHook.gpsSendButton = gpsSendButton;
+                                gpsSendButton.setVisibility(View.GONE); // shown on digital only via monitorToggle.post()
+
+                                buttonContainer.addView(gpsSendButton);
+                                XposedBridge.log(TAG + ": ✓ Added GPS position send button (right side, top=60dp, digital channels only)");
+
                                 // Zone button is now created in RSSI/Zone container above borderbox
                                 
                                 XposedBridge.log(TAG + ": Final child count: " + rootLayout.getChildCount());
@@ -2430,14 +2509,15 @@ public class MainHook implements IXposedHookLoadPackage {
                                                 monitoringModeToggle.setAlpha(1.0f);
                                                 isMonitoringMode = false;
                                                 
-                                                // DISABLED 2026-03-09: Hide MON button for DMR channels (debugging audio issues)
-                                                // Only show for analog channels - DMR monitoring mode needs firmware fixes
+                                                // MON = analog only; GPS POS = digital only (same right-side slot)
                                                 if (channelType == 0) {
                                                     monitoringModeToggle.setVisibility(View.GONE);
+                                                    if (gpsSendButton != null) gpsSendButton.setVisibility(View.VISIBLE);
                                                 } else {
                                                     monitoringModeToggle.setVisibility(View.VISIBLE);
+                                                    if (gpsSendButton != null) gpsSendButton.setVisibility(View.GONE);
                                                 }
-                                                
+
                                                 if (channelType == 0) {
                                                     // Digital channel - MON button controls contactType (1=GROUP, 2=ALL)
                                                     // Store original txContact for restoration
@@ -13470,17 +13550,21 @@ public class MainHook implements IXposedHookLoadPackage {
                             XposedBridge.log(TAG + ": VFO Apply: soft SQ button " + (vfoChannelMode == 1 ? "shown" : "hidden"));
                         }
                         
-                        // Show/hide MON button based on VFO mode
+                        // Show/hide MON and GPS POS buttons based on VFO mode (analog=MON, digital=GPS)
                         if (monitoringModeToggle != null) {
                             monitoringModeToggle.setVisibility(vfoChannelMode == 1 ? View.VISIBLE : View.GONE);
                             XposedBridge.log(TAG + ": VFO Apply: MON button " + (vfoChannelMode == 1 ? "shown" : "hidden"));
+                        }
+                        if (gpsSendButton != null) {
+                            gpsSendButton.setVisibility(vfoChannelMode == 0 ? View.VISIBLE : View.GONE);
+                            XposedBridge.log(TAG + ": VFO Apply: GPS button " + (vfoChannelMode == 0 ? "shown" : "hidden"));
                         }
                     }
                 }
             } catch (Throwable btnEx) {
                 XposedBridge.log(TAG + ": Could not update button visibility: " + btnEx.getMessage());
             }
-            
+
             String modeStr = (vfoChannelMode == 0) ? "Digital DMR" : "Analog FM";
             XposedBridge.log(TAG + ": VFO changes applied: " + vfoFrequencyMHz + " MHz (" + modeStr + ")");
             
@@ -13673,17 +13757,21 @@ public class MainHook implements IXposedHookLoadPackage {
                             XposedBridge.log(TAG + ": VFO soft SQ button " + (vfoChannelMode == 1 ? "shown" : "hidden"));
                         }
                         
-                        // Show/hide MON button based on VFO mode
+                        // Show/hide MON and GPS POS buttons based on VFO mode
                         if (monitoringModeToggle != null) {
                             monitoringModeToggle.setVisibility(vfoChannelMode == 1 ? View.VISIBLE : View.GONE);
                             XposedBridge.log(TAG + ": VFO MON button " + (vfoChannelMode == 1 ? "shown" : "hidden"));
+                        }
+                        if (gpsSendButton != null) {
+                            gpsSendButton.setVisibility(vfoChannelMode == 0 ? View.VISIBLE : View.GONE);
+                            XposedBridge.log(TAG + ": VFO GPS button " + (vfoChannelMode == 0 ? "shown" : "hidden"));
                         }
                     }
                 }
             } catch (Throwable btnEx) {
                 XposedBridge.log(TAG + ": Could not update button visibility: " + btnEx.getMessage());
             }
-            
+
             // Disable bottom navigation (channel and zone buttons) during VFO mode
             disableBottomNavigation(activity);
             
@@ -13747,10 +13835,14 @@ public class MainHook implements IXposedHookLoadPackage {
                             XposedBridge.log(TAG + ": VFO Exit: soft SQ button " + (currentChannelType == 1 ? "shown" : "hidden"));
                         }
                         
-                        // Show/hide MON button based on restored channel type
+                        // Show/hide MON and GPS POS buttons based on restored channel type
                         if (monitoringModeToggle != null) {
                             monitoringModeToggle.setVisibility(currentChannelType == 1 ? View.VISIBLE : View.GONE);
                             XposedBridge.log(TAG + ": VFO Exit: MON button " + (currentChannelType == 1 ? "shown" : "hidden"));
+                        }
+                        if (gpsSendButton != null) {
+                            gpsSendButton.setVisibility(currentChannelType == 0 ? View.VISIBLE : View.GONE);
+                            XposedBridge.log(TAG + ": VFO Exit: GPS button " + (currentChannelType == 0 ? "shown" : "hidden"));
                         }
                     }
                 }

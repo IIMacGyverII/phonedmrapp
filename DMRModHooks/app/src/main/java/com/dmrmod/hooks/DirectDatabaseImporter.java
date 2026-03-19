@@ -64,6 +64,13 @@ public class DirectDatabaseImporter {
     
     private static final String TAG = "DMRModHooks_DirectImport";
     
+    // === COMPOUND KEY ZONE MATCHING FEATURE FLAG ===
+    // Set to true to enable compound key (channelNum|freq|name) zone matching
+    // Set to false to revert to simple name-only matching
+    // This fixes zone scrambling when importing channels with duplicate channel_numbers
+    private static final boolean USE_COMPOUND_KEY_ZONES = false;
+    // ==============================================
+    
     /**
      * Show backup selection dialog and import from app context
      */
@@ -261,23 +268,28 @@ public class DirectDatabaseImporter {
                         return;
                     }
                     
-                    // Import channels (files now in timestamped folder with simple names)
+                    // Step 1: Import TG lists BEFORE channels so name lookups succeed
+                    File tgListsFile = new File(backupFolder, "TG_Lists.csv");
+                    boolean tgListsOk = importTGLists(context, tgListsFile);
+
+                    // Step 2: Import channels (TG list assignment happens inside importChannels)
                     File channelsFile = new File(backupFolder, "Channels.csv");
                     boolean channelsOk = importChannels(context, channelsFile);
-                    
-                    // Import contacts
+
+                    // Step 3: Import contacts
                     File contactsFile = new File(backupFolder, "Contacts.csv");
                     boolean contactsOk = importContacts(context, contactsFile);
-                    
-                    // Import zones (optional - not all backups have zones)
+
+                    // Step 4: Import zones (optional - not all backups have zones)
                     File zonesFile = new File(backupFolder, "Zones.csv");
                     boolean zonesOk = importZones(context, zonesFile);
-                    
+
                     // Show result
                     final String message;
                     final boolean shouldRefresh;
                     if (channelsOk && contactsOk && zonesOk) {
-                        message = "✓ Import successful!\nChannels, contacts, and zones imported.";
+                        message = "✓ Import successful!\nChannels, contacts, zones" +
+                            (tgListsOk ? ", TG lists" : "") + " imported.";
                         shouldRefresh = true;
                     } else if (channelsOk && contactsOk) {
                         message = "✓ Import successful!\nChannels and contacts imported (no zones).";
@@ -421,6 +433,7 @@ public class DirectDatabaseImporter {
                     String contactName = fields[8].trim();
                     int contactId = getContactId(contactMap, contactName);
                     values.put("channel_txContact", contactId);
+                    // TG List name (field 9) is stored for later assignment after rowId is known
                 } else {
                     // Analog channels - set DMR fields to 0
                     values.put("channel_cc", 0);
@@ -557,9 +570,42 @@ public class DirectDatabaseImporter {
                 } else {
                     importCount++;
                     
-                    // Store the rowId (_id) for zone import later
+                    // Store the rowId (_id) for zone and TG list import later
                     final long finalRowId = rowId;
-                    
+
+                    // Assign TG list to this channel (DMR channels only, field 9)
+                    if (isDMR) {
+                        try {
+                            String tgListName = (fields.length > 9) ? fields[9].trim() : "";
+                            if (!tgListName.isEmpty()
+                                    && !tgListName.equalsIgnoreCase("None")
+                                    && !tgListName.equalsIgnoreCase("-")) {
+                                TGListDatabase tgListDb = TGListDatabase.getInstance(context);
+                                TGListDatabase.TGList tgList = tgListDb.getTGListByName(tgListName);
+                                if (tgList != null) {
+                                    tgListDb.assignTGListToChannel((int) finalRowId, tgList.id);
+                                    // Also write TG IDs directly into channel_groups so the native
+                                    // firmware picks them up (mirrors the saveChannelData logic).
+                                    int[] hwGroups = tgList.getHardwareGroups();
+                                    StringBuilder groupsSb = new StringBuilder();
+                                    for (int gi = 0; gi < hwGroups.length; gi++) {
+                                        if (gi > 0) groupsSb.append(',');
+                                        groupsSb.append(hwGroups[gi]);
+                                    }
+                                    ContentValues groupsUpdate = new ContentValues();
+                                    groupsUpdate.put("channel_groups", groupsSb.toString());
+                                    db.update("database_channel_area_default_uhf", groupsUpdate,
+                                            "_id=?", new String[]{String.valueOf(finalRowId)});
+                                    Log.i(TAG, "  Assigned TG list '" + tgListName + "' and wrote " + hwGroups.length + " TG IDs into channel_groups for channel " + channelNumber);
+                                } else {
+                                    Log.w(TAG, "  TG list '" + tgListName + "' not found for channel " + channelNumber);
+                                }
+                            }
+                        } catch (Exception e) {
+                            Log.w(TAG, "Could not assign TG list for channel " + channelNumber + ": " + e.getMessage());
+                        }
+                    }
+
                     // Import APRS setting to APRSDatabase if present
                     try {
                         int aprsFieldIndex = 24;
@@ -847,6 +893,138 @@ public class DirectDatabaseImporter {
      * @return true if successful or no zones file exists, false if error
      */
     private static boolean importZones(Context context, File csvFile) {
+        // delegate to internal method — this signature kept for call-site compatibility
+        return importZonesInternal(context, csvFile);
+    }
+
+    /**
+     * Import TG_Lists.csv into TGListDatabase.
+     *
+     * Format (OpenGD77 / DMRModHooks compatible):
+     *   TG List Name,Contact1,Contact2,...,Contact32
+     *
+     * Each contact column may be either:
+     *   - A numeric TG ID (preferred — as exported by DirectDatabaseExporter)
+     *   - A contact name (OpenGD77 CPS — resolved via contact_database)
+     *
+     * Lists split into _partN rows on export are automatically re-merged.
+     * Existing TG lists with the same name are replaced (upsert).
+     */
+    private static boolean importTGLists(Context context, File csvFile) {
+        if (!csvFile.exists()) {
+            Log.i(TAG, "No TG_Lists.csv found - skipping TG list import");
+            return true;
+        }
+        BufferedReader reader = null;
+        try {
+            Log.i(TAG, "Importing TG lists from: " + csvFile.getAbsolutePath());
+
+            // Build contact-name → DMR ID map for OpenGD77 codeplugs that store names
+            java.util.Map<String, Integer> contactDmrIdMap = buildContactDmrIdMap(context);
+
+            TGListDatabase tgListDb = TGListDatabase.getInstance(context);
+
+            // Accumulate rows — multi-part rows are merged by stripping _partN suffix
+            java.util.LinkedHashMap<String, java.util.ArrayList<Integer>> accumulated =
+                    new java.util.LinkedHashMap<>();
+
+            reader = new BufferedReader(new FileReader(csvFile));
+            String header = reader.readLine(); // skip header
+            if (header == null) {
+                Log.i(TAG, "TG_Lists.csv is empty");
+                return true;
+            }
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+                String[] fields = parseCSVLine(line);
+                if (fields.length < 1) continue;
+
+                String rawName = fields[0].trim();
+                if (rawName.isEmpty()) continue;
+
+                // Strip _partN suffix so multi-part rows are merged under one key
+                String listName = rawName.replaceAll("_part\\d+$", "");
+
+                java.util.ArrayList<Integer> tgIds = accumulated.get(listName);
+                if (tgIds == null) {
+                    tgIds = new java.util.ArrayList<>();
+                    accumulated.put(listName, tgIds);
+                }
+
+                for (int i = 1; i < fields.length; i++) {
+                    String cell = fields[i].trim();
+                    if (cell.isEmpty()) continue;
+                    try {
+                        int tgId = Integer.parseInt(cell);
+                        if (tgId > 0) tgIds.add(tgId);
+                    } catch (NumberFormatException e) {
+                        // Cell is a contact name — try to resolve to DMR ID
+                        Integer dmrId = contactDmrIdMap.get(cell);
+                        if (dmrId != null && dmrId > 0) tgIds.add(dmrId);
+                        else Log.w(TAG, "TG_Lists: unresolved contact name '" + cell + "'");
+                    }
+                }
+            }
+
+            int listCount = 0;
+            for (java.util.Map.Entry<String, java.util.ArrayList<Integer>> entry : accumulated.entrySet()) {
+                String name = entry.getKey();
+                java.util.ArrayList<Integer> ids = entry.getValue();
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < ids.size(); i++) {
+                    if (i > 0) sb.append(',');
+                    sb.append(ids.get(i));
+                }
+                tgListDb.saveTGList(name, sb.toString());
+                Log.i(TAG, "✓ Imported TG list '" + name + "' with " + ids.size() + " TGs");
+                listCount++;
+            }
+
+            Log.i(TAG, "TG list import complete: " + listCount + " lists");
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "Error importing TG_Lists.csv: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        } finally {
+            if (reader != null) try { reader.close(); } catch (Exception ignored) {}
+        }
+    }
+
+    /** Build contactName → DMR-ID map from the stock contact_database for TG list resolution. */
+    private static java.util.Map<String, Integer> buildContactDmrIdMap(Context context) {
+        java.util.Map<String, Integer> map = new java.util.LinkedHashMap<>();
+        android.database.sqlite.SQLiteDatabase db = null;
+        android.database.Cursor c = null;
+        try {
+            java.io.File dbFile = context.getDatabasePath("contact_database.db");
+            if (!dbFile.exists()) return map;
+            db = android.database.sqlite.SQLiteDatabase.openDatabase(
+                dbFile.getAbsolutePath(), null,
+                android.database.sqlite.SQLiteDatabase.OPEN_READONLY);
+            c = db.query("contact_database",
+                new String[]{"contact_name", "contact_number"},
+                null, null, null, null, null);
+            if (c != null && c.moveToFirst()) {
+                do {
+                    String name = c.getString(0);
+                    int dmrId  = c.getInt(1);
+                    if (name != null && !name.isEmpty() && dmrId > 0) map.put(name, dmrId);
+                } while (c.moveToNext());
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "buildContactDmrIdMap: " + e.getMessage());
+        } finally {
+            if (c != null) c.close();
+            if (db != null) db.close();
+        }
+        return map;
+    }
+
+    private static boolean importZonesInternal(Context context, File csvFile) {
         BufferedReader reader = null;
         
         try {
@@ -863,8 +1041,16 @@ public class DirectDatabaseImporter {
             zoneDb.clearAllZones();  // Clear existing zones before import
             Log.i(TAG, "ZoneDatabase initialized for import");
             
-            // Build channel name => channel number map for lookup
+            // Build channel lookup maps
             java.util.Map<String, Integer> channelNameMap = buildChannelNameMap(context);
+            java.util.Map<String, Integer> channelCompoundKeyMap = null;
+            
+            if (USE_COMPOUND_KEY_ZONES) {
+                // Build compound key map for more reliable zone matching
+                channelCompoundKeyMap = buildChannelCompoundKeyMap(context);
+                Log.i(TAG, "Compound key zone matching enabled ("+channelCompoundKeyMap.size()+" keys)");
+            }
+            
             if (channelNameMap.isEmpty()) {
                 Log.w(TAG, "No channels in database - cannot import zones");
                 return false;
@@ -896,21 +1082,37 @@ public class DirectDatabaseImporter {
                     continue;
                 }
                 
-                // Remaining fields (up to 80) are channel names
+                // Remaining fields (up to 80) are channel names (or compound keys)
                 List<Integer> channelIds = new ArrayList<>();
                 for (int i = 1; i < fields.length; i++) {
-                    String channelName = fields[i].trim();
-                    if (channelName.isEmpty()) {
+                    String channelRef = fields[i].trim();
+                    if (channelRef.isEmpty()) {
                         continue; // Empty fields are normal (not all zones have 80 channels)
                     }
                     
-                    // Look up channel ID by name
-                    Integer channelId = channelNameMap.get(channelName);
+                    // Try compound key lookup first (if enabled), then fall back to name
+                    Integer channelId = null;
+                    
+                    if (USE_COMPOUND_KEY_ZONES && channelCompoundKeyMap != null && channelRef.contains("|")) {
+                        // Format: "channelNum|frequency|name" - try exact compound key match
+                        channelId = channelCompoundKeyMap.get(channelRef);
+                        if (channelId != null) {
+                            Log.d(TAG, "Zone '" + zoneName + "': Mapped compound key '" + channelRef + "' to ID " + channelId);
+                        }
+                    }
+                    
+                    // Fall back to name-only lookup (for backward compatibility)
+                    if (channelId == null) {
+                        channelId = channelNameMap.get(channelRef);
+                        if (channelId != null) {
+                            Log.d(TAG, "Zone '" + zoneName + "': Mapped channel '" + channelRef + "' to ID " + channelId);
+                        } else {
+                            Log.w(TAG, "Zone '" + zoneName + "': Channel '" + channelRef + "' not found in database");
+                        }
+                    }
+                    
                     if (channelId != null) {
                         channelIds.add(channelId);
-                        Log.d(TAG, "Zone '" + zoneName + "': Mapped channel '" + channelName + "' to ID " + channelId);
-                    } else {
-                        Log.w(TAG, "Zone '" + zoneName + "': Channel '" + channelName + "' not found in database");
                     }
                 }
                 
@@ -987,6 +1189,61 @@ public class DirectDatabaseImporter {
         }
         
         return channelMap;
+    }
+    
+    /**
+     * Build compound key map for zone matching: "channelNum|frequency|name" => channel ID
+     * This provides more reliable zone restoration when channel_number is not unique.
+     * 
+     * @param context Application context
+     * @return Map of compound keys to channel IDs
+     */
+    private static java.util.Map<String, Integer> buildChannelCompoundKeyMap(Context context) {
+        java.util.Map<String, Integer> compoundKeyMap = new java.util.HashMap<>();
+        SQLiteDatabase db = null;
+        Cursor cursor = null;
+        
+        try {
+            File dbFile = context.getDatabasePath("database_channel_area_default_uhf.db");
+            if (!dbFile.exists()) {
+                Log.w(TAG, "Channel database not found");
+                return compoundKeyMap;
+            }
+            
+            db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, 
+                SQLiteDatabase.OPEN_READONLY);
+            
+            cursor = db.query("database_channel_area_default_uhf", 
+                new String[]{"_id", "channel_number", "channel_rxFreq", "channel_name"}, 
+                null, null, null, null, null);
+            
+            if (cursor != null && cursor.moveToFirst()) {
+                do {
+                    int id = cursor.getInt(0);
+                    int channelNum = cursor.getInt(1);
+                    long rxFreqHz = cursor.getLong(2);
+                    String name = cursor.getString(3);
+                    
+                    // Convert frequency from Hz to MHz with 5 decimal places (e.g., 446.00625)
+                    double rxFreqMHz = rxFreqHz / 1000000.0;
+                    String freqStr = String.format("%.5f", rxFreqMHz);
+                    
+                    // Build compound key: "channelNum|frequency|name"
+                    String compoundKey = channelNum + "|" + freqStr + "|" + name;
+                    compoundKeyMap.put(compoundKey, id);
+                } while (cursor.moveToNext());
+            }
+            
+            Log.i(TAG, "Built " + compoundKeyMap.size() + " compound keys for zone import");
+            
+        } catch (Exception e) {
+            Log.w(TAG, "Error building compound key map: " + e.getMessage());
+        } finally {
+            if (cursor != null) cursor.close();
+            if (db != null) db.close();
+        }
+        
+        return compoundKeyMap;
     }
     
     /**

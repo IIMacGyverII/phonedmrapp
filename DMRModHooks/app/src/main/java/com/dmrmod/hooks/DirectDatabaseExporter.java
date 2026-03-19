@@ -41,6 +41,13 @@ public class DirectDatabaseExporter {
     
     private static final String TAG = "DMRModHooks_DirectExport";
     
+    // === COMPOUND KEY ZONE MATCHING FEATURE FLAG ===
+    // Set to true to enable compound key (channelNum|freq|name) zone export
+    // Set to false to revert to simple name-only export (OpenGD77 compatible)
+    // MUST match the setting in DirectDatabaseImporter for proper round-trip
+    private static final boolean USE_COMPOUND_KEY_ZONES = false;
+    // ==============================================
+    
     /**
      * Migrate old backups from Download/DMR_Backups/ to Download/DMR/DMR_Backups/
      * This is called automatically on first export to organize existing backups
@@ -153,7 +160,7 @@ public class DirectDatabaseExporter {
             // Export all 5 required CSV files
             boolean channelsOk = exportChannelsDirect(appContext, channelsFile);
             boolean contactsOk = exportContactsDirect(appContext, contactsFile);
-            boolean tgListsOk = exportTGListsCSV(tgListsFile);
+            boolean tgListsOk = exportTGListsCSV(appContext, tgListsFile);
             boolean zonesOk = exportZonesCSV(appContext, zonesFile);
             boolean dtmfOk = exportDTMFCSV(dtmfFile);
             
@@ -281,6 +288,9 @@ public class DirectDatabaseExporter {
             
             // Build contacts lookup map for efficient contact name resolution
             java.util.Map<Integer, String> contactMap = buildContactMap(context);
+
+            // Build TG list name lookup map for channel export (channel _id → list name)
+            TGListDatabase tgListDb = TGListDatabase.getInstance(context);
             
             // Write CSV header
             BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
@@ -365,7 +375,9 @@ public class DirectDatabaseExporter {
                     // Look up contact name from ID
                     String contactName = getContactName(contactMap, contactId);
                     rowBuilder.append(contactName).append(",");         // 9. Contact
-                    rowBuilder.append("None,");                          // 10. TG List
+                    // Look up TG list assignment for this channel
+                    String tgListName = tgListDb.getTGListNameForChannel(channelId);
+                    rowBuilder.append(tgListName).append(",");           // 10. TG List
                     rowBuilder.append("None,");                          // 11. DMR ID
                     rowBuilder.append("Off,");                           // 12. TS1_TA_Tx
                     rowBuilder.append("Off,");                           // 13. TS2_TA_Tx ID
@@ -552,29 +564,84 @@ public class DirectDatabaseExporter {
     }
     
     /**
-     * Export TG_Lists.csv - Talk Group Lists (empty for now)
-     * OpenGD77 requires this file to be present even if empty
+     * Export TG_Lists.csv — named TalkGroup lists stored in TGListDatabase.
+     *
+     * Format (OpenGD77 compatible):
+     *   TG List Name,Contact1,Contact2,...,Contact32
+     *
+     * Each Contact column contains the numeric TG ID (not a contact name) so that the
+     * values round-trip perfectly through our own importer without requiring a separate
+     * contact lookup.  OpenGD77 CPS will import them as-is when the corresponding
+     * numeric contacts exist in Contacts.csv.
+     *
+     * Lists with MORE than 32 TG IDs are written across multiple rows with the name
+     * suffixed by "_partN" so no data is lost on export.
      */
-    private static boolean exportTGListsCSV(File outputFile) {
+    private static boolean exportTGListsCSV(Context context, File outputFile) {
         try {
             BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
-            
-            // Header: TG List Name + 32 Contact columns
+
+            // Header: TG List Name + 32 Contact columns (OpenGD77 format)
             StringBuilder header = new StringBuilder("TG List Name");
-            for (int i = 1; i <= 32; i++) {
+            for (int i = 1; i <= TGListDatabase.HARDWARE_MAX_GROUPS; i++) {
                 header.append(",Contact").append(i);
             }
             writer.write(header.toString());
             writer.write("\r\n");  // Windows CRLF
-            
+
+            // Export all named TG lists from our database
+            TGListDatabase tgListDb = TGListDatabase.getInstance(context);
+            java.util.List<TGListDatabase.TGList> allLists = tgListDb.getAllTGLists();
+            int rowsWritten = 0;
+
+            for (TGListDatabase.TGList list : allLists) {
+                java.util.List<Integer> ids = list.getTgIds();
+                int total = ids.size();
+
+                if (total == 0) {
+                    // Write a row with empty contact columns so the list name is preserved
+                    writer.write(escapeCsvField(list.name));
+                    for (int i = 0; i < TGListDatabase.HARDWARE_MAX_GROUPS; i++) writer.write(",");
+                    writer.write("\r\n");
+                    rowsWritten++;
+                    continue;
+                }
+
+                // Write one row per block of 32 TG IDs to avoid data loss
+                int part = 1;
+                for (int offset = 0; offset < total; offset += TGListDatabase.HARDWARE_MAX_GROUPS) {
+                    String rowName = (total <= TGListDatabase.HARDWARE_MAX_GROUPS)
+                            ? list.name  // single row — keep the exact list name
+                            : list.name + "_part" + part;
+                    writer.write(escapeCsvField(rowName));
+                    for (int i = 0; i < TGListDatabase.HARDWARE_MAX_GROUPS; i++) {
+                        writer.write(",");
+                        int idx = offset + i;
+                        if (idx < total) writer.write(String.valueOf(ids.get(idx)));
+                    }
+                    writer.write("\r\n");
+                    rowsWritten++;
+                    part++;
+                }
+            }
+
             writer.close();
-            Log.i(TAG, "✓ TG_Lists exported: " + outputFile.getAbsolutePath());
+            Log.i(TAG, "✓ TG_Lists exported: " + rowsWritten + " list rows → " + outputFile.getAbsolutePath());
             return true;
         } catch (Exception e) {
             Log.e(TAG, "Error exporting TG_Lists: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
+    }
+
+    /** Escape a CSV field (wrap in quotes if it contains comma, quote, or newline). */
+    private static String escapeCsvField(String value) {
+        if (value == null) return "";
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
     }
     
     /**
@@ -588,8 +655,18 @@ public class DirectDatabaseExporter {
         BufferedWriter writer = null;
         
         try {
-            // Build channel ID => channel name map for export
-            java.util.Map<Integer, String> channelMap = buildChannelIdMap(context);
+            // Build channel ID => channel reference map for export
+            java.util.Map<Integer, String> channelMap;
+            
+            if (USE_COMPOUND_KEY_ZONES) {
+                // Use compound key format for reliable zone restoration
+                channelMap = buildChannelIdCompoundKeyMap(context);
+                Log.i(TAG, "Using compound key format for zone export ("+channelMap.size()+" channels)");
+            } else {
+                // Use simple name-only format (OpenGD77 compatible)
+                channelMap = buildChannelIdMap(context);
+                Log.i(TAG, "Using name-only format for zone export (OpenGD77 compatible)");
+            }
             
             writer = new BufferedWriter(new FileWriter(outputFile));
             
@@ -702,6 +779,61 @@ public class DirectDatabaseExporter {
         }
         
         return channelMap;
+    }
+    
+    /**
+     * Build compound key map for zone export: channel ID => "channelNum|frequency|name"
+     * This provides more reliable zone restoration when channel_number is not unique.
+     * 
+     * @param context Application context
+     * @return Map of channel IDs to compound keys
+     */
+    private static java.util.Map<Integer, String> buildChannelIdCompoundKeyMap(Context context) {
+        java.util.Map<Integer, String> compoundKeyMap = new java.util.HashMap<>();
+        SQLiteDatabase db = null;
+        Cursor cursor = null;
+        
+        try {
+            File dbFile = context.getDatabasePath("database_channel_area_default_uhf.db");
+            if (!dbFile.exists()) {
+                Log.w(TAG, "Channel database not found");
+                return compoundKeyMap;
+            }
+            
+            db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, 
+                SQLiteDatabase.OPEN_READONLY);
+            
+            cursor = db.query("database_channel_area_default_uhf", 
+                new String[]{"_id", "channel_number", "channel_rxFreq", "channel_name"}, 
+                null, null, null, null, null);
+            
+            if (cursor != null && cursor.moveToFirst()) {
+                do {
+                    int id = cursor.getInt(0);
+                    int channelNum = cursor.getInt(1);
+                    long rxFreqHz = cursor.getLong(2);
+                    String name = cursor.getString(3);
+                    
+                    // Convert frequency from Hz to MHz with 5 decimal places (e.g., 446.00625)
+                    double rxFreqMHz = rxFreqHz / 1000000.0;
+                    String freqStr = String.format("%.5f", rxFreqMHz);
+                    
+                    // Build compound key: "channelNum|frequency|name"
+                    String compoundKey = channelNum + "|" + freqStr + "|" + name;
+                    compoundKeyMap.put(id, compoundKey);
+                } while (cursor.moveToNext());
+            }
+            
+            Log.i(TAG, "Built " + compoundKeyMap.size() + " compound keys for zone export");
+            
+        } catch (Exception e) {
+            Log.w(TAG, "Error building compound key map: " + e.getMessage());
+        } finally {
+            if (cursor != null) cursor.close();
+            if (db != null) db.close();
+        }
+        
+        return compoundKeyMap;
     }
     
     /**

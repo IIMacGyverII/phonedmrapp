@@ -1,0 +1,9 @@
+Zone Name,Channels
+Analog,"N1CJ: CARLA 31 Sunset Ridge,N1CJ: WIN 07 Sunset Ridge,N1CJ: PAPA 03 Santiago Peak,N1CJ: W6CDW Elsinore,N1CJ: Catalina Two Harbors"
+DMR,"N1CJ: Simplex Hotspot,N1CJ: Simplex Hotspot APRS,N1CJ: Duplex Hotspot Slot 1,N1CJ: Hotspot Duplex Slot 2,N1CJ: Hotspot Duplex APRS,N1CJ: AD5MT DMR TS1,N1CJ: PAPA SUN TS2,N1CJ: PAPA SUN APRS,N1CJ: AD5MT DMR TS2,N1CJ: PAPA SUN TS1"
+GMRS,"GMRS 01,GMRS 02,GMRS 03"
+MURS,"MURS-1,MURS-2,MURS-3,MURS-4: Blue Dot,MURS-5: Green Dot"
+Marine,"SEA 01:Port Operations and Comme,SEA 09:Boater to Boater,SEA 16:Distress Safety"
+Railway,"AAR-002 Canada,AAR-041 Road,AAR-077 Yard"
+Simplex,"N1CJ: 2m Calling Freq,N1CJ: 70cm Calling Freq,N1CJ: 2m Simplex Exercise,N1CJ: 70cm Simplex Exercise,N1CJ: Off-Road Frequency,N1CJ: Triple Nickle,N1CJ: DMR UHF Simplex Direct,N1CJ: DMR UHF Simplex Slot 1,N1CJ: DMR VHF Simplex Direct,N1CJ: DMR VHF Simplex Slot 1"
+Weather,"WX-01,WX-02,WX-03,WX-04,WX-05,WX-06,WX-07,WX-08,WX-09,WX-10,WX-11,WX-12"
