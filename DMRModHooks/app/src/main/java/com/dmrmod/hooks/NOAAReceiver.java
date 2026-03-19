@@ -8,6 +8,8 @@ import android.os.Looper;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -79,6 +81,54 @@ public class NOAAReceiver {
     /** Number of lines to collect for sync calibration before decoding begins. */
     private static final int SYNC_CALIB_LINES = 8;
 
+    /**
+     * Per-line sync re-lock search half-window (APT samples).
+     * After each decoded line, the decoder searches ±SYNC_MARGIN around the
+     * expected sync position to correct accumulated rate drift.  30 samples
+     * at 4160 Hz = 7.2 ms — more than enough for any realistic clock error.
+     */
+    private static final int SYNC_MARGIN = 30;
+
+    // -----------------------------------------------------------------------
+    // Color mode constants
+    // -----------------------------------------------------------------------
+    public static final int COLOR_GRAY    = 0;  // Grayscale (default)
+    public static final int COLOR_THERMAL = 1;  // Ch A gray + Ch B thermal palette
+    public static final int COLOR_MSA     = 2;  // Multi-Spectral Analysis (Ch A+B combined)
+
+    /**
+     * Thermal IR false-color LUT (256 ARGB entries).
+     * Maps pixel brightness (0=coldest/dark, 255=warmest/bright) to color.
+     * Meteorological convention: cold cloud tops  →  white/blue,
+     *                            warm surface     →  orange/red.
+     */
+    private static final int[] THERMAL_LUT = new int[256];
+    static {
+        // Color stops: { pixelValue, R, G, B }
+        int[][] stops = {
+            {  0, 255, 255, 255},  // white       — coldest / highest cloud tops
+            { 40, 200, 230, 255},  // pale blue   — cold clouds
+            { 80, 100, 160, 255},  // blue        — mid-cold
+            {110,   0, 200, 200},  // cyan        — upper troposphere
+            {140,   0, 200, 100},  // green       — mid atmosphere / cold land
+            {170, 180, 255,   0},  // yellow-green — warm land
+            {200, 255, 180,   0},  // orange      — warmer land
+            {225, 255,  80,   0},  // red-orange  — warm surface
+            {255, 120,   0,   0},  // dark red    — warmest (sea surface)
+        };
+        for (int s = 0; s < stops.length - 1; s++) {
+            int x0 = stops[s][0],  r0 = stops[s][1],  g0 = stops[s][2],  b0 = stops[s][3];
+            int x1 = stops[s+1][0],r1 = stops[s+1][1],g1 = stops[s+1][2],b1 = stops[s+1][3];
+            for (int x = x0; x <= x1; x++) {
+                float t = (x1 > x0) ? (float)(x - x0) / (x1 - x0) : 0f;
+                int r = Math.round(r0 + t * (r1 - r0));
+                int g = Math.round(g0 + t * (g1 - g0));
+                int b = Math.round(b0 + t * (b1 - b0));
+                THERMAL_LUT[x] = 0xFF000000 | (r << 16) | (g << 8) | b;
+            }
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Instance / singleton
     // -----------------------------------------------------------------------
@@ -128,24 +178,30 @@ public class NOAAReceiver {
     /** Input PCM sample rate (set at first processAudio call or by setInputRate). */
     private int    inputRate   = 16000;
     private double ncoPhase    = 0.0;
-    private double iLpf        = 0.0;   // I low-pass filter state
-    private double qLpf        = 0.0;   // Q low-pass filter state
+    private double iLpf        = 0.0;   // I low-pass filter, stage 1
+    private double qLpf        = 0.0;   // Q low-pass filter, stage 1
+    private double iLpf2       = 0.0;   // I low-pass filter, stage 2
+    private double qLpf2       = 0.0;   // Q low-pass filter, stage 2
 
     /**
-     * IIR low-pass alpha.  Targets fc ≈ 1000 Hz at 16000 Hz input rate.
-     * alpha = 1 - exp(-2π × fc / fs)   (single-pole IIR)
-     * At fc=1000, fs=8000:  alpha ≈ 0.54
-     * At fc=1000, fs=16000: alpha ≈ 0.28
+     * Two-pole IIR low-pass: two cascaded first-order stages with the same alpha.
+     * fc ≈ 1000 Hz at 16000 Hz gives 12 dB/oct rolloff — suppresses the 4800 Hz
+     * double-frequency artifact (~25 dB rejection vs ~12 dB for single-pole).
+     * alpha = 1 - exp(-2π × fc / fs)
+     * At fc=1000, fs=16000: alpha ≈ 0.33
      * Recomputed when inputRate changes.
      */
-    private double lpfAlpha = 0.28;
+    private double lpfAlpha = 1.0 - Math.exp(-2.0 * Math.PI * 1000.0 / 16000.0);  // ≈ 0.33
 
     /** NCO phase increment per input sample: 2π × SUBCARRIER / inputRate */
     private double ncoIncrement = 2.0 * Math.PI * SUBCARRIER_HZ / 16000.0;
 
     /** Resampler accumulator and step.  step = APT_RATE / inputRate. */
     private double resampleAccum = 0.0;
-    private double resampleStep  = APT_RATE / 16000.0;  // 0.26 for 16000 Hz
+    private double resampleStep  = (double) APT_RATE / 16000.0;  // 0.26 for 16000 Hz
+
+    /** Counts input samples processed during calibration phase (for logging). */
+    private long calibInputSamples = 0;
 
     // -----------------------------------------------------------------------
     // Calibration and sync detection
@@ -161,16 +217,60 @@ public class NOAAReceiver {
     // Line buffer  (APT samples ready for pixel extraction)
     // -----------------------------------------------------------------------
 
-    private final float[] lineBuffer    = new float[SAMPLES_PER_LINE];
+    // Extra room on each side of the line for the per-line sync search window.
+    private final float[] lineBuffer    = new float[SAMPLES_PER_LINE + 2 * SYNC_MARGIN];
     private int           lineBufferPos = 0;
+    /** Expected position of sync A within lineBuffer. Reset to SYNC_MARGIN after each
+     *  decoded line so that the search window is symmetric: [0 .. 2*SYNC_MARGIN]. */
+    private int           lineExpectedSync = SYNC_MARGIN;
+
+    // Per-line pixel buffer for percentile normalisation (1818 = 909 A + 909 B)
+    private final float[] normBuf = new float[IMAGE_A_LENGTH + IMAGE_B_LENGTH];
 
     // -----------------------------------------------------------------------
-    // Adaptive normalisation (running per-line min/max EMA)
+    // Color mode
     // -----------------------------------------------------------------------
+    private volatile int colorMode = COLOR_GRAY;
 
-    private float adaptMin = 0.0f;
-    private float adaptMax = 1.0f;
-    private boolean normSeeded = false;
+    /** Raw 8-bit grayscale values for every decoded pixel (unsigned, stored as bytes).
+     *  Kept so that switching color mode can instantly re-render all existing lines. */
+    private byte[] rawGrayA = null;  // MAX_IMAGE_LINES * IMAGE_A_LENGTH
+    private byte[] rawGrayB = null;  // MAX_IMAGE_LINES * IMAGE_B_LENGTH
+
+    /** Change color mode and immediately re-render all already-decoded lines. */
+    public synchronized void setColorMode(int mode) {
+        colorMode = mode;
+        recolorBitmapPixels();
+    }
+    public int getColorMode() { return colorMode; }
+
+    /** Re-render all already-decoded lines using the current colorMode. */
+    private void recolorBitmapPixels() {
+        if (bitmapPixels == null || rawGrayA == null || decodedLines == 0) return;
+        int mode = colorMode;
+        for (int ln = 0; ln < decodedLines; ln++) {
+            int rowStart = ln * IMAGE_TOTAL_WIDTH;
+            int grayOff  = ln * IMAGE_A_LENGTH;
+            for (int i = 0; i < IMAGE_A_LENGTH; i++) {
+                int aGray = rawGrayA[grayOff + i] & 0xFF;
+                int bGray = rawGrayB[grayOff + i] & 0xFF;
+                int aColor, bColor;
+                if (mode == COLOR_THERMAL) {
+                    aColor = 0xFF000000 | (aGray << 16) | (aGray << 8) | aGray;
+                    bColor = THERMAL_LUT[bGray];
+                } else if (mode == COLOR_MSA) {
+                    int bl = 255 - bGray;
+                    aColor = 0xFF000000 | (bGray << 16) | (aGray << 8) | bl;
+                    bColor = THERMAL_LUT[bGray];
+                } else {
+                    aColor = 0xFF000000 | (aGray << 16) | (aGray << 8) | aGray;
+                    bColor = 0xFF000000 | (bGray << 16) | (bGray << 8) | bGray;
+                }
+                bitmapPixels[rowStart + i]                  = aColor;
+                bitmapPixels[rowStart + IMAGE_A_LENGTH + i] = bColor;
+            }
+        }
+    }
 
     // -----------------------------------------------------------------------
     // Image building
@@ -181,6 +281,14 @@ public class NOAAReceiver {
     private String lastSavedPath = null;
 
     // -----------------------------------------------------------------------
+    // WAV capture (diagnostic: save first ~90s of raw PCM for PC analysis)
+    // -----------------------------------------------------------------------
+    private static final int WAV_CAPTURE_MAX_BYTES = 90 * 16000 * 2; // 90s @ 16kHz 16-bit mono
+    private FileOutputStream wavCapStream = null;
+    private String           wavCapPath   = null;
+    private int              wavBytesWritten = 0;
+
+    // -----------------------------------------------------------------------
     // Public API
     // -----------------------------------------------------------------------
 
@@ -189,21 +297,27 @@ public class NOAAReceiver {
         ncoPhase      = 0.0;
         iLpf          = 0.0;
         qLpf          = 0.0;
+        iLpf2         = 0.0;
+        qLpf2         = 0.0;
         resampleAccum = 0.0;
 
         calibBuf      = new float[SYNC_CALIB_LINES * SAMPLES_PER_LINE];
         calibPos      = 0;
         syncCalibrated = false;
         syncOffset    = 0;
+        calibInputSamples  = 0;
 
-        lineBufferPos = 0;
-        adaptMin      = 0.0f;
-        adaptMax      = 1.0f;
-        normSeeded    = false;
+        lineBufferPos    = 0;
+        lineExpectedSync = SYNC_MARGIN;
 
+        rawGrayA      = null;
+        rawGrayB      = null;
         bitmapPixels  = null;
         decodedLines  = 0;
         lastSavedPath = null;
+
+        // Start WAV capture for diagnostic purposes
+        startWavCapture();
 
         XposedBridge.log(TAG + ": reset()");
     }
@@ -211,10 +325,84 @@ public class NOAAReceiver {
     /** Call to stop monitoring (frees Bitmap memory). */
     public synchronized void stop() {
         bitmapPixels = null;
+        stopWavCapture();
         XposedBridge.log(TAG + ": stop()");
     }
 
-    /** Set the input PCM sample rate (call before processAudio if not 16000 Hz). */
+    /** Open a new WAV file and write the 44-byte placeholder header. */
+    private void startWavCapture() {
+        stopWavCapture();  // close any previous capture
+        try {
+            File dir = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOWNLOADS), "DMR/NOAA");
+            dir.mkdirs();
+            String ts = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
+            File f = new File(dir, "noaa_pcm_" + ts + ".wav");
+            wavCapStream    = new FileOutputStream(f);
+            wavCapPath      = f.getAbsolutePath();
+            wavBytesWritten = 0;
+            writeWavHeader(wavCapStream, 0, inputRate); // placeholder size
+            XposedBridge.log(TAG + ": WAV capture started: " + wavCapPath);
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": WAV capture start failed: " + e.getMessage());
+            wavCapStream = null;
+        }
+    }
+
+    /** Finalise and close the WAV capture file, patching the header with actual size. */
+    private void stopWavCapture() {
+        if (wavCapStream == null) return;
+        try {
+            wavCapStream.close();
+            // Patch RIFF chunk size and data chunk size in the header
+            RandomAccessFile raf = new RandomAccessFile(wavCapPath, "rw");
+            raf.seek(4);  writeInt32LE(raf, 36 + wavBytesWritten);
+            raf.seek(40); writeInt32LE(raf, wavBytesWritten);
+            raf.close();
+            XposedBridge.log(TAG + ": WAV capture saved: " + wavCapPath
+                + "  (" + wavBytesWritten + " bytes, rate=" + inputRate + " Hz)");
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": WAV capture stop error: " + e.getMessage());
+        }
+        wavCapStream = null;
+        wavCapPath   = null;
+        wavBytesWritten = 0;
+    }
+
+    /** Write a standard 44-byte WAV header for 16-bit mono PCM. */
+    private static void writeWavHeader(FileOutputStream out, int dataBytes, int sampleRate)
+            throws IOException {
+        int byteRate = sampleRate * 2;
+        byte[] h = new byte[44];
+        // RIFF header
+        h[0]='R'; h[1]='I'; h[2]='F'; h[3]='F';
+        writeLE32(h,  4, 36 + dataBytes);
+        h[8]='W'; h[9]='A'; h[10]='V'; h[11]='E';
+        // fmt chunk
+        h[12]='f'; h[13]='m'; h[14]='t'; h[15]=' ';
+        writeLE32(h, 16, 16);        // chunk size
+        writeLE16(h, 20, 1);         // PCM
+        writeLE16(h, 22, 1);         // channels
+        writeLE32(h, 24, sampleRate);
+        writeLE32(h, 28, byteRate);
+        writeLE16(h, 32, 2);         // block align
+        writeLE16(h, 34, 16);        // bits per sample
+        // data chunk
+        h[36]='d'; h[37]='a'; h[38]='t'; h[39]='a';
+        writeLE32(h, 40, dataBytes);
+        out.write(h);
+    }
+    private static void writeLE32(byte[] b, int off, int v) {
+        b[off]=(byte)(v); b[off+1]=(byte)(v>>8); b[off+2]=(byte)(v>>16); b[off+3]=(byte)(v>>24);
+    }
+    private static void writeLE16(byte[] b, int off, int v) {
+        b[off]=(byte)(v); b[off+1]=(byte)(v>>8);
+    }
+    private static void writeInt32LE(RandomAccessFile r, int v) throws IOException {
+        r.write(v & 0xFF); r.write((v>>8)&0xFF); r.write((v>>16)&0xFF); r.write((v>>24)&0xFF);
+    }
+
+    /** Set the input PCM sample rate (call before processAudio if not 12000 Hz). */
     public void setInputRate(int rate) {
         if (rate == inputRate) return;
         inputRate    = rate;
@@ -262,9 +450,26 @@ public class NOAAReceiver {
      */
     public synchronized void processAudio(byte[] data, int length) {
         if (data == null || length < 2) return;
-        if (calibBuf == null) reset();   // Safety: ensure init
+        if (calibBuf == null && !syncCalibrated) reset();
+
+        // Capture raw PCM to WAV file for diagnostic purposes (first ~90s)
+        if (wavCapStream != null && wavBytesWritten < WAV_CAPTURE_MAX_BYTES) {
+            int toWrite = Math.min(length, WAV_CAPTURE_MAX_BYTES - wavBytesWritten);
+            try {
+                wavCapStream.write(data, 0, toWrite);
+                wavBytesWritten += toWrite;
+                if (wavBytesWritten >= WAV_CAPTURE_MAX_BYTES) {
+                    stopWavCapture();  // Seal the file once we have enough
+                }
+            } catch (Exception e) {
+                XposedBridge.log(TAG + ": WAV write error: " + e.getMessage());
+            }
+        }
 
         for (int i = 0; i < length - 1; i += 2) {
+            // Count input samples during calibration (for logging only)
+            if (!syncCalibrated) calibInputSamples++;
+
             // Convert 2 bytes → 16-bit signed (little-endian)
             short raw = (short) (((data[i + 1] & 0xFF) << 8) | (data[i] & 0xFF));
             double s  = raw * (1.0 / 32768.0);
@@ -273,16 +478,20 @@ public class NOAAReceiver {
             double cosV = Math.cos(ncoPhase);
             double sinV = Math.sin(ncoPhase);
 
-            // Mix with quadrature references and low-pass filter
-            iLpf = lpfAlpha * (s *  cosV) + (1.0 - lpfAlpha) * iLpf;
-            qLpf = lpfAlpha * (s * -sinV) + (1.0 - lpfAlpha) * qLpf;
+            // Mix with quadrature references and two-pole low-pass filter
+            double iMixed = s *  cosV;
+            double qMixed = s * -sinV;
+            iLpf  = lpfAlpha * iMixed + (1.0 - lpfAlpha) * iLpf;
+            qLpf  = lpfAlpha * qMixed + (1.0 - lpfAlpha) * qLpf;
+            iLpf2 = lpfAlpha * iLpf  + (1.0 - lpfAlpha) * iLpf2;
+            qLpf2 = lpfAlpha * qLpf  + (1.0 - lpfAlpha) * qLpf2;
 
             // Advance NCO phase
             ncoPhase += ncoIncrement;
             if (ncoPhase >= 2.0 * Math.PI) ncoPhase -= 2.0 * Math.PI;
 
-            // Envelope magnitude
-            double envelope = Math.sqrt(iLpf * iLpf + qLpf * qLpf);
+            // Envelope magnitude (from second-stage output)
+            double envelope = Math.sqrt(iLpf2 * iLpf2 + qLpf2 * qLpf2);
 
             // ── Resample to APT rate (4160 Hz) ───────────────────────────
             // Simple polyphase accumulator (sample-and-hold)
@@ -309,13 +518,20 @@ public class NOAAReceiver {
             calibBuf[calibPos++] = v;
 
             if (calibPos >= calibBuf.length) {
+                // Log calibration stats; rate correction happens post-calibration
+                XposedBridge.log(TAG + ": Calib complete: calibSamples=" + calibInputSamples
+                    + "  defaultResampleStep=" + String.format("%.5f", resampleStep));
+
                 // Enough data — find sync offset
                 syncOffset     = computeSyncOffset(calibBuf);
                 syncCalibrated = true;
                 XposedBridge.log(TAG + ": Sync calibrated, offset=" + syncOffset + " samples");
 
-                // Replay calibration samples starting from the determined offset
-                for (int j = syncOffset; j < calibBuf.length; j++) {
+                // Replay calibration samples starting SYNC_MARGIN before the determined
+                // sync offset, so sync A lands at lineExpectedSync (=SYNC_MARGIN) in the
+                // line buffer — giving the per-line search window symmetric room.
+                int replayStart = Math.max(0, syncOffset - SYNC_MARGIN);
+                for (int j = replayStart; j < calibBuf.length; j++) {
                     pushToLineBuffer(calibBuf[j]);
                 }
                 calibBuf = null;   // Free 64 KB calibration buffer
@@ -327,72 +543,135 @@ public class NOAAReceiver {
     }
 
     /**
-     * Push sample into the 2080-sample line buffer.
-     * When a complete line is available, extract pixels and update the image.
+     * Push one APT-rate sample into the line buffer.
+     *
+     * A line is considered complete when we have accumulated enough samples
+     * to search for sync A within ±SYNC_MARGIN of the expected position and
+     * still have a full SAMPLES_PER_LINE window after the found sync.
+     *
+     * After each line:
+     *   1. Find actual sync A position within [lineExpectedSync ± SYNC_MARGIN].
+     *   2. Gently correct resampleStep (soft PLL) to kill long-term drift.
+     *   3. Carry over the SYNC_MARGIN samples before the next expected sync
+     *      so that the search window is symmetric for the following line.
      */
     private void pushToLineBuffer(float v) {
         lineBuffer[lineBufferPos++] = v;
 
-        if (lineBufferPos >= SAMPLES_PER_LINE) {
-            processLine(lineBuffer);
-            lineBufferPos = 0;
+        // Trigger once we have: expected-sync + full line + margin samples
+        int needed = lineExpectedSync + SAMPLES_PER_LINE + SYNC_MARGIN;
+        if (lineBufferPos < needed) return;
+
+        // ── Find actual sync A within ±SYNC_MARGIN of expected position ──
+        int searchStart = Math.max(0, lineExpectedSync - SYNC_MARGIN);
+        int searchEnd   = Math.min(lineBufferPos - SAMPLES_PER_LINE - 1,
+                                   lineExpectedSync + SYNC_MARGIN);
+        int foundSync   = findSyncInRange(lineBuffer, searchStart, searchEnd);
+
+        // No rate correction: inputRate is confirmed at 16000 Hz by spectral analysis.
+        // The ±SYNC_MARGIN search window above already handles per-line timing jitter
+        // without needing to modify resampleStep (which would accumulate drift).
+
+        // ── Decode the line ───────────────────────────────────────────────
+        processLine(lineBuffer, foundSync);
+
+        // ── Carry over: keep SYNC_MARGIN samples before the next sync ────
+        // Next sync expected at (foundSync + SAMPLES_PER_LINE); carry from
+        // SYNC_MARGIN samples before that so sym window is preserved.
+        int carryStart = foundSync + SAMPLES_PER_LINE - SYNC_MARGIN;
+        int remaining  = lineBufferPos - carryStart;
+        if (remaining > 0 && carryStart >= 0) {
+            System.arraycopy(lineBuffer, carryStart, lineBuffer, 0, remaining);
         }
+        lineBufferPos    = Math.max(0, remaining);
+        lineExpectedSync = SYNC_MARGIN;  // next sync expected in the middle of the buffer
     }
 
     /**
-     * Process a complete 2080-sample APT line:
+     * Search buf[searchStart..searchEnd] for the position with highest
+     * high-frequency energy over 39 consecutive samples (the sync A metric).
+     */
+    private static int findSyncInRange(float[] buf, int searchStart, int searchEnd) {
+        final int syncLen = 39;
+        double bestEnergy = -1.0;
+        int    bestPos    = (searchStart + searchEnd) / 2;  // default: centre
+        for (int pos = searchStart; pos <= searchEnd; pos++) {
+            if (pos + syncLen >= buf.length) break;
+            double energy = 0;
+            for (int k = 0; k < syncLen - 1; k++) {
+                energy += Math.abs(buf[pos + k + 1] - buf[pos + k]);
+            }
+            if (energy > bestEnergy) {
+                bestEnergy = energy;
+                bestPos    = pos;
+            }
+        }
+        return bestPos;
+    }
+
+    /**
+     * Process a complete 2080-sample APT line starting at lineStart within the buffer:
      *   - Update adaptive normalisation
      *   - Extract 909+909 pixel values
      *   - Write row into the Bitmap pixel array
      *   - Fire callbacks every 30 lines / save every 300 lines
      */
-    private void processLine(float[] line) {
+    private void processLine(float[] line, int lineStart) {
         if (decodedLines >= MAX_IMAGE_LINES) return;
 
-        // ── Adaptive normalisation ────────────────────────────────────────
-        // Compute line min/max from the image columns only (more stable)
-        float lineMin =  Float.MAX_VALUE;
-        float lineMax = -Float.MAX_VALUE;
-        for (int i = IMAGE_A_START; i < IMAGE_A_START + IMAGE_A_LENGTH; i++) {
-            if (line[i] < lineMin) lineMin = line[i];
-            if (line[i] > lineMax) lineMax = line[i];
+        // ── Per-line percentile normalisation (1st / 99th percentile) ─────
+        // Matches the Python standalone decoder exactly.
+        // Collect 909 A + 909 B = 1818 image pixel values, sort, and clip.
+        for (int i = 0; i < IMAGE_A_LENGTH; i++) {
+            normBuf[i] = line[lineStart + IMAGE_A_START + i];
         }
-        for (int i = IMAGE_B_START; i < IMAGE_B_START + IMAGE_B_LENGTH; i++) {
-            if (line[i] < lineMin) lineMin = line[i];
-            if (line[i] > lineMax) lineMax = line[i];
+        for (int i = 0; i < IMAGE_B_LENGTH; i++) {
+            normBuf[IMAGE_A_LENGTH + i] = line[lineStart + IMAGE_B_START + i];
         }
-
-        if (!normSeeded) {
-            adaptMin   = lineMin;
-            adaptMax   = lineMax;
-            normSeeded = true;
-        } else {
-            adaptMin = 0.95f * adaptMin + 0.05f * lineMin;
-            adaptMax = 0.95f * adaptMax + 0.05f * lineMax;
-        }
-
-        float range = adaptMax - adaptMin;
+        java.util.Arrays.sort(normBuf);
+        // 1% of 1818 ≈ index 18;  99% ≈ index 1799
+        float lineMin = normBuf[18];
+        float lineMax = normBuf[1799];
+        float range   = lineMax - lineMin;
         if (range < 1e-6f) return;
 
-        // ── Lazy allocate pixel array ─────────────────────────────────────
+        // ── Lazy allocate pixel arrays ────────────────────────────────────
         if (bitmapPixels == null) {
             bitmapPixels = new int[MAX_IMAGE_LINES * IMAGE_TOTAL_WIDTH];
         }
+        if (rawGrayA == null) {
+            rawGrayA = new byte[MAX_IMAGE_LINES * IMAGE_A_LENGTH];
+            rawGrayB = new byte[MAX_IMAGE_LINES * IMAGE_B_LENGTH];
+        }
 
-        // ── Fill pixel row ────────────────────────────────────────────────
-        int rowStart = decodedLines * IMAGE_TOTAL_WIDTH;
+        // ── Fill pixel row (single combined loop handles A+B for all color modes) ──
+        int rowStart  = decodedLines * IMAGE_TOTAL_WIDTH;
+        int grayOff   = decodedLines * IMAGE_A_LENGTH;
+        int mode      = colorMode;
 
         for (int i = 0; i < IMAGE_A_LENGTH; i++) {
-            float v    = (line[IMAGE_A_START + i] - adaptMin) / range;
-            int   gray = Math.min(255, Math.max(0, (int) (v * 255.0f)));
-            bitmapPixels[rowStart + i] =
-                0xFF000000 | (gray << 16) | (gray << 8) | gray;
-        }
-        for (int i = 0; i < IMAGE_B_LENGTH; i++) {
-            float v    = (line[IMAGE_B_START + i] - adaptMin) / range;
-            int   gray = Math.min(255, Math.max(0, (int) (v * 255.0f)));
-            bitmapPixels[rowStart + IMAGE_A_LENGTH + i] =
-                0xFF000000 | (gray << 16) | (gray << 8) | gray;
+            int aGray = Math.min(255, Math.max(0,
+                (int)((line[lineStart + IMAGE_A_START + i] - lineMin) / range * 255.0f)));
+            int bGray = Math.min(255, Math.max(0,
+                (int)((line[lineStart + IMAGE_B_START + i] - lineMin) / range * 255.0f)));
+
+            rawGrayA[grayOff + i] = (byte) aGray;
+            rawGrayB[grayOff + i] = (byte) bGray;
+
+            int aColor, bColor;
+            if (mode == COLOR_THERMAL) {
+                aColor = 0xFF000000 | (aGray << 16) | (aGray << 8) | aGray;
+                bColor = THERMAL_LUT[bGray];
+            } else if (mode == COLOR_MSA) {
+                int bl = 255 - bGray;
+                aColor = 0xFF000000 | (bGray << 16) | (aGray << 8) | bl;
+                bColor = THERMAL_LUT[bGray];
+            } else {
+                aColor = 0xFF000000 | (aGray << 16) | (aGray << 8) | aGray;
+                bColor = 0xFF000000 | (bGray << 16) | (bGray << 8) | bGray;
+            }
+            bitmapPixels[rowStart + i]                  = aColor;
+            bitmapPixels[rowStart + IMAGE_A_LENGTH + i] = bColor;
         }
 
         decodedLines++;
@@ -486,16 +765,36 @@ public class NOAAReceiver {
                 "DMR/NOAA");
             if (!dir.exists()) dir.mkdirs();
 
-            String ts   = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
-                .format(new Date());
-            File   file = new File(dir, "NOAA_" + ts + ".png");
+            String ts = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
 
+            // Always save the current (possibly colored) view
+            String suffix = colorMode == COLOR_THERMAL ? "_thermal"
+                          : colorMode == COLOR_MSA     ? "_msa"
+                          : "";
+            File file = new File(dir, "NOAA_" + ts + suffix + ".png");
             try (FileOutputStream fos = new FileOutputStream(file)) {
                 bmp.compress(Bitmap.CompressFormat.PNG, 100, fos);
             }
-
             lastSavedPath = file.getAbsolutePath();
             XposedBridge.log(TAG + ": Auto-saved " + decodedLines + " lines → " + lastSavedPath);
+
+            // If not already grayscale, also save a _gray version
+            if (colorMode != COLOR_GRAY && rawGrayA != null) {
+                int savedMode = colorMode;
+                colorMode = COLOR_GRAY;
+                recolorBitmapPixels();
+                Bitmap grayBmp = getLiveBitmap();
+                colorMode = savedMode;
+                recolorBitmapPixels();  // restore color
+
+                if (grayBmp != null) {
+                    File grayFile = new File(dir, "NOAA_" + ts + "_gray.png");
+                    try (FileOutputStream fos = new FileOutputStream(grayFile)) {
+                        grayBmp.compress(Bitmap.CompressFormat.PNG, 100, fos);
+                    }
+                    XposedBridge.log(TAG + ": Also saved grayscale → " + grayFile.getAbsolutePath());
+                }
+            }
 
             if (saveCallback != null) {
                 final String path  = lastSavedPath;
