@@ -2,8 +2,9 @@
 
 **Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS + VFO Mode + SSTV + NOAA APT!
 
-> **?? Current Stable Release: v3.3.6** (March 19, 2026) - TG List Architecture + Group Grid Refresh  
-> **??? Previous Release: v3.3.5** (March 19, 2026) - NOAA APT Software Squelch Slider  
+> **?? Current Stable Release: v3.3.7** (March 19, 2026) - GPS Messaging + Hyperlinked Coordinates  
+> **??? Previous Release: v3.3.6** (March 19, 2026) - TG List Architecture + Group Grid Refresh  
+> **??? Prior Release: v3.3.5** (March 19, 2026) - NOAA APT Software Squelch Slider  
 > **??? Prior Release: v3.3.4** (March 19, 2026) - NOAA APT Live Monitoring  
 > **?? Prior Release: v3.3.3** (March 18, 2026) - SSTV Settings + APRS/SSTV Dialog Refresh Fix  
 > **?? Prior Release: v3.3.2** (March 19, 2026) - APRS Buttons Moved to Monitoring Page  
@@ -18,6 +19,35 @@
 ## Demo
 
 <video src="https://github.com/user-attachments/assets/d6305a49-c8ed-47dc-a9d8-7e731aa02811" controls title="DMRModHooks v1.1 Demo" width="800"></video>
+
+## ?? What's New in v3.3.7 (March 19, 2026)
+
+### GPS Messaging over DMR SMS
+
+**Send your GPS position as a DMR SMS with reverse-geocoded city/state; tap received GPS coordinates to open maps**
+
+#### **Sending Your Position**
+- **GPS POS button** (digital channels only): sends a formatted position message to the current contact
+  - Format: `GPS:37.123456,-122.123456 acc:5m San Jose, CA`
+  - Reverse geocoding runs on a background thread (no UI freeze)
+  - Confirm dialog shows coordinates + accuracy before sending
+  - "Don't ask again" checkbox persists preference to SharedPreferences
+
+#### **Receiving GPS Coordinates**
+- Any received DMR message containing GPS coordinates is automatically hyperlinked
+- Tap the blue-underlined coordinates to open in maps app (fallback to browser)
+- Supports all major radio vendor formats:
+  - `GPS:lat,lon` / `Pos:lat,lon` / `Loc:lat,lon` (prefixed)
+  - `Lat: N, Lon: W` (labeled)
+  - `N37.123 E122.456` (directional)
+  - Bare decimal pairs (e.g. `37.1234,-122.1234`)
+
+#### **Message List UX**
+- Single tap on GPS text → opens maps
+- Long press → Copy / Delete / Clean All dialog (moved from single tap)
+- Uses `BufferType.SPANNABLE` to ensure spans remain tappable after `setText()`
+
+---
 
 ## ?? What's New in v3.3.6 (March 19, 2026)
 
@@ -691,7 +721,9 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 
 ## Current Status ✅
 
-**Current Release: v3.3.2** (March 19, 2026)  
+**Current Release: v3.3.7** (March 19, 2026)  
+**GPS Messaging**: ✅ Send position over DMR SMS with reverse geocoding + confirm dialog  
+**GPS Hyperlinks**: ✅ Tap received GPS coordinates to open maps (multi-format pattern)  
 **APRS UX**: ✅ APRS Received + Settings buttons moved to monitoring page  
 **Crash Recovery**: ✅ Improved — Restart App button on all recovery dialogs, channel name integrity fix  
 **SSTV Monitoring**: ✅ Working - VIS detection + IQ auto-detect, auto-save images, all major modes  
@@ -708,7 +740,7 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 **Analog MON Button**: ✅ Working - Open squelch for continuous monitoring  
 **Software Squelch**: ✅ Working - Hybrid RSSI + Audio RMS squelch with UI controls  
 **User Validation**: ✅ All features tested and confirmed working  
-**Latest Build**: March 18, 2026
+**Latest Build**: March 19, 2026
 
 ## Radio Firmware
 
