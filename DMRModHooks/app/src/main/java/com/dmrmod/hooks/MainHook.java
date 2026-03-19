@@ -90,7 +90,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.3.6";
+    private static final String VERSION = "3.3.7";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -388,12 +388,158 @@ public class MainHook implements IXposedHookLoadPackage {
         
         // Register debug packet broadcast receiver for command fuzzing
         registerDebugPacketReceiver(lpparam);
-        
+
+        // Hook message content activity to make GPS coordinates clickable
+        hookMessageDisplay(lpparam);
+
         // Test UART bootloader probe (for permanent flash capability)
         // DISABLED: Bootloader not accessible from app context (EACCES)
         // testBootloaderAccess();
-        
+
         XposedBridge.log(TAG + ": All hooks installed successfully");
+    }
+
+    // Matches GPS coordinate pairs in several common radio formats:
+    //   Group 1,2 : "GPS:lat,lon"  "Pos:lat,lon"  "Loc:lat,lon"  (our format + generic prefixed)
+    //   Group 3,4 : "Lat: X  Lon: Y"  (Hytera/Kenwood label style)
+    //   Group 5,6,7,8: "N37.1234 W122.1234"  (directional — sign derived from N/S/E/W)
+    //   Group 9,10: bare "37.12345, -122.12345"  (≥4 decimal places, reduces false positives)
+    private static final java.util.regex.Pattern GPS_PATTERN =
+        java.util.regex.Pattern.compile(
+            "(?:GPS|Pos(?:ition)?|Loc(?:ation)?)\\s*:\\s*(-?\\d{1,3}\\.\\d+)\\s*,\\s*(-?\\d{1,3}\\.\\d+)" +
+            "|" +
+            "Lat(?:itude)?\\s*:?\\s*(-?\\d{1,3}\\.\\d+)[,\\s]+Lon(?:gitude)?\\s*:?\\s*(-?\\d{1,3}\\.\\d+)" +
+            "|" +
+            "([NS])(\\d{1,3}\\.\\d{3,})[,\\s]+([EW])(\\d{1,3}\\.\\d{3,})" +
+            "|" +
+            "(-?\\d{1,2}\\.\\d{4,}),\\s*(-?1?\\d{1,2}\\.\\d{4,})",
+            java.util.regex.Pattern.CASE_INSENSITIVE
+        );
+
+    /** Extract [lat, lon] from whichever GPS_PATTERN group matched. */
+    private static double[] extractLatLon(java.util.regex.Matcher m) {
+        if (m.group(1) != null) {
+            return new double[]{Double.parseDouble(m.group(1)), Double.parseDouble(m.group(2))};
+        } else if (m.group(3) != null) {
+            return new double[]{Double.parseDouble(m.group(3)), Double.parseDouble(m.group(4))};
+        } else if (m.group(5) != null) {
+            double lat = Double.parseDouble(m.group(6)) * ("S".equalsIgnoreCase(m.group(5)) ? -1 : 1);
+            double lon = Double.parseDouble(m.group(8)) * ("W".equalsIgnoreCase(m.group(7)) ? -1 : 1);
+            return new double[]{lat, lon};
+        } else {
+            return new double[]{Double.parseDouble(m.group(9)), Double.parseDouble(m.group(10))};
+        }
+    }
+
+    private void hookMessageDisplay(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            Class<?> adapterClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.activity.MessageContentActivity$MessageListAdapter",
+                lpparam.classLoader);
+
+            XposedHelpers.findAndHookMethod(adapterClass, "getView",
+                int.class, android.view.View.class, android.view.ViewGroup.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) {
+                        try {
+                            android.view.View row = (android.view.View) param.getResult();
+                            if (row == null) return;
+                            Object holder = row.getTag();
+                            if (holder == null) return;
+
+                            android.widget.TextView tv = (android.widget.TextView)
+                                XposedHelpers.getObjectField(holder, "mTvValues");
+                            if (tv == null) return;
+
+                            // Move Copy/Delete/Clean All dialog from tap → long-press for ALL messages
+                            final Object activity = XposedHelpers.getObjectField(param.thisObject, "this$0");
+                            final int position = (int) param.args[0];
+                            tv.setOnClickListener(null);
+                            tv.setOnLongClickListener(widget -> {
+                                try { XposedHelpers.callMethod(activity, "showListDialog", position); }
+                                catch (Throwable ignored) {}
+                                return true;
+                            });
+
+                            // GPS: add tappable span that opens maps
+                            CharSequence text = tv.getText();
+                            if (text == null) return;
+                            String content = text.toString();
+
+                            java.util.regex.Matcher m = GPS_PATTERN.matcher(content);
+                            if (!m.find()) return;
+
+                            double[] coords = extractLatLon(m);
+                            final double lat = coords[0];
+                            final double lon = coords[1];
+
+                            android.text.SpannableString ss = new android.text.SpannableString(content);
+                            android.text.style.ClickableSpan clickSpan = new android.text.style.ClickableSpan() {
+                                @Override
+                                public void onClick(android.view.View widget) {
+                                    try {
+                                        android.net.Uri geoUri = android.net.Uri.parse(
+                                            String.format(java.util.Locale.US, "geo:%f,%f?q=%f,%f", lat, lon, lat, lon));
+                                        android.content.Intent mapIntent = new android.content.Intent(
+                                            android.content.Intent.ACTION_VIEW, geoUri);
+                                        mapIntent.setFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                                        widget.getContext().startActivity(mapIntent);
+                                    } catch (android.content.ActivityNotFoundException e) {
+                                        android.net.Uri webUri = android.net.Uri.parse(
+                                            String.format(java.util.Locale.US,
+                                                "https://maps.google.com/?q=%f,%f", lat, lon));
+                                        android.content.Intent webIntent = new android.content.Intent(
+                                            android.content.Intent.ACTION_VIEW, webUri);
+                                        webIntent.setFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                                        try { widget.getContext().startActivity(webIntent); }
+                                        catch (Throwable ignored) {}
+                                    }
+                                }
+                                @Override
+                                public void updateDrawState(android.text.TextPaint ds) {
+                                    super.updateDrawState(ds);
+                                    ds.setColor(0xFF4FC3F7); // light blue
+                                    ds.setUnderlineText(true);
+                                }
+                            };
+                            ss.setSpan(clickSpan, m.start(), m.end(),
+                                android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                            tv.setText(ss, android.widget.TextView.BufferType.SPANNABLE);
+                            // Single tap on GPS span → maps; tap elsewhere → nothing; long press → dialog
+                            tv.setOnTouchListener(new android.view.View.OnTouchListener() {
+                                @Override
+                                public boolean onTouch(android.view.View widget, android.view.MotionEvent event) {
+                                    if (event.getAction() != android.view.MotionEvent.ACTION_UP) return false;
+                                    android.widget.TextView tw = (android.widget.TextView) widget;
+                                    android.text.Layout layout = tw.getLayout();
+                                    if (layout == null) return false;
+                                    CharSequence raw = tw.getText();
+                                    if (!(raw instanceof android.text.Spannable)) return false;
+                                    int x = (int) event.getX() - tw.getTotalPaddingLeft() + tw.getScrollX();
+                                    int y = (int) event.getY() - tw.getTotalPaddingTop() + tw.getScrollY();
+                                    int line = layout.getLineForVertical(y);
+                                    int offset = layout.getOffsetForHorizontal(line, x);
+                                    android.text.Spannable sp = (android.text.Spannable) raw;
+                                    android.text.style.ClickableSpan[] spans = sp.getSpans(
+                                        offset, offset, android.text.style.ClickableSpan.class);
+                                    if (spans.length > 0) {
+                                        spans[0].onClick(widget);
+                                        return true;
+                                    }
+                                    return false;
+                                }
+                            });
+                        } catch (Throwable t) {
+                            XposedBridge.log(TAG + ": hookMessageDisplay error: " + t.getMessage());
+                        }
+                    }
+                });
+
+            XposedBridge.log(TAG + ": hookMessageDisplay installed");
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": hookMessageDisplay setup error: " + t.getMessage());
+        }
     }
 
     /**
@@ -2311,30 +2457,90 @@ public class MainHook implements IXposedHookLoadPackage {
                                                 return;
                                             }
 
-                                            String gpsText = String.format(java.util.Locale.US,
-                                                "GPS:%.6f,%.6f acc:%dm",
-                                                loc.getLatitude(), loc.getLongitude(),
-                                                (int) loc.getAccuracy());
+                                            final double lat = loc.getLatitude();
+                                            final double lon = loc.getLongitude();
+                                            final int acc = (int) loc.getAccuracy();
 
-                                            // Send via DmrManager.saveSms() — stores in history and sends over air
-                                            Class<?> dmrManagerClass = XposedHelpers.findClass(
-                                                "com.pri.prizeinterphone.manager.DmrManager",
-                                                lpparam.classLoader);
-                                            Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+                                            android.content.SharedPreferences prefs = context.getSharedPreferences(
+                                                "dmrmod_gps_prefs", android.content.Context.MODE_PRIVATE);
+                                            boolean skipConfirm = prefs.getBoolean("gps_send_no_confirm", false);
 
-                                            Class<?> messageDataClass = XposedHelpers.findClass(
-                                                "com.pri.prizeinterphone.serial.data.MessageData",
-                                                lpparam.classLoader);
-                                            Object msgData = messageDataClass.newInstance();
-                                            XposedHelpers.callMethod(msgData, "setDirection", 0);  // 0 = outgoing
-                                            XposedHelpers.callMethod(msgData, "setStatus", 0);
-                                            XposedHelpers.callMethod(msgData, "setContent", gpsText);
-                                            XposedHelpers.callMethod(msgData, "setTimestamp", System.currentTimeMillis());
+                                            Runnable doSend = () -> {
+                                                // Build message on background thread (Geocoder may block)
+                                                new Thread(() -> {
+                                                    String cityState = null;
+                                                    try {
+                                                        Geocoder geocoder = new Geocoder(context, java.util.Locale.US);
+                                                        if (geocoder.isPresent()) {
+                                                            List<Address> addresses = geocoder.getFromLocation(lat, lon, 1);
+                                                            if (addresses != null && !addresses.isEmpty()) {
+                                                                Address addr = addresses.get(0);
+                                                                String city = addr.getLocality();
+                                                                String state = addr.getAdminArea();
+                                                                if (city != null && state != null) cityState = city + ", " + state;
+                                                                else if (city != null) cityState = city;
+                                                                else if (state != null) cityState = state;
+                                                            }
+                                                        }
+                                                    } catch (Throwable ignored) {}
 
-                                            XposedHelpers.callMethod(dmrManager, "saveSms", msgData);
+                                                    String gpsText = cityState != null
+                                                        ? String.format(java.util.Locale.US, "GPS:%.6f,%.6f acc:%dm %s", lat, lon, acc, cityState)
+                                                        : String.format(java.util.Locale.US, "GPS:%.6f,%.6f acc:%dm", lat, lon, acc);
 
-                                            XposedBridge.log(TAG + ": GPS position sent: " + gpsText);
-                                            Toast.makeText(context, "Position sent: " + gpsText, Toast.LENGTH_LONG).show();
+                                                    try {
+                                                        Class<?> dmrManagerClass = XposedHelpers.findClass(
+                                                            "com.pri.prizeinterphone.manager.DmrManager",
+                                                            lpparam.classLoader);
+                                                        Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+
+                                                        Class<?> messageDataClass = XposedHelpers.findClass(
+                                                            "com.pri.prizeinterphone.serial.data.MessageData",
+                                                            lpparam.classLoader);
+                                                        Object msgData = messageDataClass.newInstance();
+                                                        XposedHelpers.callMethod(msgData, "setDirection", 0);
+                                                        XposedHelpers.callMethod(msgData, "setStatus", 0);
+                                                        XposedHelpers.callMethod(msgData, "setContent", gpsText);
+                                                        XposedHelpers.callMethod(msgData, "setTimestamp", System.currentTimeMillis());
+
+                                                        XposedHelpers.callMethod(dmrManager, "saveSms", msgData);
+
+                                                        XposedBridge.log(TAG + ": GPS position sent: " + gpsText);
+                                                        final String toastMsg = "Position sent: " + gpsText;
+                                                        android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+                                                        h.post(() -> Toast.makeText(context, toastMsg, Toast.LENGTH_LONG).show());
+                                                    } catch (Throwable t) {
+                                                        XposedBridge.log(TAG + ": GPS send error: " + t.getMessage());
+                                                        android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+                                                        h.post(() -> Toast.makeText(context, "GPS send failed: " + t.getMessage(), Toast.LENGTH_SHORT).show());
+                                                    }
+                                                }).start();
+                                            };
+
+                                            if (skipConfirm) {
+                                                doSend.run();
+                                                return;
+                                            }
+
+                                            // Build confirmation dialog with "Don't show again" checkbox
+                                            android.widget.CheckBox dontAsk = new android.widget.CheckBox(context);
+                                            dontAsk.setText("Don't ask again");
+                                            dontAsk.setPadding(
+                                                (int)(16 * context.getResources().getDisplayMetrics().density), 0, 0, 0);
+
+                                            new android.app.AlertDialog.Builder(context)
+                                                .setTitle("Send Position")
+                                                .setMessage(String.format(java.util.Locale.US,
+                                                    "Broadcast your GPS coordinates?\n\n%.6f, %.6f  (±%dm)", lat, lon, acc))
+                                                .setView(dontAsk)
+                                                .setPositiveButton("Send", (dialog, which) -> {
+                                                    if (dontAsk.isChecked()) {
+                                                        prefs.edit().putBoolean("gps_send_no_confirm", true).apply();
+                                                    }
+                                                    doSend.run();
+                                                })
+                                                .setNegativeButton("Cancel", null)
+                                                .show();
 
                                         } catch (Throwable t) {
                                             XposedBridge.log(TAG + ": GPS send error: " + t.getMessage());
