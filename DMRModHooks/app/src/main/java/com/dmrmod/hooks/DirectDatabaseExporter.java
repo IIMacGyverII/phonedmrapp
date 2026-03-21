@@ -110,9 +110,9 @@ public class DirectDatabaseExporter {
         }
     }
     
-    // OpenGD77 CSV Headers (28 columns - matches OpenGD77 CPS export format)
+    // OpenGD77 CSV Headers (29 columns - includes _id for unique identification)
     private static final String CHANNELS_HEADER = 
-        "Channel Number,Channel Name,Channel Type,Rx Frequency,Tx Frequency,Bandwidth (kHz)," +
+        "_id,Channel Number,Channel Name,Channel Type,Rx Frequency,Tx Frequency,Bandwidth (kHz)," +
         "Colour Code,Timeslot,Contact,TG List,DMR ID,TS1_TA_Tx,TS2_TA_Tx ID,RX Tone,TX Tone," +
         "Squelch,Power,Rx Only,Zone Skip,All Skip,TOT,VOX,No Beep,No Eco,APRS,Latitude,Longitude,Use Location";
     
@@ -292,13 +292,9 @@ public class DirectDatabaseExporter {
             // Build TG list name lookup map for channel export (channel _id → list name)
             TGListDatabase tgListDb = TGListDatabase.getInstance(context);
             
-            // Write CSV header
+            // Write CSV header (use constant to ensure consistency)
             BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
-            StringBuilder headerBuilder = new StringBuilder();
-            headerBuilder.append("Channel Number,Channel Name,Channel Type,Rx Frequency,Tx Frequency,Bandwidth (kHz),");
-            headerBuilder.append("Colour Code,Timeslot,Contact,TG List,DMR ID,TS1_TA_Tx,TS2_TA_Tx ID,RX Tone,TX Tone,");
-            headerBuilder.append("Squelch,Power,Rx Only,Zone Skip,All Skip,TOT,VOX,No Beep,No Eco,APRS,Latitude,Longitude,Use Location");
-            writer.write(headerBuilder.toString());
+            writer.write(CHANNELS_HEADER);
             writer.write("\r\n");  // Windows CRLF for OpenGD77 compatibility
             
             // Export all channels
@@ -359,10 +355,11 @@ public class DirectDatabaseExporter {
                 // Determine channel type for OpenGD77 (Analogue vs Digital)
                 String csvChannelType = isDigital ? "Digital" : "Analogue";
                 
-                // Build CSV row (28 columns - OpenGD77 compatible format)
+                // Build CSV row (29 columns - includes _id for uniqueness)
                 StringBuilder rowBuilder = new StringBuilder();
-                rowBuilder.append(channelNumber).append(",");    // 1. Channel Number
-                rowBuilder.append(channelName).append(",");      // 2. Channel Name
+                rowBuilder.append(channelId).append(",");        // 1. _id (unique database ID)
+                rowBuilder.append(channelNumber).append(",");    // 2. Channel Number
+                rowBuilder.append(channelName).append(",");      // 3. Channel Name
                 rowBuilder.append(csvChannelType).append(",");   // 3. Channel Type
                 rowBuilder.append(rxFreqMHz).append(",");        // 4. Rx Frequency
                 rowBuilder.append(txFreqMHz).append(",");        // 5. Tx Frequency
