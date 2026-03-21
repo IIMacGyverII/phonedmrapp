@@ -352,7 +352,24 @@ public class DirectDatabaseImporter {
             
             // Read CSV file first to parse all data
             reader = new BufferedReader(new FileReader(csvFile));
-            String headerLine = reader.readLine(); // Skip header
+            String headerLine = reader.readLine();
+            
+            // Detect if CSV has _id column (Android export format)
+            // Format with _id: "_id,Channel Number,Channel Name,..." (29 columns)
+            // Format without _id: "Channel Number,Channel Name,..." (28 columns)
+            boolean hasIdColumn = false;
+            if (headerLine != null) {
+                String[] headerFields = parseCSVLine(headerLine);
+                if (headerFields.length >= 29 && headerFields[0].trim().equalsIgnoreCase("_id")) {
+                    hasIdColumn = true;
+                    Log.i(TAG, "Detected _id column in CSV header - will skip first column");
+                } else if (headerFields.length == 28 && headerFields[0].trim().equals("Channel Number")) {
+                    hasIdColumn = false;
+                    Log.i(TAG, "Detected standard OpenGD77 format (no _id column)");
+                } else {
+                    Log.w(TAG, "Unknown CSV format: " + headerFields.length + " columns, first=" + headerFields[0]);
+                }
+            }
             
             // Begin transaction
             db.beginTransaction();
@@ -381,56 +398,60 @@ public class DirectDatabaseImporter {
                 if (line.trim().isEmpty()) continue;
                 
                 String[] fields = parseCSVLine(line);
-                if (fields.length < 28) {
-                    Log.w(TAG, "Skipping invalid line (not enough fields): " + line);
+                
+                // Adjust minimum field count based on whether _id column is present
+                int minFields = hasIdColumn ? 29 : 28;
+                if (fields.length < minFields) {
+                    Log.w(TAG, "Skipping invalid line (expected " + minFields + " fields, got " + fields.length + "): " + line);
                     skippedCount++;
                     continue;
                 }
+                
+                // Field offset: skip _id column if present
+                int offset = hasIdColumn ? 1 : 0;
                 
                 // Wrap each channel import in try-catch to handle parsing errors gracefully
                 try {
                     ContentValues values = new ContentValues();
                     
-                    // Check if this is the new format with _ID field (29+ columns)
-                    // New format: _ID, Channel Number, Channel Name, ...
-                    // OpenGD77 format: Channel Number, Channel Name, ...
                     // Channel Number -> channel_number
-                    String channelNumber = fields[0].trim();
+                    String channelNumber = fields[offset + 0].trim();
                     values.put("channel_number", Integer.parseInt(channelNumber));
                     
                     // Channel Name -> channel_name
-                    String channelName = fields[1].trim();
+                    String channelName = fields[offset + 1].trim();
                     values.put("channel_name", channelName);
                 
                 // Channel Type -> channel_type (Database uses: 0=Digital, 1=Analog)
-                String channelType = fields[2].trim();
+                // Accept both "Digital"/"Analog" and "Digital"/"Analogue" spellings
+                String channelType = fields[offset + 2].trim();
                 boolean isDMR = channelType.equalsIgnoreCase("Digital");
                 values.put("channel_type", isDMR ? "0" : "1");  // Database uses numeric values
                 
                 // Rx Frequency -> channel_rxFreq (MHz to Hz)
-                String rxFreq = fields[3].trim().replace("\t", "");
+                String rxFreq = fields[offset + 3].trim().replace("\t", "");
                 double rxFreqMHz = Double.parseDouble(rxFreq);
                 long rxFreqHz = (long)(rxFreqMHz * 1000000);
                 values.put("channel_rxFreq", rxFreqHz);
                 
                 // Tx Frequency -> channel_txFreq (MHz to Hz)
-                String txFreq = fields[4].trim().replace("\t", "");
+                String txFreq = fields[offset + 4].trim().replace("\t", "");
                 values.put("channel_txFreq", (long)(Double.parseDouble(txFreq) * 1000000));
                 
                 // DMR-specific fields - ONLY set for Digital channels
                 if (isDMR) {
                     // Color Code -> channel_cc
-                    String ccStr = fields[6].trim();
+                    String ccStr = fields[offset + 6].trim();
                     int colorCode = ccStr.isEmpty() ? 1 : Integer.parseInt(ccStr);
                     values.put("channel_cc", colorCode);
                     
                     // Timeslot -> channel_inBoundSlot
-                    String tsStr = fields[7].trim();
+                    String tsStr = fields[offset + 7].trim();
                     int timeslot = tsStr.isEmpty() ? 1 : Integer.parseInt(tsStr);
                     values.put("channel_inBoundSlot", timeslot);
                     
                     // Contact -> channel_txContact (lookup ID by name)
-                    String contactName = fields[8].trim();
+                    String contactName = fields[offset + 8].trim();
                     int contactId = getContactId(contactMap, contactName);
                     values.put("channel_txContact", contactId);
                     // TG List name (field 9) is stored for later assignment after rowId is known
@@ -450,14 +471,14 @@ public class DirectDatabaseImporter {
                 // OpenGD77 CSV format: "None", "67.0" (CTCSS), "D023N" (DCS Normal), "D023I" (DCS Inverted)
                 int rxType = 0, rxSubCode = 0, txType = 0, txSubCode = 0;
                 try {
-                    String rxTone = fields[13].trim();
+                    String rxTone = fields[offset + 13].trim();
                     rxType = ToneConverter.parseType(rxTone);
                     rxSubCode = ToneConverter.parseSubCode(rxTone);
                 } catch (Exception e) {
                     Log.w(TAG, "Error parsing RX Tone, using None: " + e.getMessage());
                 }
                 try {
-                    String txTone = fields[14].trim();
+                    String txTone = fields[offset + 14].trim();
                     txType = ToneConverter.parseType(txTone);
                     txSubCode = ToneConverter.parseSubCode(txTone);
                 } catch (Exception e) {
@@ -468,7 +489,7 @@ public class DirectDatabaseImporter {
                 // OpenGD77 uses percentages (5%, 10%, 15%...95%), app uses 0-9
                 int squelch = 0;
                 try {
-                    String sqStr = fields[15].trim();
+                    String sqStr = fields[offset + 15].trim();
                     if (!sqStr.isEmpty() && !sqStr.equalsIgnoreCase("None") && !sqStr.equalsIgnoreCase("Disabled")) {
                         // Remove % sign if present and parse as integer
                         String cleanSq = sqStr.replace("%", "").trim();
@@ -508,7 +529,7 @@ public class DirectDatabaseImporter {
                 // App uses 0=low, 1=high, so divide range: P1-P4=low, P5-P9 and +W-=high
                 int power = 1;  // Default to high
                 try {
-                    String powerStr = fields[16].trim();
+                    String powerStr = fields[offset + 16].trim();
                     // OpenGD77 low power range: P1, P2, P3, P4
                     if (powerStr.equalsIgnoreCase("P1") || powerStr.equalsIgnoreCase("P2") || 
                         powerStr.equalsIgnoreCase("P3") || powerStr.equalsIgnoreCase("P4") ||
@@ -576,7 +597,7 @@ public class DirectDatabaseImporter {
                     // Assign TG list to this channel (DMR channels only, field 9)
                     if (isDMR) {
                         try {
-                            String tgListName = (fields.length > 9) ? fields[9].trim() : "";
+                            String tgListName = (fields.length > offset + 9) ? fields[offset + 9].trim() : "";
                             if (!tgListName.isEmpty()
                                     && !tgListName.equalsIgnoreCase("None")
                                     && !tgListName.equalsIgnoreCase("-")) {
@@ -608,7 +629,7 @@ public class DirectDatabaseImporter {
 
                     // Import APRS setting to APRSDatabase if present
                     try {
-                        int aprsFieldIndex = 24;
+                        int aprsFieldIndex = offset + 24;
                         if (fields.length > aprsFieldIndex) {
                             String aprsStr = fields[aprsFieldIndex].trim();
                             if (!aprsStr.isEmpty() && !aprsStr.equalsIgnoreCase("None")) {
@@ -628,8 +649,8 @@ public class DirectDatabaseImporter {
                     
                     // Import lat/lon to LocationDatabase if present
                     try {
-                        int latFieldIndex = 25;
-                        int lonFieldIndex = 26;
+                        int latFieldIndex = offset + 25;
+                        int lonFieldIndex = offset + 26;
                         if (fields.length > lonFieldIndex) {
                             String latStr = fields[latFieldIndex].trim();
                             String lonStr = fields[lonFieldIndex].trim();
@@ -656,12 +677,12 @@ public class DirectDatabaseImporter {
                 
                 } catch (NumberFormatException e) {
                     // Handle parsing errors for numbers (frequencies, channel number, etc.)
-                    String channelInfo = fields.length > 1 ? fields[1] : "unknown";
+                    String channelInfo = fields.length > offset + 1 ? fields[offset + 1] : "unknown";
                     Log.e(TAG, "✗ Failed to parse numeric field for channel '" + channelInfo + "': " + e.getMessage());
                     skippedCount++;
                 } catch (Exception e) {
                     // Handle any other errors during channel import
-                    String channelInfo = fields.length > 1 ? fields[1] : "unknown";
+                    String channelInfo = fields.length > offset + 1 ? fields[offset + 1] : "unknown";
                     Log.e(TAG, "✗ Failed to import channel '" + channelInfo + "': " + e.getMessage());
                     skippedCount++;
                 }
