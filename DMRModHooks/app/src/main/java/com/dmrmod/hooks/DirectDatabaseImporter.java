@@ -414,6 +414,13 @@ public class DirectDatabaseImporter {
                 try {
                     ContentValues values = new ContentValues();
                     
+                    // If _id column is present, preserve the original _id value
+                    // This is critical for maintaining zone assignments (zones reference channels by _id)
+                    if (hasIdColumn) {
+                        String channelId = fields[0].trim();
+                        values.put("_id", Integer.parseInt(channelId));
+                    }
+                    
                     // Channel Number -> channel_number
                     String channelNumber = fields[offset + 0].trim();
                     values.put("channel_number", Integer.parseInt(channelNumber));
@@ -580,7 +587,8 @@ public class DirectDatabaseImporter {
                     values.put("channel_active", 0);          // Inactive by default
                 }
                 
-                // Insert into database (auto-increment _id)
+                // Insert into database
+                // If _id was provided in CSV, it will be preserved; otherwise auto-increment
                 long rowId = db.insert("database_channel_area_default_uhf", null, values);
                 if (rowId > 0) {
                     Log.i(TAG, "✓ Inserted channel " + channelNumber + ": " + channelName + " (ID: " + rowId + ")");
