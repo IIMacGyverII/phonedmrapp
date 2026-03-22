@@ -14,8 +14,8 @@ import android.util.Log;
  * IMPORT STRATEGY:
  * - Reads OpenGD77-format CSV files from Download/DMR/DMR_Backups/
  * - Shows timestamp-based selection dialog for available backups
- * - Clears existing channels and imports from CSV (full replace)
- * - Preserves stock contacts to avoid breaking app functionality
+ * - Clears existing channels and contacts, then imports from CSV (full replace)
+ * - Uses transactions to ensure atomic imports (all-or-nothing)
  * 
  * CRITICAL: Digital vs Analog Channel Handling
  * The app database requires DIFFERENT field values for Digital (DMR) vs Analog (FM) channels:
