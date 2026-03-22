@@ -2879,6 +2879,78 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             );
 
+            // Hook updateChannelNumber() to use metal sprite sheet
+            XposedHelpers.findAndHookMethod(
+                fragmentClass,
+                "updateChannelNumber",
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        try {
+                            Object currentChannelData = XposedHelpers.getObjectField(param.thisObject, "mCurrentChannelData");
+                            int channelNumber = (int) XposedHelpers.callMethod(currentChannelData, "getNumber");
+                            
+                            android.widget.ImageButton numOneBtn = (android.widget.ImageButton) XposedHelpers.getObjectField(param.thisObject, "mImgTalkbackNumOne");
+                            android.widget.ImageButton numTwoBtn = (android.widget.ImageButton) XposedHelpers.getObjectField(param.thisObject, "mImgTalkbackNumTwo");
+                            
+                            if (numOneBtn == null || numTwoBtn == null) {
+                                return;
+                            }
+                            
+                            Context context = numOneBtn.getContext();
+                            android.content.res.Resources res = context.getResources();
+                            
+                            // Load sprite sheet
+                            int spriteId = res.getIdentifier("numbers0_9metal", "drawable", context.getPackageName());
+                            if (spriteId == 0) {
+                                XposedBridge.log(TAG + ": Metal sprite sheet not found, using default");
+                                return;
+                            }
+                            
+                            android.graphics.Bitmap spriteBitmap = android.graphics.BitmapFactory.decodeResource(res, spriteId);
+                            int spriteWidth = spriteBitmap.getWidth();
+                            int spriteHeight = spriteBitmap.getHeight();
+                            int digitWidth = spriteWidth / 10;  // 10 digits (0-9)
+                            
+                            // Extract digits
+                            int tensDigit = (channelNumber < 10) ? 0 : (channelNumber / 10);
+                            int onesDigit = channelNumber % 10;
+                            
+                            // Create bitmaps for each digit
+                            android.graphics.Bitmap tensDigitBitmap = android.graphics.Bitmap.createBitmap(
+                                spriteBitmap, 
+                                tensDigit * digitWidth, 
+                                0, 
+                                digitWidth, 
+                                spriteHeight
+                            );
+                            
+                            android.graphics.Bitmap onesDigitBitmap = android.graphics.Bitmap.createBitmap(
+                                spriteBitmap, 
+                                onesDigit * digitWidth, 
+                                0, 
+                                digitWidth, 
+                                spriteHeight
+                            );
+                            
+                            // Set the bitmaps as backgrounds
+                            numOneBtn.setImageBitmap(tensDigitBitmap);
+                            numOneBtn.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                            numOneBtn.setBackgroundColor(0x00000000);  // Transparent background
+                            
+                            numTwoBtn.setImageBitmap(onesDigitBitmap);
+                            numTwoBtn.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                            numTwoBtn.setBackgroundColor(0x00000000);  // Transparent background
+                            
+                            XposedBridge.log(TAG + ": Metal channel numbers set: CH" + channelNumber);
+                            
+                        } catch (Exception e) {
+                            XposedBridge.log(TAG + ": Error setting metal channel numbers: " + e.getMessage());
+                        }
+                    }
+                }
+            );
+
             XposedBridge.log(TAG + ": Successfully hooked InterPhoneTalkBackFragment");
             
         } catch (Throwable t) {
