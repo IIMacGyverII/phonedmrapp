@@ -391,6 +391,7 @@ public class DirectDatabaseImporter {
                 
                 // Import all channels to UHF database
                 int importCount = 0;
+                boolean hasSeenActiveChannel = false; // Track to ensure only ONE channel is marked active
                 
                 // Build contact name => ID map for lookup
                 java.util.Map<String, Integer> contactMap = buildContactNameMap(context);
@@ -610,6 +611,16 @@ public class DirectDatabaseImporter {
                     } catch (Exception e) {
                         active = isDMR ? 1 : 0;
                     }
+                    // Protection: Only allow ONE channel to be active (first one wins)
+                    if (active == 1) {
+                        if (hasSeenActiveChannel) {
+                            active = 0; // Force to inactive if we've already seen an active channel
+                            Log.w(TAG, "CH" + channelNumber + " marked as active but another channel is already active - setting to inactive");
+                        } else {
+                            hasSeenActiveChannel = true; // Mark that we've seen the first active channel
+                            Log.i(TAG, "CH" + channelNumber + " marked as active channel (current loaded channel)");
+                        }
+                    }
                     try {
                         outBoundSlot = Integer.parseInt(fields[offset + 34].trim());
                     } catch (Exception e) {
@@ -641,6 +652,16 @@ public class DirectDatabaseImporter {
                         relay = 1;
                         interrupt = 0;
                         active = 0;
+                    }
+                    // Protection: Only allow ONE channel to be active (first one wins)
+                    if (active == 1) {
+                        if (hasSeenActiveChannel) {
+                            active = 0; // Force to inactive if we've already seen an active channel
+                            Log.w(TAG, "CH" + channelNumber + " would be active (legacy format) but another channel is already active - setting to inactive");
+                        } else {
+                            hasSeenActiveChannel = true; // Mark that we've seen the first active channel
+                            Log.i(TAG, "CH" + channelNumber + " marked as active channel (current loaded channel, legacy format)");
+                        }
                     }
                     outBoundSlot = 0;
                     channelMode = 0;
