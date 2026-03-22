@@ -355,17 +355,20 @@ public class DirectDatabaseImporter {
             String headerLine = reader.readLine();
             
             // Detect if CSV has _id column (Android export format)
-            // Format with _id: "_id,Channel Number,Channel Name,..." (29 columns)
-            // Format without _id: "Channel Number,Channel Name,..." (28 columns)
+            // Format with _id: "_id,Channel Number,Channel Name,..." (37 columns with new fields, 29 legacy)
+            // Format without _id: "Channel Number,Channel Name,..." (36 columns with new fields, 28 legacy)
             boolean hasIdColumn = false;
+            boolean hasNewFields = false; // Encrypt, Relay, Interrupt, Active, etc.
             if (headerLine != null) {
                 String[] headerFields = parseCSVLine(headerLine);
                 if (headerFields.length >= 29 && headerFields[0].trim().equalsIgnoreCase("_id")) {
                     hasIdColumn = true;
-                    Log.i(TAG, "Detected _id column in CSV header - will skip first column");
-                } else if (headerFields.length == 28 && headerFields[0].trim().equals("Channel Number")) {
+                    hasNewFields = headerFields.length >= 37;
+                    Log.i(TAG, "Detected Android export format with _id column (" + headerFields.length + " fields, newFields=" + hasNewFields + ")");
+                } else if (headerFields.length >= 28 && headerFields[0].trim().equals("Channel Number")) {
                     hasIdColumn = false;
-                    Log.i(TAG, "Detected standard OpenGD77 format (no _id column)");
+                    hasNewFields = headerFields.length >= 36;
+                    Log.i(TAG, "Detected OpenGD77 format (" + headerFields.length + " fields, newFields=" + hasNewFields + ")");
                 } else {
                     Log.w(TAG, "Unknown CSV format: " + headerFields.length + " columns, first=" + headerFields[0]);
                 }
@@ -399,8 +402,16 @@ public class DirectDatabaseImporter {
                 
                 String[] fields = parseCSVLine(line);
                 
-                // Adjust minimum field count based on whether _id column is present
-                int minFields = hasIdColumn ? 29 : 28;
+                // Adjust minimum field count based on format
+                // Legacy: 29 with _id, 28 without
+                // New: 37 with _id, 36 without
+                int minFields;
+                if (hasNewFields) {
+                    minFields = hasIdColumn ? 37 : 36;
+                } else {
+                    minFields = hasIdColumn ? 29 : 28;
+                }
+                
                 if (fields.length < minFields) {
                     Log.w(TAG, "Skipping invalid line (expected " + minFields + " fields, got " + fields.length + "): " + line);
                     skippedCount++;
@@ -572,20 +583,81 @@ public class DirectDatabaseImporter {
                 values.put("channel_txSubCode", txSubCode); // TX tone code (index into tone array)
                 values.put("channel_groups", "1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"); // Zone groups
                 
-                // Fields that DIFFER between Digital and Analog:
-                if (isDMR) {
-                    // Digital channels (DMR)
-                    values.put("channel_encryptSw", 1);       // Encryption switch
-                    values.put("channel_encryptKey", "");     // Encryption key (empty string, NOT NULL)
-                    values.put("channel_interrupt", 2);       // Interrupt mode
-                    values.put("channel_active", 1);          // Channel active status (1=active)
+                // NEW FIELDS: Read from CSV if available (backward compatible with old format)
+                int encryptSw, relay, interrupt, active, outBoundSlot, channelMode, contactType;
+                String encryptKey;
+                
+                if (hasNewFields && fields.length >= minFields) {
+                    // Parse new fields from CSV (fields 29-36, adjusted by offset)
+                    try {
+                        encryptSw = Integer.parseInt(fields[offset + 29].trim());
+                    } catch (Exception e) {
+                        encryptSw = isDMR ? 1 : 0;
+                    }
+                    encryptKey = fields[offset + 30].trim();
+                    try {
+                        relay = Integer.parseInt(fields[offset + 31].trim());
+                    } catch (Exception e) {
+                        relay = 1;
+                    }
+                    try {
+                        interrupt = Integer.parseInt(fields[offset + 32].trim());
+                    } catch (Exception e) {
+                        interrupt = isDMR ? 2 : 0;
+                    }
+                    try {
+                        active = Integer.parseInt(fields[offset + 33].trim());
+                    } catch (Exception e) {
+                        active = isDMR ? 1 : 0;
+                    }
+                    try {
+                        outBoundSlot = Integer.parseInt(fields[offset + 34].trim());
+                    } catch (Exception e) {
+                        outBoundSlot = 0;
+                    }
+                    try {
+                        channelMode = Integer.parseInt(fields[offset + 35].trim());
+                    } catch (Exception e) {
+                        channelMode = 0;
+                    }
+                    try {
+                        contactType = Integer.parseInt(fields[offset + 36].trim());
+                    } catch (Exception e) {
+                        contactType = 0;
+                    }
+                    
+                    Log.i(TAG, "CH" + channelNumber + " new fields: encrypt=" + encryptSw + ",relay=" + relay + ",interrupt=" + interrupt + ",active=" + active);
                 } else {
-                    // Analog channels (FM)
-                    values.put("channel_encryptSw", 0);       // No encryption
-                    // channel_encryptKey left as NULL for analog (don't set it)
-                    values.put("channel_interrupt", 0);       // No interrupt
-                    values.put("channel_active", 0);          // Inactive by default
+                    // Legacy CSV format: use defaults based on channel type
+                    if (isDMR) {
+                        encryptSw = 1;
+                        encryptKey = "";
+                        relay = 1;
+                        interrupt = 2;
+                        active = 1;
+                    } else {
+                        encryptSw = 0;
+                        encryptKey = "";
+                        relay = 1;
+                        interrupt = 0;
+                        active = 0;
+                    }
+                    outBoundSlot = 0;
+                    channelMode = 0;
+                    contactType = 0;
                 }
+                
+                // Apply parsed or default values
+                values.put("channel_encryptSw", encryptSw);
+                if (!encryptKey.isEmpty() || isDMR) {
+                    values.put("channel_encryptKey", encryptKey);
+                }
+                values.put("channel_relay", relay);
+                values.put("channel_interrupt", interrupt);
+                values.put("channel_active", active);
+                values.put("channel_outBoundSlot", outBoundSlot);
+                values.put("channel_mode", channelMode);
+                values.put("channel_contactType", contactType);
                 
                 // Insert into database
                 // If _id was provided in CSV, it will be preserved; otherwise auto-increment

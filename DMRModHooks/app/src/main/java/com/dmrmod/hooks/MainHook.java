@@ -193,6 +193,9 @@ public class MainHook implements IXposedHookLoadPackage {
     private static final java.util.HashMap<Integer, java.util.ArrayList<String>> channelTranscriptionHistory = new java.util.HashMap<>();
     private static final int MAX_TRANSCRIPTION_HISTORY = 10;
 
+    // Sci-fi background view (circuit board + drops + audio bars)
+    private static CircuitBoardView circuitBoardView = null;
+
     // Monitoring mode toggle (ALL mode workaround for group call reception + analog squelch open)
     private static android.widget.CompoundButton monitoringModeToggle = null;
     private static android.widget.Button gpsSendButton = null;
@@ -1079,6 +1082,9 @@ public class MainHook implements IXposedHookLoadPackage {
                             // Store context for later use in database operations
                             appContext = context.getApplicationContext();
                             
+                            // Neon sci-fi aesthetic: dark navy background
+                            rootLayout.setBackgroundColor(0xFF060D1A);
+                            
                             int margin5dp = (int) (5 * context.getResources().getDisplayMetrics().density);
                             int margin10dp = (int) (10 * context.getResources().getDisplayMetrics().density);
                             
@@ -1151,6 +1157,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                                     params.setMargins(0, 0, 0, 0);
                                                     tv.setLayoutParams(params);
                                                 }
+                                                // Neon styling: cyan text, compact size
+                                                tv.setTextColor(0xFF00E5FF);
+                                                tv.setTextSize(11);
                                             }
                                         }
                                         
@@ -1233,10 +1242,10 @@ public class MainHook implements IXposedHookLoadPackage {
                                 gradientDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
                                 gradientDrawable.setStroke(
                                     (int) (2 * context.getResources().getDisplayMetrics().density),
-                                    0xAAFFFFFF
+                                    0x5900E5FF  // Cyan border at ~35% opacity
                                 );
                                 gradientDrawable.setCornerRadius(12 * context.getResources().getDisplayMetrics().density);
-                                gradientDrawable.setColors(new int[]{0x15FFFFFF, 0x08FFFFFF});
+                                gradientDrawable.setColors(new int[]{0x0800E5FF, 0x0400E5FF});
                                 gradientDrawable.setGradientType(android.graphics.drawable.GradientDrawable.LINEAR_GRADIENT);
                                 gradientDrawable.setOrientation(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM);
                                 
@@ -1244,7 +1253,20 @@ public class MainHook implements IXposedHookLoadPackage {
                                 borderBox.setLayoutParams(borderParams);
                                 borderBox.setClickable(false);
                                 borderBox.setFocusable(false);
-                                
+
+                                // ── Sci-fi animated background ──────────────────────────────
+                                circuitBoardView = new CircuitBoardView(context);
+                                FrameLayout.LayoutParams cbParams = new FrameLayout.LayoutParams(
+                                    FrameLayout.LayoutParams.MATCH_PARENT,
+                                    FrameLayout.LayoutParams.MATCH_PARENT
+                                );
+                                circuitBoardView.setLayoutParams(cbParams);
+                                circuitBoardView.setClickable(false);
+                                circuitBoardView.setFocusable(false);
+                                borderBox.addView(circuitBoardView, 0);
+                                XposedBridge.log(TAG + ": ✓ Added CircuitBoardView background");
+                                // ────────────────────────────────────────────────────────────
+
                                 // Add caller display TextView to borderbox (top-left)
                                 TextView callerText = new TextView(context);
                                 callerText.setTag("DMR_CALLER_TEXT");
@@ -1481,16 +1503,18 @@ public class MainHook implements IXposedHookLoadPackage {
                                 zoneButtonWidget.setLayoutParams(zoneButtonParams);
                                 zoneButtonWidget.setTextSize(12);
                                 zoneButtonWidget.setTypeface(null, android.graphics.Typeface.BOLD);
-                                zoneButtonWidget.setTextColor(0xFFFFFFFF);  // White text
+                                zoneButtonWidget.setTextColor(0xFF00E5FF);  // Cyan text
                                 
                                 // Create drawable for zone selector button
                                 android.graphics.drawable.GradientDrawable zoneSelectorDrawable = new android.graphics.drawable.GradientDrawable();
                                 zoneSelectorDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                                zoneSelectorDrawable.setColor(0xFF4169E1);  // Royal blue
+                                zoneSelectorDrawable.setColors(new int[]{0xFF0D1F4A, 0xFF1A3680});  // Dark navy gradient
+                                zoneSelectorDrawable.setGradientType(android.graphics.drawable.GradientDrawable.LINEAR_GRADIENT);
+                                zoneSelectorDrawable.setOrientation(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM);
                                 zoneSelectorDrawable.setCornerRadius(8 * context.getResources().getDisplayMetrics().density);
                                 zoneSelectorDrawable.setStroke(
                                     (int) (2 * context.getResources().getDisplayMetrics().density),
-                                    0xFFFFFFFF  // White border
+                                    0xFF00E5FF  // Cyan border
                                 );
                                 zoneButtonWidget.setBackground(zoneSelectorDrawable);
                                 
@@ -1607,7 +1631,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Squelch label "SQ:" - LEFT SIDE
                                 TextView squelchLabel = new TextView(context);
                                 squelchLabel.setText("SQ:");
-                                squelchLabel.setTextColor(0xFFFFFFFF);
+                                squelchLabel.setTextColor(0xFF888888);  // Gray label
                                 squelchLabel.setTextSize(14);
                                 squelchLabel.setTypeface(null, android.graphics.Typeface.BOLD);
                                 LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
@@ -1623,7 +1647,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 TextView squelchValueLabel = new TextView(context);
                                 squelchValueLabel.setTag("DMR_SQUELCH_VALUE");
                                 squelchValueLabel.setText("5");
-                                squelchValueLabel.setTextColor(0xFF00FF00); // Green
+                                squelchValueLabel.setTextColor(0xFF00E5FF); // Cyan
                                 squelchValueLabel.setTextSize(18);
                                 squelchValueLabel.setTypeface(null, android.graphics.Typeface.BOLD);
                                 squelchValueLabel.setGravity(android.view.Gravity.CENTER);
@@ -1652,10 +1676,10 @@ public class MainHook implements IXposedHookLoadPackage {
                                 
                                 // Make slider white for visibility (both progress and background)
                                 try {
-                                    android.content.res.ColorStateList whiteColor = android.content.res.ColorStateList.valueOf(0xFFFFFFFF);
-                                    squelchSeekBar.setProgressTintList(whiteColor);
-                                    squelchSeekBar.setProgressBackgroundTintList(whiteColor);  // Make entire track white
-                                    squelchSeekBar.setThumbTintList(whiteColor);
+                                    android.content.res.ColorStateList cyanColor = android.content.res.ColorStateList.valueOf(0xFF00E5FF);
+                                    squelchSeekBar.setProgressTintList(cyanColor);
+                                    squelchSeekBar.setProgressBackgroundTintList(cyanColor);  // Cyan track
+                                    squelchSeekBar.setThumbTintList(cyanColor);
                                 } catch (Exception e) {
                                     XposedBridge.log(TAG + ": Could not set slider color: " + e);
                                 }
@@ -1776,16 +1800,29 @@ public class MainHook implements IXposedHookLoadPackage {
                                 
                                 // PTT button now at index 4 (inside container, centered)
                                 rootLayout.removeView(pttButton);
-                                FrameLayout.LayoutParams pttParams = new FrameLayout.LayoutParams(
-                                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                                    FrameLayout.LayoutParams.WRAP_CONTENT
-                                );
+                                int pttSizePx = (int) (176 * context.getResources().getDisplayMetrics().density);
+                                FrameLayout.LayoutParams pttParams = new FrameLayout.LayoutParams(pttSizePx, pttSizePx);
                                 pttParams.gravity = android.view.Gravity.CENTER;
                                 pttButton.setLayoutParams(pttParams);
                                 buttonContainer.addView(pttButton);
                                 pttButton.setVisibility(View.VISIBLE);
                                 pttButton.bringToFront();
                                 XposedBridge.log(TAG + ": ✓ PTT button centered in container");
+
+                                // Apply custom PTT idle background from module assets
+                                try {
+                                    Context moduleCtx = context.createPackageContext("com.dmrmod.hooks", Context.CONTEXT_IGNORE_SECURITY);
+                                    int idleResId = moduleCtx.getResources().getIdentifier("interphone_talkback_record", "drawable", "com.dmrmod.hooks");
+                                    if (idleResId != 0) {
+                                        android.graphics.drawable.Drawable idleDrawable = moduleCtx.getResources().getDrawable(idleResId, moduleCtx.getTheme());
+                                        pttButton.setBackground(idleDrawable);
+                                        XposedBridge.log(TAG + ": ✓ Custom PTT idle background applied");
+                                    } else {
+                                        XposedBridge.log(TAG + ": Custom PTT drawable not found");
+                                    }
+                                } catch (Exception e) {
+                                    XposedBridge.log(TAG + ": Failed to apply custom PTT background: " + e.getMessage());
+                                }
                                 
                                 // Create transcription toggle button (left of PTT button)
                                 android.widget.ToggleButton transcriptionToggle = new android.widget.ToggleButton(context);
@@ -1804,7 +1841,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 transcriptionToggle.setLayoutParams(transcriptionToggleParams);
                                 transcriptionToggle.setTextSize(14);
                                 transcriptionToggle.setTypeface(null, android.graphics.Typeface.BOLD);
-                                transcriptionToggle.setTextColor(0xFFFFFFFF);  // White text
+                                transcriptionToggle.setTextColor(0xFFB388FF);  // Light purple text
                                 
                                 // Create state list drawable for purple background
                                 android.graphics.drawable.StateListDrawable transcriptionStateDrawable = new android.graphics.drawable.StateListDrawable();
@@ -1812,22 +1849,22 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Checked state (transcription enabled) - Solid purple background
                                 android.graphics.drawable.GradientDrawable transcriptionCheckedDrawable = new android.graphics.drawable.GradientDrawable();
                                 transcriptionCheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                                transcriptionCheckedDrawable.setColor(0xFF9370DB);  // Medium purple
+                                transcriptionCheckedDrawable.setColor(0xFF2D1060);  // Deep purple
                                 transcriptionCheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
                                 transcriptionCheckedDrawable.setStroke(
                                     (int) (2 * context.getResources().getDisplayMetrics().density),
-                                    0xFFFFFFFF  // White border
+                                    0xFF7C4DFF  // Purple neon border
                                 );
                                 transcriptionStateDrawable.addState(new int[]{android.R.attr.state_checked}, transcriptionCheckedDrawable);
                                 
                                 // Unchecked state (transcription disabled) - Light purple background
                                 android.graphics.drawable.GradientDrawable transcriptionUncheckedDrawable = new android.graphics.drawable.GradientDrawable();
                                 transcriptionUncheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                                transcriptionUncheckedDrawable.setColor(0x609370DB);  // Light purple (transparent version of ON color)
+                                transcriptionUncheckedDrawable.setColor(0xFF1A0A35);  // Dark purple off
                                 transcriptionUncheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
                                 transcriptionUncheckedDrawable.setStroke(
                                     (int) (2 * context.getResources().getDisplayMetrics().density),
-                                    0x80FFFFFF  // Semi-transparent white border
+                                    0x807C4DFF  // Semi-transparent purple border
                                 );
                                 transcriptionStateDrawable.addState(new int[]{}, transcriptionUncheckedDrawable);
                                 
@@ -1916,7 +1953,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 softSqToggle.setLayoutParams(softSqToggleParams);
                                 softSqToggle.setTextSize(12);  // Slightly smaller for "Soft SQ"
                                 softSqToggle.setTypeface(null, android.graphics.Typeface.BOLD);
-                                softSqToggle.setTextColor(0xFFFFFFFF);  // White text
+                                softSqToggle.setTextColor(0xFF00E5FF);  // Cyan text
                                 
                                 // Create state list drawable for software squelch button
                                 android.graphics.drawable.StateListDrawable softSqStateDrawable = new android.graphics.drawable.StateListDrawable();
@@ -1924,22 +1961,22 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Checked state (software squelch enabled) - Blue background
                                 android.graphics.drawable.GradientDrawable softSqCheckedDrawable = new android.graphics.drawable.GradientDrawable();
                                 softSqCheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                                softSqCheckedDrawable.setColor(0xFF2196F3);  // Material blue
+                                softSqCheckedDrawable.setColor(0xFF0D3D47);  // Neon teal dark
                                 softSqCheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
                                 softSqCheckedDrawable.setStroke(
                                     (int) (2 * context.getResources().getDisplayMetrics().density),
-                                    0xFFFFFFFF  // White border
+                                    0xFF00BCD4  // Cyan border
                                 );
                                 softSqStateDrawable.addState(new int[]{android.R.attr.state_checked}, softSqCheckedDrawable);
                                 
                                 // Unchecked state (software squelch disabled) - Light blue background
                                 android.graphics.drawable.GradientDrawable softSqUncheckedDrawable = new android.graphics.drawable.GradientDrawable();
                                 softSqUncheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                                softSqUncheckedDrawable.setColor(0x602196F3);  // Light blue (transparent version of ON color)
+                                softSqUncheckedDrawable.setColor(0xFF0A2A30);  // Dark teal off
                                 softSqUncheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
                                 softSqUncheckedDrawable.setStroke(
                                     (int) (2 * context.getResources().getDisplayMetrics().density),
-                                    0x80FFFFFF  // Semi-transparent white border
+                                    0x8000BCD4  // Semi-transparent cyan border
                                 );
                                 softSqStateDrawable.addState(new int[]{}, softSqUncheckedDrawable);
                                 
@@ -2006,7 +2043,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 recordToggle.setLayoutParams(toggleParams);
                                 recordToggle.setTextSize(14);
                                 recordToggle.setTypeface(null, android.graphics.Typeface.BOLD);
-                                recordToggle.setTextColor(0xFFFFFFFF);  // White text
+                                recordToggle.setTextColor(0xFFFF8A80);  // Light red text
                                 
                                 // Create state list drawable for background
                                 android.graphics.drawable.StateListDrawable stateDrawable = new android.graphics.drawable.StateListDrawable();
@@ -2014,22 +2051,22 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Checked state (recording enabled) - Red background
                                 android.graphics.drawable.GradientDrawable checkedDrawable = new android.graphics.drawable.GradientDrawable();
                                 checkedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                                checkedDrawable.setColor(0xFFFF0000);  // Solid red
+                                checkedDrawable.setColor(0xFF500000);  // Dark red
                                 checkedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
                                 checkedDrawable.setStroke(
                                     (int) (2 * context.getResources().getDisplayMetrics().density),
-                                    0xFFFFFFFF  // White border
+                                    0xFFF44336  // Red neon border
                                 );
                                 stateDrawable.addState(new int[]{android.R.attr.state_checked}, checkedDrawable);
                                 
                                 // Unchecked state (recording disabled) - Light red background
                                 android.graphics.drawable.GradientDrawable uncheckedDrawable = new android.graphics.drawable.GradientDrawable();
                                 uncheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                                uncheckedDrawable.setColor(0x60FF0000);  // Light red (transparent version of ON color)
+                                uncheckedDrawable.setColor(0xFF2A0000);  // Dark red off
                                 uncheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
                                 uncheckedDrawable.setStroke(
                                     (int) (2 * context.getResources().getDisplayMetrics().density),
-                                    0x80FFFFFF  // Semi-transparent white border
+                                    0x80F44336  // Semi-transparent red border
                                 );
                                 stateDrawable.addState(new int[]{}, uncheckedDrawable);
                                 
@@ -2083,7 +2120,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 monitorToggle.setLayoutParams(monitorToggleParams);
                                 monitorToggle.setTextSize(14);
                                 monitorToggle.setTypeface(null, android.graphics.Typeface.BOLD);
-                                monitorToggle.setTextColor(0xFFFFFFFF);  // White text
+                                monitorToggle.setTextColor(0xFFFFD54F);  // Amber text
                                 
                                 // Create state list drawable for monitoring mode
                                 android.graphics.drawable.StateListDrawable monitorStateDrawable = new android.graphics.drawable.StateListDrawable();
@@ -2091,22 +2128,22 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Checked state (monitoring ON - ALL mode) - Orange background
                                 android.graphics.drawable.GradientDrawable monitorCheckedDrawable = new android.graphics.drawable.GradientDrawable();
                                 monitorCheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                                monitorCheckedDrawable.setColor(0xFFFF8C00);  // Dark orange
+                                monitorCheckedDrawable.setColor(0xFF362500);  // Dark amber
                                 monitorCheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
                                 monitorCheckedDrawable.setStroke(
                                     (int) (2 * context.getResources().getDisplayMetrics().density),
-                                    0xFFFFFFFF  // White border
+                                    0xFFFF8F00  // Amber neon border
                                 );
                                 monitorStateDrawable.addState(new int[]{android.R.attr.state_checked}, monitorCheckedDrawable);
                                 
                                 // Unchecked state (monitoring OFF - GROUP mode) - Light orange background
                                 android.graphics.drawable.GradientDrawable monitorUncheckedDrawable = new android.graphics.drawable.GradientDrawable();
                                 monitorUncheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                                monitorUncheckedDrawable.setColor(0x60FF8C00);  // Light orange (transparent version of ON color)
+                                monitorUncheckedDrawable.setColor(0xFF1A1000);  // Dark amber off
                                 monitorUncheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
                                 monitorUncheckedDrawable.setStroke(
                                     (int) (2 * context.getResources().getDisplayMetrics().density),
-                                    0x80FFFFFF  // Semi-transparent white border
+                                    0x80FF8F00  // Semi-transparent amber border
                                 );
                                 monitorStateDrawable.addState(new int[]{}, monitorUncheckedDrawable);
                                 
@@ -2308,7 +2345,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 aprsButton.setLayoutParams(aprsButtonParams);
                                 aprsButton.setTextSize(11);  // Slightly smaller to fit better
                                 aprsButton.setTypeface(null, android.graphics.Typeface.BOLD);
-                                aprsButton.setTextColor(0xFFFFFFFF);  // White text
+                                aprsButton.setTextColor(0xFF69F0AE);  // Green text
                                 
                                 // Create state list drawable for APRS button
                                 android.graphics.drawable.StateListDrawable aprsStateDrawable = new android.graphics.drawable.StateListDrawable();
@@ -2316,22 +2353,22 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Checked state (APRS monitoring active) - Green background
                                 android.graphics.drawable.GradientDrawable aprsCheckedDrawable = new android.graphics.drawable.GradientDrawable();
                                 aprsCheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                                aprsCheckedDrawable.setColor(0xFF00AA00);  // Green
+                                aprsCheckedDrawable.setColor(0xFF004400);  // Dark green
                                 aprsCheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
                                 aprsCheckedDrawable.setStroke(
                                     (int) (2 * context.getResources().getDisplayMetrics().density),
-                                    0xFFFFFFFF  // White border
+                                    0xFF00E676  // Green neon border
                                 );
                                 aprsStateDrawable.addState(new int[]{android.R.attr.state_checked}, aprsCheckedDrawable);
                                 
                                 // Unchecked state (APRS monitoring inactive) - Light green background
                                 android.graphics.drawable.GradientDrawable aprsUncheckedDrawable = new android.graphics.drawable.GradientDrawable();
                                 aprsUncheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                                aprsUncheckedDrawable.setColor(0x6000AA00);  // Light green (transparent version of ON color)
+                                aprsUncheckedDrawable.setColor(0xFF002200);  // Dark green off
                                 aprsUncheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
                                 aprsUncheckedDrawable.setStroke(
                                     (int) (2 * context.getResources().getDisplayMetrics().density),
-                                    0x80FFFFFF  // Semi-transparent white border
+                                    0x8000E676  // Semi-transparent green border
                                 );
                                 aprsStateDrawable.addState(new int[]{}, aprsUncheckedDrawable);
                                 
@@ -2370,7 +2407,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 vfoButton.setLayoutParams(vfoButtonParams);
                                 vfoButton.setTextSize(12);
                                 vfoButton.setTypeface(null, android.graphics.Typeface.BOLD);
-                                vfoButton.setTextColor(0xFFFFFFFF);  // White text
+                                vfoButton.setTextColor(0xFFFFCA28);  // Amber text
                                 
                                 // Create state list drawable for VFO button
                                 android.graphics.drawable.StateListDrawable vfoStateDrawable = new android.graphics.drawable.StateListDrawable();
@@ -2378,22 +2415,22 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Checked state (VFO active) - Orange background
                                 android.graphics.drawable.GradientDrawable vfoCheckedDrawable = new android.graphics.drawable.GradientDrawable();
                                 vfoCheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                                vfoCheckedDrawable.setColor(0xFFFF9800);  // Orange
+                                vfoCheckedDrawable.setColor(0xFF4A3000);  // Dark amber
                                 vfoCheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
                                 vfoCheckedDrawable.setStroke(
                                     (int) (2 * context.getResources().getDisplayMetrics().density),
-                                    0xFFFFFFFF  // White border
+                                    0xFFFF8F00  // Amber neon border
                                 );
                                 vfoStateDrawable.addState(new int[]{android.R.attr.state_checked}, vfoCheckedDrawable);
                                 
                                 // Unchecked state (VFO inactive) - Light orange background
                                 android.graphics.drawable.GradientDrawable vfoUncheckedDrawable = new android.graphics.drawable.GradientDrawable();
                                 vfoUncheckedDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                                vfoUncheckedDrawable.setColor(0x60FF9800);  // Light orange
+                                vfoUncheckedDrawable.setColor(0xFF2A1A00);  // Dark amber off
                                 vfoUncheckedDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
                                 vfoUncheckedDrawable.setStroke(
                                     (int) (2 * context.getResources().getDisplayMetrics().density),
-                                    0x80FFFFFF  // Semi-transparent white border
+                                    0x80FF8F00  // Semi-transparent amber border
                                 );
                                 vfoStateDrawable.addState(new int[]{}, vfoUncheckedDrawable);
                                 
@@ -2434,16 +2471,16 @@ public class MainHook implements IXposedHookLoadPackage {
                                 gpsSendButton.setLayoutParams(gpsSendParams);
                                 gpsSendButton.setTextSize(12);
                                 gpsSendButton.setTypeface(null, android.graphics.Typeface.BOLD);
-                                gpsSendButton.setTextColor(0xFFFFFFFF);
+                                gpsSendButton.setTextColor(0xFF69F0AE);  // Green text
                                 gpsSendButton.setPadding(0, 0, 0, 0);
 
                                 android.graphics.drawable.GradientDrawable gpsButtonDrawable = new android.graphics.drawable.GradientDrawable();
                                 gpsButtonDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                                gpsButtonDrawable.setColor(0xFF4CAF50); // Material green
+                                gpsButtonDrawable.setColor(0xFF004400); // Dark green
                                 gpsButtonDrawable.setCornerRadius(20 * context.getResources().getDisplayMetrics().density);
                                 gpsButtonDrawable.setStroke(
                                     (int) (2 * context.getResources().getDisplayMetrics().density),
-                                    0xFFFFFFFF
+                                    0xFF00E676  // Green neon border
                                 );
                                 gpsSendButton.setBackground(gpsButtonDrawable);
 
@@ -2764,6 +2801,34 @@ public class MainHook implements IXposedHookLoadPackage {
                                 if (locationText != null) {
                                     updateLocationDisplay(param.thisObject, locationText, rootLayout.getContext());
                                 }
+                                
+                                // Trim frequencies to 3 decimal places and restyle info TextViews
+                                try {
+                                    Context ctx = rootLayout.getContext();
+                                    String pkg = ctx.getPackageName();
+                                    int[] infoIds = {
+                                        ctx.getResources().getIdentifier("fragment_talkback_send", "id", pkg),
+                                        ctx.getResources().getIdentifier("fragment_talkback_recieve", "id", pkg),
+                                        ctx.getResources().getIdentifier("fragment_talkback_power", "id", pkg),
+                                        ctx.getResources().getIdentifier("fragment_talkback_color_or_noise", "id", pkg),
+                                        ctx.getResources().getIdentifier("fragment_talkback_call_name", "id", pkg)
+                                    };
+                                    for (int rid : infoIds) {
+                                        if (rid != 0) {
+                                            android.view.View vv = rootLayout.findViewById(rid);
+                                            if (vv instanceof TextView) {
+                                                TextView tv = (TextView) vv;
+                                                tv.setTextColor(0xFF00E5FF);
+                                                String txt = tv.getText().toString();
+                                                // Trim frequency decimals: e.g. "462.562500" → "462.562"
+                                                String trimmed = txt.replaceAll("(\\d+\\.\\d{3})\\d+", "$1");
+                                                if (!trimmed.equals(txt)) tv.setText(trimmed);
+                                            }
+                                        }
+                                    }
+                                } catch (Throwable t2) {
+                                    // ignore styling errors
+                                }
                             }
                         } catch (Exception e) {
                             XposedBridge.log(TAG + ": Error updating location in updateUI: " + e.getMessage());
@@ -2772,6 +2837,48 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             );
             
+            // Replace setTalkbackRecordBg entirely so the OEM runOnUiThread never fires over our assets
+            XposedHelpers.findAndHookMethod(
+                fragmentClass,
+                "setTalkbackRecordBg",
+                int.class,
+                new XC_MethodReplacement() {
+                    @Override
+                    protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
+                        try {
+                            final int state = (int) param.args[0];
+                            android.app.Activity activity = (android.app.Activity)
+                                XposedHelpers.callMethod(param.thisObject, "getActivity");
+                            if (activity == null) return null;
+                            final android.widget.ImageButton imgBtn = (android.widget.ImageButton)
+                                XposedHelpers.getObjectField(param.thisObject, "mImgTalkbackRecord");
+                            activity.runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        Context ctx = imgBtn.getContext();
+                                        Context moduleCtx = ctx.createPackageContext("com.dmrmod.hooks", Context.CONTEXT_IGNORE_SECURITY);
+                                        String resName = (state == 1) ? "interphone_talkback_recording"
+                                                       : (state == 2) ? "interphone_talkback_recv"
+                                                       : "interphone_talkback_record";
+                                        int resId = moduleCtx.getResources().getIdentifier(resName, "drawable", "com.dmrmod.hooks");
+                                        if (resId != 0) {
+                                            android.graphics.drawable.Drawable d = moduleCtx.getResources().getDrawable(resId, moduleCtx.getTheme());
+                                            imgBtn.setBackground(d);
+                                        }
+                                    } catch (Exception e) {
+                                        XposedBridge.log(TAG + ": setTalkbackRecordBg replacement UI error: " + e.getMessage());
+                                    }
+                                }
+                            });
+                        } catch (Exception e) {
+                            XposedBridge.log(TAG + ": setTalkbackRecordBg replacement error: " + e.getMessage());
+                        }
+                        return null;
+                    }
+                }
+            );
+
             XposedBridge.log(TAG + ": Successfully hooked InterPhoneTalkBackFragment");
             
         } catch (Throwable t) {
@@ -9235,6 +9342,13 @@ public class MainHook implements IXposedHookLoadPackage {
                             originalAudio = java.util.Arrays.copyOf(audioData, length);
                         }
                         
+                        // === AUDIO LEVEL (always computed for VU-meter bars) ===
+                        int amplitude = calculateAudioAmplitude(audioData, length);
+                        if (circuitBoardView != null) {
+                            circuitBoardView.audioAmplitude = amplitude;
+                            circuitBoardView.isReceiving = isReceiving;
+                        }
+
                         // === SOFTWARE SQUELCH (Hybrid RSSI + Audio RMS) ===
                         // Note: Squelch level 0 = disabled (pass all audio), 1-9 = enabled with increasing sensitivity
                         // APRS mode forces software squelch on, VFO mode uses Soft SQ button setting
@@ -9245,7 +9359,9 @@ public class MainHook implements IXposedHookLoadPackage {
                             int activeThreshold = softwareSquelchThreshold;
                             
                             // Calculate audio amplitude (optimized RMS with peak detection)
-                            int amplitude = calculateAudioAmplitude(audioData, length);
+                            // (already computed above; reuse)
+                            // Feed audio level to animated background view
+                            // (already fed above)
                             
                             // Get thresholds with hysteresis (using active threshold)
                             int audioThreshold = getAudioSquelchThreshold(activeThreshold);
@@ -11545,7 +11661,38 @@ public class MainHook implements IXposedHookLoadPackage {
             );
             
             XposedBridge.log(TAG + ": ✓ Channel navigation hook installed");
-            
+
+            // Fix: ReceiveSoundState ignores MSG_CHANNEL_CHANGE (2021) — hook it to allow
+            // channel switching while a transmission is being received.
+            Class<?> receiveSoundStateClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.state.TalkBackStateMachine$ReceiveSoundState",
+                lpparam.classLoader
+            );
+
+            XposedHelpers.findAndHookMethod(
+                receiveSoundStateClass,
+                "processMessage",
+                android.os.Message.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                        android.os.Message msg = (android.os.Message) param.args[0];
+                        if (msg.what != 2021) return; // Only intercept MSG_CHANNEL_CHANGE
+                        try {
+                            Object sm = XposedHelpers.getObjectField(param.thisObject, "this$0");
+                            Object fragment = XposedHelpers.getObjectField(sm, "fragment");
+                            boolean isUp = ((Boolean) msg.obj).booleanValue();
+                            XposedHelpers.callMethod(fragment, "updateChannelId", isUp);
+                            param.setResult(true);
+                        } catch (Throwable t) {
+                            XposedBridge.log(TAG + ": Error handling channel change in ReceiveSoundState: " + t.getMessage());
+                        }
+                    }
+                }
+            );
+
+            XposedBridge.log(TAG + ": ✓ ReceiveSoundState channel navigation fix installed");
+
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": Failed to hook channel navigation: " + t.getMessage());
             XposedBridge.log(t);
@@ -11770,6 +11917,27 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             );
             
+            // Hook updateView() to call initData() instead — prevents empty channel list.
+            // updateView() (called on every tab swipe via onPageSelected) overwrites the
+            // channels field with an unfiltered getChannelList() call without notifyDataSetChanged().
+            // Our getCount() replacement reads channels directly, so this bad data = empty list.
+            // Fix: replace updateView() with a proper initData() call.
+            XposedHelpers.findAndHookMethod(
+                channelFragmentClass,
+                "updateView",
+                new XC_MethodReplacement() {
+                    @Override
+                    protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
+                        try {
+                            XposedHelpers.callMethod(param.thisObject, "initData");
+                        } catch (Throwable t) {
+                            XposedBridge.log(TAG + ": Error in updateView replacement: " + t.getMessage());
+                        }
+                        return null;
+                    }
+                }
+            );
+
             XposedBridge.log(TAG + ": ✓ Channel list filter and click hooks installed");
             
         } catch (Throwable t) {

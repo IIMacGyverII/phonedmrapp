@@ -110,11 +110,12 @@ public class DirectDatabaseExporter {
         }
     }
     
-    // OpenGD77 CSV Headers (29 columns - includes _id for unique identification)
+    // OpenGD77 CSV Headers (37 columns - includes _id and all database fields)
     private static final String CHANNELS_HEADER = 
         "_id,Channel Number,Channel Name,Channel Type,Rx Frequency,Tx Frequency,Bandwidth (kHz)," +
         "Colour Code,Timeslot,Contact,TG List,DMR ID,TS1_TA_Tx,TS2_TA_Tx ID,RX Tone,TX Tone," +
-        "Squelch,Power,Rx Only,Zone Skip,All Skip,TOT,VOX,No Beep,No Eco,APRS,Latitude,Longitude,Use Location";
+        "Squelch,Power,Rx Only,Zone Skip,All Skip,TOT,VOX,No Beep,No Eco,APRS,Latitude,Longitude,Use Location," +
+        "Encrypt Switch,Encrypt Key,Relay,Interrupt,Active,Outbound Slot,Channel Mode,Contact Type";
     
     private static final String CONTACTS_HEADER = "Contact Name,ID,ID Type,TS Override";
     
@@ -318,6 +319,16 @@ public class DirectDatabaseExporter {
                     int txType = cursor.getInt(cursor.getColumnIndex("channel_txType"));
                     int txSubCode = cursor.getInt(cursor.getColumnIndex("channel_txSubCode"));
                     
+                    // Read new fields for complete backup
+                    int encryptSw = cursor.getInt(cursor.getColumnIndex("channel_encryptSw"));
+                    String encryptKey = cursor.getString(cursor.getColumnIndex("channel_encryptKey"));
+                    int relay = cursor.getInt(cursor.getColumnIndex("channel_relay"));
+                    int interrupt = cursor.getInt(cursor.getColumnIndex("channel_interrupt"));
+                    int active = cursor.getInt(cursor.getColumnIndex("channel_active"));
+                    int outBoundSlot = cursor.getInt(cursor.getColumnIndex("channel_outBoundSlot"));
+                    int channelMode = cursor.getInt(cursor.getColumnIndex("channel_mode"));
+                    int contactType = cursor.getInt(cursor.getColumnIndex("channel_contactType"));
+                    
                     // DIAGNOSTIC: Export ALL raw database columns for comparison
                     // This will help us find what changes when user edits+saves a channel
                     if (channelNumber <= 3 || channelNumber == 8 || channelNumber == 9 || channelNumber == 16) {
@@ -412,6 +423,16 @@ public class DirectDatabaseExporter {
                         rowBuilder.append("0.008,");                         // 27. Longitude (default)
                         rowBuilder.append("No");                             // 28. Use Location
                     }
+                    
+                    // NEW FIELDS (29-36): Complete database backup
+                    rowBuilder.append(",").append(encryptSw);               // 29. Encrypt Switch (0=off, 1=on)
+                    rowBuilder.append(",").append(encryptKey != null ? encryptKey : ""); // 30. Encrypt Key
+                    rowBuilder.append(",").append(relay);                   // 31. Relay
+                    rowBuilder.append(",").append(interrupt);               // 32. Interrupt
+                    rowBuilder.append(",").append(active);                  // 33. Active (0=inactive, 1=active)
+                    rowBuilder.append(",").append(outBoundSlot);            // 34. Outbound Slot
+                    rowBuilder.append(",").append(channelMode);             // 35. Channel Mode
+                    rowBuilder.append(",").append(contactType);             // 36. Contact Type
                 } else {
                     // Analogue channels
                     rowBuilder.append(",,,,,,,");                       // 7-13. DMR fields (all blank)
@@ -453,6 +474,16 @@ public class DirectDatabaseExporter {
                         rowBuilder.append("0.008,");                         // 27. Longitude (default)
                         rowBuilder.append("No");                             // 28. Use Location
                     }
+                    
+                    // NEW FIELDS (29-36): Complete database backup
+                    rowBuilder.append(",").append(encryptSw);               // 29. Encrypt Switch (0=off, 1=on)
+                    rowBuilder.append(",").append(encryptKey != null ? encryptKey : ""); // 30. Encrypt Key
+                    rowBuilder.append(",").append(relay);                   // 31. Relay
+                    rowBuilder.append(",").append(interrupt);               // 32. Interrupt
+                    rowBuilder.append(",").append(active);                  // 33. Active (0=inactive, 1=active)
+                    rowBuilder.append(",").append(outBoundSlot);            // 34. Outbound Slot
+                    rowBuilder.append(",").append(channelMode);             // 35. Channel Mode
+                    rowBuilder.append(",").append(contactType);             // 36. Contact Type
                 }
                 
                 writer.write(rowBuilder.toString());

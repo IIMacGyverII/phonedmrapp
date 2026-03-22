@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DMR App UI Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+    font-family: 'Segoe UI', sans-serif;
+    gap: 40px;
+    flex-wrap: wrap;
+  }
+
+  .label {
+    text-align: center;
+    color: #aaa;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: bold;
+  }
+
+  /* ========== PHONE FRAME ========== */
+  .phone {
+    width: 360px;
+    background: #000;
+    border-radius: 36px;
+    border: 2px solid #333;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+    position: relative;
+  }
+
+  /* ========== STATUS BAR ========== */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px 4px;
+    font-size: 12px;
+    color: #fff;
+  }
+
+  /* ========== BEFORE: plain dark ========== */
+  .before .phone { background: #000; }
+  .before .status-bar { background: #000; }
+
+  .before .title-bar {
+    background: #000;
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #fff;
+    font-size: 16px;
+    font-weight: bold;
+  }
+
+  .before .channel-row {
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 4px 8px;
+    gap: 16px;
+  }
+  .before .arrow-btn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: 2px solid #e8a000;
+    background: transparent;
+    display: flex; align-items: center; justify-content: center;
+    color: #e8a000;
+    font-size: 20px;
+    cursor: pointer;
+  }
+  .before .channel-num {
+    font-size: 48px;
+    font-weight: bold;
+    color: #e8a000;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 4px;
+  }
+
+  .before .info-block {
+    padding: 4px 12px 4px;
+    color: #fff;
+    font-size: 13px;
+    line-height: 1.5;
+    background: #000;
+  }
+
+  .before .zone-btn {
+    margin: 6px 16px;
+    padding: 10px 0;
+    background: #4169e1;
+    border: 2px solid #fff;
+    border-radius: 8px;
+    color: #fff;
+    font-weight: bold;
+    text-align: center;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .before .content-box {
+    margin: 6px 12px;
+    height: 220px;
+    background: #000;
+    border: 2px solid #555;
+    border-radius: 10px;
+    position: relative;
+  }
+  .before .history-btn {
+    position: absolute;
+    top: 8px; right: 8px;
+    border: 1px solid #4169e1;
+    border-radius: 6px;
+    padding: 3px 8px;
+    color: #4169e1;
+    font-size: 11px;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .before .btn-area {
+    background: #000;
+    padding: 4px 8px 6px;
+    display: grid;
+    grid-template-columns: 80px 1fr 80px;
+    grid-template-rows: 46px 46px 46px;
+    gap: 6px;
+    align-items: center;
+  }
+  .before .side-btn {
+    border-radius: 24px;
+    padding: 8px 0;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+    color: #fff;
+    cursor: pointer;
+  }
+  .before .btn-softsq  { background: #2e6e7e; }
+  .before .btn-txt     { background: #4a3a8a; }
+  .before .btn-vfo     { background: #8a6a00; }
+  .before .btn-rec     { background: #8a1a1a; }
+  .before .btn-mon     { background: #6a5500; }
+  .before .btn-pktrad  { background: #1a5a1a; }
+
+  .before .ptt-area {
+    grid-column: 2;
+    grid-row: 1 / 4;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .before .ptt-btn {
+    width: 110px; height: 110px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #f0a000, #c07000);
+    box-shadow: 0 0 20px rgba(200,120,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    position: relative;
+  }
+  .before .ptt-ring {
+    position: absolute;
+    width: 130px; height: 130px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 80%, rgba(120,60,0,0.7), rgba(60,30,0,0.5));
+    z-index: -1;
+  }
+  .before .ptt-icon { font-size: 36px; }
+
+  .before .bottom-tabs {
+    background: #111;
+    display: flex;
+    border-top: 1px solid #333;
+    padding: 6px 0 12px;
+  }
+  .before .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    cursor: pointer;
+    color: #888;
+    font-size: 11px;
+  }
+  .before .tab.active { color: #e8a000; }
+  .before .tab-icon { font-size: 20px; }
+
+  /* ========== AFTER: SCI-FI NEON ========== */
+  .after .phone {
+    background: #060d1a;
+    border: 2px solid #00e5ff44;
+    box-shadow: 0 0 30px rgba(0,229,255,0.15), 0 8px 40px rgba(0,0,0,0.9);
+  }
+  .after .status-bar {
+    background: #060d1a;
+    color: #00e5ff;
+    font-size: 12px;
+  }
+
+  /* Circuit board background canvas overlay */
+  .circuit-bg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.18;
+  }
+
+  .after .phone-inner {
+    position: relative;
+    z-index: 1;
+  }
+
+  .after .title-bar {
+    padding: 6px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #00e5ff;
+    font-size: 16px;
+    font-weight: bold;
+    text-shadow: 0 0 10px #00e5ff;
+    letter-spacing: 1px;
+  }
+  .after .title-bar .menu-icon {
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .after .title-bar .menu-icon span {
+    width: 20px; height: 2px;
+    background: #00e5ff;
+    box-shadow: 0 0 6px #00e5ff;
+    display: block;
+    border-radius: 1px;
+  }
+
+  .after .channel-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 4px 8px;
+    gap: 10px;
+  }
+  .after .arrow-btn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: 2px solid #00e5ff;
+    background: rgba(0,229,255,0.08);
+    box-shadow: 0 0 12px rgba(0,229,255,0.4), inset 0 0 8px rgba(0,229,255,0.1);
+    display: flex; align-items: center; justify-content: center;
+    color: #00e5ff;
+    font-size: 16px;
+    cursor: pointer;
+    text-shadow: 0 0 8px #00e5ff;
+  }
+  .after .channel-num {
+    font-size: 52px;
+    font-weight: bold;
+    color: #00e5ff;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 6px;
+    text-shadow: 0 0 20px #00e5ff, 0 0 40px rgba(0,200,255,0.4);
+  }
+
+  .after .info-block {
+    padding: 2px 14px 2px;
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .after .info-label { color: #888; }
+  .after .info-value { color: #00e5ff; text-shadow: 0 0 6px #00e5ffaa; }
+
+  .after .rssi-zone-row {
+    display: flex;
+    margin: 4px 12px;
+    gap: 8px;
+    align-items: center;
+  }
+  .after .rssi-box {
+    flex: 1;
+    border: 2px solid rgba(255,255,0,0.5);
+    background: rgba(255,255,0,0.05);
+    border-radius: 8px;
+    padding: 3px 8px;
+    color: #ffff00;
+    font-size: 12px;
+    text-align: center;
+    min-height: 28px;
+    font-weight: bold;
+    text-shadow: 0 0 6px #ffff00aa;
+  }
+  .after .zone-btn {
+    flex: 1;
+    padding: 6px 0;
+    background: linear-gradient(135deg, #0d1f4a, #1a3680);
+    border: 2px solid #00e5ff;
+    border-radius: 8px;
+    color: #00e5ff;
+    font-weight: bold;
+    text-align: center;
+    font-size: 12px;
+    cursor: pointer;
+    text-shadow: 0 0 8px #00e5ff;
+    box-shadow: 0 0 10px rgba(0,229,255,0.2), inset 0 0 6px rgba(0,229,255,0.05);
+    letter-spacing: 1px;
+  }
+
+  .after .sq-row {
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 6px;
+    margin-top: -2px;
+  }
+  .after .sq-label { color: #fff; font-size: 13px; font-weight: bold; }
+  .after .sq-value { color: #00ff88; font-size: 16px; font-weight: bold; text-shadow: 0 0 6px #00ff88; min-width: 16px; }
+  .after .sq-track {
+    flex: 1;
+    height: 4px;
+    background: linear-gradient(to right, #00e5ff 55%, #1a3040 55%);
+    border-radius: 2px;
+    position: relative;
+    box-shadow: 0 0 6px rgba(0,229,255,0.4);
+  }
+  .after .sq-thumb {
+    position: absolute;
+    top: -5px;
+    left: 55%;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 6px #00e5ff;
+    transform: translateX(-50%);
+  }
+
+  .after .content-box {
+    margin: 6px 12px;
+    height: 205px;
+    background: linear-gradient(160deg, rgba(0,229,255,0.04), rgba(0,229,255,0.01));
+    border: 1px solid rgba(0,229,255,0.35);
+    border-radius: 12px;
+    position: relative;
+    box-shadow: 0 0 15px rgba(0,229,255,0.08), inset 0 0 30px rgba(0,0,0,0.3);
+  }
+
+  /* subtle inner glow lines */
+  .after .content-box::before {
+    content: '';
+    position: absolute;
+    top: 8px; left: 8px; right: 8px;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(0,229,255,0.2), transparent);
+  }
+
+  .after .history-btn {
+    position: absolute;
+    top: 8px; right: 8px;
+    border: 1px solid #00e5ff;
+    border-radius: 8px;
+    padding: 3px 10px;
+    color: #00e5ff;
+    font-size: 10px;
+    background: rgba(0,229,255,0.1);
+    cursor: pointer;
+    text-shadow: 0 0 6px #00e5ff;
+    box-shadow: 0 0 8px rgba(0,229,255,0.15);
+    letter-spacing: 0.5px;
+  }
+
+  /* Waveform visualizer lines */
+  .after .waveform {
+    position: absolute;
+    bottom: 20px;
+    left: 10px;
+    right: 10px;
+    height: 40px;
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    opacity: 0.3;
+  }
+  .after .waveform .bar {
+    flex: 1;
+    background: linear-gradient(to top, #00e5ff, rgba(0,229,255,0.1));
+    border-radius: 1px 1px 0 0;
+  }
+
+  /* Scanning line effect */
+  .after .scan-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(0,229,255,0.4), transparent);
+    animation: scanAnim 3s linear infinite;
+    pointer-events: none;
+  }
+  @keyframes scanAnim {
+    0% { top: 0%; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
+
+  .after .btn-area {
+    padding: 4px 8px 4px;
+    display: grid;
+    grid-template-columns: 80px 1fr 80px;
+    grid-template-rows: 44px 44px 44px;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .after .side-btn {
+    border-radius: 22px;
+    padding: 8px 0;
+    font-size: 11px;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+  }
+
+  /* Individual button styles matching concept */
+  .after .btn-softsq {
+    background: linear-gradient(135deg, #0a2a30, #0d3d47);
+    border: 1.5px solid #00bcd4;
+    color: #00e5ff;
+    box-shadow: 0 0 10px rgba(0,188,212,0.3), inset 0 0 6px rgba(0,188,212,0.05);
+    text-shadow: 0 0 6px #00e5ff;
+  }
+  .after .btn-txt {
+    background: linear-gradient(135deg, #1a0a35, #2d1060);
+    border: 1.5px solid #7c4dff;
+    color: #b388ff;
+    box-shadow: 0 0 10px rgba(124,77,255,0.3), inset 0 0 6px rgba(124,77,255,0.05);
+    text-shadow: 0 0 6px #b388ff;
+  }
+  .after .btn-vfo {
+    background: linear-gradient(135deg, #2a1a00, #4a3000);
+    border: 1.5px solid #ff8f00;
+    color: #ffca28;
+    box-shadow: 0 0 10px rgba(255,143,0,0.3), inset 0 0 6px rgba(255,143,0,0.05);
+    text-shadow: 0 0 6px #ffca28;
+  }
+  .after .btn-rec {
+    background: linear-gradient(135deg, #2a0000, #500000);
+    border: 1.5px solid #f44336;
+    color: #ff8a80;
+    box-shadow: 0 0 10px rgba(244,67,54,0.3), inset 0 0 6px rgba(244,67,54,0.05);
+    text-shadow: 0 0 6px #ff8a80;
+  }
+  .after .btn-mon {
+    background: linear-gradient(135deg, #1a1000, #362500);
+    border: 1.5px solid #ff8f00;
+    color: #ffd54f;
+    box-shadow: 0 0 10px rgba(255,143,0,0.3), inset 0 0 6px rgba(255,143,0,0.05);
+    text-shadow: 0 0 6px #ffd54f;
+  }
+  .after .btn-pktrad {
+    background: linear-gradient(135deg, #002200, #004400);
+    border: 1.5px solid #00e676;
+    color: #69f0ae;
+    box-shadow: 0 0 10px rgba(0,230,118,0.3), inset 0 0 6px rgba(0,230,118,0.05);
+    text-shadow: 0 0 6px #69f0ae;
+  }
+
+  .after .ptt-area {
+    grid-column: 2;
+    grid-row: 1 / 4;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .after .ptt-outer {
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 60%, rgba(120,60,0,0.5), rgba(20,10,0,0.8));
+    box-shadow: 0 0 30px rgba(200,120,0,0.25);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .after .ptt-outer::before {
+    content: '';
+    position: absolute;
+    width: 138px; height: 138px;
+    border-radius: 50%;
+    border: 2px solid rgba(200,120,0,0.3);
+    box-shadow: 0 0 20px rgba(200,120,0,0.2);
+  }
+  .after .ptt-btn {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ffca28, #e65100);
+    box-shadow: 0 0 25px rgba(255,160,0,0.6), 0 4px 12px rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  .after .ptt-btn::after {
+    content: '';
+    position: absolute;
+    top: 10%; left: 15%;
+    width: 40%; height: 30%;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+  }
+  .after .ptt-icon { font-size: 34px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+
+  .after .bottom-tabs {
+    background: #060d1a;
+    display: flex;
+    border-top: 1px solid rgba(0,229,255,0.2);
+    padding: 6px 0 12px;
+  }
+  .after .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    cursor: pointer;
+    color: #446677;
+    font-size: 10px;
+    letter-spacing: 0.3px;
+  }
+  .after .tab.active {
+    color: #00e5ff;
+    text-shadow: 0 0 6px #00e5ff;
+  }
+  .after .tab.active .tab-icon { text-shadow: 0 0 8px #00e5ff; }
+  .after .tab-icon { font-size: 18px; }
+
+  /* Nav indicator line */
+  .after .bottom-tabs::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px; height: 3px;
+    border-radius: 2px;
+    background: rgba(0,229,255,0.4);
+  }
+  .after .phone { overflow: hidden; position: relative; }
+
+  /* Dot grid pattern background */
+  .after .phone::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: radial-gradient(circle, rgba(0,180,220,0.08) 1px, transparent 1px);
+    background-size: 20px 20px;
+    pointer-events: none;
+    z-index: 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== BEFORE ===== -->
+<div>
+  <div class="label">CURRENT</div>
+  <div class="phone before">
+    <div class="status-bar">
+      <span>12:47</span>
+      <span>🔔 📶 🔋</span>
+    </div>
+
+    <div class="title-bar">
+      <span>GMRS 01(UHF)</span>
+      <span style="font-size:20px">☰</span>
+    </div>
+
+    <div class="channel-row">
+      <div class="arrow-btn">◀</div>
+      <div class="channel-num">03</div>
+      <div class="arrow-btn">▶</div>
+    </div>
+
+    <div class="info-block">
+      Power:Low power<br>
+      Squelch Level:0<br>
+      Send:462.562500<br>
+      Receive:462.562500
+    </div>
+
+    <div style="display:flex; margin:4px 12px; gap:8px;">
+      <div style="flex:1; border:2px solid rgba(255,255,0,0.4); border-radius:8px; padding:4px 8px; color:#ffff00; font-size:12px; opacity:0.4; text-align:center; min-height:28px;"></div>
+      <div class="zone-btn" style="flex:1; margin:0; padding:6px 0; font-size:12px;">ZONE: ALL</div>
+    </div>
+
+    <div style="margin:0 12px; display:flex; align-items:center; gap:6px; padding:2px 2px;">
+      <span style="color:#fff; font-size:13px; font-weight:bold;">SQ:</span>
+      <span style="color:#0f0; font-size:16px; font-weight:bold;">5</span>
+      <div style="flex:1; height:4px; background:linear-gradient(to right, #fff 55%, #333 55%); border-radius:2px; position:relative;">
+        <div style="position:absolute; top:-5px; left:55%; width:14px; height:14px; border-radius:50%; background:#fff; transform:translateX(-50%);"></div>
+      </div>
+    </div>
+
+    <div class="content-box">
+      <div class="history-btn">Analog History</div>
+    </div>
+
+    <div class="btn-area">
+      <div class="side-btn btn-softsq">SOFT SQ</div>
+      <div class="ptt-area">
+        <div class="ptt-btn">
+          <div class="ptt-ring"></div>
+          <span class="ptt-icon">🎙️</span>
+        </div>
+      </div>
+      <div class="side-btn btn-rec">REC</div>
+
+      <div class="side-btn btn-txt">TXT</div>
+      <div class="side-btn btn-mon">MON</div>
+
+      <div class="side-btn btn-vfo">VFO</div>
+      <div class="side-btn btn-pktrad">PKT RAD</div>
+    </div>
+
+    <div class="bottom-tabs">
+      <div class="tab active"><span class="tab-icon">🎙️</span><span>Intercom</span></div>
+      <div class="tab"><span class="tab-icon">📋</span><span>Channel</span></div>
+      <div class="tab"><span class="tab-icon">👤</span><span>Contact</span></div>
+      <div class="tab"><span class="tab-icon">💬</span><span>Message</span></div>
+      <div class="tab"><span class="tab-icon">📻</span><span>Device</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== AFTER ===== -->
+<div>
+  <div class="label">REDESIGNED</div>
+  <div class="phone after">
+
+    <!-- Circuit trace lines via SVG -->
+    <svg class="circuit-bg" viewBox="0 0 360 780" xmlns="http://www.w3.org/2000/svg">
+      <g stroke="#00e5ff" stroke-width="1" fill="none">
+        <!-- horizontal traces -->
+        <polyline points="0,80 40,80 50,90 120,90 130,80 200,80"/>
+        <polyline points="180,140 220,140 230,150 300,150"/>
+        <polyline points="0,300 30,300 40,310 80,310 90,300 160,300"/>
+        <polyline points="200,420 250,420 260,430 360,430"/>
+        <polyline points="0,550 50,550 60,560 110,560 120,550 200,550"/>
+        <polyline points="250,200 280,200 290,210 360,210"/>
+        <!-- vertical traces -->
+        <polyline points="60,0 60,40 70,50 70,120 60,130 60,200"/>
+        <polyline points="300,100 300,150 290,160 290,230"/>
+        <polyline points="40,400 40,450 50,460 50,530"/>
+        <polyline points="320,350 320,400 310,410 310,480 320,490 320,600"/>
+        <!-- dots at junctions -->
+        <circle cx="50" cy="90" r="2" fill="#00e5ff"/>
+        <circle cx="130" cy="80" r="2" fill="#00e5ff"/>
+        <circle cx="230" cy="150" r="2" fill="#00e5ff"/>
+        <circle cx="40" cy="310" r="2" fill="#00e5ff"/>
+        <circle cx="90" cy="300" r="2" fill="#00e5ff"/>
+        <circle cx="260" cy="430" r="2" fill="#00e5ff"/>
+        <circle cx="60" cy="50" r="2" fill="#00e5ff"/>
+        <circle cx="70" cy="120" r="2" fill="#00e5ff"/>
+        <circle cx="300" cy="160" r="2" fill="#00e5ff"/>
+        <circle cx="50" cy="460" r="2" fill="#00e5ff"/>
+        <circle cx="310" cy="410" r="2" fill="#00e5ff"/>
+        <circle cx="310" cy="490" r="2" fill="#00e5ff"/>
+        <!-- corner accents -->
+        <polyline points="10,10 10,30 30,30" stroke-width="1.5"/>
+        <circle cx="30" cy="30" r="2" fill="#00e5ff"/>
+        <polyline points="350,10 350,30 330,30" stroke-width="1.5"/>
+        <circle cx="330" cy="30" r="2" fill="#00e5ff"/>
+        <polyline points="10,770 10,750 30,750" stroke-width="1.5"/>
+        <circle cx="30" cy="750" r="2" fill="#00e5ff"/>
+        <polyline points="350,770 350,750 330,750" stroke-width="1.5"/>
+        <circle cx="330" cy="750" r="2" fill="#00e5ff"/>
+      </g>
+    </svg>
+
+    <div class="phone-inner">
+      <div class="status-bar">
+        <span>12:47</span>
+        <span>🔔 📶 ⊠ 🔋</span>
+      </div>
+
+      <div class="title-bar">
+        <span>GMRS 01 (UHF)</span>
+        <div class="menu-icon"><span></span><span></span><span></span></div>
+      </div>
+
+      <div class="channel-row">
+        <div class="arrow-btn">◀</div>
+        <div class="channel-num">03</div>
+        <div class="arrow-btn">▶</div>
+      </div>
+
+      <div class="info-block">
+        <span class="info-label">Power: </span><span class="info-value">Low power</span><br>
+        <span class="info-label">Squelch Level: </span><span class="info-value">0</span><br>
+        <span class="info-label">Send: </span><span class="info-value">462.562500</span><br>
+        <span class="info-label">Receive: </span><span class="info-value">462.562500</span>
+      </div>
+
+      <div class="rssi-zone-row">
+        <div class="rssi-box" style="opacity:0.3; font-size:10px; padding:4px;">— dBm</div>
+        <div class="zone-btn">ZONE: ALL</div>
+      </div>
+
+      <div class="sq-row" style="margin-bottom:2px;">
+        <span class="sq-label">SQ:</span>
+        <span class="sq-value">5</span>
+        <div class="sq-track">
+          <div class="sq-thumb"></div>
+        </div>
+      </div>
+
+      <div class="content-box">
+        <div class="scan-line"></div>
+        <div class="history-btn">Analog History</div>
+        <!-- Waveform at bottom -->
+        <div class="waveform">
+          <div class="bar" style="height:8px"></div>
+          <div class="bar" style="height:14px"></div>
+          <div class="bar" style="height:6px"></div>
+          <div class="bar" style="height:20px"></div>
+          <div class="bar" style="height:10px"></div>
+          <div class="bar" style="height:16px"></div>
+          <div class="bar" style="height:8px"></div>
+          <div class="bar" style="height:24px"></div>
+          <div class="bar" style="height:12px"></div>
+          <div class="bar" style="height:18px"></div>
+          <div class="bar" style="height:6px"></div>
+          <div class="bar" style="height:14px"></div>
+          <div class="bar" style="height:22px"></div>
+          <div class="bar" style="height:8px"></div>
+          <div class="bar" style="height:16px"></div>
+          <div class="bar" style="height:10px"></div>
+          <div class="bar" style="height:20px"></div>
+          <div class="bar" style="height:14px"></div>
+          <div class="bar" style="height:8px"></div>
+          <div class="bar" style="height:12px"></div>
+          <div class="bar" style="height:18px"></div>
+          <div class="bar" style="height:6px"></div>
+          <div class="bar" style="height:22px"></div>
+          <div class="bar" style="height:10px"></div>
+          <div class="bar" style="height:16px"></div>
+          <div class="bar" style="height:8px"></div>
+          <div class="bar" style="height:14px"></div>
+          <div class="bar" style="height:20px"></div>
+          <div class="bar" style="height:12px"></div>
+          <div class="bar" style="height:18px"></div>
+        </div>
+      </div>
+
+      <div class="btn-area">
+        <div class="side-btn btn-softsq">SOFT SQ</div>
+        <div class="ptt-area">
+          <div class="ptt-outer">
+            <div class="ptt-btn">
+              <span class="ptt-icon">🎙️</span>
+            </div>
+          </div>
+        </div>
+        <div class="side-btn btn-rec">REC</div>
+
+        <div class="side-btn btn-txt">TXT</div>
+        <div class="side-btn btn-mon">MON</div>
+
+        <div class="side-btn btn-vfo">VFO</div>
+        <div class="side-btn btn-pktrad">PKT RAD</div>
+      </div>
+
+      <div class="bottom-tabs" style="position:relative;">
+        <div class="tab active"><span class="tab-icon">🎙️</span><span>Intercom</span></div>
+        <div class="tab"><span class="tab-icon">📋</span><span>Channel</span></div>
+        <div class="tab"><span class="tab-icon">👤</span><span>Contact</span></div>
+        <div class="tab"><span class="tab-icon">💬</span><span>Message</span></div>
+        <div class="tab"><span class="tab-icon">📻</span><span>Device</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
