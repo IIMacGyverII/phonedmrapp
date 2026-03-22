@@ -852,9 +852,9 @@ public class DirectDatabaseImporter {
             // Begin transaction to ensure inserts are atomic
             db.beginTransaction();
             try {
-                // DON'T delete existing contacts - preserve stock contacts
-                // Channels reference contact ID 1 which exists in stock database
-                Log.i(TAG, "Preserving existing contacts (stock contacts remain intact)");
+                // Clear existing contacts to prevent duplicates on reimport
+                int deletedCount = db.delete("contact_database", null, null);
+                Log.i(TAG, "Cleared " + deletedCount + " existing contacts before import");
                 
                 // Import all contacts from CSV
                 int contactCount = 0;
