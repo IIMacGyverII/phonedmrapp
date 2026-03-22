@@ -208,8 +208,9 @@ public class CSVImporter {
                 return false;
             }
             
-            // Clear existing contacts (optional - you might want to disable this)
-            // db.delete("contact_database", null, null);
+            // Clear existing contacts to prevent duplicates on reimport
+            int deletedCount = db.delete("contact_database", null, null);
+            Log.i(TAG, "Cleared " + deletedCount + " existing contacts before import");
             
             int importCount = 0;
             int skipCount = 0;
