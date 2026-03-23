@@ -360,6 +360,21 @@ public class DirectDatabaseExporter {
                 // Database uses numeric values: 0=Digital/DMR, 1=Analog
                 boolean isDigital = "0".equals(channelType);
                 
+                // VALIDATE critical activation fields before export
+                // relay must be 1 for all channels
+                if (relay != 1) {
+                    Log.w(TAG, "CH" + channelNumber + " DB has relay=" + relay + ", forcing to 1 for export");
+                    relay = 1;
+                }
+                
+                // interrupt must be 2 for Digital, 0 for Analog
+                int expectedInterrupt = isDigital ? 2 : 0;
+                if (interrupt != expectedInterrupt) {
+                    Log.w(TAG, "CH" + channelNumber + " DB has interrupt=" + interrupt + 
+                        ", forcing to " + expectedInterrupt + " for " + (isDigital ? "Digital" : "Analog") + " export");
+                    interrupt = expectedInterrupt;
+                }
+                
                 // Determine bandwidth (blank for Digital, 12.5 for Analogue)
                 String bandwidth = isDigital ? "" : "12.5";
                 
@@ -401,35 +416,13 @@ public class DirectDatabaseExporter {
                     // App uses 0=low, 1=high. OpenGD77 uses P1 (lowest) to P9 (highest)
                     String powerStr = (power == 0) ? "P1" : "P9";
                     rowBuilder.append(powerStr).append(",");            // 17. Power
-                    
-                    // Read channel flags from database (instead of hardcoding)
-                    try {
-                        int rxOnly = cursor.getInt(cursor.getColumnIndex("channel_rxOnly"));
-                        int zoneSkip = cursor.getInt(cursor.getColumnIndex("channel_zoneSkip"));
-                        int allSkip = cursor.getInt(cursor.getColumnIndex("channel_allSkip"));
-                        int tot = cursor.getInt(cursor.getColumnIndex("channel_tot"));
-                        int vox = cursor.getInt(cursor.getColumnIndex("channel_vox"));
-                        int noBeep = cursor.getInt(cursor.getColumnIndex("channel_noBeep"));
-                        int noEco = cursor.getInt(cursor.getColumnIndex("channel_noEco"));
-                        
-                        rowBuilder.append(rxOnly == 1 ? "Yes" : "No").append(",");        // 18. Rx Only
-                        rowBuilder.append(zoneSkip == 1 ? "Yes" : "No").append(",");      // 19. Zone Skip
-                        rowBuilder.append(allSkip == 1 ? "Yes" : "No").append(",");       // 20. All Skip
-                        rowBuilder.append(tot).append(",");                                // 21. TOT (seconds)
-                        rowBuilder.append(vox == 1 ? "On" : "Off").append(",");           // 22. VOX
-                        rowBuilder.append(noBeep == 1 ? "Yes" : "No").append(",");        // 23. No Beep
-                        rowBuilder.append(noEco == 1 ? "Yes" : "No").append(",");         // 24. No Eco
-                    } catch (Exception e) {
-                        // DB columns don't exist - use safe defaults (safe since most radios don't use these)
-                        Log.w(TAG, "CH" + channelNumber + " missing Rx Only/Zone Skip/All Skip/TOT/VOX/No Beep/No Eco fields: " + e.getMessage());
-                        rowBuilder.append("No,");                            // 18. Rx Only (default)
-                        rowBuilder.append("No,");                            // 19. Zone Skip (default)
-                        rowBuilder.append("No,");                            // 20. All Skip (default)
-                        rowBuilder.append("0,");                             // 21. TOT (default)
-                        rowBuilder.append("Off,");                           // 22. VOX (default)
-                        rowBuilder.append("No,");                            // 23. No Beep (default)
-                        rowBuilder.append("No,");                            // 24. No Eco (default)
-                    }
+                    rowBuilder.append("No,");                            // 18. Rx Only
+                    rowBuilder.append("No,");                            // 19. Zone Skip
+                    rowBuilder.append("No,");                            // 20. All Skip
+                    rowBuilder.append("0,");                             // 21. TOT
+                    rowBuilder.append("Off,");                           // 22. VOX
+                    rowBuilder.append("No,");                            // 23. No Beep
+                    rowBuilder.append("No,");                            // 24. No Eco
                     
                     // Query APRSDatabase for APRS setting (Digital channels)
                     APRSDatabase aprsDb = APRSDatabase.getInstance(context);
@@ -478,35 +471,13 @@ public class DirectDatabaseExporter {
                     // App uses 0=low, 1=high. OpenGD77 uses P1 (lowest) to P9 (highest)
                     String powerStr = (power == 0) ? "P1" : "P9";
                     rowBuilder.append(powerStr).append(",");            // 17. Power
-                    
-                    // Read channel flags from database (instead of hardcoding)
-                    try {
-                        int rxOnly = cursor.getInt(cursor.getColumnIndex("channel_rxOnly"));
-                        int zoneSkip = cursor.getInt(cursor.getColumnIndex("channel_zoneSkip"));
-                        int allSkip = cursor.getInt(cursor.getColumnIndex("channel_allSkip"));
-                        int tot = cursor.getInt(cursor.getColumnIndex("channel_tot"));
-                        int vox = cursor.getInt(cursor.getColumnIndex("channel_vox"));
-                        int noBeep = cursor.getInt(cursor.getColumnIndex("channel_noBeep"));
-                        int noEco = cursor.getInt(cursor.getColumnIndex("channel_noEco"));
-                        
-                        rowBuilder.append(rxOnly == 1 ? "Yes" : "No").append(",");        // 18. Rx Only
-                        rowBuilder.append(zoneSkip == 1 ? "Yes" : "No").append(",");      // 19. Zone Skip
-                        rowBuilder.append(allSkip == 1 ? "Yes" : "No").append(",");       // 20. All Skip
-                        rowBuilder.append(tot).append(",");                                // 21. TOT (seconds)
-                        rowBuilder.append(vox == 1 ? "On" : "Off").append(",");           // 22. VOX
-                        rowBuilder.append(noBeep == 1 ? "Yes" : "No").append(",");        // 23. No Beep
-                        rowBuilder.append(noEco == 1 ? "Yes" : "No").append(",");         // 24. No Eco
-                    } catch (Exception e) {
-                        // DB columns don't exist - use safe defaults (safe since most radios don't use these)
-                        Log.w(TAG, "CH" + channelNumber + " missing Rx Only/Zone Skip/All Skip/TOT/VOX/No Beep/No Eco fields: " + e.getMessage());
-                        rowBuilder.append("No,");                            // 18. Rx Only (default)
-                        rowBuilder.append("No,");                            // 19. Zone Skip (default)
-                        rowBuilder.append("No,");                            // 20. All Skip (default)
-                        rowBuilder.append("0,");                             // 21. TOT (default)
-                        rowBuilder.append("Off,");                           // 22. VOX (default)
-                        rowBuilder.append("No,");                            // 23. No Beep (default)
-                        rowBuilder.append("No,");                            // 24. No Eco (default)
-                    }
+                    rowBuilder.append("No,");                            // 18. Rx Only
+                    rowBuilder.append("No,");                            // 19. Zone Skip
+                    rowBuilder.append("No,");                            // 20. All Skip
+                    rowBuilder.append("0,");                             // 21. TOT
+                    rowBuilder.append("Off,");                           // 22. VOX
+                    rowBuilder.append("No,");                            // 23. No Beep
+                    rowBuilder.append("No,");                            // 24. No Eco
                     
                     // Query APRSDatabase for APRS setting (Analog channels)
                     APRSDatabase aprsDb2 = APRSDatabase.getInstance(context);
