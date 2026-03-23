@@ -395,6 +395,15 @@ public class MainHook implements IXposedHookLoadPackage {
         // Hook message content activity to make GPS coordinates clickable
         hookMessageDisplay(lpparam);
 
+        // Hook bottom nav bar styling (dark bg, cyan active, purple inactive)
+        hookBottomNavBar(lpparam);
+
+        // Apply sci-fi circuit board background to all remaining nav pages
+        hookOtherFragmentBackgrounds(lpparam);
+
+        // Apply dark navy background to all sub-pages / standalone activities
+        hookGenericActivityBackgrounds(lpparam);
+
         // Test UART bootloader probe (for permanent flash capability)
         // DISABLED: Bootloader not accessible from app context (EACCES)
         // testBootloaderAccess();
@@ -431,6 +440,149 @@ public class MainHook implements IXposedHookLoadPackage {
             return new double[]{lat, lon};
         } else {
             return new double[]{Double.parseDouble(m.group(9)), Double.parseDouble(m.group(10))};
+        }
+    }
+
+    private void hookBottomNavBar(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            Class<?> activityClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.InterPhoneHomeActivity",
+                lpparam.classLoader
+            );
+
+            // Style after activity is created
+            XposedHelpers.findAndHookMethod(activityClass, "onCreate", Bundle.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        final Activity activity = (Activity) param.thisObject;
+                        activity.runOnUiThread(new Runnable() {
+                            @Override public void run() {
+                                applyBottomNavStyle(activity, "talkback");
+                            }
+                        });
+                    }
+                }
+            );
+
+            // Re-style whenever user taps a tab
+            XposedHelpers.findAndHookMethod(activityClass, "tapOnClick", View.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        final Activity activity = (Activity) param.thisObject;
+                        final View tappedView = (View) param.args[0];
+                        activity.runOnUiThread(new Runnable() {
+                            @Override public void run() {
+                                try {
+                                    String tabName = activity.getResources().getResourceEntryName(tappedView.getId());
+                                    applyBottomNavStyle(activity, tabName);
+                                } catch (Exception e) {
+                                    XposedBridge.log(TAG + ": tapOnClick style error: " + e.getMessage());
+                                }
+                            }
+                        });
+                    }
+                }
+            );
+
+            XposedBridge.log(TAG + ": Successfully hooked bottom nav bar");
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error hooking bottom nav: " + t.getMessage());
+        }
+    }
+
+    private void applyBottomNavStyle(Activity activity, String activeTabId) {
+        try {
+            String pkg = activity.getPackageName();
+            android.content.res.Resources res = activity.getResources();
+            float dp = res.getDisplayMetrics().density;
+
+            int tapViewId = res.getIdentifier("interphone_tap_view", "id", pkg);
+            if (tapViewId == 0) return;
+            android.view.ViewGroup tapView = (android.view.ViewGroup) activity.findViewById(tapViewId);
+            if (tapView == null) return;
+
+            tapView.setBackgroundColor(0xFF060D1A);
+
+            // Map tabId -> emoji icon
+            java.util.Map<String, String> emojiMap = new java.util.LinkedHashMap<>();
+            emojiMap.put("talkback", "\uD83C\uDF99");   // 🎙️ microphone
+            emojiMap.put("channel",  "\uD83D\uDCCB");   // 📋 clipboard
+            emojiMap.put("contacts", "\uD83D\uDC64");   // 👤 person
+            emojiMap.put("message",  "\uD83D\uDCAC");   // 💬 speech bubble
+            emojiMap.put("local",    "\uD83D\uDCFB");   // 📻 radio
+
+            for (java.util.Map.Entry<String, String> entry : emojiMap.entrySet()) {
+                String tabId = entry.getKey();
+                String emoji = entry.getValue();
+
+                int viewId = res.getIdentifier(tabId, "id", pkg);
+                if (viewId == 0) continue;
+                android.view.ViewGroup tabLayout = (android.view.ViewGroup) activity.findViewById(viewId);
+                if (tabLayout == null) continue;
+
+                boolean isActive = tabId.equals(activeTabId);
+                int color = isActive ? 0xFF00E5FF : 0xFF705090;
+
+                // child 0 = ImageView (OEM icon) — hide it on first pass only
+                // On subsequent calls child 0 is already our emoji, so check by tag first
+                if (tabLayout.getChildCount() > 0) {
+                    android.view.View c0 = tabLayout.getChildAt(0);
+                    if (!"DMR_TAB_EMOJI".equals(c0.getTag())) {
+                        c0.setVisibility(android.view.View.GONE);
+                    }
+                }
+
+                // Find or create emoji TextView
+                android.widget.TextView emojiView = (android.widget.TextView) tabLayout.findViewWithTag("DMR_TAB_EMOJI");
+                if (emojiView == null) {
+                    emojiView = new android.widget.TextView(activity);
+                    emojiView.setTag("DMR_TAB_EMOJI");
+                    emojiView.setGravity(android.view.Gravity.CENTER);
+                    emojiView.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 22);
+                    android.widget.LinearLayout.LayoutParams elp =
+                        new android.widget.LinearLayout.LayoutParams(
+                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
+                    emojiView.setLayoutParams(elp);
+                    tabLayout.addView(emojiView, 0);
+                }
+                emojiView.setText(emoji);
+                // Active: cyan glow via shadow; inactive: plain muted purple
+                if (isActive) {
+                    emojiView.setShadowLayer(8f, 0f, 0f, 0xFF00E5FF);
+                } else {
+                    emojiView.setShadowLayer(0f, 0f, 0f, 0);
+                }
+
+                // Color the label (child index may shift after emoji insert, find by type)
+                for (int i = 0; i < tabLayout.getChildCount(); i++) {
+                    android.view.View child = tabLayout.getChildAt(i);
+                    if (child instanceof android.widget.TextView && child.getTag() == null) {
+                        ((android.widget.TextView) child).setTextColor(color);
+                        ((android.widget.TextView) child).setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 10);
+                        break;
+                    }
+                }
+
+                // Add or update the 2dp underline indicator
+                android.view.View indicator = tabLayout.findViewWithTag("DMR_TAB_IND");
+                if (indicator == null) {
+                    indicator = new android.view.View(activity);
+                    indicator.setTag("DMR_TAB_IND");
+                    android.widget.LinearLayout.LayoutParams lp =
+                        new android.widget.LinearLayout.LayoutParams(
+                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                            (int)(2 * dp));
+                    lp.setMargins((int)(8 * dp), (int)(2 * dp), (int)(8 * dp), 0);
+                    indicator.setLayoutParams(lp);
+                    tabLayout.addView(indicator);
+                }
+                indicator.setBackgroundColor(isActive ? 0xFF00E5FF : android.graphics.Color.TRANSPARENT);
+            }
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": applyBottomNavStyle error: " + e.getMessage());
         }
     }
 
@@ -1033,6 +1185,20 @@ public class MainHook implements IXposedHookLoadPackage {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         XposedBridge.log(TAG + ": InterPhoneHomeActivity created successfully with hooks active");
+
+                        // Tint system bars to match the dark navy theme
+                        final Activity activity = (Activity) param.thisObject;
+                        activity.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    android.view.Window w = activity.getWindow();
+                                    // Slightly darker than #0A1520 for the status/nav bars
+                                    w.setStatusBarColor(0xFF060D14);
+                                    w.setNavigationBarColor(0xFF060D14);
+                                } catch (Throwable ignored) {}
+                            }
+                        });
                     }
                 }
             );
@@ -1083,7 +1249,11 @@ public class MainHook implements IXposedHookLoadPackage {
                             appContext = context.getApplicationContext();
                             
                             // Neon sci-fi aesthetic: dark navy background
-                            rootLayout.setBackgroundColor(0xFF060D1A);
+                            rootLayout.setBackgroundColor(0xFF0A1520);
+
+                            // Title bar (child 0 of the base fragment layout) — channel name + hamburger
+                            android.view.View talkBackTitleBar = ((android.view.ViewGroup) param.args[0]).getChildAt(0);
+                            if (talkBackTitleBar != null) talkBackTitleBar.setBackgroundColor(0xFF060D14);
                             
                             int margin5dp = (int) (5 * context.getResources().getDisplayMetrics().density);
                             int margin10dp = (int) (10 * context.getResources().getDisplayMetrics().density);
@@ -1320,7 +1490,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 activityHeader.setTag("ACTIVITY_HISTORY_HEADER");
                                 activityHeader.setText("DMR History");  // Default, will be updated based on channel type
                                 activityHeader.setTextColor(0xFF00BFFF);  // Deep sky blue
-                                activityHeader.setTextSize(9);
+                                activityHeader.setTextSize(13);
                                 activityHeader.setTypeface(null, android.graphics.Typeface.BOLD);
                                 LinearLayout.LayoutParams headerParams = new LinearLayout.LayoutParams(
                                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -1827,19 +1997,21 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Create transcription toggle button (left of PTT button)
                                 android.widget.ToggleButton transcriptionToggle = new android.widget.ToggleButton(context);
                                 transcriptionToggle.setTag("DMR_TRANSCRIPTION_TOGGLE");
-                                transcriptionToggle.setTextOn("TXT");
-                                transcriptionToggle.setTextOff("TXT");
+                                transcriptionToggle.setTextOn("✍️\nTXT");
+                                transcriptionToggle.setTextOff("✍️\nTXT");
                                 transcriptionToggle.setChecked(false);
                                 
                                 FrameLayout.LayoutParams transcriptionToggleParams = new FrameLayout.LayoutParams(
-                                    (int) (70 * context.getResources().getDisplayMetrics().density),  // 70dp width
-                                    (int) (40 * context.getResources().getDisplayMetrics().density)   // 40dp height
+                                    (int) (70 * context.getResources().getDisplayMetrics().density),
+                                    (int) (52 * context.getResources().getDisplayMetrics().density)
                                 );
                                 transcriptionToggleParams.gravity = android.view.Gravity.START | android.view.Gravity.TOP;
-                                transcriptionToggleParams.leftMargin = (int) (10 * context.getResources().getDisplayMetrics().density); // 10dp from left edge
-                                transcriptionToggleParams.topMargin = (int) (60 * context.getResources().getDisplayMetrics().density); // 60dp from top (evenly spaced)
+                                transcriptionToggleParams.leftMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
+                                transcriptionToggleParams.topMargin = (int) (66 * context.getResources().getDisplayMetrics().density);
                                 transcriptionToggle.setLayoutParams(transcriptionToggleParams);
-                                transcriptionToggle.setTextSize(14);
+                                transcriptionToggle.setSingleLine(false);
+                                transcriptionToggle.setTextSize(13);
+                                transcriptionToggle.setGravity(android.view.Gravity.CENTER);
                                 transcriptionToggle.setTypeface(null, android.graphics.Typeface.BOLD);
                                 transcriptionToggle.setTextColor(0xFFB388FF);  // Light purple text
                                 
@@ -1939,19 +2111,21 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Create software squelch toggle button (above TXT button, left side)
                                 android.widget.ToggleButton softSqToggle = new android.widget.ToggleButton(context);
                                 softSqToggle.setTag("DMR_SOFT_SQUELCH_TOGGLE");
-                                softSqToggle.setTextOn("Soft SQ");
-                                softSqToggle.setTextOff("Soft SQ");
+                                softSqToggle.setTextOn("🎚️\nSOFT SQ");
+                                softSqToggle.setTextOff("🎚️\nSOFT SQ");
                                 softSqToggle.setChecked(isSoftwareSquelchEnabled);
                                 
                                 FrameLayout.LayoutParams softSqToggleParams = new FrameLayout.LayoutParams(
-                                    (int) (90 * context.getResources().getDisplayMetrics().density),  // 90dp width for "Soft SQ"
-                                    (int) (40 * context.getResources().getDisplayMetrics().density)   // 40dp height
+                                    (int) (80 * context.getResources().getDisplayMetrics().density),
+                                    (int) (52 * context.getResources().getDisplayMetrics().density)
                                 );
                                 softSqToggleParams.gravity = android.view.Gravity.START | android.view.Gravity.TOP;
-                                softSqToggleParams.leftMargin = (int) (10 * context.getResources().getDisplayMetrics().density); // 10dp from left edge
-                                softSqToggleParams.topMargin = (int) (10 * context.getResources().getDisplayMetrics().density); // 10dp from top
+                                softSqToggleParams.leftMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
+                                softSqToggleParams.topMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
                                 softSqToggle.setLayoutParams(softSqToggleParams);
-                                softSqToggle.setTextSize(12);  // Slightly smaller for "Soft SQ"
+                                softSqToggle.setSingleLine(false);
+                                softSqToggle.setTextSize(13);
+                                softSqToggle.setGravity(android.view.Gravity.CENTER);
                                 softSqToggle.setTypeface(null, android.graphics.Typeface.BOLD);
                                 softSqToggle.setTextColor(0xFF00E5FF);  // Cyan text
                                 
@@ -2029,19 +2203,21 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Create recording toggle button (right-aligned)
                                 android.widget.ToggleButton recordToggle = new android.widget.ToggleButton(context);
                                 recordToggle.setTag("DMR_RECORDING_TOGGLE");
-                                recordToggle.setTextOn("REC");
-                                recordToggle.setTextOff("REC");
+                                recordToggle.setTextOn("⏺\nREC");
+                                recordToggle.setTextOff("⏺\nREC");
                                 recordToggle.setChecked(false);
                                 
                                 FrameLayout.LayoutParams toggleParams = new FrameLayout.LayoutParams(
-                                    (int) (70 * context.getResources().getDisplayMetrics().density),  // 70dp width
-                                    (int) (40 * context.getResources().getDisplayMetrics().density)   // 40dp height
+                                    (int) (70 * context.getResources().getDisplayMetrics().density),
+                                    (int) (52 * context.getResources().getDisplayMetrics().density)
                                 );
                                 toggleParams.gravity = android.view.Gravity.END | android.view.Gravity.TOP;
                                 toggleParams.rightMargin = (int) (16 * context.getResources().getDisplayMetrics().density);
-                                toggleParams.topMargin = (int) (10 * context.getResources().getDisplayMetrics().density); // 10dp from top
+                                toggleParams.topMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
                                 recordToggle.setLayoutParams(toggleParams);
-                                recordToggle.setTextSize(14);
+                                recordToggle.setSingleLine(false);
+                                recordToggle.setTextSize(13);
+                                recordToggle.setGravity(android.view.Gravity.CENTER);
                                 recordToggle.setTypeface(null, android.graphics.Typeface.BOLD);
                                 recordToggle.setTextColor(0xFFFF8A80);  // Light red text
                                 
@@ -2106,19 +2282,21 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Create monitoring mode toggle button (below REC button, right side)
                                 android.widget.ToggleButton monitorToggle = new android.widget.ToggleButton(context);
                                 monitorToggle.setTag("DMR_MONITOR_TOGGLE");
-                                monitorToggle.setTextOn("MON");
-                                monitorToggle.setTextOff("MON");
+                                monitorToggle.setTextOn("👁️\nMON");
+                                monitorToggle.setTextOff("👁️\nMON");
                                 monitorToggle.setChecked(false);
                                 
                                 FrameLayout.LayoutParams monitorToggleParams = new FrameLayout.LayoutParams(
-                                    (int) (70 * context.getResources().getDisplayMetrics().density),  // 70dp width
-                                    (int) (40 * context.getResources().getDisplayMetrics().density)   // 40dp height
+                                    (int) (70 * context.getResources().getDisplayMetrics().density),
+                                    (int) (52 * context.getResources().getDisplayMetrics().density)
                                 );
                                 monitorToggleParams.gravity = android.view.Gravity.END | android.view.Gravity.TOP;
                                 monitorToggleParams.rightMargin = (int) (16 * context.getResources().getDisplayMetrics().density);
-                                monitorToggleParams.topMargin = (int) (60 * context.getResources().getDisplayMetrics().density); // Below REC (10+40+10)
+                                monitorToggleParams.topMargin = (int) (66 * context.getResources().getDisplayMetrics().density);
                                 monitorToggle.setLayoutParams(monitorToggleParams);
-                                monitorToggle.setTextSize(14);
+                                monitorToggle.setSingleLine(false);
+                                monitorToggle.setTextSize(13);
+                                monitorToggle.setGravity(android.view.Gravity.CENTER);
                                 monitorToggle.setTypeface(null, android.graphics.Typeface.BOLD);
                                 monitorToggle.setTextColor(0xFFFFD54F);  // Amber text
                                 
@@ -2331,19 +2509,21 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Create Packet Radio menu button (below MON button, right side)
                                 android.widget.ToggleButton aprsButton = new android.widget.ToggleButton(context);
                                 aprsButton.setTag("DMR_PKT_RAD_BUTTON");
-                                aprsButton.setTextOn("PKT RAD");
-                                aprsButton.setTextOff("PKT RAD");
+                                aprsButton.setTextOn("📡\nPKT RAD");
+                                aprsButton.setTextOff("📡\nPKT RAD");
                                 aprsButton.setChecked(false);
                                 
                                 FrameLayout.LayoutParams aprsButtonParams = new FrameLayout.LayoutParams(
-                                    (int) (76 * context.getResources().getDisplayMetrics().density),  // 76dp width (20% smaller than 95dp)
-                                    (int) (40 * context.getResources().getDisplayMetrics().density)   // 40dp height
+                                    (int) (76 * context.getResources().getDisplayMetrics().density),
+                                    (int) (52 * context.getResources().getDisplayMetrics().density)
                                 );
                                 aprsButtonParams.gravity = android.view.Gravity.END | android.view.Gravity.TOP;
                                 aprsButtonParams.rightMargin = (int) (16 * context.getResources().getDisplayMetrics().density);
-                                aprsButtonParams.topMargin = (int) (110 * context.getResources().getDisplayMetrics().density); // Below MON (60+40+10)
+                                aprsButtonParams.topMargin = (int) (124 * context.getResources().getDisplayMetrics().density);
                                 aprsButton.setLayoutParams(aprsButtonParams);
-                                aprsButton.setTextSize(11);  // Slightly smaller to fit better
+                                aprsButton.setSingleLine(false);
+                                aprsButton.setTextSize(13);
+                                aprsButton.setGravity(android.view.Gravity.CENTER);
                                 aprsButton.setTypeface(null, android.graphics.Typeface.BOLD);
                                 aprsButton.setTextColor(0xFF69F0AE);  // Green text
                                 
@@ -2393,19 +2573,21 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Create VFO toggle button (below TXT button, left side)
                                 android.widget.ToggleButton vfoButton = new android.widget.ToggleButton(context);
                                 vfoButton.setTag("DMR_VFO_TOGGLE");
-                                vfoButton.setTextOn("VFO");
-                                vfoButton.setTextOff("VFO");
+                                vfoButton.setTextOn("🎛️\nVFO");
+                                vfoButton.setTextOff("🎛️\nVFO");
                                 vfoButton.setChecked(false);
                                 
                                 FrameLayout.LayoutParams vfoButtonParams = new FrameLayout.LayoutParams(
-                                    (int) (70 * context.getResources().getDisplayMetrics().density),  // 70dp width
-                                    (int) (40 * context.getResources().getDisplayMetrics().density)   // 40dp height
+                                    (int) (70 * context.getResources().getDisplayMetrics().density),
+                                    (int) (52 * context.getResources().getDisplayMetrics().density)
                                 );
                                 vfoButtonParams.gravity = android.view.Gravity.START | android.view.Gravity.TOP;
-                                vfoButtonParams.leftMargin = (int) (10 * context.getResources().getDisplayMetrics().density);
-                                vfoButtonParams.topMargin = (int) (110 * context.getResources().getDisplayMetrics().density); // 110dp from top (evenly spaced)
+                                vfoButtonParams.leftMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
+                                vfoButtonParams.topMargin = (int) (124 * context.getResources().getDisplayMetrics().density);
                                 vfoButton.setLayoutParams(vfoButtonParams);
-                                vfoButton.setTextSize(12);
+                                vfoButton.setSingleLine(false);
+                                vfoButton.setTextSize(13);
+                                vfoButton.setGravity(android.view.Gravity.CENTER);
                                 vfoButton.setTypeface(null, android.graphics.Typeface.BOLD);
                                 vfoButton.setTextColor(0xFFFFCA28);  // Amber text
                                 
@@ -2459,17 +2641,19 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Create GPS position send button (same slot as MON, right side — shown on digital, hidden on analog)
                                 android.widget.Button gpsSendButton = new android.widget.Button(context);
                                 gpsSendButton.setTag("DMR_GPS_SEND_BUTTON");
-                                gpsSendButton.setText("📍 POS");
+                                gpsSendButton.setText("📍\nPOS");
 
                                 FrameLayout.LayoutParams gpsSendParams = new FrameLayout.LayoutParams(
                                     (int) (70 * context.getResources().getDisplayMetrics().density),
-                                    (int) (40 * context.getResources().getDisplayMetrics().density)
+                                    (int) (52 * context.getResources().getDisplayMetrics().density)
                                 );
                                 gpsSendParams.gravity = android.view.Gravity.END | android.view.Gravity.TOP;
                                 gpsSendParams.rightMargin = (int) (16 * context.getResources().getDisplayMetrics().density);
-                                gpsSendParams.topMargin = (int) (60 * context.getResources().getDisplayMetrics().density); // Same slot as MON
+                                gpsSendParams.topMargin = (int) (66 * context.getResources().getDisplayMetrics().density);
                                 gpsSendButton.setLayoutParams(gpsSendParams);
-                                gpsSendButton.setTextSize(12);
+                                gpsSendButton.setSingleLine(false);
+                                gpsSendButton.setGravity(android.view.Gravity.CENTER);
+                                gpsSendButton.setTextSize(13);
                                 gpsSendButton.setTypeface(null, android.graphics.Typeface.BOLD);
                                 gpsSendButton.setTextColor(0xFF69F0AE);  // Green text
                                 gpsSendButton.setPadding(0, 0, 0, 0);
@@ -2640,7 +2824,28 @@ public class MainHook implements IXposedHookLoadPackage {
                             } catch (Exception e2) {
                                 XposedBridge.log(TAG + ": Error getting initial channel: " + e2.getMessage());
                             }
-                            
+
+                            // Tint nav buttons with module cyan drawables
+                            try {
+                                Context ctx = rootLayout.getContext();
+                                Context moduleCtx = ctx.createPackageContext("com.dmrmod.hooks", Context.CONTEXT_IGNORE_SECURITY);
+                                int subResId = moduleCtx.getResources().getIdentifier("interphone_talkback_sub", "drawable", "com.dmrmod.hooks");
+                                int addResId = moduleCtx.getResources().getIdentifier("interphone_talkback_add", "drawable", "com.dmrmod.hooks");
+                                int subViewId = ctx.getResources().getIdentifier("fragment_talkback_sub", "id", ctx.getPackageName());
+                                int addViewId = ctx.getResources().getIdentifier("fragment_talkback_add", "id", ctx.getPackageName());
+                                android.widget.ImageButton btnSub = (android.widget.ImageButton) rootLayout.findViewById(subViewId);
+                                android.widget.ImageButton btnAdd = (android.widget.ImageButton) rootLayout.findViewById(addViewId);
+                                if (btnSub != null && subResId != 0) {
+                                    btnSub.setBackground(moduleCtx.getResources().getDrawable(subResId, moduleCtx.getTheme()));
+                                }
+                                if (btnAdd != null && addResId != 0) {
+                                    btnAdd.setBackground(moduleCtx.getResources().getDrawable(addResId, moduleCtx.getTheme()));
+                                }
+                                XposedBridge.log(TAG + ": Tinted nav buttons");
+                            } catch (Exception eNav) {
+                                XposedBridge.log(TAG + ": Nav button tint error: " + eNav.getMessage());
+                            }
+
                         } catch (Exception e) {
                             XposedBridge.log(TAG + ": Error modifying TalkBack layout: " + e.getMessage());
                             XposedBridge.log(TAG + ": " + android.util.Log.getStackTraceString(e));
@@ -2879,74 +3084,57 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             );
 
-            // Hook updateChannelNumber() to use metal sprite sheet
+            // Hook updateChannelNumber to use tinted cyan number drawables
             XposedHelpers.findAndHookMethod(
                 fragmentClass,
                 "updateChannelNumber",
-                new XC_MethodHook() {
+                new XC_MethodReplacement() {
                     @Override
-                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
                         try {
-                            Object currentChannelData = XposedHelpers.getObjectField(param.thisObject, "mCurrentChannelData");
-                            int channelNumber = (int) XposedHelpers.callMethod(currentChannelData, "getNumber");
-                            
-                            android.widget.ImageButton numOneBtn = (android.widget.ImageButton) XposedHelpers.getObjectField(param.thisObject, "mImgTalkbackNumOne");
-                            android.widget.ImageButton numTwoBtn = (android.widget.ImageButton) XposedHelpers.getObjectField(param.thisObject, "mImgTalkbackNumTwo");
-                            
-                            if (numOneBtn == null || numTwoBtn == null) {
-                                return;
-                            }
-                            
-                            Context context = numOneBtn.getContext();
-                            android.content.res.Resources res = context.getResources();
-                            
-                            // Load sprite sheet
-                            int spriteId = res.getIdentifier("numbers0_9metal", "drawable", context.getPackageName());
-                            if (spriteId == 0) {
-                                XposedBridge.log(TAG + ": Metal sprite sheet not found, using default");
-                                return;
-                            }
-                            
-                            android.graphics.Bitmap spriteBitmap = android.graphics.BitmapFactory.decodeResource(res, spriteId);
-                            int spriteWidth = spriteBitmap.getWidth();
-                            int spriteHeight = spriteBitmap.getHeight();
-                            int digitWidth = spriteWidth / 10;  // 10 digits (0-9)
-                            
-                            // Extract digits
-                            int tensDigit = (channelNumber < 10) ? 0 : (channelNumber / 10);
-                            int onesDigit = channelNumber % 10;
-                            
-                            // Create bitmaps for each digit
-                            android.graphics.Bitmap tensDigitBitmap = android.graphics.Bitmap.createBitmap(
-                                spriteBitmap, 
-                                tensDigit * digitWidth, 
-                                0, 
-                                digitWidth, 
-                                spriteHeight
-                            );
-                            
-                            android.graphics.Bitmap onesDigitBitmap = android.graphics.Bitmap.createBitmap(
-                                spriteBitmap, 
-                                onesDigit * digitWidth, 
-                                0, 
-                                digitWidth, 
-                                spriteHeight
-                            );
-                            
-                            // Set the bitmaps as backgrounds
-                            numOneBtn.setImageBitmap(tensDigitBitmap);
-                            numOneBtn.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                            numOneBtn.setBackgroundColor(0x00000000);  // Transparent background
-                            
-                            numTwoBtn.setImageBitmap(onesDigitBitmap);
-                            numTwoBtn.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                            numTwoBtn.setBackgroundColor(0x00000000);  // Transparent background
-                            
-                            XposedBridge.log(TAG + ": Metal channel numbers set: CH" + channelNumber);
-                            
-                        } catch (Exception e) {
-                            XposedBridge.log(TAG + ": Error setting metal channel numbers: " + e.getMessage());
+                            Object fragment = param.thisObject;
+                            Object channelData = XposedHelpers.getObjectField(fragment, "mCurrentChannelData");
+                            if (channelData == null) return null;
+                            int number = (int) XposedHelpers.callMethod(channelData, "getNumber");
+
+                            final android.widget.ImageButton numOne = (android.widget.ImageButton)
+                                XposedHelpers.getObjectField(fragment, "mImgTalkbackNumOne");
+                            final android.widget.ImageButton numTwo = (android.widget.ImageButton)
+                                XposedHelpers.getObjectField(fragment, "mImgTalkbackNumTwo");
+                            if (numOne == null || numTwo == null) return null;
+
+                            final int digitOne = (number < 10) ? 0 : (number / 10);
+                            final int digitTwo = (number < 10) ? number : (number % 10);
+
+                            android.app.Activity activity = (android.app.Activity)
+                                XposedHelpers.callMethod(fragment, "getActivity");
+                            if (activity == null) return null;
+
+                            activity.runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        Context ctx = numOne.getContext();
+                                        Context moduleCtx = ctx.createPackageContext("com.dmrmod.hooks", Context.CONTEXT_IGNORE_SECURITY);
+                                        setNumDrawable(moduleCtx, numOne, digitOne);
+                                        setNumDrawable(moduleCtx, numTwo, digitTwo);
+                                    } catch (Exception e) {
+                                        XposedBridge.log(TAG + ": updateChannelNumber UI error: " + e.getMessage());
+                                    }
+                                }
+                                private void setNumDrawable(Context moduleCtx, android.widget.ImageButton btn, int digit) {
+                                    String resName = "interphone_talkback_num_" + digit;
+                                    int resId = moduleCtx.getResources().getIdentifier(resName, "drawable", "com.dmrmod.hooks");
+                                    if (resId != 0) {
+                                        android.graphics.drawable.Drawable d = moduleCtx.getResources().getDrawable(resId, moduleCtx.getTheme());
+                                        btn.setBackground(d);
+                                    }
+                                }
+                            });
+                        } catch (Throwable t) {
+                            XposedBridge.log(TAG + ": updateChannelNumber error: " + t.getMessage());
                         }
+                        return null;
                     }
                 }
             );
@@ -3421,8 +3609,20 @@ public class MainHook implements IXposedHookLoadPackage {
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         try {
                             Context context = (Context) param.thisObject;
-                            Activity activity = (Activity) param.thisObject;
-                            
+                            final Activity activity = (Activity) param.thisObject;
+
+                            // Apply dark navy background
+                            activity.getWindow().getDecorView().post(new Runnable() {
+                                @Override public void run() {
+                                    try {
+                                        android.view.ViewGroup content = (android.view.ViewGroup)
+                                            activity.getWindow().getDecorView().findViewById(android.R.id.content);
+                                        if (content != null && content.getChildCount() > 0)
+                                            content.getChildAt(0).setBackgroundColor(0xFF0A1520);
+                                    } catch (Throwable ignored) {}
+                                }
+                            });
+
                             // Update software version TextView to include module version
                             Object tvSoftwareVersion = XposedHelpers.getObjectField(
                                 param.thisObject,
@@ -12983,7 +13183,30 @@ public class MainHook implements IXposedHookLoadPackage {
                                 XposedBridge.log(TAG + ": Could not find container LinearLayout");
                                 return;
                             }
-                            
+
+                            // Apply dark navy background after all rows (including our added ones) are in place
+                            final android.widget.ScrollView scrollViewFinal = scrollView;
+                            final ViewGroup containerFinal = container;
+                            final Activity activityFinal = activity;
+                            container.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    // Root view (black by default) — covers any gap below the ScrollView
+                                    android.view.Window w = activityFinal.getWindow();
+                                    w.setStatusBarColor(0xFF060D14);
+                                    w.setNavigationBarColor(0xFF060D14);
+                                    android.view.ViewGroup content = (android.view.ViewGroup)
+                                        w.getDecorView().findViewById(android.R.id.content);
+                                    if (content != null && content.getChildCount() > 0)
+                                        content.getChildAt(0).setBackgroundColor(0xFF0A1520);
+                                    scrollViewFinal.setBackgroundColor(0xFF0A1520);
+                                    containerFinal.setBackgroundColor(0xFF0A1520);
+                                    for (int i = 0; i < containerFinal.getChildCount(); i++) {
+                                        containerFinal.getChildAt(i).setBackgroundColor(0xFF0A1520);
+                                    }
+                                }
+                            });
+
                             // Get the channelData from the activity
                             final Object channelData = XposedHelpers.getObjectField(param.thisObject, "channelData");
                             
@@ -14880,6 +15103,139 @@ public class MainHook implements IXposedHookLoadPackage {
         } finally {
             if (shouldDeleteBackup) {
                 deleteVFOChannelBackupFile();
+            }
+        }
+    }
+
+    /**
+     * Apply the sci-fi circuit board animated background to Channel, Contacts, Message, and Local
+     * pages so they all share the same dark aesthetic as the TalkBack (intercom) page.
+     *
+     * Strategy: hook each fragment's initView(View) and, after the view is attached, inject a
+     * CircuitBoardView into the ViewPager's per-page FrameLayout container (the parent of the
+     * fragment root view).  The fragment root's OEM background is removed so the dark layer shows
+     * through wherever content is transparent.
+     */
+    private void hookGenericActivityBackgrounds(XC_LoadPackage.LoadPackageParam lpparam) {
+        final String[] activityClasses = {
+            "com.pri.prizeinterphone.activity.FragmentLocalSettingsActivity",
+            "com.pri.prizeinterphone.activity.FragmentLocalDeviceAreaActivity",
+            "com.pri.prizeinterphone.activity.FragmentLocalDeviceAreaListActivity",
+            "com.pri.prizeinterphone.activity.FragmentLocalUseAssistantActivity",
+            "com.pri.prizeinterphone.activity.MessageContentActivity",
+            "com.pri.prizeinterphone.activity.FragmentNewContactsActivity",
+            "com.pri.prizeinterphone.activity.RecordListActivity",
+            "com.pri.prizeinterphone.activity.FragmentLocalTestBiteErrorRateActivity",
+        };
+        for (final String className : activityClasses) {
+            try {
+                Class<?> activityClass = XposedHelpers.findClass(className, lpparam.classLoader);
+                XposedHelpers.findAndHookMethod(
+                    activityClass,
+                    "onCreate",
+                    Bundle.class,
+                    new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            final Activity activity = (Activity) param.thisObject;
+                            activity.getWindow().getDecorView().post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        android.view.Window w = activity.getWindow();
+                                        w.setStatusBarColor(0xFF060D14);
+                                        w.setNavigationBarColor(0xFF060D14);
+                                        android.view.ViewGroup content = (android.view.ViewGroup)
+                                            w.getDecorView().findViewById(android.R.id.content);
+                                        if (content == null) return;
+                                        View rootView = content.getChildAt(0);
+                                        if (rootView != null) rootView.setBackgroundColor(0xFF0A1520);
+                                    } catch (Throwable t) { /* no-op */ }
+                                }
+                            });
+                            XposedBridge.log(TAG + ": ✓ dark bg queued → " + className);
+                        }
+                    }
+                );
+                XposedBridge.log(TAG + ": Hooked dark bg activity → " + className);
+            } catch (Throwable t) {
+                XposedBridge.log(TAG + ": Error hooking dark bg for " + className + ": " + t.getMessage());
+            }
+        }
+    }
+
+    private void hookOtherFragmentBackgrounds(XC_LoadPackage.LoadPackageParam lpparam) {
+        final String[] fragmentClasses = {
+            "com.pri.prizeinterphone.fragment.InterPhoneChannelFragment",
+            "com.pri.prizeinterphone.fragment.InterPhoneContactsFragment",
+            "com.pri.prizeinterphone.fragment.InterPhoneMessageFragment",
+            "com.pri.prizeinterphone.fragment.InterPhoneLocalFragment",
+        };
+
+        for (final String className : fragmentClasses) {
+            try {
+                Class<?> fragmentClass = XposedHelpers.findClass(className, lpparam.classLoader);
+                XposedHelpers.findAndHookMethod(
+                    fragmentClass,
+                    "initView",
+                    android.view.View.class,
+                    new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            Object fragment = param.thisObject;
+                            android.view.View rootView = (android.view.View) param.args[0];
+                            if (rootView == null) return;
+
+                            // rootView = fragment_base_view_pager.xml (LinearLayout)
+                            // Its children: title bar RelativeLayout + mFragmentContainer FrameLayout
+                            // The content view (fragment_channel_view etc.) is inflated INTO mFragmentContainer
+                            // So we must darken: rootView, mFragmentContainer, and its children
+                            rootView.setBackgroundColor(0xFF0A1520);
+
+                            // mFragmentContainer is a public field on BaseViewPagerFragment
+                            try {
+                                android.widget.FrameLayout container = (android.widget.FrameLayout)
+                                    XposedHelpers.getObjectField(fragment, "mFragmentContainer");
+                                if (container != null) {
+                                    container.setBackgroundColor(0xFF0A1520);
+                                    // Set dark bg on every child (the actual content views)
+                                    for (int i = 0; i < container.getChildCount(); i++) {
+                                        android.view.View contentView = container.getChildAt(i);
+                                        contentView.setBackgroundColor(0xFF0A1520);
+                                        // Local/Device page: also darken inner ScrollView content
+                                        // (fragment_local_view has a ScrollView > LinearLayout with its own bg)
+                                        if (contentView instanceof android.view.ViewGroup) {
+                                            android.view.ViewGroup contentVg = (android.view.ViewGroup) contentView;
+                                            for (int j = 0; j < contentVg.getChildCount(); j++) {
+                                                android.view.View child = contentVg.getChildAt(j);
+                                                if (child instanceof android.widget.ScrollView) {
+                                                    child.setBackgroundColor(0xFF0A1520);
+                                                    android.widget.ScrollView sv = (android.widget.ScrollView) child;
+                                                    if (sv.getChildCount() > 0) {
+                                                        sv.getChildAt(0).setBackgroundColor(0xFF0A1520);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (Throwable t) { /* no-op */ }
+
+                            // Also darken the title bar (child 0 of rootView = RelativeLayout)
+                            try {
+                                if (rootView instanceof android.view.ViewGroup) {
+                                    android.view.View titleBar = ((android.view.ViewGroup) rootView).getChildAt(0);
+                                    if (titleBar != null) titleBar.setBackgroundColor(0xFF060D14);
+                                }
+                            } catch (Throwable t) { /* no-op */ }
+
+                            XposedBridge.log(TAG + ": ✓ dark bg applied → " + className);
+                        }
+                    }
+                );
+                XposedBridge.log(TAG + ": Hooked dark bg → " + className);
+            } catch (Throwable t) {
+                XposedBridge.log(TAG + ": Error hooking dark bg for " + className + ": " + t.getMessage());
             }
         }
     }

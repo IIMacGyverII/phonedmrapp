@@ -589,26 +589,30 @@ public class DirectDatabaseImporter {
                 String encryptKey;
                 
                 if (hasNewFields && fields.length >= minFields) {
-                    // Parse new fields from CSV (fields 29-36, adjusted by offset)
+                    // Parse new fields from CSV (fields 28-35 for OpenGD77, 29-36 for Android with _id)
                     try {
-                        encryptSw = Integer.parseInt(fields[offset + 29].trim());
+                        encryptSw = Integer.parseInt(fields[offset + 28].trim());
                     } catch (Exception e) {
+                        Log.w(TAG, "CH" + channelNumber + " encryptSw parse failed: " + e.getMessage());
                         encryptSw = isDMR ? 1 : 0;
                     }
-                    encryptKey = fields[offset + 30].trim();
+                    encryptKey = fields[offset + 29].trim();
                     try {
-                        relay = Integer.parseInt(fields[offset + 31].trim());
+                        relay = Integer.parseInt(fields[offset + 30].trim());
                     } catch (Exception e) {
+                        Log.w(TAG, "CH" + channelNumber + " relay parse failed: " + e.getMessage());
                         relay = 1;
                     }
                     try {
-                        interrupt = Integer.parseInt(fields[offset + 32].trim());
+                        interrupt = Integer.parseInt(fields[offset + 31].trim());
                     } catch (Exception e) {
+                        Log.w(TAG, "CH" + channelNumber + " interrupt parse failed: " + e.getMessage());
                         interrupt = isDMR ? 2 : 0;
                     }
                     try {
-                        active = Integer.parseInt(fields[offset + 33].trim());
+                        active = Integer.parseInt(fields[offset + 32].trim());
                     } catch (Exception e) {
+                        Log.w(TAG, "CH" + channelNumber + " active parse failed: " + e.getMessage());
                         active = isDMR ? 1 : 0;
                     }
                     // Protection: Only allow ONE channel to be active (first one wins)
@@ -622,17 +626,17 @@ public class DirectDatabaseImporter {
                         }
                     }
                     try {
-                        outBoundSlot = Integer.parseInt(fields[offset + 34].trim());
+                        outBoundSlot = Integer.parseInt(fields[offset + 33].trim());
                     } catch (Exception e) {
                         outBoundSlot = 0;
                     }
                     try {
-                        channelMode = Integer.parseInt(fields[offset + 35].trim());
+                        channelMode = Integer.parseInt(fields[offset + 34].trim());
                     } catch (Exception e) {
                         channelMode = 0;
                     }
                     try {
-                        contactType = Integer.parseInt(fields[offset + 36].trim());
+                        contactType = Integer.parseInt(fields[offset + 35].trim());
                     } catch (Exception e) {
                         contactType = 0;
                     }
