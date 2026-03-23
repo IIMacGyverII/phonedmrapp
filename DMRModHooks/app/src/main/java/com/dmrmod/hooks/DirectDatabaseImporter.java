@@ -611,12 +611,24 @@ public class DirectDatabaseImporter {
                     encryptKey = fields[offset + 29].trim();
                     try {
                         relay = Integer.parseInt(fields[offset + 30].trim());
+                        // VALIDATE: Relay must ALWAYS be 1 for activation to work
+                        if (relay != 1) {
+                            Log.w(TAG, "CH" + channelNumber + " relay=" + relay + " is invalid, forcing to 1");
+                            relay = 1;
+                        }
                     } catch (Exception e) {
                         Log.w(TAG, "CH" + channelNumber + " relay parse failed: " + e.getMessage());
                         relay = 1;
                     }
                     try {
                         interrupt = Integer.parseInt(fields[offset + 31].trim());
+                        // VALIDATE: Interrupt must match channel type (Digital=2, Analog=0)
+                        int expectedInterrupt = isDMR ? 2 : 0;
+                        if (interrupt != expectedInterrupt) {
+                            Log.w(TAG, "CH" + channelNumber + " interrupt=" + interrupt + " wrong for " + 
+                                (isDMR ? "Digital" : "Analog") + " channel, forcing to " + expectedInterrupt);
+                            interrupt = expectedInterrupt;
+                        }
                     } catch (Exception e) {
                         Log.w(TAG, "CH" + channelNumber + " interrupt parse failed: " + e.getMessage());
                         interrupt = isDMR ? 2 : 0;
@@ -653,7 +665,7 @@ public class DirectDatabaseImporter {
                         contactType = 0;
                     }
                     
-                    Log.i(TAG, "CH" + channelNumber + " new fields: encrypt=" + encryptSw + ",relay=" + relay + ",interrupt=" + interrupt + ",active=" + active);
+                    Log.i(TAG, "CH" + channelNumber + " validated fields: encrypt=" + encryptSw + ",relay=" + relay + ",interrupt=" + interrupt + ",active=" + active);
                 } else {
                     // Legacy CSV format: use defaults based on channel type
                     if (isDMR) {
