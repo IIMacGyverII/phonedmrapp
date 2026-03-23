@@ -414,65 +414,120 @@
   .after .btn-area {
     padding: 4px 8px 4px;
     display: grid;
-    grid-template-columns: 80px 1fr 80px;
-    grid-template-rows: 44px 44px 44px;
+    grid-template-columns: 78px 1fr 78px;
+    grid-template-rows: 54px 54px 54px;
     gap: 6px;
-    align-items: center;
+    align-items: stretch;
   }
 
   .after .side-btn {
-    border-radius: 22px;
-    padding: 8px 0;
-    font-size: 11px;
-    font-weight: bold;
+    border-radius: 10px;
+    padding: 4px 2px;
+    font-size: 9px;
+    font-weight: 700;
     text-align: center;
     cursor: pointer;
-    letter-spacing: 0.5px;
-    transition: all 0.2s;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    transition: transform 0.15s, box-shadow 0.15s;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
   }
+  /* Glossy top-highlight */
+  .after .side-btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 45%;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.11), transparent);
+    border-radius: 10px 10px 0 0;
+    pointer-events: none;
+  }
+  /* Bottom depth edge */
+  .after .side-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: rgba(0,0,0,0.45);
+    border-radius: 0 0 10px 10px;
+    pointer-events: none;
+  }
+  .after .side-btn:hover { transform: scale(1.05); }
+  .after .btn-icon { font-size: 18px; line-height: 1; display: block; }
 
-  /* Individual button styles matching concept */
+  /* Individual button styles */
   .after .btn-softsq {
-    background: linear-gradient(135deg, #0a2a30, #0d3d47);
+    background: linear-gradient(160deg, #0a2e36, #051820);
     border: 1.5px solid #00bcd4;
     color: #00e5ff;
-    box-shadow: 0 0 10px rgba(0,188,212,0.3), inset 0 0 6px rgba(0,188,212,0.05);
+    box-shadow: 0 0 12px rgba(0,188,212,0.35), inset 0 1px 0 rgba(0,229,255,0.15);
     text-shadow: 0 0 6px #00e5ff;
   }
+  .after .btn-softsq:hover { box-shadow: 0 0 20px rgba(0,188,212,0.6), inset 0 1px 0 rgba(0,229,255,0.2); }
   .after .btn-txt {
-    background: linear-gradient(135deg, #1a0a35, #2d1060);
+    background: linear-gradient(160deg, #1a0a35, #100525);
     border: 1.5px solid #7c4dff;
     color: #b388ff;
-    box-shadow: 0 0 10px rgba(124,77,255,0.3), inset 0 0 6px rgba(124,77,255,0.05);
+    box-shadow: 0 0 12px rgba(124,77,255,0.35), inset 0 1px 0 rgba(179,136,255,0.15);
     text-shadow: 0 0 6px #b388ff;
   }
+  .after .btn-txt:hover { box-shadow: 0 0 20px rgba(124,77,255,0.6), inset 0 1px 0 rgba(179,136,255,0.2); }
   .after .btn-vfo {
-    background: linear-gradient(135deg, #2a1a00, #4a3000);
+    background: linear-gradient(160deg, #2a1800, #180e00);
     border: 1.5px solid #ff8f00;
     color: #ffca28;
-    box-shadow: 0 0 10px rgba(255,143,0,0.3), inset 0 0 6px rgba(255,143,0,0.05);
+    box-shadow: 0 0 12px rgba(255,143,0,0.35), inset 0 1px 0 rgba(255,202,40,0.15);
     text-shadow: 0 0 6px #ffca28;
   }
+  .after .btn-vfo:hover { box-shadow: 0 0 20px rgba(255,143,0,0.6), inset 0 1px 0 rgba(255,202,40,0.2); }
   .after .btn-rec {
-    background: linear-gradient(135deg, #2a0000, #500000);
+    background: linear-gradient(160deg, #2a0000, #180000);
     border: 1.5px solid #f44336;
     color: #ff8a80;
-    box-shadow: 0 0 10px rgba(244,67,54,0.3), inset 0 0 6px rgba(244,67,54,0.05);
+    box-shadow: 0 0 12px rgba(244,67,54,0.35), inset 0 1px 0 rgba(255,138,128,0.15);
     text-shadow: 0 0 6px #ff8a80;
   }
+  .after .btn-rec:hover { box-shadow: 0 0 20px rgba(244,67,54,0.6), inset 0 1px 0 rgba(255,138,128,0.2); }
   .after .btn-mon {
-    background: linear-gradient(135deg, #1a1000, #362500);
-    border: 1.5px solid #ff8f00;
+    background: linear-gradient(160deg, #1f1200, #120b00);
+    border: 1.5px solid #ffa000;
     color: #ffd54f;
-    box-shadow: 0 0 10px rgba(255,143,0,0.3), inset 0 0 6px rgba(255,143,0,0.05);
+    box-shadow: 0 0 12px rgba(255,160,0,0.35), inset 0 1px 0 rgba(255,213,79,0.15);
     text-shadow: 0 0 6px #ffd54f;
   }
+  .after .btn-mon:hover { box-shadow: 0 0 20px rgba(255,160,0,0.6), inset 0 1px 0 rgba(255,213,79,0.2); }
   .after .btn-pktrad {
-    background: linear-gradient(135deg, #002200, #004400);
+    background: linear-gradient(160deg, #002418, #00150d);
     border: 1.5px solid #00e676;
     color: #69f0ae;
-    box-shadow: 0 0 10px rgba(0,230,118,0.3), inset 0 0 6px rgba(0,230,118,0.05);
+    box-shadow: 0 0 12px rgba(0,230,118,0.35), inset 0 1px 0 rgba(105,240,174,0.15);
     text-shadow: 0 0 6px #69f0ae;
+  }
+  .after .btn-pktrad:hover { box-shadow: 0 0 20px rgba(0,230,118,0.6), inset 0 1px 0 rgba(105,240,174,0.2); }
+  /* POS button — teal/cyan, same family as SOFT SQ but distinct */
+  .after .btn-pos {
+    background: linear-gradient(160deg, #002a20, #001510);
+    border: 1.5px solid #00bfa5;
+    color: #64ffda;
+    box-shadow: 0 0 12px rgba(0,191,165,0.4), inset 0 1px 0 rgba(100,255,218,0.15);
+    text-shadow: 0 0 6px #64ffda;
+  }
+  .after .btn-pos:hover { box-shadow: 0 0 22px rgba(0,191,165,0.7), inset 0 1px 0 rgba(100,255,218,0.25); }
+  /* Dim/disabled button for slots hidden on a given channel type */
+  .after .btn-hidden {
+    background: linear-gradient(160deg, #0c0c0c, #080808);
+    border: 1.5px solid #2a2a2a;
+    color: #333;
+    box-shadow: none;
+    text-shadow: none;
+    pointer-events: none;
+    opacity: 0.35;
   }
 
   .after .ptt-area {
@@ -519,37 +574,42 @@
   .after .bottom-tabs {
     background: #060d1a;
     display: flex;
-    border-top: 1px solid rgba(0,229,255,0.2);
-    padding: 6px 0 12px;
+    border-top: 1px solid rgba(0,229,255,0.18);
+    padding: 8px 0 10px;
   }
   .after .tab {
     flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
+    gap: 3px;
     cursor: pointer;
-    color: #446677;
+    color: #7060a0;
     font-size: 10px;
     letter-spacing: 0.3px;
+    position: relative;
+    padding-bottom: 4px;
   }
   .after .tab.active {
     color: #00e5ff;
-    text-shadow: 0 0 6px #00e5ff;
+    text-shadow: 0 0 6px #00e5ffaa;
   }
-  .after .tab.active .tab-icon { text-shadow: 0 0 8px #00e5ff; }
-  .after .tab-icon { font-size: 18px; }
+  .after .tab.active .tab-icon {
+    filter: drop-shadow(0 0 5px #00e5ff);
+  }
+  .after .tab-icon { font-size: 19px; }
 
-  /* Nav indicator line */
-  .after .bottom-tabs::after {
+  /* Per-tab active indicator line */
+  .after .tab.active::after {
     content: '';
     position: absolute;
-    bottom: 4px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 120px; height: 3px;
-    border-radius: 2px;
-    background: rgba(0,229,255,0.4);
+    bottom: 0;
+    left: 20%;
+    right: 20%;
+    height: 2px;
+    border-radius: 1px;
+    background: #00e5ff;
+    box-shadow: 0 0 6px #00e5ff;
   }
   .after .phone { overflow: hidden; position: relative; }
 
@@ -759,7 +819,7 @@
       </div>
 
       <div class="btn-area">
-        <div class="side-btn btn-softsq">SOFT SQ</div>
+        <div class="side-btn btn-softsq"><span class="btn-icon">🎚️</span><span>SOFT SQ</span></div>
         <div class="ptt-area">
           <div class="ptt-outer">
             <div class="ptt-btn">
@@ -767,16 +827,125 @@
             </div>
           </div>
         </div>
-        <div class="side-btn btn-rec">REC</div>
+        <div class="side-btn btn-rec"><span class="btn-icon">⏺</span><span>REC</span></div>
 
-        <div class="side-btn btn-txt">TXT</div>
-        <div class="side-btn btn-mon">MON</div>
+        <div class="side-btn btn-txt"><span class="btn-icon">✍️</span><span>TXT</span></div>
+        <div class="side-btn btn-mon"><span class="btn-icon">👁️</span><span>MON</span></div>
 
-        <div class="side-btn btn-vfo">VFO</div>
-        <div class="side-btn btn-pktrad">PKT RAD</div>
+        <div class="side-btn btn-vfo"><span class="btn-icon">🎛️</span><span>VFO</span></div>
+        <div class="side-btn btn-pktrad"><span class="btn-icon">📡</span><span>PKT RAD</span></div>
       </div>
 
       <div class="bottom-tabs" style="position:relative;">
+        <div class="tab active"><span class="tab-icon">🎙️</span><span>Intercom</span></div>
+        <div class="tab"><span class="tab-icon">📋</span><span>Channel</span></div>
+        <div class="tab"><span class="tab-icon">👤</span><span>Contact</span></div>
+        <div class="tab"><span class="tab-icon">💬</span><span>Message</span></div>
+        <div class="tab"><span class="tab-icon">📻</span><span>Device</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DIGITAL CHANNEL ===== -->
+<div>
+  <div class="label">REDESIGNED — DIGITAL CHANNEL</div>
+  <div class="phone after">
+    <svg class="circuit-bg" viewBox="0 0 360 780" xmlns="http://www.w3.org/2000/svg">
+      <g stroke="#00e5ff" stroke-width="1" fill="none">
+        <polyline points="0,80 40,80 50,90 120,90 130,80 200,80"/>
+        <polyline points="180,140 220,140 230,150 300,150"/>
+        <polyline points="0,300 30,300 40,310 80,310 90,300 160,300"/>
+        <polyline points="200,420 250,420 260,430 360,430"/>
+        <polyline points="60,0 60,40 70,50 70,120 60,130 60,200"/>
+        <polyline points="300,100 300,150 290,160 290,230"/>
+        <polyline points="40,400 40,450 50,460 50,530"/>
+        <polyline points="320,350 320,400 310,410 310,480 320,490 320,600"/>
+        <circle cx="50" cy="90" r="2" fill="#00e5ff"/>
+        <circle cx="130" cy="80" r="2" fill="#00e5ff"/>
+        <circle cx="230" cy="150" r="2" fill="#00e5ff"/>
+        <circle cx="40" cy="310" r="2" fill="#00e5ff"/>
+        <circle cx="90" cy="300" r="2" fill="#00e5ff"/>
+        <circle cx="70" cy="120" r="2" fill="#00e5ff"/>
+        <circle cx="310" cy="410" r="2" fill="#00e5ff"/>
+        <polyline points="10,10 10,30 30,30" stroke-width="1.5"/>
+        <circle cx="30" cy="30" r="2" fill="#00e5ff"/>
+        <polyline points="350,10 350,30 330,30" stroke-width="1.5"/>
+        <circle cx="330" cy="30" r="2" fill="#00e5ff"/>
+        <polyline points="10,770 10,750 30,750" stroke-width="1.5"/>
+        <circle cx="30" cy="750" r="2" fill="#00e5ff"/>
+        <polyline points="350,770 350,750 330,750" stroke-width="1.5"/>
+        <circle cx="330" cy="750" r="2" fill="#00e5ff"/>
+      </g>
+    </svg>
+    <div class="phone-inner">
+      <div class="status-bar">
+        <span>12:47</span>
+        <span>🔔 📶 ⊠ 🔋</span>
+      </div>
+      <div class="title-bar">
+        <span>DMR TG 91 (UHF)</span>
+        <div class="menu-icon"><span></span><span></span><span></span></div>
+      </div>
+      <div class="channel-row">
+        <div class="arrow-btn">◀</div>
+        <div class="channel-num">07</div>
+        <div class="arrow-btn">▶</div>
+      </div>
+      <div class="info-block">
+        <span class="info-label">Power: </span><span class="info-value">High power</span><br>
+        <span class="info-label">Color Code: </span><span class="info-value">1</span><br>
+        <span class="info-label">Send: </span><span class="info-value">446.100000</span><br>
+        <span class="info-label">Receive: </span><span class="info-value">446.100000</span>
+      </div>
+      <div class="rssi-zone-row">
+        <div class="rssi-box" style="opacity:0.3; font-size:10px; padding:4px;">— dBm</div>
+        <div class="zone-btn">ZONE: ALL</div>
+      </div>
+      <!-- No squelch slider on digital -->
+      <div style="height:22px"></div>
+      <div class="content-box">
+        <div class="scan-line"></div>
+        <div class="history-btn">Digital History</div>
+        <div class="waveform">
+          <div class="bar" style="height:8px"></div><div class="bar" style="height:14px"></div>
+          <div class="bar" style="height:20px"></div><div class="bar" style="height:10px"></div>
+          <div class="bar" style="height:24px"></div><div class="bar" style="height:6px"></div>
+          <div class="bar" style="height:18px"></div><div class="bar" style="height:12px"></div>
+          <div class="bar" style="height:22px"></div><div class="bar" style="height:8px"></div>
+          <div class="bar" style="height:16px"></div><div class="bar" style="height:20px"></div>
+          <div class="bar" style="height:10px"></div><div class="bar" style="height:14px"></div>
+          <div class="bar" style="height:18px"></div><div class="bar" style="height:24px"></div>
+          <div class="bar" style="height:8px"></div><div class="bar" style="height:12px"></div>
+          <div class="bar" style="height:6px"></div><div class="bar" style="height:20px"></div>
+          <div class="bar" style="height:16px"></div><div class="bar" style="height:10px"></div>
+          <div class="bar" style="height:22px"></div><div class="bar" style="height:14px"></div>
+          <div class="bar" style="height:8px"></div><div class="bar" style="height:18px"></div>
+          <div class="bar" style="height:20px"></div><div class="bar" style="height:12px"></div>
+          <div class="bar" style="height:16px"></div><div class="bar" style="height:6px"></div>
+        </div>
+      </div>
+      <div class="btn-area">
+        <!-- SOFT SQ hidden on digital — dimmed placeholder -->
+        <div class="side-btn btn-hidden"><span class="btn-icon">🎚️</span><span>SOFT SQ</span></div>
+        <div class="ptt-area">
+          <div class="ptt-outer">
+            <div class="ptt-btn">
+              <span class="ptt-icon">🎙️</span>
+            </div>
+          </div>
+        </div>
+        <div class="side-btn btn-rec"><span class="btn-icon">⏺</span><span>REC</span></div>
+
+        <div class="side-btn btn-txt"><span class="btn-icon">✍️</span><span>TXT</span></div>
+        <!-- POS replaces MON on digital -->
+        <div class="side-btn btn-pos"><span class="btn-icon">📍</span><span>POS</span></div>
+
+        <div class="side-btn btn-vfo"><span class="btn-icon">🎛️</span><span>VFO</span></div>
+        <!-- PKT RAD (APRS) hidden on digital — dimmed placeholder -->
+        <div class="side-btn btn-hidden"><span class="btn-icon">📡</span><span>PKT RAD</span></div>
+      </div>
+      <div class="bottom-tabs">
         <div class="tab active"><span class="tab-icon">🎙️</span><span>Intercom</span></div>
         <div class="tab"><span class="tab-icon">📋</span><span>Channel</span></div>
         <div class="tab"><span class="tab-icon">👤</span><span>Contact</span></div>

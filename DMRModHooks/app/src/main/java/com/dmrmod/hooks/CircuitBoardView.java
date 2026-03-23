@@ -125,9 +125,17 @@ public class CircuitBoardView extends View {
         }
 
         // Smooth audio bars
-        // Normalize: voice peaks ~6000-12000, use 10000 as max
+        // Normalize with sqrt curve for better low-end sensitivity (like a real VU meter).
+        // Max ~3000 covers typical voice; sqrt expands quiet signals:
+        //   RMS 200 → 26%, RMS 500 → 41%, RMS 1500 → 71%, RMS 3000+ → 100%
         // Only animate when actually receiving — zero out amplitude otherwise so bars decay to idle
-        float norm = isReceiving ? Math.min(1.0f, audioAmplitude / 10000.0f) : 0.0f;
+        float norm;
+        if (isReceiving) {
+            float linear = Math.min(1.0f, audioAmplitude / 3000.0f);
+            norm = (float) Math.sqrt(linear);
+        } else {
+            norm = 0.0f;
+        }
         for (int i = 0; i < NUM_BARS; i++) {
             float center = NUM_BARS / 2.0f;
             float dist   = Math.abs(i - center) / center;        // 0 at centre, 1 at edge
