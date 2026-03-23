@@ -592,9 +592,16 @@ public class DirectDatabaseImporter {
                     // Parse new fields from CSV (fields 28-35 for OpenGD77, 29-36 for Android with _id)
                     try {
                         encryptSw = Integer.parseInt(fields[offset + 28].trim());
+                        // CONVERT OpenGD77 format to Android app format:
+                        // OpenGD77: 0=disabled, 1=enabled
+                        // Android: 0=uninitialized, 1=enabled, 2=disabled
+                        if (encryptSw == 0) {
+                            encryptSw = 2;  // OpenGD77 0 (disabled) → Android 2 (disabled)
+                        }
+                        // encryptSw == 1 stays as 1 (enabled in both)
                     } catch (Exception e) {
                         Log.w(TAG, "CH" + channelNumber + " encryptSw parse failed: " + e.getMessage());
-                        encryptSw = isDMR ? 1 : 0;
+                        encryptSw = isDMR ? 1 : 2;  // Default to disabled (2) not enabled
                     }
                     encryptKey = fields[offset + 29].trim();
                     try {
