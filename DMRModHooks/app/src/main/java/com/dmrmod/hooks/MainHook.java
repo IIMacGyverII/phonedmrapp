@@ -13403,6 +13403,16 @@ public class MainHook implements IXposedHookLoadPackage {
                                     // Insert after zone row (zone is at index 3, so we go at index 4)
                                     container.addView(tgRow, 4);
                                     XposedBridge.log(TAG + ": TG List selector added to channel edit page");
+                                    
+                                    // Auto-populate the group grid from the TG list
+                                    if (currentTGListId > 0) {
+                                        TGListDatabase.TGList currentList = tgDb.getTGList(currentTGListId);
+                                        if (currentList != null) {
+                                            int[] tgIds = currentList.getHardwareGroups();
+                                            refreshGroupGrid(context, activity, tgIds);
+                                            XposedBridge.log(TAG + ": Auto-populated group grid with " + currentList.size() + " TGs from list '" + currentTGListName + "'");
+                                        }
+                                    }
                                 }
                             } catch (Throwable tge) {
                                 XposedBridge.log(TAG + ": Error adding TG List row: " + tge.getMessage());
