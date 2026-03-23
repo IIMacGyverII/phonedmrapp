@@ -708,6 +708,61 @@ public class DirectDatabaseImporter {
                 values.put("channel_mode", channelMode);
                 values.put("channel_contactType", contactType);
                 
+                // NEW: Parse Rx Only/Zone Skip/All Skip/TOT/VOX/No Beep/No Eco fields (18-24)
+                // These fields come from OpenGD77 CSV exports
+                // If not present in CSV, safe defaults are used (0 for boolean, 0 for TOT)
+                try {
+                    // Column 18 (offset + 17): Rx Only
+                    String rxOnlyStr = (fields.length > offset + 17) ? fields[offset + 17].trim() : "No";
+                    int rxOnly = rxOnlyStr.equalsIgnoreCase("Yes") ? 1 : 0;
+                    values.put("channel_rxOnly", rxOnly);
+                    
+                    // Column 19 (offset + 18): Zone Skip
+                    String zoneSkipStr = (fields.length > offset + 18) ? fields[offset + 18].trim() : "No";
+                    int zoneSkip = zoneSkipStr.equalsIgnoreCase("Yes") ? 1 : 0;
+                    values.put("channel_zoneSkip", zoneSkip);
+                    
+                    // Column 20 (offset + 19): All Skip
+                    String allSkipStr = (fields.length > offset + 19) ? fields[offset + 19].trim() : "No";
+                    int allSkip = allSkipStr.equalsIgnoreCase("Yes") ? 1 : 0;
+                    values.put("channel_allSkip", allSkip);
+                    
+                    // Column 21 (offset + 20): TOT (Time-Out Timer, in seconds)
+                    String totStr = (fields.length > offset + 20) ? fields[offset + 20].trim() : "0";
+                    int tot = totStr.isEmpty() ? 0 : Integer.parseInt(totStr);
+                    values.put("channel_tot", tot);
+                    
+                    // Column 22 (offset + 21): VOX (Voice-Activated Transmit)
+                    String voxStr = (fields.length > offset + 21) ? fields[offset + 21].trim() : "Off";
+                    int vox = voxStr.equalsIgnoreCase("On") ? 1 : 0;
+                    values.put("channel_vox", vox);
+                    
+                    // Column 23 (offset + 22): No Beep
+                    String noBeepStr = (fields.length > offset + 22) ? fields[offset + 22].trim() : "No";
+                    int noBeep = noBeepStr.equalsIgnoreCase("Yes") ? 1 : 0;
+                    values.put("channel_noBeep", noBeep);
+                    
+                    // Column 24 (offset + 23): No Eco
+                    String noEcoStr = (fields.length > offset + 23) ? fields[offset + 23].trim() : "No";
+                    int noEco = noEcoStr.equalsIgnoreCase("Yes") ? 1 : 0;
+                    values.put("channel_noEco", noEco);
+                    
+                    Log.i(TAG, "CH" + channelNumber + " imported flags: rxOnly=" + rxOnly + 
+                        " zoneSkip=" + zoneSkip + " allSkip=" + allSkip + " tot=" + tot + 
+                        " vox=" + vox + " noBeep=" + noBeep + " noEco=" + noEco);
+                } catch (Exception e) {
+                    // Graceful fallback: Use safe defaults (0) if parsing fails
+                    // This is safe because most radios don't use these fields
+                    Log.w(TAG, "CH" + channelNumber + " error parsing flags fields, using defaults: " + e.getMessage());
+                    values.put("channel_rxOnly", 0);
+                    values.put("channel_zoneSkip", 0);
+                    values.put("channel_allSkip", 0);
+                    values.put("channel_tot", 0);
+                    values.put("channel_vox", 0);
+                    values.put("channel_noBeep", 0);
+                    values.put("channel_noEco", 0);
+                }
+                
                 // Insert into database
                 // If _id was provided in CSV, it will be preserved; otherwise auto-increment
                 long rowId = db.insert("database_channel_area_default_uhf", null, values);
