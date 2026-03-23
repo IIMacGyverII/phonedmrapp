@@ -379,7 +379,9 @@ public class DirectDatabaseExporter {
                 if (csvChannelType.equals("Digital")) {
                     // Digital channels
                     rowBuilder.append(colorCode).append(",");           // 7. Colour Code
-                    rowBuilder.append(timeslot).append(",");            // 8. Timeslot
+                    // CONVERT Android 0-based timeslot to OpenGD77 1-based: 0→1, 1→2
+                    int timeslotExport = timeslot + 1;
+                    rowBuilder.append(timeslotExport).append(",");      // 8. Timeslot
                     // Look up contact name from ID
                     String contactName = getContactName(contactMap, contactId);
                     rowBuilder.append(contactName).append(",");         // 9. Contact

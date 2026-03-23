@@ -465,9 +465,11 @@ public class DirectDatabaseImporter {
                     values.put("channel_cc", colorCode);
                     
                     // Timeslot -> channel_inBoundSlot
+                    // CONVERT OpenGD77 1-based to Android 0-based: 1→0, 2→1
                     String tsStr = fields[offset + 7].trim();
                     int timeslot = tsStr.isEmpty() ? 1 : Integer.parseInt(tsStr);
-                    values.put("channel_inBoundSlot", timeslot);
+                    int timeslotApp = timeslot - 1;  // OpenGD77 1-based → Android 0-based
+                    values.put("channel_inBoundSlot", timeslotApp);
                     
                     // Contact -> channel_txContact (lookup ID by name)
                     String contactName = fields[offset + 8].trim();
@@ -505,11 +507,14 @@ public class DirectDatabaseImporter {
                 }
                 
                 // Squelch (15) - Read from CSV with OpenGD77 percentage conversion
-                // OpenGD77 uses percentages (5%, 10%, 15%...95%), app uses 0-9
+                // OpenGD77 uses percentages (5%, 10%, 15%...95%) or "Normal", app uses 0-9
                 int squelch = 0;
                 try {
                     String sqStr = fields[offset + 15].trim();
-                    if (!sqStr.isEmpty() && !sqStr.equalsIgnoreCase("None") && !sqStr.equalsIgnoreCase("Disabled")) {
+                    // OpenGD77 "Normal" = mid-range squelch (use 5 = 45%)
+                    if (sqStr.equalsIgnoreCase("Normal")) {
+                        squelch = 5;
+                    } else if (!sqStr.isEmpty() && !sqStr.equalsIgnoreCase("None") && !sqStr.equalsIgnoreCase("Disabled")) {
                         // Remove % sign if present and parse as integer
                         String cleanSq = sqStr.replace("%", "").trim();
                         int sqPercent = Integer.parseInt(cleanSq);
