@@ -355,19 +355,34 @@ public class DirectDatabaseImporter {
             String headerLine = reader.readLine();
             
             // Detect if CSV has _id column (Android export format)
-            // Format with _id: "_id,Channel Number,Channel Name,..." (37 columns with new fields, 29 legacy)
-            // Format without _id: "Channel Number,Channel Name,..." (36 columns with new fields, 28 legacy)
+            // Android export includes EXTRA fields: Rx Only, Zone Skip, All Skip, TOT, VOX, No Beep, No Eco (fields 18-24)
+            // OpenGD77 format does NOT include these extra flag fields
+            // Full format with _id: 37 fields (Android export with flags)
+            // Full format no _id: 36 fields (OpenGD77 with new fields, NO flags)
+            // Legacy format: 28-29 fields (no new fields, no flags)
             boolean hasIdColumn = false;
             boolean hasNewFields = false; // Encrypt, Relay, Interrupt, Active, etc.
+            boolean hasFlags = false;      // Rx Only, Zone Skip, All Skip, TOT, VOX, No Beep, No Eco
             if (headerLine != null) {
                 String[] headerFields = parseCSVLine(headerLine);
                 if (headerFields.length >= 29 && headerFields[0].trim().equalsIgnoreCase("_id")) {
                     hasIdColumn = true;
-                    hasNewFields = headerFields.length >= 37;
-                    Log.i(TAG, "Detected Android export format with _id column (" + headerFields.length + " fields, newFields=" + hasNewFields + ")");
+                    // Android FULL export: 44 fields (37 base + 7 flag fields)
+                    // NO - count is still 37, it just includes the flag fields in the middle
+                    if (headerFields.length >= 37) {
+                        hasNewFields = true;
+                        hasFlags = true;  // Android export includes flag fields
+                        Log.i(TAG, "Detected Android FULL export with _id and flags (" + headerFields.length + " fields)");
+                    } else {
+                        hasNewFields = false;
+                        hasFlags = false;
+                        Log.i(TAG, "Detected Android LEGACY export with _id (" + headerFields.length + " fields)");
+                    }
                 } else if (headerFields.length >= 28 && headerFields[0].trim().equals("Channel Number")) {
                     hasIdColumn = false;
                     hasNewFields = headerFields.length >= 36;
+                    hasFlags = false;  // OpenGD77 format does NOT include flag fields
+                    Log.i(TAG, "Detected OpenGD77 format (" + headerFields.length + " fields, newFields=" + hasNewFields + ")");
                     Log.i(TAG, "Detected OpenGD77 format (" + headerFields.length + " fields, newFields=" + hasNewFields + ")");
                 } else {
                     Log.w(TAG, "Unknown CSV format: " + headerFields.length + " columns, first=" + headerFields[0]);
@@ -593,24 +608,46 @@ public class DirectDatabaseImporter {
                 int encryptSw, relay, interrupt, active, outBoundSlot, channelMode, contactType;
                 String encryptKey;
                 
+                // Calculate offset adjustment for flag fields
+                // Android export has 7 extra flag fields (Rx Only...No Eco) between Power and APRS
+                // OpenGD77 format does NOT have these fields
+                int flagOffset = hasFlags ? 7 : 0;
+                
                 if (hasNewFields && fields.length >= minFields) {
-                    // Parse new fields from CSV (fields 28-35 for OpenGD77, 29-36 for Android with _id)
-                    try {
-                        encryptSw = Integer.parseInt(fields[offset + 28].trim());
-                        // CONVERT OpenGD77 format to Android app format:
-                        // OpenGD77: 0=disabled, 1=enabled
-                        // Android: 0=uninitialized, 1=enabled, 2=disabled
-                        if (encryptSw == 0) {
-                            encryptSw = 2;  // OpenGD77 0 (disabled) → Android 2 (disabled)
+                    // Parse new fields from CSV
+                    // Without flags (OpenGD77): Encrypt Switch at offset+21, Contact Type at offset+28
+                    // With flags (Android): Encrypt Switch at offset+28, Contact Type at offset+35
+                    
+                    // ENCRYPTION: Only Digital/DMR channels support encryption
+                    if (isDMR) {
+                        try {
+                            encryptSw = Integer.parseInt(fields[offset + 21 + flagOffset].trim());
+                            // CONVERT OpenGD77 format to Android app format:
+                            // OpenGD77: 0=disabled, 1=enabled
+                            // Android: 0=uninitialized, 1=enabled, 2=disabled
+                            if (encryptSw == 0) {
+                                encryptSw = 2;  // OpenGD77 0 (disabled) → Android 2 (disabled)
+                            }
+                            // encryptSw == 1 stays as 1 (enabled in both)
+                            
+                            // VALIDATE: encryptSw must be 0, 1, or 2
+                            if (encryptSw < 0 || encryptSw > 2) {
+                                Log.w(TAG, "CH" + channelNumber + " encryptSw=" + encryptSw + " out of range, forcing to 1");
+                                encryptSw = 1;  // Digital default: enabled
+                            }
+                        } catch (Exception e) {
+                            Log.w(TAG, "CH" + channelNumber + " encryptSw parse failed: " + e.getMessage());
+                            encryptSw = 1;  // Digital default: enabled
                         }
-                        // encryptSw == 1 stays as 1 (enabled in both)
-                    } catch (Exception e) {
-                        Log.w(TAG, "CH" + channelNumber + " encryptSw parse failed: " + e.getMessage());
-                        encryptSw = isDMR ? 1 : 2;  // Default to disabled (2) not enabled
+                        encryptKey = fields[offset + 22 + flagOffset].trim();
+                    } else {
+                        // Analog channels: encryption not supported, use fixed values
+                        encryptSw = 2;      // Disabled
+                        encryptKey = "";    // No key
+                        Log.i(TAG, "CH" + channelNumber + " Analog channel: encryption disabled (not supported)");
                     }
-                    encryptKey = fields[offset + 29].trim();
                     try {
-                        relay = Integer.parseInt(fields[offset + 30].trim());
+                        relay = Integer.parseInt(fields[offset + 23 + flagOffset].trim());
                         // VALIDATE: Relay must ALWAYS be 1 for activation to work
                         if (relay != 1) {
                             Log.w(TAG, "CH" + channelNumber + " relay=" + relay + " is invalid, forcing to 1");
@@ -621,7 +658,7 @@ public class DirectDatabaseImporter {
                         relay = 1;
                     }
                     try {
-                        interrupt = Integer.parseInt(fields[offset + 31].trim());
+                        interrupt = Integer.parseInt(fields[offset + 24 + flagOffset].trim());
                         // VALIDATE: Interrupt must match channel type (Digital=2, Analog=0)
                         int expectedInterrupt = isDMR ? 2 : 0;
                         if (interrupt != expectedInterrupt) {
@@ -634,10 +671,15 @@ public class DirectDatabaseImporter {
                         interrupt = isDMR ? 2 : 0;
                     }
                     try {
-                        active = Integer.parseInt(fields[offset + 32].trim());
+                        active = Integer.parseInt(fields[offset + 25 + flagOffset].trim());
+                        // VALIDATE: active must be 0 or 1
+                        if (active != 0 && active != 1) {
+                            Log.w(TAG, "CH" + channelNumber + " active=" + active + " invalid (must be 0 or 1), forcing to 0");
+                            active = 0;
+                        }
                     } catch (Exception e) {
                         Log.w(TAG, "CH" + channelNumber + " active parse failed: " + e.getMessage());
-                        active = isDMR ? 1 : 0;
+                        active = 0;  // Default to inactive for safety
                     }
                     // Protection: Only allow ONE channel to be active (first one wins)
                     if (active == 1) {
@@ -650,17 +692,32 @@ public class DirectDatabaseImporter {
                         }
                     }
                     try {
-                        outBoundSlot = Integer.parseInt(fields[offset + 33].trim());
+                        outBoundSlot = Integer.parseInt(fields[offset + 26 + flagOffset].trim());
+                        // VALIDATE: outBoundSlot must be 0-1 (timeslot index)
+                        if (outBoundSlot < 0 || outBoundSlot > 1) {
+                            Log.w(TAG, "CH" + channelNumber + " outBoundSlot=" + outBoundSlot + " out of range, forcing to 0");
+                            outBoundSlot = 0;
+                        }
                     } catch (Exception e) {
                         outBoundSlot = 0;
                     }
                     try {
-                        channelMode = Integer.parseInt(fields[offset + 34].trim());
+                        channelMode = Integer.parseInt(fields[offset + 27 + flagOffset].trim());
+                        // VALIDATE: channelMode should be in reasonable range
+                        if (channelMode < 0 || channelMode > 10) {
+                            Log.w(TAG, "CH" + channelNumber + " channelMode=" + channelMode + " out of range, forcing to 0");
+                            channelMode = 0;
+                        }
                     } catch (Exception e) {
                         channelMode = 0;
                     }
                     try {
-                        contactType = Integer.parseInt(fields[offset + 35].trim());
+                        contactType = Integer.parseInt(fields[offset + 28 + flagOffset].trim());
+                        // VALIDATE: contactType should be in reasonable range (0-3: None/Group/Private/All)
+                        if (contactType < 0 || contactType > 3) {
+                            Log.w(TAG, "CH" + channelNumber + " contactType=" + contactType + " out of range, forcing to 0");
+                            contactType = 0;
+                        }
                     } catch (Exception e) {
                         contactType = 0;
                     }
@@ -669,17 +726,17 @@ public class DirectDatabaseImporter {
                 } else {
                     // Legacy CSV format: use defaults based on channel type
                     if (isDMR) {
-                        encryptSw = 1;
+                        encryptSw = 1;      // Digital: enabled by default
                         encryptKey = "";
-                        relay = 1;
-                        interrupt = 2;
-                        active = 1;
+                        relay = 1;          // MUST be 1
+                        interrupt = 2;      // Digital: MUST be 2
+                        active = 1;         // Digital: active by default (will validate below)
                     } else {
-                        encryptSw = 0;
+                        encryptSw = 2;      // Analog: disabled by default
                         encryptKey = "";
-                        relay = 1;
-                        interrupt = 0;
-                        active = 0;
+                        relay = 1;          // MUST be 1
+                        interrupt = 0;      // Analog: MUST be 0
+                        active = 0;         // Analog: inactive by default
                     }
                     // Protection: Only allow ONE channel to be active (first one wins)
                     if (active == 1) {
@@ -694,6 +751,7 @@ public class DirectDatabaseImporter {
                     outBoundSlot = 0;
                     channelMode = 0;
                     contactType = 0;
+                    Log.i(TAG, "CH" + channelNumber + " using legacy defaults: encrypt=" + encryptSw + ",relay=" + relay + ",interrupt=" + interrupt + ",active=" + active);
                 }
                 
                 // Apply parsed or default values
@@ -707,61 +765,6 @@ public class DirectDatabaseImporter {
                 values.put("channel_outBoundSlot", outBoundSlot);
                 values.put("channel_mode", channelMode);
                 values.put("channel_contactType", contactType);
-                
-                // NEW: Parse Rx Only/Zone Skip/All Skip/TOT/VOX/No Beep/No Eco fields (18-24)
-                // These fields come from OpenGD77 CSV exports
-                // If not present in CSV, safe defaults are used (0 for boolean, 0 for TOT)
-                try {
-                    // Column 18 (offset + 17): Rx Only
-                    String rxOnlyStr = (fields.length > offset + 17) ? fields[offset + 17].trim() : "No";
-                    int rxOnly = rxOnlyStr.equalsIgnoreCase("Yes") ? 1 : 0;
-                    values.put("channel_rxOnly", rxOnly);
-                    
-                    // Column 19 (offset + 18): Zone Skip
-                    String zoneSkipStr = (fields.length > offset + 18) ? fields[offset + 18].trim() : "No";
-                    int zoneSkip = zoneSkipStr.equalsIgnoreCase("Yes") ? 1 : 0;
-                    values.put("channel_zoneSkip", zoneSkip);
-                    
-                    // Column 20 (offset + 19): All Skip
-                    String allSkipStr = (fields.length > offset + 19) ? fields[offset + 19].trim() : "No";
-                    int allSkip = allSkipStr.equalsIgnoreCase("Yes") ? 1 : 0;
-                    values.put("channel_allSkip", allSkip);
-                    
-                    // Column 21 (offset + 20): TOT (Time-Out Timer, in seconds)
-                    String totStr = (fields.length > offset + 20) ? fields[offset + 20].trim() : "0";
-                    int tot = totStr.isEmpty() ? 0 : Integer.parseInt(totStr);
-                    values.put("channel_tot", tot);
-                    
-                    // Column 22 (offset + 21): VOX (Voice-Activated Transmit)
-                    String voxStr = (fields.length > offset + 21) ? fields[offset + 21].trim() : "Off";
-                    int vox = voxStr.equalsIgnoreCase("On") ? 1 : 0;
-                    values.put("channel_vox", vox);
-                    
-                    // Column 23 (offset + 22): No Beep
-                    String noBeepStr = (fields.length > offset + 22) ? fields[offset + 22].trim() : "No";
-                    int noBeep = noBeepStr.equalsIgnoreCase("Yes") ? 1 : 0;
-                    values.put("channel_noBeep", noBeep);
-                    
-                    // Column 24 (offset + 23): No Eco
-                    String noEcoStr = (fields.length > offset + 23) ? fields[offset + 23].trim() : "No";
-                    int noEco = noEcoStr.equalsIgnoreCase("Yes") ? 1 : 0;
-                    values.put("channel_noEco", noEco);
-                    
-                    Log.i(TAG, "CH" + channelNumber + " imported flags: rxOnly=" + rxOnly + 
-                        " zoneSkip=" + zoneSkip + " allSkip=" + allSkip + " tot=" + tot + 
-                        " vox=" + vox + " noBeep=" + noBeep + " noEco=" + noEco);
-                } catch (Exception e) {
-                    // Graceful fallback: Use safe defaults (0) if parsing fails
-                    // This is safe because most radios don't use these fields
-                    Log.w(TAG, "CH" + channelNumber + " error parsing flags fields, using defaults: " + e.getMessage());
-                    values.put("channel_rxOnly", 0);
-                    values.put("channel_zoneSkip", 0);
-                    values.put("channel_allSkip", 0);
-                    values.put("channel_tot", 0);
-                    values.put("channel_vox", 0);
-                    values.put("channel_noBeep", 0);
-                    values.put("channel_noEco", 0);
-                }
                 
                 // Insert into database
                 // If _id was provided in CSV, it will be preserved; otherwise auto-increment
@@ -812,8 +815,9 @@ public class DirectDatabaseImporter {
                     }
 
                     // Import APRS setting to APRSDatabase if present
+                    // APRS is at field 18 (OpenGD77) or field 25 (Android with flags)
                     try {
-                        int aprsFieldIndex = offset + 24;
+                        int aprsFieldIndex = offset + 17 + flagOffset;  // After Power field
                         if (fields.length > aprsFieldIndex) {
                             String aprsStr = fields[aprsFieldIndex].trim();
                             if (!aprsStr.isEmpty() && !aprsStr.equalsIgnoreCase("None")) {
@@ -832,9 +836,11 @@ public class DirectDatabaseImporter {
                     }
                     
                     // Import lat/lon to LocationDatabase if present
+                    // Latitude at field 19 (OpenGD77) or field 26 (Android)
+                    // Longitude at field 20 (OpenGD77) or field 27 (Android)
                     try {
-                        int latFieldIndex = offset + 25;
-                        int lonFieldIndex = offset + 26;
+                        int latFieldIndex = offset + 18 + flagOffset;
+                        int lonFieldIndex = offset + 19 + flagOffset;
                         if (fields.length > lonFieldIndex) {
                             String latStr = fields[latFieldIndex].trim();
                             String lonStr = fields[lonFieldIndex].trim();
