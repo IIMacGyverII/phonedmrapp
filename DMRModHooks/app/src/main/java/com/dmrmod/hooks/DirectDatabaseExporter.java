@@ -497,12 +497,10 @@ public class DirectDatabaseExporter {
                     }
                     
                     // NEW FIELDS (29-36): Complete database backup
-                    // CONVERT Android app format to OpenGD77 format:
-                    // Android: 0=uninitialized, 1=enabled, 2=disabled
-                    // OpenGD77: 0=disabled, 1=enabled
-                    int encryptSwExport = (encryptSw == 1) ? 1 : 0;  // 1→1 (enabled), 0/2→0 (disabled)
-                    rowBuilder.append(",").append(encryptSwExport);        // 29. Encrypt Switch
-                    rowBuilder.append(",").append(encryptKey != null ? encryptKey : ""); // 30. Encrypt Key
+                    // NOTE: Analog channels do NOT support encryption
+                    // Always export 0 (disabled) and empty key for analog
+                    rowBuilder.append(",0");                                 // 29. Encrypt Switch (always 0/disabled for analog)
+                    rowBuilder.append(",");                                  // 30. Encrypt Key (always empty for analog)
                     rowBuilder.append(",").append(relay);                   // 31. Relay
                     rowBuilder.append(",").append(interrupt);               // 32. Interrupt
                     rowBuilder.append(",").append(active);                  // 33. Active (0=inactive, 1=active)
