@@ -9616,10 +9616,8 @@ public class MainHook implements IXposedHookLoadPackage {
                         
                         // === AUDIO LEVEL (always computed for VU-meter bars) ===
                         int amplitude = calculateAudioAmplitude(audioData, length);
-                        if (circuitBoardView != null) {
-                            circuitBoardView.audioAmplitude = amplitude;
-                            circuitBoardView.isReceiving = isReceiving;
-                        }
+                        // NOTE: circuitBoardView.audioAmplitude is updated AFTER squelch decision below
+                        // so the bars are frozen at 0 when soft-squelch is closed.
 
                         // === SOFTWARE SQUELCH (Hybrid RSSI + Audio RMS) ===
                         // Note: Squelch level 0 = disabled (pass all audio), 1-9 = enabled with increasing sensitivity
@@ -9719,7 +9717,13 @@ public class MainHook implements IXposedHookLoadPackage {
                         }
                         
                         // === END SOFTWARE SQUELCH ===
-                        
+
+                        // Update VU-meter bars: show 0 when squelch is active but closed
+                        if (circuitBoardView != null) {
+                            circuitBoardView.audioAmplitude = (useSquelch && !isSquelchOpen) ? 0 : amplitude;
+                            circuitBoardView.isReceiving = isReceiving;
+                        }
+
                         // Use originalAudio for features that need clean audio
                         byte[] processingAudio = (originalAudio != null) ? originalAudio : audioData;
                         
@@ -11964,6 +11968,67 @@ public class MainHook implements IXposedHookLoadPackage {
             );
 
             XposedBridge.log(TAG + ": ✓ ReceiveSoundState channel navigation fix installed");
+
+            // Hook DmrManager.sendAnalogMessage to intercept ALL analog message sends and force
+            // squelch to 0 if software squelch is enabled. This is much more robust than trying
+            // to re-send after the state machine runs, because we catch:
+            //   • Initial channel programming
+            //   • Channel changes (side buttons, list taps, zone switches)
+            //   • State machine retries
+            //   • Any other code path that sends analog messages
+            // We modify the ChannelData object's sq field BEFORE it's read and sent to hardware.
+            Class<?> dmrManagerClassNav = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.manager.DmrManager",
+                lpparam.classLoader
+            );
+            Class<?> channelDataClassNav = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.serial.data.ChannelData",
+                lpparam.classLoader
+            );
+            XposedHelpers.findAndHookMethod(
+                dmrManagerClassNav,
+                "sendAnalogMessage",
+                channelDataClassNav,
+                new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                        if (!isSoftwareSquelchEnabled && !isAprsSoftwareSquelchEnabled) return;
+                        
+                        // Get the ChannelData argument
+                        Object channelData = param.args[0];
+                        
+                        // Read original squelch value
+                        int originalSq = XposedHelpers.getIntField(channelData, "sq");
+                        
+                        // Force squelch to 0 for software squelch (hardware fully open)
+                        XposedHelpers.setIntField(channelData, "sq", 0);
+                        
+                        XposedBridge.log(TAG + ": Intercepted sendAnalogMessage - forcing sq=" + originalSq + " → sq=0");
+                        
+                        // Schedule squelch state reset + re-enable after channel loads.
+                        // This fixes the issue where squelch gets stuck after channel change.
+                        // The delay allows the new channel's audio to start flowing before we
+                        // reset the state machine, preventing it from being stuck with stale values.
+                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+                            @Override public void run() {
+                                if (isSoftwareSquelchEnabled || isAprsSoftwareSquelchEnabled) {
+                                    // Reset squelch state for new channel
+                                    isSquelchOpen = false;
+                                    previousSquelchOpen = false;
+                                    lastSquelchOpenTime = 0;
+                                    currentRssi = -999;
+                                    
+                                    // Re-send hardware sq=0 (in case state machine overwrote it)
+                                    enableSoftwareSquelchOnCurrentChannel();
+                                    
+                                    XposedBridge.log(TAG + ": Reset squelch state after channel change");
+                                }
+                            }
+                        }, 300);  // 300ms delay - after channel audio starts but before user notices
+                    }
+                }
+            );
+            XposedBridge.log(TAG + ": ✓ sendAnalogMessage software squelch hook installed");
 
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": Failed to hook channel navigation: " + t.getMessage());
