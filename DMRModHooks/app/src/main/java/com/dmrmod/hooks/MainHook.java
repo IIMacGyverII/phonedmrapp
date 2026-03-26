@@ -13494,13 +13494,20 @@ public class MainHook implements IXposedHookLoadPackage {
                                     TextView relayLabel = (TextView) relayRow.getChildAt(0);
                                     
                                     if (relayLabel != null) {
-                                        // Add help icon to the right of the label text
-                                        relayLabel.setCompoundDrawablesWithIntrinsicBounds(0, 0, android.R.drawable.ic_menu_info_details, 0);
-                                        relayLabel.setCompoundDrawablePadding((int) (8 * context.getResources().getDisplayMetrics().density)); // 8dp
+                                        // Create a separate ImageView for the help icon
+                                        android.widget.ImageView helpIcon = new android.widget.ImageView(context);
+                                        helpIcon.setImageResource(android.R.drawable.ic_menu_info_details);
                                         
-                                        // Make entire label area clickable for help
-                                        relayLabel.setClickable(true);
-                                        relayLabel.setOnClickListener(new View.OnClickListener() {
+                                        // Size and position the icon
+                                        int iconSize = (int) (20 * context.getResources().getDisplayMetrics().density); // 20dp
+                                        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(iconSize, iconSize);
+                                        iconParams.gravity = android.view.Gravity.CENTER_VERTICAL;
+                                        iconParams.leftMargin = (int) (4 * context.getResources().getDisplayMetrics().density); // 4dp margin
+                                        helpIcon.setLayoutParams(iconParams);
+                                        
+                                        // Make icon clickable
+                                        helpIcon.setClickable(true);
+                                        helpIcon.setOnClickListener(new View.OnClickListener() {
                                             @Override
                                             public void onClick(View v) {
                                                 new android.app.AlertDialog.Builder(context)
@@ -13510,6 +13517,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                                     .show();
                                             }
                                         });
+                                        
+                                        // Insert the icon after the label (at index 1, before the separator)
+                                        relayRow.addView(helpIcon, 1);
                                         
                                         XposedBridge.log(TAG + ": Added relay help icon and click handler");
                                     }
