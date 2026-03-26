@@ -13483,6 +13483,43 @@ public class MainHook implements IXposedHookLoadPackage {
                                 XposedBridge.log(TAG + ": Error adding TG List row: " + tge.getMessage());
                             }
                             
+                            // ===== ADD RELAY HELP ICON =====
+                            try {
+                                // Find the relay disconnect row by ID
+                                int relayRowId = context.getResources().getIdentifier("interphone_channel_relay_disconnecte", "id", context.getPackageName());
+                                LinearLayout relayRow = (LinearLayout) activity.findViewById(relayRowId);
+                                
+                                if (relayRow != null) {
+                                    // Find the title TextView (first child)
+                                    TextView relayLabel = (TextView) relayRow.getChildAt(0);
+                                    
+                                    if (relayLabel != null) {
+                                        // Add help icon to the right of the label text
+                                        relayLabel.setCompoundDrawablesWithIntrinsicBounds(0, 0, android.R.drawable.ic_menu_info_details, 0);
+                                        relayLabel.setCompoundDrawablePadding((int) (8 * context.getResources().getDisplayMetrics().density)); // 8dp
+                                        
+                                        // Make entire label area clickable for help
+                                        relayLabel.setClickable(true);
+                                        relayLabel.setOnClickListener(new View.OnClickListener() {
+                                            @Override
+                                            public void onClick(View v) {
+                                                new android.app.AlertDialog.Builder(context)
+                                                    .setTitle("Relay Disconnection Setting")
+                                                    .setMessage("This setting controls repeater connection behavior:\n\n• Disable (Recommended): Normal repeater operation. The radio stays connected to the repeater and can transmit properly.\n\n• Enable: Disconnects from repeater network. This mode waits for repeater confirmation and may prevent transmitting. Only use if specifically required by your network.")
+                                                    .setPositiveButton(android.R.string.ok, null)
+                                                    .show();
+                                            }
+                                        });
+                                        
+                                        XposedBridge.log(TAG + ": Added relay help icon and click handler");
+                                    }
+                                } else {
+                                    XposedBridge.log(TAG + ": Relay row not found, cannot add help icon");
+                                }
+                            } catch (Throwable relayHelpErr) {
+                                XposedBridge.log(TAG + ": Error adding relay help icon: " + relayHelpErr.getMessage());
+                            }
+                            
                         } catch (Throwable t) {
                             XposedBridge.log(TAG + ": Error in channel edit hook: " + t.getMessage());
                             XposedBridge.log(t);

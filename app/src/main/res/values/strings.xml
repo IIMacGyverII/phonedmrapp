@@ -231,6 +231,8 @@
     <string name="interphone_channel_relay_disconnecte_default">Disable</string>
     <string name="interphone_channel_relay_disconnecte_disable_value">Disable</string>
     <string name="interphone_channel_relay_disconnecte_enable_value">Enable</string>
+    <string name="interphone_channel_relay_help_title">Relay Disconnection Setting</string>
+    <string name="interphone_channel_relay_help_message">This setting controls repeater connection behavior:\n\n• Disable (Recommended): Normal repeater operation. The radio stays connected to the repeater and can transmit properly.\n\n• Enable: Disconnects from repeater network. This mode waits for repeater confirmation and may prevent transmitting. Only use if specifically required by your network.</string>
     <string name="interphone_channel_rxsubcode">Receive Sub audio code</string>
     <string name="interphone_channel_rxtype">Receive type</string>
     <string name="interphone_channel_rxtype_ctc">ctcsss</string>

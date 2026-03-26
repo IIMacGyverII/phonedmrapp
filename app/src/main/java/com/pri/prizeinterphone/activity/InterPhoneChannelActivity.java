@@ -855,6 +855,14 @@ public class InterPhoneChannelActivity extends AppCompatActivity implements View
                 updateSelectedItem(view.getId());
                 showPopupWindow(this.mDataChannelPower, 2, R.id.interphone_channel_power_set, this.mCurrentChannelPower);
                 return;
+            case R.id.interphone_channel_relay_disconnecte_label:
+                // Show help dialog explaining relay disconnect
+                new androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle(R.string.interphone_channel_relay_help_title)
+                    .setMessage(R.string.interphone_channel_relay_help_message)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show();
+                return;
             case R.id.interphone_channel_relay_disconnecte_set /* 2131296549 */:
                 updateSelectedItem(view.getId());
                 showPopupWindow(this.mDataChannelRelayDisconnet, 2, R.id.interphone_channel_relay_disconnecte_set, this.mCurrentChannelRelayDisconnet);

@@ -202,6 +202,8 @@
     <string name="interphone_channel_relay_disconnecte_default">关</string>
     <string name="interphone_channel_relay_disconnecte_disable_value">关</string>
     <string name="interphone_channel_relay_disconnecte_enable_value">开</string>
+    <string name="interphone_channel_relay_help_title">中继脱网设置</string>
+    <string name="interphone_channel_relay_help_message">此设置控制中继器连接行为：\n\n• 关（推荐）：正常中继操作。对讲机保持与中继器的连接，可以正常发射。\n\n• 开：从中继网络断开连接。此模式等待中继器确认，可能会阻止发射。仅在网络明确要求时使用。</string>
     <string name="interphone_channel_rxsubcode">接收子码</string>
     <string name="interphone_channel_rxtype">接收类型</string>
     <string name="interphone_channel_rxtype_ctc">ctcsss</string>
