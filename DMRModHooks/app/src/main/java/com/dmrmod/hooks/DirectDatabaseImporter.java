@@ -648,11 +648,9 @@ public class DirectDatabaseImporter {
                     }
                     try {
                         relay = Integer.parseInt(fields[offset + 23 + flagOffset].trim());
-                        // VALIDATE: Relay must ALWAYS be 1 for activation to work
-                        if (relay != 1) {
-                            Log.w(TAG, "CH" + channelNumber + " relay=" + relay + " is invalid, forcing to 1");
-                            relay = 1;
-                        }
+                        // Accept relay values as-is from CSV (0, 1, or 2)
+                        // Do not force to 1 - preserve the actual configured value
+                        Log.d(TAG, "CH" + channelNumber + " relay=" + relay + " (preserved from CSV)");
                     } catch (Exception e) {
                         Log.w(TAG, "CH" + channelNumber + " relay parse failed: " + e.getMessage());
                         relay = 1;
