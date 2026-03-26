@@ -189,6 +189,7 @@
     <item type="id" name="interphone_channel_power" />
     <item type="id" name="interphone_channel_power_set" />
     <item type="id" name="interphone_channel_relay_disconnecte" />
+    <item type="id" name="interphone_channel_relay_disconnecte_label" />
     <item type="id" name="interphone_channel_relay_disconnecte_set" />
     <item type="id" name="interphone_channel_rxsubcode" />
     <item type="id" name="interphone_channel_rxsubcode_set" />
