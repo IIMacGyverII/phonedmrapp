@@ -361,10 +361,11 @@ public class DirectDatabaseExporter {
                 boolean isDigital = "0".equals(channelType);
                 
                 // VALIDATE critical activation fields before export
-                // relay must be 1 for all channels
-                if (relay != 1) {
-                    Log.w(TAG, "CH" + channelNumber + " DB has relay=" + relay + ", forcing to 1 for export");
-                    relay = 1;
+                // relay can be 0 (direct/APRS), 1 (relay disconnect), or 2 (normal/default)
+                // Preserve actual value - do not force to 1 (which breaks transmit)
+                if (relay != 0 && relay != 1 && relay != 2) {
+                    Log.w(TAG, "CH" + channelNumber + " DB has invalid relay=" + relay + ", forcing to 2 (default)");
+                    relay = 2;  // Use default from AnalogMessage/DigitalMessage constructors
                 }
                 
                 // interrupt must be 2 for Digital, 0 for Analog
