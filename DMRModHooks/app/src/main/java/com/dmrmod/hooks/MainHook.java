@@ -13203,6 +13203,398 @@ public class MainHook implements IXposedHookLoadPackage {
     }
     
     /**
+     * Add help icons to all channel properties with detailed explanations
+     */
+    private void addChannelPropertyHelpIcons(final Activity activity, final Context context) {
+        try {
+            // Helper method to add icon to a property row
+            final Runnable addHelpIcon = new Runnable() {
+                private void addIcon(String rowId, String title, String message) {
+                    try {
+                        int id = context.getResources().getIdentifier(rowId, "id", context.getPackageName());
+                        if (id == 0) return;
+                        
+                        LinearLayout row = (LinearLayout) activity.findViewById(id);
+                        if (row == null || row.getVisibility() != View.VISIBLE) return;
+                        
+                        // Get the label TextView (first child)
+                        TextView labelTextView = (TextView) row.getChildAt(0);
+                        if (labelTextView == null) return;
+                        
+                        // Create help icon ImageView
+                        ImageView helpIcon = new ImageView(context);
+                        helpIcon.setImageResource(android.R.drawable.ic_menu_info_details);
+                        
+                        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(
+                            (int) (20 * context.getResources().getDisplayMetrics().density),
+                            (int) (20 * context.getResources().getDisplayMetrics().density)
+                        );
+                        iconParams.setMargins(
+                            (int) (4 * context.getResources().getDisplayMetrics().density), 0, 0, 0
+                        );
+                        helpIcon.setLayoutParams(iconParams);
+                        
+                        // Add click listener
+                        final String finalTitle = title;
+                        final String finalMessage = message;
+                        helpIcon.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                new AlertDialog.Builder(activity)
+                                    .setTitle(finalTitle)
+                                    .setMessage(finalMessage)
+                                    .setPositiveButton(android.R.string.ok, null)
+                                    .show();
+                            }
+                        });
+                        
+                        // Insert after label (index 1)
+                        row.addView(helpIcon, 1);
+                    } catch (Throwable t) {
+                        XposedBridge.log(TAG + ": Error adding help icon for " + rowId + ": " + t.getMessage());
+                    }
+                }
+                
+                // Helper for vertical layouts where the TextView is just a header
+                private void addIconToVerticalLayout(String layoutId, String title, String message) {
+                    try {
+                        int id = context.getResources().getIdentifier(layoutId, "id", context.getPackageName());
+                        if (id == 0) return;
+                        
+                        LinearLayout layout = (LinearLayout) activity.findViewById(id);
+                        if (layout == null || layout.getVisibility() != View.VISIBLE) return;
+                        
+                        // The first child should be the TextView label
+                        View firstChild = layout.getChildAt(0);
+                        if (!(firstChild instanceof TextView)) return;
+                        
+                        TextView labelTextView = (TextView) firstChild;
+                        
+                        // Create a horizontal container for label + icon
+                        LinearLayout headerRow = new LinearLayout(context);
+                        headerRow.setOrientation(LinearLayout.HORIZONTAL);
+                        headerRow.setLayoutParams(new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT
+                        ));
+                        
+                        // Remove label from parent
+                        layout.removeView(labelTextView);
+                        
+                        // Create help icon
+                        ImageView helpIcon = new ImageView(context);
+                        helpIcon.setImageResource(android.R.drawable.ic_menu_info_details);
+                        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(
+                            (int) (20 * context.getResources().getDisplayMetrics().density),
+                            (int) (20 * context.getResources().getDisplayMetrics().density)
+                        );
+                        iconParams.setMargins(
+                            (int) (4 * context.getResources().getDisplayMetrics().density), 0, 0, 0
+                        );
+                        iconParams.gravity = android.view.Gravity.CENTER_VERTICAL;
+                        helpIcon.setLayoutParams(iconParams);
+                        
+                        final String finalTitle = title;
+                        final String finalMessage =message;
+                        helpIcon.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                new AlertDialog.Builder(activity)
+                                    .setTitle(finalTitle)
+                                    .setMessage(finalMessage)
+                                    .setPositiveButton(android.R.string.ok, null)
+                                    .show();
+                            }
+                        });
+                        
+                        // Add label and icon to header row
+                        headerRow.addView(labelTextView);
+                        headerRow.addView(helpIcon);
+                        
+                        // Add header row back as first child
+                        layout.addView(headerRow, 0);
+                    } catch (Throwable t) {
+                        XposedBridge.log(TAG + ": Error adding help icon to vertical layout " + layoutId + ": " + t.getMessage());
+                    }
+                }
+                
+                @Override
+                public void run() {
+                    // Fix spelling errors and add help icons to frequency fields
+                    try {
+                        // Get the vertical frequency container
+                        int freqContainerId = context.getResources().getIdentifier("interphone_channel_frequency", "id", context.getPackageName());
+                        LinearLayout freqContainer = (LinearLayout) activity.findViewById(freqContainerId);
+                        
+                        if (freqContainer != null) {
+                            // Child 0: frequency_band row (might be hidden)
+                            // Child 1: send frequency row
+                            // Child 2: receive frequency row
+                            
+                            // Fix frequency band label
+                            View child0 = freqContainer.getChildAt(0);
+                            if (child0 instanceof LinearLayout) {
+                                LinearLayout freqBandRow = (LinearLayout) child0;
+                                TextView label = (TextView) freqBandRow.getChildAt(0);
+                                if (label != null) label.setText("Frequency band");
+                            }
+                            
+                            // Fix and add help to send frequency
+                            View child1 = freqContainer.getChildAt(1);
+                            if (child1 instanceof LinearLayout) {
+                                LinearLayout sendRow = (LinearLayout) child1;
+                                TextView sendLabel = (TextView) sendRow.getChildAt(0);
+                                if (sendLabel != null) {
+                                    sendLabel.setText("Send frequency");
+                                    
+                                    // Add help icon
+                                    ImageView helpIcon = new ImageView(context);
+                                    helpIcon.setImageResource(android.R.drawable.ic_menu_info_details);
+                                    LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(
+                                        (int) (20 * context.getResources().getDisplayMetrics().density),
+                                        (int) (20 * context.getResources().getDisplayMetrics().density)
+                                    );
+                                    iconParams.setMargins((int) (4 * context.getResources().getDisplayMetrics().density), 0, 0, 0);
+                                    helpIcon.setLayoutParams(iconParams);
+                                    helpIcon.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            new AlertDialog.Builder(activity)
+                                                .setTitle("Send Frequency")
+                                                .setMessage("Transmit (TX) frequency in 10Hz units (no decimal).\n\n" +
+                                                    "Enter the frequency as an integer value:\n" +
+                                                    "• Frequency in MHz × 100000\n" +
+                                                    "• Up to 9 digits\n\n" +
+                                                    "Examples:\n" +
+                                                    "• 446.0000 MHz → enter 44600000\n" +
+                                                    "• 145.8000 MHz → enter 14580000\n" +
+                                                    "• 462.5625 MHz → enter 46256250\n\n" +
+                                                    "For simplex: Set TX and RX to the same value\n" +
+                                                    "For repeaters: TX and RX are different (repeater offset)")
+                                                .setPositiveButton(android.R.string.ok, null)
+                                                .show();
+                                        }
+                                    });
+                                    sendRow.addView(helpIcon, 1);
+                                }
+                            }
+                            
+                            // Fix and add help to receive frequency
+                            View child2 = freqContainer.getChildAt(2);
+                            if (child2 instanceof LinearLayout) {
+                                LinearLayout recvRow = (LinearLayout) child2;
+                                TextView recvLabel = (TextView) recvRow.getChildAt(0);
+                                if (recvLabel != null) {
+                                    recvLabel.setText("Recv frequency");
+                                    
+                                    // Add help icon
+                                    ImageView helpIcon = new ImageView(context);
+                                    helpIcon.setImageResource(android.R.drawable.ic_menu_info_details);
+                                    LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(
+                                        (int) (20 * context.getResources().getDisplayMetrics().density),
+                                        (int) (20 * context.getResources().getDisplayMetrics().density)
+                                    );
+                                    iconParams.setMargins((int) (4 * context.getResources().getDisplayMetrics().density), 0, 0, 0);
+                                    helpIcon.setLayoutParams(iconParams);
+                                    helpIcon.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            new AlertDialog.Builder(activity)
+                                                .setTitle("Receive Frequency")
+                                                .setMessage("Receive (RX) frequency in 10Hz units (no decimal).\n\n" +
+                                                    "Enter the frequency as an integer value:\n" +
+                                                    "• Frequency in MHz × 100000\n" +
+                                                    "• Up to 9 digits\n\n" +
+                                                    "Examples:\n" +
+                                                    "• 446.0000 MHz → enter 44600000\n" +
+                                                    "• 145.8000 MHz → enter 14580000\n" +
+                                                    "• 462.5625 MHz → enter 46256250\n\n" +
+                                                    "For simplex: Set RX same as TX value\n" +
+                                                    "For repeaters: RX is different from TX (repeater offset)\n\n" +
+                                                    "Example repeater:\n" +
+                                                    "• TX: 14520000 (145.200 MHz)\n" +
+                                                    "• RX: 14580000 (145.800 MHz)")
+                                                .setPositiveButton(android.R.string.ok, null)
+                                                .show();
+                                        }
+                                    });
+                                    recvRow.addView(helpIcon, 1);
+                                }
+                            }
+                        }
+                    } catch (Throwable t) {
+                        XposedBridge.log(TAG + ": Error fixing frequency labels: " + t.getMessage());
+                    }
+                    
+                    // COMMON PROPERTIES (visible on both analog and digital)
+                    
+                    addIcon("interphone_channel_name", "Channel Name",
+                        "The name of this channel (up to 32 characters).\n\n" +
+                        "This name appears in your channel list and should clearly identify the frequency or purpose.\n\n" +
+                        "Examples:\n" +
+                        "• \"Repeater W1ABC\"\n" +
+                        "• \"Simplex 446.000\"\n" +
+                        "• \"Local DMR\"\n\n" +
+                        "Use descriptive names to easily find channels while operating.");
+                    
+                    addIcon("interphone_channel_type", "Channel Type",
+                        "Digital (DMR) or Analog (FM).\n\n" +
+                        "• Digital: Uses DMR protocol for voice and data. Requires DMR-compatible repeaters.\n" +
+                        "• Analog: Traditional FM voice. Compatible with all FM radios.\n\n" +
+                        "Note: Channel type cannot be changed after creation.");
+                    
+                    addIcon("interphone_channel_frequency_band", "Frequency Band",
+                        "The frequency range for this channel.\n\n" +
+                        "• UHF: 400-480 MHz (most common for DMR repeaters)\n" +
+                        "• VHF: 136-174 MHz (common for analog FM)\n\n" +
+                        "Your radio hardware determines which bands are available.\n\n" +
+                        "Regional variations:\n" +
+                        "• USA: 420-450 MHz (UHF), 144-148 MHz (VHF)\n" +
+                        "• Europe: 430-440 MHz (UHF), 144-146 MHz (VHF)\n" +
+                        "• PMR446: 446 MHz (license-free in EU)");
+                    
+                    addIcon("interphone_channel_power", "TX Power",
+                        "Transmit power level.\n\n" +
+                        "• High Power: Maximum range, uses more battery. Typically 5W (UHF) or 4W (VHF).\n" +
+                        "• Low Power: Shorter range, saves battery. Typically 1W.\n\n" +
+                        "Use Low Power when close to repeater or for direct communication to save battery.");
+                    
+                    addIcon("interphone_channel_relay_disconnecte", "Relay Disconnection",
+                        "Repeater relay control (usually leave DISABLED).\n\n" +
+                        "• Disable (Default): Normal repeater operation. Your transmission goes through the repeater.\n" +
+                        "• Enable: Disconnects repeater relay. Prevents retransmission.\n\n" +
+                        "WARNING: Setting to Enable breaks normal repeater function. Most users should never enable this.\n\n" +
+                        "Use case: Accessing repeater's local receiver (parrot mode) without activating the transmitter.");
+                    
+                    // TX/RX Frequencies have labels to fix but no help icons yet
+                    
+                    // DIGITAL-ONLY PROPERTIES
+                    
+                    addIcon("interphone_channel_color", "Color Code",
+                        "Digital Color Code (0-15). Must match the repeater or network.\n\n" +
+                        "Color Code is like CTCSS for digital channels - it prevents interference from other DMR networks on the same frequency.\n\n" +
+                        "• Default: 1\n" +
+                        "• Range: 0-15\n\n" +
+                        "Check your repeater's configuration or network administrator for the correct Color Code.");
+                    
+                    addIcon("interphone_channel_mode_type", "Channel Mode",
+                        "DMR channel operating mode.\n\n" +
+                        "• Direct Mode: Simplex (radio-to-radio) communication. Both radios use same frequency.\n" +
+                        "• Double Slot Mode: Repeater mode using TDMA time slots. Allows two conversations on one frequency.\n\n" +
+                        "Use Direct Mode for simplex, Double Slot Mode for repeaters.");
+                    
+                    addIcon("interphone_channel_slot_type", "Time Slot",
+                        "DMR TDMA time slot (Slot 1 or Slot 2).\n\n" +
+                        "DMR repeaters use two time slots on one frequency, allowing two simultaneous conversations.\n\n" +
+                        "• Slot 1: First time slot\n" +
+                        "• Slot 2: Second time slot\n\n" +
+                        "Check your repeater configuration. Many use Slot 1 for regional, Slot 2 for worldwide.");
+                    
+                    addIcon("interphone_channel_contact_type", "Contact Type",
+                        "Type of DMR call.\n\n" +
+                        "• Person: Private call to specific DMR ID\n" +
+                        "• Group: Group call to talk group\n" +
+                        "• All: Broadcast to all radios (use sparingly)\n\n" +
+                        "Most channels use Group for repeater talk groups.");
+                    
+                    addIcon("interphone_channel_contact", "Call Number",
+                        "DMR ID or Talk Group number.\n\n" +
+                        "• For Person contacts: Enter target DMR ID (e.g., 1234567)\n" +
+                        "• For Group contacts: Enter talk group ID (e.g., 91 for Worldwide)\n" +
+                        "• Range: 1-16777215\n\n" +
+                        "Common talk groups:\n" +
+                        "• 1: Parrot (echo test)\n" +
+                        "• 91: Worldwide\n" +
+                        "• 93: North America\n" +
+                        "• 3100: USA Nationwide");
+                    
+                    addIcon("interphone_channel_encryption", "Encryption",
+                        "Enable voice encryption for privacy.\n\n" +
+                        "• Enable: Encrypts voice transmission. Requires encryption key.\n" +
+                        "• Disable: Standard unencrypted DMR.\n\n" +
+                        "Note: Both radios must use same encryption key. Encrypted transmissions cannot be heard by radios without the key.\n\n" +
+                        "Most repeaters do not support encryption.");
+                    
+                    addIcon("interphone_channel_interrupt_transmission", "Transmission Interruption",
+                        "Controls channel busy behavior.\n\n" +
+                        "• OFF: Normal operation. Cannot transmit when channel busy.\n" +
+                        "• Open: Allows interrupting other transmissions.\n" +
+                        "• Transport: Always transmit (disables busy check). Use for emergencies only.\n\n" +
+                        "Recommended: Leave on OFF for normal use.");
+                    
+                    // ANALOG-ONLY PROPERTIES
+                    
+                    addIcon("interphone_channel_band", "Bandwidth",
+                        "Channel bandwidth (analog only).\n\n" +
+                        "• Narrow (12.5 kHz): More channels in same spectrum, slightly lower audio quality\n" +
+                        "• Wide (25 kHz): Better audio quality, fewer channels\n\n" +
+                        "Must match the bandwidth of other radios and repeaters you're communicating with.\n\n" +
+                        "Many modern systems use Narrow for efficiency.");
+                    
+                    addIcon("interphone_channel_sq", "Squelch",
+                        "Squelch level (analog only). Controls when radio opens audio.\n\n" +
+                        "• 1: Most sensitive (opens on weak signals, more background noise)\n" +
+                        "• 5: Medium (good balance)\n" +
+                        "• 9: Least sensitive (requires strong signal, less noise)\n\n" +
+                        "Recommended: Start at 2-3 and adjust up if hearing too much noise.\n\n" +
+                        "Note: Stock firmware has a bug forcing squelch to 2. DMRModHooks implements software squelch for full control.");
+                    
+                    addIcon("interphone_channel_txtype", "TX Tone Type",
+                        "Transmit tone type (analog only).\n\n" +
+                        "• Wave: No tone (open squelch)\n" +
+                        "• CTC: CTCSS tone (sub-audible analog tone)\n" +
+                        "• PDCS: DCS code forward polarity\n" +
+                        "• NDCS: DCS code inverted polarity\n\n" +
+                        "CTCSS/DCS prevents hearing unwanted transmissions on same frequency. Must match repeater or other radios.\n\n" +
+                        "Use Wave for simplex with no privacy tone.");
+                    
+                    addIcon("interphone_channel_txsubcode", "TX Tone/Code",
+                        "Transmit CTCSS tone or DCS code (analog only).\n\n" +
+                        "• CTC: 50 tones from 62.5 Hz to 254.1 Hz\n" +
+                        "• DCS: 83 codes (N=normal, l=inverted polarity)\n\n" +
+                        "Common CTCSS tones:\n" +
+                        "• 67.0 Hz, 100.0 Hz, 131.8 Hz, 141.3 Hz\n\n" +
+                        "Must match the tone/code required by your repeater or group.\n\n" +
+                        "Only used when TX Type is CTC, PDCS, or NDCS.");
+                    
+                    addIcon("interphone_channel_rxtype", "RX Tone Type",
+                        "Receive tone type (analog only).\n\n" +
+                        "• Wave: Receive all transmissions (no tone squelch)\n" +
+                        "• CTC: Only open squelch for matching CTCSS tone\n" +
+                        "• PDCS: Only open for matching DCS forward\n" +
+                        "• NDCS: Only open for matching DCS inverted\n\n" +
+                        "Typically matches TX Type. Use Wave to monitor all activity on frequency.");
+                    
+                    addIcon("interphone_channel_rxsubcode", "RX Tone/Code",
+                        "Receive CTCSS tone or DCS code (analog only).\n\n" +
+                        "• CTC: 50 tones from 62.5 Hz to 254.1 Hz\n" +
+                        "• DCS: 83 codes (N=normal, l=inverted)\n\n" +
+                        "Typically matches TX SubCode. Radio will only open squelch for transmissions with this tone/code.\n\n" +
+                        "Only used when RX Type is CTC, PDCS, or NDCS.");
+                    
+                    // SPECIAL LAYOUT: Group List (vertical layout with GridView)
+                    addIconToVerticalLayout("interphone_channel_group_list", "Group List",
+                        "Channel Group List for digital channels.\n\n" +
+                        "This grid shows all 32 possible DMR groups (0-31) that can be assigned to this channel.\n\n" +
+                        "Groups allow organizing channels into categories:\n" +
+                        "• By region (Group 0: Local repeaters)\n" +
+                        "• By network (Group 1: Brandmeister)\n" +
+                        "• By purpose (Group 2: Emergency)\n\n" +
+                        "The radio supports 32 groups total across all zones.\n\n" +
+                        "Note: This is different from Talk Groups (TGs). Group List is for organizing channels, while TG List is for monitoring multiple talk groups on a single channel.\n\n" +
+                        "Digital/DMR channels only.");
+                }
+            };
+            
+            // Run on UI thread
+            activity.runOnUiThread(addHelpIcon);
+            
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error in addChannelPropertyHelpIcons: " + t.getMessage());
+        }
+    }
+    
+    /**
      * Hook InterPhoneChannelActivity to add zone selector
      */
     private void hookChannelEditActivity(XC_LoadPackage.LoadPackageParam lpparam) {
@@ -13376,8 +13768,37 @@ public class MainHook implements IXposedHookLoadPackage {
                             );
                             valueText.setLayoutParams(valueParams);
                             
+                            // Create help icon for zone
+                            ImageView zoneHelpIcon = new ImageView(context);
+                            zoneHelpIcon.setImageResource(android.R.drawable.ic_menu_info_details);
+                            LinearLayout.LayoutParams zoneIconParams = new LinearLayout.LayoutParams(
+                                (int) (20 * context.getResources().getDisplayMetrics().density),
+                                (int) (20 * context.getResources().getDisplayMetrics().density)
+                            );
+                            zoneIconParams.setMargins(
+                                (int) (4 * context.getResources().getDisplayMetrics().density), 0, 0, 0
+                            );
+                            zoneHelpIcon.setLayoutParams(zoneIconParams);
+                            zoneHelpIcon.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    new AlertDialog.Builder(activity)
+                                        .setTitle("Zone")
+                                        .setMessage("Organize channels into zones (groups) for easier navigation.\n\n" +
+                                            "Zones let you group related channels together:\n" +
+                                            "• By region (\"Local\", \"Travel\")\n" +
+                                            "• By purpose (\"Repeaters\", \"Simplex\", \"Emergency\")\n" +
+                                            "• By network (\"Brandmeister\", \"DMR-MARC\")\n\n" +
+                                            "Create and manage zones in the Zones menu.\n\n" +
+                                            "Channels can be in multiple zones.")
+                                        .setPositiveButton(android.R.string.ok, null)
+                                        .show();
+                                }
+                            });
+                            
                             // Assemble the row
                             zoneRow.addView(titleText);
+                            zoneRow.addView(zoneHelpIcon);
                             zoneRow.addView(separator);
                             zoneRow.addView(valueText);
                             
@@ -13430,6 +13851,39 @@ public class MainHook implements IXposedHookLoadPackage {
                                     tgTitleText.setGravity(android.view.Gravity.CENTER_VERTICAL);
                                     tgTitleText.setLayoutParams(titleParams);
 
+                                    // Create help icon for TG List
+                                    ImageView tgHelpIcon = new ImageView(context);
+                                    tgHelpIcon.setImageResource(android.R.drawable.ic_menu_info_details);
+                                    LinearLayout.LayoutParams tgIconParams = new LinearLayout.LayoutParams(
+                                        (int) (20 * context.getResources().getDisplayMetrics().density),
+                                        (int) (20 * context.getResources().getDisplayMetrics().density)
+                                    );
+                                    tgIconParams.setMargins(
+                                        (int) (4 * context.getResources().getDisplayMetrics().density), 0, 0, 0
+                                    );
+                                    tgHelpIcon.setLayoutParams(tgIconParams);
+                                    tgHelpIcon.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            new AlertDialog.Builder(activity)
+                                                .setTitle("Talk Group List")
+                                                .setMessage("Talk Group (TG) List for digital channels.\n\n" +
+                                                    "A TG List assigns up to 32 talk groups to this channel for scanning/monitoring.\n\n" +
+                                                    "When selected:\n" +
+                                                    "• Radio can receive from all TGs in the list\n" +
+                                                    "• Radio displays which TG is active\n" +
+                                                    "• Allows scanning multiple TGs on one frequency\n\n" +
+                                                    "Common uses:\n" +
+                                                    "• Monitor local, regional, and national TGs\n" +
+                                                    "• Scan multiple topic/activity TGs\n" +
+                                                    "• Group related TGs by theme\n\n" +
+                                                    "Create and manage TG Lists in the TG List menu.\n\n" +
+                                                    "Note: Digital/DMR channels only.")
+                                                .setPositiveButton(android.R.string.ok, null)
+                                                .show();
+                                        }
+                                    });
+
                                     View tgSeparator = new View(context);
                                     tgSeparator.setBackgroundResource(separatorResId);
                                     tgSeparator.setLayoutParams(new LinearLayout.LayoutParams(7, 13));
@@ -13450,6 +13904,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     tgValueText.setLayoutParams(valueParams);
 
                                     tgRow.addView(tgTitleText);
+                                    tgRow.addView(tgHelpIcon);
                                     tgRow.addView(tgSeparator);
                                     tgRow.addView(tgValueText);
 
@@ -13483,52 +13938,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                 XposedBridge.log(TAG + ": Error adding TG List row: " + tge.getMessage());
                             }
                             
-                            // ===== ADD RELAY HELP ICON =====
-                            try {
-                                // Find the relay disconnect row by ID
-                                int relayRowId = context.getResources().getIdentifier("interphone_channel_relay_disconnecte", "id", context.getPackageName());
-                                LinearLayout relayRow = (LinearLayout) activity.findViewById(relayRowId);
-                                
-                                if (relayRow != null) {
-                                    // Find the title TextView (first child)
-                                    TextView relayLabel = (TextView) relayRow.getChildAt(0);
-                                    
-                                    if (relayLabel != null) {
-                                        // Create a separate ImageView for the help icon
-                                        android.widget.ImageView helpIcon = new android.widget.ImageView(context);
-                                        helpIcon.setImageResource(android.R.drawable.ic_menu_info_details);
-                                        
-                                        // Size and position the icon
-                                        int iconSize = (int) (20 * context.getResources().getDisplayMetrics().density); // 20dp
-                                        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(iconSize, iconSize);
-                                        iconParams.gravity = android.view.Gravity.CENTER_VERTICAL;
-                                        iconParams.leftMargin = (int) (4 * context.getResources().getDisplayMetrics().density); // 4dp margin
-                                        helpIcon.setLayoutParams(iconParams);
-                                        
-                                        // Make icon clickable
-                                        helpIcon.setClickable(true);
-                                        helpIcon.setOnClickListener(new View.OnClickListener() {
-                                            @Override
-                                            public void onClick(View v) {
-                                                new android.app.AlertDialog.Builder(context)
-                                                    .setTitle("Relay Disconnection Setting")
-                                                    .setMessage("This setting controls repeater connection behavior:\n\n• Disable (Recommended): Normal repeater operation. The radio stays connected to the repeater and can transmit properly.\n\n• Enable: Disconnects from repeater network. This mode waits for repeater confirmation and may prevent transmitting. Only use if specifically required by your network.")
-                                                    .setPositiveButton(android.R.string.ok, null)
-                                                    .show();
-                                            }
-                                        });
-                                        
-                                        // Insert the icon after the label (at index 1, before the separator)
-                                        relayRow.addView(helpIcon, 1);
-                                        
-                                        XposedBridge.log(TAG + ": Added relay help icon and click handler");
-                                    }
-                                } else {
-                                    XposedBridge.log(TAG + ": Relay row not found, cannot add help icon");
-                                }
-                            } catch (Throwable relayHelpErr) {
-                                XposedBridge.log(TAG + ": Error adding relay help icon: " + relayHelpErr.getMessage());
-                            }
+                            // ===== ADD HELP ICONS TO ALL CHANNEL PROPERTIES =====
+                            addChannelPropertyHelpIcons(activity, context);
                             
                         } catch (Throwable t) {
                             XposedBridge.log(TAG + ": Error in channel edit hook: " + t.getMessage());
