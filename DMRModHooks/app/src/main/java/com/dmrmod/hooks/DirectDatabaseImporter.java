@@ -68,7 +68,7 @@ public class DirectDatabaseImporter {
     // Set to true to enable compound key (channelNum|freq|name) zone matching
     // Set to false to revert to simple name-only matching
     // This fixes zone scrambling when importing channels with duplicate channel_numbers
-    private static final boolean USE_COMPOUND_KEY_ZONES = false;
+    private static final boolean USE_COMPOUND_KEY_ZONES = true;
     // ==============================================
     
     /**
