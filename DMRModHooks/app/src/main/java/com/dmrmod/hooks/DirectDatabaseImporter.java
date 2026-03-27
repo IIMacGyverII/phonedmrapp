@@ -268,17 +268,17 @@ public class DirectDatabaseImporter {
                         return;
                     }
                     
-                    // Step 1: Import TG lists BEFORE channels so name lookups succeed
+                    // Step 1: Import contacts FIRST so channels can resolve contact names
+                    File contactsFile = new File(backupFolder, "Contacts.csv");
+                    boolean contactsOk = importContacts(context, contactsFile);
+
+                    // Step 2: Import TG lists BEFORE channels so name lookups succeed
                     File tgListsFile = new File(backupFolder, "TG_Lists.csv");
                     boolean tgListsOk = importTGLists(context, tgListsFile);
 
-                    // Step 2: Import channels (TG list assignment happens inside importChannels)
+                    // Step 3: Import channels (contact & TG list assignment happens inside importChannels)
                     File channelsFile = new File(backupFolder, "Channels.csv");
                     boolean channelsOk = importChannels(context, channelsFile);
-
-                    // Step 3: Import contacts
-                    File contactsFile = new File(backupFolder, "Contacts.csv");
-                    boolean contactsOk = importContacts(context, contactsFile);
 
                     // Step 4: Import zones (optional - not all backups have zones)
                     File zonesFile = new File(backupFolder, "Zones.csv");
