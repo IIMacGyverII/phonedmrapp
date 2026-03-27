@@ -13941,6 +13941,67 @@ public class MainHook implements IXposedHookLoadPackage {
                             // ===== ADD HELP ICONS TO ALL CHANNEL PROPERTIES =====
                             addChannelPropertyHelpIcons(activity, context);
                             
+                            // ===== FIX GROUP NUMBER DISPLAY =====
+                            // The "Group Number" field shows channel_txContact (database row ID)
+                            // but should show the actual TalkGroup number (contact_number)
+                            try {
+                                final int groupNumberEditId = context.getResources().getIdentifier(
+                                    "interphone_group_number_edit", "id", context.getPackageName());
+                                if (groupNumberEditId != 0) {
+                                    final android.widget.EditText groupNumberEdit = 
+                                        (android.widget.EditText) activity.findViewById(groupNumberEditId);
+                                    
+                                    if (groupNumberEdit != null && channelData != null) {
+                                        // Get the contact ID (database row ID) from channel
+                                        int contactId = XposedHelpers.getIntField(channelData, "txContact");
+                                        
+                                        // Look up the actual TalkGroup number from contacts database
+                                        if (contactId > 0) {
+                                            android.database.sqlite.SQLiteDatabase contactDb = null;
+                                            android.database.Cursor cursor = null;
+                                            try {
+                                                java.io.File dbFile = context.getDatabasePath("contact_database.db");
+                                                contactDb = android.database.sqlite.SQLiteDatabase.openDatabase(
+                                                    dbFile.getAbsolutePath(), null, 
+                                                    android.database.sqlite.SQLiteDatabase.OPEN_READONLY);
+                                                
+                                                cursor = contactDb.query("contact_database", 
+                                                    new String[]{"contact_number", "contact_name"},
+                                                    "_id=?", 
+                                                    new String[]{String.valueOf(contactId)},
+                                                    null, null, null);
+                                                
+                                                if (cursor != null && cursor.moveToFirst()) {
+                                                    int actualTG = cursor.getInt(0);
+                                                    String contactName = cursor.getString(1);
+                                                    
+                                                    // Update the EditText with the actual TalkGroup number
+                                                    final int finalActualTG = actualTG;
+                                                    activity.runOnUiThread(new Runnable() {
+                                                        @Override
+                                                        public void run() {
+                                                            groupNumberEdit.setText(String.valueOf(finalActualTG));
+                                                        }
+                                                    });
+                                                    
+                                                    XposedBridge.log(TAG + ": Fixed group number display: contact ID " + 
+                                                        contactId + " ('" + contactName + "') → TG " + actualTG);
+                                                } else {
+                                                    XposedBridge.log(TAG + ": Contact ID " + contactId + " not found in database");
+                                                }
+                                            } catch (Exception e) {
+                                                XposedBridge.log(TAG + ": Error looking up contact: " + e.getMessage());
+                                            } finally {
+                                                if (cursor != null) cursor.close();
+                                                if (contactDb != null) contactDb.close();
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (Throwable tgfix) {
+                                XposedBridge.log(TAG + ": Error fixing group number display: " + tgfix.getMessage());
+                            }
+                            
                         } catch (Throwable t) {
                             XposedBridge.log(TAG + ": Error in channel edit hook: " + t.getMessage());
                             XposedBridge.log(t);
@@ -13954,6 +14015,74 @@ public class MainHook implements IXposedHookLoadPackage {
                 channelActivityClass,
                 "saveChannelData",
                 new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam saveParam) throws Throwable {
+                        try {
+                            Activity activity = (Activity) saveParam.thisObject;
+                            Context context = activity;
+                            
+                            // ===== FIX GROUP NUMBER SAVE =====
+                            // The user edited the TalkGroup number directly, but we need to save the contact ID
+                            // Convert TalkGroup number → Contact ID before saving
+                            try {
+                                final int groupNumberEditId = context.getResources().getIdentifier(
+                                    "interphone_group_number_edit", "id", context.getPackageName());
+                                if (groupNumberEditId != 0) {
+                                    final android.widget.EditText groupNumberEdit = 
+                                        (android.widget.EditText) activity.findViewById(groupNumberEditId);
+                                    
+                                    if (groupNumberEdit != null) {
+                                        String tgNumberStr = groupNumberEdit.getText().toString().trim();
+                                        if (!tgNumberStr.isEmpty()) {
+                                            int tgNumber = Integer.parseInt(tgNumberStr);
+                                            
+                                            // Look up the contact ID from the TalkGroup number
+                                            android.database.sqlite.SQLiteDatabase contactDb = null;
+                                            android.database.Cursor cursor = null;
+                                            try {
+                                                java.io.File dbFile = context.getDatabasePath("contact_database.db");
+                                                contactDb = android.database.sqlite.SQLiteDatabase.openDatabase(
+                                                    dbFile.getAbsolutePath(), null, 
+                                                    android.database.sqlite.SQLiteDatabase.OPEN_READONLY);
+                                                
+                                                cursor = contactDb.query("contact_database", 
+                                                    new String[]{"_id", "contact_name"},
+                                                    "contact_number=?", 
+                                                    new String[]{String.valueOf(tgNumber)},
+                                                    null, null, null);
+                                                
+                                                if (cursor != null && cursor.moveToFirst()) {
+                                                    int contactId = cursor.getInt(0);
+                                                    String contactName = cursor.getString(1);
+                                                    
+                                                    // Update the channelData with the contact ID
+                                                    Object channelData = XposedHelpers.getObjectField(saveParam.thisObject, "channelData");
+                                                    if (channelData != null) {
+                                                        XposedHelpers.setIntField(channelData, "txContact", contactId);
+                                                        XposedBridge.log(TAG + ": Converted TG " + tgNumber + 
+                                                            " ('" + contactName + "') → contact ID " + contactId + " before save");
+                                                    }
+                                                } else {
+                                                    XposedBridge.log(TAG + ": Warning: TG " + tgNumber + 
+                                                        " not found in contacts database - saving as-is");
+                                                }
+                                            } catch (Exception e) {
+                                                XposedBridge.log(TAG + ": Error converting TG to contact ID: " + e.getMessage());
+                                            } finally {
+                                                if (cursor != null) cursor.close();
+                                                if (contactDb != null) contactDb.close();
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (Throwable tgconv) {
+                                XposedBridge.log(TAG + ": Error converting group number before save: " + tgconv.getMessage());
+                            }
+                        } catch (Throwable t) {
+                            XposedBridge.log(TAG + ": Error in saveChannelData beforeHook: " + t.getMessage());
+                        }
+                    }
+                    
                     @Override
                     protected void afterHookedMethod(MethodHookParam saveParam) throws Throwable {
                         try {
