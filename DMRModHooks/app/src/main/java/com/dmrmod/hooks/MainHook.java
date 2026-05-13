@@ -1011,7 +1011,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             );
             
-            XposedBridge.log(TAG + ": Successfully hooked PrizeInterPhoneApp.onCreate()");
+            XposedBridge.log(TAG + ": Successfully hooked PrizeInterPhoneApp.attachBaseContext() and onCreate()");
             
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": Error hooking PrizeInterPhoneApp: " + t.getMessage());
@@ -14027,20 +14027,50 @@ public class MainHook implements IXposedHookLoadPackage {
                             Activity activity = (Activity) saveParam.thisObject;
                             Context context = activity;
                             
+                            XposedBridge.log(TAG + ": === saveChannelData beforeHook called ===");
+                            
+                            // Get channelData to check channel type
+                            Object channelData = XposedHelpers.getObjectField(saveParam.thisObject, "channelData");
+                            if (channelData == null) {
+                                XposedBridge.log(TAG + ": channelData is null, skipping TG conversion");
+                                return;
+                            }
+                            
+                            // Get channel type (0 = Analog, 1 = Digital/DMR)
+                            int channelType = XposedHelpers.getIntField(channelData, "type");
+                            int contactType = XposedHelpers.getIntField(channelData, "contactType");
+                            int originalTxContact = XposedHelpers.getIntField(channelData, "txContact");
+                            
+                            XposedBridge.log(TAG + ": Channel type=" + channelType + 
+                                " (0=Analog, 1=Digital), contactType=" + contactType + 
+                                " (0=Group, 1=Private), original txContact=" + originalTxContact);
+                            
+                            // Only process Digital/DMR Group calls
+                            if (channelType != 1 || contactType != 0) {
+                                XposedBridge.log(TAG + ": Not a DMR group call channel, skipping TG conversion");
+                                return;
+                            }
+                            
                             // ===== FIX GROUP NUMBER SAVE =====
                             // The user edited the TalkGroup number directly, but we need to save the contact ID
                             // Convert TalkGroup number → Contact ID before saving
                             try {
                                 final int groupNumberEditId = context.getResources().getIdentifier(
                                     "interphone_channel_call_name_set", "id", context.getPackageName());
+                                XposedBridge.log(TAG + ": groupNumberEditId=" + groupNumberEditId);
+                                
                                 if (groupNumberEditId != 0) {
                                     final android.widget.EditText groupNumberEdit = 
                                         (android.widget.EditText) activity.findViewById(groupNumberEditId);
+                                    XposedBridge.log(TAG + ": groupNumberEdit found=" + (groupNumberEdit != null));
                                     
                                     if (groupNumberEdit != null) {
                                         String tgNumberStr = groupNumberEdit.getText().toString().trim();
+                                        XposedBridge.log(TAG + ": EditText value='" + tgNumberStr + "'");
+                                        
                                         if (!tgNumberStr.isEmpty()) {
                                             int tgNumber = Integer.parseInt(tgNumberStr);
+                                            XposedBridge.log(TAG + ": Parsed TG number=" + tgNumber);
                                             
                                             // Look up the contact ID from the TalkGroup number
                                             android.database.sqlite.SQLiteDatabase contactDb = null;
@@ -14050,6 +14080,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                                 contactDb = android.database.sqlite.SQLiteDatabase.openDatabase(
                                                     dbFile.getAbsolutePath(), null, 
                                                     android.database.sqlite.SQLiteDatabase.OPEN_READONLY);
+                                                XposedBridge.log(TAG + ": Opened contact database");
                                                 
                                                 cursor = contactDb.query("contact_database", 
                                                     new String[]{"_id", "contact_name"},
@@ -14061,31 +14092,42 @@ public class MainHook implements IXposedHookLoadPackage {
                                                     int contactId = cursor.getInt(0);
                                                     String contactName = cursor.getString(1);
                                                     
-                                                    // Update the channelData with the contact ID
-                                                    Object channelData = XposedHelpers.getObjectField(saveParam.thisObject, "channelData");
-                                                    if (channelData != null) {
-                                                        XposedHelpers.setIntField(channelData, "txContact", contactId);
-                                                        XposedBridge.log(TAG + ": Converted TG " + tgNumber + 
-                                                            " ('" + contactName + "') → contact ID " + contactId + " before save");
-                                                    }
+                                                    XposedBridge.log(TAG + ": SAVE CONVERSION: TG " + tgNumber + 
+                                                        " ('" + contactName + "') → contact ID " + contactId);
+                                                    XposedBridge.log(TAG + ": Setting channelData.txContact from " + 
+                                                        originalTxContact + " to " + contactId);
+                                                    
+                                                    XposedHelpers.setIntField(channelData, "txContact", contactId);
+                                                    
+                                                    // Verify it was set correctly
+                                                    int verifyTxContact = XposedHelpers.getIntField(channelData, "txContact");
+                                                    XposedBridge.log(TAG + ": Verified channelData.txContact=" + verifyTxContact);
                                                 } else {
-                                                    XposedBridge.log(TAG + ": Warning: TG " + tgNumber + 
-                                                        " not found in contacts database - saving as-is");
+                                                    XposedBridge.log(TAG + ": WARNING: TG " + tgNumber + 
+                                                        " not found in contacts database - will save original ID " + originalTxContact);
                                                 }
                                             } catch (Exception e) {
-                                                XposedBridge.log(TAG + ": Error converting TG to contact ID: " + e.getMessage());
+                                                XposedBridge.log(TAG + ": ERROR converting TG to contact ID: " + e.getMessage());
+                                                XposedBridge.log(e);
                                             } finally {
                                                 if (cursor != null) cursor.close();
                                                 if (contactDb != null) contactDb.close();
+                                                XposedBridge.log(TAG + ": Closed contact database");
                                             }
+                                        } else {
+                                            XposedBridge.log(TAG + ": EditText is empty, keeping original txContact=" + originalTxContact);
                                         }
                                     }
                                 }
                             } catch (Throwable tgconv) {
-                                XposedBridge.log(TAG + ": Error converting group number before save: " + tgconv.getMessage());
+                                XposedBridge.log(TAG + ": ERROR in TG conversion: " + tgconv.getMessage());
+                                XposedBridge.log(tgconv);
                             }
+                            
+                            XposedBridge.log(TAG + ": === saveChannelData beforeHook complete ===");
                         } catch (Throwable t) {
-                            XposedBridge.log(TAG + ": Error in saveChannelData beforeHook: " + t.getMessage());
+                            XposedBridge.log(TAG + ": CRITICAL ERROR in saveChannelData beforeHook: " + t.getMessage());
+                            XposedBridge.log(t);
                         }
                     }
                     

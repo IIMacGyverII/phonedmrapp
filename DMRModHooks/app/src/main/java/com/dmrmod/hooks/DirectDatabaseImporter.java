@@ -268,6 +268,49 @@ public class DirectDatabaseImporter {
                         return;
                     }
                     
+                    // **CRITICAL**: Ensure app data directory structure exists BEFORE import
+                    // After "Clear Storage", directory structure may be incomplete
+                    try {
+                        java.io.File dataDir = context.getApplicationContext().getDataDir();
+                        java.io.File databasesDir = new java.io.File(dataDir, "databases");
+                        java.io.File sharedPrefsDir = new java.io.File(dataDir, "shared_prefs");
+                        
+                        Log.i(TAG, "Verifying data directory structure before import");
+                        Log.i(TAG, "  Data dir: " + dataDir.getAbsolutePath() + " (exists: " + dataDir.exists() + ")");
+                        Log.i(TAG, "  Databases dir: " + databasesDir.getAbsolutePath() + " (exists: " + databasesDir.exists() + ")");
+                        Log.i(TAG, "  SharedPrefs dir: " + sharedPrefsDir.getAbsolutePath() + " (exists: " + sharedPrefsDir.exists() + ")");
+                        
+                        // Ensure directories exist
+                        if (!databasesDir.exists()) {
+                            Log.w(TAG, "⚠ databases directory missing before import! Creating...");
+                            if (databasesDir.mkdirs()) {
+                                Log.i(TAG, "✓ databases directory created");
+                            } else {
+                                Log.e(TAG, "❌ FAILED to create databases directory - import may fail");
+                            }
+                        }
+                        
+                        if (!sharedPrefsDir.exists()) {
+                            Log.w(TAG, "⚠ shared_prefs directory missing before import! Creating...");
+                            if (sharedPrefsDir.mkdirs()) {
+                                Log.i(TAG, "✓ shared_prefs directory created");
+                            } else {
+                                Log.e(TAG, "❌ FAILED to create shared_prefs directory");
+                            }
+                        }
+                        
+                        // Force create a dummy preference to initialize shared_prefs properly
+                        try {
+                            android.content.SharedPreferences prefs = context.getSharedPreferences("dmr_import_test", Context.MODE_PRIVATE);
+                            prefs.edit().putBoolean("initialized", true).apply();
+                            Log.i(TAG, "✓ SharedPreferences system initialized");
+                        } catch (Exception prefEx) {
+                            Log.e(TAG, "⚠ Failed to initialize SharedPreferences: " + prefEx.getMessage());
+                        }                        
+                    } catch (Exception dirCheck) {
+                        Log.e(TAG, "Error checking directory structure: " + dirCheck.getMessage());
+                    }
+                    
                     // Step 1: Import contacts FIRST so channels can resolve contact names
                     File contactsFile = new File(backupFolder, "Contacts.csv");
                     boolean contactsOk = importContacts(context, contactsFile);
@@ -289,13 +332,13 @@ public class DirectDatabaseImporter {
                     final boolean shouldRefresh;
                     if (channelsOk && contactsOk && zonesOk) {
                         message = "✓ Import successful!\nChannels, contacts, zones" +
-                            (tgListsOk ? ", TG lists" : "") + " imported.";
+                            (tgListsOk ? ", TG lists" : "") + " imported.\n\n⚠️ RESTART APP for changes to take effect";
                         shouldRefresh = true;
                     } else if (channelsOk && contactsOk) {
-                        message = "✓ Import successful!\nChannels and contacts imported (no zones).";
+                        message = "✓ Import successful!\nChannels and contacts imported (no zones).\n\n⚠️ RESTART APP for changes to take effect";
                         shouldRefresh = true;
                     } else if (channelsOk) {
-                        message = "⚠ Import partially successful\nChannels: OK, Contacts: Failed, Zones: " + (zonesOk ? "OK" : "Failed");
+                        message = "⚠ Import partially successful\nChannels: OK, Contacts: Failed, Zones: " + (zonesOk ? "OK" : "Failed") + "\n\n⚠️ RESTART APP for changes to take effect";
                         shouldRefresh = true;
                     } else if (contactsOk) {
                         message = "⚠ Import partially successful\nChannels: Failed, Contacts: OK, Zones: " + (zonesOk ? "OK" : "Failed");
@@ -305,13 +348,42 @@ public class DirectDatabaseImporter {
                         shouldRefresh = false;
                     }
                     
+                    // **CRITICAL FIX**: Ensure directory structure is intact after import
+                    // Import operations can sometimes corrupt the app's data directory
+                    try {
+                        java.io.File dataDir = context.getApplicationContext().getDataDir();
+                        java.io.File sharedPrefsDir = new java.io.File(dataDir, "shared_prefs");
+                        java.io.File databasesDir = new java.io.File(dataDir, "databases");
+                        
+                        if (!sharedPrefsDir.exists()) {
+                            Log.w(TAG, "⚠️ shared_prefs missing after import! Recreating...");
+                            if (sharedPrefsDir.mkdirs()) {
+                                Log.i(TAG, "✓ shared_prefs directory recreated");
+                            } else {
+                                Log.e(TAG, "❌ Failed to recreate shared_prefs directory");
+                            }
+                        }
+                        
+                        if (!databasesDir.exists()) {
+                            Log.w(TAG, "⚠️ databases directory missing after import! Recreating...");
+                            if (databasesDir.mkdirs()) {
+                                Log.i(TAG, "✓ databases directory recreated");
+                            } else {
+                                Log.e(TAG, "❌ Failed to recreate databases directory");
+                            }
+                        }
+                    } catch (Exception dirFix) {
+                        Log.e(TAG, "Error fixing directories after import: " + dirFix.getMessage());
+                    }
+                    
                     ((android.app.Activity) context).runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                             android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_LONG).show();
                             
                             // Auto-refresh channel list if channels were imported
-                            if (shouldRefresh) {
+                            // DISABLED: This may corrupt app state - user should manually restart instead
+                            if (false && shouldRefresh) {
                                 refreshChannelList(context);
                             }
                         }
@@ -596,7 +668,7 @@ public class DirectDatabaseImporter {
                 values.put("channel_outBoundSlot", 0);    // Outbound timeslot
                 values.put("channel_mode", 0);            // Channel mode
                 values.put("channel_contactType", 0);     // Contact type
-                values.put("channel_relay", 1);           // Relay setting (SAME for both)
+                values.put("channel_relay", 2);           // Relay: 2=normal (will be overwritten if CSV has value)
                 values.put("channel_sq", squelch);        // Squelch level (from CSV)
                 values.put("channel_rxType", rxType);     // RX tone type (0=None, 1=CTCSS, 2=FDCS, 3=BDCS)
                 values.put("channel_rxSubCode", rxSubCode); // RX tone code (index into tone array)
@@ -648,12 +720,18 @@ public class DirectDatabaseImporter {
                     }
                     try {
                         relay = Integer.parseInt(fields[offset + 23 + flagOffset].trim());
-                        // Accept relay values as-is from CSV (0, 1, or 2)
-                        // Do not force to 1 - preserve the actual configured value
-                        Log.d(TAG, "CH" + channelNumber + " relay=" + relay + " (preserved from CSV)");
+                        // CONVERT OpenGD77 relay format to Android format:
+                        // OpenGD77: 0 = relay disconnect disabled (normal mode)
+                        // Android: 0 = APRS/direct (firmware rejects), 1 = relay disconnect, 2 = normal
+                        if (relay == 0) {
+                            relay = 2;  // Convert "disabled" (0) to normal mode (2)
+                            Log.d(TAG, "CH" + channelNumber + " relay=0 (relay disconnect disabled) → converted to relay=2 (normal)");
+                        } else {
+                            Log.d(TAG, "CH" + channelNumber + " relay=" + relay + " (preserved from CSV)");
+                        }
                     } catch (Exception e) {
                         Log.w(TAG, "CH" + channelNumber + " relay parse failed: " + e.getMessage());
-                        relay = 1;
+                        relay = 2;  // Default to normal mode
                     }
                     try {
                         interrupt = Integer.parseInt(fields[offset + 24 + flagOffset].trim());
@@ -724,17 +802,17 @@ public class DirectDatabaseImporter {
                 } else {
                     // Legacy CSV format: use defaults based on channel type
                     if (isDMR) {
-                        encryptSw = 1;      // Digital: enabled by default
+                        encryptSw = 1;
                         encryptKey = "";
-                        relay = 1;          // MUST be 1
-                        interrupt = 2;      // Digital: MUST be 2
-                        active = 1;         // Digital: active by default (will validate below)
+                        relay = 2;  // Normal mode (relay disconnect disabled)
+                        interrupt = 2;
+                        active = 1;
                     } else {
-                        encryptSw = 2;      // Analog: disabled by default
+                        encryptSw = 2;
                         encryptKey = "";
-                        relay = 1;          // MUST be 1
-                        interrupt = 0;      // Analog: MUST be 0
-                        active = 0;         // Analog: inactive by default
+                        relay = 2;  // Normal mode (relay disconnect disabled)
+                        interrupt = 0;
+                        active = 0;
                     }
                     // Protection: Only allow ONE channel to be active (first one wins)
                     if (active == 1) {
@@ -876,6 +954,42 @@ public class DirectDatabaseImporter {
                 }
             }
             
+            // CRITICAL: Ensure at least ONE channel is marked as active
+            // If no channel was imported with active=1, the app will fail to load!
+            if (!hasSeenActiveChannel && importCount > 0) {
+                Log.w(TAG, "⚠ WARNING: No channel was marked as active! Setting first channel (ID=1) to active");
+                try {
+                    android.content.ContentValues activeUpdate = new android.content.ContentValues();
+                    activeUpdate.put("channel_active", 1);
+                    int updated = db.update("database_channel_area_default_uhf", activeUpdate, "_id=?", new String[]{"1"});
+                    if (updated > 0) {
+                        Log.i(TAG, "✓ Set first channel (_id=1) to active");
+                    } else {
+                        Log.e(TAG, "❌ Failed to set any channel to active - app may fail to load!");
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "❌ Error setting first channel to active: " + e.getMessage());
+                }
+            }
+            
+            // CRITICAL: Ensure at least ONE channel is marked as active
+            // If no channel was imported with active=1, the app will fail to load!
+            if (!hasSeenActiveChannel && importCount > 0) {
+                Log.w(TAG, "⚠ WARNING: No channel was marked as active! Setting first channel (ID=1) to active");
+                try {
+                    android.content.ContentValues activeUpdate = new android.content.ContentValues();
+                    activeUpdate.put("channel_active", 1);
+                    int updated = db.update("database_channel_area_default_uhf", activeUpdate, "_id=?", new String[]{"1"});
+                    if (updated > 0) {
+                        Log.i(TAG, "✓ Set first channel (_id=1) to active");
+                    } else {
+                        Log.e(TAG, "❌ Failed to set any channel to active - app may fail to load!");
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "❌ Error setting first channel to active: " + e.getMessage());
+                }
+            }
+            
             // Mark transaction as successful
             db.setTransactionSuccessful();
             if (skippedCount > 0) {
@@ -942,6 +1056,15 @@ public class DirectDatabaseImporter {
                 // Clear existing contacts to prevent duplicates on reimport
                 int deletedCount = db.delete("contact_database", null, null);
                 Log.i(TAG, "Cleared " + deletedCount + " existing contacts before import");
+                
+                // CRITICAL: Reset autoincrement counter so contact IDs start from 1
+                // This ensures channels that reference contact_id=1 as default will work
+                try {
+                    db.execSQL("DELETE FROM sqlite_sequence WHERE name='contact_database'");
+                    Log.i(TAG, "✓ Reset contact autoincrement counter - IDs will start from 1");
+                } catch (Exception e) {
+                    Log.i(TAG, "No autoincrement to reset for contacts (this is normal)");
+                }
                 
                 // Import all contacts from CSV
                 int contactCount = 0;
