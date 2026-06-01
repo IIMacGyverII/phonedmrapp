@@ -98,3 +98,12 @@ signed.apk.idsig
 jadx/
 jadx-*.zip
 decompiled-java/
+
+# AI session logs
+.ai-logs/
+
+# AI documentation / session summaries
+.docs/
+
+# GitHub Copilot instructions (contains private project details)
+.github/copilot-instructions.md
