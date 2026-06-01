@@ -2,8 +2,9 @@
 
 **Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS + VFO Mode + SSTV + NOAA APT!
 
-> **🚀 Current Stable Release: v3.3.7** (March 19, 2026) - GPS Messaging + Hyperlinked Coordinates  
-> **🗂️ Previous Release: v3.3.6** (March 19, 2026) - TG List Architecture + Group Grid Refresh  
+> **🚀 Current Stable Release: v3.3.8** (June 1, 2026) - Contact ID Fix + OpenGD77 CPS Fork v1.2.0  
+> **🗂️ Previous Release: v3.3.7** (March 19, 2026) - GPS Messaging + Hyperlinked Coordinates  
+> **🛰️ Prior Release: v3.3.6** (March 19, 2026) - TG List Architecture + Group Grid Refresh  
 > **🛰️ Prior Release: v3.3.5** (March 19, 2026) - NOAA APT Software Squelch Slider  
 > **🛰️ Prior Release: v3.3.4** (March 19, 2026) - NOAA APT Live Monitoring  
 > **📺 Prior Release: v3.3.3** (March 18, 2026) - SSTV Settings + APRS/SSTV Dialog Refresh Fix  
@@ -20,7 +21,30 @@
 
 <video src="https://github.com/user-attachments/assets/d6305a49-c8ed-47dc-a9d8-7e731aa02811" controls title="DMRModHooks v1.1 Demo" width="800"></video>
 
-## 📍 What's New in v3.3.7 (March 19, 2026)
+## � What's New in v3.3.8 (June 1, 2026)
+
+### Contact ID Bug Fix — 4 Files (Pitfall 12)
+`channel_txContact` stores the 24-bit DMR ID (`contact_number`), not the contact table `_id`. All four export/import files were keying contact maps by `_id`, causing contacts to resolve to the wrong person or default to "None"/contact 1.
+
+- **`CSVExporter.java`, `DirectDatabaseExporter.java`** — contact maps now keyed by `contact_number`; col 11 (DMR ID) now exports the actual DMR ID instead of hardcoded "None"
+- **`DirectDatabaseImporter.java`, `CSVImporter.java`** — same fix on import side; primary lookup reads DMR ID from CSV col 11 directly; fallback to name lookup for OpenGD77 CSVs where col 11 = "None"; default contact changed from `1` → `0` so failed lookups don't silently assign contact 1
+
+### Contact Type Auto-Resolution (`CSVImporter`)
+New `buildContactTypeMap()` queries `contact_database.contact_type` and maps to channel constants (Group→1, Private→0, AllCall→2). Channels now get the correct `contactType` from the assigned contact instead of always defaulting to 0 (Private).
+
+### Relay / Band Fix (`CSVImporter`)
+- `channel_relay`: was `0` (invalid — firmware rejects), now `2` (normal mode)
+- `channel_band`: was hardcoded `0` (UHF), now derived from RX frequency (`1`=VHF if 136–174 MHz, else `0`=UHF)
+
+### OpenGD77 CPS Fork v1.2.0
+- Fixed Latitude, Longitude, and Use Location showing as 0 after Android CSV import — `ImportFromCsvFile` now reads all 37 columns (cols 18–36 were previously skipped)
+- Fixed startup crash (AccessViolationException) from lat/lon fields on `ChannelOne` struct
+- Fixed Longitude label and Use Location checkbox clipped in channel editor
+- Fork identity: About dialog, window title, device tree root renamed for PriInterPhone
+
+---
+
+## �📍 What's New in v3.3.7 (March 19, 2026)
 
 ### GPS Messaging over DMR SMS
 
