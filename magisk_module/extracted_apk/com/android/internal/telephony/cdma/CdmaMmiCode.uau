@@ -1,3 +1,0 @@
-signature,file,startline,startcol,endline,endcol,properties
-Lcom/android/internal/telephony/cdma/CdmaMmiCode;->mSc:Ljava/lang/String;,frameworks/opt/telephony/src/java/com/android/internal/telephony/cdma/CdmaMmiCode.java,77,5,77,88,maxTargetSdk=30&trackingBug=170729553L
-Lcom/android/internal/telephony/cdma/CdmaMmiCode;->makeEmptyNull(Ljava/lang/String;)Ljava/lang/String;,frameworks/opt/telephony/src/java/com/android/internal/telephony/cdma/CdmaMmiCode.java,148,5,148,88,maxTargetSdk=30&trackingBug=170729553L

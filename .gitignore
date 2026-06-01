@@ -107,3 +107,6 @@ decompiled-java/
 
 # GitHub Copilot instructions (contains private project details)
 .github/copilot-instructions.md
+
+# NDK/CMake build cache
+DMRModHooks/app/.cxx/

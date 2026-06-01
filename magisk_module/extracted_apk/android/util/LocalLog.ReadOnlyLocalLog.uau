@@ -1,2 +1,0 @@
-signature,file,startline,startcol,endline,endcol,properties
-Landroid/util/LocalLog$ReadOnlyLocalLog;->dump(Ljava/io/FileDescriptor;Ljava/io/PrintWriter;[Ljava/lang/String;)V,frameworks/base/core/java/android/util/LocalLog.java,118,9,118,92,maxTargetSdk=30&trackingBug=170729553L

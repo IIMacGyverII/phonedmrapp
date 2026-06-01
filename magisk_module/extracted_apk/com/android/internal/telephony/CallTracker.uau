@@ -1,9 +1,0 @@
-signature,file,startline,startcol,endline,endcol,properties
-Lcom/android/internal/telephony/CallTracker;->mPendingOperations:I,frameworks/opt/telephony/src/java/com/android/internal/telephony/CallTracker.java,46,5,46,88,maxTargetSdk=30&trackingBug=170729553L
-Lcom/android/internal/telephony/CallTracker;->mNeedsPoll:Z,frameworks/opt/telephony/src/java/com/android/internal/telephony/CallTracker.java,48,5,48,88,maxTargetSdk=30&trackingBug=170729553L
-Lcom/android/internal/telephony/CallTracker;->mCi:Lcom/android/internal/telephony/CommandsInterface;,frameworks/opt/telephony/src/java/com/android/internal/telephony/CallTracker.java,53,5,53,88,maxTargetSdk=30&trackingBug=170729553L
-Lcom/android/internal/telephony/CallTracker;->mNumberConverted:Z,frameworks/opt/telephony/src/java/com/android/internal/telephony/CallTracker.java,56,5,56,88,maxTargetSdk=30&trackingBug=170729553L
-Lcom/android/internal/telephony/CallTracker;-><init>()V,frameworks/opt/telephony/src/java/com/android/internal/telephony/CallTracker.java,79,5,79,25,
-Lcom/android/internal/telephony/CallTracker;->registerForVoiceCallEnded(Landroid/os/Handler;ILjava/lang/Object;)V,frameworks/opt/telephony/src/java/com/android/internal/telephony/CallTracker.java,308,5,308,25,
-Lcom/android/internal/telephony/CallTracker;->getState()Lcom/android/internal/telephony/PhoneConstants$State;,frameworks/opt/telephony/src/java/com/android/internal/telephony/CallTracker.java,311,5,311,88,maxTargetSdk=30&trackingBug=170729553L
-Lcom/android/internal/telephony/CallTracker;->log(Ljava/lang/String;)V,frameworks/opt/telephony/src/java/com/android/internal/telephony/CallTracker.java,313,5,313,88,maxTargetSdk=30&trackingBug=170729553L

@@ -1,3 +1,0 @@
-signature,file,startline,startcol,endline,endcol,properties
-Lcom/android/internal/telephony/cat/DisplayTextParams;->mTextMsg:Lcom/android/internal/telephony/cat/TextMessage;,frameworks/opt/telephony/src/java/com/android/internal/telephony/cat/DisplayTextParams.java,24,5,24,88,maxTargetSdk=30&trackingBug=170729553L
-Lcom/android/internal/telephony/cat/DisplayTextParams;-><init>(Lcom/android/internal/telephony/cat/CommandDetails;Lcom/android/internal/telephony/cat/TextMessage;)V,frameworks/opt/telephony/src/java/com/android/internal/telephony/cat/DisplayTextParams.java,27,5,27,88,maxTargetSdk=30&trackingBug=170729553L

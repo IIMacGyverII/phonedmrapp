@@ -1,3 +1,0 @@
-signature,file,startline,startcol,endline,endcol,properties
-Lcom/android/internal/telephony/Call$State;->isAlive()Z,frameworks/opt/telephony/src/java/com/android/internal/telephony/Call.java,52,9,52,29,
-Lcom/android/internal/telephony/Call$State;->isRinging()Z,frameworks/opt/telephony/src/java/com/android/internal/telephony/Call.java,57,9,57,29,
