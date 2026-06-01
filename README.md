@@ -1,26 +1,26 @@
-# PriInterPhone DMR Radio - LSPosed Mod with OpenGD77 Integration + Advanced Features
+﻿# PriInterPhone DMR Radio - LSPosed Mod with OpenGD77 Integration + Advanced Features
 
 **Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS + VFO Mode + SSTV + NOAA APT!
 
-> **?? Current Stable Release: v3.3.7** (March 19, 2026) - GPS Messaging + Hyperlinked Coordinates  
-> **??? Previous Release: v3.3.6** (March 19, 2026) - TG List Architecture + Group Grid Refresh  
-> **??? Prior Release: v3.3.5** (March 19, 2026) - NOAA APT Software Squelch Slider  
-> **??? Prior Release: v3.3.4** (March 19, 2026) - NOAA APT Live Monitoring  
-> **?? Prior Release: v3.3.3** (March 18, 2026) - SSTV Settings + APRS/SSTV Dialog Refresh Fix  
-> **?? Prior Release: v3.3.2** (March 19, 2026) - APRS Buttons Moved to Monitoring Page  
-> **?? Prior Release: v3.3.1** (March 18, 2026) - Crash Recovery Improvements  
-> **?? Prior Release: v3.3.0** (March 18, 2026) - SSTV Live Monitoring  
-> **??? Prior Release: v3.2.3** (March 16, 2026) - APRS Channel Filtering + Button Spacing  
-> **??? Feature Release: v3.1.5** (March 14, 2026) - VFO Mode (Variable Frequency Oscillator)  
-> **?? Bug Fix: v3.1.4** (March 13, 2026) - Software Squelch State Fix  
-> **?? Major Feature: v3.1.0** (March 12, 2026) - APRS Live Monitoring  
-> **??? Stable Base: v1.7.0** (February 2026) - Transcription and API Features
+> **🚀 Current Stable Release: v3.3.7** (March 19, 2026) - GPS Messaging + Hyperlinked Coordinates  
+> **🗂️ Previous Release: v3.3.6** (March 19, 2026) - TG List Architecture + Group Grid Refresh  
+> **🛰️ Prior Release: v3.3.5** (March 19, 2026) - NOAA APT Software Squelch Slider  
+> **🛰️ Prior Release: v3.3.4** (March 19, 2026) - NOAA APT Live Monitoring  
+> **📺 Prior Release: v3.3.3** (March 18, 2026) - SSTV Settings + APRS/SSTV Dialog Refresh Fix  
+> **📡 Prior Release: v3.3.2** (March 19, 2026) - APRS Buttons Moved to Monitoring Page  
+> **🔧 Prior Release: v3.3.1** (March 18, 2026) - Crash Recovery Improvements  
+> **📺 Prior Release: v3.3.0** (March 18, 2026) - SSTV Live Monitoring  
+> **🛠️ Prior Release: v3.2.3** (March 16, 2026) - APRS Channel Filtering + Button Spacing  
+> **🎛️ Feature Release: v3.1.5** (March 14, 2026) - VFO Mode (Variable Frequency Oscillator)  
+> **🐛 Bug Fix: v3.1.4** (March 13, 2026) - Software Squelch State Fix  
+> **📡 Major Feature: v3.1.0** (March 12, 2026) - APRS Live Monitoring  
+> **🎙️ Stable Base: v1.7.0** (February 2026) - Transcription and API Features
 
 ## Demo
 
 <video src="https://github.com/user-attachments/assets/d6305a49-c8ed-47dc-a9d8-7e731aa02811" controls title="DMRModHooks v1.1 Demo" width="800"></video>
 
-## ?? What's New in v3.3.7 (March 19, 2026)
+## 📍 What's New in v3.3.7 (March 19, 2026)
 
 ### GPS Messaging over DMR SMS
 
@@ -49,7 +49,7 @@
 
 ---
 
-## ?? What's New in v3.3.6 (March 19, 2026)
+## 🔧 What's New in v3.3.6 (March 19, 2026)
 
 ### TG List — Direct DB Write + Group Grid Refresh
 
@@ -67,14 +67,14 @@
 
 ---
 
-## ??? What's New in v3.3.5 (March 19, 2026)
+## 🛰️ What's New in v3.3.5 (March 19, 2026)
 
 ### NOAA APT — Software Squelch Slider Added to Live Monitoring Screen
 
 **Full software squelch control (toggle + slider) is now available on the NOAA APT live monitoring screen, matching the SSTV and APRS experience**
 
 #### **Software Squelch Toggle + Slider**
-- **?? Soft SQ toggle button** — shown on the NOAA live monitoring screen below the satellite info text
+- **🔊 Soft SQ toggle button** — shown on the NOAA live monitoring screen below the satellite info text
   - Green when ON, gray when OFF; initialized from current software squelch state
   - Enabling calls `enableSoftwareSquelchOnCurrentChannel()` + a 2.5s delayed re-apply to survive late channel state-machine updates
   - Disabling calls `disableSoftwareSquelchOnCurrentChannel()` to restore hardware squelch
@@ -92,14 +92,14 @@
 
 ---
 
-## ??? What's New in v3.3.4 (March 19, 2026)
+## 🛰️ What's New in v3.3.4 (March 19, 2026)
 
 ### NOAA APT Satellite Image Reception — Live Monitoring
 
 **Receive and decode NOAA weather satellite APT transmissions in real-time, with live image display, automatic saving, and pass prediction**
 
 #### **NOAA Button and Live Screen**
-- **??? NOAA Toggle Button**: New slate-blue button on intercom page
+- **🛰️ NOAA Toggle Button**: New slate-blue button on intercom page
   - Opens live monitoring screen with real-time image decode
   - Mutually exclusive with APRS, SSTV, and VFO modes
 - **Live Monitoring Screen**:
@@ -139,27 +139,27 @@
 - Crash-recovery dialog on next app start if restore did not complete
 
 ---
-## ?? What's New in v3.3.3 (March 18, 2026)
+## 📺 What's New in v3.3.3 (March 18, 2026)
 
 ### SSTV Settings & Received Images Dialogs + Dialog Refresh Fix
 
 **Added configurable SSTV settings (frequency with VHF/UHF support), a received images browser, and fixed stale-data dialogs for both SSTV and APRS**
 
 #### **SSTV Settings Dialog**
-- New **?? SSTV Settings** button on both the SSTV start dialog and SSTV live monitoring screen
-- Configure SSTV frequency (supports both **VHF 136�174 MHz** and **UHF 400�520 MHz**)
+- New **⚙️ SSTV Settings** button on both the SSTV start dialog and SSTV live monitoring screen
+- Configure SSTV frequency (supports both **VHF 136–174 MHz** and **UHF 400–520 MHz**)
 - Default frequency: `144.500 MHz` (persisted across sessions via SharedPreferences)
 - Frequency validated to prevent out-of-range entry
 - Hint text updated to show both VHF (`144.500`) and UHF (`432.500`) examples
 
 #### **SSTV Received Images Dialog**
-- New **?? SSTV Received** button on both the SSTV start dialog and live monitoring screen
+- New **📸 SSTV Received** button on both the SSTV start dialog and live monitoring screen
 - Lists all saved SSTV images from `Download/DMR/SSTV/`, sorted newest-first
 - Tap any entry to open in the device gallery app
 - Shows "no images yet" placeholder when folder is empty
 
 #### **Dialog Refresh Fix (SSTV + APRS)**
-- **Problem**: Opening Settings from a start dialog, saving a new frequency, then returning showed the old value � the start dialog was built once and never refreshed
+- **Problem**: Opening Settings from a start dialog, saving a new frequency, then returning showed the old value — the start dialog was built once and never refreshed
 - **Fix**: Both **SSTV** and **APRS** start dialogs now use a holder+callback pattern
   - When Settings is opened from a start dialog, saving dismisses the stale start dialog and reopens it fresh
   - The newly opened dialog reads the latest saved values from SharedPreferences / APRSDatabase
@@ -186,7 +186,7 @@
 
 ---
 
-## � What's New in v3.3.1 (March 18, 2026)
+## 🔧 What's New in v3.3.1 (March 18, 2026)
 
 ### Crash Recovery Improvements — Restart App Button + Channel Name Fix
 
@@ -207,7 +207,7 @@
 
 ---
 
-## �📺 What's New in v3.3.0 (March 18, 2026)
+## 📺 What's New in v3.3.0 (March 18, 2026)
 
 ### SSTV Live Monitoring - Slow Scan TV Image Reception
 
@@ -451,7 +451,7 @@
 
 ---
 
-## � What's New in v3.1.2 (March 13, 2026)
+## 🔧 What's New in v3.1.2 (March 13, 2026)
 
 ### APRS Channel Recovery & Squelch Control Improvements
 
@@ -503,7 +503,7 @@ The radio hardware has a unique quirk that affects squelch control:
 
 ---
 
-## �🐛 What's New in v3.1.1 (March 12, 2026)
+## 🐛 What's New in v3.1.1 (March 12, 2026)
 
 ### Critical APRS Bug Fixes
 
