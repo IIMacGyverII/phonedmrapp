@@ -19,7 +19,7 @@
 
 ## Demo
 
-<video src="https://github.com/user-attachments/assets/d6305a49-c8ed-47dc-a9d8-7e731aa02811" controls title="DMRModHooks v1.1 Demo" width="800"></video>
+<video src="https://github.com/IIMacGyverII/phonedmrapp/raw/main/releases/3.3.8.mp4" controls title="DMRModHooks v3.3.8 Demo" width="800"></video>
 
 ## � What's New in v3.3.8 (June 1, 2026)
 
