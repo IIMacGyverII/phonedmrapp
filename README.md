@@ -1,4 +1,4 @@
-
+﻿
 
 https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
@@ -23,7 +23,7 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
 ## Demo
 
-<video src="https://github.com/IIMacGyverII/phonedmrapp/releases/download/v3.3.8/3.3.8.mp4" controls title="DMRModHooks v3.3.8 Demo" width="800"></video>
+<video src="https://github.com/IIMacGyverII/phonedmrapp/releases/download/v3.3.8/3.3.8.mp4" controls autoplay muted loop title="DMRModHooks v3.3.8 Demo" width="800"></video>
 
 ## � What's New in v3.3.8 (June 1, 2026)
 
