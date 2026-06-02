@@ -1,3 +1,7 @@
+
+
+https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
+
 ﻿# PriInterPhone DMR Radio - LSPosed Mod with OpenGD77 Integration + Advanced Features
 
 **Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS + VFO Mode + SSTV + NOAA APT!
