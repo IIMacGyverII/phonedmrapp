@@ -7,6 +7,7 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 **Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS + VFO Mode + SSTV + NOAA APT!
 
 > **🚀 Current Stable Release: v3.4.1** (June 5, 2026) - CSVImporter legacy contact fix (all 4 files complete)  
+> **🖥️ OpenGD77 CPS Fork: v1.3.0** (June 5, 2026) - Pre-import channel diff preview (Tier 2.5)
 > **🔧 Previous Release: v3.4.0** (June 5, 2026) - Pitfall 12 fix (contact DMR ID), channel mode, CSVExporter parity  
 > **🐛 Prior Release: v3.3.9** (June 5, 2026) - Group/Private contact type swap + encrypt defaults  
 > **🗂️ Prior Release: v3.3.8** (June 1, 2026) - OpenGD77 CPS Fork v1.2.0  
@@ -26,6 +27,16 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 ## Demo
 
 <video src="https://github.com/IIMacGyverII/phonedmrapp/releases/download/v3.3.8/3.3.8.mp4" controls autoplay muted loop title="DMRModHooks v3.3.8 Demo" width="800"></video>
+
+## What's New in OpenGD77 CPS Fork v1.3.0 (June 5, 2026)
+
+Desktop CPS fork ([OpenGD77CPS-Mac](https://github.com/IIMacGyverII/OpenGD77CPS-Mac)) — download zip from `OpenGD77Fork/` or [releases](https://github.com/IIMacGyverII/OpenGD77CPS-Mac/releases).
+
+- **Pre-import diff preview** — Before Path B import, review channels that will be added, changed, or deleted vs the loaded codeplug; field-level changes (frequencies, contact, relay, lat/lon, etc.).
+- **Apply / Cancel** — Cancel aborts without modifying the in-memory codeplug.
+- Android backup manager shows diff summary counts when validating a phone export folder.
+
+---
 
 ## What's New in v3.4.1 (June 5, 2026)
 
