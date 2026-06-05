@@ -404,7 +404,8 @@ public class DirectDatabaseExporter {
                     // Look up TG list assignment for this channel
                     String tgListName = tgListDb.getTGListNameForChannel(channelId);
                     rowBuilder.append(tgListName).append(",");           // 10. TG List
-                    rowBuilder.append("None,");                          // 11. DMR ID
+                    // Col 11: export the raw DMR ID from channel_txContact (which stores the DMR ID)
+                    rowBuilder.append(contactId > 0 ? String.valueOf(contactId) : "None").append(",");  // 11. DMR ID
                     rowBuilder.append("Off,");                           // 12. TS1_TA_Tx
                     rowBuilder.append("Off,");                           // 13. TS2_TA_Tx ID
                     rowBuilder.append("");                               // 14. RX Tone (blank for digital)
@@ -453,7 +454,8 @@ public class DirectDatabaseExporter {
                     rowBuilder.append(",").append(interrupt);               // 32. Interrupt
                     rowBuilder.append(",").append(active);                  // 33. Active (0=inactive, 1=active)
                     rowBuilder.append(",").append(outBoundSlot);            // 34. Outbound Slot
-                    rowBuilder.append(",").append(channelMode);             // 35. Channel Mode
+                    // Convert Android channel_mode=4 (double-slot) back to CPS value=3
+                    rowBuilder.append(",").append(channelMode == 4 ? 3 : channelMode);  // 35. Channel Mode
                     rowBuilder.append(",").append(contactType);             // 36. Contact Type
                 } else {
                     // Analogue channels
@@ -506,7 +508,8 @@ public class DirectDatabaseExporter {
                     rowBuilder.append(",").append(interrupt);               // 32. Interrupt
                     rowBuilder.append(",").append(active);                  // 33. Active (0=inactive, 1=active)
                     rowBuilder.append(",").append(outBoundSlot);            // 34. Outbound Slot
-                    rowBuilder.append(",").append(channelMode);             // 35. Channel Mode
+                    // Convert Android channel_mode=4 (double-slot) back to CPS value=3
+                    rowBuilder.append(",").append(channelMode == 4 ? 3 : channelMode);  // 35. Channel Mode
                     rowBuilder.append(",").append(contactType);             // 36. Contact Type
                 }
                 
@@ -909,10 +912,12 @@ public class DirectDatabaseExporter {
     }
     
     /**
-     * Build a map of contact ID => contact name for efficient lookup
-     * 
+     * Build a map of contact DMR-ID (contact_number) => contact name for efficient lookup.
+     * Keyed by contact_number (the 24-bit DMR ID), NOT by the row _id, because
+     * channel_txContact stores the DMR ID — see Pitfall 12 in copilot-instructions.md.
+     *
      * @param context Application context
-     * @return Map of contact IDs to names, or empty map if database doesn't exist
+     * @return Map of DMR IDs to contact names, or empty map if database doesn't exist
      */
     private static java.util.Map<Integer, String> buildContactMap(Context context) {
         java.util.Map<Integer, String> contactMap = new java.util.HashMap<>();
@@ -929,19 +934,20 @@ public class DirectDatabaseExporter {
             db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, 
                 SQLiteDatabase.OPEN_READONLY);
             
+            // Key by contact_number (DMR ID) — NOT _id — because channel_txContact stores the DMR ID
             cursor = db.query("contact_database", 
-                new String[]{"_id", "contact_name"}, 
+                new String[]{"contact_number", "contact_name"}, 
                 null, null, null, null, null);
             
             if (cursor != null && cursor.moveToFirst()) {
                 do {
-                    int id = cursor.getInt(0);
+                    int dmrId = cursor.getInt(0);  // contact_number = 24-bit DMR ID
                     String name = cursor.getString(1);
-                    contactMap.put(id, name);
+                    contactMap.put(dmrId, name);
                 } while (cursor.moveToNext());
             }
             
-            Log.i(TAG, "Loaded " + contactMap.size() + " contacts for lookup");
+            Log.i(TAG, "Loaded " + contactMap.size() + " contacts for lookup (keyed by DMR ID)");
             
         } catch (Exception e) {
             Log.w(TAG, "Error building contact map: " + e.getMessage());
