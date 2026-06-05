@@ -5,6 +5,10 @@
 
 > This document is an honest accounting of what was built, what was attempted and failed, and what was deliberately removed. Anything that was tried but didn't work is explicitly marked. Things that were *planned* but never shipped are also marked.
 
+### AI agent rule — deploy to device
+
+After any successful `adb install` of an updated **DMRModHooks** APK (debug, release, or `install.ps1`), **automatically run `adb reboot`**. Do not skip reboot or delegate it to the user. LSPosed hooks load at boot; without reboot, on-device testing of code changes is unreliable. Prefer `DMRModHooks/install.ps1` (build + install + reboot). Full detail: `.github/copilot-instructions.md` § “AI agents — device deploy (mandatory)”.
+
 ---
 
 ## 1. Project at a glance
@@ -42,7 +46,7 @@ Cross-referenced against committed code in `DMRModHooks/app/src/main/java/com/dm
 - Created `local.properties` with `sdk.dir=C:\Users\Joshua\AppData\Local\Android\Sdk`.
 - Resolved missing `AppTheme`/`AppTheme_Dialog`/`DeviceKilledDialog` styles by copying `styles.xml`/`colors.xml`/`dimens.xml`/`bools.xml` from `decompiled/res/values/` into `app/src/main/res/values/`.
 - Locked debug & release builds to the **same** `release.keystore` (alias `dmrmodhooks`, password `android`) so `adb install -r` preserves LSPosed module state.
-- `install.ps1` script with the `-r` flag.
+- `install.ps1` script with the `-r` flag and **automatic `adb reboot`** on successful install (required for LSPosed hook updates).
 
 ### 3.2 OpenGD77 CSV ecosystem
 - [`DirectDatabaseExporter.java`](DMRModHooks/app/src/main/java/com/dmrmod/hooks/DirectDatabaseExporter.java) — exports Channels / Contacts / TG_Lists / Zones / DTMF to `/sdcard/Download/DMR_Backups/YYYYMMDD_HHmmss/` using the Android 37-column format (`_id` + 36 fields).

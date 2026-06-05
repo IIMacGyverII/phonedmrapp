@@ -980,15 +980,17 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
    .\gradlew.bat assembleDebug
    ```
 
-2. **Install Both Modules**:
+2. **Install Both Modules** (then reboot so LSPosed loads the new hook code):
    ```powershell
    adb install -r DMRModHooks\app\build\outputs\apk\debug\app-debug.apk
    adb install -r DMRTranscriptionService\app\build\outputs\apk\debug\app-debug.apk
+   adb reboot
    ```
+   Or from `DMRModHooks/`: `.\install.ps1` (builds, installs DMRModHooks, reboots automatically).
 
 #### Enable in LSPosed Manager
 
-3. **Activate Module**:
+3. **Activate Module** (after reboot from step 2, or reboot again if you changed LSPosed scope):
    - Open LSPosed Manager app on device
    - Go to "Modules" tab
    - Enable "DMR Mod Hooks" checkbox

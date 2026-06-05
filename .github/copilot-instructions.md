@@ -12,6 +12,38 @@
 
 > **Read this first if you are starting a new session:** [`.docs/AI_LOGS_SUMMARY.md`](../.docs/AI_LOGS_SUMMARY.md) is a comprehensive accounting of everything that was shipped, attempted-and-failed, and deliberately removed across the full chat history. Consult it before re-investigating anything that looks like a known dead-end (especially APRS TX, LED control, DMR group-call RX, and >32-TG software filtering).
 
+## 🤖 AI agents — device deploy (mandatory)
+
+**Whenever you build and push/install a new `DMRModHooks` APK to the connected device** (`adb install`, `adb install -r`, or `install.ps1`), you **must reboot the device automatically** after a **successful** install — do not leave reboot as an optional user step.
+
+```powershell
+# Preferred: build + install + reboot (install.ps1 reboots on success)
+cd DMRModHooks
+.\install.ps1
+
+# Manual equivalent (from DMRModHooks/):
+.\gradlew assembleDebug
+adb install -r -t app\build\outputs\apk\debug\app-debug.apk
+adb reboot
+```
+
+**Also reboot** when installing a release APK from `releases\` for on-device validation:
+
+```powershell
+adb install -r releases\DMRModHooks-v3.4.0.apk
+adb reboot
+```
+
+**Why:** LSPosed/Zygisk loads hook bytecode at boot. Without reboot, Java/Xposed changes often do not apply even though `adb install` succeeded.
+
+**Rules:**
+- Run `adb reboot` yourself — do not only tell the user to reboot.
+- If multiple APKs are installed in one session (e.g. DMRModHooks + DMRTranscriptionService), finish installs then **one** `adb reboot`.
+- If `adb reboot` fails (no device, unauthorized), report the failure; do not claim deploy is complete.
+- `DMRTranscriptionService` alone may work without reboot; **DMRModHooks always requires reboot** after update.
+
+Same rule is documented in [`.docs/AI_LOGS_SUMMARY.md`](../.docs/AI_LOGS_SUMMARY.md) §3.1 and [`.docs/PROJECT_AND_DOC_AUDIT_FOR_REVIEW.md`](../.docs/PROJECT_AND_DOC_AUDIT_FOR_REVIEW.md) (device workflow).
+
 ## ⚠️ Trust, but Verify — These Instructions Can Be Wrong
 
 This file is hand-maintained and ~1500 lines long. It drifts. **Always verify against the code before relying on a specific claim** — especially:
@@ -900,17 +932,22 @@ cd DMRModHooks
 ```
 
 ### Installation (Preserves LSPosed Module State)
+
+**AI agents:** See [§ AI agents — device deploy (mandatory)](#-ai-agents--device-deploy-mandatory). **Always** `adb reboot` after successful install.
+
 ```powershell
-# From DMRModHooks directory
+# From DMRModHooks directory (recommended — installs then reboots)
 .\install.ps1
 
-# OR manually with -r flag (replace without uninstall)
+# OR manually with -r flag (replace without uninstall) — MUST include reboot
 .\gradlew assembleDebug
 adb install -r -t app\build\outputs\apk\debug\app-debug.apk
 adb reboot
 ```
 
 **CRITICAL**: Always use `-r` flag to replace without uninstalling. Uninstalling disables the LSPosed module and user must manually re-enable.
+
+**CRITICAL**: Always **`adb reboot`** after install so LSPosed loads the new hook code. Skipping reboot is a common cause of “fix didn’t work on device” false negatives.
 
 ### Signing Configuration
 
@@ -1085,6 +1122,7 @@ git push origin main
 - ✅ All changes committed to main branch
 - ✅ GitHub release created with tag
 - ✅ APK uploaded and renamed properly
+- ✅ **If testing on device:** `adb install -r releases\DMRModHooks-vX.X.X.apk` then **`adb reboot`** (mandatory for AI agents — see deploy section above)
 - ✅ **OpenGD77 fork zip attached** (reuse latest from `OpenGD77Fork/` if unchanged — never omit it)
 - ✅ Release published (not draft)
 - ✅ APK copied to releases/ folder and committed
