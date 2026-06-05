@@ -99,6 +99,11 @@ jadx/
 jadx-*.zip
 decompiled-java/
 
+# Local agent/session artifacts (may contain machine paths)
+terminals/
+agent-tools/
+.tmp_export_verify/
+
 # AI session logs
 .ai-logs/
 
