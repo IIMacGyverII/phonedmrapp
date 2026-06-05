@@ -1,4 +1,4 @@
-﻿
+
 
 https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
@@ -6,8 +6,8 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
 **Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS + VFO Mode + SSTV + NOAA APT!
 
-> **🚀 Current Stable Release: v3.4.0** (June 5, 2026) - Pitfall 12 fix (contact DMR ID), channel mode, CSVExporter parity  
-> **🐛 Previous Release: v3.3.9** (June 5, 2026) - Group/Private contact type swap + encrypt defaults  
+> **🚀 Current Stable Release: v3.4.1** (June 5, 2026) - CSVImporter legacy contact fix (all 4 files complete)  
+> **🔧 Previous Release: v3.4.0** (June 5, 2026) - Pitfall 12 fix (contact DMR ID), channel mode, CSVExporter parity  `n> **🐛 Prior Release: v3.3.9** (June 5, 2026) - Group/Private contact type swap + encrypt defaults  
 > **🗂️ Prior Release: v3.3.8** (June 1, 2026) - OpenGD77 CPS Fork v1.2.0  
 > **🛰️ Prior Release: v3.3.6** (March 19, 2026) - TG List Architecture + Group Grid Refresh  
 > **🛰️ Prior Release: v3.3.5** (March 19, 2026) - NOAA APT Software Squelch Slider  
@@ -26,23 +26,35 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
 <video src="https://github.com/IIMacGyverII/phonedmrapp/releases/download/v3.3.8/3.3.8.mp4" controls autoplay muted loop title="DMRModHooks v3.3.8 Demo" width="800"></video>
 
+## ðŸ”§ What's New in v3.4.1 (June 5, 2026)
+
+### CSVImporter Legacy Contact Fix (all 4 files complete)
+
+The `BackupActivity` path uses the legacy `CSVImporter` class. Its `buildContactNameMap()` was querying the wrong table (`contact` instead of `contact_database`) and the wrong column (`_id` instead of `contact_number`), so contact name lookups always returned empty.
+
+- Table: `contact` → `contact_database` (correct OEM table name)
+- Column: `_id` → `contact_number` (24-bit DMR ID, consistent with all other files)
+- All four export/import Java classes now correctly key contact maps by `contact_number`
+
+---
+
 ## ðŸ”§ What's New in v3.4.0 (June 5, 2026)
 
-### Pitfall 12 Fix â€” Contact DMR ID (all 4 export/import files)
+### Pitfall 12 Fix — Contact DMR ID (all 4 export/import files)
 `channel_txContact` stores the 24-bit DMR ID (`contact_number`), not the contact table `_id`. All four export/import files were keying contact maps by `_id`, causing contacts to resolve to the wrong person or default to "None"/contact 1 on import.
 
-- **`DirectDatabaseExporter.java`, `CSVExporter.java`** â€” contact maps now keyed by `contact_number` (DMR ID); col 11 (DMR ID) now exports the actual DMR ID instead of hardcoded "None"
-- **`DirectDatabaseImporter.java`** â€” map now nameâ†’DMR-ID; importer tries col 11 (DMR ID) first, falls back to name; default contact changed from `1` â†’ `0`
+- **`DirectDatabaseExporter.java`, `CSVExporter.java`** — contact maps now keyed by `contact_number` (DMR ID); col 11 (DMR ID) now exports the actual DMR ID instead of hardcoded "None"
+- **`DirectDatabaseImporter.java`** — map now name→DMR-ID; importer tries col 11 (DMR ID) first, falls back to name; default contact changed from `1` → `0`
 
-### Channel Mode â€” Double-Slot Repeaters (field report #3)
-CPS/OpenGD77 uses `channel_mode=3` for double-slot; the OEM firmware uses `4`. Import now maps 3â†’4 (shows "Double slot" in UI). Export maps 4â†’3 for correct CPS round-trips.
+### Channel Mode — Double-Slot Repeaters (field report #3)
+CPS/OpenGD77 uses `channel_mode=3` for double-slot; the OEM firmware uses `4`. Import now maps 3→4 (shows "Double slot" in UI). Export maps 4→3 for correct CPS round-trips.
 
 ---
 
 ## ðŸ› What's New in v3.3.9 (June 5, 2026)
 
 ### OpenGD77 CPS Import Bug Fixes (field report)
-- **Group/Private contacts swapped**: `DirectDatabaseImporter` had Groupâ†’0, Privateâ†’1; OEM uses 0=Private, 1=Group. Fixed in importer and exporter.
+- **Group/Private contacts swapped**: `DirectDatabaseImporter` had Group→0, Private→1; OEM uses 0=Private, 1=Group. Fixed in importer and exporter.
 - **All DMR channels had encryption ON**: Legacy import branch defaulted `encryptSw=1`. Now defaults `2` (disabled). Parse-fail fallback also fixed.
 - **Analog squelch parse failure**: Now defaults to `sq=2` (normal) instead of `sq=0`.
 - **VERSION constant**: Startup toast now correctly shows v3.3.9.
@@ -56,7 +68,7 @@ CPS/OpenGD77 uses `channel_mode=3` for double-slot; the OEM firmware uses `4`. I
 - Fixed startup crash (AccessViolationException) from lat/lon fields
 - Fork identity: About dialog, window title, device tree root renamed for PriInterPhone
 
-> **Note:** v3.3.8 release notes previously claimed "Contact ID Fix (Pitfall 12)" in all four Java files. That fix was not in the Java source â€” the actual Java fix shipped in **v3.4.0**.
+> **Note:** v3.3.8 release notes previously claimed "Contact ID Fix (Pitfall 12)" in all four Java files. That fix was not in the Java source — the actual Java fix shipped in **v3.4.0**.
 
 ---
 ## �📍 What's New in v3.3.7 (March 19, 2026)
