@@ -558,9 +558,27 @@ public class DirectDatabaseImporter {
                     int timeslotApp = timeslot - 1;  // OpenGD77 1-based → Android 0-based
                     values.put("channel_inBoundSlot", timeslotApp);
                     
-                    // Contact -> channel_txContact (lookup ID by name)
+                    // Contact -> channel_txContact
+                    // Primary: parse col 11 (DMR ID field, offset+10) — CPS sometimes exports the DMR ID here.
+                    // Fallback: resolve col 9 contact name via name->DMR-ID map.
+                    // channel_txContact stores the 24-bit DMR ID, NOT the contact row _id (Pitfall 12).
                     String contactName = fields[offset + 8].trim();
-                    int contactId = getContactId(contactMap, contactName);
+                    int contactId = 0;
+                    if (fields.length > offset + 10) {
+                        String dmrIdStr = fields[offset + 10].trim();
+                        if (!dmrIdStr.isEmpty() && !dmrIdStr.equalsIgnoreCase("None")) {
+                            try {
+                                int parsedDmrId = Integer.parseInt(dmrIdStr);
+                                if (parsedDmrId > 0) {
+                                    contactId = parsedDmrId;
+                                    Log.i(TAG, "  CH" + channelNumber + " txContact resolved from col 11 DMR ID: " + contactId);
+                                }
+                            } catch (NumberFormatException ignored) {}
+                        }
+                    }
+                    if (contactId == 0) {
+                        contactId = getContactId(contactMap, contactName);
+                    }
                     values.put("channel_txContact", contactId);
                     // TG List name (field 9) is stored for later assignment after rowId is known
                 } else {
@@ -784,6 +802,12 @@ public class DirectDatabaseImporter {
                         if (channelMode < 0 || channelMode > 10) {
                             Log.w(TAG, "CH" + channelNumber + " channelMode=" + channelMode + " out of range, forcing to 0");
                             channelMode = 0;
+                        }
+                        // Map CPS/OpenGD77 value 3 (double-slot) -> Android OEM value 4
+                        // OEM UI only recognises 0 (Direct mode) and 4 (Double slot); 3 silently shows as Direct.
+                        if (channelMode == 3) {
+                            channelMode = 4;
+                            Log.i(TAG, "CH" + channelNumber + " channel_mode=3 mapped to 4 (Double slot)");
                         }
                     } catch (Exception e) {
                         channelMode = 0;
@@ -1582,10 +1606,12 @@ public class DirectDatabaseImporter {
     }
     
     /**
-     * Build a map of contact name => contact ID for efficient lookup during import
-     * 
+     * Build a map of contact name => DMR ID (contact_number) for efficient lookup during import.
+     * Keyed by contact_number (the 24-bit DMR ID), NOT the row _id, because
+     * channel_txContact stores the DMR ID — see Pitfall 12 in copilot-instructions.md.
+     *
      * @param context Application context
-     * @return Map of contact names to IDs, or empty map if database doesn't exist
+     * @return Map of contact names to DMR IDs, or empty map if database doesn't exist
      */
     private static java.util.Map<String, Integer> buildContactNameMap(Context context) {
         java.util.Map<String, Integer> contactMap = new java.util.HashMap<>();
@@ -1595,26 +1621,27 @@ public class DirectDatabaseImporter {
         try {
             File dbFile = context.getDatabasePath("contact_database.db");
             if (!dbFile.exists()) {
-                Log.w(TAG, "Contact database not found, all contacts will use default ID");
+                Log.w(TAG, "Contact database not found, all contacts will use default DMR ID 0");
                 return contactMap;
             }
             
             db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, 
                 SQLiteDatabase.OPEN_READONLY);
             
+            // Key by contact_number (DMR ID) — NOT _id — because channel_txContact stores the DMR ID
             cursor = db.query("contact_database", 
-                new String[]{"_id", "contact_name"}, 
+                new String[]{"contact_number", "contact_name"}, 
                 null, null, null, null, null);
             
             if (cursor != null && cursor.moveToFirst()) {
                 do {
-                    int id = cursor.getInt(0);
+                    int dmrId = cursor.getInt(0);  // contact_number = 24-bit DMR ID
                     String name = cursor.getString(1);
-                    contactMap.put(name, id);
+                    contactMap.put(name, dmrId);
                 } while (cursor.moveToNext());
             }
             
-            Log.i(TAG, "Loaded " + contactMap.size() + " contacts for import lookup");
+            Log.i(TAG, "Loaded " + contactMap.size() + " contacts for import lookup (keyed by DMR ID)");
             
         } catch (Exception e) {
             Log.w(TAG, "Error building contact name map: " + e.getMessage());
@@ -1627,23 +1654,24 @@ public class DirectDatabaseImporter {
     }
     
     /**
-     * Get contact ID by name from the contact map
-     * 
-     * @param contactMap Map of contact names to IDs
+     * Get contact DMR ID by name from the contact map.
+     * Returns the 24-bit DMR ID stored in contact_number, NOT the row _id.
+     *
+     * @param contactMap Map of contact names to DMR IDs
      * @param contactName Contact name to lookup
-     * @return Contact ID, or 1 (default) if not found or "None"
+     * @return Contact DMR ID, or 0 (no contact) if not found or "None"
      */
     private static int getContactId(java.util.Map<String, Integer> contactMap, String contactName) {
         if (contactName == null || contactName.trim().isEmpty() || contactName.equalsIgnoreCase("None")) {
-            return 1; // Default contact ID
+            return 0; // No contact
         }
-        Integer id = contactMap.get(contactName);
-        if (id != null) {
-            Log.d(TAG, "Resolved contact '" + contactName + "' to ID " + id);
-            return id;
+        Integer dmrId = contactMap.get(contactName);
+        if (dmrId != null) {
+            Log.d(TAG, "Resolved contact '" + contactName + "' to DMR ID " + dmrId);
+            return dmrId;
         }
-        Log.w(TAG, "Contact not found: '" + contactName + "', using default ID 1");
-        return 1; // Default if not found
+        Log.w(TAG, "Contact not found: '" + contactName + "', using default DMR ID 0");
+        return 0; // No contact if not found
     }
     
     /**

@@ -292,13 +292,13 @@ public class CSVExporter {
                 Log.w(TAG, "Contact database not accessible for contact map: " + e.getMessage());
                 return contactMap;
             }
-            cursor = db.query("contact_database", new String[]{"_id", "contact_name"}, null, null, null, null, null);
+            cursor = db.query("contact_database", new String[]{"contact_number", "contact_name"}, null, null, null, null, null);
             
             if (cursor != null) {
                 while (cursor.moveToNext()) {
-                    int id = cursor.getInt(0);
+                    int dmrId = cursor.getInt(0);  // contact_number = 24-bit DMR ID
                     String name = cursor.getString(1);
-                    contactMap.put(id, name != null ? name : "Unknown");
+                    contactMap.put(dmrId, name != null ? name : "Unknown");
                 }
             }
             
@@ -370,8 +370,8 @@ public class CSVExporter {
         // Column 10: TG List
         row.append("None").append(",");
         
-        // Column 11: DMR ID
-        row.append("None").append(",");
+        // Column 11: DMR ID — export raw DMR ID from channel_txContact (Pitfall 12 fix)
+        row.append(contactId > 0 ? String.valueOf(contactId) : "None").append(",");
         
         // Column 12: TS1_TA_Tx
         row.append("Off").append(",");
