@@ -7,7 +7,8 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 **Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS + VFO Mode + SSTV + NOAA APT!
 
 > **🚀 Current Stable Release: v3.4.1** (June 5, 2026) - CSVImporter legacy contact fix (all 4 files complete)  
-> **🔧 Previous Release: v3.4.0** (June 5, 2026) - Pitfall 12 fix (contact DMR ID), channel mode, CSVExporter parity  `n> **🐛 Prior Release: v3.3.9** (June 5, 2026) - Group/Private contact type swap + encrypt defaults  
+> **🔧 Previous Release: v3.4.0** (June 5, 2026) - Pitfall 12 fix (contact DMR ID), channel mode, CSVExporter parity  
+> **🐛 Prior Release: v3.3.9** (June 5, 2026) - Group/Private contact type swap + encrypt defaults  
 > **🗂️ Prior Release: v3.3.8** (June 1, 2026) - OpenGD77 CPS Fork v1.2.0  
 > **🛰️ Prior Release: v3.3.6** (March 19, 2026) - TG List Architecture + Group Grid Refresh  
 > **🛰️ Prior Release: v3.3.5** (March 19, 2026) - NOAA APT Software Squelch Slider  
@@ -26,7 +27,7 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
 <video src="https://github.com/IIMacGyverII/phonedmrapp/releases/download/v3.3.8/3.3.8.mp4" controls autoplay muted loop title="DMRModHooks v3.3.8 Demo" width="800"></video>
 
-## ðŸ”§ What's New in v3.4.1 (June 5, 2026)
+## 🔧 What's New in v3.4.1 (June 5, 2026)
 
 ### CSVImporter Legacy Contact Fix (all 4 files complete)
 
@@ -38,7 +39,7 @@ The `BackupActivity` path uses the legacy `CSVImporter` class. Its `buildContact
 
 ---
 
-## ðŸ”§ What's New in v3.4.0 (June 5, 2026)
+## 🔧 What's New in v3.4.0 (June 5, 2026)
 
 ### Pitfall 12 Fix — Contact DMR ID (all 4 export/import files)
 `channel_txContact` stores the 24-bit DMR ID (`contact_number`), not the contact table `_id`. All four export/import files were keying contact maps by `_id`, causing contacts to resolve to the wrong person or default to "None"/contact 1 on import.
@@ -51,7 +52,7 @@ CPS/OpenGD77 uses `channel_mode=3` for double-slot; the OEM firmware uses `4`. I
 
 ---
 
-## ðŸ› What's New in v3.3.9 (June 5, 2026)
+## 🐛 What's New in v3.3.9 (June 5, 2026)
 
 ### OpenGD77 CPS Import Bug Fixes (field report)
 - **Group/Private contacts swapped**: `DirectDatabaseImporter` had Group→0, Private→1; OEM uses 0=Private, 1=Group. Fixed in importer and exporter.
@@ -61,7 +62,7 @@ CPS/OpenGD77 uses `channel_mode=3` for double-slot; the OEM firmware uses `4`. I
 
 ---
 
-## ðŸ“‹ What's New in v3.3.8 (June 1, 2026)
+## 📋 What's New in v3.3.8 (June 1, 2026)
 
 ### OpenGD77 CPS Fork v1.2.0
 - Fixed Latitude, Longitude, and Use Location showing as 0 after Android CSV import
