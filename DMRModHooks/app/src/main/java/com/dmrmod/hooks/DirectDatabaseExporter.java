@@ -581,8 +581,9 @@ public class DirectDatabaseExporter {
                     int dmrId = cursor.getInt(cursor.getColumnIndex("contact_number"));  // Fixed: was "dmr_id"
                     int contactType = cursor.getInt(cursor.getColumnIndex("contact_type"));
                     
-                    String idType = (contactType == 0) ? "Group" : 
-                                  (contactType == 1) ? "Private" : "All Call";
+                    // OEM schema: 0=Private, 1=Group, 2=All Call
+                    String idType = (contactType == 0) ? "Private" :
+                                  (contactType == 1) ? "Group" : "All Call";
                     
                     // Build CSV row (4 columns)
                     String row = String.format(Locale.US, "%s,%d,%s,-",

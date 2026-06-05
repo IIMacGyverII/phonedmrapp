@@ -22,14 +22,14 @@ import android.util.Log;
  * 
  * Digital (DMR) channels require:
  *   - channel_type = 0
- *   - channel_encryptSw = 1
+ *   - channel_encryptSw = 2 (disabled; OEM: 2=off, 1=on — NOT 1)
  *   - channel_interrupt = 2
  *   - channel_active = 1
  *   - channel_cc, channel_inBoundSlot set from CSV
  * 
  * Analog (FM) channels require:
  *   - channel_type = 1
- *   - channel_encryptSw = 0
+ *   - channel_encryptSw = 2 (disabled)
  *   - channel_encryptKey = NULL (not set)
  *   - channel_interrupt = 0
  *   - channel_active = 0
@@ -632,7 +632,8 @@ public class DirectDatabaseImporter {
                         Log.i(TAG, "Converted squelch " + sqStr + " (" + sqPercent + "%) to level " + squelch);
                     }
                 } catch (Exception e) {
-                    squelch = 0;  // Default to 0 if parsing fails
+                    // Default: analog=2 (normal), digital=0 (disabled; firmware ignores sq for DMR)
+                    squelch = isDMR ? 0 : 2;
                 }
                 
                 // Power (16) - Read from CSV with OpenGD77 P1-P9 and +W- format
@@ -704,12 +705,12 @@ public class DirectDatabaseImporter {
                             
                             // VALIDATE: encryptSw must be 0, 1, or 2
                             if (encryptSw < 0 || encryptSw > 2) {
-                                Log.w(TAG, "CH" + channelNumber + " encryptSw=" + encryptSw + " out of range, forcing to 1");
-                                encryptSw = 1;  // Digital default: enabled
+                                Log.w(TAG, "CH" + channelNumber + " encryptSw=" + encryptSw + " out of range, forcing to 2 (disabled)");
+                                encryptSw = 2;  // Default: disabled (OEM: 2=off, 1=on)
                             }
                         } catch (Exception e) {
                             Log.w(TAG, "CH" + channelNumber + " encryptSw parse failed: " + e.getMessage());
-                            encryptSw = 1;  // Digital default: enabled
+                            encryptSw = 2;  // Default: disabled (OEM: 2=off, 1=on)
                         }
                         encryptKey = fields[offset + 22 + flagOffset].trim();
                     } else {
@@ -801,8 +802,9 @@ public class DirectDatabaseImporter {
                     Log.i(TAG, "CH" + channelNumber + " validated fields: encrypt=" + encryptSw + ",relay=" + relay + ",interrupt=" + interrupt + ",active=" + active);
                 } else {
                     // Legacy CSV format: use defaults based on channel type
+                    // OEM encryption: 2=disabled, 1=enabled. Default to disabled.
                     if (isDMR) {
-                        encryptSw = 1;
+                        encryptSw = 2;  // Disabled (OEM: 2=off, 1=on)
                         encryptKey = "";
                         relay = 2;  // Normal mode (relay disconnect disabled)
                         interrupt = 2;
@@ -1086,13 +1088,14 @@ public class DirectDatabaseImporter {
                 // ID (1) -> contact_number
                 values.put("contact_number", Integer.parseInt(fields[1].trim()));
                 
-                // ID Type (2) -> contact_type (Group=0, Private=1, All Call=2)
+                // ID Type (2) -> contact_type (OEM schema: 0=Private, 1=Group, 2=All Call)
+                // OpenGD77 CSV strings: "Private", "Group", "All Call"
                 String idType = fields[2].trim();
                 int contactType;
                 if (idType.equalsIgnoreCase("Group")) {
-                    contactType = 0;
+                    contactType = 1;  // OEM: 1=Group
                 } else if (idType.equalsIgnoreCase("Private")) {
-                    contactType = 1;
+                    contactType = 0;  // OEM: 0=Private
                 } else {
                     contactType = 2; // All Call
                 }
