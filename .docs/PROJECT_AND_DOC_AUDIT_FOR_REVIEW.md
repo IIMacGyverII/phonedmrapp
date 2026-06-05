@@ -10,14 +10,15 @@
 
 | Priority | Section | Action |
 |----------|---------|--------|
-| **1** | [§18](#18-sonnet-v340-implementation--grok-review) | **Latest:** what v3.4.0 implemented (Pitfall 12 + channel mode), what remains, open questions |
-| **2** | [§17](#17-post-sonnet-verification-v339--grok-composer-review) | Previous: what v3.3.9 fixed |
-| **3** | [§10](#10-contact-id-audit-pitfall-12--the-critical-drift) | Background: Pitfall 12 spec and evidence chain |
-| **4** | [§13](#13-field-bug-report--opengd77-cps-import-user-reported) | Field report matrix — all 6 symptoms; §13.11 post-v3.4.0 status |
-| **5** | [§14](#14-recommended-fix-list-prioritized) | P0 items: all done except CSVImporter table name |
-| **6** | [§15](#15-verification-checklist-for-reviewers) | §15.3 is the post-v3.4.0 snapshot |
+| **1** | [§4.1](#41-sonnet-backlog-post-v340-june-5-2026) | **Start here:** post-v3.4.0 tasks (verify TX, legacy CSVImporter, docs) |
+| **2** | [§18](#18-sonnet-v340-implementation--grok-review) | What v3.4.0 implemented (Pitfall 12 + channel mode) + Grok code review |
+| **3** | [§17](#17-post-sonnet-verification-v339--grok-composer-review) | v3.3.9 slice (contact type + encrypt) |
+| **4** | [§10](#10-contact-id-audit-pitfall-12--the-critical-drift) | Pitfall 12 background (pre-fix investigation) |
+| **5** | [§13](#13-field-bug-report--opengd77-cps-import-user-reported) | Field report + §13.11 QA closure (export evidence) |
+| **6** | [§14](#14-recommended-fix-list-prioritized) | P0 code done; P1 `CSVImporter` + verification |
+| **7** | [§15](#15-verification-checklist-for-reviewers) | §15.3 code snapshot; §15.4 `.tmp_export_verify/` |
 
-**Do not trust without grep:** `AI_LOGS_SUMMARY.md` §3.11 (lines 193–197) and §6.7 (lines 405–407) claim all four Java files were fixed for `contact_number` — **false on `main`** (see [§9.1](#91-ai_logs-claims-vs-code-verdict)).
+**Do not trust without grep:** `AI_LOGS_SUMMARY.md` §3.11 originally claimed all four files fixed — **false through v3.3.9**; **corrected in AI_LOGS and code as of v3.4.0** except `CSVImporter` (see [§9.1](#91-ai_logs-claims-vs-code-verdict), [§10.10](#1010-claim-matrix-post-v340)).
 
 ---
 
@@ -56,7 +57,7 @@
 
 **v3.4.0 (Sonnet, commit `1ec55d1d`):** Implements Pitfall 12 in `DirectDatabaseExporter`, `DirectDatabaseImporter`, and `CSVExporter`; maps channel_mode `3↔4`; corrects README and AI_LOGS false claims. See [§18](#18-sonnet-v340-implementation--grok-review).
 
-**Field validation:** Stock **CPS 2025.03.23.01** import symptoms mapped to code in §13; after v3.3.9, users should **re-import from scratch** and reboot (LSPosed) before judging DMR TX.
+**Field validation:** Stock **CPS 2025.03.23.01** import symptoms mapped in §13; **v3.4.0** addresses #1–#3 and #5–#6 in code (Pitfall 12 + mode `3↔4`). Users must **install v3.4.0**, reboot (LSPosed), **delete and re-import** codeplug before judging DMR TX on hardware.
 
 **Secondary findings (still open):**
 - Transcription: `TranscriptionService.java` uses **Google Cloud Speech-to-Text**; README and `AI_LOGS_SUMMARY.md` §3.12 describe **OpenAI Whisper**.
@@ -81,6 +82,8 @@
 | `.github/copilot-instructions.md` | Large maintainer guide (~1500 lines); mostly accurate, self-notes drift |
 
 **Target device workflow:** Root + Magisk (Zygisk) + LSPosed → enable module for `com.pri.prizeinterphone` only.
+
+**AI agent deploy rule:** After pushing/installing a new `DMRModHooks` APK via `adb`, **always run `adb reboot`** immediately (or use `DMRModHooks/install.ps1`, which reboots on success). Mandatory for valid on-device tests — see `.github/copilot-instructions.md` § “AI agents — device deploy (mandatory)”.
 
 ---
 
@@ -147,6 +150,24 @@ Mutually exclusive flags. Pattern:
 | `.docs/AI_LOGS_SUMMARY.md` §1 | **v3.4.0** | Updated; §3.11 false claim corrected |
 | Git commit `f664a60c` | "Release v3.3.8" | Only `build.gradle` + APK; no Java CSV fixes |
 
+### 4.1 Sonnet backlog (post-v3.4.0, June 5, 2026)
+
+**Status:** P0 import/export integrity on the **LOCAL → IMPORT/EXPORT** path is **code-complete** in `1ec55d1d`. Remaining work is verification, legacy paths, and doc hygiene. Do **not** re-open Pitfall 12 or contact-type inversion unless a regression is proven.
+
+| Priority | Task | Why | Suggested approach |
+|----------|------|-----|-------------------|
+| **P0-verify** | Hardware DMR TX after clean v3.4.0 import | Only open symptom with code fixes but no TX proof (#5) | Install `releases/DMRModHooks-v3.4.0.apk`, `adb reboot`, wipe channels/contacts, re-import CPS export, test one digital channel with encrypt off |
+| **P0-verify** | `channel_txContact=0` OEM behavior | v3.4.0 changed default from `1` → `0` | Activate channel with unresolved contact; check for “operation failed” vs “no contact” |
+| **P0-verify** | CPS 2025.03.23.01 double-slot `channel_mode` value | Mapping assumes CPS writes `3` | Export one known repeater from stock CPS; read col 35; compare to §15.4 export sample |
+| **P1** | Fix `CSVImporter` table `"contact"` → `"contact_database"` | Backup path still broken | One-line query fix or route `BackupActivity` to `DirectDatabase*` |
+| **P1** | `buildContactTypeMap()` on channel import | `channel_contactType` may stay `0` when col 36 empty | Read assigned contact’s `contact_type` after Pitfall 12 resolves txContact |
+| **P1** | `releases/RELEASE_NOTES.md` + `DMRModHooks/README.md` | Still at v3.1.x | Mirror root `README.md` v3.4.0 bullets |
+| **P2** | Transcription docs → Google Cloud Speech | `AI_LOGS` §3.12 vs `TranscriptionService.java` | Doc-only; no code change unless switching APIs |
+| **P2** | Analog CPS “Disabled” → `sq=2` optional map | Field #4 | Only if users confirm sq=0 is unusable on Armor 26 Ultra |
+| **P3** | Do **not** re-try (see `AI_LOGS_SUMMARY.md` §4) | Dead ends on this hardware | APRS TX over FM, LED MCU control, firmware group-RX patches, on-device Whisper/Vosk |
+
+**Sonnet session checklist:** Read §18 → run §15 grep block (expect post-v3.4.0) → §15.4 export samples → device QA §13.10 → close or file issues in §14.
+
 ---
 
 ## 5. Architecture
@@ -212,7 +233,7 @@ From `.github/copilot-instructions.md` and `AI_LOGS_SUMMARY.md` §4 — **empiri
 |------|----------|-------------|
 | **A — Code + copilot pitfalls** | `MainHook.java`, `DirectDatabaseImporter.java`, `.github/copilot-instructions.md` Pitfall 12 | Highest |
 | **B — Session synthesis** | `.docs/AI_LOGS_SUMMARY.md` | High for *history*; verify “shipped” claims against git |
-| **C — User README** | Root `README.md` | Good feature list; version/footer stale; v3.3.8 contact claims wrong |
+| **C — User README** | Root `README.md` | Updated v3.4.0 (June 5, 2026); `DMRModHooks/README.md` still stale |
 | **D — Old / alternate paths** | `docs/STATUS.md` (Magisk paused), `docs/QUICKSTART.md` (Ghidra blocked Feb 28), `DMRModHooks/README.md` | Historical |
 | **E — Early APRS architecture** | `docs/APRS_COMPLETE_SYSTEM_SUMMARY.md` | Shows TX path “DONE”; superseded by TX investigation |
 
@@ -243,11 +264,10 @@ References `.docs/AI_LOGS_SUMMARY.md` — **file exists** at `.docs/AI_LOGS_SUMM
 **Caveats (§10 of that file):**
 
 - Only **4 of 10** chat logs read in full; Feb 22 log (~270k lines) never fully read.
-- §3.11 claims contact-map fix in all four Java files — **contradicted by current source** (see §10 below).
+- §3.11 originally claimed contact-map fix in all four files — **false through v3.3.9**; annotated + fixed in v3.4.0 (see §9.1, §10.10).
 - §3.12 says production transcription is **OpenAI Whisper** — **contradicted by** `TranscriptionService.java` (Google API).
-- “Currently shipped v3.3.7” — outdated vs `build.gradle` 3.3.8.
 
-**Reviewer rule:** When AI_LOGS says “fixed in all four files,” run the grep patterns in §15 before believing it.
+**Reviewer rule:** For Pitfall 12 status, use §15.3 (post-v3.4.0), not §10.4–10.7 alone (those sections document the pre-fix investigation).
 
 ### 9.1 AI_LOGS claims vs code (verbatim)
 
@@ -259,21 +279,33 @@ References `.docs/AI_LOGS_SUMMARY.md` — **file exists** at `.docs/AI_LOGS_SUMM
 
 > **Fixed:** build map keyed by `contact_number`. Android format now also writes the raw DMR ID to col 11 …
 
-**Audit verdict on `main` (June 5, 2026):**
+**Audit verdict — pre-v3.4.0 (through v3.3.9, June 5, 2026):**
 
-| AI_LOGS claim | Code reality |
-|---------------|--------------|
-| Map keyed by `contact_number` in all four files | **False** — `DirectDatabaseExporter` still queries `_id`, `contact_name` (~932) |
-| Col 11 DMR ID export/import | **False** — exporters still `append("None")` for col 11 |
-| Importer reads col 11 | **False** — name→`_id` only |
-| Default contact `0` on failure | **False** — `getContactId` returns `1` (~1635, 1643) |
+| AI_LOGS claim | Code reality (pre-v3.4.0) |
+|---------------|---------------------------|
+| Map keyed by `contact_number` in all four files | **False** until `1ec55d1d` |
+| Col 11 DMR ID export/import | **False** on Direct* / CSVExporter until v3.4.0 |
+| Importer reads col 11 | **False** until v3.4.0 |
+| Default contact `0` on failure | **False** (`getContactId` returned `1`) until v3.4.0 |
 | v3.3.8 git commit applied Java fix | **False** — `f664a60c` only version + APK |
 
-**Separate bug (not in AI_LOGS §3.11):** contact **type** Group/Private inverted in `DirectDatabaseImporter` — field report §13; legacy `CSVImporter` line 246 is correct but unused by main IMPORT.
+**Audit verdict — post-v3.4.0 (`1ec55d1d`):**
+
+| AI_LOGS claim | Code reality (v3.4.0+) |
+|---------------|----------------------|
+| Map keyed by `contact_number` | **True** — `DirectDatabaseExporter`, `DirectDatabaseImporter`, `CSVExporter` |
+| Col 11 DMR ID export/import | **True** — Direct* + `CSVExporter`; **false** on `CSVImporter` |
+| Importer reads col 11 | **True** — `DirectDatabaseImporter` col 11 primary |
+| Default contact `0` on failure | **True** — `getContactId` returns `0` |
+| `AI_LOGS` §3.11 narrative | **Annotated** with correction block in `.docs/AI_LOGS_SUMMARY.md` |
+
+**Separate bug (fixed v3.3.9):** contact **type** Group/Private inversion — field report §13 #1–2.
 
 ---
 
 ## 10. Contact ID audit (Pitfall 12) — the critical drift
+
+> **§10.4–10.8** document the **pre-v3.4.0 investigation** (why the bug mattered). **Current behavior** is in [§10.10](#1010-claim-matrix-post-v340) and [§18](#18-sonnet-v340-implementation--grok-review). Pitfall 12 is **implemented** on the primary LOCAL import/export path as of v3.4.0.
 
 ### 10.1 Ground truth (OEM behavior)
 
@@ -306,7 +338,7 @@ From root `README.md` (June 1, 2026 section):
 
 **Primary round-trip = Direct* only** for normal users.
 
-### 10.4 Claim matrix (source on `main` as of audit date)
+### 10.4 Claim matrix (pre-v3.4.0 — historical)
 
 | Claim | DirectDatabaseExporter | DirectDatabaseImporter | CSVExporter | CSVImporter |
 |-------|------------------------|-------------------------|-------------|-------------|
@@ -427,6 +459,17 @@ Still reachable from `BackupActivity.java` (~349–447).
 - Import Channels.csv with col 11 set and col 9 `"None"`.
 - Cross-device import (contacts file + channels file, order: contacts first).
 
+### 10.10 Claim matrix (post-v3.4.0)
+
+| Claim | DirectDatabaseExporter | DirectDatabaseImporter | CSVExporter | CSVImporter |
+|-------|------------------------|-------------------------|-------------|-------------|
+| Map keyed by `contact_number` | **YES** | **YES** (name→DMR ID) | **YES** | **NO** (still `_id` via wrong table) |
+| Export col 11 = DMR ID | **YES** | n/a | **YES** | n/a |
+| Import reads col 11 | n/a | **YES** (primary) | n/a | **NO** |
+| Default fail → `0` | n/a | **YES** | n/a | partial (`getOrDefault` only) |
+| Channel mode `3↔4` | **YES** (export 4→3) | **YES** (import 3→4) | n/a | n/a |
+| Contact type Group/Private | n/a | **YES** (v3.3.9) | n/a | **YES** (unused path) |
+
 ---
 
 ## 11. Other doc vs code mismatches
@@ -444,7 +487,8 @@ Still reachable from `BackupActivity.java` (~349–447).
 ### 11.2 MainHook size and version
 
 - README project tree: “MainHook 3300+ lines” → actual **~15,953 lines**.
-- `VERSION = "3.3.7"` vs `build.gradle` **3.3.8**.
+- `MainHook` line count ~16k; README tree still says “3300+ lines” in places.
+- `VERSION` aligned with `build.gradle` since v3.3.9 (**3.4.0** as of `1ec55d1d`).
 
 ### 11.3 Deployment story
 
@@ -481,15 +525,18 @@ f664a60c Release v3.3.8
   releases/DMRModHooks-v3.3.8.apk
 ```
 
-**No commits found** on `main` that change contact map keying to `contact_number` in the four CSV classes. Recent related commits:
+**Pitfall 12 / import fix timeline:**
 
-- `a2cc1ffa` — import order (contacts before channels)
-- `94f4a242` / `18319db6` — relay preserve, TG list export
-- `ec0234da` — contact type column in CSV backup (export col 36), not Pitfall 12 map fix
+| Commit | Version | Java changes |
+|--------|---------|--------------|
+| `f664a60c` | v3.3.8 | Version + APK only — **no** CSV contact-map fix |
+| `7526e354` | v3.3.9 | Contact type swap; encrypt defaults; sq parse default |
+| `1ec55d1d` | v3.4.0 | Pitfall 12 (Direct* + `CSVExporter`); channel_mode `3↔4`; README + AI_LOGS corrections |
+| `483586e4` | docs | Audit §18 (Sonnet v3.4.0 implementation notes) |
 
-**Conclusion:** v3.3.8 **marketing/docs/contact fix narrative** diverged from **merged Java** for contact maps.
+Earlier related commits: `a2cc1ffa` (import order), `94f4a242` / `18319db6` (relay, TG list), `ec0234da` (contact type col 36 export).
 
-**v3.3.9 addendum:** Sonnet’s commit message accurately describes its scope (type swap + encrypt). Do not conflate with README/AI_LOGS “contact ID fix in all four files.”
+**Conclusion:** v3.3.8 **marketing/docs** claimed Pitfall 12; **code shipped in v3.4.0**. v3.3.9 fixed a **different** bug set (contact **type**, encrypt).
 
 ---
 
@@ -577,7 +624,7 @@ int contactType = idType.equalsIgnoreCase("Group") ? 1 : 0;
 
 **UI wiring — only `DirectDatabaseImporter` is invoked from `MainHook` IMPORT (~4134).**
 
-### 13.5 Bug 3 — Channel mode Direct vs double-slot
+### 13.5 Bug 3 — Channel mode Direct vs double-slot (**fixed v3.4.0**)
 
 **OEM (`InterPhoneChannelActivity.java`):**
 
@@ -588,14 +635,9 @@ int contactType = idType.equalsIgnoreCase("Group") ? 1 : 0;
 
 On load, only `0` and `4` update the mode TextView. Value **`3`** (common in OpenGD77 CPS exports) matches neither; UI can remain at default **“Direct mode”** while timeslot columns still show slot 1 or 2.
 
-**Importer** stores CSV value unchanged:
+**Pre-v3.4.0:** Importer stored CSV value unchanged (`channel_mode=3` → UI showed Direct).
 
-```java
-channelMode = Integer.parseInt(fields[offset + 27 + flagOffset].trim());
-values.put("channel_mode", channelMode);
-```
-
-**Needed:** Map OpenGD77/CPS `3` → Android `4` on import (and reverse on export). Verify against a sample `Channels.csv` row from CPS 2025.03.23.01.
+**v3.4.0:** Import maps `3→4`; export maps `4→3` (`DirectDatabaseImporter` / `DirectDatabaseExporter`). Confirm CPS 2025.03.23.01 actually uses `3` for double-slot (§18.8).
 
 ### 13.6 Bug 4 — Analog squelch 0
 
@@ -626,7 +668,7 @@ If header detection fails (CPS header/column count ≠ expected) or encrypt fiel
 
 **File header comment** in `DirectDatabaseImporter.java` was corrected in v3.3.9 to document `encryptSw=2` (disabled) for digital channels.
 
-**Pitfall 12 (`channel_txContact`):** Channels still resolve contact by **name → row `_id`**, not DMR ID — digital TX/RX can fail even after user toggles encryption off in UI (#5).
+**Pitfall 12 (`channel_txContact`):** **Fixed v3.4.0** — import uses col 11 DMR ID + name→`contact_number` map; default `0`. Hardware TX still needs validation (#5).
 
 ### 13.8 Import path diagram
 
@@ -644,8 +686,9 @@ flowchart LR
 |-----------|---------------|-------------------|-----------------|--------------|
 | Stock CPS CSV | OpenGD77 strings | Often col 11 empty | Usually 0=off | Often 0 or 3 |
 | DirectDatabaseImporter (pre-3.3.9) | **Swapped** | **_id not DMR ID** | **Often 1 or legacy 1** | **No 3→4 map** |
-| DirectDatabaseImporter (v3.3.9+) | **Fixed** | **_id not DMR ID** (unchanged) | **Default 2 (off)** | **No 3→4 map** (unchanged) |
-| CSVImporter (legacy) | **Correct** | Still wrong table/path | relay 0 bug | band 0 bug |
+| DirectDatabaseImporter (v3.3.9 only) | **Fixed** | **_id not DMR ID** | **Default 2 (off)** | **No 3→4 map** |
+| DirectDatabaseImporter (v3.4.0+) | **Fixed** | **DMR ID** (Pitfall 12) | **Default 2 (off)** | **3→4 map** |
+| CSVImporter (legacy) | **Correct** type | Wrong table `"contact"`; no col 11 | varies | band 0 bug |
 | OEM expects | 0=Priv 1=Group | DMR ID in txContact | 2=off | 0/4 |
 
 ### 13.9 What does *not* explain this report
@@ -656,32 +699,42 @@ flowchart LR
 
 ### 13.10 Confirmation steps for reporter / QA
 
-**On v3.3.9+ (after clean re-import + reboot):**
+**On v3.4.0+ (after `adb install -r` v3.4.0, LSPosed reboot, clean re-import):**
 
-1. **Contacts:** OpenGD77 **Group** → phone **Group** tab; **Private** → **Private** tab. (Pre-3.3.9: reversed.)
-2. **DMR encrypt:** Fresh import → channel editor shows encryption **off** (`encryptSw=2`). (Pre-3.3.9: often on.)
-3. **Repeaters:** If UI still shows **Direct** for double-slot CPS channels, bug 3 likely still present (`channel_mode=3` in DB).
-4. **DMR TX:** If encrypt off but digital still fails, suspect **Pitfall 12** (`txContact` wrong) — not fixed in v3.3.9.
-5. **Analog sq:** CPS `Disabled`/0% may still import as `sq=0`; only **parse failure** defaults to `sq=2` for analog.
+1. **Contacts:** Group → Group tab; Private → Private tab (v3.3.9).
+2. **DMR encrypt:** Encryption **off** on fresh import (`encryptSw=2`) (v3.3.9).
+3. **Repeaters:** Double-slot CPS channels → UI **Double slot** (`channel_mode=4` in DB) (v3.4.0).
+4. **DMR TX:** With encrypt off and correct contact tabs, test digital TX; if fail, check logcat `txContact` / OEM `txContact=0` behavior (§18.8).
+5. **Analog sq:** CPS `Disabled`/0% may still be `sq=0`; optional follow-up.
 
-**Regression check (pre-3.3.9 only):** Compare `BackupActivity` (`CSVImporter`) vs LOCAL IMPORT — type swap was only on `DirectDatabaseImporter`.
+**Regression:** `BackupActivity` / `CSVImporter` path still uses wrong `"contact"` table — use **LOCAL IMPORT** only until P0#5 closed.
 
-### 13.11 Link to §10 (Pitfall 12)
+### 13.11 Field report status after v3.4.0
 
-| Issue | User symptom |
-|-------|----------------|
-| Contact **type** swap | #1, #2 |
-| `txContact` = `_id` not DMR ID | #5 (with #6) |
-| Encrypt defaults | #5, #6 |
-| Channel mode 3 vs 4 | #3 |
+| # | Symptom | Code fix | QA on device | Export/CSV evidence (Grok, June 5) |
+|---|---------|----------|--------------|-------------------------------------|
+| 1–2 | Swapped contact lists | v3.3.9 | Retest tabs after clean import | **Closed in CSV:** `Contacts_swapped.csv` has `Private` on MD-380 (1446) and `Group` on Family Group (11904). Inverted snapshot in `Contacts.csv` (same names, swapped `ID Type`) documents pre-fix export behavior — see §15.4 |
+| 3 | Repeaters show Direct | v3.4.0 (`3→4`) | Retest repeater UI | **Partial:** `Channels.csv` row Medina-T1-N0AGI exports `Channel Mode=3` (Android DB had `4` → CPS `3`). Confirms **export** leg of `4→3`; import/UI still needs device check |
+| 4 | Analog sq=0 | Partial | Optional | `Channels.csv` analog rows use squelch `45` (percent), not `0` — reporter’s sq=0 may be CPS-specific rows not in this sample |
+| 5 | DMR don’t work | v3.4.0 Pitfall 12 + v3.3.9 encrypt | **TX test required** | Encrypt col `0` on digital rows in export sample; col 11 DMR ID still `1` on some rows — verify against real contact DMR IDs on device |
+| 6 | Encrypt on | v3.3.9 | Retest channel editor | **Closed in CSV:** digital channels show `Encrypt Switch,0` in `.tmp_export_verify/Channels.csv` |
 
-Fixing Pitfall 12 alone **does not** fix swapped contact lists — requires changing `importContacts()` / exporter `idType` mapping (done in v3.3.9 for type; Pitfall 12 still separate).
+**QA closure rule:** Treat #1–2 and #6 as **code + export verified**; #3 export mapping **verified**, import/UI **pending**; #5 **open** until digital TX on hardware.
+
+### 13.12 Link to §10 (Pitfall 12)
+
+| Issue | User symptom | Fixed in |
+|-------|----------------|----------|
+| Contact **type** swap | #1, #2 | v3.3.9 |
+| `txContact` = DMR ID | #5 | v3.4.0 |
+| Encrypt defaults | #5, #6 | v3.3.9 |
+| Channel mode 3 vs 4 | #3 | v3.4.0 |
 
 ---
 
 ## 14. Recommended fix list (prioritized)
 
-Status as of **v3.3.9** (`7526e354`):
+Status as of **v3.4.0** (`1ec55d1d`):
 
 ### P0 — Data integrity (contact / codeplug)
 
@@ -815,9 +868,36 @@ Sonnet implementation commit `1ec55d1d` (June 5, 2026). Verified by source read 
 | `build.gradle` versionCode/Name | **340 / 3.4.0** | `DMRModHooks/app/build.gradle` |
 | `README.md` header | **v3.4.0** June 5 2026 | Root `README.md` — What's New for v3.4.0 + v3.3.9; v3.3.8 claim corrected |
 | `AI_LOGS_SUMMARY.md` §3.11 | **Corrected** | False “Fixed in all four files” claim annotated with correction; v3.4.0 noted |
-| Gradle release build | **SUCCESS** (17 s) | `assembleRelease` |
+| Gradle release build | **SUCCESS** (17 s) | `assembleRelease` (Sonnet) |
 | APK size | **41.33 MB** | `releases/DMRModHooks-v3.4.0.apk` |
-| GitHub release v3.4.0 | **Published** | 2 assets: APK (41.33 MB) + fork zip (0.82 MB) |
+| Device install (Grok, v1.5) | **SUCCESS** | `adb install -r` debug APK → **3.4.0** (340) on `5006AF1020002922` |
+
+### 15.4 Export round-trip verification (workspace samples)
+
+**Artifacts (untracked, June 5, 2026):** `.tmp_export_verify/` — produced by LOCAL **EXPORT** after v3.4.0 on device `5006AF1020002922` for Sonnet/code review. Not committed; safe to delete or regenerate.
+
+| File | Purpose |
+|------|---------|
+| `Contacts_swapped.csv` | **Correct** contact `ID Type` after v3.3.9+ (filename is historical — content is *not* swapped) |
+| `Contacts.csv` | **Inverted** `ID Type` snapshot (Group/Private reversed vs OEM) — illustrates pre-v3.3.9 bug or DB still holding swapped types before re-import |
+| `Channels.csv` | Channel export with col 11 `DMR ID`, `Encrypt Switch`, `Channel Mode` |
+
+**Contact type spot-check (first private vs first group):**
+
+| Contact | `Contacts_swapped.csv` (expected) | `Contacts.csv` (inverted) |
+|---------|-----------------------------------|---------------------------|
+| MD-380 (1446) | `Private` | `Group` |
+| Family Group (11904) | `Group` | `Private` |
+
+**Channel spot-checks (`Channels.csv`):**
+
+| Channel | Col 11 DMR ID | Encrypt Switch | Channel Mode | Notes |
+|---------|---------------|----------------|--------------|-------|
+| Family DMR | `1` | `0` | `0` | Encrypt off — matches v3.3.9; DMR ID value needs device cross-check |
+| Medina-T1-N0AGI | `1` | `0` | **`3`** | Confirms `4→3` on export for double-slot repeater |
+| STMA EMS/Fire (analog) | empty | `0` | `0` | Squelch `45` (percent string) |
+
+**Sonnet action:** If `Contacts.csv` was exported from the same session as `Contacts_swapped.csv`, determine which code path produced each file. Primary path should only emit the **correct** mapping; a second inverted file implies stale DB data or a legacy exporter — grep `DirectDatabaseExporter` contact `idType` lines (~585–586).
 
 ---
 
@@ -874,18 +954,10 @@ Sonnet implementation commit `1ec55d1d` (June 5, 2026). Verified by source read 
 | 4 | Analog sq=0 | **May persist** for explicit 0%/Disabled in CSV | **Medium** — only parse-fail → `sq=2` |
 | 5 | DMR channels don’t work | **Partially improved** | **Medium** — encrypt fixed; txContact not |
 | 6 | Encrypt on | **Fixed** on fresh import | **High** |
-### 13.11 Field report status after v3.4.0
 
-| # | Symptom | Expected after v3.4.0 | Confidence |
-|---|---------|------------------------|------------|
-| 1–2 | Swapped Group/Private lists | **Fixed** (v3.3.9) | High |
-| 3 | Repeaters show Direct not double-slot | **Fixed** (v3.4.0) — `3→4` mapped | High (if CPS uses `3`; see §18.8) |
-| 4 | Analog sq=0 for explicit Disabled/0% | **May persist** | Medium — parse-fail only |
-| 5 | DMR channels don't work | **Improved** — txContact now DMR ID | Medium — needs hardware TX test |
-| 6 | Encrypt on | **Fixed** (v3.3.9) | High |
-**Device note:** Debug APK `app/build/outputs/apk/debug/app-debug.apk` was installed on Armor 26 Ultra (`adb install -r`). User must **re-enable LSPosed scope** and **reboot** for hook bytecode to load; then **delete and re-import** codeplug (old DB rows retain wrong `contact_type` / `encryptSw`).
+**Device note (v3.3.9):** See §15.2. **v3.4.0** install: Grok Composer, June 5, 2026 — `app-debug.apk` on device `5006AF1020002922`, `versionName=3.4.0` (340). Reboot LSPosed + clean re-import required.
 
-### 17.4 Opinions and recommendations
+### 17.4 Opinions and recommendations (historical — pre-v3.4.0)
 
 1. **Do not update README to repeat the v3.3.8 “contact ID fixed in all four files” wording** for v3.3.9. Describe accurately: “contact **type** and encryption import fixes.” Pitfall 12 deserves its own release bullet when actually merged.
 2. **Sonnet chose the right first slice.** Type swap + encrypt are the highest-signal fixes for the field report with the smallest diff and lowest regression risk. Pitfall 12 is a larger change (map rebuild + col 11 + default `0`) and should be a dedicated commit with round-trip tests.
@@ -1085,6 +1157,8 @@ Round-trip: CPS `3` → Android DB `4` → CPS export `3`. Values other than `3`
 | 2026-06-05 | v1.2 | Sonnet quick-start, verbatim bug report (§13.0), AI_LOGS quotes (§9.1), verification snapshot (§15.1) |
 | 2026-06-05 | v1.3 | §17 Grok Composer post-Sonnet v3.3.9 review; §14/§15 status tables; device install note; executive summary updated |
 | 2026-06-05 | v1.4 | §18 Sonnet v3.4.0 implementation detail (Pitfall 12 + channel mode 3↔4 + doc corrections); §14 P0 items marked done; §15.3 post-v3.4.0 snapshot; §4 version table updated; §13.11 field report updated; executive summary updated |
+| 2026-06-05 | v1.5 | Grok consistency pass: §9.1/§10.10 post-v3.4.0 matrices; §12 timeline; §13.5–13.12 QA; fixed §17 duplicate §13.11; §15.3 device install v3.4.0 |
+| 2026-06-05 | v1.6 | §4.1 Sonnet backlog; §15.4 export verify (`.tmp_export_verify/`); §13.11 field-QA closure table; quick-start row for §4.1/§15.4 |
 
 ## Appendix C — Related artifacts
 
@@ -1097,8 +1171,9 @@ Round-trip: CPS `3` → Android DB `4` → CPS export `3`. Values other than `3`
 | Shipped APK (v3.4.0 Pitfall 12 + channel mode) | `releases/DMRModHooks-v3.4.0.apk` |
 | v3.3.9 fix commit | `7526e354` |
 | v3.4.0 fix commit | `1ec55d1d` |
+| Export verify samples (untracked) | `.tmp_export_verify/Contacts*.csv`, `Channels.csv` |
 | Stock CPS named in bug report | OpenGD77 **2025.03.23.01** (not the fork zip in `OpenGD77Fork/`) |
 
 ---
 
-*End of reviewer handoff — v1.4.*
+*End of reviewer handoff — v1.6.*

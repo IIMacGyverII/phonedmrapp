@@ -3,6 +3,8 @@
 # 
 # WARNING: Always use this script to install updates!
 # Uses -r (replace) and -t (test package) flags to preserve LSPosed module state.
+# Reboots the device automatically after successful install (required for LSPosed hook changes).
+# AI agents: use this script instead of adb install alone — see .github/copilot-instructions.md
 # 
 # The build.gradle is configured so debug and release use the SAME signing key.
 # This prevents signature mismatches that would force user to re-enable in LSPosed.

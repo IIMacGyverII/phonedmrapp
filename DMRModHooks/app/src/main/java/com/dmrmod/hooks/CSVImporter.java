@@ -461,14 +461,14 @@ public class CSVImporter {
                 Log.w(TAG, "Contact database not accessible for name map: " + e.getMessage());
                 return contactMap;
             }
-            cursor = db.query("contact", new String[]{"_id", "contact_name"}, null, null, null, null, null);
+            cursor = db.query("contact_database", new String[]{"contact_number", "contact_name"}, null, null, null, null, null);
             
             if (cursor != null) {
                 while (cursor.moveToNext()) {
-                    int id = cursor.getInt(0);
+                    int dmrId = cursor.getInt(0);
                     String name = cursor.getString(1);
                     if (name != null && !name.isEmpty()) {
-                        contactMap.put(name, id);
+                        contactMap.put(name, dmrId);
                     }
                 }
             }
