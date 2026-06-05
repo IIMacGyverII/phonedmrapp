@@ -27,7 +27,7 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
 <video src="https://github.com/IIMacGyverII/phonedmrapp/releases/download/v3.3.8/3.3.8.mp4" controls autoplay muted loop title="DMRModHooks v3.3.8 Demo" width="800"></video>
 
-## 🔧 What's New in v3.4.1 (June 5, 2026)
+## What's New in v3.4.1 (June 5, 2026)
 
 ### CSVImporter Legacy Contact Fix (all 4 files complete)
 
@@ -39,7 +39,7 @@ The `BackupActivity` path uses the legacy `CSVImporter` class. Its `buildContact
 
 ---
 
-## 🔧 What's New in v3.4.0 (June 5, 2026)
+## What's New in v3.4.0 (June 5, 2026)
 
 ### Pitfall 12 Fix — Contact DMR ID (all 4 export/import files)
 `channel_txContact` stores the 24-bit DMR ID (`contact_number`), not the contact table `_id`. All four export/import files were keying contact maps by `_id`, causing contacts to resolve to the wrong person or default to "None"/contact 1 on import.
@@ -52,7 +52,7 @@ CPS/OpenGD77 uses `channel_mode=3` for double-slot; the OEM firmware uses `4`. I
 
 ---
 
-## 🐛 What's New in v3.3.9 (June 5, 2026)
+## What's New in v3.3.9 (June 5, 2026)
 
 ### OpenGD77 CPS Import Bug Fixes (field report)
 - **Group/Private contacts swapped**: `DirectDatabaseImporter` had Group→0, Private→1; OEM uses 0=Private, 1=Group. Fixed in importer and exporter.
@@ -62,7 +62,7 @@ CPS/OpenGD77 uses `channel_mode=3` for double-slot; the OEM firmware uses `4`. I
 
 ---
 
-## 📋 What's New in v3.3.8 (June 1, 2026)
+## What's New in v3.3.8 (June 1, 2026)
 
 ### OpenGD77 CPS Fork v1.2.0
 - Fixed Latitude, Longitude, and Use Location showing as 0 after Android CSV import
@@ -72,7 +72,7 @@ CPS/OpenGD77 uses `channel_mode=3` for double-slot; the OEM firmware uses `4`. I
 > **Note:** v3.3.8 release notes previously claimed "Contact ID Fix (Pitfall 12)" in all four Java files. That fix was not in the Java source — the actual Java fix shipped in **v3.4.0**.
 
 ---
-## �📍 What's New in v3.3.7 (March 19, 2026)
+## What's New in v3.3.7 (March 19, 2026)
 
 ### GPS Messaging over DMR SMS
 
@@ -101,7 +101,7 @@ CPS/OpenGD77 uses `channel_mode=3` for double-slot; the OEM firmware uses `4`. I
 
 ---
 
-## 🔧 What's New in v3.3.6 (March 19, 2026)
+## What's New in v3.3.6 (March 19, 2026)
 
 ### TG List — Direct DB Write + Group Grid Refresh
 
@@ -119,7 +119,7 @@ CPS/OpenGD77 uses `channel_mode=3` for double-slot; the OEM firmware uses `4`. I
 
 ---
 
-## 🛰️ What's New in v3.3.5 (March 19, 2026)
+## What's New in v3.3.5 (March 19, 2026)
 
 ### NOAA APT — Software Squelch Slider Added to Live Monitoring Screen
 
@@ -144,7 +144,7 @@ CPS/OpenGD77 uses `channel_mode=3` for double-slot; the OEM firmware uses `4`. I
 
 ---
 
-## 🛰️ What's New in v3.3.4 (March 19, 2026)
+## What's New in v3.3.4 (March 19, 2026)
 
 ### NOAA APT Satellite Image Reception — Live Monitoring
 
@@ -191,7 +191,7 @@ CPS/OpenGD77 uses `channel_mode=3` for double-slot; the OEM firmware uses `4`. I
 - Crash-recovery dialog on next app start if restore did not complete
 
 ---
-## 📺 What's New in v3.3.3 (March 18, 2026)
+## What's New in v3.3.3 (March 18, 2026)
 
 ### SSTV Settings & Received Images Dialogs + Dialog Refresh Fix
 
@@ -219,7 +219,7 @@ CPS/OpenGD77 uses `channel_mode=3` for double-slot; the OEM firmware uses `4`. I
 
 ---
 
-## 📡 What's New in v3.3.2 (March 19, 2026)
+## What's New in v3.3.2 (March 19, 2026)
 
 ### APRS Received + APRS Settings Buttons Moved to Monitoring Page
 
@@ -238,7 +238,7 @@ CPS/OpenGD77 uses `channel_mode=3` for double-slot; the OEM firmware uses `4`. I
 
 ---
 
-## 🔧 What's New in v3.3.1 (March 18, 2026)
+## What's New in v3.3.1 (March 18, 2026)
 
 ### Crash Recovery Improvements — Restart App Button + Channel Name Fix
 
@@ -259,7 +259,7 @@ CPS/OpenGD77 uses `channel_mode=3` for double-slot; the OEM firmware uses `4`. I
 
 ---
 
-## 📺 What's New in v3.3.0 (March 18, 2026)
+## What's New in v3.3.0 (March 18, 2026)
 
 ### SSTV Live Monitoring - Slow Scan TV Image Reception
 
@@ -337,7 +337,7 @@ CPS/OpenGD77 uses `channel_mode=3` for double-slot; the OEM firmware uses `4`. I
 
 ---
 
-## 🎛️ What's New in v3.1.5 (March 14, 2026)
+## What's New in v3.1.5 (March 14, 2026)
 
 ### VFO Mode - Variable Frequency Oscillator
 
@@ -426,7 +426,7 @@ CPS/OpenGD77 uses `channel_mode=3` for double-slot; the OEM firmware uses `4`. I
 
 ---
 
-## 🐛 What's New in v3.1.4 (March 13, 2026)
+## What's New in v3.1.4 (March 13, 2026)
 
 ### Critical Software Squelch State Fix
 
@@ -449,7 +449,7 @@ CPS/OpenGD77 uses `channel_mode=3` for double-slot; the OEM firmware uses `4`. I
 
 ---
 
-## 🎨 What's New in v3.1.3 (March 13, 2026)
+## What's New in v3.1.3 (March 13, 2026)
 
 ### Software Squelch UI Enhancements & APRS Toggle
 
@@ -503,7 +503,7 @@ CPS/OpenGD77 uses `channel_mode=3` for double-slot; the OEM firmware uses `4`. I
 
 ---
 
-## 🔧 What's New in v3.1.2 (March 13, 2026)
+## What's New in v3.1.2 (March 13, 2026)
 
 ### APRS Channel Recovery & Squelch Control Improvements
 
@@ -555,7 +555,7 @@ The radio hardware has a unique quirk that affects squelch control:
 
 ---
 
-## 🐛 What's New in v3.1.1 (March 12, 2026)
+## What's New in v3.1.1 (March 12, 2026)
 
 ### Critical APRS Bug Fixes
 
@@ -627,7 +627,7 @@ The radio hardware has a unique quirk that affects squelch control:
 - APRS channels automatically filtered from channel list
 - Database stores full transmission history per station
 
-## 🎉 What's New in v3.0.9 (March 9, 2026)
+## What's New in v3.0.9 (March 9, 2026)
 
 ### 🧭 GPS Distance Display Enhancements
 
@@ -655,7 +655,7 @@ Local Simplex (↑N 250m)
 210m (689ft) 📍
 ```
 
-## 🎉 What's New in v3.0.8 (March 9, 2026)
+## What's New in v3.0.8 (March 9, 2026)
 
 ### 🎛️ Zone Management & Channel Edit Zone Selector
 
@@ -673,7 +673,7 @@ Local Simplex (↑N 250m)
 
 **Usage**: Channel page → Edit channel → Tap Zone row → Select/Create/Rename zones
 
-## 🎉 What's New in v3.0.5 (March 9, 2026)
+## What's New in v3.0.5 (March 9, 2026)
 
 ### 📂 Channel Zones
 
@@ -685,7 +685,7 @@ Local Simplex (↑N 250m)
 - Up to 80 channels per zone (OpenGD77 limit)
 - Zones stored in local database (persistent)
 
-## 🎉 What's New in v3.0.4 (March 9, 2026)
+## What's New in v3.0.4 (March 9, 2026)
 
 ### 📍 GPS Distance Calculation
 
@@ -694,14 +694,14 @@ Local Simplex (↑N 250m)
 - Uses device GPS/network location
 - No internet required
 
-## 🎉 What's New in v3.0.3 (March 9, 2026)
+## What's New in v3.0.3 (March 9, 2026)
 
 ### 🐛 Critical Bug Fix
 
 - **DMR Audio Fixed**: Resolved silent receive audio and garbled transmit audio
 - Call type override logic now only active during MON mode
 
-## 🎉 What's New in v3.0.2 (March 9, 2026)
+## What's New in v3.0.2 (March 9, 2026)
 
 ### 🆕 Major Features
 
