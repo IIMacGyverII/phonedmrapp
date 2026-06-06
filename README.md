@@ -7,7 +7,7 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 **Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS + VFO Mode + SSTV + NOAA APT!
 
 > **🚀 Current Stable Release: v3.4.1** (June 5, 2026) - CSVImporter legacy contact fix (all 4 files complete)  
-> **🖥️ OpenGD77 CPS Fork: v1.5.2** (June 5, 2026) - `OpenGD77CPS-Mac_Build_20260605_194151.zip` — Tier 1.5: collapsible advanced codeplug fields on channel editor
+> **🖥️ OpenGD77 CPS Fork: v1.5.3** (June 5, 2026) - `OpenGD77CPS-Mac_Build_20260605_202853.zip` — Tier 1.5 polish: full RadioID link, hide Analog on digital+collapsed
 > **🔧 Previous Release: v3.4.0** (June 5, 2026) - Pitfall 12 fix (contact DMR ID), channel mode, CSVExporter parity  
 > **🐛 Prior Release: v3.3.9** (June 5, 2026) - Group/Private contact type swap + encrypt defaults  
 > **🗂️ Prior Release: v3.3.8** (June 1, 2026) - OpenGD77 CPS Fork v1.2.0  
