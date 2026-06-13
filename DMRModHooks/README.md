@@ -762,7 +762,7 @@ Real-time caller information during incoming DMR transmissions.
 
 **How It Works**:
 - Hooks ModuleStatusMessageHandler for RECEIVE_START/STOP events
-- Decodes DMR ID from DigitalAudioMessage packets (offset 1, 2-byte LE)
+- Decodes DMR ID from DigitalAudioMessage packets (offset 1, 3-byte LE, 24-bit)
 - Queries contact database for name lookup
 - Asynchronous to prevent UI blocking
 
@@ -903,7 +903,7 @@ See [ANALOG_MON_FEATURE.md](ANALOG_MON_FEATURE.md) for complete technical detail
 - ✅ Display in borderbox top-left corner with green text
 - ✅ Format: "📞 Contact Name\nDMR ID: 64067" or "📞 DMR ID: 64067"
 - ✅ Hooks ModuleStatusMessageHandler for RECEIVE_START/STOP events
-- ✅ Decodes DMR ID from DigitalAudioMessage packets (offset 1, 2-byte LE)
+- ✅ Decodes DMR ID from DigitalAudioMessage packets (offset 1, 3-byte LE, 24-bit)
 - ✅ Asynchronous contact lookup prevents UI blocking
 - ✅ Display automatically clears when transmission ends
 - ✅ Works with multiple callers, tested and verified
@@ -1085,7 +1085,7 @@ See [ANALOG_MON_FEATURE.md](ANALOG_MON_FEATURE.md) for complete technical detail
 8. **DigitalAudioMessageHandler.onMessage()** *(v1.3.7+)*
    - Purpose: Extract DMR caller ID from digital audio packets
    - Actions:
-     - Decodes DMR ID from byte offset 1 (2-byte little-endian)
+     - Decodes DMR ID from byte offset 1 (3-byte little-endian, 24-bit)
      - Looks up contact name from contact_database.db
      - Updates caller display with contact name or DMR ID
      - Saves activity history entry with DMR ID
@@ -1381,7 +1381,7 @@ Or use LSPosed Manager → Logs
 - Displays incoming caller information in borderbox (top-left corner, green text)
 - Hooked ModuleStatusMessageHandler to detect RECEIVE_START/STOP events
 - Hooked DigitalAudioMessageHandler to decode caller DMR ID from radio module packets
-- DMR ID extraction: offset 1, 2-byte little-endian from Digital Audio packet body
+- DMR ID extraction: offset 1, 3-byte little-endian (24-bit) from Digital Audio packet body
 - Automatic contact name lookup from contact_database table
 - Display format: "📞 Contact Name\nDMR ID: 12345" when contact found
 - Falls back to "📞 DMR ID: 12345" when DMR ID not in contacts

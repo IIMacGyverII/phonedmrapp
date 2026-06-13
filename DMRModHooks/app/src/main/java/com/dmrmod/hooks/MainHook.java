@@ -8697,11 +8697,12 @@ public class MainHook implements IXposedHookLoadPackage {
                                 XposedBridge.log(TAG + ": Expected DMR ID: 64067 (0xFA23)");
                                 XposedBridge.log(TAG + ": =============================================");
                                 
-                                // DMR ID is at offset 1, 2-byte little-endian: bytes[2] << 8 | bytes[1]
-                                if (body.length >= 3) {
-                                    int dmrId = ((body[2] & 0xFF) << 8) | (body[1] & 0xFF);
+                                // DMR ID is at offset 1, 3-byte little-endian (24-bit): body[3]<<16 | body[2]<<8 | body[1]
+                                if (body.length >= 4) {
+                                    int dmrId = ((body[3] & 0xFF) << 16) | ((body[2] & 0xFF) << 8) | (body[1] & 0xFF);
+                                    dmrId &= 0xFFFFFF;
                                     
-                                    XposedBridge.log(TAG + ": Decoded DMR ID (offset 1, 2-byte LE): " + dmrId + ", channel type: " + currentChannelType);
+                                    XposedBridge.log(TAG + ": Decoded DMR ID (offset 1, 3-byte LE): " + dmrId + ", channel type: " + currentChannelType);
                                     
                                     // Only process DMR IDs on digital channels
                                     if (dmrId > 0 && dmrId < 16777215 && currentChannelType == 0) {  // Valid DMR ID range and digital channel
