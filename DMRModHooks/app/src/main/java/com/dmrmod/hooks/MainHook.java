@@ -98,6 +98,9 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile String currentCallerName = null;
     private static volatile boolean isReceiving = false;
     private static TextView callerDisplayTextView = null;
+
+    // Intercom content box layout (dp)
+    private static final int BORDERBOX_HEIGHT_DP = 250;
     
     // DMR activity history (last 3 activities with timestamps per channel)
     private static TextView dmrActivityIndicator = null;
@@ -1395,13 +1398,14 @@ public class MainHook implements IXposedHookLoadPackage {
                                 View pttButton = rootLayout.getChildAt(2);
                                 XposedBridge.log(TAG + ": PTT button found: " + pttButton.getClass().getSimpleName());
                                 
-                                // Create borderbox (250dp empty FrameLayout)
+                                // Create borderbox (fixed 250dp — caller scrolls inside, spectrum at bottom)
                                 android.widget.FrameLayout borderBox = new android.widget.FrameLayout(context);
                                 borderBox.setTag("DMR_BORDERBOX");
-                                int height250dp = (int) (250 * context.getResources().getDisplayMetrics().density);
+                                float density = context.getResources().getDisplayMetrics().density;
+                                int borderBoxHeightPx = (int) (BORDERBOX_HEIGHT_DP * density);
                                 LinearLayout.LayoutParams borderParams = new LinearLayout.LayoutParams(
                                     LinearLayout.LayoutParams.MATCH_PARENT,
-                                    height250dp
+                                    borderBoxHeightPx
                                 );
                                 borderParams.leftMargin = margin10dp;
                                 borderParams.rightMargin = margin10dp;
@@ -1437,90 +1441,73 @@ public class MainHook implements IXposedHookLoadPackage {
                                 XposedBridge.log(TAG + ": ✓ Added CircuitBoardView background");
                                 // ────────────────────────────────────────────────────────────
 
-                                // Add caller display TextView to borderbox (top-left)
+                                // Caller ID on top, DMR history below (may overlap spectrum)
+                                LinearLayout infoPanel = new LinearLayout(context);
+                                infoPanel.setOrientation(LinearLayout.VERTICAL);
+                                infoPanel.setTag("DMR_INFO_PANEL");
+                                int panelMarginPx = (int) (8 * density);
+                                FrameLayout.LayoutParams infoPanelParams = new FrameLayout.LayoutParams(
+                                    FrameLayout.LayoutParams.MATCH_PARENT,
+                                    FrameLayout.LayoutParams.WRAP_CONTENT
+                                );
+                                infoPanelParams.gravity = android.view.Gravity.TOP | android.view.Gravity.START;
+                                infoPanelParams.topMargin = panelMarginPx;
+                                infoPanelParams.leftMargin = panelMarginPx;
+                                infoPanelParams.rightMargin = panelMarginPx;
+                                android.graphics.drawable.GradientDrawable infoPanelDrawable = new android.graphics.drawable.GradientDrawable();
+                                infoPanelDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                                infoPanelDrawable.setStroke((int) (1 * density), 0x8800BFFF);
+                                infoPanelDrawable.setCornerRadius(8 * density);
+                                infoPanelDrawable.setColor(0x32000000);
+                                infoPanel.setBackground(infoPanelDrawable);
+                                infoPanel.setLayoutParams(infoPanelParams);
+                                int infoPadding = (int) (6 * density);
+                                infoPanel.setPadding(infoPadding, infoPadding, infoPadding, infoPadding);
+
                                 TextView callerText = new TextView(context);
                                 callerText.setTag("DMR_CALLER_TEXT");
-                                FrameLayout.LayoutParams callerParams = new FrameLayout.LayoutParams(
-                                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                                    FrameLayout.LayoutParams.WRAP_CONTENT
+                                LinearLayout.LayoutParams callerParams = new LinearLayout.LayoutParams(
+                                    LinearLayout.LayoutParams.MATCH_PARENT,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT
                                 );
-                                callerParams.gravity = android.view.Gravity.TOP | android.view.Gravity.START;
-                                callerParams.topMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
-                                callerParams.leftMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
+                                callerParams.bottomMargin = (int) (4 * density);
                                 callerText.setLayoutParams(callerParams);
-                                callerText.setTextColor(0xFF00FF00);  // Green text for incoming
+                                callerText.setTextColor(0xFF00FF00);
                                 callerText.setTextSize(14);
-                                callerText.setText("");  // Empty by default
-                                callerText.setVisibility(View.GONE);  // Hidden initially
-                                
-                                borderBox.addView(callerText);
-                                
-                                // Store reference for updates
+                                callerText.setText("");
+                                callerText.setVisibility(View.GONE);
+                                infoPanel.addView(callerText);
                                 callerDisplayTextView = callerText;
-                                
-                                // Create a small bordered box for activity history (top-right corner)
-                                LinearLayout activityBox = new LinearLayout(context);
-                                activityBox.setOrientation(LinearLayout.VERTICAL);
-                                activityBox.setTag("DMR_ACTIVITY_BOX");
-                                FrameLayout.LayoutParams activityBoxParams = new FrameLayout.LayoutParams(
-                                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                                    FrameLayout.LayoutParams.WRAP_CONTENT
-                                );
-                                activityBoxParams.gravity = android.view.Gravity.TOP | android.view.Gravity.END;
-                                activityBoxParams.topMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
-                                activityBoxParams.rightMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
-                                
-                                // Create border for activity box
-                                android.graphics.drawable.GradientDrawable activityBoxDrawable = new android.graphics.drawable.GradientDrawable();
-                                activityBoxDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                                activityBoxDrawable.setStroke(
-                                    (int) (1 * context.getResources().getDisplayMetrics().density),
-                                    0x8800BFFF  // Semi-transparent blue border
-                                );
-                                activityBoxDrawable.setCornerRadius(8 * context.getResources().getDisplayMetrics().density);
-                                activityBoxDrawable.setColor(0x10000000);  // Very subtle dark background
-                                
-                                activityBox.setBackground(activityBoxDrawable);
-                                activityBox.setLayoutParams(activityBoxParams);
-                                int padding = (int) (6 * context.getResources().getDisplayMetrics().density);
-                                activityBox.setPadding(padding, padding, padding, padding);
-                                
-                                // Add header TextView
+
                                 TextView activityHeader = new TextView(context);
                                 activityHeader.setTag("ACTIVITY_HISTORY_HEADER");
-                                activityHeader.setText("DMR History");  // Default, will be updated based on channel type
-                                activityHeader.setTextColor(0xFF00BFFF);  // Deep sky blue
+                                activityHeader.setText("DMR History");
+                                activityHeader.setTextColor(0xFF00BFFF);
                                 activityHeader.setTextSize(13);
                                 activityHeader.setTypeface(null, android.graphics.Typeface.BOLD);
                                 LinearLayout.LayoutParams headerParams = new LinearLayout.LayoutParams(
-                                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                                    LinearLayout.LayoutParams.MATCH_PARENT,
                                     LinearLayout.LayoutParams.WRAP_CONTENT
                                 );
-                                headerParams.bottomMargin = (int) (4 * context.getResources().getDisplayMetrics().density);
+                                headerParams.bottomMargin = (int) (4 * density);
                                 activityHeader.setLayoutParams(headerParams);
-                                activityBox.addView(activityHeader);
-                                
-                                // Store reference for dynamic updates
+                                infoPanel.addView(activityHeader);
                                 activityHeaderTextView = activityHeader;
-                                
-                                // Add DMR activity indicator inside the activity box
+
                                 TextView activityIndicator = new TextView(context);
                                 activityIndicator.setTag("DMR_ACTIVITY_INDICATOR");
-                                LinearLayout.LayoutParams activityParams = new LinearLayout.LayoutParams(
-                                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                                activityIndicator.setLayoutParams(new LinearLayout.LayoutParams(
+                                    LinearLayout.LayoutParams.MATCH_PARENT,
                                     LinearLayout.LayoutParams.WRAP_CONTENT
-                                );
-                                activityIndicator.setLayoutParams(activityParams);
-                                activityIndicator.setTextColor(0xFF00BFFF);  // Deep sky blue for data
-                                activityIndicator.setTextSize(10);  // Slightly smaller text
-                                activityIndicator.setText("");  // Empty by default
-                                activityIndicator.setVisibility(View.GONE);  // Hidden initially
-                                
-                                activityBox.addView(activityIndicator);
-                                borderBox.addView(activityBox);
-                                
-                                // Store reference for updates
+                                ));
+                                activityIndicator.setTextColor(0xFF00BFFF);
+                                activityIndicator.setTextSize(10);
+                                activityIndicator.setText("");
+                                activityIndicator.setVisibility(View.GONE);
+                                infoPanel.addView(activityIndicator);
                                 dmrActivityIndicator = activityIndicator;
+
+                                borderBox.addView(infoPanel);
                                 
                                 // Create transcription display box (bottom of borderbox)
                                 LinearLayout transcriptionBoxLayout = new LinearLayout(context);
@@ -1941,7 +1928,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 
                                 // Insert borderbox at index 4 (pushed down by squelch slider)
                                 rootLayout.addView(borderBox, 4);
-                                XposedBridge.log(TAG + ": ✓ Added borderbox at index 4 (250dp)");
+                                XposedBridge.log(TAG + ": ✓ Added borderbox at index 4 (" + BORDERBOX_HEIGHT_DP + "dp)");
                                 
                                 // Create spacer
                                 View spacer = new View(context);
@@ -8858,9 +8845,6 @@ public class MainHook implements IXposedHookLoadPackage {
         }
     }
     
-    /**
-     * Update the caller display TextView
-     */
     /**
      * Update the caller display with custom text (for analog tone info)
      */
