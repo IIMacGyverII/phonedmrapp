@@ -103,6 +103,7 @@ decompiled-java/
 terminals/
 agent-tools/
 .tmp_export_verify/
+temp/
 
 # AI session logs
 .ai-logs/
