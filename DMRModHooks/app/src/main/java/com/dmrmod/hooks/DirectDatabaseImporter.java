@@ -544,6 +544,9 @@ public class DirectDatabaseImporter {
                 String txFreq = fields[offset + 4].trim().replace("\t", "");
                 values.put("channel_txFreq", (long)(Double.parseDouble(txFreq) * 1000000));
                 
+                // Inbound slot (0=TS1, 1=TS2) — used for double-slot outbound alignment on digital channels
+                int inboundSlotApp = 0;
+
                 // DMR-specific fields - ONLY set for Digital channels
                 if (isDMR) {
                     // Color Code -> channel_cc
@@ -556,6 +559,7 @@ public class DirectDatabaseImporter {
                     String tsStr = fields[offset + 7].trim();
                     int timeslot = tsStr.isEmpty() ? 1 : Integer.parseInt(tsStr);
                     int timeslotApp = timeslot - 1;  // OpenGD77 1-based → Android 0-based
+                    inboundSlotApp = timeslotApp;
                     values.put("channel_inBoundSlot", timeslotApp);
                     
                     // Contact -> channel_txContact
@@ -650,8 +654,11 @@ public class DirectDatabaseImporter {
                         Log.i(TAG, "Converted squelch " + sqStr + " (" + sqPercent + "%) to level " + squelch);
                     }
                 } catch (Exception e) {
-                    // Default: analog=2 (normal), digital=0 (disabled; firmware ignores sq for DMR)
-                    squelch = isDMR ? 0 : 2;
+                    squelch = 2;
+                }
+                // OpenGD77 often exports 0%, empty, or None — use normal squelch instead of wide-open 0
+                if (squelch <= 0) {
+                    squelch = 2;
                 }
                 
                 // Power (16) - Read from CSV with OpenGD77 P1-P9 and +W- format
@@ -855,8 +862,16 @@ public class DirectDatabaseImporter {
                     contactType = 0;
                     Log.i(TAG, "CH" + channelNumber + " using legacy defaults: encrypt=" + encryptSw + ",relay=" + relay + ",interrupt=" + interrupt + ",active=" + active);
                 }
+
+                // Digital: always double-slot (mode 4) so the radio tunes/RX works; Direct mode (0) is not useful here
+                if (isDMR) {
+                    channelMode = 4;
+                    outBoundSlot = inboundSlotApp;
+                    Log.i(TAG, "CH" + channelNumber + " digital channel → double-slot (mode=4), outBoundSlot=" + outBoundSlot);
+                }
                 
                 // Apply parsed or default values
+                values.put("channel_sq", squelch);
                 values.put("channel_encryptSw", encryptSw);
                 if (!encryptKey.isEmpty() || isDMR) {
                     values.put("channel_encryptKey", encryptKey);

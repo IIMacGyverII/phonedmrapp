@@ -349,7 +349,10 @@ public class CSVImporter {
                     int colourCode = parseInt(fields[6], 1);
                     int timeslot = parseInt(fields[7], 1);
                     String contactName = fields[8].trim();
-                    int squelch = parseInt(fields[15], 0);
+                    int squelch = parseInt(fields[15], 2);
+                    if (squelch <= 0) {
+                        squelch = 2;
+                    }
                     String power = fields[16].trim();
                     
                     // Skip empty channels
@@ -396,7 +399,7 @@ public class CSVImporter {
                     values.put("channel_power", powerLevel);
                     values.put("channel_sq", squelch);
                     values.put("channel_active", 1);
-                    values.put("channel_mode", 0);
+                    values.put("channel_mode", type == 0 ? 4 : 0);
                     values.put("channel_contactType", 0);
                     values.put("channel_encryptSw", 0);
                     values.put("channel_encryptKey", "");
