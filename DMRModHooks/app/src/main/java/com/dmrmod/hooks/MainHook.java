@@ -90,14 +90,16 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.4.1";
+    private static final String VERSION = "3.4.4";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
     private static volatile int currentCallerDmrId = 0;
     private static volatile String currentCallerName = null;
     private static volatile boolean isReceiving = false;
-    private static TextView callerDisplayTextView = null;
+    private static LinearLayout callerDetailPanel = null;
+    private static TextView callerHeadlineTextView = null;
+    private static LinearLayout callerFieldsContainer = null;
 
     // Intercom content box layout (dp)
     private static final int BORDERBOX_HEIGHT_DP = 250;
@@ -1456,28 +1458,54 @@ public class MainHook implements IXposedHookLoadPackage {
                                 infoPanelParams.rightMargin = panelMarginPx;
                                 android.graphics.drawable.GradientDrawable infoPanelDrawable = new android.graphics.drawable.GradientDrawable();
                                 infoPanelDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                                infoPanelDrawable.setStroke((int) (1 * density), 0x8800BFFF);
+                                infoPanelDrawable.setStroke((int) (1 * density), 0x5500BFFF);
                                 infoPanelDrawable.setCornerRadius(8 * density);
-                                infoPanelDrawable.setColor(0x32000000);
+                                infoPanelDrawable.setColor(0x18000000);
                                 infoPanel.setBackground(infoPanelDrawable);
                                 infoPanel.setLayoutParams(infoPanelParams);
-                                int infoPadding = (int) (6 * density);
+                                int infoPadding = (int) (5 * density);
                                 infoPanel.setPadding(infoPadding, infoPadding, infoPadding, infoPadding);
 
-                                TextView callerText = new TextView(context);
-                                callerText.setTag("DMR_CALLER_TEXT");
-                                LinearLayout.LayoutParams callerParams = new LinearLayout.LayoutParams(
+                                LinearLayout callerPanel = new LinearLayout(context);
+                                callerPanel.setTag("DMR_CALLER_PANEL");
+                                callerPanel.setOrientation(LinearLayout.VERTICAL);
+                                callerPanel.setLayoutParams(new LinearLayout.LayoutParams(
+                                    LinearLayout.LayoutParams.MATCH_PARENT,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                ));
+                                callerPanel.setClickable(false);
+                                callerPanel.setFocusable(false);
+                                callerPanel.setVisibility(View.GONE);
+
+                                TextView callerHeadline = new TextView(context);
+                                callerHeadline.setTag("DMR_CALLER_HEADLINE");
+                                LinearLayout.LayoutParams headlineParams = new LinearLayout.LayoutParams(
                                     LinearLayout.LayoutParams.MATCH_PARENT,
                                     LinearLayout.LayoutParams.WRAP_CONTENT
                                 );
-                                callerParams.bottomMargin = (int) (4 * density);
-                                callerText.setLayoutParams(callerParams);
-                                callerText.setTextColor(0xFF00FF00);
-                                callerText.setTextSize(14);
-                                callerText.setText("");
-                                callerText.setVisibility(View.GONE);
-                                infoPanel.addView(callerText);
-                                callerDisplayTextView = callerText;
+                                headlineParams.bottomMargin = (int) (2 * density);
+                                callerHeadline.setLayoutParams(headlineParams);
+                                callerHeadline.setTextColor(0xFF00FF00);
+                                callerHeadline.setTextSize(16);
+                                callerHeadline.setTypeface(null, android.graphics.Typeface.BOLD);
+                                callerHeadline.setMaxLines(1);
+                                callerHeadline.setSingleLine(true);
+                                callerHeadline.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                                callerPanel.addView(callerHeadline);
+                                callerHeadlineTextView = callerHeadline;
+
+                                LinearLayout fieldsContainer = new LinearLayout(context);
+                                fieldsContainer.setTag("DMR_CALLER_FIELDS");
+                                fieldsContainer.setOrientation(LinearLayout.VERTICAL);
+                                fieldsContainer.setLayoutParams(new LinearLayout.LayoutParams(
+                                    LinearLayout.LayoutParams.MATCH_PARENT,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT
+                                ));
+                                callerPanel.addView(fieldsContainer);
+                                callerFieldsContainer = fieldsContainer;
+
+                                infoPanel.addView(callerPanel);
+                                callerDetailPanel = callerPanel;
 
                                 TextView activityHeader = new TextView(context);
                                 activityHeader.setTag("ACTIVITY_HISTORY_HEADER");
@@ -1501,7 +1529,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     LinearLayout.LayoutParams.WRAP_CONTENT
                                 ));
                                 activityIndicator.setTextColor(0xFF00BFFF);
-                                activityIndicator.setTextSize(10);
+                                activityIndicator.setTextSize(11);
                                 activityIndicator.setText("");
                                 activityIndicator.setVisibility(View.GONE);
                                 infoPanel.addView(activityIndicator);
@@ -2925,11 +2953,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                         currentCallerDmrId = 0;
                                         currentCallerName = null;
                                         isReceiving = false;
-                                        if (callerDisplayTextView != null) {
-                                            callerDisplayTextView.post(() -> {
-                                                callerDisplayTextView.setText("");
-                                                callerDisplayTextView.setVisibility(View.GONE);
-                                            });
+                                        if (callerDetailPanel != null) {
+                                            callerDetailPanel.post(() -> hideCallerPanelOnUiThread());
                                         }
                                         XposedBridge.log(TAG + ": Cleared DMR caller display on switch to analog channel");
                                     }
@@ -4121,17 +4146,73 @@ public class MainHook implements IXposedHookLoadPackage {
                     DirectDatabaseImporter.showImportDialog(activity);
                 }
             });
+
+            // === RADIOID GLOBAL DB STATUS ===
+            TextView radioidStatus = new TextView(context);
+            radioidStatus.setText(RadioidDatabase.getInstance(context).getStatusSummary(context));
+            radioidStatus.setTextSize(12);
+            radioidStatus.setTextColor(0xFF888888);
+            radioidStatus.setPadding(20, 8, 20, 4);
+            radioidStatus.setLayoutParams(new ViewGroup.LayoutParams(templateParams));
+
+            // === DOWNLOAD RADIOID DATABASE ===
+            Button radioidDownloadButton = new Button(context);
+            radioidDownloadButton.setText("🌐 Download RadioID Database");
+            radioidDownloadButton.setTextSize(16);
+            radioidDownloadButton.setAllCaps(false);
+            radioidDownloadButton.setPadding(20, 20, 20, 20);
+            radioidDownloadButton.setLayoutParams(new ViewGroup.LayoutParams(templateParams));
+
+            final TextView radioidStatusRef = radioidStatus;
+            final Runnable refreshRadioidStatus = new Runnable() {
+                @Override
+                public void run() {
+                    radioidStatusRef.setText(
+                        RadioidDatabase.getInstance(activity).getStatusSummary(activity));
+                }
+            };
+            radioidDownloadButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    XposedBridge.log(TAG + ": RadioID download button clicked");
+                    String userAgent = "DMRModHooks/" + VERSION + " (github.com/IIMacGyverII/phonedmrapp)";
+                    RadioidDatabase.downloadAndImport(activity, userAgent, refreshRadioidStatus);
+                }
+            });
+
+            // === IMPORT RADIOID CSV (manual fallback) ===
+            Button radioidImportButton = new Button(context);
+            radioidImportButton.setText("📂 Import RadioID CSV");
+            radioidImportButton.setTextSize(16);
+            radioidImportButton.setAllCaps(false);
+            radioidImportButton.setPadding(20, 20, 20, 20);
+            radioidImportButton.setLayoutParams(new ViewGroup.LayoutParams(templateParams));
+
+            radioidImportButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    XposedBridge.log(TAG + ": RadioID CSV import button clicked");
+                    RadioidDatabase.showImportDialog(activity, refreshRadioidStatus);
+                }
+            });
             
             // Add buttons at specified index
             if (index >= 0) {
                 parentLayout.addView(exportButton, index);
                 parentLayout.addView(importButton, index + 1);
+                parentLayout.addView(radioidStatus, index + 2);
+                parentLayout.addView(radioidDownloadButton, index + 3);
+                parentLayout.addView(radioidImportButton, index + 4);
                 XposedBridge.log(TAG + ": ✓ Export button added at index " + index);
                 XposedBridge.log(TAG + ": ✓ Import button added at index " + (index + 1));
+                XposedBridge.log(TAG + ": ✓ RadioID buttons added at indices " + (index + 2) + "-" + (index + 4));
             } else {
                 parentLayout.addView(exportButton);
                 parentLayout.addView(importButton);
-                XposedBridge.log(TAG + ": ✓ Export and Import buttons added at end of layout");
+                parentLayout.addView(radioidStatus);
+                parentLayout.addView(radioidDownloadButton);
+                parentLayout.addView(radioidImportButton);
+                XposedBridge.log(TAG + ": ✓ Export, Import, and RadioID buttons added at end of layout");
             }
             
         } catch (Exception e) {
@@ -8775,18 +8856,23 @@ public class MainHook implements IXposedHookLoadPackage {
                     
                     if (context != null && currentCallerDmrId > 0) {
                         // Look up contact name
-                        String contactName = lookupContactName(context, currentCallerDmrId);
-                        currentCallerName = contactName;
+                        CallerDisplayInfo callerInfo = lookupCallerDisplayInfo(context, currentCallerDmrId);
+                        if (callerInfo == null) {
+                            callerInfo = new CallerDisplayInfo();
+                            callerInfo.dmrId = currentCallerDmrId;
+                        }
+                        currentCallerName = callerInfo.shortName();
+                        final CallerDisplayInfo panelInfo = callerInfo;
                         
                         // Update UI on main thread - but only if still on digital channel
-                        if (callerDisplayTextView != null) {
-                            callerDisplayTextView.post(new Runnable() {
+                        if (callerDetailPanel != null) {
+                            callerDetailPanel.post(new Runnable() {
                                 @Override
                                 public void run() {
                                     // Double-check we're still on a digital channel before updating
                                     // This prevents race condition where channel switched to analog
                                     if (currentChannelType == 0) {
-                                        updateCallerDisplay();
+                                        applyCallerPanelOnUiThread(panelInfo);
                                         // Now update activity indicator with contact name available
                                         updateActivityIndicator("📻 Voice RX");
                                     } else {
@@ -8803,116 +8889,395 @@ public class MainHook implements IXposedHookLoadPackage {
         }).start();
     }
     
-    /**
-     * Lookup contact name from DMR ID in contacts database
-     */
-    private String lookupContactName(Context context, int dmrId) {
+    /** Merged personal + global caller data for the RX detail panel. */
+    private static class CallerDisplayInfo {
+        int dmrId;
+        String personalName;
+        boolean fromPersonal;
+        boolean fromGlobal;
+        String callsign;
+        String firstName;
+        String lastName;
+        String city;
+        String state;
+        String country;
+
+        String shortName() {
+            if (fromPersonal && isNonEmpty(personalName)) {
+                return personalName.trim();
+            }
+            if (isNonEmpty(callsign)) {
+                return callsign.trim();
+            }
+            String combined = combineName(firstName, lastName);
+            if (isNonEmpty(combined)) {
+                return combined;
+            }
+            return null;
+        }
+
+        String headline() {
+            if (fromPersonal && isNonEmpty(personalName)) {
+                return "📡 " + personalName.trim();
+            }
+            if (isNonEmpty(callsign)) {
+                return "📡 " + callsign.trim();
+            }
+            return "📡 Voice RX";
+        }
+
+        String sourceBadge() {
+            if (fromPersonal) {
+                return "⭐";
+            }
+            if (fromGlobal) {
+                return "🌐";
+            }
+            return "";
+        }
+    }
+
+    private static boolean isNonEmpty(String s) {
+        return s != null && !s.trim().isEmpty();
+    }
+
+    private static String combineName(String first, String last) {
+        StringBuilder sb = new StringBuilder();
+        if (isNonEmpty(first)) {
+            sb.append(first.trim());
+        }
+        if (isNonEmpty(last)) {
+            if (sb.length() > 0) sb.append(' ');
+            sb.append(last.trim());
+        }
+        return sb.toString();
+    }
+
+    private String lookupPersonalContactName(Context context, int dmrId) {
         android.database.Cursor cursor = null;
         android.database.sqlite.SQLiteDatabase db = null;
         try {
-            // Contacts are stored in contact_database.db
             db = context.openOrCreateDatabase("contact_database.db", Context.MODE_PRIVATE, null);
-            
-            // Ensure table exists (create if needed)
             db.execSQL("CREATE TABLE IF NOT EXISTS contact_database(_id integer primary key autoincrement, contact_name varchar, contact_type integer, contact_number varchar, contact_active integer, contact_icon varchar)");
-            
             cursor = db.rawQuery(
                 "SELECT contact_name FROM contact_database WHERE contact_number = ?",
                 new String[]{String.valueOf(dmrId)}
             );
-            
             if (cursor != null && cursor.moveToFirst()) {
                 String name = cursor.getString(0);
-                XposedBridge.log(TAG + ": Found contact: " + name + " for DMR ID: " + dmrId);
-                db.close();
-                return name;
+                if (isNonEmpty(name)) {
+                    return name.trim();
+                }
             }
-            
-            XposedBridge.log(TAG + ": No contact found for DMR ID: " + dmrId + " in contact_database");
-            if (db != null) db.close();
-            return null;
-            
         } catch (Exception e) {
-            XposedBridge.log(TAG + ": Error looking up contact: " + e.getMessage());
-            if (db != null) {
-                try { db.close(); } catch (Exception ex) {}
-            }
-            return null;
+            XposedBridge.log(TAG + ": Error looking up personal contact: " + e.getMessage());
         } finally {
             if (cursor != null) {
-                try { cursor.close(); } catch (Exception e) {}
+                try { cursor.close(); } catch (Exception ignored) {}
+            }
+            if (db != null) {
+                try { db.close(); } catch (Exception ignored) {}
+            }
+        }
+        return null;
+    }
+
+    private CallerDisplayInfo lookupCallerDisplayInfo(Context context, int dmrId) {
+        CallerDisplayInfo info = new CallerDisplayInfo();
+        info.dmrId = dmrId;
+
+        String personal = lookupPersonalContactName(context, dmrId);
+        if (isNonEmpty(personal)) {
+            info.personalName = personal;
+            info.fromPersonal = true;
+        }
+
+        RadioidDatabase.CallerRecord global =
+            RadioidDatabase.getInstance(context).lookupRecord(dmrId);
+        if (global != null) {
+            info.fromGlobal = true;
+            info.callsign = global.callsign;
+            info.firstName = global.firstName;
+            info.lastName = global.lastName;
+            info.city = global.city;
+            info.state = global.state;
+            info.country = global.country;
+        }
+
+        if (!info.fromPersonal && !info.fromGlobal) {
+            return null;
+        }
+        return info;
+    }
+
+    /**
+     * Lookup contact name from DMR ID (personal first, then global RadioID cache).
+     */
+    private String lookupContactName(Context context, int dmrId) {
+        CallerDisplayInfo info = lookupCallerDisplayInfo(context, dmrId);
+        if (info != null) {
+            String name = info.shortName();
+            if (isNonEmpty(name)) {
+                return name;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Rich history label: registrant name first, then callsign, else DMR ID.
+     * Example: "Richard John William · VE3UOD"
+     */
+    private String formatDmrHistoryLabel(Context context, int dmrId) {
+        if (dmrId <= 0) {
+            return "-----";
+        }
+        CallerDisplayInfo info = lookupCallerDisplayInfo(context, dmrId);
+        if (info == null) {
+            return String.valueOf(dmrId);
+        }
+
+        StringBuilder label = new StringBuilder();
+        String registrantName = combineName(info.firstName, info.lastName);
+        if (isNonEmpty(registrantName)) {
+            label.append(registrantName.trim());
+        } else if (info.fromPersonal && isNonEmpty(info.personalName)) {
+            label.append(info.personalName.trim());
+        }
+
+        if (isNonEmpty(info.callsign)) {
+            String call = info.callsign.trim();
+            if (label.length() > 0) {
+                if (!label.toString().equalsIgnoreCase(call)) {
+                    label.append(" · ").append(call);
+                }
+            } else {
+                label.append(call);
+            }
+        }
+
+        if (label.length() == 0) {
+            label.append(dmrId);
+        }
+        return label.toString();
+    }
+
+    private LinearLayout createCallerHorizontalRow(Context context, float density) {
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        rowParams.topMargin = (int) (3 * density);
+        row.setLayoutParams(rowParams);
+        return row;
+    }
+
+    private TextView createCallerFieldChip(Context context, String icon, String value,
+                                           float textSp, int textColor, float weight, float density) {
+        TextView chip = new TextView(context);
+        chip.setText(icon + " " + value.trim());
+        chip.setTextSize(textSp);
+        chip.setTextColor(textColor);
+        chip.setTypeface(null, android.graphics.Typeface.BOLD);
+        chip.setSingleLine(true);
+        chip.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+            0,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            weight
+        );
+        params.rightMargin = (int) (6 * density);
+        chip.setLayoutParams(params);
+        return chip;
+    }
+
+    private void populateCallerFieldsContainer(CallerDisplayInfo info) {
+        if (callerFieldsContainer == null || info == null) {
+            return;
+        }
+        Context context = callerFieldsContainer.getContext();
+        float density = context.getResources().getDisplayMetrics().density;
+        callerFieldsContainer.removeAllViews();
+
+        final float fieldTextSp = 13f;
+        final int fieldColor = 0xFFE8F4FF;
+
+        // Row 1: DMR ID + registrant name (horizontal)
+        LinearLayout idNameRow = createCallerHorizontalRow(context, density);
+        idNameRow.addView(createCallerFieldChip(
+            context, "🆔", String.valueOf(info.dmrId), fieldTextSp, 0xFF00E5FF, 0.38f, density));
+
+        String registrantName = null;
+        if (info.fromGlobal) {
+            registrantName = combineName(info.firstName, info.lastName);
+            if (isNonEmpty(registrantName) && info.fromPersonal && isNonEmpty(info.personalName)
+                && registrantName.equalsIgnoreCase(info.personalName.trim())) {
+                registrantName = null;
+            }
+        }
+        if (isNonEmpty(registrantName)) {
+            idNameRow.addView(createCallerFieldChip(
+                context, "👤", registrantName, fieldTextSp, fieldColor, 0.62f, density));
+        }
+        callerFieldsContainer.addView(idNameRow);
+
+        // Row 2: city · state · country (single horizontal line)
+        if (info.fromGlobal) {
+            StringBuilder locationLine = new StringBuilder();
+            appendLocationPart(locationLine, "🏙️", info.city);
+            appendLocationPart(locationLine, "🗺️", info.state);
+            appendLocationPart(locationLine, "🌍", info.country);
+            if (locationLine.length() > 0) {
+                TextView locationChip = new TextView(context);
+                locationChip.setText(locationLine.toString().trim());
+                locationChip.setTextSize(fieldTextSp);
+                locationChip.setTextColor(fieldColor);
+                locationChip.setTypeface(null, android.graphics.Typeface.BOLD);
+                locationChip.setSingleLine(true);
+                locationChip.setEllipsize(android.text.TextUtils.TruncateAt.MARQUEE);
+                locationChip.setMarqueeRepeatLimit(-1);
+                locationChip.setSelected(true);
+                locationChip.setHorizontallyScrolling(true);
+                LinearLayout.LayoutParams locParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+                locParams.topMargin = (int) (3 * density);
+                locationChip.setLayoutParams(locParams);
+                callerFieldsContainer.addView(locationChip);
             }
         }
     }
-    
+
+    private void appendLocationPart(StringBuilder sb, String icon, String value) {
+        if (!isNonEmpty(value)) {
+            return;
+        }
+        if (sb.length() > 0) {
+            sb.append("   ");
+        }
+        sb.append(icon).append(' ').append(value.trim());
+    }
+
+    private void applyCallerPanelOnUiThread(CallerDisplayInfo info) {
+        if (callerDetailPanel == null || callerHeadlineTextView == null || callerFieldsContainer == null) {
+            return;
+        }
+        if (info == null || info.dmrId <= 0) {
+            hideCallerPanelOnUiThread();
+            return;
+        }
+        String badge = info.sourceBadge();
+        String headline = info.headline();
+        if (isNonEmpty(badge)) {
+            headline = headline + "  " + badge;
+        }
+        callerHeadlineTextView.setText(headline);
+        populateCallerFieldsContainer(info);
+        callerDetailPanel.setVisibility(View.VISIBLE);
+    }
+
+    private void hideCallerPanelOnUiThread() {
+        if (callerDetailPanel != null) {
+            callerDetailPanel.setVisibility(View.GONE);
+        }
+        if (callerHeadlineTextView != null) {
+            callerHeadlineTextView.setText("");
+        }
+        if (callerFieldsContainer != null) {
+            callerFieldsContainer.removeAllViews();
+        }
+    }
+
     /**
      * Update the caller display with custom text (for analog tone info)
      */
     private void updateCallerDisplay(final String displayText) {
-        if (callerDisplayTextView == null) {
+        if (callerDetailPanel == null) {
             return;
         }
-        
         try {
-            callerDisplayTextView.post(new Runnable() {
+            callerDetailPanel.post(new Runnable() {
                 @Override
                 public void run() {
-                    callerDisplayTextView.setText(displayText);
-                    callerDisplayTextView.setVisibility(View.VISIBLE);
+                    if (callerHeadlineTextView != null) {
+                        callerHeadlineTextView.setText(displayText);
+                    }
+                    if (callerFieldsContainer != null) {
+                        callerFieldsContainer.removeAllViews();
+                    }
+                    callerDetailPanel.setVisibility(View.VISIBLE);
                 }
             });
-            
             XposedBridge.log(TAG + ": Updated caller display: " + displayText);
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error updating caller display: " + e.getMessage());
         }
     }
-    
+
     /**
      * Update the caller display with DMR caller information
      */
     private void updateCallerDisplay() {
-        // Only show DMR caller info on digital channels
-        if (callerDisplayTextView == null || !isReceiving || currentChannelType != 0) {
+        if (callerDetailPanel == null || !isReceiving || currentChannelType != 0) {
             return;
         }
-        
         try {
             if (currentCallerDmrId > 0) {
-                String displayText;
-                if (currentCallerName != null && !currentCallerName.isEmpty()) {
-                    displayText = "📞 " + currentCallerName + "\nDMR ID: " + currentCallerDmrId;
-                } else {
-                    displayText = "📞 DMR ID: " + currentCallerDmrId;
+                CallerDisplayInfo info = lookupCallerDisplayInfo(
+                    getAppContextFromClassLoader(), currentCallerDmrId);
+                if (info == null) {
+                    info = new CallerDisplayInfo();
+                    info.dmrId = currentCallerDmrId;
+                    if (isNonEmpty(currentCallerName)) {
+                        info.personalName = currentCallerName;
+                        info.fromPersonal = true;
+                    }
                 }
-                
-                callerDisplayTextView.setText(displayText);
-                callerDisplayTextView.setVisibility(View.VISIBLE);
-                
-                XposedBridge.log(TAG + ": Updated caller display: " + displayText);
+                final CallerDisplayInfo panelInfo = info;
+                callerDetailPanel.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        applyCallerPanelOnUiThread(panelInfo);
+                    }
+                });
+                XposedBridge.log(TAG + ": Updated caller detail panel for ID " + currentCallerDmrId);
             }
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error updating caller display: " + e.getMessage());
         }
     }
-    
+
+    private Context getAppContextFromClassLoader() {
+        try {
+            if (appClassLoader == null) {
+                return null;
+            }
+            Class<?> appClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.PrizeInterPhoneApp", appClassLoader);
+            return (Context) XposedHelpers.callStaticMethod(appClass, "getContext");
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     /**
      * Clear the caller display
      */
     private void clearCallerDisplay() {
         currentCallerDmrId = 0;
         currentCallerName = null;
-        
-        if (callerDisplayTextView != null) {
+
+        if (callerDetailPanel != null) {
             try {
-                callerDisplayTextView.post(new Runnable() {
+                callerDetailPanel.post(new Runnable() {
                     @Override
                     public void run() {
-                        callerDisplayTextView.setText("");
-                        callerDisplayTextView.setVisibility(View.GONE);
+                        hideCallerPanelOnUiThread();
                     }
                 });
-                
                 XposedBridge.log(TAG + ": Cleared caller display");
             } catch (Exception e) {
                 XposedBridge.log(TAG + ": Error clearing caller display: " + e.getMessage());
@@ -8938,20 +9303,15 @@ public class MainHook implements IXposedHookLoadPackage {
             String dmrIdStr;
             
             if (currentChannelType == 0) {
-                // Digital/DMR channel - include DMR ID or contact name
                 dmrIdStr = (currentCallerDmrId > 0) ? String.valueOf(currentCallerDmrId) : "-----";
-                
-                // Use contact name if available, otherwise use DMR ID
-                String displayName;
-                if (currentCallerName != null && !currentCallerName.isEmpty()) {
-                    displayName = currentCallerName;
-                } else {
-                    displayName = dmrIdStr;
+
+                String displayName = dmrIdStr;
+                if (currentCallerDmrId > 0 && appContext != null) {
+                    displayName = formatDmrHistoryLabel(appContext, currentCallerDmrId);
                 }
-                
-                // Add RSSI if available
+
                 String rssiStr = (currentRssi != -999) ? " " + currentRssi + " dBm" : "";
-                entry = displayName + " " + timestamp + " " + activityType + rssiStr;
+                entry = displayName + "  " + timestamp + " " + activityType + rssiStr;
             } else {
                 // Analog/FM channel - no caller ID (analog doesn't have individual IDs)
                 dmrIdStr = "N/A";  // Store as N/A for database consistency
@@ -9112,18 +9472,14 @@ public class MainHook implements IXposedHookLoadPackage {
                         String rssiStr = (rssiDbm != null && rssiDbm != -999) ? " " + rssiDbm + " dBm" : "";
                         
                         if (dmrId != null && !dmrId.equals("N/A")) {
-                            // DMR format - try to look up contact name
                             String displayName = dmrId;
                             try {
                                 int id = Integer.parseInt(dmrId);
-                                String contactName = lookupContactName(context, id);
-                                if (contactName != null && !contactName.isEmpty()) {
-                                    displayName = contactName;
-                                }
+                                displayName = formatDmrHistoryLabel(context, id);
                             } catch (NumberFormatException e) {
                                 // Keep using dmrId as is
                             }
-                            entry = displayName + " " + timestamp + " " + activityType + rssiStr;
+                            entry = displayName + "  " + timestamp + " " + activityType + rssiStr;
                         } else {
                             entry = timestamp + " " + activityType + rssiStr;  // Analog format (no ID)
                         }
