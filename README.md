@@ -4,10 +4,11 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
 ﻿# PriInterPhone DMR Radio - LSPosed Mod with OpenGD77 Integration + Advanced Features
 
-**Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS + VFO Mode + SSTV + NOAA APT!
+**Status**: ✅ **FULLY FUNCTIONAL** - RadioID Caller Lookup + Export/Import + GPS + Zones + Transcription + APRS + VFO + SSTV + NOAA APT!
 
 > **🚀 Current Stable Release: v3.4.6** (June 21, 2026) - TG list import fix + wide-band default for new/imported channels  
-> **🔧 Previous Release: v3.4.5** (June 16, 2026) - Double-slot import, squelch default, RadioID.net caller lookup  
+> **📻 Major Feature: v3.4.5** (June 16, 2026) - **RadioID.net global DMR ID lookup** — see who's calling with callsign, name & location (~300k IDs, offline)  
+> **🔧 Also in v3.4.5** — Double-slot import fix, squelch default to normal
 > **🖥️ OpenGD77 CPS Fork: v2.0.45** — `OpenGD77CPS-Mac_Build_20260607_210202.zip` (unchanged since v3.4.5)  
 > **🔧 Prior Release: v3.4.0** (June 5, 2026) - Pitfall 12 fix (contact DMR ID), channel mode, CSVExporter parity
 > **🐛 Prior Release: v3.3.9** (June 5, 2026) - Group/Private contact type swap + encrypt defaults  
@@ -28,6 +29,33 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 ## Demo
 
 <video src="https://github.com/IIMacGyverII/phonedmrapp/releases/download/v3.3.8/3.3.8.mp4" controls autoplay muted loop title="DMRModHooks v3.3.8 Demo" width="800"></video>
+
+## 📻 RadioID.net Caller Lookup (Major Feature — v3.4.5+)
+
+**Know who's on the air.** When someone keys up on a digital channel, DMRModHooks resolves their 24-bit DMR ID to a real identity — even if they're not in your codeplug.
+
+### How it works
+
+1. **Device tab → Download RadioID Database** — one-time fetch of the official [RadioID.net](https://www.radioid.net/) `user.csv` (~17 MB, ~300k registered IDs)
+2. On every **voice RX**, the module decodes the caller's DMR ID from the digital audio packet
+3. **Two-tier lookup**: your personal codeplug contacts always win; RadioID is the fallback for unknown IDs
+4. Results are cached locally in `dmrmod_radioid.db` — lookups work **offline** after download
+
+### What you see on the intercom screen
+
+- **Caller detail panel** over the spectrum — large callsign headline with source badge (🌐 RadioID / ⭐ personal contact)
+- Registrant name, DMR ID, city · state · country
+- **DMR history** lines: `First Last · CALLSIGN  HH:mm:ss 📻 Voice RX -XX dBm`
+
+### Setup (one time)
+
+1. Install v3.4.5+ and reboot
+2. Open **Device** tab → tap **Download RadioID Database** (Wi‑Fi recommended, ~1–2 min)
+3. Optional manual import: place `user.csv` in `/sdcard/Download/DMR/RadioID/`
+
+> Your codeplug contacts are never overwritten. RadioID only fills in IDs you don't already have programmed.
+
+---
 
 ## What's New in v3.4.6 (June 21, 2026)
 
@@ -51,31 +79,18 @@ New and imported analog channels now default to **wide band (25 kHz)** on both U
 
 ## What's New in v3.4.5 (June 16, 2026)
 
+### 📻 RadioID.net Global DMR ID Lookup (major feature)
+
+See the dedicated section above for full details. Shipped in v3.4.5:
+
+- Offline global ID database (~300k IDs) with callsign, name, city, state, country
+- Live caller panel + enriched DMR history on voice RX
+- `RadioidDatabase.java` — separate from OEM contacts; codeplug always takes priority
+
 ### OpenGD77 CSV Import Fixes
 
-- **Double-slot mode** — Digital channels import as **Double slot** (`channel_mode=4`) with outbound slot matched to the imported timeslot. Previously timeslot imported correctly but mode stayed **Direct** (0), so channels would not tune/RX.
-- **Squelch default** — Empty, `None`, or `0%` squelch values default to **2** (normal) instead of wide-open **0**.
-
-### RadioID.net Global DMR ID Database
-
-Offline lookup for unknown RX caller IDs using the official RadioID.net user database.
-
-- **Download RadioID Database** — Device tab fetches `radioid.net/static/user.csv` (~17 MB, ~300k IDs)
-- **Import RadioID CSV** — manual fallback from `Download/DMR/RadioID/` if download is unavailable
-- **Separate SQLite cache** (`dmrmod_radioid.db`) — does not touch OEM `contact_database`
-- **Two-tier lookup** — codeplug contacts always win; global DB is fallback only
-- Stores callsign, first/last name, city, state, country
-
-### RX Caller Detail Panel
-
-Compact horizontal layout over the spectrum (semi-transparent):
-
-- Large callsign headline with source badge (🌐 RadioID / ⭐ personal contact)
-- DMR ID + registrant name; city · state · country on one line
-
-### DMR History
-
-Richer history labels: `First Last · CALLSIGN  HH:mm:ss 📻 Voice RX -XX dBm` (live RX and reloaded channel history)
+- **Double-slot mode** — Digital channels import as **Double slot** (`channel_mode=4`) with outbound slot matched to the imported timeslot
+- **Squelch default** — Empty, `None`, or `0%` squelch values default to **2** (normal) instead of wide-open **0**
 
 ### Bug Fixes
 
@@ -823,6 +838,7 @@ Local Simplex (↑N 250m)
 ## What is this?
 
 LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
+- **📻 RadioID.net Caller Lookup** - Resolve unknown RX DMR IDs to callsign, name & location (~300k IDs, offline after download)
 - **📺 SSTV Live Monitoring** - Receive and decode Slow Scan TV images over the air
 - **🎛️ VFO Mode** - Variable Frequency Oscillator for temporary frequency tuning
 - **📡 APRS Live Monitoring** - Real-time packet reception with live dashboard and GPS mapping
@@ -840,11 +856,11 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 ## Current Status ✅
 
 **Current Release: v3.4.6** (June 21, 2026)  
-**TG List Import**: ✅ Fixed — TG-list codeplugs get valid TX contact + Group type on import  
-**Wide-Band Default**: ✅ Fixed — new/imported channels default to 25 kHz (UHF and VHF)  
+**📻 RadioID.net Caller Lookup**: ✅ **Major feature** — global DMR ID → callsign/name/location; live caller panel + history (v3.4.5+)  
+**TG List Import**: ✅ Fixed — TG-list codeplugs get valid TX contact + Group type on import (v3.4.6)  
+**Wide-Band Default**: ✅ Fixed — new/imported channels default to 25 kHz (UHF and VHF) (v3.4.6)  
 **Contact DMR ID (Pitfall 12)**: ✅ Fixed — all 4 export/import files key contacts by DMR ID, not row _id  
-**Channel Mode (double-slot)**: ✅ Fixed — digital imports use OEM `4` ("Double slot")  
-**RadioID.net Lookup**: ✅ Global DMR ID cache + caller detail panel (v3.4.4+)
+**Channel Mode (double-slot)**: ✅ Fixed — digital imports use OEM `4` ("Double slot") (v3.4.5)
 **Contact Type (Group/Private)**: ✅ Fixed — no longer swapped on stock CPS import (v3.3.9)  
 **Encrypt Default**: ✅ Fixed — DMR channels no longer import with encryption ON (v3.3.9)
 **GPS Messaging**: ✅ Send position over DMR SMS with reverse geocoding + confirm dialog  
@@ -865,7 +881,7 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 **Analog MON Button**: ✅ Working - Open squelch for continuous monitoring  
 **Software Squelch**: ✅ Working - Hybrid RSSI + Audio RMS squelch with UI controls  
 **User Validation**: ✅ All features tested and confirmed working  
-**Latest Build**: March 19, 2026
+**Latest Build**: June 21, 2026
 
 ## Radio Firmware
 
@@ -1048,6 +1064,8 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
    adb reboot
    adb install -r DMRTranscriptionService-v1.0.apk  # Optional, for transcription only
    ```
+
+3. **Enable caller lookup** (recommended): Device tab → **Download RadioID Database** (one-time, ~17 MB)
 
 #### Option B: Build from Source (For Developers & Experimenters)
 
@@ -1482,10 +1500,8 @@ phonedmrapp/
 - **IP connectivity**: Explore DMR network connectivity options
 
 ### Global DMR Database Integration
-- **RadioID.net Integration**: Add ability to download and sync global DMR contact database
-- **Automatic Updates**: Periodic contact database refresh from radioid.net
-- **Smart Contact Resolution**: Automatically resolve DMR IDs to callsigns and names
-- **Offline Database**: Local caching for fast lookups without internet connection
+- ✅ **RadioID.net Integration** — Shipped v3.4.5: download, offline cache, caller panel, history labels
+- **Automatic Updates**: Periodic contact database refresh from radioid.net (manual re-download today)
 
 ### The Sky's the Limit
 With LSPosed runtime hooks and full access to the platform-signed app, **anything is possible**:
@@ -1495,11 +1511,10 @@ With LSPosed runtime hooks and full access to the platform-signed app, **anythin
 - Community-driven feature development
 - Enhanced radio control and monitoring
 
-**Last Updated**: March 9, 2026  
-**Current Version**: v3.0.9 - GPS Distance Enhancements  
-**Major Release**: v3.0.8 - Zone Management  
-**Feature Release**: v3.0.5 - Channel Zones  
-**Base Release**: v1.7.0 - Transcription & API Features  
+**Last Updated**: June 21, 2026  
+**Current Version**: v3.4.6  
+**Major Feature**: v3.4.5 - RadioID.net global DMR ID caller lookup  
+**Base Release**: v1.7.0 - Transcription & API Features
 **Status**: LSPosed module fully operational - All features working perfectly!  
 **GitHub**: https://github.com/IIMacGyverII/phonedmrapp
 
