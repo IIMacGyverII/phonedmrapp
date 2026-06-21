@@ -49,6 +49,40 @@ New and imported analog channels now default to **wide band (25 kHz)** on both U
 
 ---
 
+## What's New in v3.4.5 (June 16, 2026)
+
+### OpenGD77 CSV Import Fixes
+
+- **Double-slot mode** — Digital channels import as **Double slot** (`channel_mode=4`) with outbound slot matched to the imported timeslot. Previously timeslot imported correctly but mode stayed **Direct** (0), so channels would not tune/RX.
+- **Squelch default** — Empty, `None`, or `0%` squelch values default to **2** (normal) instead of wide-open **0**.
+
+### RadioID.net Global DMR ID Database
+
+Offline lookup for unknown RX caller IDs using the official RadioID.net user database.
+
+- **Download RadioID Database** — Device tab fetches `radioid.net/static/user.csv` (~17 MB, ~300k IDs)
+- **Import RadioID CSV** — manual fallback from `Download/DMR/RadioID/` if download is unavailable
+- **Separate SQLite cache** (`dmrmod_radioid.db`) — does not touch OEM `contact_database`
+- **Two-tier lookup** — codeplug contacts always win; global DB is fallback only
+- Stores callsign, first/last name, city, state, country
+
+### RX Caller Detail Panel
+
+Compact horizontal layout over the spectrum (semi-transparent):
+
+- Large callsign headline with source badge (🌐 RadioID / ⭐ personal contact)
+- DMR ID + registrant name; city · state · country on one line
+
+### DMR History
+
+Richer history labels: `First Last · CALLSIGN  HH:mm:ss 📻 Voice RX -XX dBm` (live RX and reloaded channel history)
+
+### Bug Fixes
+
+- Fixed crash (`BadTokenException`) when showing RadioID download progress dialog
+
+---
+
 ## What's New in OpenGD77 CPS Fork v1.3.0 (June 5, 2026)
 
 Desktop CPS fork ([OpenGD77CPS-Mac](https://github.com/IIMacGyverII/OpenGD77CPS-Mac)) — download zip from `OpenGD77Fork/` or [releases](https://github.com/IIMacGyverII/OpenGD77CPS-Mac/releases).
