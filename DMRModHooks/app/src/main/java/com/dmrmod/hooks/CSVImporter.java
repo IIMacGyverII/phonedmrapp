@@ -405,7 +405,8 @@ public class CSVImporter {
                     values.put("channel_encryptKey", "");
                     values.put("channel_relay", 0);
                     values.put("channel_interrupt", 0);
-                    values.put("channel_band", 0);
+                    String bandwidthField = fields.length > 5 ? fields[5].trim() : "";
+                    values.put("channel_band", parseChannelBandwidth(bandwidthField, type == 1));
                     values.put("channel_rxType", 0);
                     values.put("channel_rxSubCode", 0);
                     values.put("channel_txType", 0);
@@ -555,5 +556,25 @@ public class CSVImporter {
         fields.add(currentField.toString());
         
         return fields.toArray(new String[0]);
+    }
+
+    /** channel_band: 0=narrow 12.5 kHz, 1=wide 25 kHz. Defaults to wide. */
+    private static int parseChannelBandwidth(String bandwidthField, boolean isAnalog) {
+        if (!isAnalog) {
+            return 1;
+        }
+        if (bandwidthField == null || bandwidthField.isEmpty()) {
+            return 1;
+        }
+        String bw = bandwidthField.replace("kHz", "").replace("KHz", "").trim();
+        try {
+            double khz = Double.parseDouble(bw);
+            return khz <= 12.5 ? 0 : 1;
+        } catch (NumberFormatException e) {
+            if (bw.equalsIgnoreCase("narrow") || bw.startsWith("12.5")) {
+                return 0;
+            }
+            return 1;
+        }
     }
 }
