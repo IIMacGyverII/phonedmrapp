@@ -10,8 +10,8 @@ android {
         applicationId "com.dmrmod.hooks"
         minSdk 26
         targetSdk 34
-        versionCode 345
-        versionName "3.4.5"
+        versionCode 346
+        versionName "3.4.6"
         
         // NDK configuration for Dire Wolf decoder - DISABLED, using pure Java PLL implementation
         /*

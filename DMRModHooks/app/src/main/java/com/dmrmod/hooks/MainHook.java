@@ -90,7 +90,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.4.5";
+    private static final String VERSION = "3.4.6";
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
@@ -13951,6 +13951,18 @@ public class MainHook implements IXposedHookLoadPackage {
             );
             
             XposedBridge.log(TAG + ": Hooking InterPhoneChannelActivity.onCreate()");
+
+            // Default new ChannelData to wide band (25 kHz); OEM constructor uses narrow (0)
+            XposedHelpers.findAndHookConstructor(
+                channelDataClass,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        XposedHelpers.setIntField(param.thisObject, "band", 1);
+                    }
+                }
+            );
+            XposedBridge.log(TAG + ": ✓ Hook installed: ChannelData() wide-band default");
             
             // Hook onCreate to add zone selector UI
             XposedHelpers.findAndHookMethod(

@@ -352,7 +352,12 @@ public class CSVExporter {
         row.append(txFreqMHz).append(",");
         
         // Column 6: Bandwidth kHz (empty for digital, 12.5 or 25 for analog)
-        row.append(",");
+        if (type == 1) {
+            int band = getInt(cursor, "channel_band", 1);
+            row.append(band == 0 ? "12.5" : "25").append(",");
+        } else {
+            row.append(",");
+        }
         
         // Column 7: Colour Code (0-15)
         int cc = getInt(cursor, "channel_cc", 1);

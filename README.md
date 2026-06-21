@@ -6,9 +6,10 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
 **Status**: ✅ **FULLY FUNCTIONAL** - Export/Import + GPS Navigation + Zone Management + Transcription + APRS + VFO Mode + SSTV + NOAA APT!
 
-> **🚀 Current Stable Release: v3.4.1** (June 5, 2026) - CSVImporter legacy contact fix (all 4 files complete)  
-> **🖥️ OpenGD77 CPS Fork: v1.6.2** (June 6, 2026) - `OpenGD77CPS-Mac_Build_20260605_225744.zip` — auto-open Channels on empty workspace; Contacts G/P badges
-> **🔧 Previous Release: v3.4.0** (June 5, 2026) - Pitfall 12 fix (contact DMR ID), channel mode, CSVExporter parity  
+> **🚀 Current Stable Release: v3.4.6** (June 21, 2026) - TG list import fix + wide-band default for new/imported channels  
+> **🔧 Previous Release: v3.4.5** (June 16, 2026) - Double-slot import, squelch default, RadioID.net caller lookup  
+> **🖥️ OpenGD77 CPS Fork: v2.0.45** — `OpenGD77CPS-Mac_Build_20260607_210202.zip` (unchanged since v3.4.5)  
+> **🔧 Prior Release: v3.4.0** (June 5, 2026) - Pitfall 12 fix (contact DMR ID), channel mode, CSVExporter parity
 > **🐛 Prior Release: v3.3.9** (June 5, 2026) - Group/Private contact type swap + encrypt defaults  
 > **🗂️ Prior Release: v3.3.8** (June 1, 2026) - OpenGD77 CPS Fork v1.2.0  
 > **🛰️ Prior Release: v3.3.6** (March 19, 2026) - TG List Architecture + Group Grid Refresh  
@@ -27,6 +28,26 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 ## Demo
 
 <video src="https://github.com/IIMacGyverII/phonedmrapp/releases/download/v3.3.8/3.3.8.mp4" controls autoplay muted loop title="DMRModHooks v3.3.8 Demo" width="800"></video>
+
+## What's New in v3.4.6 (June 21, 2026)
+
+### TG List Import Fix
+
+OpenGD77 codeplugs that use a **TG List** (not a named contact in the Contact column) were importing with `txContact=0` and `contactType=Private`, so digital channels would not TX until manually edited.
+
+- **`DirectDatabaseImporter`** — When Contact/DMR ID resolve to 0, uses the **first TG ID** from the named TG List column (requires `TG_Lists.csv` imported before `Channels.csv`)
+- Sets **Group (1)** contact type when a TX DMR ID is present but CSV left type as Private
+- Looks up contact type from `contact_database` when the contact name is known
+
+### Wide-Band Default (25 kHz)
+
+New and imported analog channels now default to **wide band (25 kHz)** on both UHF and VHF.
+
+- **`DirectDatabaseImporter` / `CSVImporter`** — Parse CSV bandwidth column (`25` / `12.5`); default to wide when empty (fixes old logic that treated UHF as narrow)
+- **`DirectDatabaseExporter` / `CSVExporter`** — Export actual bandwidth (`12.5` or `25`) for analog channels
+- **`MainHook`** — New in-app channels start at wide band via `ChannelData()` hook (Narrow still selectable in editor)
+
+---
 
 ## What's New in OpenGD77 CPS Fork v1.3.0 (June 5, 2026)
 
@@ -784,9 +805,12 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 
 ## Current Status ✅
 
-**Current Release: v3.4.0** (June 5, 2026)  
-**Contact DMR ID (Pitfall 12)**: ✅ Fixed — all 4 export/import files now key contacts by DMR ID, not row _id  
-**Channel Mode (double-slot)**: ✅ Fixed — CPS `3` now imports as OEM `4` ("Double slot")  
+**Current Release: v3.4.6** (June 21, 2026)  
+**TG List Import**: ✅ Fixed — TG-list codeplugs get valid TX contact + Group type on import  
+**Wide-Band Default**: ✅ Fixed — new/imported channels default to 25 kHz (UHF and VHF)  
+**Contact DMR ID (Pitfall 12)**: ✅ Fixed — all 4 export/import files key contacts by DMR ID, not row _id  
+**Channel Mode (double-slot)**: ✅ Fixed — digital imports use OEM `4` ("Double slot")  
+**RadioID.net Lookup**: ✅ Global DMR ID cache + caller detail panel (v3.4.4+)
 **Contact Type (Group/Private)**: ✅ Fixed — no longer swapped on stock CPS import (v3.3.9)  
 **Encrypt Default**: ✅ Fixed — DMR channels no longer import with encryption ON (v3.3.9)
 **GPS Messaging**: ✅ Send position over DMR SMS with reverse geocoding + confirm dialog  
@@ -976,16 +1000,18 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 
 #### Option A: Download Pre-built Release (✅ Recommended for All Users)
 
-**Use v3.0.9 latest release for all current features including GPS navigation, zone management, and transcription.**
+**Use the latest GitHub release for all current features (RadioID lookup, TG list import, OpenGD77 CSV, APRS/SSTV/NOAA/VFO, transcription).**
 
 1. **Download Latest Release**:
    - Go to [Releases](https://github.com/IIMacGyverII/phonedmrapp/releases/latest)
-   - Download `DMRModHooks-v3.0.9.apk` (**latest version**)
+   - Download `DMRModHooks-v3.4.6.apk` (**latest version**)
    - Download `DMRTranscriptionService-v1.0.apk` (if using transcription)
+   - Download `OpenGD77CPS-Mac_Build_*.zip` from the same release (desktop CPS fork)
 
-2. **Install Both APKs**:
+2. **Install Both APKs** (reboot after DMRModHooks — required for LSPosed):
    ```powershell
-   adb install -r DMRModHooks-v3.0.9.apk
+   adb install -r DMRModHooks-v3.4.6.apk
+   adb reboot
    adb install -r DMRTranscriptionService-v1.0.apk  # Optional, for transcription only
    ```
 

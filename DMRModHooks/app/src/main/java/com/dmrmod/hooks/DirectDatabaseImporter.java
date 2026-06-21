@@ -480,8 +480,10 @@ public class DirectDatabaseImporter {
                 int importCount = 0;
                 boolean hasSeenActiveChannel = false; // Track to ensure only ONE channel is marked active
                 
-                // Build contact name => ID map for lookup
+                // Build contact name => ID / type maps for lookup
                 java.util.Map<String, Integer> contactMap = buildContactNameMap(context);
+                java.util.Map<String, Integer> contactTypeMap = buildContactTypeMap(context);
+                TGListDatabase tgListDb = TGListDatabase.getInstance(context);
                 
                 String line;
                 int skippedCount = 0;
@@ -512,6 +514,9 @@ public class DirectDatabaseImporter {
                 // Wrap each channel import in try-catch to handle parsing errors gracefully
                 try {
                     ContentValues values = new ContentValues();
+                    String tgListName = "";
+                    String contactNameForType = "";
+                    boolean txContactFromTgList = false;
                     
                     // If _id column is present, preserve the original _id value
                     // This is critical for maintaining zone assignments (zones reference channels by _id)
@@ -562,12 +567,13 @@ public class DirectDatabaseImporter {
                     inboundSlotApp = timeslotApp;
                     values.put("channel_inBoundSlot", timeslotApp);
                     
-                    // Contact -> channel_txContact
-                    // Primary: parse col 11 (DMR ID field, offset+10) — CPS sometimes exports the DMR ID here.
-                    // Fallback: resolve col 9 contact name via name->DMR-ID map.
+                    // Contact -> channel_txContact; TG List col -> RX groups + TX fallback
+                    // OpenGD77 CPS exports DMR ID col empty and Contact may be None when RX uses a TG list.
                     // channel_txContact stores the 24-bit DMR ID, NOT the contact row _id (Pitfall 12).
-                    String contactName = fields[offset + 8].trim();
+                    contactNameForType = fields[offset + 8].trim();
+                    tgListName = (fields.length > offset + 9) ? fields[offset + 9].trim() : "";
                     int contactId = 0;
+                    txContactFromTgList = false;
                     if (fields.length > offset + 10) {
                         String dmrIdStr = fields[offset + 10].trim();
                         if (!dmrIdStr.isEmpty() && !dmrIdStr.equalsIgnoreCase("None")) {
@@ -581,10 +587,22 @@ public class DirectDatabaseImporter {
                         }
                     }
                     if (contactId == 0) {
-                        contactId = getContactId(contactMap, contactName);
+                        contactId = getContactId(contactMap, contactNameForType);
+                    }
+                    // Fallback: first TG in named list becomes TX target (typical BM / TG-list codeplugs)
+                    if (contactId == 0
+                            && !tgListName.isEmpty()
+                            && !tgListName.equalsIgnoreCase("None")
+                            && !tgListName.equalsIgnoreCase("-")) {
+                        TGListDatabase.TGList tgList = tgListDb.getTGListByName(tgListName);
+                        if (tgList != null && !tgList.getTgIds().isEmpty()) {
+                            contactId = tgList.getTgIds().get(0);
+                            txContactFromTgList = true;
+                            Log.i(TAG, "  CH" + channelNumber + " txContact from TG list '"
+                                    + tgListName + "' first TG: " + contactId);
+                        }
                     }
                     values.put("channel_txContact", contactId);
-                    // TG List name (field 9) is stored for later assignment after rowId is known
                 } else {
                     // Analog channels - set DMR fields to 0
                     values.put("channel_cc", 0);
@@ -592,9 +610,9 @@ public class DirectDatabaseImporter {
                     values.put("channel_txContact", 0);
                 }
                 
-                // Band - set based on frequency
-                // VHF (136-174 MHz) = band 1, UHF (400-512 MHz) = band 0
-                int band = (rxFreqMHz >= 136 && rxFreqMHz <= 174) ? 1 : 0;
+                // Bandwidth (col 6) -> channel_band: 0=narrow 12.5 kHz, 1=wide 25 kHz
+                String bandwidthField = fields.length > offset + 5 ? fields[offset + 5].trim() : "";
+                int band = parseChannelBandwidth(bandwidthField, !isDMR);
                 values.put("channel_band", band);
                 
                 // RX Tone and TX Tone - Parse CTCSS/DCS codes
@@ -867,6 +885,21 @@ public class DirectDatabaseImporter {
                 if (isDMR) {
                     channelMode = 4;
                     outBoundSlot = inboundSlotApp;
+                    // TX contact type: OEM needs Group (1) for talkgroup TX — CSV often leaves 0 (Private)
+                    int txContactDmrId = values.getAsInteger("channel_txContact") != null
+                            ? values.getAsInteger("channel_txContact") : 0;
+                    if (txContactDmrId > 0 && contactType == 0) {
+                        Integer dbContactType = contactTypeMap.get(contactNameForType);
+                        if (dbContactType != null && dbContactType >= 0 && dbContactType <= 2) {
+                            contactType = dbContactType;
+                        } else if (txContactFromTgList) {
+                            contactType = 1;
+                        } else {
+                            contactType = 1;
+                        }
+                        Log.i(TAG, "CH" + channelNumber + " contactType → " + contactType
+                                + " (TX DMR ID " + txContactDmrId + ")");
+                    }
                     Log.i(TAG, "CH" + channelNumber + " digital channel → double-slot (mode=4), outBoundSlot=" + outBoundSlot);
                 }
                 
@@ -901,11 +934,9 @@ public class DirectDatabaseImporter {
                     // Assign TG list to this channel (DMR channels only, field 9)
                     if (isDMR) {
                         try {
-                            String tgListName = (fields.length > offset + 9) ? fields[offset + 9].trim() : "";
                             if (!tgListName.isEmpty()
                                     && !tgListName.equalsIgnoreCase("None")
                                     && !tgListName.equalsIgnoreCase("-")) {
-                                TGListDatabase tgListDb = TGListDatabase.getInstance(context);
                                 TGListDatabase.TGList tgList = tgListDb.getTGListByName(tgListName);
                                 if (tgList != null) {
                                     tgListDb.assignTGListToChannel((int) finalRowId, tgList.id);
@@ -1667,6 +1698,41 @@ public class DirectDatabaseImporter {
         
         return contactMap;
     }
+
+    /**
+     * Build a map of contact name => contact_type (0=Private, 1=Group, 2=All Call).
+     */
+    private static java.util.Map<String, Integer> buildContactTypeMap(Context context) {
+        java.util.Map<String, Integer> typeMap = new java.util.HashMap<>();
+        SQLiteDatabase db = null;
+        Cursor cursor = null;
+        try {
+            File dbFile = context.getDatabasePath("contact_database.db");
+            if (!dbFile.exists()) {
+                return typeMap;
+            }
+            db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null,
+                    SQLiteDatabase.OPEN_READONLY);
+            cursor = db.query("contact_database",
+                    new String[]{"contact_name", "contact_type"},
+                    null, null, null, null, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                do {
+                    String name = cursor.getString(0);
+                    int type = cursor.getInt(1);
+                    if (name != null) {
+                        typeMap.put(name, type);
+                    }
+                } while (cursor.moveToNext());
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Error building contact type map: " + e.getMessage());
+        } finally {
+            if (cursor != null) cursor.close();
+            if (db != null) db.close();
+        }
+        return typeMap;
+    }
     
     /**
      * Get contact DMR ID by name from the contact map.
@@ -1676,6 +1742,29 @@ public class DirectDatabaseImporter {
      * @param contactName Contact name to lookup
      * @return Contact DMR ID, or 0 (no contact) if not found or "None"
      */
+    /**
+     * Parse OpenGD77 CSV "Bandwidth (kHz)" to channel_band.
+     * 0 = narrow (12.5 kHz), 1 = wide (25 kHz). Defaults to wide when empty or unrecognized.
+     */
+    private static int parseChannelBandwidth(String bandwidthField, boolean isAnalog) {
+        if (!isAnalog) {
+            return 1;
+        }
+        if (bandwidthField == null || bandwidthField.isEmpty()) {
+            return 1;
+        }
+        String bw = bandwidthField.replace("kHz", "").replace("KHz", "").trim();
+        try {
+            double khz = Double.parseDouble(bw);
+            return khz <= 12.5 ? 0 : 1;
+        } catch (NumberFormatException e) {
+            if (bw.equalsIgnoreCase("narrow") || bw.startsWith("12.5")) {
+                return 0;
+            }
+            return 1;
+        }
+    }
+
     private static int getContactId(java.util.Map<String, Integer> contactMap, String contactName) {
         if (contactName == null || contactName.trim().isEmpty() || contactName.equalsIgnoreCase("None")) {
             return 0; // No contact

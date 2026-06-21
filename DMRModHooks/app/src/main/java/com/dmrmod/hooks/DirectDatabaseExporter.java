@@ -376,8 +376,8 @@ public class DirectDatabaseExporter {
                     interrupt = expectedInterrupt;
                 }
                 
-                // Determine bandwidth (blank for Digital, 12.5 for Analogue)
-                String bandwidth = isDigital ? "" : "12.5";
+                // Bandwidth: blank for Digital; analog uses channel_band (0=12.5, 1=25 kHz)
+                String bandwidth = isDigital ? "" : (band == 0 ? "12.5" : "25");
                 
                 // Determine channel type for OpenGD77 (Analogue vs Digital)
                 String csvChannelType = isDigital ? "Digital" : "Analogue";
