@@ -312,7 +312,7 @@ public class CSVImporter {
             Log.i(TAG, "Opening channel database via context...");
             
             try {
-                db = context.openOrCreateDatabase("database_channel_area_default_uhf.db", Context.MODE_PRIVATE, null);
+                db = context.openOrCreateDatabase(OemChannelTable.dbFileName(context), Context.MODE_PRIVATE, null);
             } catch (Exception e) {
                 Log.e(TAG, "Channel database cannot be opened via context");
                 Log.e(TAG, "Error: " + e.getMessage());
@@ -320,7 +320,7 @@ public class CSVImporter {
             }
             
             // Clear existing channels (optional - you might want to disable this)
-            // db.delete("database_channel_area_default_uhf", null, null);
+            // db.delete(OemChannelTable.tableName(context), null, null);
             
             int importCount = 0;
             int skipCount = 0;
@@ -413,7 +413,7 @@ public class CSVImporter {
                     values.put("channel_txSubCode", 0);
                     values.put("channel_groups", "");
                     
-                    long result = db.insert("database_channel_area_default_uhf", null, values);
+                    long result = db.insert(OemChannelTable.tableName(context), null, values);
                     
                     if (result != -1) {
                         importCount++;

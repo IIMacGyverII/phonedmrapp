@@ -414,13 +414,17 @@ public class DirectDatabaseImporter {
             Log.i(TAG, "Importing channels from: " + csvFile.getAbsolutePath());
             
             // Open UHF database only (app uses one database at a time)
-            File dbFile = context.getDatabasePath("database_channel_area_default_uhf.db");
+            File dbFile = context.getDatabasePath(OemChannelTable.dbFileName(context));
             db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE);
             
-            // Initialize LocationDatabase for lat/lon import
+            // Module side-tables (locations, APRS flags) live in separate SQLite files, so they cannot
+            // join the channel transaction. Collect them during the parse and apply them only after the
+            // channel table has committed, so a failed/rolled-back import leaves the previous locations
+            // and APRS flags intact instead of half-cleared.
             LocationDatabase locationDb = LocationDatabase.getInstance(context);
-            locationDb.clearAllLocations();  // Clear existing locations before import
-            Log.i(TAG, "LocationDatabase initialized for import");
+            final java.util.List<double[]> pendingLocations = new java.util.ArrayList<>(); // {channelNumber, lat, lon}
+            final java.util.List<int[]> pendingAprs = new java.util.ArrayList<>();          // {channelNumber, enabled}
+            boolean channelsCommitted = false;
             
             // Read CSV file first to parse all data
             reader = new BufferedReader(new FileReader(csvFile));
@@ -465,12 +469,12 @@ public class DirectDatabaseImporter {
             db.beginTransaction();
             try {
                 // Clear existing channels
-                int deleted = db.delete("database_channel_area_default_uhf", null, null);
+                int deleted = db.delete(OemChannelTable.tableName(context), null, null);
                 Log.i(TAG, "Deleted " + deleted + " existing channels");
                 
                 // Reset autoincrement counter
                 try {
-                    db.execSQL("DELETE FROM sqlite_sequence WHERE name='database_channel_area_default_uhf'");
+                    db.execSQL("DELETE FROM sqlite_sequence WHERE name='" + OemChannelTable.tableName(context) + "'");
                     Log.i(TAG, "Reset autoincrement counter");
                 } catch (Exception e) {
                     Log.i(TAG, "No autoincrement to reset (this is normal)");
@@ -918,7 +922,7 @@ public class DirectDatabaseImporter {
                 
                 // Insert into database
                 // If _id was provided in CSV, it will be preserved; otherwise auto-increment
-                long rowId = db.insert("database_channel_area_default_uhf", null, values);
+                long rowId = db.insert(OemChannelTable.tableName(context), null, values);
                 if (rowId > 0) {
                     Log.i(TAG, "✓ Inserted channel " + channelNumber + ": " + channelName + " (ID: " + rowId + ")");
                 }
@@ -950,7 +954,7 @@ public class DirectDatabaseImporter {
                                     }
                                     ContentValues groupsUpdate = new ContentValues();
                                     groupsUpdate.put("channel_groups", groupsSb.toString());
-                                    db.update("database_channel_area_default_uhf", groupsUpdate,
+                                    db.update(OemChannelTable.tableName(context), groupsUpdate,
                                             "_id=?", new String[]{String.valueOf(finalRowId)});
                                     Log.i(TAG, "  Assigned TG list '" + tgListName + "' and wrote " + hwGroups.length + " TG IDs into channel_groups for channel " + channelNumber);
                                 } else {
@@ -966,18 +970,16 @@ public class DirectDatabaseImporter {
                     // APRS is at field 18 (OpenGD77) or field 25 (Android with flags)
                     try {
                         int aprsFieldIndex = offset + 17 + flagOffset;  // After Power field
+                        boolean aprsEnabled = false;
                         if (fields.length > aprsFieldIndex) {
                             String aprsStr = fields[aprsFieldIndex].trim();
-                            if (!aprsStr.isEmpty() && !aprsStr.equalsIgnoreCase("None")) {
-                                // APRS enabled if field is "TX", "On", or non-empty
-                                boolean aprsEnabled = aprsStr.equalsIgnoreCase("TX") || 
-                                                     aprsStr.equalsIgnoreCase("On");
-                                if (aprsEnabled) {
-                                    APRSDatabase aprsDb = APRSDatabase.getInstance(context);
-                                    aprsDb.setEnabled(Integer.parseInt(channelNumber), true);
-                                    Log.i(TAG, "  Enabled APRS for channel " + channelNumber);
-                                }
-                            }
+                            aprsEnabled = aprsStr.equalsIgnoreCase("TX") || aprsStr.equalsIgnoreCase("On");
+                        }
+                        // Recorded for EVERY channel (explicit false too) so a stale "enabled" flag from the
+                        // previous codeplug cannot survive under a reused channel number. Applied after commit.
+                        pendingAprs.add(new int[]{Integer.parseInt(channelNumber), aprsEnabled ? 1 : 0});
+                        if (aprsEnabled) {
+                            Log.i(TAG, "  Queued APRS enable for channel " + channelNumber);
                         }
                     } catch (Exception e) {
                         Log.w(TAG, "Could not parse APRS setting for channel " + channelNumber + ": " + e.getMessage());
@@ -1000,8 +1002,8 @@ public class DirectDatabaseImporter {
                                 
                                 // Don't save default values (0.128, 0.008)
                                 if (Math.abs(lat - 0.128) > 0.001 || Math.abs(lon - 0.008) > 0.001) {
-                                    locationDb.saveLocation(Integer.parseInt(channelNumber), lat, lon);
-                                    Log.i(TAG, "  Saved location for channel " + channelNumber + ": " + lat + ", " + lon);
+                                    pendingLocations.add(new double[]{Integer.parseInt(channelNumber), lat, lon});
+                                    Log.i(TAG, "  Queued location for channel " + channelNumber + ": " + lat + ", " + lon);
                                 }
                             }
                         }
@@ -1033,7 +1035,7 @@ public class DirectDatabaseImporter {
                 try {
                     android.content.ContentValues activeUpdate = new android.content.ContentValues();
                     activeUpdate.put("channel_active", 1);
-                    int updated = db.update("database_channel_area_default_uhf", activeUpdate, "_id=?", new String[]{"1"});
+                    int updated = db.update(OemChannelTable.tableName(context), activeUpdate, "_id=?", new String[]{"1"});
                     if (updated > 0) {
                         Log.i(TAG, "✓ Set first channel (_id=1) to active");
                     } else {
@@ -1051,7 +1053,7 @@ public class DirectDatabaseImporter {
                 try {
                     android.content.ContentValues activeUpdate = new android.content.ContentValues();
                     activeUpdate.put("channel_active", 1);
-                    int updated = db.update("database_channel_area_default_uhf", activeUpdate, "_id=?", new String[]{"1"});
+                    int updated = db.update(OemChannelTable.tableName(context), activeUpdate, "_id=?", new String[]{"1"});
                     if (updated > 0) {
                         Log.i(TAG, "✓ Set first channel (_id=1) to active");
                     } else {
@@ -1064,17 +1066,36 @@ public class DirectDatabaseImporter {
             
             // Mark transaction as successful
             db.setTransactionSuccessful();
+            channelsCommitted = true;
             if (skippedCount > 0) {
                 Log.w(TAG, "⚠ Imported " + importCount + " channels, skipped " + skippedCount + " channels due to errors");
             } else {
                 Log.i(TAG, "✓ Imported " + importCount + " channels");
             }
-            
+
             } finally {
                 // End transaction
                 db.endTransaction();
             }
-            
+
+            // Channel table is committed — now replace the module side-tables that describe it.
+            if (channelsCommitted) {
+                try {
+                    locationDb.clearAllLocations();
+                    for (double[] loc : pendingLocations) {
+                        locationDb.saveLocation((int) loc[0], loc[1], loc[2]);
+                    }
+                    APRSDatabase aprsDb = APRSDatabase.getInstance(context);
+                    for (int[] a : pendingAprs) {
+                        aprsDb.setEnabled(a[0], a[1] == 1);   // preserves comment/symbol columns
+                    }
+                    Log.i(TAG, "✓ Applied " + pendingLocations.size() + " locations and "
+                            + pendingAprs.size() + " APRS flags after channel commit");
+                } catch (Exception e) {
+                    Log.w(TAG, "Side-table update after channel import failed: " + e.getMessage());
+                }
+            }
+
             // Force WAL checkpoint
             try {
                 db.execSQL("PRAGMA wal_checkpoint(FULL)");
@@ -1329,6 +1350,11 @@ public class DirectDatabaseImporter {
 
             TGListDatabase tgListDb = TGListDatabase.getInstance(context);
 
+            // Restore replaces: drop the previous lists AND their channel assignments. Assignments are
+            // keyed by channel _id, which the subsequent (wipe-and-insert) channel import re-creates from
+            // the "TG List" column, so anything left here would point at the wrong rows.
+            tgListDb.clearAllTGLists();
+
             // Accumulate rows — multi-part rows are merged by stripping _partN suffix
             java.util.LinkedHashMap<String, java.util.ArrayList<Integer>> accumulated =
                     new java.util.LinkedHashMap<>();
@@ -1563,7 +1589,7 @@ public class DirectDatabaseImporter {
         Cursor cursor = null;
         
         try {
-            File dbFile = context.getDatabasePath("database_channel_area_default_uhf.db");
+            File dbFile = context.getDatabasePath(OemChannelTable.dbFileName(context));
             if (!dbFile.exists()) {
                 Log.w(TAG, "Channel database not found");
                 return channelMap;
@@ -1572,7 +1598,7 @@ public class DirectDatabaseImporter {
             db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, 
                 SQLiteDatabase.OPEN_READONLY);
             
-            cursor = db.query("database_channel_area_default_uhf", 
+            cursor = db.query(OemChannelTable.tableName(context), 
                 new String[]{"_id", "channel_name"}, 
                 null, null, null, null, null);
             
@@ -1609,7 +1635,7 @@ public class DirectDatabaseImporter {
         Cursor cursor = null;
         
         try {
-            File dbFile = context.getDatabasePath("database_channel_area_default_uhf.db");
+            File dbFile = context.getDatabasePath(OemChannelTable.dbFileName(context));
             if (!dbFile.exists()) {
                 Log.w(TAG, "Channel database not found");
                 return compoundKeyMap;
@@ -1618,7 +1644,7 @@ public class DirectDatabaseImporter {
             db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, 
                 SQLiteDatabase.OPEN_READONLY);
             
-            cursor = db.query("database_channel_area_default_uhf", 
+            cursor = db.query(OemChannelTable.tableName(context), 
                 new String[]{"_id", "channel_number", "channel_rxFreq", "channel_name"}, 
                 null, null, null, null, null);
             

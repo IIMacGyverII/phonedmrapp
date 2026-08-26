@@ -4,24 +4,28 @@
 
 | File | Purpose |
 |------|---------|
-| `MainHook.java` | All Xposed hooks, UI overlays, state, VFO/APRS/SSTV/NOAA modes |
-| `DirectDatabaseExporter.java` / `DirectDatabaseImporter.java` | Primary backup/restore (37-col Android + 36-col OpenGD77) |
-| `CSVExporter.java` / `CSVImporter.java` | Legacy CSV paths |
+| `MainHook.java` | All Xposed hooks, UI overlays, state, VFO/APRS/SSTV/NOAA modes (16.3k lines — line-range map in `docs/deep-dive/08-…`) |
+| `DirectDatabaseExporter.java` / `DirectDatabaseImporter.java` | Primary backup/restore (37-col Android + 36-col OpenGD77); import is **wipe-and-insert**; both hard-code the `default_uhf` area |
+| `CSVExporter.java` / `CSVImporter.java` | Legacy CSV paths — unreachable from the UI |
 | `ZoneDatabase.java` | Zone tables; keys channels by DB `_id` |
 | `TGListDatabase.java` | Named TG lists; first 32 IDs → `channel_groups` |
-| `AFSKDecoderIQ.java` | Production APRS RX decoder |
-| `AFSKGenerator.java` | Reference only — TX does not work |
-| `SSTVReceiver.java` / `SSTVImageDecoderIQ.java` | SSTV RX |
-| `BackupActivity.java` | Backup management UI |
+| `RadioidDatabase.java` | RadioID.net lookup DB (`dmrmod_radioid.db`) |
+| `AFSKDecoderIQ.java` + `AFSKDecoder.java` | Production APRS RX: IQ demod + PLL (IQ) and HDLC/CRC framing (AFSKDecoder) |
+| `AFSKGenerator.java` | Reference only, unreferenced — TX does not work |
+| `SSTVReceiver.java` / `SSTVImageDecoderIQ.java` + `com/example/dmrmodhooks/sstv/*` | SSTV RX (the `sstv/` package is the live demod) |
+| `BackupActivity.java` | Legacy, unreachable (no caller opens it) |
 
 ## OEM app (`app/src/main/java/com/pri/prizeinterphone/`)
 
 | Path | Purpose |
 |------|---------|
-| `handler/DigitalAudioMessageHandler.java` | RX digital audio + caller info packets |
+| `handler/DigitalAudioMessageHandler.java` | Call-metadata packet (0x2B) — caller ID only; OEM `handle()` is empty. Voice PCM does **not** pass through here (it comes from `PrizeTinyService` → `PCMReceiveManager`) |
 | `message/DigitalAudioMessage.java` | Packet wrapper |
-| `manager/DmrManager.java` | Channel/hardware manager |
+| `manager/DmrManager.java` | Channel/hardware manager; owns `localId` and the channel cache |
+| `manager/PCMReceiveManager.java` | RX audio → `AudioTrack` (8 kHz stereo 16-bit); `writeAudioTrack` is the module's audio tap |
+| `state/CmdStateMachine.java` | Channel-programming transaction (1 s timeout, one retry) |
 | `serial/MessageDispatcher.java` | Serial command routing |
+| `protocol/Const.java` | Authoritative command-byte list |
 
 ## Build & deploy
 
@@ -55,8 +59,8 @@
 
 | File | Role |
 |------|------|
-| `DirectDatabaseExporter.java` | Writes 5 CSVs to `/sdcard/Download/DMR_Backups/YYYYMMDD_HHmmss/` |
-| `DirectDatabaseImporter.java` | Reads 5 CSVs; enforces import order; `relay 0→2`; upsert channels by name+freq |
+| `DirectDatabaseExporter.java` | Writes 5 CSVs (+PDF+zip) to `/sdcard/Download/DMR/DMR_Backups/YYYYMMDD_HHmmss/` |
+| `DirectDatabaseImporter.java` | Reads 4 CSVs (DTMF ignored); enforces import order; `relay 0→2`; **wipe + insert**, `_id` preserved for 37-col files |
 | `CSVExporter.java` / `CSVImporter.java` | Legacy paths — prefer Direct* |
 
 ### Five backup CSVs
@@ -67,7 +71,9 @@
 | `TG_Lists.csv` | Module `dmrmod_tglists.db` |
 | `Channels.csv` | OEM channel DB + module APRS/locations DBs |
 | `Zones.csv` | Module `dmrmod_zones.db` |
-| `DTMF.csv` | OEM DTMF table |
+| `DTMF.csv` | Header-only placeholder — nothing imports it |
+
+All `dmrmod_*.db` files live in `/data/data/com.pri.prizeinterphone/databases/` (module runs inside the OEM process).
 
 ### Convention traps (grep before changing)
 
@@ -84,9 +90,10 @@
 
 | Tier | Path | When to read |
 |------|------|--------------|
-| Session start | `.grok/rules/00-session-start.md` | Every session |
-| Full reference | `.grok/rules/copilot-instructions.md` | Deep work, DB schema, hooks list |
-| History / dead ends | `.docs/AI_LOGS_SUMMARY.md` | Before investigating "why doesn't X work" |
+| Session start | `.grok/rules/00-session-start.md` (mirrored as `CLAUDE.md`) | Every session |
+| **Verified architecture** | `docs/deep-dive/00-README.md` → chapters 01–14 | Before touching serial, audio, DB, UI-injection, import/export, or any hook |
+| Full reference | `.grok/rules/copilot-instructions.md` | Deep work, DB schema, hooks list (corrected 2026-08-26 from the deep dive) |
+| History / dead ends | `.docs/AI_LOGS_SUMMARY.md` (gitignored, often absent) → fallback `docs/deep-dive/13-…` §5 | Before investigating "why doesn't X work" |
 | Research | `docs/*.md` | Firmware, APRS, group-call, Ghidra |
 | Releases | `releases/` | Only when user asks for a release |
 

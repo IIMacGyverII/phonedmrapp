@@ -127,7 +127,7 @@ public class CSVExporter {
             Map<Integer, String> contactMap = buildContactMap(context, targetPackage);
             
             // Copy database to our cache using su
-            dbCopy = copyDatabaseToCache(context, targetPackage, "database_channel_area_default_uhf.db");
+            dbCopy = copyDatabaseToCache(context, targetPackage, OemChannelTable.dbFileName(context));
             if (dbCopy == null) {
                 Log.e(TAG, "Failed to copy channel database");
                 return false;
@@ -142,7 +142,7 @@ public class CSVExporter {
             }
             
             // Query all channels
-            cursor = db.query("database_channel_area_default_uhf", null, null, null, null, null, "channel_number ASC");
+            cursor = db.query(OemChannelTable.tableName(context), null, null, null, null, null, "channel_number ASC");
             
             if (cursor == null) {
                 Log.e(TAG, "Channel cursor is null");

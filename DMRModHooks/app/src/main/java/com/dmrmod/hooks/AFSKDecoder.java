@@ -42,6 +42,9 @@ public class AFSKDecoder {
     private static final byte FLAG = 0x7E;
     
     private static int audioFileCounter = 0;
+
+    /** Set to true (e.g. from a debug build) to dump each 2 s APRS buffer to /sdcard/aprs_debug/ as WAV. */
+    public static volatile boolean DEBUG_SAVE_WAV = false;
     
     /**
      * Decode AFSK audio samples into AX.25 packets
@@ -50,8 +53,12 @@ public class AFSKDecoder {
         List<byte[]> packets = new ArrayList<>();
         
         try {
-            // Save audio to WAV file for analysis with direwolf
-            saveAudioToWAV(audioSamples);
+            // Optional debug dump for offline analysis with direwolf.
+            // Disabled by default: with it on, every 2 s APRS buffer (~192 KB) was written to
+            // /sdcard/aprs_debug/ for as long as APRS mode ran, with no cap or cleanup.
+            if (DEBUG_SAVE_WAV) {
+                saveAudioToWAV(audioSamples);
+            }
             
             // Step 1: Demodulate AFSK to bits
             boolean[] bits = demodulateAFSK(audioSamples);

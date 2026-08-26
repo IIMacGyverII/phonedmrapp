@@ -130,7 +130,7 @@ public class ZoneDatabase extends SQLiteOpenHelper {
         android.database.Cursor cursor = null;
         
         try {
-            java.io.File dbFile = context.getDatabasePath("database_channel_area_default_uhf.db");
+            java.io.File dbFile = context.getDatabasePath(OemChannelTable.dbFileName(context));
             if (!dbFile.exists()) {
                 return map;
             }
@@ -139,7 +139,7 @@ public class ZoneDatabase extends SQLiteOpenHelper {
                 dbFile.getAbsolutePath(), null, 
                 android.database.sqlite.SQLiteDatabase.OPEN_READONLY);
             
-            cursor = db.query("database_channel_area_default_uhf", 
+            cursor = db.query(OemChannelTable.tableName(context), 
                 new String[]{"_id", "channel_number"}, 
                 null, null, null, null, null);
             

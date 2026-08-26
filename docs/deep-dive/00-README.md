@@ -119,7 +119,7 @@ Consolidated from the chapters; each has a cite there.
 
 ### Latent failures surfaced by the cross-reference (ch. 14)
 
-Everything the module touches on the OEM side was checked; these are the only mismatches, and all of them fail *silently* today because of the try/catch discipline:
+Everything the module touches on the OEM side was checked; these are the only mismatches, and all of them fail *silently* because of the try/catch discipline. **Status 2026-08-26:** the hard-coded-area and help-icon items below are fixed in the working tree (see `CHANGELOG_DRAFT.md`, unreleased); the rest are dead code.
 
 | Item | Effect | Where |
 |---|---|---|

@@ -50,6 +50,8 @@ Same rule is documented in [`.docs/AI_LOGS_SUMMARY.md`](../.docs/AI_LOGS_SUMMARY
 
 This file is hand-maintained and ~1500 lines long. It drifts. **Always verify against the code before relying on a specific claim** — especially:
 
+> **Verified reference:** `docs/deep-dive/00-README.md` (14 chapters, code-cited and independently audited, 2026-08-26). Where this file and the deep dive disagree, the deep dive is the corrected version — its §4 lists every correction that was applied to this file on 2026-08-26. Use it for OEM class paths, DB schemas, packet layouts, hook locations and the audio format.
+
 - **Database column names** (§5a) — grep `getColumnIndex("channel_…")` and `values.put("channel_…")` in `DirectDatabaseExporter.java` / `DirectDatabaseImporter.java` for the OEM channel table. The two naming schemes (SQL `channel_xxx` vs Java field `xxx`) are easy to confuse.
 - **`ChannelData` field names** — grep `XposedHelpers.getIntField(channelData, "…")` / `getObjectField(channelData, "…")` in `MainHook.java`. If a field doesn't appear in a real call site, assume it doesn't exist on the class.
 - **OEM class paths** (`com.pri.prizeinterphone.*`) — verify in `decompiled/` or by searching `XposedHelpers.findClass(...)` calls. Subpackages like `serial.data` vs `data` matter.
@@ -72,7 +74,7 @@ These were thoroughly tested and proven impossible on this hardware. Don't waste
 | **DMR group-call RX** | Firmware ignores the RX group list — only receives calls to the radio's own DMR ID. Not fixable in software. (TX All-Call now works post-VFO-session fix.) |
 | **>32 TG IDs per channel (hardware)** | `ChannelData.groups` is `int[32]`. Cannot expand. Software-side filtering for overflow TGs is blocked because the `DigitalAudioMessage` body layout doesn't expose the destination TG offset. |
 | **Squelch levels 1, 3–9** | Firmware coerces every non-zero squelch value to `2`. Only `sq=0` (open) and `sq=2` (tight) are distinct hardware states. This is why we run software squelch on top of `sq=0`. |
-| **On-device Whisper TFLite** | Researched, not shipped. The cloud Whisper API path is what works. |
+| **On-device speech-to-text** | Researched (TFLite/Vosk/ONNX), not shipped. The shipped path is **Google Cloud Speech-to-Text** (`speech.googleapis.com/v1/speech:recognize`, LINEAR16/en-US) inside the separate `DMRTranscriptionService` app, reached via AIDL — there is no Whisper code anywhere. `assets/speech_model.tflite` (41.6 MB) is unreferenced dead weight. See `docs/deep-dive/10-…`. |
 
 ## Core Architecture
 
@@ -91,7 +93,7 @@ These were thoroughly tested and proven impossible on this hardware. Don't waste
 
 ## Project Structure
 
-All Java classes live flat in a single package `com.dmrmod.hooks` (not in subpackages — `databases/`, `aprs/`, `sstv/`, `noaa/`, `views/` referenced in older docs do NOT exist).
+Almost all Java classes live flat in the package `com.dmrmod.hooks` (`databases/`, `aprs/`, `noaa/`, `views/` referenced in older docs do NOT exist). The one exception is `com/example/dmrmodhooks/sstv/` (12 files, a port of xdsopl's GPLv3 *robot36*) — this **is the production SSTV DSP** (`SSTVIQDemodulator` etc.), used by `SSTVReceiver`/`SSTVImageDecoderIQ`.
 
 ### Top-Level Repository Layout
 
@@ -132,11 +134,11 @@ DMRModHooks/
 │   │   ├── MainHook.java                # Entry point — implements IXposedHookLoadPackage (~16,000 lines)
 │   │   │
 │   │   ├── # APRS RX (TX is reference-only, see Hard Constraints)
-│   │   ├── AFSKDecoder.java             # Original Goertzel attempt (abandoned)
-│   │   ├── AFSKDecoderIQ.java           # ⭐ Production IQ + FIR decoder (Dire Wolf style)
-│   │   ├── AFSKDecoderPLL.java          # PLL clock recovery (TICKS_PER_PLL_CYCLE = 0x100000000L)
-│   │   ├── AFSKGenerator.java           # Reference only — does NOT transmit successfully
-│   │   ├── APRSPacketDecoder.java       # AX.25 framing, bit-unstuffing, CRC-16-CCITT, longest-gap algo
+│   │   ├── AFSKDecoder.java             # ⭐ LIVE: AGC, NRZI, HDLC flag search, longest-gap, bit-unstuffing, CRC-16-CCITT (its old Goertzel demod is replaced by AFSKDecoderIQ)
+│   │   ├── AFSKDecoderIQ.java           # ⭐ Production IQ + FIR demod + Dire Wolf-style PLL (TICKS_PER_PLL_CYCLE = 0x100000000L)
+│   │   ├── AFSKDecoderPLL.java          # DEAD — stub, no callers (uses 0x80000000)
+│   │   ├── AFSKGenerator.java           # Reference only, unreferenced — does NOT transmit successfully
+│   │   ├── APRSPacketDecoder.java       # AX.25 address/SSID + APRS info-field parsing only (uncompressed positions)
 │   │   ├── APRSReceiver.java
 │   │   ├── APRSDatabase.java            # APRS settings/SharedPreferences
 │   │   ├── APRSReceivedDatabase.java    # Received-packet log
@@ -147,22 +149,24 @@ DMRModHooks/
 │   │   ├── SSTVMode.java                # VIS code database (Robot/Martin/Scottie/PD)
 │   │   ├── SSTVVISDetector.java         # Goertzel VIS detection
 │   │   ├── SSTVAutoDetector.java        # Sync-based fallback
-│   │   ├── SSTVReceiver.java            # 3 MB circular buffer, state machine
-│   │   ├── SSTVImageDecoder.java
-│   │   ├── SSTVImageDecoderIQ.java      # ⭐ Production IQ decoder
-│   │   ├── SSTVFMDemodRobot36.java
-│   │   ├── SSTVFilter.java
+│   │   ├── SSTVReceiver.java            # 1 MB linear buffer trimmed to last 18 s (not circular), state machine, bg thread
+│   │   ├── SSTVImageDecoder.java        # DEAD (non-IQ)
+│   │   ├── SSTVImageDecoderIQ.java      # ⭐ Production IQ decoder (uses com/example/dmrmodhooks/sstv/SSTVIQDemodulator)
+│   │   ├── SSTVFMDemodRobot36.java      # DEAD
+│   │   ├── SSTVFilter.java              # DEAD (live copy is in the sstv/ package)
 │   │   ├── SSTVFFTDemodulator.java, SSTVGoertzelDemod.java,
-│   │   ├── SSTVZeroCrossingDemod.java, SSTVPhaseDemod.java,  # alt demods, kept for experimentation
+│   │   ├── SSTVZeroCrossingDemod.java, SSTVPhaseDemod.java,  # DEAD alt demods — unreferenced
 │   │   ├── SSTVVISResult.java
 │   │   │
 │   │   ├── # NOAA APT
 │   │   ├── NOAAReceiver.java
 │   │   ├── SatellitePassPredictor.java  # TLE-based pass prediction
-│   │   ├── FrequencyModulation.java
+│   │   ├── FrequencyModulation.java     # DEAD
 │   │   │
-│   │   ├── # Audio DSP helpers
-│   │   ├── Complex.java, Phasor.java, Kaiser.java, ComplexConvolution.java, ToneConverter.java
+│   │   ├── # Audio DSP helpers — Complex/Phasor/Kaiser/ComplexConvolution are DEAD copies; live ones are in com/example/dmrmodhooks/sstv/
+│   │   ├── Complex.java, Phasor.java, Kaiser.java, ComplexConvolution.java
+│   │   ├── ToneConverter.java           # CTCSS/DCS index↔string mapping (not DSP) — used by exporter/importer/PDF/MainHook
+│   │   ├── RadioidDatabase.java         # RadioID.net user.csv → dmrmod_radioid.db (v3.4.5)
 │   │   │
 │   │   ├── # Codeplug / database
 │   │   ├── CSVExporter.java, CSVImporter.java       # legacy paths
@@ -217,11 +221,12 @@ private static CircuitBoardView circuitBoardView = null;  // Sound bar display
 ### APRS / Squelch UI State (added 3/13 session)
 ```java
 private static volatile boolean isAprsSoftwareSquelchEnabled = false;  // APRS page toggle — independent from intercom
-private static volatile int savedIntercomSquelchThreshold = 2;          // Saved before APRS mode overwrites it
+private static volatile int savedIntercomSquelchThreshold = 5;          // Saved before APRS mode overwrites it (default is 5, not 2)
 private static android.widget.ToggleButton softwareSquelchToggleButton = null;  // Intercom page soft SQ button (static ref)
-private static android.widget.ToggleButton aprsToggleButton = null;            // APRS page toggle button (static ref)
-private static android.view.View softwareSquelchContainer = null;              // Slider container — show/hide on channel type change
+private static android.widget.ToggleButton aprsMonitoringToggleButton = null;  // APRS page toggle button (static ref)
+private static LinearLayout softwareSquelchContainer = null;                    // Slider container — show/hide on channel type change
 ```
+Note: `softwareSquelchThreshold` is ONE global shared by the intercom, APRS, SSTV and NOAA sliders; only APRS persists it (`aprs_squelch`) — this is the mechanism behind Pitfall 10.
 
 ### Caller / Recording / Zone / VFO State (selected highlights — see MainHook.java top for full list)
 ```java
@@ -242,27 +247,27 @@ private static volatile List<Integer> currentZoneChannels = null;
 // MON button (analog monitor)
 private static volatile boolean isMonitoringMode = false;
 
-// VFO mode parameters
-private static volatile double vfoFrequencyMHz = 146.520;  // simplex default
-private static volatile int vfoLocalId = -1;               // -1 = use channel default (see Pitfall 15)
-private static volatile int vfoBandWidth = 0;              // 0 = 12.5 kHz, 1 = 25 kHz
+// VFO mode parameters — NOTE: these are plain statics, NOT volatile (written/read on the UI thread only)
+private static double vfoFrequencyMHz = 146.520;  // simplex default
+private static int vfoLocalId = -1;               // -1 = use channel default (see Pitfall 15)
+private static int vfoBandWidth = 0;              // unused — VFO has no bandwidth control
 
-// App ClassLoader cached at hookApplication time for async callbacks
+// App ClassLoader — captured in handleLoadPackage (not hookApplication) for async callbacks
 private static ClassLoader appClassLoader = null;
 ```
 
-### Mode-Specific Default Frequencies (hardcoded in MainHook.java)
-| Mode | Default MHz | Notes |
+### Mode-Specific Default Frequencies
+| Mode | Default MHz | Where the default lives |
 |---|---|---|
-| APRS | 144.390 | North-American 2 m APRS frequency |
-| SSTV | 144.500 | 2 m SSTV calling; persisted in `dmrmod_sstv_global` |
-| NOAA | 137.100 | NOAA-19; persisted in `dmrmod_noaa_global` |
-| VFO  | 146.520 | 2 m simplex calling; in-memory only (`vfoFrequencyMHz`) |
+| APRS | 144.390 | `APRSDatabase.DEFAULT_APRS_FREQUENCY`; user-editable, persisted in `dmrmod_aprs_global` (`aprs_frequency`) |
+| SSTV | 144.500 | literal fallback string at each `getString("sstv_frequency", "144.500")` call site; persisted in `dmrmod_sstv_global` |
+| NOAA | 137.100 | literal fallback string at each `getString("noaa_frequency", …)` call site; persisted in `dmrmod_noaa_global` |
+| VFO  | 146.520 | in-memory only (`vfoFrequencyMHz`) |
 
 ## Key Hook Methods
 
 ### UI Modification Hooks
-- `hookApplication()` - `Application.onCreate()` — grabs the app `ClassLoader` and runs early init
+- `hookApplication()` - `PrizeInterPhoneApp.onCreate()` — creates `shared_prefs`/`databases` dirs and runs the zone `_id` migration. (The app `ClassLoader` is captured in `handleLoadPackage`, not here.)
 - `hookMainActivity()` - Main app initialization, status bar colors
 - `hookTalkBackFragment()` - Intercom page (main screen with PTT)
 - `hookLocalFragment()` - Device/Settings tab
@@ -274,18 +279,19 @@ private static ClassLoader appClassLoader = null;
 - `hookGenericActivityBackgrounds()` - Sub-activities (Settings, DeviceArea, etc.)
 
 ### Audio Processing Hooks
-- `hookPCMReceiveManager()` - **CRITICAL** - Audio pipeline hook
-  - Intercepts all PCM audio before speaker
+- `hookPCMReceiveManager()` - **CRITICAL** - Audio pipeline hook (`PCMReceiveManager.writeAudioTrack(byte[] bArr, int len)`, private, runs on the OEM `HandlerThread("readpcm")`)
+  - Intercepts **RX** PCM before the speaker (not TX, not playback of recordings). RX PCM does **not** come over the UART — it arrives via the vendor Binder service `android.os.PrizeTinyService` (`ITinyRecvCallback.onRecv`).
+  - **Format:** the OEM `AudioTrack` is `8000 Hz, CHANNEL_OUT_STEREO, PCM 16-bit` = 32 000 B/s, delivered in ~2048-byte (~64 ms) chunks. The module treats the same bytes as **16 kHz mono** (identical byte rate; sample layout unverified — see `docs/deep-dive/00-README.md` §5). Do **not** write new DSP against "8 kHz mono".
   - Implements software squelch
   - Feeds APRS/SSTV/NOAA decoders
   - Handles recording and transcription
   - Updates sound bar animations
 - `hookDigitalAudioHandler()` - DMR voice-packet RX path; extracts caller DMR ID from `DigitalAudioMessage` body bytes
   - **Packet layout** (`QUERY_DIGITAL_AUDIO_RECEIVE_INFO` body): `body[0]` = callType (0=private, 1=group, 2=all); `body[1..3]` = caller DMR ID, **24-bit little-endian** (`body[3]<<16 | body[2]<<8 | body[1]`). Do **not** read only 2 bytes — that truncates IDs >65535 (e.g. 3199587 displayed as 53859).
-- `hookSpeechRecognizer()` / `hookSystemRecognitionService()` - Android system speech-recognition integration (legacy / research; cloud Whisper is the shipped path)
+- `hookSpeechRecognizer()` / `hookSystemRecognitionService()` - **DEAD** — defined but never called from `handleLoadPackage` (Feb 2026 SpeechRecognizer experiment). The shipped transcription path is Google Cloud STT via `DMRTranscriptionService` (AIDL).
   
 ### Hardware Control Hooks
-- `hookDmrManager()` - Channel management, hardware commands. **Also where the VFO `localId` override lives** (see Pitfall 15)
+- `hookDmrManager()` - Channel management, hardware commands (`sendAnalogMessage`/`sendDigitalMessage` before-hooks mutate `ChannelData`; the `sendAnalogMessage` hook here only logs). **The VFO `localId` override lives in the `BaseMessage.send()` before-hook** (~`MainHook.java:10799`), and the software-squelch `sq=0` forcing + 300 ms re-enable lives in `hookChannelNavigation()`'s `sendAnalogMessage` hook (~12329) — see Pitfall 15 and "1. Software Squelch Architecture".
 - `hookModuleStatusHandler()` - Radio state (RX/TX/idle)
 - `hookSignalMessageHandler()` - RSSI updates (cmd 0x32 responses) — source of `currentRssi` for software squelch
 - `hookSerialCommunication()` - Low-level hardware comms (UART logging on `/dev/ttyS0`)
@@ -307,30 +313,36 @@ private static ClassLoader appClassLoader = null;
 | `startAPRSMonitoring(Activity)` / `stopAPRSMonitoring(Activity)` | APRS lifecycle (overwrites `softwareSquelchThreshold` — see Pitfall 10) |
 | `startSSTVMonitoring(Activity)` / `stopSSTVMonitoring(Activity)` | SSTV lifecycle |
 | `enableSoftwareSquelchOnCurrentChannel()` / `disableSoftwareSquelchOnCurrentChannel()` | Issues direct `AnalogMessage.send()` with `sq=0` / `sq=2` (bypasses state machine — see Pitfall 8) |
-| `syncChannelInfoWithData(Object)` | Refresh UI after backup restore — NOT the right path for hardware writes |
-| `getContactNameForDmrId(long, Context)` | Looks up `contact_database.contact_name WHERE contact_number = ?` |
+| `DmrManager.syncChannelInfoWithData(ChannelData)` (OEM) | **Is** the OEM hardware-write path: kicks `CmdStateMachine.SetChannelState` (1 s timeout, one retry). Every monitoring mode uses it to push the hijacked channel. It does NOT refresh the UI by itself (`updateChannel()` → `updateChannelList()` does). Guard on `SetChannelState` before calling — see Pitfall 8/13. |
+| `lookupContactName(Context,int)` / `lookupCallerDisplayInfo(Context,int)` | Two-tier caller lookup: OEM `contact_database` (`contact_number = ?`) first, then `RadioidDatabase` (`dmrmod_radioid.db`). (`getContactNameForDmrId` does not exist.) |
 | `applyBottomNavStyle(Activity, String tabName)` | Re-paints all 5 bottom-nav tabs after `tapOnClick` |
 | `updateActivityIndicator(String)` | Appends to scrolling activity history + writes row to `dmrmod_history.db` |
 | `updateCallerInfoAsync(ClassLoader)` | Background thread: looks up contact name for current caller |
-| `updateAPRSLiveScreen(...)` / `updateSSTVLiveScreen(...)` / `updateNOAALiveScreen()` | 2-second dialog refresh tickers |
+| `updateAPRSLiveScreen(...)` / `updateSSTVLiveScreen(...)` / `updateNOAALiveScreen()` | Dialog refresh tickers: APRS 2 s, **SSTV 1 s**, NOAA 2 s |
+| `checkAndRestore{APRS,SSTV,NOAA,VFO}ChannelOnStartup(Context)` | Startup crash recovery, run +2 s after launch; triggered by the channel-**name prefix** (`APRS (`, `SSTV (`, `NOAA (`, `VFO`), not by the mode flags (which are reset first). APRS/VFO inline the restore; only SSTV/NOAA call `restore*ChannelBackup`. |
 
 ### Frequently-Hooked OEM Class Paths (`com.pri.prizeinterphone.*`)
 
 | Subpackage | Class | Used for |
 |---|---|---|
-| `ui.activity` | `MainActivity` | Status bar / theme |
-| `ui.fragment` | `TalkBackFragment` | Intercom page — the main hook surface |
-| `ui.fragment` | `LocalFragment` | Device/Settings tab |
-| `handler` | `ModuleStatusHandler` | Radio RX/TX/idle transitions |
-| `handler` | `DigitalAudioHandler` | DMR voice-packet RX (caller ID extraction) |
-| `handler` | `SignalMessageHandler` | RSSI updates |
-| `manager` | `PCMReceiveManager` | **Audio pipeline** (`writeAudioTrack`) |
-| `manager` | `DmrManager` | Channel programming + `sendDigitalMessage`/`sendAnalogMessage` |
+| *(root)* | `InterPhoneHomeActivity` | Launcher activity (there is no `MainActivity`); hosts the 5-tab custom `LinearLayout` bar + ViewPager |
+| `fragment` | `InterPhoneTalkBackFragment` | Intercom page — the main hook surface (root view field: `mLocalView`) |
+| `fragment` | `InterPhoneLocalFragment` | Device/Settings tab |
+| `fragment` | `InterPhoneChannelFragment`, `InterPhoneContactsFragment`, `InterPhoneMessageFragment` | Channel list / contacts / SMS pages |
+| `activity` | `InterPhoneChannelActivity` | Channel editor (`saveChannelData`) |
+| `handler` | `ModuleStatusMessageHandler` | Radio RX/TX/idle transitions (status cmd 0x36) |
+| `handler` | `DigitalAudioMessageHandler` | DMR call-metadata packet (0x2B) — caller ID extraction. OEM `handle()` is empty; the body layout is the module's reverse-engineering |
+| `handler` | `SignalMessageHandler` | RSSI replies (0x32) — OEM never converts; the dBm formula is the module's |
+| `manager` | `PCMReceiveManager` | **RX audio pipeline** (`writeAudioTrack`) |
+| `manager` | `DmrManager` | Channel programming + `sendDigitalMessage`/`sendAnalogMessage`; owns `localId` and the `channels` cache |
+| `state` | `CmdStateMachine`, `TalkBackStateMachine` | Channel-programming transaction / PTT+RX state |
 | `serial.data` | `ChannelData` | Per-channel config struct (note: subpackage is `serial.data`, NOT plain `data` — see Pitfall 1) |
-| `serial` | `SerialManager` | UART traffic |
-| `serial.communication` | `Packet`, `SerialPort` | Raw byte framing |
-| `message` | `AnalogMessage`, `DigitalMessage`, `SignalMessage`, `RelayMessage` | Per-command packet builders — instantiate + `.send()` for direct hardware writes |
-| `protocol` | `MessageDispatcher` | Incoming-packet routing |
+| `serial` | `SerialManager`, `MessageDispatcher` | UART owner (`send(Packet)`); inbound cmd-byte → handler routing |
+| `serial.port` | `SerialPort` | JNI `/dev/ttyS0` @ 57600 |
+| `protocol` | `Packet`, `Const` | Frame model; command constants |
+| `message` | `BaseMessage`, `AnalogMessage`, `DigitalMessage`, `SignalMessage`, `ModuleStatusMessage`, `DigitalAudioMessage` | Per-command packet builders — instantiate + `.send()` for direct hardware writes. (`RelayMessage` is looked up but never used by the module.) |
+
+Full verified inventory of every hooked method, reflected member and resource ID: `docs/deep-dive/14-hook-integration-crossref.md`.
 
 ## Critical Patterns & Best Practices
 
@@ -340,7 +352,7 @@ private static ClassLoader appClassLoader = null;
 
 **Solution**: Hybrid software squelch using RSSI + Audio RMS.
 
-**Implementation Pattern**:
+**Implementation Pattern** (lives in `hookChannelNavigation()`, ~`MainHook.java:12329-12371` — not in `hookDmrManager()`):
 ```java
 // Hook sendAnalogMessage to force sq=0 BEFORE hardware send
 XposedHelpers.findAndHookMethod(
@@ -379,16 +391,16 @@ XposedHelpers.findAndHookMethod(
 
 **Location**: `hookPCMReceiveManager()` → `writeAudioTrack(byte[], int)` → `beforeHookedMethod`
 
-**Execution Order**:
-1. Calculate audio amplitude (always, for VU meter)
-2. Make copy of audio data for decoders (APRS/SSTV/NOAA/transcription)
-3. Run software squelch logic
+**Execution Order** (as implemented, `MainHook.java:~9945-10102`):
+1. Make a pre-squelch copy of the buffer — **only if** some consumer is active (recording, transcription, APRS/SSTV/NOAA)
+2. Calculate audio amplitude (every 2nd 16-bit sample; the code comment saying "every 4th" is wrong)
+3. Run software squelch logic (RSSI + amplitude, hysteresis ×100/140, 300 ms hang)
 4. Mute audio buffer if squelch closed: `Arrays.fill(audioData, 0, length, (byte) 0)`
 5. Update `circuitBoardView.audioAmplitude` (0 if squelched)
-6. Feed decoders with **original** (pre-squelch) audio
+6. Feed recording / transcription buffer / decoders from the **copy** (pre-squelch). The recording file write happens on this audio thread.
 7. Let original `writeAudioTrack` proceed
 
-**Critical Rule**: Decoders MUST receive pre-squelch audio, speaker gets post-squelch audio.
+**Critical Rule**: Decoders MUST receive pre-squelch audio, speaker gets post-squelch audio. Note the mute also silences the OEM's own `.pcm` recording tap (same array). Software squelch gates **digital** audio too if left enabled (no channel-type check).
 
 ### 3. Channel Change State Management
 
@@ -489,12 +501,12 @@ Table name = `database_channel_area_default_uhf`. Columns confirmed by the actua
 | Column | `ChannelData` field | Type | Notes |
 |---|---|---|---|
 | `_id` | — | INTEGER PK | Autoincrement. Used as the stable zone/TG-list key — **not** `channel_number` |
-| `channel_number` | `number` | INTEGER | Display order number. Non-unique (multiple channels can share same number) |
+| `channel_number` | `number` | INTEGER | Display number. Non-unique; the OEM app **never orders by it** (channel list order = rowid order) |
 | `channel_name` | `name` | TEXT | Display name |
-| `channel_type` | `type` | TEXT/INT | `"0"` = Digital/DMR, `"1"` = Analog/FM. Stored as text in DB but read as int from `ChannelData.type` |
+| `channel_type` | `type` | INTEGER | `0` = Digital/DMR, `1` = Analog/FM (integer column, not text) |
 | `channel_rxFreq` | `rxFreq` | INTEGER | Hz (e.g. 462562500) |
 | `channel_txFreq` | `txFreq` | INTEGER | Hz |
-| `channel_band` | `band` | INTEGER | 0=UHF, 1=VHF (derived from frequency) |
+| `channel_band` | `band` | INTEGER | **Bandwidth**, not band: 0 = narrow 12.5 kHz, 1 = wide 25 kHz. (Older notes said UHF/VHF — wrong.) New/imported channels default to wide since v3.4.6 |
 | `channel_sq` | `sq` | INTEGER | Squelch 0–9 (firmware coerces 1,3–9 → 2; only 0 and 2 are distinct) |
 | `channel_power` | `power` | INTEGER | 0=low (P1), 1=high (P9). OpenGD77 expects `P1`–`P9` strings |
 | `channel_cc` | `cc` | INTEGER | Color code (DMR only, 0–15). **Field name is `cc`, NOT `colorCode`** (this bit VFO in v3.1.5) |
@@ -506,12 +518,12 @@ Table name = `database_channel_area_default_uhf`. Columns confirmed by the actua
 | `channel_rxSubCode` | `rxSubCode` | INTEGER | Index into tone table for the chosen `rxType` |
 | `channel_txType` | `txType` | INTEGER | TX tone type, same encoding as `rxType`. **Column is `channel_txType`, NOT `channel_txToneType`** |
 | `channel_txSubCode` | `txSubCode` | INTEGER | Index into tone table for the chosen `txType` |
-| `channel_encryptSw` | `encryptSw` | INTEGER | 0=off, 1=on. **Column is `channel_encryptSw`, NOT `channel_encryptSwitch`** |
+| `channel_encryptSw` | `encryptSw` | INTEGER | **1 = on, 2 = off** (OEM convention; `ChannelData` default 1). Not 0/1. **Column is `channel_encryptSw`, NOT `channel_encryptSwitch`** |
 | `channel_encryptKey` | `encryptKey` | TEXT | Hex key string |
-| `channel_relay` | `relay` | INTEGER | 1=relay-disconnect ON, 2=normal. **Never 0** — firmware rejects 0; importer coerces 0→2. (OpenGD77 CPS uses 0=normal/1=disconnect internally — different convention!) |
-| `channel_interrupt` | `interrupt` | INTEGER | Must be `2` for Digital, `0` for Analog — importer/exporter enforce this |
+| `channel_relay` | `relay` | INTEGER | 1=relay-disconnect ON, 2=normal (`ChannelData` default 2). The OEM app never writes 0; importer coerces 0→2. "Firmware rejects 0" is a field observation, not verifiable from app code. (OpenGD77 CPS uses 0=normal/1=disconnect internally — different convention!) |
+| `channel_interrupt` | `interrupt` | INTEGER | OEM default is `2` for **every** channel type and it is only transmitted for digital channels. The importer/exporter's "0 for analog" is a **module** convention, not an OEM rule |
 | `channel_active` | `active` | INTEGER | Only one channel may be active at a time (`_id=1` is the boot channel by convention) |
-| `channel_mode` | `mode` | INTEGER | Per-channel mode flag (uses vary; importer defaults to `0`) |
+| `channel_mode` | `channelMode` | INTEGER | 0 = single slot, **4 = double slot** (OEM). CPS uses 3 for double-slot; importer maps 3→4 and forces 4 for DMR channels since v3.4.5; exporter maps 4→3 |
 | `channel_groups` | `groups` | TEXT | Comma-separated TG IDs, **exactly 32 slots** (e.g. `"1,0,0,...,0"`). Written by `TGListDatabase.getHardwareGroups()` at channel-save time so firmware reads the right TGs without runtime hooks (v3.3.6 architecture change) |
 
 **Columns that do NOT exist on this table** (despite appearing in CSV exports or in older docs):
@@ -520,6 +532,8 @@ Table name = `database_channel_area_default_uhf`. Columns confirmed by the actua
 - `channel_rxOnly`, `channel_zoneSkip`, `channel_allSkip`, `channel_tot`, `channel_vox`, `channel_noBeep`, `channel_noEco` — CSV-only fields; the OpenGD77 exporter always emits `"No"` / `"Off"` / `"0"` for these because we have no DB source to read from
 - `channel_localId` — `localId` is the device's own DMR ID and lives on `DmrManager`, not on `ChannelData`. See Pitfall 15.
 
+**One DB file per channel *area*.** The OEM stores each area in its own file `database_<areaKey>.db` (table of the same name); a stock UV4T module has 14 areas (`channel_area_default_uhf`, `channel_area_default_vhf`, 12 regional). The area registry is JSON in pref `pref_person_device_area_list`; the selected area is `pref_person_channel_area_selected_index`. **The module's export/import/PDF/dump classes hard-code `database_channel_area_default_uhf.db`** and ignore the selected area (known bug — see `docs/deep-dive/11-…` §1.9); reflection paths via `DmrManager.getCurrentDbHelper()` are area-correct.
+
 #### `contact_database.db` — contacts
 Table name = `contact_database`
 
@@ -527,14 +541,14 @@ Table name = `contact_database`
 |---|---|---|
 | `_id` | INTEGER PK | Row ID — **NOT** what `channel_txContact` stores |
 | `contact_name` | VARCHAR | Display name |
-| `contact_type` | INTEGER | 0=Private, 1=Group, 2=AllCall |
+| `contact_type` | INTEGER | 0=Private, 1=Group. (2=AllCall is a module/CSV convention, not an OEM value; OEM all-call is DMR ID 16777215) |
 | `contact_number` | VARCHAR | 24-bit DMR ID — **this is what `channel_txContact` stores** |
 | `contact_active` | INTEGER | |
 | `contact_icon` | VARCHAR | |
 
 ---
 
-**Module's own databases** — stored in `com.dmrmod.hooks` data dir via `context.getDatabasePath()`:
+**Module's own databases** — the module runs inside the OEM process, so every `dmrmod_*.db` lives in **`/data/data/com.pri.prizeinterphone/databases/`** (the hooked app's `getApplicationContext().getDatabasePath()`), NOT in a `com.dmrmod.hooks` data dir:
 
 | DB file | Table(s) | Key columns |
 |---|---|---|
@@ -570,13 +584,14 @@ Table name = `contact_database`
 
 | Folder | Contents |
 |---|---|
-| `DMR_Backups/YYYYMMDD_HHmmss/` | Codeplug CSV exports (Channels, Contacts, TG_Lists, Zones, DTMF) |
-| `DMR/Recordings/[ChannelName]/` | PCM→WAV recordings |
+| `DMR/DMR_Backups/YYYYMMDD_HHmmss/` | Codeplug CSV exports (Channels, Contacts, TG_Lists, Zones, DTMF) + PDF + zip |
+| `DMR/Audio/[ChannelName]/` | PCM→WAV recordings (`<ts>_<contact|callsign|dmrId>.wav`; files < 10 kB are deleted) |
 | `DMR/Transcription/[ChannelName]/transcription_YYYYMMDD.txt` | Daily transcription logs |
 | `DMR/APRS/` | Received APRS packet logs (TXT + GPX) |
 | `DMR/SSTV/` | Received SSTV images |
 | `DMR/NOAA/` | NOAA APT satellite images |
-| `/sdcard/DMR/api_key.txt` | OpenAI Whisper API key (auto-created on first run) |
+| `DMR/api_key.txt` (i.e. `/sdcard/Download/DMR/api_key.txt`) | **Google Cloud Speech-to-Text** API key (auto-created with a placeholder). `DMRTranscriptionService` reads it once at `onCreate` — `am force-stop com.macdmr.transcription` after rotating |
+| `DMR/RadioID/` | Manual-import location for RadioID.net `user.csv` → `dmrmod_radioid.db` |
 
 ### 6. Color Scheme & Theming
 
@@ -622,27 +637,29 @@ if (isAPRSMonitoringActive || isSSTVMonitoringActive ||
     return;
 }
 
-// 2. Save current channel to SharedPreferences (MUST include localId — see Pitfall 15)
+// 2. Save current channel to a serialised HashMap on /sdcard/<mode>_channel_backup.dat
+//    (NOT SharedPreferences; must NOT include localId — see Pitfall 15)
 saveChannelBackup(currentChannel);
 
-// 3. Hijack channel (change freq, name, etc)
+// 3. Hijack channel (change freq, name, etc) and push to hardware
 channelData.setRxFreq(144500000);  // 144.500 MHz
 channelData.setName("SSTV (original name)");
-updateChannel(channelData);
+updateChannel(channelData);            // DB + updateChannelList + syncChannelInfo
+syncChannelInfoWithData(channelData);  // CmdStateMachine transaction
 
 // 4. Set mode flag
 isSSTVMonitoringActive = true;
 
-// 5. Enable software squelch if needed
-enableSoftwareSquelchOnCurrentChannel();
+// 5. All four modes force software squelch OFF on start (the live screens have their own slider)
 ```
+**Reality check (2026-08-26):** the exclusivity check in step 1 is only partially implemented (APRS start checks nothing; see `docs/deep-dive/09-…` §1.2), and **no name-nesting guard exists** in any `save*Backup`/`start*` method.
 
 **Pattern for Mode Deactivation**:
 ```java
 // 1. Disable software squelch
 disableSoftwareSquelchOnCurrentChannel();
 
-// 2. Restore channel from SharedPreferences
+// 2. Restore channel from the /sdcard backup file (or the in-memory HashMap)
 restoreChannelBackup();
 
 // 3. Clear mode flag
@@ -802,7 +819,7 @@ aprsDecoder.feed(originalAudio);  // Use original, not squelched
 ```
 
 ### ❌ Pitfall 8: Database `updateChannel()` + `syncChannelInfo()` Doesn't Stick
-**Problem**: Updating the channel DB and calling `syncChannelInfo()` to push changes (e.g. squelch slider) gets cached/raced by `CmdStateMachine.transitionToSetChannelStateState()`. The hardware reverts.
+**Problem**: Updating the channel DB and calling `syncChannelInfo()` to push changes (e.g. squelch slider) appeared not to stick. Precise mechanism (see `docs/deep-dive/03-…` §2, §9): `syncChannelInfo(ChannelData)` only programs when `active==1`; the transaction is realised on the `CmdState` thread only when the next message is pumped; and `CmdStateMachine` correlates acks by command byte alone and **drops replies in `NoDealState`**, so a direct send never produces a listener callback. There is no "revert" logic — later OEM re-programs simply resend DB values.
 
 **Solution**: Construct an `AnalogMessage` (or `DigitalMessage`) directly, copy fields from `currentChannel`, set the field you're changing, and call `.send()` — same path the MON button uses. Bypasses the state machine entirely. The APRS squelch slider was migrated to this pattern on 2026-03-12 and started working immediately. Documented in user-memory `aprs-squelch-investigation.md`.
 
@@ -847,7 +864,9 @@ XposedHelpers.callMethod(am, "send");   // hits hardware immediately
 ### ❌ Pitfall 13: Post-Channel-Change Squelch Race Condition
 **Problem**: After a channel change, `enableSoftwareSquelchOnCurrentChannel()` is called via a 300 ms `postDelayed`. Occasionally the state machine wins and squelch is left initialized-but-not-active. Symptom: a short audio blip on channel load, then everything is blocked even though the threshold is set low enough to pass.
 
-**Workaround**: Touch the squelch slider without moving it — this re-triggers `enableSoftwareSquelchOnCurrentChannel()` and restores correct state. Root cause unresolved as of v3.3.7.
+**Workaround**: Touch the squelch slider without moving it — this re-triggers `enableSoftwareSquelchOnCurrentChannel()` and restores correct state.
+
+**Plausible root cause (2026-08-26, `docs/deep-dive/03-…` §9/§10):** the 300 ms re-apply lands while `CmdStateMachine` is still in `SetChannelState` waiting (up to 1 s) for the follow-up 0x35/0x2A ack; because acks are matched only by command byte, the module's 0x23 ack can be consumed as the OEM transaction's ack. Deterministic fix: re-apply on `dealEvent(0x23)` / entry to `NoDealState` instead of a timer.
 
 ### ❌ Pitfall 14: Zygisk — Static Variables Survive App Restart
 **Problem**: In Zygisk, the module's static variables persist across force-close/restart cycles of the target app. A flag like `isSSTVMonitoringActive = true` left by a crash stays `true` on the next launch; the startup code tries to update a stale dialog reference and crashes.
@@ -860,24 +879,27 @@ isNOAAMonitoringActive = false;
 isVFOModeActive = false;
 // + null all dialog/receiver static refs
 ```
-**Crash recovery**: Also check for `"APRS ("` / `"SSTV ("` prefix in the current channel name at startup — if found, show the channel-restore dialog. **Any new monitoring mode must follow this same pattern.**
+**What is actually reset today** (`hookMainActivity`, ~`MainHook.java:1130-1175`): the four mode flags and the dialog/receiver refs. **Not reset:** `isMonitoringMode`, `isSoftwareSquelchEnabled`, `isAprsSoftwareSquelchEnabled`, `isRecordingEnabled`, `isTranscriptionEnabled`, zone state, `currentChannelType`, `vfoLocalId`.
 
-**Name nesting guard**: When a mode wraps the channel name (e.g. `"SSTV (" + originalName + ")"`), first check if the name already starts with `"SSTV ("` and ends with `")"` — if so, extract the inner name before re-wrapping. Crash/restart can leave the name already wrapped, producing `"SSTV (SSTV (UHF))"` double-nesting otherwise.
+**Crash recovery**: the four `checkAndRestore*ChannelOnStartup` calls (+2 s) check for the `"APRS ("` / `"SSTV ("` / `"NOAA ("` / `"VFO"` prefix in the current channel name — if found, show the channel-restore dialog. **Any new monitoring mode must follow this same pattern.**
+
+**Name nesting guard** (**not implemented as of v3.4.6**): when a mode wraps the channel name (e.g. `"SSTV (" + originalName + ")"`), it should first check if the name already starts with `"SSTV ("` and ends with `")"` and extract the inner name before re-wrapping. Crash/restart can otherwise leave `"SSTV (SSTV (UHF))"` double-nesting. Add this when touching any `save*Backup`/`start*` method.
 
 ### ❌ Pitfall 15: `localId` Override for VFO Mode (NOT a backup/restore field)
 **Reality**: `localId` is the device's own DMR ID. It is **NOT** a column on `ChannelData` / the channel database. It lives on the `DigitalMessage` packet and is populated from `DmrManager.getLocalId()` at packet build time. Trying `XposedHelpers.getObjectField(channelData, "localId")` will throw.
 
 **Why it matters**: VFO mode wants to let the user temporarily transmit with a different DMR ID without permanently changing the device setting. You can't do that by editing the channel — you must override the `localId` field on each outgoing `DigitalMessage`.
 
-**Correct pattern** (already implemented in `hookDmrManager` → `sendDigitalMessage` `beforeHookedMethod` at MainHook.java line ~10458):
+**Correct pattern** (implemented in the **`BaseMessage.send()` before-hook** inside `hookDmrManager()`, ~`MainHook.java:10799-10803` — the `DigitalMessage` is a local inside `DmrManager.sendDigitalMessage`, so it is unreachable from the `sendDigitalMessage` hook):
 ```java
 private static int vfoLocalId = -1;  // -1 = use channel default, else override
 
-// inside hookDmrManager.sendDigitalMessage beforeHookedMethod:
+// inside the BaseMessage.send() beforeHookedMethod, when thisObject is a DigitalMessage:
 if (isVFOModeActive && vfoLocalId > 0) {
     XposedHelpers.setObjectField(digitalMessage, "localId", vfoLocalId);
 }
 ```
+Wire fact: `localId` is a 4-byte int at body offset 8 of the 163-byte `DigitalMessage`; `txContact` is at offset 140.
 **Do NOT** add `localId` to any channel backup `HashMap` — the field doesn't exist on `ChannelData`. (The VFO backup file does include a `localId` key but only as an analog-channel safety default; it's not read back from the channel object.)
 
 ### ❌ Pitfall 16: PowerShell `Set-Content` Adds UTF-8 BOM to CSV — Wipes Channel List on Import
@@ -1179,6 +1201,7 @@ git push origin main
 ## Related Files & Documentation
 
 ### Key Documentation Files
+- **`docs/deep-dive/00-README.md`** - Verified, code-cited architecture reference for the OEM app (ch. 01–07) and the module (ch. 08–14). Read the relevant chapter before touching serial, audio, DB, UI-injection or import/export code.
 - `README.md` - User-facing feature documentation
 - `APRS_COMPLETE_SYSTEM_SUMMARY.md` - APRS implementation details
 - `SSTV_PHASE1_COMPLETE.md` - SSTV decoder architecture
@@ -1191,8 +1214,8 @@ git push origin main
 
 **Android App Features**:
 - Export/import all 5 CSV files: Channels, Contacts, TG_Lists, Zones, DTMF
-- Files saved to `/sdcard/Download/DMR_Backups/YYYYMMDD_HHmmss/`
-- Direct database import via `DirectDatabaseImporter.java`
+- Files saved to `/sdcard/Download/DMR/DMR_Backups/YYYYMMDD_HHmmss/`
+- Direct database import via `DirectDatabaseImporter.java` — **wipe-and-insert** (deletes the OEM contact and channel tables inside a transaction, re-inserts; `_id` preserved only for 37-column Android CSVs). TG-list assignments and APRS flags are *not* cleared on import; locations are cleared outside the transaction.
 - Defensive relay=0 conversion (see below)
 
 **OpenGD77 CPS Fork**:
@@ -1208,7 +1231,7 @@ We maintain a fork of OpenGD77 CPS with critical bug fixes for Android compatibi
 | `DMR/ChannelsForm.cs` | Android CSV export (`ExportToAndroidCsvFile`) + **both active import paths** (see Three Import Paths below) |
 | `DMR/ChannelsCsvImporter.cs` | **DEAD CODE** — correct 37-col importer, never called from any call site |
 | `DMR/ChannelForm.cs` | `ChannelOne` struct, static CSV arrays (`CsvLatitudes`, `CsvLongitudes`, `CsvUseLocations`, `CsvEncryptKeys`), `DispData`/`SaveData` |
-| `DMR/AboutForm.cs` | `FORK_VERSION` constant — bump on every build (current shipped: **v1.2.7**, zip `OpenGD77CPS-Mac_Build_20260605_154314.zip`) |
+| `DMR/AboutForm.cs` | `FORK_VERSION` constant — bump on every build (current shipped: **v2.0.45**, zip `OpenGD77CPS-Mac_Build_20260607_210202.zip`) |
 
 #### Three Import Paths — CRITICAL ARCHITECTURE
 
@@ -1247,7 +1270,7 @@ Col  9: Contact          Col 19: Zone Skip         Col 29: Encrypt Switch
                                                    Col 35: Channel Mode
                                                    Col 36: Contact Type
 ```
-*Col 11 (DMR ID): CPS always exports empty — Android importer falls back to contact name lookup.
+*Col 11 (DMR ID): the Android exporter fills it with the raw DMR ID (since v3.4.0) and the importer prefers it; the CPS exports it empty, in which case the importer falls back to contact-name lookup, then to the first TG of the named TG list, then 0.
 
 **OpenGD77 format (no `_id`)**: 36 columns — same fields shifted left by 1 (cols 0-35). New fields start at col 28.
 
@@ -1257,18 +1280,18 @@ Channels.csv gets the spotlight because that's where round-trip bugs hide, but a
 
 | CSV file | Header | Source (export) | Destination (import) | Notes |
 |---|---|---|---|---|
-| `Contacts.csv` | `Contact Name,ID,ID Type,TS Override` | OEM `contact_database.db → contact_database` | same OEM table | `ID` is the 24-bit DMR ID (`contact_number`). `ID Type` = 0/1/2 (Private/Group/AllCall). |
+| `Contacts.csv` | `Contact Name,ID,ID Type,TS Override` | OEM `contact_database.db → contact_database` | same OEM table | `ID` is the 24-bit DMR ID (`contact_number`). `ID Type` is the string `Private` / `Group` / `All Call`. |
 | `TG_Lists.csv` | `TG List Name,Contact1,…,Contact32` | Module `dmrmod_tglists.db → tg_lists` | same module table | Lists longer than 32 IDs are split into `Name_part1`, `Name_part2`, … rows. |
 | `Channels.csv` | 37 cols (see above) | OEM `database_channel_area_default_uhf` + module APRS/locations DBs | OEM channel table + module DBs | The big one. |
-| `Zones.csv` | `Zone Name,Channel1,…,Channel80` | Module `dmrmod_zones.db → zones` | same module table | Channel cells store channel **names** (or `name⟨_id⟩` compound key when `USE_COMPOUND_KEY_ZONES = true`). Lookup map keyed by `_id`. |
-| `DTMF.csv` | `Contact Name,Code` | OEM DTMF contact table | OEM DTMF contact table | Smallest of the 5. |
+| `Zones.csv` | `Zone Name,Channel1,…,Channel80` | Module `dmrmod_zones.db → zones` | same module table | Channel cells store channel **names** (or the `channelNum|rxMHz|name` compound key when `USE_COMPOUND_KEY_ZONES = true` — currently `false` in the exporter, `true` in the importer, which accepts both). |
+| `DTMF.csv` | `Contact Name,Code` | *(none — header-only)* | *(nothing imports it)* | Placeholder for CPS compatibility; the OEM has no DTMF table. |
 
-**Import order (enforced by `DirectDatabaseImporter.showImportDialog` at lines ~315-327):**
+**Import order (enforced by `DirectDatabaseImporter.performImport`, grep `importContacts(` for the current line):**
 1. `Contacts.csv` — must be first (channel→contact resolution needs the contact table populated; see Pitfall 12)
 2. `TG_Lists.csv` — depends on contacts (TG IDs are resolved by contact name when present)
 3. `Channels.csv` — depends on contacts (`channel_txContact` lookup) and TG lists (`channel_groups` precomputation)
 4. `Zones.csv` — depends on channels (must resolve channel names → `_id`)
-5. DTMF is imported in the OEM path or skipped (depends on backup contents)
+5. `DTMF.csv` is never imported (header-only placeholder)
 
 If you reorder these or import Channels alone, expect "operation failed" toasts and silent contact-id-defaulting-to-1 corruption.
 
@@ -1353,7 +1376,7 @@ msbuild OpenGD77CPS.sln /p:Configuration=Release
 # Output: bin/ReleaseOpenGD77/OpenGD77CPS.exe
 ```
 
-**Latest Build**: `OpenGD77Fork/OpenGD77CPS-Mac_Build_20260601_142528.zip`
+**Latest Build**: `OpenGD77Fork/OpenGD77CPS-Mac_Build_20260607_210202.zip` (fork v2.0.45; always pick the newest timestamp in `OpenGD77Fork/`)
 
 **Comprehensive codebase documentation**: See `docs/CODEBASE_DEEP_DIVE.md` in the fork repo (`C:\Users\Joshua\Documents\android\OpenGD77CPS-Mac\docs\CODEBASE_DEEP_DIVE.md`). Read this before editing any import/export path — it documents the full architecture, all three import paths, static array conventions, known pitfalls, and round-trip column mapping.
 
@@ -1408,7 +1431,7 @@ public const string FORK_NAME    = "DMRModHooks / PriInterPhone fork";
 8. **Feature Log**: Add entry to feature log (session memory or CHANGELOG_DRAFT.md) for README/release notes
 
 ### When Modifying Audio Pipeline
-1. **Never Block**: Audio hook runs at 8kHz sample rate - keep processing under 2ms
+1. **Never Block**: the audio hook receives ~2048-byte chunks every ~64 ms (OEM track = 8 kHz stereo 16-bit = 32 kB/s; module DSP treats it as 16 kHz mono). Keep per-callback work to a few ms — the hard ceiling is the 64 ms cadence.
 2. **Pre-Allocate**: Use pre-allocated buffers to avoid GC pressure
 3. **Background Thread**: Heavy processing (FFT, decode) must run in background
 4. **Copy First**: Make audio copy before muting for decoders
@@ -1466,12 +1489,17 @@ How this affects the user experience
 | 0x23 | `SET_ANALOG_INFO_CMD` | AnalogMessage — analog channel programming. Intercept here in `beforeHookedMethod` to override `sq` before hardware send. |
 | 0x2E | `SET_VOL_CMD` | VolumeMessage |
 | 0x30 | `SET_SQUELCH_CMD` | SquelchMessage (rarely used directly — `sq` is per-channel) |
-| 0x32 | `QUERY_SIGNAL_STRENGTH_CMD` | SignalMessage — returns `rssi` byte in dBm. Used by software squelch. |
-| 0x33 | `SET_RELAY_CMD` | RelayMessage — single byte. `0` = relay-disconnect off (normal repeater behavior). `1` = relay-disconnect on. The "Relay disconnection" UI string maps directly to this. Error states: `RELAY_ACTIVITY_TIME_OUT = 0x6`, `RelayConnectionFailedState`. |
+| 0x32 | `QUERY_SIGNAL_STRENGTH_CMD` | SignalMessage — returns one raw `rssi` byte. The OEM never converts or uses it; the module's `dBm = -(120 - raw/2)` is a guess. Only the module sends this command. |
+| 0x33 | `SET_OFFLINE_MODE_CMD` (class `RelayMessage`) | single byte: `1` = relay-disconnect ON, `2` = normal — never 0. The OEM only sends relay as a field of the channel packet. Status byte `RELAY_ACTIVITY_TIME_OUT = 6` arrives via 0x36. |
+| 0x36 | `MODULE_PRINT_STATUS_INFO_CMD` | **Unsolicited MCU→app** status push: 1 RX start, 2 RX stop, 3 TX start, 4 TX stop, 5 SMS received, 6 relay timeout, 7 channel busy, 8/9 SMS sent ok/fail. App acks with body `{1}`. |
+| 0x2B | `QUERY_DIGITAL_AUDIO_RECEIVE_INFO` | DigitalAudioMessage — body `[callType, id_lo, id_mid, id_hi, …]`; OEM handler is empty, the module parses it for caller ID. |
+| 0xAA | `MODULE_INIT_CMD` | Boot handshake (also the 17-byte `BF AA …` banner). |
 
-No LED-control command exists in the 0x22–0x3C range. LEDs are controlled solely by the radio MCU firmware.
+Frame: `68 | cmd | rw | sr | cksum(2, BE) | len(2, BE) | body | 10`; 16-bit one's-complement checksum over the frame with the checksum field zeroed (tail included); **bodies are little-endian** (`ByteBuf`). Complete table with directions and handlers: `docs/deep-dive/01-oem-serial-protocol.md` §5; per-message byte layouts: `02-…`.
 
-**Additional confirmed commands** (exact hex not all pinned): `SET_ENHANCE_FUNCTION` (5 remote sub-functions — Radio Check `1` / Call Alert `2` / Remote Monitor `3` / Radio Kill `4` / Radio Revive `5`; no UI built yet), `SEND_SMS` / `RECEIVE_SMS`, `QUERY_DIGITAL_AUDIO_RECEIVE_INFO`, `SET_LISTEN`, `SET_ENCRYPT_FUNCTION`, `SET_POLITE_POLICY`, `INTERRUPT_TRANSMIT` (3 modes), TOT (`0x3B`), BER test (`0x3F`). Full table in `.docs/AI_LOGS_SUMMARY.md` §7.
+No LED-control command exists anywhere in `Const.Command` (range 0x22–0x3F plus 0xAA). LEDs are controlled solely by the radio MCU firmware.
+
+**Other commands** (all pinned in `protocol/Const.java`): `SET_ENHANCE_FUNCTION_CMD 0x28` (remote functions — Radio Check `1` / Call Alert `2` / Remote Monitor `3` / Radio Kill `4` / Radio Revive `5`; kill/revive are in the OEM Settings UI, and an inbound `fun=4` triggers `DeviceKilledActivity`), `SEND_SMS 0x2C` / `RECEIVE_SMS 0x2D`, `SET_LISTEN 0x2F`, `SET_ENCRYPT_FUNCTION 0x29`, `SET_POLITE_POLICY 0x37`, `INTERRUPT_TRANSMIT 0x35`, TOT `0x3B`, BER test `0x3F`, `QUERY_VERSION 0x34`, `QUERY_INIT_STATUS 0x27`, `SET_GAIN_MIC 0x2A`. Volume/squelch-only/listen/encrypt-function/power-save/policy/mix-check builders exist but the OEM app never sends them. (`.docs/AI_LOGS_SUMMARY.md` is gitignored and absent on most checkouts.)
 
 ## 
 
@@ -1564,5 +1592,5 @@ Users can now navigate only through channels in their current zone, making chann
 
 ---
 
-**Last Updated**: May 2026
-**Document Version**: 1.0
+**Last Updated**: 2026-08-26 (drift corrections from `docs/deep-dive/00-README.md` §4 applied)
+**Document Version**: 1.1
