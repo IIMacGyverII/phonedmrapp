@@ -128,13 +128,13 @@ public class PDFExporter {
         PdfDocument.Page page = null;
         
         try {
-            File dbFile = context.getDatabasePath("database_channel_area_default_uhf.db");
+            File dbFile = context.getDatabasePath(OemChannelTable.dbFileName(context));
             if (!dbFile.exists()) {
                 return pageNumber;
             }
             
             db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READONLY);
-            cursor = db.query("database_channel_area_default_uhf", null, null, null, null, null, "channel_number ASC");
+            cursor = db.query(OemChannelTable.tableName(context), null, null, null, null, null, "channel_number ASC");
             
             if (cursor == null || cursor.getCount() == 0) {
                 return pageNumber;

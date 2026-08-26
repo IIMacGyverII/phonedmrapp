@@ -262,7 +262,7 @@ public class DirectDatabaseExporter {
         
         try {
             // Open UHF database only
-            File dbFile = context.getDatabasePath("database_channel_area_default_uhf.db");
+            File dbFile = context.getDatabasePath(OemChannelTable.dbFileName(context));
             Log.i(TAG, "Opening channel database: " + dbFile.getAbsolutePath());
             
             if (!dbFile.exists()) {
@@ -272,7 +272,7 @@ public class DirectDatabaseExporter {
             
             db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, 
                 SQLiteDatabase.OPEN_READONLY);
-            cursor = db.query("database_channel_area_default_uhf", null, null, null, 
+            cursor = db.query(OemChannelTable.tableName(context), null, null, null, 
                 null, null, "channel_number ASC");
             
             // Initialize LocationDatabase for lat/lon queries
@@ -804,7 +804,7 @@ public class DirectDatabaseExporter {
         Cursor cursor = null;
         
         try {
-            File dbFile = context.getDatabasePath("database_channel_area_default_uhf.db");
+            File dbFile = context.getDatabasePath(OemChannelTable.dbFileName(context));
             if (!dbFile.exists()) {
                 Log.w(TAG, "Channel database not found");
                 return channelMap;
@@ -813,7 +813,7 @@ public class DirectDatabaseExporter {
             db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, 
                 SQLiteDatabase.OPEN_READONLY);
             
-            cursor = db.query("database_channel_area_default_uhf", 
+            cursor = db.query(OemChannelTable.tableName(context), 
                 new String[]{"_id", "channel_name"}, 
                 null, null, null, null, null);
             
@@ -850,7 +850,7 @@ public class DirectDatabaseExporter {
         Cursor cursor = null;
         
         try {
-            File dbFile = context.getDatabasePath("database_channel_area_default_uhf.db");
+            File dbFile = context.getDatabasePath(OemChannelTable.dbFileName(context));
             if (!dbFile.exists()) {
                 Log.w(TAG, "Channel database not found");
                 return compoundKeyMap;
@@ -859,7 +859,7 @@ public class DirectDatabaseExporter {
             db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, 
                 SQLiteDatabase.OPEN_READONLY);
             
-            cursor = db.query("database_channel_area_default_uhf", 
+            cursor = db.query(OemChannelTable.tableName(context), 
                 new String[]{"_id", "channel_number", "channel_rxFreq", "channel_name"}, 
                 null, null, null, null, null);
             

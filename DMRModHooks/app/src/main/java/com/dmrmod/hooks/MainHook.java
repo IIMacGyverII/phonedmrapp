@@ -9963,7 +9963,16 @@ public class MainHook implements IXposedHookLoadPackage {
                         // === SOFTWARE SQUELCH (Hybrid RSSI + Audio RMS) ===
                         // Note: Squelch level 0 = disabled (pass all audio), 1-9 = enabled with increasing sensitivity
                         // APRS mode forces software squelch on, VFO mode uses Soft SQ button setting
-                        boolean useSquelch = (isSoftwareSquelchEnabled || isAPRSMonitoringActive) && softwareSquelchThreshold > 0;
+                        // Only gate analog audio: DMR voice is already gated by the firmware, and the Soft SQ
+                        // toggle is hidden on digital channels — but the flag used to survive a switch to a
+                        // digital channel and silently mute DMR RX. Monitoring modes always run analog.
+                        boolean analogAudio = currentChannelType == 1
+                                || isAPRSMonitoringActive || isSSTVMonitoringActive || isNOAAMonitoringActive;
+                        // APRS mode only gates when its own Soft SQ toggle is on (the live screen used to
+                        // force gating with the persisted aprs_squelch threshold even with the toggle OFF).
+                        boolean squelchRequested = isSoftwareSquelchEnabled
+                                || (isAPRSMonitoringActive && isAprsSoftwareSquelchEnabled);
+                        boolean useSquelch = analogAudio && squelchRequested && softwareSquelchThreshold > 0;
                         
                         if (useSquelch) {
                             // Use the intercom page's Soft SQ threshold
@@ -13838,7 +13847,9 @@ public class MainHook implements IXposedHookLoadPackage {
                         "• All: Broadcast to all radios (use sparingly)\n\n" +
                         "Most channels use Group for repeater talk groups.");
                     
-                    addIcon("interphone_channel_contact", "Call Number",
+                    // Row id is interphone_channel_call_name (the "Call Number" EditText row);
+                    // "interphone_channel_contact" never existed, so this icon was silently skipped.
+                    addIcon("interphone_channel_call_name", "Call Number",
                         "DMR ID or Talk Group number.\n\n" +
                         "• For Person contacts: Enter target DMR ID (e.g., 1234567)\n" +
                         "• For Group contacts: Enter talk group ID (e.g., 91 for Worldwide)\n" +

@@ -10,14 +10,14 @@ public class DiagnosticDatabaseDump {
     
     public static void dumpChannelInfo(Context context, int channelNumber) {
         try {
-            String dbPath = context.getDatabasePath("database_channel_area_default_uhf.db").getAbsolutePath();
+            String dbPath = context.getDatabasePath(OemChannelTable.dbFileName(context)).getAbsolutePath();
             SQLiteDatabase db = SQLiteDatabase.openDatabase(dbPath, null, SQLiteDatabase.OPEN_READONLY);
             
-            String[] columns = db.rawQuery("PRAGMA table_info(database_channel_area_default_uhf)", null)
+            String[] columns = db.rawQuery("PRAGMA table_info(" + OemChannelTable.tableName(context) + ")", null)
                 .getColumnNames();
             
             Cursor cursor = db.query(
-                "database_channel_area_default_uhf",
+                OemChannelTable.tableName(context),
                 null,
                 "channel_number = ?",
                 new String[]{String.valueOf(channelNumber)},

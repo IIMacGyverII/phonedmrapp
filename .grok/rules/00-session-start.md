@@ -2,11 +2,13 @@
 
 Mandatory checklist for every new session on **phonedmrapp** / **DMRModHooks**.
 
+> **Mirror rule:** this file and `CLAUDE.md` at the repo root are **byte-identical copies** (one for Grok/Copilot agents, one for Claude Code). Edit either one, then copy it over the other in the same commit — never let them diverge. Verify with `git diff --no-index CLAUDE.md .grok/rules/00-session-start.md` (no output = in sync).
+
 ## 1. Orient (30 seconds)
 
 | What | Where | Notes |
 |------|-------|-------|
-| **Shipped version** | `DMRModHooks/app/build.gradle` → `versionName` / `versionCode` | Authoritative; docs may lag (currently **v3.4.1**) |
+| **Shipped version** | `DMRModHooks/app/build.gradle` → `versionName` / `versionCode` | Authoritative; docs may lag (v3.4.6 as of 2026-08-26) |
 | **Full instructions** | `.grok/rules/copilot-instructions.md` | Clone of `.github/copilot-instructions.md` |
 | **Verified deep dive** | `docs/deep-dive/00-README.md` | Code-cited reference for OEM app + mod (14 chapters). **§4 lists known errors in this file and `copilot-instructions.md`** — check it before trusting a schema/class-path/audio claim here |
 | **Dead ends / history** | `.docs/AI_LOGS_SUMMARY.md` (gitignored, may be absent) → fallback `docs/deep-dive/13-…` §5, `07-…` §5 | Read before retrying APRS TX, LED, group-call RX, >32 TG filtering |
@@ -30,6 +32,23 @@ Always grep before relying on: DB column names, `ChannelData` field names, hook 
 | DMR group-call RX | Firmware ignores RX group list; private calls to own ID only |
 | >32 TG IDs per channel | `ChannelData.groups` is `int[32]`; firmware limit |
 | Squelch levels 1,3–9 | Firmware coerces to `2`; only `sq=0` and `sq=2` are distinct |
+| On-device speech-to-text | Not shipped; transcription is **Google Cloud STT** via `DMRTranscriptionService` (not Whisper) |
+
+## 3a. Facts that older notes got wrong (verified 2026-08-26 — full list in `docs/deep-dive/00-README.md` §4)
+
+| Topic | Reality |
+|-------|---------|
+| RX audio | Does **not** cross the UART; arrives via `android.os.PrizeTinyService`. OEM `AudioTrack` = **8 kHz stereo 16-bit** (32 kB/s, ~2048 B / 64 ms chunks). Module DSP treats it as 16 kHz mono (same byte rate). Never write DSP against "8 kHz mono". |
+| Module DBs | All `dmrmod_*.db` live in `/data/data/com.pri.prizeinterphone/databases/` (module runs in the OEM process) |
+| `channel_band` | Bandwidth (0 narrow / 1 wide), **not** UHF/VHF |
+| `channel_encryptSw` | 1 = on, **2 = off** |
+| `channel_interrupt` | OEM default 2 for all types; "0 for analog" is a module convention |
+| Channel storage | One SQLite file per **area** (`database_<areaKey>.db`, 14 default areas); export/import hard-code `default_uhf` (bug) |
+| Import | `DirectDatabaseImporter` is wipe-and-insert, not upsert |
+| Backups / recordings / key | `Download/DMR/DMR_Backups/`, `Download/DMR/Audio/<Channel>/`, `Download/DMR/api_key.txt` |
+| OEM class names | `InterPhoneHomeActivity` (root pkg), `fragment.InterPhoneTalkBackFragment`, `handler.ModuleStatusMessageHandler`, `protocol.Packet`, `serial.MessageDispatcher` — there is no `MainActivity`/`TalkBackFragment` |
+| Hook locations | `sq=0` forcing + 300 ms re-enable: `hookChannelNavigation`; VFO `localId` override: `BaseMessage.send()` hook (~`MainHook.java:10799`) |
+| `syncChannelInfoWithData` | **Is** the OEM hardware-write path (`CmdStateMachine` transaction) |
 
 ## 4. Deploy workflow (mandatory for AI agents)
 
@@ -62,7 +81,8 @@ cd DMRModHooks
 | Pitfall | Rule |
 |---------|------|
 | **12 — txContact** | `channel_txContact` stores **24-bit DMR ID** (`contact_number`), NOT contact row `_id` |
-| **15 — localId** | Device DMR ID is on `DmrManager` / outgoing `DigitalMessage`, NOT `ChannelData` |
+| **15 — localId** | Device DMR ID is on `DmrManager` / outgoing `DigitalMessage` (body offset 8), NOT `ChannelData`; VFO override lives in the `BaseMessage.send()` hook |
+| **13 — squelch race** | 300 ms re-apply can be eaten by the in-flight `SetChannelState` ack (acks matched by cmd byte only) — re-apply on `dealEvent(0x23)` instead |
 | **8 — squelch** | Use `AnalogMessage.send()` with `sq=0`/`sq=2`; don't rely on `syncChannelInfoWithData` for hardware |
 | **10 — APRS squelch** | APRS mode overwrites `softwareSquelchThreshold` |
 | **11 — relay field** | OpenGD77 exports `relay=0`; Android firmware rejects 0 → importer coerces `0→2` |
@@ -104,11 +124,12 @@ msbuild OpenGD77CPS.sln /p:Configuration=Release
 
 ## 9. Packet layouts (verified)
 
-See `.grok/rules/packet-layouts.md` for byte offsets. Key fix (2026-06-12): caller DMR ID in `DigitalAudioMessage` is **24-bit LE at body[1..3]**, not 16-bit.
+See `.grok/rules/packet-layouts.md` for byte offsets, and `docs/deep-dive/01-…`/`02-…` for the complete command table and every message's body layout. Key fix (2026-06-12): caller DMR ID in `DigitalAudioMessage` is **24-bit LE at body[1..3]**, not 16-bit.
 
 ## 10. When you finish a change
 
 - [ ] Build: `cd DMRModHooks; .\gradlew assembleDebug`
 - [ ] If device attached: `.\install.ps1` (includes reboot)
-- [ ] If you corrected stale docs: patch `.grok/rules/` and `.github/copilot-instructions.md` in the same PR/commit
+- [ ] If you corrected stale docs: patch `.grok/rules/` and `.github/copilot-instructions.md` in the same PR/commit; if the fact is architectural, patch the relevant `docs/deep-dive/` chapter too
+- [ ] If you edited this file: copy it to `CLAUDE.md` (or vice-versa) — see the mirror rule at the top
 - [ ] Do **not** auto-release unless asked

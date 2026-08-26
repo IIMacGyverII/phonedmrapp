@@ -4,7 +4,7 @@ Verify against code before changing. Grep `MainHook.java` and `app/src/main/java
 
 ## DigitalAudioMessage (`QUERY_DIGITAL_AUDIO_RECEIVE_INFO`)
 
-Hook: `hookDigitalAudioHandler()` in `MainHook.java`.
+Hook: `hookDigitalAudioHandler()` in `MainHook.java`. Note the OEM's own `DigitalAudioMessageHandler.handle()` / `DigitalAudioMessage.decodeBody()` are **empty** — this layout is the module's reverse-engineering, not OEM code. Voice PCM does not travel in this (or any) UART packet; it arrives via `android.os.PrizeTinyService` → `PCMReceiveManager` (8 kHz stereo 16-bit `AudioTrack`).
 
 | Offset | Size | Field | Notes |
 |--------|------|-------|-------|
@@ -18,16 +18,26 @@ Hook: `hookDigitalAudioHandler()` in `MainHook.java`.
 
 Destination talkgroup offset in this packet is **unknown** — software-side TG filtering for >32 entries is blocked.
 
-## DigitalMessage (channel programming, 163 bytes)
+## DigitalMessage (channel programming, cmd 0x22, 163-byte body, little-endian)
 
-See `.docs/AI_LOGS_SUMMARY.md` §7 and `docs/V2.0.0_CALL_TYPE_OVERRIDE_FIX.md`.
+Full offset table: `docs/deep-dive/02-oem-messages-and-handlers.md` §3.2 (re-derived and verified from `message/DigitalMessage.java` `encodeBody`).
 
-| Region | Field | Notes |
+| Body offset | Field | Notes |
 |--------|-------|-------|
-| Bytes 5–7 | Target ID | 24-bit LE (group/private TX target) |
-| `txContact` | int | DMR ID or TG ID to transmit to |
-| `localId` | int | This radio's DMR ID (from `DmrManager`, not channel DB) |
-| `groups[]` | int[32] | RX group list — max 32, firmware ignores for RX anyway |
+| 0 | `rxFreq` | int, Hz |
+| 4 | `txFreq` | int, Hz |
+| 8 | `localId` | int — this radio's DMR ID (from `DmrManager`, not channel DB); VFO override sets it here via the `BaseMessage.send()` hook |
+| 12 | `groups[0..31]` | 32 × int — RX group list (firmware ignores it for RX) |
+| 140 | `txContact` | int — DMR ID or TG ID to transmit to |
+| 144–150 | `contactType`, `cc`, `inBoundSlot`, `outBoundSlot`, `power`, `encryptSw`, `channelMode` | 1 byte each (order per §3.2) |
+| 151 | `encryptKey` | 8 bytes (unchecked `put(String)` — must be exactly 8) |
+| 159–162 | `relay`, `interrupt`, `volume`, `band` | 1 byte each |
+
+There is **no** "24-bit target at bytes 5–7" in the outbound packet — that was a misreading. Frame header (`ckSum`, `len`) is big-endian; **all bodies are little-endian**.
+
+## AnalogMessage (cmd 0x23, 19-byte body)
+
+Offsets: 0 `rxFreq`(4) · 4 `txFreq`(4) · 8 `band` · 9 `power` · 10 `sq` · 11 `rxType` · 12 `rxSubCode` · 13 `txType` · 14 `txSubCode` · 15 `pwrSave` · 16 `volume` · 17 `monitor` · 18 `relay` — see `02-…` §3.1. Frequencies are Hz, unscaled; `pwrSave`/`volume`/`monitor` are never copied from `ChannelData` (defaults 2/8/2).
 
 ## Contact / channel DB keys
 
@@ -38,4 +48,4 @@ See `.docs/AI_LOGS_SUMMARY.md` §7 and `docs/V2.0.0_CALL_TYPE_OVERRIDE_FIX.md`.
 
 ## Valid DMR ID range
 
-`1` .. `16777214` (`0xFFFFFF` = broadcast / special). Hook uses `dmrId > 0 && dmrId < 16777215`.
+`1` .. `16777214` (`0xFFFFFF` = 16777215 = all-call / broadcast). Hook uses `dmrId > 0 && dmrId < 16777215`. The OEM contact editor caps IDs at 16776415.
