@@ -69,7 +69,7 @@ These were thoroughly tested and proven impossible on this hardware. Don't waste
 
 | Limitation | Reality |
 |---|---|
-| **APRS TX over analog FM** | Voice-optimized DSP destroys AFSK on the RF path (96 % → 27 % AFSK energy). 6 methods tested, 0 worked. `AFSKGenerator.java` is kept only as reference. Requires external TNC or different radio. |
+| **APRS TX over analog FM** | **Unresolved (2026-08-26)** — previously "impossible: voice DSP destroys AFSK (96 % → 27 % energy), 6 methods tested". All six fed `PrizeTinyService.writeFrame` **mono** audio; the OEM TX path (`PrizePcmManager`, `AudioRecord(8000, CHANNEL_IN_STEREO)`) writes **stereo** frames, so the tones were doubled/aliased before the DSP ever saw them. The stereo-frame experiment has not been run — see `docs/deep-dive/15-packet-radio-review.md` §1.2/§3.1 before touching TX. `AFSKGenerator.java` is the input to that experiment. |
 | **Hardware LED control** | No GPIO/sysfs/serial command exists in the app or the 0x22–0x3C command range. Controlled solely by radio MCU firmware. |
 | **DMR group-call RX** | Firmware ignores the RX group list — only receives calls to the radio's own DMR ID. Not fixable in software. (TX All-Call now works post-VFO-session fix.) |
 | **>32 TG IDs per channel (hardware)** | `ChannelData.groups` is `int[32]`. Cannot expand. Software-side filtering for overflow TGs is blocked because the `DigitalAudioMessage` body layout doesn't expose the destination TG offset. |
