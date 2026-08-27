@@ -35,6 +35,9 @@ corrections that came out of the same audit.
 - Help icon appears on the Call Number row.
 - APK shrinks from ~43 MB to ~2 MB once the tflite asset is removed.
 
+### Known regression risk introduced by this batch (2026-08-27, from the Grok review)
+- `OemChannelTable` makes **channel** export/import follow the selected area, but the module side-tables (`dmrmod_zones.db`, `dmrmod_tglists.db`, `dmrmod_locations.db`, `dmrmod_aprs.db`) are still global: importing a backup while a *different* area is selected now clears that area's channels **and** the other area's zones/TG lists/locations; identical `_id`/`channel_number` integers across areas share rows. Mitigation before release: backlog **R7** (stamp `area_key` in the export folder, refuse/confirm cross-area import); full fix **H8** (area-scoped tables). Until then: import only into the area the backup was taken from.
+
 ### Testing notes
 - **Not compiled**: the authoring machine has no JDK, Android SDK, `local.properties` or `release.keystore`. Build with `cd DMRModHooks; .\gradlew assembleDebug`, then `.\install.ps1` (includes reboot).
 - Regression checks: (1) export on a non-default area and confirm `Channels.csv` matches that area; (2) import a folder, then check `dmrmod_locations.db`/`dmrmod_aprs.db` contents; (3) toggle Soft SQ on analog, switch to a DMR channel, confirm RX audio; (4) APRS mode with Soft SQ OFF — audio must pass; (5) open the channel editor and confirm the Call Number help icon.

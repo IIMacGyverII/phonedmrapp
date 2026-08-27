@@ -9,10 +9,13 @@ This folder contains the DMR radio module firmware for the Ulefone PriInterPhone
 
 - **Version**: DMR003.UV4T.V022
 - **MD5**: `4426035392262CA54583C230C9E268E0`
-- **Architecture**: ARM Cortex-M (Thumb mode, mixed 16/32-bit instructions)
-- **Base Address**: `0x08000000` (STM32/GD32 flash memory map)
-- **RTOS**: uC/OS-III (Micrium commercial real-time OS)
+- **Architecture**: ARM, Thumb/Thumb-2
+- **Base Address**: `0x08000000` — **assumed, NOT verified.** The first two words don't parse as a Cortex-M `(SP, reset)` pair at that base; the load base/core must be re-established before trusting any absolute address. See `docs/deep-dive/07-firmware-update-and-mcu.md` §4.2 and `18-firmware-modding-plan.md` §5.1.
+- **RTOS**: uC/OS-III (Micrium) — confirmed in-binary (plaintext task strings)
+- **Encryption**: none (RTOS + version strings are plaintext); entropy ≈ 6.97 bits/byte
 - **Status**: Unmodified factory firmware as shipped with device
+
+> **The prior 14-patch campaign was 0/14** — it patched bytes chosen from a naive linear disassembler (`scripts/arm_disasm.py`) under the unverified base above. Do not reuse those addresses. A corrected reverse-engineering plan is in `docs/deep-dive/18-firmware-modding-plan.md`.
 
 **Source Location**: Also available at `app/src/main/assets/DMR003.UV4T.V022.bin` (bundled with app for updates)
 

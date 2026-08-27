@@ -27,9 +27,9 @@ Always grep before relying on: DB column names, `ChannelData` field names, hook 
 
 | Topic | Reality |
 |-------|---------|
-| APRS TX over analog FM | Impossible on this hardware (voice DSP kills AFSK) |
+| APRS TX over analog FM | **Unresolved, not impossible** (2026-08-26): the 2026-03 "voice DSP kills AFSK" verdict came from tests that fed `writeFrame` **mono** buffers while the OEM TX path writes 8 kHz **stereo** frames (tones double → aliasing). Do not build on TX until the stereo-frame experiment in `docs/deep-dive/15-packet-radio-review.md` §3.1 has been run; do not re-run the mono experiments. |
 | Hardware LED control | MCU firmware only; no app command |
-| DMR group-call RX | Firmware ignores RX group list; private calls to own ID only |
+| DMR group-call RX | Firmware ignores the 32-entry RX group list (`groups[]`); ALL/RECEIVE_ALL (`contactType=2`) reports the TG as `0xFFFFFF` and audio is dropped. Whether a GROUP channel hears its own `txContact` TG is the only thing that works and must be confirmed on-air (backlog E7 gate P0.6) |
 | >32 TG IDs per channel | `ChannelData.groups` is `int[32]`; firmware limit |
 | Squelch levels 1,3–9 | Firmware coerces to `2`; only `sq=0` and `sq=2` are distinct |
 | On-device speech-to-text | Not shipped; transcription is **Google Cloud STT** via `DMRTranscriptionService` (not Whisper) |
@@ -40,7 +40,8 @@ Always grep before relying on: DB column names, `ChannelData` field names, hook 
 |-------|---------|
 | RX audio | Does **not** cross the UART; arrives via `android.os.PrizeTinyService`. OEM `AudioTrack` = **8 kHz stereo 16-bit** (32 kB/s, ~2048 B / 64 ms chunks). Module DSP treats it as 16 kHz mono (same byte rate). Never write DSP against "8 kHz mono". |
 | Module DBs | All `dmrmod_*.db` live in `/data/data/com.pri.prizeinterphone/databases/` (module runs in the OEM process) |
-| `channel_band` | Bandwidth (0 narrow / 1 wide), **not** UHF/VHF |
+| `channel_band` | Bandwidth (0 narrow / 1 wide), **not** UHF/VHF. **`MainHook.determineBand(freq)` still returns UHF/VHF (0/1) and is written into `band` by SSTV/NOAA/VFO — a live bug (backlog R1). Never reuse it; set `band` from an explicit narrow/wide choice.** |
+| Module side-tables vs areas | `OemChannelTable` made channel export/import follow the selected **area**, but `dmrmod_zones/tglists/locations/aprs` are still one file for all areas: importing area B clears area A's extras and equal integer keys collide (backlog R7/H8). Until fixed, only import into the area the backup came from |
 | `channel_encryptSw` | 1 = on, **2 = off** |
 | `channel_interrupt` | OEM default 2 for all types; "0 for analog" is a module convention |
 | Channel storage | One SQLite file per **area** (`database_<areaKey>.db`, 14 default areas); export/import hard-code `default_uhf` (bug) |

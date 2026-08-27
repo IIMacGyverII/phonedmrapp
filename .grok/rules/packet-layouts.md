@@ -29,11 +29,20 @@ Full offset table: `docs/deep-dive/02-oem-messages-and-handlers.md` §3.2 (re-de
 | 8 | `localId` | int — this radio's DMR ID (from `DmrManager`, not channel DB); VFO override sets it here via the `BaseMessage.send()` hook |
 | 12 | `groups[0..31]` | 32 × int — RX group list (firmware ignores it for RX) |
 | 140 | `txContact` | int — DMR ID or TG ID to transmit to |
-| 144–150 | `contactType`, `cc`, `inBoundSlot`, `outBoundSlot`, `power`, `encryptSw`, `channelMode` | 1 byte each (order per §3.2) |
-| 151 | `encryptKey` | 8 bytes (unchecked `put(String)` — must be exactly 8) |
-| 159–162 | `relay`, `interrupt`, `volume`, `band` | 1 byte each |
+| 144 | `contactType` | 0 private / 1 group / 2 all |
+| 145 | `power` | 0 low / 1 high |
+| 146 | `cc` | colour code |
+| 147 | `inboundSlot` | 0 = TS1, 1 = TS2 |
+| 148 | `outboundSlot` | 0 = TS1, 1 = TS2 |
+| 149 | `channelMode` | 0 direct / 4 double-slot |
+| 150 | `encryptSw` | 1 on / 2 off |
+| 151 | `encryptKey` | 8 bytes (unchecked `put(String)` — must be exactly 8 or every later offset shifts) |
+| 159 | `pwrSave` | default 1, not copied from `ChannelData` |
+| 160 | `volume` | default 8, not copied |
+| 161 | `mic` | from pref `pref_person_mic_gan_value` |
+| 162 | `relay` | 1 disconnect / 2 normal |
 
-There is **no** "24-bit target at bytes 5–7" in the outbound packet — that was a misreading. Frame header (`ckSum`, `len`) is big-endian; **all bodies are little-endian**.
+**`DigitalMessage` has no `band` or `interrupt` byte** — `band` (bandwidth) exists only in `AnalogMessage` (offset 8); `interrupt` is a separate command (`0x35`). There is **no** "24-bit target at bytes 5–7" in the outbound packet — that was a misreading. Frame header (`ckSum`, `len`) is big-endian; **all bodies are little-endian**.
 
 ## AnalogMessage (cmd 0x23, 19-byte body)
 

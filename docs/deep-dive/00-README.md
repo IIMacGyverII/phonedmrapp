@@ -7,7 +7,7 @@
 
 **Why it exists.** The project's working notes (`.grok/rules/*.md`, the READMEs, `docs/*.md`) were written incrementally over months and have drifted from the code in dozens of places — some of them load-bearing (audio format, DB locations, class paths, field semantics). Every chapter here was produced by reading the relevant sources in full and citing `path:line` for every non-trivial claim; where the existing notes disagree with the code, the chapter says so in a **⚠️ Doc drift** callout. Section [4](#4-consolidated-corrections-to-the-working-notes) collects those corrections in one table.
 
-**As of:** commit `14e484a2` (main), DMRModHooks `versionName 3.4.6`, OEM decompile of `com.pri.prizeinterphone` `V1.0` (versionCode 33) rebranded in-tree as `com.macgyver.dmr` `2.0-MacDMR`. Written 2026-08-26.
+**As of:** chapters 01–14 describe commit `14e484a2` (main), DMRModHooks `versionName 3.4.6`, OEM decompile of `com.pri.prizeinterphone` `V1.0` (versionCode 33) rebranded in-tree as `com.macgyver.dmr` `2.0-MacDMR`; written 2026-08-26. Later commits: `53dbcfe1` (these docs), `ba6431cb` (audit bug batch, unbuilt — `CHANGELOG_DRAFT.md`). Chapters 15–17 and `docs/BACKLOG.md` were written 2026-08-26/27 against `ba6431cb`. An independent product audit by Grok lives in `docs/grok-deep-dive/` and is reconciled in [17](17-grok-review-response.md).
 
 **Conventions.** `path:line` cites are relative to the repo root unless a chapter defines a shorthand (`OEM/`, `MH:`, `EXP:`…). Claims not directly supported by code are marked **inferred**. Line numbers decay — grep for the symbol name if a cite is off.
 
@@ -35,6 +35,10 @@ Read 01→07 to understand the OEM app bottom-up (transport → commands → con
 | [12](12-mod-signal-decoders.md) | Signal decoders (DSP) | Input rate handling and `resample16to48`; APRS chain (IQ AFSK → Dire-Wolf-style PLL → NRZI → HDLC → CRC → AX.25); SSTV chain (Goertzel VIS → robot36-derived IQ FM demod); NOAA APT chain; which of the ~40 DSP classes are live vs dead; offline test recipe; tuning knobs | 560 lines |
 | **Project** | | | |
 | [13](13-project-history-and-knowledge-map.md) | History & knowledge map | 11 project phases across ~356 commits (rebrand era → platform-signature wall → Magisk detour → LSPosed pivot → feature accretion); full version→date→headline→APK table; which decompiled tree is authoritative and why `app/` is reference-only; index of all ~85 `docs/*.md` by theme/status; 9 consolidated dead ends with evidence; OpenGD77 fork's 138 builds condensed; all 107 scripts classified; working agreements; hygiene notes | see file |
+| [15](15-packet-radio-review.md) | Packet radio (APRS) review | Assessment of the shipped batch-mode AFSK RX chain and the abandoned TX path; ranked alternatives (streaming modem at native rate, HDLC receiver, javAPRSlib parsing, passive decode without channel hijack, APRS-IS iGate/beacon); the untested stereo-frame TX experiment; test-harness plan | see file |
+| [16](16-repeater-directory-import.md) | Nearby Repeaters (design + to-do) | Feature design for downloading nearby FM/DMR repeaters and talkgroups and programming them additively; UX layout, source strategy (BrandMeister · RadioID · hearham · RepeaterBook opt-in), merge/dedupe rules, `dmrmod_repeaters.db`, field recipe, legal checklist, tests, 5-phase to-do list. Backed by `_research-repeater-sources.md` and `_research-integration-surface.md` | see file |
+| [18](18-firmware-modding-plan.md) | Modding the MCU firmware | Can we decompile / edit / flash the radio firmware to change squelch coercion, band limits, TOT, group-call RX? Binary re-analysis (uC/OS-III, not encrypted, base address never actually verified), why the prior 14 patches failed (naive disassembler + unproven base + no dynamic anchor), a protocol-anchored RE plan, the safe RAM-load test loop, legal notes, and an FW to-do series | see file |
+| [17](17-grok-review-response.md) | Response to the Grok deep dive | Claim-by-claim re-verification of `docs/grok-deep-dive/` (an independent product audit): what was confirmed (e.g. `determineBand()` programs UHF/VHF into the bandwidth byte; the `saveChannelData` hook is inverted on both enums; the area-aware fix left module side-tables global), what was rejected with evidence, what changed in these documents, and the new backlog items it produced | see file |
 | [14](14-hook-integration-crossref.md) | Hook ↔ OEM cross-reference | 41 hook sites → 51 (class, method) targets (46 OEM + 5 framework), 40 `findClass` lookups, 113 reflective (class, member) pairs, 53 resource IDs, 30 DB column names — each verified against the OEM source with `file:line`; NOT FOUND / PARTIAL items; reverse index per OEM class; fragility ranking | see file |
 
 ---
@@ -188,6 +192,10 @@ Recommended follow-up (not done here, to keep this change documentation-only): p
 | Add a monitoring mode | 09 §7.1 checklist |
 | Understand why a hook silently does nothing | 14 (NOT FOUND list), 08 §11.4 |
 | Understand why something "was already tried" | 13 §5 (dead ends), 07 §5 (patch campaign) |
+| Change something the app can't reach (squelch levels, band, group-call RX) | 18 (firmware modding plan) + 07 (update mechanism, MCU facts) |
+| Decide what to work on next | `docs/BACKLOG.md` (ranked, with evidence pointers) |
+| Improve or rework APRS / packet radio | 15 (review + recommended sequence), 12 §2 (current decoder), 09 §2 (mode UI) |
+| Build the Nearby Repeaters feature | 16 (design, to-do), `_research-integration-surface.md` (exact APIs to call), `_research-repeater-sources.md` (endpoints/terms) |
 | Ship a release / deploy to device | `.grok/rules/00-session-start.md` §4–5, 13 §8 |
 
 ---

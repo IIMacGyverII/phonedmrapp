@@ -14,7 +14,8 @@ safely test a modified image today.
 - The patched image lives in **MCU RAM only** — it reverts on radio power-cycle. This is
   well-evidenced empirically; the "RAM not flash" mechanism itself is inferred, not proven.
 - The group-call RX bug (contactType=2 → groupId `0xFFFFFF`) was **not** fixed by any of 14 NOP
-  patches. Permanent flashing via UART is blocked (`/dev/ttyS1` → EACCES).
+  patches. Permanent flashing via UART is **unproven, not blocked** — the one EACCES was on `/dev/ttyS1`,
+  which is *not* the port the working update uses (`/dev/ttyS0`); see §3 and `18-…` §6/§10.
 
 ---
 
@@ -305,6 +306,13 @@ Evidence:
   `EACCES` (`bootloader_probe_results.txt:61`), so the RAM-vs-flash question was never settled by
   reading the target address back. The claim rests on the revert-on-reset observation, not on a
   confirmed load address.
+- **⚠️ But the probe was on the wrong UART** (surfaced by `docs/grok-deep-dive/10-firmware-modding.md`,
+  re-verified 2026-08-27): the working YModem update runs over **`/dev/ttyS0`** (`SerialPort.java:25`,
+  57600, via `SerialManager.getSerial()` → `YModemManager.java:104`), while `UARTBootloaderProbe`
+  targeted **`/dev/ttyS1`** (`UARTBootloaderProbe.java:37`). The EACCES therefore says nothing about
+  bootloader access on the port the firmware path actually uses. Permanent flash is **not proven
+  blocked** — it was tested on a node the update never touches. See `18-firmware-modding-plan.md` §6, §10
+  and FW7 for the corrected approach (retry on S0 after the `dmr009` GPIO knock, read-only first).
 
 ---
 
@@ -315,13 +323,22 @@ Evidence:
 | Version string | `DMR003.UV4T.V022` | `Constants.java:22`, `README.md:10` |
 | Size | 378,620 bytes | asset + `README.md:8` |
 | MD5 (factory) | `4426035392262CA54583C230C9E268E0` | `README.md:11`, verified against asset |
-| Architecture | ARM Cortex-M, Thumb (mixed 16/32-bit) | `README.md:12` (from docs) |
-| Base address | `0x08000000` (STM32/GD32 flash map) | `README.md:13` (from docs) |
-| RTOS | uC/OS-III (Micrium) | `FIRMWARE_ANALYSIS_SUMMARY.md:10` (from docs) |
-| Tasks | `timer10ms`, `task init`, `cpchanscan` + uC/OS-III system tasks | `FIRMWARE_ANALYSIS_SUMMARY.md:16-28` (from docs) |
+| Architecture | ARM, Thumb/Thumb-2 | disassembly + docs |
+| Base address | `0x08000000` **assumed, not verified** — see §4.2 | `README.md:13` (from docs) |
+| RTOS | uC/OS-III (Micrium) | **re-confirmed in the binary** (plaintext task strings, §4.2) |
+| Tasks | `timer10ms`, `task init`, `cpchanscan` + uC/OS-III system tasks (`Idle`, `ISR Queue`, `Tick`, `Stat`, `Timer`) | `FIRMWARE_ANALYSIS_SUMMARY.md:16-28`; system tasks re-confirmed in-binary |
 | Semaphores | `encrec_sem`, `decrec_sem`, `play_sem`, `Task Sem` | `FIRMWARE_ANALYSIS_SUMMARY.md:30` (from docs) |
-| Entropy / magic | 5.4 bits (unencrypted); header bytes `2C 11 01 C0` | `FIRMWARE_ANALYSIS_SUMMARY.md:8,48` (from docs) |
+| Encryption | **none** — RTOS + version strings are plaintext | re-confirmed in-binary (§4.2) |
+| Entropy | **6.97 bits/byte** (consistent with ARM code + data, not a cipher) | re-measured 2026-08-27 (§4.2); the docs' "5.4" is not reproducible |
 | Module identity | **conflicting**: HR_C6000 / "STM32/GD32F4 clone" / (one doc) "TYT MD-UV380" | see doc-drift below |
+
+### 4.2 Binary re-analysis (2026-08-27)
+
+Re-measured directly from `radio_firmware/DMR003.UV4T.V022-ORIGINAL.bin` (378,620 B, MD5 `4426…`):
+
+- **Not encrypted / not compressed.** The uC/OS-III task names (`uC/OS-III Idle Task` @`0x35FE4`, `… ISR Queue Task`, `… Tick Task`, `… Stat Task`, `… Timer Task` @`0x361A4`) and the version string `DMR003.UV4T.V022` @`0x38464` are **plaintext**. An encrypted image would not expose them. Entropy is **6.97 bits/byte** — high but normal for ARM code interleaved with data tables; the "5.4 bits" in `FIRMWARE_ANALYSIS_SUMMARY.md` does not reproduce.
+- **⚠️ The base address `0x08000000` was never verified.** The image's first two 32-bit little-endian words are `0xC001112C` and `0x11EC6420`. For a Cortex-M image loaded at `0x08000000` those would have to be `(initial SP, reset vector)` — but a valid SP should point into SRAM (~`0x20000000…`) and the reset vector should be an odd (Thumb) address **inside** `[base, base+0x5C6FC)`; neither holds. So either the image does **not** begin with the vector table (it has a header or a non-zero load offset), or the core is not a plain Cortex-M (the HR_C6000 baseband is ARM7TDMI-class in some variants, with different vector semantics). `0x08000000` is only ever the *input* to `scripts/arm_disasm.py`, never a proven fact. Every absolute address in the old analysis (`0x08018F26`, `0x080490E2`, …) is correct **only if** that guess is correct.
+- **Why this matters:** the base/core question is the first thing a real reverse-engineering pass must settle (the strings are fixed anchors for constraint-solving; see `18-firmware-modding-plan.md` §5.1). Until it is settled, treat the `0x08…` addresses and the "5 contactType CMP locations" as unverified.
 
 ### 4.1 `cmd_handler.c` — not a usable command handler
 
@@ -384,7 +401,17 @@ target ID** from the DMR frame on that path — a parsing bug, not a filtering b
 
 ### 5.2 The 14 patches
 
-All addresses are memory (`0x0800_0000` base); file offset = addr − `0x08000000`.
+> ⚠️ **Root cause of 0/14, re-assessed 2026-08-27 (see `18-firmware-modding-plan.md` §4).** Every
+> patch below was chosen from `scripts/arm_disasm.py` output — a **naive linear Thumb disassembler**
+> that reads 16 bits at a time with a hard-coded `base=0x08000000` and no Thumb-2 awareness, so it
+> mis-aligns 32-bit instructions and inline data as code (the dump is full of `?? (40 b3)`). Combined
+> with the **unverified base address** (§4.2), the "contactType CMP #2 locations" and every address in
+> the table may not be the instructions they were believed to be. The campaign was also **static-only**:
+> it never anchored to the known UART command bytes or verified a hypothesis dynamically. The failure is
+> better explained by "patched mis-identified bytes under an unproven memory map" than by any single
+> missed branch. Treat the addresses below as historical, not as confirmed instruction sites.
+
+All addresses are memory (`0x0800_0000` **assumed** base, §4.2); file offset = addr − `0x08000000`.
 
 | # | Address | Change | Result |
 |---|---|---|---|
