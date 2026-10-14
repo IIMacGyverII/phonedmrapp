@@ -181,7 +181,7 @@ Nothing in the RX path can be improved safely without a way to measure it off-de
 
 | Step | What | Why first | Effort |
 |---|---|---|---|
-| 0 | Backlog **A2** (settle 8 kHz-stereo vs 16 kHz-mono) | Fixes the modem's native rate and the TX frame format in one 5-minute test | S (device) |
+| 0 ✅ | Backlog **A2/G1** — **done 2026-10-14: 8 kHz stereo, L == R** (`grok-deep-dive/11` §16). Native rate for the modem is 8 kHz after dropping every other sample; TX frames are stereo-duplicated | S (device) |
 | 1 | §4 harness + JUnit around the existing decoder, baseline `ours/direwolf` on the corpus | Makes every later change measurable | S–M |
 | 2 | **R1** streaming modem + HDLC receiver at native rate | Structural fix; removes latency, one-packet-per-2 s, resampler, boxing, thread spawn | M |
 | 3 | **R3** javAPRSlib parsing (Mic-E, compressed, messages, objects, weather) | Biggest user-visible gain; tiny effort with the library | S |
