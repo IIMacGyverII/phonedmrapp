@@ -85,7 +85,8 @@ Suggested v3.4.7 changelog: *analog bandwidth is actually bandwidth; frequency h
 | **U12** | Unify recordings (OEM `/sdcard/interphone/record` vs module `Download/DMR/Audio/`): one list, one player | Two piles | M | no | `deep-dive/04-…` §4, `10-…` §1 |
 | **U13** ✅ | **Channel scanner** (zone-aware, hold/hang, long-press nuisance skip, rejected-channel skip) | **Done 2026-10-14** — `ChannelScanner` drives the OEM `updateChannelId()` path. Follow-ups: dwell is a constant 1.5 s (measured 0.9 s to RECEIVE_START after landing); a priority channel and a persisted skip list are not implemented; scanning needs Soft SQ off | M | yes | `CHANGELOG_DRAFT.md` batch 6 |
 | **R14** | **Editor guard for channels the radio refuses**: warn (or refuse to save) a digital channel with no TX contact; show the OEM "operation failed" reason | 2026-10-14: Ch 46–48 of the test codeplug (Contact "None") are NAK'd by the MCU (`MSG_SET_CHANNEL_ERROR cmd34`), so +/- and scan cannot land on them. Needs the H7 sweep to list every field the MCU validates | S | yes | `CHANGELOG_DRAFT.md` batch 6 |
-| **R15** | Zone-navigation hook: restore `mCurrentChannelIndex` when the preset step is NAK'd | Same class as the scanner fix: after a refused write the fragment index is one ahead of the radio until the next successful change | S | yes | `MainHook` `hookChannelNavigation`; `ChannelScanner` tick |
+| **R15** ✅ | Zone-navigation hook: restore `mCurrentChannelIndex` when the preset step is NAK'd | **Done 2026-10-14**: `InterPhoneTalkBackFragment$2.errorEvent` hook undoes the preset (`zonePresetFrom`) and gives the scanner an immediate strike | S | yes | `CHANGELOG_DRAFT.md` batch 7 |
+| **R16** ✅ | Zone navigation never wrapped at the zone's ends (`updateChannelId()` clamps) | **Done 2026-10-14** (code review): direction argument reversed for the two end steps | S | yes | `CHANGELOG_DRAFT.md` batch 7 |
 
 ### OEM capabilities already on the wire
 
@@ -93,7 +94,8 @@ Suggested v3.4.7 changelog: *analog bandwidth is actually bandwidth; frequency h
 |---|---|---|---|---|---|
 | **E1** | Radio Check / Call Alert / Remote Monitor (`0x28` fun 1–3) next to Kill/Revive, with confirmation copy | Firmware supports; OEM only exposes Kill/Revive | M | yes | `deep-dive/02-…` §3.4 |
 | **E2** | Probe mix-check (`0x38`) and `SET_SPK_EN` (`0x3C`) via the Diagnostics injector **before** any UI | Builders exist; OEM never sends; MCU behaviour unknown | S | yes | `deep-dive/01-…` §5 |
-| **E3** | RSSI calibration against a known level | `-(120 - raw/2)` dBm is a guess | S | yes | `deep-dive/02-…` §3.14 |
+| **E3** | RSSI calibration against a known level | `-(120 - raw/2)` dBm is a guess. Data points 2026-10-14 (live S-meter): quiet VHF channel raw 31 → −105 "dBm" (noise floor), NOAA WX6 carrier −86 to −81 | S | yes | `deep-dive/02-…` §3.14 |
+| **U14** ✅ | **Live S-meter** (idle RSSI polling, Device-tab toggle, default OFF) | **Done 2026-10-14** | S | yes | `CHANGELOG_DRAFT.md` batch 7 |
 
 ---
 

@@ -49,7 +49,7 @@ Always grep before relying on: DB column names, `ChannelData` field names, hook 
 | Import | `DirectDatabaseImporter` is wipe-and-insert, not upsert |
 | Backups / recordings / key | `Download/DMR/DMR_Backups/`, `Download/DMR/Audio/<Channel>/`, `Download/DMR/api_key.txt` |
 | OEM class names | `InterPhoneHomeActivity` (root pkg), `fragment.InterPhoneTalkBackFragment`, `handler.ModuleStatusMessageHandler`, `protocol.Packet`, `serial.MessageDispatcher` — there is no `MainActivity`/`TalkBackFragment` |
-| Hook locations | `sq=0` forcing + 300 ms re-enable + ack re-apply: `hookChannelNavigation`; VFO `localId` override: `BaseMessage.send()` hook; Device-tab tools: `McuDiagnostics` + `addButtonToLayout`; diagnostics gate: `diagnosticsEnabled` (prefs `dmrmod_diagnostics`, default OFF — turn it on in the Device tab before using `SEND_DEBUG_PACKET` or expecting `uart_logs`); channel scanner: `ChannelScanner` (drives the OEM `updateChannelId()`; the zone hook bypasses it via `ChannelScanner.stepping`; needs Soft SQ off; the radio NAKs digital channels with no TX contact); serial reader guard: `hookSerialReaderWatchdog` |
+| Hook locations | `sq=0` forcing + 300 ms re-enable + ack re-apply: `hookChannelNavigation`; VFO `localId` override: `BaseMessage.send()` hook; Device-tab tools: `McuDiagnostics` + `addButtonToLayout`; diagnostics gate: `diagnosticsEnabled` (prefs `dmrmod_diagnostics`, default OFF — turn it on in the Device tab before using `SEND_DEBUG_PACKET` or expecting `uart_logs`); channel scanner: `ChannelScanner` (drives the OEM `updateChannelId()`; the zone hook bypasses it via `ChannelScanner.stepping`; needs Soft SQ off; the radio NAKs digital channels with no TX contact); serial reader guard: `hookSerialReaderWatchdog`; live S-meter: `smeterEnabled` + `smeterPoll` (prefs `dmrmod_diagnostics`/`smeter`, default OFF); channel-change refusals: `InterPhoneTalkBackFragment$2.errorEvent` hook in `hookScanSupport` |
 | `syncChannelInfoWithData` | **Is** the OEM hardware-write path (`CmdStateMachine` transaction) |
 
 ## 4. Deploy workflow (mandatory for AI agents)
@@ -76,7 +76,7 @@ cd DMRModHooks
 - Match existing style in `MainHook.java` and helper classes.
 - All hooks: try-catch, log via `XposedBridge.log(TAG + …)`.
 - UI updates: `Handler(Looper.getMainLooper())`.
-- Shared state: `volatile` static fields at top of `MainHook.java`.
+- Shared state: `volatile` static fields at top of `MainHook.java`. **Never build a `Handler`, `Looper`-bound object or anything needing a Context in a static initializer of `MainHook`**: `<clinit>` runs in the Zygote fork before the main Looper exists, and one NPE there makes LSPosed drop the whole module ("Failed to load class com.dmrmod.hooks.MainHook", 2026-10-14). Create such objects lazily from a hook.
 
 ## 7. Critical pitfalls (grep before touching)
 
