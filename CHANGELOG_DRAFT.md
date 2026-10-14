@@ -3,11 +3,18 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-14 — Batch 11: private JSON mode backups (S3), import needs its safety copy
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **S3** | **Mode backups are private JSON.** APRS / SSTV / NOAA / VFO parked the hijacked channel as a Java-serialized HashMap at `/sdcard/<mode>_channel_backup.dat` (world-readable; read back through `ObjectInputStream`). They are now `files/dmrmod_<mode>_channel_backup.json` in the OEM app's private directory via the new `ModeBackupStore` (save / load / exists / delete). A leftover `.dat` is migrated once through a class-whitelisting `ObjectInputStream` (HashMap, boxed primitives, String, int[] only) and deleted. All call sites switched; no `.dat` path remains in `MainHook`. | `ModeBackupStore` (new), `MainHook` | **device**: NOAA APT monitoring started from PKT RAD - `files/dmrmod_noaa_channel_backup.json` appeared holding the parked channel (`NOAA WX6`, 162.500 MHz, `sq` 5); STOP + CLOSE logged `NOAA channel restored: NOAA WX6`, the file was gone and the intercom showed NOAA WX6 again; startup checks log "No ... backup file found" for APRS/SSTV/VFO |
+| **R8** (cont.) | If the automatic pre-import backup fails, the import is **aborted** with a message instead of proceeding without a snapshot. | `DirectDatabaseImporter` | code review |
+
 ## 2026-10-14 — Hygiene: untracked scratch files, module README
 
 | Backlog | Change | Files | Test |
 |---|---|---|---|
-| **H1** ◐ | 36 loose files at `DMRModHooks/` root — logcat dumps, test logs, a personal codeplug (`database_channel_area_default_uhf.db`), CSV/PDF backups — and the stale `OpenGD77Fork/DMRModHooks-signed.apk` are **untracked** (`git rm --cached`; they stay on disk) and gitignored by pattern. The 24 `.wav` captures stay tracked: they are the only candidate corpus for the F0 modem test harness. | `.gitignore`, index | `git status` clean; files present on disk |
+| **H1** ◐ | 24 loose files at `DMRModHooks/` root — logcat dumps, test logs, a personal codeplug (`database_channel_area_default_uhf.db`), CSV/PDF backups — and the stale `OpenGD77Fork/DMRModHooks-signed.apk` are **untracked** (`git rm --cached`; they stay on disk) and gitignored by pattern. The 24 `.wav` captures stay tracked: they are the only candidate corpus for the F0 modem test harness. | `.gitignore`, index | `git status` clean; files present on disk |
 | **H3** ✅ | `DMRModHooks/README.md` (1,894 lines, stopped at v3.1.3) replaced by a 40-line pointer to the root README / CLAUDE.md / changelog / deep dive, with build notes and a file map. The old text remains in git history. | `DMRModHooks/README.md` | — |
 | docs | Root README gets an "Unreleased" pointer to `CHANGELOG_DRAFT.md` under the release banner (no version bump). | `README.md` | — |
 

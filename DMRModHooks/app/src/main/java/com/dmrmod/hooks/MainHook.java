@@ -7265,11 +7265,7 @@ public class MainHook implements IXposedHookLoadPackage {
      */
     private void saveChannelBackupToFile(java.util.HashMap<String, Object> backup) {
         try {
-            java.io.File backupFile = new java.io.File("/sdcard/aprs_channel_backup.dat");
-            java.io.ObjectOutputStream oos = new java.io.ObjectOutputStream(
-                new java.io.FileOutputStream(backupFile));
-            oos.writeObject(backup);
-            oos.close();
+            ModeBackupStore.save("aprs", backup);   // S3
             XposedBridge.log(TAG + ": Channel backup saved to file");
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error saving backup to file: " + e.getMessage());
@@ -7281,17 +7277,10 @@ public class MainHook implements IXposedHookLoadPackage {
      */
     private java.util.HashMap<String, Object> loadChannelBackupFromFile() {
         try {
-            java.io.File backupFile = new java.io.File("/sdcard/aprs_channel_backup.dat");
-            if (!backupFile.exists()) {
+            java.util.HashMap<String, Object> backup = ModeBackupStore.load("aprs");   // S3
+            if (backup == null) {
                 return null;
             }
-            
-            java.io.ObjectInputStream ois = new java.io.ObjectInputStream(
-                new java.io.FileInputStream(backupFile));
-            @SuppressWarnings("unchecked")
-            java.util.HashMap<String, Object> backup = (java.util.HashMap<String, Object>) ois.readObject();
-            ois.close();
-            
             XposedBridge.log(TAG + ": Channel backup loaded from file");
             return backup;
         } catch (Exception e) {
@@ -7305,9 +7294,7 @@ public class MainHook implements IXposedHookLoadPackage {
      */
     private void deleteChannelBackupFile() {
         try {
-            java.io.File backupFile = new java.io.File("/sdcard/aprs_channel_backup.dat");
-            if (backupFile.exists()) {
-                backupFile.delete();
+            if (ModeBackupStore.delete("aprs")) {   // S3
                 XposedBridge.log(TAG + ": Channel backup file deleted");
             }
         } catch (Exception e) {
@@ -7372,7 +7359,7 @@ public class MainHook implements IXposedHookLoadPackage {
     }
 
     // -----------------------------------------------------------------------
-    // SSTV-specific channel backup (separate from APRS, uses sstv_channel_backup.dat)
+    // SSTV-specific channel backup (separate from APRS; ModeBackupStore "sstv")
     // -----------------------------------------------------------------------
     private java.util.HashMap<String, Object> sstvChannelBackup = null;
 
@@ -7397,11 +7384,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 sstvChannelBackup.put("txType", 0); sstvChannelBackup.put("txSubCode", 0);
             }
             // Save to dedicated file
-            java.io.File backupFile = new java.io.File("/sdcard/sstv_channel_backup.dat");
-            java.io.ObjectOutputStream oos = new java.io.ObjectOutputStream(
-                new java.io.FileOutputStream(backupFile));
-            oos.writeObject(sstvChannelBackup);
-            oos.close();
+            ModeBackupStore.save("sstv", sstvChannelBackup);   // S3
             XposedBridge.log(TAG + ": SSTV channel backup saved: " + sstvChannelBackup.get("name"));
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error saving SSTV channel backup: " + e.getMessage());
@@ -7412,14 +7395,8 @@ public class MainHook implements IXposedHookLoadPackage {
         try {
             if (sstvChannelBackup == null) {
                 // Try loading from file (crash recovery path)
-                java.io.File backupFile = new java.io.File("/sdcard/sstv_channel_backup.dat");
-                if (backupFile.exists()) {
-                    java.io.ObjectInputStream ois = new java.io.ObjectInputStream(
-                        new java.io.FileInputStream(backupFile));
-                    @SuppressWarnings("unchecked")
-                    java.util.HashMap<String, Object> loaded =
-                        (java.util.HashMap<String, Object>) ois.readObject();
-                    ois.close();
+                java.util.HashMap<String, Object> loaded = ModeBackupStore.load("sstv");   // S3
+                if (loaded != null) {
                     sstvChannelBackup = loaded;
                     XposedBridge.log(TAG + ": SSTV channel backup loaded from file");
                 } else {
@@ -7457,7 +7434,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedBridge.log(TAG + ": SSTV channel restored: " + sstvChannelBackup.get("name"));
             sstvChannelBackup = null;
             // Delete backup file
-            new java.io.File("/sdcard/sstv_channel_backup.dat").delete();
+            ModeBackupStore.delete("sstv");
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error restoring SSTV channel: " + e.getMessage());
         }
@@ -7470,8 +7447,7 @@ public class MainHook implements IXposedHookLoadPackage {
         boolean shouldDeleteBackup = false;
         try {
             XposedBridge.log(TAG + ": Checking for orphaned SSTV channel...");
-            java.io.File backupFile = new java.io.File("/sdcard/sstv_channel_backup.dat");
-            if (!backupFile.exists()) {
+            if (!ModeBackupStore.exists("sstv")) {   // S3
                 XposedBridge.log(TAG + ": No SSTV backup file found - normal startup");
                 return;
             }
@@ -7494,12 +7470,11 @@ public class MainHook implements IXposedHookLoadPackage {
 
             if (channelName != null && channelName.startsWith("SSTV (")) {
                 XposedBridge.log(TAG + ": Detected orphaned SSTV channel - restoring backup...");
-                java.io.ObjectInputStream ois = new java.io.ObjectInputStream(
-                    new java.io.FileInputStream(backupFile));
-                @SuppressWarnings("unchecked")
-                java.util.HashMap<String, Object> backup =
-                    (java.util.HashMap<String, Object>) ois.readObject();
-                ois.close();
+                java.util.HashMap<String, Object> backup = ModeBackupStore.load("sstv");   // S3
+                if (backup == null) {
+                    XposedBridge.log(TAG + ": SSTV backup unreadable - nothing to restore");
+                    return;
+                }
                 sstvChannelBackup = backup;
                 restoreSSTVChannelBackup(context);
                 shouldDeleteBackup = false;  // restoreSSTVChannelBackup already deletes it
@@ -7563,7 +7538,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedBridge.log(e);
         } finally {
             if (shouldDeleteBackup) {
-                try { new java.io.File("/sdcard/sstv_channel_backup.dat").delete(); } catch (Exception ignored) {}
+                try { ModeBackupStore.delete("sstv"); } catch (Exception ignored) {}
             }
         }
     }
@@ -7579,8 +7554,7 @@ public class MainHook implements IXposedHookLoadPackage {
             // Note: APRS state already reset immediately in MainActivity.onCreate (before this delayed call)
             
             // Check if backup file exists
-            java.io.File backupFile = new java.io.File("/sdcard/aprs_channel_backup.dat");
-            if (!backupFile.exists()) {
+            if (!ModeBackupStore.exists("aprs")) {   // S3
                 XposedBridge.log(TAG + ": No APRS backup file found - normal startup");
                 return;
             }
@@ -8620,10 +8594,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 noaaChannelBackup.put("rxType", 0); noaaChannelBackup.put("rxSubCode", 0);
                 noaaChannelBackup.put("txType", 0); noaaChannelBackup.put("txSubCode", 0);
             }
-            java.io.ObjectOutputStream oos = new java.io.ObjectOutputStream(
-                new java.io.FileOutputStream("/sdcard/noaa_channel_backup.dat"));
-            oos.writeObject(noaaChannelBackup);
-            oos.close();
+            ModeBackupStore.save("noaa", noaaChannelBackup);   // S3
             XposedBridge.log(TAG + ": NOAA channel backup saved: " + noaaChannelBackup.get("name"));
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error saving NOAA channel backup: " + e.getMessage());
@@ -8633,14 +8604,8 @@ public class MainHook implements IXposedHookLoadPackage {
     private void restoreNOAAChannelBackup(Context context) {
         try {
             if (noaaChannelBackup == null) {
-                java.io.File f = new java.io.File("/sdcard/noaa_channel_backup.dat");
-                if (!f.exists()) { XposedBridge.log(TAG + ": No NOAA backup file"); return; }
-                java.io.ObjectInputStream ois = new java.io.ObjectInputStream(
-                    new java.io.FileInputStream(f));
-                @SuppressWarnings("unchecked")
-                java.util.HashMap<String, Object> loaded =
-                    (java.util.HashMap<String, Object>) ois.readObject();
-                ois.close();
+                java.util.HashMap<String, Object> loaded = ModeBackupStore.load("noaa");   // S3
+                if (loaded == null) { XposedBridge.log(TAG + ": No NOAA backup file"); return; }
                 noaaChannelBackup = loaded;
             }
             Class<?> dmrClass = XposedHelpers.findClass(
@@ -8670,7 +8635,7 @@ public class MainHook implements IXposedHookLoadPackage {
             }
             XposedBridge.log(TAG + ": NOAA channel restored: " + noaaChannelBackup.get("name"));
             noaaChannelBackup = null;
-            new java.io.File("/sdcard/noaa_channel_backup.dat").delete();
+            ModeBackupStore.delete("noaa");
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error restoring NOAA channel: " + e.getMessage());
         }
@@ -8680,8 +8645,7 @@ public class MainHook implements IXposedHookLoadPackage {
     private void checkAndRestoreNOAAChannelOnStartup(final Context context) {
         boolean deleteBackup = false;
         try {
-            java.io.File bf = new java.io.File("/sdcard/noaa_channel_backup.dat");
-            if (!bf.exists()) return;
+            if (!ModeBackupStore.exists("noaa")) return;   // S3
             deleteBackup = true;
 
             Class<?> dmrClass = XposedHelpers.findClass(
@@ -8696,12 +8660,11 @@ public class MainHook implements IXposedHookLoadPackage {
 
             if (name != null && name.startsWith("NOAA (")) {
                 XposedBridge.log(TAG + ": Restoring orphaned NOAA channel...");
-                java.io.ObjectInputStream ois = new java.io.ObjectInputStream(
-                    new java.io.FileInputStream(bf));
-                @SuppressWarnings("unchecked")
-                java.util.HashMap<String, Object> backup =
-                    (java.util.HashMap<String, Object>) ois.readObject();
-                ois.close();
+                java.util.HashMap<String, Object> backup = ModeBackupStore.load("noaa");   // S3
+                if (backup == null) {
+                    XposedBridge.log(TAG + ": NOAA backup unreadable - nothing to restore");
+                    return;
+                }
                 noaaChannelBackup = backup;
                 restoreNOAAChannelBackup(context);
                 deleteBackup = false;  // restoreNOAAChannelBackup already deletes it
@@ -8762,7 +8725,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedBridge.log(TAG + ": NOAA startup check error: " + e.getMessage());
         } finally {
             if (deleteBackup) {
-                try { new java.io.File("/sdcard/noaa_channel_backup.dat").delete(); } catch (Exception ignored) {}
+                try { ModeBackupStore.delete("noaa"); } catch (Exception ignored) {}
             }
         }
     }
@@ -12395,6 +12358,7 @@ public class MainHook implements IXposedHookLoadPackage {
                         final android.content.Context context = (android.content.Context) param.thisObject;
 
                         try {
+                            ModeBackupStore.init(context.getFilesDir());   // S3: mode backups live in files/, not /sdcard
                             diagnosticsEnabled = context.getSharedPreferences(DIAG_PREFS, android.content.Context.MODE_PRIVATE)
                                     .getBoolean("enabled", false);
                             smeterEnabled = context.getSharedPreferences(DIAG_PREFS, android.content.Context.MODE_PRIVATE)
@@ -16543,11 +16507,7 @@ public class MainHook implements IXposedHookLoadPackage {
      */
     private void saveVFOChannelBackupToFile(java.util.HashMap<String, Object> backup) {
         try {
-            java.io.File backupFile = new java.io.File("/sdcard/vfo_channel_backup.dat");
-            java.io.ObjectOutputStream oos = new java.io.ObjectOutputStream(
-                new java.io.FileOutputStream(backupFile));
-            oos.writeObject(backup);
-            oos.close();
+            ModeBackupStore.save("vfo", backup);   // S3
             XposedBridge.log(TAG + ": VFO channel backup saved to file");
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error saving VFO backup to file: " + e.getMessage());
@@ -16559,17 +16519,10 @@ public class MainHook implements IXposedHookLoadPackage {
      */
     private java.util.HashMap<String, Object> loadVFOChannelBackupFromFile() {
         try {
-            java.io.File backupFile = new java.io.File("/sdcard/vfo_channel_backup.dat");
-            if (!backupFile.exists()) {
+            java.util.HashMap<String, Object> backup = ModeBackupStore.load("vfo");   // S3
+            if (backup == null) {
                 return null;
             }
-            
-            java.io.ObjectInputStream ois = new java.io.ObjectInputStream(
-                new java.io.FileInputStream(backupFile));
-            @SuppressWarnings("unchecked")
-            java.util.HashMap<String, Object> backup = (java.util.HashMap<String, Object>) ois.readObject();
-            ois.close();
-            
             XposedBridge.log(TAG + ": VFO channel backup loaded from file");
             return backup;
         } catch (Exception e) {
@@ -16583,9 +16536,7 @@ public class MainHook implements IXposedHookLoadPackage {
      */
     private void deleteVFOChannelBackupFile() {
         try {
-            java.io.File backupFile = new java.io.File("/sdcard/vfo_channel_backup.dat");
-            if (backupFile.exists()) {
-                backupFile.delete();
+            if (ModeBackupStore.delete("vfo")) {   // S3
                 XposedBridge.log(TAG + ": VFO channel backup file deleted");
             }
         } catch (Exception e) {
@@ -16890,8 +16841,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedBridge.log(TAG + ": Checking for orphaned VFO channel...");
             
             // Check if backup file exists
-            java.io.File backupFile = new java.io.File("/sdcard/vfo_channel_backup.dat");
-            if (!backupFile.exists()) {
+            if (!ModeBackupStore.exists("vfo")) {   // S3
                 XposedBridge.log(TAG + ": No VFO backup file found - normal startup");
                 return;
             }
