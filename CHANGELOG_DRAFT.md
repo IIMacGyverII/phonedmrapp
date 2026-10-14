@@ -3,6 +3,24 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-14 — MCU diagnostics + first compile of the audit batch
+
+### Type
+- ✨ Feature (diagnostics) · 🔧 Technical
+
+### Changes
+
+| Area | Change | Files |
+|---|---|---|
+| Device tab | **🧪 Read MCU channel images** — sends `QUERY_DIGITAL_INFO` (0x24), `QUERY_ANALOG_INFO` (0x25) and `QUERY_MIX_CHECK_INFO` (0x39), captures the MCU's 163 / 19 / 169-byte replies through the existing `MessageDispatcher.onReceive` hook, decodes every field (frequencies, localId, groups[], txContact, contactType, CC, slots, mode, encrypt, tones, squelch…) and shows them in a dialog; also written to the Xposed log. Read-only. Verified by hand over adb on 2026-10-14 (`docs/grok-deep-dive/11-firmware-fw0-results.md` §15). | `McuDiagnostics.java` (new), `MainHook.addButtonToLayout`, `MainHook.hookSerialCommunication` |
+| Device tab | **🔬 Probe RX audio layout** (backlog gate G1) — samples 60 `writeAudioTrack` chunks and reports whether consecutive 16-bit samples arrive as equal pairs (8 kHz stereo L==R), one silent channel, or independent samples (16 kHz mono as the module assumes). Open-squelch noise is sufficient input. | `McuDiagnostics.java`, `MainHook.hookPCMReceiveManager` |
+
+### Build notes (2026-10-14)
+- **First successful compile** of the 2026-08-26 batch: `:app:compileDebugJavaWithJavac` passes with JDK 17 (Temurin `17.0.20.1+1`, `C:\Users\Joshua\tools\jdk-17.0.20.1+1`). Gradle 8.2 in the wrapper **does not run** on the Android Studio bundled JDK (class file 69) — set `JAVA_HOME` to the JDK 17 before `gradlew`.
+- `local.properties` (gitignored) created with `sdk.dir` pointing at `%LOCALAPPDATA%\Android\Sdk`.
+- **`DMRModHooks/release.keystore` is absent from this machine** (gitignored, never committed, old repo path `C:\Users\Joshua\Documents\android\phonedmrapp` no longer exists). `assembleDebug` stops at `validateSigningDebug`; the installed 3.4.5 is signed with cert `9a9a4eb2…22b9` (CN=DMRModHooks). Until the keystore is found, an install needs `adb uninstall` + a new key + re-enable in LSPosed.
+- Not yet device-tested; version not bumped.
+
 ## 2026-08-26 — Found-bugs batch from the deep-dive audit
 
 ### Type
