@@ -7,7 +7,7 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 **Status**: ✅ **FULLY FUNCTIONAL** - RadioID Caller Lookup + Export/Import + GPS + Zones + Transcription + APRS + VFO + SSTV + NOAA APT!
 
 > **🚀 Current Stable Release: v3.4.6** (June 21, 2026) - TG list import fix + wide-band default for new/imported channels
-> **🧪 Unreleased (main branch)** — channel scanner with scan list, live S-meter, serial-reader watchdog, backup area stamp + import preview, diagnostics gate, 8 kHz recordings, in-app help: see [`CHANGELOG_DRAFT.md`](CHANGELOG_DRAFT.md)  
+> **🧪 Unreleased on `main`** (October 14, 2026) - **Channel scanner** with scan list, **live S-meter**, in-app help, diagnostics gate, import preview + area check, serial-reader watchdog, 8 kHz recordings, 40+ correctness fixes - see [What's New on main](#whats-new-on-main-unreleased-october-14-2026) and [`CHANGELOG_DRAFT.md`](CHANGELOG_DRAFT.md)  
 > **📻 Major Feature: v3.4.5** (June 16, 2026) - **RadioID.net global DMR ID lookup** — see who's calling with callsign, name & location (~300k IDs, offline)  
 > **🔧 Also in v3.4.5** — Double-slot import fix, squelch default to normal
 > **🖥️ OpenGD77 CPS Fork: v2.0.45** — `OpenGD77CPS-Mac_Build_20260607_210202.zip` (unchanged since v3.4.5)  
@@ -55,6 +55,60 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 3. Optional manual import: place `user.csv` in `/sdcard/Download/DMR/RadioID/`
 
 > Your codeplug contacts are never overwritten. RadioID only fills in IDs you don't already have programmed.
+
+---
+
+## What's New on main (unreleased, October 14, 2026)
+
+Everything below is built, installed and exercised on the test phone (Ulefone, DMR003.UV4T.V022 module) but **not yet released**; the shipped version stays v3.4.6. Full per-change log with device evidence: [`CHANGELOG_DRAFT.md`](CHANGELOG_DRAFT.md).
+
+### 🔍 Channel Scanner (new)
+
+The OEM app has no scan. A **SCAN** button now sits between the Signal box and the Zone button on the intercom.
+
+- Scans the selected **zone** (or all channels) through the OEM's own channel-change path, so the database, the number display and the radio module always agree
+- Stops on activity (the radio's own squelch / DMR decode), stays 2.5 s after it ends, then moves on; **tap** to stop on the current channel, PTT or a manual arrow press also stops it
+- **Long-press while stopped on a channel** - skip that channel for this session; **long-press while idle** - edit the persistent **scan list** (unchecked channels are never scanned)
+- Channels the radio refuses to tune (see "Good to know" below) are skipped automatically with a notice
+- Timing measured on the hardware: the module acks a channel write in ~0.1 s but needs ~0.9 s before its squelch can open, so the scanner listens 1.5 s per channel (~80 s for 48 channels). Soft SQ must be off while scanning.
+
+### 📶 Live S-meter (new)
+
+Device-tab toggle (off by default). Polls the module's RSSI once a second while idle and the screen is on, so the intercom's Signal box reads even with the squelch closed (noise floor ≈ -105 dBm on this unit, NOAA carrier -86 to -81).
+
+### 📖 In-app help
+
+The OEM **Use Assistant** page gained section 7, "DMR Mod features": every injected control, the Device-tab tools, and the radio limits that bite.
+
+### 💾 Backups and import
+
+- Each export now writes **`meta.json`** (area, time, app version) into the backup folder and zip
+- **Import preview**: the confirm dialog lists rows per CSV, the backup's area and the current channel count
+- Import **refuses** a backup from a different area, **aborts** if its automatic safety backup fails, refuses an empty `Channels.csv`, strips a UTF-8 BOM, and quotes/unquotes names with commas
+- Export follows the **selected area** (was hard-coded to `default_uhf`)
+
+### 🛠 Diagnostics (opt-in)
+
+- Device-tab **Diagnostics** switch (default **off**): UART file logger + the `com.dmrmod.SEND_DEBUG_PACKET` receiver are inert until you turn it on
+- **Read MCU channel images** - 0x24/0x25/0x39 readback of what the module really holds, decoded field by field
+- **Probe RX audio layout** - measured the OEM audio stream as 8 kHz stereo with L == R; recordings are now true **8 kHz mono WAV** (half the size); captures under 1 s are dropped
+- **Hook self-test** at startup: one log line, one toast if any hook failed to install
+
+### 🧯 Robustness and correctness
+
+- Serial reader: a frame split across two reads no longer kills the OEM reader thread for good; a watchdog restarts it if anything else does
+- Soft SQ off restores the channel's **own** squelch level (was always 2); Soft SQ is re-applied when the module acks a foreign squelch write (Pitfall 13)
+- Zone navigation now **wraps** at the zone ends and recovers when the module refuses a write
+- Mode backups (APRS/SSTV/NOAA/VFO) are private JSON files, no longer serialized objects on `/sdcard`
+- `channel_band` is bandwidth, not UHF/VHF: VFO has a Narrow/Wide selector, SSTV writes narrow, NOAA wide
+- The `txContact` rewrite that could store a contact row id instead of the DMR ID (Pitfall 12) is gone
+- Encrypt key field accepts hex `0-9 A-F`; three-digit channel numbers display; geocoder off the UI thread; 16 dead DSP files removed; 25 scratch files untracked
+
+### Good to know
+
+- A digital channel with **no Call Number** (TX contact) is refused by the radio module: the arrow keys show "operation failed" and the scanner skips it. The editor now warns when you save one.
+- Squelch levels 1-9 behave as **one threshold** on this radio (on-air sweeps, 2026-10-14); 0 is always open.
+- The MCU firmware is **C-SKY V2**, not ARM; disassembly tooling and findings are in `docs/grok-deep-dive/11-firmware-fw0-results.md`.
 
 ---
 
