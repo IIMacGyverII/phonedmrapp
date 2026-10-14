@@ -681,6 +681,8 @@ Method: OEM app started (`am start -n com.pri.prizeinterphone/.InterPhoneHomeAct
 | 10:40:01 | `0x24` | 163 B with **`01 00 00 00 02 00 00 00 03 00 00 00`** at offset 12 | **groups[] is stored** in the MCU's channel image, all three slots |
 | 10:40:03 / 05 | reference `0x22` re-sent, `0x24` | identical to 10:38:28 | restored |
 
+10:41:44 — `0x39` body `01` (`QUERY_MIX_CHECK_INFO`, no OEM message class) → **169 zero bytes**, `sr=0`: the third readback (§14.2, buffer `0x38AB0`) also works; the mix-check slot has never been written on this radio.
+
 No `0x21`/`0x20` frames appeared on the wire during a normal boot + these queries (only `0xAA, 0x34, 0x22, 0x35, 0x3B` and the queries).
 
 **What this settles**
