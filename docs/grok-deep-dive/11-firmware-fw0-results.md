@@ -612,3 +612,54 @@ A straight-line sequence of ten blocks, each: `memset(stack, 0, 1536)` via `bsr 
 | Vote "which base makes task pointers or far targets land on function starts": no candidate above noise (`scripts` ad-hoc, 1,821 start candidates) | **no alias of this image at `0x03000000` or elsewhere** is supported |
 
 Working model: boot ROM / resident kernel (external) + this 378 KB application image at 0 + SRAM at `0x03xxxxxx`. The RAM-load update replaces only the application. Consequences: (a) OS calls, `memcpy`-class helpers and whatever the type→cmd mapper `+0x794C` calls cannot be read; (b) any RX-group-list decision taken inside the external region is invisible to static analysis of `ORIGINAL.bin`; (c) the 0x24/0x25 **readback** test from the RumiTX comparison remains the cheapest way to learn what the MCU stored.
+
+---
+
+## 14. FW1 — the phone-protocol dispatcher and the channel readback (2026-10-14)
+
+### 14.1 Routing (corrects §11.1)
+
+`+0x7C48` is the UART RX task loop, not a "0x20/0x21-only" waiter. After `buf[0]==0x68` and 7 more header bytes:
+
+| `buf[1]` (cmd) | Action |
+|---|---|
+| `0x20`, `0x0F` | discard, restart |
+| `0x21` | `bsr +0x8BE4` — a **second protocol family** (sub-command in `buf[2]`, 35 entries, jump table in RAM `0x030520D8`). The MCU also *emits* `68 21 <sub> <01|FF> …` frames via `+0x7E94` (subs 1,2,3,4,16–20,34). The OEM app has no 0x21 handler and drops them silently (ch. 01 §6). |
+| anything else | `bsr +0xAA3C` — **the phone-protocol handler** |
+
+### 14.2 `+0xAA3C` — validate, then `switch(cmd − 0x22)`
+
+Length = BE `buf[6..7]` (+1 for the tail), rejected if ≥ 800; waits for the rest; checks `buf[0]==0x68`, `buf[len−1]==0x10`, recomputes the one's-complement checksum (`+0x7D94`); then
+
+```
++0xAAA2  ld.b  r3,(r4,1)          ; cmd
++0xAAA4  subi  r3, 0x22
++0xAAA8  cmphsi r3, 105           ; cmd 0x22..0x8A accepted
++0xAAAE  lrw   r2, 0x03052240     ; jump table in RAM
++0xAAB0  ldr.w r3,(r2,r3<<2) ; jmp r3
+```
+
+The table itself is **not in the image** (no run of case addresses at any alignment/offset — it is filled by the external component), so cmd→case is partly inferred. The 35 inline cases at `+0xAAC8…+0xABF2` each do `mov r0,r4; bsr <handler>` — this is the real "`cmd_handler.c`":
+
+| Case → handler | What it does | Likely cmd |
+|---|---|---|
+| `+0xABEA → +0x9310` | 163-byte digital unpack (§13.1) | **0x22** |
+| `+0xABE2 → +0x99B4` | contains the 19-byte analog unpack `+0x9A2C` (§11.4) | **0x23** |
+| `+0xABDA → +0x9E3C` | reply **163 B** from `0x38E4C` via `+0x90B0` | **0x24 QUERY_DIGITAL — channel readback exists** |
+| `+0xABD2 → +0x9E4C` | reply **19 B** from `0x38C70` | **0x25 QUERY_ANALOG — readback exists** |
+| `+0xAB26 → +0x9E5C` | reply **169 B** from `0x38AB0` | 0x39 QUERY_MIX_CHECK (OEM has no message class for it) |
+| `+0xABC2 → +0x9E24` | ACK with `sr` = bit 5 of status byte `0x38908` | a status query |
+| `+0xAAD8` inline → `+0x8E0C` | 1-byte body → external call pair (`0xFD01125C`/`0xFD011220`, args `68`): a register read-modify-write with the byte in bits 8–15 | volume / squelch / mic-gain class (0x2E/0x30/0x2A) |
+| `+0xABF2` inline | 3-byte **BE** value from body[0..2] → `(r8,0x14)` | an ID setter (0x28 ENHANCE or SMS target) |
+| `+0xAB3E` inline | sets bits 0/1 of flag byte `0x38EF0` | a mode toggle (0x2F LISTEN / 0x31 PWR-SAVE class) |
+| `+0xAB2E → +0x8EA8` | plain ACK | a no-op command |
+| `+0x8EB4`, `+0x8F18`, `+0x8FA8` | body[0] ∈ {1,2,3} switches with ACK | 1-byte enum commands (0x33 relay, 0x35 interrupt, 0x37 policy…) |
+| `+0xA34C … +0xA898`, `+0x9264`, `+0x9FB8`, `+0xA1DC` | larger handlers, not read | SMS (0x2C/0x2D), encrypt (0x29), TOT (0x3B), BER (0x3F), audio query (0x2B)… |
+
+**`+0x90B0` is the generic reply builder:** `(cmd, sr, body*, len)` → `68 cmd sr 00 ck ck len(BE) body 10`. Its other callers answer with 1, 9, 27 and 33-byte bodies (`+0xA6BA`, `+0xA886`, `+0xC056`, `+0xA020`) — candidates for version (0x34), digital-audio info (0x2B), RSSI (0x32) and SMS fetch (0x2D).
+
+### 14.3 Consequences
+
+- **The 0x24 / 0x25 readback is real firmware behaviour.** The MCU keeps the last-written digital (163 B at `0x38E4C`) and analog (19 B at `0x38C70`) channel images and returns them on request. The OEM app registers handlers for both but never sends them (ch. 02 §6). One `com.dmrmod.SEND_DEBUG_PACKET` broadcast per command on a device (`CMD=36` / `CMD=37`, `BODY=01`) will show exactly what the MCU stored — squelch byte, group list, `txContact`. This is the ground truth the squelch and group-call questions have lacked; it is the recommended next device step (backlog FW2/FW-B3).
+- The 0x21 family is unexplored and never reaches the app's dispatcher. Whether it carries anything useful (its `01/FF` sub-frames look like start/stop events) can be settled by the mod's UART logger, which sees raw frames before `MessageDispatcher` drops them.
+- `+0x7E94` is a 0x21 builder, **not** a generic command builder — §10's "callers pass cmd 0x22 in r3" was a sub-command 0x22 of family 0x21.
