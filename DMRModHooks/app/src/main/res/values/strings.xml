@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">DMR Mod Hooks v0.2</string>
-    <string name="xposed_description">MacGyver DMR Modifications - Version Test v0.2</string>
-    
+    <!-- app_name and xposed_description are generated from versionName in app/build.gradle (resValue). -->
+
     <!-- Target application package -->
     <string-array name="xposed_scope">
         <item>com.pri.prizeinterphone</item>

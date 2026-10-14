@@ -3,6 +3,47 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-14 — Correctness batch 2
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **S22** (root cause) | `enableSoftwareSquelchOnCurrentChannel()` overwrote the live `ChannelData.sq` with 0 (so VFO could read it) and the disable path then "restored" 0. The level is now saved in `softSqSavedChannelSq` before the overwrite and restored, into both the wire message and the channel object. The `sendAnalogMessage` before-hook also puts its 0 back in `afterHookedMethod`. | `MainHook` | **device**: NOAA channel level 5 → Soft SQ on → MCU `sq=0` → Soft SQ off → MCU `sq=5` |
+| **S13** | PDF export: contact type label follows the OEM enum (0 person / 1 group / 2 all) and the contact map is keyed by `contact_number`, so channel contact names resolve (Pitfall 12). | `PDFExporter` | code review |
+| **S15** | Information page: the empty light-gray "patch controls" container is only added when it has children. | `MainHook` | code review |
+| **S17** | `updateLocationDisplay` runs its Geocoder / GPS work on a background thread and posts only the text updates. | `MainHook` | **device**: Intercom loads; location chip updates |
+| **S18** | `activityHistory` guarded by `synchronized (activityHistory)` at the writer, the clear and the DB loader. | `MainHook` | code review |
+| **S5** | `DMRTranscriptionService` treats both `YOUR_API_KEY_HERE` and the module's `YOUR_GOOGLE_CLOUD_API_KEY_HERE` as "no key". | `TranscriptionService` | build |
+| **U8** | Intercom labels get English defaults (`Power:`, `Color Code:`, `Send:`, `Receive:`, `Contact:`) in `initView` instead of flashing the OEM layout's Chinese placeholders. | `MainHook` | **device**: UI dump after cold start |
+| build | `android.suppressUnsupportedCompileSdk=34` silences the AGP 8.1 warning. | `gradle.properties` | — |
+
+## 2026-10-14 — Correctness batch 1 (device-tested where noted)
+
+### Type
+- 🐛 Bug fixes · 🔧 Technical · ✨ Small features
+
+### Changes
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **R1** | `determineBand()` deleted. It returned UHF/VHF into `channel_band`, which is the analog **bandwidth** byte. SSTV now sets narrow (0), NOAA wide (1), VFO uses `vfoBandWidth` (default wide). `channelMode` is no longer written for analog modes. | `MainHook` | code review |
+| **R2** | The `saveChannelData` before-hook's "TG number → contact row `_id`" conversion removed: it tested the OEM enums inverted (ran on analog + person channels) and wrote a row id into `channel_txContact`, which holds the 24-bit DMR ID (Pitfall 12). The hook now only logs. | `MainHook` | code review |
+| **R3** | Channel-editor frequency help text: Hz, no decimal, `446.0000 MHz → 446000000` (was 10× wrong). | `MainHook` | code review |
+| **R9** | Manifest: removed the `APRSSettingsActivity` entry (class never existed → `ActivityNotFoundException` landmine); `BackupActivity` is `exported="false"`. | `AndroidManifest.xml` | installs |
+| **R11** | App label and LSPosed description generated from `versionName` (`resValue`), strings.xml no longer says "v0.2". | `build.gradle`, `strings.xml` | `aapt dump badging` → "DMR Mod Hooks v3.4.6" |
+| **R12** (part) | Launch-time reset now also clears Soft SQ / APRS Soft SQ / squelch-open flags, monitoring mode, zone auto-switch, and closes a stuck recording stream. | `MainHook` | code review |
+| **S9** | APRS position packets whose coordinates fail to parse are no longer `isValid` (no more stations at 0,0). | `APRSPacketDecoder` | code review |
+| **S10** | SSTV stop clears Soft SQ like APRS/NOAA do. | `MainHook` | code review |
+| **S12** | Channel numbers ≥ 100 show their last two digits instead of a stale sprite. | `MainHook` | code review |
+| **S20** | UART logger: full command-byte name table (hex, from `Const.java`), status names for `0x36` pushes, RSSI decode for `0x32`, and the body interpreter now actually runs (it compared with decimal 22) using the shared `McuDiagnostics` decoders (little-endian). | `MainHook`, `McuDiagnostics` | **device**: log shows `cmd=0x24 (QUERY_DIGITAL_INFO)`, `status=RECEIVE_START` |
+| **S21** | Recording keeps one sample of each L==R pair and writes an **8 kHz mono** WAV (half the size, truthful header). | `MainHook` | **device**: NOAA recording → `channels=1 sampleRate=8000`, 229 376 B for 14.3 s |
+| **S22** | Soft SQ off restores the channel's own squelch level. Root cause fixed too: the `sendAnalogMessage` before-hook wrote 0 into the live `ChannelData.sq` and never put it back; it now restores the field in `afterHookedMethod`. | `MainHook` | **device**: see below |
+| **U4** | `CircuitBoardView` animates at 5 fps when not receiving (was 20 fps always). | `CircuitBoardView` | code review |
+
+### Device test log (2026-10-14, Armor 26 Ultra, NOAA WX6 162.500 MHz)
+- Readback via Device tab after reboot: OK; command names correct in the module log.
+- Recording: three WAVs produced across RX stop/start cycles; header 8 kHz / mono / 16 000 B·s⁻¹; sizes match wall-clock.
+- Soft SQ off → analog image `sq` byte: first build read back 0 (root cause above), fixed build re-tested — result recorded in `docs/grok-deep-dive/11-firmware-fw0-results.md` §18.
+
 ## 2026-10-14 — MCU diagnostics + first compile of the audit batch
 
 ### Type

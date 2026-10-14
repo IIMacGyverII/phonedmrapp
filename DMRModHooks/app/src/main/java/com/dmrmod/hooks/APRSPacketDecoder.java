@@ -115,7 +115,13 @@ public class APRSPacketDecoder {
                 XposedBridge.log(TAG + ": Unsupported data type: " + dataTypeId);
                 return result;
             }
-            
+
+            // Only a packet with a parsed position is valid (backlog S9): a position report whose
+            // coordinates failed to parse used to be stored at 0,0 and plotted in the Gulf of Guinea.
+            if (result.latitude == 0.0 && result.longitude == 0.0) {
+                XposedBridge.log(TAG + ": Position report without parsable coordinates from " + result.sourceCallsign + " - ignored");
+                return result;
+            }
             result.isValid = true;
             XposedBridge.log(TAG + ": Decoded: " + result.toString());
             
