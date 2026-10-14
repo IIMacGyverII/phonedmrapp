@@ -124,3 +124,12 @@ DMRModHooks/app/.cxx/
 radio_firmware/fw1_csky_objdump.txt
 radio_firmware/fw1_csky_objdump.err
 othercomputerbackup/
+
+# Local scratch at the module root (logcat dumps, personal codeplug copies, CSV/PDF backups). The .wav captures stay tracked (F0 corpus).
+DMRModHooks/*.txt
+DMRModHooks/*.log
+DMRModHooks/*.db
+DMRModHooks/*.csv
+DMRModHooks/*.pdf
+DMRModHooks/*.pcm
+OpenGD77Fork/*.apk

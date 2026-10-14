@@ -3,6 +3,14 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-14 — Hygiene: untracked scratch files, module README
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **H1** ◐ | 36 loose files at `DMRModHooks/` root — logcat dumps, test logs, a personal codeplug (`database_channel_area_default_uhf.db`), CSV/PDF backups — and the stale `OpenGD77Fork/DMRModHooks-signed.apk` are **untracked** (`git rm --cached`; they stay on disk) and gitignored by pattern. The 24 `.wav` captures stay tracked: they are the only candidate corpus for the F0 modem test harness. | `.gitignore`, index | `git status` clean; files present on disk |
+| **H3** ✅ | `DMRModHooks/README.md` (1,894 lines, stopped at v3.1.3) replaced by a 40-line pointer to the root README / CLAUDE.md / changelog / deep dive, with build notes and a file map. The old text remains in git history. | `DMRModHooks/README.md` | — |
+| docs | Root README gets an "Unreleased" pointer to `CHANGELOG_DRAFT.md` under the release banner (no version bump). | `README.md` | — |
+
 ## 2026-10-14 — Batch 10: in-app help, launch reset completeness
 
 | Backlog | Change | Files | Test |

@@ -6,7 +6,8 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
 **Status**: ✅ **FULLY FUNCTIONAL** - RadioID Caller Lookup + Export/Import + GPS + Zones + Transcription + APRS + VFO + SSTV + NOAA APT!
 
-> **🚀 Current Stable Release: v3.4.6** (June 21, 2026) - TG list import fix + wide-band default for new/imported channels  
+> **🚀 Current Stable Release: v3.4.6** (June 21, 2026) - TG list import fix + wide-band default for new/imported channels
+> **🧪 Unreleased (main branch)** — channel scanner with scan list, live S-meter, serial-reader watchdog, backup area stamp + import preview, diagnostics gate, 8 kHz recordings, in-app help: see [`CHANGELOG_DRAFT.md`](CHANGELOG_DRAFT.md)  
 > **📻 Major Feature: v3.4.5** (June 16, 2026) - **RadioID.net global DMR ID lookup** — see who's calling with callsign, name & location (~300k IDs, offline)  
 > **🔧 Also in v3.4.5** — Double-slot import fix, squelch default to normal
 > **🖥️ OpenGD77 CPS Fork: v2.0.45** — `OpenGD77CPS-Mac_Build_20260607_210202.zip` (unchanged since v3.4.5)  

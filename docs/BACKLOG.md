@@ -123,9 +123,9 @@ Design: `deep-dive/15-packet-radio-review.md` (+ addendum) and `16-repeater-dire
 
 | # | Item | Why | Effort | Evidence |
 |---|---|---|---|---|
-| **H1** (D2) | `.gitignore` + untrack the ~57 loose `.wav`/`.txt`/`.db`/`.pdf` at `DMRModHooks/` root; stale `OpenGD77Fork/DMRModHooks-signed.apk` | Multi-MB logs and a personal codeplug are tracked | S | `deep-dive/13-…` §9 |
+| **H1** (D2) ◐ | `.gitignore` + untrack the ~57 loose `.wav`/`.txt`/`.db`/`.pdf` at `DMRModHooks/` root; stale `OpenGD77Fork/DMRModHooks-signed.apk` | **Logs, DBs, CSVs, PDF and the APK untracked 2026-10-14.** The 24 `.wav` captures are kept on purpose until F0 decides whether they become `testdata/` or go | S | `CHANGELOG_DRAFT.md` hygiene |
 | **H2** | Keep one CPS zip in `OpenGD77Fork/` (newest); the other 137 are git history | Largest objects in the repo | M | `13-…` §6 |
-| **H3** | Point `DMRModHooks/README.md` at the root README or delete it | Duplicate, stale | S | `13-…` §9 |
+| **H3** ✅ | Point `DMRModHooks/README.md` at the root README or delete it | **Done 2026-10-14**: pointer README with build notes and a file map | S | `CHANGELOG_DRAFT.md` hygiene |
 | **H4** (D1) | Dead-code prune after grep: ~20 DSP classes, `CSVExporter/Importer`, `BackupActivity`, speech hooks, `cpp/`, `AFSKDecoderPLL`, `DireWolfDecoder`; keep `AFSKGenerator` until F6 | ~5k misleading lines | M | `12-…` source table, `14-…` §1 |
 | **H5** | JUnit: `OemChannelTable`, importer coercions, HDLC CRC, tone mapping, `band` semantics (146.94 FM → 1; 12.5 kHz source → 0) | Zero tests today | M | `17-…` §5 |
 | **H6** | LICENSE honesty: state that decompiled OEM sources and firmware images are in-tree for research; keep GPLv3; add the interactive GPL notice for the robot36 port | `LICENSE:665-666` is false as published | S | `17-…` §1 |
