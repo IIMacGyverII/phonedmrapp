@@ -267,6 +267,20 @@ public class DirectDatabaseImporter {
                         showError(context, "Backup folder not found");
                         return;
                     }
+
+                    // Backlog R7: refuse a cross-area restore. The channel table is per area, but the
+                    // module's zones/TG lists/locations/APRS tables are global, so importing area B's
+                    // backup while area A is selected would wipe A's extras (CLAUDE.md §3a).
+                    String selectedArea = OemChannelTable.areaKey(context);
+                    String backupArea = DirectDatabaseExporter.readMetaAreaKey(backupFolder);
+                    Log.i(TAG, "Import area check: backup=" + (backupArea == null ? "(no meta.json)" : backupArea)
+                        + " selected=" + selectedArea);
+                    if (backupArea != null && !backupArea.equals(selectedArea)) {
+                        showError(context, "This backup was exported from area\n" + backupArea.replace("channel_area_", "")
+                            + "\nbut the selected area is\n" + selectedArea.replace("channel_area_", "")
+                            + "\n\nSelect that area in the radio settings, then import again.");
+                        return;
+                    }
                     
                     // **CRITICAL**: Ensure app data directory structure exists BEFORE import
                     // After "Clear Storage", directory structure may be incomplete
