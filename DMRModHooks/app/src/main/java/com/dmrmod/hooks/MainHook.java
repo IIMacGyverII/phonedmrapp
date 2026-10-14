@@ -242,6 +242,48 @@ public class MainHook implements IXposedHookLoadPackage {
     private static Object talkBackFragmentInstance = null;  // Store fragment reference for channel switching
     private static volatile boolean isAutoSwitchingZone = false;  // Flag to bypass zone navigation during automatic zone switch
     private static Button scanButton = null;  // Intercom "SCAN" button (ChannelScanner)
+    private static volatile boolean isTransmitting = false;  // SEND_START .. SEND_STOP
+    private static volatile boolean smeterEnabled = false;   // Live S-meter: poll RSSI while idle (Device-tab toggle, prefs key "smeter")
+    // NOT created here: MainHook.<clinit> runs in the Zygote fork, before the app's main Looper exists
+    // (a Handler in a static initializer made the whole module fail to load on 2026-10-14).
+    private static android.os.Handler smeterHandler = null;
+    private static final Runnable smeterPoll = new Runnable() {
+        @Override
+        public void run() {
+            if (!smeterEnabled) {
+                return;
+            }
+            try {
+                // While receiving the audio hook already polls every 500 ms; while transmitting or
+                // scanning the value is meaningless / the UART is busy with channel writes.
+                if (!isReceiving && !isTransmitting && !ChannelScanner.isScanning()
+                    && appClassLoader != null && rssiDisplayTextView != null) {
+                    querySignalStrength();
+                }
+            } catch (Throwable t) {
+                XposedBridge.log(TAG + ": S-meter poll error: " + t.getMessage());
+            }
+            smeterHandler().postDelayed(this, 1000);
+        }
+    };
+
+    private static android.os.Handler smeterHandler() {
+        if (smeterHandler == null) {
+            smeterHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+        }
+        return smeterHandler;
+    }
+    private static volatile int zonePresetFrom = -1;  // R15: real index before a zone-navigation preset, until ack/NAK
+
+    private static void setSmeterEnabled(boolean on) {
+        smeterEnabled = on;
+        smeterHandler().removeCallbacks(smeterPoll);
+        if (on) {
+            smeterHandler().post(smeterPoll);
+        } else if (!isReceiving) {
+            hideRssiDisplay();
+        }
+    }
     private static final java.util.ArrayDeque<Long> uartReaderRestarts = new java.util.ArrayDeque<>();  // G2 watchdog rate limit
 
     // Current GPS location for distance calculations
@@ -1724,6 +1766,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                 
                                 // Store reference for updates
                                 rssiDisplayTextView = rssiText;
+                                if (smeterEnabled) {
+                                    setSmeterEnabled(true);
+                                }
                                 
                                 // Add RSSI box to container
                                 rssiZoneContainer.addView(rssiBox);
@@ -4445,6 +4490,31 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             });
 
+            // === LIVE S-METER: poll 0x32 RSSI once a second while idle (the MCU answers with the squelch closed) ===
+            final android.widget.ToggleButton smeterToggle = new android.widget.ToggleButton(context);
+            smeterToggle.setTextOn("📶 Live S-meter ON (RSSI polled while idle)");
+            smeterToggle.setTextOff("📶 Live S-meter OFF (RSSI polled while idle)");
+            smeterToggle.setChecked(smeterEnabled);
+            smeterToggle.setTextSize(14);
+            smeterToggle.setAllCaps(false);
+            smeterToggle.setPadding(20, 20, 20, 20);
+            smeterToggle.setLayoutParams(new ViewGroup.LayoutParams(templateParams));
+            smeterToggle.setContentDescription("Toggle live S-meter");
+            smeterToggle.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    boolean on = smeterToggle.isChecked();
+                    try {
+                        activity.getSharedPreferences(DIAG_PREFS, Context.MODE_PRIVATE).edit()
+                                .putBoolean("smeter", on).apply();
+                    } catch (Throwable ignored) { }
+                    setSmeterEnabled(on);
+                    XposedBridge.log(TAG + ": S-meter toggled " + (on ? "ON" : "OFF"));
+                    Toast.makeText(activity, on
+                            ? "Live S-meter ON: the Signal box on the intercom now shows RSSI even with the squelch closed"
+                            : "Live S-meter OFF", Toast.LENGTH_LONG).show();
+                }
+            });
             // Add buttons at specified index
             if (index >= 0) {
                 parentLayout.addView(exportButton, index);
@@ -4456,6 +4526,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 parentLayout.addView(mcuReadbackButton, index + 6);
                 parentLayout.addView(audioProbeButton, index + 7);
                 parentLayout.addView(diagToggle, index + 8);
+                parentLayout.addView(smeterToggle, index + 9);
                 XposedBridge.log(TAG + ": ✓ Export button added at index " + index);
                 XposedBridge.log(TAG + ": ✓ Import button added at index " + (index + 1));
                 XposedBridge.log(TAG + ": ✓ RadioID buttons added at indices " + (index + 2) + "-" + (index + 4));
@@ -4469,6 +4540,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 parentLayout.addView(mcuReadbackButton);
                 parentLayout.addView(audioProbeButton);
                 parentLayout.addView(diagToggle);
+                parentLayout.addView(smeterToggle);
                 XposedBridge.log(TAG + ": ✓ Export, Import, and RadioID buttons added at end of layout");
             }
             
@@ -8817,6 +8889,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     break;
                                     
                                 case 3:  // SEND_START
+                                    isTransmitting = true;
                                     ChannelScanner.stop("PTT");
                                     XposedBridge.log(TAG + ": SEND_START detected");
                                     activityType = "📻 Voice TX";
@@ -8824,6 +8897,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     break;
                                     
                                 case 4:  // SEND_STOP
+                                    isTransmitting = false;
                                     XposedBridge.log(TAG + ": SEND_STOP detected");
                                     // Don't clear activity history - let it persist
                                     break;
@@ -12196,6 +12270,9 @@ public class MainHook implements IXposedHookLoadPackage {
                         try {
                             diagnosticsEnabled = context.getSharedPreferences(DIAG_PREFS, android.content.Context.MODE_PRIVATE)
                                     .getBoolean("enabled", false);
+                            smeterEnabled = context.getSharedPreferences(DIAG_PREFS, android.content.Context.MODE_PRIVATE)
+                                    .getBoolean("smeter", false);
+                            XposedBridge.log(TAG + ": Live S-meter " + (smeterEnabled ? "ON" : "OFF") + " (prefs)");
                         } catch (Throwable ignored) { }
                         XposedBridge.log(TAG + ": Diagnostics (UART log + debug receiver) " + (diagnosticsEnabled ? "ON" : "OFF"));
                         pruneUartLogs(40);  // keep the newest 40 files (20 sessions); the folder had 1,860 on 2026-10-14
@@ -12625,6 +12702,42 @@ public class MainHook implements IXposedHookLoadPackage {
                     }
                 }
             });
+            // InterPhoneTalkBackFragment$2 is the channel-change ack listener (dealEvent / errorEvent).
+            // errorEvent = MSG_SET_CHANNEL_ERROR: the radio refused the SET_*_INFO write.
+            try {
+                Class<?> ackListener = XposedHelpers.findClass(
+                    "com.pri.prizeinterphone.fragment.InterPhoneTalkBackFragment$2", lpparam.classLoader);
+                XposedHelpers.findAndHookMethod(ackListener, "errorEvent", Byte.class, new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        try {
+                            XposedBridge.log(TAG + ": SET_CHANNEL error (cmd 0x" + String.format("%02X", ((Byte) param.args[0]) & 0xFF)
+                                + ") - the radio refused the channel write");
+                            ChannelScanner.onSetChannelError();
+                            int from = zonePresetFrom;
+                            if (from >= 0) {
+                                zonePresetFrom = -1;
+                                Object fragment = XposedHelpers.getObjectField(param.thisObject, "this$0");
+                                XposedHelpers.setIntField(fragment, "mCurrentChannelIndex", from);
+                                XposedBridge.log(TAG + ": R15: zone navigation preset undone, index back to " + from);
+                            }
+                        } catch (Throwable t) {
+                            XposedBridge.log(TAG + ": errorEvent hook error: " + t.getMessage());
+                        }
+                    }
+                });
+                XposedHelpers.findAndHookMethod(ackListener, "dealEvent",
+                    XposedHelpers.findClass("com.pri.prizeinterphone.message.BaseMessage", lpparam.classLoader),
+                    new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            zonePresetFrom = -1;
+                        }
+                    });
+                XposedBridge.log(TAG + ": ✓ SET_CHANNEL ack/error hooks installed (R15)");
+            } catch (Throwable t) {
+                XposedBridge.log(TAG + ": SET_CHANNEL ack/error hooks NOT installed: " + t.getMessage());
+            }
             XposedBridge.log(TAG + ": ✓ Scan support hooks installed");
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": Error installing scan support hooks: " + t.getMessage());
@@ -12721,15 +12834,22 @@ public class MainHook implements IXposedHookLoadPackage {
                                     // Pre-set the index so the original method will land on our target
                                     // Original method does: if(isUp) index++; else index--;
                                     // So we set it to (target - 1) for UP, or (target + 1) for DOWN
-                                    int presetIndex = isUp ? (nextIndex - 1) : (nextIndex + 1);
-                                    
-                                    // Handle wraparound
-                                    if (presetIndex < 0) {
-                                        presetIndex = maxChannelId - 1;
-                                    } else if (presetIndex >= maxChannelId) {
-                                        presetIndex = 0;
+                                    // updateChannelId() clamps instead of wrapping, so a preset of (max-1) going UP, or of 0 going
+                                    // DOWN, used to be a no-op at the zone's ends (R16). Reverse the direction for those two steps.
+                                    int presetIndex;
+                                    if (isUp && nextIndex == 0) {
+                                        param.args[0] = Boolean.FALSE;
+                                        presetIndex = 1;
+                                    } else if (!isUp && nextIndex == maxChannelId - 1) {
+                                        param.args[0] = Boolean.TRUE;
+                                        presetIndex = maxChannelId - 2;
+                                    } else {
+                                        presetIndex = isUp ? (nextIndex - 1) : (nextIndex + 1);
                                     }
-                                    
+
+                                    // R15: if the radio refuses the write, the OEM leaves mCurrentChannelIndex at our preset;
+                                    // the errorEvent hook puts it back to where the radio really is.
+                                    zonePresetFrom = mCurrentChannelIndex;
                                     XposedHelpers.setIntField(fragment, "mCurrentChannelIndex", presetIndex);
                                     
                                     // Let the original method run - it will increment/decrement to nextIndex

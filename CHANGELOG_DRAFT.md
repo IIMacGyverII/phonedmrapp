@@ -3,6 +3,15 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-14 — Batch 7: live S-meter, SET_CHANNEL error hook, zone wrap-around
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **U14** (new) | **Live S-meter.** Device-tab toggle "📶 Live S-meter OFF/ON" (prefs `dmrmod_diagnostics` / `smeter`, default OFF). When ON, the mod polls `0x32` RSSI once a second while idle (not receiving, not transmitting, not scanning) and the intercom's Signal box shows the value even with the squelch closed. | `MainHook` | **device**: on a quiet NOAA channel the box showed `Signal: -105 dBm` (noise floor) with no RECEIVE_START; back on the live channel −86 dBm; toggle persisted and logged |
+| **R15** | **SET_CHANNEL error hook.** `InterPhoneTalkBackFragment$2.errorEvent` (the OEM's channel-change ack listener) is hooked: the refusal is logged with the command byte, the scanner strikes the channel immediately instead of waiting 3 s, and a zone-navigation preset is undone so `mCurrentChannelIndex` goes back to the channel the radio is really on. | `MainHook`, `ChannelScanner` | **device**: three refused channels now cost ~0.15 s each (was 6 s); zone path code-reviewed |
+| **R16** (new) | **Zone wrap-around fixed.** `updateChannelId()` clamps at the list ends, so the zone hook's preset of `max-1` going UP (or 0 going DOWN) was a no-op at the zone's ends. The hook now reverses the direction argument for those two steps, as the scanner does. | `MainHook` | code review (needs a zone whose first/last channel is at a list end to see it) |
+| lesson | A `Handler` created in a **static initializer of `MainHook`** NPE'd in the Zygote fork (`Looper.getMainLooper()` is null there) and LSPosed dropped the whole module — no hooks, no `LSPosed-Bridge` log lines, Device tab bare. Found via `/data/adb/lspd/log/modules_*.log`. The handler is now lazy; rule added to CLAUDE.md §6. | `MainHook`, `CLAUDE.md` | **device**: module loads again |
+
 ## 2026-10-14 — Batch 6: channel scanner, serial-reader watchdog, backup area stamp
 
 | Backlog | Change | Files | Test |

@@ -100,6 +100,17 @@ public final class ChannelScanner {
         lastReceiveStartAt = SystemClock.uptimeMillis();
     }
 
+    /**
+     * Called from the {@code InterPhoneTalkBackFragment$2.errorEvent} hook when the OEM gives up on a
+     * SET_DIGITAL/SET_ANALOG write (MSG_SET_CHANNEL_ERROR). Makes the pending step time out on the
+     * next tick instead of waiting the full {@link #STEP_TIMEOUT_MS}.
+     */
+    public static void onSetChannelError() {
+        if (scanning && pendingTarget >= 0) {
+            stepSentAt = 0;
+        }
+    }
+
     /** @return null when started, otherwise the reason it could not start (already toast-ready). */
     public static synchronized String start(Object talkBackFragment, ClassLoader loader, Env e) {
         if (scanning) {
@@ -231,8 +242,9 @@ public final class ChannelScanner {
                         Integer strikes = stepFailures.get(failed);
                         int n = (strikes == null ? 0 : strikes) + 1;
                         stepFailures.put(failed, n);
-                        XposedBridge.log(TAG + ": Scan step to index " + failed + " not acknowledged in "
-                            + STEP_TIMEOUT_MS + " ms (now at " + idx + "), strike " + n);
+                        XposedBridge.log(TAG + ": Scan step to index " + failed + " failed ("
+                            + (stepSentAt == 0 ? "radio refused the write" : "no ack in " + STEP_TIMEOUT_MS + " ms")
+                            + ", now at " + idx + "), strike " + n);
                         // The OEM only moves mCurrentChannelIndex on a successful ack, so after a NAK the
                         // fragment is still sitting on our preset while the radio never left stepFrom.
                         if (stepFrom >= 0 && idx == stepPreset && idx != stepFrom) {
