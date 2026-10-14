@@ -103,22 +103,26 @@ Same split as Claude 18. Extra: do not treat RAM-load as the only *access* story
 
 ### Phase FW-A — Image identity (no radio)
 
-- [ ] **FW-A0** New Ghidra project from **ORIGINAL.bin** only. Discard `cmd_handler.c` and `arm_disasm.py` output as ground truth.
-- [ ] **FW-A1** Decide core + base: Cortex-M Thumb at candidate bases **or** ARM7TDMI; scan for a run of odd in-range pointers (vector table); constraint-solve `LDR … pc-rel` against known strings (`DMR003.UV4T.V022` @ file `0x38464`, uC/OS task names @ `0x35FE4+` per Claude 18).
-- [ ] **FW-A2** Validate with uC/OS-III signatures (`OSTaskCreate`, TCBs, named tasks).
-- [ ] **FW-A3** Write the answer (base, core, header length if any) into this file and Claude 07. Until then, **no absolute `0x08xxxxxx` patch**.
+Lab notes: [`11-firmware-fw0-results.md`](11-firmware-fw0-results.md). Script: `scripts/fw0_identify_image.py`.
+
+- [x] **FW-A0** Measured ORIGINAL.bin: size, MD5, entropy 6.970, plaintext uC/OS + version, 2-byte PATCH14
+- [x] **FW-A1a** Offset 0 is **not** a Cortex-M vector table (`0xC001112C`, `0x11EC6420`)
+- [x] **FW-A1b** `base+str_off` 32-bit literals for version/RTOS strings: **absent** at `0x08000000` and other round bases. One in-image string pointer: `"encrypt"` @ `0x080365C8`
+- [x] **FW-A1c** Ghidra ARM cannot list this image. See [`11` §9](11-firmware-fw0-results.md).
+- [x] **FW-A2** ISA is **C-SKY V2** (`rts16` ×807, `lrw32` → `rxvoice` @ `+0x3659C`). `0xE468`/`0x10xx` = `subi32`. Micrium uC/OS-III has a C-SKY port — consistent.
+- [x] **FW-A3** C-SKY V2, link base 0 — **confirmed by two real disassemblers** (binutils 2.27 `csky-elfabiv2-objdump` + Ghidra C-SKY module, 1,057 functions). See [`11` §12](11-firmware-fw0-results.md). **No `0x08xxxxxx` ARM patch.**
 
 ### Phase FW-B — Protocol-anchored map (no radio, then optional device)
 
-- [ ] **FW-B1** Find UART framing: `0x68` head + `0x10` tail used together, and the 16-bit one’s-complement checksum loop (distinctive).
-- [ ] **FW-B2** Command dispatch on `cmd`. Name handlers: `0x22` digital, `0x23` analog, `0x2B` digital-audio RX report, `0x30` squelch, `0x3B` TOT, `0x36` status.
+- [x] **FW-B1** Builders `+0x8E80` / `+0x901C`. Checksum **`+0x7D94`** is OEM `pcCheckSum` (BE words, fold, `not16`); wrapper `+0x8E5C` writes `buf[4..5]` BE. Send **`+0x7DE8`** → **`+0x5EF4`** MMIO UART `0x1409xxxx` (poll bit1 @ +124, write @ +0). See [`11` §10](11-firmware-fw0-results.md).
+- [x] **FW-B2** Analog UART path named. Unpack `+0x9A2C` (`sq` at `#10`), ACK `+0x8E7C`, **repack `sq` as-is** at `+0x9C3E`. Apply `+0x7A30` = memcpy `0xB0` (`+0x304E8`) + MMIO `0x1100xxxx`. **No** `cmpnei` of cmd `0x22`/`0x23`. **No** MCU `if (sq) sq=2` on parse/repack/apply (see [`11` §11.5](11-firmware-fw0-results.md)). Clamp is analog-IC or an unlisted veneer — do not RAM-load a parse patch.
 - [ ] **FW-B3** (device, after backlog **R6** gates the injector) Confirm each cmd’s observable effect with `com.dmrmod.SEND_DEBUG_PACKET` **Diagnostics-off-by-default**.
 
 This is the step the 14-patch campaign never did: locate handlers by **bytes the app already sends**, not by `CMP #2` in a bad listing.
 
 ### Phase FW-C — Easy visible change (device, RAM-load)
 
-- [ ] **FW-C1** Trace `sq` from `0x23` body; find clamp-to-2. One-byte or short patch.
+- [~] **FW-C1** UART path does **not** clamp (`+0x9C3E` stores `sq` as-is; 0–9 accepted). Next lab (optional): watch `0x1100xxxx` while sending `sq=0/1/2/3`, or accept IC-side coerce. No MCU byte to NOP yet.
 - [ ] **FW-C2** RAM-load; confirm levels 1 vs 2 vs 3 are distinct **or** prove they aren’t in this build.
 - [ ] **FW-C3** Power-cycle; confirm revert.
 - [ ] **Stop and write the round-trip up.** Do not start group-call until this loop works.

@@ -114,5 +114,12 @@ temp/
 # GitHub Copilot instructions (contains private project details)
 .github/copilot-instructions.md
 
+# Local Ghidra 12 project + headless logs (regenerable; JDK/Ghidra live under %USERPROFILE%\tools)
+radio_firmware/ghidra_project_fw0/
+radio_firmware/ghidra_fw0_headless.log
+radio_firmware/ghidra_fw0_dump.log
+
 # NDK/CMake build cache
 DMRModHooks/app/.cxx/
+radio_firmware/fw1_csky_objdump.txt
+radio_firmware/fw1_csky_objdump.err
