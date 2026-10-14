@@ -3,6 +3,16 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-14 — Batch 9: scan list, import preview, S-meter screen gate, short-recording filter
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **U13** (cont.) | **Scan list.** Long-press SCAN while idle opens a checklist of every channel in the area (`nn  name  (DMR/FM)`); unchecked channels are left out of every scan. Persisted in prefs `dmrmod_scan` / `excluded` (channel `_id`s), loaded at app start; "All" clears it. Long-press while scanning is still the one-session nuisance skip. | `ChannelScanner`, `MainHook` | **device**: unchecked channels 1–2 → prefs hold `1,2`, scan log says `45 other channel(s) in scope … 2 off the scan list`, dialog re-opens with them unchecked, "All" empties the prefs |
+| **R10** | **Import preview.** The "Confirm Import" dialog now says what the backup contains (rows per CSV), which area it came from, and how many channels the selected area holds now; warns when `Channels.csv` has no rows. | `DirectDatabaseImporter` | **device**: `Backup contains: 48 channels, 27 contacts, 5 TG lists, 4 zones, 0 DTMF / Backup area: default_uhf / On the phone now (default_uhf): 48 channels` |
+| **U14** (cont.) | S-meter polling pauses while the screen is off (`PowerManager.isInteractive()`). | `MainHook` | code review |
+| recorder | Captures shorter than 1 s (16 000 bytes of 8 kHz mono) are discarded instead of becoming WAV files — squelch tails and kerchunks. | `MainHook` | code review |
+| note | After an app restart with a carrier already present, `isReceiving` is false until the next RECEIVE_STOP/START, so a scan started right after relaunch may step off a busy channel once before it holds on the next one. Expected; the status pushes are the only source of truth. | — | device observation |
+
 ## 2026-10-14 — Batch 8: hook self-test, CSV quoting, hex keys, refused-channel warning
 
 | Backlog | Change | Files | Test |
