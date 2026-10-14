@@ -133,3 +133,6 @@ DMRModHooks/*.csv
 DMRModHooks/*.pdf
 DMRModHooks/*.pcm
 OpenGD77Fork/*.apk
+
+# Python bytecode from the helper scripts
+scripts/__pycache__/

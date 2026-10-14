@@ -404,6 +404,12 @@ public class DirectDatabaseImporter {
                     } catch (Throwable t) {
                         Log.e(TAG, "⚠ Pre-import auto-backup threw: " + t.getMessage());
                     }
+                    if (!autoBackupOk) {
+                        // 2026-10-14: an import without a recoverable snapshot is not worth the risk.
+                        showError(context, "Import aborted: the automatic backup of the current codeplug failed.\n"
+                            + "Run EXPORT on the Device tab to see the error, then try again.");
+                        return;
+                    }
 
                     // Step 1: Import contacts FIRST so channels can resolve contact names
                     File contactsFile = new File(backupFolder, "Contacts.csv");
