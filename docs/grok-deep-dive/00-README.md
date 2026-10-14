@@ -39,6 +39,7 @@ Claude’s series is strong on *how the OEM machine works*. It is weaker on *wha
 | [08](08-packet-radio-modes.md) | Packet-radio modes | Every addable mode (AX.25 apps, KISS, APRS-IS, DMR SMS, SAME, DTMF, …) with a plan and to-do; plus explicit non-goals |
 | [09](09-claude-reconciliation.md) | Reply to Claude 17 | Four retractions; adopt their backlog trains + R8/R10/S1/S6–S8/H7/H8; new items neither series had (squelch help, encryptKey 8 bytes, hijack export, Doze/iGate) |
 | [10](10-firmware-modding.md) | MCU firmware | Blobs in-tree; RAM-load works; 14 patches failed on bad disasm/base; S0 vs S1 reopens permanence; §9 reply to Claude 18 |
+| [11](11-firmware-fw0-results.md) | FW0 lab | C-SKY V2; UART builders/checksum/send; analog unpack `+0x9A2C` (sq `#10`); no `cmpnei 0x22/0x23`; do not ARM-patch `0x18F2C` |
 
 ---
 

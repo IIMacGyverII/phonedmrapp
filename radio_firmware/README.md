@@ -9,7 +9,7 @@ This folder contains the DMR radio module firmware for the Ulefone PriInterPhone
 
 - **Version**: DMR003.UV4T.V022
 - **MD5**: `4426035392262CA54583C230C9E268E0`
-- **Architecture**: ARM, Thumb/Thumb-2
+- **Architecture**: **C-SKY V2** (T-HEAD CK80x-class), 16/32-bit mixed — not ARM. Settled 2026-10-14 with `csky-elfabiv2-objdump` and the Ghidra C-SKY module (see `docs/grok-deep-dive/11-firmware-fw0-results.md` §12). Link base 0.
 - **Base Address**: `0x08000000` — **assumed, NOT verified.** The first two words don't parse as a Cortex-M `(SP, reset)` pair at that base; the load base/core must be re-established before trusting any absolute address. See `docs/deep-dive/07-firmware-update-and-mcu.md` §4.2 and `18-firmware-modding-plan.md` §5.1.
 - **RTOS**: uC/OS-III (Micrium) — confirmed in-binary (plaintext task strings)
 - **Encryption**: none (RTOS + version strings are plaintext); entropy ≈ 6.97 bits/byte

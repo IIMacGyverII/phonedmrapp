@@ -143,8 +143,8 @@ Two other on-device facts worth having before any flash attempt:
 
 | # | Item | Effort | Device | Depends |
 |---|---|---|---|---|
-| **FW0** | Re-import into Ghidra; **determine the true base address and core** by constraint-solving against the known plaintext strings and pointer tables; validate with uC/OS-III signatures. Document the answer (settles the ch. 07 doc-drift). | M | no | — |
-| **FW1** | **Protocol anchor:** find the checksum routine + `0x68/0x10` framing + the `cmd`-byte dispatch; name the handlers for `0x22/0x23/0x2B/0x30/0x3B`. Produce a real command→function map (replaces `cmd_handler.c`). | M | no | FW0 |
+| **FW0** ✅ | **Done 2026-08-27 / 2026-10-14.** Core is **C-SKY V2** (not ARM), link base **0**. Confirmed with `csky-elfabiv2-objdump` and the Ghidra C-SKY module (1,057 functions, 83k instructions). `docs/grok-deep-dive/11-firmware-fw0-results.md` §9, §12. | M | no | — |
+| **FW1** ◐ | **Protocol anchor:** checksum `+0x7D94`, send `+0x7DE8`, RX waiter `+0x7C48`, analog unpack `+0x9A2C` named and verified in a real listing (`11` §10–12). Still open: the 0x22 digital unpack, `0x2B/0x30/0x3B` handlers, and the ~25 call targets that lie **outside the image** (`11` §12). Tooling: `scripts/fw1_ghidra_csky.ps1`. | M | no | FW0 |
 | **FW2** | **Dynamic ground truth:** via the (gated) debug-packet path, map each command byte's observable effect on the MCU; correlate with FW1. | S | yes | FW1, R6 |
 | **FW3** | **Easy win first:** locate the squelch clamp (levels→2) *or* a tone table; make a one-byte change; RAM-load; observe; power-cycle restore. Prove the full loop. | M | yes | FW1–2 |
 | **FW4** | Locate the frequency/band-limit validation (document only unless the operator authorises TX-band changes for their own allocation — §7). | M | no | FW1 |

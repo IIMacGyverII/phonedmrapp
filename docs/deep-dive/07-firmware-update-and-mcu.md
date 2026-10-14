@@ -323,7 +323,7 @@ Evidence:
 | Version string | `DMR003.UV4T.V022` | `Constants.java:22`, `README.md:10` |
 | Size | 378,620 bytes | asset + `README.md:8` |
 | MD5 (factory) | `4426035392262CA54583C230C9E268E0` | `README.md:11`, verified against asset |
-| Architecture | ARM, Thumb/Thumb-2 | disassembly + docs |
+| Architecture | **C-SKY V2** (CK80x-class), link base 0 — **not** ARM; every ARM/Thumb listing before 2026-08-27 was mis-decoded | `docs/grok-deep-dive/11-firmware-fw0-results.md` §9, §12 (objdump + Ghidra C-SKY module, 2026-10-14) |
 | Base address | `0x08000000` **assumed, not verified** — see §4.2 | `README.md:13` (from docs) |
 | RTOS | uC/OS-III (Micrium) | **re-confirmed in the binary** (plaintext task strings, §4.2) |
 | Tasks | `timer10ms`, `task init`, `cpchanscan` + uC/OS-III system tasks (`Idle`, `ISR Queue`, `Tick`, `Stat`, `Timer`) | `FIRMWARE_ANALYSIS_SUMMARY.md:16-28`; system tasks re-confirmed in-binary |
