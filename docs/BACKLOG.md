@@ -145,7 +145,7 @@ Full plan: `deep-dive/18-firmware-modding-plan.md`. The flash-and-test loop is s
 | **FW0** | Re-import into Ghidra; determine the **true base address and core** by constraint-solving against the plaintext strings + pointer tables; validate with uC/OS-III signatures | M | no | `18-…` §5.1 |
 | **FW1** | Protocol anchor: find checksum + `0x68/0x10` framing + the `cmd`-byte dispatch; map `0x22/0x23/0x2B/0x30/0x3B` handlers (replaces the useless `cmd_handler.c`) | M | no | `18-…` §5.2 |
 | **FW2** | Dynamic ground truth via the (gated) debug-packet path: map each command byte's observable MCU effect | S | yes | `18-…` §5.4 |
-| **FW3** | Easy win first (squelch clamp or a tone table): one-byte change → RAM-load → observe → power-cycle restore. Proves the loop. | M | yes | `18-…` §5.3 |
+| **FW3** ◐ | Easy win first: one-byte change → RAM-load → observe → power-cycle restore. **Target found 2026-10-14: CTCSS tone table at `+0x366B2`** (50 × LE16 centihertz; `scripts/fw1_ctcss_table.py`, `grok-deep-dive/11-…` §18). Edit one tone, confirm the decode shifts, power-cycle restore. Needs a device + a tone source. | M | yes | `grok-deep-dive/11-…` §18 |
 | **FW4** | Locate band/frequency-limit validation (**document only** unless the operator authorises TX-band changes for their own allocation — legal note §7) | M | no | `18-…` §7 |
 | **FW5** | Group-call RX: anchor at the `0x2B` reporter, walk back to the RX-frame TG extraction; "constraint confirmed" is a valid outcome | L | yes | `18-…` §5.3 |
 | **FW6** | Revive `PatchReloadHelper` as an opt-in firmware-dev control in Diagnostics; **stop bundling `PATCH14.bin`** (it does nothing); never auto-load a `DMRDEBUG.bin` | S | yes | `18-…` §6, R6/S7 |

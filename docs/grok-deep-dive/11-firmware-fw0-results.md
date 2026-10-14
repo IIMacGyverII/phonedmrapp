@@ -769,3 +769,52 @@ Interleaved 30 s windows over `sq` 1, 2, 5, 9, 3, 7 (two cycles, then 2 restored
 **Two operational facts from the sweeps**
 - Reprogramming the analog channel costs ≈ 0.6 s of receive (`STOP` → `START`), which bounds any stepped-scan design to roughly one channel per second with audio, or faster if it relies on `0x32` RSSI alone (readable while closed, §17).
 - The on-air threshold of levels 1–9 sits around the −90 dBm region on this radio; `0x32` RSSI (`dBm = −(120 − raw/2)`) tracks the signal smoothly across it, so the software squelch's RSSI gate is the right tool for anything finer than open/closed.
+
+---
+
+## 18. FW1 — the CTCSS tone table (2026-10-14)
+
+First data table in the image that maps to a user-visible radio function. Found by scanning
+`ORIGINAL.bin` for an ascending 16-bit run matching the standard EIA CTCSS list; reproducible with
+`scripts/fw1_ctcss_table.py`.
+
+| Property | Value |
+|---|---|
+| File offset | **`0x0366B2`** (link base 0) |
+| Entries | 50 |
+| Width / endian | 16-bit little-endian |
+| Units | **centihertz** (0.01 Hz): `6700` = 67.00 Hz … `25410` = 254.10 Hz |
+| Match to EIA standard | 49/50 exact; index 32 holds `17740` (177.40 Hz) where the catalogue lists 177.3 — a known variant, not an error |
+
+The entry immediately before the table (`0x0366B0` = `6250` = 62.5 Hz) and the words before it belong
+to the preceding coefficient block; the table proper is the 50 contiguous words from `0x0366B2`. The
+analog-unpack tone-index bound of `#0x32` (§11.4, §11.5) is exactly this table's length (50), so the
+UART `rxType`/`txType` index selects an entry here. No DCS code table was found in this image in the
+obvious decimal-octal encoding; DCS is likely Golay-encoded at runtime or lives in the resident region
+(§13.3).
+
+### 18.1 Why this is the right toolchain-validation target
+
+This is the clean "prove the edit → RAM-load → observe → power-cycle-restore loop" change the plan has
+been missing (§11.5 killed the squelch-clamp idea; the band bound in FW4 is TX-side and gated behind the
+operator's own authorisation, §18-plan §7). CTCSS is a sub-audible squelch tone used on normal
+amateur/PMR operation; changing a table entry alters only which tone the radio encodes/decodes, with no
+bearing on transmit frequency or band limits.
+
+Validation recipe (same safe loop as ch. 07 §6, no new technique):
+
+1. Copy `DMR003.UV4T.V022-ORIGINAL.bin`; change one entry — e.g. index 0 from `6700` (67.0 Hz) to a
+   distinct nearby value such as `6760` (67.6 Hz) — keeping the file at 378,620 bytes.
+2. RAM-load it via the existing `DMRDEBUG.bin` path (ch. 07 §6).
+3. Set an analog channel's CTCSS to index 0 (67.0 Hz in the editor) and transmit a 67.0 Hz tone into
+   the receiver (or decode a known 67.0 Hz source): a shifted table entry should mis-decode, and a
+   source at the new 67.6 Hz value should open it — a clean observable.
+4. Power-cycle → factory table restored.
+
+A single confirmed round-trip here de-risks every later firmware experiment. Logged as backlog **FW3**.
+
+### 18.2 Named site
+
+| Offset | Role |
+|---|---|
+| `+0x366B2` | CTCSS tone table, 50 × LE16 centihertz (67.00–254.10 Hz) |
