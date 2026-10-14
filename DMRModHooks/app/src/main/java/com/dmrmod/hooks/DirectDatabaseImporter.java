@@ -311,6 +311,16 @@ public class DirectDatabaseImporter {
                         Log.e(TAG, "Error checking directory structure: " + dirCheck.getMessage());
                     }
                     
+                    // Step 0 (backlog R8): the import is wipe-and-insert, so snapshot the current codeplug
+                    // first. A failed or wrong-area import is then recoverable from DMR_Backups/.
+                    boolean autoBackupOk = false;
+                    try {
+                        autoBackupOk = DirectDatabaseExporter.exportFromAppContext(context);
+                        Log.i(TAG, autoBackupOk ? "✓ Pre-import auto-backup written" : "⚠ Pre-import auto-backup FAILED");
+                    } catch (Throwable t) {
+                        Log.e(TAG, "⚠ Pre-import auto-backup threw: " + t.getMessage());
+                    }
+
                     // Step 1: Import contacts FIRST so channels can resolve contact names
                     File contactsFile = new File(backupFolder, "Contacts.csv");
                     boolean contactsOk = importContacts(context, contactsFile);
@@ -331,7 +341,7 @@ public class DirectDatabaseImporter {
                     final String message;
                     final boolean shouldRefresh;
                     if (channelsOk && contactsOk && zonesOk) {
-                        message = "✓ Import successful!\nChannels, contacts, zones" +
+                        message = (autoBackupOk ? "(previous codeplug saved to DMR_Backups first)\n" : "") + "✓ Import successful!\nChannels, contacts, zones" +
                             (tgListsOk ? ", TG lists" : "") + " imported.\n\n⚠️ RESTART APP for changes to take effect";
                         shouldRefresh = true;
                     } else if (channelsOk && contactsOk) {
@@ -429,6 +439,9 @@ public class DirectDatabaseImporter {
             // Read CSV file first to parse all data
             reader = new BufferedReader(new FileReader(csvFile));
             String headerLine = reader.readLine();
+            if (headerLine != null && headerLine.length() > 0 && headerLine.charAt(0) == 0xFEFF) {
+                headerLine = headerLine.substring(1);  // UTF-8 BOM (Pitfall 16 / backlog R4): used to make every row unparseable
+            }
             
             // Detect if CSV has _id column (Android export format)
             // Android export includes EXTRA fields: Rx Only, Zone Skip, All Skip, TOT, VOX, No Beep, No Eco (fields 18-24)
@@ -1064,6 +1077,13 @@ public class DirectDatabaseImporter {
                 }
             }
             
+            // Backlog R4: never commit an empty channel table. A header-only or unparseable file used to
+            // wipe the codeplug and report success.
+            if (importCount == 0) {
+                Log.e(TAG, "❌ No channels parsed from " + csvFile.getName() + " - rolling back, codeplug unchanged");
+                throw new IllegalStateException("No channels parsed from Channels.csv - import rolled back");
+            }
+
             // Mark transaction as successful
             db.setTransactionSuccessful();
             channelsCommitted = true;

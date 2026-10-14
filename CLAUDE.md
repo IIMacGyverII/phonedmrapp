@@ -41,7 +41,7 @@ Always grep before relying on: DB column names, `ChannelData` field names, hook 
 |-------|---------|
 | RX audio | Does **not** cross the UART; arrives via `android.os.PrizeTinyService`. OEM `AudioTrack` = **8 kHz stereo 16-bit** (32 kB/s, 2048 B / 64 ms chunks). **Measured 2026-10-14: L == R for 100 % of samples** (`docs/grok-deep-dive/11-…` §16), so the content is **8 kHz mono duplicated**. Module DSP still treats the buffer as 16 kHz mono — 2× redundant. New DSP: take every other sample and work at 8 kHz; TX frames must be stereo-duplicated. |
 | Module DBs | All `dmrmod_*.db` live in `/data/data/com.pri.prizeinterphone/databases/` (module runs in the OEM process) |
-| `channel_band` | Bandwidth (0 narrow / 1 wide), **not** UHF/VHF. **`MainHook.determineBand(freq)` still returns UHF/VHF (0/1) and is written into `band` by SSTV/NOAA/VFO — a live bug (backlog R1). Never reuse it; set `band` from an explicit narrow/wide choice.** |
+| `channel_band` | Bandwidth (0 narrow / 1 wide), **not** UHF/VHF. `determineBand()` was deleted 2026-10-14 (backlog R1): SSTV writes narrow, NOAA wide, VFO has a Narrow/Wide selector. Always set `band` from an explicit narrow/wide choice. |
 | Module side-tables vs areas | `OemChannelTable` made channel export/import follow the selected **area**, but `dmrmod_zones/tglists/locations/aprs` are still one file for all areas: importing area B clears area A's extras and equal integer keys collide (backlog R7/H8). Until fixed, only import into the area the backup came from |
 | `channel_encryptSw` | 1 = on, **2 = off** |
 | `channel_interrupt` | OEM default 2 for all types; "0 for analog" is a module convention |
@@ -49,7 +49,7 @@ Always grep before relying on: DB column names, `ChannelData` field names, hook 
 | Import | `DirectDatabaseImporter` is wipe-and-insert, not upsert |
 | Backups / recordings / key | `Download/DMR/DMR_Backups/`, `Download/DMR/Audio/<Channel>/`, `Download/DMR/api_key.txt` |
 | OEM class names | `InterPhoneHomeActivity` (root pkg), `fragment.InterPhoneTalkBackFragment`, `handler.ModuleStatusMessageHandler`, `protocol.Packet`, `serial.MessageDispatcher` — there is no `MainActivity`/`TalkBackFragment` |
-| Hook locations | `sq=0` forcing + 300 ms re-enable: `hookChannelNavigation`; VFO `localId` override: `BaseMessage.send()` hook (~`MainHook.java:10799`) |
+| Hook locations | `sq=0` forcing + 300 ms re-enable + ack re-apply: `hookChannelNavigation`; VFO `localId` override: `BaseMessage.send()` hook; Device-tab tools: `McuDiagnostics` + `addButtonToLayout`; diagnostics gate: `diagnosticsEnabled` (prefs `dmrmod_diagnostics`, default OFF — turn it on in the Device tab before using `SEND_DEBUG_PACKET` or expecting `uart_logs`) |
 | `syncChannelInfoWithData` | **Is** the OEM hardware-write path (`CmdStateMachine` transaction) |
 
 ## 4. Deploy workflow (mandatory for AI agents)
@@ -84,7 +84,7 @@ cd DMRModHooks
 |---------|------|
 | **12 — txContact** | `channel_txContact` stores **24-bit DMR ID** (`contact_number`), NOT contact row `_id` |
 | **15 — localId** | Device DMR ID is on `DmrManager` / outgoing `DigitalMessage` (body offset 8), NOT `ChannelData`; VFO override lives in the `BaseMessage.send()` hook |
-| **13 — squelch race** | 300 ms re-apply can be eaten by the in-flight `SetChannelState` ack (acks matched by cmd byte only) — re-apply on `dealEvent(0x23)` instead |
+| **13 — squelch race** | 300 ms re-apply can be eaten by the in-flight `SetChannelState` ack (acks matched by cmd byte only). Since 2026-10-14 the mod also re-applies `sq=0` from an `AnalogMessageHandler.handle` after-hook whenever an analog ack arrives for a write whose `sq` was not 0 (`lastSentAnalogSq`), with the timer kept as fallback |
 | **8 — squelch** | Use `AnalogMessage.send()` with `sq=0`/`sq=2`; don't rely on `syncChannelInfoWithData` for hardware |
 | **10 — APRS squelch** | APRS mode overwrites `softwareSquelchThreshold` |
 | **11 — relay field** | OpenGD77 exports `relay=0`; Android firmware rejects 0 → importer coerces `0→2` |
