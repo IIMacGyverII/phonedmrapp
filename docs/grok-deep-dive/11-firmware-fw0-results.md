@@ -750,3 +750,22 @@ Pass 2 (interleaved 30 s windows, RSSI polled):
 - Useful side-finding: **`0x32` RSSI answers while the hardware squelch is closed** (14 replies per 30 s window, all non-zero, with no `RECEIVE_START`). So the RSSI figure is available even when no audio flows — the software-squelch slider could show it continuously, and a scan feature can use it without opening the squelch.
 
 **Mod defect found while setting this up (backlog S22):** `disableSoftwareSquelchOnCurrentChannel()` (`MainHook.java` ≈ 4852) re-sends the channel with **hard-coded `sq=2`** when Soft SQ is switched off, instead of the channel's configured level (the NOAA channel is set to 5 in the editor; the MCU held 2). Harmless as long as 2–9 behave alike; wrong the moment they don't.
+
+### 17.1 Pass 3 — same channel, radio repositioned to ≈ −81 dBm (steady receive)
+
+Interleaved 30 s windows over `sq` 1, 2, 5, 9, 3, 7 (two cycles, then 2 restored). Every rewrite produced the same signature: `RECEIVE_STOP` then `RECEIVE_START` ≈ 0.6 s after the `0x23` write, then receive for the rest of the window.
+
+| sq | windows | rx seconds / 30 (each) | mean RSSI |
+|---|---|---|---|
+| 1 | 2 | 29, 29 | −81.3 / −80.5 dBm |
+| 2 | 3 | 29, 29, 29 | −80.7 / −80.5 / −80.5 |
+| 3 | 2 | 29, 29 | −80.9 / −81.0 |
+| 5 | 2 | 29, 29 | −80.8 / −80.8 |
+| 7 | 2 | 29, 29 | −80.7 / −81.0 |
+| 9 | 2 | 29, 29 | −80.6 / −80.9 |
+
+**Conclusion across §17 and §17.1.** At −94 dBm every level 1–9 holds the receiver closed; at −81 dBm every level 1–9 opens it within 0.6 s and keeps it open. No level behaved differently from any other at either signal strength, over 26 windows. So within what can be observed, **levels 1–9 are one threshold somewhere between −94 and −81 dBm, and `sq=0` is "always open"** — the 2026-03 behavioural finding stands, now with numbers, and it matches the firmware walk (the MCU stores the byte but no per-level processing was found; §11.5, §15). The only residual is a signal inside that 13 dB window; given identical behaviour at both edges and the absence of level logic in the image, it is not worth more bench time unless a spot at ≈ −88 dBm turns up by accident.
+
+**Two operational facts from the sweeps**
+- Reprogramming the analog channel costs ≈ 0.6 s of receive (`STOP` → `START`), which bounds any stepped-scan design to roughly one channel per second with audio, or faster if it relies on `0x32` RSSI alone (readable while closed, §17).
+- The on-air threshold of levels 1–9 sits around the −90 dBm region on this radio; `0x32` RSSI (`dBm = −(120 − raw/2)`) tracks the signal smoothly across it, so the software squelch's RSSI gate is the right tool for anything finer than open/closed.
