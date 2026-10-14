@@ -220,7 +220,7 @@ public class DirectDatabaseImporter {
                                     new AlertDialog.Builder(context)
                                         .setTitle("Confirm Import")
                                         .setMessage("This will REPLACE all current channels and contacts with data from:\n\n" 
-                                            + displayName + "\n\nContinue?")
+                                            + displayName + "\n\n" + buildImportPreview(context, selectedFolder) + "\nContinue?")   // R10 preview
                                         .setPositiveButton("Import", new android.content.DialogInterface.OnClickListener() {
                                             @Override
                                             public void onClick(android.content.DialogInterface dialog, int which) {
@@ -247,6 +247,76 @@ public class DirectDatabaseImporter {
         }).start();
     }
     
+
+    /** R10: one-paragraph preview for the confirm dialog - CSV row counts, backup area, current channel count. */
+    static String buildImportPreview(Context context, String folderName) {
+        try {
+            File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            File folder = new File(new File(downloadDir, "DMR/DMR_Backups"), folderName);
+            String[] files = {"Channels.csv", "Contacts.csv", "TG_Lists.csv", "Zones.csv", "DTMF.csv"};
+            String[] labels = {"channels", "contacts", "TG lists", "zones", "DTMF"};
+            StringBuilder sb = new StringBuilder("Backup contains: ");
+            int channelRows = -1;
+            for (int i = 0; i < files.length; i++) {
+                int rows = countCsvRows(new File(folder, files[i]));
+                if (i == 0) channelRows = rows;
+                if (i > 0) sb.append(", ");
+                sb.append(rows < 0 ? "no " + labels[i] + " file" : rows + " " + labels[i]);
+            }
+            String area = DirectDatabaseExporter.readMetaAreaKey(folder);
+            sb.append("\nBackup area: ").append(area == null ? "unknown (older backup)" : area.replace("channel_area_", ""));
+            int current = currentChannelCount(context);
+            sb.append("\nOn the phone now (").append(OemChannelTable.areaKey(context).replace("channel_area_", "")).append("): ")
+              .append(current < 0 ? "?" : String.valueOf(current)).append(" channels");
+            if (channelRows == 0) {
+                sb.append("\n\n! Channels.csv has no rows - the import will be refused.");
+            }
+            sb.append("\n");
+            return sb.toString();
+        } catch (Throwable t) {
+            Log.w(TAG, "preview failed: " + t.getMessage());
+            return "";
+        }
+    }
+
+    /** Data rows in a CSV file (lines minus the header), or -1 when the file is missing. */
+    static int countCsvRows(File csv) {
+        if (csv == null || !csv.exists()) {
+            return -1;
+        }
+        BufferedReader reader = null;
+        try {
+            reader = new BufferedReader(new FileReader(csv));
+            int lines = 0;
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (!line.trim().isEmpty()) lines++;
+            }
+            return Math.max(0, lines - 1);
+        } catch (Exception e) {
+            return -1;
+        } finally {
+            try { if (reader != null) reader.close(); } catch (Exception ignored) { }
+        }
+    }
+
+    static int currentChannelCount(Context context) {
+        SQLiteDatabase db = null;
+        Cursor c = null;
+        try {
+            File dbFile = context.getDatabasePath(OemChannelTable.dbFileName(context));
+            if (!dbFile.exists()) return -1;
+            db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READONLY);
+            c = db.rawQuery("SELECT COUNT(*) FROM " + OemChannelTable.tableName(context), null);
+            return c.moveToFirst() ? c.getInt(0) : -1;
+        } catch (Exception e) {
+            return -1;
+        } finally {
+            try { if (c != null) c.close(); } catch (Exception ignored) { }
+            try { if (db != null) db.close(); } catch (Exception ignored) { }
+        }
+    }
+
     /**
      * Perform the actual import in background thread
      */

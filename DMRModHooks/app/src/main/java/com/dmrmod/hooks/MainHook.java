@@ -243,6 +243,8 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile boolean isAutoSwitchingZone = false;  // Flag to bypass zone navigation during automatic zone switch
     private static Button scanButton = null;  // Intercom "SCAN" button (ChannelScanner)
     private static volatile int hookInstallFailures = 0;  // S8: bumped by every hook-installer catch block
+    private static final String SCAN_PREFS = "dmrmod_scan";  // "excluded": StringSet of channel _ids left out of the scan
+    private static final long MIN_RECORDING_BYTES = 16000;   // 1 s of 8 kHz 16-bit mono; shorter captures are squelch tails
     private static volatile boolean isTransmitting = false;  // SEND_START .. SEND_STOP
     private static volatile boolean smeterEnabled = false;   // Live S-meter: poll RSSI while idle (Device-tab toggle, prefs key "smeter")
     // NOT created here: MainHook.<clinit> runs in the Zygote fork, before the app's main Looper exists
@@ -259,7 +261,11 @@ public class MainHook implements IXposedHookLoadPackage {
                 // scanning the value is meaningless / the UART is busy with channel writes.
                 if (!isReceiving && !isTransmitting && !ChannelScanner.isScanning()
                     && appClassLoader != null && rssiDisplayTextView != null) {
-                    querySignalStrength();
+                    android.os.PowerManager pm = (android.os.PowerManager)
+                        rssiDisplayTextView.getContext().getSystemService(Context.POWER_SERVICE);
+                    if (pm == null || pm.isInteractive()) {   // nobody is looking while the screen is off
+                        querySignalStrength();
+                    }
                 }
             } catch (Throwable t) {
                 XposedBridge.log(TAG + ": S-meter poll error: " + t.getMessage());
@@ -275,6 +281,86 @@ public class MainHook implements IXposedHookLoadPackage {
         return smeterHandler;
     }
     private static volatile int zonePresetFrom = -1;  // R15: real index before a zone-navigation preset, until ack/NAK
+
+    /**
+     * Scan list editor (long-press SCAN while idle): every channel of the current area with a
+     * checkbox; unchecked channels are skipped by the scanner. Persisted in prefs "dmrmod_scan".
+     */
+    private static void showScanListDialog(final Context context) {
+        try {
+            Object fragment = talkBackFragmentInstance;
+            if (fragment == null) {
+                Toast.makeText(context, "Intercom not ready", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            @SuppressWarnings("unchecked")
+            final java.util.List<Object> channels = (java.util.List<Object>) XposedHelpers.getObjectField(fragment, "channels");
+            if (channels == null || channels.isEmpty()) {
+                Toast.makeText(context, "No channels", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            final int n = channels.size();
+            final int[] ids = new int[n];
+            final String[] labels = new String[n];
+            final boolean[] checked = new boolean[n];
+            java.util.Set<Integer> excluded = ChannelScanner.getExcluded();
+            for (int i = 0; i < n; i++) {
+                Object ch = channels.get(i);
+                ids[i] = XposedHelpers.getIntField(ch, "_id");
+                int number = XposedHelpers.getIntField(ch, "number");
+                String name = String.valueOf(XposedHelpers.getObjectField(ch, "name"));
+                int type = XposedHelpers.getIntField(ch, "type");
+                labels[i] = String.format(java.util.Locale.US, "%2d  %s  %s", number >= 100 ? number % 100 : number, name, type == 0 ? "(DMR)" : "(FM)");
+                checked[i] = !excluded.contains(ids[i]);
+            }
+            AlertDialog.Builder b = new AlertDialog.Builder(context);
+            b.setTitle("Scan list (checked = scanned)");
+            b.setMultiChoiceItems(labels, checked, new DialogInterface.OnMultiChoiceClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which, boolean isChecked) {
+                    checked[which] = isChecked;
+                }
+            });
+            b.setPositiveButton("Save", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    try {
+                        java.util.Set<Integer> ex = new java.util.HashSet<>();
+                        java.util.Set<String> exStr = new java.util.HashSet<>();
+                        for (int i = 0; i < n; i++) {
+                            if (!checked[i]) {
+                                ex.add(ids[i]);
+                                exStr.add(String.valueOf(ids[i]));
+                            }
+                        }
+                        ChannelScanner.setExcluded(ex);
+                        context.getSharedPreferences(SCAN_PREFS, Context.MODE_PRIVATE).edit().putStringSet("excluded", exStr).apply();
+                        XposedBridge.log(TAG + ": Scan list saved: " + ex.size() + " of " + n + " channels excluded");
+                        Toast.makeText(context, "Scan list: " + (n - ex.size()) + " of " + n + " channels scanned", Toast.LENGTH_SHORT).show();
+                    } catch (Throwable t) {
+                        XposedBridge.log(TAG + ": Scan list save failed: " + t.getMessage());
+                    }
+                }
+            });
+            b.setNeutralButton("All", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    try {
+                        ChannelScanner.setExcluded(null);
+                        context.getSharedPreferences(SCAN_PREFS, Context.MODE_PRIVATE).edit().remove("excluded").apply();
+                        XposedBridge.log(TAG + ": Scan list cleared: all " + n + " channels scanned");
+                        Toast.makeText(context, "Scan list: all " + n + " channels scanned", Toast.LENGTH_SHORT).show();
+                    } catch (Throwable t) {
+                        XposedBridge.log(TAG + ": Scan list clear failed: " + t.getMessage());
+                    }
+                }
+            });
+            b.setNegativeButton("Cancel", null);
+            b.show();
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Scan list dialog error: " + t.getMessage());
+        }
+    }
 
     private static void setSmeterEnabled(boolean on) {
         smeterEnabled = on;
@@ -1879,6 +1965,10 @@ public class MainHook implements IXposedHookLoadPackage {
                                     @Override
                                     public boolean onLongClick(View v) {
                                         try {
+                                            if (!ChannelScanner.isScanning()) {
+                                                showScanListDialog(context);   // idle: edit the persistent scan list
+                                                return true;
+                                            }
                                             Toast.makeText(context, ChannelScanner.skipCurrent(), Toast.LENGTH_SHORT).show();
                                         } catch (Throwable t) {
                                             XposedBridge.log(TAG + ": Scan skip error: " + t.getMessage());
@@ -10079,7 +10169,11 @@ public class MainHook implements IXposedHookLoadPackage {
             
             // Convert PCM to WAV (add headers)
             java.io.File pcmFile = new java.io.File(currentRecordingPath);
-            if (pcmFile.exists() && pcmDataSize > 0) {
+            if (pcmFile.exists() && pcmDataSize > 0 && pcmDataSize < MIN_RECORDING_BYTES) {
+                // Squelch tails and kerchunks: not worth a file (2026-10-14)
+                XposedBridge.log(TAG + ": Discarded recording shorter than 1 s (" + pcmDataSize + " bytes)");
+                pcmFile.delete();
+            } else if (pcmFile.exists() && pcmDataSize > 0) {
                 // Create WAV filename
                 String wavPath = currentRecordingPath.replace(".pcm", ".wav");
                 java.io.File wavFile = new java.io.File(wavPath);
@@ -12298,6 +12392,20 @@ public class MainHook implements IXposedHookLoadPackage {
                             smeterEnabled = context.getSharedPreferences(DIAG_PREFS, android.content.Context.MODE_PRIVATE)
                                     .getBoolean("smeter", false);
                             XposedBridge.log(TAG + ": Live S-meter " + (smeterEnabled ? "ON" : "OFF") + " (prefs)");
+                            try {
+                                java.util.Set<String> ex = context.getSharedPreferences(SCAN_PREFS, android.content.Context.MODE_PRIVATE)
+                                        .getStringSet("excluded", null);
+                                java.util.Set<Integer> ids = new java.util.HashSet<>();
+                                if (ex != null) {
+                                    for (String one : ex) {
+                                        try { ids.add(Integer.parseInt(one)); } catch (NumberFormatException ignored) { }
+                                    }
+                                }
+                                ChannelScanner.setExcluded(ids);
+                                XposedBridge.log(TAG + ": Scan list: " + ids.size() + " channel(s) excluded (prefs)");
+                            } catch (Throwable t) {
+                                XposedBridge.log(TAG + ": Scan list prefs load failed: " + t.getMessage());
+                            }
                         } catch (Throwable ignored) { }
                         XposedBridge.log(TAG + ": Diagnostics (UART log + debug receiver) " + (diagnosticsEnabled ? "ON" : "OFF"));
                         pruneUartLogs(40);  // keep the newest 40 files (20 sessions); the folder had 1,860 on 2026-10-14

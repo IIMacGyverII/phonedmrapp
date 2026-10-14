@@ -78,6 +78,8 @@ public final class ChannelScanner {
     /** uptimeMillis of the last RECEIVE_START push (set from MainHook's status hook). */
     private static volatile long lastReceiveStartAt = 0;
     private static final Set<Integer> skippedIds = new HashSet<>();
+    /** Channels the user removed from the scan list (persisted by MainHook in prefs "dmrmod_scan"). */
+    private static final Set<Integer> excludedIds = new HashSet<>();
     /** Consecutive un-acknowledged steps per channel index (the OEM retries once, then NAKs). */
     private static final java.util.Map<Integer, Integer> stepFailures = new java.util.HashMap<>();
 
@@ -93,6 +95,18 @@ public final class ChannelScanner {
 
     public static int skippedCount() {
         return skippedIds.size();
+    }
+
+    /** Replace the persistent scan-list exclusions (channel {@code _id}s). */
+    public static synchronized void setExcluded(java.util.Collection<Integer> ids) {
+        excludedIds.clear();
+        if (ids != null) {
+            excludedIds.addAll(ids);
+        }
+    }
+
+    public static synchronized Set<Integer> getExcluded() {
+        return new HashSet<>(excludedIds);
     }
 
     /** Called from the ModuleStatusMessageHandler hook on every RECEIVE_START (any thread). */
@@ -140,7 +154,8 @@ public final class ChannelScanner {
             scanning = true;
             int candidates = countCandidates(channels, idx);
             XposedBridge.log(TAG + ": Scan started from index " + idx + " (" + candidates
-                + " other channel(s) in scope, " + skippedIds.size() + " skipped)");
+                + " other channel(s) in scope, " + skippedIds.size() + " skipped this session, "
+                + excludedIds.size() + " off the scan list)");
             if (candidates == 0) {
                 scanning = false;
                 return "No other channels in this zone to scan";
@@ -274,7 +289,7 @@ public final class ChannelScanner {
                 // still receiving on it until we leave - and (b) its RECEIVE_START arrived after this
                 // channel landed, so a stale flag from the previous channel cannot stop the scan.
                 boolean active = env.isReceiving()
-                    && !skippedIds.contains(XposedHelpers.getIntField(channels.get(idx), "_id"))
+                    && inScope(channels.get(idx))
                     && (holding || lastReceiveStartAt >= landedAt);
                 if (active) {
                     lastActivityAt = now;
@@ -394,7 +409,7 @@ public final class ChannelScanner {
     private static boolean inScope(Object channel) {
         try {
             int id = XposedHelpers.getIntField(channel, "_id");
-            if (skippedIds.contains(id)) {
+            if (skippedIds.contains(id) || excludedIds.contains(id)) {
                 return false;
             }
             java.util.Collection<Integer> zone = env != null ? env.zoneChannelIds() : null;
