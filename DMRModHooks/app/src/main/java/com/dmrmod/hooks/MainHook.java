@@ -149,6 +149,7 @@ public class MainHook implements IXposedHookLoadPackage {
     // See enableSoftwareSquelchOnCurrentChannel() and disableSoftwareSquelchOnCurrentChannel()
     // ============================================================================
     private static volatile boolean isSoftwareSquelchEnabled = false;  // Disabled by default
+    private static volatile int softSqSavedChannelSq = 2;  // channel's hardware sq before Soft SQ forced 0 (S22)
     private static volatile int softwareSquelchThreshold = 2;  // User squelch level (0-9)
     private static volatile boolean isSquelchOpen = false;  // Current squelch state
     private static volatile boolean previousSquelchOpen = false;  // Track state changes
@@ -293,7 +294,7 @@ public class MainHook implements IXposedHookLoadPackage {
     private static int vfoRxToneCode = 0;
     private static int vfoTxToneType = 0;
     private static int vfoTxToneCode = 0;
-    private static int vfoBandWidth = 0;   // 0=12.5kHz, 1=25kHz
+    private static int vfoBandWidth = 1;   // analog bandwidth: 0=12.5kHz, 1=25kHz (wide default, like new channels since v3.4.6)
     
     // Digital/DMR-specific settings
     private static int vfoContactType = 1;  // 0=PERSON (Private), 1=GROUP (TalkGroup), 2=ALL (Receive All)
@@ -1136,7 +1137,22 @@ public class MainHook implements IXposedHookLoadPackage {
                         aprsUpdateHandler = null;
                         aprsUpdateRunnable = null;
                         aprsRssiDisplayTextView = null;
-                        
+
+                        // Pitfall 14 completeness (backlog R12): every mode/gating flag that can survive an
+                        // Activity re-create must start from the UI's default state.
+                        isSoftwareSquelchEnabled = false;
+                        isAprsSoftwareSquelchEnabled = false;
+                        isSquelchOpen = false;
+                        previousSquelchOpen = false;
+                        isMonitoringMode = false;
+                        isAutoSwitchingZone = false;
+                        if (isCurrentlyRecording || pcmOutputStream != null) {
+                            XposedBridge.log(TAG + ": Recording state was stuck from previous session - closing");
+                            try { if (pcmOutputStream != null) pcmOutputStream.close(); } catch (Exception ignored) { }
+                            pcmOutputStream = null;
+                            isCurrentlyRecording = false;
+                        }
+
                         // **CRITICAL FIX**: Reset VFO state to prevent UI loading failure
                         // VFO flag persists in module memory across app restarts!
                         if (isVFOModeActive) {
@@ -1255,6 +1271,26 @@ public class MainHook implements IXposedHookLoadPackage {
                             
                             // Neon sci-fi aesthetic: dark navy background
                             rootLayout.setBackgroundColor(0xFF0A1520);
+
+                            // The OEM layout ships Chinese placeholder labels (功率： etc.) that flash until the
+                            // first channel update; give them English defaults right away (backlog U8).
+                            String[][] labelDefaults = {
+                                {"fragment_talkback_power", "Power:"},
+                                {"fragment_talkback_color_or_noise", "Color Code:"},
+                                {"fragment_talkback_send", "Send:"},
+                                {"fragment_talkback_recieve", "Receive:"},
+                                {"fragment_talkback_call_name", "Contact:"}
+                            };
+                            for (String[] ld : labelDefaults) {
+                                int lid = context.getResources().getIdentifier(ld[0], "id", TARGET_PACKAGE);
+                                View lv = lid != 0 ? rootLayout.findViewById(lid) : null;
+                                if (lv instanceof TextView) {
+                                    CharSequence cur = ((TextView) lv).getText();
+                                    boolean placeholder = cur == null || cur.length() == 0
+                                        || (cur.length() > 0 && cur.charAt(0) >= 0x4E00 && cur.charAt(0) <= 0x9FFF);
+                                    if (placeholder) ((TextView) lv).setText(ld[1]);
+                                }
+                            }
 
                             // Title bar (child 0 of the base fragment layout) — channel name + hamburger
                             android.view.View talkBackTitleBar = ((android.view.ViewGroup) param.args[0]).getChildAt(0);
@@ -2198,7 +2234,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                             enableSoftwareSquelchOnCurrentChannel();
                                         } else {
                                             // Disabling software squelch
-                                            XposedBridge.log(TAG + ": Software squelch disabled - reverting to hardware squelch 2");
+                                            XposedBridge.log(TAG + ": Software squelch disabled - restoring the channel's hardware squelch level");
                                             Toast.makeText(context, "Hardware squelch enabled", Toast.LENGTH_SHORT).show();
                                             
                                             // Hide the slider
@@ -3115,8 +3151,14 @@ public class MainHook implements IXposedHookLoadPackage {
                                 XposedHelpers.getObjectField(fragment, "mImgTalkbackNumTwo");
                             if (numOne == null || numTwo == null) return null;
 
-                            final int digitOne = (number < 10) ? 0 : (number / 10);
-                            final int digitTwo = (number < 10) ? number : (number % 10);
+                            // Two digit sprites only. For numbers >= 100 show the last two digits instead of
+                            // asking for a non-existent "num_1x" drawable and leaving a stale digit (backlog S12).
+                            final int shown = number % 100;
+                            final int digitOne = shown / 10;
+                            final int digitTwo = shown % 10;
+                            if (number >= 100) {
+                                XposedBridge.log(TAG + ": Channel number " + number + " shown as " + String.format("%02d", shown) + " (two-digit display)");
+                            }
 
                             android.app.Activity activity = (android.app.Activity)
                                 XposedHelpers.callMethod(fragment, "getActivity");
@@ -3182,7 +3224,23 @@ public class MainHook implements IXposedHookLoadPackage {
     /**
      * Helper method to update location display for current channel
      */
-    private void updateLocationDisplay(Object fragment, TextView locationText, Context context) {
+    /**
+     * Resolves the channel's saved location to "City, ST (distance)" and shows it. Geocoder and GPS
+     * lookups block, so the work runs on a background thread and only the TextView updates are posted
+     * to the UI thread (backlog S17; this used to run on the UI thread and could ANR).
+     */
+    private void updateLocationDisplay(final Object fragment, final TextView locationText, final Context context) {
+        new Thread(new Runnable() {
+            @Override public void run() { updateLocationDisplayBlocking(fragment, locationText, context); }
+        }, "dmrmod-location").start();
+    }
+
+    private static void postText(final TextView tv, final String text) {
+        if (tv == null) return;
+        tv.post(new Runnable() { @Override public void run() { tv.setText(text); } });
+    }
+
+    private void updateLocationDisplayBlocking(Object fragment, TextView locationText, Context context) {
         try {
             Object mCurrentChannelIndex = XposedHelpers.getObjectField(fragment, "mCurrentChannelIndex");
             if (mCurrentChannelIndex != null) {
@@ -3247,7 +3305,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 }
                                 
                                 displayText += "\n📍";
-                                locationText.setText(displayText);
+                                postText(locationText, displayText);
                                 
                                 // Fetch elevation in background thread
                                 final String baseText = displayText.replace("\n📍", "");
@@ -3287,7 +3345,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 }
                                 
                                 displayText += "\n📍";
-                                locationText.setText(displayText);
+                                postText(locationText, displayText);
                                 
                                 // Fetch elevation in background
                                 fetchAndDisplayElevation(location, locationText, displayText.replace("\n📍", ""));
@@ -3310,7 +3368,7 @@ public class MainHook implements IXposedHookLoadPackage {
                             }
                             
                             displayText += "\n📍";
-                            locationText.setText(displayText);
+                            postText(locationText, displayText);
                             
                             // Fetch elevation in background
                             fetchAndDisplayElevation(location, locationText, displayText.replace("\n📍", ""));
@@ -3333,14 +3391,14 @@ public class MainHook implements IXposedHookLoadPackage {
                         }
                         
                         displayText += "\n📍";
-                        locationText.setText(displayText);
+                        postText(locationText, displayText);
                         
                         // Fetch elevation in background
                         fetchAndDisplayElevation(location, locationText, displayText.replace("\n📍", ""));
                         XposedBridge.log(TAG + ": Geocoder error: " + e.getMessage() + ", showing coordinates");
                     }
                 } else {
-                    locationText.setText("📍");
+                    postText(locationText, "📍");
                     XposedBridge.log(TAG + ": No location for channel " + channelNumber);
                 }
             }
@@ -6627,8 +6685,9 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.setIntField(currentChannel, "rxFreq", sstvFreqHz);
             XposedHelpers.setIntField(currentChannel, "txFreq", sstvFreqHz);
             XposedHelpers.setIntField(currentChannel, "sq", 2);  // Hardware squelch 2 (0 doesn't work)
-            XposedHelpers.setIntField(currentChannel, "band", determineBand(Double.parseDouble(sstvFreqStr)));  // auto VHF/UHF
-            XposedHelpers.setIntField(currentChannel, "channelMode", 0);  // Narrow bandwidth (NFM 12.5kHz for SSTV)
+            // channel_band is BANDWIDTH (0 narrow 12.5 kHz / 1 wide 25 kHz), not UHF/VHF (backlog R1).
+            // SSTV is narrow FM; channelMode is a digital-only field and is not written for analog.
+            XposedHelpers.setIntField(currentChannel, "band", 0);
             XposedHelpers.setIntField(currentChannel, "power", 1);  // High power
             XposedHelpers.setIntField(currentChannel, "rxType", 0);  // No tone
             XposedHelpers.setIntField(currentChannel, "rxSubCode", 0);
@@ -6800,7 +6859,13 @@ public class MainHook implements IXposedHookLoadPackage {
 
             isSSTVMonitoringActive = false;
             sstvReceiver = null;
-            
+
+            // Same teardown as APRS/NOAA: a Soft SQ left on would keep gating the restored channel (backlog S10)
+            if (isSoftwareSquelchEnabled) {
+                isSoftwareSquelchEnabled = false;
+                disableSoftwareSquelchOnCurrentChannel();
+            }
+
             Toast.makeText(activity, "SSTV Monitoring stopped", Toast.LENGTH_SHORT).show();
             XposedBridge.log(TAG + ": SSTV monitoring mode deactivated");
             
@@ -8075,8 +8140,9 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.setIntField(channel, "rxFreq", freqHz);
             XposedHelpers.setIntField(channel, "txFreq", freqHz);
             XposedHelpers.setIntField(channel, "sq",     2);  // sq=2 (0 kills audio on this hardware)
-            XposedHelpers.setIntField(channel, "band",   determineBand(Double.parseDouble(freqStr)));
-            XposedHelpers.setIntField(channel, "channelMode", 1);  // Wide FM (25 kHz) for NOAA
+            // channel_band is BANDWIDTH: NOAA weather radio is wide FM (25 kHz) (backlog R1).
+            // channelMode is a digital-only field and is not written for analog.
+            XposedHelpers.setIntField(channel, "band",   1);
             XposedHelpers.setIntField(channel, "power",  1);
             XposedHelpers.setIntField(channel, "rxType", 0);
             XposedHelpers.setIntField(channel, "rxSubCode", 0);
@@ -9360,20 +9426,18 @@ public class MainHook implements IXposedHookLoadPackage {
             }
             
             // Add to history (most recent first)
-            activityHistory.addFirst(entry);
-            
-            // Trim to max 3 entries
-            while (activityHistory.size() > MAX_ACTIVITY_HISTORY) {
-                activityHistory.removeLast();
-            }
-            
-            // Build display string from all entries
             StringBuilder displayText = new StringBuilder();
-            for (String historyEntry : activityHistory) {
-                if (displayText.length() > 0) {
-                    displayText.append("\n");
+            synchronized (activityHistory) {  // written from the serial thread, read on channel change (S18)
+                activityHistory.addFirst(entry);
+                while (activityHistory.size() > MAX_ACTIVITY_HISTORY) {
+                    activityHistory.removeLast();
                 }
-                displayText.append(historyEntry);
+                for (String historyEntry : activityHistory) {
+                    if (displayText.length() > 0) {
+                        displayText.append("\n");
+                    }
+                    displayText.append(historyEntry);
+                }
             }
             
             final String finalDisplay = displayText.toString();
@@ -9402,7 +9466,7 @@ public class MainHook implements IXposedHookLoadPackage {
         
         try {
             // Clear history
-            activityHistory.clear();
+            synchronized (activityHistory) { activityHistory.clear(); }
             
             dmrActivityIndicator.post(new Runnable() {
                 @Override
@@ -9491,6 +9555,7 @@ public class MainHook implements IXposedHookLoadPackage {
                         new String[]{String.valueOf(channelNumber), String.valueOf(MAX_ACTIVITY_HISTORY)}
                     );
                     
+                    synchronized (activityHistory) {  // lock held through the reorder (S18)
                     // Clear current history
                     activityHistory.clear();
                     
@@ -9555,6 +9620,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     }
                     
                     XposedBridge.log(TAG + ": Loaded " + activityHistory.size() + " history entries for channel " + channelNumber);
+                    }  // synchronized (activityHistory)
                     
                 } catch (Exception e) {
                     XposedBridge.log(TAG + ": Error loading channel history: " + e.getMessage());
@@ -9756,9 +9822,9 @@ public class MainHook implements IXposedHookLoadPackage {
                 String wavPath = currentRecordingPath.replace(".pcm", ".wav");
                 java.io.File wavFile = new java.io.File(wavPath);
                 
-                // Write WAV file with headers
-                // Using 16kHz based on observed data rate: 2048 bytes/64ms = 16000 samples/sec
-                convertPCMtoWAV(pcmFile, wavFile, 16000, 1, 16);  // 16kHz, mono, 16-bit
+                // Write WAV file with headers. The capture path keeps one sample of each L==R pair of the
+                // 8 kHz stereo stream, so the data is genuine 8 kHz mono (G1, 2026-10-14).
+                convertPCMtoWAV(pcmFile, wavFile, 8000, 1, 16);  // 8 kHz, mono, 16-bit
                 
                 // Delete temporary PCM file
                 pcmFile.delete();
@@ -10139,10 +10205,18 @@ public class MainHook implements IXposedHookLoadPackage {
                         // Only capture if recording is enabled and currently recording
                         if (isRecordingEnabled && isCurrentlyRecording && pcmOutputStream != null) {
                             try {
-                                // Write PCM data to file (original unmuted audio)
-                                pcmOutputStream.write(processingAudio, 0, length);
-                                pcmDataSize += length;
-                                
+                                // Write PCM data to file (original unmuted audio).
+                                // The stream is 8 kHz stereo with L == R (measured 2026-10-14, G1), so keep one
+                                // sample per pair: the file becomes true 8 kHz mono at half the size (backlog S21).
+                                int pairs = (length & ~3) / 4;
+                                byte[] mono = new byte[pairs * 2];
+                                for (int p = 0, o = 0; p < pairs; p++, o += 2) {
+                                    mono[o] = processingAudio[p * 4];
+                                    mono[o + 1] = processingAudio[p * 4 + 1];
+                                }
+                                pcmOutputStream.write(mono, 0, mono.length);
+                                pcmDataSize += mono.length;
+
                             } catch (Exception e) {
                                 XposedBridge.log(TAG + ": Error writing PCM data: " + e.getMessage());
                             }
@@ -10423,7 +10497,10 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.callMethod(analogMessage, "setRelay", 
                 (byte) XposedHelpers.getIntField(currentChannel, "relay"));
             
-            // Update the channel object's squelch field to 0 for VFO to read
+            // Remember the channel's own level before overwriting it: the live field is set to 0 so VFO can
+            // read it, and disableSoftwareSquelchOnCurrentChannel() restores it from here (backlog S22).
+            int prevSq = XposedHelpers.getIntField(currentChannel, "sq");
+            if (prevSq != 0) softSqSavedChannelSq = prevSq;
             XposedHelpers.setIntField(currentChannel, "sq", 0);
             
             // Send to hardware
@@ -10480,8 +10557,12 @@ public class MainHook implements IXposedHookLoadPackage {
                 XposedHelpers.getIntField(currentChannel, "txFreq"));
             XposedHelpers.callMethod(analogMessage, "setRxFreq", 
                 XposedHelpers.getIntField(currentChannel, "rxFreq"));
-            XposedHelpers.callMethod(analogMessage, "setSq", 
-                (byte) 2);  // Set to hardware squelch 2
+            // Restore the channel's own hardware squelch level, not a hard-coded 2 (backlog S22).
+            // The live field holds 0 while Soft SQ is on (enable path), so fall back to the level saved there.
+            // Levels 1-9 behave alike on-air (grok-deep-dive/11 §17.1) but the stored value should be the user's.
+            int restoreSq = XposedHelpers.getIntField(currentChannel, "sq");
+            if (restoreSq == 0) restoreSq = softSqSavedChannelSq;
+            XposedHelpers.callMethod(analogMessage, "setSq", (byte) restoreSq);
             XposedHelpers.callMethod(analogMessage, "setRxType", 
                 (byte) XposedHelpers.getIntField(currentChannel, "rxType"));
             XposedHelpers.callMethod(analogMessage, "setRxSubCode", 
@@ -10493,13 +10574,13 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.callMethod(analogMessage, "setRelay", 
                 (byte) XposedHelpers.getIntField(currentChannel, "relay"));
             
-            // Update the channel object's squelch field so VFO can read it
-            XposedHelpers.setIntField(currentChannel, "sq", 2);
+            // Put the channel's own level back into the live object too (VFO reads it)
+            XposedHelpers.setIntField(currentChannel, "sq", restoreSq);
             
             // Send to hardware
             XposedHelpers.callMethod(analogMessage, "send");
             
-            XposedBridge.log(TAG + ": ✓ Software squelch disabled - hardware sq set to 2, channel sq updated");
+            XposedBridge.log(TAG + ": ✓ Software squelch disabled - hardware sq restored to " + restoreSq);
             
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": ✗ Error disabling software squelch: " + t.getMessage());
@@ -11761,60 +11842,25 @@ public class MainHook implements IXposedHookLoadPackage {
                         }
                         textWriter.write("\n");
                         
-                        // Try to parse as DigitalMessage (cmd=22, SET_DIGITAL_INFO_CMD)
-                        if (cmd == 22 && body.length >= 163) {
+                        // Interpret known bodies. The old block compared cmd with decimal 22 (never 0x22) and
+                        // decoded big-endian, so it never fired and would have been wrong if it had (S20).
+                        int c = cmd & 0xFF;
+                        if ((c == 0x22 || c == 0x24) && body.length >= 163) {
                             textWriter.write("----------------------------------------\n");
-                            textWriter.write("Parsed as DigitalMessage (SET_DIGITAL_INFO_CMD):\n");
-                            
-                            // Parse fields using big-endian byte order
-                            int rxFreq = ((body[0] & 0xFF) << 24) | ((body[1] & 0xFF) << 16) | 
-                                        ((body[2] & 0xFF) << 8) | (body[3] & 0xFF);
-                            int txFreq = ((body[4] & 0xFF) << 24) | ((body[5] & 0xFF) << 16) | 
-                                        ((body[6] & 0xFF) << 8) | (body[7] & 0xFF);
-                            int localId = ((body[8] & 0xFF) << 24) | ((body[9] & 0xFF) << 16) | 
-                                         ((body[10] & 0xFF) << 8) | (body[11] & 0xFF);
-                            
-                            // Group list (32 groups, 4 bytes each)
-                            int[] groups = new int[32];
-                            for (int i = 0; i < 32; i++) {
-                                int offset = 12 + (i * 4);
-                                groups[i] = ((body[offset] & 0xFF) << 24) | ((body[offset+1] & 0xFF) << 16) | 
-                                           ((body[offset+2] & 0xFF) << 8) | (body[offset+3] & 0xFF);
+                            textWriter.write("Parsed as DigitalMessage (" + getCmdName(cmd) + "):\n");
+                            textWriter.write(McuDiagnostics.decodeDigital(body));
+                            if ((body[144] & 0xFF) == 2) {
+                                textWriter.write("\n*** MONITORING MODE (ALL) PACKET ***\n");
                             }
-                            
-                            int txContact = ((body[140] & 0xFF) << 24) | ((body[141] & 0xFF) << 16) | 
-                                           ((body[142] & 0xFF) << 8) | (body[143] & 0xFF);
-                            byte contactType = body[144];
-                            byte power = body[145];
-                            byte colorCode = body[146];
-                            byte slot = body[147];
-                            
-                            textWriter.write("  RX Freq: " + rxFreq + " Hz (" + (rxFreq / 1000000.0) + " MHz)\n");
-                            textWriter.write("  TX Freq: " + txFreq + " Hz (" + (txFreq / 1000000.0) + " MHz)\n");
-                            textWriter.write("  Local ID: " + localId + "\n");
-                            textWriter.write("  TX Contact: " + txContact + "\n");
-                            textWriter.write("  Contact Type: " + contactType + " (" + 
-                                            (contactType == 0 ? "PERSON" : 
-                                             contactType == 1 ? "GROUP" : 
-                                             contactType == 2 ? "ALL" : "UNKNOWN") + ")\n");
-                            textWriter.write("  Power: " + power + "\n");
-                            textWriter.write("  Color Code: " + colorCode + "\n");
-                            textWriter.write("  Slot: " + slot + "\n");
-                            textWriter.write("  Groups: [");
-                            int nonZeroGroups = 0;
-                            for (int g : groups) {
-                                if (g != 0) {
-                                    if (nonZeroGroups > 0) textWriter.write(", ");
-                                    textWriter.write(String.valueOf(g));
-                                    nonZeroGroups++;
-                                }
-                            }
-                            textWriter.write("] (" + nonZeroGroups + " active)\n");
-                            
-                            // Highlight contactType=2 (ALL mode) packets
-                            if (contactType == 2) {
-                                textWriter.write("\n🔥🔥🔥 MONITORING MODE (ALL) PACKET! 🔥🔥🔥\n");
-                            }
+                        } else if ((c == 0x23 || c == 0x25) && body.length >= 19) {
+                            textWriter.write("----------------------------------------\n");
+                            textWriter.write("Parsed as AnalogMessage (" + getCmdName(cmd) + "):\n");
+                            textWriter.write(McuDiagnostics.decodeAnalog(body, 0));
+                        } else if (c == 0x36 && body.length >= 1) {
+                            textWriter.write("  Status: " + (body[0] & 0xFF) + " (" + getModuleStatusName(body[0] & 0xFF) + ")\n");
+                        } else if (c == 0x32 && body.length >= 1 && rw == 0) {
+                            int raw = body[0] & 0xFF;
+                            textWriter.write("  RSSI raw " + raw + (raw > 0 ? (" = " + (-(120 - raw / 2.0)) + " dBm") : " (no signal)") + "\n");
                         }
                     }
                     
@@ -11822,7 +11868,9 @@ public class MainHook implements IXposedHookLoadPackage {
                     textWriter.close();
                     
                     // Also log to Xposed for real-time monitoring
-                    XposedBridge.log(TAG + ": UART " + direction + " cmd=" + cmd + " (" + getCmdName(cmd) + ") len=" + len);
+                    String extra = ((cmd & 0xFF) == 0x36 && body != null && body.length >= 1)
+                            ? " status=" + getModuleStatusName(body[0] & 0xFF) : "";
+                    XposedBridge.log(TAG + ": UART " + direction + " cmd=0x" + String.format("%02X", cmd) + " (" + getCmdName(cmd) + ") len=" + len + extra);
                     
                 } catch (Exception e) {
                     XposedBridge.log(TAG + ": ❌ Error logging UART packet: " + e.getMessage());
@@ -11834,14 +11882,58 @@ public class MainHook implements IXposedHookLoadPackage {
     /**
      * Get human-readable command name
      */
+    /** Command-byte names from the OEM protocol/Const.java (backlog S20: the old table mixed decimal and hex). */
     private String getCmdName(byte cmd) {
-        switch (cmd) {
+        switch (cmd & 0xFF) {
+            case 0x22: return "SET_DIGITAL_INFO";
+            case 0x23: return "SET_ANALOG_INFO";
+            case 0x24: return "QUERY_DIGITAL_INFO";
+            case 0x25: return "QUERY_ANALOG_INFO";
+            case 0x26: return "SET_LAUNCH_INFO (PTT)";
+            case 0x27: return "QUERY_INIT_STATUS";
+            case 0x28: return "SET_ENHANCE_FUNCTION";
+            case 0x29: return "SET_ENCRYPT_FUNCTION";
+            case 0x2A: return "SET_GAIN_MIC";
+            case 0x2B: return "QUERY_DIGITAL_AUDIO_RECEIVE_INFO";
+            case 0x2C: return "SEND_SMS";
+            case 0x2D: return "RECEIVE_SMS";
+            case 0x2E: return "SET_VOL";
+            case 0x2F: return "SET_LISTEN";
+            case 0x30: return "SET_SQUELCH";
+            case 0x31: return "SET_POWER_SAVE_MODE";
+            case 0x32: return "QUERY_SIGNAL_STRENGTH (RSSI)";
+            case 0x33: return "SET_OFFLINE_MODE (relay)";
+            case 0x34: return "QUERY_VERSION";
+            case 0x35: return "INTERRUPT_TRANSMIT";
+            case 0x36: return "MODULE_STATUS";
+            case 0x37: return "SET_POLITE_POLICY";
+            case 0x38: return "SET_MIX_CHECK_INFO";
+            case 0x39: return "QUERY_MIX_CHECK_INFO";
+            case 0x3A: return "SET_SMS_PROTOCOL_TYPE";
+            case 0x3B: return "SET_TOT";
+            case 0x3C: return "SET_SPK_EN";
+            case 0x3F: return "TEST_BIT_ERROR_RATE";
+            case 0xAA: return "MODULE_INIT";
+            default: return "UNKNOWN";
+        }
+    }
+
+    /** Status byte carried in the body of MODULE_STATUS (0x36) pushes — Const.ModuleStatus. */
+    private static String getModuleStatusName(int status) {
+        switch (status) {
             case 1: return "RECEIVE_START";
             case 2: return "RECEIVE_STOP";
+            case 3: return "SEND_START";
+            case 4: return "SEND_STOP";
+            case 5: return "SMS_RECEIVED";
+            case 6: return "RELAY_ACTIVITY_TIME_OUT";
+            case 7: return "CHANNEL_BUSY";
+            case 8: return "SMS_SENT_SUCCESS";
+            case 9: return "SMS_SENT_FAIL";
             case 10: return "MIX_CHECK_DIGITAL_RECEIVE_START";
-            case 22: return "SET_DIGITAL_INFO_CMD";
-            case 35: return "INTERRUPT_TRANSMIT_CMD";
-            case 63: return "TEST_BIT_ERROR_RATE";
+            case 11: return "MIX_CHECK_DIGITAL_RECEIVE_STOP";
+            case 12: return "MIX_CHECK_ANALOG_RECEIVE_START";
+            case 13: return "MIX_CHECK_ANALOG_RECEIVE_STOP";
             default: return "UNKNOWN";
         }
     }
@@ -12383,16 +12475,20 @@ public class MainHook implements IXposedHookLoadPackage {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                         if (!isSoftwareSquelchEnabled && !isAprsSoftwareSquelchEnabled) return;
-                        
+
                         // Get the ChannelData argument
                         Object channelData = param.args[0];
-                        
+
                         // Read original squelch value
                         int originalSq = XposedHelpers.getIntField(channelData, "sq");
-                        
-                        // Force squelch to 0 for software squelch (hardware fully open)
+
+                        // Force squelch to 0 for software squelch (hardware fully open). The field is put back
+                        // in afterHookedMethod: sendAnalogMessage copies it into the AnalogMessage synchronously,
+                        // and leaving 0 in the live ChannelData made "Soft SQ off" restore 0 instead of the
+                        // channel's own level (found 2026-10-14, backlog S22).
                         XposedHelpers.setIntField(channelData, "sq", 0);
-                        
+                        param.setObjectExtra("dmrmod_originalSq", originalSq);
+
                         XposedBridge.log(TAG + ": Intercepted sendAnalogMessage - forcing sq=" + originalSq + " → sq=0");
                         
                         // Schedule squelch state reset + re-enable after channel loads.
@@ -12415,6 +12511,14 @@ public class MainHook implements IXposedHookLoadPackage {
                                 }
                             }
                         }, 300);  // 300ms delay - after channel audio starts but before user notices
+                    }
+
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        Object originalSq = param.getObjectExtra("dmrmod_originalSq");
+                        if (originalSq instanceof Integer && param.args[0] != null) {
+                            XposedHelpers.setIntField(param.args[0], "sq", (Integer) originalSq);
+                        }
                     }
                 }
             );
@@ -13751,14 +13855,14 @@ public class MainHook implements IXposedHookLoadPackage {
                                         public void onClick(View v) {
                                             new AlertDialog.Builder(activity)
                                                 .setTitle("Send Frequency")
-                                                .setMessage("Transmit (TX) frequency in 10Hz units (no decimal).\n\n" +
+                                                .setMessage("Transmit (TX) frequency in Hz (no decimal).\n\n" +
                                                     "Enter the frequency as an integer value:\n" +
-                                                    "• Frequency in MHz × 100000\n" +
-                                                    "• Up to 9 digits\n\n" +
+                                                    "• Frequency in MHz × 1,000,000\n" +
+                                                    "• 9 digits for UHF/VHF\n\n" +
                                                     "Examples:\n" +
-                                                    "• 446.0000 MHz → enter 44600000\n" +
-                                                    "• 145.8000 MHz → enter 14580000\n" +
-                                                    "• 462.5625 MHz → enter 46256250\n\n" +
+                                                    "• 446.0000 MHz → enter 446000000\n" +
+                                                    "• 145.8000 MHz → enter 145800000\n" +
+                                                    "• 462.5625 MHz → enter 462562500\n\n" +
                                                     "For simplex: Set TX and RX to the same value\n" +
                                                     "For repeaters: TX and RX are different (repeater offset)")
                                                 .setPositiveButton(android.R.string.ok, null)
@@ -13791,14 +13895,14 @@ public class MainHook implements IXposedHookLoadPackage {
                                         public void onClick(View v) {
                                             new AlertDialog.Builder(activity)
                                                 .setTitle("Receive Frequency")
-                                                .setMessage("Receive (RX) frequency in 10Hz units (no decimal).\n\n" +
+                                                .setMessage("Receive (RX) frequency in Hz (no decimal).\n\n" +
                                                     "Enter the frequency as an integer value:\n" +
-                                                    "• Frequency in MHz × 100000\n" +
-                                                    "• Up to 9 digits\n\n" +
+                                                    "• Frequency in MHz × 1,000,000\n" +
+                                                    "• 9 digits for UHF/VHF\n\n" +
                                                     "Examples:\n" +
-                                                    "• 446.0000 MHz → enter 44600000\n" +
-                                                    "• 145.8000 MHz → enter 14580000\n" +
-                                                    "• 462.5625 MHz → enter 46256250\n\n" +
+                                                    "• 446.0000 MHz → enter 446000000\n" +
+                                                    "• 145.8000 MHz → enter 145800000\n" +
+                                                    "• 462.5625 MHz → enter 462562500\n\n" +
                                                     "For simplex: Set RX same as TX value\n" +
                                                     "For repeaters: RX is different from TX (repeater offset)\n\n" +
                                                     "Example repeater:\n" +
@@ -14433,101 +14537,17 @@ public class MainHook implements IXposedHookLoadPackage {
                             
                             XposedBridge.log(TAG + ": === saveChannelData beforeHook called ===");
                             
-                            // Get channelData to check channel type
+                            // Backlog R2 (2026-10-14): the "TalkGroup number -> contact row _id" conversion that
+                            // lived here was removed. It tested the OEM enums inverted (ran on ANALOG + PERSON
+                            // channels, since OEM type 0 = DMR and contactType 1 = GROUP) and wrote a contact_database
+                            // row _id into channel_txContact, which must hold the 24-bit DMR ID (Pitfall 12). The
+                            // editor's Call Number field already holds the DMR ID, so no conversion is needed.
                             Object channelData = XposedHelpers.getObjectField(saveParam.thisObject, "channelData");
-                            if (channelData == null) {
-                                XposedBridge.log(TAG + ": channelData is null, skipping TG conversion");
-                                return;
+                            if (channelData != null) {
+                                XposedBridge.log(TAG + ": saveChannelData: type=" + XposedHelpers.getIntField(channelData, "type")
+                                    + " contactType=" + XposedHelpers.getIntField(channelData, "contactType")
+                                    + " txContact=" + XposedHelpers.getIntField(channelData, "txContact") + " (left unchanged)");
                             }
-                            
-                            // Get channel type (0 = Analog, 1 = Digital/DMR)
-                            int channelType = XposedHelpers.getIntField(channelData, "type");
-                            int contactType = XposedHelpers.getIntField(channelData, "contactType");
-                            int originalTxContact = XposedHelpers.getIntField(channelData, "txContact");
-                            
-                            XposedBridge.log(TAG + ": Channel type=" + channelType + 
-                                " (0=Analog, 1=Digital), contactType=" + contactType + 
-                                " (0=Group, 1=Private), original txContact=" + originalTxContact);
-                            
-                            // Only process Digital/DMR Group calls
-                            if (channelType != 1 || contactType != 0) {
-                                XposedBridge.log(TAG + ": Not a DMR group call channel, skipping TG conversion");
-                                return;
-                            }
-                            
-                            // ===== FIX GROUP NUMBER SAVE =====
-                            // The user edited the TalkGroup number directly, but we need to save the contact ID
-                            // Convert TalkGroup number → Contact ID before saving
-                            try {
-                                final int groupNumberEditId = context.getResources().getIdentifier(
-                                    "interphone_channel_call_name_set", "id", context.getPackageName());
-                                XposedBridge.log(TAG + ": groupNumberEditId=" + groupNumberEditId);
-                                
-                                if (groupNumberEditId != 0) {
-                                    final android.widget.EditText groupNumberEdit = 
-                                        (android.widget.EditText) activity.findViewById(groupNumberEditId);
-                                    XposedBridge.log(TAG + ": groupNumberEdit found=" + (groupNumberEdit != null));
-                                    
-                                    if (groupNumberEdit != null) {
-                                        String tgNumberStr = groupNumberEdit.getText().toString().trim();
-                                        XposedBridge.log(TAG + ": EditText value='" + tgNumberStr + "'");
-                                        
-                                        if (!tgNumberStr.isEmpty()) {
-                                            int tgNumber = Integer.parseInt(tgNumberStr);
-                                            XposedBridge.log(TAG + ": Parsed TG number=" + tgNumber);
-                                            
-                                            // Look up the contact ID from the TalkGroup number
-                                            android.database.sqlite.SQLiteDatabase contactDb = null;
-                                            android.database.Cursor cursor = null;
-                                            try {
-                                                java.io.File dbFile = context.getDatabasePath("contact_database.db");
-                                                contactDb = android.database.sqlite.SQLiteDatabase.openDatabase(
-                                                    dbFile.getAbsolutePath(), null, 
-                                                    android.database.sqlite.SQLiteDatabase.OPEN_READONLY);
-                                                XposedBridge.log(TAG + ": Opened contact database");
-                                                
-                                                cursor = contactDb.query("contact_database", 
-                                                    new String[]{"_id", "contact_name"},
-                                                    "contact_number=?", 
-                                                    new String[]{String.valueOf(tgNumber)},
-                                                    null, null, null);
-                                                
-                                                if (cursor != null && cursor.moveToFirst()) {
-                                                    int contactId = cursor.getInt(0);
-                                                    String contactName = cursor.getString(1);
-                                                    
-                                                    XposedBridge.log(TAG + ": SAVE CONVERSION: TG " + tgNumber + 
-                                                        " ('" + contactName + "') → contact ID " + contactId);
-                                                    XposedBridge.log(TAG + ": Setting channelData.txContact from " + 
-                                                        originalTxContact + " to " + contactId);
-                                                    
-                                                    XposedHelpers.setIntField(channelData, "txContact", contactId);
-                                                    
-                                                    // Verify it was set correctly
-                                                    int verifyTxContact = XposedHelpers.getIntField(channelData, "txContact");
-                                                    XposedBridge.log(TAG + ": Verified channelData.txContact=" + verifyTxContact);
-                                                } else {
-                                                    XposedBridge.log(TAG + ": WARNING: TG " + tgNumber + 
-                                                        " not found in contacts database - will save original ID " + originalTxContact);
-                                                }
-                                            } catch (Exception e) {
-                                                XposedBridge.log(TAG + ": ERROR converting TG to contact ID: " + e.getMessage());
-                                                XposedBridge.log(e);
-                                            } finally {
-                                                if (cursor != null) cursor.close();
-                                                if (contactDb != null) contactDb.close();
-                                                XposedBridge.log(TAG + ": Closed contact database");
-                                            }
-                                        } else {
-                                            XposedBridge.log(TAG + ": EditText is empty, keeping original txContact=" + originalTxContact);
-                                        }
-                                    }
-                                }
-                            } catch (Throwable tgconv) {
-                                XposedBridge.log(TAG + ": ERROR in TG conversion: " + tgconv.getMessage());
-                                XposedBridge.log(tgconv);
-                            }
-                            
                             XposedBridge.log(TAG + ": === saveChannelData beforeHook complete ===");
                         } catch (Throwable t) {
                             XposedBridge.log(TAG + ": CRITICAL ERROR in saveChannelData beforeHook: " + t.getMessage());
@@ -15227,9 +15247,9 @@ public class MainHook implements IXposedHookLoadPackage {
             
             XposedHelpers.setIntField(currentChannel, "rxFreq", vfoRxFreqHz);
             XposedHelpers.setIntField(currentChannel, "txFreq", vfoTxFreqHz);
-            XposedHelpers.setIntField(currentChannel, "band", determineBand(vfoFrequencyMHz));
+            XposedHelpers.setIntField(currentChannel, "band", vfoBandWidth);  // bandwidth, not UHF/VHF (backlog R1)
             XposedHelpers.setIntField(currentChannel, "power", vfoPowerLevel);
-            
+
             if (vfoChannelMode == 1) {
                 // Analog mode - set tone settings, leave squelch as-is
                 XposedHelpers.setIntField(currentChannel, "rxType", vfoRxToneType);
@@ -15431,9 +15451,9 @@ public class MainHook implements IXposedHookLoadPackage {
             
             XposedHelpers.setIntField(currentChannel, "rxFreq", vfoRxFreqHz);
             XposedHelpers.setIntField(currentChannel, "txFreq", vfoTxFreqHz);
-            XposedHelpers.setIntField(currentChannel, "band", determineBand(vfoFrequencyMHz));
+            XposedHelpers.setIntField(currentChannel, "band", vfoBandWidth);  // bandwidth, not UHF/VHF (backlog R1)
             XposedHelpers.setIntField(currentChannel, "power", vfoPowerLevel);
-            
+
             if (vfoChannelMode == 1) {
                 // Analog mode - tone settings
                 try {
@@ -16079,23 +16099,9 @@ public class MainHook implements IXposedHookLoadPackage {
         }
     }
     
-    /**
-     * Determine band from frequency
-     */
-    private int determineBand(double frequencyMHz) {
-        // 0=UHF (400-520 MHz)
-        // 1=VHF (136-174 MHz)
-        
-        if (frequencyMHz >= 136 && frequencyMHz <= 174) {
-            return 1;  // VHF
-        } else if (frequencyMHz >= 400 && frequencyMHz <= 520) {
-            return 0;  // UHF
-        } else {
-            XposedBridge.log(TAG + ": Warning - frequency " + frequencyMHz + " MHz outside normal bands, defaulting to VHF");
-            return 1;  // Default to VHF
-        }
-    }
-    
+    // determineBand(freq) was removed (backlog R1): it returned UHF/VHF into channel_band, which is the
+    // analog BANDWIDTH byte (0 narrow / 1 wide). Every caller now sets the bandwidth explicitly.
+
     /**
      * Check and restore VFO channel on startup (crash recovery)
      */

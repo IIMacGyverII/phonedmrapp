@@ -49,7 +49,8 @@ public class CircuitBoardView extends View {
                 tickAnimation();
                 invalidate();
             }
-            handler.postDelayed(this, 50);  // ~20 fps
+            // ~20 fps while receiving, ~5 fps idle (backlog U4: the view used to redraw at 20 fps forever)
+            handler.postDelayed(this, isReceiving ? 50 : 200);
         }
     };
 

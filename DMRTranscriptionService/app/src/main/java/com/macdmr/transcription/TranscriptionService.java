@@ -57,7 +57,7 @@ public class TranscriptionService extends Service {
         
         loadApiKey();
         
-        if (apiKey == null || apiKey.isEmpty() || apiKey.equals("YOUR_API_KEY_HERE")) {
+        if (apiKey == null || apiKey.isEmpty() || isPlaceholderKey(apiKey)) {
             Log.w(TAG, "⚠️ API key not configured - transcription will fail");
         } else {
             Log.i(TAG, "✅ Google Cloud Speech-to-Text ready (API key configured from " + (apiKey.startsWith("AIza") ? "file" : "BuildConfig") + ")");
@@ -67,6 +67,11 @@ public class TranscriptionService extends Service {
     /**
      * Load API key from Download/DMR/api_key.txt, fallback to BuildConfig
      */
+    /** Both placeholder spellings: the module writes YOUR_GOOGLE_CLOUD_API_KEY_HERE into api_key.txt (backlog S5). */
+    private static boolean isPlaceholderKey(String k) {
+        return k == null || k.isEmpty() || k.equals("YOUR_API_KEY_HERE") || k.equals("YOUR_GOOGLE_CLOUD_API_KEY_HERE");
+    }
+
     private void loadApiKey() {
         try {
             File dmrFolder = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "DMR");
@@ -124,7 +129,7 @@ public class TranscriptionService extends Service {
         public String transcribe(byte[] pcmBytes, int sampleRate) {
             Log.i(TAG, "📥 Received transcription request: " + pcmBytes.length + " bytes @ " + sampleRate + " Hz");
             
-            if (apiKey == null || apiKey.isEmpty() || apiKey.equals("YOUR_API_KEY_HERE")) {
+            if (apiKey == null || apiKey.isEmpty() || isPlaceholderKey(apiKey)) {
                 return "[API key not configured - Press TXT to configure]";
             }
             
@@ -225,7 +230,7 @@ public class TranscriptionService extends Service {
 
         @Override
         public boolean isReady() {
-            boolean ready = apiKey != null && !apiKey.isEmpty() && !apiKey.equals("YOUR_API_KEY_HERE");
+            boolean ready = apiKey != null && !apiKey.isEmpty() && !isPlaceholderKey(apiKey);
             Log.d(TAG, "isReady() = " + ready + " (key: " + (apiKey != null ? (apiKey.length() + " chars") : "null") + ")");
             return ready;
         }

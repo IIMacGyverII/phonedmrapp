@@ -33,17 +33,11 @@
             android:name="xposedscope"
             android:resource="@array/xposed_scope" />
 
-        <!-- BackupActivity for OpenGD77 CSV export/import -->
+        <!-- BackupActivity (legacy CSV export/import UI). Not launched from anywhere in the module;
+             kept unexported so other apps cannot start it (backlog R9). -->
         <activity
             android:name=".BackupActivity"
             android:label="DMR Backup &amp; Restore"
-            android:theme="@android:style/Theme.Material.Light"
-            android:exported="true" />
-
-        <!-- APRSSettingsActivity for APRS configuration -->
-        <activity
-            android:name=".APRSSettingsActivity"
-            android:label="APRS Settings"
             android:theme="@android:style/Theme.Material.Light"
             android:exported="false" />
 

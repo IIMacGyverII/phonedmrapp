@@ -129,7 +129,7 @@ public final class McuDiagnostics {
     private static String mhz(int hz) { return String.format(Locale.US, "%.6f MHz", hz / 1e6); }
 
     /** 163-byte DigitalMessage body. */
-    static String decodeDigital(byte[] b) {
+    public static String decodeDigital(byte[] b) {
         StringBuilder sb = new StringBuilder();
         sb.append(String.format(Locale.US, "len %d%s\n", b.length, b.length == 163 ? "" : "  (expected 163)"));
         sb.append("rxFreq      ").append(mhz(i32le(b, 0))).append('\n');
@@ -164,7 +164,7 @@ public final class McuDiagnostics {
     }
 
     /** 19-byte AnalogMessage body, starting at offset {@code o}. */
-    static String decodeAnalog(byte[] b, int o) {
+    public static String decodeAnalog(byte[] b, int o) {
         StringBuilder sb = new StringBuilder();
         if (o == 0) sb.append(String.format(Locale.US, "len %d%s\n", b.length, b.length == 19 ? "" : "  (expected 19)"));
         sb.append("rxFreq      ").append(mhz(i32le(b, o))).append('\n');

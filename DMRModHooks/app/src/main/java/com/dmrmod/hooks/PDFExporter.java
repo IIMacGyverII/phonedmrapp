@@ -336,7 +336,8 @@ public class PDFExporter {
                 int dmrId = cursor.getInt(cursor.getColumnIndex("contact_number"));
                 int type = cursor.getInt(cursor.getColumnIndex("contact_type"));
                 
-                String typeStr = (type == 0) ? "Group" : "Private";
+                // OEM contact_type: 0 = PERSON (private), 1 = GROUP, 2 = ALL (backlog S13: label was inverted)
+                String typeStr = (type == 1) ? "Group" : (type == 2) ? "All" : "Private";
                 
                 canvas.drawText(name, MARGIN, y, paint);
                 canvas.drawText(String.valueOf(dmrId), MARGIN + 300, y, paint);
@@ -589,8 +590,9 @@ public class PDFExporter {
             }
             
             db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(), null, SQLiteDatabase.OPEN_READONLY);
+            // Key by the 24-bit DMR ID: channel_txContact stores contact_number, not the row _id (Pitfall 12 / S13)
             cursor = db.query("contact_database", 
-                new String[]{"_id", "contact_name"}, 
+                new String[]{"contact_number", "contact_name"}, 
                 null, null, null, null, null);
             
             while (cursor != null && cursor.moveToNext()) {
