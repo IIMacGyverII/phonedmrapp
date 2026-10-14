@@ -663,3 +663,29 @@ The table itself is **not in the image** (no run of case addresses at any alignm
 - **The 0x24 / 0x25 readback is real firmware behaviour.** The MCU keeps the last-written digital (163 B at `0x38E4C`) and analog (19 B at `0x38C70`) channel images and returns them on request. The OEM app registers handlers for both but never sends them (ch. 02 §6). One `com.dmrmod.SEND_DEBUG_PACKET` broadcast per command on a device (`CMD=36` / `CMD=37`, `BODY=01`) will show exactly what the MCU stored — squelch byte, group list, `txContact`. This is the ground truth the squelch and group-call questions have lacked; it is the recommended next device step (backlog FW2/FW-B3).
 - The 0x21 family is unexplored and never reaches the app's dispatcher. Whether it carries anything useful (its `01/FF` sub-frames look like start/stop events) can be settled by the mod's UART logger, which sees raw frames before `MessageDispatcher` drops them.
 - `+0x7E94` is a 0x21 builder, **not** a generic command builder — §10's "callers pass cmd 0x22 in r3" was a sub-command 0x22 of family 0x21.
+
+---
+
+## 15. FW2 — live readback on the device (2026-10-14, Armor 26 Ultra, module v3.4.5 installed)
+
+Method: OEM app started (`am start -n com.pri.prizeinterphone/.InterPhoneHomeActivity`), then `com.dmrmod.SEND_DEBUG_PACKET` broadcasts; every frame captured by the mod's UART logger (`/sdcard/DMR/uart_logs/uart_20261014_103816.txt`). All replies carried `rw=0 sr=0` and valid checksums. The channel the app had programmed was restored at the end (re-sent byte-exact, readback confirmed).
+
+| Time | TX | RX | Result |
+|---|---|---|---|
+| 10:38:20 | app's own `0x22` (163 B: 443.200 / 448.200 MHz, localId 1447, groups[0]=1, txContact 1, GROUP, CC 11, mode 4, encrypt off) | `0x22` ack | boot-chain write, used as reference |
+| 10:38:28 | **`0x24` body `01`** | **163 B, byte-identical** to the write above | `QUERY_DIGITAL_INFO` **works**; MCU keeps the full digital image |
+| 10:38:31 | **`0x25` body `01`** | 19 B: all zero except `sq=3`, `volume=8` | `QUERY_ANALOG_INFO` **works**; stale analog slot (never written this session) |
+| 10:39:55 | `0x23` analog: 446.000/446.000, band 1, power 0, **`sq=5`**, no tones, pwrSave 2, vol 8, mon 2, relay 2 | ack `sr=0` | MCU accepted squelch 5 |
+| 10:39:57 | `0x25` | **19 B byte-identical, `sq=5`** | **MCU stores squelch as sent** — confirms §11.5: no clamp in the MCU image |
+| 10:39:59 | `0x22` with **groups[0..2] = 1, 2, 3** (rest as reference) | ack `sr=0` | — |
+| 10:40:01 | `0x24` | 163 B with **`01 00 00 00 02 00 00 00 03 00 00 00`** at offset 12 | **groups[] is stored** in the MCU's channel image, all three slots |
+| 10:40:03 / 05 | reference `0x22` re-sent, `0x24` | identical to 10:38:28 | restored |
+
+No `0x21`/`0x20` frames appeared on the wire during a normal boot + these queries (only `0xAA, 0x34, 0x22, 0x35, 0x3B` and the queries).
+
+**What this settles**
+- Readback is a first-class tool: any future firmware or codeplug question of the form "what did the MCU actually receive" is one broadcast. Worth a Diagnostics-page button (backlog S7) that prints both images decoded.
+- Squelch: the hard-constraint wording "firmware coerces 1,3–9 to 2" is **not** true of the MCU's stored value. If levels 1,3–9 really behave like 2 on-air (the 2026-03 behavioural finding), that happens downstream of the stored byte — in the analog apply path to the RF IC (`+0x7A30` → `0x1100xxxx`) or in the IC itself. A listening test with a weak signal at `sq=0/2/5/9` is the remaining experiment; it needs an RF source.
+- Group list: the MCU keeps all 32 slots as written. The "firmware ignores `groups[]`" constraint therefore describes the **RX filter**, not storage. Whether the RX path consults the stored list is the FW5 question and needs a second DMR transmitter.
+
+**Residual state:** the analog slot on the radio now holds 446.000 MHz / `sq=5` until the user selects any analog channel (the app rewrites it). The active digital channel is unchanged.
