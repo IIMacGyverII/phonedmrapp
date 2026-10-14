@@ -135,6 +135,17 @@ Everything the module touches on the OEM side was checked; these are the only mi
 
 ---
 
+## 3b. Code changes since these chapters were written (2026-10-14)
+
+The chapters describe commit `14e484a2`. The 2026-10-14 session changed the mod in ways that make some chapter statements historical; the full list is in `CHANGELOG_DRAFT.md`, the device evidence in `docs/grok-deep-dive/11-firmware-fw0-results.md` §15–18. Headlines:
+
+- **RX audio** (ch. 04, 12): measured 8 kHz stereo with L == R; the recorder now stores genuine 8 kHz mono WAVs. Decoders still consume the duplicated stream.
+- **Device tab** (ch. 08, 11): `McuDiagnostics` adds "Read MCU channel images" (0x24/0x25/0x39 readback, verified against the firmware's `+0x9E3C/+0x9E4C/+0x9E5C` reply handlers), "Probe RX audio layout", and a **Diagnostics** gate that now controls the UART file logger and the `SEND_DEBUG_PACKET` receiver (both default OFF).
+- **Hooks** (ch. 08, 09, 14): `determineBand()` deleted (bandwidth set explicitly; VFO has a Narrow/Wide control); the `saveChannelData` before-hook no longer rewrites `txContact`; `sendAnalogMessage` hook restores `ChannelData.sq` after the send; a new `AnalogMessageHandler.handle` after-hook re-applies Soft SQ on acks (Pitfall 13); Soft SQ off restores the channel's own level; `updateLocationDisplay` runs off the UI thread; `activityHistory` is locked.
+- **Dead code** (ch. 12 §1): `AFSKDecoderPLL`, `DireWolfDecoder` + `cpp/`, `SSTVImageDecoder`, `SSTVGoertzelDemod`, `SSTVZeroCrossingDemod`, `SSTVFMDemodRobot36`, `SSTVFFTDemodulator`, `SSTVPhaseDemod`, `SSTVFilter`, `FrequencyModulation`, `Phasor`, `Kaiser`, `ComplexConvolution`, `Complex`, `SSTVFMDemodulator.java.old` are gone. `AFSKGenerator` stays for the TX experiment.
+- **Importer** (ch. 11): strips a BOM, refuses to commit an empty channel table, and writes an automatic backup first.
+- **Firmware** (ch. 07, 18): the MCU is C-SKY V2 with a real listing; squelch 1–9 behave as one threshold on-air; the kernel lives outside the update image.
+
 ## 4. Consolidated corrections to the working notes
 
 The rules docs (`.grok/rules/00-session-start.md`, `copilot-instructions.md`, `key-files.md`, `packet-layouts.md`) and the READMEs are the day-to-day guidance for agents and humans. These are the claims that the code contradicts, ranked by how much damage acting on them would do. Each chapter's ⚠️ section has the cites.
