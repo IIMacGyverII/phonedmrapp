@@ -4196,6 +4196,36 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             });
             
+            // === DIAGNOSTICS: MCU CHANNEL READBACK (0x24/0x25/0x39, read-only) ===
+            Button mcuReadbackButton = new Button(context);
+            mcuReadbackButton.setText("🧪 Read MCU channel images");
+            mcuReadbackButton.setTextSize(16);
+            mcuReadbackButton.setAllCaps(false);
+            mcuReadbackButton.setPadding(20, 20, 20, 20);
+            mcuReadbackButton.setLayoutParams(new ViewGroup.LayoutParams(templateParams));
+            mcuReadbackButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    XposedBridge.log(TAG + ": MCU readback button clicked");
+                    McuDiagnostics.readChannelImages(activity, appClassLoader);
+                }
+            });
+
+            // === DIAGNOSTICS: RX AUDIO LAYOUT PROBE (gate G1) ===
+            Button audioProbeButton = new Button(context);
+            audioProbeButton.setText("🔬 Probe RX audio layout");
+            audioProbeButton.setTextSize(16);
+            audioProbeButton.setAllCaps(false);
+            audioProbeButton.setPadding(20, 20, 20, 20);
+            audioProbeButton.setLayoutParams(new ViewGroup.LayoutParams(templateParams));
+            audioProbeButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    XposedBridge.log(TAG + ": RX audio layout probe button clicked");
+                    McuDiagnostics.startAudioLayoutProbe(activity);
+                }
+            });
+
             // Add buttons at specified index
             if (index >= 0) {
                 parentLayout.addView(exportButton, index);
@@ -4203,6 +4233,8 @@ public class MainHook implements IXposedHookLoadPackage {
                 parentLayout.addView(radioidStatus, index + 2);
                 parentLayout.addView(radioidDownloadButton, index + 3);
                 parentLayout.addView(radioidImportButton, index + 4);
+                parentLayout.addView(mcuReadbackButton, index + 5);
+                parentLayout.addView(audioProbeButton, index + 6);
                 XposedBridge.log(TAG + ": ✓ Export button added at index " + index);
                 XposedBridge.log(TAG + ": ✓ Import button added at index " + (index + 1));
                 XposedBridge.log(TAG + ": ✓ RadioID buttons added at indices " + (index + 2) + "-" + (index + 4));
@@ -4212,6 +4244,8 @@ public class MainHook implements IXposedHookLoadPackage {
                 parentLayout.addView(radioidStatus);
                 parentLayout.addView(radioidDownloadButton);
                 parentLayout.addView(radioidImportButton);
+                parentLayout.addView(mcuReadbackButton);
+                parentLayout.addView(audioProbeButton);
                 XposedBridge.log(TAG + ": ✓ Export, Import, and RadioID buttons added at end of layout");
             }
             
@@ -9945,7 +9979,12 @@ public class MainHook implements IXposedHookLoadPackage {
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                         byte[] audioData = (byte[]) param.args[0];
                         int length = (int) param.args[1];
-                        
+
+                        // Diagnostics: RX sample-layout probe (gate G1), only while a probe is running
+                        if (McuDiagnostics.probeActive()) {
+                            McuDiagnostics.probeChunk(audioData, length);
+                        }
+
                         // Make a copy BEFORE any squelch muting for APRS/SSTV/NOAA/transcription/recording
                         // This ensures those features get clean audio regardless of squelch state
                         byte[] originalAudio = null;
@@ -11633,6 +11672,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                         Object packet = param.args[0];
                         logPacketData("RX", packet, binaryLogFile, textLogFile);
+                        McuDiagnostics.onReply(packet);  // capture 0x24/0x25/0x39 readback replies
                     }
                 }
             );
