@@ -3,6 +3,13 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-14 — Batch 10: in-app help, launch reset completeness
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **U11** | **Use Assistant rewritten for the mod.** The OEM help page (`FragmentLocalUseAssistantActivity`) gets a seventh section, "DMR Mod features": every intercom control (SCAN and its long-presses, Zone, Signal/S-meter, SOFT SQ, REC/TXT, modes), the Device-tab tools (EXPORT/IMPORT with the area and BOM caveats, RadioID, Diagnostics), and the facts that bite (squelch 1–9 one threshold, Call-Number-0 channels refused, group-call RX limit, reboot after a module update). Text lives in `MainHook.MOD_HELP_TEXT`. | `MainHook` | **device**: section appended, text readable in the UI dump |
+| **R12** (cont.) | Launch reset also clears the zone filter (`currentZoneName/currentZoneChannels`, which the rebuilt Zone button already claimed was "All") and the VFO DMR-ID override (`vfoLocalId`). | `MainHook` | code review |
+
 ## 2026-10-14 — Batch 9: scan list, import preview, S-meter screen gate, short-recording filter
 
 | Backlog | Change | Files | Test |

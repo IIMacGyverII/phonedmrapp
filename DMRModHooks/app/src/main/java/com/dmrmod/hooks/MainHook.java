@@ -524,6 +524,9 @@ public class MainHook implements IXposedHookLoadPackage {
 
         // Channel scanner: suppress the OEM progress dialog while scanning
         hookScanSupport(lpparam);
+
+        // U11: mod help appended to the OEM "Use Assistant" page
+        hookUseAssistant(lpparam);
         
         // Hook for zone filtering in channel list page
         hookChannelListFilter(lpparam);
@@ -1301,6 +1304,11 @@ public class MainHook implements IXposedHookLoadPackage {
                         isMonitoringMode = false;
                         isAutoSwitchingZone = false;
                         ChannelScanner.reset();
+                        // R12 (2026-10-14): the zone filter lives only in these statics while the Zone button
+                        // is rebuilt saying "All"; the VFO DMR-ID override must not leak into normal channels.
+                        currentZoneName = "All";
+                        currentZoneChannels = null;
+                        vfoLocalId = -1;
                         if (isCurrentlyRecording || pcmOutputStream != null) {
                             XposedBridge.log(TAG + ": Recording state was stuck from previous session - closing");
                             try { if (pcmOutputStream != null) pcmOutputStream.close(); } catch (Exception ignored) { }
@@ -12813,6 +12821,95 @@ public class MainHook implements IXposedHookLoadPackage {
             hookInstallFailures++;
             XposedBridge.log(TAG + ": Error installing serial reader watchdog: " + t.getMessage());
         }
+    }
+
+    /** U11 help text shown under the OEM's six "Use Assistant" paragraphs. Plain text, kept current by hand. */
+    static final String MOD_HELP_TEXT =
+        "Intercom\n"
+        + "\u2022 SCAN: tap to scan the selected zone (or all channels) using the radio's own squelch; the scanner stops on activity and moves on 2.5 s after it ends. Tap again to stop on the current channel. Long-press while it is stopped on a channel to skip that channel for this session; long-press while idle to edit the scan list (unchecked channels are never scanned). Soft SQ must be off.\n"
+        + "\u2022 Zone: pick a zone; the arrows and the scanner then only visit its channels.\n"
+        + "\u2022 Signal: RSSI while receiving. With Live S-meter on (Device tab) it also reads with the squelch closed.\n"
+        + "\u2022 SOFT SQ (analog only): opens the radio squelch and gates audio in software with the slider. Turn it off before scanning.\n"
+        + "\u2022 REC records received audio to Download/DMR/Audio/<channel>/ as 8 kHz WAV; captures under 1 s are dropped. TXT sends recordings to Google Speech-to-Text (needs an API key, long-press TXT).\n"
+        + "\u2022 APRS / SSTV / NOAA / VFO take over the current channel while active and restore it on exit. Exit them before scanning.\n"
+        + "\n"
+        + "Device tab\n"
+        + "\u2022 EXPORT writes Channels/Contacts/TG_Lists/Zones/DTMF CSVs (OpenGD77 style) plus a PDF and a zip into Download/DMR/DMR_Backups/<timestamp>/.\n"
+        + "\u2022 IMPORT replaces the selected area's channels and contacts with a backup. A fresh backup is taken first; the confirm dialog shows what will change; a backup from another area is refused. Never edit the CSVs with a tool that adds a BOM.\n"
+        + "\u2022 RadioID: downloads the public DMR ID list so callers are named in the history.\n"
+        + "\u2022 Diagnostics: 'Read MCU channel images' shows what the radio module really holds; the Diagnostics switch turns on UART logging and the adb debug receiver (leave it off normally); Live S-meter polls RSSI once a second while idle.\n"
+        + "\n"
+        + "Good to know\n"
+        + "\u2022 Squelch levels 1-9 behave as one threshold on this radio; 0 is always open.\n"
+        + "\u2022 A digital channel with no Call Number (TX contact) is refused by the radio: the arrows show 'operation failed' and the scanner skips it.\n"
+        + "\u2022 Group-call receive only works for the channel's own talkgroup; All-call receive is a known firmware limit.\n"
+        + "\u2022 After updating the mod, reboot the phone.";
+
+    private void hookUseAssistant(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            Class<?> helpActivity = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.activity.FragmentLocalUseAssistantActivity", lpparam.classLoader);
+            XposedHelpers.findAndHookMethod(helpActivity, "onCreate", Bundle.class, new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    try {
+                        final Activity activity = (Activity) param.thisObject;
+                        ViewGroup content = (ViewGroup) activity.findViewById(android.R.id.content);
+                        ScrollView scroll = findFirstScrollView(content);
+                        if (scroll == null || scroll.getChildCount() == 0 || !(scroll.getChildAt(0) instanceof ViewGroup)) {
+                            XposedBridge.log(TAG + ": U11: Use Assistant layout not as expected - help not added");
+                            return;
+                        }
+                        ViewGroup column = (ViewGroup) scroll.getChildAt(0);
+                        if (column.findViewWithTag("DMR_MOD_HELP") != null) {
+                            return;
+                        }
+                        float d = activity.getResources().getDisplayMetrics().density;
+                        TextView title = new TextView(activity);
+                        title.setTag("DMR_MOD_HELP");
+                        title.setText("7. DMR Mod features");
+                        title.setTextSize(18);
+                        title.setTypeface(null, android.graphics.Typeface.BOLD);
+                        title.setTextColor(0xFF00E5FF);
+                        title.setPadding((int) (16 * d), (int) (24 * d), (int) (16 * d), (int) (8 * d));
+                        TextView body = new TextView(activity);
+                        body.setText(MOD_HELP_TEXT);
+                        body.setTextSize(14);
+                        body.setTextColor(0xFFE0E0E0);
+                        body.setLineSpacing(0, 1.15f);
+                        body.setPadding((int) (16 * d), 0, (int) (16 * d), (int) (32 * d));
+                        column.addView(title);
+                        column.addView(body);
+                        XposedBridge.log(TAG + ": U11: mod help appended to Use Assistant");
+                    } catch (Throwable t) {
+                        XposedBridge.log(TAG + ": U11 hook error: " + t.getMessage());
+                    }
+                }
+            });
+            XposedBridge.log(TAG + ": ✓ Use Assistant help hook installed (U11)");
+        } catch (Throwable t) {
+            hookInstallFailures++;
+            XposedBridge.log(TAG + ": Error hooking Use Assistant: " + t.getMessage());
+        }
+    }
+
+    private static ScrollView findFirstScrollView(ViewGroup root) {
+        if (root == null) {
+            return null;
+        }
+        for (int i = 0; i < root.getChildCount(); i++) {
+            View child = root.getChildAt(i);
+            if (child instanceof ScrollView) {
+                return (ScrollView) child;
+            }
+            if (child instanceof ViewGroup) {
+                ScrollView found = findFirstScrollView((ViewGroup) child);
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        return null;
     }
 
     /**
