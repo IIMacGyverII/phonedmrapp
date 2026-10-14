@@ -39,7 +39,7 @@ Always grep before relying on: DB column names, `ChannelData` field names, hook 
 
 | Topic | Reality |
 |-------|---------|
-| RX audio | Does **not** cross the UART; arrives via `android.os.PrizeTinyService`. OEM `AudioTrack` = **8 kHz stereo 16-bit** (32 kB/s, ~2048 B / 64 ms chunks). Module DSP treats it as 16 kHz mono (same byte rate). Never write DSP against "8 kHz mono". |
+| RX audio | Does **not** cross the UART; arrives via `android.os.PrizeTinyService`. OEM `AudioTrack` = **8 kHz stereo 16-bit** (32 kB/s, 2048 B / 64 ms chunks). **Measured 2026-10-14: L == R for 100 % of samples** (`docs/grok-deep-dive/11-…` §16), so the content is **8 kHz mono duplicated**. Module DSP still treats the buffer as 16 kHz mono — 2× redundant. New DSP: take every other sample and work at 8 kHz; TX frames must be stereo-duplicated. |
 | Module DBs | All `dmrmod_*.db` live in `/data/data/com.pri.prizeinterphone/databases/` (module runs in the OEM process) |
 | `channel_band` | Bandwidth (0 narrow / 1 wide), **not** UHF/VHF. **`MainHook.determineBand(freq)` still returns UHF/VHF (0/1) and is written into `band` by SSTV/NOAA/VFO — a live bug (backlog R1). Never reuse it; set `band` from an explicit narrow/wide choice.** |
 | Module side-tables vs areas | `OemChannelTable` made channel export/import follow the selected **area**, but `dmrmod_zones/tglists/locations/aprs` are still one file for all areas: importing area B clears area A's extras and equal integer keys collide (backlog R7/H8). Until fixed, only import into the area the backup came from |

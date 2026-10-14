@@ -10,8 +10,8 @@ Legend — **Effort**: S < ½ day · M 1–2 days · L 3–5 days. **Device**: n
 
 | # | Item | Why | Effort | Device | Evidence |
 |---|---|---|---|---|---|
-| **G0** (A1) | **Build + regression-test HEAD** (`ba6431cb`) | Authored without a toolchain; nothing compiled. Five checks in `CHANGELOG_DRAFT.md`. | S | yes | `CHANGELOG_DRAFT.md` |
-| **G1** (A2) | **Settle the RX sample layout** — dump one `writeAudioTrack` chunk, test `s[2k]==s[2k+1]` | Every decoder's tone math and the TX frame format depend on it | S | yes | `deep-dive/00-README.md` §5, `04-…` §6 |
+| **G0** (A1) ◐ | **Build + regression-test HEAD** | **Built and installed 2026-10-14** (JDK 17, keystore recovered); hooks load, Device tab renders. The five manual regression checks in `CHANGELOG_DRAFT.md` (area-aware export, import side-tables, Soft SQ on digital, APRS Soft SQ off, Call Number help icon) are **still to run by hand**. | S | yes | `CHANGELOG_DRAFT.md` |
+| **G1** (A2) ✅ | **Settled 2026-10-14: 8 kHz stereo, L == R for 100 % of 30,720 pairs** (Device tab → 🔬 Probe RX audio layout). Follow-ups: decimate to 8 kHz mono in every consumer, fix recorder WAV header (S21), write the APRS TX experiment with stereo-duplicated frames. | S | yes | `grok-deep-dive/11-…` §16 |
 | **G2** (A3) | Check logs for `run error---` (`TAG_AsyncPacketReader`) | OEM reader thread dies permanently on a fragmented frame; watchdog is cheap if it happens | S | yes | `deep-dive/01-…` §10 |
 
 ---

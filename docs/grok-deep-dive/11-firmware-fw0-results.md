@@ -691,3 +691,28 @@ No `0x21`/`0x20` frames appeared on the wire during a normal boot + these querie
 - Group list: the MCU keeps all 32 slots as written. The "firmware ignores `groups[]`" constraint therefore describes the **RX filter**, not storage. Whether the RX path consults the stored list is the FW5 question and needs a second DMR transmitter.
 
 **Residual state:** the analog slot on the radio now holds 446.000 MHz / `sq=5` until the user selects any analog channel (the app rewrites it). The active digital channel is unchanged.
+
+---
+
+## 16. Device run 2 — diagnostics shipped, gate G1 settled (2026-10-14, module 3.4.6 + diagnostics installed)
+
+Build: first `assembleDebug` of the 2026-08-26 audit batch + `McuDiagnostics` (JDK 17; `release.keystore` recovered from `othercomputerbackup/`, cert matches the installed module). Installed with `install.ps1`, device rebooted, hooks confirmed in logcat (`writeAudioTrack` hooked, UART hooks, debug receiver, Device-tab buttons at indices 15–16).
+
+**🧪 Read MCU channel images** (Device tab) — tapped via `uiautomator`; three queries, three replies within 40 ms each, dialog + log show the decoded images. Fresh-boot analog slot again reads **all zero except `sq=3`, `volume=8`** — so `sq=3` is the MCU's **power-up default** for the analog image, not a leftover from an earlier write.
+
+**🔬 Probe RX audio layout** (gate **G1**) — with the analog slot written `sq=0` (module reported `RECEIVE_START`, OEM created its `AudioTrack(8000, STEREO)`), 60 chunks were sampled:
+
+| Measure | Value |
+|---|---|
+| chunks / bytes | 60 / 122,880 (every chunk 2,048 B) |
+| sample pairs (even, odd) | 30,720 |
+| even == odd | **100.00 %** |
+| even == 0 / odd == 0 | 0.01 % / 0.01 % |
+| mean abs even / odd | 3,895 / 3,895 |
+| corr(even, odd) | 1.000 |
+
+**Verdict: the stream is 8 kHz stereo with L == R, byte for byte.** The information content is **8 kHz mono**; every mod consumer that treats the buffer as 16 kHz mono (recorder, transcription buffer, APRS/SSTV/NOAA decoders, VU) is processing 2× redundant samples, and any resampler built on "16 kHz" is wrong by exactly a factor of two. Consequences are listed in `docs/deep-dive/00-README.md` §5 and `15-packet-radio-review.md` step 0 (now done): decimate by taking every other sample (or average pairs) and write DSP against **8 kHz mono**; the APRS TX experiment must write **stereo-duplicated** frames.
+
+**Incident.** While unlocking the phone over adb, a blind `input swipe` started inside the Intercom screen's on-screen PTT and the DMR History shows a `Voice TX` at 12:08:10 — a sub-second key-up on the active channel's TX frequency (448.200 MHz). No further blind gestures were used; all later taps were on `uiautomator`-resolved bounds, and the Device tab (no PTT) was used for scrolling. Rule for agents: **never swipe or tap unresolved coordinates while the Intercom tab is in front.**
+
+**State left on the radio:** the active digital channel was re-sent and read back byte-identical; the analog slot holds 446.000 MHz / `sq=0` until any analog channel is selected in the app.
