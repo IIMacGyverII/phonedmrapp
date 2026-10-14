@@ -10,7 +10,7 @@ Legend — **Effort**: S < ½ day · M 1–2 days · L 3–5 days. **Device**: n
 
 | # | Item | Why | Effort | Device | Evidence |
 |---|---|---|---|---|---|
-| **G0** (A1) ◐ | **Build + regression-test HEAD** | **Built and installed 2026-10-14** (JDK 17, keystore recovered); hooks load, Device tab renders. The five manual regression checks in `CHANGELOG_DRAFT.md` (area-aware export, import side-tables, Soft SQ on digital, APRS Soft SQ off, Call Number help icon) are **still to run by hand**. | S | yes | `CHANGELOG_DRAFT.md` |
+| **G0** (A1) ◐ | **Build + regression-test HEAD** | **Built and installed 2026-10-14** (JDK 17, keystore recovered); hooks load, Device tab renders. Regression checks: (1) export verified 2026-10-14 for the selected `default_uhf` area (48 channels, exporter opened that DB; only one area is in use on the test phone); (2) import side-tables, (3) Soft SQ on digital, (4) APRS Soft SQ off, (5) Call Number help icon are **still to run by hand** — (5) needs the channel editor, which an unattended tap on a list row could confuse with a channel change. | S | yes | `CHANGELOG_DRAFT.md` |
 | **G1** (A2) ✅ | **Settled 2026-10-14: 8 kHz stereo, L == R for 100 % of 30,720 pairs** (Device tab → 🔬 Probe RX audio layout). Follow-ups: decimate to 8 kHz mono in every consumer, fix recorder WAV header (S21), write the APRS TX experiment with stereo-duplicated frames. | S | yes | `grok-deep-dive/11-…` §16 |
 | **G2** (A3) | Check logs for `run error---` (`TAG_AsyncPacketReader`) | OEM reader thread dies permanently on a fragmented frame; watchdog is cheap if it happens | S | yes | `deep-dive/01-…` §10 |
 
