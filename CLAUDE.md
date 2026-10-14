@@ -16,6 +16,7 @@ Mandatory checklist for every new session on **phonedmrapp** / **DMRModHooks**.
 | **OEM app source** | `app/src/main/java/com/pri/prizeinterphone/` | Decompiled PriInterPhone |
 | **OpenGD77 CPS fork (binary)** | `OpenGD77Fork/*.zip` | Latest build zip for releases; **not** a git submodule |
 | **OpenGD77 CPS fork (source)** | `C:\Users\Joshua\Documents\android\OpenGD77CPS-Mac` | Separate repo — edit/build CPS here |
+| **MCU firmware RE** | `docs/grok-deep-dive/11-firmware-fw0-results.md` §12–14 | Image is **C-SKY V2**, not ARM. Disassemblers installed: `C:\Users\Joshua\tools\csky-elfabiv2\bin\csky-elfabiv2-objdump.exe` and the Ghidra C-SKY module; `scripts/fw1_ghidra_csky.ps1`. Never reuse the old `0x08xxxxxx` ARM addresses |
 
 ## 2. Trust, but verify
 
