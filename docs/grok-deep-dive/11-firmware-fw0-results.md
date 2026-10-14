@@ -565,3 +565,50 @@ So the hand walkers were right where they reached, and FW-A3 is **closed**: ISA 
 - Decide what the out-of-image region is (the YModem update only carries this one file; the module may have a resident ROM). Read-only observation on a device is the only way.
 - Name the 0x22 digital unpack (the §11.4 analog twin) in the Ghidra project.
 - Walk the `rxvoice` callers toward the RX voice path.
+
+---
+
+## 13. FW1 continued — digital `0x22` unpack found; memory map still open (2026-10-14)
+
+Source: `radio_firmware/fw1_csky_objdump.txt` (regenerate with the §12 command). Read-only findings; nothing patched.
+
+### 13.1 Digital channel unpack = `FUN_00009310` (body copy at `+0x9394`)
+
+`+0x9310 push r4-r11, r15; subi sp, 588`. After the frame arrives: `movi r2, 163; addi r0, sp, 424; bsr +0x304E8` — **memcpy of exactly 163 bytes**, the OEM `DigitalMessage` body length. It then reads the OEM offsets byte-wise (file offsets of the loads in brackets):
+
+| Body off | OEM field (ch. 02 §3.2) | Load |
+|---|---|---|
+| 0–3 / 4–7 | `rxFreq` / `txFreq` (assembled with `lsli 8/16/24` + `or`) | `+0x939C…+0x9414` |
+| 8–11 | `localId` | `+0x93C6`, `+0x93B4`, `+0x93D2`, `+0x9414` |
+| 140–143 (`0x8C–0x8F`) | `txContact` | `+0x93CA`, `+0x93B6`, `+0x93D6`, `+0x9418` |
+| 144 (`0x90`) | `contactType` | `+0x93BE` → spilled `(sp,0xA0)` |
+| 145 / 146 | `power` / `cc` | `+0x945E` / `+0x9422` |
+| 147 / 148 | `inboundSlot` / `outboundSlot` | `+0x9448` / `+0x9450` |
+| 149 / 150 | `channelMode` / `encryptSw` | `+0x9466` / `+0x946A` |
+| 159–162 (`0x9F–0xA2`) | `pwrSave`, `volume`, `mic`, `relay` | `+0x946E…+0x947E` |
+
+Frequency range checks follow, using literal pairs `(−400 000 000, 120 000 000)` and `(−136 000 000, 38 000 000)`: i.e. **400–520 MHz** or **136–174 MHz** accepted, otherwise one of the `bsr +0x8E7C` ACK-and-return exits (`+0x957C`, `+0x95A0`, `+0x95C4`). That is the FW4 band-limit validation — **document only**, per plan §7.
+
+Branches on the DMR fields (all FW5-relevant, none understood yet):
+- `+0x941E cmpnei r11, 2` — `contactType == ALL`.
+- `+0x95E6 cmpnei r7, 3` — a fourth `contactType` value the app never sends.
+- `+0x9512/+0x9516` — `channelMode` is 0 or 4 (OEM Direct / Double-slot), else error exit.
+- `+0x962E cmpnei r0, 32` closes a **32-iteration loop** (`+0x9606…+0x9632`) that walks `ldr.w (r8, r7<<2)` over the copied body — the `groups[32]` list **is** consumed by the MCU, at least into a RAM structure. Whether the RX path then uses it is the open question (hard constraint "firmware ignores groups[]" is behaviour-level evidence, not yet code-level).
+- Success path `+0x9540`: `bsr +0x8E7C` (ACK), clear a byte at `*(0x3244C+0xB)`, `bsr +0x1924` (unlock), return. `+0x9566`: `movi r0,2; bsr +0x7E08` (same 3-byte flag setter the analog handler uses) then `bsr +0x6354`.
+
+The analog twin is `+0x9A2C` (§11.4); both share the ACK, lock/unlock (`+0x18E8`/`+0x1924`) and flag-setter helpers. The in-memory channel object noted in §11.4 at `+0x939C` is this same function's post-memcpy read-out.
+
+### 13.2 Task creation = `FUN_00001BF8`
+
+A straight-line sequence of ten blocks, each: `memset(stack, 0, 1536)` via `bsr +0x30568`, build a 9-word argument block on the stack (`prio` 17–26, stack size `0x180/0x300`, option `3`), load `r0/r1/r2` from pools, then **`bsr 0xFCFF8F88`** — an out-of-image call with 58 sites, by shape `OSTaskCreate`. So the **uC/OS-III kernel is not in this file**; it lives in the external region the `bsr`s reach. The pool values passed as `r1`/`r2` are `0x0305xxxx` / `0x0302xxxx–0x0303xxxx` (plus one `0x0002C8DC`): RAM or a second code region, not provable from this image.
+
+### 13.3 Memory map — what the listing says and does not say
+
+| Evidence | Reading |
+|---|---|
+| `lrw` pools → in-file string offsets (`rxvoice` @ `+0x3659C`) | this image is addressed at **0** |
+| 1,583 `bsr` sites → ~25 targets in `0xFCFF6000–0xFD014690` (PC − ≈48 MB) | a second code region (kernel + libc-class helpers: the top targets have 392/322/320 callers) — **not in the YModem image** |
+| Task entry / name pointers `0x0302xxxx–0x0305xxxx` | a third region, likely SRAM |
+| Vote "which base makes task pointers or far targets land on function starts": no candidate above noise (`scripts` ad-hoc, 1,821 start candidates) | **no alias of this image at `0x03000000` or elsewhere** is supported |
+
+Working model: boot ROM / resident kernel (external) + this 378 KB application image at 0 + SRAM at `0x03xxxxxx`. The RAM-load update replaces only the application. Consequences: (a) OS calls, `memcpy`-class helpers and whatever the type→cmd mapper `+0x794C` calls cannot be read; (b) any RX-group-list decision taken inside the external region is invisible to static analysis of `ORIGINAL.bin`; (c) the 0x24/0x25 **readback** test from the RumiTX comparison remains the cheapest way to learn what the MCU stored.
