@@ -150,6 +150,11 @@ public class MainHook implements IXposedHookLoadPackage {
     // ============================================================================
     private static volatile boolean isSoftwareSquelchEnabled = false;  // Disabled by default
     private static volatile int softSqSavedChannelSq = 2;  // channel's hardware sq before Soft SQ forced 0 (S22)
+    private static volatile int lastSentAnalogSq = -1;      // sq byte of the last 0x23 the app sent (Pitfall 13 / R13)
+    // Diagnostics gate (backlog R6): UART file logger + com.dmrmod.SEND_DEBUG_PACKET receiver are opt-in.
+    // Persisted in the OEM app's prefs; default OFF. The Device-tab readback/probe buttons do not need it.
+    private static volatile boolean diagnosticsEnabled = false;
+    private static final String DIAG_PREFS = "dmrmod_diagnostics";
     private static volatile int softwareSquelchThreshold = 2;  // User squelch level (0-9)
     private static volatile boolean isSquelchOpen = false;  // Current squelch state
     private static volatile boolean previousSquelchOpen = false;  // Track state changes
@@ -1392,6 +1397,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Create location TextView (40% width, right-aligned)
                                 TextView locationText = new TextView(context);
                                 locationText.setTag("DMR_LOCATION_TEXT");
+                                locationText.setContentDescription("Channel location and distance");  // U3 accessibility
                                 LinearLayout.LayoutParams locationParams = new LinearLayout.LayoutParams(
                                     0,
                                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -1504,6 +1510,7 @@ public class MainHook implements IXposedHookLoadPackage {
 
                                 LinearLayout callerPanel = new LinearLayout(context);
                                 callerPanel.setTag("DMR_CALLER_PANEL");
+                                callerPanel.setContentDescription("Caller details");  // U3 accessibility
                                 callerPanel.setOrientation(LinearLayout.VERTICAL);
                                 callerPanel.setLayoutParams(new LinearLayout.LayoutParams(
                                     LinearLayout.LayoutParams.MATCH_PARENT,
@@ -1560,6 +1567,7 @@ public class MainHook implements IXposedHookLoadPackage {
 
                                 TextView activityIndicator = new TextView(context);
                                 activityIndicator.setTag("DMR_ACTIVITY_INDICATOR");
+                                activityIndicator.setContentDescription("DMR history");  // U3 accessibility
                                 activityIndicator.setLayoutParams(new LinearLayout.LayoutParams(
                                     LinearLayout.LayoutParams.MATCH_PARENT,
                                     LinearLayout.LayoutParams.WRAP_CONTENT
@@ -1695,6 +1703,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Add RSSI value TextView
                                 TextView rssiText = new TextView(context);
                                 rssiText.setTag("DMR_RSSI_TEXT");
+                                rssiText.setContentDescription("Signal strength");  // U3 accessibility
                                 rssiText.setTextColor(0xFFFFFF00);  // Yellow text
                                 rssiText.setTextSize(16);
                                 rssiText.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -1713,6 +1722,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Create ZONE selector button (right half)
                                 android.widget.Button zoneButtonWidget = new android.widget.Button(context);
                                 zoneButtonWidget.setTag("DMR_ZONE_SELECTOR");
+                                zoneButtonWidget.setContentDescription("Select zone");  // U3 accessibility
                                 zoneButtonWidget.setText("Zone: All");
                                 
                                 LinearLayout.LayoutParams zoneButtonParams = new LinearLayout.LayoutParams(
@@ -1883,6 +1893,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Squelch slider
                                 android.widget.SeekBar squelchSeekBar = new android.widget.SeekBar(context);
                                 squelchSeekBar.setTag("DMR_SQUELCH_SEEKBAR");
+                                squelchSeekBar.setContentDescription("Software squelch threshold");  // U3 accessibility
                                 LinearLayout.LayoutParams squelchSeekBarParams = new LinearLayout.LayoutParams(
                                     0,
                                     LinearLayout.LayoutParams.WRAP_CONTENT
@@ -2048,6 +2059,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Create transcription toggle button (left of PTT button)
                                 android.widget.ToggleButton transcriptionToggle = new android.widget.ToggleButton(context);
                                 transcriptionToggle.setTag("DMR_TRANSCRIPTION_TOGGLE");
+                                transcriptionToggle.setContentDescription("Toggle transcription");  // U3 accessibility
                                 transcriptionToggle.setTextOn("✍️\nTXT");
                                 transcriptionToggle.setTextOff("✍️\nTXT");
                                 transcriptionToggle.setChecked(false);
@@ -2162,6 +2174,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Create software squelch toggle button (above TXT button, left side)
                                 android.widget.ToggleButton softSqToggle = new android.widget.ToggleButton(context);
                                 softSqToggle.setTag("DMR_SOFT_SQUELCH_TOGGLE");
+                                softSqToggle.setContentDescription("Toggle software squelch");  // U3 accessibility
                                 softSqToggle.setTextOn("🎚️\nSOFT SQ");
                                 softSqToggle.setTextOff("🎚️\nSOFT SQ");
                                 softSqToggle.setChecked(isSoftwareSquelchEnabled);
@@ -2254,6 +2267,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Create recording toggle button (right-aligned)
                                 android.widget.ToggleButton recordToggle = new android.widget.ToggleButton(context);
                                 recordToggle.setTag("DMR_RECORDING_TOGGLE");
+                                recordToggle.setContentDescription("Toggle recording");  // U3 accessibility
                                 recordToggle.setTextOn("⏺\nREC");
                                 recordToggle.setTextOff("⏺\nREC");
                                 recordToggle.setChecked(false);
@@ -2333,6 +2347,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Create monitoring mode toggle button (below REC button, right side)
                                 android.widget.ToggleButton monitorToggle = new android.widget.ToggleButton(context);
                                 monitorToggle.setTag("DMR_MONITOR_TOGGLE");
+                                monitorToggle.setContentDescription("Toggle monitor (squelch open)");  // U3 accessibility
                                 monitorToggle.setTextOn("👁️\nMON");
                                 monitorToggle.setTextOff("👁️\nMON");
                                 monitorToggle.setChecked(false);
@@ -2560,6 +2575,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Create Packet Radio menu button (below MON button, right side)
                                 android.widget.ToggleButton aprsButton = new android.widget.ToggleButton(context);
                                 aprsButton.setTag("DMR_PKT_RAD_BUTTON");
+                                aprsButton.setContentDescription("Packet radio modes");  // U3 accessibility
                                 aprsButton.setTextOn("📡\nPKT RAD");
                                 aprsButton.setTextOff("📡\nPKT RAD");
                                 aprsButton.setChecked(false);
@@ -2624,6 +2640,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Create VFO toggle button (below TXT button, left side)
                                 android.widget.ToggleButton vfoButton = new android.widget.ToggleButton(context);
                                 vfoButton.setTag("DMR_VFO_TOGGLE");
+                                vfoButton.setContentDescription("VFO mode");  // U3 accessibility
                                 vfoButton.setTextOn("🎛️\nVFO");
                                 vfoButton.setTextOff("🎛️\nVFO");
                                 vfoButton.setChecked(false);
@@ -2692,6 +2709,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Create GPS position send button (same slot as MON, right side — shown on digital, hidden on analog)
                                 android.widget.Button gpsSendButton = new android.widget.Button(context);
                                 gpsSendButton.setTag("DMR_GPS_SEND_BUTTON");
+                                gpsSendButton.setContentDescription("Send GPS position");  // U3 accessibility
                                 gpsSendButton.setText("📍\nPOS");
 
                                 FrameLayout.LayoutParams gpsSendParams = new FrameLayout.LayoutParams(
@@ -4254,6 +4272,14 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             });
             
+            // === DIAGNOSTICS SECTION HEADER (backlog S7: one home for the read-only tools and the gate) ===
+            TextView diagHeader = new TextView(context);
+            diagHeader.setText("Diagnostics");
+            diagHeader.setTextSize(13);
+            diagHeader.setTextColor(0xFF888888);
+            diagHeader.setPadding(20, 24, 20, 4);
+            diagHeader.setLayoutParams(new ViewGroup.LayoutParams(templateParams));
+
             // === DIAGNOSTICS: MCU CHANNEL READBACK (0x24/0x25/0x39, read-only) ===
             Button mcuReadbackButton = new Button(context);
             mcuReadbackButton.setText("🧪 Read MCU channel images");
@@ -4284,6 +4310,30 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             });
 
+            // === DIAGNOSTICS GATE (R6): UART file logger + debug packet receiver ===
+            final android.widget.ToggleButton diagToggle = new android.widget.ToggleButton(context);
+            diagToggle.setTextOn("🛠 Diagnostics ON (UART log + debug receiver)");
+            diagToggle.setTextOff("🛠 Diagnostics OFF (UART log + debug receiver)");
+            diagToggle.setChecked(diagnosticsEnabled);
+            diagToggle.setTextSize(14);
+            diagToggle.setAllCaps(false);
+            diagToggle.setPadding(20, 20, 20, 20);
+            diagToggle.setLayoutParams(new ViewGroup.LayoutParams(templateParams));
+            diagToggle.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    diagnosticsEnabled = diagToggle.isChecked();
+                    try {
+                        activity.getSharedPreferences(DIAG_PREFS, Context.MODE_PRIVATE).edit()
+                                .putBoolean("enabled", diagnosticsEnabled).apply();
+                    } catch (Throwable ignored) { }
+                    XposedBridge.log(TAG + ": Diagnostics toggled " + (diagnosticsEnabled ? "ON" : "OFF"));
+                    Toast.makeText(activity, diagnosticsEnabled
+                            ? "Diagnostics ON: UART frames logged to Download/DMR/uart_logs; adb debug packets accepted"
+                            : "Diagnostics OFF", Toast.LENGTH_LONG).show();
+                }
+            });
+
             // Add buttons at specified index
             if (index >= 0) {
                 parentLayout.addView(exportButton, index);
@@ -4291,8 +4341,10 @@ public class MainHook implements IXposedHookLoadPackage {
                 parentLayout.addView(radioidStatus, index + 2);
                 parentLayout.addView(radioidDownloadButton, index + 3);
                 parentLayout.addView(radioidImportButton, index + 4);
-                parentLayout.addView(mcuReadbackButton, index + 5);
-                parentLayout.addView(audioProbeButton, index + 6);
+                parentLayout.addView(diagHeader, index + 5);
+                parentLayout.addView(mcuReadbackButton, index + 6);
+                parentLayout.addView(audioProbeButton, index + 7);
+                parentLayout.addView(diagToggle, index + 8);
                 XposedBridge.log(TAG + ": ✓ Export button added at index " + index);
                 XposedBridge.log(TAG + ": ✓ Import button added at index " + (index + 1));
                 XposedBridge.log(TAG + ": ✓ RadioID buttons added at indices " + (index + 2) + "-" + (index + 4));
@@ -4302,8 +4354,10 @@ public class MainHook implements IXposedHookLoadPackage {
                 parentLayout.addView(radioidStatus);
                 parentLayout.addView(radioidDownloadButton);
                 parentLayout.addView(radioidImportButton);
+                parentLayout.addView(diagHeader);
                 parentLayout.addView(mcuReadbackButton);
                 parentLayout.addView(audioProbeButton);
+                parentLayout.addView(diagToggle);
                 XposedBridge.log(TAG + ": ✓ Export, Import, and RadioID buttons added at end of layout");
             }
             
@@ -11730,6 +11784,12 @@ public class MainHook implements IXposedHookLoadPackage {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                         Object packet = param.args[0];
+                        try {
+                            if ((((Byte) XposedHelpers.getObjectField(packet, "cmd")) & 0xFF) == 0x23) {
+                                byte[] body = (byte[]) XposedHelpers.getObjectField(packet, "body");
+                                if (body != null && body.length >= 19) lastSentAnalogSq = body[10] & 0xFF;
+                            }
+                        } catch (Throwable ignored) { }
                         logPacketData("TX", packet, binaryLogFile, textLogFile);
                     }
                 }
@@ -11771,6 +11831,7 @@ public class MainHook implements IXposedHookLoadPackage {
      * Performs real-time packet parsing and interpretation
      */
     private void logPacketData(final String direction, final Object packet, final File binaryLog, final File textLog) {
+        if (!diagnosticsEnabled) return;  // R6: opt-in; the logger opened two files per packet forever
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -12017,6 +12078,13 @@ public class MainHook implements IXposedHookLoadPackage {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         final android.content.Context context = (android.content.Context) param.thisObject;
+
+                        try {
+                            diagnosticsEnabled = context.getSharedPreferences(DIAG_PREFS, android.content.Context.MODE_PRIVATE)
+                                    .getBoolean("enabled", false);
+                        } catch (Throwable ignored) { }
+                        XposedBridge.log(TAG + ": Diagnostics (UART log + debug receiver) " + (diagnosticsEnabled ? "ON" : "OFF"));
+                        pruneUartLogs(40);  // keep the newest 40 files (20 sessions); the folder had 1,860 on 2026-10-14
                         
                         // Register broadcast receiver for debug commands
                         android.content.BroadcastReceiver debugReceiver = new android.content.BroadcastReceiver() {
@@ -12039,10 +12107,35 @@ public class MainHook implements IXposedHookLoadPackage {
         }
     }
     
+    /** Delete all but the newest {@code keep} files in Download/DMR/uart_logs (names are timestamped). */
+    private static void pruneUartLogs(final int keep) {
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    File dir = new File(Environment.getExternalStorageDirectory(), "DMR/uart_logs");
+                    File[] files = dir.listFiles();
+                    if (files == null || files.length <= keep) return;
+                    java.util.Arrays.sort(files, new java.util.Comparator<File>() {
+                        @Override public int compare(File x, File y) { return y.getName().compareTo(x.getName()); }
+                    });
+                    int deleted = 0;
+                    for (int i = keep; i < files.length; i++) if (files[i].delete()) deleted++;
+                    XposedBridge.log(TAG + ": Pruned " + deleted + " old UART log files (kept " + keep + ")");
+                } catch (Throwable t) {
+                    XposedBridge.log(TAG + ": UART log prune failed: " + t.getMessage());
+                }
+            }
+        }, "dmrmod-uartlog-prune").start();
+    }
+
     /**
      * Handle debug packet broadcast - send custom UART packets for fuzzing
      */
     private void handleDebugPacket(android.content.Intent intent, ClassLoader classLoader) {
+        if (!diagnosticsEnabled) {
+            XposedBridge.log(TAG + ": Debug packet ignored - Diagnostics is OFF (enable it on the Device tab)");
+            return;
+        }
         try {
             // Extract packet parameters from intent
             int cmd = intent.getIntExtra("CMD", -1);
@@ -12524,6 +12617,39 @@ public class MainHook implements IXposedHookLoadPackage {
             );
             XposedBridge.log(TAG + ": ✓ sendAnalogMessage software squelch hook installed");
 
+            // Pitfall 13 (backlog R13): the OEM's SetChannelState transaction can swallow the 300 ms re-apply,
+            // because acks are matched by command byte only. Re-apply sq=0 when the MCU acknowledges an analog
+            // write whose squelch byte was not 0 — i.e. the OEM's own channel program just overwrote ours.
+            // Our own sq=0 write acks with lastSentAnalogSq == 0, so this cannot loop.
+            try {
+                Class<?> analogHandlerClass = XposedHelpers.findClass(
+                    "com.pri.prizeinterphone.handler.AnalogMessageHandler", lpparam.classLoader);
+                Class<?> analogMessageClassNav = XposedHelpers.findClass(
+                    "com.pri.prizeinterphone.message.AnalogMessage", lpparam.classLoader);
+                XposedHelpers.findAndHookMethod(analogHandlerClass, "handle", analogMessageClassNav,
+                    new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            try {
+                                if (!(isSoftwareSquelchEnabled || isAprsSoftwareSquelchEnabled)) return;
+                                if (currentChannelType != 1 && !isAPRSMonitoringActive && !isSSTVMonitoringActive && !isNOAAMonitoringActive) return;
+                                Object pkt = XposedHelpers.getObjectField(param.args[0], "packet");
+                                byte sr = (Byte) XposedHelpers.getObjectField(pkt, "sr");
+                                if (sr != 0) return;  // only successful acks
+                                if (lastSentAnalogSq > 0) {
+                                    XposedBridge.log(TAG + ": Analog ack for sq=" + lastSentAnalogSq + " while Soft SQ is on - re-applying sq=0 (Pitfall 13)");
+                                    enableSoftwareSquelchOnCurrentChannel();
+                                }
+                            } catch (Throwable t) {
+                                XposedBridge.log(TAG + ": Error in AnalogMessageHandler hook: " + t.getMessage());
+                            }
+                        }
+                    });
+                XposedBridge.log(TAG + ": ✓ AnalogMessageHandler ack hook installed (Pitfall 13 re-apply)");
+            } catch (Throwable t) {
+                XposedBridge.log(TAG + ": Failed to hook AnalogMessageHandler: " + t.getMessage());
+            }
+
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": Failed to hook channel navigation: " + t.getMessage());
             XposedBridge.log(t);
@@ -12834,6 +12960,7 @@ public class MainHook implements IXposedHookLoadPackage {
                             // Create zone button
                             android.widget.Button channelZoneButton = new android.widget.Button(context);
                             channelZoneButton.setTag("DMR_CHANNEL_ZONE_BTN");
+                            channelZoneButton.setContentDescription("Channel zone");  // U3 accessibility
                             channelZoneButton.setText("Zone: " + currentZoneName);
                             channelZoneButton.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12);
                             channelZoneButton.setTextColor(0xFFFFFFFF);
@@ -14849,6 +14976,27 @@ public class MainHook implements IXposedHookLoadPackage {
             powerRadioGroup.addView(highPowerRadio);
             
             mainLayout.addView(powerRadioGroup);
+
+            // === Bandwidth Section (analog FM; channel_band is bandwidth, backlog R1) ===
+            TextView bwLabel = new TextView(activity);
+            bwLabel.setText("Bandwidth (analog FM):");
+            bwLabel.setTextSize(14);
+            bwLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            mainLayout.addView(bwLabel);
+
+            final android.widget.RadioGroup bwRadioGroup = new android.widget.RadioGroup(activity);
+            bwRadioGroup.setOrientation(android.widget.RadioGroup.HORIZONTAL);
+            final android.widget.RadioButton narrowRadio = new android.widget.RadioButton(activity);
+            narrowRadio.setText("Narrow 12.5 kHz");
+            narrowRadio.setId(View.generateViewId());
+            narrowRadio.setChecked(vfoBandWidth == 0);
+            bwRadioGroup.addView(narrowRadio);
+            final android.widget.RadioButton wideRadio = new android.widget.RadioButton(activity);
+            wideRadio.setText("Wide 25 kHz");
+            wideRadio.setId(View.generateViewId());
+            wideRadio.setChecked(vfoBandWidth != 0);
+            bwRadioGroup.addView(wideRadio);
+            mainLayout.addView(bwRadioGroup);
             
             // Spacer
             View spacer4 = new View(activity);
@@ -15084,6 +15232,9 @@ public class MainHook implements IXposedHookLoadPackage {
                         
                         // Get power
                         vfoPowerLevel = (powerRadioGroup.getCheckedRadioButtonId() == lowPowerRadio.getId()) ? 0 : 1;
+
+                        // Get bandwidth (0 narrow / 1 wide)
+                        vfoBandWidth = (bwRadioGroup.getCheckedRadioButtonId() == narrowRadio.getId()) ? 0 : 1;
                         
                         // Get mode-specific settings
                         if (vfoChannelMode == 1) {

@@ -3,6 +3,25 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-14 — Batch 5: Pitfall 13 and import safety
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **R13** | Pitfall 13: Soft SQ is re-applied when the MCU **acknowledges** an analog write whose squelch byte was not 0 (`AnalogMessageHandler.handle` after-hook; the last-sent `sq` is tracked in the `SerialManager.send` hook). The 300 ms timer stays as a fallback. Our own `sq=0` writes cannot loop. | `MainHook` | **device**: with Soft SQ on, a foreign `sq=5` write is followed by an automatic `sq=0` and the readback shows 0 |
+| **R4** | Importer strips a UTF-8 BOM from the `Channels.csv` header, and **refuses to commit an empty channel table** (throws inside the transaction → rollback, result "failed", codeplug untouched). | `DirectDatabaseImporter` | code review (import not exercised on the user's codeplug) |
+| **R8** | **Automatic backup before every import** via `DirectDatabaseExporter.exportFromAppContext` (timestamped folder in `DMR_Backups/`); the success message says so. | `DirectDatabaseImporter` | code review |
+
+## 2026-10-14 — Batch 3: Diagnostics gate
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **R6** (cont.) | When the app starts, `Download/DMR/uart_logs/` is pruned to the newest 40 files (it held 1,860). | `MainHook` | **device**: log line with the count |
+| **R1** (cont.) | VFO dialog gains a **Bandwidth: Narrow 12.5 kHz / Wide 25 kHz** selector feeding `vfoBandWidth`, which is what `channel_band` now receives. | `MainHook` | **device**: dialog shows the control |
+| **S7** | Device tab: a "Diagnostics" header groups the readback, probe and gate controls. | `MainHook` | **device**: UI dump |
+| **U3** | `contentDescription` on the 14 tagged injected controls (Soft SQ, REC, MON, VFO, POS, PKT RAD, zone, squelch slider, …). | `MainHook` | **device**: UI dump shows `content-desc` |
+| hygiene | Dead DSP code deleted (verified unreferenced, compile-checked): `AFSKDecoderPLL`, `DireWolfDecoder` + `cpp/`, `SSTVImageDecoder`, `SSTVGoertzelDemod`, `SSTVZeroCrossingDemod`, `SSTVFMDemodRobot36`, `SSTVFFTDemodulator`, `SSTVPhaseDemod`, `SSTVFilter`, `FrequencyModulation`, `Phasor`, `Kaiser`, `ComplexConvolution`, `Complex`, `SSTVFMDemodulator.java.old`. The live SSTV demod is the `com.example.dmrmodhooks.sstv` package; `AFSKGenerator` is kept for the TX experiment. | 16 files | compile |
+| **R6** | **Diagnostics are opt-in.** New Device-tab toggle "🛠 Diagnostics OFF/ON (UART log + debug receiver)", persisted in the OEM app's `dmrmod_diagnostics` prefs, default OFF. While OFF the UART file logger writes nothing and `com.dmrmod.SEND_DEBUG_PACKET` broadcasts are ignored with a log line — an exported receiver that could make any app send MCU commands (including Radio Kill) is now inert by default. The 🧪 readback and 🔬 probe buttons do not depend on it. | `MainHook` | **device**: broadcast ignored while OFF, accepted after toggling ON; readback works in both states |
+
 ## 2026-10-14 — Correctness batch 2
 
 | Backlog | Change | Files | Test |
