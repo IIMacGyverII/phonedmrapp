@@ -3,6 +3,13 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-14 — Firmware track: CTCSS table located, do-nothing patch image unbundled
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **FW1/FW3** | The **CTCSS tone table** is at file offset `0x366B2` of the MCU image: 50 × LE16 centihertz (6700 = 67.00 Hz … 25410 = 254.10 Hz), 49/50 identical to the EIA list (index 32 is the 177.4/177.3 catalogue variant). First user-visible data table found; it is the legal, receive-side, reversible FW3 target for proving the RAM-load round trip. No literal xref and no DCS table found. | `scripts/fw1_ctcss_table.py`, `grok-deep-dive/11` §18, plan `18`, backlog | script reproduces 49/50 |
+| **FW6** (part) | `PATCH14.bin` (378 KB modified MCU image that did nothing) is no longer bundled in the APK; `PatchReloadHelper` had no live callers. | `assets/` | build + install, hooks load |
+
 ## 2026-10-14 — Batch 11: private JSON mode backups (S3), import needs its safety copy
 
 | Backlog | Change | Files | Test |

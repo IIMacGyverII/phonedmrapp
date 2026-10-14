@@ -813,7 +813,12 @@ Validation recipe (same safe loop as ch. 07 §6, no new technique):
 
 A single confirmed round-trip here de-risks every later firmware experiment. Logged as backlog **FW3**.
 
-### 18.2 Named site
+### 18.2 What was not found (same pass)
+
+- **No literal cross-reference to the table.** No 32-bit word in the image equals `0x366B0`/`0x366B2`, and the objdump lines that mention those addresses are the table's own bytes mis-decoded as `addi`. The index-to-table load therefore goes through a base pointer held in RAM or a resident-region helper (§13.3), not an `lrw` literal. Unresolved; not needed for the FW3 edit, which changes the data, not the code.
+- **No DCS table** in three encodings: codes as decimal-digit numbers (23, 25, 26 …), as octal values (0o23 = 19 …), or as 23-bit Golay words with the fixed `100` field (`low12 == code | 0x800`). DCS is generated at runtime or lives outside this image.
+
+### 18.3 Named site
 
 | Offset | Role |
 |---|---|
