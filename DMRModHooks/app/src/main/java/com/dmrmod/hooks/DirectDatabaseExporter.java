@@ -459,7 +459,7 @@ public class DirectDatabaseExporter {
                 StringBuilder rowBuilder = new StringBuilder();
                 rowBuilder.append(channelId).append(",");        // 1. _id (unique database ID)
                 rowBuilder.append(channelNumber).append(",");    // 2. Channel Number
-                rowBuilder.append(channelName).append(",");      // 3. Channel Name
+                rowBuilder.append(escapeCsvField(channelName)).append(",");      // 3. Channel Name (S14: quoted if it holds , or ")
                 rowBuilder.append(csvChannelType).append(",");   // 3. Channel Type
                 rowBuilder.append(rxFreqMHz).append(",");        // 4. Rx Frequency
                 rowBuilder.append(txFreqMHz).append(",");        // 5. Tx Frequency
@@ -663,7 +663,7 @@ public class DirectDatabaseExporter {
                     
                     // Build CSV row (4 columns)
                     String row = String.format(Locale.US, "%s,%d,%s,-",
-                        contactName, dmrId, idType);
+                        escapeCsvField(contactName), dmrId, idType);
                     
                     // Only write if this contact is unique
                     if (uniqueContacts.add(row)) {

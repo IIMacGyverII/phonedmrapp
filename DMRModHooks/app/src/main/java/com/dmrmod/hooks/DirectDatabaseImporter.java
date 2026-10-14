@@ -1279,7 +1279,13 @@ public class DirectDatabaseImporter {
             char c = line.charAt(i);
             
             if (c == '"') {
-                inQuotes = !inQuotes;
+                // S14: a doubled quote inside a quoted field is a literal quote
+                if (inQuotes && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                    field.append('"');
+                    i++;
+                } else {
+                    inQuotes = !inQuotes;
+                }
             } else if (c == ',' && !inQuotes) {
                 fields.add(field.toString());
                 field.setLength(0);
