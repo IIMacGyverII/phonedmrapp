@@ -65,6 +65,7 @@ Suggested v3.4.7 changelog: *analog bandwidth is actually bandwidth; frequency h
 | **S19** (B6) | One `USE_COMPOUND_KEY_ZONES` value | Exporter false / importer true | S | no | `deep-dive/11-…` §10 |
 | **S20** (B8) | Fix `getCmdName` (22→34, 35→…); separate status-byte naming | UART text logs are wrong | S | no | `deep-dive/08-…` §10.2 |
 | **S21** | Recording WAV header should reflect the real layout once G1 is settled; don't delete short bursts < 10 kB silently (make it a setting) | Players/STT inherit a wrong header | S | no | `deep-dive/10-…` §1 |
+| **S22** | `disableSoftwareSquelchOnCurrentChannel()` must restore the channel's own `sq`, not a hard-coded `2` | NOAA channel set to 5 reaches the MCU as 2 when Soft SQ is turned off (`grok-deep-dive/11-…` §17) | S | yes | `MainHook.java:~4852` |
 
 ### UX
 

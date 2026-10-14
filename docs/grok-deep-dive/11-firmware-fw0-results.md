@@ -716,3 +716,37 @@ Build: first `assembleDebug` of the 2026-08-26 audit batch + `McuDiagnostics` (J
 **Incident.** While unlocking the phone over adb, a blind `input swipe` started inside the Intercom screen's on-screen PTT and the DMR History shows a `Voice TX` at 12:08:10 — a sub-second key-up on the active channel's TX frequency (448.200 MHz). No further blind gestures were used; all later taps were on `uiautomator`-resolved bounds, and the Device tab (no PTT) was used for scrolling. Rule for agents: **never swipe or tap unresolved coordinates while the Intercom tab is in front.**
 
 **State left on the radio:** the active digital channel was re-sent and read back byte-identical; the analog slot holds 446.000 MHz / `sq=0` until any analog channel is selected in the app.
+
+---
+
+## 17. Hardware squelch sweep on a live signal (2026-10-14, NOAA WX6 162.500 MHz, Soft SQ off)
+
+Method: the analog image was rewritten over the UART (`0x23`, same frequency/band/power/tones as the app's own write, only `sq` changed), then the module's `RECEIVE_START`/`RECEIVE_STOP` pushes were counted per window and RSSI (`0x32`) was polled every 2 s. No channel change came from the app during either pass (`foreign_0x23 = 0` everywhere). The user kept the radio on the channel and Soft SQ off.
+
+Pass 1 (45 s windows, in order): `sq 0` → open 45/45 s · `sq 1` → 1.5 s · `sq 2, 3, 5, 7, 9` → 0 s each · `sq 2` again → 3.2 s.
+
+Pass 2 (interleaved 30 s windows, RSSI polled):
+
+| sq | rx seconds / 30 | mean RSSI |
+|---|---|---|
+| 1 | 0 | −93.6 dBm |
+| 2 | 2.4 | −93.5 |
+| 5 | 0 | −94.2 |
+| 9 | 0 | −96.1 |
+| 2 | 0 | −95.7 |
+| 1 | 0 | −96.4 |
+| 9 | 0 | −94.1 |
+| 5 | 0 | −94.0 |
+| 5 | 0 | −94.1 |
+| 9 | 0 | −94.0 |
+| 1 | 0 | −93.7 |
+| 2 | 0 | −93.3 |
+| 2 (restore) | 0 | −94.0 |
+
+**What it shows**
+- `sq=0` is "carrier squelch off": the receiver stays open regardless of signal. Confirmed again.
+- At this signal (≈ −94 dBm, steady to ±1.5 dB), **levels 1 through 9 all keep the receiver closed** except for brief openings that are indistinguishable from fading (one 2.4 s opening under `sq=2`, 1.5 s under `sq=1` in pass 1, none under 5, 7, 9 in 7 windows). The data cannot separate "1–9 share one threshold" from "1–9 have thresholds that all sit above −94 dBm".
+- **Decisive test still needed:** a signal between roughly −90 and −80 dBm (strong enough to open level 1 or 2 reliably, weak enough that a higher level might close). Candidates: a closer NOAA transmitter, a local repeater's idle carrier, or a handheld on low power at distance.
+- Useful side-finding: **`0x32` RSSI answers while the hardware squelch is closed** (14 replies per 30 s window, all non-zero, with no `RECEIVE_START`). So the RSSI figure is available even when no audio flows — the software-squelch slider could show it continuously, and a scan feature can use it without opening the squelch.
+
+**Mod defect found while setting this up (backlog S22):** `disableSoftwareSquelchOnCurrentChannel()` (`MainHook.java` ≈ 4852) re-sends the channel with **hard-coded `sq=2`** when Soft SQ is switched off, instead of the channel's configured level (the NOAA channel is set to 5 in the editor; the MCU held 2). Harmless as long as 2–9 behave alike; wrong the moment they don't.
