@@ -11,6 +11,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -166,6 +169,9 @@ public class DirectDatabaseExporter {
             boolean dtmfOk = exportDTMFCSV(dtmfFile);
             
             if (channelsOk && contactsOk && tgListsOk && zonesOk && dtmfOk) {
+                // Backlog R7: stamp the area this backup came from so the importer can refuse a
+                // cross-area restore (module side-tables are global; see CLAUDE.md §3a).
+                writeMeta(appContext, new File(outputDir, "meta.json"));
                 Log.i(TAG, "✓ Export successful! All 5 OpenGD77 CSV files created:");
                 Log.i(TAG, "  Channels: " + channelsFile.getAbsolutePath());
                 Log.i(TAG, "  Contacts: " + contactsFile.getAbsolutePath());
@@ -209,12 +215,78 @@ public class DirectDatabaseExporter {
      * Create a zip archive of all backup files
      * Makes it easy to transfer the entire backup via USB, email, or cloud storage
      */
+    /** Name of the per-backup metadata file (backlog R7). */
+    static final String META_FILE = "meta.json";
+
+    /**
+     * Writes {@code meta.json}: the OEM area the channel table was read from, when, and by which
+     * module build. Hand-rolled JSON (four flat fields) to avoid pulling org.json into the hook.
+     */
+    static boolean writeMeta(Context context, File metaFile) {
+        FileWriter writer = null;
+        try {
+            String area = OemChannelTable.areaKey(context);
+            String stamp = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.US).format(new Date());
+            String version = "unknown";
+            try {
+                version = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionName;
+            } catch (Exception ignored) { }
+            StringBuilder sb = new StringBuilder();
+            sb.append("{\n");
+            sb.append("  \"format\": 1,\n");
+            sb.append("  \"area_key\": \"").append(area).append("\",\n");
+            sb.append("  \"exported_at\": \"").append(stamp).append("\",\n");
+            sb.append("  \"oem_app_version\": \"").append(version).append("\"\n");
+            sb.append("}\n");
+            writer = new FileWriter(metaFile);
+            writer.write(sb.toString());
+            Log.i(TAG, "meta.json written: area_key=" + area);
+            return true;
+        } catch (Exception e) {
+            Log.w(TAG, "meta.json not written: " + e.getMessage());
+            return false;
+        } finally {
+            if (writer != null) {
+                try { writer.close(); } catch (IOException ignored) { }
+            }
+        }
+    }
+
+    /**
+     * Reads {@code area_key} from a backup folder's meta.json.
+     * @return the area key, or null when the file is missing or has no area (pre-R7 backups)
+     */
+    static String readMetaAreaKey(File backupFolder) {
+        File metaFile = new File(backupFolder, META_FILE);
+        if (!metaFile.exists()) {
+            return null;
+        }
+        try {
+            StringBuilder sb = new StringBuilder();
+            java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.FileReader(metaFile));
+            try {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line);
+                }
+            } finally {
+                reader.close();
+            }
+            java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("\"area_key\"\\s*:\\s*\"([^\"]+)\"").matcher(sb);
+            return m.find() ? m.group(1) : null;
+        } catch (Exception e) {
+            Log.w(TAG, "meta.json unreadable: " + e.getMessage());
+            return null;
+        }
+    }
+
     private static boolean createBackupZip(File backupDir, String folderName) {
         try {
             File zipFile = new File(backupDir, "DMR_Backup_" + folderName + ".zip");
             FileOutputStream fos = new FileOutputStream(zipFile);
             ZipOutputStream zos = new ZipOutputStream(fos);
-            
+
             // List of files to include in the zip
             String[] filesToZip = {
                 "Channels.csv",
@@ -222,7 +294,8 @@ public class DirectDatabaseExporter {
                 "TG_Lists.csv",
                 "Zones.csv",
                 "DTMF.csv",
-                "Backup_Summary.pdf"
+                "Backup_Summary.pdf",
+                META_FILE
             };
             
             byte[] buffer = new byte[1024];

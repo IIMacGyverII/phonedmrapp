@@ -241,6 +241,8 @@ public class MainHook implements IXposedHookLoadPackage {
     private static java.util.Map<Long, Integer> lastUsedChannelPerZone = new java.util.concurrent.ConcurrentHashMap<>();  // Track last channel per zone
     private static Object talkBackFragmentInstance = null;  // Store fragment reference for channel switching
     private static volatile boolean isAutoSwitchingZone = false;  // Flag to bypass zone navigation during automatic zone switch
+    private static Button scanButton = null;  // Intercom "SCAN" button (ChannelScanner)
+    private static final java.util.ArrayDeque<Long> uartReaderRestarts = new java.util.ArrayDeque<>();  // G2 watchdog rate limit
 
     // Current GPS location for distance calculations
     private static volatile android.location.Location currentGpsLocation = null;
@@ -387,6 +389,12 @@ public class MainHook implements IXposedHookLoadPackage {
         
         // Hook for zone-based channel navigation filtering
         hookChannelNavigation(lpparam);
+
+        // Backlog G2: serial reader partial-frame guard + thread watchdog
+        hookSerialReaderWatchdog(lpparam);
+
+        // Channel scanner: suppress the OEM progress dialog while scanning
+        hookScanSupport(lpparam);
         
         // Hook for zone filtering in channel list page
         hookChannelListFilter(lpparam);
@@ -1151,6 +1159,7 @@ public class MainHook implements IXposedHookLoadPackage {
                         previousSquelchOpen = false;
                         isMonitoringMode = false;
                         isAutoSwitchingZone = false;
+                        ChannelScanner.reset();
                         if (isCurrentlyRecording || pcmOutputStream != null) {
                             XposedBridge.log(TAG + ": Recording state was stuck from previous session - closing");
                             try { if (pcmOutputStream != null) pcmOutputStream.close(); } catch (Exception ignored) { }
@@ -1680,7 +1689,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 LinearLayout.LayoutParams rssiBoxParams = new LinearLayout.LayoutParams(
                                     0,
                                     LinearLayout.LayoutParams.WRAP_CONTENT,
-                                    0.5f
+                                    0.4f
                                 );
                                 rssiBoxParams.rightMargin = (int) (4 * context.getResources().getDisplayMetrics().density);
                                 
@@ -1718,6 +1727,108 @@ public class MainHook implements IXposedHookLoadPackage {
                                 
                                 // Add RSSI box to container
                                 rssiZoneContainer.addView(rssiBox);
+                                // Channel scanner button (middle) - backlog feature 2026-10-14; logic in ChannelScanner
+                                final android.widget.Button scanButtonWidget = new android.widget.Button(context);
+                                scanButtonWidget.setTag("DMR_SCAN_BUTTON");
+                                scanButtonWidget.setContentDescription("Scan channels");
+                                scanButtonWidget.setText("🔍 SCAN");
+                                LinearLayout.LayoutParams scanButtonParams = new LinearLayout.LayoutParams(
+                                    0,
+                                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                                    0.3f
+                                );
+                                scanButtonParams.leftMargin = (int) (4 * context.getResources().getDisplayMetrics().density);
+                                scanButtonWidget.setLayoutParams(scanButtonParams);
+                                scanButtonWidget.setTextSize(12);
+                                scanButtonWidget.setTypeface(null, android.graphics.Typeface.BOLD);
+                                scanButtonWidget.setTextColor(0xFF00E5FF);  // Cyan text (idle)
+                                final android.graphics.drawable.GradientDrawable scanIdleDrawable = new android.graphics.drawable.GradientDrawable();
+                                scanIdleDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                                scanIdleDrawable.setColors(new int[]{0xFF0D1F4A, 0xFF1A3680});  // Dark navy gradient (same as Zone)
+                                scanIdleDrawable.setGradientType(android.graphics.drawable.GradientDrawable.LINEAR_GRADIENT);
+                                scanIdleDrawable.setOrientation(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM);
+                                scanIdleDrawable.setCornerRadius(8 * context.getResources().getDisplayMetrics().density);
+                                scanIdleDrawable.setStroke((int) (2 * context.getResources().getDisplayMetrics().density), 0xFF00E5FF);
+                                final android.graphics.drawable.GradientDrawable scanActiveDrawable = new android.graphics.drawable.GradientDrawable();
+                                scanActiveDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                                scanActiveDrawable.setColors(new int[]{0xFF4A3A0D, 0xFF80651A});  // Amber gradient while scanning
+                                scanActiveDrawable.setGradientType(android.graphics.drawable.GradientDrawable.LINEAR_GRADIENT);
+                                scanActiveDrawable.setOrientation(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM);
+                                scanActiveDrawable.setCornerRadius(8 * context.getResources().getDisplayMetrics().density);
+                                scanActiveDrawable.setStroke((int) (2 * context.getResources().getDisplayMetrics().density), 0xFFFFD54F);
+                                scanButtonWidget.setBackground(scanIdleDrawable);
+                                scanButton = scanButtonWidget;
+                                final ChannelScanner.Env scanEnv = new ChannelScanner.Env() {
+                                    @Override
+                                    public boolean isReceiving() {
+                                        return isReceiving;
+                                    }
+                                    @Override
+                                    public java.util.Collection<Integer> zoneChannelIds() {
+                                        return currentZoneChannels;
+                                    }
+                                    @Override
+                                    public void onStatus(boolean scanning, String label) {
+                                        scanButtonWidget.setText(label);
+                                        scanButtonWidget.setTextColor(scanning ? 0xFFFFD54F : 0xFF00E5FF);
+                                        scanButtonWidget.setBackground(scanning ? scanActiveDrawable : scanIdleDrawable);
+                                    }
+                                    @Override
+                                    public void onNotice(String text) {
+                                        Toast.makeText(context, text, Toast.LENGTH_SHORT).show();
+                                    }
+                                };
+                                scanButtonWidget.setOnClickListener(new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        try {
+                                            if (ChannelScanner.isScanning()) {
+                                                ChannelScanner.stop("user");
+                                                Toast.makeText(context, "Scan stopped", Toast.LENGTH_SHORT).show();
+                                                return;
+                                            }
+                                            String blocker = null;
+                                            if (isSoftwareSquelchEnabled) {
+                                                blocker = "Turn Soft SQ off to scan (scan uses the radio squelch)";
+                                            } else if (isAPRSMonitoringActive) {
+                                                blocker = "Exit APRS mode before scanning";
+                                            } else if (isSSTVMonitoringActive) {
+                                                blocker = "Exit SSTV mode before scanning";
+                                            } else if (isNOAAMonitoringActive) {
+                                                blocker = "Exit NOAA mode before scanning";
+                                            } else if (isVFOModeActive) {
+                                                blocker = "Exit VFO mode before scanning";
+                                            }
+                                            if (blocker != null) {
+                                                Toast.makeText(context, blocker, Toast.LENGTH_SHORT).show();
+                                                return;
+                                            }
+                                            String err = ChannelScanner.start(talkBackFragmentInstance, context.getClassLoader(), scanEnv);
+                                            if (err != null) {
+                                                Toast.makeText(context, err, Toast.LENGTH_SHORT).show();
+                                            } else {
+                                                Toast.makeText(context, (currentZoneChannels != null && !currentZoneChannels.isEmpty())
+                                                    ? "Scanning zone - long-press to skip a busy channel"
+                                                    : "Scanning all channels - long-press to skip a busy channel", Toast.LENGTH_SHORT).show();
+                                            }
+                                        } catch (Throwable t) {
+                                            XposedBridge.log(TAG + ": Scan button error: " + t.getMessage());
+                                        }
+                                    }
+                                });
+                                scanButtonWidget.setOnLongClickListener(new View.OnLongClickListener() {
+                                    @Override
+                                    public boolean onLongClick(View v) {
+                                        try {
+                                            Toast.makeText(context, ChannelScanner.skipCurrent(), Toast.LENGTH_SHORT).show();
+                                        } catch (Throwable t) {
+                                            XposedBridge.log(TAG + ": Scan skip error: " + t.getMessage());
+                                        }
+                                        return true;
+                                    }
+                                });
+                                rssiZoneContainer.addView(scanButtonWidget);
+                                XposedBridge.log(TAG + ": ✓ Added channel scan button");
                                 
                                 // Create ZONE selector button (right half)
                                 android.widget.Button zoneButtonWidget = new android.widget.Button(context);
@@ -1728,7 +1839,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 LinearLayout.LayoutParams zoneButtonParams = new LinearLayout.LayoutParams(
                                     0,
                                     LinearLayout.LayoutParams.WRAP_CONTENT,
-                                    0.5f
+                                    0.3f
                                 );
                                 zoneButtonParams.leftMargin = (int) (4 * context.getResources().getDisplayMetrics().density);
                                 zoneButtonWidget.setLayoutParams(zoneButtonParams);
@@ -8630,6 +8741,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 case 10: // MIX_CHECK_DIGITAL_RECEIVE_START
                                     XposedBridge.log(TAG + ": RECEIVE_START detected (type: " + currentChannelType + ")");
                                     isReceiving = true;
+                                    ChannelScanner.onReceiveStart();
                                     
                                     // Start recording if enabled
                                     if (isRecordingEnabled) {
@@ -8705,6 +8817,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     break;
                                     
                                 case 3:  // SEND_START
+                                    ChannelScanner.stop("PTT");
                                     XposedBridge.log(TAG + ": SEND_START detected");
                                     activityType = "📻 Voice TX";
                                     showActivity = true;
@@ -8748,6 +8861,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     currentCallerDmrId = 0;
                                     currentCallerName = null;
                                     isReceiving = true;
+                                    ChannelScanner.onReceiveStart();
                                     
                                     String toneDisplay = ToneConverter.formatForDisplay(currentRxToneType, currentRxToneSubCode);
                                     
@@ -12395,6 +12509,128 @@ public class MainHook implements IXposedHookLoadPackage {
     }
     
     /**
+     * Backlog G2 (2026-10-14): the OEM serial reader thread dies permanently on any exception.
+     * (1) {@code decode()} reads {@code len} body bytes without checking that they have arrived,
+     *     so a frame split across two reads throws BufferUnderflowException and kills the thread.
+     *     The before-hook returns null (wait for more bytes) while a 0x68 frame is incomplete.
+     * (2) If {@code run()} still exits while the port is open, restart it (max 5 per minute).
+     */
+    private void hookSerialReaderWatchdog(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            final Class<?> readerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.codec.AsyncPacketReader", lpparam.classLoader);
+            final Class<?> dmrManagerClass = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.manager.DmrManager", lpparam.classLoader);
+
+            XposedHelpers.findAndHookMethod(readerClass, "decode", ByteBuffer.class, new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    try {
+                        ByteBuffer buf = (ByteBuffer) param.args[0];
+                        if (buf == null || buf.remaining() < 8) {
+                            return;
+                        }
+                        Object dm = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+                        if (dm != null && (Boolean) XposedHelpers.callMethod(dm, "isTestBitErrorRate")) {
+                            return;   // BER test mode consumes the raw stream; no framing
+                        }
+                        int p = buf.position();
+                        int head = buf.get(p) & 0xFF;
+                        if (head != 0x68) {
+                            return;   // 0x00 / 0xF0 / 0xBF quirks and garbage: keep the OEM resync logic
+                        }
+                        int len = ((buf.get(p + 6) & 0xFF) << 8) | (buf.get(p + 7) & 0xFF);
+                        if (len > 4096) {
+                            return;   // implausible length: let the OEM path fail and the watchdog recover
+                        }
+                        int need = 9 + len;
+                        if (buf.remaining() < need) {
+                            if (diagnosticsEnabled) {
+                                XposedBridge.log(TAG + ": UART RX partial frame cmd=0x"
+                                    + String.format("%02X", buf.get(p + 1) & 0xFF) + " have=" + buf.remaining()
+                                    + " need=" + need + " - waiting for the rest (G2)");
+                            }
+                            param.setResult(null);
+                        }
+                    } catch (Throwable t) {
+                        XposedBridge.log(TAG + ": decode guard error: " + t.getMessage());
+                    }
+                }
+            });
+
+            XposedHelpers.findAndHookMethod(readerClass, "run", new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    try {
+                        final Object reader = param.thisObject;
+                        boolean isStop = XposedHelpers.getBooleanField(reader, "isStop");
+                        Object serial = XposedHelpers.getObjectField(reader, "serial");
+                        boolean connected = serial != null && (Boolean) XposedHelpers.callMethod(serial, "isConnected");
+                        if (isStop || !connected) {
+                            return;   // normal shutdown
+                        }
+                        long now = System.currentTimeMillis();
+                        synchronized (uartReaderRestarts) {
+                            while (!uartReaderRestarts.isEmpty() && now - uartReaderRestarts.peekFirst() > 60000L) {
+                                uartReaderRestarts.pollFirst();
+                            }
+                            if (uartReaderRestarts.size() >= 5) {
+                                XposedBridge.log(TAG + ": AsyncPacketReader died again - 5 restarts in 60 s, giving up (G2)");
+                                return;
+                            }
+                            uartReaderRestarts.addLast(now);
+                        }
+                        XposedBridge.log(TAG + ": AsyncPacketReader thread exited while the port is open - restarting (G2 watchdog)");
+                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    if (!XposedHelpers.getBooleanField(reader, "isStop")) {
+                                        XposedHelpers.callMethod(reader, "startRead");
+                                    }
+                                } catch (Throwable t) {
+                                    XposedBridge.log(TAG + ": reader restart failed: " + t.getMessage());
+                                }
+                            }
+                        }, 300);
+                    } catch (Throwable t) {
+                        XposedBridge.log(TAG + ": reader watchdog error: " + t.getMessage());
+                    }
+                }
+            });
+            XposedBridge.log(TAG + ": ✓ Serial reader watchdog installed (G2)");
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error installing serial reader watchdog: " + t.getMessage());
+        }
+    }
+
+    /**
+     * Channel scanner support: the OEM shows a 3 s "changing channel" ProgressDialog on every
+     * channel change; suppress it for scanner-driven steps so the screen stays usable.
+     */
+    private void hookScanSupport(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            Class<?> baseFragment = XposedHelpers.findClass(
+                "com.pri.prizeinterphone.fragment.BaseViewPagerFragment", lpparam.classLoader);
+            XposedHelpers.findAndHookMethod(baseFragment, "showProgressDialog", String.class, new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    try {
+                        if (ChannelScanner.isScanning()
+                            && param.thisObject.getClass().getName().endsWith("InterPhoneTalkBackFragment")) {
+                            param.setResult(null);
+                        }
+                    } catch (Throwable t) {
+                        XposedBridge.log(TAG + ": scan progress-dialog hook error: " + t.getMessage());
+                    }
+                }
+            });
+            XposedBridge.log(TAG + ": ✓ Scan support hooks installed");
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Error installing scan support hooks: " + t.getMessage());
+        }
+    }
+    /**
      * Hook channel navigation to filter by zone
      */
     private void hookChannelNavigation(XC_LoadPackage.LoadPackageParam lpparam) {
@@ -12413,6 +12649,14 @@ public class MainHook implements IXposedHookLoadPackage {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                         // If we're auto-switching zones, bypass zone navigation and let original method run
+                        // Channel scanner: its own steps pick the target (zone-aware) and must reach the OEM
+                        // method untouched; any other updateChannelId() while scanning is a manual change.
+                        if (ChannelScanner.stepping) {
+                            return;
+                        }
+                        if (ChannelScanner.isScanning()) {
+                            ChannelScanner.stop("manual channel change");
+                        }
                         if (isAutoSwitchingZone) {
                             return;
                         }
