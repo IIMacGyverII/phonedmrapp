@@ -3,6 +3,16 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-14 — Batch 8: hook self-test, CSV quoting, hex keys, refused-channel warning
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **S8** | **Hook self-test.** Every hook-installer catch block (23 sites) bumps `hookInstallFailures`; `InterPhoneHomeActivity.onCreate` logs `Hook self-test: N installer failure(s)` and shows one toast when N > 0. | `MainHook` | **device**: `Hook self-test: 0 installer failure(s)` |
+| **S14** | **CSV quoting.** Channel and contact names go through `escapeCsvField` on export (quoted when they contain `,` `"` or a newline); `parseCSVLine` turns a doubled quote inside a quoted field back into one quote. | `DirectDatabaseExporter`, `DirectDatabaseImporter` | **device**: export is byte-identical to the previous one for this codeplug (no names need quoting) |
+| **U5** | **Hex encryption keys.** The editor's key field accepts `0-9 A-F a-f` (caps keyboard, no suggestions, hint "8 chars, 0-9 A-F"). Safe because the OEM sends the field's raw ASCII bytes (`getEncryptKey().getBytes()`), so any character is a valid key byte; `maxLength=8` is unchanged. | `MainHook` | **device**: hook log `U5: encrypt key field accepts hex` when the editor opens; typing not exercised (the key row only appears for a digital channel with encryption on) |
+| **R14** | **Refused-channel warning.** Saving a digital channel with Call Number 0 shows a toast saying the radio will refuse to tune it (saved anyway). The `channel_txContact=0` rule comes from the batch 6 finding: Ch 45 (`txContact=1, contactType=1`) tunes, Ch 46–48 (`txContact=0, contactType=0`) are NAK'd. | `MainHook` | code review (no save performed on the user's codeplug) |
+| tooling | The phone's default 256 kB logcat buffer wraps within seconds under the OEM app's per-packet logging, which is why "missing" hook-install lines kept appearing; the test scripts now run `adb logcat -G 16M` first. | scratch scripts | — |
+
 ## 2026-10-14 — Batch 7: live S-meter, SET_CHANNEL error hook, zone wrap-around
 
 | Backlog | Change | Files | Test |

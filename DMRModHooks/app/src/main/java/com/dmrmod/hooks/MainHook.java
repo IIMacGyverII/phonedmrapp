@@ -242,6 +242,7 @@ public class MainHook implements IXposedHookLoadPackage {
     private static Object talkBackFragmentInstance = null;  // Store fragment reference for channel switching
     private static volatile boolean isAutoSwitchingZone = false;  // Flag to bypass zone navigation during automatic zone switch
     private static Button scanButton = null;  // Intercom "SCAN" button (ChannelScanner)
+    private static volatile int hookInstallFailures = 0;  // S8: bumped by every hook-installer catch block
     private static volatile boolean isTransmitting = false;  // SEND_START .. SEND_STOP
     private static volatile boolean smeterEnabled = false;   // Live S-meter: poll RSSI while idle (Device-tab toggle, prefs key "smeter")
     // NOT created here: MainHook.<clinit> runs in the Zygote fork, before the app's main Looper exists
@@ -549,6 +550,7 @@ public class MainHook implements IXposedHookLoadPackage {
 
             XposedBridge.log(TAG + ": Successfully hooked bottom nav bar");
         } catch (Throwable t) {
+            hookInstallFailures++;
             XposedBridge.log(TAG + ": Error hooking bottom nav: " + t.getMessage());
         }
     }
@@ -1075,6 +1077,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedBridge.log(TAG + ": Successfully hooked PrizeInterPhoneApp.attachBaseContext() and onCreate()");
             
         } catch (Throwable t) {
+            hookInstallFailures++;
             XposedBridge.log(TAG + ": Error hooking PrizeInterPhoneApp: " + t.getMessage());
             XposedBridge.log(t);
         }
@@ -1113,6 +1116,16 @@ public class MainHook implements IXposedHookLoadPackage {
                         // NOTE: Auto-refresh feature disabled - causes black screen issues
                         // User will need to manually restart app after firmware update
                         
+                        // S8 hook self-test: every installer's catch block bumps hookInstallFailures.
+                        // One log line always; one toast only when something did not hook.
+                        try {
+                            XposedBridge.log(TAG + ": Hook self-test: " + hookInstallFailures + " installer failure(s)");
+                            if (hookInstallFailures > 0) {
+                                Toast.makeText(activity, "DMR Mod: " + hookInstallFailures
+                                    + " hook(s) failed to install - some features are off. See LSPosed log.", Toast.LENGTH_LONG).show();
+                            }
+                        } catch (Throwable ignored) { }
+
                         // Create Audio and Transcription folder structure
                         try {
                             java.io.File downloadDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS);
@@ -1283,6 +1296,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedBridge.log(TAG + ": Successfully hooked InterPhoneHomeActivity.onCreate()");
             
         } catch (Throwable t) {
+            hookInstallFailures++;
             XposedBridge.log(TAG + ": Error hooking InterPhoneHomeActivity: " + t.getMessage());
             XposedBridge.log(t);
         }
@@ -3370,6 +3384,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedBridge.log(TAG + ": Successfully hooked InterPhoneTalkBackFragment");
             
         } catch (Throwable t) {
+            hookInstallFailures++;
             XposedBridge.log(TAG + ": Error hooking InterPhoneTalkBackFragment: " + t.getMessage());
             XposedBridge.log(t);
         }
@@ -3994,6 +4009,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedBridge.log(TAG + ": Successfully hooked FragmentLocalInformationActivity");
             
         } catch (Throwable t) {
+            hookInstallFailures++;
             XposedBridge.log(TAG + ": Error hooking FragmentLocalInformationActivity: " + t.getMessage());
             XposedBridge.log(t);
         }
@@ -4171,6 +4187,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedBridge.log(TAG + ": Successfully hooked UpdateFirmwareActivity");
             
         } catch (Throwable t) {
+            hookInstallFailures++;
             XposedBridge.log(TAG + ": Error hooking UpdateFirmwareActivity: " + t.getMessage());
             XposedBridge.log(t);
         }
@@ -4218,6 +4235,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedBridge.log(TAG + ": Successfully hooked InterPhoneLocalFragment");
             
         } catch (Throwable t) {
+            hookInstallFailures++;
             XposedBridge.log(TAG + ": Error hooking InterPhoneLocalFragment: " + t.getMessage());
             XposedBridge.log(t);
         }
@@ -8980,6 +8998,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedBridge.log(TAG + ": Successfully hooked ModuleStatusMessageHandler");
             
         } catch (Throwable t) {
+            hookInstallFailures++;
             XposedBridge.log(TAG + ": Error hooking ModuleStatusMessageHandler: " + t.getMessage());
             XposedBridge.log(t);
         }
@@ -9134,6 +9153,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedBridge.log(TAG + ": Successfully hooked DigitalAudioMessageHandler");
             
         } catch (Throwable t) {
+            hookInstallFailures++;
             XposedBridge.log(TAG + ": Error hooking DigitalAudioMessageHandler: " + t.getMessage());
             XposedBridge.log(t);
         }
@@ -10881,6 +10901,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedBridge.log(TAG + ": Successfully hooked SignalMessageHandler.decode");
             
         } catch (Throwable t) {
+            hookInstallFailures++;
             XposedBridge.log(TAG + ": Failed to hook SignalMessageHandler: " + t.getMessage());
         }
     }
@@ -11055,6 +11076,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 XposedBridge.log(TAG + ": Successfully hooked DigitalMessage.encodeBody()");
                 
             } catch (Throwable t) {
+                hookInstallFailures++;
                 XposedBridge.log(TAG + ": Failed to hook DigitalMessage.encodeBody(): " + t.getMessage());
             }
             
@@ -11094,6 +11116,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 XposedBridge.log(TAG + ": Successfully hooked AnalogMessage.encodeBody()");
                 
             } catch (Throwable t) {
+                hookInstallFailures++;
                 XposedBridge.log(TAG + ": Failed to hook AnalogMessage.encodeBody(): " + t.getMessage());
             }
             
@@ -11218,6 +11241,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 XposedBridge.log(TAG + ": Successfully hooked BaseMessage.send()");
                 
             } catch (Throwable t) {
+                hookInstallFailures++;
                 XposedBridge.log(TAG + ": Failed to hook BaseMessage.send(): " + t.getMessage());
             }
             
@@ -11226,6 +11250,7 @@ public class MainHook implements IXposedHookLoadPackage {
             // The firmware is already loaded in RAM, so this is acceptable
             
         } catch (Throwable t) {
+            hookInstallFailures++;
             XposedBridge.log(TAG + ": Failed to hook DmrManager: " + t.getMessage());
         }
     }
@@ -12677,6 +12702,7 @@ public class MainHook implements IXposedHookLoadPackage {
             });
             XposedBridge.log(TAG + ": ✓ Serial reader watchdog installed (G2)");
         } catch (Throwable t) {
+            hookInstallFailures++;
             XposedBridge.log(TAG + ": Error installing serial reader watchdog: " + t.getMessage());
         }
     }
@@ -12740,6 +12766,7 @@ public class MainHook implements IXposedHookLoadPackage {
             }
             XposedBridge.log(TAG + ": ✓ Scan support hooks installed");
         } catch (Throwable t) {
+            hookInstallFailures++;
             XposedBridge.log(TAG + ": Error installing scan support hooks: " + t.getMessage());
         }
     }
@@ -13011,10 +13038,12 @@ public class MainHook implements IXposedHookLoadPackage {
                     });
                 XposedBridge.log(TAG + ": ✓ AnalogMessageHandler ack hook installed (Pitfall 13 re-apply)");
             } catch (Throwable t) {
+                hookInstallFailures++;
                 XposedBridge.log(TAG + ": Failed to hook AnalogMessageHandler: " + t.getMessage());
             }
 
         } catch (Throwable t) {
+            hookInstallFailures++;
             XposedBridge.log(TAG + ": Failed to hook channel navigation: " + t.getMessage());
             XposedBridge.log(t);
         }
@@ -13262,6 +13291,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedBridge.log(TAG + ": ✓ Channel list filter and click hooks installed");
             
         } catch (Throwable t) {
+            hookInstallFailures++;
             XposedBridge.log(TAG + ": Failed to hook channel list filter: " + t.getMessage());
             XposedBridge.log(t);
         }
@@ -13397,6 +13427,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedBridge.log(TAG + ": ✓ Channel list UI hook installed");
             
         } catch (Throwable t) {
+            hookInstallFailures++;
             XposedBridge.log(TAG + ": Failed to hook channel list UI: " + t.getMessage());
             XposedBridge.log(t);
         }
@@ -14640,6 +14671,24 @@ public class MainHook implements IXposedHookLoadPackage {
                                 return;
                             }
 
+                            // U5 (2026-10-14): the OEM key field accepts digits only, but the wire format is the
+                            // field's 8 raw ASCII bytes (DmrManager: encryptKey = getEncryptKey().getBytes()), so any
+                            // character is a valid key byte. Allow hex A-F as well; maxLength 8 is kept by the layout.
+                            try {
+                                int keyId = context.getResources().getIdentifier("interphone_channel_encryption_key_set", "id", context.getPackageName());
+                                android.widget.EditText keyEdit = keyId != 0 ? (android.widget.EditText) activity.findViewById(keyId) : null;
+                                if (keyEdit != null) {
+                                    keyEdit.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                                        | android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
+                                        | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+                                    keyEdit.setKeyListener(android.text.method.DigitsKeyListener.getInstance("0123456789ABCDEFabcdef"));
+                                    keyEdit.setHint("8 chars, 0-9 A-F");
+                                    XposedBridge.log(TAG + ": U5: encrypt key field accepts hex");
+                                }
+                            } catch (Throwable t) {
+                                XposedBridge.log(TAG + ": U5 key field tweak failed: " + t.getMessage());
+                            }
+
                             // Apply dark navy background after all rows (including our added ones) are in place
                             final android.widget.ScrollView scrollViewFinal = scrollView;
                             final ViewGroup containerFinal = container;
@@ -15035,9 +15084,18 @@ public class MainHook implements IXposedHookLoadPackage {
                             // editor's Call Number field already holds the DMR ID, so no conversion is needed.
                             Object channelData = XposedHelpers.getObjectField(saveParam.thisObject, "channelData");
                             if (channelData != null) {
-                                XposedBridge.log(TAG + ": saveChannelData: type=" + XposedHelpers.getIntField(channelData, "type")
-                                    + " contactType=" + XposedHelpers.getIntField(channelData, "contactType")
-                                    + " txContact=" + XposedHelpers.getIntField(channelData, "txContact") + " (left unchanged)");
+                                int chType = XposedHelpers.getIntField(channelData, "type");
+                                int chContactType = XposedHelpers.getIntField(channelData, "contactType");
+                                int chTxContact = XposedHelpers.getIntField(channelData, "txContact");
+                                XposedBridge.log(TAG + ": saveChannelData: type=" + chType
+                                    + " contactType=" + chContactType + " txContact=" + chTxContact + " (left unchanged)");
+                                // R14 (2026-10-14): the MCU NAKs a digital channel whose Call Number is 0 (three such
+                                // channels on the test codeplug fail SET_DIGITAL_INFO every time); the OEM editor lets
+                                // it through and the +/- keys then fail with "operation failed". Warn, do not block.
+                                if (chType == 0 && chTxContact == 0) {
+                                    Toast.makeText(context, "Digital channel without a Call Number: the radio will refuse to tune it "
+                                        + "(saved anyway - add a TG or contact ID)", Toast.LENGTH_LONG).show();
+                                }
                             }
                             XposedBridge.log(TAG + ": === saveChannelData beforeHook complete ===");
                         } catch (Throwable t) {
@@ -15160,6 +15218,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedBridge.log(TAG + ": Successfully hooked InterPhoneChannelActivity");
             
         } catch (Throwable t) {
+            hookInstallFailures++;
             XposedBridge.log(TAG + ": Error hooking channel edit activity: " + t.getMessage());
             XposedBridge.log(t);
         }
@@ -16794,6 +16853,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 );
                 XposedBridge.log(TAG + ": Hooked dark bg activity → " + className);
             } catch (Throwable t) {
+                hookInstallFailures++;
                 XposedBridge.log(TAG + ": Error hooking dark bg for " + className + ": " + t.getMessage());
             }
         }
@@ -16870,6 +16930,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 );
                 XposedBridge.log(TAG + ": Hooked dark bg → " + className);
             } catch (Throwable t) {
+                hookInstallFailures++;
                 XposedBridge.log(TAG + ": Error hooking dark bg for " + className + ": " + t.getMessage());
             }
         }
