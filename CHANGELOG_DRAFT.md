@@ -1,7 +1,22 @@
 # Changelog draft — unreleased (working towards v3.4.7)
 
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
-Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
+Built, installed and device-tested on the attached radio unless an entry says otherwise.
+
+## 2026-10-15 — Nearby Repeaters: legible install dialogs (dark theme)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | The install dialogs are built almost entirely from hand-made views with light-grey text, but the radio renders the default `AlertDialog` on a **white** background, washing them out (reported on the "Add to zone" page: radio labels, the New-zone field and the Existing-zone spinner were nearly invisible). The DMR and FM install dialogs are now forced to a **dark dialog theme** (`Theme_Material_Dialog_Alert`), so the light text is correct and the dialog matches the dark app; the zone spinner is built against that theme too, since its text colour comes from the theme, not an explicit `setTextColor`. The main list dialog is left alone (its rows use the theme's default dark-on-white text and are readable). | `NearbyRepeatersUi` (`DIALOG_THEME`, both install `AlertDialog.Builder`, spinner `ContextThemeWrapper`) | **device**: user confirmed the Add-to-zone text is now legible |
+
+## 2026-10-15 — Nearby Repeaters: zone picker at install (shared default)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | Each install used to spawn its own `»CALL City` zone, so adding several nearby repeaters cluttered the zone list. The install dialog now has an **"Add to zone"** chooser: one shared **`» Nearby`** zone (default, so N repeaters make one zone), a **New zone** (field prefilled with the old per-repeater name), or an **Existing zone** (spinner of current zones, hidden when there are none). FM repeaters get a small zone-only dialog (`openFmInstall`) since they have no talkgroup step. The chosen name is threaded `doInstall → runInstall → RepeaterProgrammer.apply(…, zoneOverride)`. | `NearbyRepeatersUi` (`buildZonePicker`, `ZonePicker`, `openFmInstall`, threading), `RepeaterProgrammer.apply` (zoneOverride overload) | build + host tests pass; **device**: installed/rebooted. Full click-through left to by-hand check (adb dialog automation flaky) |
+| — | **Undo is shared-zone-safe.** Each removed channel is also dropped from its zone (`ZoneDatabase.removeChannelFromAllZones`), and a zone is deleted only once it is **empty and unreferenced by any other install run** — replacing the old `run.zoneCreated` gate. So a shared zone survives until the last repeater in it is undone (any order), and a zone still holding the user's own channels is never touched. | `RepeaterProgrammer.undo` | build/tests pass |
+
+Docs: `docs/deep-dive/16-repeater-directory-import.md` §11 records the new zone behaviour (supersedes the "one zone per DMR repeater" default in §1/§2.2/§8).
 
 ## 2026-10-15 — Nearby Repeaters: manual talkgroups when a repeater lists none
 
