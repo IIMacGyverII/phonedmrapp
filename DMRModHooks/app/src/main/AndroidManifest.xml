@@ -9,6 +9,10 @@
     <!-- Network permission for elevation API and geocoding -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- In-app software update: let the MODULE app install its own updates (never the intercom
+         app). One-time "install unknown apps" grant to com.dmrmod.hooks only. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     
     <!-- Location permissions for distance calculation -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -40,6 +44,16 @@
             android:label="DMR Backup &amp; Restore"
             android:theme="@android:style/Theme.Material.Light"
             android:exported="false" />
+
+        <!-- In-app updater. Runs in the MODULE's own process/UID, so the "install unknown apps"
+             grant lands on com.dmrmod.hooks, never on the intercom app. Exported so the hook
+             (running in the intercom process) can launch it; it only accepts GitHub-hosted URLs. -->
+        <activity
+            android:name=".InstallerActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:launchMode="singleTop"
+            android:excludeFromRecents="true"
+            android:exported="true" />
 
     </application>
 

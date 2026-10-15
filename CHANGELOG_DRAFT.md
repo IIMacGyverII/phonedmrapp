@@ -3,16 +3,18 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
-## 2026-10-15 — In-app software update (download + root-install latest release)
+## 2026-10-15 — In-app software update (no root; module-owned installer)
 
 | Backlog | Change | Files | Test |
 |---|---|---|---|
-| — | New **"Check for updates"** button on the Device tab. It queries GitHub's `releases/latest` for `IIMacGyverII/phonedmrapp`, compares the release tag to the installed `versionName`, and if newer shows a dialog with the release notes and a **Download & install**. Install streams the APK bytes straight into `pm install -r` over `su` (the radio is rooted via Magisk) — no temp file, no `REQUEST_INSTALL_PACKAGES`, no installer tap-through — then offers **Reboot now** (LSPosed only reloads a module on reboot). A quiet background check runs when the Device tab is shown and only re-labels the button ("⬆ Update available: vX.Y.Z") when a newer release exists; it never pops a dialog. Nothing downloads, installs or reboots without an explicit tap. | `GithubUpdater` (new: fetch/compare/download/`installViaRoot`/`rebootViaRoot` + check/offer/install UI, dark dialog theme), `MainHook` (Device-tab button + quiet check) | build + host tests pass; **device**: button appears, quiet check runs. End-to-end install not yet exercised against a real newer release (installed == latest == 3.4.6); the first `su` call will trigger a one-time Magisk grant for the intercom app |
+| — | New **"Check for updates"** button on the Device tab. It queries GitHub's `releases/latest` for `IIMacGyverII/phonedmrapp`, compares the release tag to the installed `versionName`, and if newer shows a dialog with the release notes and **Download & install**. A quiet background check runs when the Device tab is shown and only re-labels the button ("⬆ Update available: vX.Y.Z"); it never pops a dialog. | `GithubUpdater` (fetch/compare/`download` + check/offer UI, dark dialog theme), `MainHook` (Device-tab button + quiet check) | build + host tests pass; **device**: button appears, quiet check runs |
+| — | **Install is non-root and never touches the intercom app's privileges.** Because the hook runs in the intercom process, an in-process install would be attributed to the intercom app. Instead the updater launches `InstallerActivity` in the **module's own** process (`com.dmrmod.hooks`), which downloads the APK and streams it through the `PackageInstaller` session API — Android shows its own install confirmation. The one-time "install unknown apps" consent therefore lands on the **module app only**; the intercom app is unchanged. After a successful install it tells the user to reboot (LSPosed loads modules on boot; non-root can't reboot for them). | `InstallerActivity` (new), `AndroidManifest` (`REQUEST_INSTALL_PACKAGES` + the activity, exported, GitHub-host-checked), `GithubUpdater.launchInstaller` | build + merged-manifest verified; end-to-end install pending a real newer release / a version-downgrade test |
 
 Notes / caveats:
-- The intercom app process must be **granted root in Magisk** the first time (a one-time prompt). If `su` is denied, the failure dialog says so.
-- Updates install cleanly only because every release is signed with the shared `release.keystore` (Android enforces a signature match on `pm install -r`).
+- No root anywhere. The intercom app gains **no** new permission; `REQUEST_INSTALL_PACKAGES` is on the module app, which installs itself.
+- Updates install cleanly only because every release is signed with the shared `release.keystore` (Android enforces a signature match on upgrade).
 - The updater picks the first release asset whose name ends `.apk`; the OpenGD77 CPS `.zip` asset is ignored.
+- `InstallerActivity` is exported (so the hook can launch it) but only accepts `github.com`/`githubusercontent.com` URLs, and the user confirms every install in the system dialog regardless.
 
 ## 2026-10-15 — Nearby Repeaters: legible install dialogs (dark theme)
 

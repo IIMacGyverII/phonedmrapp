@@ -2,32 +2,29 @@ package com.dmrmod.hooks;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.widget.Button;
 import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 
 import de.robv.android.xposed.XposedBridge;
 
 /**
- * In-app updater: checks GitHub Releases for a newer DMRModHooks APK, downloads it, and installs it
- * with root (the device runs LSPosed via Magisk, so {@code su} is available). A reboot is offered
- * afterwards because LSPosed only reloads a module on reboot.
+ * In-app updater: checks GitHub Releases for a newer DMRModHooks APK and, when the user chooses to
+ * update, hands off to {@link InstallerActivity} in the module's own process. That keeps the
+ * "install unknown apps" consent on the module app (com.dmrmod.hooks) — the intercom app gains no
+ * privilege. No root.
  *
  * <p>Network is done through {@link HttpClient} (same wrapper the Nearby Repeaters sources use); its
- * {@link HttpClient.Response#body} is raw bytes, so the APK downloads directly. Install streams the
- * bytes into {@code pm install} over {@code su} — no temp file, no install permission, no tap-through.
+ * {@link HttpClient.Response#body} is raw bytes, so the APK downloads directly.
  *
- * <p>Nothing here runs automatically without the user's say-so: the quiet check only re-labels the
- * button; downloading, installing and rebooting each need an explicit tap.
+ * <p>Nothing here runs automatically: the quiet check only re-labels the button; downloading and
+ * installing need an explicit tap, and Android shows its own install confirmation.
  */
 public final class GithubUpdater {
 
@@ -107,45 +104,11 @@ public final class GithubUpdater {
         return compareVersions(latest.version, inst) > 0;
     }
 
+    /** Download the APK bytes. Runs off the UI thread (called from {@link InstallerActivity}). */
     public static byte[] download(String url) throws Exception {
         HttpClient.Response r = HttpClient.get(url);
         if (!r.isOk() || r.body == null) throw new IOException("Download returned HTTP " + r.code);
         return r.body;
-    }
-
-    /** Stream the APK into {@code pm install} over su. Returns null on success, else an error string. */
-    public static String installViaRoot(byte[] apk) {
-        Process p = null;
-        try {
-            p = Runtime.getRuntime().exec(new String[]{"su", "-c", "pm install -r -S " + apk.length + " -"});
-            OutputStream os = p.getOutputStream();
-            os.write(apk);
-            os.flush();
-            os.close();
-            String out = readAll(p.getInputStream()) + readAll(p.getErrorStream());
-            int code = p.waitFor();
-            if (code == 0 && out.toLowerCase(java.util.Locale.US).contains("success")) return null;
-            return "pm install exit " + code + (out.trim().isEmpty() ? "" : ": " + out.trim());
-        } catch (Throwable t) {
-            return "install error: " + t;
-        } finally {
-            if (p != null) try { p.destroy(); } catch (Throwable ignore) { }
-        }
-    }
-
-    public static void rebootViaRoot() {
-        try { Runtime.getRuntime().exec(new String[]{"su", "-c", "reboot"}); }
-        catch (Throwable t) { XposedBridge.log(TAG + ": reboot via su failed: " + t); }
-    }
-
-    private static String readAll(InputStream in) {
-        try {
-            ByteArrayOutputStream b = new ByteArrayOutputStream();
-            byte[] buf = new byte[4096];
-            int n;
-            while ((n = in.read(buf)) > 0) b.write(buf, 0, n);
-            return new String(b.toByteArray(), "UTF-8");
-        } catch (Exception e) { return ""; }
     }
 
     // ---- UI ----------------------------------------------------------------
@@ -213,65 +176,36 @@ public final class GithubUpdater {
         if (notes.length() > 1500) notes = notes.substring(0, 1500) + "…";
         String msg = "You have v" + installedVersion(activity) + ".\n\n"
             + (notes.isEmpty() ? "" : "What's new:\n" + notes + "\n\n")
-            + "Download and install now? The radio will offer to reboot afterwards (LSPosed needs it "
-            + "to load the new version).";
+            + "Download and install now? Android will ask you to confirm the install, and you'll need "
+            + "to reboot the radio afterwards so LSPosed loads the new version.";
         new AlertDialog.Builder(activity, DIALOG_THEME)
             .setTitle("Update available: v" + rel.version)
             .setMessage(msg)
             .setNegativeButton("Later", null)
             .setPositiveButton("Download & install", new android.content.DialogInterface.OnClickListener() {
                 @Override public void onClick(android.content.DialogInterface d, int w) {
-                    downloadAndInstall(activity, rel);
+                    launchInstaller(activity, rel);
                 }
             })
             .show();
     }
 
-    private static void downloadAndInstall(final Activity activity, final Release rel) {
-        final ProgressDialog prog = new ProgressDialog(activity, DIALOG_THEME);
-        prog.setMessage("Downloading v" + rel.version + "…");
-        prog.setCancelable(false);
-        prog.show();
-        new Thread(new Runnable() {
-            @Override public void run() {
-                String error = null;
-                try {
-                    byte[] apk = download(rel.apkUrl);
-                    activity.runOnUiThread(new Runnable() {
-                        @Override public void run() { prog.setMessage("Installing v" + rel.version + "…"); }
-                    });
-                    error = installViaRoot(apk);
-                } catch (Throwable t) {
-                    error = "download failed: " + t.getMessage();
-                }
-                final String err = error;
-                activity.runOnUiThread(new Runnable() {
-                    @Override public void run() {
-                        try { prog.dismiss(); } catch (Throwable ignore) { }
-                        if (err == null) {
-                            new AlertDialog.Builder(activity, DIALOG_THEME)
-                                .setTitle("Installed v" + rel.version)
-                                .setMessage("The update is installed but not loaded yet. Reboot now so "
-                                    + "LSPosed picks it up?")
-                                .setNegativeButton("Later", null)
-                                .setPositiveButton("Reboot now", new android.content.DialogInterface.OnClickListener() {
-                                    @Override public void onClick(android.content.DialogInterface d, int w) {
-                                        Toast.makeText(activity, "Rebooting…", Toast.LENGTH_SHORT).show();
-                                        rebootViaRoot();
-                                    }
-                                })
-                                .show();
-                        } else {
-                            new AlertDialog.Builder(activity, DIALOG_THEME)
-                                .setTitle("Update failed")
-                                .setMessage(err + "\n\nIf this is a root-permission error, grant the "
-                                    + "intercom app root in Magisk and try again.")
-                                .setPositiveButton("Close", null)
-                                .show();
-                        }
-                    }
-                });
-            }
-        }, "update-install").start();
+    /**
+     * Hand off to {@link InstallerActivity} in the module's own process, so the install consent
+     * lands on the module app and not the intercom app. The installer does the download + install.
+     */
+    private static void launchInstaller(Activity activity, Release rel) {
+        try {
+            Intent i = new Intent();
+            i.setClassName("com.dmrmod.hooks", "com.dmrmod.hooks.InstallerActivity");
+            i.putExtra(InstallerActivity.EXTRA_URL, rel.apkUrl);
+            i.putExtra(InstallerActivity.EXTRA_VERSION, rel.version);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            activity.startActivity(i);
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": launch installer failed: " + t);
+            Toast.makeText(activity, "Couldn't start the installer: " + t.getMessage(),
+                Toast.LENGTH_LONG).show();
+        }
     }
 }
