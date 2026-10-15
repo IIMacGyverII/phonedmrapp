@@ -3,6 +3,14 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-15 — Nearby Repeaters Phase 0 complete (P0.5: location permission + fresh fix)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **E7 P0.5** | Confirmed the OEM process holds location at runtime: `dumpsys package com.pri.prizeinterphone` shows `ACCESS_FINE_LOCATION granted=true` with `SYSTEM_FIXED|GRANTED_BY_DEFAULT` (it is a privileged `android.uid.system` package, so the grant can't be revoked). Added a **one-shot fresh GPS/network fix** to the dialog: the last-known fix shows immediately, then a current fix (12 s timeout, removed after the first result) upgrades it and re-sorts the list. | `NearbyRepeatersUi` (fresh fix) | **device**: `fresh fix 45.222558,-93.6730501` logged, status updated from the last-known position; catalog loaded from the 24 h private cache (offline path), no refetch; no crash |
+
+**Phase 0 is done**: nearby BrandMeister repeaters list by distance on the radio, work offline after the first fetch, with a fresh GPS fix. Next: Phase 1 (install path) under the re-scoped one-listen-channel-per-slot model (`16-…` §10).
+
 ## 2026-10-15 — Nearby Repeaters Phase 0: the Device-tab list (P0.4)
 
 | Backlog | Change | Files | Test |
