@@ -3,6 +3,12 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-15 — R5: channel locations keyed by `_id` (Nearby Repeaters prerequisite)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **R5** | The intercom's distance/location display looked up `LocationDatabase` by `mCurrentChannelIndex + 1`, which only equals the channel's key with no deletions and no zone filter — so under a zone it showed the wrong channel's location. It now resolves the displayed channel's **`_id`** from the fragment's own (zone-filtered) `channels` list. The importer stages locations by the inserted `_id` and the exporter looks them up by `_id`, so the whole path keys on `_id` (the stable key the Nearby-Repeaters installer will use). The `channel_locations` key column keeps its legacy name `channel_number` but now holds `_id` (no cache migration; the two are equal on this codeplug). | `MainHook`, `DirectDatabaseImporter`, `DirectDatabaseExporter`, `LocationDatabase` | **device**: injected a location row for the active channel's `_id` (49); the intercom resolved it to Chicago with distance and bearing (`Distance to channel id 49`), proving the read path keys by `_id`; hooks load 0 failures, no crash |
+
 ## 2026-10-15 — On-air: group-call RX follows the RX group list (E7 gate P0.6 passed)
 
 | Backlog | Change | Files | Test |

@@ -18,6 +18,8 @@ public class LocationDatabase extends SQLiteOpenHelper {
     
     // Table and column names
     private static final String TABLE_LOCATIONS = "channel_locations";
+    // R5 (2026-10-15): this key column now holds the channel **_id**, not channel_number.
+    // The column keeps its legacy name to avoid a cache migration; all callers pass _id.
     private static final String COLUMN_CHANNEL_NUMBER = "channel_number";
     private static final String COLUMN_LATITUDE = "latitude";
     private static final String COLUMN_LONGITUDE = "longitude";

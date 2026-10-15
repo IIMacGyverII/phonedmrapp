@@ -522,7 +522,7 @@ public class DirectDatabaseImporter {
             // channel table has committed, so a failed/rolled-back import leaves the previous locations
             // and APRS flags intact instead of half-cleared.
             LocationDatabase locationDb = LocationDatabase.getInstance(context);
-            final java.util.List<double[]> pendingLocations = new java.util.ArrayList<>(); // {channelNumber, lat, lon}
+            final java.util.List<double[]> pendingLocations = new java.util.ArrayList<>(); // {channel _id, lat, lon} (R5: keyed by _id, not channel_number)
             final java.util.List<int[]> pendingAprs = new java.util.ArrayList<>();          // {channelNumber, enabled}
             boolean channelsCommitted = false;
             
@@ -1105,7 +1105,7 @@ public class DirectDatabaseImporter {
                                 
                                 // Don't save default values (0.128, 0.008)
                                 if (Math.abs(lat - 0.128) > 0.001 || Math.abs(lon - 0.008) > 0.001) {
-                                    pendingLocations.add(new double[]{Integer.parseInt(channelNumber), lat, lon});
+                                    pendingLocations.add(new double[]{finalRowId, lat, lon});  // R5: key by the channel's _id
                                     Log.i(TAG, "  Queued location for channel " + channelNumber + ": " + lat + ", " + lon);
                                 }
                             }
