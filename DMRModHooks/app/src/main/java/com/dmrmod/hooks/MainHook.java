@@ -4626,6 +4626,24 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             });
 
+            // === SOFTWARE UPDATE (download the latest GitHub release and root-install it) ===
+            final Button updateButton = new Button(context);
+            updateButton.setText("⬆ Check for updates");
+            updateButton.setTextSize(16);
+            updateButton.setAllCaps(false);
+            updateButton.setPadding(20, 20, 20, 20);
+            updateButton.setLayoutParams(new ViewGroup.LayoutParams(templateParams));
+            updateButton.setContentDescription("Check for software updates");
+            updateButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    XposedBridge.log(TAG + ": Check for updates clicked");
+                    GithubUpdater.checkAndPrompt(activity);
+                }
+            });
+            // Quiet background check when the Device tab is shown: re-labels the button if newer.
+            try { GithubUpdater.checkQuietly(activity, updateButton); } catch (Throwable ignore) { }
+
             // Add buttons at specified index
             if (index >= 0) {
                 parentLayout.addView(exportButton, index);
@@ -4639,6 +4657,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 parentLayout.addView(diagToggle, index + 8);
                 parentLayout.addView(smeterToggle, index + 9);
                 parentLayout.addView(nearbyButton, index + 10);
+                parentLayout.addView(updateButton, index + 11);
                 XposedBridge.log(TAG + ": ✓ Export button added at index " + index);
                 XposedBridge.log(TAG + ": ✓ Import button added at index " + (index + 1));
                 XposedBridge.log(TAG + ": ✓ RadioID buttons added at indices " + (index + 2) + "-" + (index + 4));
@@ -4654,6 +4673,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 parentLayout.addView(diagToggle);
                 parentLayout.addView(smeterToggle);
                 parentLayout.addView(nearbyButton);
+                parentLayout.addView(updateButton);
                 XposedBridge.log(TAG + ": ✓ Export, Import, and RadioID buttons added at end of layout");
             }
             
