@@ -96,6 +96,9 @@ public class MainHook implements IXposedHookLoadPackage {
     // Caller identification state
     private static volatile int currentCallerDmrId = 0;
     private static volatile String currentCallerName = null;
+    // 0x2B caller-info body (on-air 2026-10-15): [0] callType 0 private / 1 group, [1..4] caller ID LE, [5..8] target LE
+    private static volatile int currentCallerDestId = 0;
+    private static volatile int currentCallerCallType = -1;
     private static volatile boolean isReceiving = false;
     private static LinearLayout callerDetailPanel = null;
     private static TextView callerHeadlineTextView = null;
@@ -3273,6 +3276,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                     // Clear DMR caller display when switching to analog channel
                                     if (channelType == 1) {  // Analog channel
                                         currentCallerDmrId = 0;
+                                        currentCallerDestId = 0;
+                                        currentCallerCallType = -1;
                                         currentCallerName = null;
                                         isReceiving = false;
                                         if (callerDetailPanel != null) {
@@ -4601,7 +4606,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     } catch (Throwable ignored) { }
                     XposedBridge.log(TAG + ": Diagnostics toggled " + (diagnosticsEnabled ? "ON" : "OFF"));
                     Toast.makeText(activity, diagnosticsEnabled
-                            ? "Diagnostics ON: UART frames logged to Download/DMR/uart_logs; adb debug packets accepted"
+                            ? "Diagnostics ON: UART frames logged to DMR/uart_logs; adb debug packets accepted"
                             : "Diagnostics OFF", Toast.LENGTH_LONG).show();
                 }
             });
@@ -9012,6 +9017,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                     
                                     // Always clear DMR state and display receiving message for analog
                                     currentCallerDmrId = 0;
+                                    currentCallerDestId = 0;
+                                    currentCallerCallType = -1;
                                     currentCallerName = null;
                                     isReceiving = true;
                                     ChannelScanner.onReceiveStart();
@@ -9139,53 +9146,20 @@ public class MainHook implements IXposedHookLoadPackage {
                             byte[] body = (byte[]) XposedHelpers.getObjectField(packet, "body");
                             
                             if (body != null && body.length > 0) {
-                                XposedBridge.log(TAG + ": ===== DigitalAudioMessage Packet Analysis =====");
-                                XposedBridge.log(TAG + ": Body length: " + body.length + " bytes");
-                                XposedBridge.log(TAG + ": Body bytes (hex): " + bytesToHex(body));
-                                
-                                // Try multiple interpretations to find the DMR ID
-                                if (body.length >= 4) {
-                                    // Try little-endian 4-byte int at offset 0
-                                    int le0 = ((body[3] & 0xFF) << 24) | ((body[2] & 0xFF) << 16) | 
-                                             ((body[1] & 0xFF) << 8) | (body[0] & 0xFF);
-                                    XposedBridge.log(TAG + ": Offset 0 Little-Endian 4-byte: " + le0);
-                                    
-                                    // Try big-endian 4-byte int at offset 0
-                                    int be0 = ((body[0] & 0xFF) << 24) | ((body[1] & 0xFF) << 16) | 
-                                             ((body[2] & 0xFF) << 8) | (body[3] & 0xFF);
-                                    XposedBridge.log(TAG + ": Offset 0 Big-Endian 4-byte: " + be0);
-                                    
-                                    // Try little-endian 3-byte (DMR IDs are 24-bit)
-                                    int le3_0 = ((body[2] & 0xFF) << 16) | ((body[1] & 0xFF) << 8) | (body[0] & 0xFF);
-                                    XposedBridge.log(TAG + ": Offset 0 Little-Endian 3-byte: " + le3_0);
-                                    
-                                    // Try big-endian 3-byte
-                                    int be3_0 = ((body[0] & 0xFF) << 16) | ((body[1] & 0xFF) << 8) | (body[2] & 0xFF);
-                                    XposedBridge.log(TAG + ": Offset 0 Big-Endian 3-byte: " + be3_0);
+                                // Body layout confirmed on-air 2026-10-15 (BTECH 6X2 -> this radio, four calls):
+                                //   [0] callType 0 private / 1 group, [1..4] caller DMR ID LE, [5..8] target LE
+                                //   (own ID for a private call, the talkgroup for a group call).
+                                if (body.length >= 9) {
+                                    currentCallerCallType = body[0] & 0xFF;
+                                    currentCallerDestId = (body[5] & 0xFF) | ((body[6] & 0xFF) << 8)
+                                        | ((body[7] & 0xFF) << 16) | ((body[8] & 0xFF) << 24);
+                                } else {
+                                    currentCallerCallType = body[0] & 0xFF;
+                                    currentCallerDestId = 0;
                                 }
-                                
-                                if (body.length >= 6) {
-                                    // Try offset 2 (skip first 2 bytes)
-                                    int le2 = ((body[5] & 0xFF) << 24) | ((body[4] & 0xFF) << 16) | 
-                                             ((body[3] & 0xFF) << 8) | (body[2] & 0xFF);
-                                    XposedBridge.log(TAG + ": Offset 2 Little-Endian 4-byte: " + le2);
-                                    
-                                    int be2 = ((body[2] & 0xFF) << 24) | ((body[3] & 0xFF) << 16) | 
-                                             ((body[4] & 0xFF) << 8) | (body[5] & 0xFF);
-                                    XposedBridge.log(TAG + ": Offset 2 Big-Endian 4-byte: " + be2);
-                                }
-                                
-                                // Try 2-byte (16-bit) interpretations
-                                if (body.length >= 2) {
-                                    int le16_0 = ((body[1] & 0xFF) << 8) | (body[0] & 0xFF);
-                                    XposedBridge.log(TAG + ": Offset 0 Little-Endian 2-byte (16-bit): " + le16_0);
-                                    
-                                    int be16_0 = ((body[0] & 0xFF) << 8) | (body[1] & 0xFF);
-                                    XposedBridge.log(TAG + ": Offset 0 Big-Endian 2-byte (16-bit): " + be16_0);
-                                }
-                                
-                                XposedBridge.log(TAG + ": Expected DMR ID: 64067 (0xFA23)");
-                                XposedBridge.log(TAG + ": =============================================");
+                                XposedBridge.log(TAG + ": 0x2B caller info: callType=" + currentCallerCallType
+                                    + " target=" + describeCallTarget(currentCallerCallType, currentCallerDestId)
+                                    + " body=" + bytesToHex(body));
                                 
                                 // DMR ID is at offset 1, 3-byte little-endian (24-bit): body[3]<<16 | body[2]<<8 | body[1]
                                 if (body.length >= 4) {
@@ -9594,6 +9568,10 @@ public class MainHook implements IXposedHookLoadPackage {
         }
         String badge = info.sourceBadge();
         String headline = info.headline();
+        String target = describeCallTarget(currentCallerCallType, currentCallerDestId);
+        if (target != null) {
+            headline = headline + "  \u00b7 " + target;
+        }
         if (isNonEmpty(badge)) {
             headline = headline + "  " + badge;
         }
@@ -9691,6 +9669,8 @@ public class MainHook implements IXposedHookLoadPackage {
      */
     private void clearCallerDisplay() {
         currentCallerDmrId = 0;
+        currentCallerDestId = 0;
+        currentCallerCallType = -1;
         currentCallerName = null;
 
         if (callerDetailPanel != null) {
@@ -9711,7 +9691,7 @@ public class MainHook implements IXposedHookLoadPackage {
     /**
      * Update the activity indicator with scrolling history (supports both DMR and Analog)
      */
-    private void updateActivityIndicator(final String activityType) {
+    private void updateActivityIndicator(String activityType) {
         if (dmrActivityIndicator == null || currentChannelNumber < 0) {
             return;
         }
@@ -9734,6 +9714,10 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
 
                 String rssiStr = (currentRssi != -999) ? " " + currentRssi + " dBm" : "";
+                String target = describeCallTarget(currentCallerCallType, currentCallerDestId);
+                if (target != null && currentCallerDmrId > 0 && activityType.contains("Voice RX")) {
+                    activityType = activityType + " " + target;
+                }
                 entry = displayName + "  " + timestamp + " " + activityType + rssiStr;
             } else {
                 // Analog/FM channel - no caller ID (analog doesn't have individual IDs)
@@ -10032,6 +10016,32 @@ public class MainHook implements IXposedHookLoadPackage {
     /**
      * Convert byte array to hex string for debugging
      */
+    /** "TG 99", "private" or "All call" from a 0x2B caller-info body; null when nothing is known. */
+    private static String describeCallTarget(int callType, int dest) {
+        if (callType < 0) return null;
+        if (callType == 2 || dest == 0xFFFFFF) return "All call";
+        if (callType == 1) return dest > 0 ? "TG " + dest : "group";
+        if (callType == 0) return "private";
+        return null;
+    }
+
+    /**
+     * On-air 2026-10-15: the MCU passes a group call only when its talkgroup is in groups[] (the RX
+     * group list, 32 slots); the Call Number alone does not admit its own TG. Put txContact into the
+     * first free slot. Returns the slot index, -1 if already present, -2 if the list is full.
+     */
+    private static int ensureTxContactInGroups(int[] groups, int txContact) {
+        if (groups == null || txContact <= 0) return -1;
+        int free = -1;
+        for (int i = 0; i < groups.length; i++) {
+            if (groups[i] == txContact) return -1;
+            if (free < 0 && groups[i] == 0) free = i;
+        }
+        if (free < 0) return -2;
+        groups[free] = txContact;
+        return free;
+    }
+
     private static String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) {
@@ -11112,11 +11122,11 @@ public class MainHook implements IXposedHookLoadPackage {
                                 byte[] encodedBytes = (byte[]) param.getResult();
                                 if (encodedBytes != null && encodedBytes.length >= 145) {
                                     // Layout: rxFreq(4) + txFreq(4) + localId(4) + groupList(128) + txContact(4) + contactType(1)
-                                    // txContact is at offset 140-143 (4 bytes, big endian)
-                                    int txContactInBytes = ((encodedBytes[140] & 0xFF) << 24) |
-                                                          ((encodedBytes[141] & 0xFF) << 16) |
-                                                          ((encodedBytes[142] & 0xFF) << 8) |
-                                                          (encodedBytes[143] & 0xFF);
+                                    // txContact is at offset 140-143 (4 bytes, little endian like every body field)
+                                    int txContactInBytes = (encodedBytes[140] & 0xFF) |
+                                                          ((encodedBytes[141] & 0xFF) << 8) |
+                                                          ((encodedBytes[142] & 0xFF) << 16) |
+                                                          ((encodedBytes[143] & 0xFF) << 24);
                                     // contactType is at offset 144 (1 byte)
                                     byte contactTypeInBytes = encodedBytes[144];
                                     
@@ -12403,7 +12413,7 @@ public class MainHook implements IXposedHookLoadPackage {
         }
     }
     
-    /** Delete all but the newest {@code keep} files in Download/DMR/uart_logs (names are timestamped). */
+    /** Delete all but the newest {@code keep} files in DMR/uart_logs (names are timestamped). */
     private static void pruneUartLogs(final int keep) {
         new Thread(new Runnable() {
             @Override public void run() {
@@ -12806,7 +12816,7 @@ public class MainHook implements IXposedHookLoadPackage {
         + "Good to know\n"
         + "\u2022 Squelch levels 1-9 behave as one threshold on this radio; 0 is always open.\n"
         + "\u2022 A digital channel with no Call Number (TX contact) is refused by the radio: the arrows show 'operation failed' and the scanner skips it.\n"
-        + "\u2022 Group-call receive only works for the channel's own talkgroup; All-call receive is a known firmware limit.\n"
+        + "\u2022 Group-call receive follows the channel's RX group list (up to 32 talkgroups): the radio only passes talkgroups in that list, so saving a channel adds its Call Number to the list. All-call receive is a firmware limit; the caller panel and history show the talkgroup of each call.\n"
         + "\u2022 After updating the mod, reboot the phone.";
 
     private void hookUseAssistant(XC_LoadPackage.LoadPackageParam lpparam) {
@@ -15265,6 +15275,22 @@ public class MainHook implements IXposedHookLoadPackage {
                                     Toast.makeText(context, "Digital channel without a Call Number: the radio will refuse to tune it "
                                         + "(saved anyway - add a TG or contact ID)", Toast.LENGTH_LONG).show();
                                 }
+                                // On-air 2026-10-15: group RX follows groups[] (the RX list), not the Call Number.
+                                // Make a GROUP channel hear the talkgroup it transmits on.
+                                if (chType == 0 && chContactType == 1 && chTxContact > 0) {
+                                    int[] g = (int[]) XposedHelpers.getObjectField(channelData, "groups");
+                                    int slot = ensureTxContactInGroups(g, chTxContact);
+                                    if (slot >= 0) {
+                                        XposedHelpers.setObjectField(channelData, "groups", g);
+                                        XposedBridge.log(TAG + ": Added TG " + chTxContact + " to the RX group list (slot " + slot + ")");
+                                        Toast.makeText(context, "Added TG " + chTxContact + " to the RX group list "
+                                            + "(the radio only passes talkgroups in that list)", Toast.LENGTH_LONG).show();
+                                    } else if (slot == -2) {
+                                        XposedBridge.log(TAG + ": RX group list full; TG " + chTxContact + " not added");
+                                        Toast.makeText(context, "RX group list is full (32): TG " + chTxContact
+                                            + " will not be heard until one is removed", Toast.LENGTH_LONG).show();
+                                    }
+                                }
                             }
                             XposedBridge.log(TAG + ": === saveChannelData beforeHook complete ===");
                         } catch (Throwable t) {
@@ -15352,6 +15378,11 @@ public class MainHook implements IXposedHookLoadPackage {
                                             if (tgList != null) {
                                                 // Write TG IDs directly into the channel's native groups array and persist to DB
                                                 int[] hwGroups = tgList.getHardwareGroups();
+                                                int txc = XposedHelpers.getIntField(channelData, "txContact");
+                                                if (XposedHelpers.getIntField(channelData, "contactType") == 1
+                                                        && ensureTxContactInGroups(hwGroups, txc) >= 0) {
+                                                    XposedBridge.log(TAG + ": TG list lacked the Call Number; added TG " + txc);
+                                                }
                                                 XposedHelpers.setObjectField(channelData, "groups", hwGroups);
                                                 Class<?> dmrMgrClass = XposedHelpers.findClass(
                                                     "com.pri.prizeinterphone.manager.DmrManager",

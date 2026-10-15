@@ -27,7 +27,7 @@ Full offset table: `docs/deep-dive/02-oem-messages-and-handlers.md` §3.2 (re-de
 | 0 | `rxFreq` | int, Hz |
 | 4 | `txFreq` | int, Hz |
 | 8 | `localId` | int — this radio's DMR ID (from `DmrManager`, not channel DB); VFO override sets it here via the `BaseMessage.send()` hook |
-| 12 | `groups[0..31]` | 32 × int — RX group list (firmware ignores it for RX) |
+| 12 | `groups[0..31]` | 32 × int — RX group list. **The MCU's RX filter (on-air 2026-10-15): a group call is passed iff its TG is here**; `txContact` alone does not admit its TG |
 | 140 | `txContact` | int — DMR ID or TG ID to transmit to |
 | 144 | `contactType` | 0 private / 1 group / 2 all |
 | 145 | `power` | 0 low / 1 high |
@@ -43,6 +43,18 @@ Full offset table: `docs/deep-dive/02-oem-messages-and-handlers.md` §3.2 (re-de
 | 162 | `relay` | 1 disconnect / 2 normal |
 
 **`DigitalMessage` has no `band` or `interrupt` byte** — `band` (bandwidth) exists only in `AnalogMessage` (offset 8); `interrupt` is a separate command (`0x35`). There is **no** "24-bit target at bytes 5–7" in the outbound packet — that was a misreading. Frame header (`ckSum`, `len`) is big-endian; **all bodies are little-endian**.
+
+## DigitalAudioMessage reply (cmd 0x2B, 9-byte body, little-endian) — caller info
+
+Pushed by the MCU after `RECEIVE_STOP` (also answers the app's 1-byte `fetch=1` query). Verified on-air 2026-10-15 with four calls from a BTECH 6X2 (ID 64067):
+
+| Body offset | Field | Observed |
+|--------|-------|-------|
+| 0 | `callType` | 0 private, 1 group (2 all) |
+| 1 | `callerId` | int LE — `43 FA 00 00` = 64067 (the old "24-bit at 1..3" reading is the same bytes) |
+| 5 | `target` | int LE — own ID `A7 05 00 00` = 1447 for the private call; `01/09/63 00 00 00` = TG 1 / 9 / 99 for group calls |
+
+Bodies seen: `00 43FA0000 A7050000`, `01 43FA0000 01000000`, `01 43FA0000 63000000`, `01 43FA0000 09000000`.
 
 ## AnalogMessage (cmd 0x23, 19-byte body)
 

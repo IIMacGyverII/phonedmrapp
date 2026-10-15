@@ -115,7 +115,7 @@ Design: `deep-dive/15-packet-radio-review.md` (+ addendum) and `16-repeater-dire
 | **F7** | If F6 passes: RF beacon / RF messages; if it fails: DMR position SMS (`0x2C`) + optional Bluetooth KISS TNC | Either way a working "send position" | M | yes | `15-…` addendum |
 | **F8** | NOAA **SAME** weather-alert decoder (162.400–162.550) on the same PCM tap | High civilian value; only needs G1 | M | yes | `15-…` addendum |
 | **F9** | DTMF decode (then encode test — different spectrum from AFSK) | `DTMF.csv` is a placeholder today | M | yes | `15-…` addendum |
-| **E7** | **Nearby Repeaters** phases 0–5 (with rev. 2 gates: R5 first, P0.6 on-air GROUP-RX test, area-scoped `installed`, private cache, BM-only on cellular) | Full spec exists | L | yes | `16-…` §7 + rev. 2 |
+| **E7** | **Nearby Repeaters** phases 0–5 (with rev. 2 gates: R5 first, ~~P0.6 on-air GROUP-RX test~~ **P0.6 passed 2026-10-15**: group RX follows the 32-slot RX list, so an installed repeater channel must carry its TGs in `groups[]`; area-scoped `installed`, private cache, BM-only on cellular) | Full spec exists | L | yes | `16-…` §7 + rev. 2 |
 
 ---
 
@@ -147,7 +147,7 @@ Full plan: `deep-dive/18-firmware-modding-plan.md`. The flash-and-test loop is s
 | **FW2** | Dynamic ground truth via the (gated) debug-packet path: map each command byte's observable MCU effect | S | yes | `18-…` §5.4 |
 | **FW3** ◐ | Easy win first: one-byte change → RAM-load → observe → power-cycle restore. **Target found 2026-10-14: CTCSS tone table at `+0x366B2`** (50 × LE16 centihertz; `scripts/fw1_ctcss_table.py`, `grok-deep-dive/11-…` §18). Edit one tone, confirm the decode shifts, power-cycle restore. Needs a device + a tone source. | M | yes | `grok-deep-dive/11-…` §18 |
 | **FW4** | Locate band/frequency-limit validation (**document only** unless the operator authorises TX-band changes for their own allocation — legal note §7) | M | no | `18-…` §7 |
-| **FW5** | Group-call RX: anchor at the `0x2B` reporter, walk back to the RX-frame TG extraction; "constraint confirmed" is a valid outcome | L | yes | `18-…` §5.3 |
+| **FW5** | ~~Group-call RX firmware patch~~ **Dropped 2026-10-15**: group RX works through the RX list (on-air, `grok-deep-dive/11-…` §19); nothing to patch. Only the 32-slot ceiling remains, not worth firmware surgery | — | — | `18-…` §5.3 |
 | **FW6** ◐ | Revive `PatchReloadHelper` as an opt-in firmware-dev control in Diagnostics; ~~stop bundling `PATCH14.bin`~~ (**removed from assets 2026-10-14**, −378 KB APK); never auto-load a `DMRDEBUG.bin` | S | yes | `18-…` §6, R6/S7 |
 | **FW7** | Only if a change is worth keeping: revisit permanent flash — **retry on `/dev/ttyS0`** (the port the update uses) after the `dmr009` GPIO knock, read-only first; the prior EACCES was on the unused `/dev/ttyS1` | L | yes | `18-…` §6/§10 |
 
@@ -155,7 +155,7 @@ Full plan: `deep-dive/18-firmware-modding-plan.md`. The flash-and-test loop is s
 
 ## Not on the list (hard constraints — do not re-open without new evidence)
 
-Hardware LED control · DMR group-call RX beyond the channel's own `txContact` (RX group list ignored; ALL/RECEIVE_ALL reports `0xFFFFFF`) · >32 TGs per channel · squelch levels 1/3–9 · on-device speech-to-text · Magisk/systemizer or a rebuilt OEM APK · a fifth channel-hijack mode · NDK Dire Wolf · an in-app CPS.
+Hardware LED control · DMR group-call RX beyond the 32-slot RX group list (**the list is the filter**, on-air 2026-10-15; ALL/RECEIVE_ALL still reports `0xFFFFFF`) · >32 TGs per channel · squelch levels 1/3–9 · on-device speech-to-text · Magisk/systemizer or a rebuilt OEM APK · a fifth channel-hijack mode · NDK Dire Wolf · an in-app CPS.
 
 **Note (2026-08-27):** "permanent firmware flashing via UART" was on this list; it is now **FW7 (unproven, not blocked)** — the EACCES that closed it was a probe of `/dev/ttyS1`, but the working update uses `/dev/ttyS0` (`deep-dive/18-…` §6/§10). RAM-load firmware testing was never blocked and is safe today.
 Evidence: `.grok/rules/00-session-start.md` §3, `deep-dive/07-…` §5, `deep-dive/13-…` §5, `grok-deep-dive/04` §G.

@@ -823,3 +823,34 @@ A single confirmed round-trip here de-risks every later firmware experiment. Log
 | Offset | Role |
 |---|---|
 | `+0x366B2` | CTCSS tone table, 50 × LE16 centihertz (67.00–254.10 Hz) |
+
+## 19. On-air group-call RX test — the RX group list is the filter (2026-10-15)
+
+Second radio: BTECH DMR-6X2, DMR ID 64067, inside the operator's Faraday cage with the Ulefone. Both on 467.700000 simplex, colour code 1, timeslot 1, low power. Phone channel 49 (`dmr test`): digital, GROUP, Call Number 9 then 99, encryption off, direct mode (`channelMode 0`). Diagnostics ON; the module's `0x24` image was read back between runs and matched the DB row each time (`groups`, `txContact`, cc, slots).
+
+### 19.1 Run 1 — RX list `[1]` (OEM default), Call Number 9 then 99
+
+Handheld keyed on TG 9 (Call Number 9) and on TG 99 (Call Number 99), ~5 s each. **Nothing**: the OEM `AsyncPacketReader` shows no `0x36` status and no `0x2B` frame from the module for either keying; only the acks of the channel writes. The phone's own TX on TG 9 (09:38:57) was not heard by the 6X2 either (its RX list did not carry TG 9 — handheld-side, not investigated).
+
+### 19.2 Run 2 — control, discriminator, then the list completed
+
+| Time | Phone image (`groups`, `txContact`) | Handheld call | Result | `0x2B` body (hex) |
+|---|---|---|---|---|
+| 09:55:13 | `[1]`, 99 | private to 1447 | **heard** | `00 43FA0000 A7050000` |
+| 09:55:59 | `[1]`, 99 | TG 1 | **heard** | `01 43FA0000 01000000` |
+| 09:56:38 | list set to `[1, 9, 99]` through the OEM group grid, 99 | — | `0x22` written, acked | — |
+| 09:57:57 | `[1,9,99]`, 99 | TG 99 | **heard** | `01 43FA0000 63000000` |
+| 09:58:22 | `[1,9,99]`, 99 | TG 9 | **heard** | `01 43FA0000 09000000` |
+
+Each heard call: `0x36` `RECEIVE_START` (body `01`) → ~3 s later `RECEIVE_STOP` (`02`) → the `0x2B` report → a second `RECEIVE_STOP`. Audio was heard on the phone for all four.
+
+### 19.3 What this settles
+
+- **The MCU's group filter is `groups[]`** (the 32-slot RX list at `0x22` body offset 12). TG 1 passed with Call Number 99 because 1 was in the list; TG 9 and 99 failed with Call Numbers 9 / 99 until they were in the list. The Call Number plays no part in receive.
+- **Private calls to the radio's own ID pass regardless** (as the 2026-03 notes said).
+- The 2026-03 "firmware ignores the RX group list — hardware limitation confirmed" verdict is **withdrawn**. The likeliest cause: that era's hook rewrote `groups[]` at call start and the TG lists never reached the hardware image; the `0x24` readback that would have shown it did not exist until 2026-10-14.
+- **`0x2B` body** (9 bytes, LE): `[0]` callType 0 private / 1 group, `[1..4]` caller ID, `[5..8]` target (own ID for private, TG for group). The module reports the TG the call was addressed to, which the OEM app never parsed.
+- Still true: ALL mode (`contactType=2`) reports `0xFFFFFF` and drops audio; the list ceiling is 32 TGs and the MCU drops out-of-list calls before any status reaches the app, so software cannot widen it.
+- Backlog **FW5** (firmware patch for group RX) is dropped; the mod now adds the Call Number to `groups[]` on save and shows the TG in the caller panel/history.
+
+Not tested: TS2, repeater mode (`relay=1`, `channelMode 4`), colour-code mismatch, encryption, more than 32 entries. Nearby Repeaters (E7) can proceed with "install the repeater's TGs into the channel's 32 slots".
