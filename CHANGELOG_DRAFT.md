@@ -3,6 +3,16 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-15 — Nearby Repeaters: manual talkgroups when a repeater lists none
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **E7** | Many directory repeaters carry no talkgroups (6,802 of 11,495 RadioID rows, and the N0YNT/Saint Paul the user hit is one). Previously such a repeater was a dead end. Now the install dialog shows a **manual talkgroup builder**: pick a timeslot, tick talkgroups from your saved contacts, and/or type a talkgroup number, then the dialog's own button (relabeled **Use these**, always visible) commits them and hands off to the normal transmit-selection + install flow. | `NearbyRepeatersUi` (`buildManualTgUi`, `loadAllContacts`, commit via the dialog button), message wording | **device**: builder renders (TS1/TS2, number field + Add, contacts checkboxes); captured "Chosen: TG 3127 TS1, TG 3169 TS2" from a ticked contact + typed number; codeplug left clean (49 ch). The commit→install path reuses the DMR install already proven on-air (KA0KMJ) |
+
+Also fixed: the "no talkgroups" message no longer says "on BrandMeister" (the repeater may be from RadioID), and the install dialog uses a repeater's own talkgroups and only queries BrandMeister when a BM device has none.
+
+Note on why N0YNT showed no IDs: it has three separate RadioID listings; the Oakdale one (443.425) carries 6 talkgroups, but the Saint Paul (443.000) and Dayton (442.850) listings have an empty `talkgroups` array upstream — missing data, not a parse error.
+
 ## 2026-10-15 — Nearby Repeaters P2.1/P2.4: RadioID wired in with geocoding
 
 | Backlog | Change | Files | Test |
