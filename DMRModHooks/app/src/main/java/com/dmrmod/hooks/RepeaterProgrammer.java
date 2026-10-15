@@ -41,20 +41,25 @@ public final class RepeaterProgrammer {
         public int channelsCreated;
         public int listenCreated;
         public int talkCreated;
+        public int fmCreated;
         public int contactsCreated;
     }
 
     /** Preview text without writing anything: how many of each object the plan will make. */
     public static String preview(Plan plan) {
-        int listen = 0, talk = 0;
+        int listen = 0, talk = 0, fm = 0;
         for (ChannelSpec c : plan.channels) {
-            if ("talk".equals(c.role)) talk++; else listen++;
+            if (c.isFm()) fm++; else if ("talk".equals(c.role)) talk++; else listen++;
         }
         StringBuilder sb = new StringBuilder();
         sb.append(plan.channels.size()).append(" channel").append(plan.channels.size() == 1 ? "" : "s");
-        sb.append(" (").append(listen).append(" listen");
-        if (talk > 0) sb.append(" + ").append(talk).append(" talk");
-        sb.append("), ").append(plan.contactsNeeded.size()).append(" contacts, 1 zone");
+        if (fm > 0) {
+            sb.append(" (FM)");
+        } else {
+            sb.append(" (").append(listen).append(" listen");
+            if (talk > 0) sb.append(" + ").append(talk).append(" talk");
+            sb.append("), ").append(plan.contactsNeeded.size()).append(" contacts, 1 zone");
+        }
         if (!plan.warnings.isEmpty()) sb.append("  ⚠ ").append(plan.warnings.get(0));
         return sb.toString();
     }
@@ -124,6 +129,7 @@ public final class RepeaterProgrammer {
             Map<Integer, Long> slotList = new LinkedHashMap<>();
             TGListDatabase tgDb = TGListDatabase.getInstance(ctx);
             for (ChannelSpec c : plan.channels) {
+                if (c.isFm()) continue;
                 if (slotList.containsKey(c.slotIndex)) continue;
                 StringBuilder csv = new StringBuilder();
                 for (int g : c.groups) { if (g > 0) { if (csv.length() > 0) csv.append(','); csv.append(g); } }
@@ -150,34 +156,51 @@ public final class RepeaterProgrammer {
             for (ChannelSpec c : plan.channels) {
                 Object cd = XposedHelpers.newInstance(XposedHelpers.findClass(CH, cl));
                 XposedHelpers.callMethod(cd, "setName", c.name);
-                XposedHelpers.callMethod(cd, "setType", 0);
                 XposedHelpers.callMethod(cd, "setRxFreq", (int) c.rxHz);
                 XposedHelpers.callMethod(cd, "setTxFreq", (int) c.txHz);
                 XposedHelpers.callMethod(cd, "setPower", 1);
-                XposedHelpers.callMethod(cd, "setCc", c.cc);
-                XposedHelpers.callMethod(cd, "setInBoundSlot", c.slotIndex);
-                XposedHelpers.callMethod(cd, "setOutBoundSlot", c.slotIndex);
-                XposedHelpers.callMethod(cd, "setChannelMode", 4);     // double-slot, as the importer does
-                XposedHelpers.callMethod(cd, "setContactType", 1);     // GROUP
-                XposedHelpers.callMethod(cd, "setTxContact", c.txContact);
-                XposedHelpers.callMethod(cd, "setEncryptSw", 2);       // off
-                XposedHelpers.callMethod(cd, "setEncryptKey", "");
                 XposedHelpers.callMethod(cd, "setRelay", 2);           // normal (never 0)
                 XposedHelpers.callMethod(cd, "setInterrupt", 2);       // OFF
-                XposedHelpers.callMethod(cd, "setBand", 1);
-                XposedHelpers.callMethod(cd, "setSq", 2);
-                XposedHelpers.callMethod(cd, "setGroups", c.groups);
                 XposedHelpers.callMethod(cd, "setActive", 0);          // NOT live until the user taps it
+
+                if (c.isFm()) {
+                    XposedHelpers.callMethod(cd, "setType", 1);        // analog FM
+                    XposedHelpers.callMethod(cd, "setBand", c.bandwidth);
+                    XposedHelpers.callMethod(cd, "setSq", 2);
+                    int rxType = ToneConverter.parseType(c.toneDown);
+                    int txType = ToneConverter.parseType(c.toneUp);
+                    XposedHelpers.callMethod(cd, "setRxType", rxType);
+                    XposedHelpers.callMethod(cd, "setRxSubCode", rxType == 0 ? 0 : ToneConverter.parseSubCode(c.toneDown));
+                    XposedHelpers.callMethod(cd, "setTxType", txType);
+                    XposedHelpers.callMethod(cd, "setTxSubCode", txType == 0 ? 0 : ToneConverter.parseSubCode(c.toneUp));
+                } else {
+                    XposedHelpers.callMethod(cd, "setType", 0);        // DMR
+                    XposedHelpers.callMethod(cd, "setCc", c.cc);
+                    XposedHelpers.callMethod(cd, "setInBoundSlot", c.slotIndex);
+                    XposedHelpers.callMethod(cd, "setOutBoundSlot", c.slotIndex);
+                    XposedHelpers.callMethod(cd, "setChannelMode", 4); // double-slot, as the importer does
+                    XposedHelpers.callMethod(cd, "setContactType", 1); // GROUP
+                    XposedHelpers.callMethod(cd, "setTxContact", c.txContact);
+                    XposedHelpers.callMethod(cd, "setEncryptSw", 2);   // off
+                    XposedHelpers.callMethod(cd, "setEncryptKey", "");
+                    XposedHelpers.callMethod(cd, "setBand", 1);
+                    XposedHelpers.callMethod(cd, "setSq", 2);
+                    XposedHelpers.callMethod(cd, "setGroups", c.groups);
+                }
 
                 XposedHelpers.callMethod(mgr, "createChannel", areaKey, cd);
                 int id = (Integer) XposedHelpers.callMethod(cd, "getId");
                 if (id <= 0) { XposedBridge.log(TAG + ": createChannel returned no id for " + c.name); continue; }
                 run.channelIds.add(id);
                 res.channelsCreated++;
-                if ("talk".equals(c.role)) res.talkCreated++; else res.listenCreated++;
+                if (c.isFm()) res.fmCreated++;
+                else if ("talk".equals(c.role)) res.talkCreated++;
+                else res.listenCreated++;
 
-                Long listId = slotList.get(c.slotIndex);
-                if (listId != null) { try { tgDb.assignTGListToChannel(id, listId); } catch (Throwable ignore) { } }
+                if (!c.isFm()) {
+                    Long listId = slotList.get(c.slotIndex);
+                    if (listId != null) { try { tgDb.assignTGListToChannel(id, listId); } catch (Throwable ignore) { } }
+                }
                 try { zoneDb.addChannelToZone(zoneId, id); } catch (Throwable ignore) { }
                 if (rep.hasCoords) { try { locDb.saveLocation(id, rep.lat, rep.lon); } catch (Throwable ignore) { } }
             }
@@ -186,11 +209,14 @@ public final class RepeaterProgrammer {
             try { MainHook.refreshChannelListUi(); } catch (Throwable ignore) { }
             res.runId = run.runId;
             res.ok = res.channelsCreated > 0;
+            String what = res.fmCreated > 0
+                ? (res.fmCreated + " FM channel" + (res.fmCreated == 1 ? "" : "s"))
+                : (res.listenCreated + " listen"
+                   + (res.talkCreated > 0 ? " + " + res.talkCreated + " talk" : "")
+                   + ", " + res.contactsCreated + " new contacts");
             res.message = "Added " + res.channelsCreated + " channel"
                 + (res.channelsCreated == 1 ? "" : "s")
-                + " (" + res.listenCreated + " listen"
-                + (res.talkCreated > 0 ? " + " + res.talkCreated + " talk" : "") + ") to zone \""
-                + plan.zoneName + "\", " + res.contactsCreated + " new contacts.\n\n"
+                + " (" + what + ") to zone \"" + plan.zoneName + "\".\n\n"
                 + "They are not live yet — open the channel list (or the new zone) and tap one.";
             XposedBridge.log(TAG + ": Repeater install run " + run.runId + ": " + res.message.replace('\n', ' '));
             return res;

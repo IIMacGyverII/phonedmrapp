@@ -3,6 +3,15 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-15 — Nearby Repeaters Phase 2: FM in the catalog and the FM install path
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **E7 P2.4 (FM)** | The live dialog now merges **hearham FM** into the BrandMeister catalog: hearham is fetched once (cached 30 days, Wi-Fi), filtered to FM-with-coordinates, and merged via `RepeaterCatalog`. FM and DMR repeaters list together by distance; the row shows `FM` or `DMR CCn`. | `NearbyRepeatersUi` | **device**: BM 3187 + hearham 15857 FM → merged 17962; FM rows appear sorted by distance |
+| **E7 P2.5** | FM install path. `RepeaterPlanner` plans one analog channel for an FM repeater; `RepeaterProgrammer` writes it (type 1, band from bandwidth, tones via the existing `ToneConverter`, sq 2, no contacts/TG list), into a per-repeater zone, inactive. Tapping an FM repeater skips the talkgroup dialog and goes straight to the confirm. | `RepeaterPlanner`, `RepeaterProgrammer`, `NearbyRepeatersUi` | **device**: K0SCA → analog channel 145.490/144.890, band wide, CTCSS rx/tx subcode 24, active 0; **undo → baseline**, no crash; **JUnit** FM-plan test |
+
+Phase 2 DMR + FM install both work on-device. Remaining: RadioID (non-BM DMR) into the live catalog with geocoding for coordinate-less rows (P2.1 is parsed, not yet wired), source/band/on-air filter chips (P2.6, e.g. hide the 6 m/out-of-range rows), and the attribution footer + source contacts (P2.7). `RepeaterCatalog.merge` and `RadioIdRepeaterSource` are already in and unit-tested, so wiring RadioID is mostly fetch+geocode.
+
 ## 2026-10-15 — Nearby Repeaters: Phase 1 polish + Phase 2 source parsers
 
 | Backlog | Change | Files | Test |

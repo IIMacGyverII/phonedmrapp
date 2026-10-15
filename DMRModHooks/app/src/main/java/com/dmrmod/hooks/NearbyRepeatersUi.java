@@ -236,6 +236,33 @@ public final class NearbyRepeatersUi {
         });
     }
 
+    /** FM source: hearham, cached 30 days in the private cache. Best-effort; [] on any failure. */
+    private java.util.List<Repeater> loadHearham(boolean forceRefresh) {
+        File cache = new File(activity.getCacheDir(), "nearby_hearham.json");
+        try {
+            long ttl = 30L * 24 * 60 * 60 * 1000;
+            String json;
+            if (!forceRefresh && cache.exists()
+                    && (System.currentTimeMillis() - cache.lastModified()) < ttl) {
+                json = readFile(cache);
+            } else {
+                HttpClient.Response r = HttpClient.get(HearhamSource.URL, null, 0L, "application/json");
+                if (r.isOk()) { json = r.bodyUtf8(); try { writeFile(cache, json); } catch (Throwable ignore) { } }
+                else if (cache.exists()) json = readFile(cache);
+                else return new java.util.ArrayList<>();
+            }
+            java.util.List<Repeater> all = HearhamSource.parse(json);
+            // keep only FM with coordinates (the catalog already has BM for DMR)
+            java.util.List<Repeater> fm = new java.util.ArrayList<>();
+            for (Repeater r : all) if (r.fm && !r.dmr && r.hasCoords) fm.add(r);
+            XposedBridge.log(TAG + ": Nearby: hearham FM rows " + fm.size() + " of " + all.size());
+            return fm;
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": hearham load failed: " + t);
+            return new java.util.ArrayList<>();
+        }
+    }
+
     /** Load from the private cache if fresh (unless forced), else fetch over the network. */
     private void loadCatalog(final boolean forceRefresh) {
         final File cache = new File(activity.getCacheDir(), CACHE_FILE);
@@ -275,13 +302,15 @@ public final class NearbyRepeatersUi {
                 }
 
                 BrandMeisterSource.ParseResult pr = BrandMeisterSource.parseDeviceList(json, fetchedAt);
+                java.util.List<Repeater> hearham = loadHearham(forceRefresh);  // FM (cached, best-effort)
+                java.util.List<Repeater> merged = RepeaterCatalog.merge(pr.repeaters, hearham);
                 synchronized (all) {
                     all.clear();
-                    all.addAll(pr.repeaters);
+                    all.addAll(merged);
                     catalogFetchedAt = fetchedAt;
                 }
-                XposedBridge.log(TAG + ": Nearby: parsed " + pr.repeaters.size() + " repeaters ("
-                    + pr.skippedSimplex + " simplex, " + pr.skippedNoCallsign + " no-call skipped)");
+                XposedBridge.log(TAG + ": Nearby: BM " + pr.repeaters.size() + " + hearham "
+                    + hearham.size() + " -> merged " + merged.size());
                 activity.runOnUiThread(new Runnable() {
                     @Override public void run() { applyFilterAndRender(); }
                 });
@@ -331,10 +360,10 @@ public final class NearbyRepeatersUi {
 
     private String formatRow(Repeater r) {
         String dist = GeoUtil.formatDistanceWithArrow(myLat, myLon, r.lat, r.lon);
-        String cc = r.cc >= 0 ? "CC" + r.cc : "CC?";
         String approx = r.approx ? "  ~approx" : "";
-        return String.format(Locale.US, "%s   %s\n%s MHz  DMR %s  %s%s",
-            r.callsign, dist, r.rxMhzString(), cc, nz(r.city), approx);
+        String mode = r.dmr ? ("DMR " + (r.cc >= 0 ? "CC" + r.cc : "CC?")) : "FM";
+        return String.format(Locale.US, "%s   %s\n%s MHz  %s  %s%s",
+            r.callsign, dist, r.rxMhzString(), mode, nz(r.city), approx);
     }
 
     private String buildStatus(int shown, int withCoords) {
@@ -382,6 +411,7 @@ public final class NearbyRepeatersUi {
     }
 
     private void openRepeater(final Repeater rep) {
+        if (rep.fm && !rep.dmr) { doInstall(rep, new LinkedHashSet<Integer>()); return; }
         final Context ctx = activity;
         final LinearLayout box = new LinearLayout(ctx);
         box.setOrientation(LinearLayout.VERTICAL);
