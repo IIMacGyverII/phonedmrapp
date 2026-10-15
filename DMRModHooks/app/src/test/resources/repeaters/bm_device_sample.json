@@ -1,0 +1,60 @@
+[
+  {
+    "id": 235454,
+    "callsign": "GB7BB",
+    "tx": 439.7125,
+    "rx": 430.7125,
+    "colorcode": 1,
+    "status": 3,
+    "statusText": "Both Slots Linked",
+    "lat": 57.66,
+    "lng": -2.6,
+    "city": "Banff, IO87QP",
+    "last_seen": "2026-08-27 00:10:32"
+  },
+  {
+    "id": 310123,
+    "callsign": "W9ABC",
+    "tx": "443.9375",
+    "rx": "448.9375",
+    "colorcode": "1",
+    "status": 3,
+    "lat": 41.8781,
+    "lng": -87.6298,
+    "city": "Chicago",
+    "last_seen": "2026-08-27 00:09:00"
+  },
+  {
+    "id": 460001,
+    "callsign": "SIMPLEX1",
+    "tx": 446.5,
+    "rx": 446.5,
+    "colorcode": 1,
+    "lat": 0,
+    "lng": 0,
+    "city": "",
+    "last_seen": "2026-08-20 12:00:00"
+  },
+  {
+    "id": 222333,
+    "callsign": "EA1LOC",
+    "tx": 145.6125,
+    "rx": 145.0125,
+    "colorcode": 2,
+    "lat": 0,
+    "lng": 0,
+    "city": "Somewhere IN80DO",
+    "last_seen": "2026-08-25 08:00:00"
+  },
+  {
+    "id": 999999,
+    "callsign": "",
+    "tx": 439.0,
+    "rx": 434.0,
+    "colorcode": 1,
+    "lat": 50.0,
+    "lng": 7.0,
+    "city": "No Callsign",
+    "last_seen": "2026-08-25 08:00:00"
+  }
+]
