@@ -3,6 +3,12 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-15 — Nearby Repeaters P2.6: mode / in-range / stale filter chips
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **E7 P2.6** | A second chip row filters the list: **DMR**, **FM**, **In-range** (default on — hides frequencies the radio can't tune, e.g. the 6 m and 927 MHz entries that used to show), and **Hide stale**. Install also refuses an out-of-range repeater outright. | `NearbyRepeatersUi`, `GeoUtil.inRadioRange` | **device**: 74 shown default → 85 with in-range off → 3 with FM off → 0 with both off; no crash |
+
 ## 2026-10-15 — Nearby Repeaters Phase 2: FM in the catalog and the FM install path
 
 | Backlog | Change | Files | Test |

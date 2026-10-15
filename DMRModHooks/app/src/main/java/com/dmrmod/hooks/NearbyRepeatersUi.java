@@ -60,6 +60,7 @@ public final class NearbyRepeatersUi {
     private double myLat, myLon;
     private boolean haveLocation;
     private int radiusKm = DEFAULT_RADIUS_KM;
+    private boolean showDmr = true, showFm = true, inRangeOnly = true, hideStale = false;
     private final List<Repeater> all = new ArrayList<>();
     private long catalogFetchedAt;
 
@@ -119,6 +120,15 @@ public final class NearbyRepeatersUi {
             chipRow.addView(b);
         }
         root.addView(chipRow);
+
+        // mode / filter toggles
+        LinearLayout filterRow = new LinearLayout(ctx);
+        filterRow.setOrientation(LinearLayout.HORIZONTAL);
+        addToggle(ctx, filterRow, "DMR", showDmr, new ToggleSink() { public void set(boolean v) { showDmr = v; } });
+        addToggle(ctx, filterRow, "FM", showFm, new ToggleSink() { public void set(boolean v) { showFm = v; } });
+        addToggle(ctx, filterRow, "In-range", inRangeOnly, new ToggleSink() { public void set(boolean v) { inRangeOnly = v; } });
+        addToggle(ctx, filterRow, "Hide stale", hideStale, new ToggleSink() { public void set(boolean v) { hideStale = v; } });
+        root.addView(filterRow);
 
         ListView list = new ListView(ctx);
         adapter = new ArrayAdapter<>(ctx, android.R.layout.simple_list_item_1, rows);
@@ -318,6 +328,14 @@ public final class NearbyRepeatersUi {
         }, "nearby-catalog").start();
     }
 
+    private boolean passesFilters(Repeater r) {
+        if (r.dmr && !showDmr) return false;
+        if (r.fm && !r.dmr && !showFm) return false;
+        if (inRangeOnly && !GeoUtil.inRadioRange(r.rxHz)) return false;
+        if (hideStale && r.status != null && r.status.toLowerCase(Locale.US).contains("not operational")) return false;
+        return true;
+    }
+
     private void applyFilterAndRender() {
         List<Repeater> matched = new ArrayList<>();
         int withCoords = 0;
@@ -325,6 +343,7 @@ public final class NearbyRepeatersUi {
             for (Repeater r : all) {
                 if (!r.hasCoords) continue;
                 withCoords++;
+                if (!passesFilters(r)) continue;
                 if (haveLocation) {
                     r.distanceMeters = GeoUtil.haversineMeters(myLat, myLon, r.lat, r.lon);
                     if (r.distanceMeters <= radiusKm * 1000.0) matched.add(r);
@@ -411,6 +430,11 @@ public final class NearbyRepeatersUi {
     }
 
     private void openRepeater(final Repeater rep) {
+        if (!GeoUtil.inRadioRange(rep.rxHz)) {
+            Toast.makeText(activity, rep.rxMhzString() + " MHz is outside the radio's range (VHF/UHF).",
+                Toast.LENGTH_LONG).show();
+            return;
+        }
         if (rep.fm && !rep.dmr) { doInstall(rep, new LinkedHashSet<Integer>()); return; }
         final Context ctx = activity;
         final LinearLayout box = new LinearLayout(ctx);
@@ -560,6 +584,26 @@ public final class NearbyRepeatersUi {
                 }});
             }
         }, "nearby-install").start();
+    }
+
+    private interface ToggleSink { void set(boolean v); }
+
+    private void addToggle(Context ctx, LinearLayout row, final String label, boolean initial, final ToggleSink sink) {
+        final android.widget.ToggleButton b = new android.widget.ToggleButton(ctx);
+        b.setTextOn(label + " \u2713");
+        b.setTextOff(label);
+        b.setChecked(initial);
+        b.setTextSize(12);
+        b.setAllCaps(false);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        b.setLayoutParams(lp);
+        b.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override public void onCheckedChanged(CompoundButton v, boolean checked) {
+                sink.set(checked);
+                applyFilterAndRender();
+            }
+        });
+        row.addView(b);
     }
 
     private void setStatus(final String s) { if (statusView != null) statusView.setText(s); }
