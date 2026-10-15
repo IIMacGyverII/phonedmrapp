@@ -4595,6 +4595,23 @@ public class MainHook implements IXposedHookLoadPackage {
                             : "Live S-meter OFF", Toast.LENGTH_LONG).show();
                 }
             });
+
+            // === NEARBY REPEATERS (backlog E7, Phase 0: list BrandMeister repeaters by distance) ===
+            Button nearbyButton = new Button(context);
+            nearbyButton.setText("📡 Nearby Repeaters");
+            nearbyButton.setTextSize(16);
+            nearbyButton.setAllCaps(false);
+            nearbyButton.setPadding(20, 20, 20, 20);
+            nearbyButton.setLayoutParams(new ViewGroup.LayoutParams(templateParams));
+            nearbyButton.setContentDescription("Nearby repeaters");
+            nearbyButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    XposedBridge.log(TAG + ": Nearby Repeaters button clicked");
+                    NearbyRepeatersUi.show(activity);
+                }
+            });
+
             // Add buttons at specified index
             if (index >= 0) {
                 parentLayout.addView(exportButton, index);
@@ -4607,6 +4624,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 parentLayout.addView(audioProbeButton, index + 7);
                 parentLayout.addView(diagToggle, index + 8);
                 parentLayout.addView(smeterToggle, index + 9);
+                parentLayout.addView(nearbyButton, index + 10);
                 XposedBridge.log(TAG + ": ✓ Export button added at index " + index);
                 XposedBridge.log(TAG + ": ✓ Import button added at index " + (index + 1));
                 XposedBridge.log(TAG + ": ✓ RadioID buttons added at indices " + (index + 2) + "-" + (index + 4));
@@ -4621,6 +4639,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 parentLayout.addView(audioProbeButton);
                 parentLayout.addView(diagToggle);
                 parentLayout.addView(smeterToggle);
+                parentLayout.addView(nearbyButton);
                 XposedBridge.log(TAG + ": ✓ Export, Import, and RadioID buttons added at end of layout");
             }
             
