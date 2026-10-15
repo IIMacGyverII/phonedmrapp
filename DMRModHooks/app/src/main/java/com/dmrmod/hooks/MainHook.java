@@ -3536,10 +3536,24 @@ public class MainHook implements IXposedHookLoadPackage {
         try {
             Object mCurrentChannelIndex = XposedHelpers.getObjectField(fragment, "mCurrentChannelIndex");
             if (mCurrentChannelIndex != null) {
-                int channelNumber = (Integer) mCurrentChannelIndex + 1;
-                
+                int idx = (Integer) mCurrentChannelIndex;
+                // R5 (2026-10-15): LocationDatabase is keyed by channel _id (the stable key the
+                // importer, exporter and the Nearby-Repeaters installer all use). The old "idx + 1"
+                // only equalled channel_number with no deletions and no zone filter, so under a zone
+                // it showed the wrong repeater's distance. Resolve the displayed channel's _id from
+                // the fragment's own (possibly zone-filtered) channel list; fall back to idx+1.
+                int channelId = idx + 1;
+                try {
+                    @SuppressWarnings("unchecked")
+                    java.util.List<Object> channels =
+                        (java.util.List<Object>) XposedHelpers.getObjectField(fragment, "channels");
+                    if (channels != null && idx >= 0 && idx < channels.size() && channels.get(idx) != null) {
+                        channelId = XposedHelpers.getIntField(channels.get(idx), "_id");
+                    }
+                } catch (Throwable ignore) { }
+
                 LocationDatabase locationDb = LocationDatabase.getInstance(context);
-                LocationDatabase.Location location = locationDb.getLocation(channelNumber);
+                LocationDatabase.Location location = locationDb.getLocation(channelId);
                 
                 if (location != null) {
                     // Get current GPS location for distance calculation
@@ -3593,7 +3607,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     }
                                     
                                     displayText += " (" + distanceStr + ")";
-                                    XposedBridge.log(TAG + ": Distance to channel " + channelNumber + ": " + distanceStr);
+                                    XposedBridge.log(TAG + ": Distance to channel id " + channelId + ": " + distanceStr);
                                 }
                                 
                                 displayText += "\n📍";
@@ -3619,7 +3633,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     }
                                 }).start();
                                 
-                                XposedBridge.log(TAG + ": Geocoded location for channel " + channelNumber + ": " + baseText);
+                                XposedBridge.log(TAG + ": Geocoded location for channel id " + channelId + ": " + baseText);
                             } else {
                                 // Geocoder returned no results, show coordinates
                                 displayText = String.format(java.util.Locale.US, 
@@ -3641,7 +3655,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 
                                 // Fetch elevation in background
                                 fetchAndDisplayElevation(location, locationText, displayText.replace("\n📍", ""));
-                                XposedBridge.log(TAG + ": No geocoding results, showing coordinates for channel " + channelNumber);
+                                XposedBridge.log(TAG + ": No geocoding results, showing coordinates for channel id " + channelId);
                             }
                         } else {
                             // Geocoder not available, show coordinates
@@ -3664,7 +3678,7 @@ public class MainHook implements IXposedHookLoadPackage {
                             
                             // Fetch elevation in background
                             fetchAndDisplayElevation(location, locationText, displayText.replace("\n📍", ""));
-                            XposedBridge.log(TAG + ": Geocoder not available, showing coordinates for channel " + channelNumber);
+                            XposedBridge.log(TAG + ": Geocoder not available, showing coordinates for channel id " + channelId);
                         }
                     } catch (Exception e) {
                         // Geocoder failed, fallback to coordinates
@@ -3691,7 +3705,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     }
                 } else {
                     postText(locationText, "📍");
-                    XposedBridge.log(TAG + ": No location for channel " + channelNumber);
+                    XposedBridge.log(TAG + ": No location for channel id " + channelId);
                 }
             }
         } catch (Exception e) {

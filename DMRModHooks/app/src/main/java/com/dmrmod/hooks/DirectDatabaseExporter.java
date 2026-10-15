@@ -505,7 +505,7 @@ public class DirectDatabaseExporter {
                     rowBuilder.append(aprsStr).append(",");              // 25. APRS
                     
                     // Query LocationDatabase for lat/lon (Digital channels)
-                    LocationDatabase.Location location = locationDb.getLocation(channelNumber);
+                    LocationDatabase.Location location = locationDb.getLocation(channelId);  // R5: key by _id
                     if (location != null) {
                         rowBuilder.append(String.format(Locale.US, "%.6f", location.latitude)).append(",");
                         rowBuilder.append(String.format(Locale.US, "%.6f", location.longitude)).append(",");
@@ -561,7 +561,7 @@ public class DirectDatabaseExporter {
                     rowBuilder.append(aprsStr2).append(",");             // 25. APRS
                     
                     // Query LocationDatabase for lat/lon (Analog channels)
-                    LocationDatabase.Location location = locationDb.getLocation(channelNumber);
+                    LocationDatabase.Location location = locationDb.getLocation(channelId);  // R5: key by _id
                     if (location != null) {
                         rowBuilder.append(String.format(Locale.US, "%.6f", location.latitude)).append(",");
                         rowBuilder.append(String.format(Locale.US, "%.6f", location.longitude)).append(",");
