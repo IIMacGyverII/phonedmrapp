@@ -79,6 +79,10 @@ public final class NearbyRepeatersUi {
     private ZonePicker zonePicker;   // the install dialog's "Add to zone" chooser (null = none)
     private static final String DEFAULT_ZONE = "\u00bb Nearby";
     private static final int ZONE_NEARBY = 101, ZONE_NEW = 102, ZONE_EXISTING = 103;
+    // The install dialogs are built almost entirely from hand-made light-coloured views; this
+    // device renders the default AlertDialog on a white background, which washes them out. Force a
+    // dark dialog theme so the light text is correct and the dialog matches the dark app.
+    private static final int DIALOG_THEME = android.R.style.Theme_Material_Dialog_Alert;
     private final Map<String, double[]> geocodeCache = new java.util.HashMap<>();
     private volatile boolean geocodeCacheLoaded;
     private volatile String userRegion, userCountry;
@@ -609,7 +613,7 @@ public final class NearbyRepeatersUi {
         ScrollView scroll = new ScrollView(ctx);
         scroll.addView(box);
 
-        final AlertDialog dlg = new AlertDialog.Builder(activity)
+        final AlertDialog dlg = new AlertDialog.Builder(activity, DIALOG_THEME)
             .setTitle(rep.callsign + "  " + rep.rxMhzString() + " MHz  CC" + (rep.cc >= 0 ? rep.cc : "?"))
             .setView(scroll)
             .setPositiveButton("Install", null)
@@ -919,8 +923,11 @@ public final class NearbyRepeatersUi {
             android.widget.RadioButton rb3 = new android.widget.RadioButton(ctx);
             rb3.setId(ZONE_EXISTING); rb3.setText("Existing zone"); rb3.setTextColor(0xFFEEEEEE);
             group.addView(rb3);
-            existing = new Spinner(ctx);
-            ArrayAdapter<String> ad = new ArrayAdapter<>(ctx, android.R.layout.simple_spinner_item, zoneNames);
+            // Spinner text colour comes from the theme (not an explicit setTextColor), so build it
+            // and its adapter against the dark dialog theme or the collapsed item is unreadable.
+            Context dctx = new android.view.ContextThemeWrapper(ctx, DIALOG_THEME);
+            existing = new Spinner(dctx);
+            ArrayAdapter<String> ad = new ArrayAdapter<>(dctx, android.R.layout.simple_spinner_item, zoneNames);
             ad.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
             existing.setAdapter(ad);
             existing.setEnabled(false);
@@ -955,7 +962,7 @@ public final class NearbyRepeatersUi {
         buildZonePicker(ctx, box, rep);
         ScrollView scroll = new ScrollView(ctx);
         scroll.addView(box);
-        new AlertDialog.Builder(activity)
+        new AlertDialog.Builder(activity, DIALOG_THEME)
             .setTitle(rep.callsign + "  " + rep.rxMhzString() + " MHz  FM")
             .setView(scroll)
             .setNegativeButton("Cancel", null)
