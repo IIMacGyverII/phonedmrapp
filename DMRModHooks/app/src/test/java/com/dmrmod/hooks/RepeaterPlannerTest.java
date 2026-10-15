@@ -130,6 +130,24 @@ public class RepeaterPlannerTest {
         for (ChannelSpec c : p.channels) assertTrue(c.name.length() <= RepeaterPlanner.MAX_NAME);
     }
 
+    @Test public void fmRepeaterGivesOneAnalogChannel() {
+        Repeater r = new Repeater();
+        r.callsign = "KA0KMJ"; r.city = "Brooklyn Park"; r.fm = true; r.dmr = false;
+        r.rxHz = 146_940_000L; r.txHz = 146_340_000L; r.bandwidth = 1;
+        r.toneUp = "123.0"; r.toneDown = "123.0";
+        Plan p = RepeaterPlanner.plan(r, null, null);
+        assertEquals(1, p.channels.size());
+        ChannelSpec c = p.channels.get(0);
+        assertTrue(c.isFm());
+        assertEquals(1, c.type);
+        assertEquals(146_940_000L, c.rxHz);
+        assertEquals(146_340_000L, c.txHz);
+        assertEquals("123.0", c.toneUp);
+        assertEquals("123.0", c.toneDown);
+        assertEquals("KA0KMJ Brooklyn Park", c.name);
+        assertTrue(p.contactsNeeded.isEmpty());
+    }
+
     @Test public void nonDmrOrEmptyYieldsNoChannels() {
         Repeater fm = new Repeater(); fm.callsign = "FM"; fm.dmr = false;
         assertTrue(RepeaterPlanner.plan(fm, null, null).channels.isEmpty());

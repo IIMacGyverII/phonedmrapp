@@ -39,18 +39,26 @@ public final class RepeaterPlanner {
     /** A channel the planner wants created. type is always 0 (DMR) here. */
     public static final class ChannelSpec {
         public String name;
-        public final int type = 0;           // DMR
+        public int type = 0;                 // 0 = DMR, 1 = analog FM
         public long rxHz;
         public long txHz;
         public int cc;
         public int slotIndex;                // 0 = TS1, 1 = TS2 (ChannelData inBound/outBound)
-        public final int contactType = 1;    // GROUP
-        public int txContact;                // the TG PTT transmits to
-        public int[] groups;                 // RX group list (<=32), the receive filter
-        public String role;                  // "listen" or "talk"
+        public int contactType = 1;          // GROUP (DMR); 0 for FM
+        public int txContact;                // the TG PTT transmits to (DMR)
+        public int[] groups;                 // RX group list (<=32), the receive filter (DMR)
+        public String role;                  // "listen", "talk" (DMR) or "fm"
         public boolean groupsTruncated;      // slot had >32 TGs
+        // FM-only
+        public int bandwidth = 1;            // 1 wide / 0 narrow
+        public String toneUp;                // TX tone string ("67.0", "D023N"), or null
+        public String toneDown;              // RX tone string, or null
+
+        public boolean isFm() { return type == 1; }
 
         @Override public String toString() {
+            if (type == 1) return "fm " + name + " rx=" + rxHz + " tx=" + txHz
+                 + " txTone=" + toneUp + " rxTone=" + toneDown + " bw=" + bandwidth;
             return role + " " + name + " txTG=" + txContact + " slot" + (slotIndex + 1)
                  + " rxGroups=" + java.util.Arrays.toString(groups);
         }
@@ -71,8 +79,28 @@ public final class RepeaterPlanner {
      */
     public static Plan plan(Repeater rep, Set<Integer> talkTgIds, Map<Integer, String> names) {
         Plan plan = new Plan();
-        if (rep == null || !rep.dmr) {
-            plan.warnings.add("not a DMR repeater");
+        if (rep == null) { plan.warnings.add("no repeater"); return plan; }
+        plan.zoneName = trim("»" + nz(rep.callsign) + " " + nz(rep.city), MAX_NAME);
+
+        // FM: exactly one analog channel.
+        if (rep.fm && !rep.dmr) {
+            ChannelSpec fm = new ChannelSpec();
+            fm.type = 1;
+            fm.contactType = 0;
+            fm.rxHz = rep.rxHz;
+            fm.txHz = rep.txHz;
+            fm.bandwidth = rep.bandwidth;
+            fm.toneUp = rep.toneUp;
+            fm.toneDown = rep.toneDown;
+            fm.role = "fm";
+            fm.name = trim(nz(rep.callsign) + " " + nz(rep.city), MAX_NAME);
+            if (fm.name.isEmpty()) fm.name = nz(rep.callsign);
+            plan.channels.add(fm);
+            return plan;
+        }
+
+        if (!rep.dmr) {
+            plan.warnings.add("not a DMR or FM repeater");
             return plan;
         }
         if (rep.talkgroups.isEmpty()) {
@@ -81,8 +109,6 @@ public final class RepeaterPlanner {
         }
         Set<Integer> talk = talkTgIds != null ? talkTgIds : new LinkedHashSet<Integer>();
         Map<Integer, String> nm = names != null ? names : new LinkedHashMap<Integer, String>();
-
-        plan.zoneName = trim("»" + nz(rep.callsign) + " " + nz(rep.city), MAX_NAME);
 
         // Group the repeater's TGs by slot, preserving order. Unknown slot (0) is treated as TS1.
         Map<Integer, List<Integer>> bySlot = new LinkedHashMap<>();
