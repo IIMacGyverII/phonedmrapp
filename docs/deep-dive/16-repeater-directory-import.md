@@ -303,3 +303,56 @@ Re-run with the same fingerprint → `updateChannel(area, cd)` in place (incl. l
 | 6 | Catalog on cellular | **BrandMeister only** |
 | 7 | GROUP RX | **Measure in P0.6**; copy depends on it |
 | 8 | hearham DMR without TGs | **Do not install as DMR** |
+
+---
+
+## 10. Revision 3 (2026-10-15) — channel model after P0.6 passed
+
+P0.6 passed on-air (`grok-deep-dive/11-…` §19/§20): a GROUP channel receives every talkgroup in its 32-slot RX group list (`groups[]`), and only those; the Call Number alone does not admit its own TG; private calls to the radio's own ID always pass; ALL-mode (`contactType=2`) reports `0xFFFFFF` and is useless for listening. The mod already writes the Call Number into `groups[]` on save (`ensureTxContactInGroups`, commit `addd16cc`). This section overrides §2.3, §4.2 and the relevant open decisions where they assumed one channel per talkgroup; everything else in §1–§9 stands.
+
+### 10.1 The channel model (replaces "one channel per TG")
+
+A DMR repeater is installed as **one channel per active timeslot**, not one per talkgroup:
+
+- **Listen channel, one per slot that has TGs.** `contactType 1`, RX group list = all of that slot's TGs (up to 32, truncate with a warning past 32), `txContact` = the slot's **primary TG** (most-common by BM `/talkgroup` ordering, else lowest number), `inBound=outBound=slot−1`, `channelMode 4`. It hears the whole slot and transmits to the primary TG. A dual-slot BM repeater is therefore **2 channels**, not 6–8.
+- **Talk channels, opt-in.** In the expanded card the user ticks any TGs they also want to **transmit** on. Each ticked TG becomes one extra channel with the **same RX group list** but `txContact` = that TG and a `{call} {tg}` name. Default: none ticked (the listen channel already covers RX and the primary TG).
+- Every channel the feature makes for a slot carries the identical RX list, so whichever one is active, the user still hears the whole slot.
+
+This resolves the Grok warning in §9.1: the expanded TG list now means **"TGs this channel hears; tick one to also get a talk channel for it,"** which is both true and intuitive.
+
+### 10.2 UX deltas (override §2.2–2.3)
+
+- **Expanded card** heading: *"Hears these N talkgroups (slot shown). Tick any you also want to transmit on — each adds one channel."* The slot listen toggle (on by default when the slot has TGs) and per-TG transmit checkboxes (off by default).
+- **Preview strip**: *"1 repeater → 2 listen channels (hear 9 TGs) + 3 talk channels · 9 contacts · 2 TG lists · 1 zone."* Separate the two channel kinds in the count so the user sees it is not one-per-TG.
+- **Defaults** (replaces the §2.3 DMR bullet): listen channel per slot on; "TS1/TS2 Local 9" still off by default; per-repeater **cap applies to talk channels** (default 8), listen channels are never capped away. Contacts are still created for every TG in the list (so caller ID names them), independent of talk-channel selection.
+- **FM** unchanged (§2.3): one channel per repeater.
+
+### 10.3 Programmer deltas (override §4.2 DMR column)
+
+Per slot with TGs:
+1. One `TGListDatabase.saveTGList("»CALL TSn", csv of that slot's TGs)` → `getHardwareGroups()` (32-slot array; `exceedsHardwareLimit()` warns).
+2. **Listen channel**: `ChannelData` as in §4.2 but `groups = that list`, `txContact = primaryTg`, name `{call} S{n}` (or template). `assignTGListToChannel(_id, listId)`.
+3. **Each selected talk TG**: another `ChannelData`, same `groups`, `txContact = tg`, name `{call} {tg}`; same TG-list assignment and zone.
+4. Contacts: `saveContact` for every TG in the slot list (type 1), reused if present; `installed.contact_created` tracks which the run made.
+5. Zone, location (`saveLocation(_id, …)` after R5/P1.0), `installed` row per channel as before.
+
+The `installed` fingerprint gains a `role` field (`listen`|`talk`) alongside `txContact`, so a re-run updates the right channel in place and undo removes exactly the run's channels. Everything else (area scoping, no `active`, no `syncChannelInfoWithData`, prefix bans, `relay 2`, 32-TG cap, `%.1f` tones) is unchanged from §9.
+
+### 10.4 Open decisions resolved
+
+| # | Decision | Resolution |
+|---|---|---|
+| 7 | GROUP RX | **Works via the RX list** (P0.6). DMR nearby is a listen feature. |
+| 9 (new) | Channels per DMR repeater | **One listen channel per active slot + user-selected talk channels.** Not one per TG. |
+| 10 (new) | Listen channel `txContact` | **Slot's primary TG** (BM name-known > lowest number), so the listen channel can also transmit on the main TG. |
+| 11 (new) | Talk channels default | **Off.** User ticks TGs to transmit on; each adds one channel sharing the slot's RX list. |
+
+### 10.5 To-do delta (Phases 0–1)
+
+- **P1.0 still required and still unfixed (verified 2026-10-15):** `MainHook.java:3539` reads `LocationDatabase` by `mCurrentChannelIndex + 1`. Fix to key by channel `_id` before the first install; `RepeaterProgrammer` then calls `saveLocation(_id, …)`.
+- **P1.4 (amended):** programmer builds one listen channel per slot + opt-in talk channels (§10.3), not one per TG; `installed` fingerprint carries `role` + `txContact`; unit-test the slot-grouping and the "listen hears all, talk sets txContact" invariant.
+- **P1.5 (amended):** expanded card = per-slot listen toggle + per-TG transmit checkboxes (§10.2); preview separates listen vs talk counts.
+- **P3.7 (done in text):** help copy already updated to "RX follows the 32-slot list; talk channels are only for transmitting."
+- Integration points confirmed present 2026-10-15: `TGListDatabase.{getHardwareGroups,saveTGList,assignTGListToChannel,HARDWARE_MAX_GROUPS}`, `ZoneDatabase.{saveZone,getZoneByName,addChannelToZone}`, `DmrManager.{createChannel,deleteChannel,updateChannel}(areaKey, cd)`, `OemChannelTable.areaKey(ctx)`.
+
+**Net effect:** the feature is smaller than §1–§8 assumed. A typical dual-slot BM repeater is 2 channels (or a few more if the user picks talk TGs), not 6–8, and it actually hears the slot's traffic. Phase 1 is a genuine listen-and-talk feature, not a TX memory bank.

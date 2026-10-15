@@ -115,7 +115,7 @@ Design: `deep-dive/15-packet-radio-review.md` (+ addendum) and `16-repeater-dire
 | **F7** | If F6 passes: RF beacon / RF messages; if it fails: DMR position SMS (`0x2C`) + optional Bluetooth KISS TNC | Either way a working "send position" | M | yes | `15-…` addendum |
 | **F8** | NOAA **SAME** weather-alert decoder (162.400–162.550) on the same PCM tap | High civilian value; only needs G1 | M | yes | `15-…` addendum |
 | **F9** | DTMF decode (then encode test — different spectrum from AFSK) | `DTMF.csv` is a placeholder today | M | yes | `15-…` addendum |
-| **E7** | **Nearby Repeaters** phases 0–5 (with rev. 2 gates: R5 first, ~~P0.6 on-air GROUP-RX test~~ **P0.6 passed 2026-10-15**: group RX follows the 32-slot RX list, so an installed repeater channel must carry its TGs in `groups[]`; area-scoped `installed`, private cache, BM-only on cellular) | Full spec exists | L | yes | `16-…` §7 + rev. 2 |
+| **E7** | **Nearby Repeaters** phases 0–5. Re-scoped 2026-10-15 (`16-…` §10, rev. 3): DMR repeater = **one listen channel per slot** (RX list holds the slot's TGs, up to 32) + opt-in talk channels, not one-per-TG. Still blocked on **P1.0** (R5 location-by-`_id`, unfixed at `MainHook.java:3539`) before the first install. Area-scoped `installed`, private cache, BM-only on cellular. | Full spec + rev. 3 | L | yes | `16-…` §7, §9, §10 |
 
 ---
 
