@@ -144,6 +144,16 @@ public final class NearbyRepeatersUi {
         list.setLayoutParams(listLp);
         root.addView(list);
 
+        TextView footer = new TextView(ctx);
+        footer.setText("Data: BrandMeister · hearham  ·  tap for sources");
+        footer.setTextSize(11);
+        footer.setTextColor(0xFF7FA8D0);
+        footer.setPadding(0, dp(ctx, 8), 0, 0);
+        footer.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { showAboutSources(); }
+        });
+        root.addView(footer);
+
         AlertDialog dialog = new AlertDialog.Builder(activity)
             .setTitle("📡 Nearby Repeaters")
             .setView(root)
@@ -584,6 +594,21 @@ public final class NearbyRepeatersUi {
                 }});
             }
         }, "nearby-install").start();
+    }
+
+    private void showAboutSources() {
+        String msg =
+            "Repeater data comes from public amateur-radio directories:\n\n"
+          + "\u2022 BrandMeister (api.brandmeister.network) \u2014 DMR repeaters, talkgroups and colour codes.\n"
+          + "\u2022 hearham.com (hearham.com/repeaters) \u2014 FM repeaters, tones and coordinates.\n\n"
+          + "Catalogs are cached on this device only and never re-published. This feature is for "
+          + "licensed amateur operators; transmit only where your licence permits.\n\n"
+          + "Distances use your device's last or looked-up GPS position.";
+        new AlertDialog.Builder(activity)
+            .setTitle("About data sources")
+            .setMessage(msg)
+            .setPositiveButton("Close", null)
+            .show();
     }
 
     private interface ToggleSink { void set(boolean v); }
