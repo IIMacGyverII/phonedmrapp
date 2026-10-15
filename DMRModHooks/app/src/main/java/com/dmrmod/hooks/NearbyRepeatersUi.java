@@ -19,6 +19,7 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -75,6 +76,9 @@ public final class NearbyRepeatersUi {
     private final List<Repeater> shownReps = new ArrayList<>();
     private volatile Map<Integer, String> tgNames;
     private Runnable manualCommit;   // non-null while the manual-TG builder is showing
+    private ZonePicker zonePicker;   // the install dialog's "Add to zone" chooser (null = none)
+    private static final String DEFAULT_ZONE = "\u00bb Nearby";
+    private static final int ZONE_NEARBY = 101, ZONE_NEW = 102, ZONE_EXISTING = 103;
     private final Map<String, double[]> geocodeCache = new java.util.HashMap<>();
     private volatile boolean geocodeCacheLoaded;
     private volatile String userRegion, userCountry;
@@ -591,7 +595,7 @@ public final class NearbyRepeatersUi {
                 Toast.LENGTH_LONG).show();
             return;
         }
-        if (rep.fm && !rep.dmr) { doInstall(rep, new LinkedHashSet<Integer>()); return; }
+        if (rep.fm && !rep.dmr) { openFmInstall(rep); return; }
         final Context ctx = activity;
         final LinearLayout box = new LinearLayout(ctx);
         box.setOrientation(LinearLayout.VERTICAL);
@@ -616,6 +620,7 @@ public final class NearbyRepeatersUi {
 
         final Set<Integer> selected = new LinkedHashSet<>();
         final TextView[] previewRef = new TextView[1];
+        zonePicker = null;
 
         new Thread(new Runnable() {
             @Override public void run() {
@@ -646,7 +651,7 @@ public final class NearbyRepeatersUi {
             @Override public void onClick(View v) {
                 if (manualCommit != null) { manualCommit.run(); return; }
                 dlg.dismiss();
-                doInstall(rep, new LinkedHashSet<Integer>(selected));
+                doInstall(rep, new LinkedHashSet<Integer>(selected), resolveZone());
             }
         });
     }
@@ -686,6 +691,7 @@ public final class NearbyRepeatersUi {
             });
             box.addView(cb);
         }
+        buildZonePicker(ctx, box, rep);
         TextView preview = new TextView(ctx);
         preview.setTextColor(0xFFBBBBBB);
         preview.setTextSize(12);
@@ -845,6 +851,122 @@ public final class NearbyRepeatersUi {
         dlg.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
     }
 
+    /** The install dialog's "Add to zone" chooser: shared default, a new named zone, or existing. */
+    private final class ZonePicker {
+        final android.widget.RadioGroup group;
+        final EditText newName;
+        final Spinner existing;
+        ZonePicker(android.widget.RadioGroup g, EditText n, Spinner e) { group = g; newName = n; existing = e; }
+        String resolve() {
+            int id = group.getCheckedRadioButtonId();
+            if (id == ZONE_NEW) {
+                String nm = newName.getText().toString().trim();
+                return nm.isEmpty() ? DEFAULT_ZONE : nm;
+            }
+            if (id == ZONE_EXISTING && existing != null && existing.getSelectedItem() != null) {
+                return existing.getSelectedItem().toString();
+            }
+            return DEFAULT_ZONE;
+        }
+    }
+
+    /** The zone the active picker points at, or the shared default when there is no picker. */
+    private String resolveZone() {
+        try { if (zonePicker != null) return zonePicker.resolve(); } catch (Throwable ignore) { }
+        return DEFAULT_ZONE;
+    }
+
+    /**
+     * Append an "Add to zone" chooser to {@code box} and remember it in {@link #zonePicker}. All
+     * nearby repeaters default to one shared "\u00bb Nearby" zone (no clutter); the operator can
+     * instead name a new zone or merge into an existing one.
+     */
+    private void buildZonePicker(final Context ctx, LinearLayout box, Repeater rep) {
+        TextView h = new TextView(ctx);
+        h.setText("Add to zone:"); h.setTextColor(0xFF88AACC); h.setTextSize(12);
+        h.setPadding(0, dp(ctx, 12), 0, dp(ctx, 2));
+        box.addView(h);
+
+        final android.widget.RadioGroup group = new android.widget.RadioGroup(ctx);
+        group.setOrientation(android.widget.RadioGroup.VERTICAL);
+
+        android.widget.RadioButton rb1 = new android.widget.RadioButton(ctx);
+        rb1.setId(ZONE_NEARBY); rb1.setText(DEFAULT_ZONE + "  (shared)"); rb1.setTextColor(0xFFEEEEEE);
+        group.addView(rb1);
+
+        android.widget.RadioButton rb2 = new android.widget.RadioButton(ctx);
+        rb2.setId(ZONE_NEW); rb2.setText("New zone"); rb2.setTextColor(0xFFEEEEEE);
+        group.addView(rb2);
+
+        final EditText newName = new EditText(ctx);
+        newName.setHint("Zone name");
+        String sugg = "\u00bb" + (rep.callsign == null ? "" : rep.callsign.trim())
+            + " " + (rep.city == null ? "" : rep.city.trim());
+        newName.setText(RepeaterPlanner.trim(sugg, 48));
+        newName.setTextColor(0xFFEEEEEE);
+        newName.setEnabled(false);
+        group.addView(newName);   // RadioGroup is a LinearLayout; non-radio children just sit inline
+
+        final List<String> zoneNames = new ArrayList<>();
+        try {
+            for (ZoneDatabase.Zone z : ZoneDatabase.getInstance(ctx).getAllZones()) {
+                if (z.name != null && !z.name.trim().isEmpty()) zoneNames.add(z.name);
+            }
+        } catch (Throwable ignore) { }
+
+        final Spinner existing;
+        if (!zoneNames.isEmpty()) {
+            android.widget.RadioButton rb3 = new android.widget.RadioButton(ctx);
+            rb3.setId(ZONE_EXISTING); rb3.setText("Existing zone"); rb3.setTextColor(0xFFEEEEEE);
+            group.addView(rb3);
+            existing = new Spinner(ctx);
+            ArrayAdapter<String> ad = new ArrayAdapter<>(ctx, android.R.layout.simple_spinner_item, zoneNames);
+            ad.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            existing.setAdapter(ad);
+            existing.setEnabled(false);
+            group.addView(existing);
+        } else {
+            existing = null;
+        }
+
+        group.setOnCheckedChangeListener(new android.widget.RadioGroup.OnCheckedChangeListener() {
+            @Override public void onCheckedChanged(android.widget.RadioGroup g, int checkedId) {
+                newName.setEnabled(checkedId == ZONE_NEW);
+                if (existing != null) existing.setEnabled(checkedId == ZONE_EXISTING);
+            }
+        });
+        group.check(ZONE_NEARBY);
+        box.addView(group);
+        zonePicker = new ZonePicker(group, newName, existing);
+    }
+
+    /** FM repeaters have no talkgroups, so their install dialog is just the zone chooser. */
+    private void openFmInstall(final Repeater rep) {
+        final Context ctx = activity;
+        final LinearLayout box = new LinearLayout(ctx);
+        box.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(ctx, 12);
+        box.setPadding(pad, pad, pad, pad);
+        TextView head = new TextView(ctx);
+        head.setText("Analog FM channel " + rep.rxMhzString() + " MHz. Choose where to file it.");
+        head.setTextColor(0xFFDDDDDD); head.setTextSize(13);
+        box.addView(head);
+        zonePicker = null;
+        buildZonePicker(ctx, box, rep);
+        ScrollView scroll = new ScrollView(ctx);
+        scroll.addView(box);
+        new AlertDialog.Builder(activity)
+            .setTitle(rep.callsign + "  " + rep.rxMhzString() + " MHz  FM")
+            .setView(scroll)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Install", new android.content.DialogInterface.OnClickListener() {
+                @Override public void onClick(android.content.DialogInterface d, int w) {
+                    doInstall(rep, new LinkedHashSet<Integer>(), resolveZone());
+                }
+            })
+            .show();
+    }
+
     private void updatePreview(Repeater rep, Set<Integer> selected, TextView preview) {
         if (preview == null) return;
         RepeaterPlanner.Plan plan = RepeaterPlanner.plan(rep, selected, tgNames);
@@ -852,27 +974,32 @@ public final class NearbyRepeatersUi {
     }
 
     private void doInstall(final Repeater rep, final Set<Integer> selected) {
+        doInstall(rep, selected, DEFAULT_ZONE);
+    }
+
+    private void doInstall(final Repeater rep, final Set<Integer> selected, final String zoneName) {
         // P1.7: confirm before writing to the codeplug, showing exactly what will be created.
         RepeaterPlanner.Plan plan = RepeaterPlanner.plan(rep, selected, tgNames);
-        String msg = "Install " + RepeaterProgrammer.preview(plan) + " for " + rep.callsign + "?\n\n"
-            + "Channels are added inactive — tap one in the channel list to go live. "
+        String msg = "Install " + RepeaterProgrammer.preview(plan) + " for " + rep.callsign
+            + "\ninto zone \u201c" + zoneName + "\u201d?\n\n"
+            + "Channels are added inactive \u2014 tap one in the channel list to go live. "
             + "Re-installing this repeater replaces what the last install made.";
         new AlertDialog.Builder(activity)
             .setTitle("Confirm install")
             .setMessage(msg)
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Install", new android.content.DialogInterface.OnClickListener() {
-                @Override public void onClick(android.content.DialogInterface d, int w) { runInstall(rep, selected); }
+                @Override public void onClick(android.content.DialogInterface d, int w) { runInstall(rep, selected, zoneName); }
             })
             .show();
     }
 
-    private void runInstall(final Repeater rep, final Set<Integer> selected) {
+    private void runInstall(final Repeater rep, final Set<Integer> selected, final String zoneName) {
         Toast.makeText(activity, "Installing " + rep.callsign + "...", Toast.LENGTH_SHORT).show();
         new Thread(new Runnable() {
             @Override public void run() {
                 final RepeaterProgrammer.Result r = RepeaterProgrammer.apply(
-                    activity, activity.getClassLoader(), rep, selected, tgNames);
+                    activity, activity.getClassLoader(), rep, selected, tgNames, zoneName);
                 activity.runOnUiThread(new Runnable() { @Override public void run() {
                     AlertDialog.Builder b = new AlertDialog.Builder(activity)
                         .setTitle(r.ok ? "Installed" : "Install")

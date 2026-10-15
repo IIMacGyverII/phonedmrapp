@@ -356,3 +356,17 @@ The `installed` fingerprint gains a `role` field (`listen`|`talk`) alongside `tx
 - Integration points confirmed present 2026-10-15: `TGListDatabase.{getHardwareGroups,saveTGList,assignTGListToChannel,HARDWARE_MAX_GROUPS}`, `ZoneDatabase.{saveZone,getZoneByName,addChannelToZone}`, `DmrManager.{createChannel,deleteChannel,updateChannel}(areaKey, cd)`, `OemChannelTable.areaKey(ctx)`.
 
 **Net effect:** the feature is smaller than §1–§8 assumed. A typical dual-slot BM repeater is 2 channels (or a few more if the user picks talk TGs), not 6–8, and it actually hears the slot's traffic. Phase 1 is a genuine listen-and-talk feature, not a TX memory bank.
+
+## 11. Revision 4 (2026-10-15) — zone grouping is a per-install choice
+
+Supersedes "one zone per DMR repeater plus an FM nearby zone" (§1, §2.2, §66, open decision in §8.2, §9.x, §10.x) and open decision 2 in §8. Installing several nearby repeaters no longer spawns a `»CALL City` zone for each one.
+
+**Install dialog now has an "Add to zone" chooser** (`NearbyRepeatersUi.buildZonePicker`, `ZonePicker.resolve`), shown on the DMR dialog (below the talkgroup list) and on a small FM-only dialog (`openFmInstall`):
+
+- **`» Nearby` (shared, default)** — every install lands in one zone, so adding ten repeaters makes one zone, not ten.
+- **New zone** — an editable field prefilled with the old per-repeater suggestion `»CALL City`, for anyone who still wants a zone per repeater.
+- **Existing zone** — a spinner of the current zones (hidden when there are none), to merge into a zone the user already has.
+
+The chosen name is threaded `doInstall(rep, selected, zoneName)` → `runInstall(…, zoneName)` → `RepeaterProgrammer.apply(…, zoneOverride)`, which sets `plan.zoneName` before the create loop. `apply`'s 5-arg form still exists and delegates with `null` (plan default).
+
+**Undo is shared-zone-safe** (`RepeaterProgrammer.undo`): each removed channel is also dropped from its zone (`ZoneDatabase.removeChannelFromAllZones`), and the zone is deleted only when it is now empty **and** no other `installed` run references its `zone_id`. This replaces the old `run.zoneCreated` gate, so the shared zone survives until the last repeater in it is undone regardless of undo order, and a zone that still holds the user's own channels is never touched.

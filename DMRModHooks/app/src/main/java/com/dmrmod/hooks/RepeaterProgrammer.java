@@ -67,11 +67,22 @@ public final class RepeaterProgrammer {
     /** Apply the plan to the radio. Runs on a background thread; never on the UI thread. */
     public static Result apply(Activity activity, ClassLoader cl, Repeater rep,
                                Set<Integer> talkTgs, Map<Integer, String> names) {
+        return apply(activity, cl, rep, talkTgs, names, null);
+    }
+
+    /**
+     * As {@link #apply(Activity, ClassLoader, Repeater, Set, Map)}, but writes the channels into
+     * {@code zoneOverride} (null/blank = the plan's own suggested zone). Lets the install dialog put
+     * several nearby repeaters into one shared zone, a new named zone, or an existing one.
+     */
+    public static Result apply(Activity activity, ClassLoader cl, Repeater rep,
+                               Set<Integer> talkTgs, Map<Integer, String> names, String zoneOverride) {
         Result res = new Result();
         try {
             final Context ctx = activity;
             final String areaKey = OemChannelTable.areaKey(ctx);
             Plan plan = RepeaterPlanner.plan(rep, talkTgs, names);
+            if (zoneOverride != null && !zoneOverride.trim().isEmpty()) plan.zoneName = zoneOverride.trim();
             if (plan.channels.isEmpty()) {
                 res.message = plan.warnings.isEmpty() ? "Nothing to install" : plan.warnings.get(0);
                 return res;
@@ -252,9 +263,24 @@ public final class RepeaterProgrammer {
                 } catch (Throwable ct) { XposedBridge.log(TAG + ": undo channel " + id + ": " + ct); }
                 try { tgDb.removeAssignmentForChannel(id); } catch (Throwable ignore) { }
                 try { locDb.deleteLocation(id); } catch (Throwable ignore) { }
+                try { zoneDb.removeChannelFromAllZones(id); } catch (Throwable ignore) { }
             }
             for (long listId : run.tgListIdsCreated) { try { tgDb.deleteTGList(listId); } catch (Throwable ignore) { } }
-            if (run.zoneCreated && run.zoneId > 0) { try { zoneDb.deleteZone(run.zoneId); } catch (Throwable ignore) { } }
+            // Delete the zone only once it is empty and no other install run still references it.
+            // With a shared zone (several repeaters installed into one zone) this leaves it alone
+            // until the last one is undone, regardless of which run happened to create it; a zone
+            // that still holds the user's own channels is never touched.
+            if (run.zoneId > 0) {
+                boolean othersUse = false;
+                for (RepeaterInstallStore.Run other : RepeaterInstallStore.load(ctx)) {
+                    if (other.runId != run.runId && other.zoneId == run.zoneId) { othersUse = true; break; }
+                }
+                if (!othersUse) {
+                    try {
+                        if (zoneDb.getChannelsInZone(run.zoneId).isEmpty()) zoneDb.deleteZone(run.zoneId);
+                    } catch (Throwable ignore) { }
+                }
+            }
             for (int num : run.contactNumbersCreated) {
                 try {
                     Object contact = XposedHelpers.callMethod(mgr, "getContact", 1, num);
