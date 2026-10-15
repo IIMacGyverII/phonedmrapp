@@ -3,6 +3,19 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-15 — Nearby Repeaters: Phase 1 polish + Phase 2 source parsers
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **E7 P1.7** | Install now asks for confirmation first, showing exactly what will be created and that channels start inactive. | `NearbyRepeatersUi` | **device**: confirm dialog appears before any write |
+| **E7 P3.3** | Re-installing the same repeater into the same area **replaces** the previous run (its channels/zone/contacts are undone first) instead of duplicating. | `RepeaterProgrammer`, `RepeaterInstallStore` | **device**: install→51 ch, install again→still 51 (not 53), undo→49 |
+| **E7 P1.6** | Best-effort channel-list refresh after install via a new `MainHook.refreshChannelListUi()` (posts the fragment's `initData` if the list has been opened). | `MainHook`, `RepeaterProgrammer` | code; createChannel already updates the module list |
+| **E7 P2.1** | `RadioIdRepeaterSource`: parses `rptrs.json` (MHz freq, `+5.000` offset, `color_code`, `ipsc_network` normalised to BM/DMR+/DMR-MARC/TGIF, `ts_linked` slot, `talkgroups[]` as objects or bare ids, Maidenhead from `map_info`). Pure. | `RadioIdRepeaterSource` (new), fixture | **JUnit**: freq/offset/tgs/network/locator |
+| **E7 P2.2** | `HearhamSource`: parses the FM/DMR array (Hz freq + signed offset, repeater-POV, `mode`, `encode`/`decode` tones, `CCn` colour code, `operational`). Pure. | `HearhamSource` (new), fixture | **JUnit**: FM RX/TX+tones, DMR CC, stale flag |
+| **E7 P2.3** | `RepeaterCatalog.merge`: folds sources (BM > RadioID > hearham) by key — first source sets each field, coordinates from the first that has them, talkgroups unioned, `sources` bitmask ORed. Pure. | `RepeaterCatalog` (new); `Repeater` gains tone/bandwidth fields | **JUnit**: dedupe+union, distinct kept, null-safe |
+
+Host suite now **39 tests, 0 failures**. The FM device-install path (ToneConverter is already present and will be reused) and wiring RadioID + hearham into the live multi-source catalog with geocoding are the next step; Phase 1 DMR install is complete and polished.
+
 ## 2026-10-15 — Nearby Repeaters Phase 1: install path (applier, expand/preview, undo)
 
 | Backlog | Change | Files | Test |

@@ -72,6 +72,17 @@ public final class RepeaterProgrammer {
                 return res;
             }
 
+            // P3.3: re-installing the same repeater into the same area replaces the earlier run,
+            // so a second install updates rather than duplicating channels/zone/contacts.
+            for (RepeaterInstallStore.Run prev : RepeaterInstallStore.load(ctx)) {
+                if (areaKey.equals(prev.areaKey) && rep.key != null && rep.key.equals(prev.repeaterKey)) {
+                    XposedBridge.log(TAG + ": Nearby: replacing prior install run " + prev.runId
+                        + " for " + rep.callsign);
+                    undo(activity, cl, prev.runId);
+                    break;
+                }
+            }
+
             Object mgr = XposedHelpers.callStaticMethod(XposedHelpers.findClass(MGR, cl), "getInstance");
 
             RepeaterInstallStore.Run run = new RepeaterInstallStore.Run();
@@ -172,6 +183,7 @@ public final class RepeaterProgrammer {
             }
 
             RepeaterInstallStore.save(ctx, run);
+            try { MainHook.refreshChannelListUi(); } catch (Throwable ignore) { }
             res.runId = run.runId;
             res.ok = res.channelsCreated > 0;
             res.message = "Added " + res.channelsCreated + " channel"

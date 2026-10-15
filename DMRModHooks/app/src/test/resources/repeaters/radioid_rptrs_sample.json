@@ -1,0 +1,4 @@
+{"rptrs":[
+  {"id":310123,"callsign":"W9ABC","city":"Chicago","state":"Illinois","country":"United States","frequency":"443.93750","color_code":1,"offset":"+5.000","ipsc_network":"BrandMeister","ts_linked":"TS1 TS2","status":"ACTIVE","map_info":"","talkgroups":[{"talkgroup":3100,"slot":1,"name":"USA Bridge"},{"talkgroup":31665,"slot":1}]},
+  {"id":445566,"callsign":"N9DMR","city":"Rockford","state":"Illinois","country":"United States","frequency":"444.50000","color_code":3,"offset":"+5.000","ipsc_network":"DMR-plus","ts_linked":"TS2","status":"ACTIVE","map_info":"Rockford EN52xx","talkgroups":[31169,31172]}
+]}

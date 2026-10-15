@@ -234,6 +234,20 @@ public class MainHook implements IXposedHookLoadPackage {
     private static android.widget.Button zoneButton = null;
     private static android.widget.Button channelPageZoneButton = null;  // Zone button on channels page
     private static Object channelFragmentInstance = null;  // Store channel fragment for refreshing list
+
+    /** P1.6: best-effort refresh of the channel-list fragment after a Nearby-Repeaters install. */
+    public static void refreshChannelListUi() {
+        final Object frag = channelFragmentInstance;
+        if (frag == null) return;
+        try {
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+                @Override public void run() {
+                    try { XposedHelpers.callMethod(frag, "initData"); }
+                    catch (Throwable t) { XposedBridge.log(TAG + ": refreshChannelListUi: " + t); }
+                }
+            });
+        } catch (Throwable ignore) { }
+    }
     private static volatile long currentZoneId = -1;  // -1 = All Channels (no filter)
     private static volatile String currentZoneName = "All";
     private static volatile java.util.List<Integer> currentZoneChannels = null;  // null = no filter

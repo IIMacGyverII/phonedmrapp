@@ -57,6 +57,9 @@ public final class RepeaterModels {
         public String lastSeen;     // source timestamp string (UTC)
         public String city;
         public String country;
+        public String toneUp;    // FM: TX sub-audible tone/code as a source string (e.g. "67.0", "D023N")
+        public String toneDown;  // FM: RX tone/code
+        public int bandwidth = 1; // 1 wide (25 kHz) / 0 narrow (12.5 kHz)
         public int sources;         // bitmask of SRC_*
         public long fetchedAt;      // epoch millis the record was fetched
         public final List<Talkgroup> talkgroups = new ArrayList<>();
