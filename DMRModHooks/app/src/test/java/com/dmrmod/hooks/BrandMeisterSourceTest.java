@@ -9,8 +9,12 @@ import com.dmrmod.hooks.RepeaterModels.Repeater;
 
 import org.junit.Test;
 
+import com.dmrmod.hooks.RepeaterModels.Talkgroup;
+
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.util.List;
+import java.util.Map;
 
 /** Host unit tests for {@link BrandMeisterSource#parseDeviceList} against a checked-in fixture. */
 public class BrandMeisterSourceTest {
@@ -85,6 +89,46 @@ public class BrandMeisterSourceTest {
     @Test public void keyIsStable() throws Exception {
         Repeater gb = byCall(BrandMeisterSource.parseDeviceList(fixture(), 0L), "GB7BB");
         assertEquals(RepeaterModels.makeKey("GB7BB", 439712500L), gb.key);
+    }
+
+    private static String res(String name) throws Exception {
+        try (InputStream in = BrandMeisterSourceTest.class.getResourceAsStream("/repeaters/" + name)) {
+            assertNotNull(name + " missing", in);
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buf = new byte[4096]; int n;
+            while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+            return new String(out.toByteArray(), "UTF-8");
+        }
+    }
+
+    @Test public void parsesDeviceTalkgroups() throws Exception {
+        List<Talkgroup> tgs = BrandMeisterSource.parseDeviceTalkgroups(res("bm_device_talkgroup.json"));
+        // 7 rows; the "0" talkgroup is dropped -> 6
+        assertEquals(6, tgs.size());
+        // slot "9" (invalid) becomes 0 (unknown)
+        boolean found3160unknown = false, found3100ts1 = false, found91ts2 = false;
+        for (Talkgroup t : tgs) {
+            if (t.id == 3160) { found3160unknown = t.slot == 0; }
+            if (t.id == 3100) { found3100ts1 = t.slot == 1; }
+            if (t.id == 91)   { found91ts2 = t.slot == 2; }
+        }
+        assertTrue(found3160unknown);
+        assertTrue(found3100ts1);
+        assertTrue(found91ts2);
+    }
+
+    @Test public void parsesTalkgroupNames() throws Exception {
+        Map<Integer, String> m = BrandMeisterSource.parseTalkgroupNames(res("bm_talkgroup_names.json"));
+        assertEquals("USA Bridge", m.get(3100));
+        assertEquals("Worldwide", m.get(91));
+        assertEquals(6, m.size());
+    }
+
+    @Test public void talkgroupParsersAreGarbageSafe() {
+        assertTrue(BrandMeisterSource.parseDeviceTalkgroups(null).isEmpty());
+        assertTrue(BrandMeisterSource.parseDeviceTalkgroups("nope").isEmpty());
+        assertTrue(BrandMeisterSource.parseTalkgroupNames(null).isEmpty());
+        assertTrue(BrandMeisterSource.parseTalkgroupNames("[]").isEmpty());
     }
 
     @Test public void emptyAndGarbageAreSafe() {
