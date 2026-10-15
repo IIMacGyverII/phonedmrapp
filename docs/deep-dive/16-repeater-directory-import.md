@@ -60,7 +60,8 @@ Device tab → new button **📡 Nearby Repeaters**, inserted after "Download Ra
 - **Settings gear** (top-right): callsign (defaults from `APRSDatabase.getCallsign()` [I §7]), naming template, default TG selection policy, channels-per-repeater cap, "Connect RepeaterBook account" (v4), catalog TTLs, clear cache.
 
 ### 2.3 Defaults that make the first install good
-- DMR repeater → one channel per **static** talkgroup on its slot, plus a "TS1 Local 9" and "TS2 Local 9" pair *off* by default; cap 8 channels per repeater (configurable), most-common TGs first (ordering: BM `/talkgroup` name known > lower TG number).
+- DMR repeater → one channel per **static** talkgroup on its slot, plus a "TS1 Local 9" and "TS2 Local 9" pair *off* by default; cap 8 channels per repeater (configurable), most-common TGs first
+  - **⚠️ Premise changed 2026-10-15 (revisit before Phase 1 build):** group RX works through the 32-slot RX group list (P0.6 passed, `grok-deep-dive/11-…` §19/§20), so a repeater's TGs on one slot can be **one channel** whose RX list holds them all, not one channel per TG. Separate channels are still needed only to **transmit** on different TGs. The channels-per-repeater model below predates this and should be re-scoped (likely: one RX-listen channel per slot + a small set of TX channels for the TGs the user talks on). (ordering: BM `/talkgroup` name known > lower TG number).
 - FM repeater → exactly one channel; TX tone from `PL` / hearham `encode`; RX tone only if published; wide (25 kHz) unless the source says narrow.
 - Zone per DMR repeater named `CALL City` (trimmed), one shared zone "FM ≤50 km" for analog; both prefixed with a discreet `»` so directory-made zones are recognisable and sortable.
 - Names: template `{call} {tg}` → e.g. `W9ABC 3100`, `W9ABC TAC310`; FM: `{call} {city}`; hard-trimmed to the OEM's channel-name width (verify the editor's `maxLength` — to-do P1.3).
@@ -290,7 +291,7 @@ Re-run with the same fingerprint → `updateChannel(area, cd)` in place (incl. l
 - Phase 0: **P0.3** includes Maidenhead; **P0.5** dumps `com.pri.prizeinterphone`; **P0.6** on-air GROUP-RX test (gate).
 - Phase 1: **P1.0** location-by-`_id` (R5) first; **P1.3** closed (32 chars); **P1.4** fingerprint includes `areaKey`, contacts carry created-vs-reused, no `syncChannelInfo`; **P1.5** real list adapter + "not live until you tap" summary; **P1.7 (new)** channel-count confirm.
 - Phase 2: **P2.1** RadioID into private cache, Wi-Fi by default; **P2.2** hearham only after written OK; **P2.2b (new)** skip hearham DMR without TGs, split mixed-mode, GMRS off by default; **P2.8 (new)** cellular stays BM-only unless opted in.
-- Phase 3: **P3.7 (new)** "About RX on this radio" help: one channel per TG; ALL-mode not offered.
+- Phase 3: **P3.7 (new)** "About RX on this radio" help: RX follows the channel's 32-slot RX group list (one listen channel per slot can hold many TGs); separate channels are only for transmitting on different TGs; ALL-mode not offered. (Updated 2026-10-15, P0.6.)
 - Phase 5: README carries the P0.6 result sentence.
 
 ### 9.5 Open decisions (updated)

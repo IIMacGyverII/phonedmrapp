@@ -111,8 +111,8 @@ Claude C1. At `handleLoadPackage`, resolve every `findClass` / `getIdentifier` /
 | Idea | Why |
 |---|---|
 | Hardware LED | MCU only |
-| DMR group-call RX | firmware ignores RX group list |
-| Software filter for >32 TGs | destination TG offset in 0x2B unknown |
+| DMR group-call RX | **works through the 32-slot RX group list** (on-air 2026-10-15, `grok-deep-dive/11-…` §19/§20); a TG is heard iff it is in the list |
+| Software filter for >32 TGs | blocked by the 32-slot firmware ceiling (the `0x2B` body does carry the target TG at `[5..8]` LE, useful for display only) |
 | Squelch 1, 3–9 as hardware | coerced to 2 |
 | On-device Whisper/Vosk/TFLite | researched; tflite just removed from the APK |
 | UART bootloader flash | `EACCES` on `/dev/ttyS1` |

@@ -391,13 +391,20 @@ control" constraint (§5.5).
 
 ### 5.1 Goal
 
-Digital **group-call receive** is broken. In monitor/RECEIVE_ALL mode (`contactType=2`) the firmware
+> **Corrected 2026-10-15.** The premise below — that group-call receive is broken — is **wrong**.
+> On-air testing with a second radio (`grok-deep-dive/11-…` §19) and a static read of the receive path
+> (§20) showed `contactType=1` (GROUP) **does** use the RX group list: a TG is heard iff it is in the
+> channel's 32-slot list, and private calls to the radio's own ID always pass. The early tests here most
+> likely never got their TGs into the hardware list. The only true part is the ALL-mode behaviour, kept below.
+>
+> The §5.2 patch work was therefore solving a non-problem; see §5.2's own re-assessment note.
+
+In monitor/RECEIVE_ALL mode (`contactType=2`) the firmware
 reports the incoming group ID as `0xFFFFFF` (16777215) instead of the real TG (e.g. 11904); the
 Android app then filters it as not-in-RX-list, so no audio plays
-(`FIRMWARE_PATCH_RESULTS.md:3-5,36-53`). Secondary: `contactType=1` (GROUP) ignores the RX group
-list, and `contactType=2` (ALL) is rejected by hardware and reverts to GROUP
-(`DMR_FIX_ROADMAP.md:10-14`). The root-cause hypothesis is that the firmware **doesn't extract the
-target ID** from the DMR frame on that path — a parsing bug, not a filtering bug.
+(`FIRMWARE_PATCH_RESULTS.md:3-5,36-53`). That `0xFFFFFF` substitution is specific to ALL mode and is
+still accurate. The `contactType=1` (GROUP) path is **not** broken (see the correction above);
+`contactType=2` (ALL) is rejected by hardware and reverts to GROUP (`DMR_FIX_ROADMAP.md:10-14`).
 
 ### 5.2 The 14 patches
 
@@ -482,7 +489,7 @@ PATCH14 was actually the resident image.
 - **Group-call RX not fixable via NOP patches.** 14 attempts (incl. the "nuclear" all-locations
   patch) never moved the reported group ID off `0xFFFFFF`; the bug is believed to be in frame
   parsing, not in a single conditional (`FIRMWARE_PATCH_RESULTS.md:36-79`,
-  `DMR_GROUP_CALL_ISSUE.md:341` "HARDWARE LIMITATION CONFIRMED").
+  `DMR_GROUP_CALL_ISSUE.md:341` "HARDWARE LIMITATION CONFIRMED"). **Note (2026-10-15):** that "limitation" is withdrawn — group RX works through the 32-slot RX group list (on-air, `grok-deep-dive/11-…` §19/§20). The `0xFFFFFF` report is specific to ALL mode (`contactType=2`); GROUP mode uses the list.
 - **Squelch coercion.** Firmware forces `sq→2` for every value except `sq=0`; levels 1–9 cannot be
   set at runtime (`SQUELCH_HARDWARE_LIMITATION.md:4-20`).
 - **No LED command.** Not present in the `Const.java` command set (§4.2).

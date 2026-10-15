@@ -1,5 +1,7 @@
 # DMR Group Call vs Private Call Research
 
+> **⚠️ Superseded 2026-10-15.** The "hardware cannot receive group calls / hardware limitation confirmed" conclusion in this February 2026 document is **wrong**. On-air testing with a second radio proved the firmware receives group calls through the channel's 32-slot RX group list (a TG is heard iff it is in the list). The most likely reason these early tests failed: the era's runtime hook rewrote `groups[]` at call start, so the talkgroups never reached the hardware image. See `docs/grok-deep-dive/11-firmware-fw0-results.md` §19 (on-air) and §20 (firmware read). Kept as a historical record; do not act on its conclusions.
+
 **Date**: February 27, 2026  
 **Issue**: DMR app only receives audio during private calls to specific radio ID, not receiving group calls even when channel is set to group mode.
 
