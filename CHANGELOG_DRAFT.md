@@ -3,6 +3,15 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-15 — Nearby Repeaters Phase 1 start: talkgroup parsers + channel planner (testable)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **E7 P1.2** | `BrandMeisterSource` gains `parseDeviceTalkgroups` (`/device/{id}/talkgroup` → the repeater's static TGs with slot; drops TG 0, maps invalid slots to unknown) and `parseTalkgroupNames` (`/talkgroup` → TG id→name map). Both pure; network fetch wrappers come with the lazy-fetch wiring. | `BrandMeisterSource`, fixtures `bm_device_talkgroup.json` / `bm_talkgroup_names.json` | **3 JUnit** (slot parse, name map, garbage-safe) |
+| **E7 P1.4 (planner)** | New pure `RepeaterPlanner`: a repeater + the TGs the user wants to transmit on → a list of `ChannelSpec`s under the **one-listen-channel-per-slot** model (ch16 §10). One listen channel per active timeslot whose RX group list holds the slot's TGs (≤32, truncate+warn) with `txContact` = the slot's primary TG; each ticked talk TG adds one channel sharing that RX list with its own `txContact`. Emits the contacts needed and a suggested zone name; trims names to 32 chars. The device-side applier (createChannel/zone/location/undo) is the next step. | `RepeaterPlanner` (new) | **8 JUnit** (one-per-slot, talk adds one, primary not duplicated, contacts cover all TGs, unknown-slot → TS1, >32 truncation, name trim, non-DMR empty) |
+
+Host test suite now 29 tests, 0 failures (`./gradlew testDebugUnitTest`). No device-facing change this step — the planner and parsers are not yet wired into the dialog. Next in Phase 1: the device-side `RepeaterProgrammer` (apply a plan through the OEM createChannel path), the expanded card with TG checkboxes + live preview, and undo.
+
 ## 2026-10-15 — Nearby Repeaters Phase 0 complete (P0.5: location permission + fresh fix)
 
 | Backlog | Change | Files | Test |

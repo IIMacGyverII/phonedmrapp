@@ -1,13 +1,16 @@
 package com.dmrmod.hooks;
 
 import com.dmrmod.hooks.RepeaterModels.Repeater;
+import com.dmrmod.hooks.RepeaterModels.Talkgroup;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * BrandMeister DMR backbone source (chapter 16 §3, P0.2).
@@ -132,6 +135,50 @@ public final class BrandMeisterSource {
             } catch (Exception recordError) {
                 // One malformed record never fails the whole parse.
             }
+        }
+        return out;
+    }
+
+    /**
+     * Parse {@code GET /device/{id}/talkgroup} → the repeater's static talkgroups.
+     * Shape: {@code [{"talkgroup":"23558","slot":"1","repeaterid":"235454"}, ...]} (all strings).
+     * slot is 1 or 2; anything else becomes 0 (unknown). Names are filled later from the TG map.
+     */
+    public static List<Talkgroup> parseDeviceTalkgroups(String json) {
+        List<Talkgroup> out = new ArrayList<>();
+        if (json == null) return out;
+        JSONArray arr;
+        try { arr = new JSONArray(json); } catch (Exception e) { return out; }
+        for (int i = 0; i < arr.length(); i++) {
+            JSONObject o = arr.optJSONObject(i);
+            if (o == null) continue;
+            try {
+                int tg = (int) optLong(o, "talkgroup", 0);
+                if (tg <= 0) continue;
+                int slot = (int) optLong(o, "slot", 0);
+                if (slot != 1 && slot != 2) slot = 0;
+                out.add(new Talkgroup(tg, slot, null, "static"));
+            } catch (Exception ignore) { }
+        }
+        return out;
+    }
+
+    /**
+     * Parse {@code GET /talkgroup} → a TG-id→name map. Shape: {@code {"3100":"USA Bridge", ...}}.
+     * Returns a {@link LinkedHashMap} so iteration order is stable for tests.
+     */
+    public static Map<Integer, String> parseTalkgroupNames(String json) {
+        Map<Integer, String> out = new LinkedHashMap<>();
+        if (json == null) return out;
+        JSONObject o;
+        try { o = new JSONObject(json); } catch (Exception e) { return out; }
+        for (java.util.Iterator<String> it = o.keys(); it.hasNext(); ) {
+            String k = it.next();
+            try {
+                int tg = Integer.parseInt(k.trim());
+                String name = o.optString(k, null);
+                if (name != null && !name.isEmpty()) out.put(tg, name);
+            } catch (Exception ignore) { }
         }
         return out;
     }
