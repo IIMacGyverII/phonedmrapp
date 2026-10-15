@@ -39,7 +39,10 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import android.widget.EditText;
+
 import de.robv.android.xposed.XposedBridge;
+import de.robv.android.xposed.XposedHelpers;
 
 /**
  * Nearby Repeaters dialog — Phase 0 (chapter 16 §2, P0.4).
@@ -71,6 +74,7 @@ public final class NearbyRepeatersUi {
     private final List<String> rows = new ArrayList<>();
     private final List<Repeater> shownReps = new ArrayList<>();
     private volatile Map<Integer, String> tgNames;
+    private Runnable manualCommit;   // non-null while the manual-TG builder is showing
     private final Map<String, double[]> geocodeCache = new java.util.HashMap<>();
     private volatile boolean geocodeCacheLoaded;
     private volatile String userRegion, userCountry;
@@ -640,6 +644,7 @@ public final class NearbyRepeatersUi {
 
         dlg.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
+                if (manualCommit != null) { manualCommit.run(); return; }
                 dlg.dismiss();
                 doInstall(rep, new LinkedHashSet<Integer>(selected));
             }
@@ -650,9 +655,11 @@ public final class NearbyRepeatersUi {
                                         final Set<Integer> selected, final TextView[] previewRef,
                                         final AlertDialog dlg) {
         if (rep.talkgroups.isEmpty()) {
-            head.setText("No talkgroups are listed for this repeater, so there is nothing to install.");
+            buildManualTgUi(ctx, box, head, rep, selected, previewRef, dlg);
             return;
         }
+        manualCommit = null;   // normal transmit-selection mode; the dialog button installs
+        dlg.getButton(AlertDialog.BUTTON_POSITIVE).setText("Install");
         head.setText("Tick any talkgroups you also want to transmit on. Each adds one channel; "
             + "all of a slot's talkgroups are received anyway.");
         int lastSlot = -1;
@@ -686,6 +693,155 @@ public final class NearbyRepeatersUi {
         box.addView(preview);
         previewRef[0] = preview;
         updatePreview(rep, selected, preview);
+        dlg.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+    }
+
+    /** Simple holder for a saved contact. */
+    private static final class ContactRow { final String name; final int number;
+        ContactRow(String n, int num) { name = n; number = num; } }
+
+    /** The user's saved contacts (name + number), via DmrManager, for the manual-TG picker. */
+    private java.util.List<ContactRow> loadAllContacts() {
+        java.util.List<ContactRow> out = new java.util.ArrayList<>();
+        try {
+            Object mgr = XposedHelpers.callStaticMethod(
+                XposedHelpers.findClass("com.pri.prizeinterphone.manager.DmrManager", activity.getClassLoader()),
+                "getInstance");
+            Object list = XposedHelpers.callMethod(mgr, "getAllContacts");
+            if (list instanceof java.util.List) {
+                for (Object c : (java.util.List<?>) list) {
+                    try {
+                        String name = (String) XposedHelpers.callMethod(c, "getName");
+                        String num = (String) XposedHelpers.callMethod(c, "getNumber");
+                        int n = Integer.parseInt(num.trim());
+                        if (n > 0) out.add(new ContactRow(name != null ? name : ("TG " + n), n));
+                    } catch (Throwable ignore) { }
+                }
+            }
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": loadAllContacts failed: " + t);
+        }
+        return out;
+    }
+
+    /**
+     * Shown when a repeater has no talkgroups in the directory data: let the operator supply them
+     * from saved contacts or by typing a number, pick the timeslot, then fall through to the normal
+     * transmit-selection + install flow.
+     */
+    private void buildManualTgUi(final Context ctx, final LinearLayout box, final TextView head,
+                                 final Repeater rep, final Set<Integer> selected,
+                                 final TextView[] previewRef, final AlertDialog dlg) {
+        head.setText("No talkgroups are listed for this repeater. Add the ones it uses: tick from your "
+            + "contacts or type a talkgroup number, choose the timeslot, then \u201cUse these\u201d.");
+
+        // ordered set of chosen talkgroups: id -> Talkgroup(id, slot, name)
+        final java.util.LinkedHashMap<Integer, Talkgroup> chosen = new java.util.LinkedHashMap<>();
+
+        // timeslot selector
+        final android.widget.RadioGroup slotGroup = new android.widget.RadioGroup(ctx);
+        slotGroup.setOrientation(android.widget.RadioGroup.HORIZONTAL);
+        final android.widget.RadioButton ts1 = new android.widget.RadioButton(ctx);
+        ts1.setId(1); ts1.setText("TS1"); ts1.setTextColor(0xFFEEEEEE);
+        final android.widget.RadioButton ts2 = new android.widget.RadioButton(ctx);
+        ts2.setId(2); ts2.setText("TS2"); ts2.setTextColor(0xFFEEEEEE);
+        slotGroup.addView(ts1); slotGroup.addView(ts2); slotGroup.check(1);
+        box.addView(slotGroup);
+
+        final TextView chosenView = new TextView(ctx);
+        chosenView.setTextColor(0xFFBBBBBB); chosenView.setTextSize(12);
+        chosenView.setPadding(0, dp(ctx, 4), 0, dp(ctx, 4));
+
+        final Runnable refreshChosen = new Runnable() {
+            @Override public void run() {
+                if (chosen.isEmpty()) { chosenView.setText("Chosen: none"); return; }
+                StringBuilder sb = new StringBuilder("Chosen: ");
+                boolean first = true;
+                for (Talkgroup tg : chosen.values()) {
+                    if (!first) sb.append(", ");
+                    first = false;
+                    sb.append("TG ").append(tg.id).append(" TS").append(tg.slot);
+                }
+                chosenView.setText(sb.toString());
+            }
+        };
+
+        // manual number entry
+        LinearLayout addRow = new LinearLayout(ctx);
+        addRow.setOrientation(LinearLayout.HORIZONTAL);
+        final EditText tgInput = new EditText(ctx);
+        tgInput.setHint("Talkgroup number");
+        tgInput.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        tgInput.setTextColor(0xFFEEEEEE);
+        LinearLayout.LayoutParams il = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        tgInput.setLayoutParams(il);
+        Button addBtn = new Button(ctx);
+        addBtn.setText("Add"); addBtn.setAllCaps(false);
+        addBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                try {
+                    int n = Integer.parseInt(tgInput.getText().toString().trim());
+                    if (n > 0) {
+                        int slot = slotGroup.getCheckedRadioButtonId() == 2 ? 2 : 1;
+                        chosen.put(n, new Talkgroup(n, slot, null, "manual"));
+                        tgInput.setText("");
+                        refreshChosen.run();
+                    }
+                } catch (Exception e) {
+                    Toast.makeText(ctx, "Enter a talkgroup number", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        addRow.addView(tgInput); addRow.addView(addBtn);
+        box.addView(addRow);
+        box.addView(chosenView);
+        refreshChosen.run();
+
+        // contacts
+        java.util.List<ContactRow> contacts = loadAllContacts();
+        if (!contacts.isEmpty()) {
+            TextView ch = new TextView(ctx);
+            ch.setText("From your contacts:"); ch.setTextColor(0xFF88AACC); ch.setTextSize(12);
+            ch.setPadding(0, dp(ctx, 8), 0, dp(ctx, 2));
+            box.addView(ch);
+            for (final ContactRow cr : contacts) {
+                final CheckBox cb = new CheckBox(ctx);
+                cb.setText(cr.name + "  (" + cr.number + ")");
+                cb.setTextColor(0xFFEEEEEE);
+                cb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                    @Override public void onCheckedChanged(CompoundButton b, boolean checked) {
+                        if (checked) {
+                            int slot = slotGroup.getCheckedRadioButtonId() == 2 ? 2 : 1;
+                            chosen.put(cr.number, new Talkgroup(cr.number, slot, cr.name, "manual"));
+                        } else {
+                            chosen.remove(cr.number);
+                        }
+                        refreshChosen.run();
+                    }
+                });
+                box.addView(cb);
+            }
+        }
+
+        // "Use these" -> set talkgroups and re-render the normal flow
+        // Commit happens via the dialog's always-visible button (relabeled "Use these"), so the
+        // user never has to scroll past the contacts list to find it.
+        manualCommit = new Runnable() {
+            @Override public void run() {
+                if (chosen.isEmpty()) {
+                    Toast.makeText(ctx, "Add at least one talkgroup", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                rep.talkgroups.clear();
+                for (Talkgroup tg : chosen.values()) if (tg.slot == 1) rep.talkgroups.add(tg);
+                for (Talkgroup tg : chosen.values()) if (tg.slot != 1) rep.talkgroups.add(tg);
+                selected.clear();
+                box.removeAllViews();
+                box.addView(head);
+                populateRepeaterDialog(ctx, box, head, rep, selected, previewRef, dlg);
+            }
+        };
+        dlg.getButton(AlertDialog.BUTTON_POSITIVE).setText("Use these");
         dlg.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
     }
 
