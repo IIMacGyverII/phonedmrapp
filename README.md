@@ -108,6 +108,7 @@ The OEM **Use Assistant** page gained section 7, "DMR Mod features": every injec
 
 - A digital channel with **no Call Number** (TX contact) is refused by the radio module: the arrow keys show "operation failed" and the scanner skips it. The editor now warns when you save one.
 - Squelch levels 1-9 behave as **one threshold** on this radio (on-air sweeps, 2026-10-14); 0 is always open.
+- **Group-call receive follows the RX group list** (on-air, 2026-10-15): the radio passes a talkgroup only if it is one of the channel's 32 RX groups; the Call Number alone is not enough. Saving a digital GROUP channel now adds its Call Number to that list, and the caller panel / history show the talkgroup of each call.
 - The MCU firmware is **C-SKY V2**, not ARM; disassembly tooling and findings are in `docs/grok-deep-dive/11-firmware-fw0-results.md`.
 
 ---

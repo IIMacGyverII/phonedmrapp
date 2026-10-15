@@ -3,6 +3,15 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-15 — On-air: group-call RX follows the RX group list (E7 gate P0.6 passed)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **E7 P0.6** | **Finding.** With a BTECH 6X2 (ID 64067) keyed into the Ulefone on 467.700 simplex, CC1/TS1: a private call to the radio's own ID (1447) opened; TG 1 opened while the channel's Call Number was 99 and the RX list was `[1]`; TG 9 and TG 99 stayed silent until they were added to the list, then both opened. The MCU's group filter is the 32-slot `groups[]` list, not the Call Number. The 2026-03 "firmware ignores the RX list" verdict is withdrawn. | docs (`CLAUDE.md` §3, copilot-instructions, `packet-layouts.md`, deep-dive 02/13, backlog, `grok-deep-dive/11` §19) | **device**: four `0x2B` bodies decoded, see §19 |
+| **0x2B** | Caller-info body decoded: `[0]` callType, `[1..4]` caller ID LE, `[5..8]` target LE. The 30-line "try every endianness" log dump (with a hard-coded "Expected DMR ID: 64067") is replaced by one decoded line; the **caller panel headline and the history entry now show the talkgroup** ("· TG 99" / "private"). | `MainHook` (`describeCallTarget`, `currentCallerDestId/CallType`) | device: next group call |
+| **RX list** | Saving a digital GROUP channel **adds its Call Number to `groups[]`** when missing (first free slot; toast), also when a TG list is applied; a full list gets a warning instead. Help text updated. | `MainHook` (`ensureTxContactInGroups`, `saveChannelData` hooks) | device: save a channel whose Call Number was missing from the list, re-read the DB |
+| fix | Outbound `txContact` debug log read the 4 bytes big-endian (printed 1660944384 for TG 99); now LE. Diagnostics toast named `Download/DMR/uart_logs`; the logger writes `/sdcard/DMR/uart_logs`. | `MainHook` | log |
+
 ## 2026-10-14 — Firmware track: CTCSS table located, do-nothing patch image unbundled
 
 | Backlog | Change | Files | Test |

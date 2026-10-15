@@ -270,7 +270,7 @@ Helpers: `enableEncrypt(byte[])` (line 44) picks `fun` from key length (8/16/32,
 **Sent by:** No OEM call site constructs/sends this. It is registered as a handler for cmd `0x2B` (radio-pushed RX voice info).
 **Response:** `DigitalAudioMessageHandler.handle` is **empty** (`handler/DigitalAudioMessageHandler.java:8`). The OEM app therefore ignores caller ID / call type entirely; the DMRModHooks module hooks `handle(DigitalAudioMessage)` and reads `packet.body` itself to recover caller ID.
 
-**Inbound body layout (per DMRModHooks reverse-engineering, not parsed by OEM):** `body[0]`=callType (0=private,1=group,2=all), `body[1..3]`=caller DMR ID **24-bit little-endian** = `(body[3]&0xFF)<<16 | (body[2]&0xFF)<<8 | (body[1]&0xFF)`. This matches `.grok/rules/packet-layouts.md`. **The OEM code contains no decode for this, so the layout is inferred from the module, not the OEM source.**
+**Inbound body layout (verified on-air 2026-10-15, four calls from a BTECH 6X2; not parsed by OEM):** 9 bytes — `body[0]`=callType (0=private,1=group,2=all), `body[1..4]`=caller DMR ID int LE, `body[5..8]`=target int LE (the radio's own ID for a private call, the talkgroup for a group call; `0xFFFFFF` in ALL mode). Earlier reading, still byte-compatible: `body[1..3]`=caller DMR ID **24-bit little-endian** = `(body[3]&0xFF)<<16 | (body[2]&0xFF)<<8 | (body[1]&0xFF)`. This matches `.grok/rules/packet-layouts.md`. **The OEM code contains no decode for this, so the layout is inferred from the module, not the OEM source.**
 
 ---
 
