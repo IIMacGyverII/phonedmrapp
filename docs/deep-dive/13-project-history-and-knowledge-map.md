@@ -201,7 +201,7 @@ whether the doc still describes current reality.
 
 | File | Summary | Status | Related |
 |---|---|---|---|
-| `DMR_GROUP_CALL_ISSUE.md` / `DMR_GROUP_CALL_RESEARCH.md` | Radio receives only private calls to its own DMR ID; group calls ignored despite RX group list. "HARDWARE LIMITATION CONFIRMED." | Historical / dead end | firmware, `hookDigitalAudioHandler` |
+| `DMR_GROUP_CALL_ISSUE.md` / `DMR_GROUP_CALL_RESEARCH.md` | Radio receives only private calls to its own DMR ID; group calls ignored despite RX group list. "HARDWARE LIMITATION CONFIRMED." **Overturned on-air 2026-10-15** (`grok-deep-dive/11-…` §19/§20): group RX works through the 32-slot RX list; those tests never got their TGs into the hardware list. | Historical / dead end | firmware, `hookDigitalAudioHandler` |
 | `MONITORING_MODE_INVESTIGATION.md` / `_IMPLEMENTATION.md` / `_TESTING.md` / `_QUICK_START.md` / `_DIAGRAM.txt` | contactType=2 ("ALL") toggle to bypass group filter; firmware ignores it. | Dead end | MON mode |
 | `DMR_FIX_ROADMAP.md` | Ranks workarounds by feasibility after hardware rejected ALL mode; UART logging was priority #1 (became v1.9.0), firmware patch the high-impact option (70% est.). | Historical | firmware |
 | `FIRMWARE_ANALYSIS_SUMMARY.md`, `DMR_FIRMWARE_PROJECT_STATUS.md`, `FIRMWARE_FLASHING_EXPLORATION.md` | Firmware = ARM Cortex-M, uC/OS-III, 378 KB, base `0x08000000`; bug at `0x08018F2C` (BLS skips group-ID extraction). Flashing explored. | Historical | `radio_firmware/` |

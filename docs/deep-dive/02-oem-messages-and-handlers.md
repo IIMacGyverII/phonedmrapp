@@ -197,7 +197,7 @@ Total: 8 (freqs) + 4 (localId) + 128 (groups) + 4 (txContact) + 11 (bytes) + 8 (
 
 **⚠️ Doc drift (packet-layouts.md):** `.grok/rules/packet-layouts.md` §"DigitalMessage" claims the TX target is at "Bytes 5–7, 24-bit LE". **The code puts `txContact` as a full 4-byte int at offset 140**, and `localId` at offset 8. There is no 24-bit-at-byte-5 field. The `.grok` "bytes 5–7" note is wrong for this outbound packet (it may be confusing this with the inbound `QUERY_DIGITAL_AUDIO_RECEIVE_INFO` body, which is a different packet — see §4/DigitalAudio).
 
-**⚠️ Doc drift (group RX):** `.grok` "Hard Constraints" says firmware ignores the RX group list. The code *does* populate `groupList[32]` here, but **only when `contactType==1`**; for Private/All-Call channels the default `[1,0,…]` is sent. Consistent with the note that group-call RX is a firmware limitation, not an app one.
+**Group RX (settled on-air 2026-10-15):** the code populates `groupList[32]` here **only when `contactType==1`** (Private/All-Call channels send the default `[1,0,…]`). The firmware **does** use that list: a group call is received iff its TG is in the list, up to 32 TGs (`grok-deep-dive/11-…` §19/§20). The old "firmware ignores the RX group list" claim is withdrawn. The mod adds the channel's Call Number to `groupList[]` on save so a GROUP channel hears its own TG.
 
 **Sent by** `DmrManager.sendDigitalMessage(ChannelData)` (`manager/DmrManager.java:329`), reached via `sendSetChannelCmdToMdl` when `channel.type == 0`. The method contains leftover `DMRModHooks_GroupDebug` log lines injected into the decompiled OEM source.
 **Response:** `DigitalMessageHandler` → `CmdStateMachine.getCmdResultFromModule` (cmd 0x22 branch, `state/CmdStateMachine.java:136`).
