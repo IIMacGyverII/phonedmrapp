@@ -3,6 +3,17 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-15 — Nearby Repeaters Phase 0: testable core (geo, HTTP, BrandMeister parser)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **E7 P0.1** | `HttpClient`: thin `HttpURLConnection` wrapper with a descriptive User-Agent, gzip, timeouts, one redirect, and conditional GET (ETag / If-Modified-Since → 304). Network-only, off the UI thread. | `HttpClient` (new) | — (device) |
+| **E7 P0.2** | `BrandMeisterSource`: parses `/device?repeater=true` into `Repeater`s. tx/rx are the repeater's point of view, so BM `tx` becomes the user's RX; simplex (tx==rx) and blank-callsign rows are dropped; numbers parse whether JSON numbers or strings; a missing coordinate falls back to a Maidenhead locator in the `city` string. The parser is pure; the fetch wrapper is device-only. | `BrandMeisterSource` (new), fixture `bm_device_sample.json` | **7 JUnit** (point-of-view freq swap, string numbers, simplex/blank drop, locator fallback, stable key, garbage-safe) |
+| **E7 P0.3** | `GeoUtil`: haversine, bearing, compass arrow, distance formatting, VHF/UHF band classification, MHz→Hz, and Maidenhead ↔ lat/lon with free-text locator extraction. `MainHook`'s four private geo helpers now delegate here, so the intercom location chip and the feature share one implementation. | `GeoUtil` (new), `RepeaterModels` (new), `MainHook` | **11 JUnit** (known distance, cardinals, arrows, band, Maidenhead round-trip + anchor + junk) |
+| infra | Host unit tests enabled: `testImplementation junit:4.13.2` + `org.json:20240303` (org.json matches android.jar's API so parsers run off-device), `testOptions.unitTests.returnDefaultValues`. Run with `./gradlew testDebugUnitTest`. | `app/build.gradle`, `src/test/…` | **18 tests, 0 failures** |
+
+Still to do in Phase 0: **P0.4** the Device-tab button + minimal dialog (location row, radius chips, distance-sorted BM list), **P0.5** confirm runtime location permission in the OEM process and a one-shot fresh GPS fix. Phase 0 writes nothing to the radio.
+
 ## 2026-10-15 — R5: channel locations keyed by `_id` (Nearby Repeaters prerequisite)
 
 | Backlog | Change | Files | Test |

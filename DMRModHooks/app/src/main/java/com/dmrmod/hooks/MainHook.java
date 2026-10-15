@@ -3717,17 +3717,7 @@ public class MainHook implements IXposedHookLoadPackage {
      * Format distance for display
      */
     private String formatDistance(double distanceMeters) {
-        if (distanceMeters < 1000) {
-            // Less than 1km - show meters
-            return String.format(java.util.Locale.US, "%.0fm", distanceMeters);
-        } else if (distanceMeters < 10000) {
-            // 1-10km - show one decimal
-            return String.format(java.util.Locale.US, "%.1fkm", distanceMeters / 1000);
-        } else {
-            // Over 10km - show miles
-            double distanceMiles = distanceMeters * 0.000621371;
-            return String.format(java.util.Locale.US, "%.1fmi", distanceMiles);
-        }
+        return GeoUtil.formatDistance(distanceMeters);
     }
     
     /**
@@ -3813,20 +3803,7 @@ public class MainHook implements IXposedHookLoadPackage {
      * @return Distance in meters
      */
     private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-        final double R = 6371000; // Earth's radius in meters
-        
-        double lat1Rad = Math.toRadians(lat1);
-        double lat2Rad = Math.toRadians(lat2);
-        double deltaLat = Math.toRadians(lat2 - lat1);
-        double deltaLon = Math.toRadians(lon2 - lon1);
-        
-        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-                   Math.cos(lat1Rad) * Math.cos(lat2Rad) *
-                   Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
-        
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        
-        return R * c;
+        return GeoUtil.haversineMeters(lat1, lon1, lat2, lon2);  // P0.3: shared with Nearby Repeaters
     }
     
     /**
@@ -3838,16 +3815,7 @@ public class MainHook implements IXposedHookLoadPackage {
      * @return Bearing in degrees (0-360)
      */
     private double calculateBearing(double lat1, double lon1, double lat2, double lon2) {
-        double lat1Rad = Math.toRadians(lat1);
-        double lat2Rad = Math.toRadians(lat2);
-        double deltaLon = Math.toRadians(lon2 - lon1);
-        
-        double y = Math.sin(deltaLon) * Math.cos(lat2Rad);
-        double x = Math.cos(lat1Rad) * Math.sin(lat2Rad) -
-                   Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(deltaLon);
-        
-        double bearing = Math.toDegrees(Math.atan2(y, x));
-        return (bearing + 360) % 360; // Normalize to 0-360
+        return GeoUtil.bearingDegrees(lat1, lon1, lat2, lon2);
     }
     
     /**
@@ -3856,16 +3824,7 @@ public class MainHook implements IXposedHookLoadPackage {
      * @return Arrow with direction letter (↑N, ↗NE, →E, etc.)
      */
     private String getDirectionArrow(double bearing) {
-        // 8-direction compass arrows with letters
-        if (bearing >= 337.5 || bearing < 22.5) return "↑N";      // N
-        if (bearing >= 22.5 && bearing < 67.5) return "↗NE";      // NE
-        if (bearing >= 67.5 && bearing < 112.5) return "→E";      // E
-        if (bearing >= 112.5 && bearing < 157.5) return "↘SE";    // SE
-        if (bearing >= 157.5 && bearing < 202.5) return "↓S";     // S
-        if (bearing >= 202.5 && bearing < 247.5) return "↙SW";    // SW
-        if (bearing >= 247.5 && bearing < 292.5) return "←W";     // W
-        if (bearing >= 292.5 && bearing < 337.5) return "↖NW";    // NW
-        return "↑N"; // Default
+        return GeoUtil.directionArrow(bearing);
     }
     
     /**
@@ -3878,21 +3837,7 @@ public class MainHook implements IXposedHookLoadPackage {
      * @return Formatted distance string with arrow
      */
     private String formatDistance(double distanceMeters, double fromLat, double fromLon, double toLat, double toLon) {
-        double bearing = calculateBearing(fromLat, fromLon, toLat, toLon);
-        String arrow = getDirectionArrow(bearing);
-        
-        if (distanceMeters < 1000) {
-            // Less than 1km - show meters with arrow
-            return String.format(java.util.Locale.US, "%s %.0fm", arrow, distanceMeters);
-        } else if (distanceMeters < 10000) {
-            // 1-10km - show one decimal with arrow
-            return String.format(java.util.Locale.US, "%s %.1fkm", arrow, distanceMeters / 1000);
-        } else {
-            // Over 10km - show miles and km with arrow
-            double distanceMiles = distanceMeters * 0.000621371;
-            double distanceKm = distanceMeters / 1000;
-            return String.format(java.util.Locale.US, "%s %.1fmi (%.1fkm)", arrow, distanceMiles, distanceKm);
-        }
+        return GeoUtil.formatDistanceWithArrow(fromLat, fromLon, toLat, toLon);
     }
     
     /**

@@ -89,10 +89,22 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+
+    testOptions {
+        unitTests {
+            returnDefaultValues = true
+        }
+    }
 }
 
 dependencies {
     // LSPosed API
     compileOnly 'de.robv.android.xposed:api:82'
     compileOnly 'de.robv.android.xposed:api:82:sources'
+
+    // Host-side unit tests (Nearby Repeaters: pure parsers and geo math).
+    // org.json is provided by android.jar at runtime; this artifact gives the same
+    // API on the JVM test classpath so BrandMeisterSource.parse* is testable off-device.
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
 }
