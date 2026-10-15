@@ -3,6 +3,8 @@ package com.dmrmod.hooks;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -69,6 +71,10 @@ public final class NearbyRepeatersUi {
     private final List<String> rows = new ArrayList<>();
     private final List<Repeater> shownReps = new ArrayList<>();
     private volatile Map<Integer, String> tgNames;
+    private final Map<String, double[]> geocodeCache = new java.util.HashMap<>();
+    private volatile boolean geocodeCacheLoaded;
+    private volatile String userRegion, userCountry;
+    private static final int GEOCODE_CAP = 160;   // bound per load; results are cached
 
     private NearbyRepeatersUi(Activity activity) {
         this.activity = activity;
@@ -145,7 +151,7 @@ public final class NearbyRepeatersUi {
         root.addView(list);
 
         TextView footer = new TextView(ctx);
-        footer.setText("Data: BrandMeister · hearham  ·  tap for sources");
+        footer.setText("Data: BrandMeister · RadioID · hearham  ·  tap for sources");
         footer.setTextSize(11);
         footer.setTextColor(0xFF7FA8D0);
         footer.setPadding(0, dp(ctx, 8), 0, 0);
@@ -256,6 +262,132 @@ public final class NearbyRepeatersUi {
         });
     }
 
+    /** Non-BM DMR source: RadioID rptrs.json, cached 7 days. Best-effort; [] on any failure. */
+    private java.util.List<Repeater> loadRadioId(boolean forceRefresh) {
+        File cache = new File(activity.getCacheDir(), "nearby_radioid.json");
+        try {
+            long ttl = 7L * 24 * 60 * 60 * 1000;
+            String json;
+            if (!forceRefresh && cache.exists()
+                    && (System.currentTimeMillis() - cache.lastModified()) < ttl) {
+                json = readFile(cache);
+            } else {
+                HttpClient.Response r = HttpClient.get(RadioIdRepeaterSource.URL, null, 0L, "application/json");
+                if (r.isOk()) { json = r.bodyUtf8(); try { writeFile(cache, json); } catch (Throwable ignore) { } }
+                else if (cache.exists()) json = readFile(cache);
+                else return new java.util.ArrayList<>();
+            }
+            java.util.List<Repeater> all = RadioIdRepeaterSource.parse(json);
+            XposedBridge.log(TAG + ": Nearby: RadioID rows " + all.size());
+            return all;
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": RadioID load failed: " + t);
+            return new java.util.ArrayList<>();
+        }
+    }
+
+    /**
+     * Fill coordinates for coordless rows in the user's region by geocoding their city, bounded and
+     * cached (RadioID carries no lat/lon). Returns how many were newly placed. Needs network, so it
+     * is a best-effort second pass; failures just leave the row off the distance list.
+     */
+    private int geocodeMissing(java.util.List<Repeater> list) {
+        if (!haveLocation) return 0;
+        Geocoder gc;
+        try { gc = new Geocoder(activity, Locale.US); } catch (Throwable t) { return 0; }
+        if (!Geocoder.isPresent()) return 0;
+        loadGeocodeCache();
+        ensureUserRegion(gc);
+        int placed = 0, calls = 0;
+        boolean cacheDirty = false;
+        for (Repeater r : list) {
+            if (r.hasCoords) continue;
+            if (isEmpty(r.city)) continue;
+            // only place repeaters plausibly near the user: same region, or same country if region unknown
+            if (userRegion != null && r.region != null && !userRegion.equalsIgnoreCase(r.region)) continue;
+            if (userRegion == null && userCountry != null && r.country != null
+                    && !userCountry.equalsIgnoreCase(r.country)) continue;
+            String q = geoQuery(r.city, r.region, r.country);
+            double[] ll = geocodeCache.get(q);
+            if (ll == null) {
+                if (calls >= GEOCODE_CAP) continue;
+                calls++;
+                ll = geocodeOnce(gc, q);
+                geocodeCache.put(q, ll != null ? ll : new double[]{Double.NaN, Double.NaN});
+                cacheDirty = true;
+            }
+            if (ll != null && !Double.isNaN(ll[0])) {
+                r.lat = ll[0]; r.lon = ll[1]; r.hasCoords = true; r.approx = true;
+                placed++;
+            }
+        }
+        if (cacheDirty) saveGeocodeCache();
+        XposedBridge.log(TAG + ": Nearby: geocoded " + placed + " RadioID rows (" + calls + " lookups)");
+        return placed;
+    }
+
+    private void ensureUserRegion(Geocoder gc) {
+        if (userRegion != null || userCountry != null) return;
+        try {
+            java.util.List<Address> a = gc.getFromLocation(myLat, myLon, 1);
+            if (a != null && !a.isEmpty()) {
+                userRegion = a.get(0).getAdminArea();
+                userCountry = a.get(0).getCountryName();
+                XposedBridge.log(TAG + ": Nearby: user region " + userRegion + ", " + userCountry);
+            }
+        } catch (Throwable ignore) { }
+    }
+
+    private double[] geocodeOnce(Geocoder gc, String query) {
+        try {
+            java.util.List<Address> a = gc.getFromLocationName(query, 1);
+            if (a != null && !a.isEmpty() && a.get(0).hasLatitude() && a.get(0).hasLongitude()) {
+                return new double[]{a.get(0).getLatitude(), a.get(0).getLongitude()};
+            }
+        } catch (Throwable ignore) { }
+        return null;
+    }
+
+    private static String geoQuery(String city, String region, String country) {
+        StringBuilder sb = new StringBuilder(city.trim());
+        if (region != null && !region.trim().isEmpty()) sb.append(", ").append(region.trim());
+        if (country != null && !country.trim().isEmpty()) sb.append(", ").append(country.trim());
+        return sb.toString();
+    }
+
+    private void loadGeocodeCache() {
+        if (geocodeCacheLoaded) return;
+        geocodeCacheLoaded = true;
+        try {
+            File f = new File(activity.getFilesDir(), "dmrmod_geocode_cache.json");
+            if (!f.exists()) return;
+            org.json.JSONObject o = new org.json.JSONObject(readFile(f));
+            for (java.util.Iterator<String> it = o.keys(); it.hasNext(); ) {
+                String k = it.next();
+                String v = o.optString(k, null);
+                if (v == null) continue;
+                String[] p = v.split(",");
+                if (p.length == 2) {
+                    try { geocodeCache.put(k, new double[]{Double.parseDouble(p[0]), Double.parseDouble(p[1])}); }
+                    catch (Exception ignore) { }
+                }
+            }
+        } catch (Throwable ignore) { }
+    }
+
+    private void saveGeocodeCache() {
+        try {
+            org.json.JSONObject o = new org.json.JSONObject();
+            for (Map.Entry<String, double[]> e : geocodeCache.entrySet()) {
+                double[] v = e.getValue();
+                o.put(e.getKey(), (Double.isNaN(v[0]) ? "nan,nan" : v[0] + "," + v[1]));
+            }
+            writeFile(new File(activity.getFilesDir(), "dmrmod_geocode_cache.json"), o.toString());
+        } catch (Throwable ignore) { }
+    }
+
+    private static boolean isEmpty(String s) { return s == null || s.trim().isEmpty(); }
+
     /** FM source: hearham, cached 30 days in the private cache. Best-effort; [] on any failure. */
     private java.util.List<Repeater> loadHearham(boolean forceRefresh) {
         File cache = new File(activity.getCacheDir(), "nearby_hearham.json");
@@ -322,18 +454,28 @@ public final class NearbyRepeatersUi {
                 }
 
                 BrandMeisterSource.ParseResult pr = BrandMeisterSource.parseDeviceList(json, fetchedAt);
-                java.util.List<Repeater> hearham = loadHearham(forceRefresh);  // FM (cached, best-effort)
-                java.util.List<Repeater> merged = RepeaterCatalog.merge(pr.repeaters, hearham);
+                java.util.List<Repeater> hearham = loadHearham(forceRefresh);   // FM (cached)
+                java.util.List<Repeater> radioid = loadRadioId(forceRefresh);   // non-BM DMR (cached)
+                final java.util.List<Repeater> merged =
+                    RepeaterCatalog.merge(pr.repeaters, radioid, hearham);
                 synchronized (all) {
                     all.clear();
                     all.addAll(merged);
                     catalogFetchedAt = fetchedAt;
                 }
-                XposedBridge.log(TAG + ": Nearby: BM " + pr.repeaters.size() + " + hearham "
-                    + hearham.size() + " -> merged " + merged.size());
+                XposedBridge.log(TAG + ": Nearby: BM " + pr.repeaters.size() + " + RadioID "
+                    + radioid.size() + " + hearham " + hearham.size() + " -> merged " + merged.size());
                 activity.runOnUiThread(new Runnable() {
                     @Override public void run() { applyFilterAndRender(); }
                 });
+                // second pass: place RadioID-only rows that have no coordinates (geocode their city),
+                // then re-render so non-BrandMeister DMR repeaters near you appear.
+                int placed = geocodeMissing(merged);
+                if (placed > 0) {
+                    activity.runOnUiThread(new Runnable() {
+                        @Override public void run() { applyFilterAndRender(); }
+                    });
+                }
             }
         }, "nearby-catalog").start();
     }
@@ -474,18 +616,22 @@ public final class NearbyRepeatersUi {
         new Thread(new Runnable() {
             @Override public void run() {
                 ensureTgNames();
-                final List<Talkgroup> tgs;
-                try {
-                    tgs = BrandMeisterSource.fetchDeviceTalkgroups(rep.dmrId);
-                } catch (final Throwable t) {
-                    activity.runOnUiThread(new Runnable() { @Override public void run() {
-                        head.setText("Could not load talkgroups: " + t.getMessage());
-                    }});
-                    return;
+                // RadioID-sourced repeaters already carry their talkgroups; only fetch from
+                // BrandMeister when the merged record has none and is actually a BM device.
+                if (rep.talkgroups.isEmpty()
+                        && (rep.sources & RepeaterModels.SRC_BRANDMEISTER) != 0) {
+                    try {
+                        List<Talkgroup> tgs = BrandMeisterSource.fetchDeviceTalkgroups(rep.dmrId);
+                        rep.talkgroups.clear();
+                        rep.talkgroups.addAll(tgs);
+                    } catch (final Throwable t) {
+                        activity.runOnUiThread(new Runnable() { @Override public void run() {
+                            head.setText("Could not load talkgroups: " + t.getMessage());
+                        }});
+                        return;
+                    }
                 }
-                for (Talkgroup tg : tgs) if (tg.name == null) tg.name = tgNames.get(tg.id);
-                rep.talkgroups.clear();
-                rep.talkgroups.addAll(tgs);
+                for (Talkgroup tg : rep.talkgroups) if (tg.name == null) tg.name = tgNames.get(tg.id);
                 activity.runOnUiThread(new Runnable() { @Override public void run() {
                     populateRepeaterDialog(ctx, box, head, rep, selected, previewRef, dlg);
                 }});
@@ -504,7 +650,7 @@ public final class NearbyRepeatersUi {
                                         final Set<Integer> selected, final TextView[] previewRef,
                                         final AlertDialog dlg) {
         if (rep.talkgroups.isEmpty()) {
-            head.setText("No talkgroups listed for this repeater on BrandMeister.");
+            head.setText("No talkgroups are listed for this repeater, so there is nothing to install.");
             return;
         }
         head.setText("Tick any talkgroups you also want to transmit on. Each adds one channel; "
@@ -600,6 +746,7 @@ public final class NearbyRepeatersUi {
         String msg =
             "Repeater data comes from public amateur-radio directories:\n\n"
           + "\u2022 BrandMeister (api.brandmeister.network) \u2014 DMR repeaters, talkgroups and colour codes.\n"
+          + "\u2022 RadioID.net (radioid.net) \u2014 non-BrandMeister DMR repeaters and talkgroups (location approximated from city).\n"
           + "\u2022 hearham.com (hearham.com/repeaters) \u2014 FM repeaters, tones and coordinates.\n\n"
           + "Catalogs are cached on this device only and never re-published. This feature is for "
           + "licensed amateur operators; transmit only where your licence permits.\n\n"

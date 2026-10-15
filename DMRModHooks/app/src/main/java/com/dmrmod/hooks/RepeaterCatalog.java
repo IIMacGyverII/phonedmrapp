@@ -50,6 +50,7 @@ public final class RepeaterCatalog {
         if (base.dmrId == 0 && lower.dmrId != 0) base.dmrId = lower.dmrId;
         if (isEmpty(base.network) && !isEmpty(lower.network)) base.network = lower.network;
         if (isEmpty(base.city) && !isEmpty(lower.city)) base.city = lower.city;
+        if (isEmpty(base.region) && !isEmpty(lower.region)) base.region = lower.region;
         if (isEmpty(base.country) && !isEmpty(lower.country)) base.country = lower.country;
         if (isEmpty(base.status) && !isEmpty(lower.status)) base.status = lower.status;
         if (isEmpty(base.toneUp) && !isEmpty(lower.toneUp)) base.toneUp = lower.toneUp;
@@ -76,7 +77,7 @@ public final class RepeaterCatalog {
         c.key = r.key; c.callsign = r.callsign; c.rxHz = r.rxHz; c.txHz = r.txHz;
         c.lat = r.lat; c.lon = r.lon; c.hasCoords = r.hasCoords; c.approx = r.approx;
         c.fm = r.fm; c.dmr = r.dmr; c.cc = r.cc; c.dmrId = r.dmrId; c.network = r.network;
-        c.status = r.status; c.lastSeen = r.lastSeen; c.city = r.city; c.country = r.country;
+        c.status = r.status; c.lastSeen = r.lastSeen; c.city = r.city; c.region = r.region; c.country = r.country;
         c.toneUp = r.toneUp; c.toneDown = r.toneDown; c.bandwidth = r.bandwidth;
         c.sources = r.sources; c.fetchedAt = r.fetchedAt;
         for (Talkgroup tg : r.talkgroups) c.talkgroups.add(new Talkgroup(tg.id, tg.slot, tg.name, tg.kind));

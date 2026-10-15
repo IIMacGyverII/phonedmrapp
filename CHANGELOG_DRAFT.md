@@ -3,6 +3,14 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-15 — Nearby Repeaters P2.1/P2.4: RadioID wired in with geocoding
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **E7 P2.1/P2.4** | **RadioID is now a live source.** The dialog fetches `rptrs.json` (cached 7 days) and merges it (BM > RadioID > hearham). RadioID rows carry no coordinates, so a second pass **geocodes** the ones in the user's region by city via the Android `Geocoder` (the user's region is reverse-geocoded once; results cached to `dmrmod_geocode_cache.json`; capped at 160 lookups per load), then re-renders. The install dialog uses a repeater's **own talkgroups** (from RadioID) and only queries BrandMeister when a BM device has none. | `NearbyRepeatersUi`, `RadioIdRepeaterSource`+`Repeater` (region field), `RepeaterCatalog` | **device, on-air**: BM 3186 + RadioID 11424 + hearham 15857 → merged 25977; user region Minnesota resolved; 173 RadioID rows geocoded; **DMR-only nearby list grew 3 → 7** (added non-BM repeaters W9YZI/N0VZC/N0YNT by city); a RadioID-only repeater opens without hitting BM; no crash |
+
+**Phase 2 is functionally complete** — three sources (DMR via BrandMeister + RadioID, FM via hearham), merged and geocoded, with DMR and FM install both proven on-air. Before any public release: the courtesy emails to the three sources and a real contact address in the User-Agent (the ship-blockers in `16-…` §5), which are the operator's to send.
+
 ## 2026-10-15 — Nearby Repeaters P2.7: attribution footer + About data sources
 
 | Backlog | Change | Files | Test |

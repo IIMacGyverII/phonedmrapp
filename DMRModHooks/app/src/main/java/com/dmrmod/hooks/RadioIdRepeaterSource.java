@@ -60,6 +60,7 @@ public final class RadioIdRepeaterSource {
                 r.dmrId = o.optInt("id", 0);
                 r.network = normalizeNetwork(optString(o, "ipsc_network"));
                 r.city = optString(o, "city");
+                r.region = optString(o, "state");
                 r.country = optString(o, "country");
                 r.sources = RepeaterModels.SRC_RADIOID;
                 r.fetchedAt = fetchedAt;
