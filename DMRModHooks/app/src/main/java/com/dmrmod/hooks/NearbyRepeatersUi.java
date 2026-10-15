@@ -486,6 +486,22 @@ public final class NearbyRepeatersUi {
     }
 
     private void doInstall(final Repeater rep, final Set<Integer> selected) {
+        // P1.7: confirm before writing to the codeplug, showing exactly what will be created.
+        RepeaterPlanner.Plan plan = RepeaterPlanner.plan(rep, selected, tgNames);
+        String msg = "Install " + RepeaterProgrammer.preview(plan) + " for " + rep.callsign + "?\n\n"
+            + "Channels are added inactive — tap one in the channel list to go live. "
+            + "Re-installing this repeater replaces what the last install made.";
+        new AlertDialog.Builder(activity)
+            .setTitle("Confirm install")
+            .setMessage(msg)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Install", new android.content.DialogInterface.OnClickListener() {
+                @Override public void onClick(android.content.DialogInterface d, int w) { runInstall(rep, selected); }
+            })
+            .show();
+    }
+
+    private void runInstall(final Repeater rep, final Set<Integer> selected) {
         Toast.makeText(activity, "Installing " + rep.callsign + "...", Toast.LENGTH_SHORT).show();
         new Thread(new Runnable() {
             @Override public void run() {

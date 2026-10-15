@@ -1,0 +1,5 @@
+[
+  {"id":1,"callsign":"KA0KMJ","latitude":45.1,"longitude":-93.4,"city":"Brooklyn Park","mode":"FM","encode":"123.0","decode":"123.0","frequency":146940000,"offset":-600000,"operational":1},
+  {"id":2,"callsign":"W9ABC","latitude":41.8,"longitude":-87.6,"city":"Chicago","mode":"DMR","encode":"CC1","decode":"","frequency":443937500,"offset":5000000,"operational":1},
+  {"id":3,"callsign":"KSTALE","latitude":44.0,"longitude":-92.0,"city":"Nowhere","mode":"FM","encode":"","decode":"","frequency":147000000,"offset":600000,"operational":0}
+]
