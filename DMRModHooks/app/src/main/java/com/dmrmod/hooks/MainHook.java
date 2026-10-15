@@ -12806,6 +12806,14 @@ public class MainHook implements IXposedHookLoadPackage {
         + "\u2022 SOFT SQ (analog only): opens the radio squelch and gates audio in software with the slider. Turn it off before scanning.\n"
         + "\u2022 REC records received audio to Download/DMR/Audio/<channel>/ as 8 kHz WAV; captures under 1 s are dropped. TXT sends recordings to Google Speech-to-Text (needs an API key, long-press TXT).\n"
         + "\u2022 APRS / SSTV / NOAA / VFO take over the current channel while active and restore it on exit. Exit them before scanning.\n"
+        + "\u2022 Caller panel: on a digital channel it names the caller (from your contacts or the RadioID list) and shows the talkgroup of the call; the history under it keeps the last 100 events per channel.\n"
+        + "\n"
+        + "Channel editor\n"
+        + "\u2022 Tap the small info icon next to a field for what it does and what this radio makes of it.\n"
+        + "\u2022 Zone: one zone per channel; the intercom Zone button and the scanner follow it.\n"
+        + "\u2022 TG List: a named set of talkgroups that fills the RX Group List grid (32 slots). The grid is what the radio receives.\n"
+        + "\u2022 Call Number: the talkgroup or DMR ID you transmit to. For Group channels it is added to the RX Group List on save.\n"
+        + "\u2022 Encrypt key: 8 hex characters, the same on both radios.\n"
         + "\n"
         + "Device tab\n"
         + "\u2022 EXPORT writes Channels/Contacts/TG_Lists/Zones/DTMF CSVs (OpenGD77 style) plus a PDF and a zip into Download/DMR/DMR_Backups/<timestamp>/.\n"
@@ -14559,7 +14567,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                                 .setMessage("Transmit (TX) frequency in Hz (no decimal).\n\n" +
                                                     "Enter the frequency as an integer value:\n" +
                                                     "• Frequency in MHz × 1,000,000\n" +
-                                                    "• 9 digits for UHF/VHF\n\n" +
+                                                    "• 9 digits: UHF 400000000-480000000, VHF 136000000-174000000 (set Frequency band first)\n\n" +
                                                     "Examples:\n" +
                                                     "• 446.0000 MHz → enter 446000000\n" +
                                                     "• 145.8000 MHz → enter 145800000\n" +
@@ -14599,7 +14607,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                                 .setMessage("Receive (RX) frequency in Hz (no decimal).\n\n" +
                                                     "Enter the frequency as an integer value:\n" +
                                                     "• Frequency in MHz × 1,000,000\n" +
-                                                    "• 9 digits for UHF/VHF\n\n" +
+                                                    "• 9 digits: UHF 400000000-480000000, VHF 136000000-174000000 (set Frequency band first)\n\n" +
                                                     "Examples:\n" +
                                                     "• 446.0000 MHz → enter 446000000\n" +
                                                     "• 145.8000 MHz → enter 145800000\n" +
@@ -14607,8 +14615,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                                     "For simplex: Set RX same as TX value\n" +
                                                     "For repeaters: RX is different from TX (repeater offset)\n\n" +
                                                     "Example repeater:\n" +
-                                                    "• TX: 14520000 (145.200 MHz)\n" +
-                                                    "• RX: 14580000 (145.800 MHz)")
+                                                    "• TX: 145200000 (145.200 MHz, the repeater input)\n" +
+                                                    "• RX: 145800000 (145.800 MHz, the repeater output)")
                                                 .setPositiveButton(android.R.string.ok, null)
                                                 .show();
                                         }
@@ -14624,162 +14632,146 @@ public class MainHook implements IXposedHookLoadPackage {
                     // COMMON PROPERTIES (visible on both analog and digital)
                     
                     addIcon("interphone_channel_name", "Channel Name",
-                        "The name of this channel (up to 32 characters).\n\n" +
-                        "This name appears in your channel list and should clearly identify the frequency or purpose.\n\n" +
-                        "Examples:\n" +
-                        "• \"Repeater W1ABC\"\n" +
-                        "• \"Simplex 446.000\"\n" +
-                        "• \"Local DMR\"\n\n" +
-                        "Use descriptive names to easily find channels while operating.");
+                        "Shown in the channel list, on the intercom and in exports; up to 32 characters.\n" +
+                        "\n" +
+                        "Say what the channel is for: \"W1ABC Rptr TS2 TG3100\", \"Simplex 446.000\", \"GMRS 15 RP\".");
                     
                     addIcon("interphone_channel_type", "Channel Type",
-                        "Digital (DMR) or Analog (FM).\n\n" +
-                        "• Digital: Uses DMR protocol for voice and data. Requires DMR-compatible repeaters.\n" +
-                        "• Analog: Traditional FM voice. Compatible with all FM radios.\n\n" +
-                        "Note: Channel type cannot be changed after creation.");
+                        "Digital (DMR) or Analog (FM).\n" +
+                        "\n" +
+                        "• Digital: DMR voice, radio to radio (Direct mode) or through a DMR repeater. Shows the colour code, slot, contact and group-list fields.\n" +
+                        "• Analog: plain FM, works with any FM radio on the frequency. Shows bandwidth, squelch and tone fields.\n" +
+                        "\n" +
+                        "The type is fixed once the channel exists: the row is hidden when editing. Delete and recreate to change it.");
                     
                     addIcon("interphone_channel_frequency_band", "Frequency Band",
-                        "The frequency range for this channel.\n\n" +
-                        "• UHF: 400-480 MHz (most common for DMR repeaters)\n" +
-                        "• VHF: 136-174 MHz (common for analog FM)\n\n" +
-                        "Your radio hardware determines which bands are available.\n\n" +
-                        "Regional variations:\n" +
-                        "• USA: 420-450 MHz (UHF), 144-148 MHz (VHF)\n" +
-                        "• Europe: 430-440 MHz (UHF), 144-146 MHz (VHF)\n" +
-                        "• PMR446: 446 MHz (license-free in EU)");
+                        "The range the Send and Receive frequencies must fall in:\n" +
+                        "• UHF: 400-480 MHz\n" +
+                        "• VHF: 136-174 MHz\n" +
+                        "\n" +
+                        "Pick the band first; the editor refuses frequencies outside it. Only transmit where your licence allows.");
                     
                     addIcon("interphone_channel_power", "TX Power",
-                        "Transmit power level.\n\n" +
-                        "• High Power: Maximum range, uses more battery. Typically 5W (UHF) or 4W (VHF).\n" +
-                        "• Low Power: Shorter range, saves battery. Typically 1W.\n\n" +
-                        "Use Low Power when close to repeater or for direct communication to save battery.");
+                        "Low or High, the two levels of the built-in radio module (the maker does not publish watts).\n" +
+                        "\n" +
+                        "Use Low radio to radio or near a repeater; it saves battery and keeps the phone cooler.");
                     
                     addIcon("interphone_channel_relay_disconnecte", "Relay Disconnection",
-                        "Repeater relay control (usually leave DISABLED).\n\n" +
-                        "• Disable (Default): Normal repeater operation. Your transmission goes through the repeater.\n" +
-                        "• Enable: Disconnects repeater relay. Prevents retransmission.\n\n" +
-                        "WARNING: Setting to Enable breaks normal repeater function. Most users should never enable this.\n\n" +
-                        "Use case: Accessing repeater's local receiver (parrot mode) without activating the transmitter.");
+                        "Leave on Disable unless your network's documentation says otherwise.\n" +
+                        "\n" +
+                        "• Disable (default): normal operation.\n" +
+                        "• Enable: the module waits for repeater confirmation before transmitting and may refuse to transmit.\n" +
+                        "\n" +
+                        "Sent to the module as the relay byte (Disable = 2, Enable = 1). OpenGD77 CPS backups carry 0 here, which the module rejects; the importer writes 2.");
                     
                     // TX/RX Frequencies have labels to fix but no help icons yet
                     
                     // DIGITAL-ONLY PROPERTIES
                     
                     addIcon("interphone_channel_color", "Color Code",
-                        "Digital Color Code (0-15). Must match the repeater or network.\n\n" +
-                        "Color Code is like CTCSS for digital channels - it prevents interference from other DMR networks on the same frequency.\n\n" +
-                        "• Default: 1\n" +
-                        "• Range: 0-15\n\n" +
-                        "Check your repeater's configuration or network administrator for the correct Color Code.");
+                        "0-15, default 1. Must match the repeater or the other radio exactly; a mismatch is simply silence.\n" +
+                        "\n" +
+                        "Repeater listings (RepeaterBook, BrandMeister) show the colour code next to the frequency.");
                     
                     addIcon("interphone_channel_mode_type", "Channel Mode",
-                        "DMR channel operating mode.\n\n" +
-                        "• Direct Mode: Simplex (radio-to-radio) communication. Both radios use same frequency.\n" +
-                        "• Double Slot Mode: Repeater mode using TDMA time slots. Allows two conversations on one frequency.\n\n" +
-                        "Use Direct Mode for simplex, Double Slot Mode for repeaters.");
+                        "• Direct mode: simplex, radio to radio on one frequency. Verified on-air with a BTECH 6X2 (CC 1, Slot 1, 2026-10-15).\n" +
+                        "• Double slot: repeater-style TDMA with two time slots on the frequency.\n" +
+                        "\n" +
+                        "Direct for simplex, Double slot for repeaters.");
                     
                     addIcon("interphone_channel_slot_type", "Time Slot",
-                        "DMR TDMA time slot (Slot 1 or Slot 2).\n\n" +
-                        "DMR repeaters use two time slots on one frequency, allowing two simultaneous conversations.\n\n" +
-                        "• Slot 1: First time slot\n" +
-                        "• Slot 2: Second time slot\n\n" +
-                        "Check your repeater configuration. Many use Slot 1 for regional, Slot 2 for worldwide.");
+                        "Slot 1 or Slot 2. A DMR repeater carries two conversations on one frequency; use the slot your talkgroup is assigned to (listings say TS1/TS2).\n" +
+                        "\n" +
+                        "Radio to radio, both radios should use the same slot.");
                     
                     addIcon("interphone_channel_contact_type", "Contact Type",
-                        "Type of DMR call.\n\n" +
-                        "• Person: Private call to specific DMR ID\n" +
-                        "• Group: Group call to talk group\n" +
-                        "• All: Broadcast to all radios (use sparingly)\n\n" +
-                        "Most channels use Group for repeater talk groups.");
+                        "What the Call Number means when you transmit:\n" +
+                        "• Person: private call to one DMR ID.\n" +
+                        "• Group: call to a talkgroup (most channels).\n" +
+                        "• All: all-call transmit. Not a monitor mode: on receive this radio reports talkgroup 16777215 and drops the audio.\n" +
+                        "\n" +
+                        "Receive is decided by the Group List at the bottom of this page, not by this field: private calls to your own ID always come through, group calls only for talkgroups in that list (confirmed on-air 2026-10-15).");
                     
                     // Row id is interphone_channel_call_name (the "Call Number" EditText row);
                     // "interphone_channel_contact" never existed, so this icon was silently skipped.
                     addIcon("interphone_channel_call_name", "Call Number",
-                        "DMR ID or Talk Group number.\n\n" +
-                        "• For Person contacts: Enter target DMR ID (e.g., 1234567)\n" +
-                        "• For Group contacts: Enter talk group ID (e.g., 91 for Worldwide)\n" +
-                        "• Range: 1-16777215\n\n" +
-                        "Common talk groups:\n" +
-                        "• 1: Parrot (echo test)\n" +
-                        "• 91: Worldwide\n" +
-                        "• 93: North America\n" +
-                        "• 3100: USA Nationwide");
+                        "The DMR ID (Person) or talkgroup (Group) this channel transmits to, 1-16776415.\n" +
+                        "\n" +
+                        "Common talkgroups: 9 local, 91 worldwide, 93 North America, 3100 USA, 9990 parrot (BrandMeister).\n" +
+                        "\n" +
+                        "A digital channel with Call Number 0 is refused by the radio module: the arrows show 'operation failed' and the scanner skips it.\n" +
+                        "\n" +
+                        "For Group channels the Call Number is added to the Group List on save, so you also hear the replies.");
                     
                     addIcon("interphone_channel_encryption", "Encryption",
-                        "Enable voice encryption for privacy.\n\n" +
-                        "• Enable: Encrypts voice transmission. Requires encryption key.\n" +
-                        "• Disable: Standard unencrypted DMR.\n\n" +
-                        "Note: Both radios must use same encryption key. Encrypted transmissions cannot be heard by radios without the key.\n\n" +
-                        "Most repeaters do not support encryption.");
+                        "Enabled scrambles the voice with the 8-character key from the Encrypt key row (hex digits 0-9 A-F); both radios need the same key.\n" +
+                        "\n" +
+                        "Repeaters and public networks do not allow encryption; use it radio to radio only, where your licence permits.\n" +
+                        "\n" +
+                        "Stored as Enabled = 1, Disabled = 2.");
                     
                     addIcon("interphone_channel_interrupt_transmission", "Transmission Interruption",
-                        "Controls channel busy behavior.\n\n" +
-                        "• OFF: Normal operation. Cannot transmit when channel busy.\n" +
-                        "• Open: Allows interrupting other transmissions.\n" +
-                        "• Transport: Always transmit (disables busy check). Use for emergencies only.\n\n" +
-                        "Recommended: Leave on OFF for normal use.");
+                        "What happens when you press PTT on a busy digital channel:\n" +
+                        "• OFF: normal, wait for the channel (module value 2).\n" +
+                        "• ON: the radio may interrupt the current transmission (value 1).\n" +
+                        "• transmit: an interrupt handshake is sent before every transmission (value 3).\n" +
+                        "\n" +
+                        "Leave OFF unless your network uses transmit interrupt.");
                     
                     // ANALOG-ONLY PROPERTIES
                     
                     addIcon("interphone_channel_band", "Bandwidth",
-                        "Channel bandwidth (analog only).\n\n" +
-                        "• Narrow (12.5 kHz): More channels in same spectrum, slightly lower audio quality\n" +
-                        "• Wide (25 kHz): Better audio quality, fewer channels\n\n" +
-                        "Must match the bandwidth of other radios and repeaters you're communicating with.\n\n" +
-                        "Many modern systems use Narrow for efficiency.");
+                        "Analog FM channel width: Narrow 12.5 kHz or Wide 25 kHz. Match the other station.\n" +
+                        "\n" +
+                        "Most amateur and commercial systems are narrow; NOAA weather, FRS/GMRS main channels and many older repeaters are wide. Narrow audio sounds quiet on a wide channel; wide audio distorts on a narrow one.\n" +
+                        "\n" +
+                        "The mod's NOAA mode writes Wide, SSTV writes Narrow, and VFO has its own selector.");
                     
                     addIcon("interphone_channel_sq", "Squelch",
-                        "Squelch level (analog only). Controls when radio opens audio.\n\n" +
-                        "• 1: Most sensitive (opens on weak signals, more background noise)\n" +
-                        "• 5: Medium (good balance)\n" +
-                        "• 9: Least sensitive (requires strong signal, less noise)\n\n" +
-                        "Recommended: Start at 2-3 and adjust up if hearing too much noise.\n\n" +
-                        "Note: Stock firmware has a bug forcing squelch to 2. DMRModHooks implements software squelch for full control.");
+                        "Hardware squelch of the analog channel, 0-9.\n" +
+                        "\n" +
+                        "On this radio only two states exist: 0 keeps the squelch open, and 1-9 all close at the same point near -90 dBm (on-air sweeps, 2026-10-14). The number is stored as you set it, but the radio does not grade it.\n" +
+                        "\n" +
+                        "For a real threshold use SOFT SQ on the intercom: it opens the hardware squelch and gates the audio in software with the slider.");
                     
                     addIcon("interphone_channel_txtype", "TX Tone Type",
-                        "Transmit tone type (analog only).\n\n" +
-                        "• Wave: No tone (open squelch)\n" +
-                        "• CTC: CTCSS tone (sub-audible analog tone)\n" +
-                        "• PDCS: DCS code forward polarity\n" +
-                        "• NDCS: DCS code inverted polarity\n\n" +
-                        "CTCSS/DCS prevents hearing unwanted transmissions on same frequency. Must match repeater or other radios.\n\n" +
-                        "Use Wave for simplex with no privacy tone.");
+                        "What is sent under your voice so the other side's squelch opens:\n" +
+                        "• Wave: nothing (carrier only).\n" +
+                        "• ctcsss: a CTCSS sub-audible tone.\n" +
+                        "• Forward DCS / Backward DCS: a digital code, normal or inverted polarity.\n" +
+                        "\n" +
+                        "Repeaters usually require a tone or code; choose the type here and the value in the row below.");
                     
                     addIcon("interphone_channel_txsubcode", "TX Tone/Code",
-                        "Transmit CTCSS tone or DCS code (analog only).\n\n" +
-                        "• CTC: 50 tones from 62.5 Hz to 254.1 Hz\n" +
-                        "• DCS: 83 codes (N=normal, l=inverted polarity)\n\n" +
-                        "Common CTCSS tones:\n" +
-                        "• 67.0 Hz, 100.0 Hz, 131.8 Hz, 141.3 Hz\n\n" +
-                        "Must match the tone/code required by your repeater or group.\n\n" +
-                        "Only used when TX Type is CTC, PDCS, or NDCS.");
+                        "The CTCSS tone or DCS code sent with your transmission.\n" +
+                        "\n" +
+                        "• CTCSS: 50 tones, 67.0-254.1 Hz (the module's own table).\n" +
+                        "• DCS: the standard code list; polarity comes from the type above.\n" +
+                        "\n" +
+                        "Only used when TX Tone Type is not Wave.");
                     
                     addIcon("interphone_channel_rxtype", "RX Tone Type",
-                        "Receive tone type (analog only).\n\n" +
-                        "• Wave: Receive all transmissions (no tone squelch)\n" +
-                        "• CTC: Only open squelch for matching CTCSS tone\n" +
-                        "• PDCS: Only open for matching DCS forward\n" +
-                        "• NDCS: Only open for matching DCS inverted\n\n" +
-                        "Typically matches TX Type. Use Wave to monitor all activity on frequency.");
+                        "When the radio opens:\n" +
+                        "• Wave: on any carrier (you hear everything on the frequency).\n" +
+                        "• ctcsss / Forward DCS / Backward DCS: only when the matching tone or code is present.\n" +
+                        "\n" +
+                        "Usually the same as the TX type. Use Wave to monitor a frequency; use a tone to keep other users' traffic out.");
                     
                     addIcon("interphone_channel_rxsubcode", "RX Tone/Code",
-                        "Receive CTCSS tone or DCS code (analog only).\n\n" +
-                        "• CTC: 50 tones from 62.5 Hz to 254.1 Hz\n" +
-                        "• DCS: 83 codes (N=normal, l=inverted)\n\n" +
-                        "Typically matches TX SubCode. Radio will only open squelch for transmissions with this tone/code.\n\n" +
-                        "Only used when RX Type is CTC, PDCS, or NDCS.");
+                        "The tone or code the radio must hear before it opens.\n" +
+                        "\n" +
+                        "• CTCSS: 50 tones, 67.0-254.1 Hz.\n" +
+                        "• DCS: the standard code list.\n" +
+                        "\n" +
+                        "Only used when RX Tone Type is not Wave.");
                     
                     // SPECIAL LAYOUT: Group List (vertical layout with GridView)
-                    addIconToVerticalLayout("interphone_channel_group_list", "Group List",
-                        "Channel Group List for digital channels.\n\n" +
-                        "This grid shows all 32 possible DMR groups (0-31) that can be assigned to this channel.\n\n" +
-                        "Groups allow organizing channels into categories:\n" +
-                        "• By region (Group 0: Local repeaters)\n" +
-                        "• By network (Group 1: Brandmeister)\n" +
-                        "• By purpose (Group 2: Emergency)\n\n" +
-                        "The radio supports 32 groups total across all zones.\n\n" +
-                        "Note: This is different from Talk Groups (TGs). Group List is for organizing channels, while TG List is for monitoring multiple talk groups on a single channel.\n\n" +
-                        "Digital/DMR channels only.");
+                    addIconToVerticalLayout("interphone_channel_group_list", "RX Group List",
+                        "The talkgroups this channel receives, up to 32 (the limit is in the radio module). Tap a cell to set a talkgroup; 0 is empty.\n" +
+                        "\n" +
+                        "Confirmed on-air 2026-10-15: the module passes a group call only if its talkgroup is in this list. The Call Number alone does not open the channel; private calls to your own DMR ID always do.\n" +
+                        "\n" +
+                        "Choosing a TG List above fills this grid from that list, and saving adds the Call Number if it is missing. Digital channels only.");
                 }
             };
             
@@ -15011,13 +15003,11 @@ public class MainHook implements IXposedHookLoadPackage {
                                 public void onClick(View v) {
                                     new AlertDialog.Builder(activity)
                                         .setTitle("Zone")
-                                        .setMessage("Organize channels into zones (groups) for easier navigation.\n\n" +
-                                            "Zones let you group related channels together:\n" +
-                                            "• By region (\"Local\", \"Travel\")\n" +
-                                            "• By purpose (\"Repeaters\", \"Simplex\", \"Emergency\")\n" +
-                                            "• By network (\"Brandmeister\", \"DMR-MARC\")\n\n" +
-                                            "Create and manage zones in the Zones menu.\n\n" +
-                                            "Channels can be in multiple zones.")
+                                        .setMessage("A named group of channels for getting around.\n" +
+                                            "\n" +
+                                            "On the intercom, the Zone button limits the arrow keys and the scanner to the zone's channels (All = every channel), and the arrows wrap at the zone ends.\n" +
+                                            "\n" +
+                                            "A channel is in one zone at a time; pick None to take it out. Create or rename zones from this selector.")
                                         .setPositiveButton(android.R.string.ok, null)
                                         .show();
                                 }
@@ -15094,18 +15084,11 @@ public class MainHook implements IXposedHookLoadPackage {
                                         public void onClick(View v) {
                                             new AlertDialog.Builder(activity)
                                                 .setTitle("Talk Group List")
-                                                .setMessage("Talk Group (TG) List for digital channels.\n\n" +
-                                                    "A TG List assigns up to 32 talk groups to this channel for scanning/monitoring.\n\n" +
-                                                    "When selected:\n" +
-                                                    "• Radio can receive from all TGs in the list\n" +
-                                                    "• Radio displays which TG is active\n" +
-                                                    "• Allows scanning multiple TGs on one frequency\n\n" +
-                                                    "Common uses:\n" +
-                                                    "• Monitor local, regional, and national TGs\n" +
-                                                    "• Scan multiple topic/activity TGs\n" +
-                                                    "• Group related TGs by theme\n\n" +
-                                                    "Create and manage TG Lists in the TG List menu.\n\n" +
-                                                    "Note: Digital/DMR channels only.")
+                                                .setMessage("A named set of talkgroups kept by the mod; create, edit and delete lists from this selector.\n" +
+                                                    "\n" +
+                                                    "Choosing one writes its talkgroups into the RX Group List grid below (the first 32), so the channel hears all of them, and the Call Number is added if the list lacks it. None leaves the grid as you set it by hand.\n" +
+                                                    "\n" +
+                                                    "The grid is what the radio module actually filters on. Digital channels only.")
                                                 .setPositiveButton(android.R.string.ok, null)
                                                 .show();
                                         }
