@@ -854,3 +854,17 @@ Each heard call: `0x36` `RECEIVE_START` (body `01`) → ~3 s later `RECEIVE_STOP
 - Backlog **FW5** (firmware patch for group RX) is dropped; the mod now adds the Call Number to `groups[]` on save and shows the TG in the caller panel/history.
 
 Not tested: TS2, repeater mode (`relay=1`, `channelMode 4`), colour-code mismatch, encryption, more than 32 entries. Nearby Repeaters (E7) can proceed with "install the repeater's TGs into the channel's 32 slots".
+
+## 20. FW5 — the receive path in the listing matches the on-air result (2026-10-15, read-only)
+
+Source: `radio_firmware/fw1_csky_objdump.txt` (regenerate with the §12 command). Nothing was patched or flashed; this is static reading that corroborates §19.
+
+Three functions were read far enough to confirm the behaviour measured on air. The point of recording them is that, for the first time, a firmware code path is tied to an observed result rather than guessed.
+
+1. **Group list is consumed as a 32-entry table, then matched on receive.** The `0x22` unpack (`+0x9310`, §13.1) copies the group list into a RAM structure in the loop that closes at `+0x962E cmpnei r0, 32`. The receive path reads a destination from the DMR frame and tests it against that stored table, not against `txContact`. This is the list lookup §19 predicted: a talkgroup is heard only if it is in the table, which is why TG 1 passed with Call Number 99 and TG 9/99 did not until added. No `contactType` gate sits in front of it, so the 2026-03 patch attempts had nothing to remove.
+
+2. **All-call is handled by a 24-bit all-ones value built in code.** `0xFFFFFF` is not a stored literal; the firmware forms it with `bmaski r?, 24`. The all-call comparison/argument sites therefore show up as `bmaski … , 24` rather than a constant in a pool. This is consistent with the radio reporting `0xFFFFFF` and dropping audio in ALL mode.
+
+3. **The `0x2B` caller-info reply is assembled field by field.** The builder near `+0xA808` reads the call type through the small mapper at `+0x23D4` and writes the caller and target IDs into the body as little-endian words before calling the generic reply builder `+0x90B0` with length 9. That matches the on-air body layout (`[0]` callType, `[1..4]` caller, `[5..8]` target).
+
+**Consequences.** The static picture and the on-air picture now agree on every point, so the group-RX question is closed from both sides. The 32-entry ceiling lives in that copy loop and the RAM structure size; it is not something a safe edit widens, so FW5 stays dropped. The practical fix is unchanged: a channel hears the talkgroups in its RX group list, and the mod writes the Call Number into that list on save. Read-only throughout; the standing rule (RAM-load only, no permanent flash, TX/band edits document-only) is untouched.
