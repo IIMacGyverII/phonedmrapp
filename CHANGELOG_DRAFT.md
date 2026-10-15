@@ -3,6 +3,14 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-15 — Nearby Repeaters P2.7: attribution footer + About data sources
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **E7 P2.7** (partial) | The dialog shows a **"Data: BrandMeister · hearham"** footer; tapping it opens an **About data sources** screen naming the sources with their URLs, stating the catalogs are cached on-device only (never re-published), and that the feature is for licensed amateurs. | `NearbyRepeatersUi` | **device**: footer shown, About dialog opens with the source list, no crash |
+
+Still before release: the courtesy emails to hearham / RadioID / BrandMeister (the ship-blocker contacts in `16-…` §5), a real contact address in the User-Agent, and RadioID wiring (needs bulk city-geocoding, deferred — most RadioID rows have no coordinates).
+
 ## 2026-10-15 — Nearby Repeaters P2.6: mode / in-range / stale filter chips
 
 | Backlog | Change | Files | Test |
