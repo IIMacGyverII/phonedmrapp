@@ -11,22 +11,31 @@ import android.os.Looper;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.ScrollView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.dmrmod.hooks.RepeaterModels.Repeater;
+import com.dmrmod.hooks.RepeaterModels.Talkgroup;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 import de.robv.android.xposed.XposedBridge;
 
@@ -57,6 +66,8 @@ public final class NearbyRepeatersUi {
     private TextView statusView;
     private ArrayAdapter<String> adapter;
     private final List<String> rows = new ArrayList<>();
+    private final List<Repeater> shownReps = new ArrayList<>();
+    private volatile Map<Integer, String> tgNames;
 
     private NearbyRepeatersUi(Activity activity) {
         this.activity = activity;
@@ -112,6 +123,12 @@ public final class NearbyRepeatersUi {
         ListView list = new ListView(ctx);
         adapter = new ArrayAdapter<>(ctx, android.R.layout.simple_list_item_1, rows);
         list.setAdapter(adapter);
+        list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
+                Repeater rep = position < shownReps.size() ? shownReps.get(position) : null;
+                if (rep != null) openRepeater(rep);
+            }
+        });
         LinearLayout.LayoutParams listLp = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(ctx, 380));
         list.setLayoutParams(listLp);
@@ -294,6 +311,7 @@ public final class NearbyRepeatersUi {
         }
 
         rows.clear();
+        shownReps.clear();
         if (!haveLocation) {
             rows.add("No location fix yet. Enable Location (GPS) and reopen.");
             rows.add("Catalog holds " + withCoords + " repeaters with coordinates.");
@@ -303,8 +321,10 @@ public final class NearbyRepeatersUi {
         } else {
             for (Repeater r : matched) {
                 rows.add(formatRow(r));
+                shownReps.add(r);
             }
         }
+        while (shownReps.size() < rows.size()) shownReps.add(null);
         if (adapter != null) adapter.notifyDataSetChanged();
         setStatus(buildStatus(matched.size(), withCoords));
     }
@@ -334,6 +354,167 @@ public final class NearbyRepeatersUi {
     }
 
     // ---------------------------------------------------------------- helpers
+
+    // ---------------------------------------------------------------- per-repeater expand + install
+
+    private void ensureTgNames() {
+        if (tgNames != null) return;
+        File cache = new File(activity.getCacheDir(), "nearby_bm_tgnames.json");
+        try {
+            long ttl = 7L * 24 * 60 * 60 * 1000;
+            if (cache.exists() && (System.currentTimeMillis() - cache.lastModified()) < ttl) {
+                tgNames = BrandMeisterSource.parseTalkgroupNames(readFile(cache));
+            } else {
+                Map<Integer, String> m = BrandMeisterSource.fetchTalkgroupNames();
+                tgNames = m;
+                try { writeNameCache(cache, m); } catch (Throwable ignore) { }
+            }
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": TG names unavailable: " + t);
+            if (tgNames == null) tgNames = new LinkedHashMap<>();
+        }
+    }
+
+    private static void writeNameCache(File f, Map<Integer, String> m) throws Exception {
+        org.json.JSONObject o = new org.json.JSONObject();
+        for (Map.Entry<Integer, String> e : m.entrySet()) o.put(String.valueOf(e.getKey()), e.getValue());
+        writeFile(f, o.toString());
+    }
+
+    private void openRepeater(final Repeater rep) {
+        final Context ctx = activity;
+        final LinearLayout box = new LinearLayout(ctx);
+        box.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(ctx, 12);
+        box.setPadding(pad, pad, pad, pad);
+        final TextView head = new TextView(ctx);
+        head.setText("Loading talkgroups...");
+        head.setTextColor(0xFFDDDDDD);
+        head.setTextSize(13);
+        box.addView(head);
+        ScrollView scroll = new ScrollView(ctx);
+        scroll.addView(box);
+
+        final AlertDialog dlg = new AlertDialog.Builder(activity)
+            .setTitle(rep.callsign + "  " + rep.rxMhzString() + " MHz  CC" + (rep.cc >= 0 ? rep.cc : "?"))
+            .setView(scroll)
+            .setPositiveButton("Install", null)
+            .setNegativeButton("Cancel", null)
+            .create();
+        dlg.show();
+        dlg.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+
+        final Set<Integer> selected = new LinkedHashSet<>();
+        final TextView[] previewRef = new TextView[1];
+
+        new Thread(new Runnable() {
+            @Override public void run() {
+                ensureTgNames();
+                final List<Talkgroup> tgs;
+                try {
+                    tgs = BrandMeisterSource.fetchDeviceTalkgroups(rep.dmrId);
+                } catch (final Throwable t) {
+                    activity.runOnUiThread(new Runnable() { @Override public void run() {
+                        head.setText("Could not load talkgroups: " + t.getMessage());
+                    }});
+                    return;
+                }
+                for (Talkgroup tg : tgs) if (tg.name == null) tg.name = tgNames.get(tg.id);
+                rep.talkgroups.clear();
+                rep.talkgroups.addAll(tgs);
+                activity.runOnUiThread(new Runnable() { @Override public void run() {
+                    populateRepeaterDialog(ctx, box, head, rep, selected, previewRef, dlg);
+                }});
+            }
+        }, "nearby-tgs").start();
+
+        dlg.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                dlg.dismiss();
+                doInstall(rep, new LinkedHashSet<Integer>(selected));
+            }
+        });
+    }
+
+    private void populateRepeaterDialog(Context ctx, LinearLayout box, TextView head, final Repeater rep,
+                                        final Set<Integer> selected, final TextView[] previewRef,
+                                        final AlertDialog dlg) {
+        if (rep.talkgroups.isEmpty()) {
+            head.setText("No talkgroups listed for this repeater on BrandMeister.");
+            return;
+        }
+        head.setText("Tick any talkgroups you also want to transmit on. Each adds one channel; "
+            + "all of a slot's talkgroups are received anyway.");
+        int lastSlot = -1;
+        for (final Talkgroup tg : rep.talkgroups) {
+            int slot = tg.slot == 2 ? 2 : 1;
+            if (slot != lastSlot) {
+                lastSlot = slot;
+                TextView sh = new TextView(ctx);
+                sh.setText("Timeslot " + slot);
+                sh.setTextColor(0xFF88AACC);
+                sh.setTextSize(12);
+                sh.setPadding(0, dp(ctx, 8), 0, dp(ctx, 2));
+                box.addView(sh);
+            }
+            final CheckBox cb = new CheckBox(ctx);
+            String nm = tg.name != null ? tg.name : ("TG " + tg.id);
+            cb.setText(nm + "  (" + tg.id + ")");
+            cb.setTextColor(0xFFEEEEEE);
+            cb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override public void onCheckedChanged(CompoundButton b, boolean checked) {
+                    if (checked) selected.add(tg.id); else selected.remove(tg.id);
+                    updatePreview(rep, selected, previewRef[0]);
+                }
+            });
+            box.addView(cb);
+        }
+        TextView preview = new TextView(ctx);
+        preview.setTextColor(0xFFBBBBBB);
+        preview.setTextSize(12);
+        preview.setPadding(0, dp(ctx, 10), 0, 0);
+        box.addView(preview);
+        previewRef[0] = preview;
+        updatePreview(rep, selected, preview);
+        dlg.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+    }
+
+    private void updatePreview(Repeater rep, Set<Integer> selected, TextView preview) {
+        if (preview == null) return;
+        RepeaterPlanner.Plan plan = RepeaterPlanner.plan(rep, selected, tgNames);
+        preview.setText("Will create: " + RepeaterProgrammer.preview(plan));
+    }
+
+    private void doInstall(final Repeater rep, final Set<Integer> selected) {
+        Toast.makeText(activity, "Installing " + rep.callsign + "...", Toast.LENGTH_SHORT).show();
+        new Thread(new Runnable() {
+            @Override public void run() {
+                final RepeaterProgrammer.Result r = RepeaterProgrammer.apply(
+                    activity, activity.getClassLoader(), rep, selected, tgNames);
+                activity.runOnUiThread(new Runnable() { @Override public void run() {
+                    AlertDialog.Builder b = new AlertDialog.Builder(activity)
+                        .setTitle(r.ok ? "Installed" : "Install")
+                        .setMessage(r.message)
+                        .setPositiveButton("Close", null);
+                    if (r.ok) {
+                        final long runId = r.runId;
+                        b.setNegativeButton("Undo", new android.content.DialogInterface.OnClickListener() {
+                            @Override public void onClick(android.content.DialogInterface d, int w) {
+                                new Thread(new Runnable() { @Override public void run() {
+                                    final String msg = RepeaterProgrammer.undo(
+                                        activity, activity.getClassLoader(), runId);
+                                    activity.runOnUiThread(new Runnable() { @Override public void run() {
+                                        Toast.makeText(activity, msg, Toast.LENGTH_LONG).show();
+                                    }});
+                                }}, "nearby-undo").start();
+                            }
+                        });
+                    }
+                    b.show();
+                }});
+            }
+        }, "nearby-install").start();
+    }
 
     private void setStatus(final String s) { if (statusView != null) statusView.setText(s); }
 

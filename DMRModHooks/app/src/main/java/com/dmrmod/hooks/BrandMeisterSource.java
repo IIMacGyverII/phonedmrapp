@@ -55,6 +55,21 @@ public final class BrandMeisterSource {
         return parseDeviceList(r.bodyUtf8(), fetchedAtMillis);
     }
 
+    /** Network fetch of one repeater's static talkgroups. Device-only. */
+    public static List<Talkgroup> fetchDeviceTalkgroups(int deviceId) throws IOException {
+        HttpClient.Response r = HttpClient.get(
+            DEVICE_TALKGROUP_URL_PREFIX + deviceId + "/talkgroup", null, 0L, "application/json");
+        if (!r.isOk()) throw new IOException("BM /device/" + deviceId + "/talkgroup HTTP " + r.code);
+        return parseDeviceTalkgroups(r.bodyUtf8());
+    }
+
+    /** Network fetch of the global TG-id->name map. Device-only. */
+    public static Map<Integer, String> fetchTalkgroupNames() throws IOException {
+        HttpClient.Response r = HttpClient.get(TALKGROUP_MAP_URL, null, 0L, "application/json");
+        if (!r.isOk()) throw new IOException("BM /talkgroup HTTP " + r.code);
+        return parseTalkgroupNames(r.bodyUtf8());
+    }
+
     public static ParseResult parseDeviceList(String json) {
         return parseDeviceList(json, System.currentTimeMillis());
     }

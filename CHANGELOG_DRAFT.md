@@ -3,6 +3,16 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-15 — Nearby Repeaters Phase 1: install path (applier, expand/preview, undo)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **E7 P1.4 (apply)** | `RepeaterProgrammer` writes a plan through the OEM create path by reflection: reuse-or-create contacts, one TG list per slot, one `ChannelData` per spec via `DmrManager.createChannel` (channelMode 4, relay 2, encryptSw 2, groups = the slot's RX list, **active 0**), then zone, location and an `installed` run record. New channels are not live until the user taps one. | `RepeaterProgrammer`, `RepeaterInstallStore` (new) | **device**: KA0KMJ → 2 listen channels (TS1/TS2), 15 contacts, zone created; channels `active=0`; DB rows match the plan |
+| **E7 P1.5** | Tapping a repeater opens a per-repeater dialog: its talkgroups grouped by slot, each a checkbox to also transmit on, a live preview (`N channels (X listen + Y talk), M contacts, 1 zone`), Install, and a result sheet with **Undo**. | `NearbyRepeatersUi` | **device**: dialog lists named TGs per slot; preview updates on tick |
+| **E7 undo** | Undo removes exactly what a run created and nothing else. Contacts are tracked by **talkgroup number** and removed via `getContact`, because `saveContact` does a blank-insert-then-update whose `notifyContactAdded` listener can throw on the background thread after the row is persisted (it did, on the first contact of a run) — recording intent before the call keeps undo exact. | `RepeaterProgrammer`, `RepeaterInstallStore` | **device**: install 49→51 ch / 27→42 contacts, run tracks all 15; **undo → 49 ch, 27 contacts, 0 leftovers**, original zones intact, no crash |
+
+Phase 1 install path proven on a live repeater with a clean undo. Remaining P1: post-install channel-list refresh so new rows show without reopening (P1.6), a channel-count confirm for large installs (P1.7), and the re-run-in-place/`installed` fingerprint (P3.3). FM install is Phase 2.
+
 ## 2026-10-15 — Nearby Repeaters Phase 1 start: talkgroup parsers + channel planner (testable)
 
 | Backlog | Change | Files | Test |
