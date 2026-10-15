@@ -4,7 +4,10 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Bundle;
+import android.os.Looper;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -41,6 +44,7 @@ public final class NearbyRepeatersUi {
     private static final long CATALOG_TTL_MS = 24L * 60 * 60 * 1000; // 24 h
     private static final int[] RADII_KM = {10, 25, 50, 100, 200};
     private static final int DEFAULT_RADIUS_KM = 50;
+    private static final long FRESH_FIX_TIMEOUT_MS = 12000;
 
     // dialog state
     private final Activity activity;
@@ -127,6 +131,7 @@ public final class NearbyRepeatersUi {
 
         setStatus("Loading catalog…");
         loadCatalog(false);
+        requestFreshFix();
     }
 
     private void resolveLocation() {
@@ -152,6 +157,66 @@ public final class NearbyRepeatersUi {
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": resolveLocation failed: " + t);
         }
+    }
+
+    /**
+     * P0.5: one-shot fresh GPS/network fix with a timeout. The dialog shows the last-known fix
+     * immediately (resolveLocation); this upgrades it to a current fix when one arrives, then stops
+     * listening. The OEM process holds ACCESS_FINE_LOCATION (SYSTEM_FIXED), confirmed on device.
+     */
+    private void requestFreshFix() {
+        activity.runOnUiThread(new Runnable() {
+            @Override public void run() {
+                try {
+                    final LocationManager lm =
+                        (LocationManager) activity.getSystemService(Context.LOCATION_SERVICE);
+                    if (lm == null) return;
+                    final LocationListener[] holder = new LocationListener[1];
+                    final boolean[] done = {false};
+                    final LocationListener listener = new LocationListener() {
+                        @Override public void onLocationChanged(Location loc) {
+                            if (done[0] || loc == null) return;
+                            done[0] = true;
+                            myLat = loc.getLatitude();
+                            myLon = loc.getLongitude();
+                            haveLocation = true;
+                            XposedBridge.log(TAG + ": Nearby: fresh fix " + myLat + "," + myLon);
+                            try { lm.removeUpdates(this); } catch (Throwable ignore) { }
+                            applyFilterAndRender();
+                        }
+                        @Override public void onProviderDisabled(String p) { }
+                        @Override public void onProviderEnabled(String p) { }
+                        @Override public void onStatusChanged(String p, int st, Bundle ex) { }
+                    };
+                    holder[0] = listener;
+                    boolean requested = false;
+                    for (String provider : new String[]{LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER}) {
+                        try {
+                            if (lm.isProviderEnabled(provider)) {
+                                lm.requestLocationUpdates(provider, 0L, 0f, listener, Looper.getMainLooper());
+                                requested = true;
+                            }
+                        } catch (SecurityException se) {
+                            XposedBridge.log(TAG + ": fresh-fix permission denied for " + provider);
+                        } catch (Throwable t) {
+                            XposedBridge.log(TAG + ": fresh-fix request failed on " + provider + ": " + t);
+                        }
+                    }
+                    if (!requested) return;
+                    // stop listening after the timeout whether or not a fix arrived
+                    statusView.postDelayed(new Runnable() {
+                        @Override public void run() {
+                            if (done[0]) return;
+                            done[0] = true;
+                            try { lm.removeUpdates(holder[0]); } catch (Throwable ignore) { }
+                            XposedBridge.log(TAG + ": Nearby: fresh fix timed out, keeping last-known");
+                        }
+                    }, FRESH_FIX_TIMEOUT_MS);
+                } catch (Throwable t) {
+                    XposedBridge.log(TAG + ": requestFreshFix failed: " + t);
+                }
+            }
+        });
     }
 
     /** Load from the private cache if fresh (unless forced), else fetch over the network. */
