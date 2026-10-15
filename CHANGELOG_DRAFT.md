@@ -3,6 +3,14 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Not yet built or device-tested (no JDK/SDK on the authoring machine — see "Testing Notes").
 
+## 2026-10-15 — Nearby Repeaters Phase 0: the Device-tab list (P0.4)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| **E7 P0.4** | New Device-tab button **📡 Nearby Repeaters** opens a dialog that shows BrandMeister repeaters near you, sorted by distance. It reads the last-known GPS fix, fetches the `/device?repeater=true` catalog once over the network, caches the ~1 MB JSON in the app-private cache dir (24 h TTL; stale cache is used if a later fetch fails, so it works offline after the first run), and filters by a radius chip (10/25/50/100/200 km). Each row shows callsign, bearing+distance, RX MHz, colour code and city. A Refresh action forces a re-fetch. Nothing is written to the radio; selecting/installing is Phase 1. | `NearbyRepeatersUi` (new), `MainHook` (button) | **device, live**: fetched 1,007,940 bytes, parsed 3,187 repeaters (91 simplex dropped); location fix resolved; 50 km → 4 shown, 200 km → 23, 10 km → 0 with a widen-radius prompt; catalog cached to `cache/nearby_bm_device.json`; no crash |
+
+Known for later phases: out-of-range frequencies (e.g. a 927 MHz 900-band repeater) are listed in Phase 0 but will be badged **not installable** in Phase 1/2 (`GeoUtil.inRadioRange`). P0.5 (confirm the runtime location permission in the OEM process and add a one-shot fresh GPS fix) is the last Phase 0 item.
+
 ## 2026-10-15 — Nearby Repeaters Phase 0: testable core (geo, HTTP, BrandMeister parser)
 
 | Backlog | Change | Files | Test |
