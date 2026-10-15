@@ -56,6 +56,7 @@ public final class RepeaterModels {
         public String status;       // source status text
         public String lastSeen;     // source timestamp string (UTC)
         public String city;
+        public String region;    // state/province, for geocoding RadioID rows
         public String country;
         public String toneUp;    // FM: TX sub-audible tone/code as a source string (e.g. "67.0", "D023N")
         public String toneDown;  // FM: RX tone/code
