@@ -94,6 +94,11 @@ sources/
 META-INF/
 kotlin/
 signed.apk.idsig
+
+# ...but DO track JUnit test fixtures (the 'resources/' rule above is for decompiled APK output)
+!DMRModHooks/app/src/test/resources/
+!DMRModHooks/app/src/test/resources/**
+
 # JADX binaries (download separately)
 jadx/
 jadx-*.zip
