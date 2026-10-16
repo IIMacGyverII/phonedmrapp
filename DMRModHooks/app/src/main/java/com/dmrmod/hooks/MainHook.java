@@ -3239,6 +3239,14 @@ public class MainHook implements IXposedHookLoadPackage {
                             // (RX) on the Receive line. Analog only; runs after the OEM set the text.
                             try {
                                 Object cd = XposedHelpers.getObjectField(param.thisObject, "mCurrentChannelData");
+                                if (cd != null) {
+                                    // Keep tone/type state current on EVERY updateUI, not just channel-
+                                    // number changes: editing the tone to None on the same channel must
+                                    // clear the software tone squelch (it used to persist until a switch).
+                                    currentChannelType = XposedHelpers.getIntField(cd, "type");
+                                    currentRxToneType = XposedHelpers.getIntField(cd, "rxType");
+                                    currentRxToneSubCode = XposedHelpers.getIntField(cd, "rxSubCode");
+                                }
                                 Object lv = XposedHelpers.getObjectField(param.thisObject, "mLocalView");
                                 if (cd != null && lv instanceof View && XposedHelpers.getIntField(cd, "type") == 1) {
                                     View root = (View) lv;
@@ -10492,7 +10500,9 @@ public class MainHook implements IXposedHookLoadPackage {
                             boolean toneConfigured = toneHz > 0;
                             boolean tonePresent = true;
                             if (toneConfigured) {
-                                ctcssDetector.setFrequency(toneHz);
+                                double adjLow = ToneConverter.ctcssHz(currentRxToneSubCode - 1);
+                                double adjHigh = ToneConverter.ctcssHz(currentRxToneSubCode + 1);
+                                ctcssDetector.setFrequency(toneHz, adjLow, adjHigh);
                                 ctcssDetector.process(audioData, length);
                                 tonePresent = ctcssDetector.isPresent();
                             }
@@ -10568,7 +10578,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                     ", Thresh=" + audioThreshold + ", RSSI=" + currentRssi +
                                     ", Open=" + isSquelchOpen
                                     + (toneConfigured ? ", tone=" + String.format("%.1f", toneHz)
-                                        + "Hz ratio=" + String.format("%.1f", ctcssDetector.lastRatio())
+                                        + "Hz vr=" + String.format("%.1f", ctcssDetector.lastVoiceRatio())
+                                        + " ar=" + String.format("%.2f", ctcssDetector.lastAdjRatio())
                                         + " present=" + tonePresent : ""));
                             }
                         }
