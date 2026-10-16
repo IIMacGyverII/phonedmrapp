@@ -3,6 +3,12 @@
 Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-15 — Help text: document Nearby Repeaters + Check for updates
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | The in-app help (under the OEM "Use Assistant" screen) was last refreshed before the two newest Device-tab tools shipped. Added **Nearby Repeaters** (what it finds, how DMR vs FM install, manual talkgroups, inactive channels + zone pick, undo) and **Check for updates** (downloads + installs the latest GitHub release, no root, reboot reminder) to the Device-tab section, and tied the "reboot after updating" note to both update paths. | `MainHook.MOD_HELP_TEXT` | builds; deployed |
+
 ## 2026-10-15 — In-app software update (no root; module-owned installer)
 
 | Backlog | Change | Files | Test |

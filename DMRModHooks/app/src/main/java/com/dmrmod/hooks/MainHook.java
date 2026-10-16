@@ -12856,13 +12856,15 @@ public class MainHook implements IXposedHookLoadPackage {
         + "\u2022 EXPORT writes Channels/Contacts/TG_Lists/Zones/DTMF CSVs (OpenGD77 style) plus a PDF and a zip into Download/DMR/DMR_Backups/<timestamp>/.\n"
         + "\u2022 IMPORT replaces the selected area's channels and contacts with a backup. A fresh backup is taken first; the confirm dialog shows what will change; a backup from another area is refused. Never edit the CSVs with a tool that adds a BOM.\n"
         + "\u2022 RadioID: downloads the public DMR ID list so callers are named in the history.\n"
+        + "\u2022 Nearby Repeaters: finds DMR and FM repeaters near you (BrandMeister, RadioID and hearham data), sorted by distance. Tap one to install it as channels \u2014 for DMR, one listen channel per timeslot (it hears that slot's talkgroups) plus any talkgroups you tick to transmit on; for FM, a single analog channel. If a repeater lists no talkgroups you can add them by hand (from your contacts or by number). New channels are added switched off and filed in a zone you pick (a shared 'Nearby' zone by default); tap one in the channel list to go live. Undo removes exactly what the install added.\n"
+        + "\u2022 Check for updates: downloads the latest release from GitHub and installs it after you confirm in Android's installer (no root needed). It tells you when a newer version is available, and reminds you to restart the radio so the new version loads.\n"
         + "\u2022 Diagnostics: 'Read MCU channel images' shows what the radio module really holds; the Diagnostics switch turns on UART logging and the adb debug receiver (leave it off normally); Live S-meter polls RSSI once a second while idle.\n"
         + "\n"
         + "Good to know\n"
         + "\u2022 Squelch levels 1-9 behave as one threshold on this radio; 0 is always open.\n"
         + "\u2022 A digital channel with no Call Number (TX contact) is refused by the radio: the arrows show 'operation failed' and the scanner skips it.\n"
         + "\u2022 Group-call receive follows the channel's RX group list (up to 32 talkgroups): the radio only passes talkgroups in that list, so saving a channel adds its Call Number to the list. All-call receive is a firmware limit; the caller panel and history show the talkgroup of each call.\n"
-        + "\u2022 After updating the mod, reboot the phone.";
+        + "\u2022 After updating the mod (via Check for updates or a manual install), reboot the phone \u2014 the new version only loads on boot.";
 
     private void hookUseAssistant(XC_LoadPackage.LoadPackageParam lpparam) {
         try {
