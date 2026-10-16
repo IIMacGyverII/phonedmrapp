@@ -3,6 +3,12 @@
 Everything below shipped in **v4.0.0** (2026-10-15). Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-15 — Soft SQ: software CTCSS tone squelch
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | Soft SQ forces the hardware squelch open (`sq=0`), which also disables the firmware's CTCSS tone gating — so a tone-coded channel used to open on any carrier. **Feasibility confirmed on-device**: a known 100 Hz keyup read 605× above its neighbours in the 8 kHz RX PCM, so the sub-audible tone survives into the audio the module sees. New `CtcssDetector` runs a continuous Goertzel at the channel's configured tone frequency (from `ToneConverter.ctcssHz`); when Soft SQ is on and the channel has a CTCSS tone (`currentRxToneType==1`), the gate requires that tone present (`open = tonePresent && RMS-floor`, `close = !tonePresent`). No tone configured → carrier squelch, unchanged. | `CtcssDetector` (new), `ToneConverter.ctcssHz`, `MainHook` (squelch decision, RECEIVE_STOP reset, tuning log) | **algorithm validated offline against the real 100 Hz capture**: 250 ms window → correct tone peaks ~0.86, adjacent 103.5 Hz leaks ~0.08 (11× separation), voice ~0.00; thresholds 0.20/0.10. Builds, installs, no crash. On-air open/close + adjacent-tone rejection is the operator's tuning test. DCS (tone types 2/3) still to do |
+
 ## 2026-10-15 — Soft SQ: own persisted settings + RMS-only gating
 
 | Backlog | Change | Files | Test |
