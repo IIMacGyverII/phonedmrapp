@@ -77,6 +77,7 @@ android {
     
     buildFeatures {
         aidl = true
+        buildConfig = true   // exposes BuildConfig.VERSION_CODE (used to detect a pending-reboot update)
     }
     
     packagingOptions {

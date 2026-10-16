@@ -633,6 +633,27 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             );
 
+            // After an in-app update installs a newer module APK, the self-update kills the module's
+            // own process before InstallerActivity can prompt, but THIS (intercom) process keeps
+            // running the old module code. On return to the app, remind the user to reboot so LSPosed
+            // loads the new version. checkPendingReboot is a no-op unless the on-disk APK is newer,
+            // and shows at most once per process.
+            try {
+                XposedHelpers.findAndHookMethod(activityClass, "onResume", new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        final Activity activity = (Activity) param.thisObject;
+                        activity.runOnUiThread(new Runnable() {
+                            @Override public void run() {
+                                try { GithubUpdater.checkPendingReboot(activity); } catch (Throwable ignore) { }
+                            }
+                        });
+                    }
+                });
+            } catch (Throwable t) {
+                XposedBridge.log(TAG + ": onResume update-prompt hook failed: " + t);
+            }
+
             // Re-style whenever user taps a tab
             XposedHelpers.findAndHookMethod(activityClass, "tapOnClick", View.class,
                 new XC_MethodHook() {
@@ -4643,6 +4664,10 @@ public class MainHook implements IXposedHookLoadPackage {
             });
             // Quiet background check when the Device tab is shown: re-labels the button if newer.
             try { GithubUpdater.checkQuietly(activity, updateButton); } catch (Throwable ignore) { }
+            // If an update was installed but not loaded yet (APK on disk newer than the running
+            // module), remind the user to reboot. The module's own process is killed on self-update,
+            // so this reminder has to come from here (the intercom process).
+            try { GithubUpdater.checkPendingReboot(activity); } catch (Throwable ignore) { }
 
             // Add buttons at specified index
             if (index >= 0) {
