@@ -21,7 +21,7 @@ public final class HttpClient {
 
     /** One real contact address goes here before the first production fetch (chapter 16 §9.2). */
     public static final String USER_AGENT =
-        "DMRModHooks/3.4.6 (+https://github.com/IIMacGyverII/phonedmrapp)";
+        "DMRModHooks/4.0.0 (+https://github.com/IIMacGyverII/phonedmrapp)";
 
     private static final int CONNECT_TIMEOUT_MS = 15000;
     private static final int READ_TIMEOUT_MS = 30000;

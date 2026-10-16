@@ -1,6 +1,6 @@
-# Changelog draft — unreleased (working towards v3.4.7)
+# Changelog — v4.0.0 (released 2026-10-15)
 
-Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
+Everything below shipped in **v4.0.0** (2026-10-15). Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
 ## 2026-10-15 — Help text: document Nearby Repeaters + Check for updates

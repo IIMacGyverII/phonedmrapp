@@ -6,8 +6,8 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
 **Status**: ✅ **FULLY FUNCTIONAL** - RadioID Caller Lookup + Export/Import + GPS + Zones + Transcription + APRS + VFO + SSTV + NOAA APT!
 
-> **🚀 Current Stable Release: v3.4.6** (June 21, 2026) - TG list import fix + wide-band default for new/imported channels
-> **🧪 Unreleased on `main`** (October 14, 2026) - **Channel scanner** with scan list, **live S-meter**, in-app help, diagnostics gate, import preview + area check, serial-reader watchdog, 8 kHz recordings, 40+ correctness fixes - see [What's New on main](#whats-new-on-main-unreleased-october-14-2026) and [`CHANGELOG_DRAFT.md`](CHANGELOG_DRAFT.md)  
+> **🚀 Current Stable Release: v4.0.0** (October 15, 2026) - **Nearby Repeaters** (find & install DMR/FM repeaters near you, no computer) + **in-app updater** (download & install the latest release, no root) + on-air **group-call RX fix** + the full October correctness/diagnostics batch (channel scanner, live S-meter, in-app help) - see [What's New in v4.0.0](#whats-new-in-v400-october-15-2026) and [`CHANGELOG_DRAFT.md`](CHANGELOG_DRAFT.md)  
+> **🔧 Prior Stable: v3.4.6** (June 21, 2026) - TG list import fix + wide-band default for new/imported channels  
 > **📻 Major Feature: v3.4.5** (June 16, 2026) - **RadioID.net global DMR ID lookup** — see who's calling with callsign, name & location (~300k IDs, offline)  
 > **🔧 Also in v3.4.5** — Double-slot import fix, squelch default to normal
 > **🖥️ OpenGD77 CPS Fork: v2.0.45** — `OpenGD77CPS-Mac_Build_20260607_210202.zip` (unchanged since v3.4.5)  
@@ -58,9 +58,29 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
 ---
 
-## What's New on main (unreleased, October 14, 2026)
+## What's New in v4.0.0 (October 15, 2026)
 
-Everything below is built, installed and exercised on the test phone (Ulefone, DMR003.UV4T.V022 module) but **not yet released**; the shipped version stays v3.4.6. Full per-change log with device evidence: [`CHANGELOG_DRAFT.md`](CHANGELOG_DRAFT.md).
+Everything below is built, installed and exercised on the test phone (Ulefone, DMR003.UV4T.V022 module). Full per-change log with device evidence: [`CHANGELOG_DRAFT.md`](CHANGELOG_DRAFT.md).
+
+### 📡 Nearby Repeaters (new)
+
+A **📡 Nearby Repeaters** button on the Device tab finds repeaters near your location and programs the ones you pick into the radio — no computer, no CSV.
+
+- **Three data sources merged**: BrandMeister (DMR), RadioID (non-BrandMeister DMR) and hearham (analog FM), de-duplicated and **sorted by distance** with bearing and range
+- **DMR install** creates one **listen channel per timeslot** — its RX group list holds that slot's talkgroups (up to 32), so you hear the whole slot — plus a transmit channel for any talkgroup you tick; **FM install** creates a single analog channel with the right tones and bandwidth
+- Repeaters the directories list **without talkgroups** get a manual builder: add them from your saved contacts or by number
+- New channels are added **switched off** and filed in a **zone you choose** (a shared "Nearby" zone by default, a new named zone, or an existing one); tap one in the channel list to go live
+- **Undo** removes exactly what an install created — hand-made channels, contacts and zones are never touched
+- Filter chips for **DMR / FM / in-range / hide-stale**; RadioID rows with no coordinates are **geocoded by city** for your region; everything is cached for offline use
+- Attribution footer and a "data sources" dialog credit BrandMeister, RadioID and hearham
+
+### ⬆️ In-app updates (new)
+
+**Check for updates** on the Device tab downloads the latest release straight from GitHub and installs it.
+
+- Quietly flags when a newer release exists, and shows its notes before you install
+- Installs through Android's own package installer — **no root**, and **no new privilege on the intercom app** (the module installs itself; the one-time "install unknown apps" consent lands on the module)
+- Streams the download (large APKs are fine), then reminds you to **reboot** so LSPosed loads the new version
 
 ### 🔍 Channel Scanner (new)
 
