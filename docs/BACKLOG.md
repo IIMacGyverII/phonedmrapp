@@ -119,6 +119,17 @@ Design: `deep-dive/15-packet-radio-review.md` (+ addendum) and `16-repeater-dire
 
 ---
 
+## Analog squelch (Soft SQ) — follow-ups
+
+Recent work (2026-10-15, all device-tested): Soft SQ busy-lockout bypass, own persisted level + on/off, RMS-only carrier gating, **software CTCSS tone squelch** (voice-robust ratio + adjacent-standard-tone rejection), and an **FM noise squelch** for non-tone channels (absolute 3.3–3.75 kHz noise, replaces the amplitude gate). See `CHANGELOG_DRAFT.md`.
+
+| # | Item | Why | Effort | Device | Evidence |
+|---|---|---|---|---|---|
+| **SQ1** | **Re-tune the FM noise squelch** (operator flagged 2026-10-15: "much better," may need revisiting). The per-level `NoiseSquelchDetector.OPEN_THRESH` table, the EMA (0.5) and 250 ms window were calibrated from a handful of on-air captures on one radio; confirm across more signals/strengths/radios and adjust. Telemetry `nsqHigh=<value>` is logged. Consider a faster/asymmetric attack if the ~0.25–0.5 s open delay bothers. | Marginal headroom at 8 kHz — no clean noise band above voice, sibilants share the high band; works well now but thresholds/attack are first-pass | S | yes | `NoiseSquelchDetector`, `CHANGELOG_DRAFT.md` |
+| **SQ2** | **Received-tone decoder display** (operator request): scan all 51 CTCSS tones (Goertzel bank) and show the detected tone in the channel panel; then **DCS decode** (23-bit Golay) for the display and for DCS tone squelch. | "Which tone/code is this?" + DCS channels are still carrier-squelched (CTCSS tone squelch done, DCS not) | M | yes | `CtcssDetector`, `ToneConverter` |
+
+---
+
 ## Hygiene (interleave; never blocks the trains)
 
 | # | Item | Why | Effort | Evidence |
