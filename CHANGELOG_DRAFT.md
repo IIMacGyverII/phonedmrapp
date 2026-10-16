@@ -3,6 +3,12 @@
 Everything below shipped in **v4.0.0** (2026-10-15). Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-15 — Transcription folded into the module (no separate app)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | Speech-to-text no longer needs the separate **DMRTranscriptionService** app (which was never released as an APK). The transcription call is now **in-process**: a new `TranscriptionClient` reads the recorded PCM, wraps it in a WAV header, and POSTs to the Google Cloud Speech-to-Text REST API via `HttpURLConnection` + `org.json` — no okhttp, no native code, no AIDL/IPC. The TXT button and `processTranscription` call it directly; the `bindToTranscriptionService`/`ServiceConnection`/`ITranscriptionService` IPC path is removed. Transcription now works with just a Google Cloud key in `Download/DMR/api_key.txt`. | `TranscriptionClient` (new), `MainHook` (TXT toggle, `processTranscription`, removed bind method + fields + import) | builds + deployed. Request shape + on-device key validated against Google (HTTP 403 "billing not enabled" on the key's project — code path correct; the Cloud project needs billing turned on for STT to return text) |
+
 ## 2026-10-15 — Help text: document Nearby Repeaters + Check for updates
 
 | Backlog | Change | Files | Test |
