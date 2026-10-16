@@ -13,6 +13,7 @@ Mandatory checklist for every new session on **phonedmrapp** / **DMRModHooks**.
 | **Verified deep dive** | `docs/deep-dive/00-README.md` | Code-cited reference for OEM app + mod (14 chapters). **§4 lists known errors in this file and `copilot-instructions.md`** — check it before trusting a schema/class-path/audio claim here |
 | **Dead ends / history** | `.docs/AI_LOGS_SUMMARY.md` (gitignored, may be absent) → fallback `docs/deep-dive/13-…` §5, `07-…` §5 | Read before retrying APRS TX, LED, group-call RX, >32 TG filtering |
 | **Entry point** | `DMRModHooks/app/src/main/java/com/dmrmod/hooks/MainHook.java` | ~16k lines; all hooks live here |
+| **Running changelog** | `CHANGELOG_DRAFT.md` (repo root) | Update on **every** user-facing change (newest first) — see §10 |
 | **OEM app source** | `app/src/main/java/com/pri/prizeinterphone/` | Decompiled PriInterPhone |
 | **OpenGD77 CPS fork (binary)** | `OpenGD77Fork/*.zip` | Latest build zip for releases; **not** a git submodule |
 | **OpenGD77 CPS fork (source)** | `C:\Users\Joshua\Documents\android\OpenGD77CPS-Mac` | Separate repo — edit/build CPS here |
@@ -133,6 +134,7 @@ See `.grok/rules/packet-layouts.md` for byte offsets, and `docs/deep-dive/01-…
 
 - [ ] Build: `cd DMRModHooks; .\gradlew assembleDebug`
 - [ ] If device attached: `.\install.ps1` (includes reboot)
+- [ ] **Log it in `CHANGELOG_DRAFT.md`** (repo root) — newest entry first, as a dated `## YYYY-MM-DD — <summary>` section with a `| Backlog | Change | Files | Test |` row, so releases have an accurate change list. Note whether it was device-tested. Skip only changes with nothing user-facing in the shipped APK (e.g. pure dev-doc edits); say so if you skip.
 - [ ] If you corrected stale docs: patch `.grok/rules/` and `.github/copilot-instructions.md` in the same PR/commit; if the fact is architectural, patch the relevant `docs/deep-dive/` chapter too
 - [ ] If you edited this file: copy it to `CLAUDE.md` (or vice-versa) — see the mirror rule at the top
 - [ ] Do **not** auto-release unless asked
