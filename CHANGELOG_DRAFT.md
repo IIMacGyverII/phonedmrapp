@@ -3,6 +3,12 @@
 Everything below shipped in **v4.0.0** (2026-10-15). Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-16 — Received CTCSS tone decoder (shows which tone is coming in)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| SQ2 | On analog RX the module now runs a **Goertzel bank over all 51 standard CTCSS tones** and posts "CTCSS &lt;tone&gt; Hz detected" to the caller panel, answering "which tone is this?". A 333 ms window picks the strongest tone bin and accepts it only when it beats the mean of the other 50 bins by a ratio (so broadband voice/noise, which lifts every bin equally, fails), is a sharp local maximum vs its neighbour tones, carries real energy (dead-air guard), and repeats for 2 consecutive windows (anti-flicker). Fed from the `writeAudioTrack` hook (8 kHz stereo, L channel), reset on RECEIVE_STOP. This is **SQ2 Phase A** (display only); DCS decode + DCS tone squelch are Phase B. | `CtcssDecoderBank` (new), `ToneConverter` (`ctcssCount`/`ctcssLabelAt`), `MainHook` (decoder bank + detectedTone TextView + `maybeUpdateDetectedTone`/`clearDetectedTone`, writeAudioTrack feed, RECEIVE_STOP clear) | **device, on-air**: three transmissions at 100.0 / 79.7 / 254.1 Hz each locked onto the correct tone within ~1 window; peak/mean ratios 440–660 vs the 15 lock floor (huge headroom) — thresholds left as first-pass |
+
 ## 2026-10-16 — Toggling Soft SQ no longer shifts the panel below
 
 | Backlog | Change | Files | Test |
