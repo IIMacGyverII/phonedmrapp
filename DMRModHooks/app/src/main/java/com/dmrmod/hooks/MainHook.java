@@ -175,6 +175,10 @@ public class MainHook implements IXposedHookLoadPackage {
     // FM noise squelch for non-tone channels (opens on a quieted high band). Runs in telemetry mode
     // for now (logs its ratio; the amplitude gate still decides) until the threshold is calibrated.
     private static final NoiseSquelchDetector noiseDetector = new NoiseSquelchDetector(8000);
+    // SQ2: CTCSS decoder bank - scans all 51 tones to show which one the incoming signal carries.
+    private static final CtcssDecoderBank toneDecoderBank = new CtcssDecoderBank(8000);
+    private static TextView detectedToneTextView = null;   // readout under the panel header
+    private static volatile int lastShownToneIndex = -2;   // -2 = never shown yet
     
     // Audio RMS thresholds for squelch levels 0-9 (tuned for 8kHz 16-bit PCM)
     // Based on real-world values: noise floor ~100-400, weak signal ~800-2000, strong ~4000+
@@ -1740,6 +1744,17 @@ public class MainHook implements IXposedHookLoadPackage {
                                 callerHeadline.setEllipsize(android.text.TextUtils.TruncateAt.END);
                                 callerPanel.addView(callerHeadline);
                                 callerHeadlineTextView = callerHeadline;
+
+                                // SQ2: detected sub-audible tone readout (CTCSS now, DCS later)
+                                TextView detectedTone = new TextView(context);
+                                detectedTone.setTag("DMR_DETECTED_TONE");
+                                detectedTone.setTextColor(0xFF00E5FF);   // cyan
+                                detectedTone.setTextSize(13);
+                                detectedTone.setTypeface(null, android.graphics.Typeface.BOLD);
+                                detectedTone.setText("");
+                                detectedTone.setVisibility(View.GONE);
+                                callerPanel.addView(detectedTone);
+                                detectedToneTextView = detectedTone;
 
                                 LinearLayout fieldsContainer = new LinearLayout(context);
                                 fieldsContainer.setTag("DMR_CALLER_FIELDS");
@@ -8995,6 +9010,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     isSquelchOpen = false;        // no signal -> soft-sq closed (stale-state tidy)
                                     ctcssDetector.reset();        // clear tone state for the next transmission
                                     noiseDetector.reset();        // clear noise-squelch EMA for the next transmission
+                                    clearDetectedTone();          // SQ2: clear the detected-tone readout
                                     previousSquelchOpen = false;  // Reset squelch state tracking
                                     
                                     // Process APRS buffer on receive stop ONLY if not in APRS monitoring mode
@@ -10464,6 +10480,19 @@ public class MainHook implements IXposedHookLoadPackage {
                         // digital channel and silently mute DMR RX. Monitoring modes always run analog.
                         boolean analogAudio = currentChannelType == 1
                                 || isAPRSMonitoringActive || isSSTVMonitoringActive || isNOAAMonitoringActive;
+
+                        // SQ2: identify the incoming sub-audible tone on analog RX. Runs on the pre-mute
+                        // buffer and independent of squelch, so the user can see the tone even while muted.
+                        if (analogAudio && isReceiving) {
+                            toneDecoderBank.process(audioData, length);
+                            maybeUpdateDetectedTone();
+                            if (System.currentTimeMillis() % 1000 < 50) {
+                                XposedBridge.log(TAG + ": [tone-decoder] det=" + toneDecoderBank.detectedIndex()
+                                    + " peak=" + String.format("%.0f", toneDecoderBank.lastPeak())
+                                    + " ratio=" + String.format("%.1f", toneDecoderBank.lastRatio())
+                                    + " energy=" + String.format("%.0f", toneDecoderBank.lastEnergy()));
+                            }
+                        }
                         // APRS mode only gates when its own Soft SQ toggle is on (the live screen used to
                         // force gating with the persisted aprs_squelch threshold even with the toggle OFF).
                         boolean squelchRequested = isSoftwareSquelchEnabled
@@ -10890,6 +10919,43 @@ public class MainHook implements IXposedHookLoadPackage {
      * Apply a channel's saved Soft SQ setting (on/off + level) when it loads, and sync the intercom
      * toggle/slider to match. Analog only — Soft SQ does nothing on digital. No row = Soft SQ off.
      */
+    /** SQ2: push the decoder bank's detection to the readout when it changes, and log telemetry. */
+    private static void maybeUpdateDetectedTone() {
+        final int idx = toneDecoderBank.detectedIndex();
+        if (idx == lastShownToneIndex) return;
+        lastShownToneIndex = idx;
+        final String label = toneDecoderBank.detectedLabel();
+        XposedBridge.log(TAG + ": [tone-decoder] " + (idx >= 0 ? ("DETECTED " + label + " Hz") : "cleared"));
+        final TextView tv = detectedToneTextView;
+        if (tv == null) return;
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+            @Override public void run() {
+                try {
+                    if (idx >= 0 && label != null) {
+                        tv.setText("CTCSS " + label + " Hz detected");
+                        tv.setVisibility(View.VISIBLE);
+                    } else {
+                        tv.setText("");
+                        tv.setVisibility(View.GONE);
+                    }
+                } catch (Throwable ignore) { }
+            }
+        });
+    }
+
+    /** SQ2: reset the decoder bank and hide the readout (on RECEIVE_STOP). */
+    private static void clearDetectedTone() {
+        toneDecoderBank.reset();
+        lastShownToneIndex = -2;
+        final TextView tv = detectedToneTextView;
+        if (tv == null) return;
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+            @Override public void run() {
+                try { tv.setText(""); tv.setVisibility(View.GONE); } catch (Throwable ignore) { }
+            }
+        });
+    }
+
     /**
      * Intercom Soft SQ bar visibility. On analog channels the bar's row is always laid out
      * (VISIBLE when on, INVISIBLE when off) so toggling Soft SQ never reflows the panel below;

@@ -27,6 +27,14 @@ public class ToneConverter {
         return -1;
     }
 
+    /** Number of standard CTCSS tones (for the decoder bank). */
+    public static int ctcssCount() { return CTCSS_TONES.length; }
+
+    /** The CTCSS tone label (e.g. "100.0") at an index, or null if out of range. */
+    public static String ctcssLabelAt(int index) {
+        return (index >= 0 && index < CTCSS_TONES.length) ? CTCSS_TONES[index] : null;
+    }
+
     private static final String[] CTCSS_TONES = {
         "62.5", "67.0", "69.3", "71.9", "74.4", "77.0", "79.7", "82.5", "85.4", "88.5",
         "91.5", "94.8", "97.4", "100.0", "103.5", "107.2", "110.9", "114.8", "118.8", "123.0",
