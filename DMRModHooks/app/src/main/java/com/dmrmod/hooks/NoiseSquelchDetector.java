@@ -18,10 +18,12 @@ public final class NoiseSquelchDetector {
     private static final double[] HI  = {3300, 3500, 3700};
     private static final double[] MID = {1200, 1600};
 
-    // Per level (0..9): ratio below which a signal is considered present (open). Higher level ->
-    // lower threshold -> demands more quieting. Level 0 = always open.
+    // Per level (0..9): smoothed high/mid ratio below which a signal is "present" (open). Calibrated
+    // on-device: static smoothed never fell below ~0.234 across ~50 windows, a −57 dBm signal read
+    // ~0.14, so every level sits in the gap (below static, above signal). Higher level -> lower
+    // threshold -> demands more quieting. Level 0 = always open.
     private static final double[] OPEN_THRESH =
-        {999, 0.28, 0.24, 0.20, 0.17, 0.15, 0.13, 0.11, 0.10, 0.09};
+        {999, 0.225, 0.21, 0.20, 0.195, 0.19, 0.18, 0.17, 0.16, 0.15};
 
     private final int window;
     private final double[] cHi = new double[HI.length];

@@ -10519,11 +10519,13 @@ public class MainHook implements IXposedHookLoadPackage {
                                 shouldOpen = tonePresent;
                                 shouldClose = !tonePresent;
                             } else {
-                                shouldOpen = (amplitude >= audioOpenThresh);
-                                shouldClose = (amplitude < audioCloseThresh);
-                                // Noise-squelch telemetry only (amplitude still gates): logs its ratio
-                                // so the open threshold can be calibrated from real signal-vs-static.
+                                // FM noise squelch: open on a signal (which quiets the high band),
+                                // close on static. An amplitude gate can't: a weak signal's loud FM
+                                // noise is quieter than static, so it muted signal and passed static.
                                 noiseDetector.process(audioData, length, activeThreshold);
+                                boolean sig = noiseDetector.isSignal();
+                                shouldOpen = sig;
+                                shouldClose = !sig;
                             }
                             
                             // Apply hysteresis
