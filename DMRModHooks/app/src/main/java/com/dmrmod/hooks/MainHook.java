@@ -48,7 +48,6 @@ import android.content.ComponentName;
 import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.content.Intent;
-import com.macdmr.transcription.ITranscriptionService;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -185,14 +184,11 @@ public class MainHook implements IXposedHookLoadPackage {
         15000    // 9: Exceptionally strong only
     };
     
-    // Speech-to-text transcription state (IPC Service)
+    // Speech-to-text transcription state (in-process; Google Cloud Speech-to-Text REST)
     private static volatile boolean isTranscriptionEnabled = false;
     private static volatile String currentTranscription = "";
     private static List<Short> audioBuffer = Collections.synchronizedList(new ArrayList<>());
     private static final int MAX_BUFFER_SIZE = 480000; // 30 seconds at 16kHz (480000 samples)
-    private static ITranscriptionService transcriptionService = null;
-    private static ServiceConnection serviceConnection = null;
-    private static boolean isServiceBound = false;
     private static LinearLayout transcriptionMessagesContainer = null;  // Container for messages
     private static android.widget.ScrollView transcriptionScrollView = null;  // Scrollable view
     private static LinearLayout transcriptionBox = null;  // Outer box
@@ -2413,10 +2409,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 
                                 // Store reference
                                 transcriptionToggleButton = transcriptionToggle;
-                                
-                                // Bind to transcription service (IPC)
-                                bindToTranscriptionService(context);
-                                
+
                                 // Set click listener for transcription toggle
                                 transcriptionToggle.setOnClickListener(new View.OnClickListener() {
                                     @Override
@@ -2431,18 +2424,10 @@ public class MainHook implements IXposedHookLoadPackage {
                                                 return;
                                             }
                                             
-                                            // User wants to enable transcription
-                                            if (!isServiceBound || transcriptionService == null) {
-                                                // Service not bound yet
-                                                isTranscriptionEnabled = true;
-                                                Toast.makeText(context, "Connecting to transcription service...", Toast.LENGTH_SHORT).show();
-                                                bindToTranscriptionService(context);
-                                            } else {
-                                                // Service already bound
-                                                isTranscriptionEnabled = true;
-                                                XposedBridge.log(TAG + ": Transcription enabled");
-                                                Toast.makeText(context, "Transcription enabled", Toast.LENGTH_SHORT).show();
-                                            }
+                                            // User wants to enable transcription (API key verified above)
+                                            isTranscriptionEnabled = true;
+                                            XposedBridge.log(TAG + ": Transcription enabled");
+                                            Toast.makeText(context, "Transcription enabled", Toast.LENGTH_SHORT).show();
                                         } else {
                                             // User disabled transcription
                                             isTranscriptionEnabled = false;
@@ -11368,88 +11353,6 @@ public class MainHook implements IXposedHookLoadPackage {
     }
     
     /**
-     * Bind to DMRTranscriptionService via IPC
-     */
-    private static void bindToTranscriptionService(final Context context) {
-        if (isServiceBound && transcriptionService != null) {
-            XposedBridge.log(TAG + ": Transcription service already bound");
-            return;
-        }
-        
-        try {
-            XposedBridge.log(TAG + ": Binding to DMRTranscriptionService...");
-            
-            // Create service connection
-            serviceConnection = new ServiceConnection() {
-                @Override
-                public void onServiceConnected(ComponentName name, IBinder service) {
-                    XposedBridge.log(TAG + ": ✅ Connected to transcription service");
-                    transcriptionService = ITranscriptionService.Stub.asInterface(service);
-                    isServiceBound = true;
-                    
-                    // Check if service is ready
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                boolean ready = transcriptionService.isReady();
-                                final String msg = ready ? "✅ Transcription ready!" : "Loading model...";
-                                XposedBridge.log(TAG + ": Service ready: " + ready);
-                                
-                                new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
-                                    }
-                                });
-                            } catch (Exception e) {
-                                XposedBridge.log(TAG + ": Error checking service ready: " + e.getMessage());
-                            }
-                        }
-                    }).start();
-                }
-                
-                @Override
-                public void onServiceDisconnected(ComponentName name) {
-                    XposedBridge.log(TAG + ": ⚠️ Disconnected from transcription service");
-                    transcriptionService = null;
-                    isServiceBound = false;
-                }
-            };
-            
-            // Intent to bind to the service
-            Intent serviceIntent = new Intent();
-            serviceIntent.setComponent(new ComponentName(
-                "com.macdmr.transcription",
-                "com.macdmr.transcription.TranscriptionService"
-            ));
-            
-            // Bind to service
-            boolean bound = context.bindService(
-                serviceIntent,
-                serviceConnection,
-                Context.BIND_AUTO_CREATE
-            );
-            
-            if (bound) {
-                XposedBridge.log(TAG + ": Service binding initiated");
-            } else {
-                XposedBridge.log(TAG + ": ❌ Failed to bind service - is DMRTranscriptionService installed?");
-                new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(context, "❌ Install DMRTranscriptionService first!", Toast.LENGTH_LONG).show();
-                    }
-                });
-            }
-            
-        } catch (Exception e) {
-            XposedBridge.log(TAG + ": ❌ Error binding to transcription service: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-    
-    /**
      * Buffer audio data for transcription
      * Called from PCMReceiveManager hook during audio reception
      */
@@ -11615,7 +11518,7 @@ public class MainHook implements IXposedHookLoadPackage {
      * Called when transmission ends (RECEIVE_STOP)
      */
     /**
-     * Process audio transcription using IPC to DMRTranscriptionService
+     * Process audio transcription in-process via Google Cloud Speech-to-Text ({@link TranscriptionClient}).
      */
     private static void processTranscription(Context context) {
         if (!isTranscriptionEnabled || audioBuffer.isEmpty()) {
@@ -11623,18 +11526,16 @@ public class MainHook implements IXposedHookLoadPackage {
         }
         
         XposedBridge.log(TAG + ": Processing transcription for " + audioBuffer.size() + " audio samples");
-        
-        if (!isServiceBound || transcriptionService == null) {
-            XposedBridge.log(TAG + ": Transcription service not bound yet");
-            currentTranscription = "[Service not ready - please wait...]";
+
+        final String apiKey = readApiKeyFromFile();
+        if (TranscriptionClient.isPlaceholderKey(apiKey)) {
+            XposedBridge.log(TAG + ": Transcription key not configured");
+            currentTranscription = "[API key not configured - long-press TXT to set it]";
             updateTranscriptionDisplay(currentTranscription);
             audioBuffer.clear();
-            
-            // Try to bind
-            bindToTranscriptionService(context);
             return;
         }
-        
+
         // Process in background thread to avoid blocking
         new Thread(new Runnable() {
             @Override
@@ -11650,10 +11551,10 @@ public class MainHook implements IXposedHookLoadPackage {
                         pcmBytes[i * 2 + 1] = (byte) ((sample >> 8) & 0xFF); // High byte
                     }
                     
-                    XposedBridge.log(TAG + ": Sending " + pcmBytes.length + " bytes to transcription service");
-                    
-                    // Call service via IPC
-                    String result = transcriptionService.transcribe(pcmBytes, 16000);
+                    XposedBridge.log(TAG + ": Transcribing " + pcmBytes.length + " bytes via Google Cloud STT");
+
+                    // In-process call (Google Cloud Speech-to-Text REST)
+                    String result = TranscriptionClient.transcribe(pcmBytes, 16000, apiKey);
                     
                     if (result != null && !result.trim().isEmpty()) {
                         currentTranscription = result;
@@ -11691,7 +11592,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     XposedBridge.log(TAG + ": ❌ Error processing transcription: " + e.getMessage());
                     e.printStackTrace();
                     
-                    currentTranscription = "[IPC error: " + e.getMessage() + "]";
+                    currentTranscription = "[Error: " + e.getMessage() + "]";
                     updateTranscriptionDisplay(currentTranscription);
                 } finally {
                     // Clear buffer for next transmission
