@@ -523,6 +523,8 @@ public class DirectDatabaseImporter {
             // and APRS flags intact instead of half-cleared.
             LocationDatabase locationDb = LocationDatabase.getInstance(context);
             final java.util.List<double[]> pendingLocations = new java.util.ArrayList<>(); // {channel _id, lat, lon} (R5: keyed by _id, not channel_number)
+            final SoftSqDatabase softSqDb = SoftSqDatabase.getInstance(context);
+            final java.util.List<int[]> pendingSoftSq = new java.util.ArrayList<>();   // {channel _id, enabled, level}
             final java.util.List<int[]> pendingAprs = new java.util.ArrayList<>();          // {channelNumber, enabled}
             boolean channelsCommitted = false;
             
@@ -532,7 +534,8 @@ public class DirectDatabaseImporter {
             if (headerLine != null && headerLine.length() > 0 && headerLine.charAt(0) == 0xFEFF) {
                 headerLine = headerLine.substring(1);  // UTF-8 BOM (Pitfall 16 / backlog R4): used to make every row unparseable
             }
-            
+            final boolean hasSoftSq = headerLine != null && headerLine.contains("SoftSQ");   // appended Soft SQ columns present?
+
             // Detect if CSV has _id column (Android export format)
             // Android export includes EXTRA fields: Rx Only, Zone Skip, All Skip, TOT, VOX, No Beep, No Eco (fields 18-24)
             // OpenGD77 format does NOT include these extra flag fields
@@ -1113,8 +1116,21 @@ public class DirectDatabaseImporter {
                     } catch (Exception e) {
                         Log.w(TAG, "Could not parse lat/lon for channel " + channelNumber + ": " + e.getMessage());
                     }
-                    
-                    Log.i(TAG, "✓ Inserted channel " + channelNumber + ": " + channelName + 
+
+                    // Per-channel Soft SQ (appended columns — always the last two fields): SoftSQ + SoftSQLevel.
+                    if (hasSoftSq && fields.length >= 2) {
+                        try {
+                            String sqStr = fields[fields.length - 2].trim();
+                            String lvStr = fields[fields.length - 1].trim();
+                            boolean en = sqStr.equalsIgnoreCase("On") || sqStr.equals("1") || sqStr.equalsIgnoreCase("true");
+                            int lv = 5; try { lv = Integer.parseInt(lvStr); } catch (Exception ignore) { }
+                            pendingSoftSq.add(new int[]{(int) finalRowId, en ? 1 : 0, lv});
+                        } catch (Exception e) {
+                            Log.w(TAG, "Could not parse Soft SQ for channel " + channelNumber + ": " + e.getMessage());
+                        }
+                    }
+
+                    Log.i(TAG, "✓ Inserted channel " + channelNumber + ": " + channelName +
                         " (" + rxFreqMHz + " MHz, band=" + band + ", rowId=" + rowId + ")");
                 }
                 
@@ -1199,8 +1215,13 @@ public class DirectDatabaseImporter {
                     for (int[] a : pendingAprs) {
                         aprsDb.setEnabled(a[0], a[1] == 1);   // preserves comment/symbol columns
                     }
-                    Log.i(TAG, "✓ Applied " + pendingLocations.size() + " locations and "
-                            + pendingAprs.size() + " APRS flags after channel commit");
+                    // Per-channel Soft SQ (upsert by _id; absent columns leave existing settings alone).
+                    for (int[] sq : pendingSoftSq) {
+                        softSqDb.save(sq[0], sq[1] == 1, sq[2]);
+                    }
+                    Log.i(TAG, "✓ Applied " + pendingLocations.size() + " locations, "
+                            + pendingAprs.size() + " APRS flags and " + pendingSoftSq.size()
+                            + " Soft SQ settings after channel commit");
                 } catch (Exception e) {
                     Log.w(TAG, "Side-table update after channel import failed: " + e.getMessage());
                 }

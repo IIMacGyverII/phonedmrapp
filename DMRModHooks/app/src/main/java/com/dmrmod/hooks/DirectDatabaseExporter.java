@@ -118,7 +118,8 @@ public class DirectDatabaseExporter {
         "_id,Channel Number,Channel Name,Channel Type,Rx Frequency,Tx Frequency,Bandwidth (kHz)," +
         "Colour Code,Timeslot,Contact,TG List,DMR ID,TS1_TA_Tx,TS2_TA_Tx ID,RX Tone,TX Tone," +
         "Squelch,Power,Rx Only,Zone Skip,All Skip,TOT,VOX,No Beep,No Eco,APRS,Latitude,Longitude,Use Location," +
-        "Encrypt Switch,Encrypt Key,Relay,Interrupt,Active,Outbound Slot,Channel Mode,Contact Type";
+        "Encrypt Switch,Encrypt Key,Relay,Interrupt,Active,Outbound Slot,Channel Mode,Contact Type," +
+        "SoftSQ,SoftSQLevel";
     
     private static final String CONTACTS_HEADER = "Contact Name,ID,ID Type,TS Override";
     
@@ -365,6 +366,7 @@ public class DirectDatabaseExporter {
 
             // Build TG list name lookup map for channel export (channel _id → list name)
             TGListDatabase tgListDb = TGListDatabase.getInstance(context);
+            SoftSqDatabase softSqDb = SoftSqDatabase.getInstance(context);   // per-channel Soft SQ columns
             
             // Write CSV header (use constant to ensure consistency)
             BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
@@ -585,7 +587,12 @@ public class DirectDatabaseExporter {
                     rowBuilder.append(",").append(channelMode == 4 ? 3 : channelMode);  // 35. Channel Mode
                     rowBuilder.append(",").append(contactType);             // 36. Contact Type
                 }
-                
+
+                // Per-channel Soft SQ (appended columns, backward-compatible): SoftSQ + SoftSQLevel.
+                SoftSqDatabase.Setting ssq = softSqDb.get(channelId);
+                rowBuilder.append(",").append(ssq != null && ssq.enabled ? "On" : "Off");      // 37. SoftSQ
+                rowBuilder.append(",").append(ssq != null && ssq.level >= 1 ? ssq.level : 5);  // 38. SoftSQLevel
+
                 writer.write(rowBuilder.toString());
                 writer.write("\r\n");  // Windows CRLF for OpenGD77 compatibility
                 
