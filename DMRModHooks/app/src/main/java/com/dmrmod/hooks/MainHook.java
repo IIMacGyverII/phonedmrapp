@@ -112,6 +112,7 @@ public class MainHook implements IXposedHookLoadPackage {
     private static final java.util.LinkedList<String> activityHistory = new java.util.LinkedList<>();
     private static final int MAX_ACTIVITY_HISTORY = 3;
     private static volatile int currentChannelNumber = -1;
+    private static volatile int currentChannelId = -1;   // channel _id of the loaded channel (per-channel Soft SQ)
     private static volatile int currentChannelType = 0; // 0=Digital/DMR, 1=Analog/FM
     private static volatile int currentRxToneType = 0; // 0=None, 1=CTCSS, 2=FDCS, 3=BDCS
     private static volatile int currentRxToneSubCode = 0; // Index into tone array
@@ -157,7 +158,6 @@ public class MainHook implements IXposedHookLoadPackage {
     // Persisted in the OEM app's prefs; default OFF. The Device-tab readback/probe buttons do not need it.
     private static volatile boolean diagnosticsEnabled = false;
     private static final String DIAG_PREFS = "dmrmod_diagnostics";
-    private static final String SOFTSQ_PREFS = "dmrmod_squelch";   // intercom Soft SQ level + on/off (own file, not the APRS DB)
     private static volatile int softwareSquelchThreshold = 2;  // User squelch level (0-9)
     private static volatile boolean isSquelchOpen = false;  // Current squelch state
     private static volatile boolean previousSquelchOpen = false;  // Track state changes
@@ -223,6 +223,7 @@ public class MainHook implements IXposedHookLoadPackage {
     // Software squelch toggle button
     private static android.widget.ToggleButton softwareSquelchToggleButton = null;
     private static android.widget.LinearLayout softwareSquelchContainer = null;  // Container for squelch slider
+    private static android.widget.SeekBar squelchSeekBarView = null;             // the Soft SQ level slider
     
     // APRS monitoring toggle button
     private static android.widget.ToggleButton aprsMonitoringToggleButton = null;
@@ -2233,6 +2234,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Store references for later updates
                                 final TextView finalSquelchValueLabel = squelchValueLabel;
                                 squelchValueTextView = squelchValueLabel;
+                                squelchSeekBarView = squelchSeekBar;   // ref for per-channel Soft SQ UI sync
                                 // Note: Status indicator removed for cleaner UI
                                 
                                 // Set up SeekBar listener
@@ -2269,37 +2271,18 @@ public class MainHook implements IXposedHookLoadPackage {
                                             XposedBridge.log(TAG + ": Applied hardware squelch for software squelch level " + progress);
                                         }
                                         
-                                        // Persist the intercom Soft SQ level in its own prefs file
-                                        // (no longer shared with the APRS aprs_squelch setting).
-                                        saveSoftSqLevel(context, progress);
-                                        XposedBridge.log(TAG + ": Saved intercom Soft SQ level " + progress);
+                                        // Per-channel Soft SQ: the live slider edits THIS channel's
+                                        // saved level (one source of truth, same store the editor uses).
+                                        if (currentChannelId > 0) SoftSqDatabase.getInstance(context)
+                                            .save(currentChannelId, isSoftwareSquelchEnabled, progress);
+                                        XposedBridge.log(TAG + ": Saved Soft SQ level " + progress + " for channel _id " + currentChannelId);
                                     }
                                 });
 
-                                // Restore the saved Soft SQ on/off state (persisted across restarts), then its level.
-                                try {
-                                    isSoftwareSquelchEnabled = loadSoftSqEnabled(context);
-                                    final int savedSquelch = loadSoftSqLevel(context);
-                                    squelchSeekBar.setProgress(savedSquelch);
-                                    softwareSquelchThreshold = savedSquelch;
-                                    finalSquelchValueLabel.setText(String.valueOf(savedSquelch));
-                                    XposedBridge.log(TAG + ": Loaded Soft SQ: enabled=" + isSoftwareSquelchEnabled
-                                        + ", level=" + savedSquelch);
-
-                                    // If Soft SQ was on, re-open the hardware squelch and drop the busy lockout.
-                                    if (isSoftwareSquelchEnabled) {
-                                        rootLayout.postDelayed(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                enableSoftwareSquelchOnCurrentChannel();
-                                                syncBusyNoSend(context);
-                                                XposedBridge.log(TAG + ": Restored Soft SQ ON (level " + savedSquelch + ")");
-                                            }
-                                        }, 500);
-                                    }
-                                } catch (Throwable t) {
-                                    XposedBridge.log(TAG + ": Could not restore Soft SQ, using defaults: " + t);
-                                }
+                                // Slider defaults only; the per-channel Soft SQ setting is applied when
+                                // the channel loads (applyChannelSoftSq), which also syncs these controls.
+                                squelchSeekBar.setProgress(softwareSquelchThreshold);
+                                finalSquelchValueLabel.setText(String.valueOf(softwareSquelchThreshold));
                                 
                                 // Insert squelch container at index 3 (initially hidden if software squelch disabled)
                                 squelchContainer.setVisibility(isSoftwareSquelchEnabled ? View.VISIBLE : View.GONE);
@@ -2555,8 +2538,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                         // Soft SQ forces the squelch open, so drop the OEM busy
                                         // lockout while it's on (restored when off) — see syncBusyNoSend.
                                         syncBusyNoSend(context);
-                                        // Remember the on/off state across restarts.
-                                        saveSoftSqEnabled(context, isSoftwareSquelchEnabled);
+                                        // Per-channel Soft SQ: save this channel's on/off + level.
+                                        if (currentChannelId > 0) SoftSqDatabase.getInstance(context)
+                                            .save(currentChannelId, isSoftwareSquelchEnabled, softwareSquelchThreshold);
                                     }
                                 });
 
@@ -3163,7 +3147,14 @@ public class MainHook implements IXposedHookLoadPackage {
                                     currentChannelType = channelType;
                                     currentRxToneType = rxType;
                                     currentRxToneSubCode = rxSubCode;
-                                    
+                                    try { currentChannelId = XposedHelpers.getIntField(channelData, "_id"); } catch (Throwable ignore) { }
+
+                                    // Per-channel Soft SQ: apply the initial channel's saved setting (slightly
+                                    // delayed so the toggle/slider views exist and the channel is settled).
+                                    rootLayout.postDelayed(new Runnable() {
+                                        @Override public void run() { applyChannelSoftSq(appContext, currentChannelId); }
+                                    }, 600);
+
                                     String toneInfo = ToneConverter.formatForDisplay(rxType, rxSubCode);
                                     XposedBridge.log(TAG + ": Initial channel: #" + channelNumber + " (" + (channelType == 0 ? "Digital" : "Analog") + "), RX Tone: " + toneInfo);
                                     updateHistoryHeader();
@@ -3249,6 +3240,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     currentChannelType = XposedHelpers.getIntField(cd, "type");
                                     currentRxToneType = XposedHelpers.getIntField(cd, "rxType");
                                     currentRxToneSubCode = XposedHelpers.getIntField(cd, "rxSubCode");
+                                    try { currentChannelId = XposedHelpers.getIntField(cd, "_id"); } catch (Throwable ignore) { }
                                 }
                                 Object lv = XposedHelpers.getObjectField(param.thisObject, "mLocalView");
                                 if (cd != null && lv instanceof View && XposedHelpers.getIntField(cd, "type") == 1) {
@@ -3278,7 +3270,10 @@ public class MainHook implements IXposedHookLoadPackage {
                                     currentChannelType = channelType;
                                     currentRxToneType = rxType;
                                     currentRxToneSubCode = rxSubCode;
-                                    
+
+                                    // Per-channel Soft SQ: apply this channel's saved on/off + level.
+                                    applyChannelSoftSq(appContext, currentChannelId);
+
                                     // Show/hide squelch slider based on channel type (analog only) AND software squelch enabled
                                     try {
                                         Object mLocalViewObj = XposedHelpers.getObjectField(param.thisObject, "mLocalView");
@@ -10889,6 +10884,39 @@ public class MainHook implements IXposedHookLoadPackage {
         } catch (Throwable ignore) { }
     }
 
+    /**
+     * Apply a channel's saved Soft SQ setting (on/off + level) when it loads, and sync the intercom
+     * toggle/slider to match. Analog only — Soft SQ does nothing on digital. No row = Soft SQ off.
+     */
+    private static void applyChannelSoftSq(final Context ctx, int channelId) {
+        try {
+            if (ctx == null) return;
+            SoftSqDatabase.Setting s = (channelId > 0) ? SoftSqDatabase.getInstance(ctx).get(channelId) : null;
+            final int level = (s != null && s.level >= 1) ? s.level : softwareSquelchThreshold;
+            final boolean enable = s != null && s.enabled && currentChannelType == 1;
+            softwareSquelchThreshold = level;
+            boolean was = isSoftwareSquelchEnabled;
+            isSoftwareSquelchEnabled = enable;
+            if (enable) enableSoftwareSquelchOnCurrentChannel();
+            else if (was) disableSoftwareSquelchOnCurrentChannel();
+            syncBusyNoSend(ctx);
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+                @Override public void run() {
+                    try {
+                        if (softwareSquelchToggleButton != null) softwareSquelchToggleButton.setChecked(enable);
+                        if (squelchSeekBarView != null) squelchSeekBarView.setProgress(level);
+                        if (squelchValueTextView != null) squelchValueTextView.setText(String.valueOf(level));
+                        if (softwareSquelchContainer != null)
+                            softwareSquelchContainer.setVisibility(enable && currentChannelType == 1 ? View.VISIBLE : View.GONE);
+                    } catch (Throwable ignore) { }
+                }
+            });
+            XposedBridge.log(TAG + ": Applied Soft SQ for _id " + channelId + ": enabled=" + enable + " level=" + level);
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": applyChannelSoftSq failed: " + t);
+        }
+    }
+
     private static void syncBusyNoSend(Context ctx) {
         if (ctx == null) return;
         try {
@@ -10914,24 +10942,6 @@ public class MainHook implements IXposedHookLoadPackage {
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": syncBusyNoSend failed: " + t);
         }
-    }
-
-    // Intercom Soft SQ persistence (own prefs file; de-conflated from the APRS aprs_squelch field).
-    private static int loadSoftSqLevel(Context ctx) {
-        try { return ctx.getSharedPreferences(SOFTSQ_PREFS, Context.MODE_PRIVATE).getInt("level", 5); }
-        catch (Throwable t) { return 5; }
-    }
-    private static void saveSoftSqLevel(Context ctx, int level) {
-        try { ctx.getSharedPreferences(SOFTSQ_PREFS, Context.MODE_PRIVATE).edit().putInt("level", level).apply(); }
-        catch (Throwable ignore) { }
-    }
-    private static boolean loadSoftSqEnabled(Context ctx) {
-        try { return ctx.getSharedPreferences(SOFTSQ_PREFS, Context.MODE_PRIVATE).getBoolean("enabled", false); }
-        catch (Throwable t) { return false; }
-    }
-    private static void saveSoftSqEnabled(Context ctx, boolean on) {
-        try { ctx.getSharedPreferences(SOFTSQ_PREFS, Context.MODE_PRIVATE).edit().putBoolean("enabled", on).apply(); }
-        catch (Throwable ignore) { }
     }
 
     private static void enableSoftwareSquelchOnCurrentChannel() {
