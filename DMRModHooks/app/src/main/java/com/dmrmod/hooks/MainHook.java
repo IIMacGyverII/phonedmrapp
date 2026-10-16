@@ -14866,6 +14866,57 @@ public class MainHook implements IXposedHookLoadPackage {
         }
     }
     
+    /** Build an OEM-styled channel-editor row (title · value) with a click handler, matching the zone row. */
+    private static LinearLayout buildEditorRow(Context ctx, String title, TextView valueView, View.OnClickListener onClick) {
+        android.content.res.Resources r = ctx.getResources();
+        String pkg = ctx.getPackageName();
+        LinearLayout row = new LinearLayout(ctx);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setClickable(true);
+        row.setFocusable(true);
+        row.setBackgroundResource(r.getIdentifier("interphone_channel_content_background_seletor", "drawable", pkg));
+        LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+            r.getDimensionPixelSize(r.getIdentifier("interphone_channel_content_height", "dimen", pkg)));
+        rowParams.setMargins(
+            r.getDimensionPixelSize(r.getIdentifier("interphone_channel_content_margin_left", "dimen", pkg)), 10,
+            r.getDimensionPixelSize(r.getIdentifier("interphone_channel_content_margin_right", "dimen", pkg)), 0);
+        row.setLayoutParams(rowParams);
+
+        TextView titleText = new TextView(ctx);
+        titleText.setText(title);
+        titleText.setTextColor(r.getColor(r.getIdentifier("pri_text_color", "color", pkg)));
+        titleText.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,
+            r.getDimensionPixelSize(r.getIdentifier("interphone_channel_content_title_size", "dimen", pkg)));
+        titleText.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(
+            r.getDimensionPixelSize(r.getIdentifier("interphone_channel_content_title_width", "dimen", pkg)),
+            LinearLayout.LayoutParams.WRAP_CONTENT);
+        tp.leftMargin = r.getDimensionPixelSize(r.getIdentifier("interphone_channel_content_title_margin_left", "dimen", pkg));
+        titleText.setLayoutParams(tp);
+
+        View sep = new View(ctx);
+        sep.setBackgroundResource(r.getIdentifier("interphone_channel_more_split", "drawable", pkg));
+        LinearLayout.LayoutParams spp = new LinearLayout.LayoutParams(7, 13);
+        spp.leftMargin = r.getDimensionPixelSize(r.getIdentifier("interphone_channel_content_split_margin_left", "dimen", pkg));
+        spp.gravity = android.view.Gravity.CENTER_VERTICAL;
+        sep.setLayoutParams(spp);
+
+        valueView.setTextColor(r.getColor(r.getIdentifier("pri_text_color", "color", pkg)));
+        valueView.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,
+            r.getDimensionPixelSize(r.getIdentifier("interphone_channel_content_sub_size", "dimen", pkg)));
+        valueView.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams vp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT);
+        vp.leftMargin = r.getDimensionPixelSize(r.getIdentifier("interphone_channel_content_split_margin_left", "dimen", pkg));
+        vp.rightMargin = r.getDimensionPixelSize(r.getIdentifier("interphone_channel_content_title_margin_left", "dimen", pkg));
+        valueView.setLayoutParams(vp);
+
+        row.addView(titleText);
+        row.addView(sep);
+        row.addView(valueView);
+        if (onClick != null) row.setOnClickListener(onClick);
+        return row;
+    }
+
     /**
      * Hook InterPhoneChannelActivity to add zone selector
      */
@@ -15118,8 +15169,53 @@ public class MainHook implements IXposedHookLoadPackage {
                             
                             // Add the zone row after the channel type row (index 2)
                             container.addView(zoneRow, 3);
-                            
+
                             XposedBridge.log(TAG + ": Zone selector added to channel edit page");
+
+                            // ── Soft SQ rows (analog channels only): on/off + level, saved per channel ──
+                            try {
+                                int chType = (channelData != null) ? XposedHelpers.getIntField(channelData, "type") : 1;
+                                if (chType == 1) {
+                                    final int ssChannelId = channelId;
+                                    SoftSqDatabase.Setting ss = (ssChannelId > 0) ? SoftSqDatabase.getInstance(context).get(ssChannelId) : null;
+                                    final boolean[] ssEnabled = { ss != null && ss.enabled };
+                                    final int[] ssLevel = { (ss != null && ss.level >= 1) ? ss.level : 5 };
+                                    XposedHelpers.setAdditionalInstanceField(activity, "dmrmod_softsqEnabled", ssEnabled[0]);
+                                    XposedHelpers.setAdditionalInstanceField(activity, "dmrmod_softsqLevel", ssLevel[0]);
+
+                                    final TextView ssEnabledValue = new TextView(context);
+                                    ssEnabledValue.setText(ssEnabled[0] ? "On" : "Off");
+                                    final TextView ssLevelValue = new TextView(context);
+                                    ssLevelValue.setText(String.valueOf(ssLevel[0]));
+
+                                    LinearLayout ssEnabledRow = buildEditorRow(context, "Soft SQ", ssEnabledValue, new View.OnClickListener() {
+                                        @Override public void onClick(View v) {
+                                            ssEnabled[0] = !ssEnabled[0];
+                                            ssEnabledValue.setText(ssEnabled[0] ? "On" : "Off");
+                                            XposedHelpers.setAdditionalInstanceField(activity, "dmrmod_softsqEnabled", ssEnabled[0]);
+                                        }
+                                    });
+                                    LinearLayout ssLevelRow = buildEditorRow(context, "Soft SQ Level", ssLevelValue, new View.OnClickListener() {
+                                        @Override public void onClick(View v) {
+                                            final String[] items = {"1","2","3","4","5","6","7","8","9"};
+                                            new AlertDialog.Builder(activity)
+                                                .setTitle("Soft SQ Level (1 lenient … 9 strict)")
+                                                .setItems(items, new android.content.DialogInterface.OnClickListener() {
+                                                    @Override public void onClick(android.content.DialogInterface d, int w) {
+                                                        ssLevel[0] = w + 1;
+                                                        ssLevelValue.setText(String.valueOf(ssLevel[0]));
+                                                        XposedHelpers.setAdditionalInstanceField(activity, "dmrmod_softsqLevel", ssLevel[0]);
+                                                    }
+                                                }).show();
+                                        }
+                                    });
+                                    container.addView(ssEnabledRow, 4);
+                                    container.addView(ssLevelRow, 5);
+                                    XposedBridge.log(TAG + ": Soft SQ editor rows added (enabled=" + ssEnabled[0] + ", level=" + ssLevel[0] + ")");
+                                }
+                            } catch (Throwable t) {
+                                XposedBridge.log(TAG + ": Soft SQ editor rows failed: " + t);
+                            }
 
                             // ── TG List row (Digital channels only) ──────────────────────────
                             try {
@@ -15370,7 +15466,23 @@ public class MainHook implements IXposedHookLoadPackage {
                         try {
                             Activity activity = (Activity) saveParam.thisObject;
                             Context context = activity;
-                            
+
+                            // Per-channel Soft SQ: persist the editor's selection. Done before the zone
+                            // block (which returns early if no zone was picked) so it always runs; the
+                            // channel _id is valid here even for a newly-created channel.
+                            try {
+                                Boolean ssEn = (Boolean) XposedHelpers.getAdditionalInstanceField(activity, "dmrmod_softsqEnabled");
+                                Integer ssLv = (Integer) XposedHelpers.getAdditionalInstanceField(activity, "dmrmod_softsqLevel");
+                                Object ssCd = XposedHelpers.getObjectField(saveParam.thisObject, "channelData");
+                                if (ssEn != null && ssCd != null) {
+                                    int cid = XposedHelpers.getIntField(ssCd, "_id");
+                                    if (cid > 0) {
+                                        SoftSqDatabase.getInstance(context).save(cid, ssEn, ssLv != null ? ssLv : 5);
+                                        XposedBridge.log(TAG + ": Saved Soft SQ for _id " + cid + ": enabled=" + ssEn + " level=" + ssLv);
+                                    }
+                                }
+                            } catch (Throwable t) { XposedBridge.log(TAG + ": Soft SQ editor save failed: " + t); }
+
                             // Get the selected zone ID from the activity instance
                             Long selectedZoneId = (Long) XposedHelpers.getAdditionalInstanceField(activity, "dmrmod_selectedZoneId");
                             if (selectedZoneId == null) {
