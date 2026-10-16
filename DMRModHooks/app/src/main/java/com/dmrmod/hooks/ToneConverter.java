@@ -19,6 +19,14 @@ public class ToneConverter {
     
     // CTCSS tone frequencies (51 standard tones)
     // Database stores as "67.0Hz", OpenGD77 expects "67.0"
+    /** CTCSS tone frequency in Hz for a 0-based sub-code, or -1 if out of range (for software tone squelch). */
+    public static double ctcssHz(int subCode) {
+        if (subCode >= 0 && subCode < CTCSS_TONES.length) {
+            try { return Double.parseDouble(CTCSS_TONES[subCode]); } catch (Exception ignore) { }
+        }
+        return -1;
+    }
+
     private static final String[] CTCSS_TONES = {
         "62.5", "67.0", "69.3", "71.9", "74.4", "77.0", "79.7", "82.5", "85.4", "88.5",
         "91.5", "94.8", "97.4", "100.0", "103.5", "107.2", "110.9", "114.8", "118.8", "123.0",

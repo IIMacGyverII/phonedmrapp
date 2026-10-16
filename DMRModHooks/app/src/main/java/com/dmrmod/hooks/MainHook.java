@@ -169,6 +169,9 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile long lastSquelchOpenTime = 0;  // For hang time (tail delay)
     private static final long SQUELCH_HANG_TIME_MS = 300;  // Hold squelch open 300ms after signal drops
     private static final int HYSTERESIS_FACTOR = 140;  // ~3dB hysteresis (openThresh / closeThresh = 1.4)
+    // Software CTCSS tone squelch: when a channel has a receive tone, Soft SQ only opens on it.
+    // RX PCM is 8 kHz mono (verified: a 100 Hz keyup read 605x above its neighbours).
+    private static final CtcssDetector ctcssDetector = new CtcssDetector(8000);
     
     // Audio RMS thresholds for squelch levels 0-9 (tuned for 8kHz 16-bit PCM)
     // Based on real-world values: noise floor ~100-400, weak signal ~800-2000, strong ~4000+
@@ -8966,6 +8969,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     XposedBridge.log(TAG + ": RECEIVE_STOP detected (type: " + currentChannelType + ")");
                                     isReceiving = false;
                                     isSquelchOpen = false;        // no signal -> soft-sq closed (stale-state tidy)
+                                    ctcssDetector.reset();        // clear tone state for the next transmission
                                     previousSquelchOpen = false;  // Reset squelch state tracking
                                     
                                     // Process APRS buffer on receive stop ONLY if not in APRS monitoring mode
@@ -10464,8 +10468,28 @@ public class MainHook implements IXposedHookLoadPackage {
                                 querySignalStrength();
                             }
 
-                            boolean shouldOpen = (amplitude >= audioOpenThresh);
-                            boolean shouldClose = (amplitude < audioCloseThresh);
+                            // CTCSS tone squelch: if the channel has a receive tone, require that
+                            // tone present (this is lost otherwise, since Soft SQ forces sq=0 and the
+                            // firmware stops gating on the tone). No tone configured -> carrier squelch.
+                            double toneHz = (currentRxToneType == 1)
+                                ? ToneConverter.ctcssHz(currentRxToneSubCode) : -1;
+                            boolean toneConfigured = toneHz > 0;
+                            boolean tonePresent = true;
+                            if (toneConfigured) {
+                                ctcssDetector.setFrequency(toneHz);
+                                ctcssDetector.process(audioData, length);
+                                tonePresent = ctcssDetector.isPresent();
+                            }
+
+                            boolean shouldOpen, shouldClose;
+                            if (toneConfigured) {
+                                // Tone gates; a low RMS floor keeps noise alone from opening it.
+                                shouldOpen = tonePresent && (amplitude >= audioCloseThresh);
+                                shouldClose = !tonePresent;
+                            } else {
+                                shouldOpen = (amplitude >= audioOpenThresh);
+                                shouldClose = (amplitude < audioCloseThresh);
+                            }
                             
                             // Apply hysteresis
                             if (isSquelchOpen) {
@@ -10522,9 +10546,12 @@ public class MainHook implements IXposedHookLoadPackage {
                             
                             // Debug logging (throttled to avoid spam)
                             if (System.currentTimeMillis() % 1000 < 50) {  // Log once per second
-                                XposedBridge.log(TAG + ": Squelch - RMS=" + amplitude + 
-                                    ", Thresh=" + audioThreshold + ", RSSI=" + currentRssi + 
-                                    ", Open=" + isSquelchOpen);
+                                XposedBridge.log(TAG + ": Squelch - RMS=" + amplitude +
+                                    ", Thresh=" + audioThreshold + ", RSSI=" + currentRssi +
+                                    ", Open=" + isSquelchOpen
+                                    + (toneConfigured ? ", tone=" + String.format("%.1f", toneHz)
+                                        + "Hz frac=" + String.format("%.3f", ctcssDetector.lastFraction())
+                                        + " present=" + tonePresent : ""));
                             }
                         }
                         
