@@ -3,6 +3,12 @@
 Everything below shipped in **v4.0.0** (2026-10-15). Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-16 — APRS/AFSK TX over analog FM proven working (overturns "impossible")
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| F6 | Ran the long-deferred stereo-frame TX experiment and **proved APRS TX works** on this radio, retiring the 2026-03 "voice DSP destroys AFSK" hard constraint. Added a Diagnostics-gated TX harness: an `AudioRecord.read` after-hook replaces the mic buffer with generated audio (tone or AFSK packet) during a keyed PTT, in the OEM's native 8 kHz **stereo** frame format. Triggered by broadcast `com.dmrmod.APRS_TX_TEST` (`--es mode tone1200\|tone2200\|packet --es fmt stereo\|mono`); PTT keyed via the OEM `com.interphone.ptt.down/up` broadcasts. Includes a minimal AX.25 UI-frame builder (FCS-16). No shipped user-facing feature yet — this is the proven foundation for a real APRS TX feature. | `MainHook` (`hookAprsTxInjection`, `handleAprsTxTest`, `fillAprsTx`, `buildTestAx25Frame`), `AFSKGenerator` (reused) | **device + HackRF, on-air**: 1200/2200 Hz stereo → correct 1200/2200 Hz; mono → doubled 2400/3600 Hz; full packet decoded by direwolf `atest` 3/3 with valid FCS |
+
 ## 2026-10-16 — CTCSS decoder: reject false locks on DCS/non-tone signals
 
 | Backlog | Change | Files | Test |

@@ -179,6 +179,16 @@ public class MainHook implements IXposedHookLoadPackage {
     private static final CtcssDecoderBank toneDecoderBank = new CtcssDecoderBank(8000);
     private static TextView detectedToneTextView = null;   // readout under the panel header
     private static volatile int lastShownToneIndex = -2;   // -2 = never shown yet
+
+    // F6: APRS/AFSK TX experiment (docs/deep-dive/15 §3.1). While aprsTxActive, the AudioRecord.read
+    // after-hook replaces the mic buffer with aprsTxSamples (8 kHz mono source), so a keyed PTT
+    // transmits our tone/packet instead of mic audio, through the OEM's own TX path. aprsTxStereo
+    // duplicates each sample into interleaved L/R (the format the vendor service expects); false
+    // writes the mono waveform straight into the buffer to reproduce the old (broken) mono test.
+    private static volatile boolean aprsTxActive = false;
+    private static volatile short[] aprsTxSamples = null;   // looped mono 8 kHz source
+    private static volatile int aprsTxPos = 0;
+    private static volatile boolean aprsTxStereo = true;
     
     // Audio RMS thresholds for squelch levels 0-9 (tuned for 8kHz 16-bit PCM)
     // Based on real-world values: noise floor ~100-400, weak signal ~800-2000, strong ~4000+
@@ -567,6 +577,9 @@ public class MainHook implements IXposedHookLoadPackage {
         
         // Register debug packet broadcast receiver for command fuzzing
         registerDebugPacketReceiver(lpparam);
+
+        // F6: APRS/AFSK TX experiment — inject generated audio into the mic path during PTT.
+        hookAprsTxInjection(lpparam);
 
         // Hook message content activity to make GPS coordinates clickable
         hookMessageDisplay(lpparam);
@@ -12560,8 +12573,21 @@ public class MainHook implements IXposedHookLoadPackage {
                         
                         android.content.IntentFilter filter = new android.content.IntentFilter("com.dmrmod.SEND_DEBUG_PACKET");
                         context.registerReceiver(debugReceiver, filter, android.content.Context.RECEIVER_EXPORTED);
-                        
+
                         XposedBridge.log(TAG + ": ✓ Debug packet receiver registered (EXPORTED for ADB)");
+
+                        // F6: APRS TX experiment receiver (arm/disarm the mic-path injection).
+                        android.content.BroadcastReceiver aprsTxReceiver = new android.content.BroadcastReceiver() {
+                            @Override
+                            public void onReceive(android.content.Context c, android.content.Intent intent) {
+                                handleAprsTxTest(intent);
+                            }
+                        };
+                        android.content.IntentFilter aprsFilter = new android.content.IntentFilter();
+                        aprsFilter.addAction("com.dmrmod.APRS_TX_TEST");
+                        aprsFilter.addAction("com.dmrmod.APRS_TX_STOP");
+                        context.registerReceiver(aprsTxReceiver, aprsFilter, android.content.Context.RECEIVER_EXPORTED);
+                        XposedBridge.log(TAG + ": ✓ APRS TX test receiver registered (EXPORTED for ADB)");
                     }
                 }
             );
@@ -12571,6 +12597,147 @@ public class MainHook implements IXposedHookLoadPackage {
         }
     }
     
+    /**
+     * F6: hook AudioRecord.read so that while {@link #aprsTxActive} is set, the bytes the OEM TX path
+     * reads from the mic are replaced with our generated audio (tone or AFSK packet). This rides the
+     * OEM's own PTT/record loop ({@code PrizePcmManager.recordReadRun}) so the frame format, timing
+     * and state machine are untouched — the one injection method the March 2026 matrix never triggered.
+     */
+    private void hookAprsTxInjection(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            XposedHelpers.findAndHookMethod(android.media.AudioRecord.class, "read",
+                byte[].class, int.class, int.class, new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) {
+                        if (!aprsTxActive) return;
+                        try {
+                            Object r = param.getResult();
+                            int n = (r instanceof Integer) ? (Integer) r : 0;
+                            if (n <= 0) return;
+                            byte[] buf = (byte[]) param.args[0];
+                            int off = (Integer) param.args[1];
+                            fillAprsTx(buf, off, n);
+                        } catch (Throwable t) {
+                            XposedBridge.log(TAG + ": [aprs-tx] fill error: " + t.getMessage());
+                        }
+                    }
+                });
+            XposedBridge.log(TAG + ": ✓ APRS TX injection hook installed (AudioRecord.read)");
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Failed to hook AudioRecord.read for APRS TX: " + t.getMessage());
+        }
+    }
+
+    /** Fill {@code n} bytes of {@code buf} from the looped mono source, stereo-duplicating per config. */
+    private static void fillAprsTx(byte[] buf, int off, int n) {
+        short[] src = aprsTxSamples;
+        if (src == null || src.length == 0) return;
+        int pos = aprsTxPos;
+        if (aprsTxStereo) {
+            // interleaved L/R 16-bit: same sample to both channels (4 bytes per frame)
+            int frames = n / 4;
+            int i = off;
+            for (int f = 0; f < frames; f++) {
+                short s = src[pos];
+                pos = (pos + 1) % src.length;
+                buf[i]     = (byte) (s & 0xFF);
+                buf[i + 1] = (byte) ((s >> 8) & 0xFF);
+                buf[i + 2] = (byte) (s & 0xFF);
+                buf[i + 3] = (byte) ((s >> 8) & 0xFF);
+                i += 4;
+            }
+        } else {
+            // mono waveform written straight in (service reads consecutive samples as L/R → doubling)
+            int samples = n / 2;
+            int i = off;
+            for (int s2 = 0; s2 < samples; s2++) {
+                short s = src[pos];
+                pos = (pos + 1) % src.length;
+                buf[i]     = (byte) (s & 0xFF);
+                buf[i + 1] = (byte) ((s >> 8) & 0xFF);
+                i += 2;
+            }
+        }
+        aprsTxPos = pos;
+    }
+
+    /** F6: build the looped source for a test mode. Tones are 1 s (integer cycles → seamless loop). */
+    private static void handleAprsTxTest(android.content.Intent intent) {
+        try {
+            String action = intent.getAction();
+            if ("com.dmrmod.APRS_TX_STOP".equals(action)) {
+                aprsTxActive = false;
+                XposedBridge.log(TAG + ": [aprs-tx] STOP (injection disarmed)");
+                return;
+            }
+            if (!diagnosticsEnabled) {
+                XposedBridge.log(TAG + ": [aprs-tx] ignored — enable Diagnostics first (Device tab)");
+                return;
+            }
+            String mode = intent.getStringExtra("mode");
+            if (mode == null) mode = "tone1200";
+            boolean stereo = !"mono".equalsIgnoreCase(intent.getStringExtra("fmt"));
+            int amp = intent.getIntExtra("amp", 10000);
+
+            short[] src;
+            if ("packet".equalsIgnoreCase(mode)) {
+                byte[] frame = buildTestAx25Frame();
+                short[] afsk = AFSKGenerator.generateAFSKWithNRZI(frame);
+                // pad with 0.3 s silence so repeated packets have an inter-frame gap
+                int gap = (int) (0.3 * 8000);
+                src = new short[afsk.length + gap];
+                System.arraycopy(afsk, 0, src, 0, afsk.length);
+                XposedBridge.log(TAG + ": [aprs-tx] packet frame=" + frame.length + "B afsk=" + afsk.length + " samples");
+            } else {
+                int freq = "tone2200".equalsIgnoreCase(mode) ? 2200 : 1200;
+                src = new short[8000]; // 1 s = integer cycles of any whole Hz → loops seamlessly
+                for (int i = 0; i < src.length; i++) {
+                    src[i] = (short) (amp * Math.sin(2.0 * Math.PI * freq * i / 8000.0));
+                }
+                XposedBridge.log(TAG + ": [aprs-tx] tone " + freq + " Hz");
+            }
+            aprsTxSamples = src;
+            aprsTxPos = 0;
+            aprsTxStereo = stereo;
+            aprsTxActive = true;
+            XposedBridge.log(TAG + ": [aprs-tx] ARMED mode=" + mode + " fmt=" + (stereo ? "stereo" : "mono")
+                + " amp=" + amp + " — key PTT now; audio injected into mic path");
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [aprs-tx] arm error: " + t.getMessage());
+        }
+    }
+
+    /** Minimal AX.25 UI beacon frame (dest APDR16, src N0CALL) + FCS, no HDLC flags. */
+    private static byte[] buildTestAx25Frame() {
+        java.io.ByteArrayOutputStream f = new java.io.ByteArrayOutputStream();
+        writeAx25Addr(f, "APDR16", 0, false);
+        writeAx25Addr(f, "N0CALL", 0, true);
+        f.write(0x03); // UI control
+        f.write(0xF0); // PID no layer 3
+        byte[] info = ">DMRModHooks F6 TX test".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        f.write(info, 0, info.length);
+        byte[] body = f.toByteArray();
+        int fcs = 0xFFFF;
+        for (byte b : body) {
+            fcs ^= (b & 0xFF);
+            for (int i = 0; i < 8; i++) fcs = ((fcs & 1) != 0) ? ((fcs >>> 1) ^ 0x8408) : (fcs >>> 1);
+        }
+        fcs ^= 0xFFFF;
+        byte[] out = new byte[body.length + 2];
+        System.arraycopy(body, 0, out, 0, body.length);
+        out[body.length] = (byte) (fcs & 0xFF);
+        out[body.length + 1] = (byte) ((fcs >> 8) & 0xFF);
+        return out;
+    }
+
+    private static void writeAx25Addr(java.io.ByteArrayOutputStream f, String call, int ssid, boolean last) {
+        for (int i = 0; i < 6; i++) {
+            char c = i < call.length() ? call.charAt(i) : ' ';
+            f.write((c << 1) & 0xFE);
+        }
+        f.write(((ssid << 1) & 0x1E) | 0x60 | (last ? 0x01 : 0x00));
+    }
+
     /** Delete all but the newest {@code keep} files in DMR/uart_logs (names are timestamped). */
     private static void pruneUartLogs(final int keep) {
         new Thread(new Runnable() {

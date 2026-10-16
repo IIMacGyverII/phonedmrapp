@@ -4,7 +4,7 @@
 
 **Bottom line.**
 - **RX works but is built as a batch job:** 2-second buffers, a 3× resampler to satisfy a decoder hard-wired to 48 kHz, one packet per buffer, cold-started PLL every buffer, ~0.5 s overlap, uncompressed-position parsing only. It is fixable incrementally into a streaming decoder at native rate with full APRS parsing — no new hardware, no new libraries strictly required.
-- **TX was declared impossible on a test matrix that has a hole in it.** Every failed experiment with the *working* AFSK generator fed the radio a **mono** buffer; the OEM's own TX path captures and writes **8 kHz stereo** frames. A mono buffer read as L/R pairs doubles every tone (1200→2400, 2200→4400 Hz, the latter aliasing) — which produces exactly the "energy collapses, spurious tones, 48 kHz is catastrophic" signature in the final report. That is a cheap, decisive experiment that was never run. Until it is, "APRS TX is impossible" should be downgraded from *hard constraint* to *unresolved*.
+- **TX was declared impossible on a test matrix that had a hole in it — the hole is now filled, and TX WORKS (on-air 2026-10-16).** Every failed 2026-03 experiment fed the radio a **mono** buffer; the OEM's own TX path captures and writes **8 kHz stereo** frames. The §3.1 experiment was finally run (HackRF capture + direwolf): injecting **stereo-duplicated** frames through an `AudioRecord.read` after-hook (riding the OEM PTT via the `com.interphone.ptt.down/up` broadcasts) TX'd a 1200 Hz tone as **1200 Hz**, 2200 Hz as **2200 Hz**, and a full AFSK packet decoded 3/3 with valid FCS. The old **mono** frames doubled every tone (1200→**2400**, 2200→4400→aliased **3600** Hz, both measured) — the entire cause of the "energy collapses, spurious tones" signature. The voice DSP does **not** destroy AFSK. "APRS TX is impossible" is **retired**; see §3.1 results below and [[aprs-tx-works-stereo-frames]].
 - **Regardless of RF TX**, the phone has GPS and internet: an **APRS-IS beacon / RX-only iGate** gives real APRS presence and uploads everything the radio hears — the standard way phones do APRS.
 
 ---
@@ -146,6 +146,20 @@ Cost: one build, one afternoon, a second receiver (HackRF or any APRS-capable ra
 4. Only if 1–3 fail with the correct format is "voice DSP kills AFSK" actually established. Record the spectra either way and update `.grok/rules` §3 with the *evidence*, not just the verdict.
 
 Things to control for: TX audio level (the report saw 21 dB attenuation — also consistent with the tones being outside the passband), FM deviation, and that the test channel is analog (`type==1`) with the relay/interrupt fields the OEM would normally send.
+
+#### §3.1 RESULTS — run 2026-10-16 (TX confirmed working)
+
+Method: injection option 3 (hook `android.media.AudioRecord.read(byte[],int,int)` after-method; while armed, overwrite the mic buffer with generated 8 kHz audio). PTT keyed via the OEM `com.interphone.ptt.down`/`.up` broadcasts (`InterPhoneTalkBackFragment$InterPhoneReceiver`) — no physical button, no state-machine surgery. Measurement: HackRF One at 467.375 MHz (250 kHz below the 467.625 MHz analog test channel to dodge the DC spike), 2 MS/s, FM-demodulated in Python; packets decoded with direwolf 1.8.1 `atest`. Harness: `MainHook.hookAprsTxInjection` + `handleAprsTxTest` (broadcast `com.dmrmod.APRS_TX_TEST`, gated by the Diagnostics flag).
+
+| Injected | Frame format | Measured TX tone |
+|---|---|---|
+| 1200 Hz | **stereo-duplicated** | **1200 Hz** ✓ |
+| 1200 Hz | mono (2026-03 style) | **2400 Hz** (doubled) |
+| 2200 Hz | **stereo-duplicated** | **2200 Hz** ✓ |
+| 2200 Hz | mono | **3600 Hz** (4400 aliased) |
+| AFSK packet `N0CALL>APDR16:>DMRModHooks F6 TX test` | stereo | **decoded 3/3 by direwolf, valid FCS** |
+
+Conclusion: the OEM voice DSP passes Bell 202 AFSK at the correct frequencies; the 2026-03 "impossible" verdict was entirely the mono/stereo frame-format error (mono read as L/R pairs → every tone doubles). The experiment is settled in favour of TX. Step 5 of §5 is **done**; the remaining work is productizing (frame builder, modem, PTT/TOT sequencing, UI), not feasibility.
 
 ### 3.2 Independent of RF: APRS-IS beaconing from the phone
 
