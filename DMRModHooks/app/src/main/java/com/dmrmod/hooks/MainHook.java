@@ -1866,6 +1866,10 @@ public class MainHook implements IXposedHookLoadPackage {
                                 // Create horizontal container for RSSI box and Zone button
                                 LinearLayout rssiZoneContainer = new LinearLayout(context);
                                 rssiZoneContainer.setOrientation(LinearLayout.HORIZONTAL);
+                                // Keep SCAN/ZONE aligned and uncropped when ZONE wraps to 2 lines (e.g. "ZONE: WEATHER"):
+                                // baseline alignment would align by first-line baseline and push the taller button down/off.
+                                rssiZoneContainer.setBaselineAligned(false);
+                                rssiZoneContainer.setGravity(android.view.Gravity.CENTER_VERTICAL);
                                 rssiZoneContainer.setTag("DMR_RSSI_ZONE_CONTAINER");
                                 LinearLayout.LayoutParams rssiZoneContainerParams = new LinearLayout.LayoutParams(
                                     LinearLayout.LayoutParams.MATCH_PARENT,

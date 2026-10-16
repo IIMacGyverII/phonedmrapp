@@ -3,6 +3,12 @@
 Everything below shipped in **v4.0.0** (2026-10-15). Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-16 — Zone button no longer clipped when its name wraps to two lines
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | The intercom RSSI/Scan/Zone row is a horizontal `LinearLayout` with default **baseline alignment**, so a two-line zone label (e.g. "ZONE: WEATHER") aligned by its first-line baseline sat lower than the single-line SCAN button and its bottom was cut off. Set `setBaselineAligned(false)` + `CENTER_VERTICAL` gravity so the cells align by box, not baseline, and the row grows to the tallest cell. | `MainHook` (rssiZoneContainer) | **device**: before/after screenshots — "ZONE: WEATHER" now fully visible, same size as SCAN, centered |
+
 ## 2026-10-16 — Soft SQ slider no longer overlaps the Signal/Scan/Zone row
 
 | Backlog | Change | Files | Test |
