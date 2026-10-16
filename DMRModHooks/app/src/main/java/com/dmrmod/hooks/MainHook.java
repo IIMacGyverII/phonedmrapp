@@ -172,6 +172,9 @@ public class MainHook implements IXposedHookLoadPackage {
     // Software CTCSS tone squelch: when a channel has a receive tone, Soft SQ only opens on it.
     // RX PCM is 8 kHz mono (verified: a 100 Hz keyup read 605x above its neighbours).
     private static final CtcssDetector ctcssDetector = new CtcssDetector(8000);
+    // FM noise squelch for non-tone channels (opens on a quieted high band). Runs in telemetry mode
+    // for now (logs its ratio; the amplitude gate still decides) until the threshold is calibrated.
+    private static final NoiseSquelchDetector noiseDetector = new NoiseSquelchDetector(8000);
     
     // Audio RMS thresholds for squelch levels 0-9 (tuned for 8kHz 16-bit PCM)
     // Based on real-world values: noise floor ~100-400, weak signal ~800-2000, strong ~4000+
@@ -8994,6 +8997,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     isReceiving = false;
                                     isSquelchOpen = false;        // no signal -> soft-sq closed (stale-state tidy)
                                     ctcssDetector.reset();        // clear tone state for the next transmission
+                                    noiseDetector.reset();        // clear noise-squelch EMA for the next transmission
                                     previousSquelchOpen = false;  // Reset squelch state tracking
                                     
                                     // Process APRS buffer on receive stop ONLY if not in APRS monitoring mode
@@ -10517,6 +10521,9 @@ public class MainHook implements IXposedHookLoadPackage {
                             } else {
                                 shouldOpen = (amplitude >= audioOpenThresh);
                                 shouldClose = (amplitude < audioCloseThresh);
+                                // Noise-squelch telemetry only (amplitude still gates): logs its ratio
+                                // so the open threshold can be calibrated from real signal-vs-static.
+                                noiseDetector.process(audioData, length, activeThreshold);
                             }
                             
                             // Apply hysteresis
@@ -10580,7 +10587,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                     + (toneConfigured ? ", tone=" + String.format("%.1f", toneHz)
                                         + "Hz vr=" + String.format("%.1f", ctcssDetector.lastVoiceRatio())
                                         + " ar=" + String.format("%.2f", ctcssDetector.lastAdjRatio())
-                                        + " present=" + tonePresent : ""));
+                                        + " present=" + tonePresent
+                                        : ", nsq=" + String.format("%.3f", noiseDetector.smoothed())
+                                          + " (raw " + String.format("%.3f", noiseDetector.ratio()) + ")"));
                             }
                         }
                         
