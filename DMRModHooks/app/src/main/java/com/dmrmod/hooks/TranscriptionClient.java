@@ -78,7 +78,7 @@ public final class TranscriptionClient {
             String body = readAll(code >= 200 && code < 300 ? conn.getInputStream() : conn.getErrorStream());
             if (code < 200 || code >= 300) {
                 XposedBridge.log(TAG + ": transcription API HTTP " + code + ": " + body);
-                return "[API error: " + code + "]";
+                return friendlyError(code, body);
             }
 
             JSONObject json = new JSONObject(body);
@@ -98,6 +98,45 @@ public final class TranscriptionClient {
         } finally {
             if (conn != null) try { conn.disconnect(); } catch (Throwable ignore) { }
         }
+    }
+
+    /**
+     * Turn a Google error response into a short, actionable message (the display only has room for a
+     * line or two). Falls back to the raw code if the body can't be parsed.
+     */
+    private static String friendlyError(int code, String body) {
+        String status = "", reason = "", message = "";
+        try {
+            JSONObject err = new JSONObject(body).optJSONObject("error");
+            if (err != null) {
+                status = err.optString("status", "");
+                message = err.optString("message", "");
+                JSONArray details = err.optJSONArray("details");
+                if (details != null) {
+                    for (int i = 0; i < details.length(); i++) {
+                        String r = details.getJSONObject(i).optString("reason", "");
+                        if (!r.isEmpty()) { reason = r; break; }
+                    }
+                }
+            }
+        } catch (Throwable ignore) { }
+
+        if ("BILLING_DISABLED".equals(reason))
+            return "[Transcription: enable billing on your Google Cloud project]";
+        if ("SERVICE_DISABLED".equals(reason) || (message != null && message.contains("has not been used")))
+            return "[Transcription: enable the Cloud Speech-to-Text API in Google Cloud]";
+        if (reason.startsWith("API_KEY"))   // API_KEY_INVALID, API_KEY_SERVICE_BLOCKED, API_KEY_HTTP_REFERRER_BLOCKED...
+            return "[Transcription: API key invalid or not allowed for Speech-to-Text]";
+        if (code == 429 || "RESOURCE_EXHAUSTED".equals(status))
+            return "[Transcription: Google quota exceeded - try later]";
+        if (code == 400)
+            return "[Transcription: bad request (" + (message.isEmpty() ? "400" : shorten(message)) + ")]";
+        return "[Transcription API error " + code + (status.isEmpty() ? "" : " " + status) + "]";
+    }
+
+    private static String shorten(String s) {
+        s = s.trim();
+        return s.length() > 80 ? s.substring(0, 80) + "…" : s;
     }
 
     /** Wrap raw 16-bit mono PCM in a 44-byte WAV header (ported from the old service). */
