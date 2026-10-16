@@ -10590,8 +10590,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                         + "Hz vr=" + String.format("%.1f", ctcssDetector.lastVoiceRatio())
                                         + " ar=" + String.format("%.2f", ctcssDetector.lastAdjRatio())
                                         + " present=" + tonePresent
-                                        : ", nsq=" + String.format("%.3f", noiseDetector.smoothed())
-                                          + " (raw " + String.format("%.3f", noiseDetector.ratio()) + ")"));
+                                        : ", nsqHigh=" + String.format("%.1f", noiseDetector.smoothed())
+                                          + " (raw " + String.format("%.1f", noiseDetector.highAmp()) + ")"
+                                          + " sig=" + noiseDetector.isSignal()));
                             }
                         }
                         
