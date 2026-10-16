@@ -912,7 +912,7 @@ Local Simplex (↑N 250m)
 - ✅ **Reactivation support** - Reopen and adjust settings without restart
 
 ### Transcription Features (v1.2 - v1.7.0)
-- ✅ **Real-time speech-to-text** using OpenAI Whisper API
+- ✅ **Real-time speech-to-text** using Google Cloud Speech-to-Text API
 - ✅ **Automatic audio recording** organized by channel
 - ✅ **Per-channel transcription history** (last 3-10 messages)
 - ✅ **Daily transcription logs** with timestamps and DMR IDs
@@ -933,7 +933,7 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 - **🗂️ Easy access** - Backups saved to Download folder (easy file transfer)
 - **⚡ Direct database access** - No shell commands, fast and reliable
 - **🔒 No APK modification** - Works via runtime hooks (preserves platform signature)
-- **🎙️ Real-time Transcription** - Live speech-to-text powered by OpenAI Whisper API
+- **🎙️ Real-time Transcription** - Live speech-to-text powered by Google Cloud Speech-to-Text
 - **📝 Automatic Logging** - Daily transcription logs organized by channel with timestamps
 
 ## Current Status ✅
@@ -957,7 +957,7 @@ LSPosed module for the Ulefone PriInterPhone DMR radio app that adds:
 **Zone Management**: ✅ Working - Create, edit, assign zones from channel edit page  
 **Export**: ✅ Working - All 5 OpenGD77 CSV files + PDF summary + Zones.csv  
 **Import**: ✅ Working - Full Digital & Analog support + Zones import  
-**Transcription**: ✅ Working - Real-time speech-to-text with OpenAI Whisper API  
+**Transcription**: ✅ Working - Real-time speech-to-text with Google Cloud Speech-to-Text  
 **Audio Recording**: ✅ Working - Automatic WAV recording organized by channel  
 **Per-Channel History**: ✅ Working - Transcription messages persist per channel  
 **Timestamps**: ✅ Working - All messages include HH:mm:ss timestamps  
@@ -999,7 +999,7 @@ adb shell rm /sdcard/DMR/DMRDEBUG.bin
 
 - **Module**: com.dmrmod.hooks (LSPosed Xposed module)
 - **Target App**: com.pri.prizeinterphone (Ulefone system app)
-- **Transcription Service**: com.macdmr.transcription (Standalone AIDL service)
+- **Transcription**: in-process Google Cloud Speech-to-Text (built into the module; no separate app)
 - **Device**: Ulefone Armor 26 Ultra (Android 13)
 - **LSPosed**: v1.9.2 (Zygisk)
 - **Current Version**: v3.3.2 (March 19, 2026)
@@ -1033,7 +1033,7 @@ adb shell rm /sdcard/DMR/DMRDEBUG.bin
 
 ### ✅ Phase 4: Real-time Speech-to-Text Transcription (v1.2 - v1.7.0)
 - **Live transcription** of all DMR audio transmissions
-- **OpenAI Whisper API** integration for accurate recognition
+- **Google Cloud Speech-to-Text** integration for accurate recognition
 - **Automatic audio recording** - All transmissions saved as WAV files
 - **Per-channel message history** - Each channel maintains its own scrollable message list
 - **Channel switching memory** - Return to any channel and see previous messages (up to 10 messages per channel)
@@ -1045,7 +1045,7 @@ adb shell rm /sdcard/DMR/DMRDEBUG.bin
 - **Format**: `[14:30:22] ID: 123456 - Transcribed text here`
 - **Scrollable UI** - Message list grows dynamically with height cap at 100dp
 - **Network resilience** - Connectivity checking and comprehensive error handling
-- **Secure API key** - Stored in `/sdcard/DMR/api_key.txt` (auto-created on first run)
+- **Secure API key** - Stored in `Download/DMR/api_key.txt` (auto-created on first run)
 - **Cost**: First $5/month FREE credit, then affordable per-second pricing
 - **Status**: ✅ Successfully transcribing real DMR audio in production
 
@@ -1129,80 +1129,66 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
    - Reboot device
    - LSPosed Manager app will appear automatically
 
-### Step 2: Install DMRModHooks Module & Transcription Service
+### Step 2: Install the DMRModHooks Module
 
 #### Option A: Download Pre-built Release (✅ Recommended for All Users)
 
-**Use the latest GitHub release for all current features (RadioID lookup, TG list import, OpenGD77 CSV, APRS/SSTV/NOAA/VFO, transcription).**
+**Use the latest GitHub release for all current features (Nearby Repeaters, in-app updates, RadioID lookup, OpenGD77 CSV, APRS/SSTV/NOAA/VFO, transcription).**
 
 1. **Download Latest Release**:
    - Go to [Releases](https://github.com/IIMacGyverII/phonedmrapp/releases/latest)
-   - Download `DMRModHooks-v3.4.6.apk` (**latest version**)
-   - Download `DMRTranscriptionService-v1.0.apk` (if using transcription)
+   - Download `DMRModHooks-v4.0.0.apk` (**latest version**)
    - Download `OpenGD77CPS-Mac_Build_*.zip` from the same release (desktop CPS fork)
 
-2. **Install Both APKs** (reboot after DMRModHooks — required for LSPosed):
+2. **Install** (reboot after — required for LSPosed):
    ```powershell
-   adb install -r DMRModHooks-v3.4.6.apk
+   adb install -r DMRModHooks-v4.0.0.apk
    adb reboot
-   adb install -r DMRTranscriptionService-v1.0.apk  # Optional, for transcription only
    ```
 
 3. **Enable caller lookup** (recommended): Device tab → **Download RadioID Database** (one-time, ~17 MB)
+
+> Already on v3.4.6 or later? Skip the manual download — open **Device tab → Check for updates** and update in-app, no PC needed.
 
 #### Option B: Build from Source (For Developers & Experimenters)
 
 **Building from source gives you access to the latest development code and experimental features.**
 
-1. **Build Both APKs**:
+1. **Build & install** (then reboot so LSPosed loads the new hook code):
    ```powershell
-   # Build DMRModHooks
    cd DMRModHooks
-   .\gradlew.bat assembleDebug
-   
-   # Build TranscriptionService
-   cd ..\DMRTranscriptionService
-   .\gradlew.bat assembleDebug
+   .\install.ps1   # builds, installs, reboots automatically
    ```
-
-2. **Install Both Modules** (then reboot so LSPosed loads the new hook code):
-   ```powershell
-   adb install -r DMRModHooks\app\build\outputs\apk\debug\app-debug.apk
-   adb install -r DMRTranscriptionService\app\build\outputs\apk\debug\app-debug.apk
-   adb reboot
-   ```
-   Or from `DMRModHooks/`: `.\install.ps1` (builds, installs DMRModHooks, reboots automatically).
+   Or manually: `.\gradlew.bat assembleDebug`, then `adb install -r app\build\outputs\apk\debug\app-debug.apk` and `adb reboot`.
 
 #### Enable in LSPosed Manager
 
-3. **Activate Module** (after reboot from step 2, or reboot again if you changed LSPosed scope):
+2. **Activate Module** (after reboot):
    - Open LSPosed Manager app on device
    - Go to "Modules" tab
    - Enable "DMR Mod Hooks" checkbox
    - Tap "DMR Mod Hooks" → Application scope
    - Verify `com.pri.prizeinterphone` is selected
-   - **Important**: Do NOT add `com.macdmr.transcription` to LSPosed scope (it works standalone)
    - Reboot device
 
-### Step 3: Configure OpenAI API (for Transcription - Optional)
+### Step 3: Configure Transcription (Optional)
 
-**Note**: Transcription is optional. GPS navigation, zone management, and all other features work without it.
+**Note**: Transcription is optional — every other feature works without it. Speech-to-text is **built into the module** (no separate app) and uses the **Google Cloud Speech-to-Text API**.
 
-1. **Get API Key**:
-   - Visit https://platform.openai.com/api-keys
-   - Create account or sign in
-   - Click "Create new secret key"
-   - Copy the key (starts with `sk-...`)
+1. **Get a Google Cloud API key**:
+   - Visit https://console.cloud.google.com
+   - Create a project and enable the **Cloud Speech-to-Text API**
+   - **Enable billing** on the project (required even for the free 60 min/month tier)
+   - Create an API key (starts with `AIza...`)
 
-2. **Configure API Key**:
-   - Create file: `/sdcard/DMR/api_key.txt`
-   - Paste your API key on first line (one line, no quotes)
-   - The app auto-creates this folder on first run if missing
+2. **Configure the key**:
+   - Put it on the first line of `Download/DMR/api_key.txt` (one line, no quotes)
+   - The app auto-creates this file on first run if missing
    - **Note**: File is device-local, never synced to GitHub
 
 3. **Pricing**:
-   - Whisper API: $0.006 per minute
-   - First $5 of usage FREE with new accounts
+   - Free tier: 60 minutes/month
+   - After the free tier: ~$0.006 per 15 seconds (~$1.44/hour)
    - Very affordable for typical DMR usage (~$0.002 per 5-second transmission)
 
 ### Step 4: Test Installation
@@ -1350,8 +1336,7 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 
 1. **Enable Transcription**:
    - Tap **TXT** button on main screen (turns green when enabled)
-   - Transcription service automatically starts
-   - Ensure `/sdcard/DMR/api_key.txt` contains your OpenAI API key
+   - Ensure `Download/DMR/api_key.txt` contains your Google Cloud API key (long-press TXT to set it)
 
 2. **During Transmissions**:
    - Real-time transcription appears below channel info in borderbox
@@ -1417,7 +1402,7 @@ phonedmrapp/
 │   │   └── DirectDatabaseImporter.java # OpenGD77 CSV import
 │   ├── build.gradle
 │   └── README.md                       # Module documentation
-├── DMRTranscriptionService/            # Speech-to-Text Service
+├── DMRTranscriptionService/            # Legacy standalone STT service (folded into the module)
 │   ├── app/src/main/
 │   │   ├── java/com/macdmr/transcription/
 │   │   │   └── TranscriptionService.java  # Google Cloud API integration
@@ -1520,9 +1505,9 @@ phonedmrapp/
 - **Device**: 5006AF1020002922 (production ROM, Magisk installed)
 
 ### Transcription Architecture
-- **Service**: Standalone AIDL service (com.macdmr.transcription)
-- **API**: Google Cloud Speech-to-Text v1
-- **HTTP Client**: OkHttp 4.12.0 with 30-second timeouts
+- **In-process**: `TranscriptionClient` in the module (no separate app since v4.0.0)
+- **API**: Google Cloud Speech-to-Text v1 (`speech:recognize`)
+- **HTTP Client**: `HttpURLConnection` with 30-second timeouts
 - **Audio Format**: PCM 16-bit mono → WAV with proper header → Base64
 - **Network**: Connectivity checking with ACCESS_NETWORK_STATE permission
 - **Security**: API key in gitignored local.properties, injected via BuildConfig
