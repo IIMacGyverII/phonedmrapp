@@ -51,11 +51,17 @@ public final class CtcssDetector {
 
     private void resetWindow() { s1 = 0; s2 = 0; n = 0; totalEnergy = 0; }
 
-    /** Feed a buffer of 16-bit LE mono PCM; present()/lastFraction() update each completed window. */
+    /**
+     * Feed a raw RX buffer; present()/lastFraction() update each completed window. The buffer is
+     * 8 kHz <b>stereo</b> 16-bit with L==R (measured 2026-10-14), so we take the L sample of each
+     * 4-byte frame — genuine 8 kHz mono, matching the recording path and the sampleRate (8000) used
+     * for the Goertzel coefficient. Stepping by 2 instead would read L,R,L,R at an effective 16 kHz
+     * and look for the tone in the wrong bin.
+     */
     public void process(byte[] data, int length) {
         if (freq <= 0) return;
         if (length > data.length) length = data.length;
-        for (int i = 0; i + 1 < length; i += 2) {
+        for (int i = 0; i + 1 < length; i += 4) {   // L sample per 4-byte stereo frame -> 8 kHz mono
             int x = (short) ((data[i + 1] << 8) | (data[i] & 0xFF));
             double s0 = x + coeff * s1 - s2;
             s2 = s1;
