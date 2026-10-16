@@ -3,6 +3,18 @@
 Everything below shipped in **v4.0.0** (2026-10-15). Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-16 — CTCSS decoder: reject false locks on DCS/non-tone signals
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| SQ2 | The CTCSS received-tone display could falsely show a tone (e.g. "CTCSS 77.0 Hz") on a DCS or broadband sub-audible signal, because a single Goertzel bin rose above the others by ratio ~15–31. Raised the lock ratio from 15→50 (release 8→25) after on-air measurement: genuine CTCSS tones peak at ratio ~440–660, so 50 clears the observed false range with wide margin while staying far below real tones. | `CtcssDecoderBank` (RATIO_ON/RATIO_OFF) | **device, on-air**: DCS transmissions (023N/047N/114N/023I) no longer trigger a bogus CTCSS readout; real tone detection unaffected |
+
+## 2026-10-16 — Investigated DCS received-code display (not feasible from audio)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| SQ2 | Investigated showing the received **DCS** code alongside CTCSS. Built a 23-bit decoder and captured on-air DCS transmissions, but the sub-audible DCS data isn't recoverable from the OEM's processed 8 kHz audio: the band sits at ~1.5% of voiceband with no 134-baud structure, while CTCSS tones pass the same path at huge amplitude (radios high-pass the sub-audible out of speaker audio; a steady tone survives via narrowband gain, an arbitrary data stream does not). The experimental decoder + debug capture were removed. **No user-facing change** beyond the CTCSS hardening above; DCS channels remain squelched by the MCU in hardware (only the code display is unavailable). | (removed `DcsDecoder`) | n/a — investigation; evidence in `docs/BACKLOG.md` SQ2 |
+
 ## 2026-10-16 — Received CTCSS tone decoder (shows which tone is coming in)
 
 | Backlog | Change | Files | Test |
