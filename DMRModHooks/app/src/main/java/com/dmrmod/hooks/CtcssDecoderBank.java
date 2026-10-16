@@ -36,10 +36,13 @@ public final class CtcssDecoderBank {
     private int candidate = -1, runs = 0;
     private volatile double lastPeak, lastRatio, lastEnergy;
 
-    // Tunables (first-pass).
+    // Tunables. RATIO thresholds raised after on-air data (2026-10-16): a genuine CTCSS tone peaks at
+    // ratio ~440-660, while a DCS data stream (broadband sub-audible) false-locked a single bin at
+    // ratio up to ~31. 50/25 clears that false range with wide margin and stays far below real tones.
+    // (If weak real tones are ever missed, lower RATIO_ON; if DCS still false-locks, raise it.)
     private static final int CONFIRM = 2;             // consecutive windows to (un)lock
-    private static final double RATIO_ON = 15.0;      // peak / mean(other bins) to lock
-    private static final double RATIO_OFF = 8.0;      // ... to release (hysteresis)
+    private static final double RATIO_ON = 50.0;      // peak / mean(other bins) to lock
+    private static final double RATIO_OFF = 25.0;     // ... to release (hysteresis)
     private static final double NEIGHBOUR = 1.2;      // peak must beat each neighbour tone by this
     private static final double ENERGY_MIN = 4.0e5;   // per-sample energy floor (raw 16-bit, dead-air guard)
 
