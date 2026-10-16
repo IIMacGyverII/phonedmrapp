@@ -2289,7 +2289,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 finalSquelchValueLabel.setText(String.valueOf(softwareSquelchThreshold));
                                 
                                 // Insert squelch container at index 3 (initially hidden if software squelch disabled)
-                                squelchContainer.setVisibility(isSoftwareSquelchEnabled ? View.VISIBLE : View.GONE);
+                                applySoftSqBarVisibility(squelchContainer, currentChannelType == 1, isSoftwareSquelchEnabled);
                                 rootLayout.addView(squelchContainer, 3);
                                 XposedBridge.log(TAG + ": ✓ Added squelch slider at index 3 (initially " + (isSoftwareSquelchEnabled ? "visible" : "hidden") + ")");
                                 
@@ -2531,10 +2531,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                             XposedBridge.log(TAG + ": Software squelch disabled - restoring the channel's hardware squelch level");
                                             Toast.makeText(context, "Hardware squelch enabled", Toast.LENGTH_SHORT).show();
                                             
-                                            // Hide the slider
-                                            if (squelchContainer != null) {
-                                                squelchContainer.setVisibility(View.GONE);
-                                            }
+                                            // Hide the slider but keep its space reserved on analog (no reflow below)
+                                            applySoftSqBarVisibility(squelchContainer, currentChannelType == 1, false);
                                             
                                             // Set hardware squelch to 2
                                             disableSoftwareSquelchOnCurrentChannel();
@@ -3168,8 +3166,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                     View squelchContainer = rootLayout.findViewWithTag("DMR_SQUELCH_CONTAINER");
                                     if (squelchContainer != null) {
                                         boolean shouldShow = (channelType == 1 && isSoftwareSquelchEnabled);
-                                        squelchContainer.setVisibility(shouldShow ? View.VISIBLE : View.GONE);
-                                        XposedBridge.log(TAG + ": [INIT] Squelch slider " + (shouldShow ? "shown" : "hidden") + " (analog=" + (channelType == 1) + ", softSqEnabled=" + isSoftwareSquelchEnabled + ")");
+                                        applySoftSqBarVisibility(squelchContainer, channelType == 1, isSoftwareSquelchEnabled);
+                                        XposedBridge.log(TAG + ": [INIT] Squelch slider " + (shouldShow ? "shown" : (channelType == 1 ? "reserved" : "hidden")) + " (analog=" + (channelType == 1) + ", softSqEnabled=" + isSoftwareSquelchEnabled + ")");
                                     } else {
                                         XposedBridge.log(TAG + ": [INIT] Could not find squelch container to set initial visibility");
                                     }
@@ -3286,8 +3284,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                             View squelchContainer = rootLayout.findViewWithTag("DMR_SQUELCH_CONTAINER");
                                             if (squelchContainer != null) {
                                                 boolean shouldShow = (channelType == 1 && isSoftwareSquelchEnabled);
-                                                squelchContainer.setVisibility(shouldShow ? View.VISIBLE : View.GONE);
-                                                XposedBridge.log(TAG + ": Squelch slider " + (shouldShow ? "shown" : "hidden") + " (analog=" + (channelType == 1) + ", softSqEnabled=" + isSoftwareSquelchEnabled + ")");
+                                                applySoftSqBarVisibility(squelchContainer, channelType == 1, isSoftwareSquelchEnabled);
+                                                XposedBridge.log(TAG + ": Squelch slider " + (shouldShow ? "shown" : (channelType == 1 ? "reserved" : "hidden")) + " (analog=" + (channelType == 1) + ", softSqEnabled=" + isSoftwareSquelchEnabled + ")");
                                             } else {
                                                 XposedBridge.log(TAG + ": Could not find squelch container to update visibility");
                                             }
@@ -10892,6 +10890,16 @@ public class MainHook implements IXposedHookLoadPackage {
      * Apply a channel's saved Soft SQ setting (on/off + level) when it loads, and sync the intercom
      * toggle/slider to match. Analog only — Soft SQ does nothing on digital. No row = Soft SQ off.
      */
+    /**
+     * Intercom Soft SQ bar visibility. On analog channels the bar's row is always laid out
+     * (VISIBLE when on, INVISIBLE when off) so toggling Soft SQ never reflows the panel below;
+     * on digital channels it is GONE (Soft SQ does not apply and the toggle is hidden).
+     */
+    private static void applySoftSqBarVisibility(View container, boolean analog, boolean enabled) {
+        if (container == null) return;
+        container.setVisibility(!analog ? View.GONE : (enabled ? View.VISIBLE : View.INVISIBLE));
+    }
+
     private static void applyChannelSoftSq(final Context ctx, int channelId) {
         try {
             if (ctx == null) return;
@@ -10910,8 +10918,7 @@ public class MainHook implements IXposedHookLoadPackage {
                         if (softwareSquelchToggleButton != null) softwareSquelchToggleButton.setChecked(enable);
                         if (squelchSeekBarView != null) squelchSeekBarView.setProgress(level);
                         if (squelchValueTextView != null) squelchValueTextView.setText(String.valueOf(level));
-                        if (softwareSquelchContainer != null)
-                            softwareSquelchContainer.setVisibility(enable && currentChannelType == 1 ? View.VISIBLE : View.GONE);
+                        applySoftSqBarVisibility(softwareSquelchContainer, currentChannelType == 1, enable);
                     } catch (Throwable ignore) { }
                 }
             });

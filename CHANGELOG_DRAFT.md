@@ -3,6 +3,12 @@
 Everything below shipped in **v4.0.0** (2026-10-15). Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-16 — Toggling Soft SQ no longer shifts the panel below
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | The intercom Soft SQ bar was toggled `GONE`↔`VISIBLE`, so turning it on/off reflowed the Signal panel and everything beneath. On analog channels the bar's row is now always laid out — `VISIBLE` when on, `INVISIBLE` (space reserved) when off — so nothing below moves; digital channels keep it `GONE` (Soft SQ doesn't apply there). New `applySoftSqBarVisibility(container, analog, enabled)` helper routes every intercom visibility site. | `MainHook` (applySoftSqBarVisibility + init/toggle/channel-change/applyChannelSoftSq sites) | **device**: before/after screenshots on STMA EMS/Fire — Analog History panel stays put when toggling Soft SQ off |
+
 ## 2026-10-16 — Zone button no longer clipped when its name wraps to two lines
 
 | Backlog | Change | Files | Test |
