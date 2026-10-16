@@ -3,6 +3,12 @@
 Everything below shipped in **v4.0.0** (2026-10-15). Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-16 — Soft SQ slider no longer overlaps the Signal/Scan/Zone row
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | The intercom Soft SQ slider + "SQ:" readout had a **−18dp top margin** ("pull up closer to RSSI") that dragged it up under the "Signal: -xxx dBm" box and the SCAN button. Changed to a small **+4dp** gap so it sits in its own row directly beneath that button row. | `MainHook` (squelchContainerParams.topMargin) | **device**: before/after screenshots — slider now clears the buttons; per-channel Soft SQ still restores on load (SOFT SQ on, level 6) |
+
 ## 2026-10-15 — Per-channel Soft SQ (editor controls, load-apply, export/import)
 
 | Backlog | Change | Files | Test |

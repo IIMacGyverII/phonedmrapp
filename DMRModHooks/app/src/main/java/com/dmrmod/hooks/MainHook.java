@@ -2164,7 +2164,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     halfScreenWidth,  // Half screen width
                                     LinearLayout.LayoutParams.WRAP_CONTENT
                                 );
-                                squelchContainerParams.topMargin = (int)(-18 * context.getResources().getDisplayMetrics().density);  // Pull up closer to RSSI (reduced from -16dp to -18dp)
+                                squelchContainerParams.topMargin = (int)(4 * context.getResources().getDisplayMetrics().density);  // Small gap below the Signal/Scan/Zone row (was -18dp, which overlapped those buttons)
                                 squelchContainerParams.bottomMargin = (int)(-6 * context.getResources().getDisplayMetrics().density);  // Pull up content below
                                 squelchContainerParams.leftMargin = margin16dp;
                                 squelchContainerParams.rightMargin = 0;  // No right margin
