@@ -3233,7 +3233,23 @@ public class MainHook implements IXposedHookLoadPackage {
                                 XposedBridge.log(TAG + ": updateUI called during VFO mode - skipping channel reload");
                                 return;
                             }
-                            
+
+                            // Append the CTCSS/DCS tone to the channel-info panel (the OEM shows freq,
+                            // power and SQ but not the tone). Encode (TX) goes on the Send line, decode
+                            // (RX) on the Receive line. Analog only; runs after the OEM set the text.
+                            try {
+                                Object cd = XposedHelpers.getObjectField(param.thisObject, "mCurrentChannelData");
+                                Object lv = XposedHelpers.getObjectField(param.thisObject, "mLocalView");
+                                if (cd != null && lv instanceof View && XposedHelpers.getIntField(cd, "type") == 1) {
+                                    View root = (View) lv;
+                                    android.content.res.Resources res = root.getResources();
+                                    appendToneToField(root, res.getIdentifier("fragment_talkback_send", "id", TARGET_PACKAGE),
+                                        XposedHelpers.getIntField(cd, "txType"), XposedHelpers.getIntField(cd, "txSubCode"));
+                                    appendToneToField(root, res.getIdentifier("fragment_talkback_recieve", "id", TARGET_PACKAGE),
+                                        XposedHelpers.getIntField(cd, "rxType"), XposedHelpers.getIntField(cd, "rxSubCode"));
+                                }
+                            } catch (Throwable ignore) { }
+
                             // Get current channel number and type
                             Object channelData = XposedHelpers.getObjectField(param.thisObject, "mCurrentChannelData");
                             if (channelData != null) {
@@ -10834,6 +10850,20 @@ public class MainHook implements IXposedHookLoadPackage {
      * a plain SharedPreferences write, no method hooking. Idempotent and self-healing: run on each
      * toggle and at app start, so a value left stuck by an unclean shutdown is put back.
      */
+    /** Append a CTCSS/DCS tone label to an OEM channel-info field (no-op for None or a missing view). */
+    private static void appendToneToField(View root, int id, int toneType, int subCode) {
+        if (id == 0 || toneType == 0) return;   // 0 = None
+        try {
+            View v = root.findViewById(id);
+            if (v instanceof TextView) {
+                TextView tv = (TextView) v;
+                String tone = ToneConverter.formatForDisplay(toneType, subCode);
+                String cur = tv.getText() == null ? "" : tv.getText().toString();
+                if (!cur.contains(tone)) tv.setText(cur + "  " + tone);
+            }
+        } catch (Throwable ignore) { }
+    }
+
     private static void syncBusyNoSend(Context ctx) {
         if (ctx == null) return;
         try {
