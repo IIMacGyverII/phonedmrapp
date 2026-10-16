@@ -620,6 +620,9 @@ public class MainHook implements IXposedHookLoadPackage {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         final Activity activity = (Activity) param.thisObject;
+                        // Self-heal the OEM busy-no-send setting: Soft SQ starts OFF each launch, so
+                        // restore the user's value if a prior session left it forced off.
+                        syncBusyNoSend(activity);
                         activity.runOnUiThread(new Runnable() {
                             @Override public void run() {
                                 applyBottomNavStyle(activity, "talkback");
@@ -2549,9 +2552,12 @@ public class MainHook implements IXposedHookLoadPackage {
                                             // Set hardware squelch to 2
                                             disableSoftwareSquelchOnCurrentChannel();
                                         }
+                                        // Soft SQ forces the squelch open, so drop the OEM busy
+                                        // lockout while it's on (restored when off) — see syncBusyNoSend.
+                                        syncBusyNoSend(context);
                                     }
                                 });
-                                
+
                                 buttonContainer.addView(softSqToggle);
                                 XposedBridge.log(TAG + ": ✓ Added software squelch toggle button above TXT");
                                 
@@ -8963,6 +8969,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 case 11: // MIX_CHECK_DIGITAL_RECEIVE_STOP
                                     XposedBridge.log(TAG + ": RECEIVE_STOP detected (type: " + currentChannelType + ")");
                                     isReceiving = false;
+                                    isSquelchOpen = false;        // no signal -> soft-sq closed (stale-state tidy)
                                     previousSquelchOpen = false;  // Reset squelch state tracking
                                     
                                     // Process APRS buffer on receive stop ONLY if not in APRS monitoring mode
@@ -10801,6 +10808,41 @@ public class MainHook implements IXposedHookLoadPackage {
      * 
      * Must be called on current channel after enabling software squelch.
      */
+    /**
+     * Keep the OEM "Busy No Send" lockout out of the way while Soft SQ is on. Soft SQ forces the
+     * hardware squelch open (sq=0), so the firmware reports the channel busy on any carrier and the
+     * OEM blocks PTT. We flip {@code pref_person_busy_no_send} (read live by {@code DmrManager} on
+     * each PTT) off while Soft SQ is enabled and restore the user's own value when it is disabled —
+     * a plain SharedPreferences write, no method hooking. Idempotent and self-healing: run on each
+     * toggle and at app start, so a value left stuck by an unclean shutdown is put back.
+     */
+    private static void syncBusyNoSend(Context ctx) {
+        if (ctx == null) return;
+        try {
+            android.content.SharedPreferences oem =
+                ctx.getSharedPreferences("com.pri.prizeinterphone.data.person", Context.MODE_PRIVATE);
+            android.content.SharedPreferences mod =
+                ctx.getSharedPreferences(DIAG_PREFS, Context.MODE_PRIVATE);
+            if (isSoftwareSquelchEnabled) {
+                if (!mod.contains("busyNoSend_orig")) {
+                    mod.edit().putBoolean("busyNoSend_orig",
+                        oem.getBoolean("pref_person_busy_no_send", true)).apply();
+                }
+                if (oem.getBoolean("pref_person_busy_no_send", true)) {
+                    oem.edit().putBoolean("pref_person_busy_no_send", false).commit();
+                    XposedBridge.log(TAG + ": Soft SQ on - disabled busy-no-send so PTT isn't blocked by the forced-open squelch");
+                }
+            } else if (mod.contains("busyNoSend_orig")) {
+                boolean orig = mod.getBoolean("busyNoSend_orig", true);
+                oem.edit().putBoolean("pref_person_busy_no_send", orig).commit();
+                mod.edit().remove("busyNoSend_orig").apply();
+                XposedBridge.log(TAG + ": Soft SQ off - restored busy-no-send to " + orig);
+            }
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": syncBusyNoSend failed: " + t);
+        }
+    }
+
     private static void enableSoftwareSquelchOnCurrentChannel() {
         if (appClassLoader == null) {
             XposedBridge.log(TAG + ": Cannot enable software squelch - appClassLoader is null");

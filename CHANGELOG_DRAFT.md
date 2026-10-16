@@ -3,6 +3,12 @@
 Everything below shipped in **v4.0.0** (2026-10-15). Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-15 — Soft SQ: PTT no longer blocked by the busy-channel lockout
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | Soft SQ forces the hardware squelch open (`sq=0`) so it can gate audio in software — but then the firmware reports the channel busy on any carrier (including noise Soft SQ is muting), and the OEM **"Busy No Send"** lockout (`pref_person_busy_no_send`, default on, read live by `DmrManager` and enforced in `TalkBackStateMachine`) blocks PTT. While Soft SQ is on, the mod now sets that pref off and **restores the user's own value** when Soft SQ is turned off, so transmit works. Plain SharedPreferences write on the shared OEM prefs file (same process) — **no method hooking**; idempotent and self-healing via `syncBusyNoSend`, called from the Soft SQ toggle and at app start (so a value left stuck by an unclean shutdown is put back). Also reset `isSquelchOpen` on RECEIVE_STOP (stale-state tidy). | `MainHook` (`syncBusyNoSend`, Soft SQ toggle, onCreate self-heal, RECEIVE_STOP) | **device**: builds, installs, no crash; startup self-heal runs and correctly no-ops when nothing is stuck. On-air PTT-under-Soft-SQ test is the operator's (the Intercom tab's on-screen PTT must not be driven over adb). An earlier attempt that hooked `getBusyNoSend()` directly caused a native ART crash (`art::Thread::CreateCallback`) and was dropped in favour of this no-hook approach |
+
 ## 2026-10-15 — Transcription folded into the module (no separate app)
 
 | Backlog | Change | Files | Test |
