@@ -3,6 +3,26 @@
 Everything below shipped in **v4.0.0** (2026-10-15). Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-15 — Per-channel Soft SQ (editor controls, load-apply, export/import)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| SQ3 | Soft SQ (on/off + level) is now **per channel** instead of global. New `SoftSqDatabase` (keyed by channel `_id`). **Channel editor** gets two rows for analog channels — "Soft SQ" (On/Off) and "Soft SQ Level" (1–9) — saved via the `saveChannelData` after-hook (works for new channels; `_id` valid post-save). On channel load the saved setting is **applied** and the intercom toggle/slider sync to it; the live intercom controls edit the current channel (one source of truth, replacing the global `dmrmod_squelch` prefs). | `SoftSqDatabase` (new), `MainHook` (`applyChannelSoftSq`, editor rows + `buildEditorRow`, save hook, per-channel save from intercom) | **device**: builds, no crash; load-apply runs (`Applied Soft SQ for _id …`). Editor rows + save/restore are the operator's test |
+| SQ3 | **Export/import**: two columns appended to `Channels.csv` — `SoftSQ` (On/Off) + `SoftSQLevel` (1–9) — read from / written to `SoftSqDatabase`. Backward-compatible: absent columns import as off; the extra columns are ignored by older importers and the OpenGD77 fork. **OpenGD77 fork still needs the columns added** (backlog SQ3). | `DirectDatabaseExporter` (header + row), `DirectDatabaseImporter` (parse last two fields → `pendingSoftSq`, apply after commit) | builds |
+
+## 2026-10-15 — Soft SQ: FM noise squelch for non-tone channels
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| SQ1 | The amplitude carrier squelch is **inverted for FM** — a weak signal's demod noise is quieter than static, so a high level muted the signal and passed the louder static (on-air: −57 dBm signal RMS 2000–4700 vs static 11000–15000). New `NoiseSquelchDetector` gates non-tone analog channels on the **absolute high-band noise** (3.3–3.75 kHz), which the carrier quiets regardless of voice level (an earlier high/mid ratio was voice-activated and needed shouting). Recordings: static 50–125, signal 1–12 → per-level thresholds in the gap, EMA-smoothed. Telemetry `nsqHigh=` logged; thresholds flagged for re-tuning (SQ1). | `NoiseSquelchDetector` (new), `MainHook` (non-tone gate) | **device**: builds, no crash; calibrated from on-air captures. Needs re-tuning across more radios (SQ1) |
+
+## 2026-10-15 — Soft SQ: CTCSS squelch fixes + received-tone display
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | **CTCSS detection fixes** from on-air testing: (1) read the **L channel** of the 8 kHz stereo buffer (was stepping 2 bytes → tone in the wrong bin → never opened); (2) **voice-robust** — compare the tone to four off-tone bins instead of total energy (the old fraction collapsed on voice and dropped the squelch mid-transmission); (3) **adjacent-tone rejection** — also compare to the two neighbouring standard tones (97.4 Hz falsely opened a 100.0 channel); (4) **stale tone cleared** on every `updateUI` (editing the tone to None on the same channel left the filter stuck). | `CtcssDetector`, `MainHook` | **device**: operator-verified 97–103 Hz discrimination; 97.4 now rejected |
+| — | **Channel-info panel** shows the CTCSS/DCS tone: encode (TX) on the Send line, decode (RX) on the Receive line (analog), via the existing `updateUI` hook. | `MainHook`, `ToneConverter.ctcssHz` | **device**: `Send:467.625  CTCSS 100.0 Hz` / `Receive:…` |
+
 ## 2026-10-15 — Soft SQ: software CTCSS tone squelch
 
 | Backlog | Change | Files | Test |
