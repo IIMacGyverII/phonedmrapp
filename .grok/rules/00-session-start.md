@@ -65,6 +65,7 @@ cd DMRModHooks
 - If no device connected, say so; do not claim deploy is complete.
 - DMRModHooks **always** needs reboot; DMRTranscriptionService may not.
 - Debug and release share `DMRModHooks/release.keystore` — never change debug signing without coordinating install method.
+- **Launch the OEM app with `adb shell am start -n com.pri.prizeinterphone/.InterPhoneHomeActivity`, NEVER `adb shell monkey -p …`.** Monkey registers itself as the system activity controller (`isUserAMonkey()=true`); if it is interrupted/killed before exiting cleanly (reboot mid-run, adb drop, a `force-stop`/`killall` racing it) the flag sticks globally and the OEM silently refuses Channel-page Use/Edit/Delete (dialog dismisses, nothing happens) — intercom arrows still work. Recover without reflash: `printf 'q\n' | adb shell am monitor`, or reboot. Diagnose: `adb shell dumpsys activity | grep mController`.
 
 ## 5. Release policy
 
