@@ -89,7 +89,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 public class MainHook implements IXposedHookLoadPackage {
     
     private static final String TAG = "DMRModHooks";
-    private static final String VERSION = "3.4.6";
+    private static final String VERSION = BuildConfig.VERSION_NAME;   // tracks build.gradle, never stale
     private static final String TARGET_PACKAGE = "com.pri.prizeinterphone";
     
     // Caller identification state
