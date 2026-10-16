@@ -27,6 +27,13 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 > **📡 Major Feature: v3.1.0** (March 12, 2026) - APRS Live Monitoring  
 > **🎙️ Stable Base: v1.7.0** (February 2026) - Transcription and API Features
 
+## Links & Community
+
+- **💬 XDA discussion & support thread**: [Ulefone Armor 26 Ultra — DMR walkie-talkie app mod](https://xdaforums.com/t/ulefone-armor-26-ultra-walkie-talkie-dmr-model-new-dmr-walkie-app-mod.4780125/)
+- **🔧 Armor 26 Ultra root, guides & development**: [XDA info / development thread](https://xdaforums.com/t/ulefone-armor-26-ultra-walkie-talkie-info-guides-development.4677740/)
+- **📦 Source, releases & changelog**: [github.com/IIMacGyverII/phonedmrapp](https://github.com/IIMacGyverII/phonedmrapp) · [latest release](https://github.com/IIMacGyverII/phonedmrapp/releases/latest)
+- **🖥️ OpenGD77 CPS fork (desktop codeplug editor)**: [github.com/IIMacGyverII/OpenGD77CPS-Mac](https://github.com/IIMacGyverII/OpenGD77CPS-Mac)
+
 ## Demo
 
 <video src="https://github.com/IIMacGyverII/phonedmrapp/releases/download/v3.3.8/3.3.8.mp4" controls autoplay muted loop title="DMRModHooks v3.3.8 Demo" width="800"></video>
