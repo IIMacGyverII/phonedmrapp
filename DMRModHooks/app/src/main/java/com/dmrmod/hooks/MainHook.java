@@ -157,6 +157,7 @@ public class MainHook implements IXposedHookLoadPackage {
     // Persisted in the OEM app's prefs; default OFF. The Device-tab readback/probe buttons do not need it.
     private static volatile boolean diagnosticsEnabled = false;
     private static final String DIAG_PREFS = "dmrmod_diagnostics";
+    private static final String SOFTSQ_PREFS = "dmrmod_squelch";   // intercom Soft SQ level + on/off (own file, not the APRS DB)
     private static volatile int softwareSquelchThreshold = 2;  // User squelch level (0-9)
     private static volatile boolean isSquelchOpen = false;  // Current squelch state
     private static volatile boolean previousSquelchOpen = false;  // Track state changes
@@ -2262,43 +2263,36 @@ public class MainHook implements IXposedHookLoadPackage {
                                             XposedBridge.log(TAG + ": Applied hardware squelch for software squelch level " + progress);
                                         }
                                         
-                                        // Save to SharedPreferences for persistence
-                                        try {
-                                            APRSDatabase aprsDb = APRSDatabase.getInstance(context);
-                                            if (aprsDb != null) {
-                                                XposedHelpers.callMethod(aprsDb, "setAprsSquelch", progress);
-                                                XposedBridge.log(TAG + ": Saved software squelch level " + progress + " to preferences");
-                                            }
-                                        } catch (Throwable t) {
-                                            XposedBridge.log(TAG + ": Error saving squelch to preferences: " + t);
-                                        }
+                                        // Persist the intercom Soft SQ level in its own prefs file
+                                        // (no longer shared with the APRS aprs_squelch setting).
+                                        saveSoftSqLevel(context, progress);
+                                        XposedBridge.log(TAG + ": Saved intercom Soft SQ level " + progress);
                                     }
                                 });
-                                
-                                // Load saved squelch value from preferences
+
+                                // Restore the saved Soft SQ on/off state (persisted across restarts), then its level.
                                 try {
-                                    APRSDatabase aprsDb = APRSDatabase.getInstance(context);
-                                    if (aprsDb != null) {
-                                        int savedSquelch = (Integer) XposedHelpers.callMethod(aprsDb, "getAprsSquelch");
-                                        squelchSeekBar.setProgress(savedSquelch);
-                                        softwareSquelchThreshold = savedSquelch;
-                                        finalSquelchValueLabel.setText(String.valueOf(savedSquelch));
-                                        XposedBridge.log(TAG + ": Loaded saved squelch level: " + savedSquelch);
-                                        
-                                        // If software squelch enabled, ALWAYS set hardware squelch to 0
-                                        // (regardless of threshold - audio processing handles threshold 0)
-                                        if (isSoftwareSquelchEnabled) {
-                                            rootLayout.postDelayed(new Runnable() {
-                                                @Override
-                                                public void run() {
-                                                    enableSoftwareSquelchOnCurrentChannel();
-                                                    XposedBridge.log(TAG + ": Opened hardware squelch for software squelch (level " + savedSquelch + ")");
-                                                }
-                                            }, 500);
-                                        }
+                                    isSoftwareSquelchEnabled = loadSoftSqEnabled(context);
+                                    final int savedSquelch = loadSoftSqLevel(context);
+                                    squelchSeekBar.setProgress(savedSquelch);
+                                    softwareSquelchThreshold = savedSquelch;
+                                    finalSquelchValueLabel.setText(String.valueOf(savedSquelch));
+                                    XposedBridge.log(TAG + ": Loaded Soft SQ: enabled=" + isSoftwareSquelchEnabled
+                                        + ", level=" + savedSquelch);
+
+                                    // If Soft SQ was on, re-open the hardware squelch and drop the busy lockout.
+                                    if (isSoftwareSquelchEnabled) {
+                                        rootLayout.postDelayed(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                enableSoftwareSquelchOnCurrentChannel();
+                                                syncBusyNoSend(context);
+                                                XposedBridge.log(TAG + ": Restored Soft SQ ON (level " + savedSquelch + ")");
+                                            }
+                                        }, 500);
                                     }
                                 } catch (Throwable t) {
-                                    XposedBridge.log(TAG + ": Could not load saved squelch, using default (5): " + t);
+                                    XposedBridge.log(TAG + ": Could not restore Soft SQ, using defaults: " + t);
                                 }
                                 
                                 // Insert squelch container at index 3 (initially hidden if software squelch disabled)
@@ -2555,6 +2549,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                         // Soft SQ forces the squelch open, so drop the OEM busy
                                         // lockout while it's on (restored when off) — see syncBusyNoSend.
                                         syncBusyNoSend(context);
+                                        // Remember the on/off state across restarts.
+                                        saveSoftSqEnabled(context, isSoftwareSquelchEnabled);
                                     }
                                 });
 
@@ -10459,22 +10455,17 @@ public class MainHook implements IXposedHookLoadPackage {
                             int audioOpenThresh = audioThreshold;
                             int audioCloseThresh = (audioThreshold * 100) / HYSTERESIS_FACTOR;  // Lower threshold to close
                             
-                            // RSSI-based gating (if available)
-                            boolean rssiPass = true;
-                            if (currentRssi != -999) {
-                                int rssiThreshold = getRssiThreshold(activeThreshold);
-                                rssiPass = (currentRssi >= rssiThreshold);
-                                
-                                // Periodic RSSI query (every 500ms)
-                                long now = System.currentTimeMillis();
-                                if (now - lastRssiQueryTime > RSSI_QUERY_INTERVAL_MS) {
-                                    querySignalStrength();
-                                }
+                            // Audio RMS drives the gate. RSSI is only polled here for the S-meter:
+                            // it lags up to 500 ms, so using it to gate clipped the first word (open
+                            // lag) and chopped mid-signal (close lag). Amplitude tracks the carrier
+                            // closely and immediately, so the gate is RMS-only now.
+                            long now = System.currentTimeMillis();
+                            if (currentRssi != -999 && now - lastRssiQueryTime > RSSI_QUERY_INTERVAL_MS) {
+                                querySignalStrength();
                             }
-                            
-                            // Hybrid decision: RSSI gates coarsely, audio RMS fine-tunes
-                            boolean shouldOpen = rssiPass && (amplitude >= audioOpenThresh);
-                            boolean shouldClose = !rssiPass || (amplitude < audioCloseThresh);
+
+                            boolean shouldOpen = (amplitude >= audioOpenThresh);
+                            boolean shouldClose = (amplitude < audioCloseThresh);
                             
                             // Apply hysteresis
                             if (isSquelchOpen) {
@@ -10841,6 +10832,24 @@ public class MainHook implements IXposedHookLoadPackage {
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": syncBusyNoSend failed: " + t);
         }
+    }
+
+    // Intercom Soft SQ persistence (own prefs file; de-conflated from the APRS aprs_squelch field).
+    private static int loadSoftSqLevel(Context ctx) {
+        try { return ctx.getSharedPreferences(SOFTSQ_PREFS, Context.MODE_PRIVATE).getInt("level", 5); }
+        catch (Throwable t) { return 5; }
+    }
+    private static void saveSoftSqLevel(Context ctx, int level) {
+        try { ctx.getSharedPreferences(SOFTSQ_PREFS, Context.MODE_PRIVATE).edit().putInt("level", level).apply(); }
+        catch (Throwable ignore) { }
+    }
+    private static boolean loadSoftSqEnabled(Context ctx) {
+        try { return ctx.getSharedPreferences(SOFTSQ_PREFS, Context.MODE_PRIVATE).getBoolean("enabled", false); }
+        catch (Throwable t) { return false; }
+    }
+    private static void saveSoftSqEnabled(Context ctx, boolean on) {
+        try { ctx.getSharedPreferences(SOFTSQ_PREFS, Context.MODE_PRIVATE).edit().putBoolean("enabled", on).apply(); }
+        catch (Throwable ignore) { }
     }
 
     private static void enableSoftwareSquelchOnCurrentChannel() {

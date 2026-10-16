@@ -3,6 +3,14 @@
 Everything below shipped in **v4.0.0** (2026-10-15). Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-15 — Soft SQ: own persisted settings + RMS-only gating
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | **De-conflated the intercom Soft SQ level.** It was being persisted into the APRS database's `aprs_squelch` field (so intercom and APRS squelch clobbered each other) and the in-memory level reset to 5 each launch. It now lives in its own prefs file (`dmrmod_squelch`). | `MainHook` (`loadSoftSqLevel`/`saveSoftSqLevel`, slider save/load) | **device**: builds, no crash; load path reads the new prefs (`Loaded Soft SQ: enabled=…, level=…`) |
+| — | **Soft SQ on/off + level now persist across restarts.** On launch the intercom restores the saved state; if it was on, it re-opens the hardware squelch and drops the busy lockout (`syncBusyNoSend`). | `MainHook` (`loadSoftSqEnabled`/`saveSoftSqEnabled`, toggle save, restore-on-build) | device: builds, no crash |
+| — | **Gating is RMS-only now.** The hybrid RSSI+RMS decision used an RSSI reading polled only every 500 ms, so it clipped the first word (open lag) and chopped mid-signal (close lag). Audio RMS tracks the carrier immediately, so the open/close gate is RMS-only; RSSI is still polled for the S-meter. | `MainHook` (squelch decision) | device: builds, no crash; on-air feel is the operator's test |
+
 ## 2026-10-15 — Soft SQ: PTT no longer blocked by the busy-channel lockout
 
 | Backlog | Change | Files | Test |
