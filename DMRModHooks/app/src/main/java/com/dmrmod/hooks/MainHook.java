@@ -10499,8 +10499,10 @@ public class MainHook implements IXposedHookLoadPackage {
 
                             boolean shouldOpen, shouldClose;
                             if (toneConfigured) {
-                                // Tone gates; a low RMS floor keeps noise alone from opening it.
-                                shouldOpen = tonePresent && (amplitude >= audioCloseThresh);
+                                // The tone-vs-neighbours ratio already rejects noise and voice-only,
+                                // so the tone itself is the gate. No RMS floor: it would re-introduce
+                                // the mid-transmission drop when voice quiets between words.
+                                shouldOpen = tonePresent;
                                 shouldClose = !tonePresent;
                             } else {
                                 shouldOpen = (amplitude >= audioOpenThresh);
@@ -10566,7 +10568,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     ", Thresh=" + audioThreshold + ", RSSI=" + currentRssi +
                                     ", Open=" + isSquelchOpen
                                     + (toneConfigured ? ", tone=" + String.format("%.1f", toneHz)
-                                        + "Hz frac=" + String.format("%.3f", ctcssDetector.lastFraction())
+                                        + "Hz ratio=" + String.format("%.1f", ctcssDetector.lastRatio())
                                         + " present=" + tonePresent : ""));
                             }
                         }
