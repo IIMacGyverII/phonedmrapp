@@ -104,13 +104,6 @@ public final class GithubUpdater {
         return compareVersions(latest.version, inst) > 0;
     }
 
-    /** Download the APK bytes. Runs off the UI thread (called from {@link InstallerActivity}). */
-    public static byte[] download(String url) throws Exception {
-        HttpClient.Response r = HttpClient.get(url);
-        if (!r.isOk() || r.body == null) throw new IOException("Download returned HTTP " + r.code);
-        return r.body;
-    }
-
     // ---- UI ----------------------------------------------------------------
 
     /**
@@ -164,6 +157,38 @@ public final class GithubUpdater {
                 }
             }
         }, "update-check").start();
+    }
+
+    private static volatile boolean rebootPromptShown;
+
+    /**
+     * If the module APK on disk is newer than the running (loaded-at-boot) code, an update was
+     * installed but LSPosed hasn't loaded it yet — tell the user to reboot. Shown once per process.
+     *
+     * <p>This runs in the intercom process (the hook). Unlike the module's own process, that process
+     * is <b>not</b> killed by a self-update, so it's the reliable place for the reminder: when the
+     * updater replaces the module APK, Android kills {@code com.dmrmod.hooks} (and its
+     * {@link InstallerActivity}) before any success dialog there can show.
+     */
+    public static void checkPendingReboot(final Activity activity) {
+        if (rebootPromptShown) return;
+        try {
+            int installed = activity.getPackageManager().getPackageInfo(PKG, 0).versionCode;
+            int running = BuildConfig.VERSION_CODE;
+            if (installed <= running) return;   // in sync (or running newer after a reboot)
+            rebootPromptShown = true;
+            final String installedName = installedVersion(activity);
+            new AlertDialog.Builder(activity, DIALOG_THEME)
+                .setTitle("Update ready: v" + installedName)
+                .setMessage("v" + installedName + " is installed but not loaded yet. Restart the radio "
+                    + "(power off, then on) so LSPosed loads it. You're still running v"
+                    + BuildConfig.VERSION_NAME + " until then.")
+                .setPositiveButton("OK", null)
+                .show();
+            XposedBridge.log(TAG + ": pending reboot: running " + running + " < installed " + installed);
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": pending-reboot check failed: " + t);
+        }
     }
 
     private static void offerUpdate(final Activity activity, final Release rel) {

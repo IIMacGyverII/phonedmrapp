@@ -12,7 +12,11 @@ import android.os.Build;
 import android.os.Bundle;
 import android.widget.Toast;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 import de.robv.android.xposed.XposedBridge;
 
@@ -59,25 +63,86 @@ public final class InstallerActivity extends Activity {
             return;
         }
         prog = new ProgressDialog(this);
+        prog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         prog.setMessage("Downloading v" + version + "…");
+        prog.setIndeterminate(true);
         prog.setCancelable(false);
         prog.show();
         new Thread(new Runnable() {
-            @Override public void run() {
-                String err = null;
-                byte[] apk = null;
-                try { apk = GithubUpdater.download(url); }
-                catch (Throwable t) { err = "download failed: " + t.getMessage(); }
-                final String e = err;
-                final byte[] a = apk;
-                runOnUiThread(new Runnable() {
-                    @Override public void run() {
-                        if (a == null) { dismiss(); toastFinish("Update failed: " + e); }
-                        else commitSession(a);
-                    }
-                });
-            }
+            @Override public void run() { downloadAndCommit(url); }
         }, "update-download").start();
+    }
+
+    /**
+     * Stream the APK from {@code url} straight into a {@link PackageInstaller} session — no full
+     * in-memory buffer, so a large APK (an old release bundled the RadioID DB, ~41 MB) is fine.
+     * Runs on a background thread; commit's result comes back to {@link #handleStatus}.
+     */
+    private void downloadAndCommit(String url) {
+        HttpURLConnection conn = null;
+        PackageInstaller.Session session = null;
+        try {
+            conn = (HttpURLConnection) new URL(url).openConnection();
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(60000);
+            conn.setInstanceFollowRedirects(true);   // github.com -> release-assets.githubusercontent.com
+            conn.setRequestProperty("User-Agent", HttpClient.USER_AGENT);
+            int code = conn.getResponseCode();
+            if (code != HttpURLConnection.HTTP_OK) throw new IOException("download HTTP " + code);
+            final long len = conn.getContentLengthLong();
+
+            PackageInstaller pi = getPackageManager().getPackageInstaller();
+            PackageInstaller.SessionParams params =
+                new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
+            if (len > 0) params.setSize(len);
+            int sid = pi.createSession(params);
+            session = pi.openSession(sid);
+
+            InputStream in = conn.getInputStream();
+            OutputStream out = session.openWrite("base.apk", 0, len > 0 ? len : -1);
+            byte[] buf = new byte[65536];
+            long total = 0;
+            int n;
+            long lastPct = -1;
+            while ((n = in.read(buf)) != -1) {
+                out.write(buf, 0, n);
+                total += n;
+                if (len > 0) {
+                    final long pct = total * 100 / len;
+                    if (pct != lastPct) {
+                        lastPct = pct;
+                        runOnUiThread(new Runnable() {
+                            @Override public void run() {
+                                if (prog != null) { prog.setIndeterminate(false); prog.setProgress((int) pct); }
+                            }
+                        });
+                    }
+                }
+            }
+            session.fsync(out);
+            out.close();
+            in.close();
+
+            runOnUiThread(new Runnable() {
+                @Override public void run() { if (prog != null) prog.setMessage("Installing v" + version + "…"); }
+            });
+
+            int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+            if (Build.VERSION.SDK_INT >= 31) flags |= PendingIntent.FLAG_MUTABLE;
+            Intent status = new Intent(this, InstallerActivity.class).setAction(ACTION_STATUS);
+            PendingIntent pe = PendingIntent.getActivity(this, sid, status, flags);
+            session.commit(pe.getIntentSender());
+            session.close();
+            session = null;
+        } catch (final Throwable t) {
+            XposedBridge.log(TAG + ": update download/commit failed: " + t);
+            if (session != null) try { session.abandon(); } catch (Throwable ignore) { }
+            runOnUiThread(new Runnable() {
+                @Override public void run() { dismiss(); toastFinish("Update failed: " + t.getMessage()); }
+            });
+        } finally {
+            if (conn != null) try { conn.disconnect(); } catch (Throwable ignore) { }
+        }
     }
 
     private static boolean allowedHost(String url) {
@@ -85,31 +150,6 @@ public final class InstallerActivity extends Activity {
             String h = Uri.parse(url).getHost();
             return h != null && (h.endsWith("github.com") || h.endsWith("githubusercontent.com"));
         } catch (Exception e) { return false; }
-    }
-
-    private void commitSession(byte[] apk) {
-        try {
-            if (prog != null) prog.setMessage("Installing v" + version + "…");
-            PackageInstaller pi = getPackageManager().getPackageInstaller();
-            PackageInstaller.SessionParams params =
-                new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
-            int sid = pi.createSession(params);
-            PackageInstaller.Session session = pi.openSession(sid);
-            OutputStream out = session.openWrite("base.apk", 0, apk.length);
-            out.write(apk);
-            session.fsync(out);
-            out.close();
-            int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-            if (Build.VERSION.SDK_INT >= 31) flags |= PendingIntent.FLAG_MUTABLE;
-            Intent status = new Intent(this, InstallerActivity.class).setAction(ACTION_STATUS);
-            PendingIntent pe = PendingIntent.getActivity(this, sid, status, flags);
-            session.commit(pe.getIntentSender());
-            session.close();
-        } catch (Throwable t) {
-            XposedBridge.log(TAG + ": install session failed: " + t);
-            dismiss();
-            toastFinish("Install failed: " + t.getMessage());
-        }
     }
 
     private void handleStatus(Intent i) {
