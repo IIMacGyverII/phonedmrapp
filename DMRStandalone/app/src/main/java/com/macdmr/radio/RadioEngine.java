@@ -155,7 +155,6 @@ public final class RadioEngine implements UartPort.Listener {
                 int code = b.length > 0 ? b[0] & 0xFF : -1;
                 try { port.send(new Frame(CMD_STATUS, 1, 1, new byte[] { 1 })); } catch (IOException ignored) { }   // the OEM acks every push
                 ev.status(code, statusName(code));
-                if (code == 2) { try { queryCallerInfo(); } catch (IOException ignored) { } }
                 break;
             }
             case CMD_RSSI:
