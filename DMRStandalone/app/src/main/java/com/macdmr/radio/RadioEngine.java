@@ -77,12 +77,14 @@ public final class RadioEngine implements UartPort.Listener {
      * Analog channel, 19-byte body (little-endian ints): rxFreq, txFreq, band, power, sq, rxType, rxSubCode,
      * txType, txSubCode, pwrSave, volume, monitor, relay. band must be 1 on VHF (band=0 deafens the RX),
      * relay 2 = normal, sq 0 = squelch open (soft squelch is done in software).
+     * Enum bytes are 1 = on / 2 = off — the MCU answers sr=1 (fail) to a 0 in pwrSave/monitor (measured 2026-10-17).
      */
     public void setAnalog(int rxHz, int txHz, int band, int power, int sq, int rxType, int rxSub, int txType, int txSub,
                           int volume, int monitor) throws IOException {
         ByteBuffer b = ByteBuffer.allocate(19).order(ByteOrder.LITTLE_ENDIAN);
         b.putInt(rxHz).putInt(txHz).put((byte) band).put((byte) power).put((byte) sq).put((byte) rxType).put((byte) rxSub)
-                .put((byte) txType).put((byte) txSub).put((byte) 1 /* pwrSave */).put((byte) volume).put((byte) monitor).put((byte) 2 /* relay normal */);
+                .put((byte) txType).put((byte) txSub).put((byte) 2 /* pwrSave: 1 on, 2 off (OEM default 2; 0 is NAKed) */)
+                .put((byte) volume).put((byte) (monitor == 1 ? 1 : 2) /* monitor: 1 on, 2 off */).put((byte) 2 /* relay normal */);
         port.send(Frame.request(CMD_SET_ANALOG, b.array()));
     }
 

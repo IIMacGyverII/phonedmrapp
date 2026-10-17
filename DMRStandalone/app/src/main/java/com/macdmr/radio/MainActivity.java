@@ -68,7 +68,15 @@ public class MainActivity extends AppCompatActivity implements RadioEngine.Event
             } catch (Exception e) { say("tune: " + e); }
         }));
         btn(r3, "RSSI", v -> bg(() -> { try { engine.queryRssi(); } catch (Exception e) { say(e.toString()); } }));
-        btn(r3, "Audio RX on", v -> bg(() -> { try { if (audio == null) audio = new TinyServiceAudio(); say(audio.startRx(true)); } catch (Exception e) { say("audio: " + e); } }));
+        btn(r3, "Audio RX on", v -> bg(() -> { try {
+            if (audio == null) { audio = new TinyServiceAudio(); audio.setSink(new TinyServiceAudio.Sink() {
+                int frames; int peak;
+                @Override public void onPcm(byte[] b, int len) {
+                    for (int i = 0; i + 1 < len; i += 4) { int v = Math.abs((short) ((b[i] & 0xFF) | (b[i + 1] << 8))); if (v > peak) peak = v; }
+                    if (++frames % 50 == 0) { say("audio frames " + frames + " (" + len + " B each), peak " + peak); peak = 0; }
+                }
+            }); }
+            say(audio.startRx(true)); } catch (Exception e) { say("audio: " + e); } }));
         btn(r3, "Audio RX off", v -> bg(() -> { if (audio != null) say(audio.stopRx()); }));
         Button ptt = btn(r4, "HOLD = PTT (voice)", null);
         ptt.setOnTouchListener((v, ev) -> {
