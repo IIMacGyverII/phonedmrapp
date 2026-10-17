@@ -321,6 +321,7 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile boolean volumePttHeld = false;
     // TX timer (2026-10-17): the firmware cuts every transmission at 30 s; show the elapsed time in the
     // history header while keyed and buzz once at 25 s so the operator can finish the sentence.
+    private static volatile AlertDialog lastHeardDialogRef = null;
     private static volatile long txStartMs = 0;
     private static volatile Runnable txTimerRunnable = null;
     private static volatile boolean txWarned = false;
@@ -4931,6 +4932,73 @@ public class MainHook implements IXposedHookLoadPackage {
      * channel_history table (what the per-channel Analog/DMR History boxes are fed from), with the
      * event count. Opened from the Device tab or by long-pressing the history header on the intercom.
      */
+    /**
+     * Jump straight to a channel number (2026-10-17). The OEM only steps +/-1 (updateChannelId), so —
+     * like the scanner — preset the fragment's index next to the target and step once; the OEM path then
+     * does the DB active flag, display and MCU write exactly as a manual press would. The channel we
+     * actually left keeps a stale active=1 (the OEM clears the preset one), so it is cleared after the
+     * landing like ChannelScanner does. Returns null on success or a short reason.
+     */
+    static String jumpToChannelNumber(final android.content.Context ctx, final int number) {
+        try {
+            final Object frag = talkBackFragmentInstance;
+            if (frag == null) return "intercom page not ready";
+            final java.util.List<?> channels = (java.util.List<?>) XposedHelpers.getObjectField(frag, "channels");
+            if (channels == null || channels.size() < 2) return "no channel list";
+            int target = -1;
+            for (int i = 0; i < channels.size(); i++) {
+                try { if (XposedHelpers.getIntField(channels.get(i), "number") == number) { target = i; break; } } catch (Throwable ignore) { }
+            }
+            if (target < 0) return "channel " + number + " is not in this area";
+            final int from = XposedHelpers.getIntField(frag, "mCurrentChannelIndex");
+            if (from == target) return "already on channel " + number;
+            final int targetIdx = target;
+            Class<?> smClass = XposedHelpers.findClass("com.pri.prizeinterphone.state.CmdStateMachine", appClassLoader);
+            Object sm = XposedHelpers.callStaticMethod(smClass, "getInstance");
+            if (XposedHelpers.callMethod(sm, "getCurrentState") == XposedHelpers.callMethod(sm, "getSetChannelState")) return "radio busy, try again";
+            try { ChannelScanner.stop("jump"); } catch (Throwable ignore) { }
+            boolean up = target > 0;
+            // The OEM ack handler clears active=1 on channels[preset] (our neighbour trick), not on the
+            // channel we really leave; with two active rows updateChannelList() snaps the index back to the
+            // old channel while the MCU is already on the new one. So clear the real one first and put it
+            // back if the write is refused (landing check below).
+            final Class<?> dmClass = XposedHelpers.findClass("com.pri.prizeinterphone.manager.DmrManager", appClassLoader);
+            final Object dm = XposedHelpers.callStaticMethod(dmClass, "getInstance");
+            final Object dbHelper = XposedHelpers.callMethod(dm, "getCurrentDbHelper");
+            final Object fromCh = channels.get(from);
+            XposedHelpers.callMethod(fromCh, "setActive", 0);
+            XposedHelpers.callMethod(dbHelper, "updateChannel", fromCh);
+            XposedHelpers.setIntField(frag, "mCurrentChannelIndex", up ? target - 1 : target + 1);
+            // the module's own updateChannelId hook (zone navigation) must let this call through untouched,
+            // exactly as it does for scanner steps
+            ChannelScanner.stepping = true;
+            try { XposedHelpers.callMethod(frag, "updateChannelId", up); }
+            finally { ChannelScanner.stepping = false; }
+            XposedBridge.log(TAG + ": [jump] index " + from + " -> " + target + " (channel " + number + ")");
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+                @Override public void run() {
+                    try {
+                        int now = XposedHelpers.getIntField(frag, "mCurrentChannelIndex");
+                        if (now == targetIdx) {
+                            XposedBridge.log(TAG + ": [jump] landed on index " + now + " (channel " + number + ")");
+                        } else {
+                            // refused / no ack: put the old channel back as the active one and the index with it
+                            XposedHelpers.callMethod(fromCh, "setActive", 1);
+                            XposedHelpers.callMethod(dbHelper, "updateChannel", fromCh);
+                            XposedHelpers.setIntField(frag, "mCurrentChannelIndex", from);
+                            XposedHelpers.callMethod(dm, "updateChannelList");
+                            XposedBridge.log(TAG + ": [jump] NOT landed (index now " + now + ", wanted " + targetIdx + ") - restored index " + from);
+                        }
+                    } catch (Throwable t) { XposedBridge.log(TAG + ": [jump] landing check: " + t.getMessage()); }
+                }
+            }, 4000);
+            return null;
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [jump] " + t.getMessage());
+            return "jump failed: " + t.getMessage();
+        }
+    }
+
     private static void showLastHeardDialog(final Activity activity) {
         try {
             // channel number -> name/type from the OEM list
@@ -4977,7 +5045,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 none.setTextSize(14); layout.addView(none);
             } else {
                 TextView hint = new TextView(activity);
-                hint.setText("Newest first across every channel. Counts are events kept in the history (up to 100 per channel).");
+                hint.setText("Newest first across every channel; tap a card to switch to that channel. Counts are events kept in the history (up to 100 per channel).");
                 hint.setTextSize(12); hint.setTextColor(0xFF999999); hint.setPadding(0, 0, 0, 10);
                 layout.addView(hint);
                 long now = System.currentTimeMillis();
@@ -5012,13 +5080,42 @@ public class MainHook implements IXposedHookLoadPackage {
                     line.setText(ago + "  \u00B7  " + who + r[2] + (r[3].isEmpty() ? "" : " " + r[3] + " dBm") + "  \u00B7  " + counts.get(ch) + " event" + (counts.get(ch) == 1 ? "" : "s"));
                     line.setTextSize(13); line.setTextColor(0xFFDDDDDD);
                     card.addView(line);
+                    final int jumpTo = ch;
+                    card.setClickable(true);
+                    card.setOnClickListener(new View.OnClickListener() {
+                        @Override public void onClick(View v) {
+                            String err = jumpToChannelNumber(activity, jumpTo);
+                            Toast.makeText(activity, err == null ? "Switching to channel " + jumpTo : err, Toast.LENGTH_SHORT).show();
+                            if (err == null && lastHeardDialogRef != null) { try { lastHeardDialogRef.dismiss(); } catch (Throwable ignore) { } }
+                        }
+                    });
                     layout.addView(card);
                 }
             }
+            // Go to channel number
+            LinearLayout go = new LinearLayout(activity);
+            go.setOrientation(LinearLayout.HORIZONTAL);
+            final android.widget.EditText numEdit = new android.widget.EditText(activity);
+            numEdit.setHint("Channel #"); numEdit.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+            numEdit.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+            android.widget.Button goBtn = new android.widget.Button(activity);
+            goBtn.setText("Go to channel"); goBtn.setAllCaps(false);
+            goBtn.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    try {
+                        int n = Integer.parseInt(numEdit.getText().toString().trim());
+                        String err = jumpToChannelNumber(activity, n);
+                        Toast.makeText(activity, err == null ? "Switching to channel " + n : err, Toast.LENGTH_SHORT).show();
+                        if (err == null && lastHeardDialogRef != null) { try { lastHeardDialogRef.dismiss(); } catch (Throwable ignore) { } }
+                    } catch (NumberFormatException e) { Toast.makeText(activity, "Enter a channel number", Toast.LENGTH_SHORT).show(); }
+                }
+            });
+            go.addView(numEdit); go.addView(goBtn);
+            layout.addView(go, 0);
             scroll.addView(layout);
             b.setView(scroll);
             b.setPositiveButton("Close", null);
-            b.show();
+            lastHeardDialogRef = b.show();
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": [lastheard] " + t.getMessage());
             try { Toast.makeText(activity, "Last heard: " + t.getMessage(), Toast.LENGTH_LONG).show(); } catch (Throwable ignore) { }
