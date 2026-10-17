@@ -205,6 +205,7 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile boolean kissActive = false;
     private static volatile int kissPort = 8001;
     private static java.net.ServerSocket kissServerSocket = null;
+    private static volatile boolean kissTunedForSession = false;  // restore the channel on stop
 
     // Audio RMS thresholds for squelch levels 0-9 (tuned for 8kHz 16-bit PCM)
     // Based on real-world values: noise floor ~100-400, weak signal ~800-2000, strong ~4000+
@@ -12767,7 +12768,12 @@ public class MainHook implements IXposedHookLoadPackage {
             }
 
             // mode=kissstart/kissstop: run the KISS-over-TCP TNC server (for APRSdroid or adb-forward tests).
-            if ("kissstart".equalsIgnoreCase(mode)) { startKissTnc(ctx, intent.getIntExtra("port", 8001)); return; }
+            if ("kissstart".equalsIgnoreCase(mode)) {
+                // optional --ei freqhz: park the radio there for the session (restored on kissstop)
+                boolean tune = intent.hasExtra("freqhz");
+                startKissTnc(ctx, intent.getIntExtra("port", 8001), tune, intent.getIntExtra("freqhz", 144390000));
+                return;
+            }
             if ("kissstop".equalsIgnoreCase(mode))  { stopKissTnc(); return; }
 
             // mode=txfreqtest: verify the capture→tune→restore round-trip (logs the captured/restored freq).
@@ -13158,7 +13164,12 @@ public class MainHook implements IXposedHookLoadPackage {
         fc.mhzEdit = new EditText(activity);
         fc.mhzEdit.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
         fc.mhzEdit.setText(aprsDb.getAprsFrequency());   // default 144.390
-        fc.mhzEdit.setPadding((int) (32 * activity.getResources().getDisplayMetrics().density), 0, 0, 0);
+        // Indent with a MARGIN (not padding) so the field's underline moves with the text and sits
+        // under the radio label; full width so the line spans to the edge like the other fields.
+        android.widget.RadioGroup.LayoutParams mhzLp = new android.widget.RadioGroup.LayoutParams(
+                android.widget.RadioGroup.LayoutParams.MATCH_PARENT, android.widget.RadioGroup.LayoutParams.WRAP_CONTENT);
+        mhzLp.leftMargin = (int) (32 * activity.getResources().getDisplayMetrics().density);
+        fc.mhzEdit.setLayoutParams(mhzLp);
         rg.addView(fc.mhzEdit);
 
         final android.widget.RadioButton curRb = new android.widget.RadioButton(activity);
@@ -13465,9 +13476,20 @@ public class MainHook implements IXposedHookLoadPackage {
      * at "TNC (KISS) over TCP/IP", host 127.0.0.1, this port. TX side only (the module keeps its own
      * APRS RX). Runs while the app is alive; transmits on the current channel (tune to the APRS freq).
      */
-    private static void startKissTnc(final android.content.Context ctx, final int port) {
+    private static void startKissTnc(final android.content.Context ctx, final int port,
+                                     boolean useAprsFreq, int freqHz) {
         final android.content.Context appCtx = ctx.getApplicationContext();
         kissPort = port;
+        // A TNC session needs the radio parked on one frequency (frames arrive whenever the app
+        // decides), so tune once here and restore in stopKissTnc — not per packet.
+        if (useAprsFreq) {
+            captureTxFreqBackup();
+            tuneCurrentChannelAnalog(freqHz);
+            kissTunedForSession = true;
+            XposedBridge.log(TAG + ": [kiss] tuned to " + (freqHz / 1000000.0) + " MHz for the session");
+        } else {
+            kissTunedForSession = false;
+        }
         kissActive = true;
         final java.util.concurrent.BlockingQueue<byte[]> queue = new java.util.concurrent.LinkedBlockingQueue<byte[]>(32);
 
@@ -13515,6 +13537,10 @@ public class MainHook implements IXposedHookLoadPackage {
         kissActive = false;
         try { if (kissServerSocket != null) kissServerSocket.close(); } catch (Throwable ignored) { }
         kissServerSocket = null;
+        if (kissTunedForSession) {
+            restoreTxFreqBackup();   // give the user's channel back
+            kissTunedForSession = false;
+        }
         XposedBridge.log(TAG + ": [kiss] TNC stopped");
     }
 
@@ -13574,9 +13600,9 @@ public class MainHook implements IXposedHookLoadPackage {
             note.setText("Lets an APRS app on this phone drive the radio as a TNC (transmit side).\n\n"
                     + "In APRSdroid: Connection Protocol → TNC (KISS); TNC via TCP/IP; host 127.0.0.1, "
                     + "port below. Then APRSdroid's transmits go out over RF.\n\n"
-                    + "Transmits on the CURRENT channel — tune to an ANALOG channel on your APRS "
-                    + "frequency. Licensed amateur use only.");
-            note.setTextSize(12); note.setTextColor(0xFF999999); note.setPadding(0, 0, 0, 20);
+                    + "The radio parks on the chosen frequency for the whole session and your channel "
+                    + "is restored when you stop. Licensed amateur use only.");
+            note.setTextSize(12); note.setTextColor(0xFF999999); note.setPadding(0, 0, 0, 12);
             layout.addView(note);
 
             TextView portLabel = new TextView(activity);
@@ -13587,6 +13613,11 @@ public class MainHook implements IXposedHookLoadPackage {
             portEdit.setText(String.valueOf(kissPort));
             portEdit.setEnabled(!kissActive);
             layout.addView(portEdit);
+
+            final APRSDatabase aprsDb = APRSDatabase.getInstance(activity);
+            final FreqChoice freq = addFreqSelector(activity, layout, aprsDb);
+            freq.aprsRb.setEnabled(!kissActive);
+            freq.mhzEdit.setEnabled(!kissActive);
 
             builder.setView(layout);
             builder.setPositiveButton(kissActive ? "Stop TNC" : "Start TNC", null);
@@ -13602,16 +13633,22 @@ public class MainHook implements IXposedHookLoadPackage {
                         dialog.dismiss();
                         return;
                     }
-                    if (currentChannelType != 1) {
-                        Toast.makeText(activity, "Switch to an ANALOG channel first (current is digital)", Toast.LENGTH_LONG).show();
+                    boolean useAprs = freq.useAprsFreq();
+                    int freqHz = freq.freqHz();
+                    if (useAprs) {
+                        if (freqHz < 1_000_000) { Toast.makeText(activity, "Enter a valid frequency in MHz", Toast.LENGTH_SHORT).show(); return; }
+                        aprsDb.setAprsFrequency(freq.mhz());
+                    } else if (currentChannelType != 1) {
+                        Toast.makeText(activity, "Current channel is digital — pick APRS frequency, or switch to an analog channel", Toast.LENGTH_LONG).show();
                         return;
                     }
                     int port;
                     try { port = Integer.parseInt(portEdit.getText().toString().trim()); }
                     catch (NumberFormatException e) { Toast.makeText(activity, "Enter a valid port", Toast.LENGTH_SHORT).show(); return; }
                     if (port < 1024 || port > 65535) { Toast.makeText(activity, "Use a port 1024–65535", Toast.LENGTH_SHORT).show(); return; }
-                    startKissTnc(activity, port);
-                    Toast.makeText(activity, "🔌 KISS TNC on 127.0.0.1:" + port + " — point APRSdroid here", Toast.LENGTH_LONG).show();
+                    startKissTnc(activity, port, useAprs, freqHz);
+                    Toast.makeText(activity, "🔌 KISS TNC on 127.0.0.1:" + port + " ("
+                            + (useAprs ? freq.mhz() + " MHz" : "current channel") + ") — point APRSdroid here", Toast.LENGTH_LONG).show();
                     dialog.dismiss();
                 }
             });
