@@ -142,7 +142,7 @@ the hardware-PTT broadcast receiver — then the feature code can move over.
 | **PTT release** | `launch=0` is **NAKed** and the transmitter stays keyed (it only stopped at the next channel write); **`launch=2` is the release** — ack sr=0, SEND_STOP immediately. Enum 1/2 again. |
 | **Cold start**: pwd 0→1, then the OEM's handshake | Banner `BF AA` + "开机初始化完成" ("power-on initialisation complete"), then 0x23 ok, 0x2A mic ok, 0x3B TOT ok, RECEIVE_START. The banner takes **> 3 s** after pwd=1; the engine now waits for it (`waitBooted`) before the first command — a 0x34 sent at +3 s got no reply. |
 | **Hardware PTT key** | `am broadcast -a com.interphone.ptt.down/.up` → the app keyed with the phone mic, released cleanly (ACK 0x26, SEND_STOP). |
-| **Digital set** `0x22` on 467.700 (ID 1447, TGs 1/9/99, cc1) | accepted (see the run log); the MCU then answered the 0x2B caller query with zeros (no call yet). |
+| **Digital set** `0x22` on 467.700 (ID 1447, TGs 1/9/99, cc1) | sent; the ack was not captured (the log was cleared between steps) — only the MCU's 0x2B caller replies (all zeros, no call) were seen afterwards. **Re-verify** on the next run. |
 
 Every hardware function a standalone app needs on the Armor 26 Ultra is now exercised from `DMRStandalone`.
 Next: carry the feature code and the intercom UI over.
