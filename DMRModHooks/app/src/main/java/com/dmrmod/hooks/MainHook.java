@@ -248,6 +248,9 @@ public class MainHook implements IXposedHookLoadPackage {
     private static final StringBuilder captionFinalText = new StringBuilder();
     private static volatile int captionCompanionInstalled = -1;   // -1 unknown, 0 no, 1 yes
     private static volatile long captionLastEndMs = 0;
+    // Caption keyword alerts (2026-10-17): prefs dmrmod_transcription/keywords (comma-separated); null = not loaded yet
+    private static volatile String[] captionKeywords = null;
+    private static final java.util.Map<String, Long> keywordLastHit = new java.util.HashMap<String, Long>();
     private static final int CAPTION_PAUSE_MS = 2500;            // silence that ends an utterance
     private static volatile String currentTranscription = "";
     private static List<Short> audioBuffer = Collections.synchronizedList(new ArrayList<>());
@@ -4855,6 +4858,17 @@ public class MainHook implements IXposedHookLoadPackage {
                 @Override public void onClick(View v) { showLastHeardDialog(activity); }
             });
 
+            // === CAPTION KEYWORD ALERTS (2026-10-17) ===
+            final android.widget.Button keywordButton = new android.widget.Button(context);
+            keywordButton.setText("🔔 Caption keyword alerts");
+            keywordButton.setTextSize(14);
+            keywordButton.setAllCaps(false);
+            keywordButton.setPadding(20, 20, 20, 20);
+            keywordButton.setLayoutParams(new ViewGroup.LayoutParams(templateParams));
+            keywordButton.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { showKeywordAlertDialog(activity); }
+            });
+
             // === VOICE ANNOUNCEMENTS: speak channel changes and DMR callers (eyes-free use) ===
             final android.widget.ToggleButton voiceToggle = new android.widget.ToggleButton(context);
             voiceToggle.setTextOn("🗣️ Voice announcements ON (channel changes, DMR callers)");
@@ -4961,8 +4975,9 @@ public class MainHook implements IXposedHookLoadPackage {
                 parentLayout.addView(voiceToggle, index + 10);
                 parentLayout.addView(volPttToggle, index + 11);
                 parentLayout.addView(lastHeardButton, index + 12);
-                parentLayout.addView(nearbyButton, index + 13);
-                parentLayout.addView(updateButton, index + 14);
+                parentLayout.addView(keywordButton, index + 13);
+                parentLayout.addView(nearbyButton, index + 14);
+                parentLayout.addView(updateButton, index + 15);
                 XposedBridge.log(TAG + ": ✓ Export button added at index " + index);
                 XposedBridge.log(TAG + ": ✓ Import button added at index " + (index + 1));
                 XposedBridge.log(TAG + ": ✓ RadioID buttons added at indices " + (index + 2) + "-" + (index + 4));
@@ -4980,6 +4995,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 parentLayout.addView(voiceToggle);
                 parentLayout.addView(volPttToggle);
                 parentLayout.addView(lastHeardButton);
+                parentLayout.addView(keywordButton);
                 parentLayout.addView(nearbyButton);
                 parentLayout.addView(updateButton);
                 XposedBridge.log(TAG + ": ✓ Export, Import, and RadioID buttons added at end of layout");
@@ -5071,6 +5087,7 @@ public class MainHook implements IXposedHookLoadPackage {
         try {
             // "[No speech detected]", "[Transcription: enable billing ...]" etc. are status messages, not speech
             if (text == null || text.trim().isEmpty() || text.trim().startsWith("[")) return;
+            if (!captionEngineVosk(context)) checkCaptionKeywords(context, text);
             String path = lastRecordingSavedPath;
             if (path != null && System.currentTimeMillis() - lastRecordingSavedMs < 180000) {
                 java.io.File side = new java.io.File(path.replaceAll("\\.wav$", "") + ".txt");
@@ -14048,6 +14065,94 @@ public class MainHook implements IXposedHookLoadPackage {
             .show();
     }
 
+    private static String[] loadCaptionKeywords(android.content.Context ctx) {
+        String[] k = captionKeywords;
+        if (k != null) return k;
+        java.util.List<String> out = new java.util.ArrayList<String>();
+        try {
+            String raw = ctx.getSharedPreferences("dmrmod_transcription", android.content.Context.MODE_PRIVATE).getString("keywords", "");
+            for (String w : raw.split("[,\\n]")) { w = w.trim().toLowerCase(java.util.Locale.US); if (!w.isEmpty()) out.add(w); }
+        } catch (Throwable ignored) { }
+        k = out.toArray(new String[0]);
+        captionKeywords = k;
+        return k;
+    }
+
+    /**
+     * Keyword alert: a finished caption sentence (either engine) that contains one of the user's words
+     * vibrates, speaks and writes a history line. Whole-word, case-insensitive, 15 s per-word hold-off.
+     */
+    static void checkCaptionKeywords(final android.content.Context ctx, String sentence) {
+        try {
+            if (sentence == null || sentence.isEmpty()) return;
+            String[] words = loadCaptionKeywords(ctx);
+            if (words.length == 0) return;
+            String low = " " + sentence.toLowerCase(java.util.Locale.US).replaceAll("[^a-z0-9' ]+", " ") + " ";
+            String hit = null;
+            long now = System.currentTimeMillis();
+            for (String w : words) {
+                if (!low.contains(" " + w + " ")) continue;
+                synchronized (keywordLastHit) {
+                    Long last = keywordLastHit.get(w);
+                    if (last != null && now - last < 15000) continue;
+                    keywordLastHit.put(w, now);
+                }
+                hit = w; break;
+            }
+            if (hit == null) return;
+            final String word = hit;
+            XposedBridge.log(TAG + ": [keyword] \"" + word + "\" in: " + sentence);
+            try {
+                android.os.Vibrator vib = (android.os.Vibrator) ctx.getSystemService(android.content.Context.VIBRATOR_SERVICE);
+                if (vib != null) {
+                    long[] pat = { 0, 250, 120, 250, 120, 400 };
+                    if (android.os.Build.VERSION.SDK_INT >= 26) vib.vibrate(android.os.VibrationEffect.createWaveform(pat, -1)); else vib.vibrate(pat, -1);
+                }
+            } catch (Throwable t) { XposedBridge.log(TAG + ": [keyword] vibrate: " + t.getMessage()); }
+            MainHook mi = moduleInstance;
+            if (mi != null) mi.updateActivityIndicator("🔔 Keyword \"" + word + "\"");
+            final String chan = currentChannelName != null && !currentChannelName.isEmpty() ? currentChannelName : ("channel " + currentChannelNumber);
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() { @Override public void run() {
+                try { Toast.makeText(ctx, "🔔 Keyword \"" + word + "\" heard on " + chan, Toast.LENGTH_LONG).show(); } catch (Throwable ignored) { }
+            } });
+            voiceSay(ctx, "Keyword " + word + " on " + chan);
+        } catch (Throwable t) { XposedBridge.log(TAG + ": [keyword] " + t.getMessage()); }
+    }
+
+    private static void showKeywordAlertDialog(final Activity activity) {
+        try {
+            final android.content.SharedPreferences tp = activity.getSharedPreferences("dmrmod_transcription", android.content.Context.MODE_PRIVATE);
+            final android.widget.EditText et = new android.widget.EditText(activity);
+            et.setHint("e.g. emergency, mayday, your name, your town");
+            et.setText(tp.getString("keywords", ""));
+            et.setMinLines(3);
+            et.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+            android.widget.LinearLayout box = new android.widget.LinearLayout(activity);
+            box.setOrientation(android.widget.LinearLayout.VERTICAL);
+            int pad = (int) (20 * activity.getResources().getDisplayMetrics().density);
+            box.setPadding(pad, pad / 2, pad, 0);
+            android.widget.TextView help = new android.widget.TextView(activity);
+            help.setText("Words or short phrases, separated by commas. While TXT (captions) is on, any transmission whose caption contains one of them vibrates the phone, speaks the word (if Voice announcements are on) and writes a 🔔 line to the channel history. Matching is whole-word and ignores case.");
+            help.setTextSize(13);
+            box.addView(help);
+            box.addView(et);
+            new AlertDialog.Builder(activity)
+                .setTitle("🔔 Caption keyword alerts")
+                .setView(box)
+                .setPositiveButton("Save", new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface d, int w) {
+                        String v = et.getText().toString().trim();
+                        tp.edit().putString("keywords", v).apply();
+                        captionKeywords = null;
+                        int n = loadCaptionKeywords(activity).length;
+                        Toast.makeText(activity, n == 0 ? "Keyword alerts off (no words)" : n + " keyword" + (n == 1 ? "" : "s") + " armed" + (isTranscriptionEnabled ? "" : " \u2014 turn TXT on to listen"), Toast.LENGTH_LONG).show();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+        } catch (Throwable t) { XposedBridge.log(TAG + ": keyword dialog: " + t.getMessage()); }
+    }
+
     private static String captionPrefix() {
         if (currentChannelType == 0) {
             if (currentCallerName != null && !currentCallerName.isEmpty()) return currentCallerName + ": ";
@@ -14151,6 +14256,7 @@ public class MainHook implements IXposedHookLoadPackage {
                             if (!t.isEmpty()) {
                                 synchronized (captionFinalText) { if (captionFinalText.length() > 0) captionFinalText.append(' '); captionFinalText.append(t); }
                                 updateTranscriptionDisplay(captionPrefix() + t);   // finished sentence scrolls up as a normal line
+                                checkCaptionKeywords(ctx, t);
                                 showLiveCaption("🎙️ \u2026");
                             }
                         }
