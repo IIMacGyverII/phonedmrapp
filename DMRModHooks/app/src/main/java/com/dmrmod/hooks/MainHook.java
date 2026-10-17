@@ -319,6 +319,12 @@ public class MainHook implements IXposedHookLoadPackage {
     // Hardware PTT (2026-10-17): volume-up key or a headset/media button keys the radio while the app is open (prefs "volptt", default off)
     private static volatile boolean volumePttEnabled = false;
     private static volatile boolean volumePttHeld = false;
+    // TX timer (2026-10-17): the firmware cuts every transmission at 30 s; show the elapsed time in the
+    // history header while keyed and buzz once at 25 s so the operator can finish the sentence.
+    private static volatile long txStartMs = 0;
+    private static volatile Runnable txTimerRunnable = null;
+    private static volatile boolean txWarned = false;
+    private static final int TX_LIMIT_S = 30, TX_WARN_S = 25;
     private static volatile android.speech.tts.TextToSpeech voiceTts = null;
     private static volatile boolean voiceTtsReady = false;
     private static volatile long voiceLastCallerId = 0, voiceLastCallerMs = 0;
@@ -10389,6 +10395,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     isTransmitting = true;
                                     ChannelScanner.stop("PTT");
                                     XposedBridge.log(TAG + ": SEND_START detected");
+                                    startTxTimer();
                                     activityType = "📻 Voice TX";
                                     showActivity = true;
                                     break;
@@ -10396,6 +10403,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 case 4:  // SEND_STOP
                                     isTransmitting = false;
                                     XposedBridge.log(TAG + ": SEND_STOP detected");
+                                    stopTxTimer();
                                     // Don't clear activity history - let it persist
                                     break;
                                     
@@ -11215,6 +11223,54 @@ public class MainHook implements IXposedHookLoadPackage {
     /**
      * Update the history box header based on channel type
      */
+    private static void startTxTimer() {
+        try {
+            txStartMs = System.currentTimeMillis(); txWarned = false;
+            final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+            Runnable old = txTimerRunnable; if (old != null) h.removeCallbacks(old);
+            Runnable r = new Runnable() {
+                @Override public void run() {
+                    if (txStartMs == 0) return;
+                    int sec = (int) ((System.currentTimeMillis() - txStartMs) / 1000);
+                    TextView tv = activityHeaderTextView;
+                    if (tv != null) {
+                        boolean late = sec >= TX_WARN_S;
+                        tv.setText("📡 TRANSMITTING  " + sec + " s  /  " + TX_LIMIT_S + " s" + (late ? "  \u2014 WRAP UP" : ""));
+                        tv.setTextColor(late ? 0xFFFF5555 : 0xFFFFAA00);
+                    }
+                    if (sec >= TX_WARN_S && !txWarned) {
+                        txWarned = true;
+                        try {
+                            android.content.Context c = homeActivityRef != null ? homeActivityRef.get() : null;
+                            if (c != null) {
+                                android.os.Vibrator vib = (android.os.Vibrator) c.getSystemService(android.content.Context.VIBRATOR_SERVICE);
+                                if (vib != null) vib.vibrate(android.os.VibrationEffect.createWaveform(new long[]{0, 150, 100, 150}, -1));
+                            }
+                        } catch (Throwable ignore) { }
+                    }
+                    h.postDelayed(this, 500);
+                }
+            };
+            txTimerRunnable = r;
+            h.post(r);
+        } catch (Throwable t) { XposedBridge.log(TAG + ": [txtimer] " + t.getMessage()); }
+    }
+
+    private static void stopTxTimer() {
+        try {
+            long start = txStartMs; txStartMs = 0;
+            final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+            Runnable r = txTimerRunnable; if (r != null) h.removeCallbacks(r); txTimerRunnable = null;
+            if (start > 0) XposedBridge.log(TAG + ": [txtimer] keyed " + ((System.currentTimeMillis() - start) / 1000.0) + " s");
+            final MainHook mi = moduleInstance;
+            h.post(new Runnable() { @Override public void run() {
+                TextView tv = activityHeaderTextView;
+                if (tv != null) tv.setTextColor(0xFF00BFFF);
+                if (mi != null) mi.updateHistoryHeader();
+            } });
+        } catch (Throwable t) { XposedBridge.log(TAG + ": [txtimer] " + t.getMessage()); }
+    }
+
     private void updateHistoryHeader() {
         if (activityHeaderTextView == null) {
             return;
