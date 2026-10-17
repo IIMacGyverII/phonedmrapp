@@ -207,7 +207,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     @Override public void onTx(boolean transmitting) { tx = transmitting; refreshHeadline(); }
     @Override public void onRssi(int dbm) { signal.setText(dbm == -999 ? "Signal: --" : "Signal: " + dbm + " dBm"); }
     @Override public void onAudioLevel(int amplitude) { board.audioAmplitude = amplitude; }
-    @Override public void onHistory(String line) { history.addFirst(line); while (history.size() > 3) history.removeLast(); renderHistory(); }
+    @Override public void onHistory(String line) { history.addLast(line); while (history.size() > 3) history.removeFirst(); renderHistory(); }
     @Override public void onCaller(String text) { headline.setText("📻 " + text); }
     @Override public void onLog(String s) { }
     @Override public void onLink(String state) { refreshHeadline(); }
