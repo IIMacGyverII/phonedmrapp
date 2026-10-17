@@ -167,7 +167,7 @@ public class DirectDatabaseExporter {
             boolean contactsOk = exportContactsDirect(appContext, contactsFile);
             boolean tgListsOk = exportTGListsCSV(appContext, tgListsFile);
             boolean zonesOk = exportZonesCSV(appContext, zonesFile);
-            boolean dtmfOk = exportDTMFCSV(dtmfFile);
+            boolean dtmfOk = exportDTMFCSV(appContext, dtmfFile);
             
             if (channelsOk && contactsOk && tgListsOk && zonesOk && dtmfOk) {
                 // Backlog R7: stamp the area this backup came from so the importer can refuse a
@@ -973,14 +973,26 @@ public class DirectDatabaseExporter {
     }
     
     /**
-     * Export DTMF.csv - DTMF Contacts (empty for now)
-     * OpenGD77 requires this file to be present even if empty
+     * Export DTMF.csv - the module's saved DTMF sequences (PKT RAD -> DTMF Decoder -> Save) in the
+     * OpenGD77 "Contact Name,Code" layout. Was an empty placeholder until 2026-10-17.
      */
-    private static boolean exportDTMFCSV(File outputFile) {
+    private static boolean exportDTMFCSV(Context context, File outputFile) {
         try {
             BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
             writer.write("Contact Name,Code");
             writer.write("\r\n");  // Windows CRLF
+            try {
+                org.json.JSONArray arr = new org.json.JSONArray(
+                        context.getSharedPreferences("dmrmod_dtmf", Context.MODE_PRIVATE).getString("contacts", "[]"));
+                for (int i = 0; i < arr.length(); i++) {
+                    org.json.JSONObject o = arr.getJSONObject(i);
+                    String name = o.optString("name", "").replace(',', ' ').replace('"', ' ');
+                    writer.write(name + "," + o.optString("seq", ""));
+                    writer.write("\r\n");
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "DTMF contacts unreadable, exporting header only: " + e.getMessage());
+            }
             writer.close();
             Log.i(TAG, "✓ DTMF exported: " + outputFile.getAbsolutePath());
             return true;
