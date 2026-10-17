@@ -31,6 +31,8 @@ public class MainActivity extends AppCompatActivity {
     private IntercomView intercom;
     private DiagnosticsView diagnostics;
     private com.macdmr.radio.ui.ChannelsView channels;
+    private com.macdmr.radio.ui.ContactsView contacts;
+    private com.macdmr.radio.ui.MessagesView messages;
     private View editor;
     private RadioService svc;
     private final TextView[] tabs = new TextView[5], tabEmoji = new TextView[5];
@@ -44,7 +46,7 @@ public class MainActivity extends AppCompatActivity {
     private final ServiceConnection conn = new ServiceConnection() {
         @Override public void onServiceConnected(ComponentName n, IBinder b) {
             svc = ((RadioService.LocalBinder) b).get();
-            intercom.attach(svc); diagnostics.attach(svc); channels.attach(svc);
+            intercom.attach(svc); diagnostics.attach(svc); channels.attach(svc); contacts.attach(svc); messages.attach(svc);
             if (!svc.isReady()) svc.bringUp();
             ui.post(rssiTick);
         }
@@ -74,6 +76,9 @@ public class MainActivity extends AppCompatActivity {
 
         intercom = new IntercomView(this);
         diagnostics = new DiagnosticsView(this);
+        contacts = new com.macdmr.radio.ui.ContactsView(this);
+        messages = new com.macdmr.radio.ui.MessagesView(this);
+        contacts.setHost(ct -> { show(3); messages.openThread(ct); });
         channels = new com.macdmr.radio.ui.ChannelsView(this);
         channels.setHost((ch, isNew) -> {
             final ChannelStore.Channel target = isNew ? new ChannelStore.Channel() : ch;
@@ -100,6 +105,8 @@ public class MainActivity extends AppCompatActivity {
         switch (idx) {
             case 0: v = intercom; break;
             case 1: v = channels; channels.reload(); break;
+            case 2: v = contacts; contacts.reload(); break;
+            case 3: v = messages; messages.reload(); break;
             case 4: v = diagnostics; break;
             default: v = placeholder(tabNames[idx]);
         }
@@ -118,6 +125,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override public void onBackPressed() {
         if (editor != null) { content.removeView(editor); editor = null; return; }
+        if (tab == 3 && messages.back()) return;
         if (tab != 0) { show(0); return; }
         super.onBackPressed();
     }

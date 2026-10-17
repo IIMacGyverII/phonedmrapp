@@ -13,7 +13,7 @@ import java.util.Locale;
 public final class RadioEngine implements UartPort.Listener {
     // commands (A→M unless noted)
     public static final int CMD_SET_DIGITAL = 0x22, CMD_SET_ANALOG = 0x23, CMD_LAUNCH = 0x26, CMD_QUERY_INIT = 0x27,
-            CMD_ENHANCE = 0x28, CMD_MIC = 0x2A, CMD_CALLER_INFO = 0x2B, CMD_VOLUME = 0x2E, CMD_MONITOR = 0x2F,
+            CMD_ENHANCE = 0x28, CMD_MIC = 0x2A, CMD_CALLER_INFO = 0x2B, CMD_SEND_SMS = 0x2C, CMD_FETCH_SMS = 0x2D, CMD_VOLUME = 0x2E, CMD_MONITOR = 0x2F,
             CMD_SQUELCH = 0x30, CMD_RSSI = 0x32, CMD_VERSION = 0x34, CMD_INTERRUPT = 0x35, CMD_STATUS = 0x36,
             CMD_TOT = 0x3B, CMD_SPK_EN = 0x3C, CMD_INIT = 0xAA;
 
@@ -25,6 +25,7 @@ public final class RadioEngine implements UartPort.Listener {
         void callerInfo(int callType, int callerId, int target);
         void ack(int cmd, boolean ok);
         void booted(String banner);
+        void sms(int type, int fromId, String text);          // 0x2D reply
     }
 
     private final DeviceProfile profile;
@@ -98,6 +99,21 @@ public final class RadioEngine implements UartPort.Listener {
 
     private static void pause(long ms) { try { Thread.sleep(ms); } catch (InterruptedException ignored) { } }
 
+    /**
+     * DMR text (0x2C): msgType 1 = single, 2 = all, 3 = group (then the group number follows), target id,
+     * UTF-16LE text. Success/failure comes back as status 8/9.
+     */
+    public void sendSms(int msgType, int callNumber, int groupNumber, String text) throws IOException {
+        byte[] t = text.getBytes(java.nio.charset.StandardCharsets.UTF_16LE);
+        ByteBuffer b = ByteBuffer.allocate(5 + (msgType == 3 ? 4 : 0) + t.length).order(ByteOrder.LITTLE_ENDIAN);
+        b.put((byte) msgType).putInt(callNumber);
+        if (msgType == 3) b.putInt(groupNumber);
+        b.put(t);
+        port.send(Frame.request(CMD_SEND_SMS, b.array()));
+    }
+
+    public void fetchSms() throws IOException { port.send(Frame.request(CMD_FETCH_SMS, (byte) 1)); }
+
     /** PTT: launch=1 keys the transmitter, 2 releases (enum 1/2 again — 0 is NAKed and the TX keeps running; firmware caps a keyed TX at 30 s). */
     public void ptt(boolean down) throws IOException { port.send(Frame.request(CMD_LAUNCH, (byte) (down ? 1 : 2))); }
 
@@ -170,6 +186,14 @@ public final class RadioEngine implements UartPort.Listener {
                     ByteBuffer bb = ByteBuffer.wrap(b).order(ByteOrder.LITTLE_ENDIAN);
                     int type = bb.get() & 0xFF; int caller = bb.getInt() & 0xFFFFFF; int target = bb.getInt();
                     ev.callerInfo(type, caller, target);
+                }
+                break;
+            case CMD_FETCH_SMS:
+                if (b.length >= 5) {
+                    ByteBuffer bb = ByteBuffer.wrap(b).order(ByteOrder.LITTLE_ENDIAN);
+                    int type = bb.get() & 0xFF; int from = bb.getInt();
+                    String text = new String(b, 5, b.length - 5, java.nio.charset.StandardCharsets.UTF_16LE).replace("\u0000", "").trim();
+                    ev.sms(type, from, text);
                 }
                 break;
             case CMD_INIT:

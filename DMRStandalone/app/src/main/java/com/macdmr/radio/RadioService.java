@@ -34,7 +34,9 @@ public class RadioService extends Service implements RadioEngine.Events {
         void onCaller(String text);
         void onLog(String s);
         void onLink(String state);          // "no root", "policy", "uart closed", "ready"…
-        void onLocation(String text);       // the intercom's location block ("City, State\n(↓S 25.5mi (41.0km))\n959ft (292m) 📍")
+        void onLocation(String text);
+        void onSms(int from, int type, String text);
+        void onSmsResult(boolean ok);       // the intercom's location block ("City, State\n(↓S 25.5mi (41.0km))\n959ft (292m) 📍")
     }
 
     public class LocalBinder extends Binder { public RadioService get() { return RadioService.this; } }
@@ -306,6 +308,9 @@ public class RadioService extends Service implements RadioEngine.Events {
             }
             case 3: transmitting = true; ui.post(() -> { for (Listener l : listeners) l.onTx(true); }); break;
             case 4: transmitting = false; history("tx", "📻 Voice TX"); ui.post(() -> { for (Listener l : listeners) l.onTx(false); }); break;
+            case 5: try { engine.fetchSms(); } catch (IOException ignored) { } break;             // SMS_RECEIVED -> ask for it
+            case 8: smsResult(true); break;
+            case 9: smsResult(false); break;
             case 7: history("busy", "⚠ Channel busy"); break;
             default: log("status " + name);
         }
@@ -322,6 +327,34 @@ public class RadioService extends Service implements RadioEngine.Events {
     }
     @Override public void ack(int cmd, boolean ok) { if (!ok) log(String.format(Locale.US, "MCU rejected 0x%02X", cmd)); }
     @Override public void booted(String banner) { log("module booted: " + banner); }
+
+    private volatile long pendingSmsId = -1;
+
+    @Override public void sms(int type, int fromId, String text) {
+        int t = type == 3 ? 1 : type == 2 ? 2 : 0;                         // store with our contact-type codes
+        store.addMessage(fromId, t, false, text, 1);
+        history("sms", "✉ Text from " + fromId + ": " + (text.length() > 40 ? text.substring(0, 40) + "…" : text));
+        ui.post(() -> { for (Listener l : listeners) l.onSms(fromId, t, text); });
+    }
+
+    private void smsResult(boolean ok) {
+        long id = pendingSmsId; pendingSmsId = -1;
+        if (id >= 0) store.setMessageStatus(id, ok ? 1 : 2);
+        if (!ok) log("text message failed");
+        ui.post(() -> { for (Listener l : listeners) l.onSmsResult(ok); });
+    }
+
+    /** Send a DMR text to a contact (private / group / all) over the current digital channel. */
+    public void sendSms(final ChannelStore.Contact to, final String text) {
+        final long id = store.addMessage(to.number, to.type, true, text, 0);
+        worker.execute(() -> {
+            try {
+                int msgType = to.type == 1 ? 3 : to.type == 2 ? 2 : 1;
+                pendingSmsId = id;
+                engine.sendSms(msgType, to.number, to.type == 1 ? to.number : 0, text);
+            } catch (Throwable t) { store.setMessageStatus(id, 2); log("sms: " + t); ui.post(() -> { for (Listener l : listeners) l.onSmsResult(false); }); }
+        });
+    }
 
     // ---- notification -------------------------------------------------------------------------------
 

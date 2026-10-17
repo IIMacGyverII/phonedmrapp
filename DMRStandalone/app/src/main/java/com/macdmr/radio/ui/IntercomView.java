@@ -211,6 +211,8 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     @Override public void onCaller(String text) { headline.setText("📻 " + text); }
     @Override public void onLog(String s) { }
     @Override public void onLink(String state) { refreshHeadline(); }
+    @Override public void onSms(int from, int type, String text) { }
+    @Override public void onSmsResult(boolean ok) { }
     @Override public void onLocation(String text) { location.setText(text); }
 
     private void renderHistory() {

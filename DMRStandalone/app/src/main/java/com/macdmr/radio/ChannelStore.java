@@ -28,7 +28,11 @@ public final class ChannelStore extends SQLiteOpenHelper {
         public String freqText(int hz) { return String.format(java.util.Locale.US, "%.3f", hz / 1e6); }
     }
 
-    public ChannelStore(Context c) { super(c, "radio.db", null, 3); }
+    public static final class Contact { public long id; public String name = ""; public int number; public int type; }   // type 0 private, 1 group, 2 all
+    public static final class Message { public long id; public int peer, type; public boolean outgoing; public long ts; public String text; public int status; }   // status 0 pending 1 sent 2 failed
+    public static final class Conversation { public int peer, type; public String name, lastText; public long lastTs; public boolean outgoing; }
+
+    public ChannelStore(Context c) { super(c, "radio.db", null, 4); }
 
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE channels (_id INTEGER PRIMARY KEY AUTOINCREMENT, number INTEGER, name TEXT, type INTEGER, rxFreq INTEGER, txFreq INTEGER,"
@@ -37,11 +41,12 @@ public final class ChannelStore extends SQLiteOpenHelper {
                 + " groups TEXT, active INTEGER, location TEXT, lat REAL DEFAULT 0, lon REAL DEFAULT 0, elev REAL DEFAULT 0)");
         db.execSQL("CREATE TABLE contacts (_id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, number INTEGER, type INTEGER)");
         db.execSQL("CREATE TABLE history (_id INTEGER PRIMARY KEY AUTOINCREMENT, channel INTEGER, ts INTEGER, kind TEXT, text TEXT, rssi INTEGER, dmrId INTEGER)");
+        db.execSQL("CREATE TABLE messages (_id INTEGER PRIMARY KEY AUTOINCREMENT, peer INTEGER, type INTEGER, outgoing INTEGER, ts INTEGER, text TEXT, status INTEGER)");
     }
 
     @Override public void onUpgrade(SQLiteDatabase db, int o, int n) {
         // nothing user-created yet at v1: rebuild and let the stock import run again
-        db.execSQL("DROP TABLE IF EXISTS channels"); db.execSQL("DROP TABLE IF EXISTS contacts"); db.execSQL("DROP TABLE IF EXISTS history");
+        db.execSQL("DROP TABLE IF EXISTS channels"); db.execSQL("DROP TABLE IF EXISTS contacts"); db.execSQL("DROP TABLE IF EXISTS history"); db.execSQL("DROP TABLE IF EXISTS messages");
         onCreate(db);
     }
 
@@ -91,6 +96,42 @@ public final class ChannelStore extends SQLiteOpenHelper {
         try (Cursor c = getReadableDatabase().rawQuery("SELECT ts, text, rssi FROM (SELECT ts, text, rssi FROM history WHERE channel=? ORDER BY ts DESC LIMIT ?) ORDER BY ts ASC", new String[] { String.valueOf(channel), String.valueOf(limit) })) {
             java.text.SimpleDateFormat f = new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US);
             while (c.moveToNext()) out.add(f.format(new java.util.Date(c.getLong(0))) + " " + c.getString(1) + (c.getInt(2) != -999 ? " " + c.getInt(2) + " dBm" : ""));
+        }
+        return out;
+    }
+
+    // ---- contacts ----
+    public List<Contact> contacts() {
+        List<Contact> out = new ArrayList<>();
+        try (Cursor c = getReadableDatabase().query("contacts", null, null, null, null, null, "name COLLATE NOCASE")) {
+            while (c.moveToNext()) { Contact ct = new Contact(); ct.id = c.getLong(0); ct.name = c.getString(1) == null ? "" : c.getString(1); ct.number = c.getInt(2); ct.type = c.getInt(3); out.add(ct); }
+        }
+        return out;
+    }
+    public String contactName(int number, int type) {
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT name FROM contacts WHERE number=? ORDER BY (type=?) DESC LIMIT 1", new String[] { String.valueOf(number), String.valueOf(type) })) { return c.moveToFirst() ? c.getString(0) : ""; }
+    }
+    public void insertContact(Contact ct) { ContentValues v = new ContentValues(); v.put("name", ct.name); v.put("number", ct.number); v.put("type", ct.type); ct.id = getWritableDatabase().insert("contacts", null, v); }
+    public void updateContact(Contact ct) { ContentValues v = new ContentValues(); v.put("name", ct.name); v.put("number", ct.number); v.put("type", ct.type); getWritableDatabase().update("contacts", v, "_id=?", new String[] { String.valueOf(ct.id) }); }
+    public void deleteContact(Contact ct) { getWritableDatabase().delete("contacts", "_id=?", new String[] { String.valueOf(ct.id) }); }
+
+    // ---- messages ----
+    public long addMessage(int peer, int type, boolean outgoing, String text, int status) {
+        ContentValues v = new ContentValues(); v.put("peer", peer); v.put("type", type); v.put("outgoing", outgoing ? 1 : 0); v.put("ts", System.currentTimeMillis()); v.put("text", text); v.put("status", status);
+        return getWritableDatabase().insert("messages", null, v);
+    }
+    public void setMessageStatus(long id, int status) { ContentValues v = new ContentValues(); v.put("status", status); getWritableDatabase().update("messages", v, "_id=?", new String[] { String.valueOf(id) }); }
+    public List<Message> messages(int peer, int type) {
+        List<Message> out = new ArrayList<>();
+        try (Cursor c = getReadableDatabase().query("messages", null, "peer=? AND type=?", new String[] { String.valueOf(peer), String.valueOf(type) }, null, null, "ts")) {
+            while (c.moveToNext()) { Message m = new Message(); m.id = c.getLong(0); m.peer = c.getInt(1); m.type = c.getInt(2); m.outgoing = c.getInt(3) == 1; m.ts = c.getLong(4); m.text = c.getString(5); m.status = c.getInt(6); out.add(m); }
+        }
+        return out;
+    }
+    public List<Conversation> conversations() {
+        List<Conversation> out = new ArrayList<>();
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT peer, type, text, ts, outgoing FROM messages m WHERE ts = (SELECT MAX(ts) FROM messages WHERE peer=m.peer AND type=m.type) ORDER BY ts DESC", null)) {
+            while (c.moveToNext()) { Conversation cv = new Conversation(); cv.peer = c.getInt(0); cv.type = c.getInt(1); cv.lastText = c.getString(2); cv.lastTs = c.getLong(3); cv.outgoing = c.getInt(4) == 1; cv.name = contactName(cv.peer, cv.type); out.add(cv); }
         }
         return out;
     }
