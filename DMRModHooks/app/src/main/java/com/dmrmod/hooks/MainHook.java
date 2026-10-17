@@ -5101,6 +5101,17 @@ public class MainHook implements IXposedHookLoadPackage {
         }
     }
     
+    /** Small grey caption under a Packet Radio menu button. */
+    private static void addModeCaption(LinearLayout parent, Activity activity, String text) {
+        TextView t = new TextView(activity);
+        t.setText(text);
+        t.setTextSize(12);
+        t.setTextColor(0xFF999999);
+        int dp = (int) activity.getResources().getDisplayMetrics().density;
+        t.setPadding(4 * dp, 0, 4 * dp, 14 * dp);
+        parent.addView(t);
+    }
+
     /**
      * Show Packet Radio Menu - main menu for selecting packet radio modes
      */
@@ -5116,7 +5127,7 @@ public class MainHook implements IXposedHookLoadPackage {
             
             // Description text
             TextView descriptionText = new TextView(activity);
-            descriptionText.setText("Select a packet radio mode:");
+            descriptionText.setText("Select a mode. Each one parks the radio on its own frequency and restores your channel when you stop it.");
             descriptionText.setTextSize(14);
             descriptionText.setTextColor(0xFF999999);
             descriptionText.setPadding(0, 0, 0, 30);
@@ -5150,8 +5161,10 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             });
             mainLayout.addView(aprsButton);
-            
-            // SSTV button (now enabled!)
+            addModeCaption(mainLayout, activity, "Receive and map APRS packets (positions, messages, weather); "
+                + "send messages and position beacons; or run a KISS TNC (TX + RX) for APRSdroid / YAAC.");
+
+            // SSTV button
             android.widget.Button sstvButton = new android.widget.Button(activity);
             sstvButton.setText("📺 SSTV (Slow Scan Television)");
             sstvButton.setTextSize(16);
@@ -5181,6 +5194,8 @@ public class MainHook implements IXposedHookLoadPackage {
             });
             
             mainLayout.addView(sstvButton);
+            addModeCaption(mainLayout, activity, "Receive images in 12 modes (Robot, Martin, Scottie, PD) and "
+                + "send Robot 24 Color / Robot 12 BW / Robot 8 BW.");
 
             // NOAA APT button
             android.widget.Button noaaButton = new android.widget.Button(activity);
@@ -5210,6 +5225,8 @@ public class MainHook implements IXposedHookLoadPackage {
             });
 
             mainLayout.addView(noaaButton);
+            addModeCaption(mainLayout, activity, "Decode APT weather-satellite images with Doppler tracking. "
+                + "NOAA switched its APT satellites off in 2025, so this only works if one is re-activated.");
 
             // NOAA Weather Radio alerts (SAME) button
             android.widget.Button wxButton = new android.widget.Button(activity);
@@ -5231,16 +5248,21 @@ public class MainHook implements IXposedHookLoadPackage {
                 @Override public void onClick(View v) { showWxAlertsDialog(activity); }
             });
             mainLayout.addView(wxButton);
+            addModeCaption(mainLayout, activity, "Listen to NOAA Weather Radio (WX1-WX7) and decode the SAME header "
+                + "of every warning, watch and test into a notification and an alert list.");
 
             // Info text
             TextView infoText = new TextView(activity);
-            infoText.setText("\n\uD83D\uDCA1 More modes coming soon...");
+            infoText.setText("\u26A0 Transmitting (APRS, KISS, SSTV send) requires an amateur radio licence. "
+                + "Receive-only modes are legal for everyone.");
             infoText.setTextSize(12);
             infoText.setTextColor(0xFF999999);
             infoText.setPadding(0, 20, 0, 0);
             mainLayout.addView(infoText);
             
-            builder.setView(mainLayout);
+            ScrollView menuScroll = new ScrollView(activity);
+            menuScroll.addView(mainLayout);
+            builder.setView(menuScroll);
             
             // Close button at bottom
             builder.setNegativeButton("Close", new DialogInterface.OnClickListener() {
@@ -5302,7 +5324,7 @@ public class MainHook implements IXposedHookLoadPackage {
         
         // Status section
         TextView statusText = new TextView(activity);
-        statusText.setText("⚫ MONITORING INACTIVE\n\nPress 'Start Monitoring' to begin receiving APRS packets.");
+        statusText.setText("⚫ MONITORING INACTIVE\n\nPress 'Start Monitoring' to receive APRS packets (positions, messages, weather, objects) on the APRS frequency — stations are listed, mapped and logged.\n\nThe buttons below send an APRS message or a position beacon, or run a KISS TNC so an APRS app on this phone can transmit and receive through the radio.");
         statusText.setTextSize(14);
         statusText.setTextColor(0xFF999999);
         statusText.setPadding(0, 10, 0, 20);
@@ -6499,7 +6521,7 @@ public class MainHook implements IXposedHookLoadPackage {
             "dmrmod_sstv_global", android.content.Context.MODE_PRIVATE);
         String sstvStartFreq = sstvStartPrefs.getString("sstv_frequency", "144.500");
         TextView statusText = new TextView(activity);
-        statusText.setText("⚫ MONITORING INACTIVE\n\nSSTV (Slow Scan Television) allows amateur radio operators to send and receive images over radio.\n\nPress 'Start Monitoring' to begin receiving SSTV images on " + sstvStartFreq + " MHz.");
+        statusText.setText("⚫ MONITORING INACTIVE\n\nSSTV (Slow Scan Television) sends still images as audio tones over an FM voice channel.\n\nPress 'Start Monitoring' to receive images on " + sstvStartFreq + " MHz (mode is detected automatically, the picture builds live and is saved to Download/DMR/SSTV/), or 'Send Image' to transmit one.");
         statusText.setTextSize(14);
         statusText.setTextColor(0xFF999999);
         statusText.setPadding(0, 10, 0, 20);
@@ -6507,33 +6529,32 @@ public class MainHook implements IXposedHookLoadPackage {
         
         // Supported modes
         TextView modesLabel = new TextView(activity);
-        modesLabel.setText("Supported Modes (Phase 1 - VIS Detection):");
+        modesLabel.setText("Receive modes (auto-detected from the VIS code or sync timing):");
         modesLabel.setTextSize(16);
         modesLabel.setTypeface(null, android.graphics.Typeface.BOLD);
         mainLayout.addView(modesLabel);
         
         TextView modesText = new TextView(activity);
-        modesText.setText("• Robot 36 (320x240, 36 sec) ⭐\n" +
-                         "• Robot 72 (320x240, 72 sec)\n" +
-                         "• Martin M1 (320x256, 114 sec)\n" +
-                         "• Martin M2 (320x256, 58 sec)\n" +
-                         "• Scottie S1/S2\n" +
-                         "• PD 120/180");
+        modesText.setText("• Robot 36 ⭐ / Robot 72 (320x240)\n" +
+                         "• Robot 24 Color, Robot 12 BW, Robot 8 BW\n" +
+                         "• Martin M1 / M2 (320x256)\n" +
+                         "• Scottie S1 / S2 / DX (320x256)\n" +
+                         "• PD 120 / PD 180 (640x496)");
         modesText.setTextSize(14);
         modesText.setPadding(0, 10, 0, 20);
         mainLayout.addView(modesText);
         
         // Phase 1 info
         TextView phaseText = new TextView(activity);
-        phaseText.setText("\n📋 Phase 1: VIS Code Detection\n\nThe app will detect SSTV signals and identify the transmission mode. Image decoding coming in Phase 2!");
+        phaseText.setText("\n📤 Transmit modes: Robot 24 Color (~24 s), Robot 12 BW and Robot 8 BW — the only modes that fit this radio's 30 s transmit time-out. Longer modes (Robot 36, Martin, Scottie, PD) can be received but not sent.");
         phaseText.setTextSize(12);
-        phaseText.setTextColor(0xFFFFAA00);
+        phaseText.setTextColor(0xFF999999);
         phaseText.setPadding(0, 20, 0, 0);
         mainLayout.addView(phaseText);
         
         // Ham license warning
         TextView licenseText = new TextView(activity);
-        licenseText.setText("\n⚠️ SSTV monitoring requires amateur radio certification. Receive-only monitoring is legal for all users.");
+        licenseText.setText("\n⚠️ Sending an image requires an amateur radio licence. Receive-only monitoring is legal for all users.");
         licenseText.setTextSize(11);
         licenseText.setTextColor(0xFF999999);
         licenseText.setPadding(0, 20, 0, 20);
