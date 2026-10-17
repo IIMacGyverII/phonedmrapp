@@ -45,26 +45,29 @@ public class SatellitePassPredictor {
     /** 2/3 */
     private static final double TOTHRD = 2.0 / 3.0;
 
-    // ─── Hardcoded fallback TLEs (approx. March 2026) ────────────────────────
+    // ─── Hardcoded fallback TLEs ─────────────────────────────────────────────
+    // Order MUST be { name, freq, line1, line2 } (what parseTLE and updateTleIfPresent use). The
+    // original fallbacks were { name, line1, line2, freq } and never parsed, so pass prediction only
+    // worked after a successful online refresh (fixed 2026-10-17).
     // Update by calling fetchFreshTles() on a background thread.
 
     private static volatile String[] tle15 = {
         "NOAA 15",
+        "137.620",
         "1 25338U 98030A   26077.50000000  .00000038  00000+0  31234-4 0  9994",
-        "2 25338  98.7165 123.4567 0010234 234.5678 125.4321 14.25670000000000",
-        "137.620"
+        "2 25338  98.7165 123.4567 0010234 234.5678 125.4321 14.25670000000000"
     };
     private static volatile String[] tle18 = {
         "NOAA 18",
+        "137.9125",
         "1 28654U 05018A   26077.50000000  .00000057  00000+0  42345-4 0  9997",
-        "2 28654  99.0234 145.6789 0013456 345.6789 014.3456 14.12456000000000",
-        "137.9125"
+        "2 28654  99.0234 145.6789 0013456 345.6789 014.3456 14.12456000000000"
     };
     private static volatile String[] tle19 = {
         "NOAA 19",
+        "137.100",
         "1 33591U 09005A   26077.50000000  .00000065  00000+0  57234-4 0  9998",
-        "2 33591  99.1896 121.4567 0013994 324.5678 035.4321 14.12345000000000",
-        "137.100"
+        "2 33591  99.1896 121.4567 0013994 324.5678 035.4321 14.12345000000000"
     };
 
     // ─── Public data types ────────────────────────────────────────────────────
@@ -415,6 +418,58 @@ public class SatellitePassPredictor {
             }
         }
         return (jdLow + jdHigh) / 2.0;
+    }
+
+    // ─── Doppler ──────────────────────────────────────────────────────────────
+
+    /**
+     * Predicted Doppler shift (Hz, positive = received above nominal) of the satellite whose
+     * nominal downlink is closest to {@code freqHz}, for an observer at lat/lon/alt at {@code timeMs}.
+     * Range rate is taken numerically over ±1 s. Returns 0 if no satellite matches or it is below
+     * the horizon.
+     */
+    public static double dopplerHz(double freqHz, double lat, double lon, double altM, long timeMs) {
+        try {
+            Sat best = null; double bestDiff = Double.MAX_VALUE;
+            for (Sat sat : loadSatellites()) {
+                if (sat == null) continue;
+                double d = Math.abs(Double.parseDouble(sat.freq) * 1e6 - freqHz);
+                if (d < bestDiff) { bestDiff = d; best = sat; }
+            }
+            if (best == null || bestDiff > 50e3) return 0;
+            double altKm = altM / 1000.0;
+            double jd = msToJD(timeMs);
+            double[] oNow = observerECI(lat, lon, altKm, gmst(jd));
+            double[] sNow = propagate(best, (jd - best.epochJD) * XMNPDA);
+            if (azimuthElevation(sNow, oNow, lat, lon, gmst(jd))[1] <= 0) return 0;
+            double dt = 1.0 / 86400.0;
+            double r1 = range(best, lat, lon, altKm, jd - dt);
+            double r2 = range(best, lat, lon, altKm, jd + dt);
+            double rangeRateKmS = (r2 - r1) / 2.0;             // km/s
+            return -freqHz * rangeRateKmS / 299792.458;        // approaching → positive shift
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": dopplerHz error: " + t.getMessage());
+            return 0;
+        }
+    }
+
+    /** Name of the satellite whose nominal downlink is closest to freqHz (null if none within 50 kHz). */
+    public static String satelliteForFrequency(double freqHz) {
+        Sat best = null; double bestDiff = Double.MAX_VALUE;
+        for (Sat sat : loadSatellites()) {
+            if (sat == null) continue;
+            double d = Math.abs(Double.parseDouble(sat.freq) * 1e6 - freqHz);
+            if (d < bestDiff) { bestDiff = d; best = sat; }
+        }
+        return (best != null && bestDiff <= 50e3) ? best.name : null;
+    }
+
+    private static double range(Sat sat, double lat, double lon, double altKm, double jd) {
+        double g = gmst(jd);
+        double[] o = observerECI(lat, lon, altKm, g);
+        double[] p = propagate(sat, (jd - sat.epochJD) * XMNPDA);
+        double dx = p[0] - o[0], dy = p[1] - o[1], dz = p[2] - o[2];
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
     // ─── Satellite loading ────────────────────────────────────────────────────
