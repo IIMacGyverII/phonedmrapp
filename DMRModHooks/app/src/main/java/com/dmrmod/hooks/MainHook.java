@@ -2444,11 +2444,11 @@ public class MainHook implements IXposedHookLoadPackage {
                                 
                                 FrameLayout.LayoutParams transcriptionToggleParams = new FrameLayout.LayoutParams(
                                     (int) (70 * context.getResources().getDisplayMetrics().density),
-                                    (int) (52 * context.getResources().getDisplayMetrics().density)
+                                    (int) (48 * context.getResources().getDisplayMetrics().density)
                                 );
                                 transcriptionToggleParams.gravity = android.view.Gravity.START | android.view.Gravity.TOP;
                                 transcriptionToggleParams.leftMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
-                                transcriptionToggleParams.topMargin = (int) (66 * context.getResources().getDisplayMetrics().density);
+                                transcriptionToggleParams.topMargin = (int) (58 * context.getResources().getDisplayMetrics().density);
                                 transcriptionToggle.setLayoutParams(transcriptionToggleParams);
                                 transcriptionToggle.setSingleLine(false);
                                 transcriptionToggle.setTextSize(13);
@@ -2548,11 +2548,11 @@ public class MainHook implements IXposedHookLoadPackage {
                                 
                                 FrameLayout.LayoutParams softSqToggleParams = new FrameLayout.LayoutParams(
                                     (int) (80 * context.getResources().getDisplayMetrics().density),
-                                    (int) (52 * context.getResources().getDisplayMetrics().density)
+                                    (int) (48 * context.getResources().getDisplayMetrics().density)
                                 );
                                 softSqToggleParams.gravity = android.view.Gravity.START | android.view.Gravity.TOP;
                                 softSqToggleParams.leftMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
-                                softSqToggleParams.topMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
+                                softSqToggleParams.topMargin = (int) (4 * context.getResources().getDisplayMetrics().density);
                                 softSqToggle.setLayoutParams(softSqToggleParams);
                                 softSqToggle.setSingleLine(false);
                                 softSqToggle.setTextSize(13);
@@ -2645,11 +2645,11 @@ public class MainHook implements IXposedHookLoadPackage {
                                 
                                 FrameLayout.LayoutParams toggleParams = new FrameLayout.LayoutParams(
                                     (int) (70 * context.getResources().getDisplayMetrics().density),
-                                    (int) (52 * context.getResources().getDisplayMetrics().density)
+                                    (int) (48 * context.getResources().getDisplayMetrics().density)
                                 );
                                 toggleParams.gravity = android.view.Gravity.END | android.view.Gravity.TOP;
                                 toggleParams.rightMargin = (int) (16 * context.getResources().getDisplayMetrics().density);
-                                toggleParams.topMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
+                                toggleParams.topMargin = (int) (4 * context.getResources().getDisplayMetrics().density);
                                 recordToggle.setLayoutParams(toggleParams);
                                 recordToggle.setSingleLine(false);
                                 recordToggle.setTextSize(13);
@@ -2725,11 +2725,11 @@ public class MainHook implements IXposedHookLoadPackage {
                                 
                                 FrameLayout.LayoutParams monitorToggleParams = new FrameLayout.LayoutParams(
                                     (int) (70 * context.getResources().getDisplayMetrics().density),
-                                    (int) (52 * context.getResources().getDisplayMetrics().density)
+                                    (int) (48 * context.getResources().getDisplayMetrics().density)
                                 );
                                 monitorToggleParams.gravity = android.view.Gravity.END | android.view.Gravity.TOP;
                                 monitorToggleParams.rightMargin = (int) (16 * context.getResources().getDisplayMetrics().density);
-                                monitorToggleParams.topMargin = (int) (66 * context.getResources().getDisplayMetrics().density);
+                                monitorToggleParams.topMargin = (int) (58 * context.getResources().getDisplayMetrics().density);
                                 monitorToggle.setLayoutParams(monitorToggleParams);
                                 monitorToggle.setSingleLine(false);
                                 monitorToggle.setTextSize(13);
@@ -2953,11 +2953,11 @@ public class MainHook implements IXposedHookLoadPackage {
                                 
                                 FrameLayout.LayoutParams aprsButtonParams = new FrameLayout.LayoutParams(
                                     (int) (76 * context.getResources().getDisplayMetrics().density),
-                                    (int) (52 * context.getResources().getDisplayMetrics().density)
+                                    (int) (48 * context.getResources().getDisplayMetrics().density)
                                 );
                                 aprsButtonParams.gravity = android.view.Gravity.END | android.view.Gravity.TOP;
                                 aprsButtonParams.rightMargin = (int) (16 * context.getResources().getDisplayMetrics().density);
-                                aprsButtonParams.topMargin = (int) (124 * context.getResources().getDisplayMetrics().density);
+                                aprsButtonParams.topMargin = (int) (112 * context.getResources().getDisplayMetrics().density);
                                 aprsButton.setLayoutParams(aprsButtonParams);
                                 aprsButton.setSingleLine(false);
                                 aprsButton.setTextSize(13);
@@ -3018,11 +3018,11 @@ public class MainHook implements IXposedHookLoadPackage {
                                 
                                 FrameLayout.LayoutParams vfoButtonParams = new FrameLayout.LayoutParams(
                                     (int) (70 * context.getResources().getDisplayMetrics().density),
-                                    (int) (52 * context.getResources().getDisplayMetrics().density)
+                                    (int) (48 * context.getResources().getDisplayMetrics().density)
                                 );
                                 vfoButtonParams.gravity = android.view.Gravity.START | android.view.Gravity.TOP;
                                 vfoButtonParams.leftMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
-                                vfoButtonParams.topMargin = (int) (124 * context.getResources().getDisplayMetrics().density);
+                                vfoButtonParams.topMargin = (int) (112 * context.getResources().getDisplayMetrics().density);
                                 vfoButton.setLayoutParams(vfoButtonParams);
                                 vfoButton.setSingleLine(false);
                                 vfoButton.setTextSize(13);
@@ -3085,11 +3085,11 @@ public class MainHook implements IXposedHookLoadPackage {
 
                                 FrameLayout.LayoutParams gpsSendParams = new FrameLayout.LayoutParams(
                                     (int) (70 * context.getResources().getDisplayMetrics().density),
-                                    (int) (52 * context.getResources().getDisplayMetrics().density)
+                                    (int) (48 * context.getResources().getDisplayMetrics().density)
                                 );
                                 gpsSendParams.gravity = android.view.Gravity.END | android.view.Gravity.TOP;
                                 gpsSendParams.rightMargin = (int) (16 * context.getResources().getDisplayMetrics().density);
-                                gpsSendParams.topMargin = (int) (66 * context.getResources().getDisplayMetrics().density);
+                                gpsSendParams.topMargin = (int) (58 * context.getResources().getDisplayMetrics().density);
                                 gpsSendButton.setLayoutParams(gpsSendParams);
                                 gpsSendButton.setSingleLine(false);
                                 gpsSendButton.setGravity(android.view.Gravity.CENTER);
