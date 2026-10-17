@@ -328,6 +328,11 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile long lastRecordingSavedMs = 0;
     private static volatile android.media.MediaPlayer lastHeardPlayer = null;
     private static volatile String lastHeardPlayingPath = null;
+    // Analog receptions (2026-10-17): until now only own TX, DMR calls and tone/DTMF/APRS events made it
+    // into the history; a plain analog reception only changed the "Receiving..." label. Log it at
+    // RECEIVE_STOP with its length unless a tone/DTMF row was already written for this reception.
+    private static volatile long rxStartMs = 0;
+    private static volatile boolean rxEventLogged = false;
     private static volatile long txStartMs = 0;
     private static volatile Runnable txTimerRunnable = null;
     private static volatile boolean txWarned = false;
@@ -10576,6 +10581,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 case 10: // MIX_CHECK_DIGITAL_RECEIVE_START
                                     XposedBridge.log(TAG + ": RECEIVE_START detected (type: " + currentChannelType + ")");
                                     isReceiving = true;
+                                    rxStartMs = System.currentTimeMillis(); rxEventLogged = false;
                                     ChannelScanner.onReceiveStart();
                                     
                                     // Start recording if enabled
@@ -10620,6 +10626,13 @@ public class MainHook implements IXposedHookLoadPackage {
                                 case 11: // MIX_CHECK_DIGITAL_RECEIVE_STOP
                                     XposedBridge.log(TAG + ": RECEIVE_STOP detected (type: " + currentChannelType + ")");
                                     isReceiving = false;
+                                    try {
+                                        long rxLen = rxStartMs > 0 ? System.currentTimeMillis() - rxStartMs : 0;
+                                        rxStartMs = 0;
+                                        if (currentChannelType == 1 && !rxEventLogged && rxLen >= 700) {
+                                            updateActivityIndicator("📻 Received " + Math.round(rxLen / 1000.0) + " s");
+                                        }
+                                    } catch (Throwable t) { XposedBridge.log(TAG + ": rx history: " + t.getMessage()); }
                                     isSquelchOpen = false;        // no signal -> soft-sq closed (stale-state tidy)
                                     ctcssDetector.reset();        // clear tone state for the next transmission
                                     toneAnnouncedIdx = -1;        // tone-scan history line: fresh per transmission (bank reset by clearDetectedTone)
@@ -12332,7 +12345,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                             + " (ratio " + String.format(java.util.Locale.US, "%.2f", toneDecoderBank.lastRatio()) + ") top: " + toneDecoderBank.debugTop(4)
                                             + " len=" + length + " buf=" + processingAudio.length);
                                     MainHook mi = moduleInstance;
-                                    if (mi != null) mi.updateActivityIndicator("🎵 CTCSS " + lbl + " Hz");
+                                    if (mi != null) { mi.updateActivityIndicator("🎵 CTCSS " + lbl + " Hz"); rxEventLogged = true; }
                                     // offer to program it when the channel is not already on this tone
                                     if (!(currentRxToneType == 1 && currentRxToneSubCode == ti)) {
                                         final android.content.Context tctx = homeActivityRef != null ? homeActivityRef.get() : null;
@@ -13466,7 +13479,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     });
                 }
                 MainHook mi = moduleInstance;
-                if (mi != null) mi.updateActivityIndicator("\uD83D\uDCDF DTMF " + digits);
+                if (mi != null) { mi.updateActivityIndicator("\uD83D\uDCDF DTMF " + digits); rxEventLogged = true; }
             } catch (Throwable t) {
                 XposedBridge.log(TAG + ": [dtmf] sequence handling error: " + t.getMessage());
             }
