@@ -1870,6 +1870,13 @@ public class MainHook implements IXposedHookLoadPackage {
                                 );
                                 headerParams.bottomMargin = (int) (4 * density);
                                 activityHeader.setLayoutParams(headerParams);
+                                activityHeader.setOnLongClickListener(new View.OnLongClickListener() {
+                                    @Override public boolean onLongClick(View v) {
+                                        Activity a = homeActivityRef != null ? homeActivityRef.get() : null;
+                                        if (a != null) showLastHeardDialog(a);
+                                        return a != null;
+                                    }
+                                });
                                 infoPanel.addView(activityHeader);
                                 activityHeaderTextView = activityHeader;
 
@@ -4732,6 +4739,17 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             });
 
+            // === LAST HEARD across all channels ===
+            final android.widget.Button lastHeardButton = new android.widget.Button(context);
+            lastHeardButton.setText("📻 Last heard (all channels)");
+            lastHeardButton.setTextSize(14);
+            lastHeardButton.setAllCaps(false);
+            lastHeardButton.setPadding(20, 20, 20, 20);
+            lastHeardButton.setLayoutParams(new ViewGroup.LayoutParams(templateParams));
+            lastHeardButton.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { showLastHeardDialog(activity); }
+            });
+
             // === VOICE ANNOUNCEMENTS: speak channel changes and DMR callers (eyes-free use) ===
             final android.widget.ToggleButton voiceToggle = new android.widget.ToggleButton(context);
             voiceToggle.setTextOn("🗣️ Voice announcements ON (channel changes, DMR callers)");
@@ -4836,8 +4854,9 @@ public class MainHook implements IXposedHookLoadPackage {
                 parentLayout.addView(diagToggle, index + 8);
                 parentLayout.addView(smeterToggle, index + 9);
                 parentLayout.addView(voiceToggle, index + 10);
-                parentLayout.addView(nearbyButton, index + 11);
-                parentLayout.addView(updateButton, index + 12);
+                parentLayout.addView(lastHeardButton, index + 11);
+                parentLayout.addView(nearbyButton, index + 12);
+                parentLayout.addView(updateButton, index + 13);
                 XposedBridge.log(TAG + ": ✓ Export button added at index " + index);
                 XposedBridge.log(TAG + ": ✓ Import button added at index " + (index + 1));
                 XposedBridge.log(TAG + ": ✓ RadioID buttons added at indices " + (index + 2) + "-" + (index + 4));
@@ -4853,6 +4872,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 parentLayout.addView(diagToggle);
                 parentLayout.addView(smeterToggle);
                 parentLayout.addView(voiceToggle);
+                parentLayout.addView(lastHeardButton);
                 parentLayout.addView(nearbyButton);
                 parentLayout.addView(updateButton);
                 XposedBridge.log(TAG + ": ✓ Export, Import, and RadioID buttons added at end of layout");
@@ -4867,6 +4887,105 @@ public class MainHook implements IXposedHookLoadPackage {
     /**
      * Show received APRS stations dialog
      */
+    /**
+     * Last heard across ALL channels (2026-10-17): newest activity per channel from the module's
+     * channel_history table (what the per-channel Analog/DMR History boxes are fed from), with the
+     * event count. Opened from the Device tab or by long-pressing the history header on the intercom.
+     */
+    private static void showLastHeardDialog(final Activity activity) {
+        try {
+            // channel number -> name/type from the OEM list
+            final java.util.HashMap<Integer, String> names = new java.util.HashMap<>();
+            final java.util.HashMap<Integer, Integer> types = new java.util.HashMap<>();
+            try {
+                Class<?> dmc = XposedHelpers.findClass("com.pri.prizeinterphone.manager.DmrManager", appClassLoader);
+                Object dm = XposedHelpers.callStaticMethod(dmc, "getInstance");
+                java.util.List<?> list = (java.util.List<?>) XposedHelpers.callMethod(dm, "getChannelList");
+                if (list != null) for (Object cd : list) {
+                    try {
+                        names.put(XposedHelpers.getIntField(cd, "number"), String.valueOf(XposedHelpers.getObjectField(cd, "name")));
+                        types.put(XposedHelpers.getIntField(cd, "number"), XposedHelpers.getIntField(cd, "type"));
+                    } catch (Throwable ignore) { }
+                }
+            } catch (Throwable t) { XposedBridge.log(TAG + ": [lastheard] channel list: " + t.getMessage()); }
+
+            // newest row per channel + counts
+            final java.util.LinkedHashMap<Integer, String[]> latest = new java.util.LinkedHashMap<>();
+            final java.util.HashMap<Integer, Integer> counts = new java.util.HashMap<>();
+            java.io.File dbFile = new java.io.File(activity.getApplicationInfo().dataDir + "/databases/dmrmod_history.db");
+            if (dbFile.exists()) {
+                android.database.sqlite.SQLiteDatabase db = android.database.sqlite.SQLiteDatabase.openDatabase(dbFile.getPath(), null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY);
+                try {
+                    android.database.Cursor c = db.rawQuery("SELECT channel_number, dmr_id, timestamp, activity_type, rssi_dbm, created_at FROM channel_history ORDER BY created_at DESC LIMIT 1000", null);
+                    while (c.moveToNext()) {
+                        int ch = c.getInt(0);
+                        Integer n = counts.get(ch); counts.put(ch, n == null ? 1 : n + 1);
+                        if (!latest.containsKey(ch)) latest.put(ch, new String[]{ c.getString(1), c.getString(2), c.getString(3), c.isNull(4) ? "" : String.valueOf(c.getInt(4)), String.valueOf(c.getLong(5)) });
+                    }
+                    c.close();
+                } finally { db.close(); }
+            }
+
+            AlertDialog.Builder b = new AlertDialog.Builder(activity);
+            b.setTitle("📻 Last heard (" + latest.size() + " channels)");
+            ScrollView scroll = new ScrollView(activity);
+            LinearLayout layout = new LinearLayout(activity);
+            layout.setOrientation(LinearLayout.VERTICAL);
+            layout.setPadding(40, 30, 40, 10);
+            if (latest.isEmpty()) {
+                TextView none = new TextView(activity);
+                none.setText("No activity recorded yet. Every received call, APRS/DTMF/CTCSS event and TX is logged per channel; this view shows the newest per channel across the whole radio (useful after scanning).");
+                none.setTextSize(14); layout.addView(none);
+            } else {
+                TextView hint = new TextView(activity);
+                hint.setText("Newest first across every channel. Counts are events kept in the history (up to 100 per channel).");
+                hint.setTextSize(12); hint.setTextColor(0xFF999999); hint.setPadding(0, 0, 0, 10);
+                layout.addView(hint);
+                long now = System.currentTimeMillis();
+                for (java.util.Map.Entry<Integer, String[]> e : latest.entrySet()) {
+                    int ch = e.getKey(); String[] r = e.getValue();
+                    long t = 0; try { t = Long.parseLong(r[4]); } catch (Exception ignore) { }
+                    long age = now - t;
+                    String ago = age < 60000 ? (age / 1000) + "s ago" : age < 3600000 ? (age / 60000) + "m ago" : age < 86400000 ? (age / 3600000) + "h ago" : (age / 86400000) + "d ago";
+                    String name = names.containsKey(ch) ? names.get(ch) : "?";
+                    Integer ty = types.get(ch);
+                    String who = (r[0] == null || r[0].isEmpty() || "-----".equals(r[0]) || "N/A".equalsIgnoreCase(r[0])) ? "" : r[0];
+                    if (!who.isEmpty()) {
+                        try {   // DMR ID -> name/callsign from the RadioID import when available
+                            int id = Integer.parseInt(who.trim());
+                            String dn = RadioidDatabase.getInstance(activity).lookupDisplayName(id);
+                            if (dn != null && !dn.trim().isEmpty()) who = dn.trim() + " (" + id + ")";
+                        } catch (Exception ignore) { }
+                        who = who + "  ";
+                    }
+                    if (r[3].startsWith("-999")) r[3] = "";
+                    LinearLayout card = new LinearLayout(activity);
+                    card.setOrientation(LinearLayout.VERTICAL);
+                    card.setPadding(16, 12, 16, 12);
+                    card.setBackgroundColor(0xFF2A2A2A);
+                    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    lp.setMargins(0, 0, 0, 8); card.setLayoutParams(lp);
+                    TextView title = new TextView(activity);
+                    title.setText("Ch " + ch + "  " + name + (ty != null && ty == 0 ? "  (DMR)" : ""));
+                    title.setTextSize(16); title.setTypeface(null, android.graphics.Typeface.BOLD); title.setTextColor(0xFF66FF66);
+                    card.addView(title);
+                    TextView line = new TextView(activity);
+                    line.setText(ago + "  \u00B7  " + who + r[2] + (r[3].isEmpty() ? "" : " " + r[3] + " dBm") + "  \u00B7  " + counts.get(ch) + " event" + (counts.get(ch) == 1 ? "" : "s"));
+                    line.setTextSize(13); line.setTextColor(0xFFDDDDDD);
+                    card.addView(line);
+                    layout.addView(card);
+                }
+            }
+            scroll.addView(layout);
+            b.setView(scroll);
+            b.setPositiveButton("Close", null);
+            b.show();
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [lastheard] " + t.getMessage());
+            try { Toast.makeText(activity, "Last heard: " + t.getMessage(), Toast.LENGTH_LONG).show(); } catch (Throwable ignore) { }
+        }
+    }
+
     /** "↗ 12.3km from you" for a station, or null when the phone has no last known location. */
     private static String aprsDistanceText(android.content.Context ctx, double lat, double lon) {
         try {
