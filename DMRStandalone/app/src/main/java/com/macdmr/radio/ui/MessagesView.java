@@ -33,6 +33,7 @@ public class MessagesView extends LinearLayout implements RadioService.Listener 
     private final ConvAdapter convAdapter = new ConvAdapter();
     private final List<ChannelStore.Conversation> convs = new ArrayList<>();
     private RadioService svc;
+    private TextView empty;
     private LinearLayout threadPage;
     private ListView threadList;
     private ThreadAdapter threadAdapter;
@@ -55,6 +56,9 @@ public class MessagesView extends LinearLayout implements RadioService.Listener 
         listPage.addView(bar);
         list = new ListView(c); list.setAdapter(convAdapter); list.setDivider(null); list.setDividerHeight(0);
         list.setOnItemClickListener((p, v, pos, id) -> { ChannelStore.Conversation cv = convs.get(pos); ChannelStore.Contact ct = new ChannelStore.Contact(); ct.name = cv.name; ct.number = cv.peer; ct.type = cv.type; openThread(ct); });
+        empty = Theme.label(c, "No messages yet.\n\nTap + to write to a contact or to the current channel's call target. Texts only work on DMR channels.", 0xFF6F7F8F, 15, false);
+        empty.setGravity(Gravity.CENTER); empty.setPadding((int) (32 * d), (int) (80 * d), (int) (32 * d), 0);
+        listPage.addView(empty);
         listPage.addView(list, new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f));
         content.addView(listPage);
         addView(content, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
@@ -63,7 +67,7 @@ public class MessagesView extends LinearLayout implements RadioService.Listener 
     public void attach(RadioService s) { svc = s; s.addListener(this); reload(); }
     public void detach() { if (svc != null) svc.removeListener(this); svc = null; }
 
-    public void reload() { if (svc == null) return; convs.clear(); convs.addAll(svc.store().conversations()); convAdapter.notifyDataSetChanged(); }
+    public void reload() { if (svc == null) return; convs.clear(); convs.addAll(svc.store().conversations()); convAdapter.notifyDataSetChanged(); if (empty != null) empty.setVisibility(convs.isEmpty() ? VISIBLE : GONE); }
 
     public boolean back() { if (threadPage != null) { content.removeView(threadPage); threadPage = null; peer = null; reload(); return true; } return false; }
 

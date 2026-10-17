@@ -12,8 +12,8 @@
 
     <application
         android:name=".RadioApp"
-        android:label="DMR Radio (spike)"
-        android:icon="@android:drawable/stat_sys_speakerphone"
+        android:label="DMR Radio"
+        android:icon="@mipmap/ic_launcher"
         android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
 
         <activity android:name=".MainActivity" android:exported="true"
