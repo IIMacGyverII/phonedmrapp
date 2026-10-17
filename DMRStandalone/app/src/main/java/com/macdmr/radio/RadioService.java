@@ -37,7 +37,8 @@ public class RadioService extends Service implements RadioEngine.Events {
         void onLocation(String text);
         void onSms(int from, int type, String text);
         void onSmsResult(boolean ok);
-        void onModes(boolean softSq, int softSqLevel, boolean squelchOpen, boolean monitor, boolean recording, boolean scanning, boolean holding, String zoneName);       // the intercom's location block ("City, State\n(↓S 25.5mi (41.0km))\n959ft (292m) 📍")
+        void onModes(boolean softSq, int softSqLevel, boolean squelchOpen, boolean monitor, boolean recording, boolean scanning, boolean holding, String zoneName);
+        void onCaption(boolean enabled, String live, String sentence);   // live = current partial ("" to clear); sentence = a finished line (null if none)       // the intercom's location block ("City, State\n(↓S 25.5mi (41.0km))\n959ft (292m) 📍")
     }
 
     public class LocalBinder extends Binder { public RadioService get() { return RadioService.this; } }
@@ -58,6 +59,9 @@ public class RadioService extends Service implements RadioEngine.Events {
     private final com.macdmr.radio.dsp.SoftSquelch softSq = new com.macdmr.radio.dsp.SoftSquelch();
     private volatile boolean monitorOn, recordOn, squelchOpen;
     private WavRecorder recorder;
+    private volatile boolean captionsOn;
+    private volatile long captionLastEnd;
+    private CaptionClient captions;
     private long zoneId;                       // 0 = all channels
     private final Scanner scanner = new Scanner(new Scanner.Host() {
         @Override public java.util.List<ChannelStore.Channel> candidates() { return zoneChannels(); }
@@ -165,6 +169,10 @@ public class RadioService extends Service implements RadioEngine.Events {
         squelchOpen = open;
         int peak = 0;
         if (open) for (int i = 0; i + 1 < n; i += 2) { int v = Math.abs((short) ((mono[i] & 0xFF) | (mono[i + 1] << 8))); if (v > peak) peak = v; }
+        if (captionsOn && open) {
+            if (captions != null && captions.isActive()) captions.feed8kMono(mono, n);
+            else if (peak > 400 && System.currentTimeMillis() - captionLastEnd > 1500 && captions != null) { Log.i(TAG, "captions: starting utterance (peak " + peak + ")"); captions.start(); }
+        }
         if (recordOn && receiving && open) {
             try {
                 if (recorder == null) { recorder = new WavRecorder(current != null ? current.name : null); recorder.start(lastCaller > 0 ? String.valueOf(lastCaller) : null); }
@@ -218,6 +226,46 @@ public class RadioService extends Service implements RadioEngine.Events {
     }
 
     public void setRecord(boolean on) { recordOn = on; if (!on) finishRecording(); pushModes(); }
+
+    // ---- live captions ----------------------------------------------------------------------------
+
+    public boolean captionsOn() { return captionsOn; }
+    public boolean captionsAvailable() { return CaptionClient.companionInstalled(this); }
+    public String captionModel() { return getSharedPreferences("radio", MODE_PRIVATE).getString("captionModel", CaptionClient.MODELS[1]); }
+
+    public void setCaptionModel(String m) {
+        getSharedPreferences("radio", MODE_PRIVATE).edit().putString("captionModel", m).apply();
+        if (captions == null) captions = newCaptionClient();
+        captions.setModel(m);
+    }
+
+    private CaptionClient newCaptionClient() {
+        return new CaptionClient(this, new CaptionClient.Listener() {
+            @Override public void status(String s) { ui.post(() -> { for (Listener l : listeners) l.onCaption(captionsOn, "\u23F3 " + s, null); }); }
+            @Override public void partial(String text) { ui.post(() -> { for (Listener l : listeners) l.onCaption(captionsOn, text + " \u2026", null); }); }
+            @Override public void sentence(String text) {
+                String line = captionPrefix() + text;
+                store.addHistory(current != null ? current.number : 0, "txt", "\uD83D\uDCDD " + line, -999, lastCaller);
+                ui.post(() -> { for (Listener l : listeners) l.onCaption(captionsOn, "\u2026", line); });
+            }
+            @Override public void finished(String full) {
+                captionLastEnd = System.currentTimeMillis();
+                ui.post(() -> { for (Listener l : listeners) l.onCaption(captionsOn, "", null); });
+            }
+        });
+    }
+
+    private String captionPrefix() {
+        if (current != null && current.isDigital() && lastCaller > 0) return store.contactName(lastCaller, 0).isEmpty() ? "ID " + lastCaller + ": " : store.contactName(lastCaller, 0) + ": ";
+        return "";
+    }
+
+    public void setCaptions(boolean on) {
+        captionsOn = on;
+        if (on) { if (captions == null) captions = newCaptionClient(); captions.setModel(captionModel()); }
+        else if (captions != null) captions.stop();
+        ui.post(() -> { for (Listener l : listeners) l.onCaption(on, "", null); });
+    }
 
     public String toggleScan() {
         if (scanner.isScanning()) { scanner.stop(); return "Scan stopped"; }
@@ -394,7 +442,7 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     // ---- listeners ----------------------------------------------------------------------------------
 
-    public void addListener(Listener l) { listeners.add(l); l.onLink(link); if (current != null) l.onChannel(current); l.onModes(softSq.isEnabled(), softSq.level(), squelchOpen, monitorOn, recordOn, scanner.isScanning(), scanner.isHolding(), zoneName()); }
+    public void addListener(Listener l) { listeners.add(l); l.onLink(link); if (current != null) l.onChannel(current); l.onModes(softSq.isEnabled(), softSq.level(), squelchOpen, monitorOn, recordOn, scanner.isScanning(), scanner.isHolding(), zoneName()); l.onCaption(captionsOn, "", null); }
     public void removeListener(Listener l) { listeners.remove(l); }
 
     private void setLink(String s) { link = s; ui.post(() -> { for (Listener l : listeners) l.onLink(s); }); updateNotification(); }
@@ -418,6 +466,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                 if (current != null && current.isDigital()) { try { engine.queryCallerInfo(); } catch (IOException ignored) { } }   // who was that (0x2B)
                 if (current != null && !current.isDigital() && len >= 700) history("rx", "📻 Received " + Math.round(len / 1000.0) + " s");
                 finishRecording();
+                if (captions != null) captions.stop();
                 ui.post(() -> { for (Listener l : listeners) l.onRx(false); });
                 break;
             }

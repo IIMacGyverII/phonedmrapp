@@ -33,6 +33,8 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     private boolean sqFromUser;
     private final ImageView digitOne, digitTwo;
     private final LinearLayout transcriptionBox;
+    private final TextView captionLive;
+    private final java.util.ArrayDeque<String> captionLines = new java.util.ArrayDeque<>();
     private final CircuitBoardView board;
     private final PttButton ptt;
     private final NeonToggle softSq, txt, vfo, rec, mon, pkt;
@@ -144,6 +146,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         LayoutParams thl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); thl.bottomMargin = dp4;
         transcriptionBox.addView(th, thl);
         transcriptionText = Theme.label(c, "", Theme.WHITE, 13, false); transcriptionBox.addView(transcriptionText);
+        captionLive = Theme.label(c, "", Theme.CYAN, 13, false); captionLive.setTypeface(null, android.graphics.Typeface.ITALIC); transcriptionBox.addView(captionLive);
         FrameLayout.LayoutParams tbl = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM);
         tbl.leftMargin = tbl.rightMargin = dp8; tbl.bottomMargin = (int) (22 * d);
         panel.addView(transcriptionBox, tbl); transcriptionBox.setVisibility(GONE);
@@ -168,7 +171,13 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         softSq.setOnClickListener(v -> { if (svc != null) svc.setSoftSq(!softSq.isOn()); });
         rec.setOnClickListener(v -> { if (svc != null) svc.setRecord(!rec.isOn()); });
         mon.setOnClickListener(v -> { if (svc != null) svc.setMonitor(!mon.isOn()); });
-        for (NeonToggle t : new NeonToggle[] { txt, vfo, pkt })
+        txt.setOnClickListener(v -> {
+            if (svc == null) return;
+            if (!svc.captionsAvailable()) { android.widget.Toast.makeText(c, "Install the DMR Transcription companion app for live captions", android.widget.Toast.LENGTH_LONG).show(); return; }
+            svc.setCaptions(!txt.isOn());
+        });
+        txt.setOnLongClickListener(v -> { pickCaptionModel(); return true; });
+        for (NeonToggle t : new NeonToggle[] { vfo, pkt })
             t.setOnClickListener(v -> android.widget.Toast.makeText(c, t.labelText() + " is not in this build yet", android.widget.Toast.LENGTH_SHORT).show());
         ptt.setListener(down -> { if (svc != null) svc.ptt(down); });
     }
@@ -188,6 +197,16 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     }
 
     public void attach(RadioService s) { svc = s; s.addListener(this); }
+
+    private void pickCaptionModel() {
+        if (svc == null) return;
+        int cur = 1; for (int i = 0; i < com.macdmr.radio.CaptionClient.MODELS.length; i++) if (com.macdmr.radio.CaptionClient.MODELS[i].equals(svc.captionModel())) cur = i;
+        new android.app.AlertDialog.Builder(getContext()).setTitle("Live-caption model").setSingleChoiceItems(com.macdmr.radio.CaptionClient.MODEL_LABELS, cur, null)
+                .setPositiveButton("Use", (d, w) -> {
+                    int i = ((android.app.AlertDialog) d).getListView().getCheckedItemPosition();
+                    if (i >= 0) { svc.setCaptionModel(com.macdmr.radio.CaptionClient.MODELS[i]); android.widget.Toast.makeText(getContext(), "Switching model; it downloads once (see the Live captions notification)", android.widget.Toast.LENGTH_LONG).show(); }
+                }).setNegativeButton("Cancel", null).show();
+    }
 
     private void pickZone() {
         if (svc == null) return;
@@ -233,6 +252,15 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     @Override public void onSms(int from, int type, String text) { }
     @Override public void onSmsResult(boolean ok) { }
     @Override public void onLocation(String text) { location.setText(text); }
+    @Override public void onCaption(boolean enabled, String live, String sentence) {
+        txt.setOn(enabled);
+        transcriptionBox.setVisibility(enabled ? VISIBLE : GONE);
+        board.barsCompact = enabled;
+        if (sentence != null) { captionLines.addLast(new java.text.SimpleDateFormat("[HH:mm:ss] ", java.util.Locale.US).format(new java.util.Date()) + sentence); while (captionLines.size() > 4) captionLines.removeFirst(); }
+        StringBuilder sb = new StringBuilder(); for (String l : captionLines) { if (sb.length() > 0) sb.append('\n'); sb.append(l); }
+        transcriptionText.setText(sb.toString()); transcriptionText.setVisibility(sb.length() == 0 ? GONE : VISIBLE);
+        captionLive.setText(live == null ? "" : live); captionLive.setVisibility(live == null || live.isEmpty() ? GONE : VISIBLE);
+    }
     @Override public void onModes(boolean sq, int level, boolean open, boolean monitor, boolean recording, boolean scanning, boolean holding, String zoneName) {
         softSq.setOn(sq); mon.setOn(monitor); rec.setOn(recording);
         if (!sqFromUser) { sqSeek.setProgress(level); sqValue.setText(String.valueOf(level)); }

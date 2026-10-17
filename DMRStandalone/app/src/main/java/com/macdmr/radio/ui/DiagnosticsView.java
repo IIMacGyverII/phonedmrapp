@@ -58,4 +58,5 @@ public class DiagnosticsView extends LinearLayout implements RadioService.Listen
     @Override public void onSmsResult(boolean ok) { }
     @Override public void onLocation(String text) { }
     @Override public void onModes(boolean a, int b, boolean c2, boolean d2, boolean e, boolean f2, boolean g, String z) { }
+    @Override public void onCaption(boolean en, String live, String sentence) { }
 }
