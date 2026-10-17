@@ -322,6 +322,12 @@ public class MainHook implements IXposedHookLoadPackage {
     // TX timer (2026-10-17): the firmware cuts every transmission at 30 s; show the elapsed time in the
     // history header while keyed and buzz once at 25 s so the operator can finish the sentence.
     private static volatile AlertDialog lastHeardDialogRef = null;
+    // Recording <-> transcription link (2026-10-17): the last saved REC file and when, so a transcription
+    // that completes right after can be written next to it (<file>.txt) and into the history row.
+    private static volatile String lastRecordingSavedPath = null;
+    private static volatile long lastRecordingSavedMs = 0;
+    private static volatile android.media.MediaPlayer lastHeardPlayer = null;
+    private static volatile String lastHeardPlayingPath = null;
     private static volatile long txStartMs = 0;
     private static volatile Runnable txTimerRunnable = null;
     private static volatile boolean txWarned = false;
@@ -4999,6 +5005,171 @@ public class MainHook implements IXposedHookLoadPackage {
         }
     }
 
+    /** Writes a finished transcription next to the recording it belongs to and into the newest history row. */
+    private static void persistTranscription(android.content.Context context, String text) {
+        try {
+            // "[No speech detected]", "[Transcription: enable billing ...]" etc. are status messages, not speech
+            if (text == null || text.trim().isEmpty() || text.trim().startsWith("[")) return;
+            String path = lastRecordingSavedPath;
+            if (path != null && System.currentTimeMillis() - lastRecordingSavedMs < 180000) {
+                java.io.File side = new java.io.File(path.replaceAll("\\.wav$", "") + ".txt");
+                java.io.FileWriter w = new java.io.FileWriter(side, false);
+                w.write(text); w.close();
+                XposedBridge.log(TAG + ": [transcript] saved next to recording: " + side.getName());
+            }
+            java.io.File dbFile = new java.io.File(context.getApplicationInfo().dataDir + "/databases/dmrmod_history.db");
+            if (dbFile.exists()) {
+                android.database.sqlite.SQLiteDatabase db = android.database.sqlite.SQLiteDatabase.openDatabase(dbFile.getPath(), null, android.database.sqlite.SQLiteDatabase.OPEN_READWRITE);
+                try {
+                    db.execSQL("UPDATE channel_history SET transcription = ? WHERE id = (SELECT id FROM channel_history WHERE channel_number = ? ORDER BY created_at DESC LIMIT 1)",
+                            new Object[]{ text, currentChannelNumber });
+                } finally { db.close(); }
+            }
+        } catch (Throwable t) { XposedBridge.log(TAG + ": [transcript] persist: " + t.getMessage()); }
+    }
+
+    private static String recordingFolderName(int number, String name) {
+        String f = name == null ? "" : name.replaceAll("[^a-zA-Z0-9\\s-]", "").trim();
+        return f.isEmpty() ? "Channel_" + number : f;
+    }
+
+    private static void stopLastHeardPlayback() {
+        try { android.media.MediaPlayer mp = lastHeardPlayer; lastHeardPlayer = null; lastHeardPlayingPath = null; if (mp != null) { mp.stop(); mp.release(); } } catch (Throwable ignore) { }
+    }
+
+    /**
+     * Per-channel detail behind a Last-heard card: the channel's recordings (Download/DMR/Audio/<channel>/)
+     * newest first, each with its caller, its transcription when one was saved next to it, and a play
+     * button; plus history rows that carry a transcription but no recording. "Switch to this channel" on top.
+     */
+    private static void showChannelDetailDialog(final Activity activity, final int number, final String name) {
+        try {
+            AlertDialog.Builder b = new AlertDialog.Builder(activity);
+            b.setTitle("Ch " + number + "  " + name);
+            ScrollView scroll = new ScrollView(activity);
+            final LinearLayout layout = new LinearLayout(activity);
+            layout.setOrientation(LinearLayout.VERTICAL);
+            layout.setPadding(40, 30, 40, 10);
+
+            android.widget.Button sw = new android.widget.Button(activity);
+            sw.setText("📻 Switch to this channel"); sw.setAllCaps(false);
+            sw.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    String err = jumpToChannelNumber(activity, number);
+                    Toast.makeText(activity, err == null ? "Switching to channel " + number : err, Toast.LENGTH_SHORT).show();
+                }
+            });
+            layout.addView(sw);
+
+            // recordings
+            java.io.File dir = new java.io.File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "DMR/Audio/" + recordingFolderName(number, name));
+            java.io.File[] files = dir.isDirectory() ? dir.listFiles(new java.io.FilenameFilter() {
+                @Override public boolean accept(java.io.File d, String n) { return n.toLowerCase().endsWith(".wav"); }
+            }) : null;
+            java.util.List<java.io.File> recs = new java.util.ArrayList<>();
+            if (files != null) { java.util.Collections.addAll(recs, files); }
+            java.util.Collections.sort(recs, new java.util.Comparator<java.io.File>() {
+                @Override public int compare(java.io.File a, java.io.File c) { return c.getName().compareTo(a.getName()); }
+            });
+            TextView rh = new TextView(activity);
+            rh.setText("\n🎤 Recordings (" + recs.size() + ")" + (recs.isEmpty() ? "  \u2014 none; turn REC on to keep received audio" : "  \u2014 tap ▶️ to listen"));
+            rh.setTextSize(14); rh.setTypeface(null, android.graphics.Typeface.BOLD);
+            layout.addView(rh);
+            final java.text.SimpleDateFormat inFmt = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US);
+            final java.text.SimpleDateFormat outFmt = new java.text.SimpleDateFormat("EEE MM-dd HH:mm:ss", java.util.Locale.US);
+            int shown = 0;
+            for (final java.io.File f : recs) {
+                if (shown++ >= 25) break;
+                String base = f.getName().replaceAll("\\.wav$", "");
+                String when = base.length() >= 15 ? base.substring(0, 15) : base;
+                String caller = base.length() > 16 ? base.substring(16).replace('_', ' ') : "";
+                String whenTxt; try { whenTxt = outFmt.format(inFmt.parse(when)); } catch (Exception e) { whenTxt = when; }
+                String transcript = null;
+                java.io.File side = new java.io.File(dir, base + ".txt");
+                if (side.exists()) { try { transcript = new String(java.nio.file.Files.readAllBytes(side.toPath()), "UTF-8").trim(); } catch (Throwable ignore) { } }
+                long secs = Math.max(0, (f.length() - 44) / 16000);   // 8 kHz 16-bit mono
+
+                LinearLayout row = new LinearLayout(activity);
+                row.setOrientation(LinearLayout.VERTICAL);
+                row.setPadding(16, 10, 16, 10); row.setBackgroundColor(0xFF2A2A2A);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                lp.setMargins(0, 6, 0, 0); row.setLayoutParams(lp);
+                LinearLayout top = new LinearLayout(activity); top.setOrientation(LinearLayout.HORIZONTAL);
+                final android.widget.Button play = new android.widget.Button(activity);
+                play.setText(f.getAbsolutePath().equals(lastHeardPlayingPath) ? "⏹️" : "▶️"); play.setAllCaps(false);
+                play.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+                TextView meta = new TextView(activity);
+                meta.setText(whenTxt + "  " + secs + " s" + (caller.isEmpty() ? "" : "  \u00B7  " + caller));
+                meta.setTextSize(13); meta.setTextColor(0xFFDDDDDD); meta.setPadding(12, 0, 0, 0);
+                meta.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+                top.addView(play); top.addView(meta);
+                row.addView(top);
+                if (transcript != null && !transcript.isEmpty()) {
+                    TextView tt = new TextView(activity);
+                    tt.setText("📝 " + transcript);
+                    tt.setTextSize(13); tt.setTextColor(0xFFFFFFFF); tt.setPadding(8, 4, 0, 0);
+                    row.addView(tt);
+                }
+                play.setOnClickListener(new View.OnClickListener() {
+                    @Override public void onClick(View v) {
+                        try {
+                            if (f.getAbsolutePath().equals(lastHeardPlayingPath)) { stopLastHeardPlayback(); play.setText("▶️"); return; }
+                            stopLastHeardPlayback();
+                            android.media.MediaPlayer mp = new android.media.MediaPlayer();
+                            mp.setAudioAttributes(new android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH).build());
+                            mp.setDataSource(f.getAbsolutePath());
+                            mp.setOnCompletionListener(new android.media.MediaPlayer.OnCompletionListener() {
+                                @Override public void onCompletion(android.media.MediaPlayer m) { stopLastHeardPlayback(); play.setText("▶️"); }
+                            });
+                            mp.prepare(); mp.start();
+                            lastHeardPlayer = mp; lastHeardPlayingPath = f.getAbsolutePath();
+                            play.setText("⏹️");
+                            XposedBridge.log(TAG + ": [lastheard] playing " + f.getName());
+                        } catch (Throwable t) {
+                            XposedBridge.log(TAG + ": [lastheard] play: " + t.getMessage());
+                            Toast.makeText(activity, "Cannot play: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+                layout.addView(row);
+            }
+
+            // transcriptions in the history that have no recording file
+            java.io.File dbFile = new java.io.File(activity.getApplicationInfo().dataDir + "/databases/dmrmod_history.db");
+            if (dbFile.exists()) {
+                android.database.sqlite.SQLiteDatabase db = android.database.sqlite.SQLiteDatabase.openDatabase(dbFile.getPath(), null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY);
+                try {
+                    android.database.Cursor c = db.rawQuery("SELECT timestamp, dmr_id, transcription, created_at FROM channel_history WHERE channel_number = ? AND transcription IS NOT NULL AND transcription != '' ORDER BY created_at DESC LIMIT 15", new String[]{ String.valueOf(number) });
+                    boolean head = false;
+                    while (c.moveToNext()) {
+                        long t = c.getLong(3);
+                        boolean hasRec = false;
+                        for (java.io.File f : recs) {
+                            try { long ft = inFmt.parse(f.getName().substring(0, 15)).getTime(); if (Math.abs(ft - t) < 40000) { hasRec = true; break; } } catch (Exception ignore) { }
+                        }
+                        if (hasRec) continue;
+                        if (!head) { head = true; TextView th = new TextView(activity); th.setText("\n📝 Transcriptions without a recording"); th.setTextSize(14); th.setTypeface(null, android.graphics.Typeface.BOLD); layout.addView(th); }
+                        TextView tv = new TextView(activity);
+                        String who = c.getString(1); if (who == null || "-----".equals(who) || "N/A".equalsIgnoreCase(who)) who = "";
+                        tv.setText(c.getString(0) + (who.isEmpty() ? "" : "  " + who) + "\n" + c.getString(2));
+                        tv.setTextSize(13); tv.setTextColor(0xFFDDDDDD); tv.setPadding(8, 6, 0, 6);
+                        layout.addView(tv);
+                    }
+                    c.close();
+                } finally { db.close(); }
+            }
+
+            scroll.addView(layout);
+            b.setView(scroll);
+            b.setPositiveButton("Close", null);
+            b.setOnDismissListener(new DialogInterface.OnDismissListener() { @Override public void onDismiss(DialogInterface d) { stopLastHeardPlayback(); } });
+            b.show();
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [lastheard] detail: " + t.getMessage());
+            Toast.makeText(activity, "Detail: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
     private static void showLastHeardDialog(final Activity activity) {
         try {
             // channel number -> name/type from the OEM list
@@ -5045,7 +5216,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 none.setTextSize(14); layout.addView(none);
             } else {
                 TextView hint = new TextView(activity);
-                hint.setText("Newest first across every channel; tap a card to switch to that channel. Counts are events kept in the history (up to 100 per channel).");
+                hint.setText("Newest first across every channel. Tap a card for its recordings and transcriptions (and to switch to it). Counts are events kept in the history (up to 100 per channel).");
                 hint.setTextSize(12); hint.setTextColor(0xFF999999); hint.setPadding(0, 0, 0, 10);
                 layout.addView(hint);
                 long now = System.currentTimeMillis();
@@ -5082,12 +5253,9 @@ public class MainHook implements IXposedHookLoadPackage {
                     card.addView(line);
                     final int jumpTo = ch;
                     card.setClickable(true);
+                    final String cardName = name;
                     card.setOnClickListener(new View.OnClickListener() {
-                        @Override public void onClick(View v) {
-                            String err = jumpToChannelNumber(activity, jumpTo);
-                            Toast.makeText(activity, err == null ? "Switching to channel " + jumpTo : err, Toast.LENGTH_SHORT).show();
-                            if (err == null && lastHeardDialogRef != null) { try { lastHeardDialogRef.dismiss(); } catch (Throwable ignore) { } }
-                        }
+                        @Override public void onClick(View v) { showChannelDetailDialog(activity, jumpTo, cardName); }
                     });
                     layout.addView(card);
                 }
@@ -11775,6 +11943,10 @@ public class MainHook implements IXposedHookLoadPackage {
                     recordedFile.delete();
                     XposedBridge.log(TAG + ": Deleted empty recording file");
                 }
+                if (recordedFile.exists()) {
+                    lastRecordingSavedPath = recordedFile.getAbsolutePath();
+                    lastRecordingSavedMs = System.currentTimeMillis();
+                }
             }
             
         } catch (Exception e) {
@@ -13772,6 +13944,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     if (result != null && !result.trim().isEmpty()) {
                         currentTranscription = result;
                         XposedBridge.log(TAG + ": ✅ Transcription: " + result);
+                        persistTranscription(context, result);
                     } else {
                         currentTranscription = "[No speech detected]";
                         XposedBridge.log(TAG + ": No speech detected in audio");
