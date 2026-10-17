@@ -120,6 +120,18 @@ Design: `deep-dive/15-packet-radio-review.md` (+ addendum) and `16-repeater-dire
 
 ---
 
+## Candidates noted 2026-10-17 (after the live-captions / search work)
+
+| # | Item | Notes |
+|---|------|-------|
+| **N1** (= E1) | Radio Check / Call Alert / Remote Monitor for DMR (`0x28` fun 1–3) next to Kill/Revive | Firmware supports; needs BTECH 6X2 on-air verification |
+| **N2** | Favourites row on the intercom: one-tap switching to pinned channels | Uses `jumpToChannelNumber`; pins in prefs |
+| **N3** | DMR SMS canned phrases (quick-send list in the Message tab) | |
+| **N4** (= S22) | NOAA squelch: `disableSoftwareSquelchOnCurrentChannel()` must restore the channel's own `sq`, not a hard-coded 2 | |
+| **N5** | Scan priority channel (checked every N steps while scanning) | `ChannelScanner` |
+| **N6** | Caption keyword alerts: per-keyword actions (record / switch channel), regex option | Follows the 2026-10-17 feature |
+| **N7** | Evaluate: standalone app instead of an LSPosed module (own UART + audio path) | See `docs/standalone-app-evaluation.md` (2026-10-17) |
+
 ## Analog squelch (Soft SQ) — follow-ups
 
 Recent work (2026-10-15, all device-tested): Soft SQ busy-lockout bypass, own persisted level + on/off, RMS-only carrier gating, **software CTCSS tone squelch** (voice-robust ratio + adjacent-standard-tone rejection), and an **FM noise squelch** for non-tone channels (absolute 3.3–3.75 kHz noise, replaces the amplitude gate). See `CHANGELOG_DRAFT.md`.

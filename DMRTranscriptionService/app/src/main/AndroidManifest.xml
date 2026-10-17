@@ -39,6 +39,9 @@
             </intent-filter>
         </service>
 
-    </application>
+            <receiver android:name=".ProbeReceiver" android:exported="true">
+            <intent-filter><action android:name="com.macdmr.transcription.PROBE" /></intent-filter>
+        </receiver>
+</application>
 
 </manifest>
