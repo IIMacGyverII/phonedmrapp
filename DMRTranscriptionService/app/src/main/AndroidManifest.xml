@@ -28,6 +28,17 @@
             </intent-filter>
         </service>
 
+        <!-- On-device live captions (Vosk) behind 127.0.0.1:8002; started by the radio-app module -->
+        <service
+            android:name=".LiveCaptionService"
+            android:enabled="true"
+            android:exported="true"
+            android:foregroundServiceType="dataSync">
+            <intent-filter>
+                <action android:name="com.macdmr.transcription.LIVE_CAPTION" />
+            </intent-filter>
+        </service>
+
     </application>
 
 </manifest>
