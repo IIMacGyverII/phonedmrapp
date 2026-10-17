@@ -94,7 +94,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                 } else {
                     log("sepolicy: " + RootSetup.applySepolicy(getFilesDir(), profile));
                     RootSetup.ensureTty(profile);
-                    if (RootSetup.stockAppEnabled(profile)) { log("stock app off: " + RootSetup.stockApp(profile, false)); Thread.sleep(1500); }
+                    if (RootSetup.stockAppEnabled(profile)) { log("stock app paused (its icon disappears while this app owns the radio; Device → Release brings it back): " + RootSetup.stockApp(profile, false)); Thread.sleep(1500); }
                 }
                 if (store.count() == 0) {
                     StringBuilder err = new StringBuilder();
@@ -103,8 +103,11 @@ public class RadioService extends Service implements RadioEngine.Events {
                 }
                 setLink("uart");
                 engine.open();
-                engine.powerOn();
-                if (!engine.waitBooted(100)) { /* already booted: no banner expected */ }
+                if (engine.powerOn()) {                       // the stock app pulls the module's power when it is disabled
+                    setLink("booting");
+                    if (!engine.waitBooted(12000)) log("no boot banner within 12 s — continuing anyway");
+                    Thread.sleep(300);
+                }
                 engine.queryVersion();
                 selectChannel(store.activeNumber());
                 startRxAudio();
