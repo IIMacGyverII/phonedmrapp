@@ -62,14 +62,20 @@ public class APRSReceiver {
 
                 APRSPacketDecoder.APRSPacket aprsPacket = APRSPacketDecoder.decode(packet);
                 
-                if (aprsPacket.isValid) {
-                    XposedBridge.log(TAG + ": ✓ Received APRS: " + aprsPacket.toString());
-                    
-                    // Store in database
+                if (!aprsPacket.isValid) continue;
+                XposedBridge.log(TAG + ": ✓ Received APRS: " + aprsPacket.toString());
+
+                if (aprsPacket.hasPosition) {
+                    // Positions, Mic-E, objects/items, NMEA: store + GPX/text export
                     db.storeStation(aprsPacket, channelNumber);
-                    
-                    // Show notification (optional)
                     showNotification(aprsPacket);
+                }
+                if (aprsPacket.isMessage()) {
+                    // Messages (incl. acks/rejs): kept in the module's message log, notified when for us
+                    MainHook.aprsMessageReceived(context, aprsPacket);
+                }
+                if (aprsPacket.status != null) {
+                    MainHook.aprsStatusReceived(context, aprsPacket);
                 }
             }
             

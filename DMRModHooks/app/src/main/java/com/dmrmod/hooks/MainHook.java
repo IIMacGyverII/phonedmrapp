@@ -4811,12 +4811,13 @@ public class MainHook implements IXposedHookLoadPackage {
             java.util.List<APRSReceivedDatabase.ReceivedStation> stations = db.getRecentStations();
             
             AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-            builder.setTitle("📍 Received APRS Stations (" + stations.size() + ")");
-            
+            builder.setTitle("📍 APRS Received (" + stations.size() + " stations)");
+
             ScrollView scrollView = new ScrollView(activity);
             LinearLayout mainLayout = new LinearLayout(activity);
             mainLayout.setOrientation(LinearLayout.VERTICAL);
             mainLayout.setPadding(40, 40, 40, 40);
+            aprsAddMessagesSection(activity, mainLayout);
             
             if (stations.isEmpty()) {
                 TextView noStations = new TextView(activity);
@@ -4932,7 +4933,8 @@ public class MainHook implements IXposedHookLoadPackage {
                 public void onClick(DialogInterface dialog, int which) {
                     APRSReceivedDatabase db = APRSReceivedDatabase.getInstance(activity);
                     db.clearAll();
-                    Toast.makeText(activity, "Received stations cleared", Toast.LENGTH_SHORT).show();
+                    activity.getSharedPreferences("dmrmod_aprs", android.content.Context.MODE_PRIVATE).edit().remove("messages").apply();
+                    Toast.makeText(activity, "Received stations and messages cleared", Toast.LENGTH_SHORT).show();
                 }
             });
             
@@ -8982,6 +8984,159 @@ public class MainHook implements IXposedHookLoadPackage {
     }
 
     /** Append to the last-50 alert list in prefs dmrmod_wx/alerts (JSON). */
+    // =====================================================================================
+    // APRS messages / status received (backlog F2, 2026-10-17)
+    // =====================================================================================
+
+    private static volatile int aprsMsgNotifySeq = 0;
+
+    /** True when the addressee is this station (CALL-SSID, or bare CALL when our SSID is 0). */
+    private static boolean aprsAddressedToMe(android.content.Context ctx, String to) {
+        try {
+            APRSDatabase db = APRSDatabase.getInstance(ctx);
+            String call = db.getCallsign();
+            if (call == null || to == null) return false;
+            call = call.trim().toUpperCase(java.util.Locale.US);
+            String t = to.trim().toUpperCase(java.util.Locale.US);
+            int ssid = db.getSSID();
+            return t.equals(call + "-" + ssid) || (ssid == 0 && t.equals(call)) || t.equals(call + "-0") && ssid == 0;
+        } catch (Throwable e) { return false; }
+    }
+
+    /** Called from the decode thread for every ':' message (incl. ack/rej). */
+    static void aprsMessageReceived(final android.content.Context ctx, final APRSPacketDecoder.APRSPacket p) {
+        try {
+            final String from = p.sourceCallsign + (p.sourceSSID != 0 ? "-" + p.sourceSSID : "");
+            final boolean mine = aprsAddressedToMe(ctx, p.messageTo);
+            final boolean bulletin = p.messageTo != null && (p.messageTo.startsWith("BLN") || p.messageTo.startsWith("NWS"));
+            String kind = p.isAck ? "ack" : p.isRej ? "rej" : "msg";
+            aprsStoreLogEntry(ctx, kind, from, p.messageTo, p.messageText, p.messageId, mine);
+            XposedBridge.log(TAG + ": [aprs] " + kind + " " + from + " -> " + p.messageTo + ": " + p.messageText
+                    + (p.messageId != null ? " {" + p.messageId : "") + (mine ? "  (FOR US)" : ""));
+            if ((mine || bulletin) && !p.isAck && !p.isRej) {
+                aprsNotifyMessage(ctx, from, p.messageTo, p.messageText, mine);
+                final String toastText = (mine ? "✉️ APRS message from " : "📢 APRS bulletin from ") + from + ": " + p.messageText;
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+                    @Override public void run() {
+                        try { Toast.makeText(ctx, toastText, Toast.LENGTH_LONG).show(); } catch (Throwable ignored) {}
+                    }
+                });
+            }
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [aprs] message handling error: " + t.getMessage());
+        }
+    }
+
+    /** Called from the decode thread for every '>' status report. */
+    static void aprsStatusReceived(android.content.Context ctx, APRSPacketDecoder.APRSPacket p) {
+        try {
+            String from = p.sourceCallsign + (p.sourceSSID != 0 ? "-" + p.sourceSSID : "");
+            aprsStoreLogEntry(ctx, "status", from, null, p.status, null, false);
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [aprs] status handling error: " + t.getMessage());
+        }
+    }
+
+    /** Message/status log: prefs dmrmod_aprs/messages, newest last, capped at 100 entries. */
+    private static void aprsStoreLogEntry(android.content.Context ctx, String kind, String from, String to,
+                                          String text, String id, boolean mine) {
+        try {
+            android.content.SharedPreferences prefs = ctx.getSharedPreferences("dmrmod_aprs", android.content.Context.MODE_PRIVATE);
+            org.json.JSONArray arr = new org.json.JSONArray(prefs.getString("messages", "[]"));
+            org.json.JSONObject o = new org.json.JSONObject();
+            o.put("t", System.currentTimeMillis()); o.put("kind", kind); o.put("from", from);
+            if (to != null) o.put("to", to);
+            o.put("text", text == null ? "" : text);
+            if (id != null) o.put("id", id);
+            o.put("mine", mine);
+            arr.put(o);
+            while (arr.length() > 100) arr.remove(0);
+            prefs.edit().putString("messages", arr.toString()).apply();
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [aprs] log store error: " + t.getMessage());
+        }
+    }
+
+    private static void aprsNotifyMessage(android.content.Context ctx, String from, String to, String text, boolean mine) {
+        try {
+            android.app.NotificationManager nm = (android.app.NotificationManager) ctx.getSystemService(android.content.Context.NOTIFICATION_SERVICE);
+            if (nm == null) return;
+            android.app.Notification.Builder b;
+            if (android.os.Build.VERSION.SDK_INT >= 26) {
+                android.app.NotificationChannel ch = new android.app.NotificationChannel("dmrmod_aprs_msg", "APRS messages", android.app.NotificationManager.IMPORTANCE_HIGH);
+                nm.createNotificationChannel(ch);
+                b = new android.app.Notification.Builder(ctx, "dmrmod_aprs_msg");
+            } else {
+                b = new android.app.Notification.Builder(ctx);
+            }
+            b.setSmallIcon(android.R.drawable.stat_notify_chat)
+             .setContentTitle((mine ? "APRS message from " : "APRS bulletin from ") + from + (mine ? "" : " to " + to))
+             .setContentText(text)
+             .setStyle(new android.app.Notification.BigTextStyle().bigText(text))
+             .setAutoCancel(true)
+             .setDefaults(android.app.Notification.DEFAULT_ALL);
+            nm.notify(7300 + (aprsMsgNotifySeq++ % 50), b.build());
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [aprs] notify error: " + t.getMessage());
+        }
+    }
+
+    /** "Messages" section at the top of the Received APRS dialog: last 20 entries, newest first. */
+    private static void aprsAddMessagesSection(Activity activity, LinearLayout parent) {
+        try {
+            android.content.SharedPreferences prefs = activity.getSharedPreferences("dmrmod_aprs", android.content.Context.MODE_PRIVATE);
+            org.json.JSONArray arr = new org.json.JSONArray(prefs.getString("messages", "[]"));
+            TextView head = new TextView(activity);
+            head.setText("✉️ Messages & status (" + arr.length() + ")");
+            head.setTextSize(16);
+            head.setTypeface(null, android.graphics.Typeface.BOLD);
+            head.setTextColor(0xFFFFCC66);
+            head.setPadding(0, 0, 0, 8);
+            parent.addView(head);
+            if (arr.length() == 0) {
+                TextView none = new TextView(activity);
+                none.setText("No APRS messages, acks or status reports decoded yet. Messages addressed to your callsign raise a notification.");
+                none.setTextSize(13); none.setTextColor(0xFF999999); none.setPadding(0, 0, 0, 20);
+                parent.addView(none);
+                return;
+            }
+            java.text.SimpleDateFormat fmt = new java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.US);
+            int shown = 0;
+            for (int i = arr.length() - 1; i >= 0 && shown < 20; i--, shown++) {
+                org.json.JSONObject o = arr.getJSONObject(i);
+                String kind = o.optString("kind", "msg");
+                boolean mine = o.optBoolean("mine", false);
+                String line;
+                String from = o.optString("from", "?");
+                String when = fmt.format(new java.util.Date(o.optLong("t", 0)));
+                if ("status".equals(kind)) {
+                    line = when + "  " + from + " status: " + o.optString("text", "");
+                } else if ("ack".equals(kind) || "rej".equals(kind)) {
+                    line = when + "  " + from + " " + kind + " " + o.optString("id", "") + " → " + o.optString("to", "");
+                } else {
+                    line = when + "  " + from + " → " + o.optString("to", "") + ": " + o.optString("text", "")
+                         + (o.has("id") ? "  {" + o.optString("id") : "");
+                }
+                TextView t = new TextView(activity);
+                t.setText((mine ? "⭐ " : "") + line);
+                t.setTextSize(13);
+                // the dialog background is light: dark text, bold + blue for messages addressed to us
+                t.setTextColor(mine ? 0xFF1E5AA8 : "status".equals(kind) ? 0xFF888888 : 0xFF444444);
+                if (mine) t.setTypeface(null, android.graphics.Typeface.BOLD);
+                t.setPadding(0, 2, 0, 2);
+                parent.addView(t);
+            }
+            View div = new View(activity);
+            div.setBackgroundColor(0x33FFFFFF);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1);
+            lp.topMargin = 12; lp.bottomMargin = 16;
+            div.setLayoutParams(lp);
+            parent.addView(div);
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [aprs] messages section error: " + t.getMessage());
+        }
+    }
+
     private static void wxStoreAlert(android.content.Context ctx, SAMEDecoder.Message m) {
         try {
             android.content.SharedPreferences prefs = ctx.getSharedPreferences("dmrmod_wx", android.content.Context.MODE_PRIVATE);

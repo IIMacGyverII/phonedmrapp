@@ -118,7 +118,7 @@ public class APRSReceivedDatabase extends SQLiteOpenHelper {
      * Store received station
      */
     public void storeStation(APRSPacketDecoder.APRSPacket packet, int channelNumber) {
-        if (!packet.isValid) {
+        if (!packet.isValid || !packet.hasPosition) {
             return;
         }
         
@@ -130,7 +130,7 @@ public class APRSReceivedDatabase extends SQLiteOpenHelper {
         values.put(COL_LATITUDE, packet.latitude);
         values.put(COL_LONGITUDE, packet.longitude);
         values.put(COL_ALTITUDE, packet.altitude);
-        values.put(COL_COMMENT, packet.comment);
+        values.put(COL_COMMENT, APRSPacketDecoder.describe(packet));
         values.put(COL_SYMBOL_TABLE, String.valueOf(packet.symbolTable));
         values.put(COL_SYMBOL_CODE, String.valueOf(packet.symbolCode));
         values.put(COL_TIMESTAMP, System.currentTimeMillis());
