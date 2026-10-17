@@ -206,6 +206,12 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile int kissPort = 8001;
     private static java.net.ServerSocket kissServerSocket = null;
     private static volatile boolean kissTunedForSession = false;  // restore the channel on stop
+    // Diagnostics plumbing: the module instance + home Activity so gated broadcasts can drive
+    // instance-level mode code (SSTV start/stop) hands-free, and an RX audio dump for decoder debugging.
+    private static volatile MainHook moduleInstance = null;
+    private static volatile java.lang.ref.WeakReference<Activity> homeActivityRef = null;
+    private static volatile java.io.FileOutputStream rxDumpStream = null;   // raw 8 kHz stereo 16-bit bytes
+    private static volatile long rxDumpBytesLeft = 0;
 
     // Audio RMS thresholds for squelch levels 0-9 (tuned for 8kHz 16-bit PCM)
     // Based on real-world values: noise floor ~100-400, weak signal ~800-2000, strong ~4000+
@@ -513,6 +519,7 @@ public class MainHook implements IXposedHookLoadPackage {
 
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
+        moduleInstance = this;   // lets gated diagnostic broadcasts reach instance-level mode code
         // Only hook our target package
         if (!lpparam.packageName.equals(TARGET_PACKAGE)) {
             return;
@@ -1434,6 +1441,7 @@ public class MainHook implements IXposedHookLoadPackage {
 
                         // Check for orphaned channels and restore if needed (delayed to ensure DmrManager is ready)
                         final Activity activityForRestore = (Activity) param.thisObject;
+                        homeActivityRef = new java.lang.ref.WeakReference<Activity>(activityForRestore);
                         new android.os.Handler().postDelayed(new Runnable() {
                             @Override
                             public void run() {
@@ -7189,7 +7197,10 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.setIntField(currentChannel, "sq", 2);  // Hardware squelch 2 (0 doesn't work)
             // channel_band is BANDWIDTH (0 narrow 12.5 kHz / 1 wide 25 kHz), not UHF/VHF (backlog R1).
             // SSTV is narrow FM; channelMode is a digital-only field and is not written for analog.
-            XposedHelpers.setIntField(currentChannel, "band", 0);
+            // 2026-10-16: band MUST be 1 here. With band=0 on a VHF frequency the receiver went deaf
+            // (no RECEIVE_START even at -73 dBm, nor on NOAA) and stayed deaf until a reboot; the same
+            // retune with band=1 receives fine. On this radio the byte is not a pure bandwidth flag.
+            XposedHelpers.setIntField(currentChannel, "band", 1);
             XposedHelpers.setIntField(currentChannel, "power", 1);  // High power
             XposedHelpers.setIntField(currentChannel, "rxType", 0);  // No tone
             XposedHelpers.setIntField(currentChannel, "rxSubCode", 0);
@@ -10717,6 +10728,18 @@ public class MainHook implements IXposedHookLoadPackage {
                         }
                         
                         // Buffer audio for SSTV decoding (only if monitoring is active)
+                        // Diagnostics: raw RX audio dump (mode=rxdump) — the exact bytes the decoders see.
+                        if (rxDumpStream != null && rxDumpBytesLeft > 0) {
+                            try {
+                                int n = (int) Math.min(length, rxDumpBytesLeft);
+                                rxDumpStream.write(processingAudio, 0, n);
+                                rxDumpBytesLeft -= n;
+                                if (rxDumpBytesLeft <= 0) {
+                                    rxDumpStream.close(); rxDumpStream = null;
+                                    XposedBridge.log(TAG + ": [rxdump] complete");
+                                }
+                            } catch (Throwable t) { rxDumpStream = null; XposedBridge.log(TAG + ": [rxdump] write failed: " + t.getMessage()); }
+                        }
                         if (isSSTVMonitoringActive && sstvReceiver != null) {
                             sstvReceiver.processAudio(processingAudio, length);
                         }
@@ -12775,6 +12798,37 @@ public class MainHook implements IXposedHookLoadPackage {
                 return;
             }
             if ("kissstop".equalsIgnoreCase(mode))  { stopKissTnc(); return; }
+
+            // mode=sstvstart/sstvstop: drive SSTV monitoring hands-free (same code path as the UI button).
+            if ("sstvstart".equalsIgnoreCase(mode) || "sstvstop".equalsIgnoreCase(mode)) {
+                final boolean start = "sstvstart".equalsIgnoreCase(mode);
+                final Activity act = homeActivityRef != null ? homeActivityRef.get() : null;
+                final MainHook mi = moduleInstance;
+                if (act == null || mi == null) { XposedBridge.log(TAG + ": [sstv-diag] no activity/instance"); return; }
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+                    @Override public void run() {
+                        try { if (start) mi.startSSTVMonitoring(act); else mi.stopSSTVMonitoring(act); }
+                        catch (Throwable t) { XposedBridge.log(TAG + ": [sstv-diag] " + t.getMessage()); }
+                    }
+                });
+                return;
+            }
+
+            // mode=rxdump --ei secs N: dump the next N seconds of raw RX audio (8 kHz stereo 16-bit) to
+            // Download/DMR/rxdump.raw — exactly the bytes the decoders are fed.
+            if ("rxdump".equalsIgnoreCase(mode)) {
+                try {
+                    int secs = intent.getIntExtra("secs", 10);
+                    File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "DMR");
+                    if (!dir.exists()) dir.mkdirs();
+                    File f = new File(dir, "rxdump.raw");
+                    if (rxDumpStream != null) { try { rxDumpStream.close(); } catch (Throwable ignored) { } }
+                    rxDumpStream = new java.io.FileOutputStream(f);
+                    rxDumpBytesLeft = (long) secs * 32000L;   // 8 kHz * 2 ch * 2 bytes
+                    XposedBridge.log(TAG + ": [rxdump] capturing " + secs + " s -> " + f.getAbsolutePath());
+                } catch (Throwable t) { XposedBridge.log(TAG + ": [rxdump] open failed: " + t.getMessage()); }
+                return;
+            }
 
             // mode=txfreqtest: verify the capture→tune→restore round-trip (logs the captured/restored freq).
             if ("txfreqtest".equalsIgnoreCase(mode)) {
