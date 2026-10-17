@@ -247,6 +247,8 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile TextView liveCaptionView = null;
     private static final StringBuilder captionFinalText = new StringBuilder();
     private static volatile int captionCompanionInstalled = -1;   // -1 unknown, 0 no, 1 yes
+    private static volatile long captionLastEndMs = 0;
+    private static final int CAPTION_PAUSE_MS = 2500;            // silence that ends an utterance
     private static volatile String currentTranscription = "";
     private static List<Short> audioBuffer = Collections.synchronizedList(new ArrayList<>());
     private static final int MAX_BUFFER_SIZE = 480000; // 30 seconds at 16kHz (480000 samples)
@@ -1945,7 +1947,9 @@ public class MainHook implements IXposedHookLoadPackage {
                                 transcriptionBoxParams.gravity = android.view.Gravity.BOTTOM;
                                 transcriptionBoxParams.leftMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
                                 transcriptionBoxParams.rightMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
-                                transcriptionBoxParams.bottomMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
+                                // 2026-10-17: sit above the VU-meter bars (drawn in the bottom ~62 dp of the panel) so live
+                                // captions are not drawn through by the bars while a station is being received
+                                transcriptionBoxParams.bottomMargin = (int) (68 * context.getResources().getDisplayMetrics().density);
                                 
                                 // Create border for transcription box
                                 android.graphics.drawable.GradientDrawable transcriptionBoxDrawable = new android.graphics.drawable.GradientDrawable();
@@ -2568,12 +2572,17 @@ public class MainHook implements IXposedHookLoadPackage {
                                             isTranscriptionEnabled = true;
                                             XposedBridge.log(TAG + ": Transcription enabled");
                                             Toast.makeText(context, vosk ? "Live captions ON (on-device, offline)" : "Transcription enabled (Google Cloud)", Toast.LENGTH_SHORT).show();
-                                            if (vosk) {   // warm the companion up now so the first reception is captioned
-                                                try {
-                                                    android.content.Intent svc = new android.content.Intent();
-                                                    svc.setComponent(new android.content.ComponentName(CAPTION_PKG, CAPTION_SERVICE));
-                                                    if (android.os.Build.VERSION.SDK_INT >= 26) context.startForegroundService(svc); else context.startService(svc);
-                                                } catch (Throwable t) { XposedBridge.log(TAG + ": [caption] warm-up: " + t.getMessage()); }
+                                            if (vosk) {   // warm the companion up now (with the chosen model) so the first reception is captioned
+                                                String chosen = context.getSharedPreferences("dmrmod_transcription", android.content.Context.MODE_PRIVATE).getString("model", null);
+                                                if (chosen != null) captionSetModel(context, chosen);   // explicit choice only; otherwise keep what the companion has
+                                                else {
+                                                    try {
+                                                        android.content.Intent svc = new android.content.Intent();
+                                                        svc.setComponent(new android.content.ComponentName(CAPTION_PKG, CAPTION_SERVICE));
+                                                        if (android.os.Build.VERSION.SDK_INT >= 26) context.startForegroundService(svc); else context.startService(svc);
+                                                    } catch (Throwable t) { XposedBridge.log(TAG + ": [caption] warm-up: " + t.getMessage()); }
+                                                }
+                                                if (isReceiving) captionStart(context);   // a station is already talking (e.g. NOAA): caption from now on
                                             }
                                         } else {
                                             // User disabled transcription
@@ -2616,7 +2625,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                                     tp.edit().putString("engine", sel == 1 ? "google" : "vosk").apply();
                                                     captionCompanionInstalled = -1;
                                                     if (sel == 1) showApiKeyConfigDialog(context, transcriptionToggle);
-                                                    else Toast.makeText(context, hasCompanion ? "On-device live captions selected. Turn TXT on; the model (41 MB) downloads once." : "Install the DMR Transcription companion app first", Toast.LENGTH_LONG).show();
+                                                    else if (hasCompanion) showCaptionModelDialog(context);
+                                                    else Toast.makeText(context, "Install the DMR Transcription companion app first", Toast.LENGTH_LONG).show();
                                                 }
                                             })
                                             .setNegativeButton("Cancel", null)
@@ -12406,6 +12416,18 @@ public class MainHook implements IXposedHookLoadPackage {
                             } catch (Throwable t) { XposedBridge.log(TAG + ": [tone] " + t.getMessage()); }
                         }
 
+                        // Live captions follow the audio itself (2026-10-17): a continuous carrier such as NOAA, or an
+                        // app restart mid-reception, never produces a RECEIVE_START, so start when speech-level audio
+                        // flows with TXT on. The utterance ends when the audio pauses (writer poll timeout) or at RECEIVE_STOP.
+                        if (isTranscriptionEnabled && !captionActive && (!useSquelch || isSquelchOpen) && amplitude > 400
+                                && System.currentTimeMillis() - captionLastEndMs > 1500) {
+                            try {
+                                android.content.Context cctx = homeActivityRef != null ? homeActivityRef.get() : null;
+                                if (cctx == null && mLocalViewObject instanceof View) cctx = ((View) mLocalViewObject).getContext();
+                                if (cctx != null && captionEngineVosk(cctx)) captionStart(cctx);
+                            } catch (Throwable t) { XposedBridge.log(TAG + ": [caption] audio start: " + t.getMessage()); }
+                        }
+
                         if (currentChannelType == 1 && (!useSquelch || isSquelchOpen) && dtmfWanted()) {
                             DTMFDecoder dd = dtmfDecoder;
                             if (dd == null) { dd = new DTMFDecoder(8000, true, dtmfListener); dtmfDecoder = dd; }
@@ -13978,6 +14000,54 @@ public class MainHook implements IXposedHookLoadPackage {
         } catch (Throwable t) { return false; }
     }
 
+    private static final String[] CAPTION_MODELS = {
+        "vosk-model-small-en-us-0.15", "vosk-model-en-us-0.22-lgraph", "vosk-model-en-us-0.22", "vosk-model-en-us-0.42-gigaspeech" };
+    private static final String[] CAPTION_MODEL_LABELS = {
+        "Small \u2014 40 MB, fastest, least accurate",
+        "Better \u2014 125 MB, good balance (default)",
+        "Best \u2014 1.8 GB, full-size English model",
+        "Max \u2014 2.3 GB, GigaSpeech-trained, most accurate" };
+
+    /** Ask the companion to use a given Vosk model (downloads it on first use). */
+    private static void captionSetModel(android.content.Context ctx, String model) {
+        try {
+            ctx.getSharedPreferences("dmrmod_transcription", android.content.Context.MODE_PRIVATE).edit().putString("model", model).apply();
+            android.content.Intent svc = new android.content.Intent();
+            svc.setComponent(new android.content.ComponentName(CAPTION_PKG, CAPTION_SERVICE));
+            svc.putExtra("model", model);
+            if (android.os.Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(svc); else ctx.startService(svc);
+            XposedBridge.log(TAG + ": [caption] model -> " + model);
+        } catch (Throwable t) { XposedBridge.log(TAG + ": [caption] set model: " + t.getMessage()); }
+    }
+
+    private static void showCaptionModelDialog(final android.content.Context ctx) {
+        final android.content.SharedPreferences tp = ctx.getSharedPreferences("dmrmod_transcription", android.content.Context.MODE_PRIVATE);
+        String cur = tp.getString("model", CAPTION_MODELS[1]);
+        int sel = 1;
+        for (int i = 0; i < CAPTION_MODELS.length; i++) if (CAPTION_MODELS[i].equals(cur)) sel = i;
+        new AlertDialog.Builder(ctx)
+            .setTitle("Live-caption model")
+            .setSingleChoiceItems(CAPTION_MODEL_LABELS, sel, null)
+            .setPositiveButton("Use", new DialogInterface.OnClickListener() {
+                @Override public void onClick(DialogInterface d, int w) {
+                    int i = ((AlertDialog) d).getListView().getCheckedItemPosition();
+                    if (i < 0 || i >= CAPTION_MODELS.length) i = 1;
+                    captionSetModel(ctx, CAPTION_MODELS[i]);
+                    Toast.makeText(ctx, "Switching to " + CAPTION_MODEL_LABELS[i].split(" \u2014 ")[0] + " model; it downloads once (watch the Live captions notification)", Toast.LENGTH_LONG).show();
+                }
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+
+    private static String captionPrefix() {
+        if (currentChannelType == 0) {
+            if (currentCallerName != null && !currentCallerName.isEmpty()) return currentCallerName + ": ";
+            if (currentCallerDmrId > 0) return "ID " + currentCallerDmrId + ": ";
+        }
+        return "";
+    }
+
     private static void showLiveCaption(final String text) {
         try {
             final LinearLayout container = transcriptionMessagesContainer;
@@ -14047,8 +14117,8 @@ public class MainHook implements IXposedHookLoadPackage {
                 Thread writer = new Thread(new Runnable() { @Override public void run() {
                     try {
                         while (true) {
-                            byte[] b = q.take();
-                            if (b.length == 0) { fs.shutdownOutput(); break; }
+                            byte[] b = q.poll(CAPTION_PAUSE_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+                            if (b == null || b.length == 0) { fs.shutdownOutput(); break; }   // pause or RECEIVE_STOP
                             out.write(b); out.flush();
                         }
                     } catch (Throwable t) { XposedBridge.log(TAG + ": [caption] writer: " + t.getMessage()); }
@@ -14067,13 +14137,13 @@ public class MainHook implements IXposedHookLoadPackage {
                         }
                         if (o.has("partial")) {
                             String ptxt = o.optString("partial").trim();
-                            String done; synchronized (captionFinalText) { done = captionFinalText.toString(); }
-                            if (!ptxt.isEmpty() || !done.isEmpty()) showLiveCaption("🎙️ " + (done.isEmpty() ? "" : done + " ") + ptxt + " \u2026");
+                            if (!ptxt.isEmpty()) showLiveCaption("🎙️ " + ptxt + " \u2026");
                         } else if (o.has("text")) {
                             String t = o.optString("text").trim();
                             if (!t.isEmpty()) {
-                                String done; synchronized (captionFinalText) { if (captionFinalText.length() > 0) captionFinalText.append(' '); captionFinalText.append(t); done = captionFinalText.toString(); }
-                                showLiveCaption("🎙️ " + done + " \u2026");
+                                synchronized (captionFinalText) { if (captionFinalText.length() > 0) captionFinalText.append(' '); captionFinalText.append(t); }
+                                updateTranscriptionDisplay(captionPrefix() + t);   // finished sentence scrolls up as a normal line
+                                showLiveCaption("🎙️ \u2026");
                             }
                         }
                     } catch (Throwable t) { XposedBridge.log(TAG + ": [caption] line: " + t.getMessage()); }
@@ -14085,14 +14155,9 @@ public class MainHook implements IXposedHookLoadPackage {
                 captionSocket = null; captionQueue = null; captionActive = false;
                 String text; synchronized (captionFinalText) { text = captionFinalText.toString().trim(); }
                 removeLiveCaption();
+                captionLastEndMs = System.currentTimeMillis();
                 if (!text.isEmpty()) {
-                    String display = text;
-                    if (savedChannelTypeForTranscription == 0) {
-                        if (savedCallerNameForTranscription != null && !savedCallerNameForTranscription.isEmpty()) display = savedCallerNameForTranscription + ": " + text;
-                        else if (savedCallerDmrIdForTranscription > 0) display = "ID " + savedCallerDmrIdForTranscription + ": " + text;
-                    }
                     currentTranscription = text;
-                    updateTranscriptionDisplay(display);
                     persistTranscription(ctx, text);
                     XposedBridge.log(TAG + ": [caption] final: " + text);
                 }
