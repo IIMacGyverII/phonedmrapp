@@ -186,10 +186,12 @@ public class MainHook implements IXposedHookLoadPackage {
     // duplicates each sample into interleaved L/R (the format the vendor service expects); false
     // writes the mono waveform straight into the buffer to reproduce the old (broken) mono test.
     private static volatile boolean aprsTxActive = false;
-    private static volatile short[] aprsTxSamples = null;   // looped mono 8 kHz source
+    private static volatile short[] aprsTxSamples = null;   // mono 8 kHz source (looped or one-shot)
     private static volatile int aprsTxPos = 0;
     private static volatile boolean aprsTxStereo = true;
-    
+    private static volatile boolean aprsTxLoop = false;     // F6 tones/test loop; real TX (message/beacon) is one-shot
+    private static volatile int aprsMsgSeq = 1;             // APRS message line number for the {NN suffix
+
     // Audio RMS thresholds for squelch levels 0-9 (tuned for 8kHz 16-bit PCM)
     // Based on real-world values: noise floor ~100-400, weak signal ~800-2000, strong ~4000+
     private static final int[] AUDIO_SQUELCH_THRESHOLDS = {
@@ -5267,6 +5269,22 @@ public class MainHook implements IXposedHookLoadPackage {
         divider.setLayoutParams(new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, 1));
         mainLayout.addView(divider);
+
+        // === SEND APRS MESSAGE (TX) BUTTON ===
+        Button aprsSendMsgBtn = new Button(activity);
+        aprsSendMsgBtn.setText("✉️ Send APRS Message (TX)");
+        aprsSendMsgBtn.setTextSize(15);
+        aprsSendMsgBtn.setAllCaps(false);
+        aprsSendMsgBtn.setPadding(20, 20, 20, 20);
+        LinearLayout.LayoutParams aprsTxParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT);
+        aprsTxParams.topMargin = (int) (8 * activity.getResources().getDisplayMetrics().density);
+        aprsSendMsgBtn.setLayoutParams(aprsTxParams);
+        aprsSendMsgBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { showAprsSendMessageDialog(activity); }
+        });
+        mainLayout.addView(aprsSendMsgBtn);
 
         // === APRS RECEIVED BUTTON ===
         Button aprsReceivedBtn = new Button(activity);
@@ -12580,7 +12598,7 @@ public class MainHook implements IXposedHookLoadPackage {
                         android.content.BroadcastReceiver aprsTxReceiver = new android.content.BroadcastReceiver() {
                             @Override
                             public void onReceive(android.content.Context c, android.content.Intent intent) {
-                                handleAprsTxTest(intent);
+                                handleAprsTxTest(c, intent);
                             }
                         };
                         android.content.IntentFilter aprsFilter = new android.content.IntentFilter();
@@ -12628,41 +12646,41 @@ public class MainHook implements IXposedHookLoadPackage {
         }
     }
 
-    /** Fill {@code n} bytes of {@code buf} from the looped mono source, stereo-duplicating per config. */
+    /**
+     * Fill {@code n} bytes of {@code buf} from the mono source, stereo-duplicating per config.
+     * When {@link #aprsTxLoop} is set (F6 tone/test modes) the source repeats seamlessly; otherwise
+     * (real message/beacon TX) it plays once and then emits silence until PTT is released, so the
+     * packet is sent exactly once no matter how long the OEM keeps the mic open.
+     */
     private static void fillAprsTx(byte[] buf, int off, int n) {
         short[] src = aprsTxSamples;
         if (src == null || src.length == 0) return;
         int pos = aprsTxPos;
-        if (aprsTxStereo) {
-            // interleaved L/R 16-bit: same sample to both channels (4 bytes per frame)
-            int frames = n / 4;
-            int i = off;
-            for (int f = 0; f < frames; f++) {
-                short s = src[pos];
-                pos = (pos + 1) % src.length;
-                buf[i]     = (byte) (s & 0xFF);
-                buf[i + 1] = (byte) ((s >> 8) & 0xFF);
+        int step = aprsTxStereo ? 4 : 2;   // bytes per output frame (stereo L/R vs mono)
+        int frames = n / step;
+        int i = off;
+        for (int f = 0; f < frames; f++) {
+            short s;
+            if (pos < src.length) {
+                s = src[pos];
+                pos++;
+                if (aprsTxLoop && pos >= src.length) pos = 0;
+            } else {
+                s = 0;   // one-shot finished: silence for the rest of the keyed window
+            }
+            buf[i]     = (byte) (s & 0xFF);
+            buf[i + 1] = (byte) ((s >> 8) & 0xFF);
+            if (aprsTxStereo) {
                 buf[i + 2] = (byte) (s & 0xFF);
                 buf[i + 3] = (byte) ((s >> 8) & 0xFF);
-                i += 4;
             }
-        } else {
-            // mono waveform written straight in (service reads consecutive samples as L/R → doubling)
-            int samples = n / 2;
-            int i = off;
-            for (int s2 = 0; s2 < samples; s2++) {
-                short s = src[pos];
-                pos = (pos + 1) % src.length;
-                buf[i]     = (byte) (s & 0xFF);
-                buf[i + 1] = (byte) ((s >> 8) & 0xFF);
-                i += 2;
-            }
+            i += step;
         }
         aprsTxPos = pos;
     }
 
     /** F6: build the looped source for a test mode. Tones are 1 s (integer cycles → seamless loop). */
-    private static void handleAprsTxTest(android.content.Intent intent) {
+    private static void handleAprsTxTest(android.content.Context ctx, android.content.Intent intent) {
         try {
             String action = intent.getAction();
             if ("com.dmrmod.APRS_TX_STOP".equals(action)) {
@@ -12676,6 +12694,31 @@ public class MainHook implements IXposedHookLoadPackage {
             }
             String mode = intent.getStringExtra("mode");
             if (mode == null) mode = "tone1200";
+
+            // mode=tune: retune the CURRENT channel to an analog frequency (for on-air TX testing).
+            // adb shell am broadcast -a com.dmrmod.APRS_TX_TEST --es mode tune --ei freqhz 144390000
+            if ("tune".equalsIgnoreCase(mode)) {
+                int freqHz = intent.getIntExtra("freqhz", 144390000);
+                tuneCurrentChannelAnalog(freqHz);
+                return;
+            }
+
+            // mode=message: exercise the REAL hands-free message TX path (self-keyed PTT, one-shot).
+            // adb shell am broadcast -a com.dmrmod.APRS_TX_TEST --es mode message --es to W1AW --es text "hi" --es call N0CALL --ei ssid 7
+            if ("message".equalsIgnoreCase(mode)) {
+                String to = intent.getStringExtra("to");     if (to == null)   to = "TEST";
+                String text = intent.getStringExtra("text"); if (text == null) text = "DMRModHooks APRS msg TX test";
+                String call = intent.getStringExtra("call"); if (call == null) call = "N0CALL";
+                int ssid = intent.getIntExtra("ssid", 0);
+                String info = buildAprsMessageInfo(to, text, aprsMsgSeq);
+                if (++aprsMsgSeq > 99) aprsMsgSeq = 1;
+                int leadMs = intent.getIntExtra("leadms", APRS_TX_LEAD_MS);
+                int reps   = intent.getIntExtra("reps", APRS_TX_REPS);
+                int gapMs  = intent.getIntExtra("gapms", APRS_TX_GAP_MS);
+                transmitAprsPacket(ctx, call, ssid, new String[]{ "WIDE1-1", "WIDE2-1" }, info,
+                        call + "-" + ssid + " → " + to + ": " + text, leadMs, reps, gapMs);
+                return;
+            }
             boolean stereo = !"mono".equalsIgnoreCase(intent.getStringExtra("fmt"));
             int amp = intent.getIntExtra("amp", 10000);
 
@@ -12699,6 +12742,7 @@ public class MainHook implements IXposedHookLoadPackage {
             aprsTxSamples = src;
             aprsTxPos = 0;
             aprsTxStereo = stereo;
+            aprsTxLoop = true;   // F6 test modes loop until APRS_TX_STOP
             aprsTxActive = true;
             XposedBridge.log(TAG + ": [aprs-tx] ARMED mode=" + mode + " fmt=" + (stereo ? "stereo" : "mono")
                 + " amp=" + amp + " — key PTT now; audio injected into mic path");
@@ -12707,14 +12751,38 @@ public class MainHook implements IXposedHookLoadPackage {
         }
     }
 
-    /** Minimal AX.25 UI beacon frame (dest APDR16, src N0CALL) + FCS, no HDLC flags. */
+    /** Minimal AX.25 UI beacon frame (dest APZDMR, src N0CALL) + FCS, no HDLC flags. */
     private static byte[] buildTestAx25Frame() {
+        return buildAprsUiFrame("APZDMR", 0, "N0CALL", 0, null,
+                ">DMRModHooks F6 TX test".getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+    }
+
+    /**
+     * Build a complete AX.25 UI (APRS) frame: dest + src + optional digipeater path, control 0x03,
+     * PID 0xF0, the info bytes, then the 16-bit CRC-CCITT FCS (LSB first). No HDLC 0x7E flags — the
+     * AFSK generator adds those. {@code path} entries are "CALL" or "CALL-SSID" (e.g. "WIDE1-1").
+     */
+    private static byte[] buildAprsUiFrame(String destCall, int destSsid, String srcCall, int srcSsid,
+                                           String[] path, byte[] info) {
         java.io.ByteArrayOutputStream f = new java.io.ByteArrayOutputStream();
-        writeAx25Addr(f, "APDR16", 0, false);
-        writeAx25Addr(f, "N0CALL", 0, true);
+        boolean srcIsLast = (path == null || path.length == 0);
+        writeAx25Addr(f, destCall, destSsid, false);
+        writeAx25Addr(f, srcCall, srcSsid, srcIsLast);
+        if (path != null) {
+            for (int p = 0; p < path.length; p++) {
+                String entry = path[p];
+                String call = entry;
+                int ssid = 0;
+                int dash = entry.indexOf('-');
+                if (dash > 0) {
+                    call = entry.substring(0, dash);
+                    try { ssid = Integer.parseInt(entry.substring(dash + 1).trim()); } catch (NumberFormatException ignored) { }
+                }
+                writeAx25Addr(f, call, ssid, p == path.length - 1);
+            }
+        }
         f.write(0x03); // UI control
         f.write(0xF0); // PID no layer 3
-        byte[] info = ">DMRModHooks F6 TX test".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
         f.write(info, 0, info.length);
         byte[] body = f.toByteArray();
         int fcs = 0xFFFF;
@@ -12728,6 +12796,243 @@ public class MainHook implements IXposedHookLoadPackage {
         out[body.length] = (byte) (fcs & 0xFF);
         out[body.length + 1] = (byte) ((fcs >> 8) & 0xFF);
         return out;
+    }
+
+    /**
+     * Transmit one APRS packet (arbitrary info field) over the CURRENT analog channel, hands-free:
+     * generate Bell-202 AFSK, arm the mic-path injection, key the OEM PTT via the broadcast the F6
+     * experiment proved ({@code com.interphone.ptt.down}), hold it for the packet duration plus a
+     * key-up/tail margin, then release. One-shot ({@link #aprsTxLoop} = false). Must run on the
+     * intercom/talkback page so the OEM PTT receiver is registered.
+     *
+     * @param path digipeater aliases (e.g. {@code {"WIDE1-1","WIDE2-1"}}), or null/empty for direct
+     * @return estimated keyed duration in ms (for the caller's UI), or -1 on failure
+     */
+    // APRS TX timing (empirical, Ulefone Armor 26 Ultra, 2026-10-16): this radio's TX audio path
+    // needs ~1.5 s to settle after PTT before AFSK demodulates cleanly (a packet sent at key-up never
+    // decodes; the same packet after settling decodes at full strength). So every TX leads with a
+    // steady-tone TXDELAY, then sends the frame APRS_TX_REPS times for decode margin.
+    private static final int APRS_TX_LEAD_MS = 1600;   // settling lead-in (steady 1200 Hz) before the frame
+    private static final int APRS_TX_REPS    = 2;      // frame repeats
+    private static final int APRS_TX_GAP_MS  = 250;    // silence between repeats
+
+    private static int transmitAprsPacket(final android.content.Context ctx, final String srcCall, final int srcSsid,
+                                          final String[] path, final String info, final String humanLabel) {
+        return transmitAprsPacket(ctx, srcCall, srcSsid, path, info, humanLabel,
+                APRS_TX_LEAD_MS, APRS_TX_REPS, APRS_TX_GAP_MS);
+    }
+
+    /**
+     * Transmit an APRS packet with a settling lead-in and {@code reps} frame copies. Returns the
+     * keyed duration in ms, or -1 on failure. See {@link #APRS_TX_LEAD_MS} for why the lead-in exists.
+     */
+    private static int transmitAprsPacket(final android.content.Context ctx, final String srcCall, final int srcSsid,
+                                          final String[] path, final String info, final String humanLabel,
+                                          int leadMs, int reps, int gapMs) {
+        try {
+            if (reps < 1) reps = 1;
+            byte[] frame = buildAprsUiFrame("APZDMR", 0, srcCall, srcSsid, path,
+                    info.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+            short[] afsk = AFSKGenerator.generateAFSKWithNRZI(frame);
+
+            final int SR = 8000;
+            int lead = (int) (leadMs / 1000.0 * SR);
+            int gap  = (int) (gapMs  / 1000.0 * SR);
+            short[] src = new short[lead + reps * (afsk.length + gap)];
+            // settling lead-in: steady 1200 Hz mark at the AFSK amplitude so the radio's AGC/PA settle
+            for (int i = 0; i < lead; i++) src[i] = (short) (30000 * Math.sin(2.0 * Math.PI * 1200 * i / SR));
+            int p = lead;
+            for (int r = 0; r < reps; r++) {
+                System.arraycopy(afsk, 0, src, p, afsk.length);
+                p += afsk.length + gap;   // gap samples stay 0 (silence between copies)
+            }
+            final int durationMs = (int) (src.length / 8.0);
+
+            aprsTxSamples = src;
+            aprsTxPos = 0;
+            aprsTxStereo = true;   // the correct vendor format (proven on-air 2026-10-16)
+            aprsTxLoop = false;    // play once (lead-in + reps already included)
+            aprsTxActive = true;
+
+            // Key PTT (OEM InterPhoneReceiver starts recording ~200 ms after ptt.down → keys TX).
+            ctx.sendBroadcast(new android.content.Intent("com.interphone.ptt.down"));
+            XposedBridge.log(TAG + ": [aprs-msg] TX start frame=" + frame.length + "B afsk=" + afsk.length
+                    + " lead=" + leadMs + "ms reps=" + reps + " total=" + src.length + " (~" + durationMs + "ms): " + humanLabel);
+
+            final android.content.Context appCtx = ctx.getApplicationContext();
+            final int holdMs = durationMs + 600;   // packet + tail margin (recording already running)
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+                @Override public void run() {
+                    try { appCtx.sendBroadcast(new android.content.Intent("com.interphone.ptt.up")); } catch (Throwable ignored) { }
+                    aprsTxActive = false;
+                    aprsTxSamples = null;
+                    aprsTxPos = 0;
+                    XposedBridge.log(TAG + ": [aprs-msg] TX done — PTT released");
+                    try { Toast.makeText(appCtx, "✓ APRS TX complete", Toast.LENGTH_SHORT).show(); } catch (Throwable ignored) { }
+                }
+            }, holdMs);
+            return durationMs;
+        } catch (Throwable t) {
+            aprsTxActive = false;
+            aprsTxSamples = null;
+            XposedBridge.log(TAG + ": [aprs-msg] TX error: " + t.getMessage());
+            try { Toast.makeText(ctx, "TX failed: " + t.getMessage(), Toast.LENGTH_LONG).show(); } catch (Throwable ignored) { }
+            return -1;
+        }
+    }
+
+    /**
+     * Retune the current channel to an analog frequency and apply it to the RF-IC, mirroring the
+     * proven APRS-monitoring hijack ({@link #startAPRSMonitoring}). Diagnostic/testing helper: the
+     * in-memory override reverts on the next channel change or app restart. Uses {@link #appClassLoader}.
+     */
+    private static void tuneCurrentChannelAnalog(int freqHz) {
+        try {
+            Class<?> dmrManagerClass = XposedHelpers.findClass("com.pri.prizeinterphone.manager.DmrManager", appClassLoader);
+            Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
+            Object ch = XposedHelpers.callMethod(dmrManager, "getCurrentChannel");
+            if (ch == null) { XposedBridge.log(TAG + ": [aprs-tune] no current channel"); return; }
+            XposedHelpers.setIntField(ch, "type", 1);        // analog
+            XposedHelpers.setIntField(ch, "rxFreq", freqHz);
+            XposedHelpers.setIntField(ch, "txFreq", freqHz);
+            XposedHelpers.setIntField(ch, "sq", 2);
+            XposedHelpers.setIntField(ch, "band", 1);
+            XposedHelpers.setIntField(ch, "channelMode", 0); // narrow
+            XposedHelpers.setIntField(ch, "rxType", 0);
+            XposedHelpers.setIntField(ch, "rxSubCode", 0);
+            XposedHelpers.setIntField(ch, "txType", 0);
+            XposedHelpers.setIntField(ch, "txSubCode", 0);
+            XposedHelpers.callMethod(dmrManager, "updateChannel", ch);
+            XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", ch);
+            currentChannelType = 1;
+            Class<?> amc = XposedHelpers.findClass("com.pri.prizeinterphone.message.AnalogMessage", appClassLoader);
+            Object am = amc.newInstance();
+            XposedHelpers.callMethod(am, "setBand", (byte) XposedHelpers.getIntField(ch, "band"));
+            XposedHelpers.callMethod(am, "setPower", (byte) XposedHelpers.getIntField(ch, "power"));
+            XposedHelpers.callMethod(am, "setTxFreq", freqHz);
+            XposedHelpers.callMethod(am, "setRxFreq", freqHz);
+            XposedHelpers.callMethod(am, "setSq", (byte) 2);
+            XposedHelpers.callMethod(am, "setRxType", (byte) 0);
+            XposedHelpers.callMethod(am, "setRxSubCode", (byte) 0);
+            XposedHelpers.callMethod(am, "setTxType", (byte) 0);
+            XposedHelpers.callMethod(am, "setTxSubCode", (byte) 0);
+            XposedHelpers.callMethod(am, "send");
+            XposedBridge.log(TAG + ": [aprs-tune] current channel -> " + (freqHz / 1000000.0) + " MHz analog narrow");
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [aprs-tune] error: " + t.getMessage());
+        }
+    }
+
+    /** Assemble a standard APRS message info field {@code :ADDRESSEE :text{LINE}. Addressee is 9 chars. */
+    private static String buildAprsMessageInfo(String addressee, String text, int line) {
+        String a = addressee == null ? "" : addressee.trim().toUpperCase(java.util.Locale.US);
+        if (a.length() > 9) a = a.substring(0, 9);
+        StringBuilder sb = new StringBuilder(":").append(a);
+        for (int i = a.length(); i < 9; i++) sb.append(' ');
+        sb.append(':').append(text == null ? "" : text).append('{').append(line);
+        return sb.toString();
+    }
+
+    /**
+     * APRS Message TX dialog — addressee + text, sent as a standard APRS message
+     * ({@code :ADDRESSEE :text{NN}) over the current analog channel.
+     */
+    private void showAprsSendMessageDialog(final Activity activity) {
+        try {
+            final APRSDatabase aprsDb = APRSDatabase.getInstance(activity);
+            final String srcCall = aprsDb.getCallsign();
+            final int srcSsid = aprsDb.getSSID();
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+            builder.setTitle("✉️ Send APRS Message");
+
+            ScrollView scroll = new ScrollView(activity);
+            LinearLayout layout = new LinearLayout(activity);
+            layout.setOrientation(LinearLayout.VERTICAL);
+            layout.setPadding(40, 30, 40, 10);
+
+            // Require a real callsign before allowing TX.
+            final boolean callsignOk = srcCall != null && !srcCall.trim().isEmpty()
+                    && !"N0CALL".equalsIgnoreCase(srcCall.trim());
+
+            TextView from = new TextView(activity);
+            from.setText("From: " + (srcCall == null ? "?" : srcCall) + "-" + srcSsid
+                    + (callsignOk ? "" : "  ⚠ set your callsign first"));
+            from.setTextSize(14);
+            from.setTextColor(callsignOk ? 0xFF69F0AE : 0xFFFF7043);
+            from.setPadding(0, 0, 0, 16);
+            layout.addView(from);
+
+            TextView warn = new TextView(activity);
+            warn.setText("Transmits on the CURRENT channel. Tune to an ANALOG channel on your APRS "
+                    + "frequency first. Licensed amateur use only.");
+            warn.setTextSize(12);
+            warn.setTextColor(0xFF999999);
+            warn.setPadding(0, 0, 0, 20);
+            layout.addView(warn);
+
+            TextView toLabel = new TextView(activity);
+            toLabel.setText("To (addressee callsign):");
+            toLabel.setTextSize(14);
+            layout.addView(toLabel);
+            final EditText toEdit = new EditText(activity);
+            toEdit.setSingleLine(true);
+            toEdit.setHint("e.g. W1AW-9");
+            toEdit.setInputType(android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+            layout.addView(toEdit);
+
+            TextView msgLabel = new TextView(activity);
+            msgLabel.setText("Message (max 67 chars):");
+            msgLabel.setTextSize(14);
+            msgLabel.setPadding(0, 16, 0, 0);
+            layout.addView(msgLabel);
+            final EditText msgEdit = new EditText(activity);
+            msgEdit.setHint("Hello from my DMR radio");
+            msgEdit.setFilters(new android.text.InputFilter[]{ new android.text.InputFilter.LengthFilter(67) });
+            layout.addView(msgEdit);
+
+            scroll.addView(layout);
+            builder.setView(scroll);
+
+            builder.setPositiveButton("📡 Transmit", null);  // overridden below so validation can keep dialog open
+            builder.setNegativeButton("Cancel", null);
+            final AlertDialog dialog = builder.create();
+            dialog.show();
+
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    if (!callsignOk) {
+                        Toast.makeText(activity, "Set your callsign in APRS Settings first", Toast.LENGTH_LONG).show();
+                        showAPRSSettingsDialog(activity);
+                        dialog.dismiss();
+                        return;
+                    }
+                    if (currentChannelType != 1) {
+                        Toast.makeText(activity, "Switch to an ANALOG channel first (current is digital)", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    String addressee = toEdit.getText().toString().trim().toUpperCase(java.util.Locale.US);
+                    String text = msgEdit.getText().toString().trim();
+                    if (addressee.isEmpty()) { Toast.makeText(activity, "Enter an addressee", Toast.LENGTH_SHORT).show(); return; }
+                    if (text.isEmpty())      { Toast.makeText(activity, "Enter a message", Toast.LENGTH_SHORT).show(); return; }
+
+                    // APRS message info: ':' + 9-char addressee (space-padded) + ':' + text + '{' + line#
+                    String info = buildAprsMessageInfo(addressee, text, aprsMsgSeq);
+                    if (++aprsMsgSeq > 99) aprsMsgSeq = 1;
+
+                    String label = srcCall + "-" + srcSsid + " → " + addressee + ": " + text;
+                    int ms = transmitAprsPacket(activity, srcCall, srcSsid,
+                            new String[]{ "WIDE1-1", "WIDE2-1" }, info, label);
+                    if (ms >= 0) {
+                        Toast.makeText(activity, "📡 Transmitting (~" + ms + "ms): " + addressee, Toast.LENGTH_SHORT).show();
+                    }
+                    dialog.dismiss();
+                }
+            });
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": showAprsSendMessageDialog error: " + t.getMessage());
+            Toast.makeText(activity, "Error: " + t.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
 
     private static void writeAx25Addr(java.io.ByteArrayOutputStream f, String call, int ssid, boolean last) {

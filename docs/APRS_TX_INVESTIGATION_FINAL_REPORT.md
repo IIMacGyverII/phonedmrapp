@@ -28,8 +28,8 @@ After extensive testing and firmware analysis, we confirmed that the TYT MD-UV38
 ```
 Test: Generated WAV → direwolf analysis
 Command: atest.exe latest_tx_test.wav
-Result: DECODED[1] 0:00.753 [callsign]-7 audio level = 100(29/28)
-Packet: [callsign]-7>APZDMR,WIDE1-1,WIDE2-1:!3412.73N/10850.00E[/A=000787
+Result: DECODED[1] 0:00.753 N0CALL-7 audio level = 100(29/28)
+Packet: N0CALL-7>APZDMR,WIDE1-1,WIDE2-1:!3412.73N/10850.00E[/A=000787
 
 Audio Analysis:
 - AFSK Energy: 96.1% (should be >90%) ✅
@@ -852,7 +852,7 @@ public class APRSPacketEncoder {
      * 
      * USAGE:
      *   byte[] packet = APRSPacketEncoder.encodePositionPacket(
-     *       "[callsign]", 7,          // Callsign and SSID
+     *       "N0CALL", 7,          // Callsign and SSID
      *       34.2122, -108.8333,  // Latitude, Longitude
      *       787,                 // Altitude (meters)
      *       "DMR Radio APRS",    // Comment
@@ -1082,7 +1082,7 @@ public class APRSPacketEncoder {
 
 ```java
 // Generate APRS position packet
-String callsign = "[callsign]";
+String callsign = "N0CALL";
 int ssid = 7;  // Mobile station
 double latitude = 34.2122;   // 34.2122°N
 double longitude = -108.8333; // 108.8333°W (negative = West)
@@ -1099,7 +1099,7 @@ byte[] packet = APRSPacketEncoder.encodePositionPacket(
 // Result: AX.25 frame ready for AFSK generation
 // Example packet (hex):
 //   82 A0 AC 88 8A 9C 00    // APZDMR-0 (destination)
-//   82 82 60 82 8A 40 0E    // [callsign]-7 (source)
+//   NN NN NN NN NN NN NN    // N0CALL-7 (source)
 //   A6 96 88 8A 62 62 00    // WIDE1-1 (digipeater)
 //   A6 96 88 8A 64 64 01    // WIDE2-1 (last address, bit 0 set)
 //   03 F0                   // Control (0x03) + PID (0xF0)

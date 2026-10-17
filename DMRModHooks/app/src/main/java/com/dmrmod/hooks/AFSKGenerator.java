@@ -1,20 +1,16 @@
 package com.dmrmod.hooks;
 
 /**
- * ========== REFERENCE ONLY - TX NOT FUNCTIONAL ON THIS HARDWARE ==========
- * 
- * APRS TX is disabled due to hardware limitation: TYT MD-UV380 analog FM mode
- * has hardwired voice DSP (bandpass/AGC/compression) that destroys AFSK tones.
- * 
- * This code generates perfect AFSK audio (confirmed by direwolf: audio level = 100).
- * All 6 transmission methods tested failed due to DSP corruption (27% AFSK energy loss).
- * 
- * For APRS TX: Use external TNC (e.g., Mobilinkd $100) or APRS radio (e.g., Anytone D878UV).
- * See APRS_TX_INVESTIGATION_FINAL_REPORT.md for complete technical analysis.
- * 
- * This file is preserved as reference implementation for external TNC use.
- * ===========================================================================
- * 
+ * ========== TX WORKS — proven on-air 2026-10-16 ==========
+ *
+ * APRS/AFSK TX over this radio's analog FM path is functional. The old "voice DSP destroys AFSK"
+ * verdict was a frame-format bug: the OEM TX path reads the mic as 8 kHz STEREO, and the earlier
+ * attempts fed MONO buffers, so every tone doubled (1200→2400, 2200→3600). Feeding stereo-duplicated
+ * frames (see MainHook.fillAprsTx / transmitAprsPacket) transmits clean Bell 202 that direwolf decodes.
+ * This generator powers the shipped "Send APRS Message (TX)" feature. Note: this radio needs a long
+ * (~1.5 s) TXDELAY to settle after PTT before AFSK decodes — the caller handles that lead-in.
+ * ==========================================================
+ *
  * Generates AFSK (Audio Frequency Shift Keying) audio for APRS transmission.
  * Uses Bell 202 modulation: 1200 Hz (mark/1), 2200 Hz (space/0) at 1200 baud.
  */
