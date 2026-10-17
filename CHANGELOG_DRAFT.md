@@ -3,6 +3,13 @@
 Everything below shipped in **v4.0.0** (2026-10-15). Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-16 — KISS TNC frequency selector (tune for the session) + freq-field alignment fix
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| F5 | The KISS TNC dialog gained the same **Transmit on:** selector (APRS frequency, default 144.390, editable / Current channel). Because a TNC session transmits whenever the external app decides, the radio is tuned **once at Start and parked there for the whole session**, and the user's channel is **restored at Stop** (not per packet like Message/Beacon). APRS-freq mode no longer requires already being on an analog channel. `mode=kissstart` accepts an optional `--ei freqhz` to park for the session. | `MainHook` (`startKissTnc`/`stopKissTnc` session tune + restore, `kissTunedForSession`, KISS dialog) | **device**: `kissstart --ei freqhz 144390000` → `tuned to 144.39 MHz for the session`; `kissstop` → `restored channel (467625000 Hz)` |
+| — | **UI fix:** the APRS-frequency field's underline in the Transmit-on selector started at the dialog's left edge and was cut short, misaligned with the indented `144.390` text (it was indented with *padding*, which moves only the text). Now indented with a left *margin* at full width, so the underline sits under the radio label and spans to the edge like the other fields. | `MainHook` (`addFreqSelector`) | **device, screenshot**: before/after — underline now aligned under the label, full width |
+
 ## 2026-10-16 — APRS Message/Beacon: frequency selector + auto-tune to APRS freq (transient, DB-safe)
 
 | Backlog | Change | Files | Test |
