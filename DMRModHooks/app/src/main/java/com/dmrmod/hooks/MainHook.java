@@ -4817,13 +4817,41 @@ public class MainHook implements IXposedHookLoadPackage {
     /**
      * Show received APRS stations dialog
      */
+    /** "↗ 12.3km from you" for a station, or null when the phone has no last known location. */
+    private static String aprsDistanceText(android.content.Context ctx, double lat, double lon) {
+        try {
+            android.location.Location me = SatellitePassPredictor.getLastLocation(ctx);
+            if (me == null) return null;
+            return GeoUtil.formatDistanceWithArrow(me.getLatitude(), me.getLongitude(), lat, lon) + " from you";
+        } catch (Throwable t) { return null; }
+    }
+
     private void showReceivedStationsDialog(final Activity activity) {
         try {
             APRSReceivedDatabase db = APRSReceivedDatabase.getInstance(activity);
-            java.util.List<APRSReceivedDatabase.ReceivedStation> stations = db.getRecentStations();
-            
+            java.util.List<APRSReceivedDatabase.ReceivedStation> allRows = db.getRecentStations();
+
+            // One card per station (newest position), with the packet count; nearest first when the
+            // phone knows where it is, otherwise newest first (2026-10-17).
+            final java.util.HashMap<String, Integer> packetCounts = new java.util.HashMap<>();
+            java.util.List<APRSReceivedDatabase.ReceivedStation> stations = new java.util.ArrayList<>();
+            for (APRSReceivedDatabase.ReceivedStation r : allRows) {
+                String k = r.getFullCallsign();
+                Integer c = packetCounts.get(k);
+                if (c == null) { packetCounts.put(k, 1); stations.add(r); } else packetCounts.put(k, c + 1);
+            }
+            final android.location.Location me = SatellitePassPredictor.getLastLocation(activity);
+            if (me != null) {
+                java.util.Collections.sort(stations, new java.util.Comparator<APRSReceivedDatabase.ReceivedStation>() {
+                    @Override public int compare(APRSReceivedDatabase.ReceivedStation a, APRSReceivedDatabase.ReceivedStation b) {
+                        return Double.compare(GeoUtil.haversineMeters(me.getLatitude(), me.getLongitude(), a.latitude, a.longitude),
+                                              GeoUtil.haversineMeters(me.getLatitude(), me.getLongitude(), b.latitude, b.longitude));
+                    }
+                });
+            }
+
             AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-            builder.setTitle("📍 APRS Received (" + stations.size() + " stations)");
+            builder.setTitle("📍 APRS Received (" + stations.size() + " stations, " + allRows.size() + " packets)");
 
             ScrollView scrollView = new ScrollView(activity);
             LinearLayout mainLayout = new LinearLayout(activity);
@@ -4840,7 +4868,7 @@ public class MainHook implements IXposedHookLoadPackage {
             } else {
                 // Export info at top
                 TextView exportInfo = new TextView(activity);
-                exportInfo.setText("📁 Each station auto-exported to Download/DMR/APRS/:\n" +
+                exportInfo.setText((me != null ? "Nearest first. " : "Newest first. ") + "📁 Each station auto-exported to Download/DMR/APRS/:\n" +
                                  "• CALLSIGN-SSID.txt (running log)\n" +
                                  "• CALLSIGN-SSID.gpx (track - open with file manager)\n" +
                                  "Tap coordinates below for quick map view.");
@@ -4888,7 +4916,16 @@ public class MainHook implements IXposedHookLoadPackage {
                     timeText.setTextColor(0xFF999999);
                     timeText.setPadding(0, 5, 0, 0);
                     stationLayout.addView(timeText);
-                    
+                    Integer pc = packetCounts.get(station.getFullCallsign());
+                    if (pc != null && pc > 1) {
+                        TextView countText = new TextView(activity);
+                        countText.setText("📦 " + pc + " packets (newest shown)");
+                        countText.setTextSize(13);
+                        countText.setTextColor(0xFF999999);
+                        countText.setPadding(0, 3, 0, 0);
+                        stationLayout.addView(countText);
+                    }
+
                     // Clickable location link
                     TextView locationText = new TextView(activity);
                     locationText.setText("📍 " + station.getLocationString());
@@ -4914,7 +4951,17 @@ public class MainHook implements IXposedHookLoadPackage {
                         }
                     });
                     stationLayout.addView(locationText);
-                    
+
+                    String distTxt = aprsDistanceText(activity, station.latitude, station.longitude);
+                    if (distTxt != null) {
+                        TextView distText = new TextView(activity);
+                        distText.setText("🧭 " + distTxt);
+                        distText.setTextSize(14);
+                        distText.setTextColor(0xFFFFCC66);
+                        distText.setPadding(0, 5, 0, 0);
+                        stationLayout.addView(distText);
+                    }
+
                     // Altitude if available
                     if (station.altitude > 0) {
                         TextView altText = new TextView(activity);
@@ -6113,7 +6160,9 @@ public class MainHook implements IXposedHookLoadPackage {
                     }
                     
                     stationText.setText("📡 " + station.getFullCallsign() + " - " + timeAgo + 
-                                      "\n   " + String.format("%.6f, %.6f", station.latitude, station.longitude));
+                                      "\n   " + String.format("%.6f, %.6f", station.latitude, station.longitude)
+                                      + (aprsDistanceText(activity, station.latitude, station.longitude) != null
+                                         ? "\n   🧭 " + aprsDistanceText(activity, station.latitude, station.longitude) : ""));
                     stationText.setTextSize(13);
                     stationText.setTextColor(0xFF66FFFF);
                     stationText.setPadding(0, 8, 0, 0);
