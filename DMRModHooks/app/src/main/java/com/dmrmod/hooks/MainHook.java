@@ -497,6 +497,11 @@ public class MainHook implements IXposedHookLoadPackage {
     // prefs dmrmod_aprs_global/passive_mode  0 = off, 1 = flagged analog channels only, 2 = all analog
     // channels (default). -1 = not loaded yet (loaded lazily from the audio hook, reset on settings save).
     private static volatile int aprsPassiveMode = -1;
+
+    // F9 (2026-10-17) DTMF decoder on the analog RX audio (prefs dmrmod_dtmf/enabled, default on; -1 = not loaded)
+    private static volatile int dtmfEnabled = -1;
+    private static volatile DTMFDecoder dtmfDecoder = null;
+    private static volatile Runnable dtmfFlushRunnable = null;
     private static volatile java.util.Set<Integer> aprsPassiveFlagged = java.util.Collections.<Integer>emptySet();
     private static SAMEDecoder wxDecoder = null;
     private static volatile String wxStatus = "";
@@ -5283,6 +5288,29 @@ public class MainHook implements IXposedHookLoadPackage {
             mainLayout.addView(wxButton);
             addModeCaption(mainLayout, activity, "Listen to NOAA Weather Radio (WX1-WX7) and decode the SAME header "
                 + "of every warning, watch and test into a notification and an alert list.");
+
+            // DTMF decoder button
+            android.widget.Button dtmfButton = new android.widget.Button(activity);
+            dtmfButton.setText("\uD83D\uDCDF DTMF Decoder");
+            dtmfButton.setTextSize(16);
+            dtmfButton.setAllCaps(false);
+            LinearLayout.LayoutParams dtmfParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                (int) (60 * activity.getResources().getDisplayMetrics().density));
+            dtmfParams.bottomMargin = (int) (15 * activity.getResources().getDisplayMetrics().density);
+            dtmfButton.setLayoutParams(dtmfParams);
+            android.graphics.drawable.GradientDrawable dtmfDrawable = new android.graphics.drawable.GradientDrawable();
+            dtmfDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+            dtmfDrawable.setColor(0xFF6B4F1D);
+            dtmfDrawable.setCornerRadius(10 * activity.getResources().getDisplayMetrics().density);
+            dtmfButton.setBackground(dtmfDrawable);
+            dtmfButton.setTextColor(0xFFFFFFFF);
+            dtmfButton.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { showDtmfDialog(activity); }
+            });
+            mainLayout.addView(dtmfButton);
+            addModeCaption(mainLayout, activity, "Always on for analog channels: touch-tone sequences heard on the air "
+                + "are shown as a toast, logged to the Analog History and listed here. Receive-only.");
 
             // Info text
             TextView infoText = new TextView(activity);
@@ -11367,6 +11395,13 @@ public class MainHook implements IXposedHookLoadPackage {
                         if (isAPRSMonitoringActive || kissActive || aprsPassiveWanted(useSquelch, isSquelchOpen)) {
                             bufferAudioForAPRS(processingAudio, length);
                         }
+
+                        // DTMF decode (F9): analog channels, audio the squelch lets through
+                        if (currentChannelType == 1 && (!useSquelch || isSquelchOpen) && dtmfWanted()) {
+                            DTMFDecoder dd = dtmfDecoder;
+                            if (dd == null) { dd = new DTMFDecoder(8000, true, dtmfListener); dtmfDecoder = dd; }
+                            dd.processAudio(processingAudio, length);
+                        }
                         
                         // Buffer audio for SSTV decoding (only if monitoring is active)
                         // Diagnostics: raw RX audio dump (mode=rxdump) — the exact bytes the decoders see.
@@ -12366,6 +12401,128 @@ public class MainHook implements IXposedHookLoadPackage {
             aprsOverlapTail = null;
             aprsLastProcessMs = 0;
         } catch (Throwable t) { XposedBridge.log(TAG + ": resetAprsAudioBuffer: " + t.getMessage()); }
+    }
+
+    private static boolean dtmfWanted() {
+        int e = dtmfEnabled;
+        if (e < 0) {
+            try {
+                android.content.Context ctx = null;
+                if (homeActivityRef != null) ctx = homeActivityRef.get();
+                if (ctx == null && mLocalViewObject instanceof View) ctx = ((View) mLocalViewObject).getContext();
+                if (ctx == null) return false;
+                e = ctx.getSharedPreferences("dmrmod_dtmf", android.content.Context.MODE_PRIVATE).getBoolean("enabled", true) ? 1 : 0;
+                dtmfEnabled = e;
+                XposedBridge.log(TAG + ": [dtmf] decoder " + (e == 1 ? "enabled" : "disabled"));
+            } catch (Throwable t) { dtmfEnabled = 0; return false; }
+        }
+        return e == 1;
+    }
+
+    private static final DTMFDecoder.Listener dtmfListener = new DTMFDecoder.Listener() {
+        @Override public void onDigit(char digit) {
+            XposedBridge.log(TAG + ": [dtmf] key " + digit);
+            // The decoder only notices the end of a sequence while audio flows; when the squelch
+            // closes right after the last key, flush from a timer instead.
+            final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+            if (dtmfFlushRunnable != null) h.removeCallbacks(dtmfFlushRunnable);
+            dtmfFlushRunnable = new Runnable() {
+                @Override public void run() { DTMFDecoder d = dtmfDecoder; if (d != null) d.flush(); }
+            };
+            h.postDelayed(dtmfFlushRunnable, DTMFDecoder.SEQUENCE_GAP_MS + 300);
+        }
+        @Override public void onSequence(final String digits, long startMs, long endMs) {
+            try {
+                XposedBridge.log(TAG + ": [dtmf] sequence " + digits + " on ch " + currentChannelNumber + " (" + currentChannelName + ")");
+                android.content.Context ctx = homeActivityRef != null ? homeActivityRef.get() : null;
+                if (ctx == null && mLocalViewObject instanceof View) ctx = ((View) mLocalViewObject).getContext();
+                if (ctx != null) {
+                    android.content.SharedPreferences prefs = ctx.getSharedPreferences("dmrmod_dtmf", android.content.Context.MODE_PRIVATE);
+                    org.json.JSONArray arr = new org.json.JSONArray(prefs.getString("log", "[]"));
+                    org.json.JSONObject o = new org.json.JSONObject();
+                    o.put("t", System.currentTimeMillis()); o.put("d", digits);
+                    o.put("ch", currentChannelNumber); o.put("name", currentChannelName);
+                    arr.put(o);
+                    while (arr.length() > 50) arr.remove(0);
+                    prefs.edit().putString("log", arr.toString()).apply();
+                    final android.content.Context fctx = ctx;
+                    new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+                        @Override public void run() {
+                            try { Toast.makeText(fctx, "\uD83D\uDCDF DTMF: " + digits, Toast.LENGTH_LONG).show(); } catch (Throwable ignored) {}
+                        }
+                    });
+                }
+                MainHook mi = moduleInstance;
+                if (mi != null) mi.updateActivityIndicator("\uD83D\uDCDF DTMF " + digits);
+            } catch (Throwable t) {
+                XposedBridge.log(TAG + ": [dtmf] sequence handling error: " + t.getMessage());
+            }
+        }
+    };
+
+    /** PKT RAD -> DTMF decoder: on/off + the last 50 sequences heard. */
+    private void showDtmfDialog(final Activity activity) {
+        try {
+            final android.content.SharedPreferences prefs = activity.getSharedPreferences("dmrmod_dtmf", android.content.Context.MODE_PRIVATE);
+            AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+            builder.setTitle("\uD83D\uDCDF DTMF Decoder");
+            ScrollView scroll = new ScrollView(activity);
+            LinearLayout layout = new LinearLayout(activity);
+            layout.setOrientation(LinearLayout.VERTICAL);
+            layout.setPadding(40, 30, 40, 10);
+
+            TextView note = new TextView(activity);
+            note.setText("Decodes DTMF (touch-tone) keys heard on any analog channel \u2014 selective-call IDs, repeater control "
+                    + "sequences, paging. Every finished sequence is shown as a toast, added to the channel\u2019s Analog History "
+                    + "and listed here. Receive-only; nothing is transmitted.");
+            note.setTextSize(12); note.setTextColor(0xFF999999); note.setPadding(0, 0, 0, 12);
+            layout.addView(note);
+
+            final android.widget.CheckBox enBox = new android.widget.CheckBox(activity);
+            enBox.setText("DTMF decoder on (analog channels)");
+            enBox.setChecked(prefs.getBoolean("enabled", true));
+            enBox.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
+                @Override public void onCheckedChanged(android.widget.CompoundButton b, boolean checked) {
+                    prefs.edit().putBoolean("enabled", checked).apply();
+                    dtmfEnabled = checked ? 1 : 0;
+                    if (!checked) { DTMFDecoder d = dtmfDecoder; if (d != null) d.reset(); }
+                }
+            });
+            layout.addView(enBox);
+
+            TextView histLabel = new TextView(activity);
+            histLabel.setText("\nRecent sequences:"); histLabel.setTextSize(13);
+            layout.addView(histLabel);
+            final TextView hist = new TextView(activity);
+            hist.setTextSize(14); hist.setTypeface(android.graphics.Typeface.MONOSPACE);
+            hist.setText(dtmfHistoryText(prefs));
+            layout.addView(hist);
+
+            scroll.addView(layout);
+            builder.setView(scroll);
+            builder.setNegativeButton("Clear list", new DialogInterface.OnClickListener() {
+                @Override public void onClick(DialogInterface d, int w) { prefs.edit().remove("log").apply(); }
+            });
+            builder.setPositiveButton("Close", null);
+            builder.show();
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": showDtmfDialog error: " + t.getMessage());
+        }
+    }
+
+    private static String dtmfHistoryText(android.content.SharedPreferences prefs) {
+        try {
+            org.json.JSONArray arr = new org.json.JSONArray(prefs.getString("log", "[]"));
+            if (arr.length() == 0) return "(none yet)";
+            java.text.SimpleDateFormat fmt = new java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.US);
+            StringBuilder sb = new StringBuilder();
+            for (int i = arr.length() - 1; i >= 0; i--) {
+                org.json.JSONObject o = arr.getJSONObject(i);
+                sb.append(fmt.format(new java.util.Date(o.optLong("t", 0)))).append("  ")
+                  .append(o.optString("d", "")).append("   ch ").append(o.optInt("ch", -1)).append(" ").append(o.optString("name", "")).append('\n');
+            }
+            return sb.toString().trim();
+        } catch (Throwable t) { return "(error: " + t.getMessage() + ")"; }
     }
 
     /** True when the current audio should be fed to the AFSK decoder although no APRS/KISS session runs. */
