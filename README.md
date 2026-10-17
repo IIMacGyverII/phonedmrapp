@@ -1,4 +1,4 @@
-
+﻿
 
 https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
@@ -6,8 +6,8 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
 **Status**: ✅ **FULLY FUNCTIONAL** - RadioID Caller Lookup + Export/Import + GPS + Zones + Transcription + APRS + VFO + SSTV + NOAA APT!
 
-> **🚀 Current Stable Release: v4.0.0** (October 15, 2026) - **Nearby Repeaters** (find & install DMR/FM repeaters near you, no computer) + **in-app updater** (download & install the latest release, no root) + on-air **group-call RX fix** + the full October correctness/diagnostics batch (channel scanner, live S-meter, in-app help) - see [What's New in v4.0.0](#whats-new-in-v400-october-15-2026) and [`CHANGELOG_DRAFT.md`](CHANGELOG_DRAFT.md)  
-> **🔧 Prior Stable: v3.4.6** (June 21, 2026) - TG list import fix + wide-band default for new/imported channels  
+> **🚀 Current Stable Release: v4.1.0** (October 17, 2026) - **Packet radio on air**: APRS TX/RX (messages, beacon, KISS TNC, digipeater, APRS-IS iGate), SSTV send, NOAA SAME weather alerts, DTMF send/decode, CTCSS tone decoder, **on-device live captions** (Vosk, no cloud) with keyword alerts, Last heard, voice announcements, channel search — 90 changes, all device-tested  
+> **🔧 Prior Stable: v4.0.0** (October 15, 2026) - Nearby Repeaters + in-app updater (no root) + on-air **group-call RX fix** + the full October correctness/diagnostics batch (channel scanner, live S-meter, in-app help) - see [What's New in v4.0.0](#whats-new-in-v400-october-15-2026) and [`CHANGELOG_DRAFT.md`](CHANGELOG_DRAFT.md)  
 > **📻 Major Feature: v3.4.5** (June 16, 2026) - **RadioID.net global DMR ID lookup** — see who's calling with callsign, name & location (~300k IDs, offline)  
 > **🔧 Also in v3.4.5** — Double-slot import fix, squelch default to normal
 > **🖥️ OpenGD77 CPS Fork: v2.0.45** — `OpenGD77CPS-Mac_Build_20260607_210202.zip` (unchanged since v3.4.5)  
@@ -62,6 +62,33 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 3. Optional manual import: place `user.csv` in `/sdcard/Download/DMR/RadioID/`
 
 > Your codeplug contacts are never overwritten. RadioID only fills in IDs you don't already have programmed.
+
+---
+
+## What's New in v4.1.0 (October 17, 2026)
+
+Two days of on-air work with a HackRF bench. Everything below is built, installed and exercised on the test phone. Full per-change log with device evidence: [`CHANGELOG_DRAFT.md`](CHANGELOG_DRAFT.md).
+
+### 📡 Packet radio that actually transmits
+- **APRS over analog FM works** (the old "impossible" verdict was a stereo/mono frame bug): **Send APRS Message**, **Position Beacon**, **KISS TNC** (TX **and** RX — use the radio from APRSdroid/YAAC over KISS-over-TCP), **fill-in digipeater** (WIDE1-1), **APRS-IS** RX-only iGate + internet beacon, **passive APRS decode** on any analog channel, full packet parser (Mic-E, compressed, objects, messages with auto-ack, weather…), stations with distance/bearing, reply from the received list.
+- **SSTV send** (Robot 24 Color / Robot BW — the firmware caps every TX at 30 s) and a corrected SSTV receiver.
+- **NOAA Weather Radio SAME alerts** decoder, **DTMF** decode + send (keypad, saved sequences), **received CTCSS tone** decoder with tap-to-program.
+
+### 🎙️ On-device live captions (no cloud)
+- TXT now shows **real-time captions** from the companion app (Vosk/Kaldi, models from 40 MB to 2.3 GB, chosen on TXT long-press). No API key, nothing leaves the phone. Google Cloud STT remains available as the alternative engine.
+- **Caption keyword alerts**: your word list → vibrate, spoken alert and a 🔔 history line when a transmission mentions it.
+- Captions and recordings are linked from **Last heard**.
+
+### 📻 Radio operation
+- **Last heard** across all channels with go-to-channel, recordings and transcripts per channel; plain analog receptions now logged.
+- **Voice announcements** (TTS) for channel changes and DMR callers; **volume-up / headset button = PTT**; **TX timer** with 25 s warning.
+- **Channel page search** (name / frequency / number) with an ALL/FM/DMR chip; ZONE button moved into the search row.
+- **Soft SQ**: software CTCSS/noise squelch, per-channel settings (also in the OpenGD77 CPS fork v2.0.44), several layout fixes.
+- **Critical fix**: a channel-write pattern that could leave the radio transmitting **no RF at all** (survived reboots) is gone — hardware writes are single-path now.
+
+### 📦 Install notes
+- The **companion app** (`DMRTranscriptionService-v1.1.0.apk`) is back and is required for live captions. Install both APKs, reboot.
+- Everything else from v4.0.0 (Nearby Repeaters, in-app updates, RadioID lookup, OpenGD77 CSV) is unchanged.
 
 ---
 
@@ -1137,12 +1164,14 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 
 1. **Download Latest Release**:
    - Go to [Releases](https://github.com/IIMacGyverII/phonedmrapp/releases/latest)
-   - Download `DMRModHooks-v4.0.0.apk` (**latest version**)
+   - Download `DMRModHooks-v4.1.0.apk` (**latest version**)
+   - Download `DMRTranscriptionService-v1.1.0.apk` (companion app — needed for on-device live captions)
    - Download `OpenGD77CPS-Mac_Build_*.zip` from the same release (desktop CPS fork)
 
 2. **Install** (reboot after — required for LSPosed):
    ```powershell
-   adb install -r DMRModHooks-v4.0.0.apk
+   adb install -r DMRModHooks-v4.1.0.apk
+   adb install -r DMRTranscriptionService-v1.1.0.apk
    adb reboot
    ```
 
@@ -1505,7 +1534,8 @@ phonedmrapp/
 - **Device**: 5006AF1020002922 (production ROM, Magisk installed)
 
 ### Transcription Architecture
-- **In-process**: `TranscriptionClient` in the module (no separate app since v4.0.0)
+- **Live captions (default since v4.1.0)**: the companion app's `LiveCaptionService` runs Vosk behind `127.0.0.1:8002`; the module streams 16 kHz PCM and shows partials live
+- **Google Cloud engine (optional)**: `TranscriptionClient` in the module, in-process
 - **API**: Google Cloud Speech-to-Text v1 (`speech:recognize`)
 - **HTTP Client**: `HttpURLConnection` with 30-second timeouts
 - **Audio Format**: PCM 16-bit mono → WAV with proper header → Base64

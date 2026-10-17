@@ -59,12 +59,18 @@ public final class GithubUpdater {
         rel.notes = o.optString("body", "");
         JSONArray assets = o.optJSONArray("assets");
         if (assets != null) {
+            // Releases since v4.1.0 also attach the companion APK (DMRTranscriptionService-*.apk):
+            // the module update must pick its own asset, so prefer a name starting with "DMRModHooks"
+            // and only fall back to the first .apk.
             for (int i = 0; i < assets.length(); i++) {
                 JSONObject a = assets.getJSONObject(i);
-                if (a.optString("name", "").toLowerCase(java.util.Locale.US).endsWith(".apk")) {
+                String n = a.optString("name", "").toLowerCase(java.util.Locale.US);
+                if (!n.endsWith(".apk")) continue;
+                boolean mine = n.startsWith("dmrmodhooks");
+                if (rel.apkUrl == null || mine) {
                     rel.apkUrl = a.optString("browser_download_url", null);
                     rel.apkSize = a.optLong("size", 0);
-                    break;
+                    if (mine) break;
                 }
             }
         }
