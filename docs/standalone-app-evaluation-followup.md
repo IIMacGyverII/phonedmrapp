@@ -84,3 +84,31 @@ boot bytes, then sends the RSSI query and logs the reply. Expected: `boot bytes 
 
 For a permanent setup, make a Magisk module (`module.prop` + `sepolicy.rule` with the four rules, zipped at
 the root, installed from the Magisk app). The LSPosed module does not need any of this.
+
+## 5. Result of the cold-start test (2026-10-17, user-authorised, all four rules live)
+
+Sequence: `pm disable-user` the OEM app → probe (`--ez uart true --ez powercycle true`) → `pm enable` + relaunch.
+
+```
+sysfs pwd = pwd :1 / ptt :1 / pd :1 / debug = 0          (readable + writable from the plain app now)
+power-cycle: pwd now = pwd :0                            (module off)
+pwd=1 (power up), waiting for the boot announcement
+boot bytes (19 in 8006 ms): 00 00 BF AA BB FA B3 F5 CA BC BB AF CD EA B3 C9 0D 0A 00
+UART tx: 68 32 01 01 95 BB 00 01 01 10
+UART rx (10 bytes, 13 ms): 68 32 00 00 6F BC 00 01 28 10   -> RSSI raw 40 = -100 dBm
+```
+
+* The boot announcement is **not an OEM-framed packet**: two zero bytes, `BF AA`, then the GBK string
+  `BB FA B3 F5 CA BC BB AF CD EA B3 C9` = "机初始化完成" ("module initialisation complete") and CR LF.
+  `InitMessageHandler` keys on the `BF`/`AA` bytes. A standalone app's reader must tolerate this non-framed
+  line before the first `68 … 10` frame.
+* After the announcement the MCU answers queries immediately, **without** the OEM's version/set-channel/TOT
+  handshake (it keeps whatever channel it last had). The handshake is still needed to program a channel, but
+  the link itself needs nothing beyond `pwd=1`.
+* A second run without the power-cycle (module left on by the OEM) answered in 10 ms (`body[0]=43`, −98.5 dBm).
+* The OEM app re-enabled and relaunched normally afterwards (`updateModuleInit` logged) — the experiment is
+  non-destructive.
+
+**Conclusion: every hardware dependency of a standalone app is now proven from an ordinary app process on
+this phone — UART (both directions, MCU replies), module power GPIO (off/on + boot capture), voice audio
+(`PrizeTinyService`), hardware PTT broadcasts. Only root (Magisk, four `sepolicy.rule` lines) is required.**
