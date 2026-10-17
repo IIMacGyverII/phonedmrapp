@@ -4871,7 +4871,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 exportInfo.setText((me != null ? "Nearest first. " : "Newest first. ") + "📁 Each station auto-exported to Download/DMR/APRS/:\n" +
                                  "• CALLSIGN-SSID.txt (running log)\n" +
                                  "• CALLSIGN-SSID.gpx (track - open with file manager)\n" +
-                                 "Tap coordinates below for quick map view.");
+                                 "Tap a callsign to message that station, coordinates for a quick map view.");
                 exportInfo.setTextSize(13);
                 exportInfo.setTextColor(0xFF66FF66);
                 exportInfo.setPadding(0, 0, 0, 20);
@@ -4897,6 +4897,10 @@ public class MainHook implements IXposedHookLoadPackage {
                     callsignText.setTextSize(18);
                     callsignText.setTypeface(null, android.graphics.Typeface.BOLD);
                     callsignText.setTextColor(0xFF66FF66);
+                    callsignText.setClickable(true);
+                    callsignText.setOnClickListener(new View.OnClickListener() {
+                        @Override public void onClick(View v) { showAprsSendMessageDialog(activity, station.getFullCallsign()); }
+                    });
                     stationLayout.addView(callsignText);
                     
                     // Time ago
@@ -9602,7 +9606,7 @@ public class MainHook implements IXposedHookLoadPackage {
             android.content.SharedPreferences prefs = activity.getSharedPreferences("dmrmod_aprs", android.content.Context.MODE_PRIVATE);
             org.json.JSONArray arr = new org.json.JSONArray(prefs.getString("messages", "[]"));
             TextView head = new TextView(activity);
-            head.setText("✉️ Messages & status (" + arr.length() + ")");
+            head.setText("✉️ Messages & status (" + arr.length() + ")" + (arr.length() > 0 ? "  — tap one to reply" : ""));
             head.setTextSize(16);
             head.setTypeface(null, android.graphics.Typeface.BOLD);
             head.setTextColor(0xFFFFCC66);
@@ -9643,6 +9647,16 @@ public class MainHook implements IXposedHookLoadPackage {
                 t.setTextColor(mine ? 0xFF1E5AA8 : "status".equals(kind) ? 0xFF888888 : 0xFF444444);
                 if (mine) t.setTypeface(null, android.graphics.Typeface.BOLD);
                 t.setPadding(0, 2, 0, 2);
+                // tap a message/ack from another station to reply to it (compose pre-filled)
+                if (!"status".equals(kind) && !o.optString("kind", "").equals("ack-tx")) {
+                    final String replyTo = from.replace(" (IS)", "").trim();
+                    t.setOnClickListener(new View.OnClickListener() {
+                        @Override public void onClick(View v) {
+                            MainHook mi = moduleInstance;
+                            if (mi != null) mi.showAprsSendMessageDialog(activity, replyTo);
+                        }
+                    });
+                }
                 parent.addView(t);
             }
             View div = new View(activity);
@@ -14949,6 +14963,11 @@ public class MainHook implements IXposedHookLoadPackage {
     private static final int RETUNE_SETTLE_MS = 3500;
 
     private void showAprsSendMessageDialog(final Activity activity) {
+        showAprsSendMessageDialog(activity, null);
+    }
+
+    /** @param toPrefill addressee to pre-fill (reply from the received list), or null */
+    private void showAprsSendMessageDialog(final Activity activity, final String toPrefill) {
         try {
             final APRSDatabase aprsDb = APRSDatabase.getInstance(activity);
             final String srcCall = aprsDb.getCallsign();
@@ -14990,6 +15009,7 @@ public class MainHook implements IXposedHookLoadPackage {
             final EditText toEdit = new EditText(activity);
             toEdit.setSingleLine(true);
             toEdit.setHint("e.g. W1AW-9");
+            if (toPrefill != null && !toPrefill.trim().isEmpty()) toEdit.setText(toPrefill.trim().toUpperCase(java.util.Locale.US));
             toEdit.setInputType(android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
             layout.addView(toEdit);
 
