@@ -65,6 +65,24 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
 ---
 
+## 🚧 Where this is going: a standalone app for more than one phone
+
+The LSPosed module hooks the Ulefone's stock walkie-talkie app, so it only ever works on the Ulefone Armor 26 Ultra. Work has started on a **standalone app** (`DMRStandalone/`, `com.macdmr.radio`) that drives the radio module directly, with one shared protocol engine and a small **device profile** per phone (serial port, audio path, power/PTT lines, PTT key broadcasts). First on-air run on 2026-10-17: with the stock app disabled it queried the module version, programmed a channel, saw the MCU's RECEIVE_START, read RSSI and streamed received audio — see [`docs/standalone-app-evaluation.md`](docs/standalone-app-evaluation.md) and [`docs/standalone-app-evaluation-followup.md`](docs/standalone-app-evaluation-followup.md).
+
+| Phone | Status |
+|---|---|
+| **Ulefone Armor 26 Ultra** (walkie-talkie model) | Module v4.1.0 supported today; standalone engine proven on air |
+| **Blackview Xplore 1** | Its stock app uses the **same radio-module protocol** ([analysis](docs/multi-device-xplore1-findings.md)); needs a profile (audio is PCM over a second UART) and root. Looking for an owner to run the info script |
+| Oukitel WP61 Plus/Ultra/Ti, Ulefone Armor 20WT, UNIWA P2 Plus… | Unknown — send us the stock app APK and the info dump |
+
+**Root (Magisk) will be required** on every phone: Android's SELinux policy only lets the stock app open the radio's serial port; four `sepolicy.rule` lines in a Magisk module open it for the standalone app.
+
+**Have a different DMR phone?** Follow [`docs/DEVICE_SUPPORT_REQUEST.md`](docs/DEVICE_SUPPORT_REQUEST.md) — one copy-paste script and the stock APK tell us everything needed for a profile — and open an issue.
+
+The module keeps getting releases until the standalone app reaches feature parity; the intercom page you see today is being carried over as-is.
+
+---
+
 ## What's New in v4.1.0 (October 17, 2026)
 
 Two days of on-air work with a HackRF bench. Everything below is built, installed and exercised on the test phone. Full per-change log with device evidence: [`CHANGELOG_DRAFT.md`](CHANGELOG_DRAFT.md).
