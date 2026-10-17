@@ -28,7 +28,7 @@ public final class ChannelStore extends SQLiteOpenHelper {
         public String freqText(int hz) { return String.format(java.util.Locale.US, "%.3f", hz / 1e6); }
     }
 
-    public ChannelStore(Context c) { super(c, "radio.db", null, 2); }
+    public ChannelStore(Context c) { super(c, "radio.db", null, 3); }
 
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE channels (_id INTEGER PRIMARY KEY AUTOINCREMENT, number INTEGER, name TEXT, type INTEGER, rxFreq INTEGER, txFreq INTEGER,"
@@ -81,7 +81,8 @@ public final class ChannelStore extends SQLiteOpenHelper {
 
     public List<String> recentHistory(int channel, int limit) {
         List<String> out = new ArrayList<>();
-        try (Cursor c = getReadableDatabase().rawQuery("SELECT ts, text, rssi FROM history WHERE channel=? ORDER BY ts DESC LIMIT ?", new String[] { String.valueOf(channel), String.valueOf(limit) })) {
+        // the module shows the newest N lines in chronological order (oldest at the top)
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT ts, text, rssi FROM (SELECT ts, text, rssi FROM history WHERE channel=? ORDER BY ts DESC LIMIT ?) ORDER BY ts ASC", new String[] { String.valueOf(channel), String.valueOf(limit) })) {
             java.text.SimpleDateFormat f = new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US);
             while (c.moveToNext()) out.add(f.format(new java.util.Date(c.getLong(0))) + " " + c.getString(1) + (c.getInt(2) != -999 ? " " + c.getInt(2) + " dBm" : ""));
         }
@@ -138,6 +139,7 @@ public final class ChannelStore extends SQLiteOpenHelper {
             }
             SQLiteDatabase sdb = SQLiteDatabase.openDatabase(dst.getAbsolutePath(), null, SQLiteDatabase.OPEN_READONLY);
             int n = 0;
+            java.util.Map<Integer, Integer> stockIdToNumber = new java.util.HashMap<>();   // module side-tables key on the stock row _id
             SQLiteDatabase db = getWritableDatabase();
             db.beginTransaction();
             try (Cursor c = sdb.query("database_channel_area_" + areaKey, null, null, null, null, null, "_id")) {   // rows in display order
@@ -145,6 +147,7 @@ public final class ChannelStore extends SQLiteOpenHelper {
                 while (c.moveToNext()) {
                     Channel ch = new Channel();
                     ch.number = ++n;
+                    stockIdToNumber.put(coli(c, "_id", -1), ch.number);
                     ch.name = col(c, "channel_name", ""); ch.type = coli(c, "channel_type", 1);
                     ch.rxFreq = coli(c, "channel_rxFreq", 0); ch.txFreq = coli(c, "channel_txFreq", 0); ch.power = coli(c, "channel_power", 0);
                     ch.band = coli(c, "channel_band", 1); ch.sq = coli(c, "channel_sq", 2); ch.rxType = coli(c, "channel_rxType", 0); ch.rxSubCode = coli(c, "channel_rxSubCode", 0);
@@ -178,9 +181,10 @@ public final class ChannelStore extends SQLiteOpenHelper {
             try {
                 SQLiteDatabase ldb = copyStock(ctx, stockPackage, "dmrmod_locations.db", "stock_locations.db");
                 if (ldb != null) {
-                    try (Cursor c = ldb.rawQuery("SELECT * FROM locations", null)) {
+                    try (Cursor c = ldb.rawQuery("SELECT * FROM channel_locations", null)) {
                         while (c.moveToNext()) {
-                            int num = coli(c, "channel_number", 0);
+                            Integer mapped = stockIdToNumber.get(coli(c, "channel_number", 0));   // "channel_number" holds the stock _id
+                            int num = mapped != null ? mapped : coli(c, "channel_number", 0);
                             ContentValues v = new ContentValues();
                             v.put("lat", c.getDouble(c.getColumnIndexOrThrow("latitude"))); v.put("lon", c.getDouble(c.getColumnIndexOrThrow("longitude")));
                             int ei = c.getColumnIndex("elevation"); v.put("elev", ei >= 0 && !c.isNull(ei) ? c.getDouble(ei) : 0);
