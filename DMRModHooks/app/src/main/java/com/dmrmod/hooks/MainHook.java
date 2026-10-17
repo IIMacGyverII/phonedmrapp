@@ -317,6 +317,10 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile long currentZoneId = -1;  // -1 = All Channels (no filter)
     private static volatile String currentZoneName = "All";
     private static volatile java.util.List<Integer> currentZoneChannels = null;  // null = no filter
+    // Channel page search + type chip (U7, 2026-10-17): name / frequency / number text, 0 all / 1 FM only / 2 DMR only
+    private static volatile String channelSearchText = "";
+    private static volatile int channelTypeFilter = 0;
+    private static volatile boolean channelSearchRowAttached = false;
     private static ZoneDatabase zoneDatabase = null;
     private static TGListDatabase tgListDatabase = null;  // Named TG lists for DMR channels
     // Active TG list for the current channel (null = no list assigned)
@@ -586,6 +590,65 @@ public class MainHook implements IXposedHookLoadPackage {
     /**
      * Check if a channel is an APRS channel (should be hidden from channel list)
      */
+    /** One visibility rule for the channel page: not APRS, in the selected zone, matching the search text and type chip. */
+    static boolean channelPageShown(java.util.List<Object> channels, int i) {
+        Object ch = channels.get(i);
+        if (isAPRSChannel(ch)) return false;
+        java.util.List<Integer> zone = currentZoneChannels;
+        if (zone != null && !zone.isEmpty()) {
+            try { if (!zone.contains(XposedHelpers.getIntField(ch, "_id"))) return false; } catch (Throwable ignored) { }
+        }
+        int tf = channelTypeFilter;
+        if (tf != 0) {
+            try {
+                int type = XposedHelpers.getIntField(ch, "type");          // OEM: 0 digital, 1 analog
+                if (tf == 1 && type != 1) return false;
+                if (tf == 2 && type != 0) return false;
+            } catch (Throwable ignored) { }
+        }
+        String q = channelSearchText;
+        if (q == null || q.isEmpty()) return true;
+        try {
+            Object nm = XposedHelpers.getObjectField(ch, "name");
+            if (nm != null && nm.toString().toLowerCase(java.util.Locale.US).contains(q)) return true;
+            String qd = q.replaceAll("[^0-9]", "");
+            if (!qd.isEmpty()) {
+                if (String.valueOf(i + 1).equals(qd)) return true;                       // channel number
+                String tx = String.valueOf(XposedHelpers.getObjectField(ch, "txFreq")).replaceAll("[^0-9]", "");
+                String rx = String.valueOf(XposedHelpers.getObjectField(ch, "rxFreq")).replaceAll("[^0-9]", "");
+                if (tx.startsWith(qd) || rx.startsWith(qd)) return true;                 // 462.6 -> 4626 prefix
+            }
+        } catch (Throwable ignored) { }
+        return false;
+    }
+
+    static int visibleChannelCount(java.util.List<Object> channels) {
+        int n = 0;
+        for (int i = 0; i < channels.size(); i++) if (channelPageShown(channels, i)) n++;
+        return n;
+    }
+
+    static int visibleChannelIndex(java.util.List<Object> channels, int position) {
+        int seen = 0;
+        for (int i = 0; i < channels.size(); i++) {
+            if (!channelPageShown(channels, i)) continue;
+            if (seen == position) return i;
+            seen++;
+        }
+        return 0;
+    }
+
+    static void refreshChannelPage() {
+        final Object frag = channelFragmentInstance;
+        if (frag == null) return;
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() { @Override public void run() {
+            try {
+                Object ad = XposedHelpers.getObjectField(frag, "mDeviceAreaListAdapter");
+                if (ad != null) XposedHelpers.callMethod(ad, "notifyDataSetChanged");
+            } catch (Throwable t) { XposedBridge.log(TAG + ": [search] refresh: " + t.getMessage()); }
+        } });
+    }
+
     private static boolean isAPRSChannel(Object channelData) {
         try {
             // Only hide temporarily hijacked APRS channels (named "APRS (originalName)")
@@ -677,6 +740,7 @@ public class MainHook implements IXposedHookLoadPackage {
         
         // Hook for adding zone button to channel list page
         hookChannelListUI(lpparam);
+        hookChannelListSearch(lpparam);
         
         // Hook for channel edit activity to add zone selector
         hookChannelEditActivity(lpparam);
@@ -15811,7 +15875,7 @@ public class MainHook implements IXposedHookLoadPackage {
                         if (check == null) return;
                         int position = (Integer) param.args[0];
                         android.widget.Button zb = channelPageZoneButton;
-                        boolean shift = position == 0 && zb != null && zb.getVisibility() == View.VISIBLE && check.getVisibility() == View.VISIBLE;
+                        boolean shift = position == 0 && !channelSearchRowAttached && zb != null && zb.getVisibility() == View.VISIBLE && check.getVisibility() == View.VISIBLE;
                         if (shift) {
                             float density = row.getResources().getDisplayMetrics().density;
                             int w = zb.getWidth() > 0 ? zb.getWidth() : (int) (120 * density);
@@ -17623,29 +17687,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 return 0;
                             }
                             
-                            // If no zone selected, count all non-APRS channels
-                            if (currentZoneChannels == null || currentZoneChannels.isEmpty()) {
-                                int count = 0;
-                                for (Object channelData : channels) {
-                                    if (!isAPRSChannel(channelData)) {
-                                        count++;
-                                    }
-                                }
-                                return count;
-                            }
-                            
-                            // Count channels in current zone (excluding APRS)
-                            int count = 0;
-                            for (Object channelData : channels) {
-                                if (isAPRSChannel(channelData)) {
-                                    continue;  // Skip APRS channels
-                                }
-                                int channelId = XposedHelpers.getIntField(channelData, "_id");
-                                if (currentZoneChannels.contains(channelId)) {
-                                    count++;
-                                }
-                            }
-                            return count;
+                            return visibleChannelCount(channels);
                             
                         } catch (Throwable t) {
                             XposedBridge.log(TAG + ": Error in getCount: " + t.getMessage());
@@ -17681,44 +17723,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 return;
                             }
                             
-                            // Map filtered position to actual channel index (excluding APRS)
-                            int actualIndex = 0;
-                            int filteredIndex = 0;
-                            
-                            if (currentZoneChannels == null || currentZoneChannels.isEmpty()) {
-                                // No zone selected - filter only APRS channels
-                                for (int i = 0; i < channels.size(); i++) {
-                                    Object channelData = channels.get(i);
-                                    if (isAPRSChannel(channelData)) {
-                                        continue;  // Skip APRS channels
-                                    }
-                                    if (filteredIndex == position) {
-                                        actualIndex = i;
-                                        break;
-                                    }
-                                    filteredIndex++;
-                                }
-                            } else {
-                                // Zone selected - filter by zone AND exclude APRS
-                                for (int i = 0; i < channels.size(); i++) {
-                                    Object channelData = channels.get(i);
-                                    if (isAPRSChannel(channelData)) {
-                                        continue;  // Skip APRS channels
-                                    }
-                                    int channelId = XposedHelpers.getIntField(channelData, "_id");
-                                    
-                                    if (currentZoneChannels.contains(channelId)) {
-                                        if (filteredIndex == position) {
-                                            actualIndex = i;
-                                            break;
-                                        }
-                                        filteredIndex++;
-                                    }
-                                }
-                            }
-                            
-                            // Replace the position argument with the actual index
-                            param.args[0] = actualIndex;
+                            param.args[0] = visibleChannelIndex(channels, position);
                             
                         } catch (Throwable t) {
                             XposedBridge.log(TAG + ": Error mapping position in getView: " + t.getMessage());
@@ -17750,47 +17755,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                 return;
                             }
                             
-                            // Map filtered position to actual channel index (excluding APRS)
-                            int actualIndex = 0;
-                            int filteredIndex = 0;
-                            
-                            if (currentZoneChannels == null || currentZoneChannels.isEmpty()) {
-                                // No zone selected - filter only APRS channels
-                                for (int i = 0; i < channels.size(); i++) {
-                                    Object channelData = channels.get(i);
-                                    if (isAPRSChannel(channelData)) {
-                                        continue;  // Skip APRS channels
-                                    }
-                                    if (filteredIndex == position) {
-                                        actualIndex = i;
-                                        break;
-                                    }
-                                    filteredIndex++;
-                                }
-                            } else {
-                                // Zone selected - filter by zone AND exclude APRS
-                                for (int i = 0; i < channels.size(); i++) {
-                                    Object channelData = channels.get(i);
-                                    if (isAPRSChannel(channelData)) {
-                                        continue;  // Skip APRS channels
-                                    }
-                                    int channelId = XposedHelpers.getIntField(channelData, "_id");
-                                    
-                                    if (currentZoneChannels.contains(channelId)) {
-                                        if (filteredIndex == position) {
-                                            actualIndex = i;
-                                            break;
-                                        }
-                                        filteredIndex++;
-                                    }
-                                }
-                            }
-                            
-                            // Replace position with actual index
-                            param.args[2] = actualIndex;
-                            
-                            XposedBridge.log(TAG + ": Mapped click position " + position + 
-                                " to actual index " + actualIndex);
+                            param.args[2] = visibleChannelIndex(channels, position);
+                            XposedBridge.log(TAG + ": Mapped click position " + position + " to actual index " + param.args[2]);
                             
                         } catch (Throwable t) {
                             XposedBridge.log(TAG + ": Error mapping click position: " + t.getMessage());
@@ -17829,6 +17795,106 @@ public class MainHook implements IXposedHookLoadPackage {
         }
     }
     
+    /**
+     * U7 (2026-10-17): search box + ALL/FM/DMR chip above the channel list, with the ZONE button moved
+     * into the same row (so it no longer floats over the first channel). Runs after the zone-button hook
+     * (posted to the main looper) and is idempotent across initData() calls.
+     */
+    private void hookChannelListSearch(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            XposedHelpers.findAndHookMethod("com.pri.prizeinterphone.fragment.InterPhoneChannelFragment", lpparam.classLoader, "initData", new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(final MethodHookParam param) throws Throwable {
+                    new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() { @Override public void run() {
+                        try {
+                            final Object fragment = param.thisObject;
+                            final android.content.Context context = (android.content.Context) XposedHelpers.callMethod(fragment, "getContext");
+                            android.view.View rootView = (android.view.View) XposedHelpers.getObjectField(fragment, "mLocalView");
+                            if (context == null || !(rootView instanceof android.widget.LinearLayout)) return;
+                            android.widget.LinearLayout root = (android.widget.LinearLayout) rootView;
+                            final float dp = context.getResources().getDisplayMetrics().density;
+                            android.widget.LinearLayout row = (android.widget.LinearLayout) root.findViewWithTag("DMR_CHANNEL_SEARCH_ROW");
+                            if (row == null) {
+                                row = new android.widget.LinearLayout(context);
+                                row.setTag("DMR_CHANNEL_SEARCH_ROW");
+                                row.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+                                row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                                row.setPadding((int) (10 * dp), (int) (6 * dp), (int) (8 * dp), (int) (4 * dp));
+
+                                final android.widget.EditText search = new android.widget.EditText(context);
+                                search.setTag("DMR_CHANNEL_SEARCH");
+                                search.setHint("🔍 name, frequency or number");
+                                search.setSingleLine(true);
+                                search.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14);
+                                search.setTextColor(0xFFFFFFFF);
+                                search.setHintTextColor(0xFF8899AA);
+                                search.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+                                search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
+                                search.setPadding((int) (12 * dp), (int) (6 * dp), (int) (12 * dp), (int) (6 * dp));
+                                android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+                                bg.setColor(0x22FFFFFF); bg.setCornerRadius(20 * dp);
+                                search.setBackground(bg);
+                                search.setText(channelSearchText);
+                                search.addTextChangedListener(new android.text.TextWatcher() {
+                                    @Override public void beforeTextChanged(CharSequence c, int a, int b, int d) { }
+                                    @Override public void onTextChanged(CharSequence c, int a, int b, int d) { }
+                                    @Override public void afterTextChanged(android.text.Editable e) {
+                                        channelSearchText = e.toString().trim().toLowerCase(java.util.Locale.US);
+                                        refreshChannelPage();
+                                    }
+                                });
+                                android.widget.LinearLayout.LayoutParams sp = new android.widget.LinearLayout.LayoutParams(0, (int) (40 * dp), 1f);
+                                row.addView(search, sp);
+
+                                final android.widget.Button chip = new android.widget.Button(context);
+                                chip.setTag("DMR_CHANNEL_TYPE_CHIP");
+                                chip.setAllCaps(false);
+                                chip.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12);
+                                chip.setTextColor(0xFFFFFFFF);
+                                chip.setPadding((int) (10 * dp), 0, (int) (10 * dp), 0);
+                                chip.setMinWidth(0); chip.setMinimumWidth(0); chip.setMinHeight(0); chip.setMinimumHeight(0);
+                                final android.graphics.drawable.GradientDrawable cbg = new android.graphics.drawable.GradientDrawable();
+                                cbg.setColor(0xFF2A3F5F); cbg.setCornerRadius(20 * dp);
+                                chip.setBackground(cbg);
+                                final String[] chipText = { "ALL", "FM", "DMR" };
+                                chip.setText(chipText[channelTypeFilter]);
+                                chip.setContentDescription("Channel type filter");
+                                chip.setOnClickListener(new android.view.View.OnClickListener() {
+                                    @Override public void onClick(android.view.View v) {
+                                        channelTypeFilter = (channelTypeFilter + 1) % 3;
+                                        chip.setText(chipText[channelTypeFilter]);
+                                        cbg.setColor(channelTypeFilter == 0 ? 0xFF2A3F5F : 0xFF1E8A5A);
+                                        refreshChannelPage();
+                                    }
+                                });
+                                android.widget.LinearLayout.LayoutParams cp = new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, (int) (40 * dp));
+                                cp.leftMargin = (int) (6 * dp);
+                                row.addView(chip, cp);
+
+                                root.addView(row, 0, new android.widget.LinearLayout.LayoutParams(android.widget.LinearLayout.LayoutParams.MATCH_PARENT, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT));
+                                XposedBridge.log(TAG + ": [search] channel search row added");
+                            }
+                            // move the floating ZONE button into the row (once)
+                            android.widget.Button zb = channelPageZoneButton;
+                            if (zb != null && zb.getParent() != row) {
+                                android.view.ViewParent op = zb.getParent();
+                                if (op instanceof android.view.ViewGroup) ((android.view.ViewGroup) op).removeView(zb);
+                                android.widget.LinearLayout.LayoutParams zp = new android.widget.LinearLayout.LayoutParams((int) (100 * dp), android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
+                                zp.leftMargin = (int) (6 * dp);
+                                row.addView(zb, zp);
+                                channelSearchRowAttached = true;
+                                XposedBridge.log(TAG + ": [search] zone button moved into the search row");
+                            }
+                        } catch (Throwable t) { XposedBridge.log(TAG + ": [search] row: " + t.getMessage()); }
+                    } });
+                }
+            });
+            XposedBridge.log(TAG + ": ✓ Channel search row hook installed");
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Channel search hook failed: " + t.getMessage());
+        }
+    }
+
     /**
      * Hook to add zone button to InterPhoneChannelFragment
      */
