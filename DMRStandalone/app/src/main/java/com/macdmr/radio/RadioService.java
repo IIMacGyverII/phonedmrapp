@@ -205,10 +205,39 @@ public class RadioService extends Service implements RadioEngine.Events {
                     dist = String.format(Locale.US, "\n(%s%s %.1fmi (%.1fkm))", arrow, dirs[(int) Math.round(b / 45.0) % 8], mi, km);
                 }
             } catch (Throwable ignored) { }
-            String elev = ch.elev > 0 ? String.format(Locale.US, "\n%dft (%.0fm) ", (int) (ch.elev * 3.28084), ch.elev) : "\n";
+            double el = ch.elev;
+            if (el <= 0) {                                   // the module looks this up online (open-elevation) and so do we, cached
+                String k = String.format(Locale.US, "elev_%.4f_%.4f", ch.lat, ch.lon);
+                android.content.SharedPreferences ep = getSharedPreferences("elevation", MODE_PRIVATE);
+                if (ep.contains(k)) el = ep.getFloat(k, 0);
+                else {
+                    try {
+                        java.net.HttpURLConnection cn = (java.net.HttpURLConnection) new java.net.URL(String.format(Locale.US, "https://api.open-elevation.com/api/v1/lookup?locations=%.6f,%.6f", ch.lat, ch.lon)).openConnection();
+                        cn.setConnectTimeout(5000); cn.setReadTimeout(8000);
+                        if (cn.getResponseCode() == 200) {
+                            java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(cn.getInputStream()));
+                            StringBuilder sb = new StringBuilder(); String ln; while ((ln = br.readLine()) != null) sb.append(ln);
+                            el = new org.json.JSONObject(sb.toString()).getJSONArray("results").getJSONObject(0).getDouble("elevation");
+                            ep.edit().putFloat(k, (float) el).apply();
+                        }
+                    } catch (Throwable ignored) { }
+                }
+            }
+            String elev = el > 0 ? String.format(Locale.US, "\n%dft (%.0fm) ", (int) (el * 3.28084), el) : "\n";
             final String text = place + dist + elev + "\uD83D\uDCCD";
             ui.post(() -> { for (Listener l : listeners) l.onLocation(text); });
         }, "geocode").start();
+    }
+
+    public void deleteChannel(ChannelStore.Channel ch) {
+        store.delete(ch);
+        if (current != null && current.id == ch.id) { current = null; int n = store.count(); if (n > 0) selectChannel(Math.min(ch.number, n)); }
+    }
+
+    /** Save an edited or new channel; if it is the active one, re-program the radio. */
+    public void saveChannel(ChannelStore.Channel ch, boolean isNew) {
+        if (isNew) store.insert(ch); else store.update(ch);
+        if (!isNew && current != null && current.id == ch.id) selectChannel(ch.number);
     }
 
     public int localId() { return getSharedPreferences("radio", MODE_PRIVATE).getInt("dmrId", 1); }
