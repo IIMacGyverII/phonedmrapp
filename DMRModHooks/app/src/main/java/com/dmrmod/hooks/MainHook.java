@@ -199,6 +199,10 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile String beaconComment = "";
     private static android.os.Handler beaconHandler = null;  // created lazily (never in <clinit> — Zygote)
     private static Runnable beaconRunnable = null;
+    // KISS TNC (feature #3): a KISS-over-TCP server so APRSdroid/YAAC can drive the radio as a TNC (TX side).
+    private static volatile boolean kissActive = false;
+    private static volatile int kissPort = 8001;
+    private static java.net.ServerSocket kissServerSocket = null;
 
     // Audio RMS thresholds for squelch levels 0-9 (tuned for 8kHz 16-bit PCM)
     // Based on real-world values: noise floor ~100-400, weak signal ~800-2000, strong ~4000+
@@ -5309,6 +5313,22 @@ public class MainHook implements IXposedHookLoadPackage {
             @Override public void onClick(View v) { showAprsBeaconDialog(activity); }
         });
         mainLayout.addView(aprsBeaconBtn);
+
+        // === KISS TNC (TX) BUTTON ===
+        Button aprsKissBtn = new Button(activity);
+        aprsKissBtn.setText("🔌 KISS TNC (TX)");
+        aprsKissBtn.setTextSize(15);
+        aprsKissBtn.setAllCaps(false);
+        aprsKissBtn.setPadding(20, 20, 20, 20);
+        LinearLayout.LayoutParams aprsKissParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT);
+        aprsKissParams.topMargin = (int) (4 * activity.getResources().getDisplayMetrics().density);
+        aprsKissBtn.setLayoutParams(aprsKissParams);
+        aprsKissBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { showKissTncDialog(activity); }
+        });
+        mainLayout.addView(aprsKissBtn);
 
         // === APRS RECEIVED BUTTON ===
         Button aprsReceivedBtn = new Button(activity);
@@ -12744,6 +12764,10 @@ public class MainHook implements IXposedHookLoadPackage {
                 return;
             }
 
+            // mode=kissstart/kissstop: run the KISS-over-TCP TNC server (for APRSdroid or adb-forward tests).
+            if ("kissstart".equalsIgnoreCase(mode)) { startKissTnc(ctx, intent.getIntExtra("port", 8001)); return; }
+            if ("kissstop".equalsIgnoreCase(mode))  { stopKissTnc(); return; }
+
             // mode=beacon: exercise the position-beacon TX path with explicit or (if omitted) cached GPS.
             // adb ... --es mode beacon --es call <call> --ei ssid 7 --ef lat 45.12 --ef lon -93.45 --es comment "x"
             if ("beacon".equalsIgnoreCase(mode)) {
@@ -12872,12 +12896,40 @@ public class MainHook implements IXposedHookLoadPackage {
     private static int transmitAprsPacket(final android.content.Context ctx, final String srcCall, final int srcSsid,
                                           final String[] path, final String info, final String humanLabel,
                                           int leadMs, int reps, int gapMs) {
+        byte[] frame = buildAprsUiFrame("APZDMR", 0, srcCall, srcSsid, path,
+                info.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+        return txAfskFrame(ctx, frame, humanLabel, leadMs, reps, gapMs, true);
+    }
+
+    /**
+     * TX a raw AX.25 frame that does NOT yet carry an FCS (e.g. the payload of a KISS data frame):
+     * appends the CRC-CCITT FCS and transmits it. Returns the keyed ms, or -1 on failure.
+     */
+    private static int transmitRawAx25(final android.content.Context ctx, final byte[] ax25NoFcs,
+                                       final String label, boolean toast) {
+        int fcs = 0xFFFF;
+        for (byte b : ax25NoFcs) {
+            fcs ^= (b & 0xFF);
+            for (int i = 0; i < 8; i++) fcs = ((fcs & 1) != 0) ? ((fcs >>> 1) ^ 0x8408) : (fcs >>> 1);
+        }
+        fcs ^= 0xFFFF;
+        byte[] frame = new byte[ax25NoFcs.length + 2];
+        System.arraycopy(ax25NoFcs, 0, frame, 0, ax25NoFcs.length);
+        frame[ax25NoFcs.length] = (byte) (fcs & 0xFF);
+        frame[ax25NoFcs.length + 1] = (byte) ((fcs >> 8) & 0xFF);
+        return txAfskFrame(ctx, frame, label, APRS_TX_LEAD_MS, APRS_TX_REPS, APRS_TX_GAP_MS, toast);
+    }
+
+    /**
+     * Core on-air TX: modulate a complete AX.25 frame (FCS included) as Bell-202 AFSK, prefix the
+     * ~1.5 s settling lead-in this radio needs, repeat {@code reps} times, inject into the OEM mic
+     * path and key/release PTT hands-free. Returns the keyed duration (ms), or -1 on failure.
+     */
+    private static int txAfskFrame(final android.content.Context ctx, final byte[] frame, final String humanLabel,
+                                   int leadMs, int reps, int gapMs, final boolean toast) {
         try {
             if (reps < 1) reps = 1;
-            byte[] frame = buildAprsUiFrame("APZDMR", 0, srcCall, srcSsid, path,
-                    info.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
             short[] afsk = AFSKGenerator.generateAFSKWithNRZI(frame);
-
             final int SR = 8000;
             int lead = (int) (leadMs / 1000.0 * SR);
             int gap  = (int) (gapMs  / 1000.0 * SR);
@@ -12911,7 +12963,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     aprsTxSamples = null;
                     aprsTxPos = 0;
                     XposedBridge.log(TAG + ": [aprs-msg] TX done — PTT released");
-                    try { Toast.makeText(appCtx, "✓ APRS TX complete", Toast.LENGTH_SHORT).show(); } catch (Throwable ignored) { }
+                    if (toast) try { Toast.makeText(appCtx, "✓ APRS TX complete", Toast.LENGTH_SHORT).show(); } catch (Throwable ignored) { }
                 }
             }, holdMs);
             return durationMs;
@@ -12919,7 +12971,7 @@ public class MainHook implements IXposedHookLoadPackage {
             aprsTxActive = false;
             aprsTxSamples = null;
             XposedBridge.log(TAG + ": [aprs-msg] TX error: " + t.getMessage());
-            try { Toast.makeText(ctx, "TX failed: " + t.getMessage(), Toast.LENGTH_LONG).show(); } catch (Throwable ignored) { }
+            if (toast) try { Toast.makeText(ctx, "TX failed: " + t.getMessage(), Toast.LENGTH_LONG).show(); } catch (Throwable ignored) { }
             return -1;
         }
     }
@@ -13225,6 +13277,170 @@ public class MainHook implements IXposedHookLoadPackage {
             });
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": showAprsBeaconDialog error: " + t.getMessage());
+            Toast.makeText(activity, "Error: " + t.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    // ===== KISS TNC (TX) — external app (APRSdroid/YAAC) drives the radio over KISS-over-TCP =====
+
+    /**
+     * Start a KISS-over-TCP server on 127.0.0.1:{@code port}. Each KISS *data* frame's AX.25 payload
+     * (no FCS) is queued and transmitted one at a time via {@link #transmitRawAx25}. Point APRSdroid
+     * at "TNC (KISS) over TCP/IP", host 127.0.0.1, this port. TX side only (the module keeps its own
+     * APRS RX). Runs while the app is alive; transmits on the current channel (tune to the APRS freq).
+     */
+    private static void startKissTnc(final android.content.Context ctx, final int port) {
+        final android.content.Context appCtx = ctx.getApplicationContext();
+        kissPort = port;
+        kissActive = true;
+        final java.util.concurrent.BlockingQueue<byte[]> queue = new java.util.concurrent.LinkedBlockingQueue<byte[]>(32);
+
+        Thread sender = new Thread(new Runnable() {
+            @Override public void run() {
+                while (kissActive) {
+                    try {
+                        byte[] f = queue.poll(500, java.util.concurrent.TimeUnit.MILLISECONDS);
+                        if (f == null) continue;
+                        int guard = 0;
+                        while (aprsTxActive && guard++ < 100) Thread.sleep(100);   // wait out any in-flight TX
+                        int ms = transmitRawAx25(appCtx, f, "KISS " + f.length + "B", false);
+                        if (ms > 0) Thread.sleep(ms + 800);                          // PTT release + settle before next
+                    } catch (InterruptedException ie) { break; }
+                    catch (Throwable t) { XposedBridge.log(TAG + ": [kiss] tx worker: " + t.getMessage()); }
+                }
+            }
+        }, "dmrmod-kiss-tx");
+        sender.setDaemon(true);
+        sender.start();
+
+        Thread server = new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    kissServerSocket = new java.net.ServerSocket();
+                    kissServerSocket.setReuseAddress(true);
+                    kissServerSocket.bind(new java.net.InetSocketAddress("127.0.0.1", port));
+                    XposedBridge.log(TAG + ": [kiss] listening on 127.0.0.1:" + port);
+                    while (kissActive) {
+                        java.net.Socket client = kissServerSocket.accept();
+                        XposedBridge.log(TAG + ": [kiss] client connected: " + client.getRemoteSocketAddress());
+                        readKissClient(client, queue);   // blocks until this client disconnects
+                    }
+                } catch (Throwable t) {
+                    if (kissActive) XposedBridge.log(TAG + ": [kiss] server error: " + t.getMessage());
+                }
+            }
+        }, "dmrmod-kiss-srv");
+        server.setDaemon(true);
+        server.start();
+        XposedBridge.log(TAG + ": [kiss] TNC started on port " + port);
+    }
+
+    private static void stopKissTnc() {
+        kissActive = false;
+        try { if (kissServerSocket != null) kissServerSocket.close(); } catch (Throwable ignored) { }
+        kissServerSocket = null;
+        XposedBridge.log(TAG + ": [kiss] TNC stopped");
+    }
+
+    /** Parse KISS frames from a connected client and enqueue the AX.25 payload of each data frame. */
+    private static void readKissClient(java.net.Socket client, java.util.concurrent.BlockingQueue<byte[]> queue) {
+        final int FEND = 0xC0, FESC = 0xDB, TFEND = 0xDC, TFESC = 0xDD;
+        try {
+            java.io.InputStream in = client.getInputStream();
+            java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
+            boolean inFrame = false, esc = false;
+            int b;
+            while (kissActive && (b = in.read()) != -1) {
+                b &= 0xFF;
+                if (b == FEND) {
+                    if (inFrame && buf.size() > 0) {
+                        byte[] raw = buf.toByteArray();
+                        // raw[0] = KISS command (high nibble port, low nibble type); 0x00 = data
+                        if ((raw[0] & 0x0F) == 0x00 && raw.length > 1) {
+                            byte[] ax25 = java.util.Arrays.copyOfRange(raw, 1, raw.length);
+                            if (queue.offer(ax25)) XposedBridge.log(TAG + ": [kiss] queued " + ax25.length + "B AX.25 for TX");
+                            else XposedBridge.log(TAG + ": [kiss] queue full — frame dropped");
+                        }
+                    }
+                    buf.reset(); inFrame = true; esc = false;
+                } else if (inFrame) {
+                    if (esc) { buf.write(b == TFEND ? FEND : (b == TFESC ? FESC : b)); esc = false; }
+                    else if (b == FESC) esc = true;
+                    else buf.write(b);
+                }
+            }
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [kiss] client read ended: " + t.getMessage());
+        } finally {
+            try { client.close(); } catch (Throwable ignored) { }
+            XposedBridge.log(TAG + ": [kiss] client disconnected");
+        }
+    }
+
+    /** KISS TNC config dialog: port + Start/Stop, with connection instructions. */
+    private void showKissTncDialog(final Activity activity) {
+        try {
+            AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+            builder.setTitle("🔌 KISS TNC (TX)");
+
+            LinearLayout layout = new LinearLayout(activity);
+            layout.setOrientation(LinearLayout.VERTICAL);
+            layout.setPadding(40, 30, 40, 10);
+
+            TextView status = new TextView(activity);
+            status.setText(kissActive ? ("🟢 TNC running on 127.0.0.1:" + kissPort) : "⚫ TNC off");
+            status.setTextSize(14);
+            status.setTextColor(kissActive ? 0xFF69F0AE : 0xFFBBBBBB);
+            status.setPadding(0, 0, 0, 16);
+            layout.addView(status);
+
+            TextView note = new TextView(activity);
+            note.setText("Lets an APRS app on this phone drive the radio as a TNC (transmit side).\n\n"
+                    + "In APRSdroid: Connection Protocol → TNC (KISS); TNC via TCP/IP; host 127.0.0.1, "
+                    + "port below. Then APRSdroid's transmits go out over RF.\n\n"
+                    + "Transmits on the CURRENT channel — tune to an ANALOG channel on your APRS "
+                    + "frequency. Licensed amateur use only.");
+            note.setTextSize(12); note.setTextColor(0xFF999999); note.setPadding(0, 0, 0, 20);
+            layout.addView(note);
+
+            TextView portLabel = new TextView(activity);
+            portLabel.setText("TCP port:"); portLabel.setTextSize(14);
+            layout.addView(portLabel);
+            final EditText portEdit = new EditText(activity);
+            portEdit.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+            portEdit.setText(String.valueOf(kissPort));
+            portEdit.setEnabled(!kissActive);
+            layout.addView(portEdit);
+
+            builder.setView(layout);
+            builder.setPositiveButton(kissActive ? "Stop TNC" : "Start TNC", null);
+            builder.setNegativeButton("Close", null);
+            final AlertDialog dialog = builder.create();
+            dialog.show();
+
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    if (kissActive) {
+                        stopKissTnc();
+                        Toast.makeText(activity, "KISS TNC stopped", Toast.LENGTH_SHORT).show();
+                        dialog.dismiss();
+                        return;
+                    }
+                    if (currentChannelType != 1) {
+                        Toast.makeText(activity, "Switch to an ANALOG channel first (current is digital)", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    int port;
+                    try { port = Integer.parseInt(portEdit.getText().toString().trim()); }
+                    catch (NumberFormatException e) { Toast.makeText(activity, "Enter a valid port", Toast.LENGTH_SHORT).show(); return; }
+                    if (port < 1024 || port > 65535) { Toast.makeText(activity, "Use a port 1024–65535", Toast.LENGTH_SHORT).show(); return; }
+                    startKissTnc(activity, port);
+                    Toast.makeText(activity, "🔌 KISS TNC on 127.0.0.1:" + port + " — point APRSdroid here", Toast.LENGTH_LONG).show();
+                    dialog.dismiss();
+                }
+            });
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": showKissTncDialog error: " + t.getMessage());
             Toast.makeText(activity, "Error: " + t.getMessage(), Toast.LENGTH_LONG).show();
         }
     }

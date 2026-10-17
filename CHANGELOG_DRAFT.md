@@ -3,6 +3,12 @@
 Everything below shipped in **v4.0.0** (2026-10-15). Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-16 — KISS TNC (TX): drive the radio from APRSdroid/YAAC over KISS-over-TCP
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| F5 | Third APRS TX feature: a **KISS-over-TCP TNC server** (TX side) so an APRS app on the phone can use the radio as its modem. New **🔌 KISS TNC (TX)** button in PKT RAD → APRS (port config, Start/Stop). Listens on `127.0.0.1:<port>` (default 8001); each KISS *data* frame's AX.25 payload is de-escaped, FCS-16 appended, and transmitted via the shared `txAfskFrame` core (stereo AFSK, 1.6 s TXDELAY, self-keyed PTT), serialized one frame at a time. Point APRSdroid at "TNC (KISS) / TCP-IP, 127.0.0.1:8001" and its transmits go out over RF. Refactored the TX core into `txAfskFrame` (frame-with-FCS) + `transmitRawAx25` (append FCS) shared by message/beacon/KISS. TX-only (module keeps its own APRS RX); runs while the app is alive, transmits on the current channel. | `MainHook` (`startKissTnc`/`stopKissTnc`/`readKissClient` KISS-over-TCP server + parser, `showKissTncDialog`, `txAfskFrame`/`transmitRawAx25` refactor, `mode=kissstart/kissstop` diagnostics) | **device + HackRF, on-air on 2 m APRS (144.390 MHz)**: a KISS frame sent to the TNC over `adb forward` + a TCP client transmitted and decoded by direwolf `atest` 2/2, valid FCS, correct addresses/path/info |
+
 ## 2026-10-16 — APRS Position Beacon TX (periodic GPS position over analog FM)
 
 | Backlog | Change | Files | Test |
