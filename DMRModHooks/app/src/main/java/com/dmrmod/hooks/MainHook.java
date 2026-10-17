@@ -191,6 +191,14 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile boolean aprsTxStereo = true;
     private static volatile boolean aprsTxLoop = false;     // F6 tones/test loop; real TX (message/beacon) is one-shot
     private static volatile int aprsMsgSeq = 1;             // APRS message line number for the {NN suffix
+    // APRS position beacon (feature #2): periodically TX our GPS as an APRS position report.
+    private static volatile boolean beaconActive = false;
+    private static volatile int beaconIntervalMs = 10 * 60 * 1000;  // default 10 min
+    private static volatile String beaconCall = null;
+    private static volatile int beaconSsid = 7;
+    private static volatile String beaconComment = "";
+    private static android.os.Handler beaconHandler = null;  // created lazily (never in <clinit> — Zygote)
+    private static Runnable beaconRunnable = null;
 
     // Audio RMS thresholds for squelch levels 0-9 (tuned for 8kHz 16-bit PCM)
     // Based on real-world values: noise floor ~100-400, weak signal ~800-2000, strong ~4000+
@@ -5285,6 +5293,22 @@ public class MainHook implements IXposedHookLoadPackage {
             @Override public void onClick(View v) { showAprsSendMessageDialog(activity); }
         });
         mainLayout.addView(aprsSendMsgBtn);
+
+        // === POSITION BEACON (TX) BUTTON ===
+        Button aprsBeaconBtn = new Button(activity);
+        aprsBeaconBtn.setText("📡 Position Beacon (TX)");
+        aprsBeaconBtn.setTextSize(15);
+        aprsBeaconBtn.setAllCaps(false);
+        aprsBeaconBtn.setPadding(20, 20, 20, 20);
+        LinearLayout.LayoutParams aprsBcnParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT);
+        aprsBcnParams.topMargin = (int) (4 * activity.getResources().getDisplayMetrics().density);
+        aprsBeaconBtn.setLayoutParams(aprsBcnParams);
+        aprsBeaconBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { showAprsBeaconDialog(activity); }
+        });
+        mainLayout.addView(aprsBeaconBtn);
 
         // === APRS RECEIVED BUTTON ===
         Button aprsReceivedBtn = new Button(activity);
@@ -12719,6 +12743,25 @@ public class MainHook implements IXposedHookLoadPackage {
                         call + "-" + ssid + " → " + to + ": " + text, leadMs, reps, gapMs);
                 return;
             }
+
+            // mode=beacon: exercise the position-beacon TX path with explicit or (if omitted) cached GPS.
+            // adb ... --es mode beacon --es call <call> --ei ssid 7 --ef lat 45.12 --ef lon -93.45 --es comment "x"
+            if ("beacon".equalsIgnoreCase(mode)) {
+                String call = intent.getStringExtra("call"); if (call == null) call = "N0CALL";
+                int ssid = intent.getIntExtra("ssid", 0);
+                String comment = intent.getStringExtra("comment"); if (comment == null) comment = "";
+                char symTable = '/', symCode = '[';
+                android.location.Location loc;
+                if (intent.hasExtra("lat") && intent.hasExtra("lon")) {
+                    loc = new android.location.Location("test");
+                    loc.setLatitude(intent.getFloatExtra("lat", 0f));
+                    loc.setLongitude(intent.getFloatExtra("lon", 0f));
+                } else {
+                    loc = currentGpsLocation;  // last cached fix (UI path refreshes this)
+                }
+                sendPositionBeaconOnce(ctx, call, ssid, symTable, symCode, comment, loc);
+                return;
+            }
             boolean stereo = !"mono".equalsIgnoreCase(intent.getStringExtra("fmt"));
             int amp = intent.getIntExtra("amp", 10000);
 
@@ -12934,6 +12977,37 @@ public class MainHook implements IXposedHookLoadPackage {
     }
 
     /**
+     * Assemble an uncompressed APRS position report (messaging-capable, no timestamp):
+     * {@code =DDMM.hhN<symTable>DDDMM.hhW<symCode>comment}. Lat/lon are signed degrees.
+     */
+    private static String buildAprsPositionInfo(double lat, double lon, char symTable, char symCode, String comment) {
+        char ns = lat >= 0 ? 'N' : 'S'; double aLat = Math.abs(lat);
+        int latDeg = (int) aLat; double latMin = (aLat - latDeg) * 60.0;
+        char ew = lon >= 0 ? 'E' : 'W'; double aLon = Math.abs(lon);
+        int lonDeg = (int) aLon; double lonMin = (aLon - lonDeg) * 60.0;
+        // guard rounding to 60.00'
+        if (latMin >= 59.995) { latMin = 0; latDeg++; }
+        if (lonMin >= 59.995) { lonMin = 0; lonDeg++; }
+        return String.format(java.util.Locale.US, "=%02d%05.2f%c%c%03d%05.2f%c%c%s",
+                latDeg, latMin, ns, symTable, lonDeg, lonMin, ew, symCode, comment == null ? "" : comment);
+    }
+
+    /**
+     * Transmit one APRS position report for {@code loc} (one-shot, hands-free PTT via
+     * {@link #transmitAprsPacket}). Returns the keyed ms, or -1 if no fix / failure.
+     */
+    private static int sendPositionBeaconOnce(android.content.Context ctx, String call, int ssid,
+                                              char symTable, char symCode, String comment, android.location.Location loc) {
+        if (loc == null) {
+            XposedBridge.log(TAG + ": [aprs-beacon] no GPS fix — skipped");
+            return -1;
+        }
+        String info = buildAprsPositionInfo(loc.getLatitude(), loc.getLongitude(), symTable, symCode, comment);
+        String label = call + "-" + ssid + " position " + info;
+        return transmitAprsPacket(ctx, call, ssid, new String[]{ "WIDE1-1", "WIDE2-1" }, info, label);
+    }
+
+    /**
      * APRS Message TX dialog — addressee + text, sent as a standard APRS message
      * ({@code :ADDRESSEE :text{NN}) over the current analog channel.
      */
@@ -13031,6 +13105,126 @@ public class MainHook implements IXposedHookLoadPackage {
             });
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": showAprsSendMessageDialog error: " + t.getMessage());
+            Toast.makeText(activity, "Error: " + t.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    /** Start the periodic position beacon: TX our GPS now and every {@code intervalMin} minutes. */
+    private void startPositionBeacon(final Activity activity, int intervalMin, String comment) {
+        final APRSDatabase aprsDb = APRSDatabase.getInstance(activity);
+        beaconCall = aprsDb.getCallsign();
+        beaconSsid = aprsDb.getSSID();
+        beaconComment = comment == null ? "" : comment;
+        if (intervalMin < 1) intervalMin = 1;
+        beaconIntervalMs = intervalMin * 60 * 1000;
+        final char symTable = aprsDb.getDefaultSymbolTable();
+        final char symCode = aprsDb.getDefaultSymbolCode();
+        beaconActive = true;
+        if (beaconHandler == null) beaconHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+        beaconRunnable = new Runnable() {
+            @Override public void run() {
+                if (!beaconActive) return;
+                try {
+                    android.location.Location loc = getCurrentLocation(activity);
+                    int ms = sendPositionBeaconOnce(activity, beaconCall, beaconSsid, symTable, symCode, beaconComment, loc);
+                    if (ms < 0) Toast.makeText(activity, "Beacon: no GPS fix — will retry next interval", Toast.LENGTH_SHORT).show();
+                } catch (Throwable t) {
+                    XposedBridge.log(TAG + ": [aprs-beacon] tick error: " + t.getMessage());
+                }
+                if (beaconActive && beaconHandler != null) beaconHandler.postDelayed(this, beaconIntervalMs);
+            }
+        };
+        beaconHandler.post(beaconRunnable);   // first beacon immediately
+        XposedBridge.log(TAG + ": [aprs-beacon] started, every " + intervalMin + " min");
+    }
+
+    private void stopPositionBeacon() {
+        beaconActive = false;
+        if (beaconHandler != null && beaconRunnable != null) beaconHandler.removeCallbacks(beaconRunnable);
+        XposedBridge.log(TAG + ": [aprs-beacon] stopped");
+    }
+
+    /** Position-beacon config dialog: interval + comment, Start/Stop. */
+    private void showAprsBeaconDialog(final Activity activity) {
+        try {
+            final APRSDatabase aprsDb = APRSDatabase.getInstance(activity);
+            final String call = aprsDb.getCallsign();
+            final int ssid = aprsDb.getSSID();
+            final boolean callsignOk = call != null && !call.trim().isEmpty() && !"N0CALL".equalsIgnoreCase(call.trim());
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+            builder.setTitle("📡 Position Beacon (TX)");
+
+            LinearLayout layout = new LinearLayout(activity);
+            layout.setOrientation(LinearLayout.VERTICAL);
+            layout.setPadding(40, 30, 40, 10);
+
+            TextView status = new TextView(activity);
+            status.setText(beaconActive
+                    ? ("🟢 Beaconing as " + call + "-" + ssid + " every " + (beaconIntervalMs / 60000) + " min")
+                    : ("⚫ Beacon off" + (callsignOk ? "" : "  ⚠ set your callsign in APRS Settings first")));
+            status.setTextSize(14);
+            status.setTextColor(beaconActive ? 0xFF69F0AE : (callsignOk ? 0xFFBBBBBB : 0xFFFF7043));
+            status.setPadding(0, 0, 0, 16);
+            layout.addView(status);
+
+            TextView note = new TextView(activity);
+            note.setText("Transmits your GPS position as an APRS position report on the CURRENT channel. "
+                    + "Tune to an ANALOG channel on your APRS frequency. Licensed amateur use only.");
+            note.setTextSize(12); note.setTextColor(0xFF999999); note.setPadding(0, 0, 0, 20);
+            layout.addView(note);
+
+            TextView ivLabel = new TextView(activity);
+            ivLabel.setText("Interval (minutes):"); ivLabel.setTextSize(14);
+            layout.addView(ivLabel);
+            final EditText ivEdit = new EditText(activity);
+            ivEdit.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+            ivEdit.setText(String.valueOf(beaconIntervalMs / 60000));
+            layout.addView(ivEdit);
+
+            TextView cmtLabel = new TextView(activity);
+            cmtLabel.setText("Comment (optional):"); cmtLabel.setTextSize(14); cmtLabel.setPadding(0, 16, 0, 0);
+            layout.addView(cmtLabel);
+            final EditText cmtEdit = new EditText(activity);
+            cmtEdit.setHint("DMRModHooks");
+            cmtEdit.setText(beaconComment);
+            cmtEdit.setFilters(new android.text.InputFilter[]{ new android.text.InputFilter.LengthFilter(43) });
+            layout.addView(cmtEdit);
+
+            builder.setView(layout);
+            builder.setPositiveButton(beaconActive ? "Stop beacon" : "Start beacon", null);
+            builder.setNegativeButton("Close", null);
+            final AlertDialog dialog = builder.create();
+            dialog.show();
+
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    if (beaconActive) {
+                        stopPositionBeacon();
+                        Toast.makeText(activity, "Beacon stopped", Toast.LENGTH_SHORT).show();
+                        dialog.dismiss();
+                        return;
+                    }
+                    if (!callsignOk) {
+                        Toast.makeText(activity, "Set your callsign in APRS Settings first", Toast.LENGTH_LONG).show();
+                        showAPRSSettingsDialog(activity);
+                        dialog.dismiss();
+                        return;
+                    }
+                    if (currentChannelType != 1) {
+                        Toast.makeText(activity, "Switch to an ANALOG channel first (current is digital)", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    int iv;
+                    try { iv = Integer.parseInt(ivEdit.getText().toString().trim()); }
+                    catch (NumberFormatException e) { Toast.makeText(activity, "Enter a valid interval", Toast.LENGTH_SHORT).show(); return; }
+                    startPositionBeacon(activity, iv, cmtEdit.getText().toString().trim());
+                    Toast.makeText(activity, "📡 Beacon started (" + iv + " min) — first position going out", Toast.LENGTH_LONG).show();
+                    dialog.dismiss();
+                }
+            });
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": showAprsBeaconDialog error: " + t.getMessage());
             Toast.makeText(activity, "Error: " + t.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
