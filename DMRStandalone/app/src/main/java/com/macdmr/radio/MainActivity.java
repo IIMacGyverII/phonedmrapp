@@ -84,6 +84,27 @@ public class MainActivity extends AppCompatActivity implements RadioEngine.Event
             else if (ev.getAction() == MotionEvent.ACTION_UP || ev.getAction() == MotionEvent.ACTION_CANCEL) { bg(() -> { try { if (audio != null) say(audio.stopTx()); engine.ptt(false); } catch (Exception e) { say("ptt: " + e); } }); }
             return false;
         });
+        btn(r4, "TX tone 3 s", v -> bg(() -> {
+            try {
+                if (audio == null) audio = new TinyServiceAudio();
+                engine.ptt(true); say(audio.startTxTone(1000));
+                Thread.sleep(3000);
+                say(audio.stopTx()); engine.ptt(false);
+            } catch (Exception e) { say("tx tone: " + e); }
+        }));
+        btn(r4, "Tune DMR", v -> bg(() -> {
+            try {
+                int hz = (int) Math.round(Double.parseDouble(freq.getText().toString().trim()) * 1e6);
+                engine.setDigital(hz, hz, 1447, new int[] { 1, 9, 99 }, 99, 1, 0, 1, 0, 0, 8, 4);   // test ID/TGs; a real app uses the user's
+            } catch (Exception e) { say("tune dmr: " + e); }
+        }));
+        btn(r4, "Boot handshake", v -> bg(() -> {
+            try {
+                engine.powerCycle();
+                final int hz = (int) Math.round(Double.parseDouble(freq.getText().toString().trim()) * 1e6);
+                engine.bootHandshake(() -> { try { engine.setAnalog(hz, hz, hz < 300_000_000 ? 1 : 0, 0, 0, 0, 0, 0, 0, 8, 2); } catch (Exception e) { say("set: " + e); } }, false);
+            } catch (Exception e) { say("handshake: " + e); }
+        }));
         btn(r4, "Close UART", v -> bg(() -> engine.close()));
         btn(r4, "Clear", v -> log.setText(""));
 
@@ -95,6 +116,9 @@ public class MainActivity extends AppCompatActivity implements RadioEngine.Event
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
             ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.RECORD_AUDIO }, 1);
+        android.content.IntentFilter f = new android.content.IntentFilter();
+        for (String a : profile.pttActions) f.addAction(a);
+        registerReceiver(pttReceiver, f, android.content.Context.RECEIVER_EXPORTED);
         say("profile: " + profile.name + "  uart=" + profile.controlPort + "  audio=" + profile.audio + "  power=" + profile.powerNode);
         refreshState();
     }
@@ -113,6 +137,7 @@ public class MainActivity extends AppCompatActivity implements RadioEngine.Event
     private void bg(Runnable r) { new Thread(r).start(); }
 
     private void say(String s) {
+        android.util.Log.i("DMRStandalone", s);
         final String line = tf.format(new Date()) + " " + s + "\n";
         ui.post(() -> { log.append(line); refreshState(); });
     }
@@ -132,5 +157,18 @@ public class MainActivity extends AppCompatActivity implements RadioEngine.Event
     @Override public void ack(int cmd, boolean ok) { say(String.format(Locale.US, "ACK 0x%02X %s", cmd, ok ? "ok" : "FAIL")); }
     @Override public void booted(String banner) { say("MODULE BOOTED: " + banner); }
 
-    @Override protected void onDestroy() { super.onDestroy(); if (audio != null) { audio.stopRx(); } engine.close(); }
+    private final android.content.BroadcastReceiver pttReceiver = new android.content.BroadcastReceiver() {
+        @Override public void onReceive(android.content.Context c, android.content.Intent i) {
+            final String a = i.getAction() == null ? "" : i.getAction();
+            final boolean down = a.endsWith("down");
+            say("HW PTT broadcast " + a);
+            bg(() -> { try {
+                if (!engine.isOpen()) return;
+                if (down) { engine.ptt(true); if (audio == null) audio = new TinyServiceAudio(); say(audio.startTx()); }
+                else { if (audio != null) say(audio.stopTx()); engine.ptt(false); }
+            } catch (Exception e) { say("hw ptt: " + e); } });
+        }
+    };
+
+    @Override protected void onDestroy() { try { unregisterReceiver(pttReceiver); } catch (Throwable ignored) { } super.onDestroy(); if (audio != null) { audio.stopRx(); } engine.close(); }
 }

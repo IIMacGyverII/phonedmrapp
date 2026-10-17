@@ -32,6 +32,7 @@ public final class RadioEngine implements UartPort.Listener {
     private final UartPort port;
     private final SysfsGpio power;
     private final StringBuilder banner = new StringBuilder();
+    private volatile java.util.concurrent.CountDownLatch bootLatch = new java.util.concurrent.CountDownLatch(1);
 
     public RadioEngine(DeviceProfile p, Events ev) {
         this.profile = p; this.ev = ev;
@@ -57,7 +58,13 @@ public final class RadioEngine implements UartPort.Listener {
 
     public void powerCycle() throws IOException {
         power.set(false); try { Thread.sleep(500); } catch (InterruptedException ignored) { }
+        bootLatch = new java.util.concurrent.CountDownLatch(1);
         power.set(true); ev.log("module power-cycled (" + power.read() + ")");
+    }
+
+    /** After pwd=1 the module needs a few seconds before it prints its banner and accepts commands. */
+    public boolean waitBooted(long ms) {
+        try { return bootLatch.await(ms, java.util.concurrent.TimeUnit.MILLISECONDS); } catch (InterruptedException e) { return false; }
     }
 
     // ---- commands ----------------------------------------------------------------------------------
@@ -70,8 +77,27 @@ public final class RadioEngine implements UartPort.Listener {
     public void setMic(int gain) throws IOException { port.send(Frame.request(CMD_MIC, (byte) gain)); }
     public void setSpkEn(boolean on) throws IOException { port.send(Frame.request(CMD_SPK_EN, (byte) (on ? 1 : 0))); }
 
-    /** PTT: launch=1 keys the transmitter, 0 releases (firmware caps a keyed TX at 30 s). */
-    public void ptt(boolean down) throws IOException { port.send(Frame.request(CMD_LAUNCH, (byte) (down ? 1 : 0))); }
+    public void setInterrupt(boolean on) throws IOException { port.send(Frame.request(CMD_INTERRUPT, (byte) (on ? 1 : 2))); }
+    public void queryInit() throws IOException { port.send(Frame.request(CMD_QUERY_INIT, (byte) 1)); }
+
+    /**
+     * The OEM's cold-start handshake after the module boots (docs/deep-dive/03 §7a): version → channel →
+     * interrupt (digital) / mic (analog) → TOT. Each step is acked; we just fire them in order with short gaps.
+     */
+    public void bootHandshake(Runnable setChannel, boolean digital) throws IOException {
+        if (!waitBooted(10000)) ev.log("no boot banner within 10 s — sending the handshake anyway");
+        pause(200);
+        queryVersion(); pause(150);
+        setChannel.run(); pause(250);
+        if (digital) setInterrupt(false); else setMic(4); pause(150);
+        setTot(0); pause(150);
+        ev.log("boot handshake sent");
+    }
+
+    private static void pause(long ms) { try { Thread.sleep(ms); } catch (InterruptedException ignored) { } }
+
+    /** PTT: launch=1 keys the transmitter, 2 releases (enum 1/2 again — 0 is NAKed and the TX keeps running; firmware caps a keyed TX at 30 s). */
+    public void ptt(boolean down) throws IOException { port.send(Frame.request(CMD_LAUNCH, (byte) (down ? 1 : 2))); }
 
     /**
      * Analog channel, 19-byte body (little-endian ints): rxFreq, txFreq, band, power, sq, rxType, rxSubCode,
@@ -118,7 +144,7 @@ public final class RadioEngine implements UartPort.Listener {
         try { txt = new String(b, 0, n, Charset.forName("GBK")).replace("\u0000", "").trim(); } catch (Throwable t) { txt = Frame.hex(b, n); }
         boolean marker = false; for (int i = 0; i + 1 < n; i++) if ((b[i] & 0xFF) == 0xBF && (b[i + 1] & 0xFF) == 0xAA) marker = true;
         ev.log("RAW " + Frame.hex(b, n) + (txt.isEmpty() ? "" : "  \"" + txt + "\""));
-        if (marker) ev.booted(txt);
+        if (marker) { bootLatch.countDown(); ev.booted(txt); }
     }
 
     @Override public void onFrame(Frame f) {

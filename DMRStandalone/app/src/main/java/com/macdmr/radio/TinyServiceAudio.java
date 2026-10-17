@@ -94,6 +94,33 @@ public final class TinyServiceAudio {
         } catch (Throwable t) { return "startTx failed: " + t; }
     }
 
+    /** TX a steady tone (bench use: a HackRF sees a clean carrier with one audio line). */
+    public synchronized String startTxTone(final double hz) {
+        try {
+            Object ok = openWrite.invoke(svc);
+            int fs = (Integer) frameSize.invoke(svc);
+            if (!Boolean.TRUE.equals(ok) || fs <= 0) return "openWritePcm=" + ok + " frameSize=" + fs;
+            txRunning = true;
+            final int frame = fs;
+            txThread = new Thread(() -> {
+                byte[] st = new byte[frame]; double ph = 0, step = 2 * Math.PI * hz / 8000.0; long t0 = System.nanoTime(); long sent = 0;
+                while (txRunning) {
+                    for (int o = 0; o + 3 < frame; o += 4) {
+                        short v = (short) (Math.sin(ph) * 9000); ph += step;
+                        st[o] = (byte) v; st[o + 1] = (byte) (v >> 8); st[o + 2] = (byte) v; st[o + 3] = (byte) (v >> 8);
+                    }
+                    try { writeFrame.invoke(svc, st, frame); } catch (Throwable t) { synchronized (err) { err.append(t).append('\n'); } break; }
+                    sent += frame / 4;                                   // samples; pace to real time (8 kHz)
+                    long due = t0 + sent * 1_000_000_000L / 8000;
+                    long wait = due - System.nanoTime();
+                    if (wait > 0) try { Thread.sleep(wait / 1_000_000, (int) (wait % 1_000_000)); } catch (InterruptedException ignored) { }
+                }
+            }, "tiny-tx-tone");
+            txThread.start();
+            return "TX tone " + hz + " Hz started, frame=" + fs;
+        } catch (Throwable t) { return "startTxTone failed: " + t; }
+    }
+
     public synchronized String stopTx() {
         txRunning = false;
         try { if (txThread != null) txThread.join(500); } catch (InterruptedException ignored) { }

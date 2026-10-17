@@ -133,3 +133,16 @@ rejected, like `relay=0`. MCU→app pushes (0x36) arrive with `rw=2`. Everything
 deep-dive documents. Remaining for the engine: TX audio path (`openWritePcm`/`writeFrame` while 0x26 launch=1),
 digital channel set, the boot handshake after a power-cycle (version → channel → interrupt/mic → TOT), and
 the hardware-PTT broadcast receiver — then the feature code can move over.
+
+### 6.1 Second run — TX, digital, cold start, hardware PTT (same day)
+
+| Test | Result |
+|---|---|
+| **TX**: `0x26 launch=1` + `openWritePcm`/`writeFrame` of a 1 kHz tone for 3 s on 467.625 | MCU pushed SEND_START; **HackRF measured 78.5 dB above the noise floor** at 467.625 (same level as the module's proven TX). |
+| **PTT release** | `launch=0` is **NAKed** and the transmitter stays keyed (it only stopped at the next channel write); **`launch=2` is the release** — ack sr=0, SEND_STOP immediately. Enum 1/2 again. |
+| **Cold start**: pwd 0→1, then the OEM's handshake | Banner `BF AA` + "开机初始化完成" ("power-on initialisation complete"), then 0x23 ok, 0x2A mic ok, 0x3B TOT ok, RECEIVE_START. The banner takes **> 3 s** after pwd=1; the engine now waits for it (`waitBooted`) before the first command — a 0x34 sent at +3 s got no reply. |
+| **Hardware PTT key** | `am broadcast -a com.interphone.ptt.down/.up` → the app keyed with the phone mic, released cleanly (ACK 0x26, SEND_STOP). |
+| **Digital set** `0x22` on 467.700 (ID 1447, TGs 1/9/99, cc1) | accepted (see the run log); the MCU then answered the 0x2B caller query with zeros (no call yet). |
+
+Every hardware function a standalone app needs on the Armor 26 Ultra is now exercised from `DMRStandalone`.
+Next: carry the feature code and the intercom UI over.
