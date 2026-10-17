@@ -488,6 +488,16 @@ public class MainHook implements IXposedHookLoadPackage {
     private static android.widget.Button noaaColorModeButton = null;
     private static long noaaSignalStartTime = 0;   // ms since epoch when first line decoded
     private static java.util.HashMap<String, Object> noaaChannelBackup = null;
+
+    // NOAA Weather Radio SAME alert monitoring (backlog F8): decodes EAS/SAME headers on the WX
+    // channels (162.400-162.550 MHz) from the same PCM tap; hardware-only tune, restored on stop.
+    private static volatile boolean isWxMonitoringActive = false;
+    private static SAMEDecoder wxDecoder = null;
+    private static volatile String wxStatus = "";
+    private static boolean wxTuned = false;
+    private static int wxNotifyId = 7100;
+    private static final String[] WX_NAMES = {"WX1 162.400", "WX2 162.425", "WX3 162.450", "WX4 162.475", "WX5 162.500", "WX6 162.525", "WX7 162.550"};
+    private static final int[] WX_FREQS = {162400000, 162425000, 162450000, 162475000, 162500000, 162525000, 162550000};
     // NOAA Doppler tracking (prefs dmrmod_noaa_global/noaa_doppler, default on): during a predicted
     // pass the radio is re-tuned in 2.5 kHz steps to follow the predicted shift (±3.4 kHz over a
     // pass at 137 MHz). Measured 2026-10-17 (HackRF bench): a 3 kHz offset drops the decode
@@ -5201,6 +5211,27 @@ public class MainHook implements IXposedHookLoadPackage {
 
             mainLayout.addView(noaaButton);
 
+            // NOAA Weather Radio alerts (SAME) button
+            android.widget.Button wxButton = new android.widget.Button(activity);
+            wxButton.setText("\u26C8\uFE0F NOAA Weather Alerts (SAME)");
+            wxButton.setTextSize(16);
+            wxButton.setAllCaps(false);
+            LinearLayout.LayoutParams wxParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                (int) (60 * activity.getResources().getDisplayMetrics().density));
+            wxParams.bottomMargin = (int) (15 * activity.getResources().getDisplayMetrics().density);
+            wxButton.setLayoutParams(wxParams);
+            android.graphics.drawable.GradientDrawable wxDrawable = new android.graphics.drawable.GradientDrawable();
+            wxDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+            wxDrawable.setColor(0xFF1E5AA8);
+            wxDrawable.setCornerRadius(10 * activity.getResources().getDisplayMetrics().density);
+            wxButton.setBackground(wxDrawable);
+            wxButton.setTextColor(0xFFFFFFFF);
+            wxButton.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { showWxAlertsDialog(activity); }
+            });
+            mainLayout.addView(wxButton);
+
             // Info text
             TextView infoText = new TextView(activity);
             infoText.setText("\n\uD83D\uDCA1 More modes coming soon...");
@@ -8790,6 +8821,185 @@ public class MainHook implements IXposedHookLoadPackage {
     }
 
     // -----------------------------------------------------------------------
+    // NOAA Weather Radio SAME alerts (F8)
+    // -----------------------------------------------------------------------
+
+    private void showWxAlertsDialog(final Activity activity) {
+        try {
+            final android.content.SharedPreferences prefs = activity.getSharedPreferences("dmrmod_wx", android.content.Context.MODE_PRIVATE);
+            AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+            builder.setTitle("\u26C8\uFE0F NOAA Weather Alerts (SAME)");
+            LinearLayout layout = new LinearLayout(activity);
+            layout.setOrientation(LinearLayout.VERTICAL);
+            layout.setPadding(40, 30, 40, 10);
+
+            final TextView status = new TextView(activity);
+            status.setTextSize(14);
+            status.setText(isWxMonitoringActive ? ("\uD83D\uDFE2 Listening " + wxStatus) : "\u26AB Not listening");
+            status.setTextColor(isWxMonitoringActive ? 0xFF69F0AE : 0xFFBBBBBB);
+            layout.addView(status);
+
+            TextView note = new TextView(activity);
+            note.setText("Decodes the digital SAME headers NOAA Weather Radio sends before every warning, "
+                    + "watch and test (Specific Area Message Encoding, 520.8 baud AFSK), plus the 1050 Hz "
+                    + "attention tone and the NNNN end-of-message. Alerts are listed here and raised as "
+                    + "notifications. The radio is parked on the chosen WX channel until you stop.");
+            note.setTextSize(12); note.setTextColor(0xFF999999); note.setPadding(0, 10, 0, 10);
+            layout.addView(note);
+
+            TextView chLabel = new TextView(activity);
+            chLabel.setText("Listen on:"); chLabel.setTextSize(13);
+            layout.addView(chLabel);
+            final android.widget.Spinner chSpin = new android.widget.Spinner(activity);
+            String[] items = new String[WX_NAMES.length + 1];
+            System.arraycopy(WX_NAMES, 0, items, 0, WX_NAMES.length);
+            items[WX_NAMES.length] = "Current channel (no retune)";
+            android.widget.ArrayAdapter<String> ad = new android.widget.ArrayAdapter<String>(activity, android.R.layout.simple_spinner_item, items);
+            ad.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            chSpin.setAdapter(ad);
+            chSpin.setSelection(prefs.getInt("wx_channel", 4));
+            layout.addView(chSpin);
+
+            TextView histLabel = new TextView(activity);
+            histLabel.setText("\nRecent alerts:"); histLabel.setTextSize(13);
+            layout.addView(histLabel);
+            final TextView hist = new TextView(activity);
+            hist.setTextSize(12); hist.setTextColor(0xFFCCCCCC);
+            hist.setText(wxHistoryText(prefs));
+            android.widget.ScrollView sv = new android.widget.ScrollView(activity);
+            sv.addView(hist);
+            sv.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                    (int) (160 * activity.getResources().getDisplayMetrics().density)));
+            layout.addView(sv);
+
+            builder.setView(layout);
+            builder.setPositiveButton(isWxMonitoringActive ? "Stop" : "Start", new DialogInterface.OnClickListener() {
+                @Override public void onClick(DialogInterface d, int w) {
+                    if (isWxMonitoringActive) { stopWxMonitoring(activity); return; }
+                    int sel = chSpin.getSelectedItemPosition();
+                    prefs.edit().putInt("wx_channel", sel).apply();
+                    startWxMonitoring(activity, sel < WX_FREQS.length ? WX_FREQS[sel] : -1);
+                }
+            });
+            builder.setNeutralButton("Clear list", new DialogInterface.OnClickListener() {
+                @Override public void onClick(DialogInterface d, int w) { prefs.edit().remove("alerts").apply(); }
+            });
+            builder.setNegativeButton("Close", null);
+            builder.show();
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [wx] dialog error: " + t.getMessage());
+        }
+    }
+
+    private static String wxHistoryText(android.content.SharedPreferences prefs) {
+        try {
+            org.json.JSONArray arr = new org.json.JSONArray(prefs.getString("alerts", "[]"));
+            if (arr.length() == 0) return "(none yet)";
+            StringBuilder sb = new StringBuilder();
+            java.text.SimpleDateFormat df = new java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.US);
+            for (int i = arr.length() - 1; i >= 0; i--) {
+                org.json.JSONObject o = arr.getJSONObject(i);
+                sb.append(df.format(new java.util.Date(o.optLong("t")))).append("  ").append(o.optString("summary")).append("\n")
+                  .append("    ").append(o.optString("raw")).append("\n");
+            }
+            return sb.toString();
+        } catch (Throwable t) { return "(unreadable)"; }
+    }
+
+    private void startWxMonitoring(final Activity activity, int freqHz) { startWxMonitoring(activity, freqHz, -1); }
+
+    private void startWxMonitoring(final Activity activity, int freqHz, int band) {
+        try {
+            if (isAPRSMonitoringActive) stopAPRSMonitoring(activity);
+            if (isSSTVMonitoringActive) stopSSTVMonitoring(activity);
+            if (isNOAAMonitoringActive) stopNOAAMonitoring(activity);
+            if (kissActive) stopKissTnc();
+            final android.content.Context appCtx = activity.getApplicationContext();
+            if (freqHz > 0) {
+                captureTxFreqBackup();
+                tuneCurrentChannelAnalog(freqHz, -1, band);
+                wxTuned = true;
+                wxStatus = "on " + (freqHz / 1e6) + " MHz";
+            } else {
+                wxTuned = false;
+                wxStatus = "on the current channel";
+            }
+            wxDecoder = new SAMEDecoder(8000, true, new SAMEDecoder.Listener() {
+                @Override public void onMessage(final SAMEDecoder.Message m) {
+                    wxStoreAlert(appCtx, m);
+                    if (!m.eom) wxNotify(appCtx, m);
+                    final String text = m.eom ? "\u26C8\uFE0F Weather alert: end of message" : ("\u26C8\uFE0F " + m.summary());
+                    new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+                        @Override public void run() { try { Toast.makeText(appCtx, text, Toast.LENGTH_LONG).show(); } catch (Throwable ignored) { } }
+                    });
+                }
+                @Override public void onAttentionTone(boolean on) {
+                    XposedBridge.log(TAG + ": [wx] attention tone " + (on ? "ON" : "off"));
+                    wxStatus = wxStatus.replace(" \u2014 ATTENTION TONE", "") + (on ? " \u2014 ATTENTION TONE" : "");
+                }
+            });
+            isWxMonitoringActive = true;
+            currentChannelType = 1;
+            XposedBridge.log(TAG + ": [wx] SAME monitoring started " + wxStatus);
+            Toast.makeText(activity, "Weather alert monitoring " + wxStatus, Toast.LENGTH_SHORT).show();
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [wx] start error: " + t.getMessage());
+        }
+    }
+
+    private void stopWxMonitoring(final Activity activity) {
+        try {
+            isWxMonitoringActive = false;
+            wxDecoder = null;
+            if (wxTuned) { restoreTxFreqBackup(); wxTuned = false; }
+            wxStatus = "";
+            XposedBridge.log(TAG + ": [wx] SAME monitoring stopped");
+            Toast.makeText(activity, "Weather alert monitoring stopped", Toast.LENGTH_SHORT).show();
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [wx] stop error: " + t.getMessage());
+        }
+    }
+
+    /** Append to the last-50 alert list in prefs dmrmod_wx/alerts (JSON). */
+    private static void wxStoreAlert(android.content.Context ctx, SAMEDecoder.Message m) {
+        try {
+            android.content.SharedPreferences prefs = ctx.getSharedPreferences("dmrmod_wx", android.content.Context.MODE_PRIVATE);
+            org.json.JSONArray arr = new org.json.JSONArray(prefs.getString("alerts", "[]"));
+            org.json.JSONObject o = new org.json.JSONObject();
+            o.put("t", m.receivedMs); o.put("raw", m.raw); o.put("summary", m.summary());
+            o.put("event", m.event); o.put("eom", m.eom);
+            arr.put(o);
+            while (arr.length() > 50) arr.remove(0);
+            prefs.edit().putString("alerts", arr.toString()).apply();
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [wx] store error: " + t.getMessage());
+        }
+    }
+
+    private static void wxNotify(android.content.Context ctx, SAMEDecoder.Message m) {
+        try {
+            android.app.NotificationManager nm = (android.app.NotificationManager) ctx.getSystemService(android.content.Context.NOTIFICATION_SERVICE);
+            if (nm == null) return;
+            android.app.Notification.Builder b;
+            if (android.os.Build.VERSION.SDK_INT >= 26) {
+                android.app.NotificationChannel ch = new android.app.NotificationChannel("dmrmod_wx", "Weather alerts (SAME)", android.app.NotificationManager.IMPORTANCE_HIGH);
+                nm.createNotificationChannel(ch);
+                b = new android.app.Notification.Builder(ctx, "dmrmod_wx");
+            } else {
+                b = new android.app.Notification.Builder(ctx);
+            }
+            b.setSmallIcon(android.R.drawable.ic_dialog_alert)
+             .setContentTitle("\u26C8\uFE0F " + (m.eventName.isEmpty() ? m.event : m.eventName))
+             .setContentText(m.summary())
+             .setStyle(new android.app.Notification.BigTextStyle().bigText(m.summary() + "\n" + m.raw))
+             .setAutoCancel(true);
+            nm.notify(wxNotifyId++, b.build());
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [wx] notify error: " + t.getMessage());
+        }
+    }
+
+    // -----------------------------------------------------------------------
     // NOAA Doppler tracking
     // -----------------------------------------------------------------------
 
@@ -10881,6 +11091,11 @@ public class MainHook implements IXposedHookLoadPackage {
                             noaaReceiver.processAudio(processingAudio, length);
                         }
 
+                        // NOAA Weather Radio SAME alerts
+                        if (isWxMonitoringActive && wxDecoder != null) {
+                            wxDecoder.processAudio(processingAudio, length);
+                        }
+
                         // Buffer audio for transcription if enabled
                         if (isTranscriptionEnabled) {
                             bufferAudioForTranscription(processingAudio);
@@ -12915,7 +13130,7 @@ public class MainHook implements IXposedHookLoadPackage {
             // adb shell am broadcast -a com.dmrmod.APRS_TX_TEST --es mode tune --ei freqhz 144390000
             if ("tune".equalsIgnoreCase(mode)) {
                 int freqHz = intent.getIntExtra("freqhz", 144390000);
-                tuneCurrentChannelAnalog(freqHz, diagPower);
+                tuneCurrentChannelAnalog(freqHz, diagPower, intent.getIntExtra("band", -1));
                 return;
             }
 
@@ -12981,6 +13196,22 @@ public class MainHook implements IXposedHookLoadPackage {
                         }
                     } catch (Throwable t) { XposedBridge.log(TAG + ": [doppler] " + t.getMessage()); }
                 } }, "dmrmod-doppler-diag").start();
+                return;
+            }
+
+            // mode=wxstart [--ei freqhz] / wxstop: NOAA Weather Radio SAME alert monitoring (bench tests).
+            if ("wxstart".equalsIgnoreCase(mode) || "wxstop".equalsIgnoreCase(mode)) {
+                final boolean start = "wxstart".equalsIgnoreCase(mode);
+                final int fhz = intent.getIntExtra("freqhz", -1);
+                final Activity act = homeActivityRef != null ? homeActivityRef.get() : null;
+                final MainHook mi = moduleInstance;
+                if (act == null || mi == null) { XposedBridge.log(TAG + ": [wx-diag] no activity/instance"); return; }
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+                    @Override public void run() {
+                        try { if (start) mi.startWxMonitoring(act, fhz, intent.getIntExtra("band", -1)); else mi.stopWxMonitoring(act); }
+                        catch (Throwable t) { XposedBridge.log(TAG + ": [wx-diag] " + t.getMessage()); }
+                    }
+                });
                 return;
             }
 
@@ -13330,7 +13561,10 @@ public class MainHook implements IXposedHookLoadPackage {
     private static void tuneCurrentChannelAnalog(int freqHz) { tuneCurrentChannelAnalog(freqHz, -1); }
 
     /** As above; {@code power} 0 = low / 1 = high overrides the channel's level for the transient tune, -1 keeps it. */
-    private static void tuneCurrentChannelAnalog(int freqHz, int power) {
+    private static void tuneCurrentChannelAnalog(int freqHz, int power) { tuneCurrentChannelAnalog(freqHz, power, -1); }
+
+    /** As above; {@code band} 0/1 overrides the channel_band byte (-1 = the VHF/UHF default). */
+    private static void tuneCurrentChannelAnalog(int freqHz, int power, int band) {
         try {
             Class<?> dmrManagerClass = XposedHelpers.findClass("com.pri.prizeinterphone.manager.DmrManager", appClassLoader);
             Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
@@ -13340,7 +13574,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.setIntField(ch, "rxFreq", freqHz);
             XposedHelpers.setIntField(ch, "txFreq", freqHz);
             XposedHelpers.setIntField(ch, "sq", 2);
-            XposedHelpers.setIntField(ch, "band", 1);
+            XposedHelpers.setIntField(ch, "band", band == 0 || band == 1 ? band : 1);
             XposedHelpers.setIntField(ch, "channelMode", 0); // narrow
             XposedHelpers.setIntField(ch, "rxType", 0);
             XposedHelpers.setIntField(ch, "rxSubCode", 0);
@@ -13365,8 +13599,8 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.callMethod(am, "setTxType", (byte) 0);
             XposedHelpers.callMethod(am, "setTxSubCode", (byte) 0);
             XposedHelpers.callMethod(am, "send");
-            XposedBridge.log(TAG + ": [aprs-tune] current channel -> " + (freqHz / 1000000.0) + " MHz analog narrow"
-                    + (power == 0 ? " (LOW power)" : power == 1 ? " (high power)" : ""));
+            XposedBridge.log(TAG + ": [aprs-tune] current channel -> " + (freqHz / 1000000.0) + " MHz analog narrow band="
+                    + XposedHelpers.getIntField(ch, "band") + (power == 0 ? " (LOW power)" : power == 1 ? " (high power)" : ""));
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": [aprs-tune] error: " + t.getMessage());
         }
