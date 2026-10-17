@@ -426,6 +426,8 @@ public class DirectDatabaseImporter {
                     // Step 4: Import zones (optional - not all backups have zones)
                     File zonesFile = new File(backupFolder, "Zones.csv");
                     boolean zonesOk = importZones(context, zonesFile);
+            // DTMF.csv -> the module's saved DTMF sequences (optional, never fails the import)
+            importDtmf(context, new File(backupFolder, "DTMF.csv"));
 
                     // Show result
                     final String message;
@@ -1455,6 +1457,41 @@ public class DirectDatabaseImporter {
      * @param csvFile Zones.csv file
      * @return true if successful or no zones file exists, false if error
      */
+    /**
+     * DTMF.csv ("Contact Name,Code") -> prefs dmrmod_dtmf/contacts, replacing the saved sequences.
+     * A missing or header-only file leaves the saved list untouched.
+     */
+    private static void importDtmf(Context context, File csvFile) {
+        if (csvFile == null || !csvFile.exists()) return;
+        BufferedReader reader = null;
+        try {
+            reader = new BufferedReader(new FileReader(csvFile));
+            org.json.JSONArray arr = new org.json.JSONArray();
+            String line; boolean first = true;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+                if (first) { first = false; if (line.toLowerCase().startsWith("contact name")) continue; }
+                int comma = line.lastIndexOf(',');
+                if (comma < 0) continue;
+                String name = line.substring(0, comma).trim().replace("\"", "");
+                String code = line.substring(comma + 1).trim().toUpperCase();
+                if (code.isEmpty() || !code.matches("[0-9A-D*#]+")) continue;
+                org.json.JSONObject o = new org.json.JSONObject();
+                o.put("name", name.isEmpty() ? code : name); o.put("seq", code);
+                arr.put(o);
+            }
+            if (arr.length() > 0) {
+                context.getSharedPreferences("dmrmod_dtmf", Context.MODE_PRIVATE).edit().putString("contacts", arr.toString()).apply();
+                Log.i(TAG, "DTMF: imported " + arr.length() + " saved sequence(s)");
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "DTMF import skipped: " + e.getMessage());
+        } finally {
+            try { if (reader != null) reader.close(); } catch (Exception ignored) { }
+        }
+    }
+
     private static boolean importZones(Context context, File csvFile) {
         // delegate to internal method — this signature kept for call-site compatibility
         return importZonesInternal(context, csvFile);

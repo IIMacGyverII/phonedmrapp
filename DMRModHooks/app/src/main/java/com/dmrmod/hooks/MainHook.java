@@ -5310,7 +5310,7 @@ public class MainHook implements IXposedHookLoadPackage {
             });
             mainLayout.addView(dtmfButton);
             addModeCaption(mainLayout, activity, "Always on for analog channels: touch-tone sequences heard on the air "
-                + "are shown as a toast, logged to the Analog History and listed here. Receive-only.");
+                + "are shown as a toast and logged to the Analog History. Send sequences with a keypad and keep named ones.");
 
             // Info text
             TextView infoText = new TextView(activity);
@@ -12490,6 +12490,177 @@ public class MainHook implements IXposedHookLoadPackage {
             });
             layout.addView(enBox);
 
+            // ---------------- Send DTMF (TX) ----------------
+            TextView txLabel = new TextView(activity);
+            txLabel.setText("\n\uD83D\uDCE4 Send DTMF (TX) on the current channel");
+            txLabel.setTextSize(15); txLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            layout.addView(txLabel);
+
+            final android.widget.EditText seqEdit = new android.widget.EditText(activity);
+            seqEdit.setHint("Sequence (0-9 A-D * #)");
+            seqEdit.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+            seqEdit.setFilters(new android.text.InputFilter[]{ new android.text.InputFilter() {
+                @Override public CharSequence filter(CharSequence src, int st, int en, android.text.Spanned d, int ds, int de) {
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = st; i < en; i++) { char c = Character.toUpperCase(src.charAt(i)); if ("0123456789ABCD*#".indexOf(c) >= 0) sb.append(c); }
+                    return sb.toString();
+                } }, new android.text.InputFilter.LengthFilter(32) });
+            seqEdit.setTypeface(android.graphics.Typeface.MONOSPACE);
+            seqEdit.setTextSize(22);
+            layout.addView(seqEdit);
+
+            // 4x4 keypad + backspace/clear
+            String[] rows = { "123A", "456B", "789C", "*0#D" };
+            for (String row : rows) {
+                LinearLayout r = new LinearLayout(activity);
+                r.setOrientation(LinearLayout.HORIZONTAL);
+                for (int i = 0; i < 4; i++) {
+                    final String key = String.valueOf(row.charAt(i));
+                    android.widget.Button b = new android.widget.Button(activity);
+                    b.setText(key); b.setTextSize(18); b.setAllCaps(false);
+                    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                    b.setLayoutParams(lp);
+                    b.setOnClickListener(new View.OnClickListener() {
+                        @Override public void onClick(View v) { seqEdit.append(key); }
+                    });
+                    r.addView(b);
+                }
+                layout.addView(r);
+            }
+            LinearLayout editRow = new LinearLayout(activity);
+            editRow.setOrientation(LinearLayout.HORIZONTAL);
+            android.widget.Button bsBtn = new android.widget.Button(activity);
+            bsBtn.setText("\u232B"); bsBtn.setAllCaps(false);
+            bsBtn.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+            bsBtn.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { String t = seqEdit.getText().toString(); if (!t.isEmpty()) seqEdit.setText(t.substring(0, t.length() - 1)); seqEdit.setSelection(seqEdit.getText().length()); }
+            });
+            editRow.addView(bsBtn);
+            android.widget.Button clrBtn = new android.widget.Button(activity);
+            clrBtn.setText("Clear"); clrBtn.setAllCaps(false);
+            clrBtn.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+            clrBtn.setOnClickListener(new View.OnClickListener() { @Override public void onClick(View v) { seqEdit.setText(""); } });
+            editRow.addView(clrBtn);
+            layout.addView(editRow);
+
+            // timing
+            LinearLayout timeRow = new LinearLayout(activity);
+            timeRow.setOrientation(LinearLayout.HORIZONTAL);
+            TextView toneLbl = new TextView(activity); toneLbl.setText("Tone ms: "); toneLbl.setTextSize(13);
+            final android.widget.EditText toneEdit = new android.widget.EditText(activity);
+            toneEdit.setInputType(android.text.InputType.TYPE_CLASS_NUMBER); toneEdit.setText(String.valueOf(prefs.getInt("tx_tone_ms", 100)));
+            toneEdit.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+            TextView gapLbl = new TextView(activity); gapLbl.setText("  Gap ms: "); gapLbl.setTextSize(13);
+            final android.widget.EditText gapEdit = new android.widget.EditText(activity);
+            gapEdit.setInputType(android.text.InputType.TYPE_CLASS_NUMBER); gapEdit.setText(String.valueOf(prefs.getInt("tx_gap_ms", 60)));
+            gapEdit.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+            timeRow.addView(toneLbl); timeRow.addView(toneEdit); timeRow.addView(gapLbl); timeRow.addView(gapEdit);
+            layout.addView(timeRow);
+
+            // transmit / save
+            LinearLayout actRow = new LinearLayout(activity);
+            actRow.setOrientation(LinearLayout.HORIZONTAL);
+            android.widget.Button txBtn = new android.widget.Button(activity);
+            txBtn.setText("\uD83D\uDCE1 Transmit"); txBtn.setAllCaps(false);
+            txBtn.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 2f));
+            android.graphics.drawable.GradientDrawable txDr = new android.graphics.drawable.GradientDrawable();
+            txDr.setColor(0xFF1E5AA8); txDr.setCornerRadius(8 * activity.getResources().getDisplayMetrics().density);
+            txBtn.setBackground(txDr); txBtn.setTextColor(0xFFFFFFFF);
+            final android.widget.Button saveBtn = new android.widget.Button(activity);
+            saveBtn.setText("\uD83D\uDCBE Save"); saveBtn.setAllCaps(false);
+            saveBtn.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+            actRow.addView(txBtn); actRow.addView(saveBtn);
+            layout.addView(actRow);
+
+            // saved sequences ("DTMF contacts")
+            final LinearLayout contactsBox = new LinearLayout(activity);
+            contactsBox.setOrientation(LinearLayout.VERTICAL);
+            layout.addView(contactsBox);
+            final Runnable refreshContacts = new Runnable() {
+                @Override public void run() {
+                    contactsBox.removeAllViews();
+                    try {
+                        org.json.JSONArray arr = new org.json.JSONArray(prefs.getString("contacts", "[]"));
+                        if (arr.length() == 0) return;
+                        TextView cl = new TextView(activity); cl.setText("Saved sequences (tap to load, long-press to delete):"); cl.setTextSize(12); cl.setTextColor(0xFF999999);
+                        contactsBox.addView(cl);
+                        for (int i = 0; i < arr.length(); i++) {
+                            final org.json.JSONObject o = arr.getJSONObject(i);
+                            final int idx = i;
+                            TextView t = new TextView(activity);
+                            t.setText("\u2022 " + o.optString("name") + ":  " + o.optString("seq"));
+                            t.setTextSize(15); t.setPadding(8, 10, 8, 10); t.setTypeface(android.graphics.Typeface.MONOSPACE);
+                            t.setOnClickListener(new View.OnClickListener() { @Override public void onClick(View v) { seqEdit.setText(o.optString("seq")); seqEdit.setSelection(seqEdit.getText().length()); } });
+                            t.setOnLongClickListener(new View.OnLongClickListener() {
+                                @Override public boolean onLongClick(View v) {
+                                    try {
+                                        org.json.JSONArray a2 = new org.json.JSONArray(prefs.getString("contacts", "[]"));
+                                        a2.remove(idx); prefs.edit().putString("contacts", a2.toString()).apply();
+                                        Toast.makeText(activity, "Deleted " + o.optString("name"), Toast.LENGTH_SHORT).show();
+                                    } catch (Throwable ignored) {}
+                                    contactsBox.post(new Runnable() { @Override public void run() { } });
+                                    return true;
+                                }
+                            });
+                            contactsBox.addView(t);
+                        }
+                    } catch (Throwable t) { XposedBridge.log(TAG + ": dtmf contacts: " + t.getMessage()); }
+                }
+            };
+            refreshContacts.run();
+
+            saveBtn.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    final String seq = seqEdit.getText().toString();
+                    if (seq.isEmpty()) { Toast.makeText(activity, "Enter a sequence first", Toast.LENGTH_SHORT).show(); return; }
+                    final android.widget.EditText nameEdit = new android.widget.EditText(activity);
+                    nameEdit.setHint("Name (e.g. Repeater link on)");
+                    new AlertDialog.Builder(activity).setTitle("Save DTMF sequence " + seq).setView(nameEdit)
+                        .setPositiveButton("Save", new DialogInterface.OnClickListener() {
+                            @Override public void onClick(DialogInterface d, int w) {
+                                try {
+                                    String name = nameEdit.getText().toString().trim();
+                                    if (name.isEmpty()) name = seq;
+                                    org.json.JSONArray arr = new org.json.JSONArray(prefs.getString("contacts", "[]"));
+                                    org.json.JSONObject o = new org.json.JSONObject(); o.put("name", name); o.put("seq", seq);
+                                    arr.put(o); prefs.edit().putString("contacts", arr.toString()).apply();
+                                    refreshContacts.run();
+                                } catch (Throwable t) { XposedBridge.log(TAG + ": dtmf save: " + t.getMessage()); }
+                            }
+                        }).setNegativeButton("Cancel", null).show();
+                }
+            });
+
+            txBtn.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    final String seq = seqEdit.getText().toString();
+                    if (seq.isEmpty()) { Toast.makeText(activity, "Enter a sequence first", Toast.LENGTH_SHORT).show(); return; }
+                    if (currentChannelType != 1) { Toast.makeText(activity, "Current channel is digital \u2014 switch to an analog channel", Toast.LENGTH_LONG).show(); return; }
+                    int toneMs = 100, gapMs = 60;
+                    try { toneMs = Math.max(40, Math.min(1000, Integer.parseInt(toneEdit.getText().toString().trim()))); } catch (Exception ignored) {}
+                    try { gapMs = Math.max(40, Math.min(1000, Integer.parseInt(gapEdit.getText().toString().trim()))); } catch (Exception ignored) {}
+                    prefs.edit().putInt("tx_tone_ms", toneMs).putInt("tx_gap_ms", gapMs).apply();
+                    final short[] pcm = dtmfPcm(seq, toneMs, gapMs);
+                    final String label = "DTMF " + seq;
+                    Toast.makeText(activity, "\uD83D\uDCE1 Sending DTMF " + seq + " on " + currentChannelName, Toast.LENGTH_SHORT).show();
+                    new Thread(new Runnable() { @Override public void run() {
+                        try {
+                            int ms = txPcmOneShot(activity, pcm, 0.0, label, true);
+                            XposedBridge.log(TAG + ": [dtmf] TX " + seq + " -> " + (ms < 0 ? "FAILED" : ms + " ms keyed"));
+                            if (ms > 0) {
+                                MainHook mi = moduleInstance;
+                                if (mi != null) mi.updateActivityIndicator("\uD83D\uDCDF DTMF TX " + seq);
+                            }
+                        } catch (Throwable t) { XposedBridge.log(TAG + ": [dtmf] TX error: " + t.getMessage()); }
+                    } }, "dmrmod-dtmf-tx").start();
+                }
+            });
+
+            TextView txNote = new TextView(activity);
+            txNote.setText("Transmits on the channel you are on (no retune) with the module\u2019s hands-free PTT. Amateur / licensed use only.");
+            txNote.setTextSize(11); txNote.setTextColor(0xFF999999); txNote.setPadding(0, 6, 0, 6);
+            layout.addView(txNote);
+
             TextView histLabel = new TextView(activity);
             histLabel.setText("\nRecent sequences:"); histLabel.setTextSize(13);
             layout.addView(histLabel);
@@ -12508,6 +12679,33 @@ public class MainHook implements IXposedHookLoadPackage {
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": showDtmfDialog error: " + t.getMessage());
         }
+    }
+
+    /** 8 kHz mono DTMF audio: 300 ms silence, then each key toneMs on / gapMs off, 200 ms tail. */
+    static short[] dtmfPcm(String seq, int toneMs, int gapMs) {
+        final int SR = 8000;
+        final double[] low = { 697, 770, 852, 941 }, high = { 1209, 1336, 1477, 1633 };
+        final String[] rows = { "123A", "456B", "789C", "*0#D" };
+        int toneN = SR * toneMs / 1000, gapN = SR * gapMs / 1000;
+        int n = SR * 300 / 1000 + seq.length() * (toneN + gapN) + SR * 200 / 1000;
+        short[] out = new short[n];
+        int pos = SR * 300 / 1000;
+        for (char c : seq.toCharArray()) {
+            int r = -1, col = -1;
+            for (int i = 0; i < 4; i++) { int j = rows[i].indexOf(c); if (j >= 0) { r = i; col = j; } }
+            if (r >= 0) {
+                for (int i = 0; i < toneN; i++) {
+                    double v = 0.38 * 32767 * (Math.sin(2 * Math.PI * low[r] * i / SR) + Math.sin(2 * Math.PI * high[col] * i / SR));
+                    // 5 ms raised-cosine edges against key clicks
+                    int edge = SR * 5 / 1000;
+                    if (i < edge) v *= 0.5 * (1 - Math.cos(Math.PI * i / edge));
+                    else if (i >= toneN - edge) v *= 0.5 * (1 - Math.cos(Math.PI * (toneN - 1 - i) / edge));
+                    out[pos + i] = (short) Math.max(-32768, Math.min(32767, v));
+                }
+            }
+            pos += toneN + gapN;
+        }
+        return out;
     }
 
     private static String dtmfHistoryText(android.content.SharedPreferences prefs) {

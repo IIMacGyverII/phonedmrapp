@@ -126,7 +126,7 @@ public class DTMFDecoder {
             }
             if (ok) {
                 double twist = pl[li] / ph[hi];
-                if (twist > 6.3 || twist < 1.0 / 6.3) ok = false;      // 8 dB
+                if (twist > 10.0 || twist < 1.0 / 10.0) ok = false;    // 10 dB (TX pre-emphasis tilts the high group up ~6 dB/oct; a de-emphasised RX sees less)
             }
             if (ok) {
                 // the pair must carry most of the energy: Goertzel power ≈ (N²/4)·A² for a pure tone
