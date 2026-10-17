@@ -664,6 +664,7 @@ public class MainHook implements IXposedHookLoadPackage {
         // Channel scanner: suppress the OEM progress dialog while scanning
         hookScanSupport(lpparam);
         hookHardwarePtt(lpparam);
+        hookChannelListCheckShift(lpparam);
 
         // U11: mod help appended to the OEM "Use Assistant" page
         hookUseAssistant(lpparam);
@@ -15681,6 +15682,43 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedBridge.log(TAG + ": Hardware PTT hook installed (volume-up / headset button)");
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": Hardware PTT hook failed: " + t.getMessage());
+        }
+    }
+
+    /**
+     * Channel page: the module's ZONE button floats over the top-right of the list, exactly where the
+     * OEM draws the "active channel" check mark of the first row. When the first row is the active
+     * channel, slide its check mark to the left of the button so it stays visible (2026-10-17).
+     */
+    private void hookChannelListCheckShift(final XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            XposedHelpers.findAndHookMethod("com.pri.prizeinterphone.fragment.InterPhoneChannelFragment$DeviceAreaListAdapter",
+                    lpparam.classLoader, "getView", int.class, View.class, ViewGroup.class, new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    try {
+                        View row = (View) param.getResult();
+                        if (row == null) return;
+                        int id = row.getResources().getIdentifier("local_device_area_list_item_select", "id", row.getContext().getPackageName());
+                        if (id == 0) return;
+                        View check = row.findViewById(id);
+                        if (check == null) return;
+                        int position = (Integer) param.args[0];
+                        android.widget.Button zb = channelPageZoneButton;
+                        boolean shift = position == 0 && zb != null && zb.getVisibility() == View.VISIBLE && check.getVisibility() == View.VISIBLE;
+                        if (shift) {
+                            float density = row.getResources().getDisplayMetrics().density;
+                            int w = zb.getWidth() > 0 ? zb.getWidth() : (int) (120 * density);
+                            check.setTranslationX(-(w + 12 * density));
+                        } else {
+                            check.setTranslationX(0f);
+                        }
+                    } catch (Throwable t) { XposedBridge.log(TAG + ": [checkshift] " + t.getMessage()); }
+                }
+            });
+            XposedBridge.log(TAG + ": Channel-list check-mark shift hook installed");
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Channel-list check-mark hook failed: " + t.getMessage());
         }
     }
 
