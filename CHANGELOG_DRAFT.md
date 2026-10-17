@@ -3,6 +3,12 @@
 Everything below shipped in **v4.0.0** (2026-10-15). Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-16 — APRS Position Beacon TX (periodic GPS position over analog FM)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| F6 | Second APRS TX feature: a **position beacon**. New **📡 Position Beacon (TX)** button in PKT RAD → APRS opens a config dialog (interval in minutes + optional comment, Start/Stop). While on, it reads the phone's GPS and transmits a standard uncompressed APRS position report (`=DDMM.hhN/DDDMM.hhW<sym>comment`, messaging-capable, symbol from APRS Settings) immediately and every N minutes, via the proven `transmitAprsPacket` path (stereo AFSK, 1.6 s TXDELAY lead-in, self-keyed PTT). Same guards as message TX (analog channel + real callsign). No-fix ticks are skipped and retried next interval. v1 limitation: runs while the app is alive and transmits on the current channel (tune to your APRS frequency). Diagnostics-gated `mode=beacon` added to `com.dmrmod.APRS_TX_TEST` (optional `--ef lat/--ef lon` for bench testing without a fix). | `MainHook` (`buildAprsPositionInfo`, `sendPositionBeaconOnce`, `startPositionBeacon`/`stopPositionBeacon`, `showAprsBeaconDialog`, beacon state fields), `APRSDatabase` (symbol/callsign getters, reused) | **device + HackRF, on-air on 2 m APRS (144.390 MHz)**: position report decoded by direwolf `atest` 2/2, valid FCS, coordinates/symbol/comment correct (bench coordinate) |
+
 ## 2026-10-16 — APRS Message TX (send a real APRS message over analog FM)
 
 | Backlog | Change | Files | Test |
