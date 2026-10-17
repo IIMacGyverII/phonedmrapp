@@ -30,7 +30,8 @@ public class MainActivity extends AppCompatActivity {
     private IntercomView intercom;
     private DiagnosticsView diagnostics;
     private RadioService svc;
-    private final TextView[] tabs = new TextView[5];
+    private final TextView[] tabs = new TextView[5], tabEmoji = new TextView[5];
+    private final View[] tabInd = new View[5];
     private final String[] tabIcons = { "🎙️", "📋", "👤", "💬", "📻" };
     private final String[] tabNames = { "Intercom", "Channel", "Contact", "Message", "Device" };
     private int tab = 0;
@@ -52,13 +53,17 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(Theme.BG);
         content = new FrameLayout(this);
         root.addView(content, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
-        LinearLayout nav = new LinearLayout(this); nav.setBackgroundColor(Theme.NAV_BG); nav.setPadding(0, Theme.dp(this, 8), 0, Theme.dp(this, 10));
+        LinearLayout nav = new LinearLayout(this); nav.setBackgroundColor(0xFF060D1A); nav.setPadding(0, Theme.dp(this, 6), 0, Theme.dp(this, 6));
         for (int i = 0; i < 5; i++) {
             final int idx = i;
-            TextView t = new TextView(this); t.setGravity(Gravity.CENTER); t.setTextSize(13); t.setTypeface(Typeface.DEFAULT_BOLD);
-            t.setText(tabIcons[i] + "\n" + tabNames[i]); t.setLineSpacing(0, 1.15f);
-            t.setOnClickListener(v -> show(idx));
-            tabs[i] = t; nav.addView(t, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+            LinearLayout tab = new LinearLayout(this); tab.setOrientation(LinearLayout.VERTICAL); tab.setGravity(Gravity.CENTER_HORIZONTAL);
+            TextView e = new TextView(this); e.setGravity(Gravity.CENTER); e.setTextSize(22); e.setText(tabIcons[i]);
+            TextView t = new TextView(this); t.setGravity(Gravity.CENTER); t.setTextSize(10); t.setText(tabNames[i]);
+            View ind = new View(this); LinearLayout.LayoutParams il = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Theme.dp(this, 2)); il.setMargins(Theme.dp(this, 8), Theme.dp(this, 2), Theme.dp(this, 8), 0);
+            tab.addView(e); tab.addView(t); tab.addView(ind, il);
+            tab.setOnClickListener(v -> show(idx));
+            tabs[i] = t; tabEmoji[i] = e; tabInd[i] = ind;
+            nav.addView(tab, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         }
         root.addView(nav);
         setContentView(root);
@@ -85,7 +90,12 @@ public class MainActivity extends AppCompatActivity {
             default: v = placeholder(tabNames[idx]);
         }
         content.addView(v, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-        for (int i = 0; i < 5; i++) tabs[i].setTextColor(i == idx ? Theme.CYAN : 0xFF8A7FB0);
+        for (int i = 0; i < 5; i++) {
+            boolean a = i == idx;
+            tabs[i].setTextColor(a ? Theme.CYAN : 0xFF705090);
+            if (a) tabEmoji[i].setShadowLayer(8f, 0f, 0f, Theme.CYAN); else tabEmoji[i].setShadowLayer(0f, 0f, 0f, 0);
+            tabInd[i].setBackgroundColor(a ? Theme.CYAN : 0x00000000);
+        }
     }
 
     private View placeholder(String name) {

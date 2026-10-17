@@ -15,9 +15,9 @@ public class NeonToggle extends TextView {
         super(c);
         this.accent = accent; this.emoji = emoji; this.label = label;
         setText(emoji + "\n" + label);
-        setGravity(Gravity.CENTER); setTextSize(12); setTypeface(Typeface.DEFAULT_BOLD);
+        setGravity(Gravity.CENTER); setTextSize(13); setTypeface(Typeface.DEFAULT_BOLD); setIncludeFontPadding(false); setLineSpacing(0, 0.95f);
         setTextColor(accent[3]); setLines(2);
-        setPadding(Theme.dp(c, 6), Theme.dp(c, 6), Theme.dp(c, 6), Theme.dp(c, 6));
+        setPadding(Theme.dp(c, 2), 0, Theme.dp(c, 2), 0);
         setClickable(true); setFocusable(true);
         setOn(false);
     }
