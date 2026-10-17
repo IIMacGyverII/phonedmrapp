@@ -34,6 +34,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     private final ImageView digitOne, digitTwo;
     private final LinearLayout transcriptionBox;
     private final TextView captionLive;
+    private final android.widget.ScrollView captionScroll;
     private final java.util.ArrayDeque<String> captionLines = new java.util.ArrayDeque<>();
     private final CircuitBoardView board;
     private final PttButton ptt;
@@ -145,8 +146,16 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         TextView th = Theme.label(c, "📝 Transcription", Theme.CYAN2, 10, true);
         LayoutParams thl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); thl.bottomMargin = dp4;
         transcriptionBox.addView(th, thl);
-        transcriptionText = Theme.label(c, "", Theme.WHITE, 13, false); transcriptionBox.addView(transcriptionText);
-        captionLive = Theme.label(c, "", Theme.CYAN, 13, false); captionLive.setTypeface(null, android.graphics.Typeface.ITALIC); transcriptionBox.addView(captionLive);
+        // capped like the module (inner scroll, newest at the bottom) so the box never grows over the history
+        final int capPx = (int) (96 * d);
+        captionScroll = new android.widget.ScrollView(c) {
+            @Override protected void onMeasure(int w, int h) { super.onMeasure(w, android.view.View.MeasureSpec.makeMeasureSpec(capPx, android.view.View.MeasureSpec.AT_MOST)); }
+        };
+        captionScroll.setVerticalScrollBarEnabled(false);
+        LinearLayout capCol = new LinearLayout(c); capCol.setOrientation(VERTICAL);
+        transcriptionText = Theme.label(c, "", Theme.WHITE, 13, false); capCol.addView(transcriptionText);
+        captionLive = Theme.label(c, "", Theme.CYAN, 13, false); captionLive.setTypeface(null, android.graphics.Typeface.ITALIC); capCol.addView(captionLive);
+        captionScroll.addView(capCol); transcriptionBox.addView(captionScroll);
         FrameLayout.LayoutParams tbl = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM);
         tbl.leftMargin = tbl.rightMargin = dp8; tbl.bottomMargin = (int) (22 * d);
         panel.addView(transcriptionBox, tbl); transcriptionBox.setVisibility(GONE);
@@ -260,6 +269,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         StringBuilder sb = new StringBuilder(); for (String l : captionLines) { if (sb.length() > 0) sb.append('\n'); sb.append(l); }
         transcriptionText.setText(sb.toString()); transcriptionText.setVisibility(sb.length() == 0 ? GONE : VISIBLE);
         captionLive.setText(live == null ? "" : live); captionLive.setVisibility(live == null || live.isEmpty() ? GONE : VISIBLE);
+        captionScroll.post(() -> captionScroll.fullScroll(android.view.View.FOCUS_DOWN));
     }
     @Override public void onModes(boolean sq, int level, boolean open, boolean monitor, boolean recording, boolean scanning, boolean holding, String zoneName) {
         softSq.setOn(sq); mon.setOn(monitor); rec.setOn(recording);
