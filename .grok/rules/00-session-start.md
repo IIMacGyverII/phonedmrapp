@@ -8,7 +8,7 @@ Mandatory checklist for every new session on **phonedmrapp** / **DMRModHooks**.
 
 | What | Where | Notes |
 |------|-------|-------|
-| **Shipped version** | `DMRModHooks/app/build.gradle` → `versionName` / `versionCode` | Authoritative; docs may lag (v3.4.6 as of 2026-08-26) |
+| **Shipped version** | `DMRModHooks/app/build.gradle` → `versionName` / `versionCode` | Authoritative; docs may lag (**v4.1.0 released 2026-10-17**; companion `DMRTranscriptionService` v1.1.0 ships alongside, same keystore) |
 | **Full instructions** | `.grok/rules/copilot-instructions.md` | Clone of `.github/copilot-instructions.md` |
 | **Verified deep dive** | `docs/deep-dive/00-README.md` | Code-cited reference for OEM app + mod (14 chapters). **§4 lists known errors in this file and `copilot-instructions.md`** — check it before trusting a schema/class-path/audio claim here |
 | **Dead ends / history** | `.docs/AI_LOGS_SUMMARY.md` (gitignored, may be absent) → fallback `docs/deep-dive/13-…` §5, `07-…` §5 | Read before retrying APRS TX, LED, group-call RX, >32 TG filtering |
