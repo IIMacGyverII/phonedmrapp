@@ -199,6 +199,8 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile String beaconComment = "";
     private static android.os.Handler beaconHandler = null;  // created lazily (never in <clinit> — Zygote)
     private static Runnable beaconRunnable = null;
+    private static volatile boolean beaconUseAprsFreq = true;   // beacon on the APRS freq (vs current channel)
+    private static volatile int beaconFreqHz = 144390000;
     // KISS TNC (feature #3): a KISS-over-TCP server so APRSdroid/YAAC can drive the radio as a TNC (TX side).
     private static volatile boolean kissActive = false;
     private static volatile int kissPort = 8001;
@@ -12768,6 +12770,17 @@ public class MainHook implements IXposedHookLoadPackage {
             if ("kissstart".equalsIgnoreCase(mode)) { startKissTnc(ctx, intent.getIntExtra("port", 8001)); return; }
             if ("kissstop".equalsIgnoreCase(mode))  { stopKissTnc(); return; }
 
+            // mode=txfreqtest: verify the capture→tune→restore round-trip (logs the captured/restored freq).
+            if ("txfreqtest".equalsIgnoreCase(mode)) {
+                final int fhz = intent.getIntExtra("freqhz", 144390000);
+                captureTxFreqBackup();
+                XposedBridge.log(TAG + ": [txfreqtest] captured rxFreq=" + (txFreqBackup != null ? txFreqBackup.get("rxFreq") : "null"));
+                tuneCurrentChannelAnalog(fhz);
+                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(
+                        new Runnable() { @Override public void run() { restoreTxFreqBackup(); } }, 2500);
+                return;
+            }
+
             // mode=beacon: exercise the position-beacon TX path with explicit or (if omitted) cached GPS.
             // adb ... --es mode beacon --es call <call> --ei ssid 7 --ef lat 45.12 --ef lon -93.45 --es comment "x"
             if ("beacon".equalsIgnoreCase(mode)) {
@@ -12997,7 +13010,10 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.setIntField(ch, "rxSubCode", 0);
             XposedHelpers.setIntField(ch, "txType", 0);
             XposedHelpers.setIntField(ch, "txSubCode", 0);
-            XposedHelpers.callMethod(dmrManager, "updateChannel", ch);
+            // NOTE: deliberately NOT calling updateChannel() — that persists to the channel DB.
+            // syncChannelInfoWithData() + AnalogMessage.send() retune the hardware only, so this is a
+            // transient in-memory override that reverts on the next channel reload and can never
+            // corrupt the user's stored channel (even if a crash skips the restore).
             XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", ch);
             currentChannelType = 1;
             Class<?> amc = XposedHelpers.findClass("com.pri.prizeinterphone.message.AnalogMessage", appClassLoader);
@@ -13059,10 +13075,133 @@ public class MainHook implements IXposedHookLoadPackage {
         return transmitAprsPacket(ctx, call, ssid, new String[]{ "WIDE1-1", "WIDE2-1" }, info, label);
     }
 
+    // --- "transmit on the APRS frequency" support: tune away, send, restore the current channel ---
+    private static java.util.HashMap<String, Object> txFreqBackup = null;
+    private static final String[] TXFREQ_FIELDS = {
+        "type", "rxFreq", "txFreq", "sq", "band", "power", "channelMode", "rxType", "rxSubCode", "txType", "txSubCode"
+    };
+
+    /** Snapshot the current channel's key fields so a temporary APRS-frequency TX can be undone. */
+    private static void captureTxFreqBackup() {
+        try {
+            Object dm = XposedHelpers.callStaticMethod(
+                    XposedHelpers.findClass("com.pri.prizeinterphone.manager.DmrManager", appClassLoader), "getInstance");
+            Object ch = XposedHelpers.callMethod(dm, "getCurrentChannel");
+            if (ch == null) { txFreqBackup = null; return; }
+            java.util.HashMap<String, Object> b = new java.util.HashMap<>();
+            for (String f : TXFREQ_FIELDS) {
+                try { b.put(f, XposedHelpers.getIntField(ch, f)); } catch (Throwable ignored) { }
+            }
+            txFreqBackup = b;
+        } catch (Throwable t) {
+            txFreqBackup = null;
+            XposedBridge.log(TAG + ": [aprs-tx] capture channel backup failed: " + t.getMessage());
+        }
+    }
+
+    /** Restore the channel snapshotted by {@link #captureTxFreqBackup} (re-applies via the OEM write path). */
+    private static void restoreTxFreqBackup() {
+        try {
+            if (txFreqBackup == null) return;
+            Object dm = XposedHelpers.callStaticMethod(
+                    XposedHelpers.findClass("com.pri.prizeinterphone.manager.DmrManager", appClassLoader), "getInstance");
+            Object ch = XposedHelpers.callMethod(dm, "getCurrentChannel");
+            if (ch != null) {
+                for (String f : TXFREQ_FIELDS) {
+                    Object v = txFreqBackup.get(f);
+                    if (v != null) try { XposedHelpers.setIntField(ch, f, (Integer) v); } catch (Throwable ignored) { }
+                }
+                // hardware-only re-apply (no updateChannel → no DB write; the DB was never changed)
+                XposedHelpers.callMethod(dm, "syncChannelInfoWithData", ch);
+                Object ty = txFreqBackup.get("type");
+                if (ty != null) currentChannelType = (Integer) ty;
+                XposedBridge.log(TAG + ": [aprs-tx] restored channel (" + txFreqBackup.get("rxFreq") + " Hz, type " + ty + ")");
+            }
+            txFreqBackup = null;
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [aprs-tx] restore channel failed: " + t.getMessage());
+        }
+    }
+
     /**
      * APRS Message TX dialog — addressee + text, sent as a standard APRS message
      * ({@code :ADDRESSEE :text{NN}) over the current analog channel.
      */
+    /** Controls of the "Transmit on: APRS freq / current channel" selector. */
+    private static class FreqChoice {
+        android.widget.RadioButton aprsRb;
+        EditText mhzEdit;
+        boolean useAprsFreq() { return aprsRb.isChecked(); }
+        String mhz() { return mhzEdit.getText().toString().trim(); }
+        int freqHz() {
+            try { return (int) Math.round(Double.parseDouble(mhz()) * 1_000_000.0); }
+            catch (Exception e) { return -1; }
+        }
+    }
+
+    /** Add a frequency selector (APRS freq, default 144.390 from settings / current channel) to a dialog. */
+    private FreqChoice addFreqSelector(final Activity activity, LinearLayout layout, APRSDatabase aprsDb) {
+        final FreqChoice fc = new FreqChoice();
+        TextView label = new TextView(activity);
+        label.setText("Transmit on:"); label.setTextSize(14); label.setPadding(0, 16, 0, 4);
+        layout.addView(label);
+
+        final android.widget.RadioGroup rg = new android.widget.RadioGroup(activity);
+        rg.setOrientation(android.widget.RadioGroup.VERTICAL);
+
+        fc.aprsRb = new android.widget.RadioButton(activity);
+        fc.aprsRb.setId(View.generateViewId());
+        fc.aprsRb.setText("APRS frequency (MHz):");
+        fc.aprsRb.setTextSize(14);
+        rg.addView(fc.aprsRb);
+
+        fc.mhzEdit = new EditText(activity);
+        fc.mhzEdit.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        fc.mhzEdit.setText(aprsDb.getAprsFrequency());   // default 144.390
+        fc.mhzEdit.setPadding((int) (32 * activity.getResources().getDisplayMetrics().density), 0, 0, 0);
+        rg.addView(fc.mhzEdit);
+
+        final android.widget.RadioButton curRb = new android.widget.RadioButton(activity);
+        curRb.setId(View.generateViewId());
+        curRb.setText("Current channel / frequency");
+        curRb.setTextSize(14);
+        rg.addView(curRb);
+
+        rg.setOnCheckedChangeListener(new android.widget.RadioGroup.OnCheckedChangeListener() {
+            @Override public void onCheckedChanged(android.widget.RadioGroup g, int id) {
+                fc.mhzEdit.setEnabled(fc.aprsRb.isChecked());
+            }
+        });
+        fc.aprsRb.setChecked(true);   // default: APRS frequency
+        layout.addView(rg);
+        return fc;
+    }
+
+    /**
+     * Run {@code txAction} (which starts a TX and returns its keyed ms) either on the APRS frequency
+     * — tune the current channel there, send, then restore the channel ~1.5 s after TX — or directly
+     * on the current channel.
+     */
+    private void txOnChosenFreq(final boolean useAprsFreq, final int freqHz,
+                                final java.util.concurrent.Callable<Integer> txAction) {
+        final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+        if (!useAprsFreq) {
+            try { txAction.call(); } catch (Exception e) { XposedBridge.log(TAG + ": txOnChosenFreq: " + e.getMessage()); }
+            return;
+        }
+        captureTxFreqBackup();
+        tuneCurrentChannelAnalog(freqHz);
+        h.postDelayed(new Runnable() {
+            @Override public void run() {
+                int ms = 3000;
+                try { Integer r = txAction.call(); if (r != null) ms = r; }
+                catch (Exception e) { XposedBridge.log(TAG + ": txOnChosenFreq: " + e.getMessage()); }
+                h.postDelayed(new Runnable() { @Override public void run() { restoreTxFreqBackup(); } },
+                        Math.max(ms, 0) + 1500);
+            }
+        }, 700);   // let the retune settle before keying PTT
+    }
+
     private void showAprsSendMessageDialog(final Activity activity) {
         try {
             final APRSDatabase aprsDb = APRSDatabase.getInstance(activity);
@@ -13090,11 +13229,12 @@ public class MainHook implements IXposedHookLoadPackage {
             layout.addView(from);
 
             TextView warn = new TextView(activity);
-            warn.setText("Transmits on the CURRENT channel. Tune to an ANALOG channel on your APRS "
-                    + "frequency first. Licensed amateur use only.");
+            warn.setText("Defaults to the APRS frequency (auto-tunes there and restores your channel "
+                    + "after). Change it, or pick Current channel to send where you're tuned. "
+                    + "Licensed amateur use only.");
             warn.setTextSize(12);
             warn.setTextColor(0xFF999999);
-            warn.setPadding(0, 0, 0, 20);
+            warn.setPadding(0, 0, 0, 12);
             layout.addView(warn);
 
             TextView toLabel = new TextView(activity);
@@ -13117,6 +13257,8 @@ public class MainHook implements IXposedHookLoadPackage {
             msgEdit.setFilters(new android.text.InputFilter[]{ new android.text.InputFilter.LengthFilter(67) });
             layout.addView(msgEdit);
 
+            final FreqChoice freq = addFreqSelector(activity, layout, aprsDb);
+
             scroll.addView(layout);
             builder.setView(scroll);
 
@@ -13133,8 +13275,13 @@ public class MainHook implements IXposedHookLoadPackage {
                         dialog.dismiss();
                         return;
                     }
-                    if (currentChannelType != 1) {
-                        Toast.makeText(activity, "Switch to an ANALOG channel first (current is digital)", Toast.LENGTH_LONG).show();
+                    final boolean useAprs = freq.useAprsFreq();
+                    final int freqHz = freq.freqHz();
+                    if (useAprs) {
+                        if (freqHz < 1_000_000) { Toast.makeText(activity, "Enter a valid APRS frequency in MHz", Toast.LENGTH_SHORT).show(); return; }
+                        aprsDb.setAprsFrequency(freq.mhz());   // remember it as the APRS freq
+                    } else if (currentChannelType != 1) {
+                        Toast.makeText(activity, "Current channel is digital — pick APRS frequency, or switch to an analog channel", Toast.LENGTH_LONG).show();
                         return;
                     }
                     String addressee = toEdit.getText().toString().trim().toUpperCase(java.util.Locale.US);
@@ -13143,15 +13290,17 @@ public class MainHook implements IXposedHookLoadPackage {
                     if (text.isEmpty())      { Toast.makeText(activity, "Enter a message", Toast.LENGTH_SHORT).show(); return; }
 
                     // APRS message info: ':' + 9-char addressee (space-padded) + ':' + text + '{' + line#
-                    String info = buildAprsMessageInfo(addressee, text, aprsMsgSeq);
+                    final String info = buildAprsMessageInfo(addressee, text, aprsMsgSeq);
                     if (++aprsMsgSeq > 99) aprsMsgSeq = 1;
-
-                    String label = srcCall + "-" + srcSsid + " → " + addressee + ": " + text;
-                    int ms = transmitAprsPacket(activity, srcCall, srcSsid,
-                            new String[]{ "WIDE1-1", "WIDE2-1" }, info, label);
-                    if (ms >= 0) {
-                        Toast.makeText(activity, "📡 Transmitting (~" + ms + "ms): " + addressee, Toast.LENGTH_SHORT).show();
-                    }
+                    final String label = srcCall + "-" + srcSsid + " → " + addressee + ": " + text;
+                    final String whereTxt = useAprs ? (freq.mhz() + " MHz") : "current channel";
+                    txOnChosenFreq(useAprs, freqHz, new java.util.concurrent.Callable<Integer>() {
+                        @Override public Integer call() {
+                            return transmitAprsPacket(activity, srcCall, srcSsid,
+                                    new String[]{ "WIDE1-1", "WIDE2-1" }, info, label);
+                        }
+                    });
+                    Toast.makeText(activity, "📡 Transmitting to " + addressee + " on " + whereTxt, Toast.LENGTH_SHORT).show();
                     dialog.dismiss();
                 }
             });
@@ -13162,13 +13311,16 @@ public class MainHook implements IXposedHookLoadPackage {
     }
 
     /** Start the periodic position beacon: TX our GPS now and every {@code intervalMin} minutes. */
-    private void startPositionBeacon(final Activity activity, int intervalMin, String comment) {
+    private void startPositionBeacon(final Activity activity, int intervalMin, String comment,
+                                     boolean useAprsFreq, int freqHz) {
         final APRSDatabase aprsDb = APRSDatabase.getInstance(activity);
         beaconCall = aprsDb.getCallsign();
         beaconSsid = aprsDb.getSSID();
         beaconComment = comment == null ? "" : comment;
         if (intervalMin < 1) intervalMin = 1;
         beaconIntervalMs = intervalMin * 60 * 1000;
+        beaconUseAprsFreq = useAprsFreq;
+        beaconFreqHz = freqHz;
         final char symTable = aprsDb.getDefaultSymbolTable();
         final char symCode = aprsDb.getDefaultSymbolCode();
         beaconActive = true;
@@ -13177,9 +13329,23 @@ public class MainHook implements IXposedHookLoadPackage {
             @Override public void run() {
                 if (!beaconActive) return;
                 try {
-                    android.location.Location loc = getCurrentLocation(activity);
-                    int ms = sendPositionBeaconOnce(activity, beaconCall, beaconSsid, symTable, symCode, beaconComment, loc);
-                    if (ms < 0) Toast.makeText(activity, "Beacon: no GPS fix — will retry next interval", Toast.LENGTH_SHORT).show();
+                    final android.location.Location loc = getCurrentLocation(activity);
+                    if (beaconUseAprsFreq) {
+                        // blip to the APRS freq for this beacon, then restore the user's channel
+                        captureTxFreqBackup();
+                        tuneCurrentChannelAnalog(beaconFreqHz);
+                        beaconHandler.postDelayed(new Runnable() {
+                            @Override public void run() {
+                                int ms = sendPositionBeaconOnce(activity, beaconCall, beaconSsid, symTable, symCode, beaconComment, loc);
+                                if (ms < 0) Toast.makeText(activity, "Beacon: no GPS fix — will retry next interval", Toast.LENGTH_SHORT).show();
+                                beaconHandler.postDelayed(new Runnable() { @Override public void run() { restoreTxFreqBackup(); } },
+                                        Math.max(ms, 0) + 1500);
+                            }
+                        }, 700);
+                    } else {
+                        int ms = sendPositionBeaconOnce(activity, beaconCall, beaconSsid, symTable, symCode, beaconComment, loc);
+                        if (ms < 0) Toast.makeText(activity, "Beacon: no GPS fix — will retry next interval", Toast.LENGTH_SHORT).show();
+                    }
                 } catch (Throwable t) {
                     XposedBridge.log(TAG + ": [aprs-beacon] tick error: " + t.getMessage());
                 }
@@ -13187,7 +13353,8 @@ public class MainHook implements IXposedHookLoadPackage {
             }
         };
         beaconHandler.post(beaconRunnable);   // first beacon immediately
-        XposedBridge.log(TAG + ": [aprs-beacon] started, every " + intervalMin + " min");
+        XposedBridge.log(TAG + ": [aprs-beacon] started, every " + intervalMin + " min, "
+                + (useAprsFreq ? (freqHz / 1000000.0) + " MHz" : "current channel"));
     }
 
     private void stopPositionBeacon() {
@@ -13221,9 +13388,10 @@ public class MainHook implements IXposedHookLoadPackage {
             layout.addView(status);
 
             TextView note = new TextView(activity);
-            note.setText("Transmits your GPS position as an APRS position report on the CURRENT channel. "
-                    + "Tune to an ANALOG channel on your APRS frequency. Licensed amateur use only.");
-            note.setTextSize(12); note.setTextColor(0xFF999999); note.setPadding(0, 0, 0, 20);
+            note.setText("Transmits your GPS position as an APRS position report. Defaults to the APRS "
+                    + "frequency (blips there each beacon and restores your channel), or pick Current "
+                    + "channel. Licensed amateur use only.");
+            note.setTextSize(12); note.setTextColor(0xFF999999); note.setPadding(0, 0, 0, 12);
             layout.addView(note);
 
             TextView ivLabel = new TextView(activity);
@@ -13242,6 +13410,8 @@ public class MainHook implements IXposedHookLoadPackage {
             cmtEdit.setText(beaconComment);
             cmtEdit.setFilters(new android.text.InputFilter[]{ new android.text.InputFilter.LengthFilter(43) });
             layout.addView(cmtEdit);
+
+            final FreqChoice freq = addFreqSelector(activity, layout, aprsDb);
 
             builder.setView(layout);
             builder.setPositiveButton(beaconActive ? "Stop beacon" : "Start beacon", null);
@@ -13263,15 +13433,21 @@ public class MainHook implements IXposedHookLoadPackage {
                         dialog.dismiss();
                         return;
                     }
-                    if (currentChannelType != 1) {
-                        Toast.makeText(activity, "Switch to an ANALOG channel first (current is digital)", Toast.LENGTH_LONG).show();
+                    boolean useAprs = freq.useAprsFreq();
+                    int freqHz = freq.freqHz();
+                    if (useAprs) {
+                        if (freqHz < 1_000_000) { Toast.makeText(activity, "Enter a valid APRS frequency in MHz", Toast.LENGTH_SHORT).show(); return; }
+                        aprsDb.setAprsFrequency(freq.mhz());
+                    } else if (currentChannelType != 1) {
+                        Toast.makeText(activity, "Current channel is digital — pick APRS frequency, or switch to an analog channel", Toast.LENGTH_LONG).show();
                         return;
                     }
                     int iv;
                     try { iv = Integer.parseInt(ivEdit.getText().toString().trim()); }
                     catch (NumberFormatException e) { Toast.makeText(activity, "Enter a valid interval", Toast.LENGTH_SHORT).show(); return; }
-                    startPositionBeacon(activity, iv, cmtEdit.getText().toString().trim());
-                    Toast.makeText(activity, "📡 Beacon started (" + iv + " min) — first position going out", Toast.LENGTH_LONG).show();
+                    startPositionBeacon(activity, iv, cmtEdit.getText().toString().trim(), useAprs, freqHz);
+                    Toast.makeText(activity, "📡 Beacon started (" + iv + " min) on "
+                            + (useAprs ? freq.mhz() + " MHz" : "current channel") + " — first position going out", Toast.LENGTH_LONG).show();
                     dialog.dismiss();
                 }
             });

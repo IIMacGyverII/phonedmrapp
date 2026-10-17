@@ -3,6 +3,12 @@
 Everything below shipped in **v4.0.0** (2026-10-15). Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-16 — APRS Message/Beacon: frequency selector + auto-tune to APRS freq (transient, DB-safe)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| F6 | Both the Send-Message and Position-Beacon dialogs gained a **Transmit on:** selector — **APRS frequency (MHz)**, prefilled from APRS Settings (default **144.390**) and editable, or **Current channel / frequency**. Default is the APRS freq: the mod auto-tunes the radio there, sends, and **restores your channel afterward** (the beacon blips to the APRS freq each interval and restores between). Editing the MHz saves it as the APRS frequency. This also lifts the old "must already be on an analog channel" requirement for APRS-freq sends (it tunes analog itself); Current-channel mode still needs analog. **Safety fix:** `tuneCurrentChannelAnalog` no longer calls `updateChannel()` (which persisted to the channel DB) — it retunes hardware only via `syncChannelInfoWithData()` + `AnalogMessage.send()`, so the tune is a transient in-memory override that reverts on channel reload and can never corrupt a stored channel, even if a crash skips the restore. | `MainHook` (`FreqChoice`/`addFreqSelector`, `txOnChosenFreq`, `captureTxFreqBackup`/`restoreTxFreqBackup`, message + beacon dialogs, `startPositionBeacon` freq args, `tuneCurrentChannelAnalog` no-DB-persist) | **device + HackRF, on-air (144.390 MHz)**: message decoded after auto-tune; verified the channel DB (Family Analog) is unchanged after tuning, and capture→tune→restore round-trip returns the channel |
+
 ## 2026-10-16 — KISS TNC (TX): drive the radio from APRSdroid/YAAC over KISS-over-TCP
 
 | Backlog | Change | Files | Test |
