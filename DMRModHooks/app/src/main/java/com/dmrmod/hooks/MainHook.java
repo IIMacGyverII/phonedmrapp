@@ -180,6 +180,8 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile int toneAnnouncedIdx = -1;   // CTCSS tone already written to the history for this transmission
     private static TextView detectedToneTextView = null;   // readout under the panel header
     private static volatile int lastShownToneIndex = -2;   // -2 = never shown yet
+    private static volatile int lastHeardToneIdx = -1;      // tone heard in the last transmission on this channel (tap-to-set)
+    private static volatile int lastHeardToneChannel = -1;
 
     // F6: APRS/AFSK TX experiment (docs/deep-dive/15 §3.1). While aprsTxActive, the AudioRecord.read
     // after-hook replaces the mic buffer with aprsTxSamples (8 kHz mono source), so a keyed PTT
@@ -1831,6 +1833,10 @@ public class MainHook implements IXposedHookLoadPackage {
                                 detectedTone.setTypeface(null, android.graphics.Typeface.BOLD);
                                 detectedTone.setText("");
                                 detectedTone.setVisibility(View.GONE);
+                                detectedTone.setClickable(true);
+                                detectedTone.setOnClickListener(new View.OnClickListener() {
+                                    @Override public void onClick(View v) { onDetectedToneTap(context); }
+                                });
                                 callerPanel.addView(detectedTone);
                                 detectedToneTextView = detectedTone;
 
@@ -1873,6 +1879,11 @@ public class MainHook implements IXposedHookLoadPackage {
                                 activityIndicator.setTextSize(11);
                                 activityIndicator.setText("");
                                 activityIndicator.setVisibility(View.GONE);
+                                // Tap the history box after a transmission with a CTCSS tone to program that tone
+                                activityIndicator.setClickable(true);
+                                activityIndicator.setOnClickListener(new View.OnClickListener() {
+                                    @Override public void onClick(View v) { onDetectedToneTap(context); }
+                                });
                                 infoPanel.addView(activityIndicator);
                                 dmrActivityIndicator = activityIndicator;
 
@@ -3242,6 +3253,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     currentChannelType = channelType;
                                     currentRxToneType = rxType;
                                     currentRxToneSubCode = rxSubCode;
+                                    hideDetectedToneReadout();
                                     try { currentChannelId = XposedHelpers.getIntField(channelData, "_id"); } catch (Throwable ignore) { }
 
                                     // Per-channel Soft SQ: apply the initial channel's saved setting (slightly
@@ -3335,6 +3347,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     currentChannelType = XposedHelpers.getIntField(cd, "type");
                                     currentRxToneType = XposedHelpers.getIntField(cd, "rxType");
                                     currentRxToneSubCode = XposedHelpers.getIntField(cd, "rxSubCode");
+                                    hideDetectedToneReadout();
                                     try { currentChannelId = XposedHelpers.getIntField(cd, "_id"); } catch (Throwable ignore) { }
                                 }
                                 Object lv = XposedHelpers.getObjectField(param.thisObject, "mLocalView");
@@ -3365,6 +3378,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     currentChannelType = channelType;
                                     currentRxToneType = rxType;
                                     currentRxToneSubCode = rxSubCode;
+                                    hideDetectedToneReadout();
 
                                     // Per-channel Soft SQ: apply this channel's saved on/off + level.
                                     applyChannelSoftSq(appContext, currentChannelId);
@@ -11797,6 +11811,15 @@ public class MainHook implements IXposedHookLoadPackage {
                                             + " len=" + length + " buf=" + processingAudio.length);
                                     MainHook mi = moduleInstance;
                                     if (mi != null) mi.updateActivityIndicator("🎵 CTCSS " + lbl + " Hz");
+                                    // offer to program it when the channel is not already on this tone
+                                    if (!(currentRxToneType == 1 && currentRxToneSubCode == ti)) {
+                                        final android.content.Context tctx = homeActivityRef != null ? homeActivityRef.get() : null;
+                                        if (tctx != null) new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+                                            @Override public void run() {
+                                                try { Toast.makeText(tctx, "🎵 CTCSS " + lbl + " Hz heard — tap the Analog History box to use it on this channel", Toast.LENGTH_LONG).show(); } catch (Throwable ignore) { }
+                                            }
+                                        });
+                                    }
                                 }
                             } catch (Throwable t) { XposedBridge.log(TAG + ": [tone] " + t.getMessage()); }
                         }
@@ -12110,6 +12133,7 @@ public class MainHook implements IXposedHookLoadPackage {
         final int idx = toneDecoderBank.detectedIndex();
         if (idx == lastShownToneIndex) return;
         lastShownToneIndex = idx;
+        if (idx >= 0) { lastHeardToneIdx = idx; lastHeardToneChannel = currentChannelNumber; }
         final String label = toneDecoderBank.detectedLabel();
         XposedBridge.log(TAG + ": [tone-decoder] " + (idx >= 0 ? ("DETECTED " + label + " Hz") : "cleared"));
         final TextView tv = detectedToneTextView;
@@ -12135,11 +12159,74 @@ public class MainHook implements IXposedHookLoadPackage {
         lastShownToneIndex = -2;
         final TextView tv = detectedToneTextView;
         if (tv == null) return;
+        final int heard = lastHeardToneIdx;
+        final boolean keep = heard >= 0 && lastHeardToneChannel == currentChannelNumber
+                && !(currentRxToneType == 1 && currentRxToneSubCode == heard);   // nothing to offer if already set
         new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
             @Override public void run() {
-                try { tv.setText(""); tv.setVisibility(View.GONE); } catch (Throwable ignore) { }
+                try {
+                    if (keep) {
+                        tv.setText("🎵 Heard CTCSS " + ToneConverter.ctcssLabelAt(heard) + " Hz \u2014 tap to use it on this channel");
+                        tv.setTextColor(0xFFFFCC66);
+                        tv.setVisibility(View.VISIBLE);
+                    } else { tv.setText(""); tv.setVisibility(View.GONE); }
+                } catch (Throwable ignore) { }
             }
         });
+    }
+
+    /** Channel changed: forget the heard tone and hide the readout. */
+    private static void hideDetectedToneReadout() {
+        lastHeardToneIdx = -1; lastHeardToneChannel = -1;
+        final TextView tv = detectedToneTextView;
+        if (tv == null) return;
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+            @Override public void run() { try { tv.setText(""); tv.setVisibility(View.GONE); } catch (Throwable ignore) { } }
+        });
+    }
+
+    /** Tap on the tone readout: offer to program the heard CTCSS tone into the current channel. */
+    private static void onDetectedToneTap(final android.content.Context ctxIn) {
+        try {
+            final int idx = lastHeardToneIdx;
+            if (idx < 0 || currentChannelType != 1) return;
+            final Activity act = homeActivityRef != null ? homeActivityRef.get() : (ctxIn instanceof Activity ? (Activity) ctxIn : null);
+            if (act == null) return;
+            final String label = ToneConverter.ctcssLabelAt(idx);
+            new AlertDialog.Builder(act)
+                .setTitle("🎵 Use CTCSS " + label + " Hz on \u201C" + currentChannelName + "\u201D?")
+                .setMessage("The last transmission on this channel carried CTCSS " + label + " Hz. Program it into the stored channel (written to the radio now):")
+                .setPositiveButton("RX + TX tone", new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface d, int w) { applyToneToCurrentChannel(act, idx, true); }
+                })
+                .setNeutralButton("RX tone only", new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface d, int w) { applyToneToCurrentChannel(act, idx, false); }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+        } catch (Throwable t) { XposedBridge.log(TAG + ": [tone] tap: " + t.getMessage()); }
+    }
+
+    private static void applyToneToCurrentChannel(final android.content.Context ctx, int idx, boolean alsoTx) {
+        try {
+            Class<?> dmc = XposedHelpers.findClass("com.pri.prizeinterphone.manager.DmrManager", appClassLoader);
+            Object dm = XposedHelpers.callStaticMethod(dmc, "getInstance");
+            Object ch = XposedHelpers.callMethod(dm, "getCurrentChannel");
+            if (ch == null) return;
+            XposedHelpers.setIntField(ch, "rxType", 1);
+            XposedHelpers.setIntField(ch, "rxSubCode", idx);
+            if (alsoTx) { XposedHelpers.setIntField(ch, "txType", 1); XposedHelpers.setIntField(ch, "txSubCode", idx); }
+            XposedHelpers.callMethod(dm, "updateChannel", ch);          // stored channel (DB)
+            applyAnalogChannelDirect(ch, "set tone");                   // hardware, single path
+            currentRxToneType = 1; currentRxToneSubCode = idx;
+            final String label = ToneConverter.ctcssLabelAt(idx);
+            XposedBridge.log(TAG + ": [tone] channel " + currentChannelNumber + " now CTCSS " + label + " Hz " + (alsoTx ? "RX+TX" : "RX"));
+            try { refreshChannelListUi(); } catch (Throwable ignore) { }
+            hideDetectedToneReadout();
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+                @Override public void run() { try { Toast.makeText(ctx, "🎵 CTCSS " + label + " Hz set on " + currentChannelName, Toast.LENGTH_LONG).show(); } catch (Throwable ignore) { } }
+            });
+        } catch (Throwable t) { XposedBridge.log(TAG + ": [tone] apply: " + t.getMessage()); }
     }
 
     /**
@@ -14269,6 +14356,10 @@ public class MainHook implements IXposedHookLoadPackage {
                     if (intent.hasExtra("sq")) XposedHelpers.setIntField(ch, "sq", intent.getIntExtra("sq", 2));
                     if (intent.hasExtra("power")) XposedHelpers.setIntField(ch, "power", intent.getIntExtra("power", 1));
                     if (intent.hasExtra("band")) XposedHelpers.setIntField(ch, "band", intent.getIntExtra("band", 0));
+                    if (intent.hasExtra("rxtype")) XposedHelpers.setIntField(ch, "rxType", intent.getIntExtra("rxtype", 0));
+                    if (intent.hasExtra("rxsub")) XposedHelpers.setIntField(ch, "rxSubCode", intent.getIntExtra("rxsub", 0));
+                    if (intent.hasExtra("txtype")) XposedHelpers.setIntField(ch, "txType", intent.getIntExtra("txtype", 0));
+                    if (intent.hasExtra("txsub")) XposedHelpers.setIntField(ch, "txSubCode", intent.getIntExtra("txsub", 0));
                     if (intent.getIntExtra("db", 1) != 0) XposedHelpers.callMethod(dm, "updateChannel", ch);
                     if (intent.getIntExtra("sync", 0) != 0) XposedHelpers.callMethod(dm, "syncChannelInfoWithData", ch);
                     if (intent.getIntExtra("direct", 1) != 0) applyAnalogChannelDirect(ch, "chanset");
