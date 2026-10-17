@@ -48,7 +48,11 @@ public final class CtcssDecoderBank {
 
     public CtcssDecoderBank(int sampleRate) {
         this.sampleRate = sampleRate;
-        this.window = Math.max(1, sampleRate / 3);    // 333 ms (resolves 2.5 Hz-spaced tones)
+        // 750 ms + Hann weighting (2026-10-17): the 333 ms rectangular window read a clean 88.5 Hz
+        // bench tone as its 91.5 Hz neighbour (3 Hz apart, leakage + the radio's low-end tilt).
+        // With Hann at 750 ms the first null sits at 2.7 Hz, so adjacent standard tones no longer
+        // rival each other; two windows (1.5 s) confirm a tone.
+        this.window = Math.max(1, sampleRate * 3 / 4);
         int count = ToneConverter.ctcssCount();
         freqs = new double[count];
         labels = new String[count];
@@ -66,8 +70,10 @@ public final class CtcssDecoderBank {
     public void process(byte[] data, int length) {
         if (length > data.length) length = data.length;
         for (int i = 0; i + 1 < length; i += 4) {     // L sample per 4-byte stereo frame
-            int x = (short) ((data[i + 1] << 8) | (data[i] & 0xFF));
-            energy += (double) x * x;
+            int xi = (short) ((data[i + 1] << 8) | (data[i] & 0xFF));
+            energy += (double) xi * xi;
+            samplesFed++;
+            double x = xi * (0.5 - 0.5 * Math.cos(2 * Math.PI * n / window));   // Hann weight
             for (int t = 0; t < coeff.length; t++) {
                 double s0 = x + coeff[t] * s1[t] - s2[t];
                 s2[t] = s1[t];
@@ -86,6 +92,10 @@ public final class CtcssDecoderBank {
             if (m > best) { second = best; best = m; bi = t; }
             else if (m > second) { second = m; }
         }
+        // keep this window's powers for debugTop()
+        if (lastPowers == null || lastPowers.length != coeff.length) lastPowers = new double[coeff.length];
+        for (int t = 0; t < coeff.length; t++) lastPowers[t] = power(t);
+        windowsEvaluated++;
         double meanOthers = (sum - best) / Math.max(1, coeff.length - 1);
         double ratio = meanOthers > 1 ? best / meanOthers : (best > 1 ? 999 : 0);
         double perSample = energy / Math.max(1, window);
@@ -125,6 +135,28 @@ public final class CtcssDecoderBank {
     public void reset() {
         resetWindow();
         detectedIndex = -1; candidate = -1; runs = 0;
+    }
+
+    private volatile double[] lastPowers;
+    private volatile long windowsEvaluated = 0, samplesFed = 0;
+
+    /** Telemetry: the k strongest bins of the last window as "label:dB-rel-to-peak", plus windows/samples seen. */
+    public String debugTop(int k) {
+        double[] p = lastPowers;
+        if (p == null) return "(no window yet)";
+        Integer[] idx = new Integer[p.length];
+        for (int i = 0; i < p.length; i++) idx[i] = i;
+        final double[] pp = p;
+        java.util.Arrays.sort(idx, new java.util.Comparator<Integer>() {
+            @Override public int compare(Integer a, Integer b) { return Double.compare(pp[b], pp[a]); }
+        });
+        StringBuilder sb = new StringBuilder();
+        double top = Math.max(1e-9, p[idx[0]]);
+        for (int i = 0; i < Math.min(k, idx.length); i++) {
+            if (i > 0) sb.append(' ');
+            sb.append(labels[idx[i]]).append(':').append(String.format(java.util.Locale.US, "%.1f", 10 * Math.log10(Math.max(1e-9, p[idx[i]]) / top)));
+        }
+        return sb.append(" windows=").append(windowsEvaluated).append(" samples=").append(samplesFed).toString();
     }
 
     public int detectedIndex() { return detectedIndex; }

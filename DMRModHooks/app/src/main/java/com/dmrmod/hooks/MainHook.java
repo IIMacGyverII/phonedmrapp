@@ -177,6 +177,7 @@ public class MainHook implements IXposedHookLoadPackage {
     private static final NoiseSquelchDetector noiseDetector = new NoiseSquelchDetector(8000);
     // SQ2: CTCSS decoder bank - scans all 51 tones to show which one the incoming signal carries.
     private static final CtcssDecoderBank toneDecoderBank = new CtcssDecoderBank(8000);
+    private static volatile int toneAnnouncedIdx = -1;   // CTCSS tone already written to the history for this transmission
     private static TextView detectedToneTextView = null;   // readout under the panel header
     private static volatile int lastShownToneIndex = -2;   // -2 = never shown yet
 
@@ -10149,6 +10150,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     isReceiving = false;
                                     isSquelchOpen = false;        // no signal -> soft-sq closed (stale-state tidy)
                                     ctcssDetector.reset();        // clear tone state for the next transmission
+                                    toneAnnouncedIdx = -1;        // tone-scan history line: fresh per transmission (bank reset by clearDetectedTone)
                                     noiseDetector.reset();        // clear noise-squelch EMA for the next transmission
                                     clearDetectedTone();          // SQ2: clear the detected-tone readout
                                     previousSquelchOpen = false;  // Reset squelch state tracking
@@ -11780,6 +11782,25 @@ public class MainHook implements IXposedHookLoadPackage {
                         }
 
                         // DTMF decode (F9): analog channels, audio the squelch lets through
+                        // CTCSS tone scan (2026-10-17): the SQ2 decoder bank (fed once above, on the pre-mute
+                        // buffer) already drives the live readout; this writes the tone to the Analog History
+                        // once per transmission so it is still there after the other station unkeys.
+                        // (A second process() call here fed every chunk twice and mis-read 88.5 Hz as 91.5.)
+                        if (currentChannelType == 1) {
+                            try {
+                                int ti = toneDecoderBank.detectedIndex();
+                                if (ti >= 0 && ti != toneAnnouncedIdx) {
+                                    toneAnnouncedIdx = ti;
+                                    final String lbl = toneDecoderBank.detectedLabel();
+                                    XposedBridge.log(TAG + ": [tone] CTCSS " + lbl + " Hz heard on ch " + currentChannelNumber
+                                            + " (ratio " + String.format(java.util.Locale.US, "%.2f", toneDecoderBank.lastRatio()) + ") top: " + toneDecoderBank.debugTop(4)
+                                            + " len=" + length + " buf=" + processingAudio.length);
+                                    MainHook mi = moduleInstance;
+                                    if (mi != null) mi.updateActivityIndicator("🎵 CTCSS " + lbl + " Hz");
+                                }
+                            } catch (Throwable t) { XposedBridge.log(TAG + ": [tone] " + t.getMessage()); }
+                        }
+
                         if (currentChannelType == 1 && (!useSquelch || isSquelchOpen) && dtmfWanted()) {
                             DTMFDecoder dd = dtmfDecoder;
                             if (dd == null) { dd = new DTMFDecoder(8000, true, dtmfListener); dtmfDecoder = dd; }
