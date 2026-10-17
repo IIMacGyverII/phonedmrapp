@@ -28,7 +28,9 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
             R.drawable.interphone_talkback_num_3, R.drawable.interphone_talkback_num_4, R.drawable.interphone_talkback_num_5, R.drawable.interphone_talkback_num_6,
             R.drawable.interphone_talkback_num_7, R.drawable.interphone_talkback_num_8, R.drawable.interphone_talkback_num_9 };
 
-    private final TextView title, power, squelch, send, receive, location, signal, headline, historyHeader, historyText, transcriptionText, sqValue;
+    private final TextView title, power, squelch, send, receive, location, signal, headline, historyHeader, historyText, transcriptionText, sqValue, scanBtn, zoneBtn;
+    private final SeekBar sqSeek;
+    private boolean sqFromUser;
     private final ImageView digitOne, digitTwo;
     private final LinearLayout transcriptionBox;
     private final CircuitBoardView board;
@@ -89,10 +91,13 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         signal.setBackground(Theme.rounded(c, 0x15FFFF00, 0xAAFFFF00, 2, 8)); signal.setPadding(dp4, (int) (12 * d), dp4, (int) (12 * d));
         LayoutParams sl = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 0.4f); sl.rightMargin = dp4;
         sr.addView(signal, sl);
-        TextView scan = pill(c, "🔍 SCAN"), zone = pill(c, "ZONE: ALL");
+        TextView scan = pill(c, "🔍 SCAN"), zone = pill(c, "ZONE: ALL"); scanBtn = scan; zoneBtn = zone;
         LayoutParams bl = new LayoutParams(0, LayoutParams.MATCH_PARENT, 0.3f); bl.leftMargin = dp4;
         sr.addView(scan, bl); sr.addView(zone, new LayoutParams(bl));
         addView(sr, srLp);
+        scan.setOnClickListener(v -> { if (svc != null) android.widget.Toast.makeText(c, svc.toggleScan(), android.widget.Toast.LENGTH_SHORT).show(); });
+        scan.setOnLongClickListener(v -> { if (svc != null) android.widget.Toast.makeText(c, svc.skipScanChannel(), android.widget.Toast.LENGTH_SHORT).show(); return true; });
+        zone.setOnClickListener(v -> pickZone());
 
         // ---- SQ slider row (module: SQ: 14 sp grey bold, value 18 sp cyan, cyan seek bar) ----
         LinearLayout sq = new LinearLayout(c); sq.setGravity(Gravity.CENTER_VERTICAL);
@@ -100,12 +105,13 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         TextView sqLabel = Theme.label(c, "SQ:", Theme.GREY, 14, true); LayoutParams ll = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT); ll.rightMargin = (int) (2 * d);
         sq.addView(sqLabel, ll);
         sqValue = Theme.label(c, "3", Theme.CYAN, 18, true); sq.addView(sqValue);
-        SeekBar seek = new SeekBar(c); seek.setMax(9); seek.setProgress(3);
+        SeekBar seek = new SeekBar(c); seek.setMax(9); seek.setProgress(5); sqSeek = seek;
         android.content.res.ColorStateList cyan = android.content.res.ColorStateList.valueOf(Theme.CYAN);
         seek.setProgressTintList(cyan); seek.setProgressBackgroundTintList(cyan); seek.setThumbTintList(cyan);
         seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar s, int p, boolean u) { sqValue.setText(String.valueOf(p)); }
-            @Override public void onStartTrackingTouch(SeekBar s) { } @Override public void onStopTrackingTouch(SeekBar s) { }
+            @Override public void onProgressChanged(SeekBar s, int p, boolean u) { sqValue.setText(String.valueOf(Math.max(1, p))); }
+            @Override public void onStartTrackingTouch(SeekBar s) { sqFromUser = true; }
+            @Override public void onStopTrackingTouch(SeekBar s) { sqFromUser = false; if (svc != null) svc.setSoftSqLevel(Math.max(1, s.getProgress())); }
         });
         LayoutParams skl = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 0.42f); skl.leftMargin = dp10; skl.rightMargin = dp10; skl.topMargin = dp4;
         sq.addView(seek, skl);
@@ -158,8 +164,11 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         bottom.addView(pkt, sat(d, 76, Gravity.END, 16, 112));
         LayoutParams btl = new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f); btl.topMargin = dp4;
         addView(bottom, btl);
-        // Mode satellites: wired up feature by feature; until a mode exists it says so instead of pretending to toggle.
-        for (NeonToggle t : new NeonToggle[] { softSq, txt, vfo, rec, mon, pkt })
+        // Mode satellites. Those not brought over yet say so instead of pretending to toggle.
+        softSq.setOnClickListener(v -> { if (svc != null) svc.setSoftSq(!softSq.isOn()); });
+        rec.setOnClickListener(v -> { if (svc != null) svc.setRecord(!rec.isOn()); });
+        mon.setOnClickListener(v -> { if (svc != null) svc.setMonitor(!mon.isOn()); });
+        for (NeonToggle t : new NeonToggle[] { txt, vfo, pkt })
             t.setOnClickListener(v -> android.widget.Toast.makeText(c, t.labelText() + " is not in this build yet", android.widget.Toast.LENGTH_SHORT).show());
         ptt.setListener(down -> { if (svc != null) svc.ptt(down); });
     }
@@ -179,6 +188,14 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     }
 
     public void attach(RadioService s) { svc = s; s.addListener(this); }
+
+    private void pickZone() {
+        if (svc == null) return;
+        final java.util.List<ChannelStore.Zone> zones = svc.store().zones();
+        String[] names = new String[zones.size() + 1]; names[0] = "ALL channels";
+        for (int i = 0; i < zones.size(); i++) names[i + 1] = zones.get(i).name + "  (" + zones.get(i).numbers.length + ")";
+        new android.app.AlertDialog.Builder(getContext()).setTitle("Zone").setItems(names, (d, w) -> svc.setZone(w == 0 ? 0 : zones.get(w - 1).id)).show();
+    }
     public void detach() { if (svc != null) svc.removeListener(this); svc = null; }
 
     private void refreshHeadline() {
@@ -216,6 +233,15 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     @Override public void onSms(int from, int type, String text) { }
     @Override public void onSmsResult(boolean ok) { }
     @Override public void onLocation(String text) { location.setText(text); }
+    @Override public void onModes(boolean sq, int level, boolean open, boolean monitor, boolean recording, boolean scanning, boolean holding, String zoneName) {
+        softSq.setOn(sq); mon.setOn(monitor); rec.setOn(recording);
+        if (!sqFromUser) { sqSeek.setProgress(level); sqValue.setText(String.valueOf(level)); }
+        sqValue.setTextColor(sq ? (open ? Theme.GREEN : Theme.AMBER) : Theme.CYAN);
+        zoneBtn.setText("ZONE: " + zoneName.toUpperCase(java.util.Locale.US));
+        scanBtn.setText(scanning ? (holding ? "\u23F9 HOLD" : "\u23F9 SCANNING") : "\uD83D\uDD0D SCAN");
+        scanBtn.setTextColor(scanning ? Theme.AMBER : Theme.CYAN);
+        scanBtn.setBackground(scanning ? Theme.gradient(getContext(), 0xFF4A3A0D, 0xFF80651A, Theme.AMBER, 2, 8) : Theme.pill(getContext()));
+    }
 
     private void renderHistory() {
         StringBuilder sb = new StringBuilder();

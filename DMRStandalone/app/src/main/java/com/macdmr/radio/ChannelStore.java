@@ -24,6 +24,7 @@ public final class ChannelStore extends SQLiteOpenHelper {
         public String encryptKey = ""; public int[] groups = new int[0]; public boolean active;
         public String location = "";
         public double lat, lon, elev;              // from the module's location table (0 = none)
+        public boolean softSq; public int softSqLevel = 5;   // software squelch (analog)
         public boolean isDigital() { return type == 0; }
         public String freqText(int hz) { return String.format(java.util.Locale.US, "%.3f", hz / 1e6); }
     }
@@ -32,13 +33,16 @@ public final class ChannelStore extends SQLiteOpenHelper {
     public static final class Message { public long id; public int peer, type; public boolean outgoing; public long ts; public String text; public int status; }   // status 0 pending 1 sent 2 failed
     public static final class Conversation { public int peer, type; public String name, lastText; public long lastTs; public boolean outgoing; }
 
-    public ChannelStore(Context c) { super(c, "radio.db", null, 4); }
+    public static final class Zone { public long id; public String name; public int[] numbers = new int[0]; }
+
+    public ChannelStore(Context c) { super(c, "radio.db", null, 5); }
 
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE channels (_id INTEGER PRIMARY KEY AUTOINCREMENT, number INTEGER, name TEXT, type INTEGER, rxFreq INTEGER, txFreq INTEGER,"
                 + " power INTEGER, band INTEGER, sq INTEGER, rxType INTEGER, rxSubCode INTEGER, txType INTEGER, txSubCode INTEGER, relay INTEGER, mode INTEGER,"
                 + " cc INTEGER, inSlot INTEGER, outSlot INTEGER, contactType INTEGER, txContact INTEGER, encryptSw INTEGER, encryptKey TEXT, interrupt INTEGER,"
-                + " groups TEXT, active INTEGER, location TEXT, lat REAL DEFAULT 0, lon REAL DEFAULT 0, elev REAL DEFAULT 0)");
+                + " groups TEXT, active INTEGER, location TEXT, lat REAL DEFAULT 0, lon REAL DEFAULT 0, elev REAL DEFAULT 0, softSq INTEGER DEFAULT 0, softSqLevel INTEGER DEFAULT 5)");
+        db.execSQL("CREATE TABLE zones (_id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, numbers TEXT)");
         db.execSQL("CREATE TABLE contacts (_id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, number INTEGER, type INTEGER)");
         db.execSQL("CREATE TABLE history (_id INTEGER PRIMARY KEY AUTOINCREMENT, channel INTEGER, ts INTEGER, kind TEXT, text TEXT, rssi INTEGER, dmrId INTEGER)");
         db.execSQL("CREATE TABLE messages (_id INTEGER PRIMARY KEY AUTOINCREMENT, peer INTEGER, type INTEGER, outgoing INTEGER, ts INTEGER, text TEXT, status INTEGER)");
@@ -46,7 +50,7 @@ public final class ChannelStore extends SQLiteOpenHelper {
 
     @Override public void onUpgrade(SQLiteDatabase db, int o, int n) {
         // nothing user-created yet at v1: rebuild and let the stock import run again
-        db.execSQL("DROP TABLE IF EXISTS channels"); db.execSQL("DROP TABLE IF EXISTS contacts"); db.execSQL("DROP TABLE IF EXISTS history"); db.execSQL("DROP TABLE IF EXISTS messages");
+        db.execSQL("DROP TABLE IF EXISTS channels"); db.execSQL("DROP TABLE IF EXISTS contacts"); db.execSQL("DROP TABLE IF EXISTS history"); db.execSQL("DROP TABLE IF EXISTS messages"); db.execSQL("DROP TABLE IF EXISTS zones");
         onCreate(db);
     }
 
@@ -100,6 +104,28 @@ public final class ChannelStore extends SQLiteOpenHelper {
         return out;
     }
 
+    // ---- zones ----
+    public List<Zone> zones() {
+        List<Zone> out = new ArrayList<>();
+        try (Cursor c = getReadableDatabase().query("zones", null, null, null, null, null, "name COLLATE NOCASE")) {
+            while (c.moveToNext()) { Zone z = new Zone(); z.id = c.getLong(0); z.name = c.getString(1); z.numbers = parseInts(c.getString(2)); out.add(z); }
+        }
+        return out;
+    }
+    public Zone zone(long id) { for (Zone z : zones()) if (z.id == id) return z; return null; }
+    public long saveZone(Zone z) {
+        ContentValues v = new ContentValues(); v.put("name", z.name); v.put("numbers", joinInts(z.numbers));
+        if (z.id > 0) { getWritableDatabase().update("zones", v, "_id=?", new String[] { String.valueOf(z.id) }); return z.id; }
+        return z.id = getWritableDatabase().insert("zones", null, v);
+    }
+    public void deleteZone(long id) { getWritableDatabase().delete("zones", "_id=?", new String[] { String.valueOf(id) }); }
+    private static int[] parseInts(String s) {
+        List<Integer> l = new ArrayList<>();
+        if (s != null) for (String t : s.split("[,;\\- ]")) { t = t.trim(); if (!t.isEmpty()) try { l.add(Integer.parseInt(t)); } catch (NumberFormatException ignored) { } }
+        int[] a = new int[l.size()]; for (int i = 0; i < a.length; i++) a[i] = l.get(i); return a;
+    }
+    private static String joinInts(int[] a) { StringBuilder b = new StringBuilder(); for (int x : a) { if (b.length() > 0) b.append(','); b.append(x); } return b.toString(); }
+
     // ---- contacts ----
     public List<Contact> contacts() {
         List<Contact> out = new ArrayList<>();
@@ -145,7 +171,7 @@ public final class ChannelStore extends SQLiteOpenHelper {
         v.put("encryptSw", ch.encryptSw); v.put("encryptKey", ch.encryptKey); v.put("interrupt", ch.interrupt);
         StringBuilder g = new StringBuilder(); for (int x : ch.groups) { if (g.length() > 0) g.append(','); g.append(x); }
         v.put("groups", g.toString()); v.put("active", ch.active ? 1 : 0); v.put("location", ch.location);
-        v.put("lat", ch.lat); v.put("lon", ch.lon); v.put("elev", ch.elev);
+        v.put("lat", ch.lat); v.put("lon", ch.lon); v.put("elev", ch.elev); v.put("softSq", ch.softSq ? 1 : 0); v.put("softSqLevel", ch.softSqLevel);
         return v;
     }
 
@@ -164,6 +190,7 @@ public final class ChannelStore extends SQLiteOpenHelper {
         ch.groups = new int[gl.size()]; for (int i = 0; i < gl.size(); i++) ch.groups[i] = gl.get(i);
         ch.active = c.getInt(c.getColumnIndexOrThrow("active")) == 1; ch.location = c.getString(c.getColumnIndexOrThrow("location"));
         ch.lat = c.getDouble(c.getColumnIndexOrThrow("lat")); ch.lon = c.getDouble(c.getColumnIndexOrThrow("lon")); ch.elev = c.getDouble(c.getColumnIndexOrThrow("elev"));
+        ch.softSq = c.getInt(c.getColumnIndexOrThrow("softSq")) == 1; ch.softSqLevel = c.getInt(c.getColumnIndexOrThrow("softSqLevel"));
         return ch;
     }
 
@@ -258,6 +285,34 @@ public final class ChannelStore extends SQLiteOpenHelper {
                     hdb.close();
                 }
             } catch (Throwable t) { err.append("history: ").append(t.getMessage()).append("; "); }
+            try {
+                SQLiteDatabase zdb = copyStock(ctx, stockPackage, "dmrmod_zones.db", "stock_zones.db");
+                if (zdb != null) {
+                    db.delete("zones", null, null);
+                    try (Cursor c = zdb.rawQuery("SELECT name, channel_list FROM zones", null)) {
+                        while (c.moveToNext()) {
+                            List<Integer> nums = new ArrayList<>();
+                            for (int sid : parseInts(c.getString(1))) { Integer num = stockIdToNumber.get(sid); if (num != null) nums.add(num); }
+                            Zone z = new Zone(); z.name = c.getString(0); z.numbers = new int[nums.size()]; for (int i = 0; i < nums.size(); i++) z.numbers[i] = nums.get(i);
+                            ContentValues v = new ContentValues(); v.put("name", z.name); v.put("numbers", joinInts(z.numbers)); db.insert("zones", null, v);
+                        }
+                    }
+                    zdb.close();
+                }
+            } catch (Throwable t) { err.append("zones: ").append(t.getMessage()).append("; "); }
+            try {
+                SQLiteDatabase qdb = copyStock(ctx, stockPackage, "dmrmod_softsq.db", "stock_softsq.db");
+                if (qdb != null) {
+                    try (Cursor c = qdb.rawQuery("SELECT channel_id, enabled, level FROM channel_softsq", null)) {
+                        while (c.moveToNext()) {
+                            Integer num = stockIdToNumber.get(c.getInt(0)); if (num == null) continue;
+                            ContentValues v = new ContentValues(); v.put("softSq", c.getInt(1)); v.put("softSqLevel", c.getInt(2));
+                            db.update("channels", v, "number=?", new String[] { String.valueOf(num) });
+                        }
+                    }
+                    qdb.close();
+                }
+            } catch (Throwable t) { err.append("softsq: ").append(t.getMessage()).append("; "); }
             sdb.close();
             return n;
         } catch (Throwable t) { err.append(t.toString()); return -1; }

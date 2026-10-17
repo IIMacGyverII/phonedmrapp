@@ -33,7 +33,7 @@ public class ChannelsView extends LinearLayout implements RadioService.Listener 
     private final ListView list;
     private final Adapter adapter = new Adapter();
     private final EditText search;
-    private final TextView chip, title;
+    private final TextView chip, title, zoneBtn;
     private final List<ChannelStore.Channel> all = new ArrayList<>(), shown = new ArrayList<>();
     private RadioService svc;
     private Host host;
@@ -72,10 +72,17 @@ public class ChannelsView extends LinearLayout implements RadioService.Listener 
         chip.setOnClickListener(v -> { typeFilter = (typeFilter + 1) % 3; chip.setText(new String[] { "ALL", "FM", "DMR" }[typeFilter]); chip.setBackground(Theme.rounded(c, typeFilter == 0 ? 0xFF2A3F5F : 0xFF1E8A5A, 0, 0, 20)); filter(); });
         LayoutParams cl = new LayoutParams(LayoutParams.WRAP_CONTENT, (int) (40 * d)); cl.leftMargin = (int) (6 * d);
         row.addView(chip, cl);
-        TextView zone = Theme.label(c, "ZONE: ALL", Theme.WHITE, 12, true); zone.setGravity(Gravity.CENTER); zone.setBackground(Theme.rounded(c, 0xFF4169E1, 0, 0, 20));
+        zoneBtn = Theme.label(c, "ZONE: ALL", Theme.WHITE, 12, true); TextView zone = zoneBtn; zone.setGravity(Gravity.CENTER); zone.setBackground(Theme.rounded(c, 0xFF4169E1, 0, 0, 20));
         zone.setPadding((int) (10 * d), (int) (5 * d), (int) (10 * d), (int) (5 * d));
         LayoutParams zl = new LayoutParams((int) (100 * d), LayoutParams.WRAP_CONTENT); zl.leftMargin = (int) (6 * d);
         row.addView(zone, zl);
+        zone.setOnClickListener(v -> {
+            if (svc == null) return;
+            final java.util.List<ChannelStore.Zone> zones = svc.store().zones();
+            String[] names = new String[zones.size() + 1]; names[0] = "ALL channels";
+            for (int i = 0; i < zones.size(); i++) names[i + 1] = zones.get(i).name + "  (" + zones.get(i).numbers.length + ")";
+            new android.app.AlertDialog.Builder(c).setTitle("Zone").setItems(names, (d2, w) -> { svc.setZone(w == 0 ? 0 : zones.get(w - 1).id); reload(); }).show();
+        });
         addView(row);
 
         list = new ListView(c); list.setAdapter(adapter); list.setDivider(null); list.setDividerHeight(0);
@@ -89,7 +96,8 @@ public class ChannelsView extends LinearLayout implements RadioService.Listener 
 
     public void reload() {
         if (svc == null) return;
-        all.clear(); all.addAll(svc.store().all());
+        all.clear(); all.addAll(svc.zoneChannels());
+        zoneBtn.setText("ZONE: " + svc.zoneName().toUpperCase(Locale.US));
         activeNumber = svc.current() != null ? svc.current().number : svc.store().activeNumber();
         filter();
     }
@@ -178,4 +186,5 @@ public class ChannelsView extends LinearLayout implements RadioService.Listener 
     @Override public void onRx(boolean r) { } @Override public void onTx(boolean t) { } @Override public void onRssi(int dbm) { }
     @Override public void onAudioLevel(int a) { } @Override public void onHistory(String l) { } @Override public void onCaller(String t) { }
     @Override public void onLog(String s) { } @Override public void onLink(String s) { } @Override public void onLocation(String t) { } @Override public void onSms(int f, int ty, String te) { } @Override public void onSmsResult(boolean ok) { }
+    @Override public void onModes(boolean a, int b, boolean c2, boolean d2, boolean e, boolean f, boolean g, String z) { }
 }

@@ -17,6 +17,9 @@ import java.lang.reflect.Method;
  */
 public final class TinyServiceAudio {
     public interface Sink { void onPcm(byte[] stereo8k, int len); }
+    public interface Gate { boolean open(); }
+    private volatile Gate gate;
+    public void setGate(Gate g) { gate = g; }
 
     private final Object svc;
     private final Method openRecv, closeRecv, openWrite, closeWrite, frameSize, writeFrame, register;
@@ -52,8 +55,12 @@ public final class TinyServiceAudio {
                 track.play();
                 register.invoke(svc, new ITinyRecvCallback.Stub() {
                     @Override public void onRecv(byte[] data, int len) {
-                        if (playing && track != null && len > 0) track.write(data, 0, len);
-                        Sink s = sink; if (s != null) s.onPcm(data, len);
+                        Sink s = sink; if (s != null) s.onPcm(data, len);            // squelch decision first
+                        Gate g = gate;
+                        if (playing && track != null && len > 0) {
+                            if (g == null || g.open()) track.write(data, 0, len);
+                            else { byte[] z = new byte[len]; track.write(z, 0, len); }  // keep the stream timing, play silence
+                        }
                     }
                 });
             }

@@ -36,7 +36,8 @@ public class RadioService extends Service implements RadioEngine.Events {
         void onLink(String state);          // "no root", "policy", "uart closed", "ready"…
         void onLocation(String text);
         void onSms(int from, int type, String text);
-        void onSmsResult(boolean ok);       // the intercom's location block ("City, State\n(↓S 25.5mi (41.0km))\n959ft (292m) 📍")
+        void onSmsResult(boolean ok);
+        void onModes(boolean softSq, int softSqLevel, boolean squelchOpen, boolean monitor, boolean recording, boolean scanning, boolean holding, String zoneName);       // the intercom's location block ("City, State\n(↓S 25.5mi (41.0km))\n959ft (292m) 📍")
     }
 
     public class LocalBinder extends Binder { public RadioService get() { return RadioService.this; } }
@@ -54,6 +55,16 @@ public class RadioService extends Service implements RadioEngine.Events {
     private volatile long rxStart;
     private volatile int lastCaller, lastCallType, lastTarget;
     private String link = "stopped";
+    private final com.macdmr.radio.dsp.SoftSquelch softSq = new com.macdmr.radio.dsp.SoftSquelch();
+    private volatile boolean monitorOn, recordOn, squelchOpen;
+    private WavRecorder recorder;
+    private long zoneId;                       // 0 = all channels
+    private final Scanner scanner = new Scanner(new Scanner.Host() {
+        @Override public java.util.List<ChannelStore.Channel> candidates() { return zoneChannels(); }
+        @Override public void tune(ChannelStore.Channel ch) { selectChannel(ch.number); }
+        @Override public boolean receiving() { return receiving; }
+        @Override public void status(boolean s, boolean h, ChannelStore.Channel on) { pushModes(); }
+    });
     /** Every MCU/audio action runs here, in order — a PTT release can never overtake its press. */
     private final java.util.concurrent.ExecutorService worker = java.util.concurrent.Executors.newSingleThreadExecutor(r -> new Thread(r, "radio-worker"));
     private volatile boolean pttDown;
@@ -64,6 +75,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         startForeground(1, notification("Radio idle"));
         profile = DeviceProfile.detect();
         store = new ChannelStore(this);
+        zoneId = getSharedPreferences("radio", MODE_PRIVATE).getLong("zone", 0);
         engine = new RadioEngine(profile, this);
     }
 
@@ -137,14 +149,94 @@ public class RadioService extends Service implements RadioEngine.Events {
         try {
             if (audio == null) {
                 audio = new TinyServiceAudio();
-                audio.setSink((b, len) -> {
-                    int peak = 0;
-                    for (int i = 0; i + 1 < len; i += 8) { int v = Math.abs((short) ((b[i] & 0xFF) | (b[i + 1] << 8))); if (v > peak) peak = v; }
-                    final int p = peak; ui.post(() -> { for (Listener l : listeners) l.onAudioLevel(p); });
-                });
+                audio.setSink((b, len) -> onRxPcm(b, len));
+                audio.setGate(() -> squelchOpen);
             }
             log(audio.startRx(true)); rxAudioOn = true;
         } catch (Throwable t) { log("audio: " + t); }
+    }
+
+    /** Every received 8 kHz stereo (L == R) block: take the left channel, run the squelch, record, meter. */
+    private final byte[] mono = new byte[4096];
+    private void onRxPcm(byte[] b, int len) {
+        int n = 0;
+        for (int i = 0; i + 3 < len && n + 1 < mono.length; i += 4) { mono[n++] = b[i]; mono[n++] = b[i + 1]; }
+        boolean open = current == null || current.isDigital() ? true : softSq.process(mono, n);
+        squelchOpen = open;
+        int peak = 0;
+        if (open) for (int i = 0; i + 1 < n; i += 2) { int v = Math.abs((short) ((mono[i] & 0xFF) | (mono[i + 1] << 8))); if (v > peak) peak = v; }
+        if (recordOn && receiving && open) {
+            try {
+                if (recorder == null) { recorder = new WavRecorder(current != null ? current.name : null); recorder.start(lastCaller > 0 ? String.valueOf(lastCaller) : null); }
+                recorder.write(mono, n);
+            } catch (Throwable t) { log("record: " + t); recorder = null; }
+        }
+        final int p = peak;
+        ui.post(() -> { for (Listener l : listeners) l.onAudioLevel(p); });
+    }
+
+    private void finishRecording() {
+        WavRecorder r = recorder; recorder = null;
+        if (r == null) return;
+        try { java.io.File f = r.stop(); if (f != null) { history("rec", "\uD83C\uDFA7 Recorded " + f.getName()); } } catch (Throwable t) { log("record stop: " + t); }
+    }
+
+    // ---- modes ----------------------------------------------------------------------------------------
+
+    public boolean softSqOn() { return softSq.isEnabled(); }
+    public int softSqLevel() { return softSq.level(); }
+    public boolean monitorOn() { return monitorOn; }
+    public boolean recordOn() { return recordOn; }
+    public boolean scanning() { return scanner.isScanning(); }
+    public boolean scanHolding() { return scanner.isHolding(); }
+
+    private void pushModes() {
+        final String zn = zoneName();
+        ui.post(() -> { for (Listener l : listeners) l.onModes(softSq.isEnabled(), softSq.level(), squelchOpen, monitorOn, recordOn, scanner.isScanning(), scanner.isHolding(), zn); });
+    }
+
+    /** Soft SQ on/off for the current analog channel (persisted per channel); the radio's squelch is already open. */
+    public void setSoftSq(boolean on) {
+        ChannelStore.Channel ch = current; if (ch == null || ch.isDigital()) return;
+        ch.softSq = on; store.update(ch);
+        softSq.configure(on, ch.softSqLevel, ch.rxType, ch.rxSubCode);
+        if (!on) squelchOpen = true;
+        pushModes();
+    }
+
+    public void setSoftSqLevel(int level) {
+        ChannelStore.Channel ch = current; if (ch == null) return;
+        ch.softSqLevel = level; store.update(ch);
+        softSq.configure(ch.softSq, level, ch.rxType, ch.rxSubCode);
+        pushModes();
+    }
+
+    public void setMonitor(final boolean on) {
+        monitorOn = on;
+        worker.execute(() -> { try { engine.setMonitor(on); } catch (IOException e) { log("monitor: " + e); } });
+        pushModes();
+    }
+
+    public void setRecord(boolean on) { recordOn = on; if (!on) finishRecording(); pushModes(); }
+
+    public String toggleScan() {
+        if (scanner.isScanning()) { scanner.stop(); return "Scan stopped"; }
+        String err = scanner.start(); pushModes();
+        return err == null ? "Scanning " + zoneName() : err;
+    }
+    public String skipScanChannel() { return scanner.skipCurrent(); }
+
+    public long zoneId() { return zoneId; }
+    public String zoneName() { if (zoneId <= 0) return "ALL"; ChannelStore.Zone z = store.zone(zoneId); return z == null ? "ALL" : z.name; }
+    public void setZone(long id) { zoneId = id; getSharedPreferences("radio", MODE_PRIVATE).edit().putLong("zone", id).apply(); pushModes(); }
+    /** Channels in the selected zone, in channel order (all channels when no zone is selected). */
+    public java.util.List<ChannelStore.Channel> zoneChannels() {
+        java.util.List<ChannelStore.Channel> all = store.all();
+        if (zoneId <= 0) return all;
+        ChannelStore.Zone z = store.zone(zoneId); if (z == null) return all;
+        java.util.Set<Integer> in = new java.util.HashSet<>(); for (int n : z.numbers) in.add(n);
+        java.util.List<ChannelStore.Channel> out = new java.util.ArrayList<>(); for (ChannelStore.Channel ch : all) if (in.contains(ch.number)) out.add(ch);
+        return out;
     }
 
     // ---- channel ------------------------------------------------------------------------------------
@@ -157,9 +249,11 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     public void stepChannel(int delta) {
         if (current == null || pttDown) return;
-        int n = store.count(); if (n == 0) return;
-        int next = ((current.number - 1 + delta) % n + n) % n + 1;
-        selectChannel(next);
+        if (scanner.isScanning()) scanner.stop();
+        java.util.List<ChannelStore.Channel> list = zoneChannels(); if (list.isEmpty()) return;
+        int pos = -1; for (int i = 0; i < list.size(); i++) if (list.get(i).number == current.number) pos = i;
+        int next = ((pos + delta) % list.size() + list.size()) % list.size();
+        selectChannel(list.get(next).number);
     }
 
     public void selectChannel(final int number) { worker.execute(() -> selectChannelNow(number)); }
@@ -175,8 +269,12 @@ public class RadioService extends Service implements RadioEngine.Events {
                 int band = ch.rxFreq < 300_000_000 ? 1 : ch.band;      // VHF must be band=1 (band=0 deafens the RX)
                 engine.setAnalog(ch.rxFreq, ch.txFreq, band, ch.power, 0 /* soft squelch in software */, ch.rxType, ch.rxSubCode, ch.txType, ch.txSubCode, 8, 2);
             }
+            finishRecording();
             current = ch; store.setActive(number);
+            softSq.configure(!ch.isDigital() && ch.softSq, ch.softSqLevel, ch.rxType, ch.rxSubCode);
+            squelchOpen = true;
             ui.post(() -> { for (Listener l : listeners) l.onChannel(ch); });
+            pushModes();
             describeLocation(ch);
             updateNotification();
         } catch (IOException e) { log("select: " + e); }
@@ -296,7 +394,7 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     // ---- listeners ----------------------------------------------------------------------------------
 
-    public void addListener(Listener l) { listeners.add(l); l.onLink(link); if (current != null) l.onChannel(current); }
+    public void addListener(Listener l) { listeners.add(l); l.onLink(link); if (current != null) l.onChannel(current); l.onModes(softSq.isEnabled(), softSq.level(), squelchOpen, monitorOn, recordOn, scanner.isScanning(), scanner.isHolding(), zoneName()); }
     public void removeListener(Listener l) { listeners.remove(l); }
 
     private void setLink(String s) { link = s; ui.post(() -> { for (Listener l : listeners) l.onLink(s); }); updateNotification(); }
@@ -319,6 +417,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                 receiving = false; long len = rxStart > 0 ? System.currentTimeMillis() - rxStart : 0; rxStart = 0;
                 if (current != null && current.isDigital()) { try { engine.queryCallerInfo(); } catch (IOException ignored) { } }   // who was that (0x2B)
                 if (current != null && !current.isDigital() && len >= 700) history("rx", "📻 Received " + Math.round(len / 1000.0) + " s");
+                finishRecording();
                 ui.post(() -> { for (Listener l : listeners) l.onRx(false); });
                 break;
             }
