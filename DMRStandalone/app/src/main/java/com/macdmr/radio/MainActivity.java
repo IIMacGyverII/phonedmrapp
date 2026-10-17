@@ -32,6 +32,8 @@ public class MainActivity extends AppCompatActivity {
     private DiagnosticsView diagnostics;
     private com.macdmr.radio.ui.ChannelsView channels;
     private com.macdmr.radio.ui.ContactsView contacts;
+    private com.macdmr.radio.ui.DeviceView device;
+    private View overlay;
     private com.macdmr.radio.ui.MessagesView messages;
     private View editor;
     private RadioService svc;
@@ -46,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
     private final ServiceConnection conn = new ServiceConnection() {
         @Override public void onServiceConnected(ComponentName n, IBinder b) {
             svc = ((RadioService.LocalBinder) b).get();
-            intercom.attach(svc); diagnostics.attach(svc); channels.attach(svc); contacts.attach(svc); messages.attach(svc);
+            intercom.attach(svc); diagnostics.attach(svc); channels.attach(svc); contacts.attach(svc); messages.attach(svc); device.attach(svc);
             if (!svc.isReady()) svc.bringUp();
             ui.post(rssiTick);
         }
@@ -76,6 +78,11 @@ public class MainActivity extends AppCompatActivity {
 
         intercom = new IntercomView(this);
         diagnostics = new DiagnosticsView(this);
+        device = new com.macdmr.radio.ui.DeviceView(this);
+        device.setHost(new com.macdmr.radio.ui.DeviceView.Host() {
+            @Override public void openHelp() { showOverlay(new com.macdmr.radio.ui.HelpView(MainActivity.this, MainActivity.this::closeOverlay)); }
+            @Override public void openDiagnostics() { showOverlay(diagnostics); }
+        });
         contacts = new com.macdmr.radio.ui.ContactsView(this);
         messages = new com.macdmr.radio.ui.MessagesView(this);
         contacts.setHost(ct -> { show(3); messages.openThread(ct); });
@@ -107,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
             case 1: v = channels; channels.reload(); break;
             case 2: v = contacts; contacts.reload(); break;
             case 3: v = messages; messages.reload(); break;
-            case 4: v = diagnostics; break;
+            case 4: v = device; break;
             default: v = placeholder(tabNames[idx]);
         }
         content.addView(v, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
@@ -123,7 +130,11 @@ public class MainActivity extends AppCompatActivity {
         TextView t = Theme.label(this, name + "\n\ncoming next", 0xFF8A7FB0, 18, false); t.setGravity(Gravity.CENTER); return t;
     }
 
+    private void showOverlay(View v) { closeOverlay(); overlay = v; content.addView(v, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)); }
+    private void closeOverlay() { if (overlay != null) { content.removeView(overlay); overlay = null; } }
+
     @Override public void onBackPressed() {
+        if (overlay != null) { closeOverlay(); return; }
         if (editor != null) { content.removeView(editor); editor = null; return; }
         if (tab == 3 && messages.back()) return;
         if (tab != 0) { show(0); return; }

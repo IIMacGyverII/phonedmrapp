@@ -158,7 +158,9 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         bottom.addView(pkt, sat(d, 76, Gravity.END, 16, 112));
         LayoutParams btl = new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f); btl.topMargin = dp4;
         addView(bottom, btl);
-        for (NeonToggle t : new NeonToggle[] { softSq, txt, vfo, rec, mon, pkt }) t.setOnClickListener(v -> t.toggle());
+        // Mode satellites: wired up feature by feature; until a mode exists it says so instead of pretending to toggle.
+        for (NeonToggle t : new NeonToggle[] { softSq, txt, vfo, rec, mon, pkt })
+            t.setOnClickListener(v -> android.widget.Toast.makeText(c, t.labelText() + " is not in this build yet", android.widget.Toast.LENGTH_SHORT).show());
         ptt.setListener(down -> { if (svc != null) svc.ptt(down); });
     }
 

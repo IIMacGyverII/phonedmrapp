@@ -49,6 +49,20 @@ public final class RootSetup {
         return run("magiskpolicy --live --apply " + f.getAbsolutePath());
     }
 
+    /**
+     * Persist the profile's policy lines as a Magisk module (/data/adb/modules/dmr-standalone/sepolicy.rule):
+     * Magisk applies them at every boot, so the app can take the radio without a live patch.
+     */
+    public static String installBootModule(DeviceProfile p) {
+        if (!haveRoot()) return "Root is not granted.";
+        StringBuilder rules = new StringBuilder();
+        for (String l : p.sepolicy) rules.append(l).append("\n");
+        String dir = "/data/adb/modules/dmr-standalone";
+        String prop = "id=dmr-standalone\nname=DMR Radio access\nversion=v1\nversionCode=1\nauthor=DMR Radio app\ndescription=Lets the DMR Radio app open the radio module's serial port and GPIO lines (" + p.name + ").\n";
+        String r = run("mkdir -p " + dir + " && printf '%s' '" + prop.replace("'", "'\\''") + "' > " + dir + "/module.prop && printf '%s' '" + rules.toString().replace("'", "'\\''") + "' > " + dir + "/sepolicy.rule && chmod 644 " + dir + "/module.prop " + dir + "/sepolicy.rule && ls " + dir);
+        return r.contains("sepolicy.rule") ? "Installed. The rules will be applied at every boot from now on (Magisk \u2192 Modules shows \"DMR Radio access\")." : "Could not write the module: " + r;
+    }
+
     public static String ensureTty(DeviceProfile p) {
         String s = run("stty -F " + p.controlPort + " " + p.baud + " raw -echo -echoe -echok -echoctl -echoke");
         if (p.pcmPort != null) s += "\n" + run("stty -F " + p.pcmPort + " " + p.pcmBaud + " raw -echo");

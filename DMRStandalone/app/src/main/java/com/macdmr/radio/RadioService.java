@@ -242,6 +242,15 @@ public class RadioService extends Service implements RadioEngine.Events {
         if (!isNew && current != null && current.id == ch.id) selectChannel(ch.number);
     }
 
+    public void setLocalId(int id) { getSharedPreferences("radio", MODE_PRIVATE).edit().putInt("dmrId", id).apply(); if (current != null && current.isDigital()) selectChannel(current.number); }
+
+    public String reimportFromStock() {
+        StringBuilder err = new StringBuilder();
+        int n = store.importFromStock(this, profile.stockApp, "default_uhf", err);
+        if (n >= 0) { int keep = store.activeNumber(); selectChannel(keep); }
+        return n >= 0 ? "Imported " + n + " channels" + (err.length() > 0 ? " (" + err + ")" : "") : "Import failed: " + err;
+    }
+
     public int localId() { return getSharedPreferences("radio", MODE_PRIVATE).getInt("dmrId", 1); }
 
     // ---- PTT ----------------------------------------------------------------------------------------

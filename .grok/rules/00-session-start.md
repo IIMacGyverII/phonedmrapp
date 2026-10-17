@@ -153,5 +153,6 @@ backlog N8). Rules from the owner:
 - **Generated images, icons and graphics** (app icon, button glyphs, panel art) — produce them, don't fall back to defaults.
 - These need not be done first, but they must be done, and **it is usually best to do them as we go**: ship each screen in its final visual form.
 - **Preserve the current intercom page.** Almost all of the DMRModHooks intercom page is ours (`CircuitBoardView`, neon channel digits, Signal/SCAN/ZONE row, Soft SQ slider, history + transcription boxes, VU bars, round PTT with the SOFT SQ/TXT/VFO/REC/MON/PKT satellites) — port it as-is and keep its look.
+- **Do it right the first time, and better than it was** (owner, 2026-10-17): this is a fresh app, not a port of the module's compromises. No placeholder screens, no "fix later" shortcuts, no copying a hook-era workaround when a proper design exists; where the module cut a corner (hard-coded area, single-file side tables, text-only dialogs, unverified assumptions), the standalone app does the proper thing.
 - Architecture: one `RadioEngine` (protocol, shared) + `DeviceProfile` per phone (control port, audio backend TinyService/UART-PCM, sysfs GPIOs, PTT broadcasts, sepolicy lines). Enum bytes to the MCU are 1 = on / 2 = off (0 is NAKed).
 - Root is required (Magisk sepolicy rules); the stock app must be disabled while the standalone app owns the UART.
