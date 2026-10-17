@@ -51,6 +51,10 @@ public class RadioService extends Service implements RadioEngine.Events {
     private volatile long rxStart;
     private volatile int lastCaller, lastCallType, lastTarget;
     private String link = "stopped";
+    /** Every MCU/audio action runs here, in order — a PTT release can never overtake its press. */
+    private final java.util.concurrent.ExecutorService worker = java.util.concurrent.Executors.newSingleThreadExecutor(r -> new Thread(r, "radio-worker"));
+    private volatile boolean pttDown;
+    private final Runnable txWatchdog = () -> { if (pttDown) { log("TX watchdog: releasing PTT after 28 s"); ptt(false); } };
 
     @Override public void onCreate() {
         super.onCreate();
@@ -64,8 +68,10 @@ public class RadioService extends Service implements RadioEngine.Events {
     @Override public int onStartCommand(Intent i, int f, int id) { return START_STICKY; }
 
     @Override public void onDestroy() {
+        try { if (pttDown) { if (audio != null) audio.stopTx(); engine.ptt(false); } } catch (Throwable ignored) { }
         try { if (audio != null) { audio.stopRx(); } } catch (Throwable ignored) { }
         engine.close();
+        worker.shutdownNow();
         super.onDestroy();
     }
 
@@ -77,8 +83,15 @@ public class RadioService extends Service implements RadioEngine.Events {
             try {
                 setLink("root");
                 boolean root = RootSetup.haveRoot();
-                if (!root) log("No root (Magisk) granted — trying the UART anyway (works if the policy rules are already live)");
-                else {
+                if (!root) {
+                    boolean stockRunning = !RootSetup.run("pidof " + profile.stockApp).trim().replaceAll("[^0-9]", "").isEmpty();
+                    if (stockRunning || !new java.io.File(profile.controlPort).canRead()) {
+                        setLink("no root");
+                        log("Root was not granted. Open the Magisk app → Superuser → allow \"DMR Radio\", then tap Bring radio up. (Without root the stock app keeps the radio and the UART stays locked.)");
+                        return;
+                    }
+                    log("No root granted, but the UART is reachable and the stock app is not running — continuing");
+                } else {
                     log("sepolicy: " + RootSetup.applySepolicy(getFilesDir(), profile));
                     RootSetup.ensureTty(profile);
                     if (RootSetup.stockAppEnabled(profile)) { log("stock app off: " + RootSetup.stockApp(profile, false)); Thread.sleep(1500); }
@@ -132,13 +145,15 @@ public class RadioService extends Service implements RadioEngine.Events {
     public boolean isReady() { return "ready".equals(link); }
 
     public void stepChannel(int delta) {
-        if (current == null) return;
+        if (current == null || pttDown) return;
         int n = store.count(); if (n == 0) return;
         int next = ((current.number - 1 + delta) % n + n) % n + 1;
         selectChannel(next);
     }
 
-    public synchronized void selectChannel(int number) {
+    public void selectChannel(final int number) { worker.execute(() -> selectChannelNow(number)); }
+
+    private synchronized void selectChannelNow(int number) {
         ChannelStore.Channel ch = store.byNumber(number);
         if (ch == null) { log("no channel " + number); return; }
         try {
@@ -159,13 +174,34 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     // ---- PTT ----------------------------------------------------------------------------------------
 
-    public void ptt(boolean down) {
-        new Thread(() -> {
+    public boolean txInhibited() {
+        ChannelStore.Channel ch = current;
+        if (ch == null) return true;
+        int f = ch.txFreq;
+        return f >= 162_400_000 && f <= 162_550_000;      // NOAA weather channels are receive-only
+    }
+
+    public void ptt(final boolean down) {
+        worker.execute(() -> {
             try {
-                if (down) { engine.ptt(true); if (audio != null) log(audio.startTx()); }
-                else { if (audio != null) audio.stopTx(); engine.ptt(false); }
-            } catch (Throwable t) { log("ptt: " + t); }
-        }, "ptt").start();
+                if (down) {
+                    if (!isReady()) { log("PTT ignored: radio not ready"); return; }
+                    if (txInhibited()) { log("PTT blocked: receive-only channel"); ui.post(() -> { for (Listener l : listeners) l.onHistory("⛔ TX blocked on a receive-only channel"); }); return; }
+                    if (pttDown) return;
+                    pttDown = true;
+                    if (audio != null) audio.stopRx();              // never play the RX stream while the mic is live (feedback)
+                    engine.ptt(true);
+                    if (audio != null) log(audio.startTx());
+                    ui.removeCallbacks(txWatchdog); ui.postDelayed(txWatchdog, 28000);
+                } else {
+                    if (!pttDown) return;
+                    pttDown = false;
+                    ui.removeCallbacks(txWatchdog);
+                    try { if (audio != null) audio.stopTx(); } finally { engine.ptt(false); }
+                    if (rxAudioOn && audio != null) audio.startRx(true);
+                }
+            } catch (Throwable t) { log("ptt: " + t); try { engine.ptt(false); } catch (Throwable ignored) { } pttDown = false; }
+        });
     }
 
     public void pollRssi() { try { if (engine.isOpen()) engine.queryRssi(); } catch (IOException ignored) { } }

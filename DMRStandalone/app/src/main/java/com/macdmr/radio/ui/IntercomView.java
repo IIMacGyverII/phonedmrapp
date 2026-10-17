@@ -135,7 +135,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         addView(bottom, new LayoutParams(LayoutParams.MATCH_PARENT, (int) (196 * d)));
         for (NeonToggle t : new NeonToggle[] { softSq, txt, vfo, rec, mon, pkt }) t.setOnClickListener(v -> t.toggle());
 
-        ptt.setListener(down -> { if (svc != null) svc.ptt(down); ptt.setState(down ? PttButton.State.TX : PttButton.State.IDLE); });
+        ptt.setListener(down -> { if (svc != null) svc.ptt(down); });
     }
 
     public void attach(RadioService s) { svc = s; s.addListener(this); }
@@ -144,7 +144,9 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     private void refreshHeadline() {
         if (tx) { headline.setText("🔴 Transmitting"); headline.setTextColor(Theme.RED); }
         else if (rx) { headline.setText("📻 Receiving..."); headline.setTextColor(Theme.GREEN); }
+        else if (svc != null && "no root".equals(svc.link())) { headline.setText("🔒 Root needed — allow in Magisk, then Device → Bring radio up"); headline.setTextColor(Theme.AMBER); }
         else { headline.setText(svc != null && svc.isReady() ? "📻 Ready" : "⏳ " + (svc != null ? svc.link() : "")); headline.setTextColor(rx ? Theme.GREEN : Theme.CYAN2); }
+        ptt.setState(tx ? PttButton.State.TX : (svc != null && svc.isReady() && svc.txInhibited() ? PttButton.State.BUSY : PttButton.State.IDLE));
         board.isReceiving = rx;
     }
 
@@ -157,6 +159,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         squelch.setText(ch.isDigital() ? "Color Code:" + ch.cc : "Squelch Level:" + ch.sq);
         send.setText("Send:" + ch.freqText(ch.txFreq)); receive.setText("Receive:" + ch.freqText(ch.rxFreq));
         location.setText(ch.location == null ? "" : ch.location);
+        refreshHeadline();
         history.clear();
         for (String l : svc.store().recentHistory(ch.number, 3)) history.addLast(l);
         renderHistory();
