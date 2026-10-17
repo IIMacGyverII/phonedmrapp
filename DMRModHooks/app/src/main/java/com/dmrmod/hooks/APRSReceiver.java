@@ -50,6 +50,16 @@ public class APRSReceiver {
             APRSReceivedDatabase db = APRSReceivedDatabase.getInstance(context);
             
             for (byte[] packet : packets) {
+                // The decode windows overlap by 1 s, so a frame can be decoded twice; identical
+                // bytes within 2 s are the same frame (digipeated copies differ in their path bits).
+                if (isRecentDuplicate(packet)) {
+                    XposedBridge.log(TAG + ": duplicate frame from overlapping window — skipped");
+                    continue;
+                }
+
+                // KISS TNC RX: every FCS-valid AX.25 frame goes to the connected client (not only APRS)
+                MainHook.kissDeliverFrame(packet);
+
                 APRSPacketDecoder.APRSPacket aprsPacket = APRSPacketDecoder.decode(packet);
                 
                 if (aprsPacket.isValid) {
@@ -69,6 +79,19 @@ public class APRSReceiver {
         }
     }
     
+    private static final java.util.LinkedList<Object[]> recentFrames = new java.util.LinkedList<>();
+
+    /** True if a byte-identical frame was already seen in the last 2 s (overlap duplicate). */
+    private static synchronized boolean isRecentDuplicate(byte[] frame) {
+        long now = System.currentTimeMillis();
+        while (!recentFrames.isEmpty() && now - (Long) recentFrames.getFirst()[1] > 2000) recentFrames.removeFirst();
+        for (Object[] e : recentFrames) {
+            if (java.util.Arrays.equals((byte[]) e[0], frame)) return true;
+        }
+        recentFrames.addLast(new Object[]{ frame.clone(), now });
+        return false;
+    }
+
     /**
      * Show notification for received station
      */

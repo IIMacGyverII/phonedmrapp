@@ -203,6 +203,9 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile int beaconFreqHz = 144390000;
     // KISS TNC (feature #3): a KISS-over-TCP server so APRSdroid/YAAC can drive the radio as a TNC (TX side).
     private static volatile boolean kissActive = false;
+    /** Output stream of the connected KISS client (one at a time); received AX.25 frames go here. */
+    private static volatile java.io.OutputStream kissClientOut = null;
+    private static volatile int kissRxFrames = 0;
     private static volatile int kissPort = 8001;
     private static java.net.ServerSocket kissServerSocket = null;
     private static volatile boolean kissTunedForSession = false;  // restore the channel on stop
@@ -240,6 +243,9 @@ public class MainHook implements IXposedHookLoadPackage {
     // APRS receive state
     private static List<Short> aprsAudioBuffer = Collections.synchronizedList(new ArrayList<>());
     private static final int APRS_BUFFER_SIZE = 32000; // 2 seconds at 16kHz (DMR radio sample rate)
+    private static final int APRS_OVERLAP_SAMPLES = 16000; // 1 s carried into the next decode window
+    private static short[] aprsOverlapTail = null;
+    private static long aprsLastProcessMs = 0;
     private static Object mLocalViewObject = null; // Store for context access
     private static android.widget.ToggleButton transcriptionToggleButton = null;
 
@@ -482,6 +488,17 @@ public class MainHook implements IXposedHookLoadPackage {
     private static android.widget.Button noaaColorModeButton = null;
     private static long noaaSignalStartTime = 0;   // ms since epoch when first line decoded
     private static java.util.HashMap<String, Object> noaaChannelBackup = null;
+    // NOAA Doppler tracking (prefs dmrmod_noaa_global/noaa_doppler, default on): during a predicted
+    // pass the radio is re-tuned in 2.5 kHz steps to follow the predicted shift (±3.4 kHz over a
+    // pass at 137 MHz). Measured 2026-10-17 (HackRF bench): a 3 kHz offset drops the decode
+    // correlation 0.94 → 0.84, a retune costs ~1.2 s of audio (RECEIVE_STOP→START).
+    private static final int    NOAA_DOPPLER_STEP_HZ = 2500;
+    private static volatile boolean noaaDopplerEnabled = true;
+    private static android.os.Handler noaaDopplerHandler = null;
+    private static Runnable noaaDopplerRunnable = null;
+    private static int    noaaBaseFreqHz = 0;
+    private static int    noaaAppliedOffsetHz = 0;
+    private static volatile String noaaDopplerStatus = "";
 
     // Analog-specific settings
     private static int vfoRxToneType = 0;  // 0=None, 1=CTCSS, 2=FDCS, 3=BDCS
@@ -5327,7 +5344,7 @@ public class MainHook implements IXposedHookLoadPackage {
 
         // === KISS TNC (TX) BUTTON ===
         Button aprsKissBtn = new Button(activity);
-        aprsKissBtn.setText("🔌 KISS TNC (TX)");
+        aprsKissBtn.setText("🔌 KISS TNC (TX + RX)");
         aprsKissBtn.setTextSize(15);
         aprsKissBtn.setAllCaps(false);
         aprsKissBtn.setPadding(20, 20, 20, 20);
@@ -7980,9 +7997,12 @@ public class MainHook implements IXposedHookLoadPackage {
             + "continuously on VHF.\n\n"
             + "Current frequency: " + freq + " MHz\n\n"
             + "Satellites:\n"
-            + "\u2022 NOAA-19  137.100 MHz (default, most active)\n"
+            + "\u2022 NOAA-19  137.100 MHz\n"
             + "\u2022 NOAA-15  137.620 MHz\n"
             + "\u2022 NOAA-18  137.9125 MHz\n\n"
+            + "\u26A0 NOAA decommissioned all three in 2025 (NOAA-18 Jun 6, NOAA-19 Aug 13, "
+            + "NOAA-15 Aug 19) and switched their transmitters off, so no APT signal is on the air "
+            + "unless one is re-activated. This mode still decodes any APT-format signal.\n\n"
             + "Images update every ~15 seconds (30 scan lines).\n"
             + "A complete pass takes ~15 minutes (1800 lines).\n\n"
             + "Press \u2018Start Monitoring\u2019 to begin.");
@@ -8036,6 +8056,18 @@ public class MainHook implements IXposedHookLoadPackage {
         settingsBtn.setOnClickListener(v -> showNOAASettingsDialog(activity, null));
         receivedBtn.setOnClickListener(v -> showNOAAReceivedImagesDialog(activity));
         passesBtn.setOnClickListener(v -> showNOAANextPassesDialog(activity));
+
+        // Doppler tracking option
+        final android.widget.CheckBox dopplerBox = new android.widget.CheckBox(activity);
+        dopplerBox.setText("Doppler tracking (auto-retune in 2.5 kHz steps during the predicted pass)");
+        dopplerBox.setTextSize(13);
+        dopplerBox.setChecked(prefs.getBoolean("noaa_doppler", true));
+        LinearLayout.LayoutParams dopParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        dopParams.topMargin = 16;
+        dopplerBox.setLayoutParams(dopParams);
+        dopplerBox.setOnCheckedChangeListener((b, checked) -> prefs.edit().putBoolean("noaa_doppler", checked).apply());
+        layout.addView(dopplerBox);
 
         builder.setView(layout);
         builder.setPositiveButton("Start Monitoring", (d, w) -> {
@@ -8304,7 +8336,8 @@ public class MainHook implements IXposedHookLoadPackage {
             if (noaaProgressText != null) {
                 int lines = noaaReceiver.getDecodedLines();
                 noaaProgressText.setText(noaaReceiver.getStatus()
-                    + (lines > 0 ? "  (" + lines + " lines \u2248 " + (lines / 2) + " sec)" : ""));
+                    + (lines > 0 ? "  (" + lines + " lines \u2248 " + (lines / 2) + " sec)" : "")
+                    + (noaaDopplerStatus.isEmpty() ? "" : "\n" + noaaDopplerStatus));
             }
             if (noaaLiveImageView != null) {
                 Bitmap snap = noaaReceiver.getLiveBitmap();
@@ -8657,8 +8690,15 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.setIntField(channel, "txType", 0);
             XposedHelpers.setIntField(channel, "txSubCode", 0);
 
-            XposedHelpers.callMethod(dmrManager, "updateChannel", channel);
+            // Hardware ONLY (no updateChannel): same reasoning as SSTV — persisting the hijack to the
+            // channel DB leaves the user's channel clobbered if the restore is ever skipped. The
+            // in-memory override reverts on the next channel reload.
             XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", channel);
+
+            noaaBaseFreqHz = freqHz;
+            noaaAppliedOffsetHz = 0;
+            noaaDopplerEnabled = prefs.getBoolean("noaa_doppler", true);
+            startNoaaDopplerTracking(activity);
 
             // Init NOAA receiver
             noaaReceiver = NOAAReceiver.getInstance(activity);
@@ -8732,6 +8772,7 @@ public class MainHook implements IXposedHookLoadPackage {
             noaaUpdateRunnable = null;
 
             isNOAAMonitoringActive = false;
+            stopNoaaDopplerTracking();
 
             if (isSoftwareSquelchEnabled) {
                 isSoftwareSquelchEnabled = false;
@@ -8746,6 +8787,76 @@ public class MainHook implements IXposedHookLoadPackage {
         } catch (Exception e) {
             XposedBridge.log(TAG + ": Error stopping NOAA monitoring: " + e.getMessage());
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // NOAA Doppler tracking
+    // -----------------------------------------------------------------------
+
+    /**
+     * Every 5 s predict the Doppler shift of the satellite on the monitored frequency (needs a last
+     * known location); when the shift crosses into another 2.5 kHz step, re-tune the radio
+     * (hardware-only) to nominal + step. Outside a pass (satellite below the horizon) the radio sits
+     * on the nominal frequency. The decoder re-syncs after the ~1.2 s audio gap a retune causes.
+     */
+    private void startNoaaDopplerTracking(final Activity activity) {
+        stopNoaaDopplerTracking();
+        if (!noaaDopplerEnabled) { noaaDopplerStatus = ""; return; }
+        final android.location.Location loc = SatellitePassPredictor.getLastLocation(activity);
+        if (loc == null) {
+            noaaDopplerStatus = "Doppler: no location fix \u2014 tracking off";
+            XposedBridge.log(TAG + ": [noaa-doppler] no location, tracking disabled");
+            return;
+        }
+        final String satName = SatellitePassPredictor.satelliteForFrequency(noaaBaseFreqHz);
+        if (satName == null) {
+            noaaDopplerStatus = "Doppler: no NOAA satellite on " + (noaaBaseFreqHz / 1e6) + " MHz";
+            return;
+        }
+        noaaDopplerStatus = "Doppler: " + satName + " \u2014 waiting for pass";
+        // refresh the orbital elements in the background (fallback TLEs age; the tracker keeps
+        // running on whatever is loaded and picks up the fresh set on its next tick)
+        new Thread(new Runnable() { @Override public void run() {
+            try { SatellitePassPredictor.fetchFreshTles(); } catch (Throwable ignored) { }
+        } }, "dmrmod-tle-refresh").start();
+        noaaDopplerHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+        noaaDopplerRunnable = new Runnable() {
+            @Override public void run() {
+                if (!isNOAAMonitoringActive) return;
+                try {
+                    double shift = SatellitePassPredictor.dopplerHz(noaaBaseFreqHz, loc.getLatitude(),
+                            loc.getLongitude(), loc.getAltitude(), System.currentTimeMillis());
+                    int step = (int) Math.round(shift / NOAA_DOPPLER_STEP_HZ) * NOAA_DOPPLER_STEP_HZ;
+                    if (shift == 0) {
+                        noaaDopplerStatus = "Doppler: " + satName + " below horizon \u2014 on nominal";
+                    } else {
+                        noaaDopplerStatus = String.format(java.util.Locale.US,
+                            "Doppler: %s %+.1f kHz \u2192 tuned %+.1f kHz", satName, shift / 1000.0, step / 1000.0);
+                    }
+                    if (step != noaaAppliedOffsetHz) {
+                        noaaAppliedOffsetHz = step;
+                        XposedBridge.log(TAG + ": [noaa-doppler] " + satName + " predicted "
+                            + String.format(java.util.Locale.US, "%+.0f", shift) + " Hz -> retune "
+                            + ((noaaBaseFreqHz + step) / 1e6) + " MHz");
+                        tuneCurrentChannelAnalog(noaaBaseFreqHz + step, 1);
+                    }
+                } catch (Throwable t) {
+                    XposedBridge.log(TAG + ": [noaa-doppler] " + t.getMessage());
+                }
+                if (noaaDopplerHandler != null) noaaDopplerHandler.postDelayed(this, 5000);
+            }
+        };
+        noaaDopplerHandler.postDelayed(noaaDopplerRunnable, 2000);
+    }
+
+    private static void stopNoaaDopplerTracking() {
+        if (noaaDopplerHandler != null && noaaDopplerRunnable != null) {
+            noaaDopplerHandler.removeCallbacks(noaaDopplerRunnable);
+        }
+        noaaDopplerHandler = null;
+        noaaDopplerRunnable = null;
+        noaaDopplerStatus = "";
+        noaaAppliedOffsetHz = 0;
     }
 
     // -----------------------------------------------------------------------
@@ -8809,7 +8920,7 @@ public class MainHook implements IXposedHookLoadPackage {
             Object tt = noaaChannelBackup.get("txType");    if (tt != null) XposedHelpers.setIntField(ch, "txType",    (Integer) tt);
             Object ts = noaaChannelBackup.get("txSubCode"); if (ts != null) XposedHelpers.setIntField(ch, "txSubCode", (Integer) ts);
             try {
-                XposedHelpers.callMethod(mgr, "updateChannel", ch);
+                // hardware-only (no updateChannel): the hijack never wrote the DB
                 XposedHelpers.callMethod(mgr, "syncChannelInfoWithData", ch);
             } catch (Throwable t) {
                 XposedBridge.log(TAG + ": NOAA restore sync warning: " + t.getMessage());
@@ -10744,7 +10855,7 @@ public class MainHook implements IXposedHookLoadPackage {
                         byte[] processingAudio = (originalAudio != null) ? originalAudio : audioData;
                         
                         // Buffer audio for APRS decoding (only if monitoring is active)
-                        if (isAPRSMonitoringActive) {
+                        if (isAPRSMonitoringActive || kissActive) {
                             bufferAudioForAPRS(processingAudio, length);
                         }
                         
@@ -11769,11 +11880,22 @@ public class MainHook implements IXposedHookLoadPackage {
         try {
             XposedBridge.log(TAG + ": Processing APRS buffer (" + aprsAudioBuffer.size() + " samples)");
             
-            // Convert List<Short> to short array
-            short[] audioSamples = new short[aprsAudioBuffer.size()];
-            for (int i = 0; i < audioSamples.length; i++) {
-                audioSamples[i] = aprsAudioBuffer.get(i);
-            }
+            // Convert List<Short> to short array, prepending the last 1 s of the previous buffer so
+            // a frame that straddles the 2 s chunk boundary is whole in one of the two windows
+            // (APRSReceiver drops the duplicate when a frame lands in both). A stale tail (gap of
+            // more than 5 s since the last window) is discarded.
+            long nowMs = System.currentTimeMillis();
+            if (nowMs - aprsLastProcessMs > 5000) aprsOverlapTail = null;
+            aprsLastProcessMs = nowMs;
+            int cur = aprsAudioBuffer.size();
+            short[] tail = aprsOverlapTail;
+            int tailLen = tail != null ? tail.length : 0;
+            short[] audioSamples = new short[tailLen + cur];
+            if (tailLen > 0) System.arraycopy(tail, 0, audioSamples, 0, tailLen);
+            for (int i = 0; i < cur; i++) audioSamples[tailLen + i] = aprsAudioBuffer.get(i);
+            int keep = Math.min(cur, APRS_OVERLAP_SAMPLES);
+            aprsOverlapTail = new short[keep];
+            System.arraycopy(audioSamples, audioSamples.length - keep, aprsOverlapTail, 0, keep);
             
             // ★ RESAMPLE 16kHz → 48kHz (DMR radio audio is 16kHz, APRS decoder expects 48kHz)
             short[] resampled = resample16to48(audioSamples);
@@ -11794,6 +11916,7 @@ public class MainHook implements IXposedHookLoadPackage {
                         if (mLocalViewObject instanceof View) {
                             context = ((View) mLocalViewObject).getContext();
                         }
+                        if (context == null && homeActivityRef != null) context = homeActivityRef.get();
                         
                         if (context != null) {
                             APRSReceiver receiver = APRSReceiver.getInstance(context);
@@ -12785,12 +12908,14 @@ public class MainHook implements IXposedHookLoadPackage {
             }
             String mode = intent.getStringExtra("mode");
             if (mode == null) mode = "tone1200";
+            // Bench tests default to LOW power (the HackRF sits next to the radio); --ei power 1 for high.
+            final int diagPower = intent.getIntExtra("power", 0);
 
             // mode=tune: retune the CURRENT channel to an analog frequency (for on-air TX testing).
             // adb shell am broadcast -a com.dmrmod.APRS_TX_TEST --es mode tune --ei freqhz 144390000
             if ("tune".equalsIgnoreCase(mode)) {
                 int freqHz = intent.getIntExtra("freqhz", 144390000);
-                tuneCurrentChannelAnalog(freqHz);
+                tuneCurrentChannelAnalog(freqHz, diagPower);
                 return;
             }
 
@@ -12835,6 +12960,53 @@ public class MainHook implements IXposedHookLoadPackage {
                 return;
             }
 
+            // mode=doppler [--ef lat --ef lon] [--ei freqhz]: log the predicted Doppler profile of the
+            // next pass on freqhz (AOS..LOS every 60 s) — validates the predictor's range-rate math.
+            if ("doppler".equalsIgnoreCase(mode)) {
+                final double lat = intent.getFloatExtra("lat", 38.0f), lon = intent.getFloatExtra("lon", -97.0f);
+                final int fhz = intent.getIntExtra("freqhz", 137100000);
+                new Thread(new Runnable() { @Override public void run() {
+                    try {
+                        java.util.List<SatellitePassPredictor.Pass> passes = SatellitePassPredictor.findPasses(lat, lon, 300, 2, 5);
+                        String want = SatellitePassPredictor.satelliteForFrequency(fhz);
+                        XposedBridge.log(TAG + ": [doppler] sat for " + fhz + " = " + want + ", passes=" + passes.size());
+                        for (SatellitePassPredictor.Pass p : passes) {
+                            if (want != null && !want.equals(p.name)) continue;
+                            XposedBridge.log(TAG + ": [doppler] pass " + p.getSummaryLine() + " AOS " + new java.util.Date(p.aosMs));
+                            for (long t = p.aosMs; t <= p.losMs; t += 60000) {
+                                double sh = SatellitePassPredictor.dopplerHz(fhz, lat, lon, 300, t);
+                                XposedBridge.log(TAG + String.format(java.util.Locale.US, ": [doppler]  +%4ds  %+6.0f Hz", (t - p.aosMs) / 1000, sh));
+                            }
+                            break;
+                        }
+                    } catch (Throwable t) { XposedBridge.log(TAG + ": [doppler] " + t.getMessage()); }
+                } }, "dmrmod-doppler-diag").start();
+                return;
+            }
+
+            // mode=noaastart / noaastop: drive NOAA APT monitoring without the UI (bench tests).
+            if ("noaastart".equalsIgnoreCase(mode) || "noaastop".equalsIgnoreCase(mode)) {
+                final boolean start = "noaastart".equalsIgnoreCase(mode);
+                final Activity act = homeActivityRef != null ? homeActivityRef.get() : null;
+                final MainHook mi = moduleInstance;
+                if (act == null || mi == null) { XposedBridge.log(TAG + ": [noaa-diag] no activity/instance"); return; }
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+                    @Override public void run() {
+                        try {
+                            if (start) {
+                                // optional --ei freqhz: override the NOAA frequency for this run (bench)
+                                if (intent.hasExtra("freqhz")) {
+                                    act.getSharedPreferences("dmrmod_noaa_global", android.content.Context.MODE_PRIVATE).edit()
+                                       .putString("noaa_frequency", String.format(java.util.Locale.US, "%.4f", intent.getIntExtra("freqhz", 137100000) / 1e6)).apply();
+                                }
+                                mi.startNOAAMonitoring(act);
+                            } else mi.stopNOAAMonitoring(act);
+                        } catch (Throwable t) { XposedBridge.log(TAG + ": [noaa-diag] " + t.getMessage()); }
+                    }
+                });
+                return;
+            }
+
             // mode=sstvtx --es img <png path> [--es smode robot24c|robot12bw|robot8bw] [--ei freqhz F]:
             // encode an image and transmit it as SSTV over the current channel (or F, transient tune).
             if ("sstvtx".equalsIgnoreCase(mode)) {
@@ -12856,7 +13028,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     + " samples (" + (pcm.length / 8) + " ms) in " + (System.currentTimeMillis() - t0) + " ms");
                             final String label = "SSTV " + SSTVEncoder.name(smode) + " " + img;
                             android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
-                            if (tune) { tuneCurrentChannelAnalog(freqHz); }
+                            if (tune) { tuneCurrentChannelAnalog(freqHz, diagPower); }
                             h.postDelayed(new Runnable() {
                                 @Override public void run() { txPcmOneShot(ctx, pcm, 1900.0, label, false); }
                             }, tune ? RETUNE_SETTLE_MS : 0);
@@ -12887,7 +13059,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 final int fhz = intent.getIntExtra("freqhz", 144390000);
                 captureTxFreqBackup();
                 XposedBridge.log(TAG + ": [txfreqtest] captured rxFreq=" + (txFreqBackup != null ? txFreqBackup.get("rxFreq") : "null"));
-                tuneCurrentChannelAnalog(fhz);
+                tuneCurrentChannelAnalog(fhz, diagPower);
                 new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(
                         new Runnable() { @Override public void run() { restoreTxFreqBackup(); } }, 2500);
                 return;
@@ -13155,7 +13327,10 @@ public class MainHook implements IXposedHookLoadPackage {
      * proven APRS-monitoring hijack ({@link #startAPRSMonitoring}). Diagnostic/testing helper: the
      * in-memory override reverts on the next channel change or app restart. Uses {@link #appClassLoader}.
      */
-    private static void tuneCurrentChannelAnalog(int freqHz) {
+    private static void tuneCurrentChannelAnalog(int freqHz) { tuneCurrentChannelAnalog(freqHz, -1); }
+
+    /** As above; {@code power} 0 = low / 1 = high overrides the channel's level for the transient tune, -1 keeps it. */
+    private static void tuneCurrentChannelAnalog(int freqHz, int power) {
         try {
             Class<?> dmrManagerClass = XposedHelpers.findClass("com.pri.prizeinterphone.manager.DmrManager", appClassLoader);
             Object dmrManager = XposedHelpers.callStaticMethod(dmrManagerClass, "getInstance");
@@ -13171,6 +13346,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.setIntField(ch, "rxSubCode", 0);
             XposedHelpers.setIntField(ch, "txType", 0);
             XposedHelpers.setIntField(ch, "txSubCode", 0);
+            if (power == 0 || power == 1) XposedHelpers.setIntField(ch, "power", power);
             // NOTE: deliberately NOT calling updateChannel() — that persists to the channel DB.
             // syncChannelInfoWithData() + AnalogMessage.send() retune the hardware only, so this is a
             // transient in-memory override that reverts on the next channel reload and can never
@@ -13189,7 +13365,8 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.callMethod(am, "setTxType", (byte) 0);
             XposedHelpers.callMethod(am, "setTxSubCode", (byte) 0);
             XposedHelpers.callMethod(am, "send");
-            XposedBridge.log(TAG + ": [aprs-tune] current channel -> " + (freqHz / 1000000.0) + " MHz analog narrow");
+            XposedBridge.log(TAG + ": [aprs-tune] current channel -> " + (freqHz / 1000000.0) + " MHz analog narrow"
+                    + (power == 0 ? " (LOW power)" : power == 1 ? " (high power)" : ""));
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": [aprs-tune] error: " + t.getMessage());
         }
@@ -13659,6 +13836,7 @@ public class MainHook implements IXposedHookLoadPackage {
             kissTunedForSession = false;
         }
         kissActive = true;
+        kissRxFrames = 0;
         final java.util.concurrent.BlockingQueue<byte[]> queue = new java.util.concurrent.LinkedBlockingQueue<byte[]>(32);
 
         Thread sender = new Thread(new Runnable() {
@@ -13712,11 +13890,41 @@ public class MainHook implements IXposedHookLoadPackage {
         XposedBridge.log(TAG + ": [kiss] TNC stopped");
     }
 
+    /**
+     * RX side of the TNC: hand a received AX.25 frame (FCS already verified and stripped by
+     * {@code AFSKDecoder}) to the connected KISS client as a port-0 data frame
+     * ({@code FEND 0x00 <escaped bytes> FEND}). Called from the APRS decode thread whenever the TNC
+     * is running — the PCM hook feeds the AFSK decoder while {@code kissActive} even without APRS
+     * monitoring mode.
+     */
+    static void kissDeliverFrame(byte[] ax25) {
+        if (!kissActive || ax25 == null || ax25.length == 0) return;
+        java.io.OutputStream out = kissClientOut;
+        kissRxFrames++;
+        if (out == null) { XposedBridge.log(TAG + ": [kiss] RX frame " + ax25.length + "B (no client connected)"); return; }
+        try {
+            java.io.ByteArrayOutputStream k = new java.io.ByteArrayOutputStream(ax25.length + 4);
+            k.write(0xC0); k.write(0x00);
+            for (byte b : ax25) {
+                int v = b & 0xFF;
+                if (v == 0xC0) { k.write(0xDB); k.write(0xDC); }
+                else if (v == 0xDB) { k.write(0xDB); k.write(0xDD); }
+                else k.write(v);
+            }
+            k.write(0xC0);
+            synchronized (MainHook.class) { out.write(k.toByteArray()); out.flush(); }
+            XposedBridge.log(TAG + ": [kiss] RX frame " + ax25.length + "B -> client");
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [kiss] RX deliver failed: " + t.getMessage());
+        }
+    }
+
     /** Parse KISS frames from a connected client and enqueue the AX.25 payload of each data frame. */
     private static void readKissClient(java.net.Socket client, java.util.concurrent.BlockingQueue<byte[]> queue) {
         final int FEND = 0xC0, FESC = 0xDB, TFEND = 0xDC, TFESC = 0xDD;
         try {
             java.io.InputStream in = client.getInputStream();
+            kissClientOut = client.getOutputStream();
             java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
             boolean inFrame = false, esc = false;
             int b;
@@ -13742,6 +13950,7 @@ public class MainHook implements IXposedHookLoadPackage {
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": [kiss] client read ended: " + t.getMessage());
         } finally {
+            kissClientOut = null;
             try { client.close(); } catch (Throwable ignored) { }
             XposedBridge.log(TAG + ": [kiss] client disconnected");
         }
@@ -13890,23 +14099,24 @@ public class MainHook implements IXposedHookLoadPackage {
     private void showKissTncDialog(final Activity activity) {
         try {
             AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-            builder.setTitle("🔌 KISS TNC (TX)");
+            builder.setTitle("🔌 KISS TNC (TX + RX)");
 
             LinearLayout layout = new LinearLayout(activity);
             layout.setOrientation(LinearLayout.VERTICAL);
             layout.setPadding(40, 30, 40, 10);
 
             TextView status = new TextView(activity);
-            status.setText(kissActive ? ("🟢 TNC running on 127.0.0.1:" + kissPort) : "⚫ TNC off");
+            status.setText(kissActive ? ("🟢 TNC running on 127.0.0.1:" + kissPort + "  ·  RX frames: " + kissRxFrames) : "⚫ TNC off");
             status.setTextSize(14);
             status.setTextColor(kissActive ? 0xFF69F0AE : 0xFFBBBBBB);
             status.setPadding(0, 0, 0, 16);
             layout.addView(status);
 
             TextView note = new TextView(activity);
-            note.setText("Lets an APRS app on this phone drive the radio as a TNC (transmit side).\n\n"
-                    + "In APRSdroid: Connection Protocol → TNC (KISS); TNC via TCP/IP; host 127.0.0.1, "
-                    + "port below. Then APRSdroid's transmits go out over RF.\n\n"
+            note.setText("Lets an APRS app on this phone use the radio as a full TNC: its transmits go "
+                    + "out over RF, and every packet the radio hears is handed back to it.\n\n"
+                    + "In APRSdroid: Connection Protocol \u2192 TNC (KISS); TNC via TCP/IP; host 127.0.0.1, "
+                    + "port below.\n\n"
                     + "The radio parks on the chosen frequency for the whole session and your channel "
                     + "is restored when you stop. Licensed amateur use only.");
             note.setTextSize(12); note.setTextColor(0xFF999999); note.setPadding(0, 0, 0, 12);

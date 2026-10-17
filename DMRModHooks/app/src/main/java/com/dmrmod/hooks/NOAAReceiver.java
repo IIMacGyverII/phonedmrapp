@@ -34,7 +34,7 @@ import de.robv.android.xposed.XposedBridge;
  *
  * Architecture
  * ------------
- *   Input  →  AM demod (I/Q mix + IIR LPF)  →  resample to 4160 Hz
+ *   Input (8 kHz, L==R)  →  AM demod (I/Q mix + FIR LPF + envelope notches)  →  resample to 4160 Hz
  *          →  calibration (first 8 lines, find sync offset)
  *          →  line extract (2080 APT samples per line)
  *          →  pixel extract (909 px Channel A, 909 px Channel B)
@@ -172,36 +172,87 @@ public class NOAAReceiver {
     public void setImageSavedCallback(ImageSavedCallback cb)  { saveCallback  = cb; }
 
     // -----------------------------------------------------------------------
-    // AM demodulation state  (I/Q method)
+    // AM demodulation state  (I/Q mix + FIR low-pass + envelope-domain notches)
     // -----------------------------------------------------------------------
 
-    /** Input PCM sample rate (set at first processAudio call or by setInputRate). */
-    private int    inputRate   = 16000;
-    private double ncoPhase    = 0.0;
-    private double iLpf        = 0.0;   // I low-pass filter, stage 1
-    private double qLpf        = 0.0;   // Q low-pass filter, stage 1
-    private double iLpf2       = 0.0;   // I low-pass filter, stage 2
-    private double qLpf2       = 0.0;   // Q low-pass filter, stage 2
+    /** Real input PCM sample rate. The OEM RX stream is 8 kHz stereo with L == R (measured
+     *  2026-10-14), so one sample per 4-byte frame at 8000 Hz. */
+    private int     inputRate        = 8000;
+    /** Bytes per input sample: 4 when the buffer is the stereo-duplicated OEM stream, 2 for mono. */
+    private int     bytesPerSample   = 4;
+    private double  ncoPhase         = 0.0;
+    private double  ncoIncrement     = 2.0 * Math.PI * SUBCARRIER_HZ / 8000.0;
 
-    /**
-     * Two-pole IIR low-pass: two cascaded first-order stages with the same alpha.
-     * fc ≈ 1000 Hz at 16000 Hz gives 12 dB/oct rolloff — suppresses the 4800 Hz
-     * double-frequency artifact (~25 dB rejection vs ~12 dB for single-pole).
-     * alpha = 1 - exp(-2π × fc / fs)
-     * At fc=1000, fs=16000: alpha ≈ 0.33
-     * Recomputed when inputRate changes.
-     */
-    private double lpfAlpha = 1.0 - Math.exp(-2.0 * Math.PI * 1000.0 / 16000.0);  // ≈ 0.33
+    /** Windowed-sinc FIR low-pass on I and Q (fc 2 kHz = APT Nyquist, Hamming, 41 taps). At 8 kHz the
+     *  2x-subcarrier mixing product lands at 3.2 kHz, well inside the stop band (about -50 dB); the old
+     *  2-pole 1 kHz IIR left ~5 % of it, which the sample-and-hold decimation then aliased into a
+     *  fixed vertical stripe pattern. */
+    private static final int FIR_TAPS = 41;
+    private double[] firTaps = designLowPass(8000);
+    private final double[] iHist = new double[FIR_TAPS];
+    private final double[] qHist = new double[FIR_TAPS];
+    private int histPos = 0;
 
-    /** NCO phase increment per input sample: 2π × SUBCARRIER / inputRate */
-    private double ncoIncrement = 2.0 * Math.PI * SUBCARRIER_HZ / 16000.0;
+    /** Envelope-domain notches at 800 and 1600 Hz. With a real satellite's +/-17 kHz deviation the
+     *  radio's narrow-FM discriminator distorts: the 2nd/3rd harmonics of the 2400 Hz subcarrier
+     *  (4800/7200 Hz) alias through the 8 kHz audio path to 3200/800 Hz (measured -26/-15 dB,
+     *  2026-10-17, HackRF bench) and beat with the carrier at 800/1600 Hz in the envelope. Notching
+     *  those two lines removed most of the striping (bench correlation 0.885 -> 0.937); at +/-5 kHz
+     *  the audio is clean and the notches cost nothing visible. */
+    private final Biquad notch800  = new Biquad();
+    private final Biquad notch1600 = new Biquad();
 
-    /** Resampler accumulator and step.  step = APT_RATE / inputRate. */
-    private double resampleAccum = 0.0;
-    private double resampleStep  = (double) APT_RATE / 16000.0;  // 0.26 for 16000 Hz
+    /** Linear-interpolation resampler state (input-sample index of the next APT word). */
+    private double prevEnv = 0.0;
+    private double nextOut = 0.0;
+    private long   inIndex = 0;
 
     /** Counts input samples processed during calibration phase (for logging). */
     private long calibInputSamples = 0;
+
+    private static double[] designLowPass(int rate) {
+        double[] h = new double[FIR_TAPS];
+        double fc = 2000.0 / rate, sum = 0;
+        for (int k = 0; k < FIR_TAPS; k++) {
+            double m = k - (FIR_TAPS - 1) / 2.0;
+            double sinc = (m == 0) ? 2 * fc : Math.sin(2 * Math.PI * fc * m) / (Math.PI * m);
+            double w = 0.54 - 0.46 * Math.cos(2 * Math.PI * k / (FIR_TAPS - 1));
+            h[k] = sinc * w; sum += h[k];
+        }
+        for (int k = 0; k < FIR_TAPS; k++) h[k] /= sum;
+        return h;
+    }
+
+    /** Direct-form biquad notch. */
+    private static final class Biquad {
+        private double b0 = 1, b1 = 0, b2 = 0, a1 = 0, a2 = 0, x1, x2, y1, y2;
+        void notch(double rate, double f0, double q) {
+            double w0 = 2 * Math.PI * f0 / rate, alpha = Math.sin(w0) / (2 * q), a0 = 1 + alpha;
+            b0 = 1 / a0; b1 = -2 * Math.cos(w0) / a0; b2 = 1 / a0;
+            a1 = -2 * Math.cos(w0) / a0; a2 = (1 - alpha) / a0;
+            x1 = x2 = y1 = y2 = 0;
+        }
+        double process(double x) {
+            double y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+            x2 = x1; x1 = x; y2 = y1; y1 = y; return y;
+        }
+    }
+
+    /** Matched-filter template for sync A: 39 words, 4 low, 7 x (2 high, 2 low) = 1040 Hz, 7 low;
+     *  zero-mean so a DC offset in the envelope does not bias the correlation. Sync B (832 Hz,
+     *  3-high/2-low) correlates ~4x weaker, which is what disambiguates A from B. */
+    private static final float[] SYNC_A_TPL = new float[39];
+    static {
+        for (int k = 0; k < 39; k++) SYNC_A_TPL[k] = -1f;
+        for (int c = 0; c < 7; c++) { SYNC_A_TPL[4 + c * 4] = 1f; SYNC_A_TPL[5 + c * 4] = 1f; }
+        float mean = 0; for (float v : SYNC_A_TPL) mean += v; mean /= 39;
+        for (int k = 0; k < 39; k++) SYNC_A_TPL[k] -= mean;
+    }
+
+    /** Running 1st/99th-percentile normalisation (EMA across lines). Per-line stretching made every
+     *  line's contrast independent (flicker, broken wedges); this tracks slowly instead. */
+    private float   normLo = 0, normHi = 1;
+    private boolean normInit = false;
 
     // -----------------------------------------------------------------------
     // Calibration and sync detection
@@ -217,8 +268,14 @@ public class NOAAReceiver {
     // Line buffer  (APT samples ready for pixel extraction)
     // -----------------------------------------------------------------------
 
-    // Extra room on each side of the line for the per-line sync search window.
-    private final float[] lineBuffer    = new float[SAMPLES_PER_LINE + 2 * SYNC_MARGIN];
+    // Room for one line + the per-line search window, plus a second line so that a lost lock
+    // (audio gap, e.g. the ~1.2 s a Doppler retune costs) can be re-acquired with a full-line search.
+    private final float[] lineBuffer    = new float[2 * SAMPLES_PER_LINE + 2 * SYNC_MARGIN];
+    /** EMA of the per-line best sync score; a line scoring far below it means the lock is lost. */
+    private double syncScoreAvg = 0;
+    private int    weakLines    = 0;
+    private boolean resyncMode  = false;
+    private int    resyncCount  = 0;
     private int           lineBufferPos = 0;
     /** Expected position of sync A within lineBuffer. Reset to SYNC_MARGIN after each
      *  decoded line so that the search window is symmetric: [0 .. 2*SYNC_MARGIN]. */
@@ -283,7 +340,7 @@ public class NOAAReceiver {
     // -----------------------------------------------------------------------
     // WAV capture (diagnostic: save first ~90s of raw PCM for PC analysis)
     // -----------------------------------------------------------------------
-    private static final int WAV_CAPTURE_MAX_BYTES = 90 * 16000 * 2; // 90s @ 16kHz 16-bit mono
+    private static final int WAV_CAPTURE_MAX_BYTES = 90 * 8000 * 2;  // 90 s @ 8 kHz 16-bit mono (one sample per L/R pair)
     private FileOutputStream wavCapStream = null;
     private String           wavCapPath   = null;
     private int              wavBytesWritten = 0;
@@ -295,11 +352,15 @@ public class NOAAReceiver {
     /** Call once before starting monitoring.  Resets all state. */
     public synchronized void reset() {
         ncoPhase      = 0.0;
-        iLpf          = 0.0;
-        qLpf          = 0.0;
-        iLpf2         = 0.0;
-        qLpf2         = 0.0;
-        resampleAccum = 0.0;
+        java.util.Arrays.fill(iHist, 0.0);
+        java.util.Arrays.fill(qHist, 0.0);
+        histPos       = 0;
+        notch800.notch(inputRate, 800, 8);
+        notch1600.notch(inputRate, 1600, 8);
+        prevEnv       = 0.0;
+        nextOut       = 0.0;
+        inIndex       = 0;
+        normInit      = false;
 
         calibBuf      = new float[SYNC_CALIB_LINES * SAMPLES_PER_LINE];
         calibPos      = 0;
@@ -309,6 +370,10 @@ public class NOAAReceiver {
 
         lineBufferPos    = 0;
         lineExpectedSync = SYNC_MARGIN;
+        syncScoreAvg     = 0;
+        weakLines        = 0;
+        resyncMode       = false;
+        resyncCount      = 0;
 
         rawGrayA      = null;
         rawGrayB      = null;
@@ -402,14 +467,15 @@ public class NOAAReceiver {
         r.write(v & 0xFF); r.write((v>>8)&0xFF); r.write((v>>16)&0xFF); r.write((v>>24)&0xFF);
     }
 
-    /** Set the input PCM sample rate (call before processAudio if not 12000 Hz). */
-    public void setInputRate(int rate) {
-        if (rate == inputRate) return;
-        inputRate    = rate;
-        lpfAlpha     = 1.0 - Math.exp(-2.0 * Math.PI * 1000.0 / rate);
-        ncoIncrement = 2.0 * Math.PI * SUBCARRIER_HZ / rate;
-        resampleStep = (double) APT_RATE / rate;
-        XposedBridge.log(TAG + ": inputRate=" + rate + "  lpfAlpha=" + String.format("%.3f", lpfAlpha));
+    /** Set the real input PCM sample rate and frame layout (default 8000 Hz, stereo-duplicated). */
+    public void setInputFormat(int rate, boolean stereoDuplicated) {
+        inputRate      = rate;
+        bytesPerSample = stereoDuplicated ? 4 : 2;
+        ncoIncrement   = 2.0 * Math.PI * SUBCARRIER_HZ / rate;
+        firTaps        = designLowPass(rate);
+        notch800.notch(rate, 800, 8);
+        notch1600.notch(rate, 1600, 8);
+        XposedBridge.log(TAG + ": input " + rate + " Hz, " + bytesPerSample + " bytes/sample");
     }
 
     /** Number of scan lines decoded so far. */
@@ -422,7 +488,7 @@ public class NOAAReceiver {
                 ? (calibPos * 100) / calibBuf.length : 0;
             return "Calibrating sync... " + pct + "%";
         }
-        return "Decoding — " + decodedLines + " lines";
+        return "Decoding — " + decodedLines + " lines" + (resyncCount > 0 ? " (re-synced " + resyncCount + "×)" : "");
     }
 
     /**
@@ -454,9 +520,13 @@ public class NOAAReceiver {
 
         // Capture raw PCM to WAV file for diagnostic purposes (first ~90s)
         if (wavCapStream != null && wavBytesWritten < WAV_CAPTURE_MAX_BYTES) {
-            int toWrite = Math.min(length, WAV_CAPTURE_MAX_BYTES - wavBytesWritten);
             try {
-                wavCapStream.write(data, 0, toWrite);
+                // keep one 16-bit sample per input frame (the stream is L == R) -> true 8 kHz mono
+                int frames = length / bytesPerSample;
+                int toWrite = Math.min(frames * 2, WAV_CAPTURE_MAX_BYTES - wavBytesWritten);
+                byte[] mono = new byte[toWrite];
+                for (int f = 0, o = 0; o + 1 < toWrite; f += bytesPerSample, o += 2) { mono[o] = data[f]; mono[o + 1] = data[f + 1]; }
+                wavCapStream.write(mono, 0, toWrite);
                 wavBytesWritten += toWrite;
                 if (wavBytesWritten >= WAV_CAPTURE_MAX_BYTES) {
                     stopWavCapture();  // Seal the file once we have enough
@@ -466,40 +536,43 @@ public class NOAAReceiver {
             }
         }
 
-        for (int i = 0; i < length - 1; i += 2) {
-            // Count input samples during calibration (for logging only)
+        final double twoPi = 2.0 * Math.PI;
+        final double outStep = (double) inputRate / APT_RATE;
+        for (int i = 0; i + 1 < length; i += bytesPerSample) {
             if (!syncCalibrated) calibInputSamples++;
 
-            // Convert 2 bytes → 16-bit signed (little-endian)
             short raw = (short) (((data[i + 1] & 0xFF) << 8) | (data[i] & 0xFF));
-            double s  = raw * (1.0 / 32768.0);
+            double sIn = raw * (1.0 / 32768.0);
 
-            // ── I/Q AM demodulation ──────────────────────────────────────
-            double cosV = Math.cos(ncoPhase);
-            double sinV = Math.sin(ncoPhase);
-
-            // Mix with quadrature references and two-pole low-pass filter
-            double iMixed = s *  cosV;
-            double qMixed = s * -sinV;
-            iLpf  = lpfAlpha * iMixed + (1.0 - lpfAlpha) * iLpf;
-            qLpf  = lpfAlpha * qMixed + (1.0 - lpfAlpha) * qLpf;
-            iLpf2 = lpfAlpha * iLpf  + (1.0 - lpfAlpha) * iLpf2;
-            qLpf2 = lpfAlpha * qLpf  + (1.0 - lpfAlpha) * qLpf2;
-
-            // Advance NCO phase
+            // -- I/Q mix with the 2400 Hz NCO --------------------------------
+            double c = Math.cos(ncoPhase), sn = Math.sin(ncoPhase);
             ncoPhase += ncoIncrement;
-            if (ncoPhase >= 2.0 * Math.PI) ncoPhase -= 2.0 * Math.PI;
+            if (ncoPhase >= twoPi) ncoPhase -= twoPi;
+            iHist[histPos] = sIn * c;
+            qHist[histPos] = -sIn * sn;
 
-            // Envelope magnitude (from second-stage output)
-            double envelope = Math.sqrt(iLpf2 * iLpf2 + qLpf2 * qLpf2);
-
-            // ── Resample to APT rate (4160 Hz) ───────────────────────────
-            // Simple polyphase accumulator (sample-and-hold)
-            resampleAccum += resampleStep;
-            while (resampleAccum >= 1.0) {
-                pushAptSample((float) envelope);
-                resampleAccum -= 1.0;
+            // -- FIR low-pass (circular history, newest at histPos) -----------
+            double iAcc = 0, qAcc = 0; int idx = histPos;
+            for (int k = 0; k < FIR_TAPS; k++) {
+                iAcc += firTaps[k] * iHist[idx];
+                qAcc += firTaps[k] * qHist[idx];
+                idx = (idx == 0) ? FIR_TAPS - 1 : idx - 1;
             }
+            histPos = (histPos + 1 == FIR_TAPS) ? 0 : histPos + 1;
+
+            // -- Envelope, then notch the discriminator-harmonic beats --------
+            double env = Math.sqrt(iAcc * iAcc + qAcc * qAcc);
+            env = notch1600.process(notch800.process(env));
+
+            // -- Resample to 4160 Hz (linear interpolation) ------------------
+            while (nextOut <= inIndex) {
+                double frac = nextOut - (inIndex - 1);
+                if (frac < 0) frac = 0; else if (frac > 1) frac = 1;
+                pushAptSample((float) (prevEnv * (1 - frac) + env * frac));
+                nextOut += outStep;
+            }
+            prevEnv = env;
+            inIndex++;
         }
     }
 
@@ -520,7 +593,7 @@ public class NOAAReceiver {
             if (calibPos >= calibBuf.length) {
                 // Log calibration stats; rate correction happens post-calibration
                 XposedBridge.log(TAG + ": Calib complete: calibSamples=" + calibInputSamples
-                    + "  defaultResampleStep=" + String.format("%.5f", resampleStep));
+                    + "  inputRate=" + inputRate);
 
                 // Enough data — find sync offset
                 syncOffset     = computeSyncOffset(calibBuf);
@@ -551,26 +624,47 @@ public class NOAAReceiver {
      *
      * After each line:
      *   1. Find actual sync A position within [lineExpectedSync ± SYNC_MARGIN].
-     *   2. Gently correct resampleStep (soft PLL) to kill long-term drift.
      *   3. Carry over the SYNC_MARGIN samples before the next expected sync
      *      so that the search window is symmetric for the following line.
      */
     private void pushToLineBuffer(float v) {
+        if (lineBufferPos >= lineBuffer.length) { lineBufferPos = 0; resyncMode = true; }
         lineBuffer[lineBufferPos++] = v;
 
-        // Trigger once we have: expected-sync + full line + margin samples
-        int needed = lineExpectedSync + SAMPLES_PER_LINE + SYNC_MARGIN;
+        // Trigger once we have: expected-sync + full line + margin samples (two lines in re-sync mode)
+        int needed = resyncMode ? 2 * SAMPLES_PER_LINE + 39
+                                : lineExpectedSync + SAMPLES_PER_LINE + SYNC_MARGIN;
         if (lineBufferPos < needed) return;
 
-        // ── Find actual sync A within ±SYNC_MARGIN of expected position ──
-        int searchStart = Math.max(0, lineExpectedSync - SYNC_MARGIN);
-        int searchEnd   = Math.min(lineBufferPos - SAMPLES_PER_LINE - 1,
-                                   lineExpectedSync + SYNC_MARGIN);
-        int foundSync   = findSyncInRange(lineBuffer, searchStart, searchEnd);
+        int foundSync;
+        if (resyncMode) {
+            // ── Lock lost: search a whole line span for the strongest sync A ──
+            foundSync = findSyncInRange(lineBuffer, 0, SAMPLES_PER_LINE - 1);
+            double sc = syncScore(lineBuffer, foundSync);
+            resyncMode = false; weakLines = 0; syncScoreAvg = sc; resyncCount++;
+            XposedBridge.log(TAG + ": re-synced at +" + foundSync + " words (score "
+                + String.format("%.2f", sc) + ", #" + resyncCount + ")");
+        } else {
+            // ── Find actual sync A within ±SYNC_MARGIN of expected position ──
+            int searchStart = Math.max(0, lineExpectedSync - SYNC_MARGIN);
+            int searchEnd   = Math.min(lineBufferPos - SAMPLES_PER_LINE - 1,
+                                       lineExpectedSync + SYNC_MARGIN);
+            foundSync = findSyncInRange(lineBuffer, searchStart, searchEnd);
+            double sc = syncScore(lineBuffer, foundSync);
+            if (syncScoreAvg <= 0) syncScoreAvg = sc;
+            if (sc < 0.35 * syncScoreAvg) {
+                // two consecutive weak matches → the sync moved outside the window
+                if (++weakLines >= 2) {
+                    resyncMode = true; weakLines = 0;
+                    return;   // keep accumulating; the full search runs once 2 lines are buffered
+                }
+            } else {
+                weakLines = 0;
+                syncScoreAvg = 0.9 * syncScoreAvg + 0.1 * sc;
+            }
+        }
 
-        // No rate correction: inputRate is confirmed at 16000 Hz by spectral analysis.
-        // The ±SYNC_MARGIN search window above already handles per-line timing jitter
-        // without needing to modify resampleStep (which would accumulate drift).
+        // No rate correction: the +/-SYNC_MARGIN search re-locks every line (timing is drift-free).
 
         // ── Decode the line ───────────────────────────────────────────────
         processLine(lineBuffer, foundSync);
@@ -583,28 +677,25 @@ public class NOAAReceiver {
         if (remaining > 0 && carryStart >= 0) {
             System.arraycopy(lineBuffer, carryStart, lineBuffer, 0, remaining);
         }
-        lineBufferPos    = Math.max(0, remaining);
+        lineBufferPos    = Math.max(0, Math.min(remaining, lineBuffer.length));
         lineExpectedSync = SYNC_MARGIN;  // next sync expected in the middle of the buffer
     }
 
-    /**
-     * Search buf[searchStart..searchEnd] for the position with highest
-     * high-frequency energy over 39 consecutive samples (the sync A metric).
-     */
+    /** Matched-filter correlation of the sync A template at buf[pos..pos+38]. */
+    private static double syncScore(float[] buf, int pos) {
+        double acc = 0;
+        for (int k = 0; k < 39; k++) acc += SYNC_A_TPL[k] * buf[pos + k];
+        return acc;
+    }
+
+    /** Position in [searchStart..searchEnd] with the best sync A match. */
     private static int findSyncInRange(float[] buf, int searchStart, int searchEnd) {
-        final int syncLen = 39;
-        double bestEnergy = -1.0;
-        int    bestPos    = (searchStart + searchEnd) / 2;  // default: centre
+        double best = -Double.MAX_VALUE;
+        int    bestPos = (searchStart + searchEnd) / 2;
         for (int pos = searchStart; pos <= searchEnd; pos++) {
-            if (pos + syncLen >= buf.length) break;
-            double energy = 0;
-            for (int k = 0; k < syncLen - 1; k++) {
-                energy += Math.abs(buf[pos + k + 1] - buf[pos + k]);
-            }
-            if (energy > bestEnergy) {
-                bestEnergy = energy;
-                bestPos    = pos;
-            }
+            if (pos + 39 > buf.length) break;
+            double sc = syncScore(buf, pos);
+            if (sc > best) { best = sc; bestPos = pos; }
         }
         return bestPos;
     }
@@ -629,10 +720,11 @@ public class NOAAReceiver {
             normBuf[IMAGE_A_LENGTH + i] = line[lineStart + IMAGE_B_START + i];
         }
         java.util.Arrays.sort(normBuf);
-        // 1% of 1818 ≈ index 18;  99% ≈ index 1799
-        float lineMin = normBuf[18];
-        float lineMax = normBuf[1799];
-        float range   = lineMax - lineMin;
+        // 1% of 1818 ~ index 18;  99% ~ index 1799 -- tracked with an EMA across lines
+        if (!normInit) { normLo = normBuf[18]; normHi = normBuf[1799]; normInit = true; }
+        else { normLo = 0.9f * normLo + 0.1f * normBuf[18]; normHi = 0.9f * normHi + 0.1f * normBuf[1799]; }
+        float lineMin = normLo;
+        float range   = normHi - normLo;
         if (range < 1e-6f) return;
 
         // ── Lazy allocate pixel arrays ────────────────────────────────────
@@ -701,52 +793,24 @@ public class NOAAReceiver {
     // -----------------------------------------------------------------------
 
     /**
-     * Determine the Sync A offset from a buffer containing at least
-     * SYNC_CALIB_LINES × SAMPLES_PER_LINE APT-rate samples.
-     *
-     * Method mirrors the Python decoder:
-     *   - Compute adjacent absolute differences (high-frequency energy)
-     *   - Reshape into rows of SAMPLES_PER_LINE
-     *   - Sum per column → profile
-     *   - Find the SYNC_A_SAMPLES-length window with maximum sum
-     *   - The two peaks (Sync A and Sync B) are 1040 samples apart;
-     *     pick the smaller index as Sync A.
+     * Determine the sync A column from SYNC_CALIB_LINES x SAMPLES_PER_LINE APT words: fold the
+     * matched-filter correlation modulo one line and take the best column. Unlike the old
+     * high-frequency-energy metric this distinguishes sync A (1040 Hz) from sync B (832 Hz), so the
+     * two image channels no longer come out swapped.
      */
     private static int computeSyncOffset(float[] calibBuf) {
-        final int syncASamples = 39;
-        final int halfLine     = SAMPLES_PER_LINE / 2;   // 1040
-        int n_lines = calibBuf.length / SAMPLES_PER_LINE;
-
-        // ── Build per-column high-frequency profile ───────────────────────
+        int nLines = calibBuf.length / SAMPLES_PER_LINE;
         double[] profile = new double[SAMPLES_PER_LINE];
-        for (int line = 0; line < n_lines; line++) {
+        for (int line = 0; line < nLines; line++) {
             int base = line * SAMPLES_PER_LINE;
-            for (int col = 0; col < SAMPLES_PER_LINE - 1; col++) {
-                profile[col] += Math.abs(calibBuf[base + col + 1]
-                                        - calibBuf[base + col]);
+            for (int col = 0; col < SAMPLES_PER_LINE; col++) {
+                if (base + col + 39 > calibBuf.length) break;
+                profile[col] += syncScore(calibBuf, base + col);
             }
         }
-
-        // ── Sliding window sum (length = SYNC_A_SAMPLES) ──────────────────
-        double cumsum = 0.0;
-        for (int j = 0; j < syncASamples; j++) cumsum += profile[j];
-
-        double bestSum = cumsum;
-        int    bestIdx = 0;
-
-        for (int j = syncASamples; j < SAMPLES_PER_LINE; j++) {
-            cumsum += profile[j] - profile[j - syncASamples];
-            if (cumsum > bestSum) {
-                bestSum = cumsum;
-                bestIdx = j - syncASamples + 1;
-            }
-        }
-
-        // Both Sync A (at offset P) and Sync B (at P+1040) produce peaks.
-        // Sync A is always the earlier one (smaller index).
-        int P1 = bestIdx;
-        int P2 = (P1 + SAMPLES_PER_LINE - halfLine) % SAMPLES_PER_LINE;
-        return Math.min(P1, P2);
+        int best = 0;
+        for (int col = 1; col < SAMPLES_PER_LINE; col++) if (profile[col] > profile[best]) best = col;
+        return best;
     }
 
     // -----------------------------------------------------------------------

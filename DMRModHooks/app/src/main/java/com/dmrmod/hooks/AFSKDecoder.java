@@ -240,39 +240,28 @@ public class AFSKDecoder {
             return packets;
         }
         
-        // Find the longest gap between FLAGs - that's the packet data
-        // (Packets are surrounded by FLAGS, idle periods have FLAGS every ~8 bits)
-        int maxGap = 0;
-        int maxGapStart = -1;
-        int maxGapEnd = -1;
-        
+        // Every gap between consecutive flags that is long enough to hold a frame is a candidate
+        // (bit stuffing guarantees no 0x7E inside a frame; idle flags sit 8 bits apart). The FCS
+        // check downstream rejects false candidates. Until 2026-10-17 only the single LONGEST gap
+        // was taken, so a 2 s buffer could never yield more than one packet and the first of two
+        // back-to-back packets (or a digipeated copy) was always dropped.
+        final int minFrameBits = 15 * 8;   // addr(14) + ctl + ... ≥ 15 bytes incl. FCS
         for (int i = 1; i < flagPositions.size(); i++) {
-            int gap = flagPositions.get(i) - flagPositions.get(i - 1);
-            if (gap > maxGap && gap > 50) {  // At least 50 bits (minimum packet size)
-                maxGap = gap;
-                maxGapStart = flagPositions.get(i - 1);
-                maxGapEnd = flagPositions.get(i);
-            }
+            int gapStart = flagPositions.get(i - 1);
+            int gapEnd   = flagPositions.get(i);
+            int packetStart  = gapStart + 8;
+            int packetLength = gapEnd - packetStart;
+            if (packetLength < minFrameBits) continue;
+            boolean[] packet = new boolean[packetLength];
+            System.arraycopy(bits, packetStart, packet, 0, packetLength);
+            packets.add(packet);
         }
-        
-        if (maxGapStart != -1 && maxGapEnd != -1) {
-            XposedBridge.log(TAG + ": Longest gap: " + maxGap + " bits between flags at " + 
-                           maxGapStart + " and " + maxGapEnd);
-            
-            // Extract packet bits (after start FLAG, before end FLAG)
-            int packetStart = maxGapStart + 8;
-            int packetLength = maxGapEnd - packetStart;
-            
-            if (packetLength > 0) {
-                boolean[] packet = new boolean[packetLength];
-                System.arraycopy(bits, packetStart, packet, 0, packetLength);
-                packets.add(packet);
-                XposedBridge.log(TAG + ": Extracted packet with " + packetLength + " bits");
-            }
+        if (packets.isEmpty()) {
+            XposedBridge.log(TAG + ": No suitable packet found (no gaps >= " + minFrameBits + " bits)");
         } else {
-            XposedBridge.log(TAG + ": No suitable packet found (no gaps > 50 bits)");
+            XposedBridge.log(TAG + ": Extracted " + packets.size() + " candidate packet(s)");
         }
-        
+
         return packets;
     }
     
