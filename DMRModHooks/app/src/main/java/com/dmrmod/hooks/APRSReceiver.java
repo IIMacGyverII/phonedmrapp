@@ -59,6 +59,8 @@ public class APRSReceiver {
 
                 // KISS TNC RX: every FCS-valid AX.25 frame goes to the connected client (not only APRS)
                 MainHook.kissDeliverFrame(packet);
+                // Fill-in digipeater (APRS monitoring + setting only)
+                MainHook.aprsMaybeDigipeat(context, packet);
 
                 APRSPacketDecoder.APRSPacket aprsPacket = APRSPacketDecoder.decode(packet);
                 
