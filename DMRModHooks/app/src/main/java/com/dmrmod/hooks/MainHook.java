@@ -6325,8 +6325,10 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedBridge.log(TAG + ": Saved intercom squelch threshold: " + savedIntercomSquelchThreshold);
             
             // Update hardware with APRS settings using state machine
-            XposedHelpers.callMethod(dmrManager, "updateChannel", currentChannel);
-            XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", currentChannel);
+            // updateChannel() removed 2026-10-17 (backlog S2): the APRS hijack/restore is hardware-only now, like SSTV/NOAA,
+            // so a stop can never persist a stale in-memory squelch/power into the stored channel.
+            // dmrManager.syncChannelInfoWithData(currentChannel) removed 2026-10-17: the OEM state-machine write followed within ms by
+            // the direct AnalogMessage below intermittently left the MCU transmitting NO RF (see applyAnalogChannelDirect)
             
             isAPRSMonitoringActive = true;
             currentChannelType = 1;  // Update static variable to match analog channel
@@ -7452,7 +7454,8 @@ public class MainHook implements IXposedHookLoadPackage {
             // taken while already hijacked — the user's channel stays clobbered (happened twice on
             // 2026-10-16). syncChannelInfoWithData() + the direct AnalogMessage below retune the
             // radio; the in-memory override reverts on the next channel reload.
-            XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", currentChannel);
+            // dmrManager.syncChannelInfoWithData(currentChannel) removed 2026-10-17: the OEM state-machine write followed within ms by
+            // the direct AnalogMessage below intermittently left the MCU transmitting NO RF (see applyAnalogChannelDirect)
 
             // Initialize SSTV receiver
             sstvReceiver = SSTVReceiver.getInstance(activity);
@@ -7745,10 +7748,13 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.setIntField(currentChannel, "rxSubCode", (Integer) channelBackup.get("rxSubCode"));
             XposedHelpers.setIntField(currentChannel, "txType", (Integer) channelBackup.get("txType"));
             XposedHelpers.setIntField(currentChannel, "txSubCode", (Integer) channelBackup.get("txSubCode"));
-            
-            // Update hardware
-            XposedHelpers.callMethod(dmrManager, "updateChannel", currentChannel);
-            XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", currentChannel);
+
+            // Update hardware (DB + OEM state machine), then push the analog config directly to the MCU
+            // updateChannel() removed 2026-10-17 (backlog S2): the APRS hijack/restore is hardware-only now, like SSTV/NOAA,
+            // so a stop can never persist a stale in-memory squelch/power into the stored channel.
+            // dmrManager.syncChannelInfoWithData(currentChannel) removed 2026-10-17: the OEM state-machine write followed within ms by
+            // the direct AnalogMessage below intermittently left the MCU transmitting NO RF (see applyAnalogChannelDirect)
+            applyAnalogChannelDirect(currentChannel, "APRS restore");
             
             XposedBridge.log(TAG + ": Channel restored: " + channelBackup.get("name"));
             channelBackup = null;  // Clear backup
@@ -7829,10 +7835,12 @@ public class MainHook implements IXposedHookLoadPackage {
             Object tt = sstvChannelBackup.get("txType"); if (tt != null) XposedHelpers.setIntField(currentChannel, "txType", (Integer) tt);
             Object ts = sstvChannelBackup.get("txSubCode"); if (ts != null) XposedHelpers.setIntField(currentChannel, "txSubCode", (Integer) ts);
             try {
+                applyAnalogChannelDirect(currentChannel, "SSTV restore");
                 // hardware-only (no updateChannel): the hijack never wrote the DB, so there is nothing
                 // to write back — and writing a backup that was itself taken while hijacked would
                 // persist the hijacked values.
-                XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", currentChannel);
+                // dmrManager.syncChannelInfoWithData(currentChannel) removed 2026-10-17: the OEM state-machine write followed within ms by
+                // the direct AnalogMessage below intermittently left the MCU transmitting NO RF (see applyAnalogChannelDirect)
             } catch (Throwable syncEx) {
                 XposedBridge.log(TAG + ": Warning: SSTV restore sync error: " + syncEx.getMessage());
             }
@@ -14134,7 +14142,10 @@ public class MainHook implements IXposedHookLoadPackage {
             // adb shell am broadcast -a com.dmrmod.APRS_TX_TEST --es mode tune --ei freqhz 144390000
             if ("tune".equalsIgnoreCase(mode)) {
                 int freqHz = intent.getIntExtra("freqhz", 144390000);
+                tuneSyncEnabled = intent.getIntExtra("sync", 1) != 0;     // bench: which write paths to use
+                tuneDirectEnabled = intent.getIntExtra("direct", 1) != 0;
                 tuneCurrentChannelAnalog(freqHz, diagPower, intent.getIntExtra("band", -1));
+                tuneSyncEnabled = false; tuneDirectEnabled = true;
                 return;
             }
 
@@ -14163,6 +14174,24 @@ public class MainHook implements IXposedHookLoadPackage {
                 return;
             }
             if ("kissstop".equalsIgnoreCase(mode))  { stopKissTnc(); return; }
+
+            // mode=chanset [--ei sq N] [--ei power 0|1] [--ei band 0|1]: write these fields of the CURRENT
+            // channel to the DB and the hardware (repair after a bench left the stored channel wrong).
+            if ("chanset".equalsIgnoreCase(mode)) {
+                try {
+                    Class<?> dmc = XposedHelpers.findClass("com.pri.prizeinterphone.manager.DmrManager", appClassLoader);
+                    Object dm = XposedHelpers.callStaticMethod(dmc, "getInstance");
+                    Object ch = XposedHelpers.callMethod(dm, "getCurrentChannel");
+                    if (intent.hasExtra("sq")) XposedHelpers.setIntField(ch, "sq", intent.getIntExtra("sq", 2));
+                    if (intent.hasExtra("power")) XposedHelpers.setIntField(ch, "power", intent.getIntExtra("power", 1));
+                    if (intent.hasExtra("band")) XposedHelpers.setIntField(ch, "band", intent.getIntExtra("band", 0));
+                    if (intent.getIntExtra("db", 1) != 0) XposedHelpers.callMethod(dm, "updateChannel", ch);
+                    if (intent.getIntExtra("sync", 0) != 0) XposedHelpers.callMethod(dm, "syncChannelInfoWithData", ch);
+                    if (intent.getIntExtra("direct", 1) != 0) applyAnalogChannelDirect(ch, "chanset");
+                    XposedBridge.log(TAG + ": [chanset] sq=" + XposedHelpers.getIntField(ch, "sq") + " power=" + XposedHelpers.getIntField(ch, "power") + " band=" + XposedHelpers.getIntField(ch, "band"));
+                } catch (Throwable t) { XposedBridge.log(TAG + ": [chanset] " + t.getMessage()); }
+                return;
+            }
 
             // mode=igate --ei on 0|1: enable/disable the APRS-IS client (bench use; passcode from settings)
             if ("igate".equalsIgnoreCase(mode)) {
@@ -14606,6 +14635,39 @@ public class MainHook implements IXposedHookLoadPackage {
     private static void tuneCurrentChannelAnalog(int freqHz, int power) { tuneCurrentChannelAnalog(freqHz, power, -1); }
 
     /** As above; {@code band} 0/1 overrides the channel_band byte (-1 = the VHF/UHF default). */
+    /**
+     * Sends the channel's analog configuration to the MCU with a direct AnalogMessage, bypassing the
+     * OEM CmdStateMachine that syncChannelInfoWithData() drives. Added 2026-10-17 after the radio was
+     * found transmitting NO RF (RX fine, SEND_START/STOP reported) following an APRS-monitoring stop
+     * whose restore used the state-machine path only; a direct AnalogMessage brought TX back. The MCU
+     * keeps its state across phone reboots, so a half-applied channel write persists until something
+     * re-sends the full configuration. No-op for digital channels.
+     */
+    private static void applyAnalogChannelDirect(Object ch, String why) {
+        try {
+            if (ch == null || XposedHelpers.getIntField(ch, "type") != 1) return;
+            Class<?> amc = XposedHelpers.findClass("com.pri.prizeinterphone.message.AnalogMessage", appClassLoader);
+            Object am = amc.newInstance();
+            XposedHelpers.callMethod(am, "setBand", (byte) XposedHelpers.getIntField(ch, "band"));
+            XposedHelpers.callMethod(am, "setPower", (byte) XposedHelpers.getIntField(ch, "power"));
+            XposedHelpers.callMethod(am, "setTxFreq", XposedHelpers.getIntField(ch, "txFreq"));
+            XposedHelpers.callMethod(am, "setRxFreq", XposedHelpers.getIntField(ch, "rxFreq"));
+            XposedHelpers.callMethod(am, "setSq", (byte) XposedHelpers.getIntField(ch, "sq"));
+            XposedHelpers.callMethod(am, "setRxType", (byte) XposedHelpers.getIntField(ch, "rxType"));
+            XposedHelpers.callMethod(am, "setRxSubCode", (byte) XposedHelpers.getIntField(ch, "rxSubCode"));
+            XposedHelpers.callMethod(am, "setTxType", (byte) XposedHelpers.getIntField(ch, "txType"));
+            XposedHelpers.callMethod(am, "setTxSubCode", (byte) XposedHelpers.getIntField(ch, "txSubCode"));
+            XposedHelpers.callMethod(am, "send");
+            XposedBridge.log(TAG + ": [analog-direct] " + why + ": tx=" + XposedHelpers.getIntField(ch, "txFreq")
+                    + " rx=" + XposedHelpers.getIntField(ch, "rxFreq") + " power=" + XposedHelpers.getIntField(ch, "power")
+                    + " band=" + XposedHelpers.getIntField(ch, "band") + " sq=" + XposedHelpers.getIntField(ch, "sq"));
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [analog-direct] " + why + " failed: " + t.getMessage());
+        }
+    }
+
+    private static volatile boolean tuneSyncEnabled = false, tuneDirectEnabled = true;  // direct-only by default (bench: --ei sync 1)
+
     private static void tuneCurrentChannelAnalog(int freqHz, int power, int band) {
         try {
             Class<?> dmrManagerClass = XposedHelpers.findClass("com.pri.prizeinterphone.manager.DmrManager", appClassLoader);
@@ -14627,8 +14689,9 @@ public class MainHook implements IXposedHookLoadPackage {
             // syncChannelInfoWithData() + AnalogMessage.send() retune the hardware only, so this is a
             // transient in-memory override that reverts on the next channel reload and can never
             // corrupt the user's stored channel (even if a crash skips the restore).
-            XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", ch);
+            if (tuneSyncEnabled) XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", ch);
             currentChannelType = 1;
+            if (!tuneDirectEnabled) { XposedBridge.log(TAG + ": [aprs-tune] sync only (bench)"); return; }
             Class<?> amc = XposedHelpers.findClass("com.pri.prizeinterphone.message.AnalogMessage", appClassLoader);
             Object am = amc.newInstance();
             XposedHelpers.callMethod(am, "setBand", (byte) XposedHelpers.getIntField(ch, "band"));
@@ -14726,7 +14789,9 @@ public class MainHook implements IXposedHookLoadPackage {
                     if (v != null) try { XposedHelpers.setIntField(ch, f, (Integer) v); } catch (Throwable ignored) { }
                 }
                 // hardware-only re-apply (no updateChannel → no DB write; the DB was never changed)
-                XposedHelpers.callMethod(dm, "syncChannelInfoWithData", ch);
+                // dm.syncChannelInfoWithData(ch) removed 2026-10-17: the OEM state-machine write followed within ms by
+                // the direct AnalogMessage below intermittently left the MCU transmitting NO RF (see applyAnalogChannelDirect)
+                applyAnalogChannelDirect(ch, "TX-freq restore");
                 Object ty = txFreqBackup.get("type");
                 if (ty != null) currentChannelType = (Integer) ty;
                 XposedBridge.log(TAG + ": [aprs-tx] restored channel (" + txFreqBackup.get("rxFreq") + " Hz, type " + ty + ")");
