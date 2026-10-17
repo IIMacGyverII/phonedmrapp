@@ -49,6 +49,11 @@ dependencies {
     
     // HTTP client for Google Cloud API
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+
+    // On-device speech recognition (Vosk / Kaldi) for live captions — runs here, not in the module,
+    // because JNA cannot be loaded inside the LSPosed-isolated radio-app process (see TRANSCRIBING_PLAN.md)
+    implementation 'com.alphacephei:vosk-android:0.3.47'
+    implementation 'net.java.dev.jna:jna:5.13.0@aar'
     
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

@@ -236,6 +236,17 @@ public class MainHook implements IXposedHookLoadPackage {
     
     // Speech-to-text transcription state (in-process; Google Cloud Speech-to-Text REST)
     private static volatile boolean isTranscriptionEnabled = false;
+    // On-device live captions (2026-10-17): received audio is streamed to the companion app's
+    // LiveCaptionService (Vosk) on 127.0.0.1:8002 and the partial results are shown as they arrive.
+    private static final String CAPTION_PKG = "com.macdmr.transcription";
+    private static final String CAPTION_SERVICE = "com.macdmr.transcription.LiveCaptionService";
+    private static final int CAPTION_PORT = 8002;
+    private static volatile boolean captionActive = false;
+    private static volatile java.net.Socket captionSocket = null;
+    private static volatile java.util.concurrent.LinkedBlockingQueue<byte[]> captionQueue = null;
+    private static volatile TextView liveCaptionView = null;
+    private static final StringBuilder captionFinalText = new StringBuilder();
+    private static volatile int captionCompanionInstalled = -1;   // -1 unknown, 0 no, 1 yes
     private static volatile String currentTranscription = "";
     private static List<Short> audioBuffer = Collections.synchronizedList(new ArrayList<>());
     private static final int MAX_BUFFER_SIZE = 480000; // 30 seconds at 16kHz (480000 samples)
@@ -2545,7 +2556,8 @@ public class MainHook implements IXposedHookLoadPackage {
                                         if (transcriptionToggle.isChecked()) {
                                             // Check if API key is configured
                                             String apiKey = readApiKeyFromFile();
-                                            if (apiKey == null || apiKey.isEmpty() || apiKey.equals("YOUR_GOOGLE_CLOUD_API_KEY_HERE")) {
+                                            boolean vosk = captionEngineVosk(context);
+                                            if (!vosk && (apiKey == null || apiKey.isEmpty() || apiKey.equals("YOUR_GOOGLE_CLOUD_API_KEY_HERE"))) {
                                                 // API key not configured - show configuration dialog
                                                 transcriptionToggle.setChecked(false); // Uncheck the button
                                                 showApiKeyConfigDialog(context, transcriptionToggle);
@@ -2555,7 +2567,14 @@ public class MainHook implements IXposedHookLoadPackage {
                                             // User wants to enable transcription (API key verified above)
                                             isTranscriptionEnabled = true;
                                             XposedBridge.log(TAG + ": Transcription enabled");
-                                            Toast.makeText(context, "Transcription enabled", Toast.LENGTH_SHORT).show();
+                                            Toast.makeText(context, vosk ? "Live captions ON (on-device, offline)" : "Transcription enabled (Google Cloud)", Toast.LENGTH_SHORT).show();
+                                            if (vosk) {   // warm the companion up now so the first reception is captioned
+                                                try {
+                                                    android.content.Intent svc = new android.content.Intent();
+                                                    svc.setComponent(new android.content.ComponentName(CAPTION_PKG, CAPTION_SERVICE));
+                                                    if (android.os.Build.VERSION.SDK_INT >= 26) context.startForegroundService(svc); else context.startService(svc);
+                                                } catch (Throwable t) { XposedBridge.log(TAG + ": [caption] warm-up: " + t.getMessage()); }
+                                            }
                                         } else {
                                             // User disabled transcription
                                             isTranscriptionEnabled = false;
@@ -2581,8 +2600,27 @@ public class MainHook implements IXposedHookLoadPackage {
                                 transcriptionToggle.setOnLongClickListener(new View.OnLongClickListener() {
                                     @Override
                                     public boolean onLongClick(View v) {
-                                        // Long press always shows the dialog (even with valid key)
-                                        showApiKeyConfigDialog(context, transcriptionToggle);
+                                        final android.content.SharedPreferences tp = context.getSharedPreferences("dmrmod_transcription", android.content.Context.MODE_PRIVATE);
+                                        boolean companion = true;
+                                        try { context.getPackageManager().getPackageInfo(CAPTION_PKG, 0); } catch (Throwable t) { companion = false; }
+                                        final boolean hasCompanion = companion;
+                                        int cur = "google".equals(tp.getString("engine", "vosk")) ? 1 : 0;
+                                        new AlertDialog.Builder(context)
+                                            .setTitle("Transcription engine")
+                                            .setSingleChoiceItems(new String[]{
+                                                    "On-device live captions (Vosk, offline)" + (hasCompanion ? "" : " \u2014 install the DMR Transcription app"),
+                                                    "Google Cloud Speech-to-Text (API key, after each transmission)" }, cur, null)
+                                            .setPositiveButton("Use", new DialogInterface.OnClickListener() {
+                                                @Override public void onClick(DialogInterface d, int w) {
+                                                    int sel = ((AlertDialog) d).getListView().getCheckedItemPosition();
+                                                    tp.edit().putString("engine", sel == 1 ? "google" : "vosk").apply();
+                                                    captionCompanionInstalled = -1;
+                                                    if (sel == 1) showApiKeyConfigDialog(context, transcriptionToggle);
+                                                    else Toast.makeText(context, hasCompanion ? "On-device live captions selected. Turn TXT on; the model (41 MB) downloads once." : "Install the DMR Transcription companion app first", Toast.LENGTH_LONG).show();
+                                                }
+                                            })
+                                            .setNegativeButton("Cancel", null)
+                                            .show();
                                         return true; // Consume the event
                                     }
                                 });
@@ -10583,6 +10621,13 @@ public class MainHook implements IXposedHookLoadPackage {
                                     isReceiving = true;
                                     rxStartMs = System.currentTimeMillis(); rxEventLogged = false;
                                     ChannelScanner.onReceiveStart();
+                                    if (isTranscriptionEnabled) {
+                                        try {
+                                            android.content.Context cctx = homeActivityRef != null ? homeActivityRef.get() : null;
+                                            if (cctx == null && mLocalViewObject instanceof View) cctx = ((View) mLocalViewObject).getContext();
+                                            if (cctx != null && captionEngineVosk(cctx)) captionStart(cctx);
+                                        } catch (Throwable t) { XposedBridge.log(TAG + ": [caption] start: " + t.getMessage()); }
+                                    }
                                     
                                     // Start recording if enabled
                                     if (isRecordingEnabled) {
@@ -10658,8 +10703,10 @@ public class MainHook implements IXposedHookLoadPackage {
                                     savedChannelTypeForTranscription = currentChannelType;
                                     
                                     // Process transcription if enabled (after transmission ends)
-                                    if (isTranscriptionEnabled && appContext != null) {
-                                        processTranscription(appContext);
+                                    if (captionActive) {
+                                        captionStop();                       // on-device captions: finish the utterance
+                                    } else if (isTranscriptionEnabled && appContext != null && !captionEngineVosk(appContext)) {
+                                        processTranscription(appContext);    // Google Cloud path
                                     }
                                     
                                     // Hide RSSI display
@@ -12395,6 +12442,7 @@ public class MainHook implements IXposedHookLoadPackage {
                         // Buffer audio for transcription if enabled
                         if (isTranscriptionEnabled) {
                             bufferAudioForTranscription(processingAudio);
+                            if (captionActive) captionFeed(processingAudio, length);
                         }
                         
                         // Only capture if recording is enabled and currently recording
@@ -13918,6 +13966,166 @@ public class MainHook implements IXposedHookLoadPackage {
     /**
      * Process audio transcription in-process via Google Cloud Speech-to-Text ({@link TranscriptionClient}).
      */
+    /** True when transcription should use the on-device live-caption engine (default when the companion app is installed). */
+    private static boolean captionEngineVosk(android.content.Context ctx) {
+        try {
+            if (captionCompanionInstalled < 0) {
+                try { ctx.getPackageManager().getPackageInfo(CAPTION_PKG, 0); captionCompanionInstalled = 1; }
+                catch (Throwable t) { captionCompanionInstalled = 0; }
+            }
+            String engine = ctx.getSharedPreferences("dmrmod_transcription", android.content.Context.MODE_PRIVATE).getString("engine", "vosk");
+            return "vosk".equals(engine) && captionCompanionInstalled == 1;
+        } catch (Throwable t) { return false; }
+    }
+
+    private static void showLiveCaption(final String text) {
+        try {
+            final LinearLayout container = transcriptionMessagesContainer;
+            if (container == null) return;
+            container.post(new Runnable() {
+                @Override public void run() {
+                    try {
+                        if (transcriptionBox != null) transcriptionBox.setVisibility(View.VISIBLE);
+                        TextView tv = liveCaptionView;
+                        if (tv == null || tv.getParent() != container) {
+                            tv = new TextView(container.getContext());
+                            tv.setTextColor(0xFF00E5FF);
+                            tv.setTextSize(12);
+                            tv.setTypeface(null, android.graphics.Typeface.ITALIC);
+                            tv.setPadding(0, 2, 0, 2);
+                            container.addView(tv);
+                            liveCaptionView = tv;
+                        }
+                        tv.setText(text);
+                        if (transcriptionScrollView != null) transcriptionScrollView.post(new Runnable() {
+                            @Override public void run() { transcriptionScrollView.fullScroll(View.FOCUS_DOWN); }
+                        });
+                    } catch (Throwable ignore) { }
+                }
+            });
+        } catch (Throwable ignore) { }
+    }
+
+    private static void removeLiveCaption() {
+        final LinearLayout container = transcriptionMessagesContainer;
+        final TextView tv = liveCaptionView;
+        liveCaptionView = null;
+        if (container == null || tv == null) return;
+        container.post(new Runnable() { @Override public void run() { try { container.removeView(tv); } catch (Throwable ignore) { } } });
+    }
+
+    /** RECEIVE_START: start the companion service if needed, connect, and stream until captionStop(). */
+    private static void captionStart(final android.content.Context ctxIn) {
+        if (captionActive) return;
+        captionActive = true;
+        synchronized (captionFinalText) { captionFinalText.setLength(0); }
+        final android.content.Context ctx = ctxIn.getApplicationContext() != null ? ctxIn.getApplicationContext() : ctxIn;
+        final java.util.concurrent.LinkedBlockingQueue<byte[]> q = new java.util.concurrent.LinkedBlockingQueue<>();
+        captionQueue = q;
+        new Thread(new Runnable() { @Override public void run() {
+            java.net.Socket sock = null;
+            try {
+                try {
+                    android.content.Intent svc = new android.content.Intent();
+                    svc.setComponent(new android.content.ComponentName(CAPTION_PKG, CAPTION_SERVICE));
+                    if (android.os.Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(svc); else ctx.startService(svc);
+                } catch (Throwable t) { XposedBridge.log(TAG + ": [caption] start service: " + t.getMessage()); }
+                for (int i = 0; i < 16 && captionActive; i++) {
+                    try { sock = new java.net.Socket(); sock.connect(new java.net.InetSocketAddress("127.0.0.1", CAPTION_PORT), 500); break; }
+                    catch (Throwable t) { sock = null; Thread.sleep(250); }
+                }
+                if (sock == null) {
+                    showLiveCaption("⏳ Captions: companion service not reachable (starting?)");
+                    captionActive = false; captionQueue = null;
+                    return;
+                }
+                captionSocket = sock;
+                sock.setTcpNoDelay(true);
+                final java.io.OutputStream out = sock.getOutputStream();
+                final java.net.Socket fs = sock;
+                // writer: drain the audio queue; an empty array = end of utterance
+                Thread writer = new Thread(new Runnable() { @Override public void run() {
+                    try {
+                        while (true) {
+                            byte[] b = q.take();
+                            if (b.length == 0) { fs.shutdownOutput(); break; }
+                            out.write(b); out.flush();
+                        }
+                    } catch (Throwable t) { XposedBridge.log(TAG + ": [caption] writer: " + t.getMessage()); }
+                } }, "dmrmod-caption-writer");
+                writer.setDaemon(true); writer.start();
+                // reader: JSON lines from the recognizer
+                java.io.BufferedReader in = new java.io.BufferedReader(new java.io.InputStreamReader(sock.getInputStream(), "UTF-8"));
+                String line;
+                while ((line = in.readLine()) != null) {
+                    try {
+                        org.json.JSONObject o = new org.json.JSONObject(line);
+                        if (o.has("status")) {
+                            String st = o.optString("status");
+                            if (!"ready".equals(st)) { showLiveCaption("⏳ Captions: " + st); }
+                            continue;
+                        }
+                        if (o.has("partial")) {
+                            String ptxt = o.optString("partial").trim();
+                            String done; synchronized (captionFinalText) { done = captionFinalText.toString(); }
+                            if (!ptxt.isEmpty() || !done.isEmpty()) showLiveCaption("🎙️ " + (done.isEmpty() ? "" : done + " ") + ptxt + " \u2026");
+                        } else if (o.has("text")) {
+                            String t = o.optString("text").trim();
+                            if (!t.isEmpty()) {
+                                String done; synchronized (captionFinalText) { if (captionFinalText.length() > 0) captionFinalText.append(' '); captionFinalText.append(t); done = captionFinalText.toString(); }
+                                showLiveCaption("🎙️ " + done + " \u2026");
+                            }
+                        }
+                    } catch (Throwable t) { XposedBridge.log(TAG + ": [caption] line: " + t.getMessage()); }
+                }
+            } catch (Throwable t) {
+                XposedBridge.log(TAG + ": [caption] " + t.getMessage());
+            } finally {
+                try { if (sock != null) sock.close(); } catch (Throwable ignore) { }
+                captionSocket = null; captionQueue = null; captionActive = false;
+                String text; synchronized (captionFinalText) { text = captionFinalText.toString().trim(); }
+                removeLiveCaption();
+                if (!text.isEmpty()) {
+                    String display = text;
+                    if (savedChannelTypeForTranscription == 0) {
+                        if (savedCallerNameForTranscription != null && !savedCallerNameForTranscription.isEmpty()) display = savedCallerNameForTranscription + ": " + text;
+                        else if (savedCallerDmrIdForTranscription > 0) display = "ID " + savedCallerDmrIdForTranscription + ": " + text;
+                    }
+                    currentTranscription = text;
+                    updateTranscriptionDisplay(display);
+                    persistTranscription(ctx, text);
+                    XposedBridge.log(TAG + ": [caption] final: " + text);
+                }
+            }
+        } }, "dmrmod-caption").start();
+    }
+
+    /** 8 kHz stereo (L==R) frames -> 16 kHz mono PCM (linear interpolation) for the recognizer. */
+    private static void captionFeed(byte[] data, int length) {
+        try {
+            java.util.concurrent.LinkedBlockingQueue<byte[]> q = captionQueue;
+            if (q == null || q.size() > 400) return;
+            int n = length / 4;
+            if (n < 2) return;
+            byte[] out = new byte[n * 4];
+            int prev = (short) ((data[1] << 8) | (data[0] & 0xFF));
+            for (int i = 0; i < n; i++) {
+                int cur = (short) ((data[4 * i + 1] << 8) | (data[4 * i] & 0xFF));
+                int mid = (prev + cur) >> 1;
+                out[4 * i] = (byte) mid; out[4 * i + 1] = (byte) (mid >> 8);
+                out[4 * i + 2] = (byte) cur; out[4 * i + 3] = (byte) (cur >> 8);
+                prev = cur;
+            }
+            q.offer(out);
+        } catch (Throwable ignore) { }
+    }
+
+    /** RECEIVE_STOP: end the utterance; the reader thread finishes with the final result. */
+    private static void captionStop() {
+        java.util.concurrent.LinkedBlockingQueue<byte[]> q = captionQueue;
+        if (q != null) q.offer(new byte[0]);
+    }
+
     private static void processTranscription(Context context) {
         if (!isTranscriptionEnabled || audioBuffer.isEmpty()) {
             return;
