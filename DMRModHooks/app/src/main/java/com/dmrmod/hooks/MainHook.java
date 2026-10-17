@@ -5048,6 +5048,12 @@ public class MainHook implements IXposedHookLoadPackage {
             autoAckBox.setChecked(activity.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE).getBoolean("auto_ack", true));
             mainLayout.addView(autoAckBox);
 
+            final android.widget.CheckBox digiBox = new android.widget.CheckBox(activity);
+            digiBox.setText("Fill-in digipeater: repeat packets heard with a WIDE1-1 first hop (once, as MYCALL*) while APRS monitoring is on. Helps mobiles reach the wide-area digipeaters; transmits unattended, so leave off unless you mean it");
+            digiBox.setTextSize(13);
+            digiBox.setChecked(activity.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE).getBoolean("digipeat", false));
+            mainLayout.addView(digiBox);
+
             TextView passiveLabel = new TextView(activity);
             passiveLabel.setText("\nPassive decode when not in monitoring mode:");
             passiveLabel.setTextSize(14);
@@ -5113,8 +5119,10 @@ public class MainHook implements IXposedHookLoadPackage {
                         aprsDb.setAprsFrequency(frequency);
                         activity.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE)
                                 .edit().putBoolean("auto_ack", autoAckBox.isChecked())
-                                .putInt("passive_mode", passiveSpin.getSelectedItemPosition()).apply();
+                                .putInt("passive_mode", passiveSpin.getSelectedItemPosition())
+                                .putBoolean("digipeat", digiBox.isChecked()).apply();
                         aprsPassiveMode = -1;   // reload on the next audio chunk
+                        aprsDigiEnabled = digiBox.isChecked() ? 1 : 0;
                         
                         Toast.makeText(activity, "APRS settings saved!", Toast.LENGTH_SHORT).show();
                         if (onSaved != null) onSaved.run();
@@ -9120,6 +9128,108 @@ public class MainHook implements IXposedHookLoadPackage {
         }
     }
 
+    // =====================================================================================
+    // Fill-in digipeater (WIDE1-1), 2026-10-17 — APRS monitoring only, setting default OFF
+    // =====================================================================================
+
+    private static volatile int aprsDigiEnabled = -1;   // -1 not loaded, 0 off, 1 on
+    private static final java.util.HashMap<String, Long> aprsDigiSeen = new java.util.HashMap<>();
+
+    private static boolean aprsDigiWanted(android.content.Context ctx) {
+        int e = aprsDigiEnabled;
+        if (e < 0) {
+            try {
+                e = ctx.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE).getBoolean("digipeat", false) ? 1 : 0;
+                aprsDigiEnabled = e;
+            } catch (Throwable t) { return false; }
+        }
+        return e == 1;
+    }
+
+    /**
+     * Called for every FCS-valid AX.25 frame heard (parsed or not). Repeats it once when the first
+     * unused digipeater hop is WIDE1-1 (or our own callsign-SSID), replacing that hop with our
+     * callsign marked used — the "new paradigm" fill-in behaviour. Never repeats our own frames,
+     * frames already carrying our callsign, frames with no digipeater field, or a frame seen in the
+     * last 30 s (same source + payload). Transmits one copy after a 0.5-1.5 s random hold-off.
+     */
+    static void aprsMaybeDigipeat(final android.content.Context ctx, final byte[] frame) {
+        try {
+            if (!isAPRSMonitoringActive || kissActive) return;
+            if (!aprsDigiWanted(ctx)) return;
+            if (frame == null || frame.length < 16) return;
+            APRSDatabase db = APRSDatabase.getInstance(ctx);
+            final String myCall = db.getCallsign() == null ? "" : db.getCallsign().trim().toUpperCase(java.util.Locale.US);
+            final int mySsid = db.getSSID();
+            if (myCall.isEmpty() || "N0CALL".equals(myCall)) return;
+
+            // walk the address field
+            int off = 0;
+            String dst = ax25Addr(frame, 0), src = ax25Addr(frame, 7);
+            if (src.equals(myCall + (mySsid != 0 ? "-" + mySsid : ""))) return;        // our own
+            boolean last = (frame[13] & 0x01) != 0;
+            off = 14;
+            int hopOff = -1;
+            while (!last && off + 7 <= frame.length) {
+                String digi = ax25Addr(frame, off);
+                boolean used = (frame[off + 6] & 0x80) != 0;
+                if (digi.equals(myCall) || digi.equals(myCall + "-" + mySsid)) { if (used) return; }   // already repeated by us
+                if (!used && hopOff < 0) {
+                    if (digi.equals("WIDE1-1") || digi.equals(myCall + "-" + mySsid) || (mySsid == 0 && digi.equals(myCall))) hopOff = off;
+                    else return;                                                        // first unused hop is not ours
+                }
+                last = (frame[off + 6] & 0x01) != 0;
+                off += 7;
+            }
+            if (hopOff < 0) return;
+            if (off + 2 > frame.length) return;
+            int infoStart = off + 2;
+
+            // de-dupe on source + payload for 30 s
+            String key = src + ":" + new String(frame, infoStart, frame.length - infoStart, java.nio.charset.StandardCharsets.ISO_8859_1);
+            long now = System.currentTimeMillis();
+            synchronized (aprsDigiSeen) {
+                Long t = aprsDigiSeen.get(key);
+                if (t != null && now - t < 30000) return;
+                aprsDigiSeen.put(key, now);
+                if (aprsDigiSeen.size() > 500) aprsDigiSeen.clear();
+            }
+
+            // build the repeated frame: hop := MYCALL-SSID with H bit set, everything else untouched
+            final byte[] out = frame.clone();
+            String call = (myCall + "      ").substring(0, 6);
+            for (int i = 0; i < 6; i++) out[hopOff + i] = (byte) ((call.charAt(i) << 1) & 0xFF);
+            out[hopOff + 6] = (byte) ((frame[hopOff + 6] & 0x01) | 0x60 | ((mySsid & 0x0F) << 1) | 0x80);
+
+            final String label = "digi " + src + ">" + dst;
+            int holdMs = 500 + new java.util.Random().nextInt(1000);
+            XposedBridge.log(TAG + ": [digi] " + src + ">" + dst + " via WIDE1-1 -> repeating as " + myCall + "-" + mySsid + "* in " + holdMs + " ms");
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+                @Override public void run() {
+                    new Thread(new Runnable() { @Override public void run() {
+                        try {
+                            if (!isAPRSMonitoringActive || kissActive) return;
+                            int ms = transmitRawAx25(ctx, out, label, false, 1);
+                            aprsStoreLogEntry(ctx, "digi", src, dst, "repeated via " + myCall + "-" + mySsid, null, false);
+                            XposedBridge.log(TAG + ": [digi] " + (ms < 0 ? "FAILED" : "repeated (" + ms + " ms)") + ": " + label);
+                        } catch (Throwable t) { XposedBridge.log(TAG + ": [digi] error: " + t.getMessage()); }
+                    } }, "dmrmod-aprs-digi").start();
+                }
+            }, holdMs);
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [digi] error: " + t.getMessage());
+        }
+    }
+
+    /** "CALL-SSID" (no "-0") from an AX.25 address field. */
+    private static String ax25Addr(byte[] f, int off) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 6; i++) { char c = (char) ((f[off + i] & 0xFF) >> 1); if (c != ' ') sb.append(c); }
+        int ssid = (f[off + 6] >> 1) & 0x0F;
+        if (ssid != 0) sb.append('-').append(ssid);
+        return sb.toString();
+    }
+
     private static final java.util.HashMap<String, Long> aprsAckSent = new java.util.HashMap<>();
 
     /**
@@ -9259,6 +9369,8 @@ public class MainHook implements IXposedHookLoadPackage {
                 String when = fmt.format(new java.util.Date(o.optLong("t", 0)));
                 if ("status".equals(kind)) {
                     line = when + "  " + from + " status: " + o.optString("text", "");
+                } else if ("digi".equals(kind)) {
+                    line = when + "  \uD83D\uDD01 digipeated " + from + " > " + o.optString("to", "");
                 } else if ("ack-tx".equals(kind)) {
                     line = when + "  ✓ acked " + o.optString("id", "") + " → " + o.optString("to", "") + " (sent by us)";
                 } else if ("ack".equals(kind) || "rej".equals(kind)) {
@@ -13852,6 +13964,15 @@ public class MainHook implements IXposedHookLoadPackage {
             }
             if ("kissstop".equalsIgnoreCase(mode))  { stopKissTnc(); return; }
 
+            // mode=digipeat --ei on 0|1: toggle the fill-in digipeater setting (bench use)
+            if ("digipeat".equalsIgnoreCase(mode)) {
+                boolean on = intent.getIntExtra("on", 0) != 0;
+                ctx.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE).edit().putBoolean("digipeat", on).apply();
+                aprsDigiEnabled = on ? 1 : 0;
+                XposedBridge.log(TAG + ": [digi] setting -> " + on);
+                return;
+            }
+
             // mode=aprsstart/aprsstop: drive APRS monitoring hands-free (same code path as the UI button).
             if ("aprsstart".equalsIgnoreCase(mode) || "aprsstop".equalsIgnoreCase(mode)) {
                 final boolean start = "aprsstart".equalsIgnoreCase(mode);
@@ -14142,6 +14263,11 @@ public class MainHook implements IXposedHookLoadPackage {
      */
     private static int transmitRawAx25(final android.content.Context ctx, final byte[] ax25NoFcs,
                                        final String label, boolean toast) {
+        return transmitRawAx25(ctx, ax25NoFcs, label, toast, APRS_TX_REPS);
+    }
+
+    private static int transmitRawAx25(final android.content.Context ctx, final byte[] ax25NoFcs,
+                                       final String label, boolean toast, int reps) {
         int fcs = 0xFFFF;
         for (byte b : ax25NoFcs) {
             fcs ^= (b & 0xFF);
@@ -14152,7 +14278,7 @@ public class MainHook implements IXposedHookLoadPackage {
         System.arraycopy(ax25NoFcs, 0, frame, 0, ax25NoFcs.length);
         frame[ax25NoFcs.length] = (byte) (fcs & 0xFF);
         frame[ax25NoFcs.length + 1] = (byte) ((fcs >> 8) & 0xFF);
-        return txAfskFrame(ctx, frame, label, APRS_TX_LEAD_MS, APRS_TX_REPS, APRS_TX_GAP_MS, toast);
+        return txAfskFrame(ctx, frame, label, APRS_TX_LEAD_MS, reps, APRS_TX_GAP_MS, toast);
     }
 
     /** Longest audio we will key for: the firmware stops TX at 30 s, keep margin for key-up + lead-in. */
