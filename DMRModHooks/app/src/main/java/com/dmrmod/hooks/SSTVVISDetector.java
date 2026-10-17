@@ -11,7 +11,7 @@ import de.robv.android.xposed.XposedBridge;
  * - Leader: 1900 Hz for 300ms (bit sync)
  * - Break: 1200 Hz for 10ms
  * - VIS start bit: 1900 Hz for 30ms
- * - 7 data bits (LSB first): 1100 Hz = 0, 1300 Hz = 1 (30ms each)
+ * - 7 data bits (LSB first): 1100 Hz = 1, 1300 Hz = 0 (30ms each) — standard polarity
  * - Even parity bit: 1100/1300 Hz for 30ms
  * - VIS stop bit: 1200 Hz for 30ms
  * 
@@ -23,8 +23,13 @@ public class SSTVVISDetector {
     // VIS tone frequencies (Hz)
     private static final float FREQ_LEADER = 1900.0f;
     private static final float FREQ_BREAK = 1200.0f;
-    private static final float FREQ_VIS_BIT0 = 1100.0f;
-    private static final float FREQ_VIS_BIT1 = 1300.0f;
+    // SSTV VIS standard (Bruchanov handbook, MMSSTV, robot36, pySSTV): logical 1 = 1100 Hz,
+    // logical 0 = 1300 Hz. These were swapped until 2026-10-16, so every standard VIS decoded as
+    // its bitwise complement with bad parity and images only ever decoded via the sync-family
+    // auto-detect fallback (proven on-air with a HackRF-generated Robot 36: VIS read 0x7d/rejected,
+    // then "9ms family matched"). Verified against the raw RX capture with an independent decoder.
+    private static final float FREQ_VIS_BIT0 = 1300.0f;
+    private static final float FREQ_VIS_BIT1 = 1100.0f;
     private static final float FREQ_SYNC = 1200.0f;
     
     // Timing constants (computed from sampleRate in constructor)
@@ -32,6 +37,8 @@ public class SSTVVISDetector {
     private int BREAK_SAMPLES;        // 10ms
     private int BIT_SAMPLES;          // 30ms per bit
     private int SECOND_LEADER_SAMPLES; // 300ms (second leader before VIS start bit)
+    // pre-filter gain compensation (relative to 1200 Hz), see constructor
+    private float compLeader = 1f, compBit0 = 1f, compBit1 = 1f;
     
     // Detection thresholds
     private static final float GOERTZEL_THRESHOLD = 3.5f;   // Lowered to 3.5 (measured 3.94 in testing)
@@ -73,6 +80,13 @@ public class SSTVVISDetector {
         LEADER_MIN_SAMPLES    = (int) (sampleRate * 0.300);  // 300ms
         BREAK_SAMPLES         = (int) (sampleRate * 0.010);  // 10ms
         BIT_SAMPLES           = (int) (sampleRate * 0.030);  // 30ms
+        // The pre-filter is really a low-pass with a strong tilt (|H| 0.571 @1200 Hz vs 0.346 @1900 Hz
+        // at 16 kHz), which biases every "1200 beats 1900" comparison early. Normalise the other
+        // tones to the 1200 Hz gain so the start-bit edge is found where the tones actually cross.
+        float g12 = firGain(FREQ_SYNC);
+        compLeader = g12 / firGain(FREQ_LEADER);
+        compBit0   = g12 / firGain(FREQ_VIS_BIT0);
+        compBit1   = g12 / firGain(FREQ_VIS_BIT1);
         SECOND_LEADER_SAMPLES = (int) (sampleRate * 0.300);  // 300ms (standard SSTV: second leader after break)
     }
     
@@ -106,9 +120,21 @@ public class SSTVVISDetector {
             //   + StartBit(30ms 1200Hz) + D0..D6(30ms each) + Parity + StopBit(30ms 1200Hz)
             // Skip past the 10ms break AND the second 300ms leader, then verify the 1200Hz start bit.
             int visStart = leaderEnd + BREAK_SAMPLES + SECOND_LEADER_SAMPLES;
-            XposedBridge.log(TAG + ": Break + second leader skipped, VIS start bit at sample " + visStart);
+            XposedBridge.log(TAG + ": Break + second leader skipped, VIS start bit at sample ~" + visStart);
 
-            // Step 3: Verify VIS start bit (1200 Hz for 30ms)
+            // Step 3: Refine to the exact 1900→1200 start-bit edge. leaderEnd comes from a coarse
+            // Goertzel scan (25 ms hops), so the predicted position can be off by up to a bit period
+            // and the data bits were being read one bit early/late (0x10 / 0x02 for a true 0x08 —
+            // seen on-air 2026-10-16 with a HackRF-generated Robot 36). Lock to the edge instead.
+            int refined = refineStartBit(filtered, visStart);
+            if (refined < 0) {
+                XposedBridge.log(TAG + ": VIS start bit (1200Hz) edge not found near " + visStart);
+                return SSTVVISResult.notDetected();
+            }
+            XposedBridge.log(TAG + ": VIS start bit edge refined " + visStart + " -> " + refined
+                    + " (" + ((refined - visStart) * 1000 / sampleRate) + " ms)");
+            visStart = refined;
+
             if (!verifyBreakTone(filtered, visStart)) {
                 XposedBridge.log(TAG + ": VIS start bit (1200Hz) not found");
                 return SSTVVISResult.notDetected();
@@ -306,6 +332,66 @@ public class SSTVVISDetector {
     /**
      * Verify break tone (1200 Hz for 10ms)
      */
+    /**
+     * Locate the exact start-bit edge (second leader 1900 Hz → start bit 1200 Hz) near a coarse
+     * estimate. Slides a 10 ms window in 1 ms steps over ±45 ms and returns the first position where
+     * 1200 Hz out-powers 1900 Hz and keeps doing so for ≥ 25 ms (the start bit is 30 ms). Returns -1
+     * if no such edge exists.
+     */
+    private int refineStartBit(short[] samples, int approx) {
+        int win  = (int) (sampleRate * 0.010);
+        int step = (int) (sampleRate * 0.001);
+        // Asymmetric span: when the 2 s work buffer no longer holds the first leader, findLeaderTone
+        // locks the SECOND leader and approx lands ~310 ms past the real start bit; the other way the
+        // coarse scan is at most ~100 ms late. The 1900→1200 transition test is specific enough (the
+        // 10 ms break fails the hold) that a wide window is safe.
+        int spanBack = (int) (sampleRate * 0.340);
+        int spanFwd  = (int) (sampleRate * 0.120);
+        // Verification windows (10 ms) start up to `hold` after the edge, so hold+win must stay
+        // inside the 30 ms start bit — 18 ms keeps the last window ending at +28 ms. (25 ms overran
+        // into the first data bit and rejected every true edge.)
+        int hold = (int) (sampleRate * 0.018);
+        int from = Math.max(win + 2 * step, approx - spanBack);
+        int to   = Math.min(samples.length - win - hold, approx + spanFwd);
+        for (int pos = from; pos <= to; pos += step) {
+            // The start bit is the ONLY 1200 Hz tone that directly follows the 1900 Hz leader; the data
+            // tones (1100/1300) also "beat 1900 at 1200" so test the transition, not just dominance.
+            int prev = pos - win - 2 * step;
+            if (!syncDominant(samples, pos, win)) continue;
+            float p19 = compLeader * goertzelMagnitude(samples, prev, win, FREQ_LEADER);
+            if (p19 <= goertzelMagnitude(samples, prev, win, FREQ_SYNC) || p19 <= compBit0 * goertzelMagnitude(samples, prev, win, FREQ_VIS_BIT0)) continue;
+            boolean holds = true;
+            for (int q = pos + step; q <= pos + hold; q += step * 4) {
+                if (!syncDominant(samples, q, win)) { holds = false; break; }
+            }
+            // With gain compensation the first qualifying window sits ~6 ms before the physical edge
+            // (measured on a real capture); returning pos as-is keeps every data-bit window
+            // (+30 ms + n·30 ms, sampled at +0/+10/+20 ms) inside its bit with ≥7 ms margin.
+            // Do NOT back up by a window: −16 ms already straddles bits 2/3 and reads 0x18.
+            if (holds) return pos;
+        }
+        return -1;
+    }
+
+    /** 1200 Hz out-powers the leader AND both data tones in this window (pre-filter gain compensated). */
+    private boolean syncDominant(short[] samples, int pos, int win) {
+        float m12 = goertzelMagnitude(samples, pos, win, FREQ_SYNC);
+        return m12 > compLeader * goertzelMagnitude(samples, pos, win, FREQ_LEADER)
+            && m12 > compBit0   * goertzelMagnitude(samples, pos, win, FREQ_VIS_BIT0)
+            && m12 > compBit1   * goertzelMagnitude(samples, pos, win, FREQ_VIS_BIT1);
+    }
+
+    /** Magnitude response of the pre-filter (BANDPASS_COEFFS) at {@code freq} for this sample rate. */
+    private float firGain(float freq) {
+        double re = 0, im = 0;
+        for (int n = 0; n < BANDPASS_COEFFS.length; n++) {
+            double w = 2 * Math.PI * freq * n / sampleRate;
+            re += BANDPASS_COEFFS[n] * Math.cos(w);
+            im -= BANDPASS_COEFFS[n] * Math.sin(w);
+        }
+        return (float) Math.sqrt(re * re + im * im);
+    }
+
     private boolean verifyBreakTone(short[] samples, int pos) {
         if (pos + BREAK_SAMPLES > samples.length) {
             return false;

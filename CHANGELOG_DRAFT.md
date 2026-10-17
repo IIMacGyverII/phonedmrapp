@@ -3,6 +3,19 @@
 Everything below shipped in **v4.0.0** (2026-10-15). Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-16 — SSTV receive: deaf-receiver regression fixed, VIS decoder corrected (HackRF-verified)
+
+Method: a HackRF transmitted a known Robot 36 reference image (colour bars + gray ramp) **into** the radio while the module monitored; the decoded PNG and a new raw RX-audio dump were scored against the source on the PC.
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | **Regression fix: SSTV monitoring left the receiver deaf.** Since R1 (2026-10-14) the SSTV hijack wrote `band=0` on the VHF SSTV frequency; the radio then reported no `RECEIVE_START` even at −73 dBm (nor on NOAA), and stayed deaf after an app restart — only a phone reboot recovered it. The identical retune with `band=1` (what APRS/NOAA/the APRS-TX tune use) receives normally. SSTV now sets `band=1`. On this radio the byte is **not** a pure bandwidth flag: it must be 1 on VHF. | `MainHook` (`startSSTVMonitoring`) | **device + HackRF**: deaf with band=0 (3 runs, 0 audio received); with band=1 the same transmission decoded 238/240 lines |
+| — | **VIS decoder: bit polarity was inverted** (`1100 Hz` read as 0, `1300 Hz` as 1; the standard is the reverse). Every standard VIS decoded as its complement with bad parity (`0x7d … rejecting`) and images only ever decoded through the sync-family auto-detect fallback. Polarity corrected to the standard. | `SSTVVISDetector` | **device + HackRF**: standard VIS now reads `0x8 (Robot 36)` through the VIS path |
+| — | **VIS decoder: data bits were read one bit early/late.** The start-bit position was *assumed* from a coarse (25 ms-hop) leader scan plus fixed offsets, so bits read as `0x10`/`0x02` for a true `0x08`; worse, when the 2 s work buffer no longer held the first leader the scan locked the *second* leader and the estimate was ~310 ms off. Added `refineStartBit`: finds the exact 1900→1200 start-bit transition (10 ms Goertzel windows, 1 ms steps, −340…+120 ms span, must hold for the start bit's duration), with the pre-filter's gain tilt compensated (|H| 0.571 @1200 Hz vs 0.346 @1900 Hz biased the comparison early). Validated offline on the real RX capture, then on-air. | `SSTVVISDetector` (`refineStartBit`, `syncDominant`, `firGain`, gain-comp fields) | **device + HackRF**: `edge refined 17600 → 12400 (−325 ms)`, bits `0 0 0 1 0 0 0` → `VIS code decoded: 0x8 (Robot 36)`, no auto-detect needed |
+| — | Decode quality measured: with a full-range reference the module decodes white 252 / black 1, worst colour-bar error 4/255, correct Cr/Cb order, 238/240 lines. (A studio-swing source reads ~8 % low-contrast — a source convention, not a module defect: Robot YCbCr is full-range in the module, pySSTV and MMSSTV.) | — | measurement |
+| — | Diagnostics (gated): `APRS_TX_TEST --es mode sstvstart|sstvstop` drives SSTV monitoring hands-free through the real start/stop code (home Activity captured in the activity hook); `--es mode rxdump --ei secs N` writes the next N s of the raw RX audio stream (8 kHz stereo 16-bit) to `Download/DMR/rxdump.raw` — exactly what the decoders are fed, for offline analysis. | `MainHook` | **device**: used for every run above |
+| — | `AFSKGenerator` header: the stale "TX not functional on this hardware" notice replaced (it powers the shipped APRS TX). | `AFSKGenerator` | n/a |
+
 ## 2026-10-16 — KISS TNC frequency selector (tune for the session) + freq-field alignment fix
 
 | Backlog | Change | Files | Test |
