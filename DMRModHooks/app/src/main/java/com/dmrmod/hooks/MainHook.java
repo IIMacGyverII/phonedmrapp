@@ -14889,7 +14889,9 @@ public class MainHook implements IXposedHookLoadPackage {
             }
             if (!voiceTtsReady) return;
             android.os.Bundle params = new android.os.Bundle();
-            params.putInt(android.speech.tts.TextToSpeech.Engine.KEY_PARAM_STREAM, android.media.AudioManager.STREAM_NOTIFICATION);
+            // media stream: the notification stream is muted on this phone (DND bell), the radio audio plays on media
+            params.putInt(android.speech.tts.TextToSpeech.Engine.KEY_PARAM_STREAM, android.media.AudioManager.STREAM_MUSIC);
+            params.putFloat(android.speech.tts.TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f);
             int r = t.speak(text, android.speech.tts.TextToSpeech.QUEUE_FLUSH, params, "dmrmod-voice");
             XposedBridge.log(TAG + ": [voice] say (" + (r == android.speech.tts.TextToSpeech.SUCCESS ? "ok" : "err " + r) + "): " + text);
         } catch (Throwable e) {
