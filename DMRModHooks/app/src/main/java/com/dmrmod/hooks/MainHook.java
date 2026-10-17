@@ -316,6 +316,9 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile boolean smeterEnabled = false;   // Live S-meter: poll RSSI while idle (Device-tab toggle, prefs key "smeter")
     // Voice announcements (2026-10-17): speak channel changes and DMR callers with Android TTS (prefs "voice", default off)
     private static volatile boolean voiceEnabled = false;
+    // Hardware PTT (2026-10-17): volume-up key or a headset/media button keys the radio while the app is open (prefs "volptt", default off)
+    private static volatile boolean volumePttEnabled = false;
+    private static volatile boolean volumePttHeld = false;
     private static volatile android.speech.tts.TextToSpeech voiceTts = null;
     private static volatile boolean voiceTtsReady = false;
     private static volatile long voiceLastCallerId = 0, voiceLastCallerMs = 0;
@@ -629,6 +632,7 @@ public class MainHook implements IXposedHookLoadPackage {
 
         // Channel scanner: suppress the OEM progress dialog while scanning
         hookScanSupport(lpparam);
+        hookHardwarePtt(lpparam);
 
         // U11: mod help appended to the OEM "Use Assistant" page
         hookUseAssistant(lpparam);
@@ -4739,6 +4743,33 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             });
 
+            // === HARDWARE PTT: volume-up / headset button keys the radio ===
+            final android.widget.ToggleButton volPttToggle = new android.widget.ToggleButton(context);
+            volPttToggle.setTextOn("🎙️ Volume-up / headset button = PTT: ON");
+            volPttToggle.setTextOff("🎙️ Volume-up / headset button = PTT: OFF");
+            volPttToggle.setChecked(volumePttEnabled);
+            volPttToggle.setTextSize(14);
+            volPttToggle.setAllCaps(false);
+            volPttToggle.setPadding(20, 20, 20, 20);
+            volPttToggle.setLayoutParams(new ViewGroup.LayoutParams(templateParams));
+            volPttToggle.setContentDescription("Toggle volume-key PTT");
+            volPttToggle.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    boolean on = volPttToggle.isChecked();
+                    try {
+                        activity.getSharedPreferences(DIAG_PREFS, Context.MODE_PRIVATE).edit()
+                                .putBoolean("volptt", on).apply();
+                    } catch (Throwable ignored) { }
+                    volumePttEnabled = on;
+                    if (!on && volumePttHeld) { volumePttHeld = false; try { activity.sendBroadcast(new android.content.Intent("com.interphone.ptt.up")); } catch (Throwable ignored) { } }
+                    XposedBridge.log(TAG + ": Hardware PTT toggled " + (on ? "ON" : "OFF"));
+                    Toast.makeText(activity, on
+                            ? "Hold volume-up (or a headset/media button) to transmit while this app is open; volume-down still adjusts volume"
+                            : "Volume-key PTT OFF", Toast.LENGTH_LONG).show();
+                }
+            });
+
             // === LAST HEARD across all channels ===
             final android.widget.Button lastHeardButton = new android.widget.Button(context);
             lastHeardButton.setText("📻 Last heard (all channels)");
@@ -4854,9 +4885,10 @@ public class MainHook implements IXposedHookLoadPackage {
                 parentLayout.addView(diagToggle, index + 8);
                 parentLayout.addView(smeterToggle, index + 9);
                 parentLayout.addView(voiceToggle, index + 10);
-                parentLayout.addView(lastHeardButton, index + 11);
-                parentLayout.addView(nearbyButton, index + 12);
-                parentLayout.addView(updateButton, index + 13);
+                parentLayout.addView(volPttToggle, index + 11);
+                parentLayout.addView(lastHeardButton, index + 12);
+                parentLayout.addView(nearbyButton, index + 13);
+                parentLayout.addView(updateButton, index + 14);
                 XposedBridge.log(TAG + ": ✓ Export button added at index " + index);
                 XposedBridge.log(TAG + ": ✓ Import button added at index " + (index + 1));
                 XposedBridge.log(TAG + ": ✓ RadioID buttons added at indices " + (index + 2) + "-" + (index + 4));
@@ -4872,6 +4904,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 parentLayout.addView(diagToggle);
                 parentLayout.addView(smeterToggle);
                 parentLayout.addView(voiceToggle);
+                parentLayout.addView(volPttToggle);
                 parentLayout.addView(lastHeardButton);
                 parentLayout.addView(nearbyButton);
                 parentLayout.addView(updateButton);
@@ -14342,6 +14375,9 @@ public class MainHook implements IXposedHookLoadPackage {
                             voiceEnabled = context.getSharedPreferences(DIAG_PREFS, android.content.Context.MODE_PRIVATE)
                                     .getBoolean("voice", false);
                             XposedBridge.log(TAG + ": Voice announcements " + (voiceEnabled ? "ON" : "OFF") + " (prefs)");
+                            volumePttEnabled = context.getSharedPreferences(DIAG_PREFS, android.content.Context.MODE_PRIVATE)
+                                    .getBoolean("volptt", false);
+                            XposedBridge.log(TAG + ": Volume/headset PTT " + (volumePttEnabled ? "ON" : "OFF") + " (prefs)");
                             try {
                                 java.util.Set<String> ex = context.getSharedPreferences(SCAN_PREFS, android.content.Context.MODE_PRIVATE)
                                         .getStringSet("excluded", null);
@@ -14985,6 +15021,50 @@ public class MainHook implements IXposedHookLoadPackage {
      * keeps its state across phone reboots, so a half-applied channel write persists until something
      * re-sends the full configuration. No-op for digital channels.
      */
+    /**
+     * Volume-up / headset-button PTT: intercept the key in the home Activity and drive the OEM's own
+     * PTT broadcasts (the same ones the phone's side key sends), so a cheap wired or Bluetooth headset
+     * button, or the volume rocker, keys the radio. Only while the app is in front and the toggle is on;
+     * volume-down still changes the volume.
+     */
+    private void hookHardwarePtt(final XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            // InterPhoneHomeActivity does not override dispatchKeyEvent, so hook the framework method and
+            // filter on the receiver class (only the OEM process is affected).
+            XposedHelpers.findAndHookMethod(android.app.Activity.class,
+                    "dispatchKeyEvent", android.view.KeyEvent.class, new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    if (!volumePttEnabled) return;
+                    if (!"com.pri.prizeinterphone.InterPhoneHomeActivity".equals(param.thisObject.getClass().getName())) return;
+                    android.view.KeyEvent ev = (android.view.KeyEvent) param.args[0];
+                    int code = ev.getKeyCode();
+                    if (code != android.view.KeyEvent.KEYCODE_VOLUME_UP && code != android.view.KeyEvent.KEYCODE_HEADSETHOOK
+                            && code != android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) return;
+                    android.content.Context ctx = ((Activity) param.thisObject).getApplicationContext();
+                    if (ev.getAction() == android.view.KeyEvent.ACTION_DOWN) {
+                        if (ev.getRepeatCount() == 0 && !volumePttHeld) {
+                            volumePttHeld = true;
+                            ctx.sendBroadcast(new android.content.Intent("com.interphone.ptt.down"));
+                            XposedBridge.log(TAG + ": [hwptt] key " + code + " down -> PTT");
+                        }
+                        param.setResult(true);
+                    } else if (ev.getAction() == android.view.KeyEvent.ACTION_UP) {
+                        if (volumePttHeld) {
+                            volumePttHeld = false;
+                            ctx.sendBroadcast(new android.content.Intent("com.interphone.ptt.up"));
+                            XposedBridge.log(TAG + ": [hwptt] key " + code + " up -> PTT released");
+                        }
+                        param.setResult(true);
+                    }
+                }
+            });
+            XposedBridge.log(TAG + ": Hardware PTT hook installed (volume-up / headset button)");
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": Hardware PTT hook failed: " + t.getMessage());
+        }
+    }
+
     /** Lazily creates the TTS engine (never from a static initializer) and speaks when ready. */
     static void voiceSay(final android.content.Context ctxIn, final String text) {
         try {
