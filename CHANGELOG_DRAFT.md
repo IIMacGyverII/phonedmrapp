@@ -3,6 +3,12 @@
 Everything below shipped in **v4.0.0** (2026-10-15). Running log of changes since v3.4.6, per the feature-log convention in `.grok/rules/copilot-instructions.md`.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-16 — APRS Message TX (send a real APRS message over analog FM)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| F6 | First **shipped APRS TX feature**, built on the proven F6 foundation. New **✉️ Send APRS Message (TX)** button in PKT RAD → APRS: enter an addressee callsign + message, and the module builds a standard APRS message frame (`:ADDRESSEE :text{NN`, 9-char addressee, WIDE1-1/WIDE2-1 path), modulates Bell-202 AFSK, stereo-duplicates it into the OEM mic path, and keys/releases PTT hands-free — one message, no button-holding. Guards: requires an analog channel and a real callsign (blocks the `N0CALL` placeholder; points to APRS Settings). **Key finding:** this radio's TX audio path needs **~1.5 s to settle** after PTT before AFSK demodulates — a packet sent at key-up never decodes, the same packet after settling decodes at full strength (true even for the F6 looped packets: only the later copies decoded). So every TX leads with a 1.6 s steady-tone TXDELAY, then sends the frame twice for margin. Added a Diagnostics-gated `mode=message` / `mode=tune` path to `com.dmrmod.APRS_TX_TEST` for hands-free on-air testing. | `MainHook` (`transmitAprsPacket`, `buildAprsUiFrame`, `buildAprsMessageInfo`, `showAprsSendMessageDialog`, `tuneCurrentChannelAnalog`, one-shot `fillAprsTx`), `AFSKGenerator` (reused) | **device + HackRF, on-air on 2 m APRS (144.390 MHz)**: full message frame decoded by direwolf `atest` 2/2 with valid FCS and correct source/addressee/path; measured carrier within −1.8 ppm of 144.390 |
+
 ## 2026-10-16 — APRS/AFSK TX over analog FM proven working (overturns "impossible")
 
 | Backlog | Change | Files | Test |

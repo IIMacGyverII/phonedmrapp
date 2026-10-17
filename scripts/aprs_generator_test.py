@@ -357,7 +357,7 @@ def main():
     return False
     
     # APRS packet parameters (matching Android app)
-    source_call = "AA0AM"
+    source_call = "N0CALL"
     source_ssid = 7
     dest_call = "APZDMR"
     dest_ssid = 0

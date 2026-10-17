@@ -43,7 +43,7 @@ Transmit APRS packets from Android DMR radio (TYT MD-UV380) by:
 ```
 Returns plain AX.25 frame:
 - Destination: APZDMR-0
-- Source: AA0AM-7 (user callsign)
+- Source: N0CALL-7 (user callsign)
 - Path: WIDE1-1, WIDE2-1
 - Control: 0x03 (UI frame)
 - PID: 0xF0 (no layer 3)
@@ -111,7 +111,7 @@ Output: "8000 Hz, 0 packets decoded"
 # Test reference audio
 atest.exe direwolf_reference.wav
 Output: "8000 Hz, 1 packet decoded"
-DECODED[1] AA0AM-7>APZDMR:...
+DECODED[1] N0CALL-7>APZDMR:...
 ```
 
 ---
@@ -349,7 +349,7 @@ getFrameSize() - Returns 2048
 
 When working correctly:
 1. Audio should sound identical to APRS packets from other radios
-2. direwolf should decode: `DECODED[1] AA0AM-7>APZDMR:!DDMM.HHN/DDDMM.HHW$/A=XXXXXX...`
+2. direwolf should decode: `DECODED[1] N0CALL-7>APZDMR:!DDMM.HHN/DDDMM.HHW$/A=XXXXXX...`
 3. Receivers should successfully decode position/altitude/comment
 4. Packet should appear on APRS-IS network when digipeated
 
