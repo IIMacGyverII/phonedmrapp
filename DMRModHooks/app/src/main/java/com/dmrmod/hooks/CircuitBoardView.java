@@ -34,6 +34,8 @@ public class CircuitBoardView extends View {
 
     // ── Public amplitude feed (updated from PCM hook thread-safely) ─────────
     public volatile int audioAmplitude = 0;
+    /** Captions visible: draw the VU bars as a thin strip so the transcription box can sit low without being drawn through. */
+    public volatile boolean barsCompact = false;
     public volatile boolean isReceiving = false;
 
     // ── Layout resolved flag ────────────────────────────────────────────────
@@ -238,9 +240,9 @@ public class CircuitBoardView extends View {
 
     /** VU-meter bars along the bottom edge of the view. */
     private void drawAudioBars(Canvas canvas, float dp) {
-        float reserveH = 36 * dp;
+        float reserveH = (barsCompact ? 10 : 36) * dp;
         float areaTop  = viewH - reserveH - 4 * dp;
-        float barZone  = (viewH - areaTop) * 1.5625f;  // 56.25% taller max height (25% + 25%)
+        float barZone  = (viewH - areaTop) * (barsCompact ? 1.0f : 1.5625f);  // 56.25% taller max height (25% + 25%)
         float margin   = 14 * dp;
         float totalW   = viewW - margin * 2;
         float barW     = totalW / NUM_BARS;

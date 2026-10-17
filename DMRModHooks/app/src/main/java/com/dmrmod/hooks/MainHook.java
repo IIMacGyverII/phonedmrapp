@@ -1949,7 +1949,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 transcriptionBoxParams.rightMargin = (int) (8 * context.getResources().getDisplayMetrics().density);
                                 // 2026-10-17: sit above the VU-meter bars (drawn in the bottom ~62 dp of the panel) so live
                                 // captions are not drawn through by the bars while a station is being received
-                                transcriptionBoxParams.bottomMargin = (int) (68 * context.getResources().getDisplayMetrics().density);
+                                transcriptionBoxParams.bottomMargin = (int) (22 * context.getResources().getDisplayMetrics().density);   // above the compact VU strip
                                 
                                 // Create border for transcription box
                                 android.graphics.drawable.GradientDrawable transcriptionBoxDrawable = new android.graphics.drawable.GradientDrawable();
@@ -1959,7 +1959,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     0xAA00BFFF  // Cyan border
                                 );
                                 transcriptionBoxDrawable.setCornerRadius(8 * context.getResources().getDisplayMetrics().density);
-                                transcriptionBoxDrawable.setColor(0x1500BFFF);  // Subtle cyan background
+                                transcriptionBoxDrawable.setColor(0xF0071626);  // near-opaque dark blue: text must stay readable over the panel
                                 
                                 transcriptionBoxLayout.setBackground(transcriptionBoxDrawable);
                                 transcriptionBoxLayout.setLayoutParams(transcriptionBoxParams);
@@ -1981,7 +1981,14 @@ public class MainHook implements IXposedHookLoadPackage {
                                 transcriptionBoxLayout.addView(transcriptionHeaderView);
                                 
                                 // Add ScrollView for transcription messages
-                                android.widget.ScrollView transcriptionScroll = new android.widget.ScrollView(context);
+                                // Capped at ~4 lines (2026-10-17): the box used to grow upward with every line until it
+                                // covered the Analog History; now it scrolls inside, newest line at the bottom.
+                                final int transcriptionMaxPx = (int) (66 * context.getResources().getDisplayMetrics().density);
+                                android.widget.ScrollView transcriptionScroll = new android.widget.ScrollView(context) {
+                                    @Override protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+                                        super.onMeasure(widthMeasureSpec, android.view.View.MeasureSpec.makeMeasureSpec(transcriptionMaxPx, android.view.View.MeasureSpec.AT_MOST));
+                                    }
+                                };
                                 transcriptionScroll.setTag("DMR_TRANSCRIPTION_SCROLL");
                                 transcriptionScroll.setVerticalScrollBarEnabled(true);
                                 transcriptionScroll.setFillViewport(false);
@@ -2597,7 +2604,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                                 transcriptionMessagesContainer.post(() -> {
                                                     transcriptionMessagesContainer.removeAllViews();  // Clear all messages
                                                     if (transcriptionBox != null) {
-                                                        transcriptionBox.setVisibility(View.GONE);
+                                                        transcriptionBox.setVisibility(View.GONE); if (circuitBoardView != null) circuitBoardView.barsCompact = false;
                                                     }
                                                 });
                                             }
@@ -14055,7 +14062,7 @@ public class MainHook implements IXposedHookLoadPackage {
             container.post(new Runnable() {
                 @Override public void run() {
                     try {
-                        if (transcriptionBox != null) transcriptionBox.setVisibility(View.VISIBLE);
+                        if (transcriptionBox != null) transcriptionBox.setVisibility(View.VISIBLE); if (circuitBoardView != null) circuitBoardView.barsCompact = true;
                         TextView tv = liveCaptionView;
                         if (tv == null || tv.getParent() != container) {
                             tv = new TextView(container.getContext());
@@ -14487,7 +14494,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     transcriptionMessagesContainer.addView(messageView);
 
                     // Show the box
-                    transcriptionBox.setVisibility(View.VISIBLE);
+                    transcriptionBox.setVisibility(View.VISIBLE); if (circuitBoardView != null) circuitBoardView.barsCompact = true;
 
                     // Ensure ScrollView caps at max height and scrolls to bottom
                     transcriptionScrollView.post(new Runnable() {
@@ -14541,7 +14548,7 @@ public class MainHook implements IXposedHookLoadPackage {
                         messageView.setLayoutParams(messageParams);
                         transcriptionMessagesContainer.addView(messageView);
                     }
-                    transcriptionBox.setVisibility(View.VISIBLE);
+                    transcriptionBox.setVisibility(View.VISIBLE); if (circuitBoardView != null) circuitBoardView.barsCompact = true;
                     
                     // Scroll to bottom and cap height
                     transcriptionScrollView.post(new Runnable() {
@@ -14558,7 +14565,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     });
                 } else {
                     // No history for this channel, hide the box
-                    transcriptionBox.setVisibility(View.GONE);
+                    transcriptionBox.setVisibility(View.GONE); if (circuitBoardView != null) circuitBoardView.barsCompact = false;
                 }
             }
         });
