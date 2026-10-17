@@ -15,7 +15,7 @@ offline with `aapt2`/`dexdump`, never installed), plus public specs.
 | Control UART | `/dev/ttyS0`, baud selectable (57600 / 115200 / … constants present; the Armor uses 57600) |
 | **Audio** | **PCM over a second UART, `/dev/ttyS1` at 230400 baud** ("initPcmSerialPort"); `AudioTrack` 8000 Hz **mono** 16-bit for RX, `AudioRecord` 8000 Hz mono 16-bit for TX, queued in packets (`pcmPackageItem`, 160-sample ≈ 20 ms frames) |
 | Module GPIOs | `/sys/devices/platform/intercom/intercom_power_control`, `…/intercom_pwd_control`, `…/intercom_ptt_control` — written 1/0 by `DmrManager.powerCtrl/pwdCtrl/pttCtrl`; power-off order in `DmrService.d()`: power → pwd → ptt all 0 |
-| Hardware PTT | `PttKeyReceiver` ("BROADCAST_PTT_KEY_DOWN/UP", 1.5 s hold rule) — a broadcast from the framework, same idea as the Armor's `com.interphone.ptt.*` |
+| Hardware PTT | `PttKeyReceiver` receives the framework broadcasts **`com.android.intent.ptt.down` / `com.android.intent.ptt.up`** (1.5 s hold rule in the app) — same idea as the Armor's `com.interphone.ptt.down/up` |
 | Bundled data | `assets/databases/channel.db` (Room, `channel_table`, 8 default channels 401.025–408.025 MHz: 6 digital cc1 localId 888 groupList "1-0-…", 2 analog), `contacts.db` |
 
 ## 2. Same MCU protocol — verified byte for byte
@@ -48,7 +48,7 @@ SMS, kill/revive, TOT — would work unchanged on the Xplore 1.
 | Voice audio | vendor binder `PrizeTinyService` → tinyalsa I2S, 8 kHz **stereo** L==R, 2048-byte frames | **raw PCM on `/dev/ttyS1` @ 230400**, 8 kHz **mono** | `AudioBackend` interface with two implementations: `TinyServiceAudio` (binder, hidden API) and `UartPcmAudio` (second tty). Everything above it (decoders, captions, AFSK TX, recording) already works on 8 kHz mono after the L/R decimation |
 | Module GPIOs | `/sys/devices/platform/dmr009/{pwd,ptt,pd,debug}` ("pwd :1") | `/sys/devices/platform/intercom/intercom_{power,pwd,ptt}_control` | `powerNode`, `pttNode`, value format per profile |
 | SELinux labels | `ttyS_device`, `sysfs_prizefactory` (rules proven) | unknown until someone runs `ls -lZ` on an Xplore 1; expect `ttyS_device` + some `sysfs_*` vendor label | profile carries the `sepolicy.rule` lines; detection = `ro.product.model` / `Build.DEVICE` |
-| Hardware PTT key | implicit broadcast `com.interphone.ptt.down/up` | `BROADCAST_PTT_KEY_DOWN/UP` (exact action string in the APK's `PttKeyReceiver`) | list of actions per profile |
+| Hardware PTT key | implicit broadcast `com.interphone.ptt.down/up` | `com.android.intent.ptt.down/up` | list of actions per profile |
 | Stock app to disable | `com.pri.prizeinterphone` (persistent priv-app) | `com.chamsion.quickchat` | `pm disable-user` per profile |
 
 ## 4. Feasibility verdict for the Xplore 1
@@ -93,3 +93,5 @@ unknown until an APK rip is available. The same 20-minute `aapt2`/`dexdump` chec
 - Rooting MediaTek Blackviews (generic): [BV9500 Plus Magisk gist](https://gist.github.com/MrCelticFox/d96a7ebe968195b43604a183aa71709a), [BV5300 root notes](https://www.rigacci.org/wiki/doku.php/doc/appunti/hardware/blackview_bv5300), [XDA Blackview Tab 18 root](https://xdaforums.com/t/rooting-a-blackview-tab-18-with-a-helio-g99-mt6789-chip.4668892/).
 - Other DMR phones: [Oukitel WP61 Plus review](https://www.techradar.com/pro/phone-communications/oukitel-wp61-plus-rugged-phone-review), [Ulefone Armor 20WT](https://www.backmarket.co.uk/en-gb/p/ulrfone-armor-20wt), [UNIWA P5](https://m.reach.dog/shop/31ba9f-3a/products/mph2097).
 - DMR modules with a serial command protocol (for context): [NiceRF DMR858M](https://www.nicerf.com/walkie-talkie-module/dmr858m.html), [SR_DMR_5WU](https://www.tindie.com/products/sunrise/sr_dmr_5wu-dmr-digital-two-way-radio-module/).
+
+How to collect the same facts from any other phone: `docs/DEVICE_SUPPORT_REQUEST.md`.
