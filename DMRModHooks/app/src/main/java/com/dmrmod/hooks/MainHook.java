@@ -314,6 +314,11 @@ public class MainHook implements IXposedHookLoadPackage {
     private static final long MIN_RECORDING_BYTES = 16000;   // 1 s of 8 kHz 16-bit mono; shorter captures are squelch tails
     private static volatile boolean isTransmitting = false;  // SEND_START .. SEND_STOP
     private static volatile boolean smeterEnabled = false;   // Live S-meter: poll RSSI while idle (Device-tab toggle, prefs key "smeter")
+    // Voice announcements (2026-10-17): speak channel changes and DMR callers with Android TTS (prefs "voice", default off)
+    private static volatile boolean voiceEnabled = false;
+    private static volatile android.speech.tts.TextToSpeech voiceTts = null;
+    private static volatile boolean voiceTtsReady = false;
+    private static volatile long voiceLastCallerId = 0, voiceLastCallerMs = 0;
     // NOT created here: MainHook.<clinit> runs in the Zygote fork, before the app's main Looper exists
     // (a Handler in a static initializer made the whole module fail to load on 2026-10-14).
     private static android.os.Handler smeterHandler = null;
@@ -3408,6 +3413,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                         XposedBridge.log(TAG + ": Error updating squelch visibility: " + e.getMessage());
                                     }
                                     currentChannelName = (channelName != null && !channelName.isEmpty()) ? channelName : ("Channel_" + channelNumber);
+                                    voiceAnnounceChannel(appContext, channelNumber, currentChannelName, currentChannelType);
                                     
                                     // TODO: Channel tracking disabled - causes ListView adapter conflicts
                                     /*
@@ -4726,6 +4732,33 @@ public class MainHook implements IXposedHookLoadPackage {
                 }
             });
 
+            // === VOICE ANNOUNCEMENTS: speak channel changes and DMR callers (eyes-free use) ===
+            final android.widget.ToggleButton voiceToggle = new android.widget.ToggleButton(context);
+            voiceToggle.setTextOn("🗣️ Voice announcements ON (channel changes, DMR callers)");
+            voiceToggle.setTextOff("🗣️ Voice announcements OFF (channel changes, DMR callers)");
+            voiceToggle.setChecked(voiceEnabled);
+            voiceToggle.setTextSize(14);
+            voiceToggle.setAllCaps(false);
+            voiceToggle.setPadding(20, 20, 20, 20);
+            voiceToggle.setLayoutParams(new ViewGroup.LayoutParams(templateParams));
+            voiceToggle.setContentDescription("Toggle voice announcements");
+            voiceToggle.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    boolean on = voiceToggle.isChecked();
+                    try {
+                        activity.getSharedPreferences(DIAG_PREFS, Context.MODE_PRIVATE).edit()
+                                .putBoolean("voice", on).apply();
+                    } catch (Throwable ignored) { }
+                    voiceEnabled = on;
+                    XposedBridge.log(TAG + ": Voice announcements toggled " + (on ? "ON" : "OFF"));
+                    if (on) voiceAnnounceChannel(activity, currentChannelNumber, currentChannelName, currentChannelType);
+                    Toast.makeText(activity, on
+                            ? "Voice ON: the phone speaks the channel when it changes and who is calling on DMR"
+                            : "Voice announcements OFF", Toast.LENGTH_LONG).show();
+                }
+            });
+
             // === LIVE S-METER: poll 0x32 RSSI once a second while idle (the MCU answers with the squelch closed) ===
             final android.widget.ToggleButton smeterToggle = new android.widget.ToggleButton(context);
             smeterToggle.setTextOn("📶 Live S-meter ON (RSSI polled while idle)");
@@ -4802,8 +4835,9 @@ public class MainHook implements IXposedHookLoadPackage {
                 parentLayout.addView(audioProbeButton, index + 7);
                 parentLayout.addView(diagToggle, index + 8);
                 parentLayout.addView(smeterToggle, index + 9);
-                parentLayout.addView(nearbyButton, index + 10);
-                parentLayout.addView(updateButton, index + 11);
+                parentLayout.addView(voiceToggle, index + 10);
+                parentLayout.addView(nearbyButton, index + 11);
+                parentLayout.addView(updateButton, index + 12);
                 XposedBridge.log(TAG + ": ✓ Export button added at index " + index);
                 XposedBridge.log(TAG + ": ✓ Import button added at index " + (index + 1));
                 XposedBridge.log(TAG + ": ✓ RadioID buttons added at indices " + (index + 2) + "-" + (index + 4));
@@ -4818,6 +4852,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 parentLayout.addView(audioProbeButton);
                 parentLayout.addView(diagToggle);
                 parentLayout.addView(smeterToggle);
+                parentLayout.addView(voiceToggle);
                 parentLayout.addView(nearbyButton);
                 parentLayout.addView(updateButton);
                 XposedBridge.log(TAG + ": ✓ Export, Import, and RadioID buttons added at end of layout");
@@ -10802,6 +10837,16 @@ public class MainHook implements IXposedHookLoadPackage {
             headline = headline + "  " + badge;
         }
         callerHeadlineTextView.setText(headline);
+        if (voiceEnabled) {
+            long now = System.currentTimeMillis();
+            if (info.dmrId != voiceLastCallerId || now - voiceLastCallerMs > 30000) {
+                voiceLastCallerId = info.dmrId; voiceLastCallerMs = now;
+                String who = info.headline();
+                // headline() starts with a satellite-dish emoji; keep letters/digits/space/comma only
+                String spoken = who == null ? String.valueOf(info.dmrId) : who.replaceAll("[()]", ", ").replaceAll("[^\\p{L}\\p{N} ,.'-]", " ").trim();
+                voiceSay(callerHeadlineTextView.getContext(), "Call from " + spoken);
+            }
+        }
         populateCallerFieldsContainer(info);
         callerDetailPanel.setVisibility(View.VISIBLE);
     }
@@ -14175,6 +14220,9 @@ public class MainHook implements IXposedHookLoadPackage {
                             smeterEnabled = context.getSharedPreferences(DIAG_PREFS, android.content.Context.MODE_PRIVATE)
                                     .getBoolean("smeter", false);
                             XposedBridge.log(TAG + ": Live S-meter " + (smeterEnabled ? "ON" : "OFF") + " (prefs)");
+                            voiceEnabled = context.getSharedPreferences(DIAG_PREFS, android.content.Context.MODE_PRIVATE)
+                                    .getBoolean("voice", false);
+                            XposedBridge.log(TAG + ": Voice announcements " + (voiceEnabled ? "ON" : "OFF") + " (prefs)");
                             try {
                                 java.util.Set<String> ex = context.getSharedPreferences(SCAN_PREFS, android.content.Context.MODE_PRIVATE)
                                         .getStringSet("excluded", null);
@@ -14818,6 +14866,44 @@ public class MainHook implements IXposedHookLoadPackage {
      * keeps its state across phone reboots, so a half-applied channel write persists until something
      * re-sends the full configuration. No-op for digital channels.
      */
+    /** Lazily creates the TTS engine (never from a static initializer) and speaks when ready. */
+    static void voiceSay(final android.content.Context ctxIn, final String text) {
+        try {
+            if (!voiceEnabled || text == null || text.trim().isEmpty()) return;
+            final android.content.Context ctx = ctxIn.getApplicationContext() != null ? ctxIn.getApplicationContext() : ctxIn;
+            android.speech.tts.TextToSpeech t = voiceTts;
+            if (t == null) {
+                synchronized (MainHook.class) {
+                    if (voiceTts == null) {
+                        voiceTtsReady = false;
+                        voiceTts = new android.speech.tts.TextToSpeech(ctx, new android.speech.tts.TextToSpeech.OnInitListener() {
+                            @Override public void onInit(int status) {
+                                voiceTtsReady = status == android.speech.tts.TextToSpeech.SUCCESS;
+                                XposedBridge.log(TAG + ": [voice] TTS init " + (voiceTtsReady ? "OK" : "FAILED " + status));
+                                if (voiceTtsReady) voiceSay(ctx, text);     // say the line that triggered the init
+                            }
+                        });
+                    }
+                }
+                return;
+            }
+            if (!voiceTtsReady) return;
+            android.os.Bundle params = new android.os.Bundle();
+            params.putInt(android.speech.tts.TextToSpeech.Engine.KEY_PARAM_STREAM, android.media.AudioManager.STREAM_NOTIFICATION);
+            int r = t.speak(text, android.speech.tts.TextToSpeech.QUEUE_FLUSH, params, "dmrmod-voice");
+            XposedBridge.log(TAG + ": [voice] say (" + (r == android.speech.tts.TextToSpeech.SUCCESS ? "ok" : "err " + r) + "): " + text);
+        } catch (Throwable e) {
+            XposedBridge.log(TAG + ": [voice] " + e.getMessage());
+        }
+    }
+
+    /** "Channel 2, Family Analog" — digits are spoken one by one so 12 is not heard as 1-2 / 21. */
+    static void voiceAnnounceChannel(android.content.Context ctx, int number, String name, int type) {
+        if (!voiceEnabled) return;
+        String n = name == null ? "" : name.replaceAll("[_]+", " ").replaceAll("\\((UHF|VHF)\\)", "").trim();
+        voiceSay(ctx, "Channel " + number + (n.isEmpty() ? "" : ", " + n) + (type == 0 ? ", digital" : ""));
+    }
+
     private static void applyAnalogChannelDirect(Object ch, String why) {
         try {
             if (ch == null || XposedHelpers.getIntField(ch, "type") != 1) return;
