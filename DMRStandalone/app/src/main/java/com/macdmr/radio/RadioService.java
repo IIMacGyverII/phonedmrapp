@@ -34,6 +34,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         void onCaller(String text);
         void onLog(String s);
         void onLink(String state);          // "no root", "policy", "uart closed", "ready"…
+        void onLocation(String text);       // the intercom's location block ("City, State\n(↓S 25.5mi (41.0km))\n959ft (292m) 📍")
     }
 
     public class LocalBinder extends Binder { public RadioService get() { return RadioService.this; } }
@@ -169,8 +170,45 @@ public class RadioService extends Service implements RadioEngine.Events {
             }
             current = ch; store.setActive(number);
             ui.post(() -> { for (Listener l : listeners) l.onChannel(ch); });
+            describeLocation(ch);
             updateNotification();
         } catch (IOException e) { log("select: " + e); }
+    }
+
+    /** Reverse-geocode the channel's stored position and add distance/bearing from the phone, like the module. */
+    private void describeLocation(final ChannelStore.Channel ch) {
+        if (ch.lat == 0 && ch.lon == 0) { ui.post(() -> { for (Listener l : listeners) l.onLocation(""); }); return; }
+        new Thread(() -> {
+            String place = String.format(Locale.US, "%.4f, %.4f", ch.lat, ch.lon);
+            try {
+                java.util.List<android.location.Address> a = new android.location.Geocoder(this, Locale.US).getFromLocation(ch.lat, ch.lon, 1);
+                if (a != null && !a.isEmpty()) {
+                    android.location.Address ad = a.get(0);
+                    String city = ad.getLocality() != null ? ad.getLocality() : ad.getSubAdminArea();
+                    String state = ad.getAdminArea();
+                    if (city != null && state != null) place = city + ", " + state; else if (city != null) place = city; else if (state != null) place = state;
+                }
+            } catch (Throwable ignored) { }
+            String dist = "";
+            try {
+                android.location.LocationManager lm = (android.location.LocationManager) getSystemService(LOCATION_SERVICE);
+                android.location.Location me = null;
+                for (String p : new String[] { android.location.LocationManager.GPS_PROVIDER, android.location.LocationManager.NETWORK_PROVIDER, android.location.LocationManager.PASSIVE_PROVIDER }) {
+                    try { android.location.Location l = lm.getLastKnownLocation(p); if (l != null && (me == null || l.getTime() > me.getTime())) me = l; } catch (SecurityException ignored) { }
+                }
+                if (me != null) {
+                    float[] r = new float[2];
+                    android.location.Location.distanceBetween(me.getLatitude(), me.getLongitude(), ch.lat, ch.lon, r);
+                    double km = r[0] / 1000.0, mi = km * 0.621371; float b = (r[1] + 360) % 360;
+                    String[] dirs = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" };
+                    String arrow = b < 22.5 || b >= 337.5 ? "\u2191" : b < 67.5 ? "\u2197" : b < 112.5 ? "\u2192" : b < 157.5 ? "\u2198" : b < 202.5 ? "\u2193" : b < 247.5 ? "\u2199" : b < 292.5 ? "\u2190" : "\u2196";
+                    dist = String.format(Locale.US, "\n(%s%s %.1fmi (%.1fkm))", arrow, dirs[(int) Math.round(b / 45.0) % 8], mi, km);
+                }
+            } catch (Throwable ignored) { }
+            String elev = ch.elev > 0 ? String.format(Locale.US, "\n%dft (%.0fm) ", (int) (ch.elev * 3.28084), ch.elev) : "\n";
+            final String text = place + dist + elev + "\uD83D\uDCCD";
+            ui.post(() -> { for (Listener l : listeners) l.onLocation(text); });
+        }, "geocode").start();
     }
 
     public int localId() { return getSharedPreferences("radio", MODE_PRIVATE).getInt("dmrId", 1); }

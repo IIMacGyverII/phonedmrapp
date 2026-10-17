@@ -196,7 +196,6 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         power.setText("Power:" + (ch.power == 1 ? "High power" : "Low power"));
         squelch.setText(ch.isDigital() ? "Color Code:" + ch.cc : "Squelch Level:" + ch.sq);
         send.setText("Send:" + ch.freqText(ch.txFreq)); receive.setText("Receive:" + ch.freqText(ch.rxFreq));
-        location.setText(ch.location == null ? "" : ch.location);
         historyHeader.setText(ch.isDigital() ? "DMR Activity" : "Analog History");
         softSq.setVisibility(ch.isDigital() ? INVISIBLE : VISIBLE);
         history.clear();
@@ -212,6 +211,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     @Override public void onCaller(String text) { headline.setText("📻 " + text); }
     @Override public void onLog(String s) { }
     @Override public void onLink(String state) { refreshHeadline(); }
+    @Override public void onLocation(String text) { location.setText(text); }
 
     private void renderHistory() {
         StringBuilder sb = new StringBuilder();

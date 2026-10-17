@@ -54,4 +54,5 @@ public class DiagnosticsView extends LinearLayout implements RadioService.Listen
     @Override public void onCaller(String text) { say("caller " + text); }
     @Override public void onLog(String s) { say(s); }
     @Override public void onLink(String st) { say("link: " + st); }
+    @Override public void onLocation(String text) { }
 }

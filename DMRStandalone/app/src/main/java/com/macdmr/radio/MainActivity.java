@@ -74,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
         show(0);
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
-            ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.RECORD_AUDIO, Manifest.permission.POST_NOTIFICATIONS }, 1);
+            ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.RECORD_AUDIO, Manifest.permission.POST_NOTIFICATIONS, Manifest.permission.ACCESS_FINE_LOCATION }, 1);
         Intent si = new Intent(this, RadioService.class);
         startForegroundService(si);
         bindService(si, conn, Context.BIND_AUTO_CREATE);
