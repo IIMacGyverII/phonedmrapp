@@ -112,3 +112,24 @@ UART rx (10 bytes, 13 ms): 68 32 00 00 6F BC 00 01 28 10   -> RSSI raw 40 = -100
 **Conclusion: every hardware dependency of a standalone app is now proven from an ordinary app process on
 this phone — UART (both directions, MCU replies), module power GPIO (off/on + boot capture), voice audio
 (`PrizeTinyService`), hardware PTT broadcasts. Only root (Magisk, four `sepolicy.rule` lines) is required.**
+
+## 6. Radio-engine spike — first run (2026-10-17, `DMRStandalone/`)
+
+A separate app (`com.macdmr.radio`, no LSPosed, plain file I/O on the UART and sysfs, `PrizeTinyService` for audio,
+`DeviceProfile` for the per-phone bits) drove the radio with the OEM app disabled:
+
+```
+UART /dev/ttyS0 open · module already powered (pwd :1)
+TX 0x34 → RX "DMR003.UV4T.V022"                       (version query answered)
+TX 0x23 [162.500 MHz, band 1, power 0, sq 0, pwrSave 2, vol 8, monitor 2, relay 2] → sr=0  (channel accepted)
+RX 0x36 [01] RECEIVE_START (rw=2 push), acked          (NOAA carrier detected by the MCU)
+TX 0x32 → RSSI raw 58 = −91 dBm
+openRecvPcm=true → audio frames 50/100/…/300, 2048 B each (64 ms), peak ≈ 12–14k   (voice PCM flowing to our AudioTrack)
+```
+
+Gotchas found: the first channel set was **NAKed (sr=1)** because enum bytes are **1 = on / 2 = off**: the OEM
+sends `pwrSave=2`, `monitor=2` (its `AnalogMessage` defaults; `DmrManager` never overrides them) and a `0` is
+rejected, like `relay=0`. MCU→app pushes (0x36) arrive with `rw=2`. Everything else behaved exactly as the
+deep-dive documents. Remaining for the engine: TX audio path (`openWritePcm`/`writeFrame` while 0x26 launch=1),
+digital channel set, the boot handshake after a power-cycle (version → channel → interrupt/mic → TOT), and
+the hardware-PTT broadcast receiver — then the feature code can move over.
