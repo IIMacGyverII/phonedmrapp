@@ -15,13 +15,23 @@ import java.io.OutputStream;
  *  - disable / re-enable the stock walkie-talkie app, which otherwise keeps the UART and re-programs the MCU
  */
 public final class RootSetup {
-    public static String run(String cmd) {
+    public static String run(String cmd) { return run(cmd, true); }
+
+    /**
+     * Magisk's su gives an app the caller's SELinux domain by default, which cannot read another app's
+     * /data/data (measured: "cp: Permission denied" from untrusted_app/shell even as uid 0). Asking for the
+     * magisk domain explicitly (`--context u:r:magisk:s0`) fixes that; older su builds without the flag get a
+     * plain retry. `--mount-master` escapes the app's own mount namespace: since Android 11 an app (and any su it
+     * spawns) only sees its own /data/data entry, so the stock app's databases are simply absent without it.
+     */
+    private static String run(String cmd, boolean magiskContext) {
         StringBuilder sb = new StringBuilder();
         try {
-            Process p = new ProcessBuilder("su", "-c", cmd).redirectErrorStream(true).start();
+            Process p = (magiskContext ? new ProcessBuilder("su", "--mount-master", "--context", "u:r:magisk:s0", "-c", cmd) : new ProcessBuilder("su", "-c", cmd)).redirectErrorStream(true).start();
             BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
             String line; while ((line = r.readLine()) != null) sb.append(line).append('\n');
             int rc = p.waitFor();
+            if (magiskContext && (sb.toString().contains("Unknown option") || sb.toString().contains("Invalid option") || sb.toString().contains("unrecognized"))) return run(cmd, false);
             if (rc != 0) sb.append("(rc=").append(rc).append(")");
         } catch (Exception e) { sb.append("su failed: ").append(e.getMessage()); }
         return sb.toString().trim();
