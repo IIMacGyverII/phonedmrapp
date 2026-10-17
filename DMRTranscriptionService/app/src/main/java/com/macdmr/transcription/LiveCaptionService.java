@@ -56,7 +56,10 @@ public class LiveCaptionService extends Service {
     private ServerSocket server;
     private Thread initThread;
 
-    private String modelUrl() { return "https://alphacephei.com/vosk/models/" + modelName + ".zip"; }
+    private static String modelUrl(String name) { return "https://alphacephei.com/vosk/models/" + name + ".zip"; }
+    /** Serialises model loads: a switch requested while the first load is still running must not download in parallel. */
+    private final Object loadLock = new Object();
+    private volatile String loadedName = null;
 
     @Override
     public void onCreate() {
@@ -79,8 +82,6 @@ public class LiveCaptionService extends Service {
             // switch model: remember it, drop the current one, re-run init (download if needed)
             getSharedPreferences("caption", MODE_PRIVATE).edit().putString("model", wanted).apply();
             modelName = wanted;
-            final Model old = model; model = null;
-            try { if (old != null) old.close(); } catch (Exception ignored) { }
             setStatus("switching to " + wanted);
             new Thread(new Runnable() { @Override public void run() { loadOnly(); } }, "caption-switch").start();
         }
@@ -89,18 +90,28 @@ public class LiveCaptionService extends Service {
 
     /** Download (if needed) + load the selected model without touching the already-running server. */
     private void loadOnly() {
-        try {
-            File dir = new File(getFilesDir(), "models/" + modelName);
-            if (!new File(dir, "am/final.mdl").exists()) {
-                setStatus("downloading model");
-                downloadAndUnzip(dir);
+        synchronized (loadLock) {
+            while (true) {
+                String name = modelName;                       // snapshot: may change while we download
+                if (model != null && name.equals(loadedName)) return;
+                try {
+                    File dir = new File(getFilesDir(), "models/" + name);
+                    if (!new File(dir, "am/final.mdl").exists()) {
+                        setStatus("downloading model");
+                        downloadAndUnzip(dir, name);
+                    }
+                    setStatus("loading model");
+                    Model m = new Model(dir.getAbsolutePath());
+                    Model old = model; model = m; loadedName = name;
+                    try { if (old != null) old.close(); } catch (Exception ignored) { }
+                    setStatus("ready");
+                } catch (Throwable t) {
+                    Log.e(TAG, "model load failed", t);
+                    setStatus("error: " + t.getMessage());
+                    return;
+                }
+                if (name.equals(modelName)) return;            // a newer request arrived meanwhile: loop once more
             }
-            setStatus("loading model");
-            model = new Model(dir.getAbsolutePath());
-            setStatus("ready");
-        } catch (Throwable t) {
-            Log.e(TAG, "model switch failed", t);
-            setStatus("error: " + t.getMessage());
         }
     }
 
@@ -130,9 +141,9 @@ public class LiveCaptionService extends Service {
         }
     }
 
-    private void downloadAndUnzip(File dir) throws Exception {
-        File zip = new File(getCacheDir(), modelName + ".zip");
-        HttpURLConnection c = (HttpURLConnection) new URL(modelUrl()).openConnection();
+    private void downloadAndUnzip(File dir, String name) throws Exception {
+        File zip = new File(getCacheDir(), name + ".zip");
+        HttpURLConnection c = (HttpURLConnection) new URL(modelUrl(name)).openConnection();
         c.setConnectTimeout(15000); c.setReadTimeout(60000);
         long total = c.getContentLengthLong();
         try (InputStream in = new BufferedInputStream(c.getInputStream()); FileOutputStream out = new FileOutputStream(zip)) {
@@ -140,7 +151,7 @@ public class LiveCaptionService extends Service {
             while ((n = in.read(buf)) > 0) {
                 out.write(buf, 0, n); done += n;
                 long pct = total > 0 ? done * 100 / total : -1;
-                if (pct != lastPct && pct % 5 == 0) { lastPct = pct; setStatus("downloading " + modelName.replace("vosk-model-", "") + " (" + (total / 1048576) + " MB) " + pct + "%"); }
+                if (pct != lastPct && pct % 5 == 0) { lastPct = pct; setStatus("downloading " + name.replace("vosk-model-", "") + " (" + (total / 1048576) + " MB) " + pct + "%"); }
             }
         }
         setStatus("unpacking model");
