@@ -5031,11 +5031,17 @@ public class MainHook implements IXposedHookLoadPackage {
             frequencyEdit.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
             mainLayout.addView(frequencyEdit);
             
+            final android.widget.CheckBox autoAckBox = new android.widget.CheckBox(activity);
+            autoAckBox.setText("Auto-acknowledge messages addressed to me (transmits a short \"ack\" while APRS monitoring is on, as every APRS client does; senders retry until they get one)");
+            autoAckBox.setTextSize(13);
+            autoAckBox.setChecked(activity.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE).getBoolean("auto_ack", true));
+            mainLayout.addView(autoAckBox);
+
             TextView infoText = new TextView(activity);
-            infoText.setText("\nThe APRS frequency is used by the APRS monitoring mode button on the intercom page.\n\n" +
-                           "📡 RX-Only Mode: This system only receives APRS packets (no transmission).\n" +
-                           "📝 Auto-Logging: All received packets are stored in database with callsign, location, timestamp.\n" +
-                           "🗺️ View History: Use 'APRS Received' button to see recent stations.");
+            infoText.setText("\nThe APRS frequency is used by APRS monitoring, Send Message, Position Beacon and the KISS TNC.\n\n" +
+                           "📡 Receive: positions (incl. Mic-E and compressed), objects, messages, status and weather are decoded; stations are stored with callsign, location and time.\n" +
+                           "✉️ Messages to your callsign-SSID raise a notification and are listed under 'APRS Received'.\n" +
+                           "🗺️ View History: Use 'APRS Received' button to see recent stations and messages.");
             infoText.setTextSize(12);
             infoText.setTextColor(0xFF999999);
             infoText.setPadding(0, 5, 0, 10);
@@ -5079,6 +5085,8 @@ public class MainHook implements IXposedHookLoadPackage {
                         aprsDb.setCallsign(callsign);
                         aprsDb.setSSID(ssid);
                         aprsDb.setAprsFrequency(frequency);
+                        activity.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE)
+                                .edit().putBoolean("auto_ack", autoAckBox.isChecked()).apply();
                         
                         Toast.makeText(activity, "APRS settings saved!", Toast.LENGTH_SHORT).show();
                         if (onSaved != null) onSaved.run();
@@ -6127,6 +6135,7 @@ public class MainHook implements IXposedHookLoadPackage {
     private void startAPRSMonitoring(final Activity activity) {
         try {
             XposedBridge.log(TAG + ": Starting APRS monitoring mode");
+            resetAprsAudioBuffer();
             
             // Get APRS frequency setting
             APRSDatabase aprsDb = APRSDatabase.getInstance(activity);
@@ -9013,6 +9022,9 @@ public class MainHook implements IXposedHookLoadPackage {
             aprsStoreLogEntry(ctx, kind, from, p.messageTo, p.messageText, p.messageId, mine);
             XposedBridge.log(TAG + ": [aprs] " + kind + " " + from + " -> " + p.messageTo + ": " + p.messageText
                     + (p.messageId != null ? " {" + p.messageId : "") + (mine ? "  (FOR US)" : ""));
+            if (mine && !p.isAck && !p.isRej && p.messageId != null) {
+                aprsMaybeAutoAck(ctx, from, p.messageId);
+            }
             if ((mine || bulletin) && !p.isAck && !p.isRej) {
                 aprsNotifyMessage(ctx, from, p.messageTo, p.messageText, mine);
                 final String toastText = (mine ? "✉️ APRS message from " : "📢 APRS bulletin from ") + from + ": " + p.messageText;
@@ -9024,6 +9036,61 @@ public class MainHook implements IXposedHookLoadPackage {
             }
         } catch (Throwable t) {
             XposedBridge.log(TAG + ": [aprs] message handling error: " + t.getMessage());
+        }
+    }
+
+    private static final java.util.HashMap<String, Long> aprsAckSent = new java.util.HashMap<>();
+
+    /**
+     * APRS protocol: a message with a {id must be acknowledged ("ackID" back to the sender) or the
+     * sender keeps retrying. Done only while APRS monitoring is on (the radio is parked on the APRS
+     * frequency; KISS mode leaves acks to the client app), gated by the "auto-ack" setting
+     * (prefs dmrmod_aprs_global/auto_ack, default on), at most once per sender+id per 10 s, after a
+     * 1.5-3 s random hold-off so two stations acking at once do not collide.
+     */
+    private static void aprsMaybeAutoAck(final android.content.Context ctx, final String from, final String id) {
+        try {
+            if (!isAPRSMonitoringActive || kissActive) return;
+            android.content.SharedPreferences g = ctx.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE);
+            if (!g.getBoolean("auto_ack", true)) return;
+            final String key = from + "{" + id;
+            long now = System.currentTimeMillis();
+            synchronized (aprsAckSent) {
+                Long last = aprsAckSent.get(key);
+                if (last != null && now - last < 10000) { XposedBridge.log(TAG + ": [aprs] ack " + key + " already sent, skipping"); return; }
+                aprsAckSent.put(key, now);
+                if (aprsAckSent.size() > 200) aprsAckSent.clear();
+            }
+            APRSDatabase db = APRSDatabase.getInstance(ctx);
+            final String myCall = db.getCallsign();
+            final int mySsid = db.getSSID();
+            if (myCall == null || myCall.trim().isEmpty() || "N0CALL".equalsIgnoreCase(myCall.trim())) {
+                XposedBridge.log(TAG + ": [aprs] auto-ack skipped: no callsign configured");
+                return;
+            }
+            String a = from.toUpperCase(java.util.Locale.US);
+            if (a.length() > 9) a = a.substring(0, 9);
+            StringBuilder sb = new StringBuilder(":").append(a);
+            for (int i = a.length(); i < 9; i++) sb.append(' ');
+            final String info = sb.append(":ack").append(id).toString();
+            final String label = "ack " + id + " → " + from;
+            int holdMs = 1500 + new java.util.Random().nextInt(1500);
+            XposedBridge.log(TAG + ": [aprs] auto-ack scheduled in " + holdMs + " ms: " + info);
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+                @Override public void run() {
+                    new Thread(new Runnable() { @Override public void run() {
+                        try {
+                            if (!isAPRSMonitoringActive || kissActive) return;
+                            int ms = transmitAprsPacket(ctx, myCall.trim(), mySsid, new String[]{ "WIDE1-1" }, info, label,
+                                    APRS_TX_LEAD_MS, 1, 0);
+                            aprsStoreLogEntry(ctx, "ack-tx", myCall.trim() + "-" + mySsid, from, "ack" + id, id, false);
+                            XposedBridge.log(TAG + ": [aprs] auto-ack " + (ms < 0 ? "FAILED" : "sent (" + ms + " ms)") + ": " + info);
+                        } catch (Throwable t) { XposedBridge.log(TAG + ": [aprs] auto-ack error: " + t.getMessage()); }
+                    } }, "dmrmod-aprs-ack").start();
+                }
+            }, holdMs);
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [aprs] auto-ack error: " + t.getMessage());
         }
     }
 
@@ -9111,6 +9178,8 @@ public class MainHook implements IXposedHookLoadPackage {
                 String when = fmt.format(new java.util.Date(o.optLong("t", 0)));
                 if ("status".equals(kind)) {
                     line = when + "  " + from + " status: " + o.optString("text", "");
+                } else if ("ack-tx".equals(kind)) {
+                    line = when + "  ✓ acked " + o.optString("id", "") + " → " + o.optString("to", "") + " (sent by us)";
                 } else if ("ack".equals(kind) || "rej".equals(kind)) {
                     line = when + "  " + from + " " + kind + " " + o.optString("id", "") + " → " + o.optString("to", "");
                 } else {
@@ -12232,6 +12301,19 @@ public class MainHook implements IXposedHookLoadPackage {
      * Buffer audio data for APRS decoding
      * Called from PCMReceiveManager hook during audio reception
      */
+    /**
+     * Drop whatever the AFSK buffer still holds from a previous session. Without this a partial
+     * (< 2 s) chunk left over when monitoring stopped was decoded at the start of the next session —
+     * seen 2026-10-17: a message from the previous bench run was decoded (and auto-acked) minutes later.
+     */
+    private static void resetAprsAudioBuffer() {
+        try {
+            synchronized (aprsAudioBuffer) { aprsAudioBuffer.clear(); }
+            aprsOverlapTail = null;
+            aprsLastProcessMs = 0;
+        } catch (Throwable t) { XposedBridge.log(TAG + ": resetAprsAudioBuffer: " + t.getMessage()); }
+    }
+
     private static void bufferAudioForAPRS(byte[] audioData, int length) {
         try {
             XposedBridge.log(TAG + ": bufferAudioForAPRS called - " + length + " bytes");
@@ -13336,6 +13418,21 @@ public class MainHook implements IXposedHookLoadPackage {
             }
             if ("kissstop".equalsIgnoreCase(mode))  { stopKissTnc(); return; }
 
+            // mode=aprsstart/aprsstop: drive APRS monitoring hands-free (same code path as the UI button).
+            if ("aprsstart".equalsIgnoreCase(mode) || "aprsstop".equalsIgnoreCase(mode)) {
+                final boolean start = "aprsstart".equalsIgnoreCase(mode);
+                final Activity act = homeActivityRef != null ? homeActivityRef.get() : null;
+                final MainHook mi = moduleInstance;
+                if (act == null || mi == null) { XposedBridge.log(TAG + ": [aprs-diag] no activity/instance"); return; }
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+                    @Override public void run() {
+                        try { if (start) mi.startAPRSMonitoring(act); else mi.stopAPRSMonitoring(act); }
+                        catch (Throwable t) { XposedBridge.log(TAG + ": [aprs-diag] " + t.getMessage()); }
+                    }
+                });
+                return;
+            }
+
             // mode=sstvstart/sstvstop: drive SSTV monitoring hands-free (same code path as the UI button).
             if ("sstvstart".equalsIgnoreCase(mode) || "sstvstop".equalsIgnoreCase(mode)) {
                 final boolean start = "sstvstart".equalsIgnoreCase(mode);
@@ -14235,6 +14332,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                      boolean useAprsFreq, int freqHz) {
         final android.content.Context appCtx = ctx.getApplicationContext();
         kissPort = port;
+        resetAprsAudioBuffer();
         // A TNC session needs the radio parked on one frequency (frames arrive whenever the app
         // decides), so tune once here and restore in stopKissTnc — not per packet.
         if (useAprsFreq) {
