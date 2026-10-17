@@ -210,6 +210,21 @@ public class APRSDatabase extends SQLiteOpenHelper {
                 new String[]{String.valueOf(channelNumber)});
     }
     
+    /** Channel numbers flagged for passive APRS decode (channel_aprs.enabled = 1). */
+    public java.util.List<Integer> getEnabledChannels() {
+        java.util.List<Integer> out = new java.util.ArrayList<>();
+        try {
+            SQLiteDatabase db = getReadableDatabase();
+            android.database.Cursor c = db.query(TABLE_CHANNEL_APRS, new String[]{COLUMN_CHANNEL_NUMBER},
+                    COLUMN_ENABLED + " = 1", null, null, null, null);
+            while (c.moveToNext()) out.add(c.getInt(0));
+            c.close();
+        } catch (Exception e) {
+            android.util.Log.w("DMRModHooks-APRS-DB", "getEnabledChannels: " + e.getMessage());
+        }
+        return out;
+    }
+
     /**
      * Get complete APRS settings for a channel
      */

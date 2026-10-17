@@ -492,6 +492,12 @@ public class MainHook implements IXposedHookLoadPackage {
     // NOAA Weather Radio SAME alert monitoring (backlog F8): decodes EAS/SAME headers on the WX
     // channels (162.400-162.550 MHz) from the same PCM tap; hardware-only tune, restored on stop.
     private static volatile boolean isWxMonitoringActive = false;
+
+    // F3 (2026-10-17) passive APRS decode on the channel you are already on, without any retune:
+    // prefs dmrmod_aprs_global/passive_mode  0 = off, 1 = flagged analog channels only, 2 = all analog
+    // channels (default). -1 = not loaded yet (loaded lazily from the audio hook, reset on settings save).
+    private static volatile int aprsPassiveMode = -1;
+    private static volatile java.util.Set<Integer> aprsPassiveFlagged = java.util.Collections.<Integer>emptySet();
     private static SAMEDecoder wxDecoder = null;
     private static volatile String wxStatus = "";
     private static boolean wxTuned = false;
@@ -5037,6 +5043,21 @@ public class MainHook implements IXposedHookLoadPackage {
             autoAckBox.setChecked(activity.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE).getBoolean("auto_ack", true));
             mainLayout.addView(autoAckBox);
 
+            TextView passiveLabel = new TextView(activity);
+            passiveLabel.setText("\nPassive decode when not in monitoring mode:");
+            passiveLabel.setTextSize(14);
+            mainLayout.addView(passiveLabel);
+            final android.widget.Spinner passiveSpin = new android.widget.Spinner(activity);
+            passiveSpin.setAdapter(new android.widget.ArrayAdapter<String>(activity, android.R.layout.simple_spinner_dropdown_item,
+                    new String[]{ "Off", "Flagged analog channels only", "All analog channels" }));
+            passiveSpin.setSelection(Math.max(0, Math.min(2, activity.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE).getInt("passive_mode", 2))));
+            mainLayout.addView(passiveSpin);
+            TextView passiveHelp = new TextView(activity);
+            passiveHelp.setText("Decodes any APRS packet heard on the analog channel you are already on \u2014 no retune, no auto-ack; "
+                    + "stations and messages are stored and notified exactly as in monitoring mode. Flag a channel from the APRS dialog while it is selected.");
+            passiveHelp.setTextSize(12); passiveHelp.setTextColor(0xFF999999);
+            mainLayout.addView(passiveHelp);
+
             TextView infoText = new TextView(activity);
             infoText.setText("\nThe APRS frequency is used by APRS monitoring, Send Message, Position Beacon and the KISS TNC.\n\n" +
                            "📡 Receive: positions (incl. Mic-E and compressed), objects, messages, status and weather are decoded; stations are stored with callsign, location and time.\n" +
@@ -5086,7 +5107,9 @@ public class MainHook implements IXposedHookLoadPackage {
                         aprsDb.setSSID(ssid);
                         aprsDb.setAprsFrequency(frequency);
                         activity.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE)
-                                .edit().putBoolean("auto_ack", autoAckBox.isChecked()).apply();
+                                .edit().putBoolean("auto_ack", autoAckBox.isChecked())
+                                .putInt("passive_mode", passiveSpin.getSelectedItemPosition()).apply();
+                        aprsPassiveMode = -1;   // reload on the next audio chunk
                         
                         Toast.makeText(activity, "APRS settings saved!", Toast.LENGTH_SHORT).show();
                         if (onSaved != null) onSaved.run();
@@ -5365,6 +5388,36 @@ public class MainHook implements IXposedHookLoadPackage {
         infoText.setTextColor(0xFF999999);
         infoText.setPadding(0, 20, 0, 20);
         mainLayout.addView(infoText);
+
+        // F3: passive decode on the channel the user is already on (no retune)
+        try {
+            final int pm = activity.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE).getInt("passive_mode", 2);
+            TextView passiveState = new TextView(activity);
+            passiveState.setText(pm == 2 ? "\uD83D\uDC42 Passive decode: ON for all analog channels (APRS Settings)"
+                    : pm == 1 ? "\uD83D\uDC42 Passive decode: flagged analog channels only (APRS Settings)"
+                    : "\uD83D\uDC42 Passive decode: off (APRS Settings)");
+            passiveState.setTextSize(12);
+            passiveState.setTextColor(0xFF999999);
+            mainLayout.addView(passiveState);
+            if (currentChannelType == 1 && !isAPRSMonitoringActive && currentChannelNumber >= 0) {
+                final int chNum = currentChannelNumber;
+                final android.widget.CheckBox flagBox = new android.widget.CheckBox(activity);
+                flagBox.setText("Decode APRS passively on \u201C" + currentChannelName + "\u201D whenever it is selected");
+                flagBox.setTextSize(13);
+                flagBox.setChecked(APRSDatabase.getInstance(activity).isEnabled(chNum));
+                flagBox.setOnCheckedChangeListener(new android.widget.CompoundButton.OnCheckedChangeListener() {
+                    @Override public void onCheckedChanged(android.widget.CompoundButton b, boolean checked) {
+                        try {
+                            APRSDatabase.getInstance(activity).setEnabled(chNum, checked);
+                            aprsPassiveMode = -1;
+                            Toast.makeText(activity, (checked ? "APRS passive decode flagged for " : "Flag removed from ") + currentChannelName
+                                    + (checked && pm != 1 ? (pm == 2 ? " (already on for all analog channels)" : " (passive decode is off in APRS Settings)") : ""), Toast.LENGTH_SHORT).show();
+                        } catch (Throwable t) { XposedBridge.log(TAG + ": flag channel: " + t.getMessage()); }
+                    }
+                });
+                mainLayout.addView(flagBox);
+            }
+        } catch (Throwable t) { XposedBridge.log(TAG + ": passive section: " + t.getMessage()); }
 
         // Divider
         View divider = new View(activity);
@@ -11309,8 +11362,9 @@ public class MainHook implements IXposedHookLoadPackage {
                         // Use originalAudio for features that need clean audio
                         byte[] processingAudio = (originalAudio != null) ? originalAudio : audioData;
                         
-                        // Buffer audio for APRS decoding (only if monitoring is active)
-                        if (isAPRSMonitoringActive || kissActive) {
+                        // Buffer audio for APRS decoding: monitoring / KISS sessions, or passively on an
+                        // analog channel (F3) — the decoder only sees audio while the squelch is open.
+                        if (isAPRSMonitoringActive || kissActive || aprsPassiveWanted(useSquelch, isSquelchOpen)) {
                             bufferAudioForAPRS(processingAudio, length);
                         }
                         
@@ -12314,14 +12368,39 @@ public class MainHook implements IXposedHookLoadPackage {
         } catch (Throwable t) { XposedBridge.log(TAG + ": resetAprsAudioBuffer: " + t.getMessage()); }
     }
 
+    /** True when the current audio should be fed to the AFSK decoder although no APRS/KISS session runs. */
+    private static boolean aprsPassiveWanted(boolean useSquelch, boolean squelchOpen) {
+        int mode = aprsPassiveMode;
+        if (mode < 0) { loadAprsPassivePrefs(); mode = aprsPassiveMode; }
+        if (mode <= 0) return false;
+        if (currentChannelType != 1) return false;                       // analog FM only
+        if (isSSTVMonitoringActive || isNOAAMonitoringActive || isWxMonitoringActive) return false;
+        if (useSquelch && !squelchOpen) return false;
+        return mode == 2 || aprsPassiveFlagged.contains(currentChannelNumber);
+    }
+
+    /** Loads passive_mode + the flagged channel set. Leaves -1 (retry later) when no Context is available yet. */
+    private static void loadAprsPassivePrefs() {
+        try {
+            android.content.Context ctx = null;
+            if (homeActivityRef != null) ctx = homeActivityRef.get();
+            if (ctx == null && mLocalViewObject instanceof View) ctx = ((View) mLocalViewObject).getContext();
+            if (ctx == null) return;
+            android.content.SharedPreferences g = ctx.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE);
+            int m = g.getInt("passive_mode", 2);
+            java.util.HashSet<Integer> set = new java.util.HashSet<>(APRSDatabase.getInstance(ctx).getEnabledChannels());
+            aprsPassiveFlagged = set;
+            aprsPassiveMode = m;
+            XposedBridge.log(TAG + ": [aprs] passive decode mode=" + m + " flagged channels=" + set);
+        } catch (Throwable t) {
+            aprsPassiveMode = 0;
+            XposedBridge.log(TAG + ": [aprs] passive prefs load failed (off): " + t.getMessage());
+        }
+    }
+
     private static void bufferAudioForAPRS(byte[] audioData, int length) {
         try {
-            XposedBridge.log(TAG + ": bufferAudioForAPRS called - " + length + " bytes");
-            
-            // Always buffer audio, even if no UI context (for autonomous operation)
-            // Context is only needed later for displaying results
-            
-            XposedBridge.log(TAG + ": Buffering APRS audio, current buffer size: " + aprsAudioBuffer.size());
+            // (per-chunk "called"/"buffer size" logs removed 2026-10-17 — passive mode would log every 64 ms)
             
             // Convert bytes to shorts (16-bit PCM Little Endian)
             for (int i = 0; i < length - 1; i += 2) {
