@@ -6499,6 +6499,22 @@ public class MainHook implements IXposedHookLoadPackage {
         mainLayout.addView(startDivider);
 
         // === SSTV RECEIVED IMAGES BUTTON ===
+        // === SEND IMAGE (TX) ===
+        Button sstvSendBtn = new Button(activity);
+        sstvSendBtn.setText("📤 Send Image (TX)");
+        sstvSendBtn.setTextSize(15);
+        sstvSendBtn.setAllCaps(false);
+        sstvSendBtn.setPadding(20, 20, 20, 20);
+        LinearLayout.LayoutParams sstvSendLp = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        sstvSendLp.topMargin = (int) (8 * activity.getResources().getDisplayMetrics().density);
+        sstvSendBtn.setLayoutParams(sstvSendLp);
+        final String sstvTxDefaultMhz = sstvStartFreq;
+        sstvSendBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { showSstvSendImageDialog(activity, sstvTxDefaultMhz); }
+        });
+        mainLayout.addView(sstvSendBtn);
+
         Button startReceivedBtn = new Button(activity);
         startReceivedBtn.setText("📺 SSTV Received Images");
         startReceivedBtn.setTextSize(15);
@@ -7207,10 +7223,13 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.setIntField(currentChannel, "txType", 0);
             XposedHelpers.setIntField(currentChannel, "txSubCode", 0);
             
-            // Update hardware
-            XposedHelpers.callMethod(dmrManager, "updateChannel", currentChannel);
+            // Update hardware ONLY. updateChannel() would persist the hijack (name prefix, 144.5 MHz,
+            // squelch) to the channel DB; if monitoring then ends in a crash/reboot — or the backup is
+            // taken while already hijacked — the user's channel stays clobbered (happened twice on
+            // 2026-10-16). syncChannelInfoWithData() + the direct AnalogMessage below retune the
+            // radio; the in-memory override reverts on the next channel reload.
             XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", currentChannel);
-            
+
             // Initialize SSTV receiver
             sstvReceiver = SSTVReceiver.getInstance(activity);
             sstvReceiver.reset();
@@ -7586,7 +7605,9 @@ public class MainHook implements IXposedHookLoadPackage {
             Object tt = sstvChannelBackup.get("txType"); if (tt != null) XposedHelpers.setIntField(currentChannel, "txType", (Integer) tt);
             Object ts = sstvChannelBackup.get("txSubCode"); if (ts != null) XposedHelpers.setIntField(currentChannel, "txSubCode", (Integer) ts);
             try {
-                XposedHelpers.callMethod(dmrManager, "updateChannel", currentChannel);
+                // hardware-only (no updateChannel): the hijack never wrote the DB, so there is nothing
+                // to write back — and writing a backup that was itself taken while hijacked would
+                // persist the hijacked values.
                 XposedHelpers.callMethod(dmrManager, "syncChannelInfoWithData", currentChannel);
             } catch (Throwable syncEx) {
                 XposedBridge.log(TAG + ": Warning: SSTV restore sync error: " + syncEx.getMessage());
@@ -12814,6 +12835,37 @@ public class MainHook implements IXposedHookLoadPackage {
                 return;
             }
 
+            // mode=sstvtx --es img <png path> [--es smode robot24c|robot12bw|robot8bw] [--ei freqhz F]:
+            // encode an image and transmit it as SSTV over the current channel (or F, transient tune).
+            if ("sstvtx".equalsIgnoreCase(mode)) {
+                final String img = intent.getStringExtra("img") != null ? intent.getStringExtra("img")
+                        : "/sdcard/Download/DMR/sstv_test.png";
+                String sm = intent.getStringExtra("smode"); if (sm == null) sm = "robot24c";
+                final int smode = sm.equalsIgnoreCase("robot12bw") ? SSTVEncoder.ROBOT_12_BW
+                                : sm.equalsIgnoreCase("robot8bw")  ? SSTVEncoder.ROBOT_8_BW : SSTVEncoder.ROBOT_24_COLOR;
+                final boolean tune = intent.hasExtra("freqhz");
+                final int freqHz = intent.getIntExtra("freqhz", 144500000);
+                new Thread(new Runnable() {
+                    @Override public void run() {
+                        try {
+                            android.graphics.Bitmap bmp = android.graphics.BitmapFactory.decodeFile(img);
+                            if (bmp == null) { XposedBridge.log(TAG + ": [sstvtx] cannot decode " + img); return; }
+                            long t0 = System.currentTimeMillis();
+                            final short[] pcm = SSTVEncoder.encode(bmp, smode);
+                            XposedBridge.log(TAG + ": [sstvtx] encoded " + SSTVEncoder.name(smode) + " " + pcm.length
+                                    + " samples (" + (pcm.length / 8) + " ms) in " + (System.currentTimeMillis() - t0) + " ms");
+                            final String label = "SSTV " + SSTVEncoder.name(smode) + " " + img;
+                            android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+                            if (tune) { tuneCurrentChannelAnalog(freqHz); }
+                            h.postDelayed(new Runnable() {
+                                @Override public void run() { txPcmOneShot(ctx, pcm, 1900.0, label, false); }
+                            }, tune ? RETUNE_SETTLE_MS : 0);
+                        } catch (Throwable t) { XposedBridge.log(TAG + ": [sstvtx] " + t.getMessage()); }
+                    }
+                }, "dmrmod-sstvtx").start();
+                return;
+            }
+
             // mode=rxdump --ei secs N: dump the next N seconds of raw RX audio (8 kHz stereo 16-bit) to
             // Download/DMR/rxdump.raw — exactly the bytes the decoders are fed.
             if ("rxdump".equalsIgnoreCase(mode)) {
@@ -12991,6 +13043,55 @@ public class MainHook implements IXposedHookLoadPackage {
         frame[ax25NoFcs.length] = (byte) (fcs & 0xFF);
         frame[ax25NoFcs.length + 1] = (byte) ((fcs >> 8) & 0xFF);
         return txAfskFrame(ctx, frame, label, APRS_TX_LEAD_MS, APRS_TX_REPS, APRS_TX_GAP_MS, toast);
+    }
+
+    /** Longest audio we will key for: the firmware stops TX at 30 s, keep margin for key-up + lead-in. */
+    private static final int TX_MAX_AUDIO_MS = 28500;
+
+    /**
+     * Core on-air TX of arbitrary 8 kHz mono PCM (SSTV, future voice/tone features): prefix the
+     * ~1.5 s settling lead-in this radio needs, inject one-shot (stereo-duplicated) into the OEM mic
+     * path and key/release PTT hands-free. Refuses anything that would exceed the firmware's 30 s
+     * transmit time-out. Returns the keyed duration (ms), or -1 on failure/refusal.
+     */
+    private static int txPcmOneShot(final android.content.Context ctx, final short[] pcm, final double leadHz,
+                                    final String humanLabel, final boolean toast) {
+        try {
+            final int SR = 8000;
+            int lead = (int) (APRS_TX_LEAD_MS / 1000.0 * SR);
+            final int durationMs = (int) ((lead + pcm.length) / 8.0);
+            if (durationMs > TX_MAX_AUDIO_MS) {
+                XposedBridge.log(TAG + ": [tx-pcm] REFUSED: " + durationMs + " ms exceeds the 30 s TOT budget — " + humanLabel);
+                if (toast) try { Toast.makeText(ctx, "Too long for this radio's 30 s transmit limit", Toast.LENGTH_LONG).show(); } catch (Throwable ignored) { }
+                return -1;
+            }
+            short[] src = new short[lead + pcm.length];
+            for (int i = 0; i < lead; i++) src[i] = (short) (30000 * Math.sin(2.0 * Math.PI * leadHz * i / SR));
+            System.arraycopy(pcm, 0, src, lead, pcm.length);
+
+            aprsTxSamples = src;
+            aprsTxPos = 0;
+            aprsTxStereo = true;
+            aprsTxLoop = false;
+            aprsTxActive = true;
+            ctx.sendBroadcast(new android.content.Intent("com.interphone.ptt.down"));
+            XposedBridge.log(TAG + ": [tx-pcm] TX start " + pcm.length + " samples + " + APRS_TX_LEAD_MS + "ms lead (~" + durationMs + "ms): " + humanLabel);
+
+            final android.content.Context appCtx = ctx.getApplicationContext();
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+                @Override public void run() {
+                    try { appCtx.sendBroadcast(new android.content.Intent("com.interphone.ptt.up")); } catch (Throwable ignored) { }
+                    aprsTxActive = false; aprsTxSamples = null; aprsTxPos = 0;
+                    XposedBridge.log(TAG + ": [tx-pcm] TX done — PTT released");
+                    if (toast) try { Toast.makeText(appCtx, "✓ Transmission complete", Toast.LENGTH_SHORT).show(); } catch (Throwable ignored) { }
+                }
+            }, durationMs + 600);
+            return durationMs;
+        } catch (Throwable t) {
+            aprsTxActive = false; aprsTxSamples = null;
+            XposedBridge.log(TAG + ": [tx-pcm] error: " + t.getMessage());
+            return -1;
+        }
     }
 
     /**
@@ -13201,6 +13302,11 @@ public class MainHook implements IXposedHookLoadPackage {
 
     /** Add a frequency selector (APRS freq, default 144.390 from settings / current channel) to a dialog. */
     private FreqChoice addFreqSelector(final Activity activity, LinearLayout layout, APRSDatabase aprsDb) {
+        return addFreqSelector(activity, layout, "APRS frequency (MHz):", aprsDb.getAprsFrequency());
+    }
+
+    /** Generic variant: caller supplies the label and default MHz (e.g. the SSTV frequency). */
+    private FreqChoice addFreqSelector(final Activity activity, LinearLayout layout, String freqLabel, String defaultMhz) {
         final FreqChoice fc = new FreqChoice();
         TextView label = new TextView(activity);
         label.setText("Transmit on:"); label.setTextSize(14); label.setPadding(0, 16, 0, 4);
@@ -13211,13 +13317,13 @@ public class MainHook implements IXposedHookLoadPackage {
 
         fc.aprsRb = new android.widget.RadioButton(activity);
         fc.aprsRb.setId(View.generateViewId());
-        fc.aprsRb.setText("APRS frequency (MHz):");
+        fc.aprsRb.setText(freqLabel);
         fc.aprsRb.setTextSize(14);
         rg.addView(fc.aprsRb);
 
         fc.mhzEdit = new EditText(activity);
         fc.mhzEdit.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        fc.mhzEdit.setText(aprsDb.getAprsFrequency());   // default 144.390
+        fc.mhzEdit.setText(defaultMhz);
         // Indent with a MARGIN (not padding) so the field's underline moves with the text and sits
         // under the radio label; full width so the line spans to the edge like the other fields.
         android.widget.RadioGroup.LayoutParams mhzLp = new android.widget.RadioGroup.LayoutParams(
@@ -13264,8 +13370,16 @@ public class MainHook implements IXposedHookLoadPackage {
                 h.postDelayed(new Runnable() { @Override public void run() { restoreTxFreqBackup(); } },
                         Math.max(ms, 0) + 1500);
             }
-        }, 700);   // let the retune settle before keying PTT
+        }, RETUNE_SETTLE_MS);
     }
+
+    /**
+     * How long to wait after a retune before keying PTT. The OEM channel-change transaction takes
+     * ~3 s to complete and, when it does, refreshes the channel and STOPS a transmission in
+     * progress (measured 2026-10-16: a 26 s SSTV TX keyed 0.7 s after a retune was cut at 2.7 s;
+     * the same TX on a settled channel ran its full length). 3.5 s keeps us clear of it.
+     */
+    private static final int RETUNE_SETTLE_MS = 3500;
 
     private void showAprsSendMessageDialog(final Activity activity) {
         try {
@@ -13406,7 +13520,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 beaconHandler.postDelayed(new Runnable() { @Override public void run() { restoreTxFreqBackup(); } },
                                         Math.max(ms, 0) + 1500);
                             }
-                        }, 700);
+                        }, RETUNE_SETTLE_MS);
                     } else {
                         int ms = sendPositionBeaconOnce(activity, beaconCall, beaconSsid, symTable, symCode, beaconComment, loc);
                         if (ms < 0) Toast.makeText(activity, "Beacon: no GPS fix — will retry next interval", Toast.LENGTH_SHORT).show();
@@ -13630,6 +13744,145 @@ public class MainHook implements IXposedHookLoadPackage {
         } finally {
             try { client.close(); } catch (Throwable ignored) { }
             XposedBridge.log(TAG + ": [kiss] client disconnected");
+        }
+    }
+
+    // ===== SSTV image TX =====
+
+    /** Candidate images for SSTV TX: Download/DMR (incl. SSTV received), Pictures, DCIM/Camera — newest first. */
+    private static java.util.List<File> listSstvCandidateImages() {
+        java.util.List<File> out = new java.util.ArrayList<File>();
+        File ext = Environment.getExternalStorageDirectory();
+        File[] dirs = {
+            new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "DMR"),
+            new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "DMR/SSTV"),
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
+            new File(ext, "DCIM/Camera"),
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+        };
+        for (File d : dirs) {
+            File[] fs = d.listFiles();
+            if (fs == null) continue;
+            for (File f : fs) {
+                String n = f.getName().toLowerCase(java.util.Locale.US);
+                if (f.isFile() && (n.endsWith(".png") || n.endsWith(".jpg") || n.endsWith(".jpeg"))) out.add(f);
+            }
+        }
+        java.util.Collections.sort(out, new java.util.Comparator<File>() {
+            @Override public int compare(File a, File b) { return Long.compare(b.lastModified(), a.lastModified()); }
+        });
+        return out.size() > 40 ? out.subList(0, 40) : out;
+    }
+
+    /** Send Image (TX) dialog: pick an image, mode (fits the 30 s TOT), frequency; transmit. */
+    private void showSstvSendImageDialog(final Activity activity, final String defaultMhz) {
+        try {
+            final java.util.List<File> images = listSstvCandidateImages();
+            AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+            builder.setTitle("📤 Send Image (SSTV TX)");
+
+            ScrollView scroll = new ScrollView(activity);
+            LinearLayout layout = new LinearLayout(activity);
+            layout.setOrientation(LinearLayout.VERTICAL);
+            layout.setPadding(40, 30, 40, 10);
+
+            TextView note = new TextView(activity);
+            note.setText("Transmits an image as SSTV. This radio cuts every transmission at 30 s, so only "
+                    + "Robot 24 Color (24 s), Robot 12 BW and Robot 8 BW fit. Defaults to the SSTV frequency "
+                    + "(auto-tunes, restores your channel after). Licensed amateur use only.");
+            note.setTextSize(12); note.setTextColor(0xFF999999); note.setPadding(0, 0, 0, 12);
+            layout.addView(note);
+
+            TextView imgLabel = new TextView(activity);
+            imgLabel.setText("Image (" + images.size() + " found, newest first):"); imgLabel.setTextSize(14);
+            layout.addView(imgLabel);
+            final android.widget.Spinner imgSpin = new android.widget.Spinner(activity);
+            java.util.List<String> names = new java.util.ArrayList<String>();
+            for (File f : images) names.add(f.getParentFile().getName() + "/" + f.getName());
+            if (names.isEmpty()) names.add("(no images in Download/DMR, Pictures or DCIM/Camera)");
+            imgSpin.setAdapter(new android.widget.ArrayAdapter<String>(activity, android.R.layout.simple_spinner_dropdown_item, names));
+            layout.addView(imgSpin);
+
+            TextView modeLabel = new TextView(activity);
+            modeLabel.setText("Mode:"); modeLabel.setTextSize(14); modeLabel.setPadding(0, 16, 0, 4);
+            layout.addView(modeLabel);
+            final android.widget.RadioGroup modeRg = new android.widget.RadioGroup(activity);
+            final int[] modes = { SSTVEncoder.ROBOT_24_COLOR, SSTVEncoder.ROBOT_12_BW, SSTVEncoder.ROBOT_8_BW };
+            final android.widget.RadioButton[] modeRbs = new android.widget.RadioButton[modes.length];
+            for (int i = 0; i < modes.length; i++) {
+                modeRbs[i] = new android.widget.RadioButton(activity);
+                modeRbs[i].setId(View.generateViewId());
+                modeRbs[i].setText(SSTVEncoder.name(modes[i]) + "  (~" + (SSTVEncoder.durationMs(modes[i]) / 1000) + " s"
+                        + (modes[i] == SSTVEncoder.ROBOT_24_COLOR ? ", 320×240 colour" : ", 160×120 B&W") + ")");
+                modeRbs[i].setTextSize(14);
+                modeRg.addView(modeRbs[i]);
+            }
+            modeRbs[0].setChecked(true);
+            layout.addView(modeRg);
+
+            final FreqChoice freq = addFreqSelector(activity, layout, "SSTV frequency (MHz):", defaultMhz);
+
+            scroll.addView(layout);
+            builder.setView(scroll);
+            builder.setPositiveButton("📡 Transmit", null);
+            builder.setNegativeButton("Cancel", null);
+            final AlertDialog dialog = builder.create();
+            dialog.show();
+
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    if (images.isEmpty()) { Toast.makeText(activity, "No image to send", Toast.LENGTH_SHORT).show(); return; }
+                    final File img = images.get(imgSpin.getSelectedItemPosition());
+                    int mode = modes[0];
+                    for (int i = 0; i < modes.length; i++) if (modeRbs[i].isChecked()) mode = modes[i];
+                    final int smode = mode;
+                    final boolean useFreq = freq.useAprsFreq();
+                    final int freqHz = freq.freqHz();
+                    if (useFreq && freqHz < 1_000_000) { Toast.makeText(activity, "Enter a valid frequency in MHz", Toast.LENGTH_SHORT).show(); return; }
+                    if (!useFreq && currentChannelType != 1) {
+                        Toast.makeText(activity, "Current channel is digital — pick the SSTV frequency, or switch to an analog channel", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    if (useFreq) {
+                        try { activity.getSharedPreferences("dmrmod_sstv_global", android.content.Context.MODE_PRIVATE).edit().putString("sstv_frequency", freq.mhz()).apply(); } catch (Throwable ignored) { }
+                    }
+                    dialog.dismiss();
+                    Toast.makeText(activity, "Encoding " + SSTVEncoder.name(smode) + "…", Toast.LENGTH_SHORT).show();
+                    new Thread(new Runnable() {
+                        @Override public void run() {
+                            try {
+                                android.graphics.Bitmap bmp = android.graphics.BitmapFactory.decodeFile(img.getAbsolutePath());
+                                if (bmp == null) throw new Exception("cannot decode " + img.getName());
+                                final short[] pcm = SSTVEncoder.encode(bmp, smode);
+                                final String label = "SSTV " + SSTVEncoder.name(smode) + " " + img.getName();
+                                final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+                                h.post(new Runnable() {
+                                    @Override public void run() {
+                                        if (useFreq) { captureTxFreqBackup(); tuneCurrentChannelAnalog(freqHz); }
+                                        h.postDelayed(new Runnable() {
+                                            @Override public void run() {
+                                                int ms = txPcmOneShot(activity, pcm, 1900.0, label, true);
+                                                if (ms > 0) {
+                                                    Toast.makeText(activity, "📡 Transmitting " + SSTVEncoder.name(smode) + " (~" + (ms / 1000) + " s)", Toast.LENGTH_LONG).show();
+                                                    if (useFreq) h.postDelayed(new Runnable() { @Override public void run() { restoreTxFreqBackup(); } }, ms + 1500);
+                                                } else if (useFreq) restoreTxFreqBackup();
+                                            }
+                                        }, useFreq ? RETUNE_SETTLE_MS : 0);
+                                    }
+                                });
+                            } catch (final Throwable t) {
+                                XposedBridge.log(TAG + ": [sstv-tx] " + t.getMessage());
+                                new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+                                    @Override public void run() { Toast.makeText(activity, "SSTV TX failed: " + t.getMessage(), Toast.LENGTH_LONG).show(); }
+                                });
+                            }
+                        }
+                    }, "dmrmod-sstv-tx").start();
+                }
+            });
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": showSstvSendImageDialog error: " + t.getMessage());
+            Toast.makeText(activity, "Error: " + t.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
