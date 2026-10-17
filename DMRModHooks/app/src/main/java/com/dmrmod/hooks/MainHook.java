@@ -1480,6 +1480,7 @@ public class MainHook implements IXposedHookLoadPackage {
                         // Check for orphaned channels and restore if needed (delayed to ensure DmrManager is ready)
                         final Activity activityForRestore = (Activity) param.thisObject;
                         homeActivityRef = new java.lang.ref.WeakReference<Activity>(activityForRestore);
+                        if (aprsIsEnabled(activityForRestore)) aprsIsStart(activityForRestore);   // F4: APRS-IS client
                         new android.os.Handler().postDelayed(new Runnable() {
                             @Override
                             public void run() {
@@ -5054,6 +5055,46 @@ public class MainHook implements IXposedHookLoadPackage {
             digiBox.setChecked(activity.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE).getBoolean("digipeat", false));
             mainLayout.addView(digiBox);
 
+            final android.content.SharedPreferences gprefs = activity.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE);
+            TextView isTitle = new TextView(activity);
+            isTitle.setText("\n\uD83C\uDF10 APRS-IS (internet)");
+            isTitle.setTextSize(16); isTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+            mainLayout.addView(isTitle);
+            final android.widget.CheckBox isBox = new android.widget.CheckBox(activity);
+            isBox.setText("Connect to APRS-IS: gate every packet heard on RF to the internet (RX-only iGate), beacon the phone's position, and receive messages sent to your callsign from anywhere");
+            isBox.setTextSize(13);
+            isBox.setChecked(gprefs.getBoolean("is_enabled", false));
+            mainLayout.addView(isBox);
+            TextView isStatus = new TextView(activity);
+            isStatus.setText("Status: " + aprsIsStatus + (aprsIs != null ? "  \u00B7  gated " + aprsIs.gatedCount + "  \u00B7  IS messages " + aprsIsMsgCount : ""));
+            isStatus.setTextSize(12); isStatus.setTextColor(0xFF999999);
+            mainLayout.addView(isStatus);
+            TextView isServerLbl = new TextView(activity); isServerLbl.setText("Server:"); isServerLbl.setTextSize(13);
+            mainLayout.addView(isServerLbl);
+            final android.widget.EditText isServerEdit = new android.widget.EditText(activity);
+            isServerEdit.setText(gprefs.getString("is_server", "rotate.aprs2.net")); isServerEdit.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_URI);
+            mainLayout.addView(isServerEdit);
+            TextView isPassLbl = new TextView(activity); isPassLbl.setText("Passcode (-1 = receive-only; needed to gate and beacon):"); isPassLbl.setTextSize(13);
+            mainLayout.addView(isPassLbl);
+            final android.widget.EditText isPassEdit = new android.widget.EditText(activity);
+            isPassEdit.setText(gprefs.getString("is_passcode", "-1"));
+            isPassEdit.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_SIGNED | android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+            mainLayout.addView(isPassEdit);
+            TextView isBeaconLbl = new TextView(activity); isBeaconLbl.setText("Beacon phone position to APRS-IS every N minutes (0 = never):"); isBeaconLbl.setTextSize(13);
+            mainLayout.addView(isBeaconLbl);
+            final android.widget.EditText isBeaconEdit = new android.widget.EditText(activity);
+            isBeaconEdit.setText(String.valueOf(gprefs.getInt("is_beacon_min", 10))); isBeaconEdit.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+            mainLayout.addView(isBeaconEdit);
+            TextView isCommentLbl = new TextView(activity); isCommentLbl.setText("Beacon comment:"); isCommentLbl.setTextSize(13);
+            mainLayout.addView(isCommentLbl);
+            final android.widget.EditText isCommentEdit = new android.widget.EditText(activity);
+            isCommentEdit.setText(gprefs.getString("is_beacon_comment", "DMRModHooks"));
+            mainLayout.addView(isCommentEdit);
+            TextView isNote = new TextView(activity);
+            isNote.setText("Your passcode is kept only in this app's private settings. Gating uses qAR with your callsign; packets carrying TCPIP, NOGATE or RFONLY and third-party frames are never gated. Nothing from the internet is transmitted on RF.");
+            isNote.setTextSize(11); isNote.setTextColor(0xFF999999); isNote.setPadding(0, 4, 0, 10);
+            mainLayout.addView(isNote);
+
             TextView passiveLabel = new TextView(activity);
             passiveLabel.setText("\nPassive decode when not in monitoring mode:");
             passiveLabel.setTextSize(14);
@@ -5123,6 +5164,15 @@ public class MainHook implements IXposedHookLoadPackage {
                                 .putBoolean("digipeat", digiBox.isChecked()).apply();
                         aprsPassiveMode = -1;   // reload on the next audio chunk
                         aprsDigiEnabled = digiBox.isChecked() ? 1 : 0;
+                        int beaconMin = 10;
+                        try { beaconMin = Math.max(0, Math.min(1440, Integer.parseInt(isBeaconEdit.getText().toString().trim()))); } catch (Exception ignored) {}
+                        String pc = isPassEdit.getText().toString().trim(); if (pc.isEmpty()) pc = "-1";
+                        gprefs.edit().putBoolean("is_enabled", isBox.isChecked())
+                                .putString("is_server", isServerEdit.getText().toString().trim().isEmpty() ? "rotate.aprs2.net" : isServerEdit.getText().toString().trim())
+                                .putString("is_passcode", pc)
+                                .putInt("is_beacon_min", beaconMin)
+                                .putString("is_beacon_comment", isCommentEdit.getText().toString().trim()).apply();
+                        if (isBox.isChecked()) aprsIsStart(activity); else aprsIsStop();
                         
                         Toast.makeText(activity, "APRS settings saved!", Toast.LENGTH_SHORT).show();
                         if (onSaved != null) onSaved.run();
@@ -5435,6 +5485,11 @@ public class MainHook implements IXposedHookLoadPackage {
             passiveState.setTextSize(12);
             passiveState.setTextColor(0xFF999999);
             mainLayout.addView(passiveState);
+            TextView isState = new TextView(activity);
+            isState.setText("\uD83C\uDF10 APRS-IS: " + (aprsIsEnabled(activity) ? aprsIsStatus + (aprsIs != null ? ", gated " + aprsIs.gatedCount : "") : "off (APRS Settings)"));
+            isState.setTextSize(12);
+            isState.setTextColor(0xFF999999);
+            mainLayout.addView(isState);
             if (currentChannelType == 1 && !isAPRSMonitoringActive && currentChannelNumber >= 0) {
                 final int chNum = currentChannelNumber;
                 final android.widget.CheckBox flagBox = new android.widget.CheckBox(activity);
@@ -9129,6 +9184,151 @@ public class MainHook implements IXposedHookLoadPackage {
     }
 
     // =====================================================================================
+    // =====================================================================================
+    // APRS-IS (F4, 2026-10-17): RX-only iGate + internet position beacon + messages for us
+    // =====================================================================================
+
+    private static volatile AprsIsClient aprsIs = null;
+    private static volatile String aprsIsStatus = "off";
+    private static volatile Runnable aprsIsBeaconRunnable = null;
+    private static volatile long aprsIsLastBeaconMs = 0;
+    private static volatile int aprsIsMsgCount = 0;
+
+    static boolean aprsIsEnabled(android.content.Context ctx) {
+        try { return ctx.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE).getBoolean("is_enabled", false); }
+        catch (Throwable t) { return false; }
+    }
+
+    /** Starts (or restarts) the APRS-IS client from the saved settings; no-op when disabled or no callsign. */
+    static synchronized void aprsIsStart(final android.content.Context ctxIn) {
+        try {
+            final android.content.Context ctx = ctxIn.getApplicationContext() != null ? ctxIn.getApplicationContext() : ctxIn;
+            aprsIsStop();
+            android.content.SharedPreferences g = ctx.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE);
+            if (!g.getBoolean("is_enabled", false)) return;
+            APRSDatabase db = APRSDatabase.getInstance(ctx);
+            String call = db.getCallsign() == null ? "" : db.getCallsign().trim().toUpperCase(java.util.Locale.US);
+            if (call.isEmpty() || "N0CALL".equals(call)) { aprsIsStatus = "no callsign configured"; return; }
+            final String login = call + (db.getSSID() != 0 ? "-" + db.getSSID() : "");
+            String server = g.getString("is_server", "rotate.aprs2.net").trim();
+            int port = g.getInt("is_port", 14580);
+            String pass = g.getString("is_passcode", "-1").trim();
+            if (pass.isEmpty()) pass = "-1";
+            final int beaconMin = g.getInt("is_beacon_min", 10);
+            AprsIsClient c = new AprsIsClient(server, port, login, pass, VERSION, null, new AprsIsClient.Listener() {
+                @Override public void onStatus(String status, boolean connected) {
+                    aprsIsStatus = status;
+                    XposedBridge.log(TAG + ": [aprs-is] " + status);
+                    if (connected && beaconMin > 0) aprsIsBeaconSoon(ctx, 5000);
+                }
+                @Override public void onServerLine(String line) { aprsIsHandleServerLine(ctx, line); }
+            });
+            aprsIs = c;
+            c.start();
+            if (beaconMin > 0) aprsIsScheduleBeacon(ctx, beaconMin);
+            XposedBridge.log(TAG + ": [aprs-is] client started as " + login + " -> " + server + ":" + port
+                    + (pass.equals("-1") ? " (receive-only, no passcode)" : "") + ", beacon every " + beaconMin + " min");
+        } catch (Throwable t) {
+            aprsIsStatus = "error: " + t.getMessage();
+            XposedBridge.log(TAG + ": [aprs-is] start error: " + t.getMessage());
+        }
+    }
+
+    static synchronized void aprsIsStop() {
+        try {
+            AprsIsClient c = aprsIs;
+            aprsIs = null;
+            if (c != null) c.stop();
+            Runnable r = aprsIsBeaconRunnable;
+            if (r != null) { new android.os.Handler(android.os.Looper.getMainLooper()).removeCallbacks(r); aprsIsBeaconRunnable = null; }
+            aprsIsStatus = "off";
+        } catch (Throwable t) { XposedBridge.log(TAG + ": [aprs-is] stop error: " + t.getMessage()); }
+    }
+
+    /** Called from the decode thread for every FCS-valid frame heard on RF (monitoring, passive, KISS). */
+    static void aprsIgateFrame(byte[] frame) {
+        try {
+            AprsIsClient c = aprsIs;
+            if (c == null || !c.isConnected()) return;
+            String tnc2 = AprsIsClient.tnc2FromFrame(frame);
+            if (tnc2 == null) return;
+            if (!AprsIsClient.shouldGate(tnc2)) { XposedBridge.log(TAG + ": [aprs-is] not gated (path/type): " + tnc2); return; }
+            boolean ok = c.gate(tnc2);
+            XposedBridge.log(TAG + ": [aprs-is] " + (ok ? "gated: " : (c.isVerified() ? "gate failed: " : "not gated (unverified login): ")) + tnc2);
+        } catch (Throwable t) { XposedBridge.log(TAG + ": [aprs-is] gate error: " + t.getMessage()); }
+    }
+
+    private static void aprsIsScheduleBeacon(final android.content.Context ctx, final int minutes) {
+        final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+        Runnable old = aprsIsBeaconRunnable;
+        if (old != null) h.removeCallbacks(old);
+        Runnable r = new Runnable() {
+            @Override public void run() {
+                if (aprsIs == null) return;
+                aprsIsSendBeacon(ctx);
+                h.postDelayed(this, minutes * 60000L);
+            }
+        };
+        aprsIsBeaconRunnable = r;
+        h.postDelayed(r, minutes * 60000L);
+    }
+
+    private static void aprsIsBeaconSoon(final android.content.Context ctx, long delayMs) {
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
+            @Override public void run() { if (System.currentTimeMillis() - aprsIsLastBeaconMs > 60000) aprsIsSendBeacon(ctx); }
+        }, delayMs);
+    }
+
+    /** Position beacon straight to APRS-IS (TCPIP*): the phone's last known location, APRS symbol from settings. */
+    static void aprsIsSendBeacon(final android.content.Context ctx) {
+        new Thread(new Runnable() { @Override public void run() {
+            try {
+                AprsIsClient c = aprsIs;
+                if (c == null || !c.isConnected() || !c.isVerified()) return;
+                android.location.Location loc = SatellitePassPredictor.getLastLocation(ctx);
+                if (loc == null) { XposedBridge.log(TAG + ": [aprs-is] beacon skipped: no location"); return; }
+                APRSDatabase db = APRSDatabase.getInstance(ctx);
+                android.content.SharedPreferences g = ctx.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE);
+                String comment = g.getString("is_beacon_comment", "DMRModHooks");
+                String info = buildAprsPositionInfo(loc.getLatitude(), loc.getLongitude(), db.getDefaultSymbolTable(), db.getDefaultSymbolCode(), comment);
+                String line = c.getLogin() + ">APDR16,TCPIP*:" + info;
+                boolean ok = c.send(line);
+                if (ok) aprsIsLastBeaconMs = System.currentTimeMillis();
+                XposedBridge.log(TAG + ": [aprs-is] beacon " + (ok ? "sent" : "FAILED") + ": " + line);
+            } catch (Throwable t) { XposedBridge.log(TAG + ": [aprs-is] beacon error: " + t.getMessage()); }
+        } }, "dmrmod-aprs-is-beacon").start();
+    }
+
+    /** Server lines: messages addressed to our login (delivered without a filter) are stored, notified and acked over IS. */
+    private static void aprsIsHandleServerLine(final android.content.Context ctx, String line) {
+        try {
+            APRSPacketDecoder.APRSPacket p = APRSPacketDecoder.decodeTnc2(line);
+            if (!p.isValid || !p.isMessage()) return;
+            if (!aprsAddressedToMe(ctx, p.messageTo)) return;
+            aprsIsMsgCount++;
+            final String from = p.sourceCallsign + (p.sourceSSID != 0 ? "-" + p.sourceSSID : "");
+            if (p.isAck || p.isRej) {
+                aprsStoreLogEntry(ctx, p.isAck ? "ack" : "rej", from + " (IS)", p.messageTo, p.messageText, p.messageId, true);
+                return;
+            }
+            aprsStoreLogEntry(ctx, "msg", from + " (IS)", p.messageTo, p.messageText, p.messageId, true);
+            aprsNotifyMessage(ctx, from + " via APRS-IS", p.messageTo, p.messageText, true);
+            final String toastText = "✉️ APRS-IS message from " + from + ": " + p.messageText;
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+                @Override public void run() { try { Toast.makeText(ctx, toastText, Toast.LENGTH_LONG).show(); } catch (Throwable ignored) {} }
+            });
+            AprsIsClient c = aprsIs;
+            if (p.messageId != null && c != null && c.isVerified()) {
+                String a = from.length() > 9 ? from.substring(0, 9) : from;
+                StringBuilder sb = new StringBuilder(":").append(a);
+                for (int i = a.length(); i < 9; i++) sb.append(' ');
+                String ack = c.getLogin() + ">APDR16,TCPIP*:" + sb.append(":ack").append(p.messageId);
+                c.send(ack);
+                XposedBridge.log(TAG + ": [aprs-is] acked over IS: " + ack);
+            }
+        } catch (Throwable t) { XposedBridge.log(TAG + ": [aprs-is] server line error: " + t.getMessage()); }
+    }
+
     // Fill-in digipeater (WIDE1-1), 2026-10-17 — APRS monitoring only, setting default OFF
     // =====================================================================================
 
@@ -13963,6 +14163,15 @@ public class MainHook implements IXposedHookLoadPackage {
                 return;
             }
             if ("kissstop".equalsIgnoreCase(mode))  { stopKissTnc(); return; }
+
+            // mode=igate --ei on 0|1: enable/disable the APRS-IS client (bench use; passcode from settings)
+            if ("igate".equalsIgnoreCase(mode)) {
+                boolean on = intent.getIntExtra("on", 0) != 0;
+                ctx.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE).edit().putBoolean("is_enabled", on).apply();
+                if (on) aprsIsStart(ctx); else aprsIsStop();
+                return;
+            }
+            if ("isbeacon".equalsIgnoreCase(mode)) { aprsIsSendBeacon(ctx); return; }
 
             // mode=digipeat --ei on 0|1: toggle the fill-in digipeater setting (bench use)
             if ("digipeat".equalsIgnoreCase(mode)) {

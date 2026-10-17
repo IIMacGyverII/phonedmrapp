@@ -61,6 +61,8 @@ public class APRSReceiver {
                 MainHook.kissDeliverFrame(packet);
                 // Fill-in digipeater (APRS monitoring + setting only)
                 MainHook.aprsMaybeDigipeat(context, packet);
+                // APRS-IS RX-only iGate (when the client is connected)
+                MainHook.aprsIgateFrame(packet);
 
                 APRSPacketDecoder.APRSPacket aprsPacket = APRSPacketDecoder.decode(packet);
                 
