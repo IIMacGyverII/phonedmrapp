@@ -71,6 +71,12 @@ public final class ChannelStore extends SQLiteOpenHelper {
         return getWritableDatabase().insert("channels", null, values(ch));
     }
 
+    public void delete(Channel ch) {
+        SQLiteDatabase db = getWritableDatabase();
+        db.delete("channels", "_id=?", new String[] { String.valueOf(ch.id) });
+        db.execSQL("UPDATE channels SET number = number - 1 WHERE number > ?", new Object[] { ch.number });   // keep 1..n contiguous
+    }
+
     public void update(Channel ch) { getWritableDatabase().update("channels", values(ch), "_id=?", new String[] { String.valueOf(ch.id) }); }
 
     public void addHistory(int channel, String kind, String text, int rssi, int dmrId) {

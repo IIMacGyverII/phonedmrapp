@@ -20,6 +20,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
+import com.macdmr.radio.ChannelStore;
 import com.macdmr.radio.ui.DiagnosticsView;
 import com.macdmr.radio.ui.IntercomView;
 import com.macdmr.radio.ui.Theme;
@@ -29,6 +30,8 @@ public class MainActivity extends AppCompatActivity {
     private FrameLayout content;
     private IntercomView intercom;
     private DiagnosticsView diagnostics;
+    private com.macdmr.radio.ui.ChannelsView channels;
+    private View editor;
     private RadioService svc;
     private final TextView[] tabs = new TextView[5], tabEmoji = new TextView[5];
     private final View[] tabInd = new View[5];
@@ -41,7 +44,7 @@ public class MainActivity extends AppCompatActivity {
     private final ServiceConnection conn = new ServiceConnection() {
         @Override public void onServiceConnected(ComponentName n, IBinder b) {
             svc = ((RadioService.LocalBinder) b).get();
-            intercom.attach(svc); diagnostics.attach(svc);
+            intercom.attach(svc); diagnostics.attach(svc); channels.attach(svc);
             if (!svc.isReady()) svc.bringUp();
             ui.post(rssiTick);
         }
@@ -71,6 +74,16 @@ public class MainActivity extends AppCompatActivity {
 
         intercom = new IntercomView(this);
         diagnostics = new DiagnosticsView(this);
+        channels = new com.macdmr.radio.ui.ChannelsView(this);
+        channels.setHost((ch, isNew) -> {
+            final ChannelStore.Channel target = isNew ? new ChannelStore.Channel() : ch;
+            if (isNew && svc != null && svc.current() != null) { target.type = svc.current().type; target.rxFreq = svc.current().rxFreq; target.txFreq = svc.current().txFreq; }
+            editor = new com.macdmr.radio.ui.ChannelEditorView(this, target, isNew, (c2, saved) -> {
+                if (saved && svc != null) svc.saveChannel(c2, isNew);
+                content.removeView(editor); editor = null; channels.reload();
+            });
+            content.addView(editor, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        });
         show(0);
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
@@ -86,6 +99,7 @@ public class MainActivity extends AppCompatActivity {
         View v;
         switch (idx) {
             case 0: v = intercom; break;
+            case 1: v = channels; channels.reload(); break;
             case 4: v = diagnostics; break;
             default: v = placeholder(tabNames[idx]);
         }
@@ -100,6 +114,12 @@ public class MainActivity extends AppCompatActivity {
 
     private View placeholder(String name) {
         TextView t = Theme.label(this, name + "\n\ncoming next", 0xFF8A7FB0, 18, false); t.setGravity(Gravity.CENTER); return t;
+    }
+
+    @Override public void onBackPressed() {
+        if (editor != null) { content.removeView(editor); editor = null; return; }
+        if (tab != 0) { show(0); return; }
+        super.onBackPressed();
     }
 
     @Override protected void onDestroy() {
