@@ -119,6 +119,12 @@ public class ProbeReceiver extends BroadcastReceiver {
                 for (String nname : new String[] { "pwd", "ptt", "pd", "debug" }) Log.i(TAG, "sysfs " + nname + " = " + sysRead(nname));
                 String pwd = sysRead("pwd").trim();
                 boolean powered = pwd.equals("pwd :1") || pwd.startsWith("FAIL");   // unreadable -> assume on, never wait for a boot
+                if (intent.getBooleanExtra("powercycle", false) && powered) {        // cold start on purpose: pwd 0 -> 1
+                    sysWrite("pwd", "0");
+                    Thread.sleep(500);
+                    Log.i(TAG, "power-cycle: pwd now = " + sysRead("pwd"));
+                    powered = false;
+                }
                 byte[] q = frame((byte) 0x32, new byte[] { 1 });            // SignalMessage: QUERY_SIGNAL_STRENGTH, fetch=1
                 try (FileInputStream in = new FileInputStream("/dev/ttyS0"); FileOutputStream out = new FileOutputStream("/dev/ttyS0")) {
                     while (in.available() > 0) in.read(new byte[Math.min(in.available(), 4096)]);   // drain stale bytes
