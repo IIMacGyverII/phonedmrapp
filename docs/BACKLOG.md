@@ -130,7 +130,8 @@ Design: `deep-dive/15-packet-radio-review.md` (+ addendum) and `16-repeater-dire
 | **N4** (= S22) | NOAA squelch: `disableSoftwareSquelchOnCurrentChannel()` must restore the channel's own `sq`, not a hard-coded 2 | |
 | **N5** | Scan priority channel (checked every N steps while scanning) | `ChannelScanner` |
 | **N6** | Caption keyword alerts: per-keyword actions (record / switch channel), regex option | Follows the 2026-10-17 feature |
-| **N7** | Evaluate: standalone app instead of an LSPosed module (own UART + audio path) | See `docs/standalone-app-evaluation.md` (2026-10-17) |
+| **N7** ✅ | Evaluate: standalone app instead of an LSPosed module (own UART + audio path) | **Feasible with root — proven 2026-10-17** (`docs/standalone-app-evaluation.md`, `-followup.md`): 4 sepolicy rules, UART + dmr009 power GPIO + PrizeTinyService audio all driven from a plain app |
+| **N8** | **Multi-device standalone app**: RadioEngine (shared protocol) + per-device profile (control port, audio backend TinyService/UART-PCM, sysfs GPIOs, PTT broadcast) | Motivation: Blackview Xplore 1 user; its app uses the **same MCU protocol** (`docs/multi-device-xplore1-findings.md`). First milestone: radio-engine spike on the Armor with the OEM app disabled |
 
 ## Analog squelch (Soft SQ) — follow-ups
 
