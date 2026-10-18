@@ -25,19 +25,20 @@ import java.util.Set;
 
 /** Nearby repeaters: find DMR (BrandMeister, RadioID) and FM (hearham) repeaters around the phone and program them in a tap. */
 public final class RepeatersDialog {
-    private static final int[] RADII = { 25, 50, 100, 200 };
+    private static final int[] RADII = { 15, 30, 60, 120 };   // miles
+    private static final double KM_PER_MI = 1.609344;
     private final Context c; private final RadioService svc; private final RepeaterService rs; private final float d;
-    private int radiusKm = 50; private AlertDialog dlg, sub; private LinearLayout list; private TextView status; private final List<TextView> chips = new ArrayList<>();
+    private int radiusMi = 30; private AlertDialog dlg, sub; private LinearLayout list; private TextView status; private final List<TextView> chips = new ArrayList<>();
     private List<Repeater> current = new ArrayList<>();
 
     public static void show(Context c, RadioService svc) { new RepeatersDialog(c, svc).open(false); }
-    private RepeatersDialog(Context c, RadioService svc) { this.c = c; this.svc = svc; rs = new RepeaterService(c, svc.store()); d = Theme.dp(c); radiusKm = c.getSharedPreferences("repeaters", Context.MODE_PRIVATE).getInt("radiusKm", 50); }
+    private RepeatersDialog(Context c, RadioService svc) { this.c = c; this.svc = svc; rs = new RepeaterService(c, svc.store()); d = Theme.dp(c); radiusMi = c.getSharedPreferences("repeaters", Context.MODE_PRIVATE).getInt("radiusMi", 30); }
 
     private void open(boolean force) {
         LinearLayout body = page("📡  Nearby repeaters");
         body.addView(hint("DMR repeaters from BrandMeister and RadioID, FM repeaters from hearham, sorted by distance from the phone. Tap one to see its details and add it to your channels; installs can be undone."));
         LinearLayout row = row();
-        for (int km : RADII) { final int k = km; chips.add(pill(row, km + " km", radiusKm == km, x -> { radiusKm = k; c.getSharedPreferences("repeaters", Context.MODE_PRIVATE).edit().putInt("radiusKm", k).apply(); for (int i = 0; i < chips.size(); i++) style(chips.get(i), RADII[i] == k); load(false); })); }
+        for (int mi : RADII) { final int k = mi; chips.add(pill(row, mi + " mi", radiusMi == mi, x -> { radiusMi = k; c.getSharedPreferences("repeaters", Context.MODE_PRIVATE).edit().putInt("radiusMi", k).apply(); for (int i = 0; i < chips.size(); i++) style(chips.get(i), RADII[i] == k); load(false); })); }
         TextView refresh = pill(row, "↻", false, x -> load(true)); refresh.setTextSize(16);
         body.addView(row);
         status = hint("Loading…"); body.addView(status);
@@ -54,7 +55,7 @@ public final class RepeatersDialog {
         final double lat = me.getLatitude(), lon = me.getLongitude();
         new Thread(() -> {
             StringBuilder st = new StringBuilder();
-            final List<Repeater> found = rs.nearby(lat, lon, radiusKm, force, st);
+            final List<Repeater> found = rs.nearby(lat, lon, radiusMi * KM_PER_MI, force, st);
             final String s = st.toString();
             list.post(() -> { current = found; status.setText(s); render(lat, lon); });
         }, "repeaters-load").start();
@@ -62,7 +63,7 @@ public final class RepeatersDialog {
 
     private void render(double lat, double lon) {
         list.removeAllViews();
-        if (current.isEmpty()) { list.addView(hint("Nothing within " + radiusKm + " km. Try a larger radius.")); return; }
+        if (current.isEmpty()) { list.addView(hint("Nothing within " + radiusMi + " miles. Try a larger radius.")); return; }
         int n = 0;
         for (final Repeater r : current) {
             if (n++ >= 150) break;

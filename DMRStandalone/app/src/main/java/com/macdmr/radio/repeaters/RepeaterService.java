@@ -73,7 +73,7 @@ public final class RepeaterService {
             if (r.distanceMeters <= radiusKm * 1000) out.add(r);
         }
         out.sort((a, b) -> Double.compare(a.distanceMeters, b.distanceMeters));
-        status.append(String.format(Locale.US, "%d BrandMeister, %d hearham, %d RadioID known; %d within %.0f km", bm.size(), hh.size(), rid.size(), out.size(), radiusKm));
+        status.append(String.format(Locale.US, "%d BrandMeister, %d hearham, %d RadioID known; %d within %.0f miles", bm.size(), hh.size(), rid.size(), out.size(), radiusKm / 1.609344));
         return out;
     }
 
