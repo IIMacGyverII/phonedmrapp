@@ -339,6 +339,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         int n = 0;
         for (int i = 0; i + 3 < len && n + 1 < mono.length; i += 4) { mono[n++] = b[i]; mono[n++] = b[i + 1]; }
         boolean open = current == null || current.isDigital() ? true : softSq.process(mono, n);
+        if (BuildConfig.DEBUG && softSq.isEnabled() && System.currentTimeMillis() - lastSqDiag > 2000) { lastSqDiag = System.currentTimeMillis(); log("soft sq: " + softSq.describe() + " gate=" + open); }
         if (open != squelchOpen && softSq.isEnabled()) softGateHistory(open);
         if (open != squelchOpen && softSq.isEnabled()) log("soft squelch " + (open ? "open" : "closed") + (current != null && current.rxType == 1 ? " (CTCSS " + com.macdmr.radio.dsp.ToneTable.ctcssLabel(current.rxSubCode) + ")" : ""));
         squelchOpen = open;
@@ -810,6 +811,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     private void setLink(String s) { link = s; ui.post(() -> { for (Listener l : listeners) l.onLink(s); }); updateNotification(); }
 
     private volatile long softOpenAt;
+    private long lastSqDiag;
     /** Soft SQ gate transitions: the module reports a continuous reception while its squelch is held open, so the "Received N s" line comes from the gate instead. */
     private void softGateHistory(boolean open) {
         long now = System.currentTimeMillis();

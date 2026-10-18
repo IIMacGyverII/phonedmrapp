@@ -48,6 +48,8 @@ public final class SoftSquelch {
     }
 
     public void reset() { tone.reset(); noise.reset(); open = false; lastOpen = 0; }
+    /** Diagnostics: what the active detector last measured. */
+    public String describe() { return toneHz > 0 ? String.format(java.util.Locale.US, "tone %.1f Hz voice=%.1f adj=%.1f present=%b", toneHz, tone.lastVoiceRatio(), tone.lastAdjRatio(), tone.isPresent()) : String.format(java.util.Locale.US, "noise hi=%.0f smoothed=%.0f level=%d signal=%b", noise.highAmp(), noise.smoothed(), level, noise.isSignal()); }
     /** The radio reported the carrier gone (RECEIVE_STOP): close at once instead of waiting for the detectors and the hang. */
     public void closeNow() { open = false; lastOpen = 0; tone.reset(); noise.reset(); }
 }
