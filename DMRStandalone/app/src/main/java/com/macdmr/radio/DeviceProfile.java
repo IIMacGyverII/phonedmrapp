@@ -20,7 +20,7 @@ public final class DeviceProfile {
     public final String powerNode;       // pwd / power enable
     public final String pttNode;         // hardware PTT line (module side)
     public final String powerOnToken;    // read() value when powered
-    public final String[] pttActions;    // framework broadcasts for the hardware PTT key
+    public final String[] pttActions;    // framework broadcasts for the hardware PTT key: down/up pairs (even index = down, odd = up)
     public final String stockApp;        // package to disable while we own the UART
     public final String[] sepolicy;      // Magisk sepolicy.rule lines an untrusted app needs
     public final String serialLib;       // the stock app's serial JNI library on /system (configures the line); null = stty fallback
@@ -38,7 +38,9 @@ public final class DeviceProfile {
     public static final DeviceProfile ARMOR_26_ULTRA = new DeviceProfile(
             "Ulefone Armor 26 Ultra", "/dev/ttyS0", 57600, Audio.TINY_SERVICE, null, 0,
             "/sys/devices/platform/dmr009/pwd", "/sys/devices/platform/dmr009/ptt", "pwd :1",
-            new String[] { "com.interphone.ptt.down", "com.interphone.ptt.up" },
+            // the framework ("smartlinkkey", KEY_SAT keycode 381) sends android.intent.action.PTT.down/up for the side key;
+            // com.interphone.ptt.down/up is what the stock app listens for when the key is assigned to it (measured 2026-10-18)
+            new String[] { "android.intent.action.PTT.down", "android.intent.action.PTT.up", "com.interphone.ptt.down", "com.interphone.ptt.up" },
             "com.pri.prizeinterphone",
             new String[] {
                     "allow untrusted_app ttyS_device chr_file { open read write ioctl getattr lock }",

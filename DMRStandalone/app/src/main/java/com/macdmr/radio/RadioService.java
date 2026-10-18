@@ -246,8 +246,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             @Override public void onReceive(android.content.Context c, Intent i) {
                 String a = i.getAction(); if (a == null) return;
                 if (!getSharedPreferences("radio", MODE_PRIVATE).getBoolean("hwPtt", true)) return;
-                if (a.equals(profile.pttActions[0])) { if (isReady()) ptt(true); }
-                else if (a.equals(profile.pttActions[1])) ptt(false);
+                for (int k = 0; k < profile.pttActions.length; k++) if (a.equals(profile.pttActions[k])) { if (k % 2 == 0) { if (isReady()) ptt(true); } else ptt(false); return; }
             }
         };
         android.content.IntentFilter f = new android.content.IntentFilter();
