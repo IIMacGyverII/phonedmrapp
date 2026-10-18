@@ -119,6 +119,9 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
 
         // --- help / diagnostics ---
         LinearLayout more = section(body, "❓ Help & tools");
+        TextView upd = pill(c, "Check for updates", Theme.VFO);
+        more.addView(upd, new LayoutParams(bb));
+        upd.setOnClickListener(v -> com.macdmr.radio.Updater.check(c));
         TextView help = pill(c, "Help & how-to", Theme.PKT), diag = pill(c, "Diagnostics log", Theme.MON);
         LinearLayout hrow = new LinearLayout(c); hrow.addView(help, new LayoutParams(bl)); hrow.addView(diag, new LayoutParams(bl)); more.addView(hrow);
         help.setOnClickListener(v -> { if (host != null) host.openHelp(); });
