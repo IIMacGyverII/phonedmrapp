@@ -136,7 +136,7 @@ public class ContactsView extends LinearLayout {
         final Context c = getContext(); float d = Theme.dp(c);
         final android.app.Dialog dlg = new android.app.Dialog(c);
         LinearLayout box = new LinearLayout(c); box.setOrientation(VERTICAL);
-        box.setBackground(Neo.card(c, Neo.alpha(typeColor(ct.type), 0x77), 18)); box.setPadding((int) (18 * d), (int) (16 * d), (int) (18 * d), (int) (14 * d));
+        box.setBackground(Neo.sheet(c, Neo.alpha(typeColor(ct.type), 0x99), 18)); box.setPadding((int) (18 * d), (int) (16 * d), (int) (18 * d), (int) (14 * d));
         LinearLayout top = new LinearLayout(c); top.setGravity(Gravity.CENTER_VERTICAL);
         top.addView(avatar(c, ct.type, ct.name, 48), new LayoutParams((int) (48 * d), (int) (48 * d)));
         LinearLayout col = new LinearLayout(c); col.setOrientation(VERTICAL); col.setPadding((int) (12 * d), 0, 0, 0);

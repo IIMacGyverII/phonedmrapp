@@ -137,6 +137,7 @@ See `.grok/rules/packet-layouts.md` for byte offsets, and `docs/deep-dive/01-…
 
 - [ ] Build: `cd DMRModHooks; .\gradlew assembleDebug`
 - [ ] If device attached: `.\install.ps1` (includes reboot)
+- [ ] **Standalone app: update the in-app help in the same change** whenever a feature is added, removed or behaves differently, a control moves, or a setting changes: the guide in `DMRStandalone/.../ui/HelpView.java` (`TOPICS`: add or edit the topic and its sections; new screens get a topic), the per-field info texts in `ChannelEditorView.java` (`H_*` constants), and any other info buttons. Help must describe what the app does now, verified against the code; never leave a stale sentence or ship a feature without its explanation
 - [ ] **Log it in `CHANGELOG_DRAFT.md`** (repo root) — newest entry first, as a dated `## YYYY-MM-DD — <summary>` section with a `| Backlog | Change | Files | Test |` row, so releases have an accurate change list. Note whether it was device-tested. Skip only changes with nothing user-facing in the shipped APK (e.g. pure dev-doc edits); say so if you skip.
 - [ ] If you corrected stale docs: patch `.grok/rules/` and `.github/copilot-instructions.md` in the same PR/commit; if the fact is architectural, patch the relevant `docs/deep-dive/` chapter too
 - [ ] If you edited this file: copy it to `CLAUDE.md` (or vice-versa) — see the mirror rule at the top
@@ -149,7 +150,7 @@ and on-air spike: `docs/standalone-app-evaluation*.md`; other phones: `docs/mult
 backlog N8). Rules from the owner:
 
 - **Look professional and elegant; easy and intuitive to use.** Not stock Android widgets/boxes or a generic UI.
-- **Help and how-to documents live inside the app.** Every screen and feature gets an in-app explanation.
+- **Help and how-to documents live inside the app.** Every screen and feature gets an in-app explanation. Keep it current: every user-facing change updates the help in the same commit (see the §10 checklist); the guide is `HelpView.TOPICS`, field-level info buttons hold their own text.
 - **Generated images, icons and graphics** (app icon, button glyphs, panel art) — produce them, don't fall back to defaults.
 - These need not be done first, but they must be done, and **it is usually best to do them as we go**: ship each screen in its final visual form.
 - **Preserve the current intercom page.** Almost all of the DMRModHooks intercom page is ours (`CircuitBoardView`, neon channel digits, Signal/SCAN/ZONE row, Soft SQ slider, history + transcription boxes, VU bars, round PTT with the SOFT SQ/TXT/VFO/REC/MON/PKT satellites) — port it as-is and keep its look.

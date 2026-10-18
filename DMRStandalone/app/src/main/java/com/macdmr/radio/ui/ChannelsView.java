@@ -167,7 +167,7 @@ public class ChannelsView extends LinearLayout implements RadioService.Listener 
         final android.app.Dialog dlg = new android.app.Dialog(c);
         LinearLayout box = new LinearLayout(c); box.setOrientation(VERTICAL);
         float d = Theme.dp(c);
-        box.setBackground(Neo.card(c, Neo.alpha(Neo.CYAN, 0x66), 18)); box.setPadding((int) (18 * d), (int) (16 * d), (int) (18 * d), (int) (14 * d));
+        box.setBackground(Neo.sheet(c, Neo.alpha(Neo.CYAN, 0x88), 18)); box.setPadding((int) (18 * d), (int) (16 * d), (int) (18 * d), (int) (14 * d));
         LinearLayout top = new LinearLayout(c); top.setGravity(Gravity.CENTER_VERTICAL);
         TextView num = numberTile(c, ch.number, ch.number == activeNumber);
         top.addView(num, new LayoutParams((int) (46 * d), (int) (46 * d)));
