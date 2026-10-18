@@ -208,6 +208,8 @@ public final class Neo {
         ICONS.put("diag", "M3 12h4l3-8 4 16 3-8h4");
         ICONS.put("id", "M3 6h18v12H3zM7 10h4M7 14h6M16 10a1.5 1.5 0 1 0 0.01 0");
         ICONS.put("check", "M5 12.5l4.5 4.5L19 7.5");
+        ICONS.put("bolt", "M13 3L5 13.5h6L10 21l8-10.5h-6z");
+        ICONS.put("send", "M4 12l16-8-5.5 16-3.2-6.8zM11.3 13.2L20 4");
         ICONS.put("radio", "M5 9h14v12H5zM9 4l8 5M8 14h3M8 17h3M15 15a2 2 0 1 0 0.01 0");
     }
 
