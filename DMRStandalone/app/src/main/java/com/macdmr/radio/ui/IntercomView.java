@@ -59,8 +59,17 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     private boolean panelClosed;
 
     /** The activity box's cross: empty its list and hide it; it comes back on the next reception or transmission (Last heard keeps everything). */
-    private void closePanel() { panelClosed = true; history.clear(); renderHistory(); infoPanel.setVisibility(GONE); }
-    private void reopenPanel(String why) { if (!panelClosed) return; android.util.Log.i("IntercomView", "activity box reopened: " + why); panelClosed = false; infoPanel.setVisibility(VISIBLE); }
+    private ImageView restoreBox;
+    private void closePanel() { panelClosed = true; history.clear(); renderHistory(); infoPanel.setVisibility(GONE); restoreBox.setVisibility(VISIBLE); }
+    /** The small button left behind: bring the box back now, with this channel's recent events. */
+    private void restorePanel() {
+        if (!panelClosed) return;
+        panelClosed = false; infoPanel.setVisibility(VISIBLE); restoreBox.setVisibility(GONE);
+        ChannelStore.Channel ch = svc != null ? svc.current() : null;
+        history.clear(); if (svc != null && ch != null) for (String l : svc.store().recentHistory(ch.number, 3)) history.addLast(l);
+        renderHistory();
+    }
+    private void reopenPanel(String why) { if (!panelClosed) return; android.util.Log.i("IntercomView", "activity box reopened: " + why); restoreBox.setVisibility(GONE); panelClosed = false; infoPanel.setVisibility(VISIBLE); }
 
     public IntercomView(Context c) {
         super(c);
@@ -192,6 +201,10 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         FrameLayout.LayoutParams ipl = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.START);
         ipl.topMargin = ipl.leftMargin = ipl.rightMargin = dp8;
         panel.addView(infoPanel, ipl);
+        restoreBox = Neo.iconButton(c, "txt", Neo.CYAN, "Show the activity box"); int rp = (int) (9 * d); restoreBox.setPadding(rp, rp, rp, rp);
+        restoreBox.setOnClickListener(v -> restorePanel()); restoreBox.setVisibility(GONE);
+        FrameLayout.LayoutParams rbl = new FrameLayout.LayoutParams((int) (38 * d), (int) (38 * d), Gravity.TOP | Gravity.END); rbl.topMargin = rbl.rightMargin = dp8;
+        panel.addView(restoreBox, rbl);
         transcriptionBox = new LinearLayout(c); transcriptionBox.setOrientation(VERTICAL);
         transcriptionBox.setBackground(Theme.rounded(c, 0xF0071626, 0xAA00BFFF, 2, 8)); transcriptionBox.setPadding(dp8, dp8, dp8, dp8);
         TextView th = Theme.label(c, "📝 Transcription", Theme.CYAN2, 10, true);
