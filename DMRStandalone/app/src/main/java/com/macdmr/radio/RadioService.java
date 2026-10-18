@@ -48,7 +48,7 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     private DeviceProfile profile;
     private RadioEngine engine;
-    private TinyServiceAudio audio;
+    private AudioBackend audio;
     private ChannelStore store;
     private ChannelStore.Channel current;
     private volatile boolean receiving, transmitting, rxAudioOn;
@@ -320,7 +320,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     private void startRxAudio() {
         try {
             if (audio == null) {
-                audio = new TinyServiceAudio();
+                audio = profile.audio == DeviceProfile.Audio.UART_PCM ? new UartPcmAudio(profile.pcmPort, profile.pcmBaud) : new TinyServiceAudio();
                 audio.setSink((b, len) -> onRxPcm(b, len));
                 audio.setGate(() -> squelchOpen);
             }

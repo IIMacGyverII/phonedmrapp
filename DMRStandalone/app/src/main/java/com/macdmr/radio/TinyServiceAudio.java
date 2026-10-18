@@ -15,11 +15,9 @@ import java.lang.reflect.Method;
  * tinyalsa device 8 / card 0 behind it). RX frames arrive as 8 kHz 16-bit stereo (L == R), 2048 bytes;
  * TX takes the same format. No caller check in the service (measured 2026-10-17).
  */
-public final class TinyServiceAudio {
-    public interface Sink { void onPcm(byte[] stereo8k, int len); }
-    public interface Gate { boolean open(); }
+public final class TinyServiceAudio implements AudioBackend {
     private volatile Gate gate;
-    public void setGate(Gate g) { gate = g; }
+    @Override public void setGate(Gate g) { gate = g; }
 
     private final Object svc;
     private final Method openRecv, closeRecv, openWrite, closeWrite, frameSize, writeFrame, register;
@@ -40,10 +38,10 @@ public final class TinyServiceAudio {
         register = c.getMethod("registerRecvCallback", Class.forName("android.os.ITinyRecvCallback"));
     }
 
-    public void setSink(Sink s) { sink = s; }
+    @Override public void setSink(Sink s) { sink = s; }
 
     /** Start RX: register the binder callback, open the PCM stream, play through an AudioTrack. */
-    public synchronized String startRx(boolean speaker) {
+    @Override public synchronized String startRx(boolean speaker) {
         try {
             if (track == null) {
                 int min = AudioTrack.getMinBufferSize(8000, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT);
@@ -70,14 +68,14 @@ public final class TinyServiceAudio {
         } catch (Throwable t) { return "startRx failed: " + t + (t.getCause() != null ? " / " + t.getCause() : ""); }
     }
 
-    public synchronized String stopRx() {
+    @Override public synchronized String stopRx() {
         playing = false;
         try { closeRecv.invoke(svc); } catch (Throwable t) { return "closeRecvPcm: " + t; }
         return "closeRecvPcm ok";
     }
 
     /** TX: phone mic → 8 kHz mono → duplicated to stereo → PrizeTinyService.writeFrame while keyed. */
-    public synchronized String startTx() {
+    @Override public synchronized String startTx() {
         try {
             Object ok = openWrite.invoke(svc);
             int fs = (Integer) frameSize.invoke(svc);
@@ -102,7 +100,7 @@ public final class TinyServiceAudio {
     }
 
     /** Play 8 kHz mono PCM into the TX path (stereo-duplicated, paced to real time); blocks until done. */
-    public String playPcm(short[] mono) {
+    @Override public String playPcm(short[] mono) {
         Object ok; int fs;
         synchronized (this) {
             try { ok = openWrite.invoke(svc); fs = (Integer) frameSize.invoke(svc); } catch (Throwable t) { return "playPcm open: " + t; }
@@ -153,7 +151,7 @@ public final class TinyServiceAudio {
         } catch (Throwable t) { return "startTxTone failed: " + t; }
     }
 
-    public synchronized String stopTx() {
+    @Override public synchronized String stopTx() {
         txRunning = false;
         try { if (txThread != null) txThread.join(500); } catch (InterruptedException ignored) { }
         try { if (rec != null) { rec.stop(); rec.release(); rec = null; } } catch (Throwable ignored) { }
