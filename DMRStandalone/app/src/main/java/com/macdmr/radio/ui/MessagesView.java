@@ -103,6 +103,11 @@ public class MessagesView extends LinearLayout implements RadioService.Listener 
         final EditText input = new EditText(c); input.setHint("Message"); input.setTextColor(Theme.WHITE); input.setHintTextColor(0xFF8899AA); input.setTextSize(15);
         input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES | InputType.TYPE_TEXT_FLAG_MULTI_LINE); input.setMaxLines(3);
         input.setBackground(Theme.rounded(c, 0x22FFFFFF, 0, 0, 20)); input.setPadding((int) (14 * d), (int) (8 * d), (int) (14 * d), (int) (8 * d));
+        TextView quick = Theme.label(c, "\u26A1", Theme.VFO[3], 18, true); quick.setGravity(Gravity.CENTER); quick.setBackground(Theme.rounded(c, Theme.VFO[0], Theme.VFO[2], 1, 20));
+        quick.setPadding((int) (10 * d), (int) (8 * d), (int) (10 * d), (int) (8 * d)); quick.setClickable(true);
+        LayoutParams ql = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT); ql.rightMargin = (int) (8 * d);
+        compose.addView(quick, ql);
+        quick.setOnClickListener(v -> quickReplies(input));
         compose.addView(input, new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f));
         TextView send = Theme.label(c, "Send", Theme.PKT[3], 15, true); send.setGravity(Gravity.CENTER); send.setBackground(Theme.rounded(c, Theme.PKT[0], Theme.PKT[2], 2, 20));
         send.setPadding((int) (18 * d), (int) (10 * d), (int) (18 * d), (int) (10 * d)); send.setClickable(true);
@@ -148,6 +153,26 @@ public class MessagesView extends LinearLayout implements RadioService.Listener 
             name.setText((cv.name == null || cv.name.isEmpty() ? "" : cv.name + "  ") + cv.peer); last.setText((cv.outgoing ? "You: " : "") + cv.lastText); time.setText(df.format(new Date(cv.lastTs)));
             return row;
         }
+    }
+
+    private static final String DEFAULT_QUICK = "QSL\nCopy, I will call you back\nOn my way\nWhere are you?\nSwitch to the other channel\nAll OK here";
+    private java.util.List<String> quickList() {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (String s : getContext().getSharedPreferences("radio", Context.MODE_PRIVATE).getString("quickReplies", DEFAULT_QUICK).split("\n")) if (!s.trim().isEmpty()) out.add(s.trim());
+        return out;
+    }
+    /** Canned texts: one tap fills the composer; the last entry edits the list. */
+    private void quickReplies(final EditText input) {
+        final java.util.List<String> q = quickList();
+        String[] items = new String[q.size() + 1]; for (int i = 0; i < q.size(); i++) items[i] = q.get(i); items[q.size()] = "\u270F\uFE0F Edit quick replies\u2026";
+        new android.app.AlertDialog.Builder(getContext()).setTitle("Quick replies").setItems(items, (d2, w) -> {
+            if (w < q.size()) { input.setText(q.get(w)); input.setSelection(input.getText().length()); return; }
+            final EditText et = new EditText(getContext()); et.setText(String.join("\n", q)); et.setMinLines(5);
+            et.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+            new android.app.AlertDialog.Builder(getContext()).setTitle("Quick replies").setMessage("One message per line.").setView(et)
+                    .setPositiveButton("Save", (d3, w3) -> getContext().getSharedPreferences("radio", Context.MODE_PRIVATE).edit().putString("quickReplies", et.getText().toString()).apply())
+                    .setNegativeButton("Cancel", null).show();
+        }).show();
     }
 
     private final class ThreadAdapter extends BaseAdapter {

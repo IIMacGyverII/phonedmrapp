@@ -58,7 +58,7 @@ public final class LastHeardDialog {
         }
         ScrollView sv = new ScrollView(c); sv.addView(body);
         AlertDialog a = new AlertDialog.Builder(c).setView(sv).create();
-        if (a.getWindow() != null) a.getWindow().setBackgroundDrawable(new ColorDrawable(Theme.BG));
+        
         for (int i = 0; i < body.getChildCount(); i++) { Object t = body.getChildAt(i).getTag(); if (t instanceof AlertDialog[]) ((AlertDialog[]) t)[0] = a; }
         a.show();
     }

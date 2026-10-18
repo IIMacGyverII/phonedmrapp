@@ -130,24 +130,42 @@ public class ChannelsView extends LinearLayout implements RadioService.Listener 
         TextView sub = Theme.label(getContext(), (ch.isDigital() ? "DMR  CC" + ch.cc + "  TS" + (ch.inSlot + 1) + "  →" + ch.txContact : "FM  SQ" + ch.sq + "  " + (ch.band == 1 ? "wide" : "narrow")) + "   " + ch.freqText(ch.rxFreq) + " / " + ch.freqText(ch.txFreq), 0xFF9AA4AE, 13, false);
         box.addView(sub);
         LinearLayout btns = new LinearLayout(getContext()); btns.setGravity(Gravity.CENTER);
-        String[] names = { "Use", "Edit", "Delete" }; int[][] accents = { Theme.PKT, Theme.SOFTSQ, Theme.REC };
-        for (int i = 0; i < 3; i++) {
+        final boolean fav = isFavourite(ch);
+        String[] names = { "Use", "Edit", fav ? "\u2605 Unstar" : "\u2606 Star", "Delete" }; int[][] accents = { Theme.PKT, Theme.SOFTSQ, Theme.VFO, Theme.REC };
+        for (int i = 0; i < 4; i++) {
             final int k = i;
-            TextView b = Theme.label(getContext(), names[i], accents[i][3], 15, true); b.setGravity(Gravity.CENTER);
-            b.setBackground(Theme.rounded(getContext(), accents[i][0], accents[i][2], 2, 20)); b.setPadding(0, (int) (10 * d), 0, (int) (10 * d)); b.setClickable(true);
-            LayoutParams lp = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f); lp.setMargins((int) (4 * d), (int) (16 * d), (int) (4 * d), 0);
+            TextView b = Theme.label(getContext(), names[i], accents[i][3], 13, true); b.setGravity(Gravity.CENTER); b.setSingleLine(true);
+            b.setBackground(Theme.rounded(getContext(), accents[i][0], accents[i][2], 2, 20)); b.setPadding((int) (2 * d), (int) (10 * d), (int) (2 * d), (int) (10 * d)); b.setClickable(true);
+            LayoutParams lp = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f); lp.setMargins((int) (3 * d), (int) (16 * d), (int) (3 * d), 0);
             btns.addView(b, lp);
             b.setOnClickListener(v -> {
                 dlg.dismiss();
                 if (k == 0 && svc != null) svc.selectChannel(ch.number);
                 else if (k == 1 && host != null) host.openEditor(ch, false);
-                else if (k == 2) confirmDelete(ch);
+                else if (k == 2) toggleFavourite(ch, !fav);
+                else if (k == 3) confirmDelete(ch);
             });
         }
         box.addView(btns);
         dlg.setContentView(box);
         if (dlg.getWindow() != null) dlg.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0));
         dlg.show();
+    }
+
+    public static final String FAV_ZONE = "\u2605 Favourites";
+    private ChannelStore.Zone favZone() { if (svc == null) return null; for (ChannelStore.Zone z : svc.store().zones()) if (FAV_ZONE.equals(z.name)) return z; return null; }
+    private boolean isFavourite(ChannelStore.Channel ch) { ChannelStore.Zone z = favZone(); if (z == null) return false; for (int n : z.numbers) if (n == ch.number) return true; return false; }
+    /** Starred channels live in a "\u2605 Favourites" zone, so they work with the zone picker, stepping and scanning. */
+    private void toggleFavourite(ChannelStore.Channel ch, boolean on) {
+        if (svc == null) return;
+        ChannelStore.Zone z = favZone();
+        if (z == null) { if (!on) return; z = new ChannelStore.Zone(); z.name = FAV_ZONE; z.numbers = new int[0]; }
+        java.util.List<Integer> nums = new java.util.ArrayList<>(); for (int n : z.numbers) if (n != ch.number) nums.add(n);
+        if (on) nums.add(ch.number);
+        z.numbers = new int[nums.size()]; for (int i = 0; i < nums.size(); i++) z.numbers[i] = nums.get(i);
+        svc.store().saveZone(z);
+        android.widget.Toast.makeText(getContext(), on ? "Starred: " + ch.name + " is in the \u2605 Favourites zone" : "Removed from \u2605 Favourites", android.widget.Toast.LENGTH_SHORT).show();
+        reload();
     }
 
     private void confirmDelete(final ChannelStore.Channel ch) {

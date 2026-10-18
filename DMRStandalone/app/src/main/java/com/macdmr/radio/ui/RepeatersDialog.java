@@ -125,7 +125,7 @@ public final class RepeatersDialog {
     private int dp(float x) { return Math.round(x * d); }
     private void toast(String s) { Toast.makeText(c, s, Toast.LENGTH_LONG).show(); }
     private LinearLayout page(String title) { LinearLayout b = new LinearLayout(c); b.setOrientation(LinearLayout.VERTICAL); b.setBackgroundColor(Theme.BG); b.setPadding(dp(16), dp(12), dp(16), dp(8)); b.addView(Theme.label(c, title, Theme.PKT[3], 20, true)); return b; }
-    private AlertDialog dialog(LinearLayout body) { ScrollView sv = new ScrollView(c); sv.addView(body); AlertDialog a = new AlertDialog.Builder(c).setView(sv).create(); if (a.getWindow() != null) a.getWindow().setBackgroundDrawable(new ColorDrawable(Theme.BG)); a.show(); return a; }
+    private AlertDialog dialog(LinearLayout body) { ScrollView sv = new ScrollView(c); sv.addView(body); AlertDialog a = new AlertDialog.Builder(c).setView(sv).create();  a.show(); return a; }
     private TextView hint(String s) { TextView t = Theme.label(c, s, 0xFF8A98A6, 12, false); t.setPadding(0, dp(4), 0, dp(6)); return t; }
     private TextView section(String s) { TextView t = Theme.label(c, s, 0xFFBFC8D0, 13, true); t.setPadding(0, dp(8), 0, dp(4)); return t; }
     private LinearLayout row() { LinearLayout r = new LinearLayout(c); r.setOrientation(LinearLayout.HORIZONTAL); r.setGravity(Gravity.CENTER_VERTICAL); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT); lp.topMargin = dp(2); lp.bottomMargin = dp(4); r.setLayoutParams(lp); return r; }

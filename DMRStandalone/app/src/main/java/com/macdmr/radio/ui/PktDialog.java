@@ -294,7 +294,7 @@ public final class PktDialog {
     private AlertDialog dialog(LinearLayout body) {
         ScrollView sv = new ScrollView(c); sv.addView(body);
         AlertDialog a = new AlertDialog.Builder(c).setView(sv).create();
-        if (a.getWindow() != null) a.getWindow().setBackgroundDrawable(new ColorDrawable(Theme.BG));
+        
         a.show();
         return a;
     }

@@ -20,7 +20,7 @@
         android:name=".RadioApp"
         android:label="DMR Radio"
         android:icon="@mipmap/ic_launcher"
-        android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
+        android:theme="@style/AppTheme">
 
         <activity android:name=".MainActivity" android:exported="true"
             android:screenOrientation="portrait">

@@ -104,7 +104,7 @@ public final class VfoDialog {
         off2.setOnClickListener(x -> { if (svc.vfoActive()) svc.exitVfo(); dlg.dismiss(); });
 
         dlg = new AlertDialog.Builder(c).setView(sv).create();
-        if (dlg.getWindow() != null) dlg.getWindow().setBackgroundDrawable(new ColorDrawable(Theme.BG));
+        
         dlg.show();
     }
 

@@ -65,21 +65,25 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
 ---
 
-## 🚧 Where this is going: a standalone app for more than one phone
+## 🚧 The standalone app (`DMRStandalone/`, "DMR Radio")
 
-The LSPosed module hooks the Ulefone's stock walkie-talkie app, so it only ever works on the Ulefone Armor 26 Ultra. Work has started on a **standalone app** (`DMRStandalone/`, `com.macdmr.radio`) that drives the radio module directly, with one shared protocol engine and a small **device profile** per phone (serial port, audio path, power/PTT lines, PTT key broadcasts). First on-air run on 2026-10-17: with the stock app disabled it queried the module version, programmed a channel, saw the MCU's RECEIVE_START, read RSSI and streamed received audio — see [`docs/standalone-app-evaluation.md`](docs/standalone-app-evaluation.md) and [`docs/standalone-app-evaluation-followup.md`](docs/standalone-app-evaluation-followup.md).
+The LSPosed module hooks the Ulefone's stock walkie-talkie app, so it only ever works on the Ulefone Armor 26 Ultra. The **standalone app** (`DMRStandalone/`, package `com.macdmr.radio`) drives the radio module directly instead: one shared protocol engine plus a small **device profile** per phone (serial port and its JNI opener, audio path, power/PTT lines, PTT key broadcasts, SELinux rules). It is not released yet, but as of 2026-10-17 it already does, all verified on the phone and on the air:
+
+- the intercom page exactly as the module draws it (same artwork and geometry), channels (list, search, editor, Star/favourites), contacts, DMR text messages with quick replies, zones, Soft SQ, REC, MON, scanner, VFO (any frequency, repeater offsets, arrow stepping, save as channel), live captions (TXT, via the companion recognizer) with keyword alerts, voice announcements, Last heard, RadioID caller names;
+- the whole PKT suite: APRS (passive decode on every analog channel, monitoring on 144.390 with auto-ack and fill-in digipeater, messages, position beacon, KISS TNC for APRSdroid/YAAC, stations and log with map links, APRS-IS iGate/beacon/messages), DTMF decode and send, NOAA SAME weather alerts, SSTV receive (live view) and send;
+- Nearby Repeaters (BrandMeister, RadioID, hearham) programmed in one tap with undo, backups in the same five-CSV layout as the module and the OpenGD77 CPS fork, boot persistence (a real Magisk module; "Own the radio at boot", or the stock app is restored after a reboot), in-app help for every screen.
 
 | Phone | Status |
 |---|---|
-| **Ulefone Armor 26 Ultra** (walkie-talkie model) | Module v4.1.0 supported today; standalone engine proven on air |
+| **Ulefone Armor 26 Ultra** (walkie-talkie model) | Module v4.1.0 supported today; standalone app feature-complete on it (pre-release) |
 | **Blackview Xplore 1** | Its stock app uses the **same radio-module protocol** ([analysis](docs/multi-device-xplore1-findings.md)); needs a profile (audio is PCM over a second UART) and root. Looking for an owner to run the info script |
 | Oukitel WP61 Plus/Ultra/Ti, Ulefone Armor 20WT, UNIWA P2 Plus… | Unknown — send us the stock app APK and the info dump |
 
-**Root (Magisk) will be required** on every phone: Android's SELinux policy only lets the stock app open the radio's serial port; four `sepolicy.rule` lines in a Magisk module open it for the standalone app.
+**Root (Magisk) is required** on every phone: Android's SELinux policy only lets the stock app open the radio's serial port; the app installs a four-line `sepolicy.rule` Magisk module from its Device tab.
 
 **Have a different DMR phone?** Follow [`docs/DEVICE_SUPPORT_REQUEST.md`](docs/DEVICE_SUPPORT_REQUEST.md) — one copy-paste script and the stock APK tell us everything needed for a profile — and open an issue.
 
-The module keeps getting releases until the standalone app reaches feature parity; the intercom page you see today is being carried over as-is.
+The module keeps getting releases until the standalone app ships.
 
 ---
 
