@@ -21,7 +21,8 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
     public interface Host { void openHelp(); void openDiagnostics(); }
 
     private final TextView linkText, idText, profileText;
-    private final android.widget.CheckBox ownAtBoot;
+    private final android.widget.CheckBox ownAtBoot, voiceBox;
+    private final TextView radioIdText;
     private RadioService svc;
     private Host host;
 
@@ -77,6 +78,21 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
 
         // --- data ---
         LinearLayout data = section(body, "💾 Channels & contacts");
+        radioIdText = Theme.label(c, "", 0xFF9AA4AE, 13, false); data.addView(radioIdText);
+        TextView radioIdBtn = pill(c, "Download / update the RadioID list", Theme.PKT);
+        data.addView(radioIdBtn, new LayoutParams(bb));
+        radioIdBtn.setOnClickListener(v -> {
+            if (svc == null) return;
+            final android.app.AlertDialog pd = new android.app.AlertDialog.Builder(c).setTitle("RadioID list").setMessage("Connecting to radioid.net\u2026").setCancelable(false).create(); pd.show();
+            new Thread(() -> {
+                try { int n = svc.radioId().downloadAndImport(t -> post(() -> pd.setMessage(t))); post(() -> { pd.dismiss(); refresh(); android.widget.Toast.makeText(c, String.format(java.util.Locale.US, "%,d DMR IDs loaded", n), android.widget.Toast.LENGTH_LONG).show(); }); }
+                catch (Throwable t) { post(() -> { pd.dismiss(); android.widget.Toast.makeText(c, "Download failed: " + t.getMessage(), android.widget.Toast.LENGTH_LONG).show(); }); }
+            }).start();
+        });
+        voiceBox = new android.widget.CheckBox(c); voiceBox.setText("Voice announcements (channel changes, caller names, keyword alerts)");
+        voiceBox.setTextColor(0xFFC8D2DC); voiceBox.setTextSize(13); voiceBox.setButtonTintList(android.content.res.ColorStateList.valueOf(Theme.CYAN));
+        data.addView(voiceBox, new LayoutParams(bb));
+        voiceBox.setOnCheckedChangeListener((b, on) -> { if (svc != null && on != svc.voiceOn()) svc.setVoiceOn(on); });
         TextView reimport = pill(c, "Re-import from the stock app", Theme.VFO);
         data.addView(reimport, new LayoutParams(bb));
         reimport.setOnClickListener(v -> new android.app.AlertDialog.Builder(c).setTitle("Re-import?").setMessage("Replaces all channels, contacts, history and messages in this app with the stock app's current data.")
@@ -118,6 +134,8 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         linkText.setText("ready".equals(l) ? "✅ This app owns the radio" : "no root".equals(l) ? "🔒 Root not granted (Magisk → Superuser)" : "stopped".equals(l) ? "⏸ Stock app owns the radio" : "⏳ " + l);
         idText.setText("ID " + svc.localId());
         ownAtBoot.setChecked(svc.ownAtBoot());
+        voiceBox.setChecked(svc.voiceOn());
+        radioIdText.setText("RadioID names: " + svc.radioId().status());
     }
 
     @Override public void onLink(String state) { refresh(); }
