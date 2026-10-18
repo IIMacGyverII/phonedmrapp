@@ -84,6 +84,13 @@ public final class Neo {
         g.setCornerRadius(Theme.dp(c, radiusDp)); g.setStroke(Theme.dp(c, 1), border);
         return g;
     }
+    /** Opaque card for pop-ups (menus, info cards): nothing behind may show through the text. */
+    public static GradientDrawable sheet(Context c, int border, float radiusDp) {
+        GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[] { 0xFF102033, 0xFF0A1622 });
+        g.setCornerRadius(Theme.dp(c, radiusDp)); g.setStroke(Theme.dp(c, 1), border);
+        return g;
+    }
+
     /** Tinted card: a wash of {@code accent} fading into the panel colour (Device tiles, link hero). */
     public static GradientDrawable tint(Context c, int accent, float radiusDp, float strokeDp) {
         GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[] { alpha(accent, 0x2E), 0xEB08121A, 0xEB08121A });
@@ -208,6 +215,7 @@ public final class Neo {
         ICONS.put("diag", "M3 12h4l3-8 4 16 3-8h4");
         ICONS.put("id", "M3 6h18v12H3zM7 10h4M7 14h6M16 10a1.5 1.5 0 1 0 0.01 0");
         ICONS.put("check", "M5 12.5l4.5 4.5L19 7.5");
+        ICONS.put("info", "M12 3a9 9 0 1 0 0.01 0M12 11v5.5M12 7.8h.01");
         ICONS.put("close", "M6 6l12 12M18 6L6 18");
         ICONS.put("alert", "M12 3.5L2.5 20h19zM12 10v4.5M12 17.5h.01");
         ICONS.put("bolt", "M13 3L5 13.5h6L10 21l8-10.5h-6z");
