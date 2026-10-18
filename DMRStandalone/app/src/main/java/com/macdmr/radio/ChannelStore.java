@@ -54,6 +54,90 @@ public final class ChannelStore extends SQLiteOpenHelper {
         onCreate(db);
     }
 
+    /** Tables added after v5 are created here (onUpgrade rebuilds everything, so the version stays put). */
+    @Override public void onOpen(SQLiteDatabase db) {
+        super.onOpen(db);
+        if (!db.isReadOnly()) db.execSQL("CREATE TABLE IF NOT EXISTS tglists (_id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, tgs TEXT)");
+    }
+
+    /** A named talkgroup list (the module's TG lists): a set of talkgroups to drop into a channel's RX group list. */
+    public static final class TgList { public long id; public String name = ""; public int[] tgs = new int[0]; }
+
+    public List<TgList> tgLists() {
+        List<TgList> out = new ArrayList<>();
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT _id, name, tgs FROM tglists ORDER BY name COLLATE NOCASE", null)) {
+            while (c.moveToNext()) { TgList t = new TgList(); t.id = c.getLong(0); t.name = c.getString(1); t.tgs = parseInts(c.getString(2)); out.add(t); }
+        }
+        return out;
+    }
+
+    public void saveTgList(TgList t) {
+        ContentValues v = new ContentValues(); v.put("name", t.name); v.put("tgs", joinInts(t.tgs));
+        if (t.id > 0) getWritableDatabase().update("tglists", v, "_id=?", new String[] { String.valueOf(t.id) }); else t.id = getWritableDatabase().insert("tglists", null, v);
+    }
+
+    public void deleteTgList(TgList t) { getWritableDatabase().delete("tglists", "_id=?", new String[] { String.valueOf(t.id) }); }
+
+    /** Up to 32 talkgroups: the channel's own first, then the list's, without duplicates. */
+    static int[] mergeGroups(int[] own, int[] add) {
+        java.util.LinkedHashSet<Integer> s = new java.util.LinkedHashSet<>();
+        for (int g : own) if (g > 0) s.add(g);
+        for (int g : add) if (g > 0 && s.size() < 32) s.add(g);
+        int[] out = new int[Math.min(32, s.size())]; int i = 0; for (int g : s) { if (i >= out.length) break; out[i++] = g; }
+        return out;
+    }
+
+    /**
+     * The module's TG lists (dmrmod_tglists.db): copy the named lists into {@code tglists} and merge each channel's assigned
+     * list into its RX group list. {@code stockIdToNumber} maps the stock row _id (what the module keys on) to our channel number.
+     */
+    private int importModuleTgLists(Context ctx, String stockPackage, java.util.Map<Integer, Integer> stockIdToNumber, StringBuilder err) {
+        SQLiteDatabase tdb = copyStock(ctx, stockPackage, "dmrmod_tglists.db", "stock_tglists.db");
+        if (tdb == null) return 0;
+        SQLiteDatabase db = getWritableDatabase();
+        int merged = 0;
+        try {
+            java.util.Map<Integer, int[]> byId = new java.util.HashMap<>();
+            db.delete("tglists", null, null);
+            try (Cursor c = tdb.rawQuery("SELECT id, name, tg_ids FROM tg_lists", null)) {
+                while (c.moveToNext()) {
+                    int[] tgs = parseInts(c.getString(2)); byId.put(c.getInt(0), tgs);
+                    if (tgs.length == 0) continue;
+                    TgList t = new TgList(); t.name = c.getString(1); t.tgs = tgs; saveTgList(t);
+                }
+            }
+            try (Cursor c = tdb.rawQuery("SELECT channel_id, tg_list_id FROM channel_tglist_assignments", null)) {
+                while (c.moveToNext()) {
+                    Integer num = stockIdToNumber.get(c.getInt(0)); int[] tgs = byId.get(c.getInt(1));
+                    if (num == null || tgs == null || tgs.length == 0) continue;
+                    Channel ch = byNumber(num); if (ch == null || !ch.isDigital()) continue;
+                    int[] g = mergeGroups(ch.groups, tgs);
+                    if (g.length != ch.groups.length) { ContentValues v = new ContentValues(); v.put("groups", joinInts(g)); db.update("channels", v, "number=?", new String[] { String.valueOf(num) }); merged++; }
+                }
+            }
+        } catch (Throwable t) { err.append("tglists: ").append(t.getMessage()).append("; "); }
+        finally { tdb.close(); }
+        return merged;
+    }
+
+    /**
+     * For an install imported before TG lists were read: map the stock rows to our channels by name and receive frequency
+     * (numbers may have changed since) and import the module's lists and assignments without touching anything else.
+     */
+    public int repairModuleTgLists(Context ctx, String stockPackage, String areaKey, StringBuilder err) {
+        SQLiteDatabase sdb = copyStock(ctx, stockPackage, "database_channel_area_" + areaKey + ".db", "stock_repair.db");
+        if (sdb == null) { err.append("stock channels not readable"); return -1; }
+        java.util.Map<Integer, Integer> map = new java.util.HashMap<>();
+        try (Cursor c = sdb.rawQuery("SELECT _id, channel_name, channel_rxFreq FROM database_channel_area_" + areaKey, null)) {
+            List<Channel> mine = all();
+            while (c.moveToNext()) {
+                String name = c.getString(1); int rx = c.getInt(2);
+                for (Channel ch : mine) if (ch.rxFreq == rx && ch.name != null && ch.name.equals(name)) { map.put(c.getInt(0), ch.number); break; }
+            }
+        } finally { sdb.close(); }
+        return importModuleTgLists(ctx, stockPackage, map, err);
+    }
+
     public int count() { try (Cursor c = getReadableDatabase().rawQuery("SELECT COUNT(*) FROM channels", null)) { return c.moveToFirst() ? c.getInt(0) : 0; } }
 
     public List<Channel> all() {
@@ -331,6 +415,7 @@ public final class ChannelStore extends SQLiteOpenHelper {
                     qdb.close();
                 }
             } catch (Throwable t) { err.append("softsq: ").append(t.getMessage()).append("; "); }
+            importModuleTgLists(ctx, stockPackage, stockIdToNumber, err);
             sdb.close();
             return n;
         } catch (Throwable t) { err.append(t.toString()); return -1; }

@@ -50,7 +50,7 @@ public class ChannelEditorView extends LinearLayout {
     private static final String H_SLOT = "A DMR repeater carries two separate conversations, time slot 1 and 2. Use the slot your talkgroup is on (the repeater's listing says). On a simplex channel every radio must use the same slot, usually TS1.";
     private static final String H_CTYPE = "Who you call: Private (one DMR ID), Group (a talkgroup) or All (every radio). On this radio a channel set to All reports callers as ID 16777215 and does not pass received audio, so use Group for normal talkgroup traffic.";
     private static final String H_CALL = "The DMR ID (private call) or talkgroup number (group call) you transmit to. For a group call it is added to the RX group list when you save, because the radio only passes group calls whose talkgroup is in that list.";
-    private static final String H_GROUPS = "Talkgroups you want to hear on this channel, separated by commas, up to 32. The radio passes a group call only if its talkgroup is in this list. Private calls to your own DMR ID always pass, and MON on the intercom passes every call the radio can decode.";
+    private static final String H_GROUPS = "Talkgroups you want to hear on this channel, separated by commas, up to 32. The radio passes a group call only if its talkgroup is in this list. Private calls to your own DMR ID always pass, and MON on the intercom passes every call the radio can decode. Talkgroup lists below inserts a saved list (the module's lists come over from the stock app) or saves this one under a name.";
     private static final String H_ENC = "The radio's own DMR privacy scrambling with an 8-character key. Only radios using the same scheme and the same key hear you; most other DMR radios cannot. Encryption is not allowed on amateur frequencies.";
     private static final String H_KEY = "Exactly 8 characters, the same on every radio in the group. Used only when Encrypt is Enabled.";
     private static final String H_INT = "DMR transmit interrupt. ON allows a call in progress to be interrupted (for example by the radio you are calling) on radios that support it; when it is refused the radio reports that the called device does not allow interruption. OFF is the stock setting.";
@@ -108,6 +108,10 @@ public class ChannelEditorView extends LinearLayout {
         choiceInto(digitalGroup, "Contact type", H_CTYPE, new String[] { "Private", "Group", "All" }, ch.contactType, v -> ch.contactType = v);
         call = textInto(digitalGroup, "Call number (DMR ID / talkgroup)", H_CALL, ch.txContact > 0 ? String.valueOf(ch.txContact) : "", InputType.TYPE_CLASS_NUMBER);
         groups = textInto(digitalGroup, "RX group list (talkgroups, comma separated, up to 32)", H_GROUPS, join(ch.groups), InputType.TYPE_CLASS_TEXT);
+        TextView lists = Neo.button(c, "Talkgroup lists\u2026", "channels", Neo.VIOLET); lists.setTextSize(14);
+        LayoutParams tll = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); tll.bottomMargin = (int) (6 * Theme.dp(c));
+        digitalGroup.addView(lists, tll);
+        lists.setOnClickListener(v -> tgListsMenu());
         choiceInto(digitalGroup, "Encrypt", H_ENC, new String[] { "Disabled", "Enabled" }, ch.encryptSw == 1 ? 1 : 0, v -> ch.encryptSw = v == 1 ? 1 : 2);
         key = textInto(digitalGroup, "Encrypt key (8 characters)", H_KEY, ch.encryptKey == null ? "" : ch.encryptKey, InputType.TYPE_CLASS_TEXT);
         choiceInto(digitalGroup, "Interrupt transmission", H_INT, new String[] { "OFF", "ON" }, ch.interrupt == 1 ? 1 : 0, v -> ch.interrupt = v == 1 ? 1 : 2);
@@ -176,6 +180,41 @@ public class ChannelEditorView extends LinearLayout {
             final double[] p = com.macdmr.radio.GeoLink.resolve(text);
             post(() -> { if (p == null) android.widget.Toast.makeText(c, "No coordinates found in the copied text", android.widget.Toast.LENGTH_LONG).show(); else setLocation(p[0], p[1]); });
         }).start();
+    }
+
+    private List<Integer> groupsInField() {
+        List<Integer> g = new ArrayList<>();
+        for (String s : groups.getText().toString().split("[,; ]+")) { s = s.trim(); if (!s.isEmpty()) try { int v = Integer.parseInt(s); if (v > 0 && !g.contains(v)) g.add(v); } catch (NumberFormatException ignored) { } }
+        return g;
+    }
+
+    /** Named talkgroup lists: insert one into the RX group list, or save the current list under a name. */
+    private void tgListsMenu() {
+        final Context c = getContext();
+        if (!(c instanceof com.macdmr.radio.MainActivity) || ((com.macdmr.radio.MainActivity) c).service() == null) return;
+        final com.macdmr.radio.ChannelStore store = ((com.macdmr.radio.MainActivity) c).service().store();
+        final List<com.macdmr.radio.ChannelStore.TgList> all = store.tgLists();
+        String[] items = new String[all.size() + 1];
+        for (int i = 0; i < all.size(); i++) items[i] = all.get(i).name + "  (" + all.get(i).tgs.length + ")";
+        items[all.size()] = "Save this RX list as a new list\u2026";
+        new android.app.AlertDialog.Builder(c).setTitle("Talkgroup lists").setItems(items, (d, w) -> {
+            if (w < all.size()) {
+                List<Integer> g = groupsInField(); int added = 0;
+                for (int t : all.get(w).tgs) if (!g.contains(t) && g.size() < 32) { g.add(t); added++; }
+                StringBuilder b = new StringBuilder(); for (int t : g) { if (b.length() > 0) b.append(", "); b.append(t); }
+                groups.setText(b.toString());
+                android.widget.Toast.makeText(c, added + " talkgroups added" + (g.size() >= 32 ? " (the radio holds 32)" : "") + ": tap Save to keep them", android.widget.Toast.LENGTH_LONG).show();
+                return;
+            }
+            final EditText nm = new EditText(c); nm.setHint("List name");
+            new android.app.AlertDialog.Builder(c).setTitle("Save talkgroup list").setView(nm).setPositiveButton("Save", (d2, w2) -> {
+                List<Integer> g = groupsInField(); if (g.isEmpty() || nm.getText().toString().trim().isEmpty()) return;
+                com.macdmr.radio.ChannelStore.TgList t = new com.macdmr.radio.ChannelStore.TgList(); t.name = nm.getText().toString().trim();
+                t.tgs = new int[g.size()]; for (int i = 0; i < g.size(); i++) t.tgs[i] = g.get(i);
+                store.saveTgList(t);
+                android.widget.Toast.makeText(c, "Saved \u201C" + t.name + "\u201D", android.widget.Toast.LENGTH_SHORT).show();
+            }).setNegativeButton("Cancel", null).show();
+        }).show();
     }
 
     private void refreshGroups() {

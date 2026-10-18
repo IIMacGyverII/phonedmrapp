@@ -117,6 +117,9 @@ public class MainActivity extends AppCompatActivity {
         bindService(si, conn, Context.BIND_AUTO_CREATE);
     }
 
+    /** The bound radio service (null until connected). */
+    public RadioService service() { return svc; }
+
     public static final String EXTRA_LAT = "com.macdmr.radio.lat", EXTRA_LON = "com.macdmr.radio.lon";
     private double[] pendingLocation;
 
