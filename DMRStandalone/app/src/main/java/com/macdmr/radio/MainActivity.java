@@ -37,10 +37,12 @@ public class MainActivity extends AppCompatActivity {
     private com.macdmr.radio.ui.MessagesView messages;
     private View editor;
     private RadioService svc;
-    private final TextView[] tabs = new TextView[5], tabEmoji = new TextView[5];
+    private final TextView[] tabs = new TextView[5];
+    private final android.widget.ImageView[] tabIcon = new android.widget.ImageView[5];
+    private final View[] tabCell = new View[5];
     private final View[] tabInd = new View[5];
-    private final String[] tabIcons = { "🎙️", "📋", "👤", "💬", "📻" };
-    private final String[] tabNames = { "Intercom", "Channel", "Contact", "Message", "Device" };
+    private final String[] tabIcons = { "intercom", "channels", "contacts", "messages", "device" };
+    private final String[] tabNames = { "Intercom", "Channels", "Contacts", "Messages", "Device" };
     private int tab = 0;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private final Runnable rssiTick = new Runnable() { @Override public void run() { if (svc != null && svc.isReady() && tab == 0) svc.pollRssi(); ui.postDelayed(this, 2000); } };
@@ -61,21 +63,26 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(Theme.BG);
         content = new FrameLayout(this);
         root.addView(content, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
-        LinearLayout nav = new LinearLayout(this); nav.setBackgroundColor(0xFF060D1A); nav.setPadding(0, Theme.dp(this, 6), 0, Theme.dp(this, 6));
+        LinearLayout nav = new LinearLayout(this); nav.setBackgroundColor(com.macdmr.radio.ui.Neo.BAR);
+        View navLine = new View(this); navLine.setBackgroundColor(com.macdmr.radio.ui.Neo.alpha(com.macdmr.radio.ui.Neo.CYAN, 0x29));
+        root.addView(navLine, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Math.max(1, Theme.dp(this, 1))));
         for (int i = 0; i < 5; i++) {
             final int idx = i;
-            LinearLayout tab = new LinearLayout(this); tab.setOrientation(LinearLayout.VERTICAL); tab.setGravity(Gravity.CENTER_HORIZONTAL);
-            TextView e = new TextView(this); e.setGravity(Gravity.CENTER); e.setTextSize(22); e.setText(tabIcons[i]);
-            TextView t = new TextView(this); t.setGravity(Gravity.CENTER); t.setTextSize(10); t.setText(tabNames[i]);
-            View ind = new View(this); LinearLayout.LayoutParams il = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Theme.dp(this, 2)); il.setMargins(Theme.dp(this, 8), Theme.dp(this, 2), Theme.dp(this, 8), 0);
-            tab.addView(e); tab.addView(t); tab.addView(ind, il);
+            LinearLayout tab = new LinearLayout(this); tab.setOrientation(LinearLayout.VERTICAL); tab.setGravity(Gravity.CENTER);
+            tab.setPadding(0, Theme.dp(this, 8), 0, Theme.dp(this, 6)); tab.setContentDescription(tabNames[i]);
+            android.widget.ImageView e = new android.widget.ImageView(this);
+            TextView t = com.macdmr.radio.ui.Neo.text(this, tabNames[i].toUpperCase(java.util.Locale.US), 0xFF71879D, 11.5f, com.macdmr.radio.ui.Neo.ui(this)); t.setGravity(Gravity.CENTER); t.setLetterSpacing(0.08f); t.setSingleLine(true);
+            LinearLayout.LayoutParams el = new LinearLayout.LayoutParams(Theme.dp(this, 24), Theme.dp(this, 24)); el.bottomMargin = Theme.dp(this, 4);
+            tab.addView(e, el); tab.addView(t);
+            View ind = new View(this); LinearLayout.LayoutParams il = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Theme.dp(this, 3)); il.setMargins(Theme.dp(this, 14), Theme.dp(this, 6), Theme.dp(this, 14), 0);
+            tab.addView(ind, il);
             tab.setOnClickListener(v -> show(idx));
-            tabs[i] = t; tabEmoji[i] = e; tabInd[i] = ind;
+            tabs[i] = t; tabIcon[i] = e; tabInd[i] = ind; tabCell[i] = tab;
             nav.addView(tab, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         }
         root.addView(nav);
         setContentView(root);
-        getWindow().setStatusBarColor(Theme.TITLE_BG); getWindow().setNavigationBarColor(Theme.NAV_BG);
+        getWindow().setStatusBarColor(0xFF0A1420); getWindow().setNavigationBarColor(com.macdmr.radio.ui.Neo.BAR);
 
         intercom = new IntercomView(this);
         diagnostics = new DiagnosticsView(this);
@@ -83,6 +90,7 @@ public class MainActivity extends AppCompatActivity {
         device.setHost(new com.macdmr.radio.ui.DeviceView.Host() {
             @Override public void openHelp() { showOverlay(new com.macdmr.radio.ui.HelpView(MainActivity.this, MainActivity.this::closeOverlay)); }
             @Override public void openDiagnostics() { showOverlay(diagnostics); }
+            @Override public void intercomStyleChanged() { rebuildIntercom(); }
         });
         contacts = new com.macdmr.radio.ui.ContactsView(this);
         messages = new com.macdmr.radio.ui.MessagesView(this);
@@ -121,10 +129,21 @@ public class MainActivity extends AppCompatActivity {
         content.addView(v, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         for (int i = 0; i < 5; i++) {
             boolean a = i == idx;
-            tabs[i].setTextColor(a ? Theme.CYAN : 0xFF705090);
-            if (a) tabEmoji[i].setShadowLayer(8f, 0f, 0f, Theme.CYAN); else tabEmoji[i].setShadowLayer(0f, 0f, 0f, 0);
-            tabInd[i].setBackgroundColor(a ? Theme.CYAN : 0x00000000);
+            int col = a ? com.macdmr.radio.ui.Neo.CYAN : 0xFF71879D;
+            tabs[i].setTextColor(col);
+            tabIcon[i].setImageDrawable(new com.macdmr.radio.ui.Neo.IconDrawable(tabIcons[i], col));
+            tabInd[i].setBackground(a ? com.macdmr.radio.ui.Theme.rounded(this, com.macdmr.radio.ui.Neo.CYAN, 0, 0, 2) : null);
+            tabCell[i].setBackground(a ? new android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.BOTTOM_TOP, new int[] { 0x1C19D3FF, 0x0019D3FF }) : null);
         }
+    }
+
+    /** The intercom look was switched (Device setting, or the intercom's own menu): build the other page and re-attach it. */
+    public void rebuildIntercom() {
+        if (svc != null) intercom.detach();
+        intercom = new IntercomView(this);
+        if (svc != null) intercom.attach(svc);
+        if (tab == 0) show(0);
+        if (svc != null) svc.pollRssi();
     }
 
     private View placeholder(String name) {
