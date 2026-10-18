@@ -161,6 +161,17 @@ public final class PacketEngine {
     public boolean dtmfEnabled() { return prefs.getBoolean("dtmf", true); }
     public boolean wxEnabled() { return prefs.getBoolean("wx", true); }
     public SharedPreferences prefs() { return prefs; }
+
+    /** Saved DTMF sequences: name → code (also exported as DTMF.csv in backups). */
+    public java.util.LinkedHashMap<String, String> dtmfSaved() {
+        java.util.LinkedHashMap<String, String> out = new java.util.LinkedHashMap<>();
+        try { org.json.JSONArray a = new org.json.JSONArray(prefs.getString("dtmfSaved", "[]")); for (int i = 0; i < a.length(); i++) { org.json.JSONObject o = a.getJSONObject(i); out.put(o.getString("name"), o.getString("code")); } } catch (Throwable ignored) { }
+        return out;
+    }
+    public void dtmfSave(String name, String code) {
+        java.util.LinkedHashMap<String, String> m = dtmfSaved(); if (code == null || code.isEmpty()) m.remove(name); else m.put(name, code);
+        try { org.json.JSONArray a = new org.json.JSONArray(); for (java.util.Map.Entry<String, String> e : m.entrySet()) a.put(new org.json.JSONObject().put("name", e.getKey()).put("code", e.getValue())); prefs.edit().putString("dtmfSaved", a.toString()).apply(); } catch (Throwable ignored) { }
+    }
     public boolean flagged(int channel) { return prefs.getStringSet("flagged", java.util.Collections.<String>emptySet()).contains(String.valueOf(channel)); }
     public void setFlagged(int channel, boolean on) {
         java.util.Set<String> s = new java.util.HashSet<>(prefs.getStringSet("flagged", java.util.Collections.<String>emptySet()));

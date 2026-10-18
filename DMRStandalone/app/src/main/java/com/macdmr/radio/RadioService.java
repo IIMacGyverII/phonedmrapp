@@ -342,6 +342,17 @@ public class RadioService extends Service implements RadioEngine.Events {
             else if (peak > 400 && System.currentTimeMillis() - captionLastEnd > 1500 && captions != null) { Log.i(TAG, "captions: starting utterance (peak " + peak + ")"); captions.start(); }
         }
         if (packet != null) packet.feed(mono, n, open);
+        if (open && current != null && !current.isDigital()) {
+            toneBank.processMono(mono, n);
+            int ti = toneBank.detectedIndex();
+            if (ti >= 0 && ti != toneAnnounced) {
+                toneAnnounced = ti;
+                if (!(current.rxType == 1 && current.rxSubCode == ti)) {          // not already programmed on this channel
+                    pendingTone = ti; pendingToneMs = System.currentTimeMillis();
+                    history("tone", "\uD83C\uDFB5 CTCSS " + toneBank.detectedLabel() + " Hz heard \u2014 tap this box to use it");
+                }
+            }
+        }
         if (recordOn && receiving && open) {
             try {
                 if (recorder == null) { recorder = new WavRecorder(current != null ? current.name : null); recorder.start(lastCaller > 0 ? String.valueOf(lastCaller) : null); }
@@ -350,6 +361,21 @@ public class RadioService extends Service implements RadioEngine.Events {
         }
         final int p = peak;
         ui.post(() -> { for (Listener l : listeners) l.onAudioLevel(p); });
+    }
+
+    // ---- CTCSS heard on an analog channel: offer it as the channel's tone ----
+    private final com.macdmr.radio.dsp.CtcssDecoderBank toneBank = new com.macdmr.radio.dsp.CtcssDecoderBank(8000);
+    private volatile int toneAnnounced = -1, pendingTone = -1; private volatile long pendingToneMs;
+    public String pendingToneLabel() { return pendingTone >= 0 && System.currentTimeMillis() - pendingToneMs < 180000 ? com.macdmr.radio.dsp.ToneConverter.ctcssLabelAt(pendingTone) : null; }
+    public void dismissPendingTone() { pendingTone = -1; }
+    /** Program the heard tone as RX and TX CTCSS on the current channel (VFO included). */
+    public String applyPendingTone() {
+        int t = pendingTone; if (t < 0 || current == null) return "Nothing to apply";
+        ChannelStore.Channel ch = current;
+        ch.rxType = 1; ch.rxSubCode = t; ch.txType = 1; ch.txSubCode = t;
+        pendingTone = -1;
+        if (ch.id < 0) applyVfo(ch, true); else { store.update(ch); selectChannel(ch.number); }
+        return "CTCSS " + com.macdmr.radio.dsp.ToneConverter.ctcssLabelAt(t) + " Hz set on " + ch.name;
     }
 
     private void finishRecording() {
@@ -732,6 +758,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                 if (current != null && current.isDigital()) { try { engine.queryCallerInfo(); } catch (IOException ignored) { } }   // who was that (0x2B)
                 if (current != null && !current.isDigital() && len >= 700) history("rx", "📻 Received " + Math.round(len / 1000.0) + " s");
                 finishRecording();
+                toneBank.reset(); toneAnnounced = -1;
                 if (captions != null) captions.stop();
                 ui.post(() -> { for (Listener l : listeners) l.onRx(false); });
                 break;

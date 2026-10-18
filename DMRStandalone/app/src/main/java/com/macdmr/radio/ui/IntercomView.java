@@ -141,7 +141,17 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         LayoutParams hh = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); hh.bottomMargin = dp4;
         infoPanel.addView(historyHeader, hh);
         historyText = Theme.label(c, "", Theme.CYAN2, 11, false); infoPanel.addView(historyText);
-        infoPanel.setClickable(true); infoPanel.setOnClickListener(v -> { if (svc != null) LastHeardDialog.show(c, svc); });
+        infoPanel.setClickable(true); infoPanel.setOnClickListener(v -> {
+            if (svc == null) return;
+            final String tone = svc.pendingToneLabel();
+            if (tone != null && svc.current() != null) {
+                new android.app.AlertDialog.Builder(c).setTitle("CTCSS " + tone + " Hz heard")
+                        .setMessage("Use it as the receive and transmit tone on " + svc.current().name + "? With the tone set, Soft SQ opens only for this tone and other stations will hear you if they need it.")
+                        .setPositiveButton("Use it", (d2, w) -> android.widget.Toast.makeText(c, svc.applyPendingTone(), android.widget.Toast.LENGTH_LONG).show())
+                        .setNeutralButton("Last heard", (d2, w) -> LastHeardDialog.show(c, svc))
+                        .setNegativeButton("Not now", (d2, w) -> svc.dismissPendingTone()).show();
+            } else LastHeardDialog.show(c, svc);
+        });
         FrameLayout.LayoutParams ipl = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.START);
         ipl.topMargin = ipl.leftMargin = ipl.rightMargin = dp8;
         panel.addView(infoPanel, ipl);
