@@ -61,7 +61,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     private WavRecorder recorder;
     private volatile boolean captionsOn;
     private volatile long captionLastEnd;
-    private CaptionClient captions;
+    private VoskCaptions captions;
     private long zoneId;                       // 0 = all channels
     private final Scanner scanner = new Scanner(new Scanner.Host() {
         @Override public java.util.List<ChannelStore.Channel> candidates() { return zoneChannels(); }
@@ -431,7 +431,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     // ---- live captions ----------------------------------------------------------------------------
 
     public boolean captionsOn() { return captionsOn; }
-    public boolean captionsAvailable() { return "google".equals(captionEngine()) ? !TranscriptionClient.isPlaceholderKey(googleKey()) : CaptionClient.companionInstalled(this); }
+    public boolean captionsAvailable() { return "google".equals(captionEngine()) ? !TranscriptionClient.isPlaceholderKey(googleKey()) : true; }
     public String captionEngine() { return getSharedPreferences("radio", MODE_PRIVATE).getString("captionEngine", "vosk"); }
     public void setCaptionEngine(String e) { getSharedPreferences("radio", MODE_PRIVATE).edit().putString("captionEngine", e).apply(); }
     public String googleKey() { return getSharedPreferences("radio", MODE_PRIVATE).getString("googleKey", ""); }
@@ -466,16 +466,16 @@ public class RadioService extends Service implements RadioEngine.Events {
             finally { googleBusy = false; }
         }, "google-stt").start();
     }
-    public String captionModel() { return getSharedPreferences("radio", MODE_PRIVATE).getString("captionModel", CaptionClient.MODELS[1]); }
+    public String captionModel() { return getSharedPreferences("radio", MODE_PRIVATE).getString("captionModel", VoskCaptions.DEFAULT_MODEL); }
 
     public void setCaptionModel(String m) {
         getSharedPreferences("radio", MODE_PRIVATE).edit().putString("captionModel", m).apply();
-        if (captions == null) captions = newCaptionClient();
+        if (captions == null) captions = newVoskCaptions();
         captions.setModel(m);
     }
 
-    private CaptionClient newCaptionClient() {
-        return new CaptionClient(this, new CaptionClient.Listener() {
+    private VoskCaptions newVoskCaptions() {
+        return new VoskCaptions(this, new VoskCaptions.Listener() {
             @Override public void status(String s) { ui.post(() -> { for (Listener l : listeners) l.onCaption(captionsOn, "\u23F3 " + s, null); }); }
             @Override public void partial(String text) { ui.post(() -> { for (Listener l : listeners) l.onCaption(captionsOn, text + " \u2026", null); }); }
             @Override public void sentence(String text) {
@@ -498,7 +498,7 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     public void setCaptions(boolean on) {
         captionsOn = on;
-        if (on) { if (captions == null) captions = newCaptionClient(); captions.setModel(captionModel()); }
+        if (on) { if (captions == null) captions = newVoskCaptions(); captions.setModel(captionModel()); }
         else if (captions != null) captions.stop();
         ui.post(() -> { for (Listener l : listeners) l.onCaption(on, "", null); });
     }

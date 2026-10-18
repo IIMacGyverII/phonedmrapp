@@ -14,11 +14,6 @@
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />   <!-- recordings made by an earlier install / the module -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />   <!-- in-app updates from GitHub releases -->
 
-    <!-- Android 11+ package visibility: we start and talk to the companion recognizer -->
-    <queries>
-        <package android:name="com.macdmr.transcription" />
-    </queries>
-
     <application
         android:name=".RadioApp"
         android:label="DMR Radio"

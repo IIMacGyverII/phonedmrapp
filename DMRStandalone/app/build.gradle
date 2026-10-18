@@ -12,6 +12,7 @@ android {
         targetSdk 34
         versionCode 100
         versionName "1.0.0-beta.1"
+        ndk { abiFilters 'arm64-v8a', 'armeabi-v7a' }   // the phones this radio family ships in are ARM; keeps the Vosk natives to two ABIs
     }
 
     buildFeatures { buildConfig true }
@@ -46,6 +47,9 @@ dependencies {
     implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:4.3'
     // Compile-time stubs of the vendor framework classes; the real ones live in the boot class path
     compileOnly project(':tiny-stubs')
+    // On-device live captions (the language model is downloaded on first use, never shipped in the APK)
+    implementation 'com.alphacephei:vosk-android:0.3.47'
+    implementation 'net.java.dev.jna:jna:5.13.0@aar'
 }
 
 configurations.all {
