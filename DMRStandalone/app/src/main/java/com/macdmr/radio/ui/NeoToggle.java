@@ -28,6 +28,5 @@ public class NeoToggle extends NeonToggle {
         g.setColor(Neo.alpha(accent, v ? 0x40 : 0x12)); g.setStroke(Theme.dp(c, v ? 2 : 1.5f), v ? accent : Neo.alpha(accent, 0xB0));
         setBackground(g);
         setTextColor(v ? 0xFFFFFFFF : accent); icon.setColor(v ? 0xFFFFFFFF : accent);
-        setShadowLayer(v ? Theme.dp(c, 8) : 0, 0, 0, accent);
     }
 }

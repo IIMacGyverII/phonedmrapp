@@ -67,7 +67,12 @@ public class DiagnosticsView extends LinearLayout implements RadioService.Listen
         StringBuilder sb = new StringBuilder(lines.size() * 60); for (String l : lines) sb.append(l).append('\n');
         log.setText(sb); dirty = false;
     }
-    @Override protected void onAttachedToWindow() { super.onAttachedToWindow(); if (dirty) render(); }
+    @Override protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        if (svc != null) { svc.setUiLog(true); lines.clear(); lines.addAll(svc.recentLog()); dirty = true; }   // the service kept the lines while this page was closed
+        if (dirty) render();
+    }
+    @Override protected void onDetachedFromWindow() { super.onDetachedFromWindow(); if (svc != null) svc.setUiLog(false); }
 
     @Override public void onChannel(ChannelStore.Channel ch) { say("channel " + ch.number + " " + ch.name); }
     @Override public void onRx(boolean r) { say(r ? "RECEIVE_START" : "RECEIVE_STOP"); }

@@ -824,7 +824,8 @@ public class RadioService extends Service implements RadioEngine.Events {
     public void diagPowerCycle() { worker.execute(() -> { try { if (audio != null) audio.stopRx(); log("power-cycling the module"); engine.powerCycle(); if (!engine.waitBooted(12000)) log("no banner after power-cycle"); engine.queryVersion(); if (current != null) applyChannelNow(current, current.id > 0); if (rxAudioOn && audio != null) audio.startRx(true); } catch (Throwable t) { log("power-cycle: " + t); } }); }
     public void diagTestTone(int ms) { short[] pcm = new short[8000 * ms / 1000]; for (int i = 0; i < pcm.length; i++) pcm[i] = (short) (12000 * Math.sin(2 * Math.PI * 1000 * i / 8000.0)); transmitPcm(pcm, "1 kHz test tone " + ms + " ms", null); }
 
-    public void pollRssi() { try { if (engine.isOpen()) engine.queryRssi(); } catch (IOException ignored) { } }
+    /** Ask the module for the signal strength (on the radio worker: never a serial write on the main thread). */
+    public void pollRssi() { worker.execute(() -> { try { if (engine.isOpen()) engine.queryRssi(); } catch (IOException ignored) { } }); }
 
     // ---- listeners ----------------------------------------------------------------------------------
 
@@ -852,7 +853,19 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     // ---- RadioEngine.Events -------------------------------------------------------------------------
 
-    @Override public void log(String s) { Log.i(TAG, s); ui.post(() -> { for (Listener l : listeners) l.onLog(s); }); }
+    /** Last 300 log lines for the Diagnostics page. Lines reach the pages only while that page is open: posting every
+     *  serial frame (ten a second while receiving) to the main thread slowed the intercom down over a session. */
+    private final java.util.ArrayDeque<String> logRing = new java.util.ArrayDeque<>();
+    private volatile boolean uiLog;
+    private final java.text.SimpleDateFormat logTf = new java.text.SimpleDateFormat("HH:mm:ss.SSS", Locale.US);
+    public void setUiLog(boolean on) { uiLog = on; }
+    public java.util.List<String> recentLog() { synchronized (logRing) { return new java.util.ArrayList<>(logRing); } }
+
+    @Override public void log(String s) {
+        Log.i(TAG, s);
+        synchronized (logRing) { logRing.addLast(logTf.format(new java.util.Date()) + " " + s); while (logRing.size() > 300) logRing.removeFirst(); }
+        if (uiLog) ui.post(() -> { for (Listener l : listeners) l.onLog(s); });
+    }
 
     @Override public void status(int code, String name) {
         switch (code) {

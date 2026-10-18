@@ -162,7 +162,8 @@ public class MainActivity extends AppCompatActivity {
             boolean a = i == idx;
             int col = a ? com.macdmr.radio.ui.Neo.CYAN : 0xFF71879D;
             tabs[i].setTextColor(col);
-            tabIcon[i].setImageDrawable(new com.macdmr.radio.ui.Neo.IconDrawable(tabIcons[i], col));
+            if (!(tabIcon[i].getDrawable() instanceof com.macdmr.radio.ui.Neo.IconDrawable)) tabIcon[i].setImageDrawable(new com.macdmr.radio.ui.Neo.IconDrawable(tabIcons[i], col));
+            else ((com.macdmr.radio.ui.Neo.IconDrawable) tabIcon[i].getDrawable()).setColor(col);
             tabInd[i].setBackground(a ? com.macdmr.radio.ui.Theme.rounded(this, com.macdmr.radio.ui.Neo.CYAN, 0, 0, 2) : null);
             tabCell[i].setBackground(a ? new android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.BOTTOM_TOP, new int[] { 0x1C19D3FF, 0x0019D3FF }) : null);
         }
