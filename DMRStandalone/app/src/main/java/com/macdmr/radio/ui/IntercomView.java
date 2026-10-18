@@ -55,6 +55,12 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     private final Deque<String> history = new ArrayDeque<>();
     private RadioService svc;
     private boolean rx, tx;
+    private LinearLayout infoPanel;
+    private boolean panelClosed;
+
+    /** The activity box's cross: empty its list and hide it; it comes back on the next reception or transmission (Last heard keeps everything). */
+    private void closePanel() { panelClosed = true; history.clear(); renderHistory(); infoPanel.setVisibility(GONE); }
+    private void reopenPanel(String why) { if (!panelClosed) return; android.util.Log.i("IntercomView", "activity box reopened: " + why); panelClosed = false; infoPanel.setVisibility(VISIBLE); }
 
     public IntercomView(Context c) {
         super(c);
@@ -62,7 +68,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         final float d = Theme.dp(c);
         final int dp10 = (int) (10 * d), dp8 = (int) (8 * d), dp4 = (int) (4 * d);
         neo = newLook(c);
-        if (neo) { setBackground(Neo.page(c)); buildNeoTop(c, d); } else {
+        if (neo) { setBackground(null); buildNeoTop(c, d); } else {
 
         // ---- title bar (OEM: 24 sp title, hamburger) ----
         LinearLayout bar = new LinearLayout(c); bar.setBackgroundColor(Theme.TITLE_BG); bar.setGravity(Gravity.CENTER_VERTICAL);
@@ -149,12 +155,19 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         panel.setBackground(pbg);
         board = new CircuitBoardView(c);
         panel.addView(board, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-        LinearLayout infoPanel = new LinearLayout(c); infoPanel.setOrientation(VERTICAL);
+        final LinearLayout infoPanel = new LinearLayout(c); infoPanel.setOrientation(VERTICAL); this.infoPanel = infoPanel;
         infoPanel.setBackground(Theme.rounded(c, 0x18000000, 0x5500BFFF, 1, 8));
         int ip = (int) (5 * d); infoPanel.setPadding(ip, ip, ip, ip);
         headline = Theme.label(c, "📻 Ready", Theme.GREEN, 16, true); headline.setMaxLines(1);
         LayoutParams hl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); hl.bottomMargin = (int) (2 * d);
-        infoPanel.addView(headline, hl);
+        // headline row with a clear-and-close button: hides the box (and empties its list) until the next reception or transmission
+        LinearLayout headRow = new LinearLayout(c); headRow.setGravity(Gravity.CENTER_VERTICAL);
+        headRow.addView(headline, new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f));
+        ImageView closeBox = new ImageView(c); closeBox.setImageDrawable(new Neo.IconDrawable("close", Neo.MUTED)); closeBox.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        int cp = (int) (8 * d); closeBox.setPadding(cp, cp, cp, cp); closeBox.setContentDescription("Clear and hide until the next reception"); closeBox.setClickable(true);
+        closeBox.setOnClickListener(v -> closePanel());
+        headRow.addView(closeBox, new LayoutParams((int) (34 * d), (int) (34 * d)));
+        infoPanel.addView(headRow, hl);
         historyHeader = Theme.label(c, "Analog History", Theme.CYAN2, 13, true);
         LayoutParams hh = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); hh.bottomMargin = dp4;
         infoPanel.addView(historyHeader, hh);
@@ -267,7 +280,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         ImageView v = new ImageView(c); v.setImageDrawable(new Neo.IconDrawable(icon, Neo.CYAN)); v.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         int p = Theme.dp(c, 13); v.setPadding(p, p, p, p);
         GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[] { 0xFF12304A, 0xFF08121D }); g.setShape(GradientDrawable.OVAL); g.setStroke(Theme.dp(c, 1.5f), Neo.CYAN);
-        v.setBackground(g); v.setElevation(Theme.dp(c, 6)); v.setOutlineAmbientShadowColor(Neo.CYAN); v.setOutlineSpotShadowColor(Neo.CYAN);
+        v.setBackground(g);
         v.setContentDescription(desc); v.setClickable(true); v.setFocusable(true);
         return v;
     }
@@ -477,7 +490,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
             historyHeader.setText(ch.isDigital() ? "DMR ACTIVITY" : "ANALOG HISTORY");
             softSq.setVisibility(ch.isDigital() ? INVISIBLE : VISIBLE);
             history.clear();
-            if (svc != null) for (String l : svc.store().recentHistory(ch.number, 3)) history.addLast(l);
+            if (svc != null && !panelClosed) for (String l : svc.store().recentHistory(ch.number, 3)) history.addLast(l);
             renderHistory(); refreshHeadline();
             return;
         }
@@ -492,19 +505,19 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         historyHeader.setText(ch.isDigital() ? "DMR Activity" : "Analog History");
         softSq.setVisibility(ch.isDigital() ? INVISIBLE : VISIBLE);
         history.clear();
-        if (svc != null) for (String l : svc.store().recentHistory(ch.number, 3)) history.addLast(l);
+        if (svc != null && !panelClosed) for (String l : svc.store().recentHistory(ch.number, 3)) history.addLast(l);
         renderHistory();
         refreshHeadline();
     }
-    @Override public void onRx(boolean receiving) { rx = receiving; refreshHeadline(); }
-    @Override public void onTx(boolean transmitting) { tx = transmitting; refreshHeadline(); }
+    @Override public void onRx(boolean receiving) { boolean was = rx; rx = receiving; if (receiving && !was && (svc == null || svc.rxReportsReception())) reopenPanel("rx"); refreshHeadline(); }
+    @Override public void onTx(boolean transmitting) { tx = transmitting; if (transmitting) reopenPanel("tx"); refreshHeadline(); }
     @Override public void onRssi(int dbm) {
         if (neo) { smeter.setDbm(dbm); smeterText.setText(dbm == -999 ? "--" : SMeterView.sUnits(dbm) + "  " + dbm + " dBm"); smeterText.setTextColor(dbm == -999 ? Neo.DIM : dbm > -93 ? Neo.AMBER_LIGHT : Neo.TEXT); return; }
         signal.setText(dbm == -999 ? "Signal: --" : "Signal: " + dbm + " dBm");
     }
     @Override public void onAudioLevel(int amplitude) { board.audioAmplitude = amplitude; }
-    @Override public void onHistory(String line) { if (!history.isEmpty() && history.peekLast().equals(line)) return; history.addLast(line); while (history.size() > 3) history.removeFirst(); renderHistory(); }
-    @Override public void onCaller(String text) { headline.setText(neo ? "●  " + text : "📻 " + text); }
+    @Override public void onHistory(String line) { reopenPanel("history: " + line); if (!history.isEmpty() && history.peekLast().equals(line)) return; history.addLast(line); while (history.size() > 3) history.removeFirst(); renderHistory(); }
+    @Override public void onCaller(String text) { reopenPanel("caller: " + text); headline.setText(neo ? "●  " + text : "📻 " + text); }
     @Override public void onLog(String s) { }
     @Override public void onLink(String state) { refreshHeadline(); }
     @Override public void onSms(int from, int type, String text) { }
@@ -520,7 +533,9 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         captionLive.setText(live == null ? "" : live); captionLive.setVisibility(live == null || live.isEmpty() ? GONE : VISIBLE);
         captionScroll.post(() -> captionScroll.fullScroll(android.view.View.FOCUS_DOWN));
     }
+    private boolean gateWasOpen;
     @Override public void onModes(boolean sq, int level, boolean open, boolean monitor, boolean recording, boolean scanning, boolean holding, String zoneName) {
+        if (sq && open && !gateWasOpen) reopenPanel("soft squelch opened"); gateWasOpen = sq && open;   // Soft SQ channels: the gate opening is the reception
         softSq.setOn(sq); mon.setOn(monitor); rec.setOn(recording); pkt.setOn(svc != null && svc.packetActive());
         if (!sqFromUser) { sqSeek.setProgress(level); sqValue.setText(String.valueOf(level)); }
         sqValue.setTextColor(sq ? (open ? Theme.GREEN : Theme.AMBER) : Theme.CYAN);

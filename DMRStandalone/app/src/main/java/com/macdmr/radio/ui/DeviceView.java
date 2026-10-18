@@ -35,7 +35,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
 
     public DeviceView(Context c) {
         super(c);
-        setOrientation(VERTICAL); setBackground(Neo.page(c));
+        setOrientation(VERTICAL);   // background: the window's
         float d = Theme.dp(c);
         header = Neo.header(c, "Device", "");
         addView(header);

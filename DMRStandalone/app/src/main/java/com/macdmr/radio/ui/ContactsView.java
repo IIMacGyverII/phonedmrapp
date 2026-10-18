@@ -43,7 +43,7 @@ public class ContactsView extends LinearLayout {
 
     public ContactsView(Context c) {
         super(c);
-        setOrientation(VERTICAL); setBackground(Neo.page(c));
+        setOrientation(VERTICAL);   // background: the window's
         float d = Theme.dp(c);
         header = Neo.header(c, "Contacts", "");
         ImageView add = Neo.iconButton(c, "plus", Neo.GREEN, "Add contact");
