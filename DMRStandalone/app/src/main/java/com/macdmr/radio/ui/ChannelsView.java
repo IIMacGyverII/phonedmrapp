@@ -211,7 +211,6 @@ public class ChannelsView extends LinearLayout implements RadioService.Listener 
         TextView n = Neo.text(c, String.format(Locale.US, "%02d", number % 100), active ? Neo.CYAN : 0xFF6FA9C0, 18, Neo.display(c)); n.setGravity(Gravity.CENTER);
         android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable(); g.setCornerRadius(Theme.dp(c, 12)); g.setColor(active ? 0xFF06202E : 0xFF0A1826);
         n.setBackground(g);
-        if (active) n.setShadowLayer(Theme.dp(c, 8), 0, 0, Neo.CYAN);
         return n;
     }
 
@@ -285,7 +284,6 @@ public class ChannelsView extends LinearLayout implements RadioService.Listener 
             TextView num = row.findViewWithTag("num");
             num.setText(String.format(Locale.US, "%02d", ch.number % 100)); num.setTextColor(active ? Neo.CYAN : 0xFF6FA9C0);
             android.graphics.drawable.GradientDrawable ng = new android.graphics.drawable.GradientDrawable(); ng.setCornerRadius(12 * d); ng.setColor(active ? 0xFF06202E : 0xFF0A1826); num.setBackground(ng);
-            num.setShadowLayer(active ? 8 * d : 0, 0, 0, Neo.CYAN);
             ((TextView) row.findViewWithTag("name")).setText(label(ch));
             row.findViewWithTag("air").setVisibility(active ? VISIBLE : GONE);
             ((TextView) row.findViewWithTag("freq")).setText(mhz(ch.rxFreq));

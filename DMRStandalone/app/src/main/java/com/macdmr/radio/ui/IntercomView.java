@@ -289,6 +289,13 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
                 .setNegativeButton("Cancel", null).show();
     }
 
+    /** Soft halo behind the channel number: a radial gradient drawn once (a text shadow is re-blurred on every change and cost up to 38 ms of GPU per channel step). */
+    private android.graphics.drawable.Drawable glow(int color) {
+        GradientDrawable g = new GradientDrawable(); g.setGradientType(GradientDrawable.RADIAL_GRADIENT);
+        g.setColors(new int[] { Neo.alpha(color, 0x3C), Neo.alpha(color, 0x14), 0x00000000 }); g.setGradientRadius(Theme.dp(getContext(), 70));
+        return g;
+    }
+
     private ImageView roundArrow(Context c, String icon, String desc) {
         ImageView v = new ImageView(c); v.setImageDrawable(new Neo.IconDrawable(icon, Neo.CYAN)); v.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         int p = Theme.dp(c, 13); v.setPadding(p, p, p, p);
@@ -320,7 +327,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         FrameLayout.LayoutParams nl = new FrameLayout.LayoutParams((int) (50 * d), (int) (50 * d), Gravity.END | Gravity.CENTER_VERTICAL); nl.rightMargin = (int) (18 * d);
         strip.addView(prev, pl); strip.addView(next, nl);
         LinearLayout mid = new LinearLayout(c); mid.setOrientation(VERTICAL); mid.setGravity(Gravity.CENTER_HORIZONTAL);
-        bigNum = Neo.text(c, "--", Neo.CYAN, 50, Neo.display(c)); bigNum.setShadowLayer(18 * d, 0, 0, Neo.alpha(Neo.CYAN, 0xA0)); bigNum.setLetterSpacing(0.04f);
+        bigNum = Neo.text(c, "--", Neo.CYAN, 50, Neo.display(c)); bigNum.setLetterSpacing(0.04f); bigNum.setPadding((int) (22 * d), (int) (2 * d), (int) (22 * d), (int) (2 * d)); bigNum.setBackground(glow(Neo.CYAN));
         mid.addView(bigNum);
         chipRow = new LinearLayout(c); chipRow.setGravity(Gravity.CENTER); chipRow.setPadding(0, (int) (4 * d), 0, 0);
         mid.addView(chipRow);
@@ -468,7 +475,6 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         else if (svc != null && svc.isReady()) { t = "READY"; col = Neo.GREEN; }
         else { t = svc != null ? svc.link().toUpperCase(java.util.Locale.US) : ""; col = Neo.AMBER; }
         headline.setText("●  " + t); headline.setTextColor(col);
-        headline.setShadowLayer(Theme.dp(getContext(), 6), 0, 0, Neo.alpha(col, 0x90));
         ptt.setState(tx ? PttButton.State.TX : rx ? PttButton.State.RX : (svc != null && svc.isReady() && svc.txInhibited() ? PttButton.State.BUSY : PttButton.State.IDLE));
         board.isReceiving = rx;
     }
@@ -478,7 +484,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         Context c = getContext(); float d = Theme.dp(c);
         title.setText((isVfo ? "VFO" : ch.name).toUpperCase(java.util.Locale.US));
         bigNum.setText(isVfo ? "VFO" : String.format(java.util.Locale.US, "%02d", ch.number % 100));
-        int numCol = isVfo ? Neo.AMBER : Neo.CYAN; bigNum.setTextColor(numCol); bigNum.setShadowLayer(18 * d, 0, 0, Neo.alpha(numCol, 0xA0));
+        int numCol = isVfo ? Neo.AMBER : Neo.CYAN; bigNum.setTextColor(numCol); bigNum.setBackground(glow(numCol));
         chipRow.removeAllViews();
         TextView[] chips = { Neo.chip(c, ch.isDigital() ? "DMR" : "FM", ch.isDigital() ? Neo.VIOLET : Neo.CYAN), Neo.chip(c, ch.rxFreq < 300_000_000 ? "VHF" : "UHF", Neo.CYAN), Neo.chip(c, ch.power == 1 ? "HIGH PWR" : "LOW PWR", Neo.AMBER) };
         for (int i = 0; i < chips.length; i++) { LayoutParams lp = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT); if (i > 0) lp.leftMargin = (int) (6 * d); chipRow.addView(chips[i], lp); }
@@ -547,6 +553,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         captionScroll.post(() -> captionScroll.fullScroll(android.view.View.FOCUS_DOWN));
     }
     private boolean gateWasOpen;
+    private int lastScanState = -1;
     @Override public void onModes(boolean sq, int level, boolean open, boolean monitor, boolean recording, boolean scanning, boolean holding, String zoneName) {
         if (sq && open && !gateWasOpen) reopenPanel("soft squelch opened"); gateWasOpen = sq && open;   // Soft SQ channels: the gate opening is the reception
         softSq.setOn(sq); mon.setOn(monitor); rec.setOn(recording); pkt.setOn(svc != null && svc.packetActive());
@@ -556,6 +563,9 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         if (neo) {
             this.zoneName = zoneName; Neo.headerSubtitle(neoHeader).setText(("Zone · " + zoneName).toUpperCase(java.util.Locale.US));
             sqValue.setTextColor(sq ? (open ? Neo.GREEN : Neo.AMBER) : Neo.CYAN);
+            int scanState = scanning ? (holding ? 2 : 1) : 0;
+            if (scanState == lastScanState) return;   // pushModes runs on every Soft SQ gate change: rebuild the SCAN key only when it changes
+            lastScanState = scanState;
             Context c = getContext(); int col = scanning ? Neo.AMBER : Neo.CYAN;
             scanBtn.setText(scanning ? (holding ? "HOLD" : "SCANNING") : "SCAN"); scanBtn.setTextColor(scanning ? Neo.AMBER_LIGHT : Neo.CYAN_LIGHT);
             Neo.IconDrawable ic = new Neo.IconDrawable(scanning ? "stop" : "scan", scanBtn.getCurrentTextColor()); int sz = Theme.dp(c, 18); ic.setBounds(0, 0, sz, sz); scanBtn.setCompoundDrawables(ic, null, null, null);

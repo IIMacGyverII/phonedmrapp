@@ -224,14 +224,24 @@ public final class Neo {
     }
 
     /** A line icon from {@link #ICONS} (or raw path data), stroked in one colour, scaled to its bounds. */
+    private static final Map<String, Path> PATHS = new HashMap<>();
+    /** Parsed once per icon (parsing on every draw-object creation churned the heap on each page switch). Shared and never mutated. */
+    private static synchronized Path path(String nameOrPath) {
+        Path p = PATHS.get(nameOrPath);
+        if (p == null) {
+            String d = ICONS.containsKey(nameOrPath) ? ICONS.get(nameOrPath) : nameOrPath;
+            try { p = androidx.core.graphics.PathParser.createPathFromPathData(d); } catch (Throwable t) { p = new Path(); }
+            PATHS.put(nameOrPath, p);
+        }
+        return p;
+    }
+
     public static final class IconDrawable extends Drawable {
         private final Path src; private final Path scaled = new Path(); private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final boolean fill; private final Matrix m = new Matrix();
         public IconDrawable(String nameOrPath, int color) { this(nameOrPath, color, false); }
         public IconDrawable(String nameOrPath, int color, boolean fill) {
-            String d = ICONS.containsKey(nameOrPath) ? ICONS.get(nameOrPath) : nameOrPath;
-            Path parsed; try { parsed = androidx.core.graphics.PathParser.createPathFromPathData(d); } catch (Throwable t) { parsed = new Path(); }
-            src = parsed; this.fill = fill;
+            src = path(nameOrPath); this.fill = fill;
             p.setColor(color); p.setStrokeCap(Paint.Cap.ROUND); p.setStrokeJoin(Paint.Join.ROUND);
         }
         public void setColor(int color) { p.setColor(color); invalidateSelf(); }
