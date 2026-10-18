@@ -43,14 +43,27 @@ public class DiagnosticsView extends LinearLayout implements RadioService.Listen
         ScrollView sv = new ScrollView(c);
         log = new TextView(c); log.setTextSize(11); log.setTypeface(Typeface.MONOSPACE); log.setTextColor(0xFFB0E8F0); log.setMovementMethod(new ScrollingMovementMethod());
         sv.addView(log);
-        clear.setOnClickListener(v -> log.setText(""));
+        clear.setOnClickListener(v -> { lines.clear(); log.setText(""); });
         addView(sv, new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f));
     }
 
     public void attach(RadioService s) { svc = s; s.addListener(this); state.setText("profile " + s.profile().name + " · uart " + s.profile().controlPort + " · audio " + s.profile().audio); }
     public void detach() { if (svc != null) svc.removeListener(this); svc = null; }
 
-    private void say(String s) { log.append(tf.format(new Date()) + " " + s + "\n"); }
+    /** Last 300 lines only, and the text view is refreshed only while this page is on screen: an unbounded TextView.append
+     *  copied the whole log on every radio frame (10 a second while receiving) and slowed every page down over a session. */
+    private static final int MAX_LINES = 300;
+    private final java.util.ArrayDeque<String> lines = new java.util.ArrayDeque<>();
+    private boolean dirty;
+    private void say(String s) {
+        lines.addLast(tf.format(new Date()) + " " + s); while (lines.size() > MAX_LINES) lines.removeFirst();
+        if (isShown()) render(); else dirty = true;
+    }
+    private void render() {
+        StringBuilder sb = new StringBuilder(lines.size() * 60); for (String l : lines) sb.append(l).append('\n');
+        log.setText(sb); dirty = false;
+    }
+    @Override protected void onAttachedToWindow() { super.onAttachedToWindow(); if (dirty) render(); }
 
     @Override public void onChannel(ChannelStore.Channel ch) { say("channel " + ch.number + " " + ch.name); }
     @Override public void onRx(boolean r) { say(r ? "RECEIVE_START" : "RECEIVE_STOP"); }

@@ -117,6 +117,7 @@ public class CircuitBoardView extends View {
 
     // ── Animation tick ────────────────────────────────────────────────────────
     private volatile int barDirtyTop = 0;
+    private android.graphics.Bitmap boardBitmap;
     private boolean barsSettled() { for (float h : barHeights) if (h > 0.004f) return false; return true; }
 
     private void tickAnimation() {
@@ -164,7 +165,13 @@ public class CircuitBoardView extends View {
         super.onDraw(canvas);
         if (!layoutDone) return;
         float dp = getResources().getDisplayMetrics().density;
-        drawCircuitBoard(canvas, dp);
+        // the trace pattern never changes: draw it once into a bitmap (re-issuing ~400 lines every animation frame made frames janky)
+        if (boardBitmap == null || boardBitmap.getWidth() != (int) viewW || boardBitmap.getHeight() != (int) viewH) {
+            if (boardBitmap != null) boardBitmap.recycle();
+            boardBitmap = android.graphics.Bitmap.createBitmap(Math.max(1, (int) viewW), Math.max(1, (int) viewH), android.graphics.Bitmap.Config.ARGB_8888);
+            drawCircuitBoard(new Canvas(boardBitmap), dp);
+        }
+        canvas.drawBitmap(boardBitmap, 0, 0, null);
         drawDrops(canvas);
         drawAudioBars(canvas, dp);
     }

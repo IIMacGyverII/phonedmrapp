@@ -20,7 +20,6 @@ public class SMeterView extends View {
     public SMeterView(Context c) {
         super(c);
         txt.setColor(Neo.DIM); txt.setTypeface(Neo.mono(c)); txt.setTextSize(10 * c.getResources().getDisplayMetrics().scaledDensity);
-        setLayerType(LAYER_TYPE_SOFTWARE, null);   // glow (shadow layer) on lit segments
     }
 
     public void setDbm(int v) { if (v == dbm) return; dbm = v; invalidate(); }
@@ -41,12 +40,12 @@ public class SMeterView extends View {
         for (int i = 0; i < SEGS; i++) {
             int col = i < 16 ? Neo.CYAN : i < 20 ? Neo.AMBER : Neo.RED;
             boolean on = i < lit;
+            float x = i * (sw + gap);
+            if (on) { seg.setColor(Neo.alpha(col, 0x40)); r.set(x - 1.5f * d, top - 1.5f * d, x + sw + 1.5f * d, bot + 1.5f * d); c.drawRoundRect(r, 3.5f * d, 3.5f * d, seg); }   // halo, no software layer (that made every frame cost ~70 ms)
             seg.setColor(on ? col : 0xFF122234);
-            seg.setShadowLayer(on ? 5 * d : 0, 0, 0, on ? Neo.alpha(col, 0xAA) : 0);
-            float x = i * (sw + gap); r.set(x, top, x + sw, bot);
+            r.set(x, top, x + sw, bot);
             c.drawRoundRect(r, 2 * d, 2 * d, seg);
         }
-        seg.setShadowLayer(0, 0, 0, 0);
         String[] labels = { "S1", "S3", "S5", "S7", "S9", "+20", "+40" };
         float[] at = { 0, 4 / 24f, 8 / 24f, 12 / 24f, 16 / 24f, 20 / 24f, 1f };
         float y = bot + 13 * d;
