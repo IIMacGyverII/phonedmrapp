@@ -142,6 +142,11 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
 
         // --- help / diagnostics ---
         LinearLayout more = section(body, "❓ Help & tools");
+        if (!com.macdmr.radio.CaptionClient.companionInstalled(c)) {
+            TextView comp = pill(c, "Install the caption companion (on-device speech)", Theme.TXT);
+            more.addView(comp, new LayoutParams(bb));
+            comp.setOnClickListener(v -> com.macdmr.radio.Updater.installCompanion(c));
+        }
         TextView upd = pill(c, "Check for updates", Theme.VFO);
         more.addView(upd, new LayoutParams(bb));
         upd.setOnClickListener(v -> com.macdmr.radio.Updater.check(c));
