@@ -808,6 +808,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             case 1: receiving = true; rxStart = System.currentTimeMillis(); ui.post(() -> { for (Listener l : listeners) l.onRx(true); }); pollRssi(); break;
             case 2: {
                 receiving = false; long len = rxStart > 0 ? System.currentTimeMillis() - rxStart : 0; rxStart = 0;
+                if (softSq.isEnabled() && squelchOpen) { softSq.closeNow(); squelchOpen = false; log("soft squelch closed (carrier gone)"); }
                 if (current != null && current.isDigital()) { try { engine.queryCallerInfo(); } catch (IOException ignored) { } }   // who was that (0x2B)
                 if (current != null && !current.isDigital() && len >= 700) history("rx", "📻 Received " + Math.round(len / 1000.0) + " s");
                 finishRecording();
