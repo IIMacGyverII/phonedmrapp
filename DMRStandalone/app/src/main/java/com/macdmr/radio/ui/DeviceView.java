@@ -21,7 +21,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
     public interface Host { void openHelp(); void openDiagnostics(); }
 
     private final TextView linkText, idText, profileText;
-    private final android.widget.CheckBox ownAtBoot, voiceBox, hwPttBox, volPttBox;
+    private final android.widget.CheckBox ownAtBoot, voiceBox, hwPttBox, volPttBox, scanSqBox;
     private final TextView radioIdText;
     private RadioService svc;
     private Host host;
@@ -122,6 +122,10 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         hwPttBox.setTextColor(0xFFC8D2DC); hwPttBox.setTextSize(13); hwPttBox.setButtonTintList(android.content.res.ColorStateList.valueOf(Theme.CYAN));
         data.addView(hwPttBox, new LayoutParams(bb));
         hwPttBox.setOnCheckedChangeListener((b, on) -> { if (svc != null && on != svc.hwPtt()) svc.setHwPtt(on); });
+        scanSqBox = new android.widget.CheckBox(c); scanSqBox.setText("Scanning uses Soft SQ on every analog channel (each channel's own level; channels keep their own setting afterwards)");
+        scanSqBox.setTextColor(0xFFC8D2DC); scanSqBox.setTextSize(13); scanSqBox.setButtonTintList(android.content.res.ColorStateList.valueOf(Theme.CYAN));
+        data.addView(scanSqBox, new LayoutParams(bb));
+        scanSqBox.setOnCheckedChangeListener((b, on) -> { if (svc != null && on != svc.scanSoftSq()) svc.setScanSoftSq(on); });
         voiceBox = new android.widget.CheckBox(c); voiceBox.setText("Voice announcements (channel changes, caller names, keyword alerts)");
         voiceBox.setTextColor(0xFFC8D2DC); voiceBox.setTextSize(13); voiceBox.setButtonTintList(android.content.res.ColorStateList.valueOf(Theme.CYAN));
         data.addView(voiceBox, new LayoutParams(bb));
@@ -224,7 +228,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         idText.setText("ID " + svc.localId());
         ownAtBoot.setChecked(svc.ownAtBoot());
         voiceBox.setChecked(svc.voiceOn());
-        hwPttBox.setChecked(svc.hwPtt());
+        hwPttBox.setChecked(svc.hwPtt()); scanSqBox.setChecked(svc.scanSoftSq());
         volPttBox.setChecked(getContext().getSharedPreferences("radio", Context.MODE_PRIVATE).getBoolean("volPtt", false));
         radioIdText.setText("RadioID names: " + svc.radioId().status());
     }

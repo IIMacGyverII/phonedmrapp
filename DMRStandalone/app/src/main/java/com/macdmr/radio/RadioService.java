@@ -68,7 +68,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         @Override public void tune(ChannelStore.Channel ch) { selectChannel(ch.number); }
         @Override public boolean receiving() { return softSq.isEnabled() ? squelchOpen : receiving; }   // with Soft SQ on the module's squelch is open and it reports a reception all the time: the soft gate is the activity signal
         @Override public boolean softGated() { return softSq.isEnabled(); }
-        @Override public void status(boolean s, boolean h, ChannelStore.Channel on) { pushModes(); }
+        @Override public void status(boolean s, boolean h, ChannelStore.Channel on) { if (!s) { final ChannelStore.Channel ch = current; if (ch != null && !ch.isDigital() && !ch.softSq && scanSoftSq()) worker.execute(() -> refreshSquelch(ch)); } pushModes(); }   // scan over: a channel that only had Soft SQ for the scan goes back to its own squelch
     });
     /** Every MCU/audio action runs here, in order — a PTT release can never overtake its press. */
     private final java.util.concurrent.ExecutorService worker = java.util.concurrent.Executors.newSingleThreadExecutor(r -> new Thread(r, "radio-worker"));
@@ -411,11 +411,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     public void setSoftSq(boolean on) {
         ChannelStore.Channel ch = current; if (ch == null || ch.isDigital()) return;
         ch.softSq = on; store.update(ch);
-        softSq.configure(on, ch.softSqLevel, ch.rxType, ch.rxSubCode);
-        if (on) { softSq.onRetune(); squelchOpen = false; }
-        if (!on) squelchOpen = true;
-        worker.execute(() -> rewriteAnalogSquelch(ch));
-        pushModes();
+        worker.execute(() -> refreshSquelch(ch));
     }
 
     public void setSoftSqLevel(int level) {
@@ -511,7 +507,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     public String toggleScan() {
         if (scanner.isScanning()) { scanner.stop(); return "Scan stopped"; }
         if (vfo != null) return "Turn VFO off to scan channels";
-        String err = scanner.start(); pushModes();
+        String err = scanner.start(); pushModes();      // the scanner tunes its first channel at once, which applies the scan-time Soft SQ
         return err == null ? "Scanning " + zoneName() : err;
     }
     public String skipScanChannel() { return scanner.skipCurrent(); }
@@ -557,7 +553,22 @@ public class RadioService extends Service implements RadioEngine.Events {
     }
 
     /** Squelch byte for the module: with Soft SQ on the radio's squelch is held open (0) and the app decides; otherwise the channel's own level. */
-    private static int hardwareSq(ChannelStore.Channel ch) { return ch.softSq ? 0 : ch.sq; }
+    private int hardwareSq(ChannelStore.Channel ch) { return softSqFor(ch) ? 0 : ch.sq; }
+
+    /** Soft SQ applies to an analog channel when it is switched on for that channel, or on every analog channel while scanning (setting, default on). */
+    private boolean softSqFor(ChannelStore.Channel ch) { return !ch.isDigital() && (ch.softSq || (scanner.isScanning() && scanSoftSq())); }
+    public boolean scanSoftSq() { return getSharedPreferences("radio", MODE_PRIVATE).getBoolean("scanSoftSq", true); }
+    public void setScanSoftSq(boolean on) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("scanSoftSq", on).apply(); }
+
+    /** Re-evaluate the squelch for the current channel (Soft SQ key, scan started/stopped): detector config, blackout and the module's squelch byte. */
+    private synchronized void refreshSquelch(ChannelStore.Channel ch) {
+        if (ch == null || ch.isDigital() || current != ch) return;
+        boolean soft = softSqFor(ch);
+        softSq.configure(soft, ch.softSqLevel, ch.rxType, ch.rxSubCode);
+        if (soft) { softSq.onRetune(); squelchOpen = false; } else squelchOpen = true;
+        rewriteAnalogSquelch(ch);
+        pushModes();
+    }
 
     /** Soft SQ was switched: re-send the analog channel so the module's squelch follows (single direct write, same path as a channel change). */
     private synchronized void rewriteAnalogSquelch(ChannelStore.Channel ch) {
@@ -581,7 +592,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             }
             finishRecording();
             current = ch; if (fromStore) store.setActive(ch.number);
-            softSq.configure(!ch.isDigital() && ch.softSq, ch.softSqLevel, ch.rxType, ch.rxSubCode);
+            softSq.configure(softSqFor(ch), ch.softSqLevel, ch.rxType, ch.rxSubCode);
             softSq.onRetune();
             squelchOpen = !softSq.isEnabled();                     // with Soft SQ on, stay muted until the detector opens (no burst of static after a retune)
             ui.post(() -> { for (Listener l : listeners) l.onChannel(ch); });
@@ -833,10 +844,11 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     @Override public void status(int code, String name) {
         switch (code) {
-            case 1: receiving = true; rxStart = System.currentTimeMillis(); ui.post(() -> { for (Listener l : listeners) l.onRx(true); }); pollRssi(); break;
+            case 1: receiving = true; rxStart = System.currentTimeMillis(); softSq.rxStarted(); ui.post(() -> { for (Listener l : listeners) l.onRx(true); }); pollRssi(); break;
             case 2: {
                 receiving = false; long len = rxStart > 0 ? System.currentTimeMillis() - rxStart : 0; rxStart = 0;
                 if (softSq.isEnabled() && squelchOpen) { softSq.closeNow(); softGateHistory(false); squelchOpen = false; log("soft squelch closed (carrier gone)"); }
+                softSq.awaitRxStart();                                   // with the module squelch held open a RECEIVE_STOP only happens while the receiver re-settles
                 if (current != null && current.isDigital()) { try { engine.queryCallerInfo(); } catch (IOException ignored) { } }   // who was that (0x2B)
                 if (current != null && !current.isDigital() && !softSq.isEnabled() && len >= 700) history("rx", "📻 Received " + Math.round(len / 1000.0) + " s");   // with Soft SQ on the soft gate writes this line
                 finishRecording();
