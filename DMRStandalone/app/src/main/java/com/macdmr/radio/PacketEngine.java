@@ -264,11 +264,12 @@ public final class PacketEngine {
         if (!host.analogRx()) { fill = 0; return; }
         if (!open) return;
         try {
-            if (dtmfEnabled()) {
+            int f = host.rxFreqHz();
+            boolean weatherBand = f >= 162_400_000 && f <= 162_550_000;      // NOAA carries no DTMF or APRS: save the CPU there
+            if (dtmfEnabled() && !weatherBand) {
                 if (dtmf == null) dtmf = new DTMFDecoder(SR, false, dtmfListener);
                 dtmf.processAudio(mono, n);
             }
-            int f = host.rxFreqHz();
             if (wxEnabled() && f >= 162_400_000 && f <= 162_550_000) {
                 if (same == null) same = new SAMEDecoder(SR, false, sameListener);
                 same.processAudio(mono, n);
@@ -278,7 +279,6 @@ public final class PacketEngine {
                 for (int i = 0, o = 0; i + 1 < n; i += 2) { sstvBytes[o++] = mono[i]; sstvBytes[o++] = mono[i + 1]; sstvBytes[o++] = mono[i]; sstvBytes[o++] = mono[i + 1]; }   // the receiver runs at 16 kHz (each 8 kHz sample twice, exactly the module's input)
                 sstv.processAudio(sstvBytes, n * 2);
             }
-            boolean weatherBand = f >= 162_400_000 && f <= 162_550_000;      // no APRS on NOAA frequencies: skip the (costly) passive AFSK decode there
             if (!sstvRx && (monitor || kiss.isActive() || (passiveWanted() && !weatherBand))) {
                 for (int i = 0; i + 1 < n && fill < WINDOW; i += 2) window[fill++] = (short) ((mono[i] & 0xFF) | (mono[i + 1] << 8));
                 if (fill >= WINDOW) {
