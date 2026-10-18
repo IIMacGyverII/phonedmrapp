@@ -21,14 +21,14 @@ import com.macdmr.radio.RootSetup;
  * report, updates, help, diagnostics).
  */
 public class DeviceView extends LinearLayout implements RadioService.Listener {
-    public interface Host { void openHelp(); void openDiagnostics(); void intercomStyleChanged(); }
+    public interface Host { void openHelp(); void openDiagnostics(); void intercomStyleChanged(); void animatedPanelChanged(boolean on); }
 
     private final LinearLayout header, hero;
     private final TextView linkText, profileText, idText;
     private final View linkDot;
     private final ImageView heroIcon;
     private final TextView takeOver, handBack, reportNow;
-    private final Neo.NeonSwitch ownAtBoot, voiceSw, hwPttSw, volPttSw, scanSqSw, styleSw;
+    private final Neo.NeonSwitch ownAtBoot, voiceSw, hwPttSw, volPttSw, scanSqSw, styleSw, animSw;
     private final LinearLayout radioIdTile;
     private RadioService svc;
     private Host host;
@@ -84,13 +84,15 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
 
         // ---- radio settings ----
         LinearLayout set = card(body, "Radio settings");
-        ownAtBoot = sw(); hwPttSw = sw(); volPttSw = sw(); scanSqSw = sw(); voiceSw = sw(); styleSw = sw();
+        ownAtBoot = sw(); hwPttSw = sw(); volPttSw = sw(); scanSqSw = sw(); voiceSw = sw(); styleSw = sw(); animSw = sw();
         addRow(set, Neo.switchRow(c, "power", Neo.GREEN, "Own the radio at boot", "Otherwise the stock app is restored after a reboot", ownAtBoot));
         addRow(set, Neo.switchRow(c, "ptt", Neo.AMBER, "Side PTT key", "The phone's hardware push-to-talk button transmits", hwPttSw));
         addRow(set, Neo.switchRow(c, "volume", Neo.AMBER, "Volume-up transmits", "While the Intercom page is open", volPttSw));
         addRow(set, Neo.switchRow(c, "softsq", Neo.CYAN, "Soft SQ while scanning", "Every analog channel, each at its own level", scanSqSw));
         addRow(set, Neo.switchRow(c, "voice", Neo.VIOLET, "Voice announcements", "Channel changes, caller names, keyword alerts", voiceSw));
         addRow(set, Neo.switchRow(c, "intercom", Neo.CYAN, "New intercom look", "Off: the classic intercom page", styleSw));
+        addRow(set, Neo.switchRow(c, "diag", Neo.CYAN, "Animated panel when quiet", "Falling lines on an idle channel (uses a little battery)", animSw));
+        animSw.setOnChange(on -> { if (host != null) host.animatedPanelChanged(on); });
         ownAtBoot.setOnChange(on -> { if (svc != null) svc.setOwnAtBoot(on); });
         hwPttSw.setOnChange(on -> { if (svc != null) svc.setHwPtt(on); });
         volPttSw.setOnChange(on -> c.getSharedPreferences("radio", Context.MODE_PRIVATE).edit().putBoolean("volPtt", on).apply());
@@ -298,7 +300,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         idText.setText("ID " + svc.localId());
         ownAtBoot.setChecked(svc.ownAtBoot()); voiceSw.setChecked(svc.voiceOn()); hwPttSw.setChecked(svc.hwPtt()); scanSqSw.setChecked(svc.scanSoftSq());
         volPttSw.setChecked(c.getSharedPreferences("radio", Context.MODE_PRIVATE).getBoolean("volPtt", false));
-        styleSw.setChecked(IntercomView.newLook(c));
+        styleSw.setChecked(IntercomView.newLook(c)); animSw.setChecked(IntercomView.animatedPanel(c));
         ((TextView) radioIdTile.findViewWithTag("sub")).setText(svc.radioId().status());
     }
 

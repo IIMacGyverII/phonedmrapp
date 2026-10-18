@@ -93,6 +93,7 @@ public class MainActivity extends AppCompatActivity {
             @Override public void openHelp() { showOverlay(new com.macdmr.radio.ui.HelpView(MainActivity.this, MainActivity.this::closeOverlay)); }
             @Override public void openDiagnostics() { showOverlay(diagnostics); }
             @Override public void intercomStyleChanged() { rebuildIntercom(); }
+            @Override public void animatedPanelChanged(boolean on) { intercom.setAnimatedPanel(on); }
         });
         contacts = new com.macdmr.radio.ui.ContactsView(this);
         messages = new com.macdmr.radio.ui.MessagesView(this);

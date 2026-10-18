@@ -42,6 +42,10 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     private SMeterView smeter;
     private String zoneName = "ALL";
 
+    /** Animate the panel's drops on a quiet channel (Device setting, on by default; it always animates while receiving). */
+    public static boolean animatedPanel(Context c) { return c.getSharedPreferences("radio", Context.MODE_PRIVATE).getBoolean("animPanel", true); }
+    public void setAnimatedPanel(boolean on) { getContext().getSharedPreferences("radio", Context.MODE_PRIVATE).edit().putBoolean("animPanel", on).apply(); board.animateIdle = on; }
+
     /** Which intercom page to build: the classic module page (default) or the new look. */
     public static boolean newLook(Context c) { return c.getSharedPreferences("radio", Context.MODE_PRIVATE).getBoolean("newIntercom", false); }
     public static void setNewLook(Context c, boolean on) { c.getSharedPreferences("radio", Context.MODE_PRIVATE).edit().putBoolean("newIntercom", on).apply(); }
@@ -159,10 +163,8 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
 
         // ---- circuit-board panel (250 dp, 10 dp side margins, 8 dp top, 2 dp 35 % cyan border, radius 12) ----
         FrameLayout panel = new FrameLayout(c);
-        GradientDrawable pbg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[] { 0x0800E5FF, 0x0400E5FF });
-        pbg.setCornerRadius(12 * d); pbg.setStroke((int) (2 * d), 0x5900E5FF);
-        panel.setBackground(pbg);
-        board = new CircuitBoardView(c);
+        board = new CircuitBoardView(c); board.animateIdle = animatedPanel(c);   // draws the panel frame itself (its own surface: the window cannot paint over it)
+        board.setFrame(0xFF0B1823, 0x5900E5FF, 2, 12, Theme.BG);   // fill = classic page navy with the panel's faint cyan tint
         panel.addView(board, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         final LinearLayout infoPanel = new LinearLayout(c); infoPanel.setOrientation(VERTICAL); this.infoPanel = infoPanel;
         infoPanel.setBackground(Theme.rounded(c, 0x18000000, 0x5500BFFF, 1, 8));
@@ -224,7 +226,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         tbl.leftMargin = tbl.rightMargin = dp8; tbl.bottomMargin = (int) (22 * d);
         panel.addView(transcriptionBox, tbl); transcriptionBox.setVisibility(GONE);
         LayoutParams pl = neo ? new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f) : new LayoutParams(LayoutParams.MATCH_PARENT, (int) (250 * d)); pl.leftMargin = pl.rightMargin = neo ? (int) (16 * d) : dp10; pl.topMargin = dp8;
-        if (neo) { GradientDrawable nb = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[] { 0xE0081420, 0xE6060E18 }); nb.setCornerRadius(14 * d); nb.setStroke((int) d, Neo.LINE); panel.setBackground(nb); }
+        if (neo) board.setFrame(0xFF07121D, Neo.LINE, 1, 14, Neo.GROUND);   // the card fill as it looks over the page
         addView(panel, pl);
 
         // ---- PTT (176 dp, centred) with the six satellites at the module's exact offsets ----
@@ -363,7 +365,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         LinearLayout sm = rcard;
         LinearLayout smTop = new LinearLayout(c); smTop.setGravity(Gravity.CENTER_VERTICAL);
         smTop.addView(Neo.caps(c, "Signal"), new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f));
-        smeterText = Neo.text(c, "--", Neo.TEXT, 17, Neo.mono(c)); smTop.addView(smeterText);
+        smeterText = Neo.text(c, "NO SIGNAL", Neo.DIM, 17, Neo.mono(c)); smTop.addView(smeterText);
         sm.addView(smTop);
         smeter = new SMeterView(c); LayoutParams mlp = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); mlp.topMargin = (int) (4 * d);
         sm.addView(smeter, mlp);
@@ -528,10 +530,25 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         renderHistory();
         refreshHeadline();
     }
-    @Override public void onRx(boolean receiving) { boolean was = rx; rx = receiving; if (receiving && !was && (svc == null || svc.rxReportsReception())) reopenPanel("rx"); refreshHeadline(); }
-    @Override public void onTx(boolean transmitting) { tx = transmitting; if (transmitting) reopenPanel("tx"); refreshHeadline(); }
+    @Override public void onRx(boolean receiving) { boolean was = rx; rx = receiving; if (receiving && !was && (svc == null || svc.rxReportsReception())) reopenPanel("rx"); refreshHeadline(); updateMeter(); }
+    @Override public void onTx(boolean transmitting) { tx = transmitting; if (transmitting) reopenPanel("tx"); refreshHeadline(); updateMeter(); }
+    private int lastDbm = -999;
+    /** Is something being received right now? The Soft SQ gate when Soft SQ decides, else the radio's own report (sq 0 analog: always). */
+    private boolean receivingNow() {
+        if (tx || svc == null) return false;
+        if (svc.softSqActive()) return gateWasOpen;
+        return svc.rxReportsReception() ? rx : true;
+    }
+    /** New look: the meter shows a reading only while something is received; otherwise it is dark and says NO SIGNAL, with the noise floor beside it. */
+    private void updateMeter() {
+        if (!neo) return;
+        boolean on = receivingNow() && lastDbm != -999;
+        smeter.setDbm(on ? lastDbm : -999);
+        if (on) { smeterText.setText(SMeterView.sUnits(lastDbm) + "  " + lastDbm + " dBm"); smeterText.setTextColor(lastDbm > -93 ? Neo.AMBER_LIGHT : Neo.TEXT); }
+        else { smeterText.setText(lastDbm == -999 ? "NO SIGNAL" : "NO SIGNAL  \u00B7  floor " + lastDbm + " dBm"); smeterText.setTextColor(Neo.DIM); }
+    }
     @Override public void onRssi(int dbm) {
-        if (neo) { smeter.setDbm(dbm); smeterText.setText(dbm == -999 ? "--" : SMeterView.sUnits(dbm) + "  " + dbm + " dBm"); smeterText.setTextColor(dbm == -999 ? Neo.DIM : dbm > -93 ? Neo.AMBER_LIGHT : Neo.TEXT); return; }
+        if (neo) { lastDbm = dbm; updateMeter(); return; }
         signal.setText(dbm == -999 ? "Signal: --" : "Signal: " + dbm + " dBm");
     }
     @Override public void onAudioLevel(int amplitude) { board.audioAmplitude = amplitude; }
@@ -555,7 +572,9 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     private boolean gateWasOpen;
     private int lastScanState = -1;
     @Override public void onModes(boolean sq, int level, boolean open, boolean monitor, boolean recording, boolean scanning, boolean holding, String zoneName) {
-        if (sq && open && !gateWasOpen) reopenPanel("soft squelch opened"); gateWasOpen = sq && open;   // Soft SQ channels: the gate opening is the reception
+        if (sq && open && !gateWasOpen) reopenPanel("soft squelch opened");
+        boolean was = gateWasOpen; gateWasOpen = sq && open;   // Soft SQ channels: the gate opening is the reception
+        if (was != gateWasOpen) updateMeter();
         softSq.setOn(sq); mon.setOn(monitor); rec.setOn(recording); pkt.setOn(svc != null && svc.packetActive());
         if (!sqFromUser) { sqSeek.setProgress(level); sqValue.setText(String.valueOf(level)); }
         sqValue.setTextColor(sq ? (open ? Theme.GREEN : Theme.AMBER) : Theme.CYAN);
