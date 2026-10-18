@@ -861,7 +861,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             try {
                 int msgType = to.type == 1 ? 3 : to.type == 2 ? 2 : 1;
                 pendingSmsId = id;
-                engine.sendSms(msgType, to.number, to.type == 1 ? to.number : 0, text);
+                engine.sendSms(msgType, to.number, 0, text);     // group texts: id = the talkgroup, second int 0 exactly as the stock app sends them
             } catch (Throwable t) { store.setMessageStatus(id, 2); log("sms: " + t); ui.post(() -> { for (Listener l : listeners) l.onSmsResult(false); }); }
         });
     }
