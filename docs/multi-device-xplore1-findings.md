@@ -95,3 +95,12 @@ unknown until an APK rip is available. The same 20-minute `aapt2`/`dexdump` chec
 - DMR modules with a serial command protocol (for context): [NiceRF DMR858M](https://www.nicerf.com/walkie-talkie-module/dmr858m.html), [SR_DMR_5WU](https://www.tindie.com/products/sunrise/sr_dmr_5wu-dmr-digital-two-way-radio-module/).
 
 How to collect the same facts from any other phone: `docs/DEVICE_SUPPORT_REQUEST.md`.
+
+## Status 2026-10-17 (evening)
+
+`DMRStandalone` now has the `AudioBackend` split: `TinyServiceAudio` (Ulefone, verified) and `UartPcmAudio` (raw 8 kHz mono PCM on
+`/dev/ttyS1` @ 230400, 20 ms packets, RX played through an AudioTrack and handed to the DSP as stereo-duplicated frames). The
+`XPLORE_1` profile selects it. **Untested on hardware** — what the first owner must confirm: the stream is headerless, byte order,
+packet size/pacing, the SELinux labels of `ttyS0/ttyS1` and the `intercom_*` sysfs nodes, and the name of the stock app's serial
+JNI library (`ls /system/lib64 | grep -i serial`, now in `DEVICE_SUPPORT_REQUEST.md`) so `DeviceProfile.serialLib` can be set.
+
