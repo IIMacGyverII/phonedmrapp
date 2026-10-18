@@ -132,6 +132,16 @@ public final class CtcssDecoderBank {
     }
 
     /** Clear detection and accumulators (call on RECEIVE_STOP). */
+    /** 8 kHz mono 16-bit LE input (the standalone app's RX stream). */
+    public void processMono(byte[] data, int length) {
+        for (int i = 0; i + 1 < length; i += 2) {
+            double x = (short) ((data[i] & 0xFF) | (data[i + 1] << 8));
+            energy += x * x;
+            for (int k = 0; k < freqs.length; k++) { double s0 = x + coeff[k] * s1[k] - s2[k]; s2[k] = s1[k]; s1[k] = s0; }
+            if (++n >= window) { evaluate(); resetWindow(); }
+        }
+    }
+
     public void reset() {
         resetWindow();
         detectedIndex = -1; candidate = -1; runs = 0;

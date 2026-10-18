@@ -28,6 +28,14 @@ public final class LastHeardDialog {
         body.addView(Theme.label(c, "📻  Last heard", Theme.CYAN, 20, true));
         TextView hint = Theme.label(c, "Newest first across every channel: who called, text and APRS traffic, what was recorded. Tap a line to switch to that channel.", 0xFF8A98A6, 12, false);
         hint.setPadding(0, (int) (4 * d), 0, (int) (8 * d)); body.addView(hint);
+        LinearLayout tools = new LinearLayout(c); tools.setGravity(Gravity.CENTER);
+        for (String[] t : new String[][] { { "\uD83C\uDFA7 Recordings", "rec" }, { "\uD83D\uDCDD Captions", "txt" } }) {
+            TextView b = Theme.label(c, t[0], Theme.CYAN, 13, true); b.setGravity(Gravity.CENTER); b.setBackground(Theme.rounded(c, 0x1400E5FF, 0x8000E5FF, 1, 18)); b.setPadding((int) (8 * d), (int) (8 * d), (int) (8 * d), (int) (8 * d)); b.setClickable(true);
+            final boolean rec = t[1].equals("rec");
+            b.setOnClickListener(v -> { if (rec) MediaDialogs.recordings(c, svc); else MediaDialogs.captions(c, svc); });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f); lp.setMargins((int) (3 * d), 0, (int) (3 * d), (int) (8 * d)); tools.addView(b, lp);
+        }
+        body.addView(tools);
 
         LinkedHashMap<String, Row> rows = new LinkedHashMap<>();
         for (Object[] h : svc.store().lastHeard(400)) {

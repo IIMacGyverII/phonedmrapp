@@ -56,7 +56,8 @@ public final class Backup {
 
     // ---- export --------------------------------------------------------------------------------------
 
-    public static File export(ChannelStore store) throws Exception {
+    public static File export(ChannelStore store) throws Exception { return export(store, null); }
+    public static File export(ChannelStore store, java.util.Map<String, String> dtmf) throws Exception {
         File dir = new File(backupRoot(), new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date()));
         if (!dir.mkdirs() && !dir.isDirectory()) throw new Exception("cannot create " + dir);
         List<ChannelStore.Channel> channels = store.all();
@@ -128,7 +129,7 @@ public final class Backup {
                 w.write(r + "\r\n");
             }
         }
-        try (Writer w = writer(new File(dir, "DTMF.csv"))) { w.write("Contact Name,Code\r\n"); }
+        try (Writer w = writer(new File(dir, "DTMF.csv"))) { w.write("Contact Name,Code\r\n"); if (dtmf != null) for (Map.Entry<String, String> e : dtmf.entrySet()) w.write(q(e.getKey()) + "," + q(e.getValue()) + "\r\n"); }
         return dir;
     }
 
@@ -155,6 +156,33 @@ public final class Backup {
     private static int num(String s, int dflt) { try { return Integer.parseInt(s.trim()); } catch (Exception e) { return dflt; } }
 
     /** Replace channels, contacts and zones from a backup folder. Returns a summary. */
+    /** Copy the five CSVs of a SAF folder into the cache so {@link #restore} can read them. */
+    public static File copyTree(android.content.Context ctx, android.net.Uri tree) throws Exception {
+        File dir = new File(ctx.getCacheDir(), "restore_" + System.currentTimeMillis()); dir.mkdirs();
+        android.net.Uri children = android.provider.DocumentsContract.buildChildDocumentsUriUsingTree(tree, android.provider.DocumentsContract.getTreeDocumentId(tree));
+        int n = 0;
+        try (android.database.Cursor c = ctx.getContentResolver().query(children, new String[] { android.provider.DocumentsContract.Document.COLUMN_DOCUMENT_ID, android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME }, null, null, null)) {
+            while (c != null && c.moveToNext()) {
+                String name = c.getString(1);
+                if (!name.endsWith(".csv")) continue;
+                android.net.Uri doc = android.provider.DocumentsContract.buildDocumentUriUsingTree(tree, c.getString(0));
+                try (java.io.InputStream in = ctx.getContentResolver().openInputStream(doc); FileOutputStream out = new FileOutputStream(new File(dir, name))) {
+                    byte[] b = new byte[65536]; int k; while ((k = in.read(b)) > 0) out.write(b, 0, k);
+                }
+                n++;
+            }
+        }
+        if (!new File(dir, "Channels.csv").exists()) throw new Exception("that folder has no Channels.csv");
+        return dir;
+    }
+
+    /** DTMF.csv rows (name → code), if the backup has any. */
+    public static java.util.LinkedHashMap<String, String> readDtmf(File dir) {
+        java.util.LinkedHashMap<String, String> out = new java.util.LinkedHashMap<>();
+        try { List<List<String>> rows = read(new File(dir, "DTMF.csv")); for (int i = 1; i < rows.size(); i++) if (rows.get(i).size() >= 2 && !col(rows.get(i), 1).isEmpty()) out.put(col(rows.get(i), 0), col(rows.get(i), 1)); } catch (Throwable ignored) { }
+        return out;
+    }
+
     public static String restore(ChannelStore store, File dir) throws Exception {
         List<List<String>> contacts = read(new File(dir, "Contacts.csv")), tgl = read(new File(dir, "TG_Lists.csv")), chans = read(new File(dir, "Channels.csv")), zones = read(new File(dir, "Zones.csv"));
         if (chans.size() < 2) throw new Exception("Channels.csv is empty");

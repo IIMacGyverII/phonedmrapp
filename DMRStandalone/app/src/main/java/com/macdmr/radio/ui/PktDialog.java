@@ -124,6 +124,16 @@ public final class PktDialog {
         LinearLayout r = row();
         button(r, "Transmit", Theme.PKT, x -> { String e = pe.sendDtmf(seq.getText().toString()); toast(e == null ? "DTMF queued" : e); if (e == null) sub.dismiss(); });
         button(r, "Clear", Theme.MON, x -> seq.setText(""));
+        button(r, "Saved\u2026", Theme.SOFTSQ, x -> {
+            final java.util.LinkedHashMap<String, String> m = pe.dtmfSaved();
+            final java.util.List<String> names = new java.util.ArrayList<>(m.keySet());
+            String[] items = new String[names.size() + 1]; for (int i = 0; i < names.size(); i++) items[i] = names.get(i) + "  \u2192  " + m.get(names.get(i)); items[names.size()] = "\uD83D\uDCBE Save the current keys as\u2026";
+            new AlertDialog.Builder(c).setTitle("Saved DTMF sequences").setItems(items, (dd, w) -> {
+                if (w < names.size()) { seq.setText(m.get(names.get(w))); return; }
+                final EditText nm = new EditText(c); nm.setHint("Name (e.g. Repeater on)");
+                new AlertDialog.Builder(c).setTitle("Save " + seq.getText()).setView(nm).setPositiveButton("Save", (d3, w3) -> { String n = nm.getText().toString().trim(); if (!n.isEmpty() && seq.getText().length() > 0) { pe.dtmfSave(n, seq.getText().toString().toUpperCase(Locale.US)); toast("Saved"); } }).setNegativeButton("Cancel", null).show();
+            }).setNegativeButton("Delete one\u2026", (dd, w) -> { if (names.isEmpty()) return; new AlertDialog.Builder(c).setTitle("Delete which?").setItems(names.toArray(new String[0]), (d4, w4) -> { pe.dtmfSave(names.get(w4), null); toast("Deleted"); }).show(); }).show();
+        });
         body.addView(r);
         sub = dialog(body);
     }

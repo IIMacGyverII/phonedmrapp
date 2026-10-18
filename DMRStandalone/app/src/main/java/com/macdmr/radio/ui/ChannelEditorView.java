@@ -29,6 +29,7 @@ public class ChannelEditorView extends LinearLayout {
     private final LinearLayout form;
     private final List<Runnable> binders = new ArrayList<>();
     private EditText name, tx, rx, call, key, groups;
+    private EditText lat, lon;
     private TextView typeV, bandV, powerV, ccV, modeV, slotV, ctypeV, encV, relayV, intV, sqV, txTypeV, txCodeV, rxTypeV, rxCodeV;
     private LinearLayout digitalGroup, analogGroup;
 
@@ -65,6 +66,16 @@ public class ChannelEditorView extends LinearLayout {
         typeV = choice("Channel type", new String[] { "Digital", "Analog" }, ch.type, v -> { ch.type = v; refreshGroups(); });
         tx = text("Send frequency (MHz)", ch.txFreq > 0 ? String.format(Locale.US, "%.5f", ch.txFreq / 1e6) : "", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         rx = text("Receive frequency (MHz)", ch.rxFreq > 0 ? String.format(Locale.US, "%.5f", ch.rxFreq / 1e6) : "", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        lat = text("Latitude (optional, for distance on the intercom)", ch.lat != 0 || ch.lon != 0 ? String.format(Locale.US, "%.5f", ch.lat) : "", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
+        lon = text("Longitude", ch.lat != 0 || ch.lon != 0 ? String.format(Locale.US, "%.5f", ch.lon) : "", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
+        TextView here = Theme.pillButton(c, "\uD83D\uDCCD Use my position");
+        here.setOnClickListener(v -> {
+            android.location.Location me = null;
+            try { android.location.LocationManager lm = (android.location.LocationManager) c.getSystemService(Context.LOCATION_SERVICE); for (String p : new String[] { "gps", "network", "passive" }) { try { android.location.Location l = lm.getLastKnownLocation(p); if (l != null && (me == null || l.getTime() > me.getTime())) me = l; } catch (SecurityException ignored) { } } } catch (Throwable ignored) { }
+            if (me == null) { android.widget.Toast.makeText(c, "No position fix yet", android.widget.Toast.LENGTH_SHORT).show(); return; }
+            lat.setText(String.format(Locale.US, "%.5f", me.getLatitude())); lon.setText(String.format(Locale.US, "%.5f", me.getLongitude()));
+        });
+        LayoutParams hl = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT); hl.bottomMargin = (int) (8 * Theme.dp(c)); form.addView(here, hl);
         powerV = choice("Power", new String[] { "Low power", "High power" }, ch.power, v -> ch.power = v);
         bandV = choice("Band", new String[] { "Narrow band", "Wide band" }, ch.band == 0 ? 0 : 1, v -> ch.band = v);
         relayV = choice("Relay (repeater)", new String[] { "Disconnect", "Normal" }, ch.relay == 1 ? 0 : 1, v -> ch.relay = v == 0 ? 1 : 2);
@@ -168,6 +179,9 @@ public class ChannelEditorView extends LinearLayout {
             ch.rxFreq = (int) Math.round(Double.parseDouble(rx.getText().toString().trim()) * 1e6);
             if (ch.rxFreq < 136_000_000 || ch.rxFreq > 480_000_000 || ch.txFreq < 136_000_000 || ch.txFreq > 480_000_000) throw new IllegalArgumentException("Frequencies must be 136–174 or 400–480 MHz");
             if (ch.rxFreq < 300_000_000) ch.band = 1;                                  // VHF must be wide on this radio
+            String la = lat.getText().toString().trim(), lo = lon.getText().toString().trim();
+            if (la.isEmpty() && lo.isEmpty()) { ch.lat = 0; ch.lon = 0; }
+            else { ch.lat = Double.parseDouble(la); ch.lon = Double.parseDouble(lo); if (Math.abs(ch.lat) > 90 || Math.abs(ch.lon) > 180) throw new IllegalArgumentException("Latitude must be within \u00B190 and longitude within \u00B1180"); }
             if (ch.isDigital()) {
                 ch.txContact = call.getText().toString().trim().isEmpty() ? 0 : Integer.parseInt(call.getText().toString().trim());
                 List<Integer> g = new ArrayList<>();
