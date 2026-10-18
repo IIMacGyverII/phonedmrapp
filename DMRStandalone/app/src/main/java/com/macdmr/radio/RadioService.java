@@ -275,6 +275,7 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     public String toggleScan() {
         if (scanner.isScanning()) { scanner.stop(); return "Scan stopped"; }
+        if (vfo != null) return "Turn VFO off to scan channels";
         String err = scanner.start(); pushModes();
         return err == null ? "Scanning " + zoneName() : err;
     }
@@ -303,6 +304,7 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     public void stepChannel(int delta) {
         if (current == null || pttDown) return;
+        if (vfo != null) { vfoStep(delta); return; }
         if (scanner.isScanning()) scanner.stop();
         java.util.List<ChannelStore.Channel> list = zoneChannels(); if (list.isEmpty()) return;
         int pos = -1; for (int i = 0; i < list.size(); i++) if (list.get(i).number == current.number) pos = i;
@@ -315,16 +317,23 @@ public class RadioService extends Service implements RadioEngine.Events {
     private synchronized void selectChannelNow(int number) {
         ChannelStore.Channel ch = store.byNumber(number);
         if (ch == null) { log("no channel " + number); return; }
+        vfo = null;
+        applyChannelNow(ch, true);
+    }
+
+    /** Program the radio with a channel; {@code fromStore} = a real channel (remembered as active), else the VFO. */
+    private synchronized void applyChannelNow(ChannelStore.Channel ch, boolean fromStore) {
         try {
             if (ch.isDigital()) {
-                engine.setDigital(ch.rxFreq, ch.txFreq, localId(), ch.groups, ch.txContact, ch.contactType, ch.power, ch.cc, ch.inSlot, ch.outSlot, 8, 4);
+                int id = !fromStore && ch.mode > 0 ? ch.mode : localId();          // VFO may transmit under another DMR ID
+                engine.setDigital(ch.rxFreq, ch.txFreq, id, ch.groups, ch.txContact, ch.contactType, ch.power, ch.cc, ch.inSlot, ch.outSlot, 8, 4);
                 engine.setInterrupt(ch.interrupt == 1);
             } else {
                 int band = ch.rxFreq < 300_000_000 ? 1 : ch.band;      // VHF must be band=1 (band=0 deafens the RX)
                 engine.setAnalog(ch.rxFreq, ch.txFreq, band, ch.power, 0 /* soft squelch in software */, ch.rxType, ch.rxSubCode, ch.txType, ch.txSubCode, 8, 2);
             }
             finishRecording();
-            current = ch; store.setActive(number);
+            current = ch; if (fromStore) store.setActive(ch.number);
             softSq.configure(!ch.isDigital() && ch.softSq, ch.softSqLevel, ch.rxType, ch.rxSubCode);
             squelchOpen = true;
             ui.post(() -> { for (Listener l : listeners) l.onChannel(ch); });
@@ -402,6 +411,89 @@ public class RadioService extends Service implements RadioEngine.Events {
     private void setLocalIdQuiet(int id) { getSharedPreferences("radio", MODE_PRIVATE).edit().putInt("dmrId", id).apply(); }
 
     public void setLocalId(int id) { getSharedPreferences("radio", MODE_PRIVATE).edit().putInt("dmrId", id).apply(); if (current != null && current.isDigital()) selectChannel(current.number); }
+
+    // ---- VFO ---------------------------------------------------------------------------------------
+
+    private ChannelStore.Channel vfo;          // the channel the radio is on while VFO is active (id -1, number 0)
+    private int vfoReturn = -1;                // channel number to return to
+
+    public boolean vfoActive() { return vfo != null; }
+    public int vfoStepHz() { return getSharedPreferences("radio", MODE_PRIVATE).getInt("vfoStep", 12500); }
+    public void setVfoStepHz(int hz) { getSharedPreferences("radio", MODE_PRIVATE).edit().putInt("vfoStep", hz).apply(); }
+
+    /** A copy of the active VFO, else the last one tuned (prefs), else 146.520 FM simplex. */
+    public ChannelStore.Channel vfoChannel() {
+        if (vfo != null) return vfoCopy(vfo);
+        ChannelStore.Channel v = new ChannelStore.Channel();
+        v.type = 1; v.rxFreq = v.txFreq = 146_520_000; v.power = 1; v.band = 1; v.cc = 1; v.contactType = 1; v.txContact = 9; v.groups = new int[] { 9 };
+        try {
+            String js = getSharedPreferences("radio", MODE_PRIVATE).getString("vfo", null);
+            if (js != null) {
+                org.json.JSONObject o = new org.json.JSONObject(js);
+                v.type = o.optInt("type", 1); v.rxFreq = o.optInt("rx", v.rxFreq); v.txFreq = o.optInt("tx", v.txFreq); v.power = o.optInt("power", 1); v.band = o.optInt("band", 1);
+                v.rxType = o.optInt("rxType"); v.rxSubCode = o.optInt("rxCode"); v.txType = o.optInt("txType"); v.txSubCode = o.optInt("txCode");
+                v.cc = o.optInt("cc", 1); v.inSlot = v.outSlot = o.optInt("slot"); v.contactType = o.optInt("callType", 1); v.txContact = o.optInt("call", 9); v.mode = o.optInt("idOverride");
+                org.json.JSONArray g = o.optJSONArray("groups"); if (g != null) { v.groups = new int[g.length()]; for (int i = 0; i < g.length(); i++) v.groups[i] = g.optInt(i); }
+            }
+        } catch (Throwable ignored) { }
+        return v;
+    }
+
+    public ChannelStore.Channel vfoCopy(ChannelStore.Channel s) {
+        ChannelStore.Channel v = new ChannelStore.Channel();
+        v.id = s.id; v.number = s.number; v.name = s.name; v.type = s.type; v.rxFreq = s.rxFreq; v.txFreq = s.txFreq; v.power = s.power; v.band = s.band; v.sq = s.sq;
+        v.rxType = s.rxType; v.rxSubCode = s.rxSubCode; v.txType = s.txType; v.txSubCode = s.txSubCode; v.relay = s.relay; v.mode = s.mode;
+        v.cc = s.cc; v.inSlot = s.inSlot; v.outSlot = s.outSlot; v.contactType = s.contactType; v.txContact = s.txContact; v.encryptSw = s.encryptSw; v.interrupt = s.interrupt;
+        v.encryptKey = s.encryptKey; v.groups = s.groups.clone(); v.softSq = s.softSq; v.softSqLevel = s.softSqLevel;
+        return v;
+    }
+
+    private void saveVfoPrefs(ChannelStore.Channel v) {
+        try {
+            org.json.JSONObject o = new org.json.JSONObject();
+            o.put("type", v.type); o.put("rx", v.rxFreq); o.put("tx", v.txFreq); o.put("power", v.power); o.put("band", v.band);
+            o.put("rxType", v.rxType); o.put("rxCode", v.rxSubCode); o.put("txType", v.txType); o.put("txCode", v.txSubCode);
+            o.put("cc", v.cc); o.put("slot", v.inSlot); o.put("callType", v.contactType); o.put("call", v.txContact); o.put("idOverride", v.mode);
+            org.json.JSONArray g = new org.json.JSONArray(); for (int x : v.groups) g.put(x); o.put("groups", g);
+            getSharedPreferences("radio", MODE_PRIVATE).edit().putString("vfo", o.toString()).apply();
+        } catch (Throwable ignored) { }
+    }
+
+    /** Tune the VFO (enters VFO mode if not in it); the previous real channel is remembered for {@link #exitVfo}. */
+    public void applyVfo(final ChannelStore.Channel in) {
+        final ChannelStore.Channel v = vfoCopy(in);
+        v.id = -1; v.number = 0;
+        if (v.name == null || v.name.isEmpty()) v.name = "VFO " + String.format(Locale.US, "%.4f", v.rxFreq / 1e6) + (v.isDigital() ? " DMR" : " FM");
+        saveVfoPrefs(v);
+        worker.execute(() -> {
+            if (pttDown) return;
+            if (scanner.isScanning()) scanner.stop();
+            if (vfo == null && current != null) vfoReturn = current.number;
+            vfo = v;
+            applyChannelNow(v, false);
+            log("VFO " + v.freqText(v.rxFreq) + "/" + v.freqText(v.txFreq) + (v.isDigital() ? " DMR cc" + v.cc + " TG " + v.txContact : " FM"));
+        });
+    }
+
+    public void exitVfo() {
+        worker.execute(() -> {
+            if (vfo == null) return;
+            vfo = null;
+            int back = vfoReturn > 0 && store.byNumber(vfoReturn) != null ? vfoReturn : store.activeNumber();
+            selectChannelNow(back);
+        });
+    }
+
+    /** Intercom arrows while VFO is on: step both frequencies (keeps any repeater offset). */
+    private void vfoStep(int delta) {
+        ChannelStore.Channel v = vfoCopy(vfo);
+        int hz = delta * vfoStepHz();
+        v.rxFreq += hz; v.txFreq += hz;
+        if (v.rxFreq < 136_000_000 || v.rxFreq > 480_000_000 || v.txFreq < 136_000_000 || v.txFreq > 480_000_000) return;
+        if (v.rxFreq > 174_000_000 && v.rxFreq < 400_000_000) { v.rxFreq = delta > 0 ? 400_000_000 : 174_000_000; v.txFreq = v.rxFreq; }
+        v.name = "";
+        applyVfo(v);
+    }
 
     public String reimportFromStock() {
         StringBuilder err = new StringBuilder();
