@@ -198,7 +198,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         mon.setOnClickListener(v -> { if (svc != null) svc.setMonitor(!mon.isOn()); });
         txt.setOnClickListener(v -> {
             if (svc == null) return;
-            if (!svc.captionsAvailable()) { android.widget.Toast.makeText(c, "google".equals(svc.captionEngine()) ? "Long-press TXT and enter a Google Cloud API key, or switch to the on-device engine" : "Install the DMR Transcription companion app for on-device captions, or long-press TXT to use Google Cloud", android.widget.Toast.LENGTH_LONG).show(); return; }
+            if (!svc.captionsAvailable()) { android.widget.Toast.makeText(c, "google".equals(svc.captionEngine()) ? "Long-press TXT and enter a Google Cloud API key, or switch to the on-device engine" : "Captions are not available right now", android.widget.Toast.LENGTH_LONG).show(); return; }
             svc.setCaptions(!txt.isOn());
         });
         txt.setOnLongClickListener(v -> {
@@ -252,11 +252,11 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
 
     private void pickCaptionModel() {
         if (svc == null) return;
-        int cur = 1; for (int i = 0; i < com.macdmr.radio.CaptionClient.MODELS.length; i++) if (com.macdmr.radio.CaptionClient.MODELS[i].equals(svc.captionModel())) cur = i;
-        new android.app.AlertDialog.Builder(getContext()).setTitle("Live-caption model").setSingleChoiceItems(com.macdmr.radio.CaptionClient.MODEL_LABELS, cur, null)
+        int cur = 1; for (int i = 0; i < com.macdmr.radio.VoskCaptions.MODELS.length; i++) if (com.macdmr.radio.VoskCaptions.MODELS[i].equals(svc.captionModel())) cur = i;
+        new android.app.AlertDialog.Builder(getContext()).setTitle("Live-caption model").setSingleChoiceItems(com.macdmr.radio.VoskCaptions.MODEL_LABELS, cur, null)
                 .setPositiveButton("Use", (d, w) -> {
                     int i = ((android.app.AlertDialog) d).getListView().getCheckedItemPosition();
-                    if (i >= 0) { svc.setCaptionModel(com.macdmr.radio.CaptionClient.MODELS[i]); android.widget.Toast.makeText(getContext(), "Switching model; it downloads once (see the Live captions notification)", android.widget.Toast.LENGTH_LONG).show(); }
+                    if (i >= 0) { svc.setCaptionModel(com.macdmr.radio.VoskCaptions.MODELS[i]); android.widget.Toast.makeText(getContext(), "Switching model; it downloads once and is kept across app updates", android.widget.Toast.LENGTH_LONG).show(); }
                 }).setNegativeButton("Cancel", null).show();
     }
 
