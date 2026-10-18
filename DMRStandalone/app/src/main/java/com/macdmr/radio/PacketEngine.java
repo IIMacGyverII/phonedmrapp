@@ -13,6 +13,9 @@ import com.macdmr.radio.pkt.DTMFDecoder;
 import com.macdmr.radio.pkt.KissTnc;
 import com.macdmr.radio.pkt.PacketStore;
 import com.macdmr.radio.pkt.SAMEDecoder;
+import com.macdmr.radio.pkt.SSTVEncoder;
+import com.macdmr.radio.pkt.SSTVMode;
+import com.macdmr.radio.pkt.SSTVReceiver;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -70,6 +73,53 @@ public final class PacketEngine {
     private DTMFDecoder dtmf;
     private SAMEDecoder same;
     private volatile long lastDtmfDigitMs;
+    // ---- SSTV ----
+    public interface SstvListener { void onSstv(String status, android.graphics.Bitmap live, int lines, int total, boolean complete); }
+    private volatile boolean sstvRx;
+    private SSTVReceiver sstv;
+    private volatile SstvListener sstvListener;
+    private volatile String sstvStatus = "idle";
+    private volatile android.graphics.Bitmap sstvLast;
+    private byte[] sstvBytes = new byte[8192];
+    public static final int SSTV_FREQ_HZ = 144_500_000;
+
+    public boolean sstvRx() { return sstvRx; }
+    public String sstvStatus() { return sstvStatus; }
+    public android.graphics.Bitmap sstvLast() { return sstvLast; }
+    public void setSstvListener(SstvListener l) { sstvListener = l; }
+    private void sstvPost(String st, android.graphics.Bitmap b, int lines, int total, boolean done) {
+        sstvStatus = st; if (b != null) sstvLast = b;
+        SstvListener l = sstvListener; if (l != null) new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> l.onSstv(st, b, lines, total, done));
+    }
+
+    public void setSstvRx(boolean on) {
+        sstvRx = on;
+        if (!on) { sstvPost("idle", null, 0, 0, false); return; }
+        if (sstv == null) {
+            sstv = SSTVReceiver.getInstance(host.context());
+            sstv.setVISDetectedCallback(m -> { host.event("\uD83D\uDCFA SSTV " + m.name + " detected"); sstvPost("receiving " + m.name, null, 0, m.height, false); });
+            sstv.setLineDecodeCallback((lines, total, snap) -> sstvPost("receiving " + lines + "/" + total, snap, lines, total, false));
+            sstv.setModeChangeCallback((o, n, k) -> sstvPost("mode changed to " + n.name, null, 0, n.height, false));
+            sstv.setImageDecodeCallback((img, m) -> { host.event("\uD83D\uDCFA SSTV picture received (" + m.name + ") \u2192 Download/DMR/SSTV"); host.notifyUser("SSTV picture received", m.name, false); sstvPost("picture complete (" + m.name + ")", img, m.height, m.height, true); });
+        }
+        sstv.reset();
+        sstvPost("listening for a VIS header", null, 0, 0, false);
+    }
+
+    /** Encode and transmit a picture (Robot 24 Color / 12 BW / 8 BW fit the 30 s limit). Returns an error or null. */
+    public String sendSstv(android.graphics.Bitmap bmp, int mode) {
+        if (bmp == null) return "No picture";
+        if (!SSTVEncoder.isSupported(mode)) return "Unsupported mode";
+        new Thread(() -> {
+            short[] pcm = SSTVEncoder.encode(bmp, mode);
+            int lead = SR * TX_LEAD_MS / 1000;
+            short[] src = new short[lead + pcm.length];
+            for (int i = 0; i < lead; i++) src[i] = (short) (30000 * Math.sin(2.0 * Math.PI * 1900 * i / SR));   // leader tone while the TX path settles
+            System.arraycopy(pcm, 0, src, lead, pcm.length);
+            host.transmitPcm(src, "SSTV " + SSTVEncoder.name(mode), () -> host.event("\uD83D\uDCFA Sent SSTV " + SSTVEncoder.name(mode)));
+        }, "sstv-encode").start();
+        return null;
+    }
     private volatile int lastAttnLevel;
 
     public PacketEngine(Host h) {
@@ -150,7 +200,12 @@ public final class PacketEngine {
                 if (same == null) same = new SAMEDecoder(SR, false, sameListener);
                 same.processAudio(mono, n);
             }
-            if (monitor || kiss.isActive() || passiveWanted()) {
+            if (sstvRx && sstv != null) {
+                if (sstvBytes.length < n * 2) sstvBytes = new byte[n * 2];
+                for (int i = 0, o = 0; i + 1 < n; i += 2) { sstvBytes[o++] = mono[i]; sstvBytes[o++] = mono[i + 1]; sstvBytes[o++] = mono[i]; sstvBytes[o++] = mono[i + 1]; }   // the receiver runs at 16 kHz (each 8 kHz sample twice, exactly the module's input)
+                sstv.processAudio(sstvBytes, n * 2);
+            }
+            if (!sstvRx && (monitor || kiss.isActive() || passiveWanted())) {
                 for (int i = 0; i + 1 < n && fill < WINDOW; i += 2) window[fill++] = (short) ((mono[i] & 0xFF) | (mono[i + 1] << 8));
                 if (fill >= WINDOW) {
                     long now = System.currentTimeMillis();
