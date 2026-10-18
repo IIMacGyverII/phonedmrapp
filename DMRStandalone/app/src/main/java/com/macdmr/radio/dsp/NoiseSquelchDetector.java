@@ -13,7 +13,7 @@ package com.macdmr.radio.dsp;
  * Soft SQ level (1 lenient … 9 strict) slides it. Level 0 disables (pass all). EMA-smoothed to ride
  * out voice sibilants (the only voice energy that reaches this band).
  *
- * <p>RX PCM is 8 kHz stereo 16-bit with L==R; takes the L sample of each 4-byte frame.
+ * <p>Input is 8 kHz mono 16-bit LE (the standalone app decimates the vendor stereo stream before DSP).
  */
 public final class NoiseSquelchDetector {
 
@@ -53,7 +53,7 @@ public final class NoiseSquelchDetector {
     /** Feed a raw RX buffer; signal()/highAmp() update each window. {@code level} is the Soft SQ level. */
     public void process(byte[] data, int length, int level) {
         if (length > data.length) length = data.length;
-        for (int i = 0; i + 1 < length; i += 4) {   // L sample per 4-byte stereo frame
+        for (int i = 0; i + 1 < length; i += 2) {   // 8 kHz mono 16-bit LE (the standalone RX stream; the module fed stereo L==R frames)
             int x = (short) ((data[i + 1] << 8) | (data[i] & 0xFF));
             for (int k = 0; k < HI.length; k++) { double s0 = x + c[k] * s1[k] - s2[k]; s2[k] = s1[k]; s1[k] = s0; }
             totalEnergy += (double) x * x;

@@ -21,7 +21,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
     public interface Host { void openHelp(); void openDiagnostics(); }
 
     private final TextView linkText, idText, profileText;
-    private final android.widget.CheckBox ownAtBoot, voiceBox, hwPttBox;
+    private final android.widget.CheckBox ownAtBoot, voiceBox, hwPttBox, volPttBox;
     private final TextView radioIdText;
     private RadioService svc;
     private Host host;
@@ -127,8 +127,18 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         data.addView(Theme.label(c, "Backups are the same five CSV files (Contacts, TG_Lists, Channels, Zones, DTMF) the DMRModHooks module and the OpenGD77 CPS fork use, in Download/DMR/DMR_Backups, so codeplugs move between all three.", 0xFF8A98A6, 12, false));
         TextView reimport = pill(c, "Re-import from the stock app", Theme.VFO);
         data.addView(reimport, new LayoutParams(bb));
-        reimport.setOnClickListener(v -> new android.app.AlertDialog.Builder(c).setTitle("Re-import?").setMessage("Replaces all channels, contacts, history and messages in this app with the stock app's current data.")
-                .setPositiveButton("Import", (dd, w) -> new Thread(() -> { final String r = svc.reimportFromStock(); post(() -> android.widget.Toast.makeText(c, r, android.widget.Toast.LENGTH_LONG).show()); }).start()).setNegativeButton("Cancel", null).show());
+        reimport.setOnClickListener(v -> new Thread(() -> {
+            final java.util.List<String> areas = svc.stockAreas();
+            post(() -> {
+                String[] names = new String[areas.size()]; for (int i = 0; i < names.length; i++) names[i] = areas.get(i).replace('_', ' ').toUpperCase(java.util.Locale.US);
+                new android.app.AlertDialog.Builder(c).setTitle("Import which stock area?").setItems(names, (d1, w1) -> new android.app.AlertDialog.Builder(c).setTitle("Re-import " + names[w1] + "?").setMessage("Replaces all channels, contacts, history and messages in this app with that area's current data from the stock app.")
+                        .setPositiveButton("Import", (dd, w) -> new Thread(() -> { final String r = svc.reimportFromStock(areas.get(w1)); post(() -> android.widget.Toast.makeText(c, r, android.widget.Toast.LENGTH_LONG).show()); }).start()).setNegativeButton("Cancel", null).show()).show();
+            });
+        }).start());
+        volPttBox = new android.widget.CheckBox(c); volPttBox.setText("Volume-up key transmits while the Intercom page is open");
+        volPttBox.setTextColor(0xFFC8D2DC); volPttBox.setTextSize(13); volPttBox.setButtonTintList(android.content.res.ColorStateList.valueOf(Theme.CYAN));
+        data.addView(volPttBox, new LayoutParams(bb));
+        volPttBox.setOnCheckedChangeListener((b, on) -> c.getSharedPreferences("radio", Context.MODE_PRIVATE).edit().putBoolean("volPtt", on).apply());
 
         // --- help / diagnostics ---
         LinearLayout more = section(body, "❓ Help & tools");
@@ -171,6 +181,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         ownAtBoot.setChecked(svc.ownAtBoot());
         voiceBox.setChecked(svc.voiceOn());
         hwPttBox.setChecked(svc.hwPtt());
+        volPttBox.setChecked(getContext().getSharedPreferences("radio", Context.MODE_PRIVATE).getBoolean("volPtt", false));
         radioIdText.setText("RadioID names: " + svc.radioId().status());
     }
 

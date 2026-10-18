@@ -19,7 +19,7 @@ package com.macdmr.radio.dsp;
  * ≥1.77 even under loud voice; the adjacent 103.5 Hz tone sat ~32 on the voice-ratio. Thresholds
  * 50/20 (voice) and 1.4/1.1 (adjacent) separate correct / adjacent / voice.
  *
- * <p>RX PCM is 8 kHz <b>stereo</b> 16-bit with L==R; takes the L sample of each 4-byte frame.
+ * <p>Input is 8 kHz mono 16-bit LE (the standalone app decimates the vendor stereo stream before DSP).
  */
 public final class CtcssDetector {
 
@@ -80,11 +80,11 @@ public final class CtcssDetector {
         for (int k = 0; k < OFFSETS.length; k++) { sO1[k] = 0; sO2[k] = 0; }
     }
 
-    /** Feed a raw RX buffer (8 kHz stereo 16-bit LE, L==R). present() updates each window. */
+    /** Feed 8 kHz mono 16-bit LE PCM. present() updates each window. */
     public void process(byte[] data, int length) {
         if (freq <= 0) return;
         if (length > data.length) length = data.length;
-        for (int i = 0; i + 1 < length; i += 4) {   // L sample per 4-byte stereo frame
+        for (int i = 0; i + 1 < length; i += 2) {   // 8 kHz mono 16-bit LE (the standalone RX stream; the module fed stereo L==R frames)
             int x = (short) ((data[i + 1] << 8) | (data[i] & 0xFF));
             double s0 = x + cT * sT1 - sT2; sT2 = sT1; sT1 = s0;
             for (int k = 0; k < OFFSETS.length; k++) {
