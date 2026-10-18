@@ -93,6 +93,25 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         voiceBox.setTextColor(0xFFC8D2DC); voiceBox.setTextSize(13); voiceBox.setButtonTintList(android.content.res.ColorStateList.valueOf(Theme.CYAN));
         data.addView(voiceBox, new LayoutParams(bb));
         voiceBox.setOnCheckedChangeListener((b, on) -> { if (svc != null && on != svc.voiceOn()) svc.setVoiceOn(on); });
+        LinearLayout brow = new LinearLayout(c); brow.setGravity(Gravity.CENTER);
+        TextView backup = pill(c, "Back up now", Theme.PKT), restore = pill(c, "Restore a backup", Theme.MON);
+        brow.addView(backup, new LayoutParams(bl)); brow.addView(restore, new LayoutParams(bl)); data.addView(brow);
+        backup.setOnClickListener(v -> new Thread(() -> {
+            try { java.io.File dir = com.macdmr.radio.Backup.export(svc.store()); post(() -> android.widget.Toast.makeText(c, "Backed up to Download/DMR/DMR_Backups/" + dir.getName(), android.widget.Toast.LENGTH_LONG).show()); }
+            catch (Throwable t) { post(() -> android.widget.Toast.makeText(c, "Backup failed: " + t.getMessage(), android.widget.Toast.LENGTH_LONG).show()); }
+        }).start());
+        restore.setOnClickListener(v -> {
+            final java.util.List<java.io.File> list = com.macdmr.radio.Backup.backups();
+            if (list.isEmpty()) { android.widget.Toast.makeText(c, "No backups in Download/DMR/DMR_Backups (make one here, or copy a folder with the five CSV files there)", android.widget.Toast.LENGTH_LONG).show(); return; }
+            String[] names = new String[list.size()]; for (int i = 0; i < names.length; i++) names[i] = list.get(i).getName();
+            new android.app.AlertDialog.Builder(c).setTitle("Restore which backup?").setItems(names, (dd, w) -> new android.app.AlertDialog.Builder(c).setTitle("Restore " + names[w] + "?")
+                    .setMessage("Replaces every channel, contact and zone in this app with the backup (OpenGD77 CPS exports work too). History, messages and settings are kept.")
+                    .setPositiveButton("Restore", (d3, w3) -> new Thread(() -> {
+                        try { final String r = com.macdmr.radio.Backup.restore(svc.store(), list.get(w)); svc.selectChannel(svc.store().activeNumber()); post(() -> android.widget.Toast.makeText(c, r, android.widget.Toast.LENGTH_LONG).show()); }
+                        catch (Throwable t) { post(() -> android.widget.Toast.makeText(c, "Restore failed: " + t.getMessage(), android.widget.Toast.LENGTH_LONG).show()); }
+                    }).start()).setNegativeButton("Cancel", null).show()).show();
+        });
+        data.addView(Theme.label(c, "Backups are the same five CSV files (Contacts, TG_Lists, Channels, Zones, DTMF) the DMRModHooks module and the OpenGD77 CPS fork use, in Download/DMR/DMR_Backups, so codeplugs move between all three.", 0xFF8A98A6, 12, false));
         TextView reimport = pill(c, "Re-import from the stock app", Theme.VFO);
         data.addView(reimport, new LayoutParams(bb));
         reimport.setOnClickListener(v -> new android.app.AlertDialog.Builder(c).setTitle("Re-import?").setMessage("Replaces all channels, contacts, history and messages in this app with the stock app's current data.")
