@@ -9,6 +9,20 @@ your phone can tell us. Nothing below changes anything on the phone; it only rea
 (Settings → About phone → tap *Build number* 7× → Developer options → *USB debugging*), and a USB cable.
 Root is **not** required for steps 1–3. If the phone is rooted, step 4 adds a little more.
 
+## 0. The easy way: let the DMR Radio app do it
+
+Install the standalone **DMR Radio** app (`DMRRadio-*.apk` from the releases page). On a phone it does not know it
+starts in discovery mode (it touches nothing radio-related) and opens the **Device** tab:
+
+1. **Generate device report** — collects everything in sections 1–4 below automatically, copies the stock
+   walkie-talkie app's APK into the report, and saves it under `Download/DMR/DeviceReport/`.
+2. **Capture the PTT key (10 s)** — press the side button a few times; what the phone sends is recorded.
+3. If the phone is rooted (Magisk): **Radio probe (root)** — finds the serial ports, derives the SELinux rules
+   from their labels, sends the module's version query at several speeds and sniffs for a PCM audio port.
+4. **Share last report** — attach the zip to a new issue. Done.
+
+The manual steps below give the same information with `adb`, for phones where the app cannot be installed.
+
 ## 1. The stock walkie-talkie app (APK)
 
 Find its package name, then pull the APK:

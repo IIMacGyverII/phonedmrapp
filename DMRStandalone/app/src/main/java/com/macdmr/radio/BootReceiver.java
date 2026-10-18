@@ -15,6 +15,7 @@ public class BootReceiver extends BroadcastReceiver {
     @Override public void onReceive(final Context ctx, Intent intent) {
         if (intent == null || !Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) return;
         final boolean own = ctx.getSharedPreferences("radio", Context.MODE_PRIVATE).getBoolean("ownAtBoot", false);
+        if (!DeviceProfile.detect().supported) return;
         if (own) {
             Intent svc = new Intent(ctx, RadioService.class).putExtra("bringUp", true);
             if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(svc); else ctx.startService(svc);

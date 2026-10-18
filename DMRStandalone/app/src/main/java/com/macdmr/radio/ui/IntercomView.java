@@ -273,6 +273,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         if (tx) { headline.setText("🔴 Transmitting"); headline.setTextColor(Theme.RED); }
         else if (rx) { headline.setText("📻 Receiving..."); headline.setTextColor(Theme.GREEN); }
         else if (svc != null && "no root".equals(svc.link())) { headline.setText("🔒 Root needed — allow in Magisk, then Device → Bring radio up"); headline.setTextColor(Theme.AMBER); }
+        else if (svc != null && "unsupported".equals(svc.link())) { headline.setText("📱 This phone is not supported yet — Device → Device report"); headline.setTextColor(Theme.AMBER); }
         else { headline.setText(svc != null && svc.isReady() ? "📻 Ready" : "⏳ " + (svc != null ? svc.link() : "")); headline.setTextColor(Theme.GREEN); }
         ptt.setState(tx ? PttButton.State.TX : rx ? PttButton.State.RX : (svc != null && svc.isReady() && svc.txInhibited() ? PttButton.State.BUSY : PttButton.State.IDLE));
         board.isReceiving = rx;
