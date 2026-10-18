@@ -51,6 +51,7 @@ public class MainActivity extends AppCompatActivity {
             intercom.attach(svc); diagnostics.attach(svc); channels.attach(svc); contacts.attach(svc); messages.attach(svc); device.attach(svc);
             if (!svc.isReady()) svc.bringUp();
             ui.post(rssiTick);
+            if (!svc.profile().supported && !getSharedPreferences("radio", MODE_PRIVATE).getBoolean("unsupportedShown", false)) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("unsupportedShown", true).apply(); show(4); }
         }
         @Override public void onServiceDisconnected(ComponentName n) { svc = null; }
     };
@@ -156,6 +157,7 @@ public class MainActivity extends AppCompatActivity {
     /** Volume-up as PTT (Device tab option) while the Intercom page is showing. */
     private boolean volPttDown;
     @Override public boolean dispatchKeyEvent(android.view.KeyEvent e) {
+        java.util.function.Consumer<android.view.KeyEvent> cap = DeviceReport.keyCapture; if (cap != null) { cap.accept(e); return true; }
         if (e.getKeyCode() == android.view.KeyEvent.KEYCODE_VOLUME_UP && tab == 0 && svc != null && getSharedPreferences("radio", MODE_PRIVATE).getBoolean("volPtt", false)) {
             if (e.getAction() == android.view.KeyEvent.ACTION_DOWN) { if (e.getRepeatCount() == 0 && !volPttDown) { volPttDown = true; svc.ptt(true); } return true; }
             if (e.getAction() == android.view.KeyEvent.ACTION_UP) { if (volPttDown) { volPttDown = false; svc.ptt(false); } return true; }

@@ -1,0 +1,203 @@
+package com.macdmr.radio;
+
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.Environment;
+import android.view.KeyEvent;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+/**
+ * Everything we need to write a device profile for a phone we have never seen, gathered on the phone itself:
+ * build facts, serial ports, the sysfs nodes a radio module would use, the stock walkie-talkie app (its APK is
+ * copied into the report), vendor libraries, framework jars, init scripts, running services — and, with root,
+ * the SELinux labels, process contexts and the stock app's receivers (which reveal the PTT key broadcasts).
+ * Output: {@code Download/DMR/DeviceReport/<model>_<time>/report.txt} plus the copied APKs, and one zip of it
+ * all to share straight into a GitHub issue.
+ */
+public final class DeviceReport {
+    public interface Progress { void step(String s); }
+    private static final Pattern RADIO = Pattern.compile("(?i)intercom|interphone|walkie|dmr|ptt|quickchat|chamsion|prize|talkie|radio|sy88|uart|serial|tiny");
+    private static final Pattern NODES = Pattern.compile("(?i)dmr|intercom|walkie|ptt|uart|radio|sy88|interphone|gpio");
+
+    private DeviceReport() { }
+
+    public static File reportRoot() { return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "DMR/DeviceReport"); }
+
+    /** Volatile hook the activity feeds hardware key events into while a PTT capture runs. */
+    public static volatile Consumer<KeyEvent> keyCapture;
+
+    public static File generate(Context c, Progress p) throws Exception {
+        String tag = (Build.MANUFACTURER + "_" + Build.MODEL).replaceAll("[^A-Za-z0-9._-]+", "_");
+        File dir = new File(reportRoot(), tag + "_" + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date()));
+        if (!dir.mkdirs() && !dir.isDirectory()) throw new Exception("cannot create " + dir);
+        StringBuilder r = new StringBuilder();
+        boolean root = suPresent() && RootSetup.haveRoot();
+
+        p.step("Phone");
+        h(r, "DMR Radio device report " + BuildConfig.VERSION_NAME + "  " + new Date());
+        kv(r, "manufacturer", Build.MANUFACTURER); kv(r, "brand", Build.BRAND); kv(r, "model", Build.MODEL); kv(r, "device", Build.DEVICE); kv(r, "product", Build.PRODUCT);
+        kv(r, "board", Build.BOARD); kv(r, "hardware", Build.HARDWARE); kv(r, "fingerprint", Build.FINGERPRINT); kv(r, "display", Build.DISPLAY);
+        kv(r, "android", Build.VERSION.RELEASE + " (SDK " + Build.VERSION.SDK_INT + ", security patch " + Build.VERSION.SECURITY_PATCH + ")");
+        kv(r, "abis", String.join(",", Build.SUPPORTED_ABIS)); kv(r, "kernel", System.getProperty("os.version"));
+        kv(r, "selinux", cat("/sys/fs/selinux/enforce").trim().equals("1") ? "enforcing" : cat("/sys/fs/selinux/enforce").trim().equals("0") ? "permissive" : "unknown");
+        kv(r, "su present", String.valueOf(suPresent())); kv(r, "root granted to this app", String.valueOf(root));
+        kv(r, "magisk", root ? RootSetup.run("magisk -v 2>/dev/null; magisk -V 2>/dev/null").replace('\n', ' ') : "n/a");
+        for (String prop : new String[] { "ro.product.model", "ro.board.platform", "ro.hardware", "ro.build.version.sdk", "ro.vendor.build.fingerprint", "persist.sys.usb.config", "ro.boot.verifiedbootstate" }) kv(r, prop, getprop(prop));
+        DeviceProfile dp = DeviceProfile.detect();
+        kv(r, "profile detected", dp.supported ? dp.name : "none (this is an unsupported phone)");
+
+        p.step("Serial ports");
+        h(r, "Serial ports (File API)");
+        File[] dev = new File("/dev").listFiles();
+        if (dev != null) for (File f : dev) if (f.getName().matches("tty(S|MT|HS|USB|GS|ACM)\\d*")) r.append(String.format(Locale.US, "  %-14s read=%s write=%s\n", f.getName(), f.canRead(), f.canWrite()));
+        r.append(cat("/proc/tty/drivers"));
+        if (root) { h(r, "Serial ports (root: labels, drivers)"); r.append(RootSetup.run("ls -lZ /dev/ttyS* /dev/ttyMT* /dev/ttyHS* /dev/ttyUSB* /dev/ttyGS* 2>/dev/null; echo; cat /proc/tty/drivers; echo; for t in /dev/ttyS*; do echo \"$t: $(stty -F $t -a 2>&1 | head -1)\"; done")).append('\n'); }
+
+        p.step("Radio module nodes");
+        h(r, "Platform devices that look like a radio module (/sys/devices/platform)");
+        File[] plat = new File("/sys/devices/platform").listFiles();
+        if (plat != null) for (File d : plat) if (NODES.matcher(d.getName()).find()) {
+            r.append("  ").append(d.getName()).append('\n');
+            File[] fs = d.listFiles();
+            if (fs != null) for (File f : fs) if (f.isFile()) r.append(String.format(Locale.US, "      %-24s r=%s w=%s  %s\n", f.getName(), f.canRead(), f.canWrite(), f.canRead() ? cat(f.getAbsolutePath()).trim().replace('\n', ' ').substring(0, Math.min(80, cat(f.getAbsolutePath()).trim().length())) : ""));
+        }
+        if (root) r.append(RootSetup.run("for d in /sys/devices/platform/*dmr* /sys/devices/platform/*intercom* /sys/devices/platform/*walkie* /sys/devices/platform/*ptt* /sys/devices/platform/*sy88*; do [ -d \"$d\" ] && echo \"--- $d\" && ls -lZ \"$d\" && for f in \"$d\"/*; do [ -f \"$f\" ] && printf '%s = ' \"$f\" && (head -c 80 \"$f\" 2>&1; echo); done; done 2>/dev/null")).append('\n');
+        h(r, "GPIO / misc nodes"); r.append(root ? RootSetup.run("ls -lZ /dev/ | grep -iE 'dmr|intercom|walkie|ptt|gpio|misc' ; ls /sys/class/gpio 2>/dev/null | head -40") : ls("/sys/class/gpio", null)).append('\n');
+
+        p.step("Walkie-talkie apps");
+        h(r, "Installed apps that look like the stock walkie-talkie app");
+        PackageManager pm = c.getPackageManager();
+        List<String> candidates = new ArrayList<>();
+        for (PackageInfo pi : pm.getInstalledPackages(PackageManager.GET_PERMISSIONS | PackageManager.GET_RECEIVERS | PackageManager.GET_SERVICES)) {
+            if (pi.packageName.equals(c.getPackageName()) || !RADIO.matcher(pi.packageName).find()) continue;
+            if (pi.packageName.matches("(?i).*(android\\.|google\\.|qualcomm|mediatek|mtk).*") && !pi.packageName.matches("(?i).*(intercom|interphone|walkie|dmr|ptt|quickchat).*")) continue;
+            ApplicationInfo ai = pi.applicationInfo; boolean sys = (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+            r.append(String.format(Locale.US, "  %s  v%s  uid=%d  system=%s  shared=%s\n      apk=%s\n      nativeLibs=%s\n", pi.packageName, pi.versionName, ai.uid, sys, pi.sharedUserId, ai.sourceDir, ai.nativeLibraryDir));
+            r.append("      libs: ").append(ls(ai.nativeLibraryDir, null)).append('\n');
+            if (pi.requestedPermissions != null) { StringBuilder pp = new StringBuilder(); for (String q : pi.requestedPermissions) if (!q.startsWith("android.permission.") || q.matches(".*(SERIAL|SYSTEM_ALERT|RECORD_AUDIO|MODIFY_AUDIO|WRITE_SECURE|DEVICE_POWER|INJECT|BROADCAST).*")) pp.append(q).append(' '); r.append("      permissions: ").append(pp).append('\n'); }
+            if (pi.receivers != null) { r.append("      receivers: "); for (android.content.pm.ActivityInfo x : pi.receivers) r.append(x.name).append(' '); r.append('\n'); }
+            if (pi.services != null) { r.append("      services: "); for (android.content.pm.ServiceInfo x : pi.services) r.append(x.name).append(' '); r.append('\n'); }
+            if (pi.packageName.matches("(?i).*(intercom|interphone|walkie|dmr|ptt|quickchat|chamsion|prize|talkie).*")) candidates.add(pi.packageName);
+        }
+        for (String pkg : candidates) {
+            try {
+                ApplicationInfo ai = pm.getApplicationInfo(pkg, 0);
+                List<String> apks = new ArrayList<>(); apks.add(ai.sourceDir); if (ai.splitSourceDirs != null) for (String s : ai.splitSourceDirs) apks.add(s);
+                for (String a : apks) { File src = new File(a); File dst = new File(dir, pkg + "_" + src.getName()); p.step("Copying " + pkg); if (copy(src, dst)) r.append("  copied ").append(dst.getName()).append(" (").append(dst.length() / 1024).append(" kB)\n"); else if (root) { RootSetup.run("cp " + a + " " + dst.getAbsolutePath() + " && chmod 644 " + dst.getAbsolutePath()); r.append("  copied with root ").append(dst.getName()).append('\n'); } }
+            } catch (Throwable t) { r.append("  could not copy ").append(pkg).append(": ").append(t).append('\n'); }
+            if (root) { h(r, "dumpsys package " + pkg + " (root)"); r.append(RootSetup.run("dumpsys package " + pkg + " | grep -vE '^\\s*$' | head -400")).append('\n'); }
+        }
+
+        p.step("System files");
+        h(r, "Framework / vendor files of interest");
+        for (String d : new String[] { "/system/framework", "/system_ext/framework", "/vendor/framework", "/system/lib64", "/system/lib", "/vendor/lib64", "/vendor/lib", "/system/etc/init", "/vendor/etc/init", "/system/etc/permissions", "/vendor/etc/permissions", "/system/priv-app", "/system/app", "/vendor/app", "/product/app", "/product/priv-app", "/system_ext/priv-app" })
+            r.append(String.format(Locale.US, "  %-26s %s\n", d, ls(d, RADIO)));
+        h(r, "Binder services"); r.append(exec("service list")).append('\n');
+        h(r, "Audio devices"); r.append(cat("/proc/asound/cards")).append(ls("/dev/snd", null)).append('\n');
+
+        if (root) {
+            p.step("Root extras");
+            h(r, "Processes with a radio-looking name (root)"); r.append(RootSetup.run("ps -AZ | grep -iE 'intercom|interphone|walkie|dmr|ptt|quickchat|tiny|serial|uart' | grep -v grep")).append('\n');
+            h(r, "Who holds the serial ports (root)"); r.append(RootSetup.run("for p in /proc/[0-9]*; do ls -l $p/fd 2>/dev/null | grep -q '/dev/tty' && echo \"$(cat $p/comm) ($(basename $p)): $(ls -l $p/fd 2>/dev/null | grep -o '/dev/tty[A-Za-z0-9]*' | sort -u | tr '\\n' ' ')\"; done")).append('\n');
+            h(r, "Recent logcat lines mentioning the radio (root)"); r.append(RootSetup.run("logcat -d -t 3000 2>/dev/null | grep -iE 'ptt|intercom|interphone|walkie|dmr|serial|tty|tiny' | tail -120")).append('\n');
+            h(r, "SELinux denials seen so far (root)"); r.append(RootSetup.run("logcat -d -b all 2>/dev/null | grep -i 'avc: denied' | tail -40; dmesg 2>/dev/null | grep -i 'avc: denied' | tail -40")).append('\n');
+        } else {
+            h(r, "Root"); r.append("  not available — with Magisk root the report also lists SELinux labels, which process holds the serial ports, and the stock app's receivers (the PTT key broadcasts).\n");
+        }
+
+        File txt = new File(dir, "report.txt");
+        try (OutputStream o = new FileOutputStream(txt)) { o.write(r.toString().getBytes("UTF-8")); }
+        p.step("Zipping");
+        File zip = new File(new File(c.getCacheDir(), "share"), dir.getName() + ".zip"); zip.getParentFile().mkdirs();
+        try (ZipOutputStream z = new ZipOutputStream(new FileOutputStream(zip))) {
+            File[] fs = dir.listFiles();
+            if (fs != null) for (File f : fs) { z.putNextEntry(new ZipEntry(f.getName())); try (InputStream in = new FileInputStream(f)) { byte[] b = new byte[65536]; int n; while ((n = in.read(b)) > 0) z.write(b, 0, n); } z.closeEntry(); }
+        }
+        return zip;
+    }
+
+    /** Append a section to the newest report folder (PTT capture, radio probe). */
+    public static File append(String title, String body) {
+        File[] fs = reportRoot().listFiles(); if (fs == null || fs.length == 0) return null;
+        File newest = null; for (File f : fs) if (f.isDirectory() && (newest == null || f.lastModified() > newest.lastModified())) newest = f;
+        if (newest == null) return null;
+        try (OutputStream o = new FileOutputStream(new File(newest, "report.txt"), true)) { o.write(("\n\n==== " + title + " ====\n" + body + "\n").getBytes("UTF-8")); } catch (Throwable ignored) { }
+        return newest;
+    }
+
+    /** Re-zip the newest report folder (after appends) and return the zip. */
+    public static File zipNewest(Context c) throws Exception {
+        File[] fs = reportRoot().listFiles(); File newest = null;
+        if (fs != null) for (File f : fs) if (f.isDirectory() && (newest == null || f.lastModified() > newest.lastModified())) newest = f;
+        if (newest == null) throw new Exception("no report yet");
+        File zip = new File(new File(c.getCacheDir(), "share"), newest.getName() + ".zip"); zip.getParentFile().mkdirs();
+        try (ZipOutputStream z = new ZipOutputStream(new FileOutputStream(zip))) {
+            File[] in = newest.listFiles();
+            if (in != null) for (File f : in) { z.putNextEntry(new ZipEntry(f.getName())); try (InputStream i = new FileInputStream(f)) { byte[] b = new byte[65536]; int n; while ((n = i.read(b)) > 0) z.write(b, 0, n); } z.closeEntry(); }
+        }
+        return zip;
+    }
+
+    public static void share(Context c, File zip) {
+        android.net.Uri u = androidx.core.content.FileProvider.getUriForFile(c, c.getPackageName() + ".files", zip);
+        Intent i = new Intent(Intent.ACTION_SEND).setType("application/zip").putExtra(Intent.EXTRA_STREAM, u).putExtra(Intent.EXTRA_SUBJECT, "DMR Radio device report: " + Build.MANUFACTURER + " " + Build.MODEL)
+                .putExtra(Intent.EXTRA_TEXT, "Device report for a DMR phone, generated by the DMR Radio app. Attach it to a GitHub issue at https://github.com/IIMacGyverII/phonedmrapp/issues").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        c.startActivity(Intent.createChooser(i, "Share the device report").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    }
+
+    /**
+     * PTT key capture: for {@code seconds}, record every hardware key the activity sees, every input event (root,
+     * getevent), and every broadcast/log line that mentions ptt/intercom. The user presses the side button meanwhile.
+     */
+    private static final String[] PTT_ACTIONS = { "com.interphone.ptt.down", "com.interphone.ptt.up", "com.android.intent.ptt.down", "com.android.intent.ptt.up", "android.intent.action.PTT.down", "android.intent.action.PTT.up", "android.intent.action.PTT", "com.runbo.ptt.key.down", "com.runbo.ptt.key.up", "com.android.action.ptt.down", "com.android.action.ptt.up", "android.intent.action.ptt.down", "android.intent.action.ptt.up", "com.sonim.intent.action.PTT_KEY_DOWN", "com.sonim.intent.action.PTT_KEY_UP", "com.kyocera.android.intent.action.PTT_BUTTON", "android.intent.action.PTT_BUTTON_DOWN", "android.intent.action.PTT_BUTTON_UP", "com.zello.ptt.down", "com.zello.ptt.up" };
+
+    public static String captureKeys(Context c, int seconds) {
+        final StringBuilder keys = new StringBuilder();
+        final android.content.BroadcastReceiver br = new android.content.BroadcastReceiver() { @Override public void onReceive(Context ctx, Intent i) { keys.append("  broadcast ").append(i.getAction()).append(i.getExtras() != null ? " extras=" + i.getExtras() : "").append('\n'); } };
+        android.content.IntentFilter f = new android.content.IntentFilter(); for (String a : PTT_ACTIONS) f.addAction(a);
+        try { if (Build.VERSION.SDK_INT >= 33) c.registerReceiver(br, f, Context.RECEIVER_EXPORTED); else c.registerReceiver(br, f); } catch (Throwable ignored) { }
+        keyCapture = e -> keys.append(String.format(Locale.US, "  key %s code=%d scan=%d device=%d flags=0x%x\n", e.getAction() == KeyEvent.ACTION_DOWN ? "DOWN" : "UP  ", e.getKeyCode(), e.getScanCode(), e.getDeviceId(), e.getFlags()));
+        boolean root = suPresent() && RootSetup.haveRoot();
+        String events = "", logs = "";
+        try {
+            if (root) {
+                RootSetup.run("logcat -c");
+                events = RootSetup.run("timeout " + seconds + " getevent -lt 2>&1 | grep -v 'SYN_REPORT' | head -200");
+                logs = RootSetup.run("logcat -d 2>/dev/null | grep -iE 'ptt|intercom|interphone|walkie|KeyEvent|keycode' | head -80");
+            } else Thread.sleep(seconds * 1000L);
+        } catch (Throwable ignored) { }
+        keyCapture = null;
+        try { c.unregisterReceiver(br); } catch (Throwable ignored) { }
+        return "Activity key events and known PTT broadcasts:\n" + (keys.length() == 0 ? "  (none reached the app)\n" : keys) + "\nInput events (root getevent):\n" + (events.isEmpty() ? "  (n/a)\n" : events + "\n") + "\nLog lines during the capture (root):\n" + (logs.isEmpty() ? "  (n/a)\n" : logs + "\n");
+    }
+
+    // ---- helpers ----
+    private static void h(StringBuilder r, String s) { r.append("\n==== ").append(s).append(" ====\n"); }
+    private static void kv(StringBuilder r, String k, String v) { r.append(String.format(Locale.US, "  %-28s %s\n", k, v == null ? "" : v.trim())); }
+    private static boolean suPresent() { for (String p : new String[] { "/system/bin/su", "/system/xbin/su", "/sbin/su", "/data/adb/magisk", "/debug_ramdisk/su" }) if (new File(p).exists()) return true; return false; }
+    static String cat(String path) { try (BufferedReader b = new BufferedReader(new InputStreamReader(new FileInputStream(path)))) { StringBuilder s = new StringBuilder(); String l; int n = 0; while ((l = b.readLine()) != null && n++ < 200) s.append(l).append('\n'); return s.toString(); } catch (Throwable t) { return ""; } }
+    static String ls(String dir, Pattern filter) { File[] fs = dir == null ? null : new File(dir).listFiles(); if (fs == null) return "(not readable)"; StringBuilder s = new StringBuilder(); for (File f : fs) if (filter == null || filter.matcher(f.getName()).find()) s.append(f.getName()).append(' '); return s.length() == 0 ? "-" : s.toString(); }
+    static String getprop(String k) { return exec("getprop " + k).trim(); }
+    static String exec(String cmd) { try { Process p = new ProcessBuilder("sh", "-c", cmd).redirectErrorStream(true).start(); BufferedReader b = new BufferedReader(new InputStreamReader(p.getInputStream())); StringBuilder s = new StringBuilder(); String l; int n = 0; while ((l = b.readLine()) != null && n++ < 400) s.append(l).append('\n'); p.waitFor(); return s.toString(); } catch (Throwable t) { return "(" + t.getMessage() + ")"; } }
+    private static boolean copy(File src, File dst) { try (InputStream i = new FileInputStream(src); OutputStream o = new FileOutputStream(dst)) { byte[] b = new byte[65536]; int n; while ((n = i.read(b)) > 0) o.write(b, 0, n); return true; } catch (Throwable t) { return false; } }
+}

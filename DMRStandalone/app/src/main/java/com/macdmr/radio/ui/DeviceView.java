@@ -64,6 +64,30 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         ownAtBoot.setOnCheckedChangeListener((b, on) -> { if (svc != null) svc.setOwnAtBoot(on); });
         link.addView(Theme.label(c, "This app needs root (Magisk) to reach the radio's serial port. While it owns the radio the stock walkie-talkie app is paused and its icon is hidden; \"Hand back\" restores it. The Magisk module makes the required SELinux rules survive a reboot so the app can start on its own; with it installed, the radio can be owned straight from boot.", 0xFF8A98A6, 12, false));
 
+        // --- device report (any phone) ---
+        LinearLayout rep = section(body, "\uD83E\uDDEA Device report");
+        rep.addView(Theme.label(c, "For a phone that has no profile yet, or to help debug one: gathers the facts a profile needs (serial ports, radio-module nodes, the stock walkie-talkie app and its APK, vendor libraries, framework jars, services; with root also SELinux labels and the PTT key broadcasts), saves it under Download/DMR/DeviceReport and offers to share the zip to a GitHub issue. Nothing on the phone is changed.", 0xFF8A98A6, 12, false));
+        LinearLayout rrow = new LinearLayout(c); rrow.setGravity(Gravity.CENTER);
+        TextView gen = pill(c, "Generate device report", Theme.PKT), share = pill(c, "Share last report", Theme.SOFTSQ);
+        rrow.addView(gen, new LayoutParams(bl)); rrow.addView(share, new LayoutParams(bl)); rep.addView(rrow);
+        LinearLayout rrow2 = new LinearLayout(c); rrow2.setGravity(Gravity.CENTER);
+        TextView keys = pill(c, "Capture the PTT key (10 s)", Theme.VFO), probe = pill(c, "Radio probe (root)", Theme.MON);
+        rrow2.addView(keys, new LayoutParams(bl)); rrow2.addView(probe, new LayoutParams(bl)); rep.addView(rrow2);
+        gen.setOnClickListener(v -> {
+            final android.app.AlertDialog pd = new android.app.AlertDialog.Builder(c).setTitle("Device report").setMessage("Starting\u2026").setCancelable(false).create(); pd.show();
+            new Thread(() -> {
+                try { final java.io.File zip = com.macdmr.radio.DeviceReport.generate(c, s -> post(() -> pd.setMessage(s + "\u2026"))); post(() -> { pd.dismiss(); new android.app.AlertDialog.Builder(c).setTitle("Report ready").setMessage("Saved under Download/DMR/DeviceReport. If the phone has a side PTT key, run \"Capture the PTT key\" and, with root, the radio probe, then share the zip.").setPositiveButton("Share now", (dd, w) -> com.macdmr.radio.DeviceReport.share(c, zip)).setNegativeButton("Later", null).show(); }); }
+                catch (Throwable t) { post(() -> { pd.dismiss(); android.widget.Toast.makeText(c, "Report failed: " + t.getMessage(), android.widget.Toast.LENGTH_LONG).show(); }); }
+            }).start();
+        });
+        share.setOnClickListener(v -> new Thread(() -> { try { final java.io.File zip = com.macdmr.radio.DeviceReport.zipNewest(c); post(() -> com.macdmr.radio.DeviceReport.share(c, zip)); } catch (Throwable t) { post(() -> android.widget.Toast.makeText(c, "No report yet: generate one first", android.widget.Toast.LENGTH_LONG).show()); } }).start());
+        keys.setOnClickListener(v -> {
+            final android.app.AlertDialog pd = new android.app.AlertDialog.Builder(c).setTitle("Press the PTT key now").setMessage("Press and release the phone\'s side PTT button a few times within the next 10 seconds. Everything the phone reports for it is recorded.").setCancelable(false).create(); pd.show();
+            new Thread(() -> { final String r = com.macdmr.radio.DeviceReport.captureKeys(c, 10); final java.io.File dir = com.macdmr.radio.DeviceReport.append("PTT key capture", r); post(() -> { pd.dismiss(); android.widget.Toast.makeText(c, dir == null ? "Captured, but generate a report first so it can be saved" : "Saved to the report", android.widget.Toast.LENGTH_LONG).show(); }); }).start();
+        });
+        probe.setOnClickListener(v -> new android.app.AlertDialog.Builder(c).setTitle("Radio probe").setMessage("Needs Magisk root. Reads the serial ports\' SELinux labels, derives and applies the rules for this session, sends the module\'s version query on each port at several speeds, reads the power node and sniffs for a PCM stream. The stock walkie-talkie app should be closed. Also pulse the power node?")
+                .setPositiveButton("Probe", (dd, w) -> runProbe(false)).setNeutralButton("Probe + power pulse", (dd, w) -> runProbe(true)).setNegativeButton("Cancel", null).show());
+
         // --- identity ---
         LinearLayout id = section(body, "🆔 Your DMR ID");
         idText = Theme.label(c, "", Theme.CYAN, 15, true); id.addView(idText);
@@ -152,6 +176,16 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         more.addView(Theme.label(c, "DMR Radio " + com.macdmr.radio.BuildConfig.VERSION_NAME + " — the standalone edition of DMRModHooks. Same radio, no LSPosed.", 0xFF8A98A6, 12, false));
     }
 
+    private void runProbe(boolean pulse) {
+        final Context c = getContext();
+        final android.app.AlertDialog pd = new android.app.AlertDialog.Builder(c).setTitle("Radio probe").setMessage("Starting\u2026").setCancelable(false).create(); pd.show();
+        new Thread(() -> {
+            final String r = com.macdmr.radio.RadioProbe.run(s -> post(() -> pd.setMessage(s + "\u2026")), pulse);
+            final java.io.File dir = com.macdmr.radio.DeviceReport.append("Radio probe", r);
+            post(() -> { pd.dismiss(); new android.app.AlertDialog.Builder(c).setTitle("Radio probe").setMessage((dir == null ? "(generate a report first so this is saved)\n\n" : "") + (r.length() > 3000 ? r.substring(0, 3000) + "\u2026" : r)).setPositiveButton("OK", null).show(); });
+        }).start();
+    }
+
     private LinearLayout section(LinearLayout parent, String title) {
         Context c = getContext(); float d = Theme.dp(c);
         LinearLayout s = new LinearLayout(c); s.setOrientation(VERTICAL);
@@ -176,7 +210,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         if (svc == null) return;
         profileText.setText(svc.profile().name + "  ·  " + svc.profile().controlPort + "  ·  audio " + (svc.profile().audio == com.macdmr.radio.DeviceProfile.Audio.TINY_SERVICE ? "vendor service" : "UART PCM"));
         String l = svc.link();
-        linkText.setText("ready".equals(l) ? "✅ This app owns the radio" : "no root".equals(l) ? "🔒 Root not granted (Magisk → Superuser)" : "stopped".equals(l) ? "⏸ Stock app owns the radio" : "⏳ " + l);
+        linkText.setText("ready".equals(l) ? "✅ This app owns the radio" : "no root".equals(l) ? "🔒 Root not granted (Magisk → Superuser)" : "stopped".equals(l) ? "⏸ Stock app owns the radio" : "unsupported".equals(l) ? "📱 No profile for this phone yet — make a device report below" : "⏳ " + l);
         idText.setText("ID " + svc.localId());
         ownAtBoot.setChecked(svc.ownAtBoot());
         voiceBox.setChecked(svc.voiceOn());

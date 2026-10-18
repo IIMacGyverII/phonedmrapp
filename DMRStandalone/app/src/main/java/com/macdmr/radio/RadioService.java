@@ -241,7 +241,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     // ---- the phone's hardware PTT key: the framework broadcasts the profile's down/up actions ----
     private android.content.BroadcastReceiver pttKey;
     private void registerHardwarePtt() {
-        if (profile.pttActions == null || profile.pttActions.length < 2) return;
+        if (!profile.supported || profile.pttActions == null || profile.pttActions.length < 2) return;
         pttKey = new android.content.BroadcastReceiver() {
             @Override public void onReceive(android.content.Context c, Intent i) {
                 String a = i.getAction(); if (a == null) return;
@@ -270,6 +270,7 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     /** Bring the radio up: policy (root), stock app off, UART, power, channel, RX audio. Runs on a worker. */
     public void bringUp() {
+        if (!profile.supported) { setLink("unsupported"); log("This phone has no device profile yet. Device tab → Generate device report, then share it on the project's GitHub issues."); return; }
         new Thread(() -> {
             try {
                 setLink("root");
