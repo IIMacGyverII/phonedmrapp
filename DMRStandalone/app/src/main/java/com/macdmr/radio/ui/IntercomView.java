@@ -141,6 +141,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         LayoutParams hh = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); hh.bottomMargin = dp4;
         infoPanel.addView(historyHeader, hh);
         historyText = Theme.label(c, "", Theme.CYAN2, 11, false); infoPanel.addView(historyText);
+        infoPanel.setClickable(true); infoPanel.setOnClickListener(v -> { if (svc != null) LastHeardDialog.show(c, svc); });
         FrameLayout.LayoutParams ipl = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.START);
         ipl.topMargin = ipl.leftMargin = ipl.rightMargin = dp8;
         panel.addView(infoPanel, ipl);
@@ -188,7 +189,10 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
             if (!svc.captionsAvailable()) { android.widget.Toast.makeText(c, "Install the DMR Transcription companion app for live captions", android.widget.Toast.LENGTH_LONG).show(); return; }
             svc.setCaptions(!txt.isOn());
         });
-        txt.setOnLongClickListener(v -> { pickCaptionModel(); return true; });
+        txt.setOnLongClickListener(v -> {
+            new android.app.AlertDialog.Builder(c).setTitle("Live captions").setItems(new String[] { "Recognition model\u2026", "Keyword alerts\u2026" }, (d2, w) -> { if (w == 0) pickCaptionModel(); else editKeywords(); }).show();
+            return true;
+        });
         vfo.setOnClickListener(v -> { if (svc != null) VfoDialog.show(c, svc); });
         vfo.setOnLongClickListener(v -> { if (svc != null && svc.vfoActive()) { svc.exitVfo(); android.widget.Toast.makeText(c, "VFO off", android.widget.Toast.LENGTH_SHORT).show(); } return true; });
         pkt.setOnClickListener(v -> { if (svc != null) PktDialog.show(c, svc); });
@@ -210,6 +214,15 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     }
 
     public void attach(RadioService s) { svc = s; s.addListener(this); }
+
+    private void editKeywords() {
+        if (svc == null) return;
+        final android.widget.EditText et = new android.widget.EditText(getContext());
+        et.setHint("e.g. emergency, mayday, your name, your town"); et.setText(svc.keywords()); et.setMinLines(3);
+        et.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        new android.app.AlertDialog.Builder(getContext()).setTitle("Keyword alerts").setMessage("Words or phrases, one per line or comma-separated. When live captions hear one, the phone vibrates, posts a notification and (with voice announcements on) says it.").setView(et)
+                .setPositiveButton("Save", (d2, w) -> svc.setKeywords(et.getText().toString())).setNegativeButton("Cancel", null).show();
+    }
 
     private void pickCaptionModel() {
         if (svc == null) return;

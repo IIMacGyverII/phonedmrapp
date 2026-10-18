@@ -94,6 +94,15 @@ public final class ChannelStore extends SQLiteOpenHelper {
         getWritableDatabase().insert("history", null, v);
     }
 
+    /** Newest events first for Last heard: [ts, channel, kind, text, dmrId]. */
+    public List<Object[]> lastHeard(int limit) {
+        List<Object[]> out = new ArrayList<>();
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT ts, channel, kind, text, dmrId FROM history WHERE kind IN ('rx','dmr','sms','rec','pkt') ORDER BY ts DESC LIMIT " + limit, null)) {
+            while (c.moveToNext()) out.add(new Object[] { c.getLong(0), c.getInt(1), c.getString(2), c.getString(3), c.getInt(4) });
+        }
+        return out;
+    }
+
     public List<String> recentHistory(int channel, int limit) {
         List<String> out = new ArrayList<>();
         // the module shows the newest N lines in chronological order (oldest at the top)

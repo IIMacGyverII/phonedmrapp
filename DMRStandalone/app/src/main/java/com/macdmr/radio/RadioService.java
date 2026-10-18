@@ -75,6 +75,48 @@ public class RadioService extends Service implements RadioEngine.Events {
     private final Runnable txWatchdog = () -> { if (pttDown) { log("TX watchdog: releasing PTT after 28 s"); ptt(false); } };
     private PacketEngine packet;
     public PacketEngine packet() { return packet; }
+    private RadioIdStore radioId;
+    public RadioIdStore radioId() { return radioId; }
+
+    /** Contacts first, then the RadioID register: "Name" or "W1AW Hiram"; empty when unknown. */
+    public String callerName(int id) {
+        if (id <= 0) return "";
+        String n = store.contactName(id, 0);
+        if (n != null && !n.isEmpty()) return n;
+        RadioIdStore.Record r = radioId != null ? radioId.lookup(id) : null;
+        return r != null ? r.display() : "";
+    }
+
+    // ---- voice announcements + keyword alerts ----
+    private android.speech.tts.TextToSpeech tts; private volatile boolean ttsReady;
+    public boolean voiceOn() { return getSharedPreferences("radio", MODE_PRIVATE).getBoolean("voice", false); }
+    public void setVoiceOn(boolean on) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("voice", on).apply(); if (on) say("Voice announcements on"); }
+    public void say(final String text) {
+        try {
+            if (tts == null) { tts = new android.speech.tts.TextToSpeech(this, st -> { ttsReady = st == android.speech.tts.TextToSpeech.SUCCESS; if (ttsReady) { tts.setLanguage(Locale.US); tts.speak(text, android.speech.tts.TextToSpeech.QUEUE_ADD, null, "say"); } }); return; }
+            if (ttsReady) tts.speak(text, android.speech.tts.TextToSpeech.QUEUE_ADD, null, "say");
+        } catch (Throwable t) { log("tts: " + t); }
+    }
+    public String keywords() { return getSharedPreferences("radio", MODE_PRIVATE).getString("keywords", ""); }
+    public void setKeywords(String k) { getSharedPreferences("radio", MODE_PRIVATE).edit().putString("keywords", k == null ? "" : k.trim()).apply(); }
+    private final java.util.HashMap<String, Long> keywordLastHit = new java.util.HashMap<>();
+    private void checkKeywords(String sentence) {
+        try {
+            String raw = keywords(); if (raw.isEmpty() || sentence == null) return;
+            String low = " " + sentence.toLowerCase(Locale.US).replaceAll("[^a-z0-9' ]+", " ") + " ";
+            long now = System.currentTimeMillis();
+            for (String w : raw.toLowerCase(Locale.US).split("[,;\n]+")) {
+                w = w.trim(); if (w.isEmpty() || !low.contains(" " + w + " ")) continue;
+                synchronized (keywordLastHit) { Long last = keywordLastHit.get(w); if (last != null && now - last < 15000) continue; keywordLastHit.put(w, now); }
+                final String word = w, chan = current != null ? current.name : "the radio";
+                try { android.os.Vibrator vib = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE); if (vib != null) vib.vibrate(android.os.VibrationEffect.createWaveform(new long[] { 0, 250, 120, 250, 120, 400 }, -1)); } catch (Throwable ignored) { }
+                history("alert", "\uD83D\uDD14 Keyword \"" + word + "\" heard");
+                notifyUser("Keyword \"" + word + "\" heard on " + chan, sentence, true);
+                if (voiceOn()) say("Keyword " + word + " on " + chan);
+                return;
+            }
+        } catch (Throwable t) { log("keywords: " + t); }
+    }
     public boolean packetActive() { return packet != null && (packet.monitoring() || packet.kiss().isActive() || packet.sstvRx()); }
 
     /** SSTV receive: on the SSTV calling frequency (through the VFO) or on the current channel. */
@@ -179,6 +221,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         zoneId = getSharedPreferences("radio", MODE_PRIVATE).getLong("zone", 0);
         engine = new RadioEngine(profile, this);
         packet = new PacketEngine(packetHost);
+        radioId = new RadioIdStore(this);
     }
 
     @Override public IBinder onBind(Intent i) { return binder; }
@@ -351,6 +394,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             @Override public void sentence(String text) {
                 String line = captionPrefix() + text;
                 store.addHistory(current != null ? current.number : 0, "txt", "\uD83D\uDCDD " + line, -999, lastCaller);
+                checkKeywords(text);
                 ui.post(() -> { for (Listener l : listeners) l.onCaption(captionsOn, "\u2026", line); });
             }
             @Override public void finished(String full) {
@@ -361,7 +405,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     }
 
     private String captionPrefix() {
-        if (current != null && current.isDigital() && lastCaller > 0) return store.contactName(lastCaller, 0).isEmpty() ? "ID " + lastCaller + ": " : store.contactName(lastCaller, 0) + ": ";
+        if (current != null && current.isDigital() && lastCaller > 0) { String n = callerName(lastCaller); return (n.isEmpty() ? "ID " + lastCaller : n) + ": "; }
         return "";
     }
 
@@ -436,6 +480,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             softSq.configure(!ch.isDigital() && ch.softSq, ch.softSqLevel, ch.rxType, ch.rxSubCode);
             squelchOpen = true;
             ui.post(() -> { for (Listener l : listeners) l.onChannel(ch); });
+            if (fromStore && voiceOn()) say("Channel " + ch.number + ", " + ch.name.replaceAll("[_]+", " ").replaceAll("\\((UHF|VHF)\\)", "").trim() + (ch.isDigital() ? ", digital" : ""));
             pushModes();
             describeLocation(ch);
             updateNotification();
@@ -686,8 +731,10 @@ public class RadioService extends Service implements RadioEngine.Events {
         if (caller <= 0) return;
         lastCaller = caller; lastCallType = type; lastTarget = target;
         String t = (type == 1 ? "TG " + target : type == 2 ? "All call" : "Private") ;
-        history("dmr", "📻 Voice RX " + t + " from " + caller);
-        ui.post(() -> { for (Listener l : listeners) l.onCaller("ID " + caller + "  " + t); });
+        String who = callerName(caller);
+        history("dmr", "📻 Voice RX " + t + " from " + (who.isEmpty() ? String.valueOf(caller) : who + " (" + caller + ")"));
+        ui.post(() -> { for (Listener l : listeners) l.onCaller((who.isEmpty() ? "ID " + caller : who + "  " + caller) + "  " + t); });
+        if (voiceOn() && !who.isEmpty()) say(who.split(" ")[0]);
     }
     @Override public void ack(int cmd, boolean ok) { if (!ok) log(String.format(Locale.US, "MCU rejected 0x%02X", cmd)); }
     @Override public void booted(String banner) { log("module booted: " + banner); }
