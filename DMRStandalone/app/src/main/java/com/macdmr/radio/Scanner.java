@@ -8,19 +8,20 @@ import java.util.List;
 
 /**
  * Channel scanner (same behaviour as the module's): step through the candidate channels, dwell
- * {@link #DWELL_MS} on each, stop while the radio reports a reception and for {@link #HANG_MS} after it
- * ends, then continue. Skips digital channels without a call target (the MCU refuses them) and
+ * {@link #DWELL_MS} on each, stop while there is activity (the radio's reception report, or the soft squelch gate
+ * when Soft SQ is on, since the module's squelch is then held open) and for {@link #HANG_MS} after it ends, then continue. Skips digital channels without a call target (the MCU refuses them) and
  * anything the user excluded. Runs on the main looper; channel writes go through the service worker.
  */
 public final class Scanner {
     public interface Host {
         List<ChannelStore.Channel> candidates();            // in scan order
         void tune(ChannelStore.Channel ch);
-        boolean receiving();
+        boolean receiving();                                 // activity on the current channel (module squelch, or the soft gate when Soft SQ is on)
+        boolean softGated();                                 // Soft SQ decides: allow for its blackout + first detector window before stepping
         void status(boolean scanning, boolean holding, ChannelStore.Channel on);
     }
 
-    static final long DWELL_MS = 1500, HANG_MS = 2500, SETTLE_MS = 700, TICK_MS = 150;
+    static final long DWELL_MS = 1500, DWELL_SOFT_MS = 1800, HANG_MS = 2500, SETTLE_MS = 700, TICK_MS = 150;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Host host;
@@ -77,7 +78,7 @@ public final class Scanner {
             }
             if (holding) {
                 if (!rx && now - lastActivityAt > HANG_MS) { holding = false; step(); }
-            } else if (idx < 0 || now - landedAt > DWELL_MS) step();
+            } else if (idx < 0 || now - landedAt > (host.softGated() ? DWELL_SOFT_MS : DWELL_MS)) step();
             handler.postDelayed(this, TICK_MS);
         }
     };
