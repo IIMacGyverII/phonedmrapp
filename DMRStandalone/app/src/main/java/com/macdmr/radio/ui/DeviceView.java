@@ -21,6 +21,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
     public interface Host { void openHelp(); void openDiagnostics(); }
 
     private final TextView linkText, idText, profileText;
+    private final android.widget.CheckBox ownAtBoot;
     private RadioService svc;
     private Host host;
 
@@ -52,10 +53,15 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         LayoutParams bb = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); bb.setMargins((int) (4 * d), (int) (8 * d), (int) (4 * d), 0);
         link.addView(boot, bb);
         boot.setOnClickListener(v -> new Thread(() -> {
-            final String r = svc != null ? RootSetup.installBootModule(svc.profile()) : "service not ready";
+            final String r = svc != null ? RootSetup.installBootModule(svc.profile(), getContext().getCacheDir()) : "service not ready";
             post(() -> new android.app.AlertDialog.Builder(getContext()).setTitle("Boot persistence").setMessage(r).setPositiveButton("OK", null).show());
         }).start());
-        link.addView(Theme.label(c, "This app needs root (Magisk) to reach the radio's serial port. While it owns the radio the stock walkie-talkie app is paused and its icon is hidden; \"Hand back\" restores it. The Magisk module makes the required SELinux rules survive a reboot so the app can start on its own.", 0xFF8A98A6, 12, false));
+        ownAtBoot = new android.widget.CheckBox(c); ownAtBoot.setText("Own the radio at boot (otherwise the stock app is restored after a reboot)");
+        ownAtBoot.setTextColor(0xFFC8D2DC); ownAtBoot.setTextSize(13); ownAtBoot.setButtonTintList(android.content.res.ColorStateList.valueOf(Theme.CYAN));
+        LayoutParams ob = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); ob.setMargins((int) (4 * d), (int) (8 * d), (int) (4 * d), 0);
+        link.addView(ownAtBoot, ob);
+        ownAtBoot.setOnCheckedChangeListener((b, on) -> { if (svc != null) svc.setOwnAtBoot(on); });
+        link.addView(Theme.label(c, "This app needs root (Magisk) to reach the radio's serial port. While it owns the radio the stock walkie-talkie app is paused and its icon is hidden; \"Hand back\" restores it. The Magisk module makes the required SELinux rules survive a reboot so the app can start on its own; with it installed, the radio can be owned straight from boot.", 0xFF8A98A6, 12, false));
 
         // --- identity ---
         LinearLayout id = section(body, "🆔 Your DMR ID");
@@ -111,6 +117,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         String l = svc.link();
         linkText.setText("ready".equals(l) ? "✅ This app owns the radio" : "no root".equals(l) ? "🔒 Root not granted (Magisk → Superuser)" : "stopped".equals(l) ? "⏸ Stock app owns the radio" : "⏳ " + l);
         idText.setText("ID " + svc.localId());
+        ownAtBoot.setChecked(svc.ownAtBoot());
     }
 
     @Override public void onLink(String state) { refresh(); }

@@ -44,7 +44,7 @@ public final class RadioEngine implements UartPort.Listener {
     public DeviceProfile profile() { return profile; }
     public boolean isOpen() { return port.isOpen(); }
 
-    public void open() throws IOException { port.open(); }
+    public void open() throws IOException { port.open(profile.serialLib != null && com.pri.prizeinterphone.serial.port.SerialPort.isLoaded() ? profile.baud : 0); }
     public void close() { port.close(); }
 
     public String powerState() { return power.read(); }

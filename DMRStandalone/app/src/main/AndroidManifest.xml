@@ -30,5 +30,8 @@
             </intent-filter>
         </activity>
         <service android:name=".RadioService" android:exported="false" android:foregroundServiceType="microphone" />
+        <receiver android:name=".BootReceiver" android:exported="true">
+            <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /></intent-filter>
+        </receiver>
     </application>
 </manifest>

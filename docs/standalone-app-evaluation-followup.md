@@ -146,3 +146,18 @@ the hardware-PTT broadcast receiver — then the feature code can move over.
 
 Every hardware function a standalone app needs on the Armor 26 Ultra is now exercised from `DMRStandalone`.
 Next: carry the feature code and the intercom UI over.
+
+## 7. Boot persistence and the cold-boot line speed (2026-10-17, later the same day)
+
+Three findings while making the app own the radio straight from a reboot (Device tab: "Keep access after reboot" +
+"Own the radio at boot"), all measured on the Armor 26 Ultra:
+
+| Finding | Detail |
+|---|---|
+| **A hand-made `/data/adb/modules/<id>/sepolicy.rule` never loads.** | Magisk lists the module but only copies `sepolicy.rule` to where it reads it at early boot when the module goes through its installer. `magisk --install-module <zip>` with a minimal zip (`module.prop`, `sepolicy.rule`, `META-INF/com/google/android/update-binary` = `#!/sbin/sh` + `#MAGISK`, `updater-script` = `#MAGISK`) works: after a reboot `magiskpolicy --print-rules` shows both `untrusted_app` rules with nothing else running. `RootSetup.installBootModule` builds that zip at runtime. |
+| **toybox `stty` cannot set this UART's speed.** | On a cold boot (stock app never ran) `/dev/ttyS0` is at 9600. `stty -F /dev/ttyS0 57600 raw …` from the Magisk domain returns rc=0 and the readback still says 9600, with the port idle or held open; the MCU then never answers (no banner, no 0x34 reply). Driver: `mt6577-uart`, kernel 4.19.191, toybox 0.8.6. Once the stock app has opened the port its 57600 persists, which is why every earlier warm test passed. Also: `su -c` from an adb shell lands in the `shell` domain part of the time even with `--context u:r:magisk:s0` (avc denials for `stty` as `u:r:shell:s0`), so bench the port from the app, not from adb. |
+| **Fix: open the port through the stock app's own serial JNI.** | `/system/lib64/libinterphone_serial_port.so` (the classic android-serialport-api: `open(path, baud, flags)` does `cfsetispeed`/`cfsetospeed` + `tcsetattr` and returns the fd; `close()`). Its symbols are bound to `com.pri.prizeinterphone.serial.port.SerialPort`, so the standalone app carries a class of that exact name, copies the library and its `libc++.so` dependency from `/system/lib64` into its files dir (the app linker namespace refuses both from `/system`) and `System.load`s them. No root, no stty: after the change a cold boot with "Own the radio at boot" gives banner, `RECEIVE_START` and RSSI within the first minute, and `stty -a` reads 57600. `DeviceProfile.serialLib` names the library per phone (null = stty fallback, used until the Xplore 1's library name is known). |
+
+The boot receiver also covers the opposite case: if the phone reboots while the standalone app owns the radio and
+"Own the radio at boot" is off, it re-enables the stock app, so the phone is never left without a radio app.
+

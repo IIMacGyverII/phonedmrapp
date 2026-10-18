@@ -6,6 +6,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.util.Locale;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 /**
  * One-time (per boot) privileged setup through Magisk su. Everything here is reversible and is exactly
@@ -50,23 +53,37 @@ public final class RootSetup {
     }
 
     /**
-     * Persist the profile's policy lines as a Magisk module (/data/adb/modules/dmr-standalone/sepolicy.rule):
-     * Magisk applies them at every boot, so the app can take the radio without a live patch.
+     * Persist the profile's policy lines as a Magisk module. Magisk only registers a module's sepolicy.rule
+     * when the module goes through its installer (it copies the rules to a place it can read at early boot;
+     * a hand-made /data/adb/modules/&lt;id&gt; directory is listed but its rules never load, measured 2026-10-17),
+     * so build a real module zip and hand it to {@code magisk --install-module}.
      */
-    public static String installBootModule(DeviceProfile p) {
+    public static String installBootModule(DeviceProfile p, File cacheDir) {
         if (!haveRoot()) return "Root is not granted.";
-        StringBuilder rules = new StringBuilder();
-        for (String l : p.sepolicy) rules.append(l).append("\n");
-        String dir = "/data/adb/modules/dmr-standalone";
-        String prop = "id=dmr-standalone\nname=DMR Radio access\nversion=v1\nversionCode=1\nauthor=DMR Radio app\ndescription=Lets the DMR Radio app open the radio module's serial port and GPIO lines (" + p.name + ").\n";
-        String r = run("mkdir -p " + dir + " && printf '%s' '" + prop.replace("'", "'\\''") + "' > " + dir + "/module.prop && printf '%s' '" + rules.toString().replace("'", "'\\''") + "' > " + dir + "/sepolicy.rule && chmod 644 " + dir + "/module.prop " + dir + "/sepolicy.rule && ls " + dir);
-        return r.contains("sepolicy.rule") ? "Installed. The rules will be applied at every boot from now on (Magisk \u2192 Modules shows \"DMR Radio access\")." : "Could not write the module: " + r;
+        try {
+            File zip = new File(cacheDir, "dmr-standalone-access.zip");
+            try (ZipOutputStream z = new ZipOutputStream(new FileOutputStream(zip))) {
+                String prop = "id=dmr-standalone\n" + "name=DMR Radio access\n" + "version=v1\n" + "versionCode=1\n" + "author=DMR Radio app\n"
+                        + "description=Lets the DMR Radio app open the radio module's serial port and GPIO lines (" + p.name + ").\n";
+                z.putNextEntry(new ZipEntry("module.prop")); z.write(prop.getBytes("UTF-8")); z.closeEntry();
+                StringBuilder rules = new StringBuilder();
+                for (String l : p.sepolicy) rules.append(l).append('\n');
+                z.putNextEntry(new ZipEntry("sepolicy.rule")); z.write(rules.toString().getBytes("UTF-8")); z.closeEntry();
+                z.putNextEntry(new ZipEntry("META-INF/com/google/android/update-binary")); z.write("#!/sbin/sh\n#MAGISK\n".getBytes("UTF-8")); z.closeEntry();
+                z.putNextEntry(new ZipEntry("META-INF/com/google/android/updater-script")); z.write("#MAGISK\n".getBytes("UTF-8")); z.closeEntry();
+            }
+            run("chmod 644 " + zip.getAbsolutePath());
+            String r = run("magisk --install-module " + zip.getAbsolutePath() + " 2>&1; ls /data/adb/modules_update/dmr-standalone /data/adb/modules/dmr-standalone 2>/dev/null");
+            boolean ok = r.contains("sepolicy.rule") || r.toLowerCase(Locale.US).contains("done");
+            return ok ? "Installed. Reboot once; from then on the rules load at every boot (Magisk → Modules shows \"DMR Radio access\")." : "Could not install the module:\n" + r;
+        } catch (Exception e) { return "Could not build the module zip: " + e; }
     }
 
+    /** Fallback line settings for profiles without a serial library, with a readback so the log shows what the port really ended up at. */
     public static String ensureTty(DeviceProfile p) {
-        String s = run("stty -F " + p.controlPort + " " + p.baud + " raw -echo -echoe -echok -echoctl -echoke");
-        if (p.pcmPort != null) s += "\n" + run("stty -F " + p.pcmPort + " " + p.pcmBaud + " raw -echo");
-        return s;
+        String s = run("cat /proc/self/attr/current; echo; stty -F " + p.controlPort + " " + p.baud + " raw -echo -echoe -echok -echoctl -echoke; echo rc=$?; stty -F " + p.controlPort + " -a | head -1");
+        if (p.pcmPort != null) s += " | " + run("stty -F " + p.pcmPort + " " + p.pcmBaud + " raw -echo; stty -F " + p.pcmPort + " -a | head -1");
+        return s.replace('\n', ' ');
     }
 
     public static String stockApp(DeviceProfile p, boolean enable) {
