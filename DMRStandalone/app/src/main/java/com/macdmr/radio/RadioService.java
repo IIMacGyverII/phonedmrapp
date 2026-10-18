@@ -222,6 +222,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         engine = new RadioEngine(profile, this);
         packet = new PacketEngine(packetHost);
         radioId = new RadioIdStore(this);
+        registerHardwarePtt();
     }
 
     @Override public IBinder onBind(Intent i) { return binder; }
@@ -233,7 +234,27 @@ public class RadioService extends Service implements RadioEngine.Events {
     public boolean ownAtBoot() { return getSharedPreferences("radio", MODE_PRIVATE).getBoolean("ownAtBoot", false); }
     public void setOwnAtBoot(boolean on) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("ownAtBoot", on).apply(); }
 
+    // ---- the phone's hardware PTT key: the framework broadcasts the profile's down/up actions ----
+    private android.content.BroadcastReceiver pttKey;
+    private void registerHardwarePtt() {
+        if (profile.pttActions == null || profile.pttActions.length < 2) return;
+        pttKey = new android.content.BroadcastReceiver() {
+            @Override public void onReceive(android.content.Context c, Intent i) {
+                String a = i.getAction(); if (a == null) return;
+                if (!getSharedPreferences("radio", MODE_PRIVATE).getBoolean("hwPtt", true)) return;
+                if (a.equals(profile.pttActions[0])) { if (isReady()) ptt(true); }
+                else if (a.equals(profile.pttActions[1])) ptt(false);
+            }
+        };
+        android.content.IntentFilter f = new android.content.IntentFilter();
+        for (String a : profile.pttActions) f.addAction(a);
+        try { if (Build.VERSION.SDK_INT >= 33) registerReceiver(pttKey, f, RECEIVER_EXPORTED); else registerReceiver(pttKey, f); } catch (Throwable t) { log("ptt key: " + t); }
+    }
+    public boolean hwPtt() { return getSharedPreferences("radio", MODE_PRIVATE).getBoolean("hwPtt", true); }
+    public void setHwPtt(boolean on) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("hwPtt", on).apply(); if (!on && pttDown) ptt(false); }
+
     @Override public void onDestroy() {
+        try { if (pttKey != null) unregisterReceiver(pttKey); } catch (Throwable ignored) { }
         try { if (pttDown) { if (audio != null) audio.stopTx(); engine.ptt(false); } } catch (Throwable ignored) { }
         try { if (audio != null) { audio.stopRx(); } } catch (Throwable ignored) { }
         engine.close();

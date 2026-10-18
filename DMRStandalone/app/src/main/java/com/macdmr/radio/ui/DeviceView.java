@@ -21,7 +21,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
     public interface Host { void openHelp(); void openDiagnostics(); }
 
     private final TextView linkText, idText, profileText;
-    private final android.widget.CheckBox ownAtBoot, voiceBox;
+    private final android.widget.CheckBox ownAtBoot, voiceBox, hwPttBox;
     private final TextView radioIdText;
     private RadioService svc;
     private Host host;
@@ -89,6 +89,10 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
                 catch (Throwable t) { post(() -> { pd.dismiss(); android.widget.Toast.makeText(c, "Download failed: " + t.getMessage(), android.widget.Toast.LENGTH_LONG).show(); }); }
             }).start();
         });
+        hwPttBox = new android.widget.CheckBox(c); hwPttBox.setText("Side PTT key transmits (the phone's hardware push-to-talk button)");
+        hwPttBox.setTextColor(0xFFC8D2DC); hwPttBox.setTextSize(13); hwPttBox.setButtonTintList(android.content.res.ColorStateList.valueOf(Theme.CYAN));
+        data.addView(hwPttBox, new LayoutParams(bb));
+        hwPttBox.setOnCheckedChangeListener((b, on) -> { if (svc != null && on != svc.hwPtt()) svc.setHwPtt(on); });
         voiceBox = new android.widget.CheckBox(c); voiceBox.setText("Voice announcements (channel changes, caller names, keyword alerts)");
         voiceBox.setTextColor(0xFFC8D2DC); voiceBox.setTextSize(13); voiceBox.setButtonTintList(android.content.res.ColorStateList.valueOf(Theme.CYAN));
         data.addView(voiceBox, new LayoutParams(bb));
@@ -157,6 +161,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         idText.setText("ID " + svc.localId());
         ownAtBoot.setChecked(svc.ownAtBoot());
         voiceBox.setChecked(svc.voiceOn());
+        hwPttBox.setChecked(svc.hwPtt());
         radioIdText.setText("RadioID names: " + svc.radioId().status());
     }
 
