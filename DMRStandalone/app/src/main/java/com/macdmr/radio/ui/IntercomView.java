@@ -32,6 +32,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     private final SeekBar sqSeek;
     private boolean sqFromUser;
     private final ImageView digitOne, digitTwo;
+    private final TextView vfoLabel;
     private final LinearLayout transcriptionBox;
     private final TextView captionLive;
     private final android.widget.ScrollView captionScroll;
@@ -69,6 +70,8 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         digitOne = new ImageView(c); digitTwo = new ImageView(c);
         LayoutParams dl = new LayoutParams((int) (34 * d), (int) (58 * d)); dl.rightMargin = (int) (6 * d);
         digits.addView(digitOne, dl); digits.addView(digitTwo, new LayoutParams((int) (34 * d), (int) (58 * d)));
+        vfoLabel = Theme.label(c, "VFO", Theme.VFO[3], 30, true); vfoLabel.setVisibility(GONE); vfoLabel.setShadowLayer(14 * d, 0, 0, Theme.VFO[2]);
+        digits.addView(vfoLabel);
         chRow.addView(digits, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
         addView(chRow, chLp);
         sub.setOnClickListener(v -> { if (svc != null) new Thread(() -> svc.stepChannel(-1)).start(); });
@@ -186,8 +189,9 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
             svc.setCaptions(!txt.isOn());
         });
         txt.setOnLongClickListener(v -> { pickCaptionModel(); return true; });
-        for (NeonToggle t : new NeonToggle[] { vfo, pkt })
-            t.setOnClickListener(v -> android.widget.Toast.makeText(c, t.labelText() + " is not in this build yet", android.widget.Toast.LENGTH_SHORT).show());
+        vfo.setOnClickListener(v -> { if (svc != null) VfoDialog.show(c, svc); });
+        vfo.setOnLongClickListener(v -> { if (svc != null && svc.vfoActive()) { svc.exitVfo(); android.widget.Toast.makeText(c, "VFO off", android.widget.Toast.LENGTH_SHORT).show(); } return true; });
+        pkt.setOnClickListener(v -> android.widget.Toast.makeText(c, "PKT is not in this build yet", android.widget.Toast.LENGTH_SHORT).show());
         ptt.setListener(down -> { if (svc != null) svc.ptt(down); });
     }
 
@@ -237,9 +241,12 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
 
     // RadioService.Listener
     @Override public void onChannel(ChannelStore.Channel ch) {
+        boolean isVfo = ch.id < 0;
         title.setText(ch.name + (ch.rxFreq < 300_000_000 ? "(VHF)" : "(UHF)"));
         int shown = ch.number % 100;
         digitOne.setImageResource(DIGITS[shown / 10]); digitTwo.setImageResource(DIGITS[shown % 10]);
+        digitOne.setVisibility(isVfo ? GONE : VISIBLE); digitTwo.setVisibility(isVfo ? GONE : VISIBLE); vfoLabel.setVisibility(isVfo ? VISIBLE : GONE);
+        vfo.setOn(isVfo);
         power.setText("Power:" + (ch.power == 1 ? "High power" : "Low power"));
         squelch.setText(ch.isDigital() ? "Color Code:" + ch.cc : "Squelch Level:" + ch.sq);
         send.setText("Send:" + ch.freqText(ch.txFreq)); receive.setText("Receive:" + ch.freqText(ch.rxFreq));
@@ -254,7 +261,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     @Override public void onTx(boolean transmitting) { tx = transmitting; refreshHeadline(); }
     @Override public void onRssi(int dbm) { signal.setText(dbm == -999 ? "Signal: --" : "Signal: " + dbm + " dBm"); }
     @Override public void onAudioLevel(int amplitude) { board.audioAmplitude = amplitude; }
-    @Override public void onHistory(String line) { history.addLast(line); while (history.size() > 3) history.removeFirst(); renderHistory(); }
+    @Override public void onHistory(String line) { if (!history.isEmpty() && history.peekLast().equals(line)) return; history.addLast(line); while (history.size() > 3) history.removeFirst(); renderHistory(); }
     @Override public void onCaller(String text) { headline.setText("📻 " + text); }
     @Override public void onLog(String s) { }
     @Override public void onLink(String state) { refreshHeadline(); }
