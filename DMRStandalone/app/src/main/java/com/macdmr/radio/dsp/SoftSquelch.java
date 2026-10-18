@@ -7,7 +7,7 @@ package com.macdmr.radio.dsp;
  * A hang time keeps the gate open across syllable gaps. Works on 8 kHz mono 16-bit PCM.
  */
 public final class SoftSquelch {
-    public static final long HANG_MS = 1500;
+    public static final long HANG_MS = 350;      // squelch tail: the detectors already smooth over 250-333 ms windows, a long hang only adds static after the other station unkeys
     private final CtcssDetector tone = new CtcssDetector(8000);
     private final NoiseSquelchDetector noise = new NoiseSquelchDetector(8000);
     private volatile boolean enabled;
@@ -40,4 +40,6 @@ public final class SoftSquelch {
     }
 
     public void reset() { tone.reset(); noise.reset(); open = false; lastOpen = 0; }
+    /** The radio reported the carrier gone (RECEIVE_STOP): close at once instead of waiting for the detectors and the hang. */
+    public void closeNow() { open = false; lastOpen = 0; tone.reset(); noise.reset(); }
 }
