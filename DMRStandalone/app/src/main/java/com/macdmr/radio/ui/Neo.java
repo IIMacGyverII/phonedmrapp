@@ -244,7 +244,7 @@ public final class Neo {
         public interface OnChange { void changed(boolean on); }
         private boolean on; private OnChange cb; private int accent = CYAN;
         private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-        public NeonSwitch(Context c) { super(c); setClickable(true); setFocusable(true); setOnClickListener(v -> { setChecked(!on); if (cb != null) cb.changed(on); }); setLayerType(LAYER_TYPE_SOFTWARE, null); }
+        public NeonSwitch(Context c) { super(c); setClickable(true); setFocusable(true); setOnClickListener(v -> { setChecked(!on); if (cb != null) cb.changed(on); }); }
         public void setAccent(int a) { accent = a; invalidate(); }
         public void setChecked(boolean v) { on = v; setContentDescription(on ? "On" : "Off"); invalidate(); }
         public boolean isChecked() { return on; }
@@ -253,13 +253,14 @@ public final class Neo {
         @Override protected void onDraw(Canvas c) {
             float d = Theme.dp(getContext()), w = 46 * d, h = 26 * d, x = (getWidth() - w) / 2f, y = (getHeight() - h) / 2f, r = h / 2f;
             android.graphics.RectF t = new android.graphics.RectF(x, y, x + w, y + h);
-            p.setShadowLayer(on ? 8 * d : 0, 0, 0, alpha(accent, 0x88));
-            p.setStyle(Paint.Style.FILL); p.setColor(on ? alpha(accent, 0x33) : 0xFF0E1A26); c.drawRoundRect(t, r, r, p);
-            p.setShadowLayer(0, 0, 0, 0);
+            p.setStyle(Paint.Style.FILL);
+            if (on) { p.setColor(alpha(accent, 0x26)); android.graphics.RectF h2 = new android.graphics.RectF(t); h2.inset(-3 * d, -3 * d); c.drawRoundRect(h2, r + 3 * d, r + 3 * d, p); }   // halo instead of a shadow layer
+            p.setColor(on ? alpha(accent, 0x33) : 0xFF0E1A26); c.drawRoundRect(t, r, r, p);
             p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(1.5f * d); p.setColor(on ? accent : 0xFF2A3C50); c.drawRoundRect(t, r, r, p);
             float kr = 9.5f * d, kx = on ? x + w - 3 * d - kr : x + 3 * d + kr;
-            p.setStyle(Paint.Style.FILL); p.setColor(on ? accent : 0xFF4A5E72); p.setShadowLayer(on ? 7 * d : 0, 0, 0, accent);
-            c.drawCircle(kx, y + h / 2f, kr, p); p.setShadowLayer(0, 0, 0, 0);
+            p.setStyle(Paint.Style.FILL);
+            if (on) { p.setColor(alpha(accent, 0x55)); c.drawCircle(kx, y + h / 2f, kr + 3 * d, p); }
+            p.setColor(on ? accent : 0xFF4A5E72); c.drawCircle(kx, y + h / 2f, kr, p);
         }
         @Override public boolean onTouchEvent(MotionEvent e) { return super.onTouchEvent(e); }
     }

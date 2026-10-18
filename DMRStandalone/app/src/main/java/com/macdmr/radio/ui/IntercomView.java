@@ -314,7 +314,6 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
             LinearLayout cell = new LinearLayout(c); cell.setOrientation(VERTICAL);
             readLabel[i] = Neo.caps(c, ""); cell.addView(readLabel[i]);
             val[i] = Neo.text(c, "", Neo.TEXT, 15.5f, Neo.mono(c)); val[i].setSingleLine(true); val[i].setPadding(0, (int) (4 * d), 0, 0);
-            androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(val[i], 10, 16, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
             cell.addView(val[i], new LayoutParams(LayoutParams.MATCH_PARENT, (int) (22 * d)));
             ro.addView(cell, new LayoutParams(0, LayoutParams.WRAP_CONTENT, wts[i]));
         }

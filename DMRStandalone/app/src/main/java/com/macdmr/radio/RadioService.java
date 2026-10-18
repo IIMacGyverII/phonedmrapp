@@ -816,7 +816,7 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     // ---- listeners ----------------------------------------------------------------------------------
 
-    public void addListener(Listener l) { listeners.add(l); l.onLink(link); if (current != null) l.onChannel(current); l.onModes(softSq.isEnabled(), softSq.level(), squelchOpen, monitorOn, recordOn, scanner.isScanning(), scanner.isHolding(), zoneName()); l.onCaption(captionsOn, "", null); }
+    public void addListener(Listener l) { listeners.add(l); l.onLink(link); if (current != null) l.onChannel(current); l.onModes(softSq.isEnabled(), softSq.level(), squelchOpen, monitorOn, recordOn, scanner.isScanning(), scanner.isHolding(), zoneName()); l.onCaption(captionsOn, "", null); l.onRx(receiving); l.onTx(transmitting); if (rssi != -999) l.onRssi(rssi); }   // a page built later (intercom look switched) starts from the live receive/transmit state, not "idle"
     public void removeListener(Listener l) { listeners.remove(l); }
 
     private void setLink(String s) { link = s; ui.post(() -> { for (Listener l : listeners) l.onLink(s); }); updateNotification(); }
