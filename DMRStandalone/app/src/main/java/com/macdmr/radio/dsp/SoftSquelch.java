@@ -28,8 +28,16 @@ public final class SoftSquelch {
     public boolean isOpen() { return !enabled || open; }
 
     /** Feed one block of 8 kHz mono PCM; returns whether the gate is open for it. */
+    private volatile long blackoutUntil; private boolean blackoutPending;
+    /** A retune just happened: stay closed for a moment, then judge fresh audio (the receiver's switching transient reads as "quiet" and would open the gate onto static). */
+    public void onRetune() { blackoutUntil = System.currentTimeMillis() + BLACKOUT_MS; blackoutPending = true; open = false; lastOpen = 0; }
+    public static final long BLACKOUT_MS = 800;
+
     public boolean process(byte[] mono, int len) {
         if (!enabled) return true;
+        long t = System.currentTimeMillis();
+        if (t < blackoutUntil) return false;
+        if (blackoutPending) { blackoutPending = false; tone.reset(); noise.reset(); }
         boolean shouldOpen;
         if (toneHz > 0) { tone.setFrequency(toneHz, adjLow, adjHigh); tone.process(mono, len); shouldOpen = tone.isPresent(); }
         else { noise.process(mono, len, level); shouldOpen = noise.isSignal(); }
