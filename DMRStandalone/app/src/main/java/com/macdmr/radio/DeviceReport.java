@@ -94,6 +94,8 @@ public final class DeviceReport {
             ApplicationInfo ai = pi.applicationInfo; boolean sys = (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
             r.append(String.format(Locale.US, "  %s  v%s  uid=%d  system=%s  shared=%s\n      apk=%s\n      nativeLibs=%s\n", pi.packageName, pi.versionName, ai.uid, sys, pi.sharedUserId, ai.sourceDir, ai.nativeLibraryDir));
             r.append("      libs: ").append(ls(ai.nativeLibraryDir, null)).append('\n');
+            File[] libs = ai.nativeLibraryDir == null ? null : new File(ai.nativeLibraryDir).listFiles();
+            if (libs != null) for (File lf : libs) if (lf.getName().endsWith(".so")) { File real = lf; try { real = lf.getCanonicalFile(); } catch (Throwable ignored) { } String syms = jniSymbols(real); if (!syms.isEmpty()) r.append("      ").append(lf.getName()).append(" -> ").append(real.getAbsolutePath()).append('\n').append(syms); }
             if (pi.requestedPermissions != null) { StringBuilder pp = new StringBuilder(); for (String q : pi.requestedPermissions) if (!q.startsWith("android.permission.") || q.matches(".*(SERIAL|SYSTEM_ALERT|RECORD_AUDIO|MODIFY_AUDIO|WRITE_SECURE|DEVICE_POWER|INJECT|BROADCAST).*")) pp.append(q).append(' '); r.append("      permissions: ").append(pp).append('\n'); }
             if (pi.receivers != null) { r.append("      receivers: "); for (android.content.pm.ActivityInfo x : pi.receivers) r.append(x.name).append(' '); r.append('\n'); }
             if (pi.services != null) { r.append("      services: "); for (android.content.pm.ServiceInfo x : pi.services) r.append(x.name).append(' '); r.append('\n'); }
@@ -112,6 +114,8 @@ public final class DeviceReport {
         h(r, "Framework / vendor files of interest");
         for (String d : new String[] { "/system/framework", "/system_ext/framework", "/vendor/framework", "/system/lib64", "/system/lib", "/vendor/lib64", "/vendor/lib", "/system/etc/init", "/vendor/etc/init", "/system/etc/permissions", "/vendor/etc/permissions", "/system/priv-app", "/system/app", "/vendor/app", "/product/app", "/product/priv-app", "/system_ext/priv-app" })
             r.append(String.format(Locale.US, "  %-26s %s\n", d, ls(d, RADIO)));
+        h(r, "Serial-looking system libraries and their JNI classes");
+        for (File lf : serialLibs(c, null)) { String syms = jniSymbols(lf); r.append("  ").append(lf.getAbsolutePath()).append(" (").append(lf.length() / 1024).append(" kB)\n").append(syms); }
         h(r, "Binder services"); r.append(exec("service list")).append('\n');
         h(r, "Audio devices"); r.append(cat("/proc/asound/cards")).append(ls("/dev/snd", null)).append('\n');
 
@@ -158,6 +162,27 @@ public final class DeviceReport {
         return zip;
     }
 
+    /** Open a new GitHub issue in the browser with the phone facts filled in; the zip is attached by hand (drag it into the issue). */
+    public static void openIssue(Context c) {
+        StringBuilder body = new StringBuilder("## Device support request\n\n");
+        body.append("- Phone: ").append(Build.MANUFACTURER).append(' ').append(Build.MODEL).append(" (").append(Build.DEVICE).append(", ").append(Build.BOARD).append(")\n");
+        body.append("- Android: ").append(Build.VERSION.RELEASE).append(" / SDK ").append(Build.VERSION.SDK_INT).append("\n- Build: ").append(Build.DISPLAY).append("\n- Platform: ").append(getprop("ro.board.platform")).append("\n");
+        body.append("- Rooted (Magisk): ").append(suPresent() ? "yes" : "no").append("\n- DMR Radio app: ").append(BuildConfig.VERSION_NAME).append("\n\n");
+        File[] fs = reportRoot().listFiles(); File newest = null; if (fs != null) for (File f : fs) if (f.isDirectory() && (newest == null || f.lastModified() > newest.lastModified())) newest = f;
+        if (newest != null) {
+            body.append("Device report folder: `Download/DMR/DeviceReport/").append(newest.getName()).append("`\n**Please drag the report zip (Device → Share last report, or the folder zipped) into this issue.**\n\n");
+            String rep = cat(new File(newest, "report.txt").getAbsolutePath());
+            int a = rep.indexOf("==== Platform devices"), b = rep.indexOf("==== GPIO");
+            if (a > 0 && b > a) body.append("Radio-module nodes found:\n```\n").append(rep, a, Math.min(b, a + 1500)).append("```\n");
+            int s1 = rep.indexOf("==== Installed apps"), s2 = rep.indexOf("==== dumpsys", s1); if (s2 < 0) s2 = rep.indexOf("==== Framework", s1);
+            if (s1 > 0 && s2 > s1) body.append("Walkie-talkie app(s):\n```\n").append(rep, s1, Math.min(s2, s1 + 1500)).append("```\n");
+        } else body.append("(No device report generated yet — Device → Generate device report, then attach its zip.)\n");
+        body.append("\nWhat the stock walkie-talkie app can do (DMR? FM? text? GPS?), and anything odd you noticed:\n\n");
+        String title = "Device support: " + Build.MANUFACTURER + " " + Build.MODEL;
+        String url = "https://github.com/IIMacGyverII/phonedmrapp/issues/new?title=" + android.net.Uri.encode(title) + "&labels=" + android.net.Uri.encode("device-support") + "&body=" + android.net.Uri.encode(body.length() > 6000 ? body.substring(0, 6000) + "\n…(trimmed; everything is in the zip)" : body.toString());
+        try { c.startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); } catch (Throwable t) { android.widget.Toast.makeText(c, "No browser available", android.widget.Toast.LENGTH_LONG).show(); }
+    }
+
     public static void share(Context c, File zip) {
         android.net.Uri u = androidx.core.content.FileProvider.getUriForFile(c, c.getPackageName() + ".files", zip);
         Intent i = new Intent(Intent.ACTION_SEND).setType("application/zip").putExtra(Intent.EXTRA_STREAM, u).putExtra(Intent.EXTRA_SUBJECT, "DMR Radio device report: " + Build.MANUFACTURER + " " + Build.MODEL)
@@ -189,6 +214,32 @@ public final class DeviceReport {
         keyCapture = null;
         try { c.unregisterReceiver(br); } catch (Throwable ignored) { }
         return "Activity key events and known PTT broadcasts:\n" + (keys.length() == 0 ? "  (none reached the app)\n" : keys) + "\nInput events (root getevent):\n" + (events.isEmpty() ? "  (n/a)\n" : events + "\n") + "\nLog lines during the capture (root):\n" + (logs.isEmpty() ? "  (n/a)\n" : logs + "\n");
+    }
+
+    /** JNI entry points of a native library, by scanning for "Java_" symbol names: tells us the Java class the vendor's serial opener binds to. */
+    public static String jniSymbols(File lib) {
+        StringBuilder out = new StringBuilder();
+        try (InputStream in = new FileInputStream(lib)) {
+            byte[] b = new byte[(int) Math.min(lib.length(), 4_000_000)]; int n = 0, k; while (n < b.length && (k = in.read(b, n, b.length - n)) > 0) n += k;
+            String s = new String(b, 0, n, "ISO-8859-1");
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("Java_([A-Za-z0-9_]+)").matcher(s);
+            java.util.LinkedHashSet<String> seen = new java.util.LinkedHashSet<>();
+            while (m.find()) {
+                String sym = m.group(1); if (!seen.add(sym)) continue;
+                int cut = sym.lastIndexOf('_'); if (cut <= 0) continue;
+                String cls = sym.substring(0, cut).replace("_1", "\u0001").replace('_', '.').replace("\u0001", "_"), method = sym.substring(cut + 1).replaceFirst("__.*$", "");
+                out.append("      JNI ").append(cls).append('.').append(method).append("()\n");
+            }
+        } catch (Throwable ignored) { }
+        return out.toString();
+    }
+
+    /** Serial-looking native libraries: the stock app's own plus anything in the system library folders. */
+    public static List<File> serialLibs(Context c, String stockPkg) {
+        List<File> out = new ArrayList<>();
+        try { if (stockPkg != null && !stockPkg.isEmpty()) { String d = c.getPackageManager().getApplicationInfo(stockPkg, 0).nativeLibraryDir; File[] fs = d == null ? null : new File(d).listFiles(); if (fs != null) for (File f : fs) if (f.getName().endsWith(".so")) out.add(f); } } catch (Throwable ignored) { }
+        for (String d : new String[] { "/system/lib64", "/vendor/lib64", "/system/lib", "/vendor/lib" }) { File[] fs = new File(d).listFiles(); if (fs != null) for (File f : fs) if (f.getName().matches("(?i).*(serial|uart|intercom|interphone|walkie|dmr).*\\.so")) out.add(f); }
+        return out;
     }
 
     // ---- helpers ----

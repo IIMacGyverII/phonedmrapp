@@ -565,7 +565,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             finishRecording();
             current = ch; if (fromStore) store.setActive(ch.number);
             softSq.configure(!ch.isDigital() && ch.softSq, ch.softSqLevel, ch.rxType, ch.rxSubCode);
-            squelchOpen = true;
+            squelchOpen = !softSq.isEnabled();                     // with Soft SQ on, stay muted until the detector opens (no burst of static after a retune)
             ui.post(() -> { for (Listener l : listeners) l.onChannel(ch); });
             if (fromStore && voiceOn()) say("Channel " + ch.number + ", " + ch.name.replaceAll("[_]+", " ").replaceAll("\\((UHF|VHF)\\)", "").trim() + (ch.isDigital() ? ", digital" : ""));
             pushModes();
