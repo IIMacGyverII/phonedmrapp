@@ -298,6 +298,13 @@ public class RadioService extends Service implements RadioEngine.Events {
                     StringBuilder err = new StringBuilder();
                     int n = store.importFromStock(this, profile.stockApp, "default_uhf", err);
                     log(n >= 0 ? "imported " + n + " channels from the stock app" : "stock import failed: " + err);
+                    if (n >= 0) getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("tgListsImported", true).apply();
+                }
+                if (!getSharedPreferences("radio", MODE_PRIVATE).getBoolean("tgListsImported", false)) {   // installs imported before TG lists were read
+                    StringBuilder err = new StringBuilder();
+                    int k = store.repairModuleTgLists(this, profile.stockApp, "default_uhf", err);
+                    log(k >= 0 ? "module TG lists imported; " + k + " channels got their list" : "TG list import failed: " + err);
+                    if (k >= 0) getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("tgListsImported", true).apply();
                 }
                 setLink("uart");
                 engine.open();
