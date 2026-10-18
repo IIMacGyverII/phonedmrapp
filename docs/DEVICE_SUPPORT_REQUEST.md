@@ -50,6 +50,7 @@ run "for f in /sys/devices/platform/*dmr*/* /sys/devices/platform/*intercom*/*; 
 run "service list | grep -iE 'tiny|dmr|intercom|walkie|audio'"
 run "ls /system/framework /system_ext/framework /vendor/framework 2>/dev/null | grep -iE 'tiny|dmr|intercom|prize|walkie'"
 run "ls /system/etc/init /vendor/etc/init 2>/dev/null | grep -iE 'tiny|dmr|intercom|walkie|serial'"
+run "ls /system/lib64 /system/lib /vendor/lib64 2>/dev/null | grep -iE 'serial|uart|dmr|intercom|walkie'"
 run "dumpsys package | grep -iE 'ptt|intercom|walkie' | sort -u | head -40"
 echo; echo "===== done"; echo "Now press and release the PTT button once, wait 3 s, then press Enter"; read _
 s "logcat after PTT press"; adb logcat -d -t 400 | grep -iE "ptt|intercom|walkie|dmr|serial|tty" >> $OUT 2>&1

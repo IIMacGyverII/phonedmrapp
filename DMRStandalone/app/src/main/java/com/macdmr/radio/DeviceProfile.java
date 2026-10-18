@@ -23,13 +23,14 @@ public final class DeviceProfile {
     public final String[] pttActions;    // framework broadcasts for the hardware PTT key
     public final String stockApp;        // package to disable while we own the UART
     public final String[] sepolicy;      // Magisk sepolicy.rule lines an untrusted app needs
+    public final String serialLib;       // the stock app's serial JNI library on /system (configures the line); null = stty fallback
 
     private DeviceProfile(String name, String controlPort, int baud, Audio audio, String pcmPort, int pcmBaud,
                           String powerNode, String pttNode, String powerOnToken, String[] pttActions,
-                          String stockApp, String[] sepolicy) {
+                          String stockApp, String[] sepolicy, String serialLib) {
         this.name = name; this.controlPort = controlPort; this.baud = baud; this.audio = audio;
         this.pcmPort = pcmPort; this.pcmBaud = pcmBaud; this.powerNode = powerNode; this.pttNode = pttNode;
-        this.powerOnToken = powerOnToken; this.pttActions = pttActions; this.stockApp = stockApp; this.sepolicy = sepolicy;
+        this.powerOnToken = powerOnToken; this.pttActions = pttActions; this.stockApp = stockApp; this.sepolicy = sepolicy; this.serialLib = serialLib;
     }
 
     /** Ulefone Armor 26 Ultra (walkie-talkie model) — measured 2026-10-17. */
@@ -42,7 +43,8 @@ public final class DeviceProfile {
                     "allow untrusted_app ttyS_device chr_file { open read write ioctl getattr lock }",
                     "typeattribute ttyS_device mlstrustedobject",
                     "allow untrusted_app sysfs_prizefactory file { open read write getattr }",
-                    "typeattribute sysfs_prizefactory mlstrustedobject" });
+                    "typeattribute sysfs_prizefactory mlstrustedobject" },
+            "/system/lib64/libinterphone_serial_port.so");
 
     /** Blackview Xplore 1 — from its QuickChat APK (docs/multi-device-xplore1-findings.md); SELinux labels unknown. */
     public static final DeviceProfile XPLORE_1 = new DeviceProfile(
@@ -52,7 +54,8 @@ public final class DeviceProfile {
             "com.chamsion.quickchat",
             new String[] {
                     "allow untrusted_app ttyS_device chr_file { open read write ioctl getattr lock }",
-                    "typeattribute ttyS_device mlstrustedobject" });
+                    "typeattribute ttyS_device mlstrustedobject" },
+            null);
 
     public static DeviceProfile detect() {
         String m = (Build.MANUFACTURER + " " + Build.MODEL + " " + Build.DEVICE).toLowerCase();

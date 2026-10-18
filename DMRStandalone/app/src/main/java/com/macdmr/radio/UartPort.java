@@ -5,9 +5,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 
 /**
- * The MCU control UART as plain files. Needs the tty in raw mode at the right baud (the OEM's JNI set it
- * once and the kernel keeps it; {@link RootSetup#ensureTty} re-applies it with stty) and SELinux access
- * (see {@link RootSetup}). A reader thread splits the byte stream into {@link Frame}s and hands anything
+ * The MCU control UART as plain files. The line is configured by the stock app's own serial JNI
+ * ({@link com.pri.prizeinterphone.serial.port.SerialPort}) when the profile names it, else the tty is
+ * opened as a plain file and {@link RootSetup#ensureTty} has to have set raw mode and the baud. SELinux access: see {@link RootSetup}. A reader thread splits the byte stream into {@link Frame}s and hands anything
  * that is not a frame (the module's boot banner, "00 00 BF AA …\r\n") to the listener as raw bytes.
  */
 public final class UartPort {
@@ -21,25 +21,38 @@ public final class UartPort {
     private final Listener listener;
     private FileInputStream in;
     private FileOutputStream out;
+    private com.pri.prizeinterphone.serial.port.SerialPort native_;
     private Thread reader;
     private volatile boolean running;
 
     public UartPort(String path, Listener l) { this.path = path; this.listener = l; }
 
-    public synchronized void open() throws IOException {
+    public synchronized void open() throws IOException { open(0); }
+
+    /** @param baud 0 = plain file open (line already configured); else configure it through the stock serial JNI. */
+    public synchronized void open(int baud) throws IOException {
         if (in != null) return;
-        in = new FileInputStream(path);
-        out = new FileOutputStream(path);
+        if (baud > 0 && com.pri.prizeinterphone.serial.port.SerialPort.isLoaded()) {
+            native_ = com.pri.prizeinterphone.serial.port.SerialPort.openPort(path, baud);
+            if (native_ == null) throw new IOException("serial open " + path + " @ " + baud + " failed");
+            in = new FileInputStream(native_.fd());
+            out = new FileOutputStream(native_.fd());
+            listener.onLog("UART " + path + " open @ " + baud + " (stock serial library)");
+        } else {
+            in = new FileInputStream(path);
+            out = new FileOutputStream(path);
+            listener.onLog("UART " + path + " open (plain file)");
+        }
         running = true;
         reader = new Thread(this::readLoop, "uart-reader");
         reader.start();
-        listener.onLog("UART " + path + " open");
     }
 
     public synchronized void close() {
         running = false;
         try { if (in != null) in.close(); } catch (IOException ignored) { }
         try { if (out != null) out.close(); } catch (IOException ignored) { }
+        if (native_ != null) { native_.release(); native_ = null; }
         in = null; out = null;
     }
 
