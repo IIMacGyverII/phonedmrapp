@@ -123,7 +123,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         LinearLayout hrow = new LinearLayout(c); hrow.addView(help, new LayoutParams(bl)); hrow.addView(diag, new LayoutParams(bl)); more.addView(hrow);
         help.setOnClickListener(v -> { if (host != null) host.openHelp(); });
         diag.setOnClickListener(v -> { if (host != null) host.openDiagnostics(); });
-        more.addView(Theme.label(c, "DMR Radio 0.1 — standalone edition of DMRModHooks. Same radio, no LSPosed.", 0xFF8A98A6, 12, false));
+        more.addView(Theme.label(c, "DMR Radio " + com.macdmr.radio.BuildConfig.VERSION_NAME + " — the standalone edition of DMRModHooks. Same radio, no LSPosed.", 0xFF8A98A6, 12, false));
     }
 
     private LinearLayout section(LinearLayout parent, String title) {
