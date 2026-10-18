@@ -185,10 +185,28 @@ public final class PktDialog {
             });
             body.addView(rowv);
         }
-        if (!list.isEmpty()) { LinearLayout r = row(); button(r, "Clear list", Theme.REC, x -> { pe.store().clearStations(); sub.dismiss(); }); body.addView(r); }
+        if (!list.isEmpty()) {
+            LinearLayout r = row();
+            button(r, "Export GPX", Theme.SOFTSQ, x -> {
+                try {
+                    StringBuilder g = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<gpx version=\"1.1\" creator=\"DMR Radio\" xmlns=\"http://www.topografix.com/GPX/1/1\">\n");
+                    SimpleDateFormat iso = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US); iso.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+                    for (PacketStore.Station s : list) g.append(String.format(Locale.US, "  <wpt lat=\"%.6f\" lon=\"%.6f\">%s<time>%s</time><name>%s</name><desc>%s</desc></wpt>\n", s.lat, s.lon, s.alt != 0 ? "<ele>" + s.alt + "</ele>" : "", iso.format(new Date(s.lastTs)), xml(s.call), xml(s.comment)));
+                    g.append("</gpx>\n");
+                    java.io.File dir = new java.io.File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "DMR/APRS"); dir.mkdirs();
+                    java.io.File out = new java.io.File(dir, "aprs_stations_" + new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date()) + ".gpx");
+                    try (java.io.Writer w = new java.io.OutputStreamWriter(new java.io.FileOutputStream(out), java.nio.charset.StandardCharsets.UTF_8)) { w.write(g.toString()); }
+                    toast("Saved Download/DMR/APRS/" + out.getName());
+                    c.startActivity(android.content.Intent.createChooser(new android.content.Intent(android.content.Intent.ACTION_SEND).setType("application/gpx+xml").putExtra(android.content.Intent.EXTRA_SUBJECT, out.getName()).putExtra(android.content.Intent.EXTRA_TEXT, g.toString()), "Share GPX"));
+                } catch (Throwable t) { toast("Export failed: " + t.getMessage()); }
+            });
+            button(r, "Clear list", Theme.REC, x -> { pe.store().clearStations(); sub.dismiss(); });
+            body.addView(r);
+        }
         sub = dialog(body);
     }
 
+    private static String xml(String s) { return s == null ? "" : s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;"); }
     private static String compass(float bearing) { float b = (bearing + 360) % 360; String[] dirs = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" }; return dirs[(int) Math.round(b / 45.0) % 8]; }
 
     private void aprsLog() {

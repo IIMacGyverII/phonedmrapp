@@ -334,11 +334,13 @@ public class RadioService extends Service implements RadioEngine.Events {
         int n = 0;
         for (int i = 0; i + 3 < len && n + 1 < mono.length; i += 4) { mono[n++] = b[i]; mono[n++] = b[i + 1]; }
         boolean open = current == null || current.isDigital() ? true : softSq.process(mono, n);
+        if (open != squelchOpen && softSq.isEnabled()) log("soft squelch " + (open ? "open" : "closed") + (current != null && current.rxType == 1 ? " (CTCSS " + com.macdmr.radio.dsp.ToneTable.ctcssLabel(current.rxSubCode) + ")" : ""));
         squelchOpen = open;
         int peak = 0;
         if (open) for (int i = 0; i + 1 < n; i += 2) { int v = Math.abs((short) ((mono[i] & 0xFF) | (mono[i + 1] << 8))); if (v > peak) peak = v; }
         if (captionsOn && open) {
-            if (captions != null && captions.isActive()) captions.feed8kMono(mono, n);
+            if ("google".equals(captionEngine())) googleFeed(mono, n, peak);
+            else if (captions != null && captions.isActive()) captions.feed8kMono(mono, n);
             else if (peak > 400 && System.currentTimeMillis() - captionLastEnd > 1500 && captions != null) { Log.i(TAG, "captions: starting utterance (peak " + peak + ")"); captions.start(); }
         }
         if (packet != null) packet.feed(mono, n, open);
@@ -425,7 +427,41 @@ public class RadioService extends Service implements RadioEngine.Events {
     // ---- live captions ----------------------------------------------------------------------------
 
     public boolean captionsOn() { return captionsOn; }
-    public boolean captionsAvailable() { return CaptionClient.companionInstalled(this); }
+    public boolean captionsAvailable() { return "google".equals(captionEngine()) ? !TranscriptionClient.isPlaceholderKey(googleKey()) : CaptionClient.companionInstalled(this); }
+    public String captionEngine() { return getSharedPreferences("radio", MODE_PRIVATE).getString("captionEngine", "vosk"); }
+    public void setCaptionEngine(String e) { getSharedPreferences("radio", MODE_PRIVATE).edit().putString("captionEngine", e).apply(); }
+    public String googleKey() { return getSharedPreferences("radio", MODE_PRIVATE).getString("googleKey", ""); }
+    public void setGoogleKey(String k) { getSharedPreferences("radio", MODE_PRIVATE).edit().putString("googleKey", k == null ? "" : k.trim()).apply(); }   // never logged
+
+    // Google Cloud Speech: collect one utterance (16 kHz, upsampled from the 8 kHz stream), send it when the audio pauses or the reception ends
+    private final java.io.ByteArrayOutputStream googleBuf = new java.io.ByteArrayOutputStream();
+    private volatile long googleLastVoiceMs; private volatile boolean googleBusy;
+    private void googleFeed(byte[] mono, int n, int peak) {
+        synchronized (googleBuf) {
+            if (peak > 400) googleLastVoiceMs = System.currentTimeMillis();
+            if (googleBuf.size() == 0 && peak <= 400) return;
+            int prev = googleBuf.size() == 0 ? 0 : (short) ((mono[0] & 0xFF) | (mono[1] << 8));
+            for (int i = 0; i + 1 < n; i += 2) { int cur = (short) ((mono[i] & 0xFF) | (mono[i + 1] << 8)); int mid = (prev + cur) >> 1; googleBuf.write(mid); googleBuf.write(mid >> 8); googleBuf.write(cur); googleBuf.write(cur >> 8); prev = cur; }
+            if (googleBuf.size() > 16000 * 2 * 55 || (System.currentTimeMillis() - googleLastVoiceMs > 1500 && googleBuf.size() > 16000 * 2)) googleFlush();
+        }
+    }
+    private void googleFlush() {
+        final byte[] pcm; synchronized (googleBuf) { if (googleBuf.size() < 16000) { googleBuf.reset(); return; } pcm = googleBuf.toByteArray(); googleBuf.reset(); }
+        if (googleBusy) return; googleBusy = true;
+        ui.post(() -> { for (Listener l : listeners) l.onCaption(captionsOn, "\u2601 transcribing\u2026", null); });
+        new Thread(() -> {
+            try {
+                String text = TranscriptionClient.transcribe(pcm, 16000, googleKey());
+                if (text != null && !text.trim().isEmpty()) {
+                    String line = captionPrefix() + text.trim();
+                    store.addHistory(current != null ? current.number : 0, "txt", "\uD83D\uDCDD " + line, -999, lastCaller);
+                    checkKeywords(text);
+                    ui.post(() -> { for (Listener l : listeners) l.onCaption(captionsOn, "", line); });
+                } else ui.post(() -> { for (Listener l : listeners) l.onCaption(captionsOn, "", null); });
+            } catch (Throwable t) { log("google stt: " + t.getClass().getSimpleName()); ui.post(() -> { for (Listener l : listeners) l.onCaption(captionsOn, "\u26A0 cloud transcription failed", null); }); }
+            finally { googleBusy = false; }
+        }, "google-stt").start();
+    }
     public String captionModel() { return getSharedPreferences("radio", MODE_PRIVATE).getString("captionModel", CaptionClient.MODELS[1]); }
 
     public void setCaptionModel(String m) {
@@ -689,9 +725,17 @@ public class RadioService extends Service implements RadioEngine.Events {
         applyVfo(v);
     }
 
-    public String reimportFromStock() {
+    /** Stock "areas" (one channel database each): keys like default_uhf, usa, eu … */
+    public java.util.List<String> stockAreas() {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (String l : RootSetup.run("ls /data/data/" + profile.stockApp + "/databases/ 2>/dev/null").split("\\s+")) { java.util.regex.Matcher m = java.util.regex.Pattern.compile("database_channel_area_(\\w+)\\.db").matcher(l); if (m.matches()) out.add(m.group(1)); }
+        if (out.isEmpty()) out.add("default_uhf");
+        return out;
+    }
+    public String reimportFromStock() { return reimportFromStock("default_uhf"); }
+    public String reimportFromStock(String areaKey) {
         StringBuilder err = new StringBuilder();
-        int n = store.importFromStock(this, profile.stockApp, "default_uhf", err);
+        int n = store.importFromStock(this, profile.stockApp, areaKey, err);
         if (n >= 0) { int keep = store.activeNumber(); selectChannel(keep); }
         return n >= 0 ? "Imported " + n + " channels" + (err.length() > 0 ? " (" + err + ")" : "") : "Import failed: " + err;
     }
@@ -730,6 +774,11 @@ public class RadioService extends Service implements RadioEngine.Events {
         });
     }
 
+    // ---- Device tools ----
+    public void diagVersion() { worker.execute(() -> { try { engine.queryVersion(); } catch (IOException e) { log("version: " + e); } }); }
+    public void diagPowerCycle() { worker.execute(() -> { try { if (audio != null) audio.stopRx(); log("power-cycling the module"); engine.powerCycle(); if (!engine.waitBooted(12000)) log("no banner after power-cycle"); engine.queryVersion(); if (current != null) applyChannelNow(current, current.id > 0); if (rxAudioOn && audio != null) audio.startRx(true); } catch (Throwable t) { log("power-cycle: " + t); } }); }
+    public void diagTestTone(int ms) { short[] pcm = new short[8000 * ms / 1000]; for (int i = 0; i < pcm.length; i++) pcm[i] = (short) (12000 * Math.sin(2 * Math.PI * 1000 * i / 8000.0)); transmitPcm(pcm, "1 kHz test tone " + ms + " ms", null); }
+
     public void pollRssi() { try { if (engine.isOpen()) engine.queryRssi(); } catch (IOException ignored) { } }
 
     // ---- listeners ----------------------------------------------------------------------------------
@@ -760,6 +809,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                 finishRecording();
                 toneBank.reset(); toneAnnounced = -1;
                 if (captions != null) captions.stop();
+                if (captionsOn && "google".equals(captionEngine())) googleFlush();
                 ui.post(() -> { for (Listener l : listeners) l.onRx(false); });
                 break;
             }

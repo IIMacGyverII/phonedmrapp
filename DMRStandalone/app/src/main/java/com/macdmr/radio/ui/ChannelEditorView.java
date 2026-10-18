@@ -34,7 +34,6 @@ public class ChannelEditorView extends LinearLayout {
     private LinearLayout digitalGroup, analogGroup;
 
     private static final String[] TONE_TYPES = { "None", "CTCSS", "DCS" };
-    private static final double[] CTCSS = { 67.0, 69.3, 71.9, 74.4, 77.0, 79.7, 82.5, 85.4, 88.5, 91.5, 94.8, 97.4, 100.0, 103.5, 107.2, 110.9, 114.8, 118.8, 123.0, 127.3, 131.8, 136.5, 141.3, 146.2, 151.4, 156.7, 159.8, 162.2, 165.5, 167.9, 171.3, 173.8, 177.3, 179.9, 183.5, 186.2, 189.9, 192.8, 196.6, 199.5, 203.5, 206.5, 210.7, 218.1, 225.7, 229.1, 233.6, 241.8, 250.3, 254.1 };
 
     public ChannelEditorView(Context c, ChannelStore.Channel channel, boolean isNew, Done done) {
         super(c);
@@ -115,7 +114,7 @@ public class ChannelEditorView extends LinearLayout {
     private static String[] names(int from, int to) { String[] s = new String[to - from + 1]; for (int i = from; i <= to; i++) s[i - from] = String.valueOf(i); return s; }
     private static String join(int[] a) { StringBuilder b = new StringBuilder(); for (int x : a) { if (b.length() > 0) b.append(", "); b.append(x); } return b.toString(); }
     private static String toneName(int type, int code) {
-        if (type == 1) return code >= 0 && code < CTCSS.length ? String.format(Locale.US, "%.1f Hz", CTCSS[code]) : "CTCSS #" + code;
+        if (type == 1) return com.macdmr.radio.dsp.ToneTable.ctcssHz(code) > 0 ? com.macdmr.radio.dsp.ToneTable.ctcssLabel(code) : "CTCSS #" + code;
         if (type == 2) return "DCS " + String.format(Locale.US, "D%03oN", code);
         return "—";
     }
@@ -123,7 +122,7 @@ public class ChannelEditorView extends LinearLayout {
     private void pickTone(final boolean txSide) {
         int type = txSide ? ch.txType : ch.rxType;
         if (type == 0) return;
-        final String[] items; final int n = type == 1 ? CTCSS.length : 104;
+        final String[] items; final int n = type == 1 ? com.macdmr.radio.dsp.ToneTable.CTCSS.length : 104;
         items = new String[n]; for (int i = 0; i < n; i++) items[i] = toneName(type, i);
         new android.app.AlertDialog.Builder(getContext()).setTitle(txSide ? "TX tone" : "RX tone").setItems(items, (d, w) -> {
             if (txSide) { ch.txSubCode = w; txCodeV.setText(items[w]); } else { ch.rxSubCode = w; rxCodeV.setText(items[w]); }

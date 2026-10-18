@@ -94,6 +94,8 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         LinearLayout sr = new LinearLayout(c); sr.setGravity(Gravity.CENTER_VERTICAL);
         LayoutParams srLp = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); srLp.leftMargin = srLp.rightMargin = dp10; srLp.topMargin = dp4;
         signal = Theme.label(c, "Signal: --", Theme.YELLOW, 16, true); signal.setGravity(Gravity.CENTER);
+        signal.setSingleLine(true); signal.setMaxLines(1);   // "Signal: -104 dBm" must never wrap and push the page down
+        androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(signal, 10, 16, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
         signal.setBackground(Theme.rounded(c, 0x15FFFF00, 0xAAFFFF00, 2, 8)); signal.setPadding(dp4, (int) (12 * d), dp4, (int) (12 * d));
         LayoutParams sl = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 0.4f); sl.rightMargin = dp4;
         sr.addView(signal, sl);
@@ -196,11 +198,17 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         mon.setOnClickListener(v -> { if (svc != null) svc.setMonitor(!mon.isOn()); });
         txt.setOnClickListener(v -> {
             if (svc == null) return;
-            if (!svc.captionsAvailable()) { android.widget.Toast.makeText(c, "Install the DMR Transcription companion app for live captions", android.widget.Toast.LENGTH_LONG).show(); return; }
+            if (!svc.captionsAvailable()) { android.widget.Toast.makeText(c, "google".equals(svc.captionEngine()) ? "Long-press TXT and enter a Google Cloud API key, or switch to the on-device engine" : "Install the DMR Transcription companion app for on-device captions, or long-press TXT to use Google Cloud", android.widget.Toast.LENGTH_LONG).show(); return; }
             svc.setCaptions(!txt.isOn());
         });
         txt.setOnLongClickListener(v -> {
-            new android.app.AlertDialog.Builder(c).setTitle("Live captions").setItems(new String[] { "Recognition model\u2026", "Keyword alerts\u2026" }, (d2, w) -> { if (w == 0) pickCaptionModel(); else editKeywords(); }).show();
+            final boolean google = "google".equals(svc.captionEngine());
+            new android.app.AlertDialog.Builder(c).setTitle("Live captions").setItems(new String[] { "Engine: " + (google ? "Google Cloud (switch to on-device Vosk)" : "on-device Vosk (switch to Google Cloud)"), "Recognition model (Vosk)\u2026", "Google Cloud API key\u2026", "Keyword alerts\u2026" }, (d2, w) -> {
+                if (w == 0) { svc.setCaptionEngine(google ? "vosk" : "google"); android.widget.Toast.makeText(c, "Captions now use " + (google ? "the on-device Vosk recognizer" : "Google Cloud Speech"), android.widget.Toast.LENGTH_SHORT).show(); }
+                else if (w == 1) pickCaptionModel();
+                else if (w == 2) editGoogleKey();
+                else editKeywords();
+            }).show();
             return true;
         });
         vfo.setOnClickListener(v -> { if (svc != null) VfoDialog.show(c, svc); });
@@ -224,6 +232,14 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     }
 
     public void attach(RadioService s) { svc = s; s.addListener(this); }
+
+    private void editGoogleKey() {
+        if (svc == null) return;
+        final android.widget.EditText et = new android.widget.EditText(getContext()); et.setHint("Google Cloud Speech-to-Text API key"); et.setText(svc.googleKey());
+        et.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        new android.app.AlertDialog.Builder(getContext()).setTitle("Google Cloud API key").setMessage("Used only when the engine is Google Cloud. The key stays in this app's private settings and is never written to logs or backups.").setView(et)
+                .setPositiveButton("Save", (d2, w) -> svc.setGoogleKey(et.getText().toString())).setNegativeButton("Cancel", null).show();
+    }
 
     private void editKeywords() {
         if (svc == null) return;

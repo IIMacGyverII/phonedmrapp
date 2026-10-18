@@ -153,6 +153,16 @@ public class MainActivity extends AppCompatActivity {
         if (req == 77 && imagePick != null) { java.util.function.Consumer<android.net.Uri> cb = imagePick; imagePick = null; if (res == RESULT_OK && data != null && data.getData() != null) cb.accept(data.getData()); }
     }
 
+    /** Volume-up as PTT (Device tab option) while the Intercom page is showing. */
+    private boolean volPttDown;
+    @Override public boolean dispatchKeyEvent(android.view.KeyEvent e) {
+        if (e.getKeyCode() == android.view.KeyEvent.KEYCODE_VOLUME_UP && tab == 0 && svc != null && getSharedPreferences("radio", MODE_PRIVATE).getBoolean("volPtt", false)) {
+            if (e.getAction() == android.view.KeyEvent.ACTION_DOWN) { if (e.getRepeatCount() == 0 && !volPttDown) { volPttDown = true; svc.ptt(true); } return true; }
+            if (e.getAction() == android.view.KeyEvent.ACTION_UP) { if (volPttDown) { volPttDown = false; svc.ptt(false); } return true; }
+        }
+        return super.dispatchKeyEvent(e);
+    }
+
     @Override public void onBackPressed() {
         if (overlay != null) { closeOverlay(); return; }
         if (editor != null) { content.removeView(editor); editor = null; return; }

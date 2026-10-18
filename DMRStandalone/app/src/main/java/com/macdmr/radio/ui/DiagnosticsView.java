@@ -31,6 +31,13 @@ public class DiagnosticsView extends LinearLayout implements RadioService.Listen
         for (TextView t : new TextView[] { up, down, rssi, clear }) { LayoutParams p = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f); p.setMargins(4, 8, 4, 8); row.addView(t, p); }
         addView(row);
         up.setOnClickListener(v -> { if (svc != null) svc.bringUp(); });
+        TextView ver = Theme.pillButton(c, "Module version"), cyc = Theme.pillButton(c, "Power-cycle module"), tone = Theme.pillButton(c, "1 kHz test tone (3 s)");
+        ver.setOnClickListener(v -> { if (svc != null) svc.diagVersion(); });
+        cyc.setOnClickListener(v -> { if (svc != null) new android.app.AlertDialog.Builder(c).setTitle("Power-cycle the radio module?").setMessage("Pulls the module's power line low and back up, waits for its boot banner and re-applies the channel. Use it if the radio stops answering.").setPositiveButton("Power-cycle", (d, w) -> svc.diagPowerCycle()).setNegativeButton("Cancel", null).show(); });
+        tone.setOnClickListener(v -> { if (svc != null) new android.app.AlertDialog.Builder(c).setTitle("Transmit a 3 s test tone?").setMessage("Keys the radio on the current channel with a 1 kHz tone, for a bench receiver or SDR.").setPositiveButton("Transmit", (d, w) -> svc.diagTestTone(3000)).setNegativeButton("Cancel", null).show(); });
+        LinearLayout row2 = new LinearLayout(c); row2.setGravity(Gravity.CENTER);
+        for (TextView t : new TextView[] { ver, cyc, tone }) { LayoutParams p = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f); p.setMargins(4, 0, 4, 8); row2.addView(t, p); }
+        addView(row2);
         down.setOnClickListener(v -> { if (svc != null) svc.shutDown(true); });
         rssi.setOnClickListener(v -> { if (svc != null) svc.pollRssi(); });
         ScrollView sv = new ScrollView(c);
