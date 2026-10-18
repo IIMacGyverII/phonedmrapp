@@ -43,9 +43,9 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         LinearLayout link = section(body, "📻 Radio link");
         profileText = Theme.label(c, "", 0xFF9AA4AE, 13, false); link.addView(profileText);
         linkText = Theme.label(c, "", Theme.CYAN, 15, true); link.addView(linkText);
-        LinearLayout lrow = new LinearLayout(c); lrow.setGravity(Gravity.CENTER);
+        LinearLayout lrow = new LinearLayout(c); lrow.setGravity(Gravity.CENTER); lrow.setBaselineAligned(false);
         TextView up = pill(c, "Take over the radio", Theme.PKT), release = pill(c, "Hand back to stock app", Theme.MON);
-        LayoutParams bl = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f); bl.setMargins((int) (4 * d), (int) (10 * d), (int) (4 * d), 0);
+        LayoutParams bl = new LayoutParams(0, LayoutParams.MATCH_PARENT, 1f); bl.setMargins((int) (4 * d), (int) (10 * d), (int) (4 * d), (int) (4 * d));   // paired buttons: same height, no baseline shift (a wrapped label used to push its neighbour down and clip both)
         lrow.addView(up, bl); lrow.addView(release, new LayoutParams(bl));
         link.addView(lrow);
         up.setOnClickListener(v -> { if (svc != null) svc.bringUp(); });
@@ -62,15 +62,15 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         LayoutParams ob = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); ob.setMargins((int) (4 * d), (int) (8 * d), (int) (4 * d), 0);
         link.addView(ownAtBoot, ob);
         ownAtBoot.setOnCheckedChangeListener((b, on) -> { if (svc != null) svc.setOwnAtBoot(on); });
-        link.addView(Theme.label(c, "This app needs root (Magisk) to reach the radio's serial port. While it owns the radio the stock walkie-talkie app is paused and its icon is hidden; \"Hand back\" restores it. The Magisk module makes the required SELinux rules survive a reboot so the app can start on its own; with it installed, the radio can be owned straight from boot.", 0xFF8A98A6, 12, false));
+        link.addView(spaced(c, Theme.label(c, "This app needs root (Magisk) to reach the radio's serial port. While it owns the radio the stock walkie-talkie app is paused and its icon is hidden; \"Hand back\" restores it. The Magisk module makes the required SELinux rules survive a reboot so the app can start on its own; with it installed, the radio can be owned straight from boot.", 0xFF8A98A6, 12, false)));
 
         // --- device report (any phone) ---
         LinearLayout rep = section(body, "\uD83E\uDDEA Device report");
         rep.addView(Theme.label(c, "For a phone that has no profile yet, or to help debug one: gathers the facts a profile needs (serial ports, radio-module nodes, the stock walkie-talkie app and its APK, vendor libraries, framework jars, services; with root also SELinux labels and the PTT key broadcasts), saves it under Download/DMR/DeviceReport and offers to share the zip to a GitHub issue. Nothing on the phone is changed.", 0xFF8A98A6, 12, false));
-        LinearLayout rrow = new LinearLayout(c); rrow.setGravity(Gravity.CENTER);
+        LinearLayout rrow = new LinearLayout(c); rrow.setGravity(Gravity.CENTER); rrow.setBaselineAligned(false);
         TextView gen = pill(c, "Generate device report", Theme.PKT), share = pill(c, "Share last report", Theme.SOFTSQ);
         rrow.addView(gen, new LayoutParams(bl)); rrow.addView(share, new LayoutParams(bl)); rep.addView(rrow);
-        LinearLayout rrow2 = new LinearLayout(c); rrow2.setGravity(Gravity.CENTER);
+        LinearLayout rrow2 = new LinearLayout(c); rrow2.setGravity(Gravity.CENTER); rrow2.setBaselineAligned(false);
         TextView keys = pill(c, "Capture the PTT key (10 s)", Theme.VFO), probe = pill(c, "Radio probe (root)", Theme.MON);
         rrow2.addView(keys, new LayoutParams(bl)); rrow2.addView(probe, new LayoutParams(bl)); rep.addView(rrow2);
         TextView issue = pill(c, "Open a GitHub issue with the facts filled in", Theme.REC);
@@ -130,7 +130,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         voiceBox.setTextColor(0xFFC8D2DC); voiceBox.setTextSize(13); voiceBox.setButtonTintList(android.content.res.ColorStateList.valueOf(Theme.CYAN));
         data.addView(voiceBox, new LayoutParams(bb));
         voiceBox.setOnCheckedChangeListener((b, on) -> { if (svc != null && on != svc.voiceOn()) svc.setVoiceOn(on); });
-        LinearLayout brow = new LinearLayout(c); brow.setGravity(Gravity.CENTER);
+        LinearLayout brow = new LinearLayout(c); brow.setGravity(Gravity.CENTER); brow.setBaselineAligned(false);
         TextView backup = pill(c, "Back up now", Theme.PKT), restore = pill(c, "Restore a backup", Theme.MON);
         brow.addView(backup, new LayoutParams(bl)); brow.addView(restore, new LayoutParams(bl)); data.addView(brow);
         backup.setOnClickListener(v -> new Thread(() -> {
@@ -157,7 +157,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
                     }).start()).setNegativeButton("Cancel", null).show();
             }).show();
         });
-        data.addView(Theme.label(c, "Backups are the same five CSV files (Contacts, TG_Lists, Channels, Zones, DTMF) the DMRModHooks module and the OpenGD77 CPS fork use, in Download/DMR/DMR_Backups, so codeplugs move between all three.", 0xFF8A98A6, 12, false));
+        data.addView(spaced(c, Theme.label(c, "Backups are the same five CSV files (Contacts, TG_Lists, Channels, Zones, DTMF) the DMRModHooks module and the OpenGD77 CPS fork use, in Download/DMR/DMR_Backups, so codeplugs move between all three.", 0xFF8A98A6, 12, false)));
         TextView reimport = pill(c, "Re-import from the stock app", Theme.VFO);
         data.addView(reimport, new LayoutParams(bb));
         reimport.setOnClickListener(v -> new Thread(() -> {
@@ -179,10 +179,10 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         more.addView(upd, new LayoutParams(bb));
         upd.setOnClickListener(v -> com.macdmr.radio.Updater.check(c));
         TextView help = pill(c, "Help & how-to", Theme.PKT), diag = pill(c, "Diagnostics log", Theme.MON);
-        LinearLayout hrow = new LinearLayout(c); hrow.addView(help, new LayoutParams(bl)); hrow.addView(diag, new LayoutParams(bl)); more.addView(hrow);
+        LinearLayout hrow = new LinearLayout(c); hrow.setBaselineAligned(false); hrow.addView(help, new LayoutParams(bl)); hrow.addView(diag, new LayoutParams(bl)); more.addView(hrow);
         help.setOnClickListener(v -> { if (host != null) host.openHelp(); });
         diag.setOnClickListener(v -> { if (host != null) host.openDiagnostics(); });
-        more.addView(Theme.label(c, "DMR Radio " + com.macdmr.radio.BuildConfig.VERSION_NAME + " — the standalone edition of DMRModHooks. Same radio, no LSPosed.", 0xFF8A98A6, 12, false));
+        more.addView(spaced(c, Theme.label(c, "DMR Radio " + com.macdmr.radio.BuildConfig.VERSION_NAME + " — the standalone edition of DMRModHooks. Same radio, no LSPosed.", 0xFF8A98A6, 12, false)));
     }
 
     private void shareZip(final boolean withApks) {
@@ -209,6 +209,9 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         parent.addView(s, lp);
         return s;
     }
+
+    /** Explanatory text under a row of buttons: a little air above it so it does not touch the buttons. */
+    private static TextView spaced(Context c, TextView t) { t.setPadding(t.getPaddingLeft(), Theme.dp(c, 8), t.getPaddingRight(), t.getPaddingBottom()); return t; }
 
     private static TextView pill(Context c, String text, int[] accent) {
         TextView b = Theme.label(c, text, accent[3], 14, true); b.setGravity(Gravity.CENTER);
