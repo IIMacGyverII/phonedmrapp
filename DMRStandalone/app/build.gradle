@@ -10,13 +10,26 @@ android {
         applicationId "com.macdmr.radio"
         minSdk 29
         targetSdk 34
-        versionCode 1
-        versionName "0.1.0-spike"
+        versionCode 100
+        versionName "1.0.0-beta.1"
     }
 
+    buildFeatures { buildConfig true }
+    // One key for debug and release (the DMRModHooks release key, like the companion app): adb install -r keeps
+    // working across both and users can move from a test build to a release without uninstalling.
+    signingConfigs {
+        release {
+            storeFile file('../../DMRModHooks/release.keystore')
+            storePassword 'android'
+            keyAlias 'dmrmodhooks'
+            keyPassword 'android'
+        }
+    }
     buildTypes {
+        debug { signingConfig signingConfigs.release }
         release {
             minifyEnabled false
+            signingConfig signingConfigs.release
         }
     }
 
