@@ -53,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
             intercom.attach(svc); diagnostics.attach(svc); channels.attach(svc); contacts.attach(svc); messages.attach(svc); device.attach(svc);
             if (!svc.isReady()) svc.bringUp();
             ui.post(rssiTick);
+            applyPendingLocation();
             if (!svc.profile().supported && !getSharedPreferences("radio", MODE_PRIVATE).getBoolean("unsupportedShown", false)) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("unsupportedShown", true).apply(); show(4); }
         }
         @Override public void onServiceDisconnected(ComponentName n) { svc = null; }
@@ -107,12 +108,38 @@ public class MainActivity extends AppCompatActivity {
             content.addView(editor, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         });
         show(0);
+        takeSharedLocation(getIntent());
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
             ActivityCompat.requestPermissions(this, android.os.Build.VERSION.SDK_INT >= 33 ? new String[] { Manifest.permission.RECORD_AUDIO, Manifest.permission.POST_NOTIFICATIONS, Manifest.permission.ACCESS_FINE_LOCATION, "android.permission.READ_MEDIA_AUDIO" } : new String[] { Manifest.permission.RECORD_AUDIO, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.READ_EXTERNAL_STORAGE }, 1);
         Intent si = new Intent(this, RadioService.class);
         startForegroundService(si);
         bindService(si, conn, Context.BIND_AUTO_CREATE);
+    }
+
+    public static final String EXTRA_LAT = "com.macdmr.radio.lat", EXTRA_LON = "com.macdmr.radio.lon";
+    private double[] pendingLocation;
+
+    @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); setIntent(i); takeSharedLocation(i); }
+
+    /** A place shared from a maps app (ShareLocationActivity): into the open channel editor, or onto a channel you pick. */
+    private void takeSharedLocation(Intent i) {
+        if (i == null || !i.hasExtra(EXTRA_LAT)) return;
+        pendingLocation = new double[] { i.getDoubleExtra(EXTRA_LAT, 0), i.getDoubleExtra(EXTRA_LON, 0) };
+        i.removeExtra(EXTRA_LAT); i.removeExtra(EXTRA_LON);
+        applyPendingLocation();
+    }
+    private void applyPendingLocation() {
+        if (pendingLocation == null) return;
+        final double[] p = pendingLocation;
+        if (editor instanceof com.macdmr.radio.ui.ChannelEditorView) { pendingLocation = null; ((com.macdmr.radio.ui.ChannelEditorView) editor).setLocation(p[0], p[1]); return; }
+        if (svc == null) return;   // applied once the service is connected
+        pendingLocation = null;
+        final java.util.List<ChannelStore.Channel> all = svc.store().all();
+        String[] names = new String[all.size()]; for (int k = 0; k < names.length; k++) names[k] = all.get(k).number + "  " + all.get(k).name;
+        new android.app.AlertDialog.Builder(this).setTitle(String.format(java.util.Locale.US, "Set %.5f, %.5f as the location of", p[0], p[1]))
+                .setItems(names, (d, w) -> { ChannelStore.Channel ch = all.get(w); ch.lat = p[0]; ch.lon = p[1]; svc.saveChannel(ch, false); android.widget.Toast.makeText(this, ch.name + ": location set", android.widget.Toast.LENGTH_LONG).show(); })
+                .setNegativeButton("Cancel", null).show();
     }
 
     private void show(int idx) {

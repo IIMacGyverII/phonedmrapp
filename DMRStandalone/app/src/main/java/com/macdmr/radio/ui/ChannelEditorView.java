@@ -55,6 +55,9 @@ public class ChannelEditorView extends LinearLayout {
     private static final String H_KEY = "Exactly 8 characters, the same on every radio in the group. Used only when Encrypt is Enabled.";
     private static final String H_INT = "DMR transmit interrupt. ON allows a call in progress to be interrupted (for example by the radio you are calling) on radios that support it; when it is refused the radio reports that the called device does not allow interruption. OFF is the stock setting.";
     private static final String H_SQ = "The radio's own squelch, used when Soft SQ is off for this channel. 0 keeps it fully open: you hear static and the radio reports a reception all the time. 1 to 9 close it; on this radio they behave as one threshold, about −90 dBm.";
+    private static final String H_SOFTSQ = "Soft SQ holds the radio's squelch open and lets the app decide what you hear: the channel's CTCSS tone when it has one, otherwise a noise squelch that tells speech from static. It catches weaker stations than the radio's own squelch. The SOFT SQ key on the intercom switches it too.";
+    private static final String H_SOFTSQ_LVL = "How strict Soft SQ is, from 1 (lenient: opens on weaker, noisier signals) to 9 (strict: only clean signals). Same as the slider on the intercom.";
+    private static final String H_MAPS = "Open Maps shows this position (or yours) in your maps app. Find the place there and use Share \u2192 DMR Radio, or copy its coordinates or link and come back to tap Paste. Paste reads coordinates, geo: links and Google, Apple or OpenStreetMap links from the clipboard, following short share links.";
     private static final String H_TXT = "A sub-audible tone sent with your transmission: CTCSS (a low tone, 62.5 to 254.1 Hz) or DCS (a digital code). Repeaters and radios that use tone squelch only open for the right one; a repeater's listing gives its access tone.";
     private static final String H_TXC = "The CTCSS frequency or DCS code to send. Tap to pick from the list.";
     private static final String H_RXT = "Only signals carrying this tone open the squelch, so other users on the frequency stay quiet. With Soft SQ on, the app checks the CTCSS tone itself; DCS is checked by the radio.";
@@ -111,6 +114,8 @@ public class ChannelEditorView extends LinearLayout {
 
         analogGroup = new LinearLayout(c); analogGroup.setOrientation(VERTICAL); form.addView(analogGroup);
         section(analogGroup, "Squelch and tones");
+        choiceInto(analogGroup, "Soft SQ", H_SOFTSQ, new String[] { "Off", "On" }, ch.softSq ? 1 : 0, v -> ch.softSq = v == 1);
+        choiceInto(analogGroup, "Soft SQ level", H_SOFTSQ_LVL, names(1, 9), Math.max(1, Math.min(9, ch.softSqLevel)) - 1, v -> ch.softSqLevel = v + 1);
         choiceInto(analogGroup, "Squelch level", H_SQ, names(0, 9), ch.sq, v -> ch.sq = v);
         choiceInto(analogGroup, "TX tone type", H_TXT, TONE_TYPES, ch.txType, v -> { ch.txType = v; ch.txSubCode = 0; txCodeV.setText(toneName(ch.txType, ch.txSubCode)); });
         txCodeV = choiceInto(analogGroup, "TX tone", H_TXC, null, 0, null);
@@ -121,17 +126,56 @@ public class ChannelEditorView extends LinearLayout {
         txCodeV.setText(toneName(ch.txType, ch.txSubCode)); rxCodeV.setText(toneName(ch.rxType, ch.rxSubCode));
 
         section(form, "Location");
-        lat = textInto(form, "Latitude (optional)", H_POS, ch.lat != 0 || ch.lon != 0 ? String.format(Locale.US, "%.5f", ch.lat) : "", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
+        lat = textInto(form, "Latitude (optional)", H_POS + "\n\n" + H_MAPS, ch.lat != 0 || ch.lon != 0 ? String.format(Locale.US, "%.5f", ch.lat) : "", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
         lon = textInto(form, "Longitude (optional)", H_POS, ch.lat != 0 || ch.lon != 0 ? String.format(Locale.US, "%.5f", ch.lon) : "", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
-        TextView here = Neo.button(c, "Use my position", "radio", Neo.CYAN);
+        LinearLayout locRow = new LinearLayout(c); locRow.setBaselineAligned(false);
+        TextView here = Neo.button(c, "My position", "radio", Neo.CYAN), maps = Neo.button(c, "Open Maps", "globe", Neo.GREEN), paste = Neo.button(c, "Paste", "import", Neo.AMBER);
+        for (TextView b : new TextView[] { here, maps, paste }) { b.setTextSize(13.5f); b.setPadding((int) (6 * d), (int) (8 * d), (int) (6 * d), (int) (8 * d)); b.setCompoundDrawablePadding((int) (4 * d)); b.setSingleLine(true); }
+        LayoutParams b1 = new LayoutParams(0, LayoutParams.MATCH_PARENT, 1.15f); b1.rightMargin = (int) (3 * d);
+        LayoutParams b2 = new LayoutParams(0, LayoutParams.MATCH_PARENT, 1.15f); b2.leftMargin = (int) (3 * d); b2.rightMargin = (int) (3 * d);
+        LayoutParams b3 = new LayoutParams(0, LayoutParams.MATCH_PARENT, 0.9f); b3.leftMargin = (int) (3 * d);
+        locRow.addView(here, b1); locRow.addView(maps, b2); locRow.addView(paste, b3);
+        maps.setOnClickListener(v -> openMaps());
+        paste.setOnClickListener(v -> pasteLocation());
         here.setOnClickListener(v -> {
             android.location.Location me = null;
             try { android.location.LocationManager lm = (android.location.LocationManager) c.getSystemService(Context.LOCATION_SERVICE); for (String p : new String[] { "gps", "network", "passive" }) { try { android.location.Location l = lm.getLastKnownLocation(p); if (l != null && (me == null || l.getTime() > me.getTime())) me = l; } catch (SecurityException ignored) { } } } catch (Throwable ignored) { }
             if (me == null) { android.widget.Toast.makeText(c, "No position fix yet", android.widget.Toast.LENGTH_SHORT).show(); return; }
             lat.setText(String.format(Locale.US, "%.5f", me.getLatitude())); lon.setText(String.format(Locale.US, "%.5f", me.getLongitude()));
         });
-        LayoutParams hl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); hl.topMargin = (int) (2 * d); form.addView(here, hl);
+        LayoutParams hl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); hl.topMargin = (int) (2 * d); form.addView(locRow, hl);
+        TextView how = Neo.text(c, "Pick a place in your maps app: Open Maps, find the place, then Share \u2192 DMR Radio. Or copy its coordinates or link and tap Paste.", Neo.DIM, 13, Neo.uiMedium(c));
+        how.setLineSpacing(0, 1.1f); how.setPadding((int) (4 * d), (int) (8 * d), (int) (4 * d), 0); form.addView(how);
         refreshGroups();
+    }
+
+    /** A position chosen elsewhere (shared from a maps app): fill the fields; Save keeps it. */
+    public void setLocation(double la, double lo) {
+        lat.setText(String.format(Locale.US, "%.5f", la)); lon.setText(String.format(Locale.US, "%.5f", lo));
+        android.widget.Toast.makeText(getContext(), "Location filled in: tap Save to keep it", android.widget.Toast.LENGTH_LONG).show();
+    }
+
+    private void openMaps() {
+        Context c = getContext();
+        double la = 0, lo = 0;
+        try { la = Double.parseDouble(lat.getText().toString().trim()); lo = Double.parseDouble(lon.getText().toString().trim()); } catch (Throwable ignored) { }
+        String label = android.net.Uri.encode(ch.name == null || ch.name.isEmpty() ? "Channel" : ch.name);
+        android.net.Uri u = la != 0 || lo != 0 ? android.net.Uri.parse("geo:" + la + "," + lo + "?q=" + la + "," + lo + "(" + label + ")") : android.net.Uri.parse("geo:0,0?q=");
+        try { c.startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, u)); android.widget.Toast.makeText(c, "Find the place, then Share \u2192 DMR Radio (or copy it and tap Paste)", android.widget.Toast.LENGTH_LONG).show(); }
+        catch (Throwable t) { android.widget.Toast.makeText(c, "No maps app is installed", android.widget.Toast.LENGTH_LONG).show(); }
+    }
+
+    private void pasteLocation() {
+        final Context c = getContext();
+        android.content.ClipboardManager cm = (android.content.ClipboardManager) c.getSystemService(Context.CLIPBOARD_SERVICE);
+        CharSequence clip = null;
+        try { if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip().getItemCount() > 0) clip = cm.getPrimaryClip().getItemAt(0).coerceToText(c); } catch (Throwable ignored) { }
+        if (clip == null || clip.length() == 0) { android.widget.Toast.makeText(c, "The clipboard is empty: copy a place's coordinates or link in your maps app first", android.widget.Toast.LENGTH_LONG).show(); return; }
+        final String text = clip.toString();
+        new Thread(() -> {
+            final double[] p = com.macdmr.radio.GeoLink.resolve(text);
+            post(() -> { if (p == null) android.widget.Toast.makeText(c, "No coordinates found in the copied text", android.widget.Toast.LENGTH_LONG).show(); else setLocation(p[0], p[1]); });
+        }).start();
     }
 
     private void refreshGroups() {
