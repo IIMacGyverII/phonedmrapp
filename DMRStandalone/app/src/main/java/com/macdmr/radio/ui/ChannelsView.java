@@ -49,8 +49,11 @@ public class ChannelsView extends LinearLayout implements RadioService.Listener 
         bar.setPadding((int) (20 * d), (int) (4 * d), (int) (16 * d), (int) (4 * d));
         title = Theme.label(c, "Default UHF", Theme.WHITE, 24, false);
         bar.addView(title, new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f));
+        TextView nearby = Theme.label(c, "\uD83D\uDCE1", Theme.WHITE, 22, false); nearby.setPadding((int) (10 * d), 0, (int) (4 * d), 0); nearby.setClickable(true);
+        nearby.setOnClickListener(v -> { if (svc != null) RepeatersDialog.show(c, svc); });
         TextView add = Theme.label(c, "+", Theme.WHITE, 34, false); add.setPadding((int) (10 * d), 0, 0, 0); add.setClickable(true);
         add.setOnClickListener(v -> { if (host != null) host.openEditor(null, true); });
+        bar.addView(nearby);
         bar.addView(add);
         addView(bar);
 

@@ -1,0 +1,136 @@
+package com.macdmr.radio.ui;
+
+import android.app.AlertDialog;
+import android.content.Context;
+import android.graphics.drawable.ColorDrawable;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import com.macdmr.radio.RadioService;
+import com.macdmr.radio.repeaters.GeoUtil;
+import com.macdmr.radio.repeaters.RepeaterModels.Repeater;
+import com.macdmr.radio.repeaters.RepeaterModels.Talkgroup;
+import com.macdmr.radio.repeaters.RepeaterPlanner.Plan;
+import com.macdmr.radio.repeaters.RepeaterService;
+
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+
+/** Nearby repeaters: find DMR (BrandMeister, RadioID) and FM (hearham) repeaters around the phone and program them in a tap. */
+public final class RepeatersDialog {
+    private static final int[] RADII = { 25, 50, 100, 200 };
+    private final Context c; private final RadioService svc; private final RepeaterService rs; private final float d;
+    private int radiusKm = 50; private AlertDialog dlg, sub; private LinearLayout list; private TextView status; private final List<TextView> chips = new ArrayList<>();
+    private List<Repeater> current = new ArrayList<>();
+
+    public static void show(Context c, RadioService svc) { new RepeatersDialog(c, svc).open(false); }
+    private RepeatersDialog(Context c, RadioService svc) { this.c = c; this.svc = svc; rs = new RepeaterService(c, svc.store()); d = Theme.dp(c); radiusKm = c.getSharedPreferences("repeaters", Context.MODE_PRIVATE).getInt("radiusKm", 50); }
+
+    private void open(boolean force) {
+        LinearLayout body = page("📡  Nearby repeaters");
+        body.addView(hint("DMR repeaters from BrandMeister and RadioID, FM repeaters from hearham, sorted by distance from the phone. Tap one to see its details and add it to your channels; installs can be undone."));
+        LinearLayout row = row();
+        for (int km : RADII) { final int k = km; chips.add(pill(row, km + " km", radiusKm == km, x -> { radiusKm = k; c.getSharedPreferences("repeaters", Context.MODE_PRIVATE).edit().putInt("radiusKm", k).apply(); for (int i = 0; i < chips.size(); i++) style(chips.get(i), RADII[i] == k); load(false); })); }
+        TextView refresh = pill(row, "↻", false, x -> load(true)); refresh.setTextSize(16);
+        body.addView(row);
+        status = hint("Loading…"); body.addView(status);
+        if (!rs.runs().isEmpty()) { LinearLayout undoRow = row(); button(undoRow, "Undo an install…", Theme.MON, x -> undo()); body.addView(undoRow); }
+        list = new LinearLayout(c); list.setOrientation(LinearLayout.VERTICAL); body.addView(list);
+        dlg = dialog(body);
+        load(force);
+    }
+
+    private void load(final boolean force) {
+        android.location.Location me = svc.lastKnownLocation();
+        if (me == null) { status.setText("No position fix yet: turn on location and open a map app once, then try again."); return; }
+        status.setText(force ? "Downloading repeater lists…" : "Loading…");
+        final double lat = me.getLatitude(), lon = me.getLongitude();
+        new Thread(() -> {
+            StringBuilder st = new StringBuilder();
+            final List<Repeater> found = rs.nearby(lat, lon, radiusKm, force, st);
+            final String s = st.toString();
+            list.post(() -> { current = found; status.setText(s); render(lat, lon); });
+        }, "repeaters-load").start();
+    }
+
+    private void render(double lat, double lon) {
+        list.removeAllViews();
+        if (current.isEmpty()) { list.addView(hint("Nothing within " + radiusKm + " km. Try a larger radius.")); return; }
+        int n = 0;
+        for (final Repeater r : current) {
+            if (n++ >= 150) break;
+            LinearLayout rowv = shell();
+            String kind = r.dmr && r.fm ? "DMR + FM" : r.dmr ? "DMR" + (r.cc >= 0 ? " CC" + r.cc : "") : "FM" + (hasTone(r.toneUp) ? " " + r.toneUp : "");
+            rowv.addView(Theme.label(c, nz(r.callsign) + "  ·  " + kind, r.dmr ? Theme.AMBER : Theme.CYAN, 15, true));
+            rowv.addView(Theme.label(c, String.format(Locale.US, "%.4f MHz %s%.1f  ·  %s %s%s", r.rxHz / 1e6, r.offsetHz() >= 0 ? "+" : "−", Math.abs(r.offsetHz()) / 1e6, GeoUtil.formatDistanceWithArrow(lat, lon, r.lat, r.lon), nz(r.city), r.approx ? " (approx.)" : ""), 0xFFBFC8D0, 12, false));
+            rowv.setClickable(true); rowv.setOnClickListener(x -> details(r, lat, lon));
+            list.addView(rowv);
+        }
+    }
+
+    private void details(final Repeater r, double lat, double lon) {
+        LinearLayout body = page("📡  " + nz(r.callsign));
+        body.addView(Theme.label(c, String.format(Locale.US, "RX %.4f MHz  ·  TX %.4f MHz", r.rxHz / 1e6, r.txHz / 1e6), Theme.CYAN, 15, true));
+        body.addView(hint((r.dmr ? "DMR" + (r.cc >= 0 ? ", colour code " + r.cc : "") + (r.network != null ? ", " + r.network : "") : "FM" + (hasTone(r.toneUp) ? ", TX tone " + r.toneUp : "") + (hasTone(r.toneDown) ? ", RX tone " + r.toneDown : "")) + "\n" + nz(r.city) + (r.region != null && !r.region.isEmpty() ? ", " + r.region : "") + "  ·  " + GeoUtil.formatDistanceWithArrow(lat, lon, r.lat, r.lon) + (r.approx ? " (position approximate)" : "") + (r.status != null && !r.status.isEmpty() ? "\nStatus: " + r.status : "") + (r.lastSeen != null && !r.lastSeen.isEmpty() ? "\nLast seen: " + r.lastSeen : "")));
+        final Set<Integer> talk = new LinkedHashSet<>();
+        final LinearLayout tgBox = new LinearLayout(c); tgBox.setOrientation(LinearLayout.VERTICAL); body.addView(tgBox);
+        if (r.dmr) {
+            tgBox.addView(hint("Loading talkgroups…"));
+            new Thread(() -> {
+                final List<Talkgroup> tgs = rs.talkgroups(r);
+                tgBox.post(() -> {
+                    tgBox.removeAllViews();
+                    if (tgs.isEmpty()) { tgBox.addView(hint("No talkgroup list for this repeater. A listen channel per slot is still created once a talkgroup is known; add TGs by hand in the channel editor.")); return; }
+                    tgBox.addView(section("Talkgroups (tick the ones you want a talk channel for)"));
+                    for (final Talkgroup tg : tgs) {
+                        final boolean[] on = { "static".equalsIgnoreCase(tg.kind) };
+                        if (on[0]) talk.add(tg.id);
+                        final TextView t = Theme.label(c, (on[0] ? "☑ " : "☐ ") + "TS" + (tg.slot == 2 ? 2 : 1) + "  TG " + tg.id + (tg.name != null && !tg.name.isEmpty() ? "  " + tg.name : "") + (tg.kind != null ? "  (" + tg.kind + ")" : ""), on[0] ? Theme.AMBER : 0xFFBFC8D0, 13, false);
+                        t.setPadding(0, dp(4), 0, dp(4)); t.setClickable(true);
+                        t.setOnClickListener(x -> { on[0] = !on[0]; if (on[0]) talk.add(tg.id); else talk.remove(tg.id); t.setText((on[0] ? "☑ " : "☐ ") + t.getText().toString().substring(2)); t.setTextColor(on[0] ? Theme.AMBER : 0xFFBFC8D0); });
+                        tgBox.addView(t);
+                    }
+                });
+            }, "repeater-tgs").start();
+        }
+        LinearLayout row = row();
+        button(row, "Add to my channels", Theme.PKT, x -> {
+            Plan p = rs.plan(r, talk);
+            if (p.channels.isEmpty()) { toast(p.warnings.isEmpty() ? "Nothing to program" : p.warnings.get(0)); return; }
+            new AlertDialog.Builder(c).setTitle("Add " + nz(r.callsign) + "?").setMessage(RepeaterService.preview(p))
+                    .setPositiveButton("Add", (dd, w) -> new Thread(() -> { final String res = rs.program(r, p); list.post(() -> { toast(res); if (sub != null) sub.dismiss(); }); }).start())
+                    .setNegativeButton("Cancel", null).show();
+        });
+        button(row, "Map", Theme.SOFTSQ, x -> { try { c.startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(String.format(Locale.US, "geo:%f,%f?q=%f,%f(%s)", r.lat, r.lon, r.lat, r.lon, android.net.Uri.encode(nz(r.callsign)))))); } catch (Throwable t) { toast("No map app"); } });
+        body.addView(row);
+        sub = dialog(body);
+    }
+
+    private void undo() {
+        final List<RepeaterService.Run> runs = rs.runs();
+        String[] names = new String[runs.size()]; for (int i = 0; i < names.length; i++) names[i] = runs.get(i).callsign + "  ·  " + runs.get(i).name;
+        new AlertDialog.Builder(c).setTitle("Remove which install?").setItems(names, (dd, w) -> { toast(rs.undo(runs.get(w).id)); dlg.dismiss(); }).show();
+    }
+
+    // ---- widgets ----
+    private static String nz(String s) { return s == null ? "" : s; }
+    private static boolean hasTone(String t) { if (t == null) return false; String x = t.trim(); return !x.isEmpty() && !x.equalsIgnoreCase("None") && !x.equals("0") && !x.equals("0.0") && !x.equals("0.00"); }
+    private int dp(float x) { return Math.round(x * d); }
+    private void toast(String s) { Toast.makeText(c, s, Toast.LENGTH_LONG).show(); }
+    private LinearLayout page(String title) { LinearLayout b = new LinearLayout(c); b.setOrientation(LinearLayout.VERTICAL); b.setBackgroundColor(Theme.BG); b.setPadding(dp(16), dp(12), dp(16), dp(8)); b.addView(Theme.label(c, title, Theme.PKT[3], 20, true)); return b; }
+    private AlertDialog dialog(LinearLayout body) { ScrollView sv = new ScrollView(c); sv.addView(body); AlertDialog a = new AlertDialog.Builder(c).setView(sv).create(); if (a.getWindow() != null) a.getWindow().setBackgroundDrawable(new ColorDrawable(Theme.BG)); a.show(); return a; }
+    private TextView hint(String s) { TextView t = Theme.label(c, s, 0xFF8A98A6, 12, false); t.setPadding(0, dp(4), 0, dp(6)); return t; }
+    private TextView section(String s) { TextView t = Theme.label(c, s, 0xFFBFC8D0, 13, true); t.setPadding(0, dp(8), 0, dp(4)); return t; }
+    private LinearLayout row() { LinearLayout r = new LinearLayout(c); r.setOrientation(LinearLayout.HORIZONTAL); r.setGravity(Gravity.CENTER_VERTICAL); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT); lp.topMargin = dp(2); lp.bottomMargin = dp(4); r.setLayoutParams(lp); return r; }
+    private LinearLayout shell() { LinearLayout r = new LinearLayout(c); r.setOrientation(LinearLayout.VERTICAL); r.setBackground(Theme.rounded(c, 0x18000000, 0x3300BFFF, 1, 8)); r.setPadding(dp(12), dp(8), dp(12), dp(8)); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT); lp.bottomMargin = dp(6); r.setLayoutParams(lp); return r; }
+    private TextView pill(LinearLayout row, String text, boolean on, View.OnClickListener l) { TextView t = Theme.label(c, text, 0xFFBFC8D0, 13, true); t.setGravity(Gravity.CENTER); t.setPadding(dp(6), dp(8), dp(6), dp(8)); t.setClickable(true); t.setOnClickListener(l); style(t, on); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f); lp.setMargins(dp(2), 0, dp(2), 0); row.addView(t, lp); return t; }
+    private void style(TextView t, boolean on) { t.setTextColor(on ? Theme.PKT[3] : 0xFFBFC8D0); t.setBackground(Theme.rounded(c, on ? Theme.PKT[0] : 0x18000000, on ? Theme.PKT[2] : 0x3300BFFF, on ? 2 : 1, 16)); }
+    private TextView button(LinearLayout row, String text, int[] accent, View.OnClickListener l) { TextView b = Theme.label(c, text, accent[3], 13, true); b.setGravity(Gravity.CENTER); b.setBackground(Theme.rounded(c, accent[0], accent[2], 2, 18)); b.setPadding(dp(6), dp(10), dp(6), dp(10)); b.setClickable(true); b.setOnClickListener(l); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f); lp.setMargins(dp(3), dp(2), dp(3), dp(2)); row.addView(b, lp); return b; }
+}
