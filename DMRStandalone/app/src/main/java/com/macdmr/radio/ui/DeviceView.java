@@ -79,11 +79,13 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         gen.setOnClickListener(v -> {
             final android.app.AlertDialog pd = new android.app.AlertDialog.Builder(c).setTitle("Device report").setMessage("Starting\u2026").setCancelable(false).create(); pd.show();
             new Thread(() -> {
-                try { final java.io.File zip = com.macdmr.radio.DeviceReport.generate(c, s -> post(() -> pd.setMessage(s + "\u2026"))); post(() -> { pd.dismiss(); new android.app.AlertDialog.Builder(c).setTitle("Report ready").setMessage("Saved under Download/DMR/DeviceReport. If the phone has a side PTT key, run \"Capture the PTT key\" and, with root, the radio probe, then share the zip.").setPositiveButton("Share now", (dd, w) -> com.macdmr.radio.DeviceReport.share(c, zip)).setNegativeButton("Later", null).show(); }); }
+                try { com.macdmr.radio.DeviceReport.generate(c, s -> post(() -> pd.setMessage(s + "\u2026"))); post(() -> { pd.dismiss(); new android.app.AlertDialog.Builder(c).setTitle("Report ready").setMessage("Saved under Download/DMR/DeviceReport. If the phone has a side PTT key, run \"Capture the PTT key\" and, with root, the radio probe, then use Share last report, which explains what it contains.").setPositiveButton("OK", null).show(); }); }
                 catch (Throwable t) { post(() -> { pd.dismiss(); android.widget.Toast.makeText(c, "Report failed: " + t.getMessage(), android.widget.Toast.LENGTH_LONG).show(); }); }
             }).start();
         });
-        share.setOnClickListener(v -> new Thread(() -> { try { final java.io.File zip = com.macdmr.radio.DeviceReport.zipNewest(c); post(() -> com.macdmr.radio.DeviceReport.share(c, zip)); } catch (Throwable t) { post(() -> android.widget.Toast.makeText(c, "No report yet: generate one first", android.widget.Toast.LENGTH_LONG).show()); } }).start());
+        share.setOnClickListener(v -> new android.app.AlertDialog.Builder(c).setTitle("Share the device report")
+                .setMessage("The report holds phone model and build facts, serial-port and radio-module node names, the walkie-talkie app's package details, library and framework file names, running radio processes, and (with root) SELinux labels and short radio-related log excerpts with message text removed and long numbers masked. No accounts, contacts, messages, location or identifiers such as IMEI.\n\nThe copied stock walkie-talkie APK is the manufacturer's software: include it if you are comfortable posting it, or share without it (we can ask for it privately).")
+                .setPositiveButton("Share all", (dd, w) -> shareZip(true)).setNeutralButton("Without the APK", (dd, w) -> shareZip(false)).setNegativeButton("Cancel", null).show());
         keys.setOnClickListener(v -> {
             final android.app.AlertDialog pd = new android.app.AlertDialog.Builder(c).setTitle("Press the PTT key now").setMessage("Press and release the phone\'s side PTT button a few times within the next 10 seconds. Everything the phone reports for it is recorded.").setCancelable(false).create(); pd.show();
             new Thread(() -> { final String r = com.macdmr.radio.DeviceReport.captureKeys(c, 10); final java.io.File dir = com.macdmr.radio.DeviceReport.append("PTT key capture", r); post(() -> { pd.dismiss(); android.widget.Toast.makeText(c, dir == null ? "Captured, but generate a report first so it can be saved" : "Saved to the report", android.widget.Toast.LENGTH_LONG).show(); }); }).start();
@@ -177,6 +179,11 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         help.setOnClickListener(v -> { if (host != null) host.openHelp(); });
         diag.setOnClickListener(v -> { if (host != null) host.openDiagnostics(); });
         more.addView(Theme.label(c, "DMR Radio " + com.macdmr.radio.BuildConfig.VERSION_NAME + " — the standalone edition of DMRModHooks. Same radio, no LSPosed.", 0xFF8A98A6, 12, false));
+    }
+
+    private void shareZip(final boolean withApks) {
+        final Context c = getContext();
+        new Thread(() -> { try { final java.io.File zip = com.macdmr.radio.DeviceReport.zipNewest(c, withApks); post(() -> com.macdmr.radio.DeviceReport.share(c, zip)); } catch (Throwable t) { post(() -> android.widget.Toast.makeText(c, "No report yet: generate one first", android.widget.Toast.LENGTH_LONG).show()); } }).start();
     }
 
     private void runProbe(boolean pulse) {

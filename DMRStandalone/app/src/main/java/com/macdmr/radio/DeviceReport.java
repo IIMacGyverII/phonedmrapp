@@ -107,7 +107,7 @@ public final class DeviceReport {
                 List<String> apks = new ArrayList<>(); apks.add(ai.sourceDir); if (ai.splitSourceDirs != null) for (String s : ai.splitSourceDirs) apks.add(s);
                 for (String a : apks) { File src = new File(a); File dst = new File(dir, pkg + "_" + src.getName()); p.step("Copying " + pkg); if (copy(src, dst)) r.append("  copied ").append(dst.getName()).append(" (").append(dst.length() / 1024).append(" kB)\n"); else if (root) { RootSetup.run("cp " + a + " " + dst.getAbsolutePath() + " && chmod 644 " + dst.getAbsolutePath()); r.append("  copied with root ").append(dst.getName()).append('\n'); } }
             } catch (Throwable t) { r.append("  could not copy ").append(pkg).append(": ").append(t).append('\n'); }
-            if (root) { h(r, "dumpsys package " + pkg + " (root)"); r.append(RootSetup.run("dumpsys package " + pkg + " | grep -vE '^\\s*$' | head -400")).append('\n'); }
+            if (root) { h(r, "dumpsys package " + pkg + " (root)"); r.append(redact(RootSetup.run("dumpsys package " + pkg + " | grep -vE '^\\s*$' | grep -iE 'Receiver|Service|Activity|action|filter|flags|codePath|resourcePath|nativeLibraryPath|primaryCpuAbi|versionName|sharedUser|uid=|perm' | head -300"))).append('\n'); }
         }
 
         p.step("System files");
@@ -123,7 +123,7 @@ public final class DeviceReport {
             p.step("Root extras");
             h(r, "Processes with a radio-looking name (root)"); r.append(RootSetup.run("ps -AZ | grep -iE 'intercom|interphone|walkie|dmr|ptt|quickchat|tiny|serial|uart' | grep -v grep")).append('\n');
             h(r, "Who holds the serial ports (root)"); r.append(RootSetup.run("for p in /proc/[0-9]*; do ls -l $p/fd 2>/dev/null | grep -q '/dev/tty' && echo \"$(cat $p/comm) ($(basename $p)): $(ls -l $p/fd 2>/dev/null | grep -o '/dev/tty[A-Za-z0-9]*' | sort -u | tr '\\n' ' ')\"; done")).append('\n');
-            h(r, "Recent logcat lines mentioning the radio (root)"); r.append(RootSetup.run("logcat -d -t 3000 2>/dev/null | grep -iE 'ptt|intercom|interphone|walkie|dmr|serial|tty|tiny' | tail -120")).append('\n');
+            h(r, "Recent logcat lines mentioning the radio (root, redacted)"); r.append(redact(RootSetup.run("logcat -d -t 3000 2>/dev/null | grep -iE 'ptt|intercom|interphone|walkie|dmr|serial|tty|tiny' | tail -120"))).append('\n');
             h(r, "SELinux denials seen so far (root)"); r.append(RootSetup.run("logcat -d -b all 2>/dev/null | grep -i 'avc: denied' | tail -40; dmesg 2>/dev/null | grep -i 'avc: denied' | tail -40")).append('\n');
         } else {
             h(r, "Root"); r.append("  not available — with Magisk root the report also lists SELinux labels, which process holds the serial ports, and the stock app's receivers (the PTT key broadcasts).\n");
@@ -150,14 +150,15 @@ public final class DeviceReport {
     }
 
     /** Re-zip the newest report folder (after appends) and return the zip. */
-    public static File zipNewest(Context c) throws Exception {
+    public static File zipNewest(Context c) throws Exception { return zipNewest(c, true); }
+    public static File zipNewest(Context c, boolean withApks) throws Exception {
         File[] fs = reportRoot().listFiles(); File newest = null;
         if (fs != null) for (File f : fs) if (f.isDirectory() && (newest == null || f.lastModified() > newest.lastModified())) newest = f;
         if (newest == null) throw new Exception("no report yet");
-        File zip = new File(new File(c.getCacheDir(), "share"), newest.getName() + ".zip"); zip.getParentFile().mkdirs();
+        File zip = new File(new File(c.getCacheDir(), "share"), newest.getName() + (withApks ? "" : "_noapk") + ".zip"); zip.getParentFile().mkdirs();
         try (ZipOutputStream z = new ZipOutputStream(new FileOutputStream(zip))) {
             File[] in = newest.listFiles();
-            if (in != null) for (File f : in) { z.putNextEntry(new ZipEntry(f.getName())); try (InputStream i = new FileInputStream(f)) { byte[] b = new byte[65536]; int n; while ((n = i.read(b)) > 0) z.write(b, 0, n); } z.closeEntry(); }
+            if (in != null) for (File f : in) { if (!withApks && f.getName().endsWith(".apk")) continue; z.putNextEntry(new ZipEntry(f.getName())); try (InputStream i = new FileInputStream(f)) { byte[] b = new byte[65536]; int n; while ((n = i.read(b)) > 0) z.write(b, 0, n); } z.closeEntry(); }
         }
         return zip;
     }
@@ -208,7 +209,7 @@ public final class DeviceReport {
             if (root) {
                 RootSetup.run("logcat -c");
                 events = RootSetup.run("timeout " + seconds + " getevent -lt 2>&1 | grep -v 'SYN_REPORT' | head -200");
-                logs = RootSetup.run("logcat -d 2>/dev/null | grep -iE 'ptt|intercom|interphone|walkie|KeyEvent|keycode' | head -80");
+                logs = redact(RootSetup.run("logcat -d 2>/dev/null | grep -iE 'ptt|intercom|interphone|walkie|KeyEvent|keycode' | head -80"));
             } else Thread.sleep(seconds * 1000L);
         } catch (Throwable ignored) { }
         keyCapture = null;
@@ -240,6 +241,17 @@ public final class DeviceReport {
         try { if (stockPkg != null && !stockPkg.isEmpty()) { String d = c.getPackageManager().getApplicationInfo(stockPkg, 0).nativeLibraryDir; File[] fs = d == null ? null : new File(d).listFiles(); if (fs != null) for (File f : fs) if (f.getName().endsWith(".so")) out.add(f); } } catch (Throwable ignored) { }
         for (String d : new String[] { "/system/lib64", "/vendor/lib64", "/system/lib", "/vendor/lib" }) { File[] fs = new File(d).listFiles(); if (fs != null) for (File f : fs) if (f.getName().matches("(?i).*(serial|uart|intercom|interphone|walkie|dmr).*\\.so")) out.add(f); }
         return out;
+    }
+
+    /** Log excerpts go into a report that may be posted publicly: drop message content, mask long numbers (DMR IDs, phone numbers), mask e-mails. */
+    static String redact(String log) {
+        if (log == null) return "";
+        StringBuilder out = new StringBuilder();
+        for (String line : log.split("\n")) {
+            if (line.matches("(?i).*(msgContent|SmsMessage|content=|callNumber|passcode|password|token|api_key|apikey).*")) continue;
+            out.append(line.replaceAll("\\b\\d{6,}\\b", "######").replaceAll("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "***@***")).append('\n');
+        }
+        return out.toString();
     }
 
     // ---- helpers ----
