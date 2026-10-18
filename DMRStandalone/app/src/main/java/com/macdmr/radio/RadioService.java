@@ -73,6 +73,85 @@ public class RadioService extends Service implements RadioEngine.Events {
     private final java.util.concurrent.ExecutorService worker = java.util.concurrent.Executors.newSingleThreadExecutor(r -> new Thread(r, "radio-worker"));
     private volatile boolean pttDown;
     private final Runnable txWatchdog = () -> { if (pttDown) { log("TX watchdog: releasing PTT after 28 s"); ptt(false); } };
+    private PacketEngine packet;
+    public PacketEngine packet() { return packet; }
+    public boolean packetActive() { return packet != null && (packet.monitoring() || packet.kiss().isActive()); }
+
+    private final PacketEngine.Host packetHost = new PacketEngine.Host() {
+        @Override public android.content.Context context() { return RadioService.this; }
+        @Override public boolean analogRx() { ChannelStore.Channel c = current; return c != null && !c.isDigital(); }
+        @Override public int rxFreqHz() { ChannelStore.Channel c = current; return c == null ? 0 : c.rxFreq; }
+        @Override public int channelNumber() { ChannelStore.Channel c = current; return c == null ? 0 : c.number; }
+        @Override public String channelName() { ChannelStore.Channel c = current; return c == null ? "" : c.name; }
+        @Override public boolean txBusy() { return pttDown; }
+        @Override public void transmitPcm(short[] pcm, String label, Runnable onDone) { RadioService.this.transmitPcm(pcm, label, onDone); }
+        @Override public android.location.Location location() { return lastKnownLocation(); }
+        @Override public void event(String line) { history("pkt", line); }
+        @Override public void notifyUser(String title, String text, boolean alert) { RadioService.this.notifyUser(title, text, alert); }
+    };
+
+    /** Hands-free one-shot transmission: key, play the PCM through the TX path, release, resume RX. */
+    public void transmitPcm(final short[] pcm, final String label, final Runnable onDone) {
+        worker.execute(() -> {
+            try {
+                if (!isReady()) { log("TX " + label + " skipped: radio not ready"); return; }
+                if (txInhibited()) { log("TX " + label + " blocked: receive-only channel"); ui.post(() -> { for (Listener l : listeners) l.onHistory("\u26D4 TX blocked on a receive-only channel"); }); return; }
+                if (pttDown) { log("TX " + label + " skipped: PTT busy"); return; }
+                int ms = pcm.length / 8;
+                if (ms > 28500) { log("TX " + label + " refused: " + ms + " ms exceeds the 30 s transmit limit"); ui.post(() -> { for (Listener l : listeners) l.onHistory("\u26D4 Too long for this radio's 30 s transmit limit"); }); return; }
+                pttDown = true;
+                if (audio != null) audio.stopRx();
+                engine.ptt(true);
+                log("TX " + label + " (" + ms + " ms)");
+                try { Thread.sleep(200); if (audio != null) log(audio.playPcm(pcm)); }
+                finally { engine.ptt(false); pttDown = false; if (rxAudioOn && audio != null) audio.startRx(true); }
+                if (onDone != null) onDone.run();
+            } catch (Throwable t) { log("TX " + label + ": " + t); try { engine.ptt(false); } catch (Throwable ignored) { } pttDown = false; }
+        });
+    }
+
+    public android.location.Location lastKnownLocation() {
+        try {
+            android.location.LocationManager lm = (android.location.LocationManager) getSystemService(LOCATION_SERVICE);
+            android.location.Location me = null;
+            for (String p : new String[] { android.location.LocationManager.GPS_PROVIDER, android.location.LocationManager.NETWORK_PROVIDER, android.location.LocationManager.PASSIVE_PROVIDER }) {
+                try { android.location.Location l = lm.getLastKnownLocation(p); if (l != null && (me == null || l.getTime() > me.getTime())) me = l; } catch (SecurityException ignored) { }
+            }
+            return me;
+        } catch (Throwable t) { return null; }
+    }
+
+    private int notifyId = 100;
+    public void notifyUser(String title, String text, boolean alert) {
+        try {
+            NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            if (nm == null) return;
+            String ch = alert ? "alerts" : "packet";
+            if (Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(new NotificationChannel(ch, alert ? "Weather alerts" : "APRS messages", alert ? NotificationManager.IMPORTANCE_HIGH : NotificationManager.IMPORTANCE_DEFAULT));
+            Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, ch) : new Notification.Builder(this);
+            b.setSmallIcon(alert ? android.R.drawable.ic_dialog_alert : android.R.drawable.ic_dialog_email).setContentTitle(title).setContentText(text)
+                    .setStyle(new Notification.BigTextStyle().bigText(text)).setAutoCancel(true)
+                    .setContentIntent(android.app.PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_UPDATE_CURRENT));
+            nm.notify(notifyId++, b.build());
+        } catch (Throwable t) { log("notify: " + t); }
+    }
+
+    /** APRS monitoring: park on the APRS frequency (through the VFO, so the channel comes back) and decode. */
+    public String aprsMonitor(boolean on) {
+        if (packet == null) return "not ready";
+        if (on) {
+            ChannelStore.Channel a = new ChannelStore.Channel();
+            a.type = 1; a.rxFreq = a.txFreq = PacketEngine.APRS_FREQ_HZ; a.band = 1; a.power = 1; a.name = "APRS 144.390";
+            packet.setMonitoring(true);
+            applyVfo(a, false);
+            pushModes();
+            return "APRS monitoring on 144.390 MHz";
+        }
+        packet.setMonitoring(false);
+        if (vfo != null && vfo.rxFreq == PacketEngine.APRS_FREQ_HZ) exitVfo();
+        pushModes();
+        return "APRS monitoring off";
+    }
 
     @Override public void onCreate() {
         super.onCreate();
@@ -81,6 +160,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         store = new ChannelStore(this);
         zoneId = getSharedPreferences("radio", MODE_PRIVATE).getLong("zone", 0);
         engine = new RadioEngine(profile, this);
+        packet = new PacketEngine(packetHost);
     }
 
     @Override public IBinder onBind(Intent i) { return binder; }
@@ -179,6 +259,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             if (captions != null && captions.isActive()) captions.feed8kMono(mono, n);
             else if (peak > 400 && System.currentTimeMillis() - captionLastEnd > 1500 && captions != null) { Log.i(TAG, "captions: starting utterance (peak " + peak + ")"); captions.start(); }
         }
+        if (packet != null) packet.feed(mono, n, open);
         if (recordOn && receiving && open) {
             try {
                 if (recorder == null) { recorder = new WavRecorder(current != null ? current.name : null); recorder.start(lastCaller > 0 ? String.valueOf(lastCaller) : null); }
@@ -460,11 +541,12 @@ public class RadioService extends Service implements RadioEngine.Events {
     }
 
     /** Tune the VFO (enters VFO mode if not in it); the previous real channel is remembered for {@link #exitVfo}. */
-    public void applyVfo(final ChannelStore.Channel in) {
+    public void applyVfo(final ChannelStore.Channel in) { applyVfo(in, true); }
+    public void applyVfo(final ChannelStore.Channel in, boolean remember) {
         final ChannelStore.Channel v = vfoCopy(in);
         v.id = -1; v.number = 0;
         if (v.name == null || v.name.isEmpty()) v.name = "VFO " + String.format(Locale.US, "%.4f", v.rxFreq / 1e6) + (v.isDigital() ? " DMR" : " FM");
-        saveVfoPrefs(v);
+        if (remember) saveVfoPrefs(v);
         worker.execute(() -> {
             if (pttDown) return;
             if (scanner.isScanning()) scanner.stop();
@@ -476,6 +558,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     }
 
     public void exitVfo() {
+        if (packet != null && packet.monitoring()) packet.setMonitoring(false);
         worker.execute(() -> {
             if (vfo == null) return;
             vfo = null;
