@@ -45,7 +45,7 @@ public class MessagesView extends LinearLayout implements RadioService.Listener 
 
     public MessagesView(Context c) {
         super(c);
-        setOrientation(VERTICAL); setBackground(Neo.page(c));
+        setOrientation(VERTICAL);   // background: the window's (the thread page, an overlay, keeps its own)
         float d = Theme.dp(c);
         content = new FrameLayout(c);
         listPage = new LinearLayout(c); listPage.setOrientation(VERTICAL);
@@ -61,7 +61,7 @@ public class MessagesView extends LinearLayout implements RadioService.Listener 
 
         // empty state: glowing icon, title, how-to, button
         empty = new LinearLayout(c); empty.setOrientation(VERTICAL); empty.setGravity(Gravity.CENTER_HORIZONTAL); empty.setPadding((int) (32 * d), (int) (70 * d), (int) (32 * d), 0);
-        ImageView art = Neo.iconTile(c, "messages", Neo.CYAN, 96); art.setElevation(8 * d); art.setOutlineAmbientShadowColor(Neo.CYAN); art.setOutlineSpotShadowColor(Neo.CYAN);
+        ImageView art = Neo.iconTile(c, "messages", Neo.CYAN, 96);
         empty.addView(art, new LayoutParams((int) (96 * d), (int) (96 * d)));
         TextView et = Neo.text(c, "No messages yet", Neo.TEXT, 20, Neo.ui(c)); et.setPadding(0, (int) (22 * d), 0, 0); empty.addView(et);
         TextView eb = Neo.text(c, "Write to a contact, a talkgroup or the current channel's call target. Texts travel on DMR channels; incoming ones appear here and in the intercom history.", Neo.MUTED, 14.5f, Neo.uiMedium(c));
@@ -141,7 +141,6 @@ public class MessagesView extends LinearLayout implements RadioService.Listener 
         ImageView send = new ImageView(c); send.setImageDrawable(new Neo.IconDrawable("send", 0xFF04121A)); send.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         int sp = (int) (12 * d); send.setPadding(sp, sp, sp, sp); send.setContentDescription("Send"); send.setClickable(true); send.setFocusable(true);
         android.graphics.drawable.GradientDrawable sg = new android.graphics.drawable.GradientDrawable(); sg.setShape(android.graphics.drawable.GradientDrawable.OVAL); sg.setColor(Neo.GREEN); send.setBackground(sg);
-        send.setElevation(6 * d); send.setOutlineAmbientShadowColor(Neo.GREEN); send.setOutlineSpotShadowColor(Neo.GREEN);
         LayoutParams sl = new LayoutParams((int) (46 * d), (int) (46 * d)); sl.leftMargin = (int) (8 * d);
         compose.addView(send, sl);
         send.setOnClickListener(v -> {

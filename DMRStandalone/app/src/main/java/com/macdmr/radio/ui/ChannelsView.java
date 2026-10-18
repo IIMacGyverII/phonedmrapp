@@ -46,7 +46,7 @@ public class ChannelsView extends LinearLayout implements RadioService.Listener 
 
     public ChannelsView(Context c) {
         super(c);
-        setOrientation(VERTICAL); setBackground(Neo.page(c));
+        setOrientation(VERTICAL);   // background: the window's
         float d = Theme.dp(c);
 
         header = Neo.header(c, "Channels", "");

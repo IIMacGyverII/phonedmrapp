@@ -1,44 +1,332 @@
 package com.macdmr.radio.ui;
 
 import android.content.Context;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Gravity;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-/** In-app help: one card per screen and feature, written for someone holding the radio for the first time. */
+import java.util.Locale;
+
+/**
+ * In-app help as a navigable guide: a home page (Start here, search, topic tiles grouped by area) and one page
+ * per topic with headed sections and Previous / Next. Search matches every section and opens the topic at it.
+ * Written for someone holding the radio for the first time; keep it in step with the screens.
+ */
 public class HelpView extends LinearLayout {
-    private static final String[][] TOPICS = {
-        { "🎙️ Intercom", "The big number is the current channel; the round arrows step through your channels. Hold the large key, or the phone's side PTT button, to talk and release to listen — it is amber when idle, green while the radio hears someone, red while you transmit. On NOAA weather channels the key is dimmed: those frequencies are receive-only.\n\nWhen a CTCSS tone is heard on an analog channel that does not have it, the history says so; tap the box to make it the channel's tone. Tap the history box for Last heard (with the recordings player and the caption transcript): everyone and every channel with activity, newest first, with names from your contacts and the RadioID list; tap a line to switch. The yellow box is the received signal strength. SCAN steps through the channels of the current zone and stops where there is activity. While scanning, Soft SQ is used on every analog channel (each at its own level) so weak stations are caught and static is not; a channel that only had Soft SQ for the scan returns to its own squelch when the scan ends. Turn that off in Device → Channels & contacts to scan with the radio's own squelch instead, then moves on a couple of seconds after it ends; long-press SCAN while it is stopped on a channel to leave that channel out for the rest of the scan. ZONE picks which group of channels the arrows and the scanner use.\n\nThe panel shows what is happening on the channel (receiving, transmitting, who called) and the last events on it; the bars are the audio level.\n\nNew look (Device → New intercom look, or long-press the classic title): the same page redesigned. A readout card shows transmit and receive frequency, colour code and slot or squelch, and the call target or tone, above a segmented S-meter (S1 to S9 in cyan, then +20 and +40). The menu button picks the zone, opens Last heard or returns to the classic look." },
-        { "🎚️ SOFT SQ · ✍️ TXT · 🎛️ VFO", "SOFT SQ holds the radio's squelch open and lets the app decide what you hear (CTCSS tone or noise squelch), which catches weaker signals than the radio's own squelch; the slider sets how strict it is. With SOFT SQ off the channel's own squelch level (Channels → Edit) applies. After a channel change the audio stays muted for under a second while the receiver settles.\n\nTXT turns on live captions of received speech; the recognizer runs inside this app (Vosk); the language model is downloaded once on first use, kept in the app's own storage across updates, and only an uninstall removes it. Long-press TXT to choose the engine (on-device, or Google Cloud Speech with your own API key), the on-device model size, or keyword alerts (words that vibrate, notify and, with voice announcements on, are spoken when heard).\n\nVFO lets you tune any frequency directly without saving a channel: mode, receive and transmit frequency (with repeater-offset shortcuts), power, bandwidth and tones, or colour code, slot and call target for DMR. While VFO is on the intercom arrows step the frequency by the step you chose, the big channel number reads VFO, and long-pressing VFO returns to your channel. Save as channel keeps a frequency you want to come back to." },
-        { "🔴 REC · 👁️ MON · 📡 PKT", "REC records everything received on the channel to Download/DMR/Audio.\n\nMON (monitor) tells the radio to pass every digital call it can decode, not only those addressed to you or your talkgroups.\n\nPKT opens the packet-radio tools. APRS: every analog channel is decoded passively (positions, messages, weather, objects go to Stations and the log); Monitor parks the radio on 144.390 MHz, auto-acks messages for your callsign and can act as a fill-in digipeater; Send message and Position beacon transmit from your callsign (set it in APRS settings); KISS TNC serves APRSdroid or YAAC on 127.0.0.1:8001 on whatever channel you are on. APRS-IS connects to the internet APRS network: with your passcode it gates what the radio hears, beacons your position online and delivers internet messages addressed to you (acked automatically); without a passcode it is receive-only. DTMF keys heard on any analog channel are logged, and you can send a sequence from the keypad or from your saved sequences (kept in backups as DTMF.csv). NOAA SAME weather alerts are decoded automatically on the weather frequencies and raise a notification. SSTV: receive pictures on 144.500 or on the current channel (Robot, Martin, Scottie, PD auto-detected; saved to Download/DMR/SSTV, live view in PKT), and send a picture from your gallery as Robot 24 Color, Robot 12 BW or Robot 8 BW. The PKT key lights while monitoring, SSTV receive or the TNC is running." },
-        { "📋 Channels", "Each card shows the channel number, name, receive frequency, FM or DMR, and the one detail that matters: colour code and slot, repeater shift or tone. The active channel glows and says ON AIR. Tap the star to add or remove a favourite; tap a card for Use (switch to it), Edit, Star or Delete. The zone and repeater buttons are at the top. Starred channels collect in a \u2605 Favourites zone, so the zone picker, the arrows and the scanner can be limited to them. The search box matches names, frequencies (type 462.6) and channel numbers; the chips show all, favourites, analog or DMR channels. Re-import from the stock app lets you pick any of the stock areas (regional channel sets). The + at the top adds a channel; the dish icon next to it opens Nearby repeaters: DMR repeaters from BrandMeister and RadioID and FM repeaters from hearham around you, sorted by distance, each added to your channels (listen channel per time slot, a talk channel per ticked talkgroup, contacts and a zone) in one tap, with undo.\n\nAnalog channels need a frequency, power, bandwidth and optionally CTCSS/DCS tones; a latitude/longitude (or Use my position) gives the intercom its distance and bearing. Digital (DMR) channels also need a colour code, time slot, a call target (a DMR ID for private calls or a talkgroup for group calls) and the list of talkgroups you want to hear on that channel (up to 32).\n\nVHF channels are always wide band on this radio; narrow band makes the receiver deaf." },
-        { "👤 Contacts", "A contact is a DMR ID (a person) or a talkgroup (a group). Use them as call targets in channels and as recipients for text messages. Avatars are colour-coded: cyan for a private ID, violet for a talkgroup, amber for all-call; the chips show all, private or talkgroups. The + adds one; the green bubble on a card opens its messages; tap a card to message, edit or delete it." },
-        { "💬 Messages", "DMR text messages travel over the current digital channel. Pick a contact or the channel's own call target, type (or tap the lightning button for a quick reply, editable), and send with the green button. On an analog channel the thread says so and nothing is sent. Under each of your messages the status is green when delivered, amber when sent without an acknowledgement (many radios never send one; the text still arrives) and red when it was not sent. One check = the radio sent it; two checks = the other radio acknowledged it (many radios, the BTECH 6X2 among them, display the text but never acknowledge, so one check is normal); a cross = the radio could not send it. Incoming texts appear here and in the channel history." },
-        { "📻 Device", "The card at the top shows who owns the radio (green: this app, cyan: the stock app, amber: a problem), with the serial port and speed. Take over / Hand back: this app and the stock walkie-talkie app cannot share the radio. Taking over pauses the stock app (its icon disappears until you hand back).\n\nRoot: the radio's serial port is locked by Android's security policy; the app needs Magisk root to unlock it. The Magisk-module button makes that permanent across reboots.\n\nRadio settings are switches: own the radio at boot, the side PTT key, volume-up as PTT, Soft SQ while scanning, voice announcements, and New intercom look (the redesigned intercom page; off keeps the classic one, and the new page's menu or a long-press on the classic title switches too).\n\nYour DMR ID is what other radios see when you talk on digital channels. The tiles below are the tools. Device report: on a phone without a profile (the app says so on the intercom and here), the tile offers Generate device report, which collects what a profile needs and Share sends the zip to a GitHub issue; Capture the PTT key records what the side button sends; the root-only Radio probe finds the serial port, derives the SELinux rules, tries the module's version query and, when the stock app's serial library is one we have a wrapper for, opens the port the vendor way; Open a GitHub issue starts a support issue with the phone facts filled in (attach the zip there). The RadioID list (radioid.net, downloaded once from here, updated whenever you like) turns caller IDs into callsigns and names in the history, captions and Last heard. Voice announcements speak channel changes, caller names and keyword alerts. The Diagnostics log also holds radio tools: module version, power-cycle, a 3 s test tone. Check for updates looks at the GitHub releases of the project and installs a newer DMR Radio build in place (channels and settings are kept). Back up now writes the five OpenGD77-style CSV files to Download/DMR/DMR_Backups; Restore reads any such folder, including codeplugs edited in the OpenGD77 CPS fork." },
-        { "⚠️ Transmitting", "You are responsible for the frequencies you use: amateur bands need a licence, GMRS needs a licence in the US, FRS limits power, and NOAA weather channels are receive-only. The radio stops any transmission after 30 seconds." },
+
+    static final class Section { final String head, text; Section(String h, String t) { head = h; text = t; } }
+    static final class Topic {
+        final String icon, title, summary, group; final int accent; final Section[] sections;
+        Topic(String group, String icon, int accent, String title, String summary, Section... s) { this.group = group; this.icon = icon; this.accent = accent; this.title = title; this.summary = summary; sections = s; }
+    }
+    private static Section s(String h, String t) { return new Section(h, t); }
+
+    static final Topic[] TOPICS = {
+        new Topic("Start here", "radio", Neo.CYAN, "Getting started", "Take over the radio, pick a channel, talk.",
+            s("1  Take over the radio", "This app and the stock walkie-talkie app cannot share the radio. Open Device and tap Take over: the stock app is paused and its icon hidden until you tap Hand back. The app needs Magisk root to reach the radio's serial port; allow it when Magisk asks."),
+            s("2  Pick a channel", "On the Intercom page the round arrows step through your channels. Or open Channels and tap a card, then Use. Your channels come from the stock app the first time and can be edited, added, backed up and restored."),
+            s("3  Talk and listen", "Hold the large round key, or the phone's side PTT button, to talk; release it to listen. The key is amber when idle, green while the radio hears someone and red while you transmit. The radio ends any single transmission after 30 seconds."),
+            s("4  Hear more", "Turn on SOFT SQ to hear weaker stations without static, TXT to read live captions of what is said, and SCAN to search the channels of a zone for activity. Each has its own topic in this guide.")),
+
+        new Topic("On the intercom", "intercom", Neo.CYAN, "Intercom", "The main page: channel, talk key, activity.",
+            s("Channel", "The big number is the current channel and the title above it is its name. The round arrows step to the previous or next channel of the current zone. On NOAA weather channels the talk key is dimmed: those frequencies are receive-only."),
+            s("Talk key", "Hold to transmit, release to listen. Amber: idle. Green: the radio is receiving. Red: transmitting. The phone's side PTT button and, if you switch it on in Device, the volume-up key do the same."),
+            s("Activity panel", "The panel says what is happening (ready, receiving, transmitting, who called) and lists the last events on this channel; the bars are the received audio level. Tap the panel for Last heard: everyone and every channel with activity, newest first, with names from your contacts and the RadioID list, plus the recordings player and the caption transcript; tap a line to switch to that channel. The small cross on the panel clears its list and hides it until the next reception or transmission; Last heard keeps everything."),
+            s("Tone offer", "When a CTCSS tone is heard on an analog channel that has none set, the panel says so. Tap it to make that tone the channel's receive and transmit tone."),
+            s("Signal", "The classic page shows the signal strength in dBm in the yellow box. The new look shows a segmented S-meter: S1 to S9 in cyan, then amber and red above S9 (+20, +40), with the S-unit and dBm beside it."),
+            s("Two looks", "Device → Radio settings → New intercom look switches between the classic page and the redesigned one. The new page's menu button and a long-press on the classic page's title switch too. Both have the same controls.")),
+
+        new Topic("On the intercom", "scan", Neo.CYAN, "Scanning and zones", "SCAN searches a zone; ZONE picks one.",
+            s("Scan", "SCAN steps through the channels of the current zone, about two seconds each, and stops on a channel with activity. It moves on about two and a half seconds after the activity ends. Tap SCAN again to stop."),
+            s("Skip a channel", "Long-press SCAN while it is holding on a channel to leave that channel out for the rest of this scan."),
+            s("Soft SQ while scanning", "While scanning, Soft SQ is used on every analog channel at that channel's own level, so weak stations are caught and static is not. A channel that only had Soft SQ for the scan returns to its own squelch when the scan stops. Turn this off in Device → Radio settings to scan with the radio's own squelch."),
+            s("Zones", "ZONE picks which group of channels the arrows and the scanner use. Starred channels form the ★ Favourites zone; nearby-repeater imports create a zone of their own.")),
+
+        new Topic("On the intercom", "softsq", Neo.CYAN, "Soft SQ", "A smarter squelch for weak signals.",
+            s("What it does", "SOFT SQ holds the radio's own squelch open and lets the app decide what you hear: the channel's CTCSS tone when it has one, otherwise a noise squelch that tells speech from static. It catches weaker stations than the radio's squelch."),
+            s("The slider", "The slider next to SOFT SQ sets how strict it is, from 1 (lenient) to 9 (strict). The number turns green while the squelch is open and amber while it is closed."),
+            s("Switching channels", "After a channel change the audio stays muted for under a second while the receiver settles, so you do not hear a burst of static."),
+            s("Per channel", "Soft SQ is remembered for each analog channel. With it off, the channel's own squelch level (Channels → Edit) applies.")),
+
+        new Topic("On the intercom", "txt", Neo.VIOLET, "Live captions", "TXT turns received speech into text.",
+            s("Captions", "TXT shows live captions of received speech in the panel. The recognizer runs inside this app (Vosk); its language model downloads once on first use, is kept across app updates, and only an uninstall removes it."),
+            s("Options", "Long-press TXT to choose the engine (on-device, or Google Cloud Speech with your own API key), the size of the on-device model, or keyword alerts."),
+            s("Keyword alerts", "Words or phrases that, when heard, vibrate the phone and post a notification; with voice announcements on they are also spoken.")),
+
+        new Topic("On the intercom", "vfo", Neo.AMBER, "VFO", "Tune any frequency without a saved channel.",
+            s("Tuning", "VFO lets you set mode, receive and transmit frequency (with repeater-offset shortcuts), power, bandwidth and tones, or colour code, slot and call target for DMR, without saving a channel."),
+            s("While VFO is on", "The arrows step the frequency by the step you chose and the big number reads VFO. Long-press VFO to return to your channel. Save as channel keeps a frequency you want to come back to.")),
+
+        new Topic("On the intercom", "rec", Neo.RED, "Record and monitor", "REC saves audio; MON hears every DMR call.",
+            s("Record", "REC records everything received on the channel to Download/DMR/Audio. Play them from Last heard → Recordings."),
+            s("Monitor", "MON tells the radio to pass every digital call it can decode on the channel, not only those addressed to you or to the talkgroups in the channel's list.")),
+
+        new Topic("On the intercom", "pkt", Neo.GREEN, "Packet radio", "APRS, APRS-IS, TNC, DTMF, weather alerts, SSTV.",
+            s("APRS", "Every analog channel is decoded passively: positions, messages, weather and objects go to Stations and the log. Monitor parks the radio on 144.390 MHz, acknowledges messages addressed to your callsign and can act as a fill-in digipeater. Send message and Position beacon transmit from your callsign, set in APRS settings."),
+            s("APRS-IS", "Connects to the internet APRS network. With your passcode it gates what the radio hears, beacons your position online and delivers internet messages addressed to you; without a passcode it only receives."),
+            s("KISS TNC", "Serves APRSdroid or YAAC on 127.0.0.1:8001 on whatever channel you are on, sending and receiving."),
+            s("DTMF", "Keys heard on any analog channel are logged. Send a sequence from the keypad or from your saved sequences; saved ones are kept in backups as DTMF.csv."),
+            s("Weather alerts", "NOAA SAME alerts are decoded automatically on the weather frequencies and raise a notification."),
+            s("SSTV", "Receive pictures on 144.500 MHz or on the current channel (Robot, Martin, Scottie and PD are detected automatically), with a live view in PKT and copies in Download/DMR/SSTV. Send a picture from your gallery as Robot 24 Color, Robot 12 BW or Robot 8 BW."),
+            s("The PKT key", "PKT lights while APRS monitoring, SSTV receive or the TNC is running.")),
+
+        new Topic("Pages", "channels", Neo.CYAN, "Channels", "Your channel list, favourites and repeaters.",
+            s("The list", "Each card shows the channel number, name, receive frequency, FM or DMR, and the one detail that matters: colour code and slot, repeater shift or tone. The active channel glows and says ON AIR."),
+            s("Find and filter", "The search box matches names, frequencies (type 462.6) and channel numbers. The chips show all, favourites, analog or DMR channels. The zone button at the top picks the zone."),
+            s("Favourites", "Tap a card's star to add or remove it. Starred channels form the ★ Favourites zone, so the arrows and the scanner can be limited to them."),
+            s("Use, edit, delete", "Tap a card for Use (switch to it), Edit, Star or Delete. The + adds a channel."),
+            s("Editing", "Analog channels need a frequency, power, bandwidth and optionally CTCSS or DCS tones; a latitude and longitude (or Use my position) gives the intercom its distance and bearing. DMR channels also need a colour code, a time slot, a call target (a DMR ID for a private call or a talkgroup for a group call) and the talkgroups you want to hear on that channel, up to 32. VHF channels are always wide band on this radio; narrow band makes its receiver deaf."),
+            s("Nearby repeaters", "The dish button lists DMR repeaters from BrandMeister and RadioID and FM repeaters from hearham around you, nearest first. One tap adds a repeater with its channels, talkgroup contacts and a zone, and it can be undone.")),
+
+        new Topic("Pages", "contacts", Neo.VIOLET, "Contacts", "DMR IDs and talkgroups.",
+            s("What a contact is", "A DMR ID (a person's radio) or a talkgroup (a group). Contacts are call targets for DMR channels and recipients for text messages."),
+            s("The list", "Avatars are colour-coded: cyan for a private ID, violet for a talkgroup, amber for all-call. The chips show all, private or talkgroups; the search box matches names and IDs."),
+            s("Actions", "The + adds a contact. The green bubble on a card opens its messages. Tap a card to message, edit or delete it.")),
+
+        new Topic("Pages", "messages", Neo.GREEN, "Messages", "DMR text messages.",
+            s("Sending", "Texts travel over the current DMR channel. Tap + and pick a contact or the channel's own call target, type, or tap the lightning button for a quick reply (the list is yours to edit), and send with the green button. On an analog channel the thread says so and nothing is sent."),
+            s("Delivery", "Under each of your messages: green ✓✓ delivered means the other radio acknowledged it; amber ✓ sent means it went out without an acknowledgement, which is normal for many radios (the BTECH 6X2 among them) and the text still arrives; red ✖ means the radio could not send it."),
+            s("Receiving", "Incoming texts appear in their conversation and in the intercom's activity panel.")),
+
+        new Topic("Pages", "device", Neo.GREEN, "Device", "Radio link, settings and tools.",
+            s("Radio link", "The card at the top shows who owns the radio (green: this app, cyan: the stock app, amber: a problem) with the serial port and speed. Take over and Hand back move the radio between this app and the stock app."),
+            s("Root and reboots", "The radio's serial port is locked by Android's security policy; the app needs Magisk root to unlock it. Keep access after reboot installs a small Magisk module so the rules survive reboots; with it, Own the radio at boot lets the app take the radio as the phone starts."),
+            s("Radio settings", "Switches for owning the radio at boot, the side PTT key, volume-up as PTT, Soft SQ while scanning, voice announcements (channel changes, caller names, keyword alerts) and the new intercom look."),
+            s("Your DMR ID", "What other radios see when you talk on DMR channels. Change sets it."),
+            s("Tools", "Back up writes the five OpenGD77-style CSV files (Contacts, TG_Lists, Channels, Zones, DTMF) to Download/DMR/DMR_Backups; Restore reads any such folder, including codeplugs edited in the OpenGD77 CPS fork. Re-import copies an area's channels from the stock app. RadioID list downloads the names behind DMR IDs from radioid.net. Updates installs a newer DMR Radio release in place. Diagnostics shows the live protocol log and radio tools (module version, power-cycle, test tone)."),
+            s("Device report", "For a phone without a profile, the Device report tile collects what a profile needs, captures what the side PTT key sends, runs the root-only radio probe, and shares the result or opens a pre-filled GitHub issue. Nothing on the phone is changed.")),
+
+        new Topic("Good to know", "alert", Neo.AMBER, "Transmitting legally", "Licences, power and the 30-second limit.",
+            s("Licences", "You are responsible for the frequencies you use: amateur bands need an amateur licence, GMRS needs a licence in the US, FRS limits power, and NOAA weather channels are receive-only."),
+            s("Time limit", "The radio ends any single transmission after 30 seconds; release and key again to continue.")),
     };
 
-    public HelpView(Context c, Runnable onBack) {
+    private final Runnable onClose;
+    private final FrameLayout stage;
+    private LinearLayout home, homeGrid, results;
+    private EditText search;
+    private int current = -1;
+
+    public HelpView(Context c, Runnable onClose) {
         super(c);
-        setOrientation(VERTICAL); setBackgroundColor(Theme.BG);
-        float d = Theme.dp(c);
-        LinearLayout bar = new LinearLayout(c); bar.setBackgroundColor(Theme.TITLE_BG); bar.setGravity(Gravity.CENTER_VERTICAL);
-        bar.setPadding((int) (12 * d), (int) (4 * d), (int) (16 * d), (int) (4 * d));
-        TextView back = Theme.label(c, "‹", Theme.WHITE, 34, false); back.setPadding(0, 0, (int) (14 * d), 0); back.setClickable(true); back.setOnClickListener(v -> onBack.run());
-        bar.addView(back);
-        bar.addView(Theme.label(c, "Help & how-to", Theme.WHITE, 22, false), new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f));
-        addView(bar);
-        ScrollView sv = new ScrollView(c);
-        LinearLayout body = new LinearLayout(c); body.setOrientation(VERTICAL); body.setPadding((int) (12 * d), (int) (10 * d), (int) (12 * d), (int) (24 * d));
-        for (String[] t : TOPICS) {
-            LinearLayout card = new LinearLayout(c); card.setOrientation(VERTICAL);
-            card.setBackground(Theme.rounded(c, 0x18000000, 0x3300BFFF, 1, 10)); card.setPadding((int) (14 * d), (int) (10 * d), (int) (14 * d), (int) (12 * d));
-            TextView h = Theme.label(c, t[0], Theme.CYAN2, 16, true); h.setPadding(0, 0, 0, (int) (6 * d)); card.addView(h);
-            TextView b = Theme.label(c, t[1], 0xFFD0D8E0, 14, false); b.setLineSpacing(0, 1.15f); card.addView(b);
-            LayoutParams lp = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); lp.bottomMargin = (int) (10 * d);
-            body.addView(card, lp);
+        this.onClose = onClose;
+        setOrientation(VERTICAL); setBackground(Neo.page(c));
+        stage = new FrameLayout(c);
+        addView(stage, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+        showHome();
+    }
+
+    /** Back key: topic → home → close. Returns true when handled here. */
+    public boolean back() { if (current >= 0) { showHome(); return true; } return false; }
+
+    // ---- home ----
+    private void showHome() {
+        final Context c = getContext(); final float d = Theme.dp(c);
+        current = -1;
+        stage.removeAllViews();
+        LinearLayout page = new LinearLayout(c); page.setOrientation(VERTICAL);
+        LinearLayout header = Neo.header(c, "Help & how-to", TOPICS.length + " topics");
+        ImageView close = Neo.iconButton(c, "close", Neo.CYAN, "Close help"); close.setOnClickListener(v -> onClose.run());
+        Neo.addAction(header, close);
+        page.addView(header);
+
+        ScrollView sv = new ScrollView(c); sv.setVerticalScrollBarEnabled(false);
+        home = new LinearLayout(c); home.setOrientation(VERTICAL); home.setPadding((int) (16 * d), (int) (12 * d), (int) (16 * d), (int) (28 * d));
+        sv.addView(home);
+        page.addView(sv, new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f));
+
+        // search
+        LinearLayout sf = new LinearLayout(c); sf.setGravity(Gravity.CENTER_VERTICAL);
+        sf.setBackground(Neo.card(c, Neo.alpha(Neo.CYAN, 0x33), 12)); sf.setPadding((int) (14 * d), 0, (int) (10 * d), 0);
+        ImageView si = new ImageView(c); si.setImageDrawable(new Neo.IconDrawable("search", Neo.MUTED));
+        sf.addView(si, new LayoutParams((int) (18 * d), (int) (18 * d)));
+        search = new EditText(c); search.setHint("Search the guide"); search.setSingleLine(true); search.setTextSize(16); search.setTypeface(Neo.uiSemi(c));
+        search.setTextColor(Neo.TEXT); search.setHintTextColor(Neo.DIM); search.setBackground(null); search.setPadding((int) (10 * d), 0, 0, 0);
+        search.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        sf.addView(search, new LayoutParams(0, (int) (44 * d), 1f));
+        home.addView(sf, new LayoutParams(LayoutParams.MATCH_PARENT, (int) (46 * d)));
+
+        results = new LinearLayout(c); results.setOrientation(VERTICAL); results.setVisibility(GONE);
+        home.addView(results);
+        homeGrid = new LinearLayout(c); homeGrid.setOrientation(VERTICAL);
+        home.addView(homeGrid);
+        search.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int a, int b, int n) { } @Override public void onTextChanged(CharSequence s, int a, int b, int n) { }
+            @Override public void afterTextChanged(Editable e) { runSearch(e.toString()); }
+        });
+
+        // start here: featured card
+        final Topic start = TOPICS[0];
+        LinearLayout hero = new LinearLayout(c); hero.setOrientation(VERTICAL); hero.setPadding((int) (16 * d), (int) (16 * d), (int) (16 * d), (int) (16 * d));
+        android.graphics.drawable.StateListDrawable hs = new android.graphics.drawable.StateListDrawable();
+        hs.addState(new int[] { android.R.attr.state_pressed }, Neo.tint(c, Neo.CYAN, 18, 1.5f)); hs.addState(new int[] { }, Neo.tint(c, Neo.CYAN, 18, 1));
+        hero.setBackground(hs); hero.setClickable(true); hero.setFocusable(true);
+        LinearLayout ht = new LinearLayout(c); ht.setGravity(Gravity.CENTER_VERTICAL);
+        ht.addView(Neo.iconTile(c, start.icon, Neo.CYAN, 52), new LayoutParams((int) (52 * d), (int) (52 * d)));
+        LinearLayout hc = new LinearLayout(c); hc.setOrientation(VERTICAL); hc.setPadding((int) (14 * d), 0, 0, 0);
+        TextView kicker = Neo.caps(c, "Start here"); kicker.setTextColor(Neo.CYAN_LIGHT); hc.addView(kicker);
+        TextView htitle = Neo.text(c, start.title, Neo.TEXT, 21, Neo.ui(c)); htitle.setPadding(0, (int) (3 * d), 0, 0); hc.addView(htitle);
+        ht.addView(hc, new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f));
+        ImageView arrow = new ImageView(c); arrow.setImageDrawable(new Neo.IconDrawable("right", Neo.CYAN)); ht.addView(arrow, new LayoutParams((int) (22 * d), (int) (22 * d)));
+        hero.addView(ht);
+        for (int i = 0; i < start.sections.length; i++) {
+            LinearLayout step = new LinearLayout(c); step.setGravity(Gravity.CENTER_VERTICAL); step.setPadding(0, (int) (i == 0 ? 14 * d : 8 * d), 0, 0);
+            TextView num = Neo.text(c, String.valueOf(i + 1), Neo.CYAN, 14, Neo.display(c)); num.setGravity(Gravity.CENTER);
+            android.graphics.drawable.GradientDrawable ng = new android.graphics.drawable.GradientDrawable(); ng.setShape(android.graphics.drawable.GradientDrawable.OVAL); ng.setStroke((int) (1.5f * d), Neo.CYAN); num.setBackground(ng);
+            step.addView(num, new LayoutParams((int) (26 * d), (int) (26 * d)));
+            TextView st = Neo.text(c, start.sections[i].head.replaceFirst("^\\d+\\s+", ""), Neo.TEXT_SOFT, 15.5f, Neo.uiSemi(c)); st.setPadding((int) (10 * d), 0, 0, 0);
+            step.addView(st);
+            hero.addView(step);
         }
-        sv.addView(body); addView(sv, new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f));
+        hero.setOnClickListener(v -> showTopic(0, -1));
+        LayoutParams hl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); hl.topMargin = (int) (14 * d);
+        homeGrid.addView(hero, hl);
+
+        // topic tiles by group
+        String group = null; LinearLayout rowOpen = null;
+        for (int i = 1; i < TOPICS.length; i++) {
+            final int idx = i; Topic t = TOPICS[i];
+            if (!t.group.equals(group)) {
+                group = t.group; rowOpen = null;
+                TextView gh = Neo.caps(c, group); gh.setPadding((int) (2 * d), (int) (22 * d), 0, (int) (8 * d)); homeGrid.addView(gh);
+            }
+            LinearLayout tile = Neo.tile(c, t.icon, t.accent, t.title, t.summary);
+            tile.setOnClickListener(v -> showTopic(idx, -1));
+            if (rowOpen == null) {
+                rowOpen = new LinearLayout(c); rowOpen.setBaselineAligned(false);
+                LayoutParams l1 = new LayoutParams(0, LayoutParams.MATCH_PARENT, 1f); l1.setMargins(0, 0, (int) (4 * d), (int) (8 * d));
+                rowOpen.addView(tile, l1);
+                // a lone tile still takes half the row
+                View spacer = new View(c); spacer.setTag("spacer");
+                LayoutParams l2 = new LayoutParams(0, LayoutParams.MATCH_PARENT, 1f); l2.setMargins((int) (4 * d), 0, 0, (int) (8 * d));
+                rowOpen.addView(spacer, l2);
+                homeGrid.addView(rowOpen);
+            } else {
+                View spacer = rowOpen.findViewWithTag("spacer"); LayoutParams l2 = (LayoutParams) spacer.getLayoutParams();
+                rowOpen.removeView(spacer); rowOpen.addView(tile, l2);
+                rowOpen = null;
+            }
+        }
+        stage.addView(page);
+    }
+
+    private void runSearch(String q) {
+        final Context c = getContext(); final float d = Theme.dp(c);
+        q = q.trim().toLowerCase(Locale.US);
+        results.removeAllViews();
+        if (q.isEmpty()) { results.setVisibility(GONE); homeGrid.setVisibility(VISIBLE); return; }
+        homeGrid.setVisibility(GONE); results.setVisibility(VISIBLE);
+        int n = 0;
+        for (int i = 0; i < TOPICS.length; i++) {
+            Topic t = TOPICS[i];
+            for (int k = 0; k < t.sections.length; k++) {
+                Section sec = t.sections[k];
+                String body = sec.text.toLowerCase(Locale.US);
+                boolean hit = sec.head.toLowerCase(Locale.US).contains(q) || body.contains(q) || (k == 0 && t.title.toLowerCase(Locale.US).contains(q));
+                if (!hit) continue;
+                final int ti = i, sk = k;
+                LinearLayout card = new LinearLayout(c); card.setOrientation(VERTICAL); card.setPadding((int) (14 * d), (int) (12 * d), (int) (14 * d), (int) (12 * d));
+                card.setBackground(Neo.card(c, Neo.alpha(t.accent, 0x55), 14)); card.setClickable(true);
+                LinearLayout top = new LinearLayout(c); top.setGravity(Gravity.CENTER_VERTICAL);
+                ImageView ic = new ImageView(c); ic.setImageDrawable(new Neo.IconDrawable(t.icon, t.accent)); top.addView(ic, new LayoutParams((int) (18 * d), (int) (18 * d)));
+                TextView tt = Neo.caps(c, t.title + "  ·  " + sec.head.replaceFirst("^\\d+\\s+", "")); tt.setTextColor(Neo.alpha(t.accent, 0xFF)); tt.setPadding((int) (8 * d), 0, 0, 0); top.addView(tt);
+                card.addView(top);
+                int at = body.indexOf(q); int from = Math.max(0, at - 50);
+                String snip = at < 0 ? sec.text : (from > 0 ? "…" : "") + sec.text.substring(from, Math.min(sec.text.length(), at + 110)) + (at + 110 < sec.text.length() ? "…" : "");
+                TextView sn = Neo.text(c, snip, Neo.TEXT_SOFT, 14, Neo.uiMedium(c)); sn.setPadding(0, (int) (6 * d), 0, 0); sn.setLineSpacing(0, 1.1f);
+                card.addView(sn);
+                card.setOnClickListener(v -> showTopic(ti, sk));
+                LayoutParams lp = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); lp.topMargin = (int) (10 * d);
+                results.addView(card, lp);
+                n++;
+            }
+        }
+        if (n == 0) {
+            TextView none = Neo.text(c, "Nothing in the guide matches “" + q + "”.", Neo.MUTED, 15, Neo.uiMedium(c)); none.setPadding((int) (4 * d), (int) (20 * d), 0, 0);
+            results.addView(none);
+        }
+    }
+
+    // ---- topic page ----
+    private void showTopic(final int idx, final int focusSection) {
+        final Context c = getContext(); final float d = Theme.dp(c);
+        current = idx;
+        final Topic t = TOPICS[idx];
+        stage.removeAllViews();
+        LinearLayout page = new LinearLayout(c); page.setOrientation(VERTICAL);
+        LinearLayout header = Neo.header(c, t.title, t.group + "  ·  " + (idx + 1) + " of " + TOPICS.length);
+        ImageView back = Neo.iconButton(c, "left", Neo.CYAN, "All topics"); back.setOnClickListener(v -> showHome());
+        LayoutParams bl = new LayoutParams((int) (44 * d), (int) (44 * d)); bl.rightMargin = (int) (12 * d);
+        header.addView(back, 0, bl);
+        ImageView close = Neo.iconButton(c, "close", Neo.CYAN, "Close help"); close.setOnClickListener(v -> onClose.run());
+        Neo.addAction(header, close);
+        page.addView(header);
+
+        final ScrollView sv = new ScrollView(c); sv.setVerticalScrollBarEnabled(false);
+        LinearLayout body = new LinearLayout(c); body.setOrientation(VERTICAL); body.setPadding((int) (16 * d), (int) (14 * d), (int) (16 * d), (int) (28 * d));
+        sv.addView(body);
+        page.addView(sv, new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f));
+
+        LinearLayout lead = new LinearLayout(c); lead.setGravity(Gravity.CENTER_VERTICAL);
+        lead.addView(Neo.iconTile(c, t.icon, t.accent, 56), new LayoutParams((int) (56 * d), (int) (56 * d)));
+        TextView sum = Neo.text(c, t.summary, Neo.TEXT, 18, Neo.ui(c)); sum.setPadding((int) (14 * d), 0, 0, 0); sum.setLineSpacing(0, 1.05f);
+        lead.addView(sum, new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f));
+        body.addView(lead);
+
+        final View[] secViews = new View[t.sections.length];
+        for (int k = 0; k < t.sections.length; k++) {
+            Section sec = t.sections[k];
+            LinearLayout card = new LinearLayout(c); card.setOrientation(VERTICAL); card.setPadding((int) (16 * d), (int) (14 * d), (int) (16 * d), (int) (16 * d));
+            card.setBackground(Neo.card(c, k == focusSection ? t.accent : Neo.LINE, 16));
+            LinearLayout hrow = new LinearLayout(c); hrow.setGravity(Gravity.CENTER_VERTICAL);
+            View bar = new View(c); android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable(); bg.setColor(t.accent); bg.setCornerRadius(2 * d); bar.setBackground(bg);
+            hrow.addView(bar, new LayoutParams((int) (3 * d), (int) (16 * d)));
+            TextView h = Neo.text(c, sec.head, Neo.TEXT, 16.5f, Neo.ui(c)); h.setPadding((int) (10 * d), 0, 0, 0); hrow.addView(h);
+            card.addView(hrow);
+            TextView tx = Neo.text(c, sec.text, Neo.TEXT_SOFT, 15, Neo.uiMedium(c)); tx.setLineSpacing(0, 1.18f); tx.setPadding(0, (int) (8 * d), 0, 0);
+            tx.setTextIsSelectable(false);
+            card.addView(tx);
+            LayoutParams lp = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); lp.topMargin = (int) (12 * d);
+            body.addView(card, lp);
+            secViews[k] = card;
+        }
+
+        // previous / next
+        LinearLayout nav = new LinearLayout(c); nav.setBaselineAligned(false);
+        LayoutParams nl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); nl.topMargin = (int) (20 * d);
+        if (idx > 0) {
+            View prev = navCard(c, "Previous", TOPICS[idx - 1], false); prev.setOnClickListener(v -> showTopic(idx - 1, -1));
+            LayoutParams p = new LayoutParams(0, LayoutParams.MATCH_PARENT, 1f); p.rightMargin = (int) (4 * d); nav.addView(prev, p);
+        }
+        if (idx < TOPICS.length - 1) {
+            View next = navCard(c, "Next", TOPICS[idx + 1], true); next.setOnClickListener(v -> showTopic(idx + 1, -1));
+            LayoutParams p = new LayoutParams(0, LayoutParams.MATCH_PARENT, 1f); p.leftMargin = idx > 0 ? (int) (4 * d) : 0; nav.addView(next, p);
+        }
+        body.addView(nav, nl);
+        TextView all = Neo.button(c, "All topics", "menu", Neo.CYAN); all.setOnClickListener(v -> showHome());
+        LayoutParams al = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); al.topMargin = (int) (10 * d);
+        body.addView(all, al);
+
+        stage.addView(page);
+        if (focusSection >= 0) sv.post(() -> sv.smoothScrollTo(0, Math.max(0, secViews[focusSection].getTop() - (int) (8 * d))));
+    }
+
+    private static View navCard(Context c, String label, Topic t, boolean next) {
+        float d = Theme.dp(c);
+        LinearLayout card = new LinearLayout(c); card.setOrientation(VERTICAL); card.setGravity(next ? Gravity.END : Gravity.START);
+        card.setPadding((int) (14 * d), (int) (12 * d), (int) (14 * d), (int) (12 * d));
+        android.graphics.drawable.StateListDrawable s = new android.graphics.drawable.StateListDrawable();
+        s.addState(new int[] { android.R.attr.state_pressed }, Neo.tint(c, t.accent, 14, 1.5f)); s.addState(new int[] { }, Neo.card(c, Neo.alpha(t.accent, 0x66), 14));
+        card.setBackground(s); card.setClickable(true); card.setFocusable(true);
+        TextView l = Neo.caps(c, (next ? "" : "← ") + label + (next ? " →" : "")); card.addView(l);
+        TextView tt = Neo.text(c, t.title, Neo.TEXT, 16, Neo.ui(c)); tt.setPadding(0, (int) (4 * d), 0, 0); tt.setGravity(next ? Gravity.END : Gravity.START); card.addView(tt);
+        return card;
     }
 }

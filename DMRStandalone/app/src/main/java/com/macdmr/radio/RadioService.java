@@ -54,6 +54,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     private volatile boolean receiving, transmitting, rxAudioOn;
     private volatile int rssi = -999;
     private volatile long rxStart;
+    private volatile boolean rxCounts;   // decided at RECEIVE_START: the matching STOP can arrive after a retune, when "current" is already the next channel
     private volatile int lastCaller, lastCallType, lastTarget;
     private String link = "stopped";
     private final com.macdmr.radio.dsp.SoftSquelch softSq = new com.macdmr.radio.dsp.SoftSquelch();
@@ -340,8 +341,8 @@ public class RadioService extends Service implements RadioEngine.Events {
         for (int i = 0; i + 3 < len && n + 1 < mono.length; i += 4) { mono[n++] = b[i]; mono[n++] = b[i + 1]; }
         boolean open = current == null || current.isDigital() ? true : softSq.process(mono, n);
         if (BuildConfig.DEBUG && softSq.isEnabled() && System.currentTimeMillis() - lastSqDiag > 2000) { lastSqDiag = System.currentTimeMillis(); log("soft sq: " + softSq.describe() + " gate=" + open); }
-        if (open != squelchOpen && softSq.isEnabled()) softGateHistory(open);
         if (open != squelchOpen && softSq.isEnabled()) log("soft squelch " + (open ? "open" : "closed") + (current != null && current.rxType == 1 ? " (CTCSS " + com.macdmr.radio.dsp.ToneTable.ctcssLabel(current.rxSubCode) + ")" : ""));
+        if (open != squelchOpen && softSq.isEnabled()) { softGateHistory(open); squelchOpen = open; pushModes(); }   // pages see the gate (activity box, Soft SQ number colour)
         squelchOpen = open;
         int peak = 0;
         if (open) for (int i = 0; i + 1 < n; i += 2) { int v = Math.abs((short) ((mono[i] & 0xFF) | (mono[i + 1] << 8))); if (v > peak) peak = v; }
@@ -400,6 +401,10 @@ public class RadioService extends Service implements RadioEngine.Events {
     public boolean monitorOn() { return monitorOn; }
     public boolean recordOn() { return recordOn; }
     public boolean scanning() { return scanner.isScanning(); }
+    /** Soft SQ decides what is heard on the current channel (the module then reports a reception all the time). */
+    public boolean softSqActive() { return softSq.isEnabled(); }
+    /** The radio's RECEIVE_START means a real reception: a DMR channel, or an analog one whose squelch is not held fully open (sq 0 reports "receiving" all the time). */
+    public boolean rxReportsReception() { ChannelStore.Channel ch = current; return ch == null || ch.isDigital() || (!softSq.isEnabled() && hardwareSq(ch) > 0); }
     public boolean scanHolding() { return scanner.isHolding(); }
 
     private void pushModes() {
@@ -844,13 +849,13 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     @Override public void status(int code, String name) {
         switch (code) {
-            case 1: receiving = true; rxStart = System.currentTimeMillis(); softSq.rxStarted(); ui.post(() -> { for (Listener l : listeners) l.onRx(true); }); pollRssi(); break;
+            case 1: receiving = true; rxStart = System.currentTimeMillis(); rxCounts = rxReportsReception(); softSq.rxStarted(); ui.post(() -> { for (Listener l : listeners) l.onRx(true); }); pollRssi(); break;
             case 2: {
                 receiving = false; long len = rxStart > 0 ? System.currentTimeMillis() - rxStart : 0; rxStart = 0;
                 if (softSq.isEnabled() && squelchOpen) { softSq.closeNow(); softGateHistory(false); squelchOpen = false; log("soft squelch closed (carrier gone)"); }
                 softSq.awaitRxStart();                                   // with the module squelch held open a RECEIVE_STOP only happens while the receiver re-settles
                 if (current != null && current.isDigital()) { try { engine.queryCallerInfo(); } catch (IOException ignored) { } }   // who was that (0x2B)
-                if (current != null && !current.isDigital() && !softSq.isEnabled() && len >= 700) history("rx", "📻 Received " + Math.round(len / 1000.0) + " s");   // with Soft SQ on the soft gate writes this line
+                if (current != null && !current.isDigital() && !softSq.isEnabled() && rxCounts && len >= 700) history("rx", "📻 Received " + Math.round(len / 1000.0) + " s");   // with Soft SQ on the soft gate writes this line
                 finishRecording();
                 toneBank.reset(); toneAnnounced = -1;
                 if (captions != null) captions.stop();
