@@ -31,7 +31,7 @@ public final class RadioProbe {
         return hex.toString().trim();
     }
 
-    public static String run(Progress p, boolean pulsePower) {
+    public static String run(android.content.Context ctx, Progress p, boolean pulsePower) {
         StringBuilder r = new StringBuilder();
         if (!RootSetup.haveRoot()) return "Root is not granted: the probe needs Magisk root (Superuser → allow DMR Radio).";
         p.step("Labels");
@@ -78,6 +78,30 @@ public final class RadioProbe {
                 r.append(String.format(Locale.US, "  %6d baud (readback %s), after 0x34 query: %s\n", baud, RootSetup.run("stty -F " + port + " -a 2>&1 | head -1").replaceAll("(?s).*speed (\\d+) baud.*", "$1").trim(), hex.isEmpty() ? "(nothing received)" : hex));
                 if (hex.contains("68 34") || hex.contains("bf aa")) { r.append("  ^ looks like the DMR module answered at ").append(baud).append(" baud\n"); break; }
             }
+        }
+
+        // a vendor serial opener we already have a wrapper class for: use it, it sets the line the right way
+        p.step("Vendor serial library");
+        for (java.io.File lib : DeviceReport.serialLibs(ctx, null)) {
+            String syms = DeviceReport.jniSymbols(lib);
+            if (syms.isEmpty()) continue;
+            r.append("\n").append(lib.getAbsolutePath()).append(":\n").append(syms);
+            if (syms.contains("com.pri.prizeinterphone.serial.port.SerialPort.open")) {
+                r.append("  known wrapper class available: trying it on each port at 57600\n");
+                if (com.pri.prizeinterphone.serial.port.SerialPort.load(ctx, lib.getAbsolutePath())) for (String port : ports) {
+                    try {
+                        com.pri.prizeinterphone.serial.port.SerialPort sp = com.pri.prizeinterphone.serial.port.SerialPort.openPort(port, 57600);
+                        if (sp == null) { r.append("  ").append(port).append(": native open failed\n"); continue; }
+                        java.io.FileInputStream in = new java.io.FileInputStream(sp.fd()); java.io.FileOutputStream out = new java.io.FileOutputStream(sp.fd());
+                        final byte[] buf = new byte[512]; final int[] got = { 0 };
+                        Thread t = new Thread(() -> { try { int n; while (got[0] < buf.length && (n = in.read(buf, got[0], buf.length - got[0])) > 0) got[0] += n; } catch (Throwable ignored) { } }); t.setDaemon(true); t.start();
+                        Thread.sleep(300); out.write(new byte[] { 0x68, 0x34, 0x01, 0x01, (byte) 0x95, (byte) 0xB9, 0x00, 0x01, 0x01, 0x10 }); out.flush(); Thread.sleep(3000);
+                        StringBuilder hex = new StringBuilder(); for (int i = 0; i < got[0]; i++) hex.append(String.format(Locale.US, "%02x ", buf[i] & 0xFF));
+                        r.append("  ").append(port).append(" via vendor library @57600: ").append(hex.length() == 0 ? "(nothing received)" : hex.toString().trim()).append(hex.toString().contains("68 34") ? "  <- module answered" : "").append('\n');
+                        try { in.close(); out.close(); } catch (Throwable ignored) { } sp.release();
+                    } catch (Throwable t) { r.append("  ").append(port).append(": ").append(t).append('\n'); }
+                }
+            } else r.append("  no wrapper class for this JNI class yet: add one named exactly as above (see SerialPort.java) and the app can open the port the vendor way\n");
         }
 
         p.step("PCM sniff");

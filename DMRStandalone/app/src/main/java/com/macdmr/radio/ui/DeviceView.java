@@ -73,6 +73,9 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         LinearLayout rrow2 = new LinearLayout(c); rrow2.setGravity(Gravity.CENTER);
         TextView keys = pill(c, "Capture the PTT key (10 s)", Theme.VFO), probe = pill(c, "Radio probe (root)", Theme.MON);
         rrow2.addView(keys, new LayoutParams(bl)); rrow2.addView(probe, new LayoutParams(bl)); rep.addView(rrow2);
+        TextView issue = pill(c, "Open a GitHub issue with the facts filled in", Theme.REC);
+        rep.addView(issue, new LayoutParams(bb));
+        issue.setOnClickListener(v -> com.macdmr.radio.DeviceReport.openIssue(c));
         gen.setOnClickListener(v -> {
             final android.app.AlertDialog pd = new android.app.AlertDialog.Builder(c).setTitle("Device report").setMessage("Starting\u2026").setCancelable(false).create(); pd.show();
             new Thread(() -> {
@@ -180,7 +183,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         final Context c = getContext();
         final android.app.AlertDialog pd = new android.app.AlertDialog.Builder(c).setTitle("Radio probe").setMessage("Starting\u2026").setCancelable(false).create(); pd.show();
         new Thread(() -> {
-            final String r = com.macdmr.radio.RadioProbe.run(s -> post(() -> pd.setMessage(s + "\u2026")), pulse);
+            final String r = com.macdmr.radio.RadioProbe.run(c, s -> post(() -> pd.setMessage(s + "\u2026")), pulse);
             final java.io.File dir = com.macdmr.radio.DeviceReport.append("Radio probe", r);
             post(() -> { pd.dismiss(); new android.app.AlertDialog.Builder(c).setTitle("Radio probe").setMessage((dir == null ? "(generate a report first so this is saved)\n\n" : "") + (r.length() > 3000 ? r.substring(0, 3000) + "\u2026" : r)).setPositiveButton("OK", null).show(); });
         }).start();
