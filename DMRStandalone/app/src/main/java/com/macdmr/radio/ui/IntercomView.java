@@ -28,11 +28,23 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
             R.drawable.interphone_talkback_num_3, R.drawable.interphone_talkback_num_4, R.drawable.interphone_talkback_num_5, R.drawable.interphone_talkback_num_6,
             R.drawable.interphone_talkback_num_7, R.drawable.interphone_talkback_num_8, R.drawable.interphone_talkback_num_9 };
 
-    private final TextView title, power, squelch, send, receive, location, signal, headline, historyHeader, historyText, transcriptionText, sqValue, scanBtn, zoneBtn;
-    private final SeekBar sqSeek;
+    private TextView title, power, squelch, send, receive, location, signal, scanBtn, zoneBtn, sqValue;
+    private final TextView headline, historyHeader, historyText, transcriptionText;
+    private SeekBar sqSeek;
     private boolean sqFromUser;
-    private final ImageView digitOne, digitTwo;
-    private final TextView vfoLabel;
+    private ImageView digitOne, digitTwo;
+    private TextView vfoLabel;
+    // new look only
+    private final boolean neo;
+    private LinearLayout neoHeader, chipRow;
+    private TextView bigNum, smeterText;
+    private TextView[] readLabel;
+    private SMeterView smeter;
+    private String zoneName = "ALL";
+
+    /** Which intercom page to build: the classic module page (default) or the new look. */
+    public static boolean newLook(Context c) { return c.getSharedPreferences("radio", Context.MODE_PRIVATE).getBoolean("newIntercom", false); }
+    public static void setNewLook(Context c, boolean on) { c.getSharedPreferences("radio", Context.MODE_PRIVATE).edit().putBoolean("newIntercom", on).apply(); }
     private final LinearLayout transcriptionBox;
     private final TextView captionLive;
     private final android.widget.ScrollView captionScroll;
@@ -49,6 +61,8 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         setOrientation(VERTICAL); setBackgroundColor(Theme.BG);
         final float d = Theme.dp(c);
         final int dp10 = (int) (10 * d), dp8 = (int) (8 * d), dp4 = (int) (4 * d);
+        neo = newLook(c);
+        if (neo) { setBackground(Neo.page(c)); buildNeoTop(c, d); } else {
 
         // ---- title bar (OEM: 24 sp title, hamburger) ----
         LinearLayout bar = new LinearLayout(c); bar.setBackgroundColor(Theme.TITLE_BG); bar.setGravity(Gravity.CENTER_VERTICAL);
@@ -56,6 +70,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         title = Theme.label(c, "", Theme.WHITE, 24, false);
         bar.addView(title, new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f));
         bar.addView(Theme.label(c, "☰", Theme.WHITE, 26, false));
+        bar.setOnLongClickListener(v -> { offerLook(true); return true; });
         addView(bar);
 
         // ---- channel row: sub (60 dp) · two digit bitmaps (34×58 dp) · add (60 dp) ----
@@ -125,6 +140,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         sq.addView(seek, skl);
         sq.addView(new TextView(c), new LayoutParams(0, 1, 0.58f));
         addView(sq, sqLp);
+        }
 
         // ---- circuit-board panel (250 dp, 10 dp side margins, 8 dp top, 2 dp 35 % cyan border, radius 12) ----
         FrameLayout panel = new FrameLayout(c);
@@ -143,6 +159,12 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         LayoutParams hh = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); hh.bottomMargin = dp4;
         infoPanel.addView(historyHeader, hh);
         historyText = Theme.label(c, "", Theme.CYAN2, 11, false); infoPanel.addView(historyText);
+        if (neo) {
+            headline.setTypeface(Neo.ui(c)); headline.setTextSize(17); headline.setLetterSpacing(0.04f);
+            historyHeader.setVisibility(GONE);   // the headline already says what the panel shows
+            historyText.setTypeface(Neo.uiSemi(c)); historyText.setTextColor(Neo.TEXT_SOFT); historyText.setTextSize(12.5f); historyText.setMaxLines(3); historyText.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            infoPanel.setBackground(Neo.card(c, Neo.alpha(Neo.CYAN, 0x30), 12)); infoPanel.setPadding(dp10, (int) (6 * d), dp10, (int) (6 * d));
+        }
         infoPanel.setClickable(true); infoPanel.setOnClickListener(v -> {
             if (svc == null) return;
             final String tone = svc.pendingToneLabel();
@@ -175,13 +197,20 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         FrameLayout.LayoutParams tbl = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM);
         tbl.leftMargin = tbl.rightMargin = dp8; tbl.bottomMargin = (int) (22 * d);
         panel.addView(transcriptionBox, tbl); transcriptionBox.setVisibility(GONE);
-        LayoutParams pl = new LayoutParams(LayoutParams.MATCH_PARENT, (int) (250 * d)); pl.leftMargin = pl.rightMargin = dp10; pl.topMargin = dp8;
+        LayoutParams pl = neo ? new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f) : new LayoutParams(LayoutParams.MATCH_PARENT, (int) (250 * d)); pl.leftMargin = pl.rightMargin = neo ? (int) (16 * d) : dp10; pl.topMargin = dp8;
+        if (neo) { GradientDrawable nb = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[] { 0xE0081420, 0xE6060E18 }); nb.setCornerRadius(14 * d); nb.setStroke((int) d, Neo.LINE); panel.setBackground(nb); }
         addView(panel, pl);
 
         // ---- PTT (176 dp, centred) with the six satellites at the module's exact offsets ----
         FrameLayout bottom = new FrameLayout(c);
         ptt = new PttButton(c);
         bottom.addView(ptt, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
+        if (neo) {
+            softSq = new NeoToggle(c, "softsq", "SOFT SQ", Neo.CYAN); txt = new NeoToggle(c, "txt", "TXT", Neo.VIOLET); vfo = new NeoToggle(c, "vfo", "VFO", Neo.AMBER);
+            rec = new NeoToggle(c, "rec", "REC", Neo.RED); mon = new NeoToggle(c, "mon", "MON", Neo.AMBER); pkt = new NeoToggle(c, "pkt", "PKT", Neo.GREEN);
+            NeonToggle[] l = { softSq, txt, vfo }, r = { rec, mon, pkt };
+            for (int i = 0; i < 3; i++) { bottom.addView(l[i], neoSat(d, Gravity.START, 4 + i * 59)); bottom.addView(r[i], neoSat(d, Gravity.END, 4 + i * 59)); }
+        } else {
         softSq = new NeonToggle(c, "🎚️", "SOFT SQ", Theme.SOFTSQ); txt = new NeonToggle(c, "✍️", "TXT", Theme.TXT); vfo = new NeonToggle(c, "🎛️", "VFO", Theme.VFO);
         rec = new NeonToggle(c, "🔴", "REC", Theme.REC); mon = new NeonToggle(c, "👁️", "MON", Theme.MON); pkt = new NeonToggle(c, "📡", "PKT", Theme.PKT);
         bottom.addView(softSq, sat(d, 80, Gravity.START, 8, 4));
@@ -190,7 +219,8 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         bottom.addView(rec, sat(d, 70, Gravity.END, 16, 4));
         bottom.addView(mon, sat(d, 70, Gravity.END, 16, 58));
         bottom.addView(pkt, sat(d, 76, Gravity.END, 16, 112));
-        LayoutParams btl = new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f); btl.topMargin = dp4;
+        }
+        LayoutParams btl = neo ? new LayoutParams(LayoutParams.MATCH_PARENT, (int) (182 * d)) : new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f); btl.topMargin = dp4;
         addView(bottom, btl);
         // Mode satellites. Those not brought over yet say so instead of pretending to toggle.
         softSq.setOnClickListener(v -> { if (svc != null) svc.setSoftSq(!softSq.isOn()); });
@@ -215,6 +245,130 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         vfo.setOnLongClickListener(v -> { if (svc != null && svc.vfoActive()) { svc.exitVfo(); android.widget.Toast.makeText(c, "VFO off", android.widget.Toast.LENGTH_SHORT).show(); } return true; });
         pkt.setOnClickListener(v -> { if (svc != null) PktDialog.show(c, svc); });
         ptt.setListener(down -> { if (svc != null) svc.ptt(down); });
+    }
+
+    private static FrameLayout.LayoutParams neoSat(float d, int side, int topDp) {
+        FrameLayout.LayoutParams p = new FrameLayout.LayoutParams((int) (76 * d), (int) (54 * d), side | Gravity.TOP);
+        if (side == Gravity.START) p.leftMargin = (int) (12 * d); else p.rightMargin = (int) (12 * d);
+        p.topMargin = (int) (topDp * d);
+        return p;
+    }
+
+    /** Offer to switch looks (long-press the classic title, or the new look's menu). */
+    private void offerLook(boolean toNew) {
+        final Context c = getContext();
+        new android.app.AlertDialog.Builder(c).setTitle(toNew ? "Try the new intercom look?" : "Back to the classic intercom?")
+                .setMessage("Device → Radio settings → New intercom look switches it too.")
+                .setPositiveButton(toNew ? "New look" : "Classic", (dd, w) -> { setNewLook(c, toNew); if (c instanceof com.macdmr.radio.MainActivity) ((com.macdmr.radio.MainActivity) c).rebuildIntercom(); })
+                .setNegativeButton("Cancel", null).show();
+    }
+
+    private ImageView roundArrow(Context c, String icon, String desc) {
+        ImageView v = new ImageView(c); v.setImageDrawable(new Neo.IconDrawable(icon, Neo.CYAN)); v.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        int p = Theme.dp(c, 13); v.setPadding(p, p, p, p);
+        GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TL_BR, new int[] { 0xFF12304A, 0xFF08121D }); g.setShape(GradientDrawable.OVAL); g.setStroke(Theme.dp(c, 1.5f), Neo.CYAN);
+        v.setBackground(g); v.setElevation(Theme.dp(c, 6)); v.setOutlineAmbientShadowColor(Neo.CYAN); v.setOutlineSpotShadowColor(Neo.CYAN);
+        v.setContentDescription(desc); v.setClickable(true); v.setFocusable(true);
+        return v;
+    }
+
+    /** The new look's top half: header, channel strip, readout, S-meter, SCAN/ZONE, Soft SQ slider. */
+    private void buildNeoTop(final Context c, final float d) {
+        final int m = (int) (16 * d);
+        neoHeader = Neo.header(c, "", "Zone · ALL");
+        title = Neo.headerTitle(neoHeader);
+        ImageView logo = new ImageView(c); logo.setImageDrawable(new Neo.IconDrawable("radio", Neo.CYAN));
+        LayoutParams lg = new LayoutParams((int) (28 * d), (int) (28 * d)); lg.rightMargin = (int) (12 * d);
+        neoHeader.addView(logo, 0, lg);
+        ImageView menu = Neo.iconButton(c, "menu", Neo.CYAN, "Menu");
+        menu.setOnClickListener(v -> new android.app.AlertDialog.Builder(c).setItems(new String[] { "Choose zone", "Last heard", "Classic intercom look" }, (dd, w) -> {
+            if (w == 0) pickZone(); else if (w == 1) { if (svc != null) LastHeardDialog.show(c, svc); } else offerLook(false);
+        }).show());
+        Neo.addAction(neoHeader, menu);
+        addView(neoHeader);
+
+        // channel strip: arrows, big number, mode chips
+        FrameLayout strip = new FrameLayout(c);
+        ImageView prev = roundArrow(c, "left", "Previous channel"), next = roundArrow(c, "right", "Next channel");
+        FrameLayout.LayoutParams pl = new FrameLayout.LayoutParams((int) (50 * d), (int) (50 * d), Gravity.START | Gravity.CENTER_VERTICAL); pl.leftMargin = (int) (18 * d);
+        FrameLayout.LayoutParams nl = new FrameLayout.LayoutParams((int) (50 * d), (int) (50 * d), Gravity.END | Gravity.CENTER_VERTICAL); nl.rightMargin = (int) (18 * d);
+        strip.addView(prev, pl); strip.addView(next, nl);
+        LinearLayout mid = new LinearLayout(c); mid.setOrientation(VERTICAL); mid.setGravity(Gravity.CENTER_HORIZONTAL);
+        bigNum = Neo.text(c, "--", Neo.CYAN, 50, Neo.display(c)); bigNum.setShadowLayer(18 * d, 0, 0, Neo.alpha(Neo.CYAN, 0xA0)); bigNum.setLetterSpacing(0.04f);
+        mid.addView(bigNum);
+        chipRow = new LinearLayout(c); chipRow.setGravity(Gravity.CENTER); chipRow.setPadding(0, (int) (4 * d), 0, 0);
+        mid.addView(chipRow);
+        strip.addView(mid, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
+        LayoutParams sl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); sl.topMargin = (int) (6 * d);
+        addView(strip, sl);
+        prev.setOnClickListener(v -> { if (svc != null) new Thread(() -> svc.stepChannel(-1)).start(); });
+        next.setOnClickListener(v -> { if (svc != null) new Thread(() -> svc.stepChannel(1)).start(); });
+
+        // readout: four cells
+        LinearLayout rcard = new LinearLayout(c); rcard.setOrientation(VERTICAL); rcard.setBackground(Neo.card(c, Neo.LINE, 14));
+        rcard.setPadding((int) (14 * d), (int) (9 * d), (int) (12 * d), (int) (4 * d));
+        LinearLayout ro = new LinearLayout(c); ro.setBaselineAligned(false);
+        readLabel = new TextView[4]; TextView[] val = new TextView[4];
+        float[] wts = { 1.15f, 1.15f, 0.85f, 1f };
+        for (int i = 0; i < 4; i++) {
+            LinearLayout cell = new LinearLayout(c); cell.setOrientation(VERTICAL);
+            readLabel[i] = Neo.caps(c, ""); cell.addView(readLabel[i]);
+            val[i] = Neo.text(c, "", Neo.TEXT, 15.5f, Neo.mono(c)); val[i].setSingleLine(true); val[i].setPadding(0, (int) (4 * d), 0, 0);
+            androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(val[i], 10, 16, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
+            cell.addView(val[i], new LayoutParams(LayoutParams.MATCH_PARENT, (int) (22 * d)));
+            ro.addView(cell, new LayoutParams(0, LayoutParams.WRAP_CONTENT, wts[i]));
+        }
+        send = val[0]; receive = val[1]; squelch = val[2]; power = val[3];
+        rcard.addView(ro);
+        android.view.View rdiv = new android.view.View(c); rdiv.setBackgroundColor(Neo.DIVIDER); LayoutParams rdl = new LayoutParams(LayoutParams.MATCH_PARENT, 1); rdl.setMargins(0, (int) (8 * d), 0, (int) (6 * d));
+        rcard.addView(rdiv, rdl);
+        LayoutParams rl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); rl.setMargins(m, (int) (8 * d), m, 0);
+        addView(rcard, rl);
+        location = Neo.text(c, "", Neo.MUTED, 12.5f, Neo.uiSemi(c)); location.setSingleLine(true); location.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                location.setVisibility(GONE);
+
+        // S-meter
+        LinearLayout sm = rcard;
+        LinearLayout smTop = new LinearLayout(c); smTop.setGravity(Gravity.CENTER_VERTICAL);
+        smTop.addView(Neo.caps(c, "Signal"), new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f));
+        smeterText = Neo.text(c, "--", Neo.TEXT, 17, Neo.mono(c)); smTop.addView(smeterText);
+        sm.addView(smTop);
+        smeter = new SMeterView(c); LayoutParams mlp = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); mlp.topMargin = (int) (4 * d);
+        sm.addView(smeter, mlp);
+        signal = smeterText;
+        // where the channel is (stored position): shown under the card only when there is one
+        LayoutParams ll2 = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); ll2.setMargins(m + (int) (4 * d), (int) (4 * d), m, 0);
+        addView(location, ll2);
+
+        // SCAN / ZONE
+        LinearLayout br = new LinearLayout(c); br.setBaselineAligned(false);
+        scanBtn = Neo.button(c, "SCAN", "scan", Neo.CYAN); zoneBtn = Neo.button(c, "ZONE: ALL", "zone", Neo.CYAN);
+        for (TextView t : new TextView[] { scanBtn, zoneBtn }) { t.setLetterSpacing(0.12f); t.setTextSize(15.5f); t.setMinHeight((int) (44 * d)); t.setSingleLine(true); }
+        LayoutParams b1 = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f); b1.rightMargin = (int) (4 * d);
+        LayoutParams b2 = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f); b2.leftMargin = (int) (4 * d);
+        br.addView(scanBtn, b1); br.addView(zoneBtn, b2);
+        LayoutParams brl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); brl.setMargins(m, (int) (6 * d), m, 0);
+        addView(br, brl);
+        scanBtn.setOnClickListener(v -> { if (svc != null) android.widget.Toast.makeText(c, svc.toggleScan(), android.widget.Toast.LENGTH_SHORT).show(); });
+        scanBtn.setOnLongClickListener(v -> { if (svc != null) android.widget.Toast.makeText(c, svc.skipScanChannel(), android.widget.Toast.LENGTH_SHORT).show(); return true; });
+        zoneBtn.setOnClickListener(v -> pickZone());
+
+        // Soft SQ slider
+        LinearLayout sq = new LinearLayout(c); sq.setGravity(Gravity.CENTER_VERTICAL);
+        TextView sqLabel = Neo.caps(c, "Soft SQ"); sqLabel.setTextSize(12);
+        sq.addView(sqLabel, new LayoutParams((int) (70 * d), LayoutParams.WRAP_CONTENT));
+        SeekBar seek = new SeekBar(c); seek.setMax(9); seek.setProgress(5); sqSeek = seek;
+        seek.setProgressTintList(android.content.res.ColorStateList.valueOf(Neo.CYAN)); seek.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(Neo.TRACK)); seek.setThumbTintList(android.content.res.ColorStateList.valueOf(Neo.CYAN));
+        seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar s2, int p, boolean u) { sqValue.setText(String.valueOf(Math.max(1, p))); }
+            @Override public void onStartTrackingTouch(SeekBar s2) { sqFromUser = true; }
+            @Override public void onStopTrackingTouch(SeekBar s2) { sqFromUser = false; if (svc != null) svc.setSoftSqLevel(Math.max(1, s2.getProgress())); }
+        });
+        sq.addView(seek, new LayoutParams(0, (int) (32 * d), 1f));
+        sqValue = Neo.text(c, "5", Neo.CYAN, 20, Neo.mono(c)); sqValue.setGravity(Gravity.END);
+        sq.addView(sqValue, new LayoutParams((int) (24 * d), LayoutParams.WRAP_CONTENT));
+        LayoutParams sql = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); sql.setMargins(m + (int) (2 * d), (int) (2 * d), m, 0);
+        addView(sq, sql);
     }
 
     private static FrameLayout.LayoutParams sat(float d, int wDp, int side, int sideMarginDp, int topDp) {
@@ -270,6 +424,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     public void detach() { if (svc != null) svc.removeListener(this); svc = null; }
 
     private void refreshHeadline() {
+        if (neo) { refreshNeoHeadline(); return; }
         if (tx) { headline.setText("🔴 Transmitting"); headline.setTextColor(Theme.RED); }
         else if (rx) { headline.setText("📻 Receiving..."); headline.setTextColor(Theme.GREEN); }
         else if (svc != null && "no root".equals(svc.link())) { headline.setText("🔒 Root needed — allow in Magisk, then Device → Bring radio up"); headline.setTextColor(Theme.AMBER); }
@@ -279,9 +434,54 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         board.isReceiving = rx;
     }
 
+    private void refreshNeoHeadline() {
+        String t; int col;
+        if (tx) { t = "TRANSMITTING"; col = Neo.RED; }
+        else if (rx) { t = "RECEIVING"; col = Neo.GREEN; }
+        else if (svc != null && "no root".equals(svc.link())) { t = "ROOT NEEDED · allow in Magisk, then Device → Take over"; col = Neo.AMBER; }
+        else if (svc != null && "unsupported".equals(svc.link())) { t = "PHONE NOT SUPPORTED YET · Device → Device report"; col = Neo.AMBER; }
+        else if (svc != null && svc.isReady()) { t = "READY"; col = Neo.GREEN; }
+        else { t = svc != null ? svc.link().toUpperCase(java.util.Locale.US) : ""; col = Neo.AMBER; }
+        headline.setText("●  " + t); headline.setTextColor(col);
+        headline.setShadowLayer(Theme.dp(getContext(), 6), 0, 0, Neo.alpha(col, 0x90));
+        ptt.setState(tx ? PttButton.State.TX : rx ? PttButton.State.RX : (svc != null && svc.isReady() && svc.txInhibited() ? PttButton.State.BUSY : PttButton.State.IDLE));
+        board.isReceiving = rx;
+    }
+
+    /** New look: number, chips and the four readout cells for the channel. */
+    private void neoChannel(ChannelStore.Channel ch, boolean isVfo) {
+        Context c = getContext(); float d = Theme.dp(c);
+        title.setText((isVfo ? "VFO" : ch.name).toUpperCase(java.util.Locale.US));
+        bigNum.setText(isVfo ? "VFO" : String.format(java.util.Locale.US, "%02d", ch.number % 100));
+        int numCol = isVfo ? Neo.AMBER : Neo.CYAN; bigNum.setTextColor(numCol); bigNum.setShadowLayer(18 * d, 0, 0, Neo.alpha(numCol, 0xA0));
+        chipRow.removeAllViews();
+        TextView[] chips = { Neo.chip(c, ch.isDigital() ? "DMR" : "FM", ch.isDigital() ? Neo.VIOLET : Neo.CYAN), Neo.chip(c, ch.rxFreq < 300_000_000 ? "VHF" : "UHF", Neo.CYAN), Neo.chip(c, ch.power == 1 ? "HIGH PWR" : "LOW PWR", Neo.AMBER) };
+        for (int i = 0; i < chips.length; i++) { LayoutParams lp = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT); if (i > 0) lp.leftMargin = (int) (6 * d); chipRow.addView(chips[i], lp); }
+        readLabel[0].setText("TX"); readLabel[1].setText("RX");
+        send.setText(ChannelsView.mhz(ch.txFreq)); receive.setText(ChannelsView.mhz(ch.rxFreq));
+        if (ch.isDigital()) {
+            readLabel[2].setText("CC · TS"); squelch.setText(ch.cc + " · " + (ch.inSlot + 1));
+            readLabel[3].setText("CALL"); power.setText((ch.contactType == 1 ? "TG " : ch.contactType == 2 ? "ALL " : "ID ") + ch.txContact);
+        } else {
+            readLabel[2].setText("SQ"); squelch.setText(String.valueOf(ch.sq));
+            readLabel[3].setText("TONE");
+            String tone = ch.rxType == 1 && com.macdmr.radio.dsp.ToneTable.ctcssHz(ch.rxSubCode) > 0 ? String.format(java.util.Locale.US, "%.1f", com.macdmr.radio.dsp.ToneTable.ctcssHz(ch.rxSubCode)) : ch.rxType == 2 ? String.format(java.util.Locale.US, "D%03oN", ch.rxSubCode) : "NONE";
+            power.setText(tone);
+        }
+    }
+
     // RadioService.Listener
     @Override public void onChannel(ChannelStore.Channel ch) {
         boolean isVfo = ch.id < 0;
+        if (neo) {
+            neoChannel(ch, isVfo); vfo.setOn(isVfo);
+            historyHeader.setText(ch.isDigital() ? "DMR ACTIVITY" : "ANALOG HISTORY");
+            softSq.setVisibility(ch.isDigital() ? INVISIBLE : VISIBLE);
+            history.clear();
+            if (svc != null) for (String l : svc.store().recentHistory(ch.number, 3)) history.addLast(l);
+            renderHistory(); refreshHeadline();
+            return;
+        }
         title.setText(ch.name + (ch.rxFreq < 300_000_000 ? "(VHF)" : "(UHF)"));
         int shown = ch.number % 100;
         digitOne.setImageResource(DIGITS[shown / 10]); digitTwo.setImageResource(DIGITS[shown % 10]);
@@ -299,15 +499,18 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     }
     @Override public void onRx(boolean receiving) { rx = receiving; refreshHeadline(); }
     @Override public void onTx(boolean transmitting) { tx = transmitting; refreshHeadline(); }
-    @Override public void onRssi(int dbm) { signal.setText(dbm == -999 ? "Signal: --" : "Signal: " + dbm + " dBm"); }
+    @Override public void onRssi(int dbm) {
+        if (neo) { smeter.setDbm(dbm); smeterText.setText(dbm == -999 ? "--" : SMeterView.sUnits(dbm) + "  " + dbm + " dBm"); smeterText.setTextColor(dbm == -999 ? Neo.DIM : dbm > -93 ? Neo.AMBER_LIGHT : Neo.TEXT); return; }
+        signal.setText(dbm == -999 ? "Signal: --" : "Signal: " + dbm + " dBm");
+    }
     @Override public void onAudioLevel(int amplitude) { board.audioAmplitude = amplitude; }
     @Override public void onHistory(String line) { if (!history.isEmpty() && history.peekLast().equals(line)) return; history.addLast(line); while (history.size() > 3) history.removeFirst(); renderHistory(); }
-    @Override public void onCaller(String text) { headline.setText("📻 " + text); }
+    @Override public void onCaller(String text) { headline.setText(neo ? "●  " + text : "📻 " + text); }
     @Override public void onLog(String s) { }
     @Override public void onLink(String state) { refreshHeadline(); }
     @Override public void onSms(int from, int type, String text) { }
     @Override public void onSmsResult(boolean ok) { }
-    @Override public void onLocation(String text) { location.setText(text); }
+    @Override public void onLocation(String text) { location.setText(text); if (neo) location.setVisibility(text == null || text.isEmpty() ? GONE : VISIBLE); }
     @Override public void onCaption(boolean enabled, String live, String sentence) {
         txt.setOn(enabled);
         transcriptionBox.setVisibility(enabled ? VISIBLE : GONE);
@@ -323,6 +526,17 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         if (!sqFromUser) { sqSeek.setProgress(level); sqValue.setText(String.valueOf(level)); }
         sqValue.setTextColor(sq ? (open ? Theme.GREEN : Theme.AMBER) : Theme.CYAN);
         zoneBtn.setText("ZONE: " + zoneName.toUpperCase(java.util.Locale.US));
+        if (neo) {
+            this.zoneName = zoneName; Neo.headerSubtitle(neoHeader).setText(("Zone · " + zoneName).toUpperCase(java.util.Locale.US));
+            sqValue.setTextColor(sq ? (open ? Neo.GREEN : Neo.AMBER) : Neo.CYAN);
+            Context c = getContext(); int col = scanning ? Neo.AMBER : Neo.CYAN;
+            scanBtn.setText(scanning ? (holding ? "HOLD" : "SCANNING") : "SCAN"); scanBtn.setTextColor(scanning ? Neo.AMBER_LIGHT : Neo.CYAN_LIGHT);
+            Neo.IconDrawable ic = new Neo.IconDrawable(scanning ? "stop" : "scan", scanBtn.getCurrentTextColor()); int sz = Theme.dp(c, 18); ic.setBounds(0, 0, sz, sz); scanBtn.setCompoundDrawables(ic, null, null, null);
+            android.graphics.drawable.StateListDrawable st = new android.graphics.drawable.StateListDrawable();
+            st.addState(new int[] { android.R.attr.state_pressed }, Neo.outline(c, col, 0x40, 12, 1.5f)); st.addState(new int[] { }, Neo.outline(c, col, scanning ? 0x30 : 0x18, 12, 1.5f));
+            scanBtn.setBackground(st);
+            return;
+        }
         scanBtn.setText(scanning ? (holding ? "\u23F9 HOLD" : "\u23F9 SCANNING") : "\uD83D\uDD0D SCAN");
         scanBtn.setTextColor(scanning ? Theme.AMBER : Theme.CYAN);
         scanBtn.setBackground(scanning ? Theme.gradient(getContext(), 0xFF4A3A0D, 0xFF80651A, Theme.AMBER, 2, 8) : Theme.pill(getContext()));
