@@ -54,6 +54,33 @@ public final class Updater {
         return null;
     }
 
+    /** The caption companion (Vosk recognizer) ships on the same releases as DMRTranscriptionService-*.apk. */
+    public static void installCompanion(final Context c) {
+        Toast.makeText(c, "Looking for the companion app...", Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            try {
+                HttpClient.Response r = HttpClient.get(LATEST + "?per_page=15", null, 0L, "application/vnd.github+json");
+                if (!r.isOk()) throw new Exception("GitHub API returned HTTP " + r.code);
+                JSONArray rels = new JSONArray(r.bodyUtf8()); Release found = null;
+                for (int k = 0; k < rels.length() && found == null; k++) {
+                    JSONObject o = rels.getJSONObject(k); if (o.optBoolean("draft", false)) continue;
+                    JSONArray assets = o.optJSONArray("assets"); if (assets == null) continue;
+                    for (int i = 0; i < assets.length(); i++) {
+                        JSONObject a = assets.getJSONObject(i); String n = a.optString("name", "");
+                        if (n.startsWith("DMRTranscriptionService") && n.endsWith(".apk")) { found = new Release(); found.apkUrl = a.optString("browser_download_url", null); found.apkName = n; found.apkSize = a.optLong("size", 0); found.version = o.optString("tag_name", ""); break; }
+                    }
+                }
+                final Release rel = found;
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                    if (rel == null) { Toast.makeText(c, "No companion APK found in the releases", Toast.LENGTH_LONG).show(); return; }
+                    new AlertDialog.Builder(c).setTitle("Install the caption companion?")
+                            .setMessage(String.format(Locale.US, "DMR Transcription (%s, %.1f MB) runs the on-device Vosk speech recognizer that TXT live captions use. It downloads a language model on first use.", rel.apkName, rel.apkSize / 1e6))
+                            .setNegativeButton("Later", null).setPositiveButton("Download", (d, w) -> download(c, rel)).show();
+                });
+            } catch (final Throwable t) { new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> Toast.makeText(c, "Lookup failed: " + t.getMessage(), Toast.LENGTH_LONG).show()); }
+        }, "companion-lookup").start();
+    }
+
     /** Numeric-aware compare: 1.0.0 > 1.0.0-beta.2 > 1.0.0-beta.1. */
     public static int compareVersions(String a, String b) {
         String[] pa = a.split("-", 2), pb = b.split("-", 2);
