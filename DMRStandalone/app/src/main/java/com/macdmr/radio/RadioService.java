@@ -344,7 +344,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             else if (peak > 400 && System.currentTimeMillis() - captionLastEnd > 1500 && captions != null) { Log.i(TAG, "captions: starting utterance (peak " + peak + ")"); captions.start(); }
         }
         if (packet != null) packet.feed(mono, n, open);
-        if (open && current != null && !current.isDigital()) {
+        if (open && current != null && !current.isDigital() && !(current.rxFreq >= 162_400_000 && current.rxFreq <= 162_550_000)) {
             toneBank.processMono(mono, n);
             int ti = toneBank.detectedIndex();
             if (ti >= 0 && ti != toneAnnounced) {
