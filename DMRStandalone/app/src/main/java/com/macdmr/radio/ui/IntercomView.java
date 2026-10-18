@@ -191,7 +191,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         txt.setOnLongClickListener(v -> { pickCaptionModel(); return true; });
         vfo.setOnClickListener(v -> { if (svc != null) VfoDialog.show(c, svc); });
         vfo.setOnLongClickListener(v -> { if (svc != null && svc.vfoActive()) { svc.exitVfo(); android.widget.Toast.makeText(c, "VFO off", android.widget.Toast.LENGTH_SHORT).show(); } return true; });
-        pkt.setOnClickListener(v -> android.widget.Toast.makeText(c, "PKT is not in this build yet", android.widget.Toast.LENGTH_SHORT).show());
+        pkt.setOnClickListener(v -> { if (svc != null) PktDialog.show(c, svc); });
         ptt.setListener(down -> { if (svc != null) svc.ptt(down); });
     }
 
@@ -279,7 +279,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         captionScroll.post(() -> captionScroll.fullScroll(android.view.View.FOCUS_DOWN));
     }
     @Override public void onModes(boolean sq, int level, boolean open, boolean monitor, boolean recording, boolean scanning, boolean holding, String zoneName) {
-        softSq.setOn(sq); mon.setOn(monitor); rec.setOn(recording);
+        softSq.setOn(sq); mon.setOn(monitor); rec.setOn(recording); pkt.setOn(svc != null && svc.packetActive());
         if (!sqFromUser) { sqSeek.setProgress(level); sqValue.setText(String.valueOf(level)); }
         sqValue.setTextColor(sq ? (open ? Theme.GREEN : Theme.AMBER) : Theme.CYAN);
         zoneBtn.setText("ZONE: " + zoneName.toUpperCase(java.util.Locale.US));
