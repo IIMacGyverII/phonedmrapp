@@ -107,9 +107,14 @@ public final class RadioEngine implements UartPort.Listener {
      */
     public void sendSms(int msgType, int callNumber, int groupNumber, String text) throws IOException {
         byte[] t = text.getBytes(java.nio.charset.StandardCharsets.UTF_16LE);
-        ByteBuffer b = ByteBuffer.allocate(5 + (msgType == 3 ? 4 : 0) + t.length).order(ByteOrder.LITTLE_ENDIAN);
+        // Body: type, callNumber, [second id], UTF-16LE text. The stock app writes the second int only for
+        // group texts, but the firmware reads a 9-byte header for private texts too: a private text sent with the
+        // 5-byte header reached a BTECH 6X2 with its first two characters missing (2026-10-17). So the id is
+        // written twice for private texts; the group id follows for group texts.
+        boolean second = msgType == 3 || msgType == 1;
+        ByteBuffer b = ByteBuffer.allocate(5 + (second ? 4 : 0) + t.length).order(ByteOrder.LITTLE_ENDIAN);
         b.put((byte) msgType).putInt(callNumber);
-        if (msgType == 3) b.putInt(groupNumber);
+        if (msgType == 3) b.putInt(groupNumber); else if (msgType == 1) b.putInt(callNumber);
         b.put(t);
         port.send(Frame.request(CMD_SEND_SMS, b.array()));
     }
