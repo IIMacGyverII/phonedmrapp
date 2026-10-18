@@ -222,6 +222,10 @@ public class RadioService extends Service implements RadioEngine.Events {
         engine = new RadioEngine(profile, this);
         packet = new PacketEngine(packetHost);
         radioId = new RadioIdStore(this);
+        if (!getSharedPreferences("radio", MODE_PRIVATE).getBoolean("smsStatusMigrated", false)) {     // texts marked failed before 2026-10-17 were only unacknowledged
+            try { store.getWritableDatabase().execSQL("UPDATE messages SET status=3 WHERE status=2 AND outgoing=1"); } catch (Throwable ignored) { }
+            getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("smsStatusMigrated", true).apply();
+        }
         registerHardwarePtt();
     }
 
