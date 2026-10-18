@@ -6,6 +6,7 @@ import android.location.Location;
 import android.util.Log;
 
 import com.macdmr.radio.pkt.AFSKDecoder;
+import com.macdmr.radio.pkt.AprsIsClient;
 import com.macdmr.radio.pkt.AFSKGenerator;
 import com.macdmr.radio.pkt.APRSPacketDecoder;
 import com.macdmr.radio.pkt.Ax25;
@@ -167,6 +168,67 @@ public final class PacketEngine {
         prefs.edit().putStringSet("flagged", s).apply();
     }
 
+    // ---- APRS-IS (internet): RX-only iGate of what the radio hears, internet position beacon, messages for us ----
+    private volatile AprsIsClient is;
+    private volatile String isStatus = "off";
+    private volatile long isLastBeacon;
+    public boolean isEnabled() { return prefs.getBoolean("isEnabled", false); }
+    public String isStatus() { AprsIsClient c = is; return c == null ? (isEnabled() ? isStatus : "off") : (c.isConnected() ? (c.isVerified() ? "connected" : "connected, receive-only") + " \u00B7 " + c.gatedCount + " gated" : isStatus); }
+    public String isServer() { return prefs.getString("isServer", "rotate.aprs2.net"); }
+    public int isPort() { return prefs.getInt("isPort", 14580); }
+    public int isBeaconMin() { return prefs.getInt("isBeaconMin", 10); }
+
+    public synchronized String isStart() {
+        isStop();
+        if (!callsignSet()) return "Set your callsign first";
+        String pass = prefs.getString("isPasscode", "-1").trim(); if (pass.isEmpty()) pass = "-1";
+        AprsIsClient c = new AprsIsClient(isServer(), isPort(), myCall(), pass, "DMRRadio 1.0", null, new AprsIsClient.Listener() {
+            @Override public void onStatus(String status, boolean connected) { isStatus = status; if (connected && isBeaconMin() > 0) new Thread(() -> { try { Thread.sleep(5000); } catch (InterruptedException ignored) { } isBeacon(); }, "aprs-is-beacon").start(); }
+            @Override public void onServerLine(String line) { isServerLine(line); }
+        });
+        is = c; c.start();
+        prefs.edit().putBoolean("isEnabled", true).apply();
+        Thread t = new Thread(() -> {
+            while (is == c) {
+                try { Thread.sleep(60000); } catch (InterruptedException e) { break; }
+                int min = isBeaconMin();
+                if (min > 0 && System.currentTimeMillis() - isLastBeacon >= min * 60000L) isBeacon();
+            }
+        }, "aprs-is-timer"); t.setDaemon(true); t.start();
+        return null;
+    }
+
+    public synchronized void isStop() { AprsIsClient c = is; is = null; if (c != null) c.stop(); isStatus = "off"; prefs.edit().putBoolean("isEnabled", false).apply(); }
+
+    /** One position report straight to the internet (no RF). */
+    public void isBeacon() {
+        AprsIsClient c = is; if (c == null || !c.isConnected() || !c.isVerified()) return;
+        Location l = host.location(); if (l == null) return;
+        String info = Ax25.positionInfo(l.getLatitude(), l.getLongitude(), symTable(), symCode(), prefs.getString("isComment", comment()));
+        if (c.send(c.getLogin() + ">APDR16,TCPIP*:" + info)) { isLastBeacon = System.currentTimeMillis(); store.log("is-beacon", myCall(), "APRS-IS", info, null, false); }
+    }
+
+    private void igate(byte[] frame) {
+        AprsIsClient c = is; if (c == null || !c.isConnected() || !c.isVerified()) return;
+        String t = AprsIsClient.tnc2FromFrame(frame);
+        if (AprsIsClient.shouldGate(t)) c.gate(t);
+    }
+
+    /** Lines from the server: messages for our login are logged, notified and acked over the internet. */
+    private void isServerLine(String line) {
+        try {
+            APRSPacketDecoder.APRSPacket p = APRSPacketDecoder.decodeTnc2(line);
+            if (!p.isValid || !p.isMessage() || !addressedToMe(p.messageTo)) return;
+            String from = p.sourceCallsign + (p.sourceSSID != 0 ? "-" + p.sourceSSID : "");
+            store.log(p.isAck ? "ack" : p.isRej ? "rej" : "msg", from + " (IS)", p.messageTo, p.messageText, p.messageId, true);
+            if (p.isAck || p.isRej) return;
+            host.notifyUser("APRS-IS message from " + from, p.messageText, false);
+            host.event("\uD83C\uDF10 " + from + ": " + p.messageText);
+            AprsIsClient c = is;
+            if (p.messageId != null && c != null && c.isVerified()) c.send(c.getLogin() + ">APDR16,TCPIP*:" + Ax25.messageInfo(from, "ack" + p.messageId, 0));
+        } catch (Throwable t) { Log.w(TAG, "is line: " + t); }
+    }
+
     public boolean monitoring() { return monitor; }
     public void setMonitoring(boolean on) { monitor = on; if (!on) { fill = 0; overlapTail = null; } }
     public KissTnc kiss() { return kiss; }
@@ -240,6 +302,7 @@ public final class PacketEngine {
                 if (duplicate(frame)) continue;
                 kiss.deliver(frame);
                 maybeDigipeat(frame);
+                igate(frame);
                 APRSPacketDecoder.APRSPacket p = APRSPacketDecoder.decode(frame);
                 String from = p.isValid ? p.sourceCallsign + (p.sourceSSID != 0 ? "-" + p.sourceSSID : "") : Ax25.addr(frame, 7);
                 if (!p.isValid) { host.event("📡 " + Ax25.tnc2(frame)); continue; }

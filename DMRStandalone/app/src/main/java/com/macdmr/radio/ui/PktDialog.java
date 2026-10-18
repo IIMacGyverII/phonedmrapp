@@ -48,6 +48,13 @@ public final class PktDialog {
         button(r2, "Send message", Theme.VFO, x -> message());
         button(r2, "Position beacon", Theme.VFO, x -> { String e = pe.sendBeacon(); toast(e == null ? "Beacon queued" : e); });
         body.addView(r2);
+        LinearLayout rIs = row();
+        button(rIs, (pe.isEnabled() ? "Stop APRS-IS" : "APRS-IS (internet)") , Theme.PKT, x -> {
+            if (pe.isEnabled()) { pe.isStop(); toast("APRS-IS off"); } else { String e = pe.isStart(); toast(e == null ? "Connecting to " + pe.isServer() : e); }
+            dlg.dismiss();
+        });
+        body.addView(rIs);
+        body.addView(hint("APRS-IS: " + pe.isStatus() + ". Gates what the radio hears to the internet (with a passcode), beacons your position online and delivers internet messages for you."));
         LinearLayout r3 = row();
         button(r3, "Stations heard (" + pe.store().stationCount() + ")", Theme.SOFTSQ, x -> stations());
         button(r3, "APRS log", Theme.SOFTSQ, x -> aprsLog());
@@ -227,6 +234,12 @@ public final class PktDialog {
         final EditText comment = field(body, "Beacon comment", pe.comment(), InputType.TYPE_CLASS_TEXT);
         final EditText path = field(body, "Digipeater path", p.getString("path", "WIDE1-1,WIDE2-1"), InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
         final EditText port = field(body, "KISS TNC port", String.valueOf(pe.kissPort()), InputType.TYPE_CLASS_NUMBER);
+        body.addView(section("APRS-IS (internet)"));
+        final EditText isServer = field(body, "Server", pe.isServer(), InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+        final EditText isPort = field(body, "Port", String.valueOf(pe.isPort()), InputType.TYPE_CLASS_NUMBER);
+        final EditText isPass = field(body, "Passcode (-1 = receive-only; never shown or logged)", p.getString("isPasscode", "-1"), InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        final EditText isMin = field(body, "Internet beacon every N minutes (0 = off)", String.valueOf(pe.isBeaconMin()), InputType.TYPE_CLASS_NUMBER);
+        final EditText isComment = field(body, "Internet beacon comment", p.getString("isComment", pe.comment()), InputType.TYPE_CLASS_TEXT);
         body.addView(section("Passive APRS decode"));
         final String[] modes = { "Off", "Flagged channels", "Every analog channel" };
         final int[] passive = { pe.passiveMode() };
@@ -245,6 +258,9 @@ public final class PktDialog {
                         .putString("symTable", s.length() >= 1 ? s.substring(0, 1) : "/").putString("symCode", s.length() >= 2 ? s.substring(1, 2) : "[")
                         .putString("comment", comment.getText().toString().trim()).putString("path", path.getText().toString().trim().toUpperCase(Locale.US))
                         .putInt("kissPort", Integer.parseInt(port.getText().toString().trim())).putInt("passive", passive[0])
+                        .putString("isServer", isServer.getText().toString().trim()).putInt("isPort", Integer.parseInt(isPort.getText().toString().trim()))
+                        .putString("isPasscode", isPass.getText().toString().trim().isEmpty() ? "-1" : isPass.getText().toString().trim())
+                        .putInt("isBeaconMin", Integer.parseInt(isMin.getText().toString().trim())).putString("isComment", isComment.getText().toString().trim())
                         .putBoolean("autoAck", flags[0]).putBoolean("digipeat", flags[1]).putBoolean("dtmf", flags[2]).putBoolean("wx", flags[3]).apply();
                 toast("Saved"); sub.dismiss();
             } catch (NumberFormatException e) { toast("Check the numbers"); }
