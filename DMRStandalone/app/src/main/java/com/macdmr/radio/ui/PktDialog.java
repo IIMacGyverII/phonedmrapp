@@ -16,6 +16,7 @@ import android.widget.Toast;
 import com.macdmr.radio.PacketEngine;
 import com.macdmr.radio.RadioService;
 import com.macdmr.radio.pkt.PacketStore;
+import com.macdmr.radio.pkt.SSTVEncoder;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -53,6 +54,18 @@ public final class PktDialog {
         button(r3, "Settings", Theme.MON, x -> settings());
         body.addView(r3);
         body.addView(hint("Passive decode runs on " + (pe.passiveMode() == 2 ? "every analog channel" : pe.passiveMode() == 1 ? "flagged channels" : "no channel (off)") + ". Monitoring parks the radio on 144.390 MHz, acks messages for you" + (pe.digipeat() ? " and digipeats WIDE1-1" : "") + ". Your channel comes back when you stop."));
+        // ---- SSTV ----
+        body.addView(section("SSTV pictures"));
+        body.addView(hint("\uD83D\uDD38 " + pe.sstvStatus()));
+        LinearLayout s1 = row();
+        if (pe.sstvRx()) button(s1, "Stop receiving", Theme.PKT, x -> { toast(svc.sstvMonitor(false, false)); dlg.dismiss(); });
+        else { button(s1, "Receive on 144.500", Theme.PKT, x -> { toast(svc.sstvMonitor(true, true)); dlg.dismiss(); }); button(s1, "Receive here", Theme.PKT, x -> { toast(svc.sstvMonitor(true, false)); dlg.dismiss(); }); }
+        body.addView(s1);
+        LinearLayout s2 = row();
+        button(s2, "Live picture", Theme.SOFTSQ, x -> sstvView());
+        button(s2, "Send picture", Theme.VFO, x -> sstvSend());
+        body.addView(s2);
+        body.addView(hint("Receives Robot, Martin, Scottie and PD modes (VIS auto-detect); pictures are saved to Download/DMR/SSTV. Sending uses Robot 24 Color, Robot 12 BW or Robot 8 BW, the modes that fit this radio's 30 s transmit limit."));
         // ---- DTMF ----
         body.addView(section("DTMF"));
         LinearLayout r4 = row();
@@ -106,6 +119,32 @@ public final class PktDialog {
         button(r, "Clear", Theme.MON, x -> seq.setText(""));
         body.addView(r);
         sub = dialog(body);
+    }
+
+    // ---- SSTV ----
+    private void sstvView() {
+        LinearLayout body = page("\uD83D\uDCFA  SSTV");
+        final TextView st = hint("\uD83D\uDD38 " + pe.sstvStatus()); body.addView(st);
+        final android.widget.ImageView iv = new android.widget.ImageView(c); iv.setAdjustViewBounds(true); iv.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        iv.setBackground(Theme.rounded(c, 0xFF000000, 0x8000BFFF, 1, 6)); iv.setMinimumHeight(dp(220));
+        if (pe.sstvLast() != null) iv.setImageBitmap(pe.sstvLast());
+        body.addView(iv, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        body.addView(hint("The picture builds up line by line while a transmission is decoded. Finished pictures are in Download/DMR/SSTV."));
+        pe.setSstvListener((status, live, lines, total, done) -> { st.setText("\uD83D\uDD38 " + status); if (live != null) iv.setImageBitmap(live); });
+        sub = dialog(body);
+        sub.setOnDismissListener(d -> pe.setSstvListener(null));
+    }
+
+    private void sstvSend() {
+        if (!(c instanceof com.macdmr.radio.MainActivity)) { toast("Open from the main screen"); return; }
+        final String[] names = { "Robot 24 Color (\u224824 s)", "Robot 12 BW (\u224812 s)", "Robot 8 BW (\u22488 s)" };
+        final int[] modes = { SSTVEncoder.ROBOT_24_COLOR, SSTVEncoder.ROBOT_12_BW, SSTVEncoder.ROBOT_8_BW };
+        new AlertDialog.Builder(c).setTitle("SSTV mode").setItems(names, (dd, w) -> ((com.macdmr.radio.MainActivity) c).pickImage(uri -> {
+            try (java.io.InputStream in = c.getContentResolver().openInputStream(uri)) {
+                android.graphics.Bitmap bmp = android.graphics.BitmapFactory.decodeStream(in);
+                String e = pe.sendSstv(bmp, modes[w]); toast(e == null ? "Sending " + names[w] : e);
+            } catch (Throwable t) { toast("Could not read that picture"); }
+        })).show();
     }
 
     // ---- lists ----

@@ -133,6 +133,18 @@ public class MainActivity extends AppCompatActivity {
     private void showOverlay(View v) { closeOverlay(); overlay = v; content.addView(v, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)); }
     private void closeOverlay() { if (overlay != null) { content.removeView(overlay); overlay = null; } }
 
+    // ---- image picker for views (SSTV send) ----
+    private java.util.function.Consumer<android.net.Uri> imagePick;
+    public void pickImage(java.util.function.Consumer<android.net.Uri> cb) {
+        imagePick = cb;
+        Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*");
+        try { startActivityForResult(i, 77); } catch (Throwable t) { android.widget.Toast.makeText(this, "No picture app available", android.widget.Toast.LENGTH_LONG).show(); }
+    }
+    @Override protected void onActivityResult(int req, int res, Intent data) {
+        super.onActivityResult(req, res, data);
+        if (req == 77 && imagePick != null) { java.util.function.Consumer<android.net.Uri> cb = imagePick; imagePick = null; if (res == RESULT_OK && data != null && data.getData() != null) cb.accept(data.getData()); }
+    }
+
     @Override public void onBackPressed() {
         if (overlay != null) { closeOverlay(); return; }
         if (editor != null) { content.removeView(editor); editor = null; return; }

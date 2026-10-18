@@ -75,7 +75,25 @@ public class RadioService extends Service implements RadioEngine.Events {
     private final Runnable txWatchdog = () -> { if (pttDown) { log("TX watchdog: releasing PTT after 28 s"); ptt(false); } };
     private PacketEngine packet;
     public PacketEngine packet() { return packet; }
-    public boolean packetActive() { return packet != null && (packet.monitoring() || packet.kiss().isActive()); }
+    public boolean packetActive() { return packet != null && (packet.monitoring() || packet.kiss().isActive() || packet.sstvRx()); }
+
+    /** SSTV receive: on the SSTV calling frequency (through the VFO) or on the current channel. */
+    public String sstvMonitor(boolean on, boolean park) {
+        if (packet == null) return "not ready";
+        if (on) {
+            if (park) {
+                ChannelStore.Channel a = new ChannelStore.Channel();
+                a.type = 1; a.rxFreq = a.txFreq = PacketEngine.SSTV_FREQ_HZ; a.band = 1; a.power = 1; a.name = "SSTV 144.500";
+                applyVfo(a, false);
+            }
+            packet.setSstvRx(true); pushModes();
+            return park ? "SSTV receive on 144.500 MHz" : "SSTV receive on this channel";
+        }
+        packet.setSstvRx(false);
+        if (vfo != null && vfo.rxFreq == PacketEngine.SSTV_FREQ_HZ) exitVfo();
+        pushModes();
+        return "SSTV receive off";
+    }
 
     private final PacketEngine.Host packetHost = new PacketEngine.Host() {
         @Override public android.content.Context context() { return RadioService.this; }
@@ -559,6 +577,7 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     public void exitVfo() {
         if (packet != null && packet.monitoring()) packet.setMonitoring(false);
+        if (packet != null && packet.sstvRx() && vfo != null && vfo.rxFreq == PacketEngine.SSTV_FREQ_HZ) packet.setSstvRx(false);
         worker.execute(() -> {
             if (vfo == null) return;
             vfo = null;
