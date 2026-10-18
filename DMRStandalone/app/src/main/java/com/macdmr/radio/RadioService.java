@@ -846,10 +846,11 @@ public class RadioService extends Service implements RadioEngine.Events {
         ui.post(() -> { for (Listener l : listeners) l.onSms(fromId, t, text); });
     }
 
+    /** Status 8 = the other radio acknowledged; 9 = no acknowledgement came back (the text usually still arrived — a BTECH 6X2 shows it and never acks, 2026-10-17). */
     private void smsResult(boolean ok) {
         long id = pendingSmsId; pendingSmsId = -1;
-        if (id >= 0) store.setMessageStatus(id, ok ? 1 : 2);
-        if (!ok) log("text message failed");
+        if (id >= 0) store.setMessageStatus(id, ok ? 1 : 3);
+        if (!ok) log("text message sent, no acknowledgement");
         ui.post(() -> { for (Listener l : listeners) l.onSmsResult(ok); });
     }
 

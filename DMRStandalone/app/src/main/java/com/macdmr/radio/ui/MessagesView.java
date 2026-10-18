@@ -185,7 +185,7 @@ public class MessagesView extends LinearLayout implements RadioService.Listener 
             TextView b = Theme.label(c, m.text, Theme.WHITE, 15, false); b.setMaxWidth((int) (260 * d));
             b.setBackground(Theme.rounded(c, m.outgoing ? 0xFF0D3D47 : 0xFF1A2432, m.outgoing ? 0xFF00BCD4 : 0x5500BFFF, 1, 16)); b.setPadding((int) (14 * d), (int) (9 * d), (int) (14 * d), (int) (9 * d));
             row.addView(b);
-            row.addView(Theme.label(c, tf.format(new Date(m.ts)) + (m.outgoing ? (m.status == 1 ? "  ✓" : m.status == 2 ? "  ✖ failed" : "  …") : ""), 0xFF6F7F8F, 11, false));
+            row.addView(Theme.label(c, tf.format(new Date(m.ts)) + (m.outgoing ? (m.status == 1 ? "  ✓✓ delivered" : m.status == 2 ? "  ✖ not sent" : m.status == 3 ? "  ✓ sent, no acknowledgement" : "  …") : ""), 0xFF6F7F8F, 11, false));
             return row;
         }
     }
