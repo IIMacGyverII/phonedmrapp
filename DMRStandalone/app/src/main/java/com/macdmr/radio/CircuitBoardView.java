@@ -49,10 +49,11 @@ public class CircuitBoardView extends View {
         public void run() {
             if (layoutDone) {
                 tickAnimation();
-                invalidate();
+                // Only the VU bars move: redraw just their strip, and nothing at all once they have settled idle
+                // (the full-panel redraw at 20 fps kept the render thread at ~20% CPU on a quiet channel, 2026-10-17).
+                if (isReceiving || !barsSettled()) { if (barDirtyTop > 0) invalidate(0, barDirtyTop, getWidth(), getHeight()); else invalidate(); }
             }
-            // ~20 fps while receiving, ~5 fps idle (backlog U4: the view used to redraw at 20 fps forever)
-            handler.postDelayed(this, isReceiving ? 50 : 200);
+            handler.postDelayed(this, isReceiving ? 66 : 200);
         }
     };
 
@@ -115,6 +116,9 @@ public class CircuitBoardView extends View {
     }
 
     // ── Animation tick ────────────────────────────────────────────────────────
+    private volatile int barDirtyTop = 0;
+    private boolean barsSettled() { for (float h : barHeights) if (h > 0.004f) return false; return true; }
+
     private void tickAnimation() {
         // Advance drops
         for (int i = 0; i < NUM_DROPS; i++) {
@@ -242,6 +246,7 @@ public class CircuitBoardView extends View {
     private void drawAudioBars(Canvas canvas, float dp) {
         float reserveH = (barsCompact ? 10 : 36) * dp;
         float areaTop  = viewH - reserveH - 4 * dp;
+        barDirtyTop = Math.max(0, (int) areaTop - 2);
         float barZone  = (viewH - areaTop) * (barsCompact ? 1.0f : 1.5625f);  // 56.25% taller max height (25% + 25%)
         float margin   = 14 * dp;
         float totalW   = viewW - margin * 2;

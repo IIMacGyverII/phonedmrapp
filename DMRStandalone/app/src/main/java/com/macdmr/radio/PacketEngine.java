@@ -278,7 +278,8 @@ public final class PacketEngine {
                 for (int i = 0, o = 0; i + 1 < n; i += 2) { sstvBytes[o++] = mono[i]; sstvBytes[o++] = mono[i + 1]; sstvBytes[o++] = mono[i]; sstvBytes[o++] = mono[i + 1]; }   // the receiver runs at 16 kHz (each 8 kHz sample twice, exactly the module's input)
                 sstv.processAudio(sstvBytes, n * 2);
             }
-            if (!sstvRx && (monitor || kiss.isActive() || passiveWanted())) {
+            boolean weatherBand = f >= 162_400_000 && f <= 162_550_000;      // no APRS on NOAA frequencies: skip the (costly) passive AFSK decode there
+            if (!sstvRx && (monitor || kiss.isActive() || (passiveWanted() && !weatherBand))) {
                 for (int i = 0; i + 1 < n && fill < WINDOW; i += 2) window[fill++] = (short) ((mono[i] & 0xFF) | (mono[i + 1] << 8));
                 if (fill >= WINDOW) {
                     long now = System.currentTimeMillis();
