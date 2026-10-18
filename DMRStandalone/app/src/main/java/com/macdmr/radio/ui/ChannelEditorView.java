@@ -97,7 +97,6 @@ public class ChannelEditorView extends LinearLayout {
 
         section(form, "Radio");
         choiceInto(form, "Power", H_POWER, new String[] { "Low power", "High power" }, ch.power, v -> ch.power = v);
-        choiceInto(form, "Band", H_BAND, new String[] { "Narrow band", "Wide band" }, ch.band == 0 ? 0 : 1, v -> ch.band = v);
         choiceInto(form, "Relay (repeater)", H_RELAY, new String[] { "Disconnect", "Normal" }, ch.relay == 1 ? 0 : 1, v -> ch.relay = v == 0 ? 1 : 2);
 
         digitalGroup = new LinearLayout(c); digitalGroup.setOrientation(VERTICAL); form.addView(digitalGroup);
@@ -117,7 +116,8 @@ public class ChannelEditorView extends LinearLayout {
         choiceInto(digitalGroup, "Interrupt transmission", H_INT, new String[] { "OFF", "ON" }, ch.interrupt == 1 ? 1 : 0, v -> ch.interrupt = v == 1 ? 1 : 2);
 
         analogGroup = new LinearLayout(c); analogGroup.setOrientation(VERTICAL); form.addView(analogGroup);
-        section(analogGroup, "Squelch and tones");
+        section(analogGroup, "Analog");
+        choiceInto(analogGroup, "Band", H_BAND, new String[] { "Narrow band", "Wide band" }, ch.band == 0 ? 0 : 1, v -> ch.band = v);
         choiceInto(analogGroup, "Soft SQ", H_SOFTSQ, new String[] { "Off", "On" }, ch.softSq ? 1 : 0, v -> ch.softSq = v == 1);
         choiceInto(analogGroup, "Soft SQ level", H_SOFTSQ_LVL, names(1, 9), Math.max(1, Math.min(9, ch.softSqLevel)) - 1, v -> ch.softSqLevel = v + 1);
         choiceInto(analogGroup, "Squelch level", H_SQ, names(0, 9), ch.sq, v -> ch.sq = v);

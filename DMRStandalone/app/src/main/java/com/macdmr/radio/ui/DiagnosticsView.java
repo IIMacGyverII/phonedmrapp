@@ -38,6 +38,10 @@ public class DiagnosticsView extends LinearLayout implements RadioService.Listen
         LinearLayout row2 = new LinearLayout(c); row2.setGravity(Gravity.CENTER);
         for (TextView t : new TextView[] { ver, cyc, tone }) { LayoutParams p = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f); p.setMargins(4, 0, 4, 8); row2.addView(t, p); }
         addView(row2);
+        TextView rt = Theme.pillButton(c, "Check backup round trip");
+        LayoutParams rtl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); rtl.setMargins(4, 0, 4, 8); addView(rt, rtl);
+        rt.setOnClickListener(v -> { if (svc == null) return; say("backup round trip: exporting and restoring into a scratch database…");
+            new Thread(() -> { final String r = com.macdmr.radio.Backup.selfTest(c, svc.store(), svc.packet() != null ? svc.packet().dtmfSaved() : null); post(() -> { for (String l : r.split("\n")) say(l); new android.app.AlertDialog.Builder(c).setTitle("Backup round trip").setMessage(r).setPositiveButton("OK", null).show(); }); }).start(); });
         down.setOnClickListener(v -> { if (svc != null) svc.shutDown(true); });
         rssi.setOnClickListener(v -> { if (svc != null) svc.pollRssi(); });
         ScrollView sv = new ScrollView(c);

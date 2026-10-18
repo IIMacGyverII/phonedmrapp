@@ -75,6 +75,7 @@ public final class Backup {
         }
         // TG lists: one per distinct RX group set, named after the first channel that uses it
         LinkedHashMap<String, int[]> lists = new LinkedHashMap<>();
+        for (ChannelStore.TgList t : store.tgLists()) if (t.tgs.length > 0 && !lists.containsKey(t.name)) lists.put(t.name, t.tgs);   // saved named lists go to the file too
         Map<Long, String> listOf = new HashMap<>();
         for (ChannelStore.Channel ch : channels) {
             if (!ch.isDigital() || ch.groups.length == 0) continue;
@@ -112,7 +113,7 @@ public final class Backup {
                 r.append(ch.power == 0 ? "P1" : "P9").append(",No,No,No,0,Off,No,No,None,");
                 if (ch.lat != 0 || ch.lon != 0) r.append(String.format(Locale.US, "%.6f,%.6f,No", ch.lat, ch.lon)); else r.append("0.128,0.008,No");
                 r.append(',').append(dig && ch.encryptSw == 1 ? 1 : 0).append(',').append(dig ? q(ch.encryptKey) : "");
-                r.append(',').append(ch.relay == 0 || ch.relay == 1 || ch.relay == 2 ? ch.relay : 2).append(',').append(dig ? 2 : 0).append(',').append(ch.active ? 1 : 0);
+                r.append(',').append(ch.relay == 0 || ch.relay == 1 || ch.relay == 2 ? ch.relay : 2).append(',').append(dig ? (ch.interrupt == 1 ? 1 : 2) : 0).append(',').append(ch.active ? 1 : 0);
                 r.append(',').append(ch.outSlot).append(',').append(ch.mode == 4 ? 3 : ch.mode).append(',').append(ch.contactType);
                 r.append(',').append(ch.softSq ? "On" : "Off").append(',').append(ch.softSqLevel >= 1 ? ch.softSqLevel : 5);
                 w.write(r + "\r\n");
@@ -154,6 +155,56 @@ public final class Backup {
 
     private static String col(List<String> r, int i) { return i >= 0 && i < r.size() ? r.get(i).trim() : ""; }
     private static int num(String s, int dflt) { try { return Integer.parseInt(s.trim()); } catch (Exception e) { return dflt; } }
+
+    /**
+     * Self-test: export everything, restore it into a scratch database and compare every channel field, contact, zone
+     * and talkgroup list with the live data. Nothing live is changed; the test backup folder is deleted afterwards.
+     */
+    public static String selfTest(android.content.Context ctx, ChannelStore live, java.util.Map<String, String> dtmf) {
+        StringBuilder r = new StringBuilder(); File dir = null; ChannelStore scratch = null;
+        try {
+            dir = export(live, dtmf);
+            ctx.deleteDatabase("backup_selftest.db");
+            scratch = new ChannelStore(ctx, "backup_selftest.db"); scratch.getWritableDatabase();
+            restore(scratch, dir);
+            List<ChannelStore.Channel> a = live.all(), b = scratch.all();
+            r.append(a.size()).append(" channels exported, ").append(b.size()).append(" restored\n");
+            int bad = 0;
+            for (ChannelStore.Channel x : a) {
+                ChannelStore.Channel y = null; for (ChannelStore.Channel z : b) if (z.number == x.number) y = z;
+                if (y == null) { r.append("  Ch ").append(x.number).append(" missing\n"); bad++; continue; }
+                List<String> d = new ArrayList<>();
+                cmp(d, "name", x.name, y.name); cmp(d, "type", x.type, y.type); cmp(d, "rx", x.rxFreq, y.rxFreq); cmp(d, "tx", x.txFreq, y.txFreq);
+                cmp(d, "power", x.power, y.power); cmp(d, "relay", x.relay, y.relay); cmp(d, "lat", Math.round(x.lat * 1e5), Math.round(y.lat * 1e5)); cmp(d, "lon", Math.round(x.lon * 1e5), Math.round(y.lon * 1e5));
+                cmp(d, "softSq", x.softSq, y.softSq); cmp(d, "softSqLevel", x.softSqLevel, y.softSqLevel);
+                if (x.isDigital()) {
+                    cmp(d, "cc", x.cc, y.cc); cmp(d, "inSlot", x.inSlot, y.inSlot); cmp(d, "outSlot", x.outSlot, y.outSlot); cmp(d, "mode", x.mode, y.mode);
+                    cmp(d, "contactType", x.contactType, y.contactType); cmp(d, "txContact", x.txContact, y.txContact); cmp(d, "groups", Arrays.toString(x.groups), Arrays.toString(y.groups));
+                    cmp(d, "encrypt", x.encryptSw == 1, y.encryptSw == 1); if (x.encryptSw == 1) cmp(d, "key", x.encryptKey, y.encryptKey); cmp(d, "interrupt", x.interrupt == 1, y.interrupt == 1);
+                } else {
+                    cmp(d, "band", x.band, y.band); cmp(d, "sq", x.sq, y.sq);
+                    cmp(d, "rxTone", x.rxType + "/" + (x.rxType == 0 ? 0 : x.rxSubCode), y.rxType + "/" + (y.rxType == 0 ? 0 : y.rxSubCode));
+                    cmp(d, "txTone", x.txType + "/" + (x.txType == 0 ? 0 : x.txSubCode), y.txType + "/" + (y.txType == 0 ? 0 : y.txSubCode));
+                }
+                if (!d.isEmpty()) { bad++; r.append("  Ch ").append(x.number).append(" ").append(x.name).append(": ").append(String.join(", ", d)).append('\n'); }
+            }
+            int ca = live.contacts().size(), cb = scratch.contacts().size(), za = live.zones().size(), zb = scratch.zones().size();
+            r.append(ca == cb ? "contacts match (" + ca + ")" : "contacts " + ca + " \u2192 " + cb).append('\n');
+            int zbad = 0;
+            for (ChannelStore.Zone z : live.zones()) { boolean ok = false; for (ChannelStore.Zone w : scratch.zones()) if (w.name.equals(z.name) && Arrays.equals(w.numbers, z.numbers)) ok = true; if (!ok) { zbad++; r.append("  zone ").append(z.name).append(" differs\n"); } }
+            r.append(za == zb && zbad == 0 ? "zones match (" + za + ")" : "zones " + za + " \u2192 " + zb).append('\n');
+            int tbad = 0;
+            for (ChannelStore.TgList t : live.tgLists()) { if (t.tgs.length == 0) continue; boolean ok = false; for (ChannelStore.TgList u : scratch.tgLists()) if (u.name.equals(t.name) && Arrays.equals(u.tgs, t.tgs)) ok = true; if (!ok) { tbad++; r.append("  TG list ").append(t.name).append(" missing\n"); } }
+            r.append(tbad == 0 ? "talkgroup lists kept" : tbad + " talkgroup lists not kept").append('\n');
+            r.insert(0, bad == 0 && zbad == 0 && tbad == 0 && ca == cb ? "ROUND TRIP OK\n" : "ROUND TRIP: " + bad + " channels differ\n");
+        } catch (Throwable t) { r.append("self-test failed: ").append(t); }
+        finally {
+            try { if (scratch != null) scratch.close(); ctx.deleteDatabase("backup_selftest.db"); } catch (Throwable ignored) { }
+            if (dir != null) { File[] fs = dir.listFiles(); if (fs != null) for (File f : fs) f.delete(); dir.delete(); }
+        }
+        return r.toString();
+    }
+    private static void cmp(List<String> d, String what, Object a, Object b) { if (a == null ? b != null : !a.equals(b)) d.add(what + " " + a + "\u2192" + b); }
 
     /** Replace channels, contacts and zones from a backup folder. Returns a summary. */
     /** Copy the five CSVs of a SAF folder into the cache so {@link #restore} can read them. */
@@ -221,9 +272,7 @@ public final class Backup {
                 ch.txContact = !idStr.isEmpty() && !idStr.equalsIgnoreCase("None") ? num(idStr, 0) : 0;
                 if (ch.txContact <= 0) { Integer byName = contactByName.get(cname.toLowerCase(Locale.US)); if (byName != null) ch.txContact = byName; else if (cname.toUpperCase(Locale.US).startsWith("TG ")) ch.txContact = num(cname.substring(3), 0); }
                 int[] g = listByName.get(col(r, off + 9).toLowerCase(Locale.US));
-                ch.groups = g != null ? g.clone() : (ch.txContact > 0 ? new int[] { ch.txContact } : new int[0]);
-                boolean has = false; for (int x : ch.groups) if (x == ch.txContact) has = true;
-                if (!has && ch.txContact > 0 && ch.groups.length < 32) { ch.groups = Arrays.copyOf(ch.groups, ch.groups.length + 1); ch.groups[ch.groups.length - 1] = ch.txContact; }
+                ch.groups = g != null ? g.clone() : new int[0];
                 ch.sq = 0;
             } else {
                 try { ch.rxType = ToneConverter.parseType(col(r, off + 13)); ch.rxSubCode = ToneConverter.parseSubCode(col(r, off + 13)); } catch (Exception ignored) { }
@@ -237,9 +286,15 @@ public final class Backup {
             if (r.size() > off + 35) {                                            // the extended Android columns
                 ch.encryptSw = ch.isDigital() && num(col(r, off + 28), 0) == 1 ? 1 : 2; ch.encryptKey = col(r, off + 29);
                 int relay = num(col(r, off + 30), 2); ch.relay = relay == 1 || relay == 2 ? relay : 2;
-                ch.interrupt = ch.isDigital() ? 2 : 0; ch.active = num(col(r, off + 32), 0) == 1; ch.outSlot = num(col(r, off + 33), ch.outSlot);
-                ch.mode = num(col(r, off + 34), 0); ch.contactType = num(col(r, off + 35), ch.isDigital() ? 1 : 0);
-            } else { ch.encryptSw = 2; ch.relay = 2; ch.interrupt = ch.isDigital() ? 2 : 0; ch.contactType = ch.isDigital() ? 1 : 0; }
+                ch.interrupt = ch.isDigital() && num(col(r, off + 31), 2) == 1 ? 1 : 2;   // radio enum 1 on / 2 off (analog: unused, stock default 2)
+                ch.active = num(col(r, off + 32), 0) == 1; ch.outSlot = num(col(r, off + 33), ch.outSlot);
+                int mode = num(col(r, off + 34), 0); ch.mode = mode == 3 || mode == 4 ? 4 : 0;            // CSV/CPS 3 = double slot = radio 4
+                ch.contactType = num(col(r, off + 35), ch.isDigital() ? 1 : 0);
+            } else { ch.encryptSw = 2; ch.relay = 2; ch.interrupt = 2; ch.contactType = ch.isDigital() ? 1 : 0; }
+            if (ch.isDigital() && ch.contactType == 1 && ch.txContact > 0 && ch.groups.length < 32) {   // a group call's own talkgroup must be in the RX list (radio passes only listed TGs)
+                boolean has = false; for (int x : ch.groups) if (x == ch.txContact) has = true;
+                if (!has) { ch.groups = Arrays.copyOf(ch.groups, ch.groups.length + 1); ch.groups[ch.groups.length - 1] = ch.txContact; }
+            }
             if (softSqCol >= 0) ch.softSq = col(r, softSqCol).equalsIgnoreCase("On");
             if (softSqLevelCol >= 0) ch.softSqLevel = Math.max(1, Math.min(9, num(col(r, softSqLevelCol), 5)));
             out.add(ch);
@@ -265,6 +320,14 @@ public final class Backup {
             for (ChannelStore.Channel ch : out) { ch.id = 0; ch.active = ch.number == keep; store.insert(ch); }
             for (ChannelStore.Contact c : cts) store.insertContact(c);
             for (ChannelStore.Zone z : zs) { z.id = 0; store.saveZone(z); }
+            if (!listByName.isEmpty()) {
+                db.delete("tglists", null, null);
+                for (int i = 1; i < tgl.size(); i++) {
+                    String name = col(tgl.get(i), 0); int[] tgs = listByName.get(name.toLowerCase(Locale.US));
+                    if (name.isEmpty() || tgs == null || tgs.length == 0) continue;
+                    ChannelStore.TgList t = new ChannelStore.TgList(); t.name = name; t.tgs = tgs; store.saveTgList(t);
+                }
+            }
             db.setTransactionSuccessful();
         } finally { db.endTransaction(); }
         return out.size() + " channels, " + cts.size() + " contacts, " + zs.size() + " zones restored from " + dir.getName();

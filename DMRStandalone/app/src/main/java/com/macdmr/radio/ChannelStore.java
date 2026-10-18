@@ -36,6 +36,8 @@ public final class ChannelStore extends SQLiteOpenHelper {
     public static final class Zone { public long id; public String name; public int[] numbers = new int[0]; }
 
     public ChannelStore(Context c) { super(c, "radio.db", null, 5); }
+    /** A separate database file (the backup self-test restores into a scratch copy). */
+    public ChannelStore(Context c, String file) { super(c, file, null, 5); }
 
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE channels (_id INTEGER PRIMARY KEY AUTOINCREMENT, number INTEGER, name TEXT, type INTEGER, rxFreq INTEGER, txFreq INTEGER,"
