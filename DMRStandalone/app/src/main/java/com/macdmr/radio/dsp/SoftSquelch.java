@@ -30,13 +30,18 @@ public final class SoftSquelch {
     /** Feed one block of 8 kHz mono PCM; returns whether the gate is open for it. */
     private volatile long blackoutUntil; private boolean blackoutPending;
     /** A retune just happened: stay closed for a moment, then judge fresh audio (the receiver's switching transient reads as "quiet" and would open the gate onto static). */
-    public void onRetune() { blackoutUntil = System.currentTimeMillis() + BLACKOUT_MS; blackoutPending = true; open = false; lastOpen = 0; }
-    public static final long BLACKOUT_MS = 800;
+    public void onRetune() { blackoutUntil = System.currentTimeMillis() + BLACKOUT_MS; rxStartDeadline = System.currentTimeMillis() + RX_START_CAP_MS; blackoutPending = true; open = false; lastOpen = 0; }
+    public static final long BLACKOUT_MS = 800, RX_START_CAP_MS = 2500, POST_RX_START_MS = 250;
+    private volatile long rxStartDeadline;
+    /** The module reported RECEIVE_STOP after a retune: its receiver is still settling, keep the gate shut until it reports RECEIVE_START again. */
+    public void awaitRxStart() { rxStartDeadline = System.currentTimeMillis() + RX_START_CAP_MS; blackoutPending = true; }
+    /** The module reported RECEIVE_START: judge audio from one fresh window after this point. */
+    public void rxStarted() { rxStartDeadline = 0; blackoutUntil = Math.max(blackoutUntil, System.currentTimeMillis() + POST_RX_START_MS); blackoutPending = true; }
 
     public boolean process(byte[] mono, int len) {
         if (!enabled) return true;
         long t = System.currentTimeMillis();
-        if (t < blackoutUntil) return false;
+        if (t < blackoutUntil || t < rxStartDeadline) return false;      // retune blackout, and until the module itself reports a reception (capped)
         if (blackoutPending) { blackoutPending = false; tone.reset(); noise.reset(); }
         boolean shouldOpen;
         if (toneHz > 0) { tone.setFrequency(toneHz, adjLow, adjHigh); tone.process(mono, len); shouldOpen = tone.isPresent(); }

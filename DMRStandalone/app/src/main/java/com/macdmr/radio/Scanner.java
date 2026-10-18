@@ -21,7 +21,7 @@ public final class Scanner {
         void status(boolean scanning, boolean holding, ChannelStore.Channel on);
     }
 
-    static final long DWELL_MS = 1500, DWELL_SOFT_MS = 1800, HANG_MS = 2500, SETTLE_MS = 700, TICK_MS = 150;
+    static final long DWELL_MS = 1500, DWELL_SOFT_MS = 2000, HANG_MS = 2500, SETTLE_MS = 700, TICK_MS = 150;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Host host;
