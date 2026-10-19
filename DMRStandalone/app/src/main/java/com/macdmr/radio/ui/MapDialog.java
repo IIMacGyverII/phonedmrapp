@@ -396,6 +396,17 @@ public final class MapDialog {
         LinearLayout.LayoutParams rl = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT); rl.topMargin = (int) (10 * d);
         box.addView(row, rl);
         sw.setOnChange(on -> { svc.setCoverageLogging(on); Toast.makeText(c, on ? "Coverage logging is on" : "Coverage logging is off", Toast.LENGTH_SHORT).show(); });
+        TextView test = Neo.button(c, "Key-up test here", "signal", Neo.VIOLET); test.setTextSize(14);
+        LinearLayout.LayoutParams tl2 = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT); tl2.topMargin = (int) (8 * d);
+        box.addView(test, tl2);
+        box.addView(Neo.sheetHint(c, "On an FM repeater channel: sends your callsign in Morse (about 3 seconds, a legal identification) and records whether the repeater answered from this spot. Use it sparingly."));
+        test.setOnClickListener(v -> {
+            ChannelStore.Channel cur = svc.current();
+            new android.app.AlertDialog.Builder(c).setTitle("Transmit a key-up test?")
+                    .setMessage("Sends your callsign in Morse on " + (cur == null ? "this channel" : cur.name) + " and listens for the repeater's tail. Only test a repeater you are allowed to use.")
+                    .setPositiveButton("Transmit", (dd, w) -> { String e = svc.keyupTest(); Toast.makeText(c, e == null ? "Sending your ID\u2026 the result appears in the history" : e, Toast.LENGTH_LONG).show(); })
+                    .setNegativeButton("Cancel", null).show();
+        });
 
         box.addView(Neo.sheetSection(c, "Show on the map"));
         LinearLayout lay = new LinearLayout(c);

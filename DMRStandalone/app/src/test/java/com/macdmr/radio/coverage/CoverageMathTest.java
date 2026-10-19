@@ -43,6 +43,13 @@ public class CoverageMathTest {
         assertTrue(-120.0 >= wb[1] && -120.0 < wb[3]);
     }
 
+    @Test public void continuousStations() {
+        assertTrue(CoverageMath.continuousStation(162_550_000));
+        assertTrue(CoverageMath.continuousStation(162_400_000));
+        assertFalse(CoverageMath.continuousStation(146_940_000));
+        assertFalse(CoverageMath.continuousStation(467_625_000));
+    }
+
     @Test public void colours() {
         assertEquals(0xFF3B5BFF, CoverageMath.signalColor(-140));
         assertEquals(0xFFFF5468, CoverageMath.signalColor(-40));

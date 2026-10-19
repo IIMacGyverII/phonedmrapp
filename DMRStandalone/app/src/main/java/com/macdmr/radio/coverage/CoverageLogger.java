@@ -47,7 +47,8 @@ public final class CoverageLogger {
     private volatile Location fix;
     private LocationListener listener;
 
-    private final List<Integer> quiet = new ArrayList<>(); private int quietChannel = -1;
+    /** Quiet-channel readings per channel number, so a scan that keeps hopping still builds each channel's noise floor. */
+    private final java.util.Map<Integer, List<Integer>> quiet = new java.util.HashMap<>();
     private long txStartAt;
     private volatile boolean probing; private final List<Integer> probe = new ArrayList<>();
     private long lastRxAt; private Location lastRxLoc; private String lastRxKey;
@@ -125,9 +126,12 @@ public final class CoverageLogger {
         if (probing) { synchronized (probe) { probe.add(dbm); } return; }
         if (host.busyTx()) return;
         ChannelStore.Channel ch = host.current(); if (ch == null) return;
-        if (ch.number != quietChannel) { synchronized (quiet) { quiet.clear(); } quietChannel = ch.number; }
-        if (!host.hearing()) { synchronized (quiet) { quiet.add(dbm); while (quiet.size() > 15) quiet.remove(0); } return; }
-        if (!target(ch) || !host.toneMatches(ch)) return;
+        boolean continuous = target(ch) && CoverageMath.continuousStation(ch.rxFreq);
+        if (!host.hearing() && !continuous) {
+            synchronized (quiet) { List<Integer> q = quiet.get(ch.number); if (q == null) { q = new ArrayList<>(); quiet.put(ch.number, q); } q.add(dbm); while (q.size() > 15) q.remove(0); }
+            return;
+        }
+        if (!target(ch) || (!continuous && !host.toneMatches(ch))) return;
         Location f = usableFix(); if (f == null) return;
         String k = key(ch); long now = System.currentTimeMillis();
         if (k.equals(lastRxKey) && now - lastRxAt < 5000 && lastRxLoc != null && lastRxLoc.distanceTo(f) < 25) return;
@@ -145,7 +149,7 @@ public final class CoverageLogger {
         final ChannelStore.Channel ch = host.current();
         if (!repeaterChannel(ch) || txMs < CoverageMath.MIN_TX_MS) return;
         final Location f = usableFix(); if (f == null) return;
-        final int floor; synchronized (quiet) { floor = ch.number == quietChannel ? CoverageMath.floor(quiet) : -999; }
+        final int floor; synchronized (quiet) { floor = CoverageMath.floor(quiet.get(ch.number)); }
         synchronized (probe) { probe.clear(); }
         probing = true;
         for (long ms : CoverageMath.PROBE_MS) ui.postDelayed(host::pollRssi, ms);

@@ -1013,6 +1013,25 @@ public class RadioService extends Service implements RadioEngine.Events {
     public void setCoverageLogging(boolean on) { coverage().setEnabled(on); startForegroundTyped(on); refreshControls(); }
     public boolean coverageLogging() { return coverage != null && coverage.running(); }
 
+    /**
+     * Key-up test on an FM repeater channel: transmit your callsign in Morse (20 wpm, 800 Hz, about 3 s; a
+     * legal identification) and let the coverage logger judge whether the repeater answered. Returns null when
+     * sent, or why not.
+     */
+    public String keyupTest() {
+        ChannelStore.Channel ch = current;
+        if (!isReady() || ch == null) return "The radio is not on";
+        if (!coverageLogging()) return "Turn on coverage logging first: the result is stored with your position";
+        if (ch.isDigital()) return "On DMR use the Parrot instead: a private call to 9990 on BrandMeister plays your call back";
+        if (ch.txFreq == ch.rxFreq || (ch.lat == 0 && ch.lon == 0)) return "Choose an FM repeater channel that has a location";
+        if (txInhibited()) return "This channel is receive-only";
+        if (packet == null || !packet.callsignSet()) return "Set your callsign first (PKT \u2192 APRS settings): the test sends it as your identification";
+        if (pttDown) return "Already transmitting";
+        String id = packet.callsign();
+        transmitPcm(com.macdmr.radio.coverage.Morse.pcm(id, 20, 800), "key-up test (Morse ID)", null);
+        return null;
+    }
+
     /** The foreground service: microphone always, plus location while coverage logging is on (allowed only while the app is in front). */
     private void startForegroundTyped(boolean location) {
         Notification n = notification(isReady() ? RadioWidget.status(this) : "Radio idle");
