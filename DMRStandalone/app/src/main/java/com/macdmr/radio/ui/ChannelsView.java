@@ -119,7 +119,7 @@ public class ChannelsView extends LinearLayout implements RadioService.Listener 
         all.clear(); all.addAll(svc.zoneChannels());
         favs.clear(); ChannelStore.Zone fz = favZone(); if (fz != null) for (int n : fz.numbers) favs.add(n);
         activeNumber = svc.current() != null ? svc.current().number : svc.store().activeNumber();
-        Neo.headerSubtitle(header).setText(("Zone " + svc.zoneName() + " · " + all.size() + (all.size() == 1 ? " channel" : " channels")).toUpperCase(Locale.US));
+        Neo.fitSubtitle(Neo.headerSubtitle(header), ("Zone " + svc.zoneName()).toUpperCase(Locale.US), (all.size() + (all.size() == 1 ? " channel" : " channels")).toUpperCase(Locale.US));
         filter();
     }
 
