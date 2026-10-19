@@ -281,8 +281,14 @@ public final class PktDialog {
         button(r, "Save", Theme.PKT, x -> {
             try {
                 String s = sym.getText().toString().trim();
-                p.edit().putString("callsign", call.getText().toString().trim().toUpperCase(Locale.US))
-                        .putInt("ssid", Math.max(0, Math.min(15, Integer.parseInt(ssid.getText().toString().trim()))))
+                String cs = call.getText().toString().trim().toUpperCase(Locale.US), ss = ssid.getText().toString().trim();
+                int dash = cs.indexOf('-');
+                if (dash > 0) { ss = cs.substring(dash + 1).trim(); cs = cs.substring(0, dash).trim(); call.setText(cs); ssid.setText(ss); }   // "CALL-7" typed in one box
+                if (!cs.isEmpty() && !cs.matches("[A-Z0-9]{1,6}")) { toast("Callsign: 1 to 6 letters and digits; the SSID goes in its own box"); return; }
+                int ssidV = Integer.parseInt(ss);
+                if (ssidV < 0 || ssidV > 15) { toast("SSID is 0 to 15"); return; }
+                p.edit().putString("callsign", cs)
+                        .putInt("ssid", ssidV)
                         .putString("symTable", s.length() >= 1 ? s.substring(0, 1) : "/").putString("symCode", s.length() >= 2 ? s.substring(1, 2) : "[")
                         .putString("comment", comment.getText().toString().trim()).putString("path", path.getText().toString().trim().toUpperCase(Locale.US))
                         .putInt("kissPort", Integer.parseInt(port.getText().toString().trim())).putInt("passive", passive[0])

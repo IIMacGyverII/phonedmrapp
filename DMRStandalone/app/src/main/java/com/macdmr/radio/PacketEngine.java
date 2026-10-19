@@ -111,6 +111,7 @@ public final class PacketEngine {
     public String sendSstv(android.graphics.Bitmap bmp, int mode) {
         if (bmp == null) return "No picture";
         if (!SSTVEncoder.isSupported(mode)) return "Unsupported mode";
+        if (!host.analogRx()) return "SSTV needs an analog channel";
         new Thread(() -> {
             short[] pcm = SSTVEncoder.encode(bmp, mode);
             int lead = SR * TX_LEAD_MS / 1000;
@@ -146,8 +147,13 @@ public final class PacketEngine {
 
     // ---- settings -------------------------------------------------------------------------------
 
-    public String callsign() { return prefs.getString("callsign", "").trim().toUpperCase(Locale.US); }
-    public int ssid() { return prefs.getInt("ssid", 7); }
+    /** The callsign without an SSID (one typed as "CALL-7" before the settings split it is still read right). */
+    public String callsign() { String c = prefs.getString("callsign", "").trim().toUpperCase(Locale.US); int d = c.indexOf('-'); return d > 0 ? c.substring(0, d).trim() : c; }
+    public int ssid() {
+        String c = prefs.getString("callsign", "").trim(); int d = c.indexOf('-');
+        if (d > 0) try { return Integer.parseInt(c.substring(d + 1).trim()) & 0x0F; } catch (NumberFormatException ignored) { }
+        return prefs.getInt("ssid", 7);
+    }
     public String myCall() { return callsign() + (ssid() != 0 ? "-" + ssid() : ""); }
     public boolean callsignSet() { String c = callsign(); return !c.isEmpty() && !"N0CALL".equals(c); }
     public char symTable() { return prefs.getString("symTable", "/").charAt(0); }
@@ -423,6 +429,7 @@ public final class PacketEngine {
 
     /** AFSK-modulate a complete frame (with FCS), prefix the settling lead, repeat, and transmit. */
     private void txFrame(byte[] frame, String label, int reps, Runnable onDone) {
+        if (!host.analogRx()) { host.event("⛔ Not sent (" + label + "): packet needs an analog channel, the current one is DMR"); return; }
         short[] afsk = AFSKGenerator.generateAFSKWithNRZI(frame);
         int lead = SR * TX_LEAD_MS / 1000, gap = SR * TX_GAP_MS / 1000;
         short[] src = new short[lead + reps * (afsk.length + gap)];
@@ -457,6 +464,7 @@ public final class PacketEngine {
         if (!callsignSet()) return "Set your callsign first (PKT → APRS settings)";
         if (to == null || to.trim().isEmpty() || text == null || text.trim().isEmpty()) return "Addressee and text are needed";
         if (text.length() > 67) return "APRS messages are at most 67 characters";
+        if (!host.analogRx()) return "Packet needs an analog channel: tune the APRS channel (144.390 MHz in North America)";
         final int id = prefs.getInt("msgId", 0) % 999 + 1; prefs.edit().putInt("msgId", id).apply();
         final String addressee = to.trim().toUpperCase(Locale.US);
         txInfo(Ax25.messageInfo(addressee, text.trim(), id), path(), "APRS message to " + addressee, TX_REPS,
@@ -484,6 +492,7 @@ public final class PacketEngine {
         if (!callsignSet()) return "Set your callsign first (PKT → APRS settings)";
         Location l = host.location();
         if (l == null) return "No position fix yet (turn on location and open Maps once)";
+        if (!host.analogRx()) return "Packet needs an analog channel: tune the APRS channel (144.390 MHz in North America)";
         final String info = Ax25.positionInfo(l.getLatitude(), l.getLongitude(), symTable(), symCode(), comment());
         txInfo(info, path(), "position beacon", TX_REPS, () -> { store.log("beacon", myCall(), "APZDMR", info, null, false); host.event("📡 Beacon sent " + String.format(Locale.US, "%.4f, %.4f", l.getLatitude(), l.getLongitude())); });
         return null;
@@ -494,6 +503,7 @@ public final class PacketEngine {
         if (seq == null) return "Nothing to send";
         String s = seq.toUpperCase(Locale.US).replaceAll("[^0-9A-D*#]", "");
         if (s.isEmpty()) return "Only 0-9, A-D, * and # can be sent";
+        if (!host.analogRx()) return "DTMF needs an analog channel";
         final String fs = s;
         host.transmitPcm(dtmfPcm(s, 100, 60), "DTMF " + s, () -> host.event("📟 Sent DTMF " + fs));
         return null;
