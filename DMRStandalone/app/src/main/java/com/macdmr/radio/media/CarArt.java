@@ -23,8 +23,16 @@ import java.util.Map;
  * into the pictures it shows: the now-playing artwork is a small intercom panel (neon channel digits, frequency,
  * mode chips, state badge, signal meter), and every channel and zone in the list gets a neon tile.
  */
-final class CarArt {
+public final class CarArt {
     private CarArt() { }
+
+    /** The live panel for the radio's current state (shared by the media screen and the control screen). */
+    public static Bitmap panelFor(Context c, com.macdmr.radio.RadioService s) {
+        State st = new State();
+        st.ch = s.current(); st.zone = s.zoneName(); st.tx = s.isTransmitting(); st.rx = s.hearing(); st.scanning = s.isScanning();
+        st.ready = s.isReady(); st.muted = s.isMuted(); st.dbm = s.lastRssi(); st.caller = s.currentCaller();
+        return panel(c, st);
+    }
 
     private static final int GROUND = 0xFF060B12, GROUND_TOP = 0xFF0D1B2B;
     private static final Map<String, Bitmap> tiles = new HashMap<>();

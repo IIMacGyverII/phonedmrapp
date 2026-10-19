@@ -42,6 +42,13 @@
         </provider>
         <!-- Android Auto: the radio as a media app (browse channels and zones, now playing, next/previous, Scan, Talk) -->
         <meta-data android:name="com.google.android.gms.car.application" android:resource="@xml/automotive_app_desc" />
+        <meta-data android:name="androidx.car.app.minCarApiLevel" android:value="1" />
+        <service android:name=".car.RadioCarAppService" android:exported="true" android:label="Radio controls" android:icon="@mipmap/ic_launcher">
+            <intent-filter>
+                <action android:name="androidx.car.app.CarAppService" />
+                <category android:name="androidx.car.app.category.IOT" />
+            </intent-filter>
+        </service>
         <service android:name=".media.RadioMediaService" android:exported="true" android:label="DMR Radio">
             <intent-filter><action android:name="android.media.browse.MediaBrowserService" /></intent-filter>
         </service>
