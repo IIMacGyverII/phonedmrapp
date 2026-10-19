@@ -144,6 +144,19 @@ public final class Neo {
     }
 
     /** Page header: title over a tracked subtitle, actions on the right. Returns the bar; add actions to {@link #actions(LinearLayout)}. */
+    /**
+     * Set a header subtitle made of parts: on one line joined by " · " when it fits, otherwise one part per line
+     * (never a word cut off with "...").
+     */
+    public static void fitSubtitle(final TextView s, final String first, final String second) {
+        final String one = first + " · " + second;
+        s.setText(one);
+        s.post(() -> {
+            int w = s.getWidth() - s.getPaddingLeft() - s.getPaddingRight();
+            if (w > 0 && s.getPaint().measureText(one) > w) s.setText(first + "\n" + second);
+        });
+    }
+
     public static LinearLayout header(Context c, String title, String subtitle) {
         LinearLayout bar = new LinearLayout(c); bar.setGravity(Gravity.CENTER_VERTICAL);
         bar.setPadding(Theme.dp(c, 16), 0, Theme.dp(c, 12), 0); bar.setMinimumHeight(Theme.dp(c, 60));
@@ -151,7 +164,7 @@ public final class Neo {
         bar.setBackground(new android.graphics.drawable.LayerDrawable(new Drawable[] { bg, bottomLine() }));
         LinearLayout col = new LinearLayout(c); col.setOrientation(LinearLayout.VERTICAL);
         TextView t = title(c, title); t.setTag("title"); col.addView(t);
-        TextView s = caps(c, subtitle == null ? "" : subtitle); s.setTag("subtitle"); s.setPadding(0, Theme.dp(c, 5), 0, 0); s.setSingleLine(true); s.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        TextView s = caps(c, subtitle == null ? "" : subtitle); s.setTag("subtitle"); s.setPadding(0, Theme.dp(c, 5), 0, 0); s.setMaxLines(2); s.setEllipsize(android.text.TextUtils.TruncateAt.END);   // two lines when a page splits it (see fitSubtitle)
         col.addView(s);
         bar.addView(col, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         LinearLayout actions = new LinearLayout(c); actions.setTag("actions"); actions.setGravity(Gravity.CENTER_VERTICAL);
