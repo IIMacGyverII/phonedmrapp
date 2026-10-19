@@ -109,7 +109,19 @@ public class HelpView extends LinearLayout {
             s("What is on it", "Green dots: APRS stations heard by the radio or APRS-IS, at their last position. Cyan diamonds: FM repeaters; violet diamonds: DMR repeaters, within the Nearby repeaters range (15 to 120 miles). Amber pins: your channels that have a location (channel editor → Location). Blue dot: you."),
             s("Moving around", "Drag to move, pinch or double-tap to zoom. The buttons on the right zoom in and out, go back to your position, and fit everything on screen. The pills at the top hide or show stations, repeaters and channels."),
             s("Markers", "Tap one for a card: a station shows when it was heard, its path, speed, altitude and comment; a repeater shows its frequencies and tone and opens its details to add it as a channel; a channel can be used straight away. Every card can open the place in your maps app."),
+            s("Coverage", "The violet Coverage pill adds your measured coverage: where each repeater was heard and where your transmissions keyed it. See Coverage maps."),
             s("Map tiles", "From OpenStreetMap (© OpenStreetMap contributors), darkened to match the app and kept on the phone for 30 days, so places you have looked at still show offline.")),
+
+        new Topic("Pages", "signal", Neo.VIOLET, "Coverage maps", "Where your repeaters really work, measured as you go.",
+            s("What it does", "With coverage logging on, the app measures each repeater wherever you hear it and checks whether it answers when you transmit. Over time the Map shows two pictures: where the repeater reaches you, and where you reach the repeater. You just use the radio normally; walks and drives fill the map in."),
+            s("Turn it on", "Map \u2192 the violet Coverage pill \u2192 Log coverage. It uses GPS while it is on, and keeps working with the screen off once you have switched it on with the app open. Switch it off the same way. Everything stays on the phone."),
+            s("Which channels", "Channels that have a location: the repeater's position, which channels added from Nearby repeaters get automatically (or set it in the channel editor \u2192 Location). Key-ups are judged only on repeater channels, where the transmit and receive frequencies differ."),
+            s("Heard: repeater to phone", "Each time you hear the repeater, the signal strength is stored with your GPS position (only fixes better than 50 m, at most one reading every 5 seconds unless you moved 25 m). On DMR the radio reports a call only with the channel's colour code; on analog with a CTCSS tone the app checks the tone, so other stations on the frequency are not counted. The map shows 150 m squares coloured by the typical reading, from blue (barely heard, about S3) through green to red (S9+30)."),
+            s("Key-ups: phone to repeater", "After each transmission of more than half a second on a repeater channel, the app reads the signal five times in the next two seconds. A repeater keeps transmitting for a moment after you let go (its tail or hang time); if that signal stands 8 dB above the channel's quiet noise floor, you keyed it from there (green). If nothing comes back it is a no reply (red). The Last heard history notes each result."),
+            s("Reading the two layers", "The Heard layer usually reaches further than Key-ups: the repeater has a big antenna and more power than a handheld. Plan by Key-ups. No-reply squares are shown only for repeaters that have answered you somewhere, since a repeater with no tail never answers. Someone else talking right after you can look like a key-up; it is rare."),
+            s("Focus and details", "The Coverage sheet picks the layer (Off, Heard, Key-ups) and one repeater or all of them (each square then shows the best one). Tap a square for its reading, or a channel pin \u2192 Coverage to focus on it. The legend in the corner opens the sheet."),
+            s("Export and clear", "Export writes Download/DMR/Coverage/<date>/ with coverage_rx.csv and coverage_tx.csv (every reading, for a spreadsheet) and coverage.kml, which opens in Google Earth with coloured squares and green/red key-up points per repeater. Clear deletes the readings of the selected repeater, or all of them."),
+            s("Good habits", "Carry the phone the same way when you compare places: a pocket or a car costs 10 to 20 dB. Do not key a repeater just to test it; use your normal conversations, and identify with your callsign as always.")),
 
         new Topic("Pages", "channels", Neo.CYAN, "Widget and notification", "Control the radio without opening the app.",
             s("Notification", "While the radio is on, its notification shows the channel, frequency and what is happening (ready, receiving, transmitting, scanning) with three buttons: previous channel, scan or stop scan, next channel. Tap the notification to open the app."),
@@ -208,6 +220,29 @@ public class HelpView extends LinearLayout {
         hero.setOnClickListener(v -> showTopic(0, -1));
         LayoutParams hl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); hl.topMargin = (int) (14 * d);
         homeGrid.addView(hero, hl);
+
+        // featured: the newest major feature
+        int fi = -1; for (int i = 0; i < TOPICS.length; i++) if ("Coverage maps".equals(TOPICS[i].title)) fi = i;
+        if (fi > 0) {
+            final int fIdx = fi; Topic ft = TOPICS[fi];
+            LinearLayout feat = new LinearLayout(c); feat.setOrientation(VERTICAL); feat.setPadding((int) (16 * d), (int) (14 * d), (int) (16 * d), (int) (14 * d));
+            android.graphics.drawable.StateListDrawable fs = new android.graphics.drawable.StateListDrawable();
+            fs.addState(new int[] { android.R.attr.state_pressed }, Neo.tint(c, Neo.VIOLET, 18, 1.5f)); fs.addState(new int[] { }, Neo.tint(c, Neo.VIOLET, 18, 1));
+            feat.setBackground(fs); feat.setClickable(true); feat.setFocusable(true);
+            LinearLayout fr = new LinearLayout(c); fr.setGravity(Gravity.CENTER_VERTICAL);
+            fr.addView(Neo.iconTile(c, ft.icon, Neo.VIOLET, 46), new LayoutParams((int) (46 * d), (int) (46 * d)));
+            LinearLayout fc = new LinearLayout(c); fc.setOrientation(VERTICAL); fc.setPadding((int) (14 * d), 0, 0, 0);
+            TextView fk = Neo.caps(c, "New \u00b7 featured"); fk.setTextColor(Neo.VIOLET_LIGHT); fc.addView(fk);
+            TextView ftt = Neo.text(c, ft.title, Neo.TEXT, 20, Neo.ui(c)); ftt.setPadding(0, (int) (3 * d), 0, 0); fc.addView(ftt);
+            fr.addView(fc, new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f));
+            ImageView fa = new ImageView(c); fa.setImageDrawable(new Neo.IconDrawable("right", Neo.VIOLET)); fr.addView(fa, new LayoutParams((int) (22 * d), (int) (22 * d)));
+            feat.addView(fr);
+            TextView fsum = Neo.text(c, "See where each repeater reaches you and where you can key it up, measured automatically as you drive or walk. Two map layers, export to Google Earth.", Neo.TEXT_SOFT, 14.5f, Neo.uiMedium(c));
+            fsum.setPadding(0, (int) (10 * d), 0, 0); fsum.setLineSpacing(0, 1.1f); feat.addView(fsum);
+            feat.setOnClickListener(v -> showTopic(fIdx, -1));
+            LayoutParams fl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); fl.topMargin = (int) (12 * d);
+            homeGrid.addView(feat, fl);
+        }
 
         // topic tiles by group
         String group = null; LinearLayout rowOpen = null;

@@ -221,6 +221,7 @@ public final class Neo {
         ICONS.put("map", "M9 4L3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14");
         ICONS.put("locate", "M12 8a4 4 0 1 0 0.01 0M12 2v3M12 19v3M2 12h3M19 12h3");
         ICONS.put("minus", "M5 12h14");
+        ICONS.put("signal", "M4 20v-3M9 20v-7M14 20V9M19 20V4");
         ICONS.put("expand", "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5");
         ICONS.put("alert", "M12 3.5L2.5 20h19zM12 10v4.5M12 17.5h.01");
         ICONS.put("bolt", "M13 3L5 13.5h6L10 21l8-10.5h-6z");
@@ -356,7 +357,7 @@ public final class Neo {
         if (t.contains("packet")) return "pkt"; if (t.contains("vfo")) return "vfo"; if (t.contains("repeater")) return "repeaters";
         if (t.contains("record")) return "rec"; if (t.contains("caption") || t.contains("transcript")) return "txt"; if (t.contains("last heard")) return "intercom";
         if (t.contains("station")) return "globe"; if (t.contains("dtmf")) return "channels"; if (t.contains("weather") || t.contains("same")) return "alert";
-        if (t.contains("emergency")) return "alert"; if (t.contains("widget")) return "widget";
+        if (t.contains("coverage")) return "signal"; if (t.contains("emergency")) return "alert"; if (t.contains("widget")) return "widget";
         if (t.contains("setting")) return "device"; if (t.contains("sstv") || t.contains("picture")) return "report"; if (t.contains("log")) return "diag";
         return "radio";
     }

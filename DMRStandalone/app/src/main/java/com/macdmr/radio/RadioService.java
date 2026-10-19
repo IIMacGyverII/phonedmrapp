@@ -220,11 +220,12 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     @Override public void onCreate() {
         super.onCreate();
-        startForeground(1, notification("Radio idle"));
+        startForegroundTyped(false);
         running = this;
         profile = DeviceProfile.detect();
         store = new ChannelStore(this);
         zoneId = getSharedPreferences("radio", MODE_PRIVATE).getLong("zone", 0);
+        if (coverage().enabled()) { coverage.resume(); startForegroundTyped(true); }
         engine = new RadioEngine(profile, this);
         packet = new PacketEngine(packetHost);
         radioId = new RadioIdStore(this);
@@ -264,6 +265,7 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     @Override public void onDestroy() {
         running = null; RadioWidget.refresh(this, null);
+        try { if (coverage != null) coverage.stop(); } catch (Throwable ignored) { }
         try { if (pttKey != null) unregisterReceiver(pttKey); } catch (Throwable ignored) { }
         try { if (pttDown) { if (audio != null) audio.stopTx(); engine.ptt(false); } } catch (Throwable ignored) { }
         try { if (audio != null) { audio.stopRx(); } } catch (Throwable ignored) { }
@@ -901,8 +903,8 @@ public class RadioService extends Service implements RadioEngine.Events {
                 ui.post(() -> { for (Listener l : listeners) l.onRx(false); });
                 break;
             }
-            case 3: transmitting = true; refreshControls(); ui.post(() -> { for (Listener l : listeners) l.onTx(true); }); break;
-            case 4: transmitting = false; refreshControls(); history("tx", "📻 Voice TX"); ui.post(() -> { for (Listener l : listeners) l.onTx(false); }); break;
+            case 3: transmitting = true; refreshControls(); if (coverage != null) coverage.onTxStart(); ui.post(() -> { for (Listener l : listeners) l.onTx(true); }); break;
+            case 4: transmitting = false; refreshControls(); if (coverage != null) coverage.onTxEnd(); history("tx", "📻 Voice TX"); ui.post(() -> { for (Listener l : listeners) l.onTx(false); }); break;
             case 5: try { engine.fetchSms(); } catch (IOException ignored) { } break;             // SMS_RECEIVED -> ask for it
             case 8: smsResult(true); break;
             case 9: smsResult(false); break;
@@ -911,7 +913,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         }
     }
 
-    @Override public void rssi(int raw, double dbm) { rssi = (int) Math.round(dbm); ui.post(() -> { for (Listener l : listeners) l.onRssi(rssi); }); }
+    @Override public void rssi(int raw, double dbm) { rssi = (int) Math.round(dbm); if (coverage != null) coverage.onRssi(rssi); ui.post(() -> { for (Listener l : listeners) l.onRssi(rssi); }); }
     @Override public void version(int v, String text) { log("module " + text); }
     @Override public void callerInfo(int type, int caller, int target) {
         if (caller <= 0) return;
@@ -988,6 +990,41 @@ public class RadioService extends Service implements RadioEngine.Events {
     private void refreshControls() { ui.removeCallbacks(controlsRefresh); ui.postDelayed(controlsRefresh, 150); }
 
     public boolean isTransmitting() { return transmitting || pttDown; }
+
+    // ---- coverage mapping ---------------------------------------------------------------------------
+    private com.macdmr.radio.coverage.CoverageLogger coverage;
+    public com.macdmr.radio.coverage.CoverageLogger coverage() {
+        if (coverage == null) coverage = new com.macdmr.radio.coverage.CoverageLogger(this, new com.macdmr.radio.coverage.CoverageLogger.Host() {
+            @Override public ChannelStore.Channel current() { return current; }
+            @Override public boolean ready() { return isReady(); }
+            @Override public boolean hearing() { return RadioService.this.hearing(); }
+            @Override public boolean busyTx() { return pttDown || transmitting; }
+            @Override public boolean toneMatches(ChannelStore.Channel ch) {
+                if (ch.isDigital() || ch.rxType != 1) return true;            // DMR: the colour code already matched; no tone or DCS: the carrier is all we have
+                double want = com.macdmr.radio.dsp.ToneTable.ctcssHz(ch.rxSubCode), got = toneBank.detectedHz();
+                return want > 0 && got > 0 && Math.abs(want - got) < 1.5;
+            }
+            @Override public void pollRssi() { RadioService.this.pollRssi(); }
+            @Override public void event(String line) { history("cov", line); }
+        });
+        return coverage;
+    }
+    /** Coverage logging on/off; on also asks for location in the foreground service so it keeps working with the screen off. */
+    public void setCoverageLogging(boolean on) { coverage().setEnabled(on); startForegroundTyped(on); }
+
+    /** The foreground service: microphone always, plus location while coverage logging is on (allowed only while the app is in front). */
+    private void startForegroundTyped(boolean location) {
+        Notification n = notification(isReady() ? RadioWidget.status(this) : "Radio idle");
+        if (Build.VERSION.SDK_INT >= 30) {
+            int t = android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE;
+            if (location) {
+                try { startForeground(1, n, t | android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION); return; }
+                catch (Throwable e) { log("coverage: location in the background not allowed now (" + e.getClass().getSimpleName() + "); logging while the app is open"); }
+            }
+            try { startForeground(1, n, t); return; } catch (Throwable ignored) { }
+        }
+        startForeground(1, n);
+    }
 
     // ---- roger beep ---------------------------------------------------------------------------------
     public static final String[] ROGER_NAMES = { "Off", "Beep", "Two-tone", "Morse K" };

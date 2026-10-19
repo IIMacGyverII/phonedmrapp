@@ -46,6 +46,16 @@ public class MapView extends View {
         public Marker(double lat, double lon, int kind, String label, Object data) { this.lat = lat; this.lon = lon; this.kind = kind; this.label = label; this.data = data; }
     }
     public interface OnSelect { void onSelect(Marker m); }
+    public interface OnCell { void onCell(com.macdmr.radio.coverage.CoverageStore.Cell c); }
+    /** Coverage layer: none, what you heard (squares coloured by signal), or key-ups (green keyed, red no reply). */
+    public static final int LAYER_NONE = 0, LAYER_RX = 1, LAYER_TX = 2;
+    private List<com.macdmr.radio.coverage.CoverageStore.Cell> cells = new ArrayList<>();
+    private int layer = LAYER_NONE; private OnCell onCell;
+    private com.macdmr.radio.coverage.CoverageStore.Cell selectedCell;
+    private final Paint cellPaint = new Paint(), cellEdge = new Paint(Paint.ANTI_ALIAS_FLAG);
+    public void setCells(List<com.macdmr.radio.coverage.CoverageStore.Cell> c, int l) { cells = c == null ? new ArrayList<>() : c; layer = l; selectedCell = null; invalidate(); }
+    public void setOnCell(OnCell l) { onCell = l; }
+    public int layer() { return layer; }
 
     private static final String TILE_URL = "https://tile.openstreetmap.org/%d/%d/%d.png";
     private static final String UA = "DMRRadio/1.0 (Android; com.macdmr.radio)";
@@ -82,6 +92,7 @@ public class MapView extends View {
         text.setTextSize(12 * d); text.setTypeface(Neo.uiSemi(c)); text.setColor(Neo.TEXT);
         textBg.setColor(0xCC07101A);
         attr.setTextSize(10 * d); attr.setColor(0xFF8DA2B8);
+        cellEdge.setStyle(Paint.Style.STROKE); cellEdge.setStrokeWidth(2 * d); cellEdge.setColor(0xFFFFFFFF);
         scale = new ScaleGestureDetector(c, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
             @Override public boolean onScale(ScaleGestureDetector g) { zoomAt(g.getFocusX(), g.getFocusY(), Math.log(g.getScaleFactor()) / Math.log(2)); return true; }
         });
@@ -91,7 +102,14 @@ public class MapView extends View {
                 double w = world(); cx += dx / w; cy = clampY(cy + dy / w); cx = wrapX(cx); invalidate(); return true;
             }
             @Override public boolean onDoubleTap(MotionEvent e) { zoomAt(e.getX(), e.getY(), 1); return true; }
-            @Override public boolean onSingleTapConfirmed(MotionEvent e) { select(hit(e.getX(), e.getY())); return true; }
+            @Override public boolean onSingleTapConfirmed(MotionEvent e) {
+                Marker m = hit(e.getX(), e.getY());
+                com.macdmr.radio.coverage.CoverageStore.Cell c = m == null ? cellAt(e.getX(), e.getY()) : null;
+                selectedCell = c;
+                select(m);
+                if (c != null && onCell != null) onCell.onCell(c);
+                return true;
+            }
         });
         setContentDescription("Map");
     }
@@ -145,6 +163,7 @@ public class MapView extends View {
                 else { cv.drawRect(dst, bg); cv.drawLine(dst.left, dst.top, dst.right, dst.top, grid); cv.drawLine(dst.left, dst.top, dst.left, dst.bottom, grid); }
             }
         }
+        if (layer != LAYER_NONE) drawCells(cv, w, h);
         for (Marker m : markers) {
             if (!visible[m.kind]) continue;
             float sx = sx(m.lon), sy = sy(m.lat);
@@ -158,6 +177,30 @@ public class MapView extends View {
         float aw = attr.measureText(a);
         cv.drawRoundRect(w - aw - 14 * d, h - 20 * d, w - 4 * d, h - 4 * d, 4 * d, 4 * d, textBg);
         cv.drawText(a, w - aw - 9 * d, h - 8.5f * d, attr);
+    }
+
+    private void drawCells(Canvas cv, int w, int h) {
+        float min = 3 * d;
+        for (com.macdmr.radio.coverage.CoverageStore.Cell c : cells) {
+            float l = sx(c.w), r = sx(c.e), t = sy(c.n), b = sy(c.s);
+            if (r < 0 || l > w || b < 0 || t > h) continue;
+            if (r - l < min) { float m = (l + r) / 2; l = m - min / 2; r = m + min / 2; }
+            if (b - t < min) { float m = (t + b) / 2; t = m - min / 2; b = m + min / 2; }
+            int col = layer == LAYER_RX ? com.macdmr.radio.coverage.CoverageMath.signalColor(c.value) : c.keyed > 0 ? Neo.GREEN : Neo.RED;
+            cellPaint.setColor((col & 0x00FFFFFF) | 0xA8000000);
+            cv.drawRect(l, t, r, b, cellPaint);
+            if (c == selectedCell) cv.drawRect(l, t, r, b, cellEdge);
+        }
+    }
+
+    private com.macdmr.radio.coverage.CoverageStore.Cell cellAt(float x, float y) {
+        if (layer == LAYER_NONE) return null;
+        float pad = 6 * d;
+        for (com.macdmr.radio.coverage.CoverageStore.Cell c : cells) {
+            float l = sx(c.w), r = sx(c.e), t = sy(c.n), b = sy(c.s);
+            if (x >= l - pad && x <= r + pad && y >= t - pad && y <= b + pad) return c;
+        }
+        return null;
     }
 
     private int color(int kind) {
