@@ -44,16 +44,16 @@ public class RadioMediaService extends MediaBrowserServiceCompat {
         ChannelStore store = s != null ? s.store() : new ChannelStore(this);
         if (ROOT.equals(parentId)) {
             for (ChannelStore.Zone z : store.zones())
-                out.add(folder(ZONE + z.id, z.name, z.numbers.length + (z.numbers.length == 1 ? " channel" : " channels")));
-            out.add(folder(ALL, "All channels", store.all().size() + " channels"));
+                out.add(folder(ZONE + z.id, z.name, z.numbers.length + (z.numbers.length == 1 ? " channel" : " channels"), CarArt.zoneTile(this, z.name)));
+            out.add(folder(ALL, "All channels", store.all().size() + " channels", CarArt.zoneTile(this, "all")));
         } else if (ALL.equals(parentId)) {
-            for (ChannelStore.Channel c : store.all()) out.add(channel(c));
+            for (ChannelStore.Channel c : store.all()) out.add(channel(this, c));
         } else if (parentId.startsWith(ZONE)) {
             long id; try { id = Long.parseLong(parentId.substring(ZONE.length())); } catch (NumberFormatException e) { id = -1; }
             ChannelStore.Zone z = store.zone(id);
             if (z != null) {
                 java.util.Set<Integer> in = new java.util.HashSet<>(); for (int n : z.numbers) in.add(n);
-                for (ChannelStore.Channel c : store.all()) if (in.contains(c.number)) out.add(channel(c));
+                for (ChannelStore.Channel c : store.all()) if (in.contains(c.number)) out.add(channel(this, c));
             }
         }
         result.sendResult(out);
@@ -65,16 +65,16 @@ public class RadioMediaService extends MediaBrowserServiceCompat {
         ChannelStore store = s != null ? s.store() : new ChannelStore(this);
         String q = query.toLowerCase(Locale.US).trim();
         for (ChannelStore.Channel c : store.all())
-            if (c.name.toLowerCase(Locale.US).contains(q) || String.valueOf(c.number).equals(q) || c.freqText(c.rxFreq).startsWith(q)) out.add(channel(c));
+            if (c.name.toLowerCase(Locale.US).contains(q) || String.valueOf(c.number).equals(q) || c.freqText(c.rxFreq).startsWith(q)) out.add(channel(this, c));
         result.sendResult(out);
     }
 
-    private static MediaBrowserCompat.MediaItem folder(String id, String title, String sub) {
-        return new MediaBrowserCompat.MediaItem(new MediaDescriptionCompat.Builder().setMediaId(id).setTitle(title).setSubtitle(sub).build(), MediaBrowserCompat.MediaItem.FLAG_BROWSABLE);
+    private static MediaBrowserCompat.MediaItem folder(String id, String title, String sub, android.graphics.Bitmap icon) {
+        return new MediaBrowserCompat.MediaItem(new MediaDescriptionCompat.Builder().setMediaId(id).setTitle(title).setSubtitle(sub).setIconBitmap(icon).build(), MediaBrowserCompat.MediaItem.FLAG_BROWSABLE);
     }
 
-    private static MediaBrowserCompat.MediaItem channel(ChannelStore.Channel c) {
+    private static MediaBrowserCompat.MediaItem channel(android.content.Context ctx, ChannelStore.Channel c) {
         String sub = String.format(Locale.US, "Ch %d · %s MHz · %s", c.number, c.freqText(c.rxFreq), c.isDigital() ? "DMR" : "FM");
-        return new MediaBrowserCompat.MediaItem(new MediaDescriptionCompat.Builder().setMediaId(CHANNEL + c.number).setTitle(c.name).setSubtitle(sub).build(), MediaBrowserCompat.MediaItem.FLAG_PLAYABLE);
+        return new MediaBrowserCompat.MediaItem(new MediaDescriptionCompat.Builder().setMediaId(CHANNEL + c.number).setTitle(c.name).setSubtitle(sub).setIconBitmap(CarArt.channelTile(ctx, c)).build(), MediaBrowserCompat.MediaItem.FLAG_PLAYABLE);
     }
 }
