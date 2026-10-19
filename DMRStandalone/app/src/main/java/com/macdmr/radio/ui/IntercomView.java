@@ -483,11 +483,11 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     private void refreshHeadline() {
         if (neo) { refreshNeoHeadline(); return; }
         if (tx) { headline.setText("🔴 Transmitting"); headline.setTextColor(Theme.RED); }
-        else if (rx) { headline.setText("📻 Receiving..."); headline.setTextColor(Theme.GREEN); }
+        else if (receivingNow()) { headline.setText("📻 Receiving..."); headline.setTextColor(Theme.GREEN); }
         else if (svc != null && "no root".equals(svc.link())) { headline.setText("🔒 Root needed — allow in Magisk, then Device → Bring radio up"); headline.setTextColor(Theme.AMBER); }
         else if (svc != null && "unsupported".equals(svc.link())) { headline.setText("📱 This phone is not supported yet — Device → Device report"); headline.setTextColor(Theme.AMBER); }
         else { headline.setText(svc != null && svc.isReady() ? "📻 Ready" : "⏳ " + (svc != null ? svc.link() : "")); headline.setTextColor(Theme.GREEN); }
-        ptt.setState(tx ? PttButton.State.TX : rx ? PttButton.State.RX : (svc != null && svc.isReady() && svc.txInhibited() ? PttButton.State.BUSY : PttButton.State.IDLE));
+        ptt.setState(tx ? PttButton.State.TX : receivingNow() ? PttButton.State.RX : (svc != null && svc.isReady() && svc.txInhibited() ? PttButton.State.BUSY : PttButton.State.IDLE));
         board.isReceiving = rx;
     }
 
@@ -564,15 +564,15 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     }
     /** New look: the meter shows a reading only while something is received; otherwise it is dark and says NO SIGNAL, with the noise floor beside it. */
     private void updateMeter() {
-        if (!neo) return;
+        if (!neo) { boolean on2 = receivingNow() && lastDbm != -999; signal.setText(on2 ? "Signal: " + lastDbm + " dBm" : "No signal"); return; }   // classic: the yellow box reads only while something is heard
         boolean on = receivingNow() && lastDbm != -999;
         smeter.setDbm(on ? lastDbm : -999);
         if (on) { smeterText.setText(SMeterView.sUnits(lastDbm) + "  " + lastDbm + " dBm"); smeterText.setTextColor(lastDbm > -93 ? Neo.AMBER_LIGHT : Neo.TEXT); smeterText.setTextSize(17); }
         else { smeterText.setText(lastDbm == -999 ? "NO SIGNAL" : "NO SIGNAL  \u00B7  floor " + lastDbm + " dBm"); smeterText.setTextColor(Neo.DIM); smeterText.setTextSize(12.5f); }
     }
     @Override public void onRssi(int dbm) {
-        if (neo) { lastDbm = dbm; updateMeter(); return; }
-        signal.setText(dbm == -999 ? "Signal: --" : "Signal: " + dbm + " dBm");
+        lastDbm = dbm; updateMeter();
+
     }
     @Override public void onAudioLevel(int amplitude) { board.audioAmplitude = amplitude; }
     @Override public void onHistory(String line) { reopenPanel("history: " + line); if (!history.isEmpty() && history.peekLast().equals(line)) return; history.addLast(line); while (history.size() > 3) history.removeFirst(); renderHistory(); }
