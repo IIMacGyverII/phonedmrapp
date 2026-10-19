@@ -218,6 +218,10 @@ public final class Neo {
         ICONS.put("check", "M5 12.5l4.5 4.5L19 7.5");
         ICONS.put("info", "M12 3a9 9 0 1 0 0.01 0M12 11v5.5M12 7.8h.01");
         ICONS.put("close", "M6 6l12 12M18 6L6 18");
+        ICONS.put("map", "M9 4L3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14");
+        ICONS.put("locate", "M12 8a4 4 0 1 0 0.01 0M12 2v3M12 19v3M2 12h3M19 12h3");
+        ICONS.put("minus", "M5 12h14");
+        ICONS.put("expand", "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5");
         ICONS.put("alert", "M12 3.5L2.5 20h19zM12 10v4.5M12 17.5h.01");
         ICONS.put("bolt", "M13 3L5 13.5h6L10 21l8-10.5h-6z");
         ICONS.put("send", "M4 12l16-8-5.5 16-3.2-6.8zM11.3 13.2L20 4");

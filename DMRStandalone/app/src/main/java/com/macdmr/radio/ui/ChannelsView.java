@@ -56,7 +56,9 @@ public class ChannelsView extends LinearLayout implements RadioService.Listener 
         zone.setOnClickListener(v -> pickZone());
         ImageView add = Neo.iconButton(c, "plus", Neo.GREEN, "Add channel");
         add.setOnClickListener(v -> { if (host != null) host.openEditor(null, true); });
-        Neo.addAction(header, nearby); Neo.addAction(header, zone); Neo.addAction(header, add);
+        ImageView mapBtn = Neo.iconButton(c, "map", Neo.CYAN, "Map");
+        mapBtn.setOnClickListener(v -> MapDialog.show(c, svc));
+        Neo.addAction(header, mapBtn); Neo.addAction(header, nearby); Neo.addAction(header, zone); Neo.addAction(header, add);
         addView(header);
 
         // search field with a line icon

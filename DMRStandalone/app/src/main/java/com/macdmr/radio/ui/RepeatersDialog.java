@@ -32,6 +32,8 @@ public final class RepeatersDialog {
     private List<Repeater> current = new ArrayList<>();
 
     public static void show(Context c, RadioService svc) { new RepeatersDialog(c, svc).open(false); }
+    /** One repeater's details sheet (from the map). */
+    public static void showDetails(Context c, RadioService svc, Repeater r, double lat, double lon) { new RepeatersDialog(c, svc).details(r, lat, lon); }
     private RepeatersDialog(Context c, RadioService svc) { this.c = c; this.svc = svc; rs = new RepeaterService(c, svc.store()); d = Theme.dp(c); radiusMi = c.getSharedPreferences("repeaters", Context.MODE_PRIVATE).getInt("radiusMi", 30); }
 
     private void open(boolean force) {
