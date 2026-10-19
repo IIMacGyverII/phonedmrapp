@@ -21,13 +21,17 @@ public final class Predictor {
     public static final double CLUTTER_DB = 12;
     /** Repeater ERP 50 W (47 dBm) + 2.15 dB to EIRP, handheld antenna -3 dBi, clutter: signal = this - path loss. */
     public static final double DOWNLINK_BUDGET = 47 + 2.15 - 3 - CLUTTER_DB;
+    /** The same budget for a transmitter of {@code erpWatts} effective radiated power. */
+    public static double downlinkBudget(double erpWatts) { return 10 * Math.log10(erpWatts * 1000) + 2.15 - 3 - CLUTTER_DB; }
     /** Handheld 4 W (36 dBm), -3 dBi antenna; repeater +6 dBi antenna, 2 dB feedline, -118 dBm sensitivity; clutter. */
     public static final double UPLINK_MAX_LOSS = 36 - 3 + 6 - 2 + 118 - CLUTTER_DB;
     /** Profile sample spacing (m) and the phone's antenna height (m). */
     public static final double SAMPLE_M = 100, RX_AGL = 1.5;
 
     public static final class Params {
-        public double lat, lon, antennaAgl = 30, radiusM = 48_000, cellM = 300; public double hz;
+        public double lat, lon, antennaAgl = 30, radiusM = 48_000, cellM = 300, sampleM = SAMPLE_M; public double hz;
+        /** Signal at the phone = this - path loss (dBm); see {@link #downlinkBudget}. */
+        public double budget = DOWNLINK_BUDGET;
     }
 
     /** One grid square: bounds and path loss. */
@@ -36,7 +40,7 @@ public final class Predictor {
     /** Path loss from the repeater to one point. */
     public static double loss(Elevation el, Params p, double lat, double lon) {
         double dist = metres(p.lat, p.lon, lat, lon);
-        int n = Math.max(3, (int) Math.ceil(dist / SAMPLE_M) + 1);
+        int n = Math.max(3, (int) Math.ceil(dist / p.sampleM) + 1);
         double[] prof = new double[n];
         for (int i = 0; i < n; i++) { double f = i / (double) (n - 1); prof[i] = el.at(p.lat + (lat - p.lat) * f, p.lon + (lon - p.lon) * f); }
         return Propagation.pathLoss(prof, dist / (n - 1), p.antennaAgl, RX_AGL, p.hz);
@@ -72,10 +76,51 @@ public final class Predictor {
     public static double calibrateRx(Elevation el, Params p, List<double[]> measured) {
         if (measured == null || measured.isEmpty()) return 0;
         double[] diff = new double[measured.size()];
-        for (int i = 0; i < diff.length; i++) { double[] m = measured.get(i); diff[i] = m[2] - (DOWNLINK_BUDGET - loss(el, p, m[0], m[1])); }
+        for (int i = 0; i < diff.length; i++) { double[] m = measured.get(i); diff[i] = m[2] - (p.budget - loss(el, p, m[0], m[1])); }
         Arrays.sort(diff);
         int n = diff.length; return n % 2 == 1 ? diff[n / 2] : (diff[n / 2 - 1] + diff[n / 2]) / 2;
     }
+
+    /**
+     * How far (m) the signal can reach before it falls below {@code floorDbm} over flat ground, for choosing the
+     * prediction's range: hills only shorten it. Stepped in 2 km, up to {@code maxM}.
+     */
+    public static double reachM(Params p, double floorDbm, double maxM) {
+        for (double d = 2000; d <= maxM; d += 2000) {
+            int n = Math.max(3, (int) Math.ceil(d / 200) + 1);
+            double l = Propagation.pathLoss(new double[n], d / (n - 1), p.antennaAgl, RX_AGL, p.hz);
+            if (p.budget - l < floorDbm) return d;
+        }
+        return maxM;
+    }
+
+    /** Antenna heights tried when fitting the measurements (m above ground). */
+    public static final double[] FIT_HEIGHTS = { 10, 15, 20, 30, 45, 60, 90, 120, 180, 250, 350 };
+
+    /**
+     * The repeater antenna height that best explains the Heard measurements {lat, lon, dBm}: for each candidate
+     * height the level is calibrated ({@link #calibrateRx}) and the spread of what is left (median absolute
+     * deviation) is compared; the height with the smallest spread wins. Height changes the shape (how far the
+     * signal carries over the terrain), the level only shifts it, so this needs readings at a range of distances.
+     * Returns {height, level correction, spread dB}.
+     */
+    public static double[] fitAntenna(Elevation el, Params p, List<double[]> measured) {
+        double bestH = p.antennaAgl, bestOff = 0, bestSpread = Double.MAX_VALUE;
+        double keep = p.antennaAgl;
+        for (double h : FIT_HEIGHTS) {
+            p.antennaAgl = h;
+            double[] diff = new double[measured.size()];
+            for (int i = 0; i < diff.length; i++) { double[] m = measured.get(i); diff[i] = m[2] - (p.budget - loss(el, p, m[0], m[1])); }
+            double off = median(diff.clone());
+            double[] dev = new double[diff.length]; for (int i = 0; i < dev.length; i++) dev[i] = Math.abs(diff[i] - off);
+            double spread = median(dev);
+            if (spread < bestSpread - 0.25) { bestSpread = spread; bestH = h; bestOff = off; }   // a clearly better fit; ties keep the lower antenna
+        }
+        p.antennaAgl = keep;
+        return new double[] { bestH, bestOff, bestSpread };
+    }
+
+    static double median(double[] a) { Arrays.sort(a); int n = a.length; return n == 0 ? 0 : n % 2 == 1 ? a[n / 2] : (a[n / 2 - 1] + a[n / 2]) / 2; }
 
     /**
      * Reach limit (largest path loss that still keys the repeater) from key-up attempts {lat, lon, keyed 1/0}:
