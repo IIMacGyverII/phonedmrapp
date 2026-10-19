@@ -54,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
             if (!svc.isReady()) svc.bringUp();
             ui.post(rssiTick);
             applyPendingLocation();
+            ui.postDelayed(MainActivity.this::announceCoverage, 3000);
             if (!svc.profile().supported && !getSharedPreferences("radio", MODE_PRIVATE).getBoolean("unsupportedShown", false)) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("unsupportedShown", true).apply(); show(4); }
         }
         @Override public void onServiceDisconnected(ComponentName n) { svc = null; }
@@ -120,6 +121,26 @@ public class MainActivity extends AppCompatActivity {
 
     /** The bound radio service (null until connected). */
     public RadioService service() { return svc; }
+
+    /** One-time card for the coverage maps feature (shown once, on the intercom, when the radio is up). */
+    private void announceCoverage() {
+        android.content.SharedPreferences p = getSharedPreferences("coverage", MODE_PRIVATE);
+        if (svc == null || isFinishing() || p.getBoolean("announced", false) || p.getBoolean("introShown", false)) return;
+        p.edit().putBoolean("announced", true).apply();
+        android.content.Context c = this; float d = com.macdmr.radio.ui.Theme.dp(c);
+        android.widget.LinearLayout box = com.macdmr.radio.ui.Neo.sheetBody(c, "Coverage maps");
+        box.addView(com.macdmr.radio.ui.Neo.label(c, "NEW FEATURE", com.macdmr.radio.ui.Neo.VIOLET, 12, true));
+        box.addView(com.macdmr.radio.ui.Neo.sheetHint(c, "See where each of your repeaters reaches you, and where you can key it up. Turn on coverage logging and the app measures as you drive or walk, then draws it on the map. Export to Google Earth any time."));
+        android.widget.TextView open = com.macdmr.radio.ui.Neo.button(c, "Open the map", "map", com.macdmr.radio.ui.Neo.VIOLET);
+        android.widget.TextView later = com.macdmr.radio.ui.Neo.button(c, "Later", "close", com.macdmr.radio.ui.Neo.CYAN);
+        android.widget.LinearLayout row = new android.widget.LinearLayout(c); row.setBaselineAligned(false);
+        android.widget.LinearLayout.LayoutParams l1 = new android.widget.LinearLayout.LayoutParams(0, android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1.4f); l1.setMargins(0, (int) (14 * d), (int) (4 * d), 0);
+        android.widget.LinearLayout.LayoutParams l2 = new android.widget.LinearLayout.LayoutParams(0, android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1f); l2.setMargins((int) (4 * d), (int) (14 * d), 0, 0);
+        row.addView(open, l1); row.addView(later, l2); box.addView(row);
+        final android.app.Dialog dlg = com.macdmr.radio.ui.Neo.showSheet(c, box);
+        open.setOnClickListener(v -> { if (dlg != null) dlg.dismiss(); com.macdmr.radio.ui.MapDialog.show(c, svc); });
+        later.setOnClickListener(v -> { if (dlg != null) dlg.dismiss(); });
+    }
 
     public static final String EXTRA_LAT = "com.macdmr.radio.lat", EXTRA_LON = "com.macdmr.radio.lon";
     private double[] pendingLocation;
