@@ -90,6 +90,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         addRow(set, Neo.switchRow(c, "volume", Neo.AMBER, "Volume-up transmits", "While the Intercom page is open", volPttSw));
         addRow(set, Neo.switchRow(c, "softsq", Neo.CYAN, "Soft SQ while scanning", "Every analog channel, each at its own level", scanSqSw));
         addRow(set, Neo.switchRow(c, "voice", Neo.VIOLET, "Voice announcements", "Channel changes, caller names, keyword alerts", voiceSw));
+        addRow(set, rogerRow(c));
         addRow(set, Neo.switchRow(c, "intercom", Neo.CYAN, "New intercom look", "Off: the classic intercom page", styleSw));
         addRow(set, Neo.switchRow(c, "diag", Neo.CYAN, "Animated panel when quiet", "Falling lines on an idle channel (uses a little battery)", animSw));
         animSw.setOnChange(on -> { if (host != null) host.animatedPanelChanged(on); });
@@ -127,7 +128,8 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         LinearLayout help = Neo.tile(c, "help", Neo.GREEN, "Help & how-to", "Every screen explained");
         LinearLayout diag = Neo.tile(c, "diag", Neo.AMBER, "Diagnostics", "Live protocol log");
         LinearLayout widget = Neo.tile(c, "widget", Neo.VIOLET, "Home widget", "Channel, scan and Talk");
-        LinearLayout[] tiles = { backup, restore, reimport, radioIdTile, report, upd, help, diag, widget, null };
+        LinearLayout sos = Neo.tile(c, "alert", Neo.RED, "Emergency", "Send your position");
+        LinearLayout[] tiles = { backup, restore, reimport, radioIdTile, report, upd, help, diag, widget, sos };
         for (int i = 0; i < tiles.length; i += 2) {
             LinearLayout r = new LinearLayout(c); r.setBaselineAligned(false);
             LayoutParams l1 = new LayoutParams(0, LayoutParams.MATCH_PARENT, 1f); l1.setMargins(0, 0, (int) (4 * d), (int) (8 * d));
@@ -144,6 +146,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         help.setOnClickListener(v -> { if (host != null) host.openHelp(); });
         diag.setOnClickListener(v -> { if (host != null) host.openDiagnostics(); });
         widget.setOnClickListener(v -> widgetSheet());
+        sos.setOnClickListener(v -> EmergencyDialog.show(c, svc));
 
         TextView foot = Neo.text(c, "Backups are the five CSV files (Contacts, TG_Lists, Channels, Zones, DTMF) the DMRModHooks module and the OpenGD77 CPS fork use, in Download/DMR/DMR_Backups.\n\nDMR Radio " + com.macdmr.radio.BuildConfig.VERSION_NAME + ", the standalone edition of DMRModHooks.", Neo.DIM, 12.5f, Neo.uiMedium(c));
         foot.setLineSpacing(0, 1.1f); foot.setPadding((int) (2 * d), (int) (8 * d), (int) (2 * d), 0);
@@ -169,6 +172,28 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
             if (dlg != null) dlg.dismiss();
             if (!asked) android.widget.Toast.makeText(c, "Long-press the home screen, choose Widgets and drag out DMR Radio", android.widget.Toast.LENGTH_LONG).show();
         });
+    }
+
+    private TextView rogerValue;
+    /** Roger beep: tap cycles Off / Beep / Two-tone / Morse K and plays the tone on the phone speaker. */
+    private LinearLayout rogerRow(Context c) {
+        LinearLayout row = new LinearLayout(c); row.setGravity(android.view.Gravity.CENTER_VERTICAL); row.setMinimumHeight(Theme.dp(c, 60));
+        row.setPadding(Theme.dp(c, 14), Theme.dp(c, 8), Theme.dp(c, 14), Theme.dp(c, 8));
+        LayoutParams il = new LayoutParams(Theme.dp(c, 38), Theme.dp(c, 38)); il.rightMargin = Theme.dp(c, 12);
+        row.addView(Neo.iconTile(c, "volume", Neo.GREEN, 38), il);
+        LinearLayout col = new LinearLayout(c); col.setOrientation(VERTICAL);
+        col.addView(Neo.label(c, "Roger beep", Neo.TEXT, 16, true));
+        TextView sub = Neo.label(c, "A short tone when you release the talk key. Tap to change and hear it", Neo.MUTED, 13, false); sub.setPadding(0, Theme.dp(c, 2), 0, 0); col.addView(sub);
+        row.addView(col, new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f));
+        rogerValue = Neo.chip(c, com.macdmr.radio.RadioService.ROGER_NAMES[svc != null ? svc.rogerStyle() : 0], Neo.GREEN);
+        row.addView(rogerValue);
+        row.setOnClickListener(v -> {
+            if (svc == null) return;
+            int s = (svc.rogerStyle() + 1) % com.macdmr.radio.RadioService.ROGER_NAMES.length;
+            svc.setRogerStyle(s); rogerValue.setText(com.macdmr.radio.RadioService.ROGER_NAMES[s]);
+            com.macdmr.radio.RadioService.previewRoger(s);
+        });
+        return row;
     }
 
     private Neo.NeonSwitch sw() { return new Neo.NeonSwitch(getContext()); }
@@ -321,6 +346,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         takeOver.setVisibility(unsupported ? GONE : VISIBLE); handBack.setVisibility(unsupported ? GONE : VISIBLE); reportNow.setVisibility(unsupported ? VISIBLE : GONE);
         takeOver.setAlpha(ready ? 0.55f : 1f); handBack.setAlpha(ready ? 1f : 0.55f);
         idText.setText("ID " + svc.localId());
+        if (rogerValue != null) rogerValue.setText(com.macdmr.radio.RadioService.ROGER_NAMES[svc.rogerStyle()]);
         ownAtBoot.setChecked(svc.ownAtBoot()); voiceSw.setChecked(svc.voiceOn()); hwPttSw.setChecked(svc.hwPtt()); scanSqSw.setChecked(svc.scanSoftSq());
         volPttSw.setChecked(c.getSharedPreferences("radio", Context.MODE_PRIVATE).getBoolean("volPtt", false));
         styleSw.setChecked(IntercomView.newLook(c)); animSw.setChecked(IntercomView.animatedPanel(c));

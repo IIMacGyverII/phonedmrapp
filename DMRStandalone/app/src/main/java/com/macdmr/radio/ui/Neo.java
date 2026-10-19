@@ -352,6 +352,7 @@ public final class Neo {
         if (t.contains("packet")) return "pkt"; if (t.contains("vfo")) return "vfo"; if (t.contains("repeater")) return "repeaters";
         if (t.contains("record")) return "rec"; if (t.contains("caption") || t.contains("transcript")) return "txt"; if (t.contains("last heard")) return "intercom";
         if (t.contains("station")) return "globe"; if (t.contains("dtmf")) return "channels"; if (t.contains("weather") || t.contains("same")) return "alert";
+        if (t.contains("emergency")) return "alert"; if (t.contains("widget")) return "widget";
         if (t.contains("setting")) return "device"; if (t.contains("sstv") || t.contains("picture")) return "report"; if (t.contains("log")) return "diag";
         return "radio";
     }

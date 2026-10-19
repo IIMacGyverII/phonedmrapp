@@ -451,6 +451,21 @@ public final class PacketEngine {
         return null;
     }
 
+    /**
+     * Emergency: a position report with the APRS emergency symbol (alternate table, '!') and "EMERGENCY <text>" as the
+     * comment, or an "EMERGENCY" status report when there is no fix. Sent on the current channel. Error text or null.
+     */
+    public String sendEmergency(String text) {
+        if (!callsignSet()) return "Set your callsign first (PKT → APRS settings)";
+        String c = ("EMERGENCY " + (text == null ? "" : text.trim())).trim();
+        final Location l = host.location();
+        final String info;
+        if (l != null) { if (c.length() > 43) c = c.substring(0, 43); info = Ax25.positionInfo(l.getLatitude(), l.getLongitude(), (char) 92, '!', c); }
+        else { if (c.length() > 62) c = c.substring(0, 62); info = ">" + c; }
+        txInfo(info, path(), "EMERGENCY " + (l != null ? "position" : "status"), TX_REPS, () -> { store.log("beacon", myCall(), "APZDMR", info, null, false); host.event("🆘 Emergency " + (l != null ? "position" : "status (no fix)") + " sent"); });
+        return null;
+    }
+
     /** Transmit one position report from the phone's last fix. Returns an error text or null. */
     public String sendBeacon() {
         if (!callsignSet()) return "Set your callsign first (PKT → APRS settings)";
