@@ -192,6 +192,13 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile short[] aprsTxSamples = null;   // mono 8 kHz source (looped or one-shot)
     private static volatile int aprsTxPos = 0;
     private static volatile boolean aprsTxStereo = true;
+    // The mic format the OEM recorder actually opened (PrizePcmManager reads it from the debug.rate /
+    // debug.channel / debug.bits system properties: 8 kHz stereo 16-bit on the Armor 26 Ultra, but a
+    // phone or firmware that sets them differently gets another format). fillAprsTx writes our 8 kHz
+    // source in whatever format the AudioRecord has, so the tones keep their pitch and speed.
+    private static volatile int aprsTxOutRate = 8000, aprsTxOutChannels = 2, aprsTxOutEncoding = 2;
+    private static volatile double aprsTxFrac = 0;
+    private static volatile String aprsTxFormatLogged = null;
     private static volatile boolean aprsTxLoop = false;     // F6 tones/test loop; real TX (message/beacon) is one-shot
     private static volatile int aprsMsgSeq = 1;             // APRS message line number for the {NN suffix
     // APRS position beacon (feature #2): periodically TX our GPS as an APRS position report.
@@ -5793,12 +5800,21 @@ public class MainHook implements IXposedHookLoadPackage {
                     try {
                         // Save global settings
                         String callsign = callsignEdit.getText().toString().trim().toUpperCase();
-                        if (callsign.length() > 6) {
-                            Toast.makeText(activity, "Callsign must be 6 chars or less", Toast.LENGTH_SHORT).show();
+                        String ssidText = ssidEdit.getText().toString().trim();
+                        int dash = callsign.indexOf('-');
+                        if (dash > 0) {   // "N0CALL-7" typed into the callsign box: the SSID goes in its own field
+                            ssidText = callsign.substring(dash + 1).trim();
+                            callsign = callsign.substring(0, dash).trim();
+                            ssidEdit.setText(ssidText);
+                            callsignEdit.setText(callsign);
+                        }
+                        if (!callsign.matches("[A-Z0-9]{1,6}")) {
+                            Toast.makeText(activity, "Callsign: 1-6 letters and digits, without the SSID (that goes in the SSID box)", Toast.LENGTH_LONG).show();
                             return;
                         }
                         
-                        int ssid = Integer.parseInt(ssidEdit.getText().toString().trim());
+                        int ssid;
+                        try { ssid = Integer.parseInt(ssidText); } catch (NumberFormatException e) { ssid = -1; }
                         if (ssid < 0 || ssid > 15) {
                             Toast.makeText(activity, "SSID must be 0-15", Toast.LENGTH_SHORT).show();
                             return;
@@ -15239,6 +15255,7 @@ public class MainHook implements IXposedHookLoadPackage {
                             if (n <= 0) return;
                             byte[] buf = (byte[]) param.args[0];
                             int off = (Integer) param.args[1];
+                            noteAprsTxFormat((android.media.AudioRecord) param.thisObject);
                             fillAprsTx(buf, off, n);
                         } catch (Throwable t) {
                             XposedBridge.log(TAG + ": [aprs-tx] fill error: " + t.getMessage());
@@ -15257,9 +15274,31 @@ public class MainHook implements IXposedHookLoadPackage {
      * (real message/beacon TX) it plays once and then emits silence until PTT is released, so the
      * packet is sent exactly once no matter how long the OEM keeps the mic open.
      */
+    /** Read the recorder's real format (rate, channels, encoding) and log it once per format. */
+    private static void noteAprsTxFormat(android.media.AudioRecord rec) {
+        try {
+            int rate = rec.getSampleRate(), chs = rec.getChannelCount(), enc = rec.getAudioFormat();
+            if (rate > 0) aprsTxOutRate = rate;
+            if (chs > 0) aprsTxOutChannels = chs;
+            if (enc == android.media.AudioFormat.ENCODING_PCM_16BIT || enc == android.media.AudioFormat.ENCODING_PCM_8BIT
+                    || enc == android.media.AudioFormat.ENCODING_PCM_32BIT) aprsTxOutEncoding = enc;
+            String f = rate + " Hz, " + chs + " ch, encoding " + enc;
+            if (!f.equals(aprsTxFormatLogged)) {
+                aprsTxFormatLogged = f;
+                XposedBridge.log(TAG + ": [aprs-tx] OEM mic format " + f + (rate == 8000 && chs == 2 && enc == 2 ? " (standard)" : " (non-standard: converting)"));
+            }
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [aprs-tx] mic format unknown, assuming 8 kHz stereo 16-bit: " + t.getMessage());
+        }
+    }
+
     private static void fillAprsTx(byte[] buf, int off, int n) {
         short[] src = aprsTxSamples;
         if (src == null || src.length == 0) return;
+        if (aprsTxStereo && !(aprsTxOutRate == 8000 && aprsTxOutChannels == 2 && aprsTxOutEncoding == 2)) {
+            fillAprsTxConverted(src, buf, off, n);
+            return;
+        }
         int pos = aprsTxPos;
         int step = aprsTxStereo ? 4 : 2;   // bytes per output frame (stereo L/R vs mono)
         int frames = n / step;
@@ -15282,6 +15321,35 @@ public class MainHook implements IXposedHookLoadPackage {
             i += step;
         }
         aprsTxPos = pos;
+    }
+
+    /**
+     * As {@link #fillAprsTx} for a recorder that is not 8 kHz stereo 16-bit: resample the 8 kHz source to
+     * the recorder's rate (linear interpolation) and write it into every channel at its sample width.
+     */
+    private static void fillAprsTxConverted(short[] src, byte[] buf, int off, int n) {
+        int chs = Math.max(1, aprsTxOutChannels), enc = aprsTxOutEncoding;
+        int width = enc == android.media.AudioFormat.ENCODING_PCM_8BIT ? 1 : enc == android.media.AudioFormat.ENCODING_PCM_32BIT ? 4 : 2;
+        double step = 8000.0 / Math.max(1000, aprsTxOutRate);
+        int pos = aprsTxPos; double frac = aprsTxFrac;
+        int frames = n / (chs * width), i = off;
+        for (int f = 0; f < frames; f++) {
+            int s;
+            if (pos < src.length) {
+                int next = pos + 1 < src.length ? src[pos + 1] : (aprsTxLoop ? src[0] : 0);
+                s = (int) Math.round(src[pos] + (next - src[pos]) * frac);
+                frac += step;
+                while (frac >= 1.0) { frac -= 1.0; pos++; if (aprsTxLoop && pos >= src.length) pos = 0; }
+            } else {
+                s = 0;   // one-shot finished: silence for the rest of the keyed window
+            }
+            for (int c = 0; c < chs; c++) {
+                if (width == 1) buf[i++] = (byte) ((s >> 8) + 128);
+                else if (width == 2) { buf[i++] = (byte) (s & 0xFF); buf[i++] = (byte) ((s >> 8) & 0xFF); }
+                else { int v = s << 16; buf[i++] = (byte) v; buf[i++] = (byte) (v >> 8); buf[i++] = (byte) (v >> 16); buf[i++] = (byte) (v >> 24); }
+            }
+        }
+        aprsTxPos = pos; aprsTxFrac = frac;
     }
 
     /** F6: build the looped source for a test mode. Tones are 1 s (integer cycles → seamless loop). */
@@ -15569,7 +15637,7 @@ public class MainHook implements IXposedHookLoadPackage {
                 XposedBridge.log(TAG + ": [aprs-tx] tone " + freq + " Hz");
             }
             aprsTxSamples = src;
-            aprsTxPos = 0;
+            aprsTxPos = 0; aprsTxFrac = 0;
             aprsTxStereo = stereo;
             aprsTxLoop = true;   // F6 test modes loop until APRS_TX_STOP
             aprsTxActive = true;
@@ -15595,6 +15663,12 @@ public class MainHook implements IXposedHookLoadPackage {
                                            String[] path, byte[] info) {
         java.io.ByteArrayOutputStream f = new java.io.ByteArrayOutputStream();
         boolean srcIsLast = (path == null || path.length == 0);
+        if (srcCall != null && srcCall.indexOf('-') > 0) {   // a "CALL-SSID" saved before the settings split it
+            int d = srcCall.indexOf('-');
+            try { srcSsid = Integer.parseInt(srcCall.substring(d + 1).trim()) & 0x0F; } catch (NumberFormatException ignored) { }
+            srcCall = srcCall.substring(0, d);
+        }
+        if (srcCall != null) srcCall = srcCall.trim().toUpperCase(java.util.Locale.US);
         writeAx25Addr(f, destCall, destSsid, false);
         writeAx25Addr(f, srcCall, srcSsid, srcIsLast);
         if (path != null) {
@@ -15687,6 +15761,26 @@ public class MainHook implements IXposedHookLoadPackage {
         return txAfskFrame(ctx, frame, label, APRS_TX_LEAD_MS, reps, APRS_TX_GAP_MS, toast);
     }
 
+    /** True when the radio's current channel is DMR (AFSK through the vocoder would arrive as garble). */
+    private static boolean currentChannelIsDigital() {
+        try {
+            Object dm = XposedHelpers.callStaticMethod(XposedHelpers.findClass("com.pri.prizeinterphone.manager.DmrManager", appClassLoader), "getInstance");
+            Object ch = XposedHelpers.callMethod(dm, "getCurrentChannel");
+            return ch != null && XposedHelpers.getIntField(ch, "type") != 1 && currentChannelType != 1;   // both agree: digital
+        } catch (Throwable t) { return false; }
+    }
+
+    /** The channel a packet goes out on, for the TX log: frequency, analog/digital, power. */
+    private static String describeTxChannel() {
+        try {
+            Object dm = XposedHelpers.callStaticMethod(XposedHelpers.findClass("com.pri.prizeinterphone.manager.DmrManager", appClassLoader), "getInstance");
+            Object ch = XposedHelpers.callMethod(dm, "getCurrentChannel");
+            if (ch == null) return "no channel";
+            int tx = XposedHelpers.getIntField(ch, "txFreq"), ty = XposedHelpers.getIntField(ch, "type"), pw = XposedHelpers.getIntField(ch, "power");
+            return String.format(java.util.Locale.US, "%.4f MHz %s, %s power", tx / 1e6, ty == 1 ? "analog" : "DIGITAL", pw == 1 ? "high" : "low");
+        } catch (Throwable t) { return "channel unknown"; }
+    }
+
     /** Longest audio we will key for: the firmware stops TX at 30 s, keep margin for key-up + lead-in. */
     private static final int TX_MAX_AUDIO_MS = 28500;
 
@@ -15702,6 +15796,11 @@ public class MainHook implements IXposedHookLoadPackage {
             final int SR = 8000;
             int lead = (int) (APRS_TX_LEAD_MS / 1000.0 * SR);
             final int durationMs = (int) ((lead + pcm.length) / 8.0);
+            if (currentChannelIsDigital()) {
+                XposedBridge.log(TAG + ": [tx-pcm] REFUSED: current channel is digital (" + describeTxChannel() + ") — " + humanLabel);
+                if (toast) try { Toast.makeText(ctx, "This needs an analog channel: the current channel is digital", Toast.LENGTH_LONG).show(); } catch (Throwable ignored) { }
+                return -1;
+            }
             if (durationMs > TX_MAX_AUDIO_MS) {
                 XposedBridge.log(TAG + ": [tx-pcm] REFUSED: " + durationMs + " ms exceeds the 30 s TOT budget — " + humanLabel);
                 if (toast) try { Toast.makeText(ctx, "Too long for this radio's 30 s transmit limit", Toast.LENGTH_LONG).show(); } catch (Throwable ignored) { }
@@ -15712,7 +15811,7 @@ public class MainHook implements IXposedHookLoadPackage {
             System.arraycopy(pcm, 0, src, lead, pcm.length);
 
             aprsTxSamples = src;
-            aprsTxPos = 0;
+            aprsTxPos = 0; aprsTxFrac = 0;
             aprsTxStereo = true;
             aprsTxLoop = false;
             aprsTxActive = true;
@@ -15723,7 +15822,7 @@ public class MainHook implements IXposedHookLoadPackage {
             new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
                 @Override public void run() {
                     try { appCtx.sendBroadcast(new android.content.Intent("com.interphone.ptt.up")); } catch (Throwable ignored) { }
-                    aprsTxActive = false; aprsTxSamples = null; aprsTxPos = 0;
+                    aprsTxActive = false; aprsTxSamples = null; aprsTxPos = 0; aprsTxFrac = 0;
                     XposedBridge.log(TAG + ": [tx-pcm] TX done — PTT released");
                     if (toast) try { Toast.makeText(appCtx, "✓ Transmission complete", Toast.LENGTH_SHORT).show(); } catch (Throwable ignored) { }
                 }
@@ -15745,6 +15844,11 @@ public class MainHook implements IXposedHookLoadPackage {
                                    int leadMs, int reps, int gapMs, final boolean toast) {
         try {
             if (reps < 1) reps = 1;
+            if (currentChannelIsDigital()) {
+                XposedBridge.log(TAG + ": [aprs-msg] REFUSED: current channel is digital (" + describeTxChannel() + ") — " + humanLabel);
+                if (toast) try { Toast.makeText(ctx, "APRS needs an analog channel: the current channel is digital", Toast.LENGTH_LONG).show(); } catch (Throwable ignored) { }
+                return -1;
+            }
             short[] afsk = AFSKGenerator.generateAFSKWithNRZI(frame);
             final int SR = 8000;
             int lead = (int) (leadMs / 1000.0 * SR);
@@ -15760,7 +15864,7 @@ public class MainHook implements IXposedHookLoadPackage {
             final int durationMs = (int) (src.length / 8.0);
 
             aprsTxSamples = src;
-            aprsTxPos = 0;
+            aprsTxPos = 0; aprsTxFrac = 0;
             aprsTxStereo = true;   // the correct vendor format (proven on-air 2026-10-16)
             aprsTxLoop = false;    // play once (lead-in + reps already included)
             aprsTxActive = true;
@@ -15768,7 +15872,7 @@ public class MainHook implements IXposedHookLoadPackage {
             // Key PTT (OEM InterPhoneReceiver starts recording ~200 ms after ptt.down → keys TX).
             ctx.sendBroadcast(new android.content.Intent("com.interphone.ptt.down"));
             XposedBridge.log(TAG + ": [aprs-msg] TX start frame=" + frame.length + "B afsk=" + afsk.length
-                    + " lead=" + leadMs + "ms reps=" + reps + " total=" + src.length + " (~" + durationMs + "ms): " + humanLabel);
+                    + " lead=" + leadMs + "ms reps=" + reps + " total=" + src.length + " (~" + durationMs + "ms) on " + describeTxChannel() + ": " + humanLabel);
 
             final android.content.Context appCtx = ctx.getApplicationContext();
             final int holdMs = durationMs + 600;   // packet + tail margin (recording already running)
@@ -15777,7 +15881,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     try { appCtx.sendBroadcast(new android.content.Intent("com.interphone.ptt.up")); } catch (Throwable ignored) { }
                     aprsTxActive = false;
                     aprsTxSamples = null;
-                    aprsTxPos = 0;
+                    aprsTxPos = 0; aprsTxFrac = 0;
                     XposedBridge.log(TAG + ": [aprs-msg] TX done — PTT released");
                     if (toast) try { Toast.makeText(appCtx, "✓ APRS TX complete", Toast.LENGTH_SHORT).show(); } catch (Throwable ignored) { }
                 }
