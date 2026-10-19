@@ -21,7 +21,7 @@ public final class CoverageStore extends SQLiteOpenHelper {
     public static final class Rx { public long ts; public String key; public double lat, lon; public float acc; public int dbm; }
     public static final class Tx { public long ts; public String key; public double lat, lon; public float acc; public int power, result, replyDbm, floorDbm; public long txMs; }
     /** One map square: its bounds, the value it is drawn with (median dBm, or a key-up result) and how many readings made it. */
-    public static final class Cell { public double s, w, n, e; public int value, count; public int keyed, failed; }
+    public static final class Cell { public double s, w, n, e; public int value, count; public int keyed, failed; public boolean predicted; }
 
     public CoverageStore(Context c) { super(c, "coverage.db", null, 1); }
 

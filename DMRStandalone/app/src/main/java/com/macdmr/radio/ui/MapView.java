@@ -49,7 +49,9 @@ public class MapView extends View {
     public interface OnCell { void onCell(com.macdmr.radio.coverage.CoverageStore.Cell c); }
     /** Coverage layer: none, what you heard (squares coloured by signal), or key-ups (green keyed, red no reply). */
     public static final int LAYER_NONE = 0, LAYER_RX = 1, LAYER_TX = 2;
-    private List<com.macdmr.radio.coverage.CoverageStore.Cell> cells = new ArrayList<>();
+    private List<com.macdmr.radio.coverage.CoverageStore.Cell> cells = new ArrayList<>(), predicted = new ArrayList<>();
+    /** Terrain prediction squares, drawn faint under the measured ones. */
+    public void setPredicted(List<com.macdmr.radio.coverage.CoverageStore.Cell> p) { predicted = p == null ? new ArrayList<>() : p; invalidate(); }
     private int layer = LAYER_NONE; private OnCell onCell;
     private com.macdmr.radio.coverage.CoverageStore.Cell selectedCell;
     private final Paint cellPaint = new Paint(), cellEdge = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -181,6 +183,16 @@ public class MapView extends View {
 
     private void drawCells(Canvas cv, int w, int h) {
         float min = 3 * d;
+        for (com.macdmr.radio.coverage.CoverageStore.Cell c : predicted) {
+            float l = sx(c.w), r = sx(c.e), t = sy(c.n), b = sy(c.s);
+            if (r < 0 || l > w || b < 0 || t > h) continue;
+            int col, a;
+            if (layer == LAYER_RX) { col = com.macdmr.radio.coverage.CoverageMath.signalColor(c.value); a = 0x4C; }
+            else { col = Neo.GREEN; a = 0x22 + Math.min(20, c.value) * 4; }
+            cellPaint.setColor((col & 0x00FFFFFF) | (a << 24));
+            cv.drawRect(l, t, r + 0.5f, b + 0.5f, cellPaint);
+            if (c == selectedCell) cv.drawRect(l, t, r, b, cellEdge);
+        }
         for (com.macdmr.radio.coverage.CoverageStore.Cell c : cells) {
             float l = sx(c.w), r = sx(c.e), t = sy(c.n), b = sy(c.s);
             if (r < 0 || l > w || b < 0 || t > h) continue;
@@ -199,6 +211,10 @@ public class MapView extends View {
         for (com.macdmr.radio.coverage.CoverageStore.Cell c : cells) {
             float l = sx(c.w), r = sx(c.e), t = sy(c.n), b = sy(c.s);
             if (x >= l - pad && x <= r + pad && y >= t - pad && y <= b + pad) return c;
+        }
+        for (com.macdmr.radio.coverage.CoverageStore.Cell c : predicted) {
+            float l = sx(c.w), r = sx(c.e), t = sy(c.n), b = sy(c.s);
+            if (x >= l && x <= r && y >= t && y <= b) return c;
         }
         return null;
     }

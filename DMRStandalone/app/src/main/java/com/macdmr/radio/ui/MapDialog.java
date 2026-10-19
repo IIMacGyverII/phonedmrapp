@@ -41,6 +41,13 @@ public final class MapDialog {
     private final TextView status;
     private final TextView[] pills = new TextView[5];
     private int layer = MapView.LAYER_NONE; private String focusKey; private String focusName;
+    private double focusLat, focusLon, focusHz;
+    private com.macdmr.radio.coverage.Prediction.Result pred; private volatile int predRun; private String predStatus = "";
+    private android.content.SharedPreferences cprefs() { return c.getSharedPreferences("coverage", Context.MODE_PRIVATE); }
+    private boolean predictOn() { return cprefs().getBoolean("predict", true); }
+    private int antennaM() { return focusKey == null ? 30 : cprefs().getInt("ant_" + focusKey, 30); }
+    private int rangeMi() { return cprefs().getInt("predRangeMi", 20); }
+    private void focus(String key, String name, double lat, double lon, double hz) { focusKey = key; focusName = name; focusLat = lat; focusLon = lon; focusHz = hz; pred = null; }
     private LinearLayout legend;
     private final int[] counts = new int[4];
     private final List<MapView.Marker> all = new ArrayList<>();
@@ -230,15 +237,16 @@ public final class MapDialog {
             cardSub.setText((r.dmr ? "DMR" + (r.cc >= 0 ? " CC" + r.cc : "") : "FM" + (hasTone(r.toneUp) ? " " + r.toneUp : "")) + " repeater · " + dist(r.lat, r.lon)); cardSub.setTextColor(col);
             cardBody.setText(String.format(Locale.US, "Output %.4f MHz, input %.4f MHz", r.rxHz / 1e6, r.txHz / 1e6) + (r.city != null ? "\n" + r.city + (r.region != null ? ", " + r.region : "") : "") + (r.approx ? "\nPosition is approximate" : ""));
             action("Details", "repeaters", col, v -> RepeatersDialog.showDetails(c, svc, r, me != null ? me.getLatitude() : r.lat, me != null ? me.getLongitude() : r.lon));
+            action("Coverage", "signal", Neo.VIOLET, v -> { focus(com.macdmr.radio.coverage.CoverageMath.repeaterKey((int) r.rxHz, r.lat, r.lon), r.callsign == null ? "Repeater" : r.callsign, r.lat, r.lon, r.rxHz); setLayer(layer == MapView.LAYER_NONE ? MapView.LAYER_RX : layer); card.setVisibility(View.GONE); });
         } else if (m.data instanceof ChannelStore.Channel) {
             final ChannelStore.Channel x = (ChannelStore.Channel) m.data;
             cardTitle.setText(x.name); cardTitle.setTextColor(Neo.AMBER);
             cardSub.setText("Channel " + x.number + " · " + (x.isDigital() ? "DMR" : "Analog") + " · " + dist(x.lat, x.lon)); cardSub.setTextColor(Neo.AMBER);
             cardBody.setText(String.format(Locale.US, "RX %.4f MHz, TX %.4f MHz", x.rxFreq / 1e6, x.txFreq / 1e6));
             action("Use channel", "channels", Neo.AMBER, v -> { svc.selectChannel(x.number); Toast.makeText(c, "Channel " + x.number + ": " + x.name, Toast.LENGTH_SHORT).show(); });
-            action("Coverage", "signal", Neo.VIOLET, v -> { focusKey = com.macdmr.radio.coverage.CoverageMath.repeaterKey(x.rxFreq, x.lat, x.lon); focusName = x.name; setLayer(layer == MapView.LAYER_NONE ? MapView.LAYER_RX : layer); card.setVisibility(View.GONE); });
+            action("Coverage", "signal", Neo.VIOLET, v -> { focus(com.macdmr.radio.coverage.CoverageMath.repeaterKey(x.rxFreq, x.lat, x.lon), x.name, x.lat, x.lon, x.rxFreq); setLayer(layer == MapView.LAYER_NONE ? MapView.LAYER_RX : layer); card.setVisibility(View.GONE); });
         }
-        if (!(m.data instanceof ChannelStore.Channel)) action("Open in Maps", "map", Neo.CYAN, v -> { try { c.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(geo))); } catch (Throwable t) { Toast.makeText(c, "No maps app", Toast.LENGTH_SHORT).show(); } });
+        if (!(m.data instanceof ChannelStore.Channel) && !(m.data instanceof Repeater)) action("Open in Maps", "map", Neo.CYAN, v -> { try { c.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(geo))); } catch (Throwable t) { Toast.makeText(c, "No maps app", Toast.LENGTH_SHORT).show(); } });
         card.setVisibility(View.VISIBLE);
     }
 
@@ -257,15 +265,46 @@ public final class MapDialog {
     // ---- coverage ---------------------------------------------------------------------------------------
 
     private void setLayer(int l) {
+        if (l != layer) card.setVisibility(View.GONE);
         layer = l;
         Neo.pillStyle(pills[0], l != MapView.LAYER_NONE, Neo.VIOLET);
-        if (l == MapView.LAYER_NONE) { map.setCells(null, l); legend.setVisibility(View.GONE); return; }
+        if (l == MapView.LAYER_NONE) { map.setCells(null, l); map.setPredicted(null); legend.setVisibility(View.GONE); return; }
         final String key = focusKey;
+        updatePrediction();
         new Thread(() -> {
             com.macdmr.radio.coverage.CoverageStore st = svc.coverage().store();
             final List<com.macdmr.radio.coverage.CoverageStore.Cell> cells = l == MapView.LAYER_RX ? st.rxCells(key) : st.txCells(key);
-            ui.post(() -> { if (layer == l) { map.setCells(cells, l); showLegend(cells.size()); } });
+            ui.post(() -> { if (layer == l) { map.setCells(cells, l); measuredSquares = cells.size(); showLegend(cells.size()); } });
         }, "coverage-cells").start();
+    }
+
+    private int measuredSquares;
+
+    /** Run (or reuse) the terrain prediction for the focused repeater and show it under the measured squares. */
+    private void updatePrediction() {
+        if (!predictOn() || focusKey == null || layer == MapView.LAYER_NONE) { map.setPredicted(null); predStatus = ""; return; }
+        if (pred != null) { map.setPredicted(layer == MapView.LAYER_RX ? pred.rx : pred.tx); predStatus = pred.summary(layer == MapView.LAYER_RX); return; }
+        final int run = ++predRun;
+        final String key = focusKey; final double lat = focusLat, lon = focusLon, hz = focusHz, ant = antennaM(), rad = rangeMi() * 1609.344;
+        predStatus = "Terrain prediction: starting\u2026";
+        new Thread(() -> {
+            com.macdmr.radio.coverage.Prediction.Result r; String err = null;
+            try {
+                r = com.macdmr.radio.coverage.Prediction.run(c, svc.coverage().store(), key, lat, lon, hz, ant, rad, text -> {
+                    if (run != predRun) return false;
+                    ui.post(() -> { if (run == predRun) { predStatus = "Terrain prediction: " + text; showLegend(measuredSquares); } });
+                    return true;
+                });
+            } catch (Throwable t) { r = null; err = t.getMessage(); }
+            final com.macdmr.radio.coverage.Prediction.Result fr = r; final String fe = err;
+            ui.post(() -> {
+                if (run != predRun) return;
+                if (fr == null) { predStatus = fe == null ? "" : "Terrain prediction failed: " + fe; showLegend(measuredSquares); return; }
+                pred = fr; map.setPredicted(layer == MapView.LAYER_RX ? fr.rx : fr.tx);
+                predStatus = "Faint squares: terrain prediction. " + fr.summary(layer == MapView.LAYER_RX);
+                showLegend(measuredSquares);
+            });
+        }, "coverage-predict").start();
     }
 
     private void showLegend(int squares) {
@@ -296,12 +335,28 @@ public final class MapDialog {
             TextView no = Neo.label(c, "\u25A0 No reply", Neo.RED, 13, true); no.setPadding((int) (14 * d), 0, 0, 0); keys.addView(no);
             legend.addView(keys);
         }
-        legend.addView(Neo.label(c, squares == 0 ? "Nothing measured yet: tap to start logging" : squares + " squares of 150 m \u00b7 tap a square", Neo.MUTED, 11.5f, false));
+        legend.addView(Neo.label(c, squares == 0 ? (pred != null ? "Nothing measured yet for this repeater" : "Nothing measured yet: tap to start logging") : squares + " measured squares of 150 m \u00b7 tap a square", Neo.MUTED, 11.5f, false));
+        if (!predStatus.isEmpty()) { TextView ps = Neo.label(c, predStatus, Neo.VIOLET_LIGHT, 11.5f, false); ps.setPadding(0, (int) (3 * d), 0, 0); legend.addView(ps); }
         legend.setVisibility(View.VISIBLE);
     }
 
     private void showCellCard(com.macdmr.radio.coverage.CoverageStore.Cell cell) {
         cardActions.removeAllViews();
+        if (cell.predicted) {
+            String where = dist((cell.s + cell.n) / 2, (cell.w + cell.e) / 2);
+            if (layer == MapView.LAYER_RX) {
+                cardTitle.setText("About " + cell.value + " dBm \u00b7 " + com.macdmr.radio.coverage.CoverageMath.sUnits(cell.value)); cardTitle.setTextColor(com.macdmr.radio.coverage.CoverageMath.signalColor(cell.value));
+                cardSub.setText("Predicted \u00b7 " + focusName + " \u00b7 " + where);
+                cardBody.setText("Not measured here: calculated from the terrain between this square and the repeater (antenna " + antennaM() + " m above ground). " + (pred != null ? pred.summary(true) + "." : "") + " Trees and buildings are not in the terrain data, so expect less in forest and town.");
+            } else {
+                cardTitle.setText("Should key up (" + cell.value + " dB to spare)"); cardTitle.setTextColor(Neo.GREEN);
+                cardSub.setText("Predicted \u00b7 " + focusName + " \u00b7 " + where);
+                cardBody.setText("Calculated from the terrain and a typical handheld on high power. " + (pred != null ? pred.summary(false) + "." : "") + " The more key-ups you log, the better this gets.");
+            }
+            cardSub.setTextColor(Neo.VIOLET);
+            card.setVisibility(View.VISIBLE);
+            return;
+        }
         if (layer == MapView.LAYER_RX) {
             cardTitle.setText(cell.value + " dBm \u00b7 " + com.macdmr.radio.coverage.CoverageMath.sUnits(cell.value)); cardTitle.setTextColor(com.macdmr.radio.coverage.CoverageMath.signalColor(cell.value));
             cardSub.setText("Heard " + (focusKey == null ? "(best repeater here)" : focusName) + " \u00b7 " + dist((cell.s + cell.n) / 2, (cell.w + cell.e) / 2)); cardSub.setTextColor(Neo.VIOLET);
@@ -360,15 +415,33 @@ public final class MapDialog {
         final List<TextView> rows = new ArrayList<>();
         TextView allRow = repRow("All repeaters", "The best repeater in each square", focusKey == null);
         box.addView(allRow); rows.add(allRow);
-        allRow.setOnClickListener(v -> { focusKey = null; focusName = null; for (TextView r : rows) Neo.pillStyle(r, r == v, Neo.VIOLET); if (layer == MapView.LAYER_NONE) setLayer(MapView.LAYER_RX); else setLayer(layer); });
+        allRow.setOnClickListener(v -> { focus(null, null, 0, 0, 0); for (TextView r : rows) Neo.pillStyle(r, r == v, Neo.VIOLET); if (layer == MapView.LAYER_NONE) setLayer(MapView.LAYER_RX); else setLayer(layer); });
+        boolean listed = focusKey == null; for (com.macdmr.radio.coverage.CoverageStore.Repeater r : reps) if (r.key.equals(focusKey)) listed = true;
+        if (!listed) {                                       // focused from the map, nothing measured yet: still show it as the selection
+            com.macdmr.radio.coverage.CoverageStore.Repeater f = new com.macdmr.radio.coverage.CoverageStore.Repeater();
+            f.key = focusKey; f.name = focusName; f.rxHz = (int) focusHz; f.lat = focusLat; f.lon = focusLon; reps.add(0, f);
+        }
         for (final com.macdmr.radio.coverage.CoverageStore.Repeater r : reps) {
             TextView t = repRow(r.name + String.format(Locale.US, "  %.4f", r.rxHz / 1e6), r.rxCount + " readings \u00b7 " + r.txCount + " transmissions" + (r.txCount > 0 ? " (" + r.keyed + " keyed)" : ""), r.key.equals(focusKey));
             box.addView(t); rows.add(t);
             t.setOnClickListener(v -> {
-                focusKey = r.key; focusName = r.name; for (TextView x : rows) Neo.pillStyle(x, x == v, Neo.VIOLET);
+                focus(r.key, r.name, r.lat, r.lon, r.rxHz); for (TextView x : rows) Neo.pillStyle(x, x == v, Neo.VIOLET);
                 setLayer(layer == MapView.LAYER_NONE ? MapView.LAYER_RX : layer);
                 map.center(r.lat, r.lon, Math.min(map.zoom(), 11));
             });
+        }
+        box.addView(Neo.sheetSection(c, "Terrain prediction"));
+        if (focusKey == null) box.addView(Neo.sheetHint(c, "Pick one repeater above (or tap a repeater or channel on the map \u2192 Coverage) to predict its range from the terrain, even before you have measured anything."));
+        else {
+            Neo.NeonSwitch ps = new Neo.NeonSwitch(c); ps.setChecked(predictOn());
+            LinearLayout prow = Neo.switchRow(c, "map", Neo.VIOLET, "Show prediction", "Faint squares under the measured ones, for " + focusName, ps);
+            prow.setBackground(Neo.rowCard(c)); box.addView(prow);
+            ps.setOnChange(on -> { cprefs().edit().putBoolean("predict", on).apply(); updatePrediction(); showLegend(measuredSquares); });
+            box.addView(Neo.sheetHint(c, "Repeater antenna height above ground"));
+            box.addView(choiceRow(new int[] { 15, 30, 60, 100 }, " m", antennaM(), v -> { cprefs().edit().putInt("ant_" + focusKey, v).apply(); pred = null; updatePrediction(); }));
+            box.addView(Neo.sheetHint(c, "Range"));
+            box.addView(choiceRow(new int[] { 10, 20, 30 }, " mi", rangeMi(), v -> { cprefs().edit().putInt("predRangeMi", v).apply(); pred = null; updatePrediction(); }));
+            box.addView(Neo.sheetHint(c, "Terrain heights come from the open Terrain Tiles (about 55 m detail) and are kept on the phone. The first prediction for an area downloads them."));
         }
         int located = 0; for (ChannelStore.Channel x : svc.store().all()) if (x.lat != 0 || x.lon != 0) located++;
         box.addView(Neo.sheetHint(c, (reps.isEmpty() ? "Nothing measured yet. " : "") + "Logging works on channels with a location: " + located + " of your channels have one (channel editor \u2192 Location; channels added from Nearby repeaters get it automatically). Key-ups are judged only on repeater channels, where transmit and receive differ."));
@@ -389,8 +462,23 @@ public final class MapDialog {
         }, "coverage-export").start());
         clr.setOnClickListener(v -> new android.app.AlertDialog.Builder(c).setTitle(focusKey == null ? "Clear all coverage data?" : "Clear coverage for " + focusName + "?")
                 .setMessage("The stored readings and key-ups are deleted from the phone. Export first to keep a copy.")
-                .setPositiveButton("Clear", (dd, w) -> { st.clear(focusKey); if (sh != null) sh.dismiss(); focusKey = null; focusName = null; setLayer(layer); })
+                .setPositiveButton("Clear", (dd, w) -> { st.clear(focusKey); if (sh != null) sh.dismiss(); focus(null, null, 0, 0, 0); setLayer(layer); })
                 .setNegativeButton("Cancel", null).show());
+    }
+
+    private interface IntPick { void pick(int v); }
+    private LinearLayout choiceRow(int[] values, String unit, int current, IntPick pick) {
+        LinearLayout row = new LinearLayout(c); row.setPadding(0, (int) (4 * d), 0, (int) (4 * d));
+        final List<TextView> all = new ArrayList<>();
+        for (int i = 0; i < values.length; i++) {
+            final int v = values[i];
+            TextView t = Neo.label(c, v + unit, Neo.VIOLET, 14, true); t.setGravity(Gravity.CENTER); t.setPadding(0, (int) (8 * d), 0, (int) (8 * d));
+            Neo.pillStyle(t, v == current, Neo.VIOLET); all.add(t);
+            LinearLayout.LayoutParams l = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f); l.setMargins(i == 0 ? 0 : (int) (3 * d), 0, i == values.length - 1 ? 0 : (int) (3 * d), 0);
+            row.addView(t, l);
+            t.setOnClickListener(x -> { for (TextView o : all) Neo.pillStyle(o, o == x, Neo.VIOLET); pick.pick(v); });
+        }
+        return row;
     }
 
     private TextView repRow(String title, String sub, boolean on) {
