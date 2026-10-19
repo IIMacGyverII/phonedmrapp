@@ -118,6 +118,9 @@ public class MapView extends View {
 
     // ---- public API -------------------------------------------------------------------------------------
     public void setOnSelect(OnSelect s) { onSelect = s; }
+    private double meLat = Double.NaN, meLon, meAcc;
+    /** Your position (moves as the phone moves); accuracy in metres draws the soft circle around it. */
+    public void setMe(double lat, double lon, float accuracyM) { meLat = lat; meLon = lon; meAcc = accuracyM; invalidate(); }
     public void setMarkers(List<Marker> m) { markers.clear(); markers.addAll(m); if (selected != null && !markers.contains(selected)) selected = null; invalidate(); }
     public void setVisible(int kind, boolean on) { visible[kind] = on; if (!on && selected != null && selected.kind == kind) select(null); invalidate(); }
     public boolean isVisible(int kind) { return visible[kind]; }
@@ -175,6 +178,14 @@ public class MapView extends View {
         placed.clear();                                              // labels above all the dots; one never covers another
         if (selected != null && visible[selected.kind]) label(cv, selected, w, h);
         for (Marker m : markers) if (m != selected && visible[m.kind]) label(cv, m, w, h);
+        if (!Double.isNaN(meLat)) {                                  // you: accuracy circle (true size) and the dot
+            float x = sx(meLon), y = sy(meLat);
+            double pxPerM = world() / (40_075_016.686 * Math.cos(Math.toRadians(meLat)));
+            float r = (float) Math.max(16 * d, meAcc * pxPerM);
+            halo.setColor(0x264DA3FF); cv.drawCircle(x, y, r, halo);
+            ring.setColor(0xFFFFFFFF); dot.setColor(0xFF4DA3FF);
+            cv.drawCircle(x, y, 7 * d, dot); cv.drawCircle(x, y, 7 * d, ring);
+        }
         String a = "© OpenStreetMap contributors";
         float aw = attr.measureText(a);
         cv.drawRoundRect(w - aw - 14 * d, h - 20 * d, w - 4 * d, h - 4 * d, 4 * d, 4 * d, textBg);

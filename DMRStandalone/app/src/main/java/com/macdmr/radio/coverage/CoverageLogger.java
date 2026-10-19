@@ -61,6 +61,10 @@ public final class CoverageLogger {
     }
 
     public CoverageStore store() { return store; }
+    private volatile Runnable onData;
+    /** Called (on the main thread) after every stored reading or key-up, e.g. by an open map to redraw. */
+    public void setOnData(Runnable r) { onData = r; }
+    private void dataChanged() { Runnable r = onData; if (r != null) ui.post(r); }
     public boolean enabled() { return prefs.getBoolean("log", false); }
     public boolean running() { return on; }
     public int sessionRx() { return sessionRx; }
@@ -138,6 +142,7 @@ public final class CoverageLogger {
         lastRxKey = k; lastRxAt = now; lastRxLoc = f;
         store.addRx(k, f.getLatitude(), f.getLongitude(), f.getAccuracy(), dbm, now);
         sessionRx++;
+        dataChanged();
     }
 
     public void onTxStart() { txStartAt = SystemClock.elapsedRealtime(); }
@@ -162,6 +167,7 @@ public final class CoverageLogger {
             String k = key(ch);
             store.addTx(k, f.getLatitude(), f.getLongitude(), f.getAccuracy(), ch.power, len, res, best, floor, System.currentTimeMillis());
             sessionTx++;
+            dataChanged();
             if (res == CoverageMath.KEYED) host.event("📶 Keyed " + ch.name + " from here (tail " + best + " dBm, " + CoverageMath.sUnits(best) + ")");
             else if (res == CoverageMath.NO_REPLY) host.event("📶 No reply from " + ch.name + " after your transmission");
         }, CoverageMath.PROBE_MS[CoverageMath.PROBE_MS.length - 1] + 300);
