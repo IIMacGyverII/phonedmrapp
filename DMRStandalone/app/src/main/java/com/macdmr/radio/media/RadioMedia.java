@@ -42,6 +42,19 @@ public final class RadioMedia {
         ctx = c;
         session = new MediaSessionCompat(c, "DMRRadio");
         session.setCallback(new MediaSessionCompat.Callback() {
+            @Override public boolean onMediaButtonEvent(Intent i) {
+                // the steering wheel's play/pause as Talk (setting, in the car); the on-screen button is not a media button
+                android.view.KeyEvent ev = i == null ? null : i.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
+                RadioService s = RadioService.running;
+                if (ev != null && s != null && s.inCar() && s.wheelTalk()) {
+                    int k = ev.getKeyCode();
+                    if (k == android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || k == android.view.KeyEvent.KEYCODE_HEADSETHOOK || k == android.view.KeyEvent.KEYCODE_MEDIA_PLAY || k == android.view.KeyEvent.KEYCODE_MEDIA_PAUSE) {
+                        if (ev.getAction() == android.view.KeyEvent.ACTION_DOWN && ev.getRepeatCount() == 0) s.wheelButton();
+                        return true;                                     // the press and its release: never also a pause
+                    }
+                }
+                return super.onMediaButtonEvent(i);
+            }
             @Override public void onPlay() { RadioService s = service(); if (s != null) s.mediaPlay(true); }
             @Override public void onPause() { RadioService s = service(); if (s != null) s.mediaPlay(false); }
             @Override public void onStop() { RadioService s = service(); if (s != null) s.mediaPlay(false); }

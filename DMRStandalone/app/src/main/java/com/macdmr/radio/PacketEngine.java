@@ -439,6 +439,19 @@ public final class PacketEngine {
         txFrame(frame, label, reps, onDone);
     }
 
+    /** Send an APRS message over APRS-IS (the login must be verified); error text or null. */
+    public String isSendMessage(String to, String text) {
+        AprsIsClient c = is;
+        if (c == null || !c.isVerified()) return "APRS-IS is not connected with a verified login";
+        if (to == null || to.trim().isEmpty() || text == null || text.trim().isEmpty()) return "Addressee and text are needed";
+        final int id = prefs.getInt("msgId", 0) % 999 + 1; prefs.edit().putInt("msgId", id).apply();
+        String addressee = to.trim().toUpperCase(Locale.US);
+        if (!c.send(c.getLogin() + ">APDR16,TCPIP*:" + Ax25.messageInfo(addressee, text.trim(), id))) return "APRS-IS send failed";
+        store.log("msg-tx", c.getLogin() + " (IS)", addressee, text.trim(), String.valueOf(id), false);
+        host.event("\uD83C\uDF10 Sent to " + addressee + ": " + text.trim());
+        return null;
+    }
+
     /** Send an APRS message (numbered so the other side acks it). Returns an error text or null. */
     public String sendMessage(final String to, final String text) {
         if (!callsignSet()) return "Set your callsign first (PKT → APRS settings)";

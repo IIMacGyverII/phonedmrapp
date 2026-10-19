@@ -156,7 +156,7 @@ public final class CarArt {
 
     static synchronized Bitmap zoneTile(Context c, String name) {
         String n = name == null ? "" : name.toLowerCase(Locale.US);
-        String icon = n.contains("fav") ? "star" : n.contains("weather") || n.contains("wx") ? "alert" : n.contains("dmr") ? "radio" : n.contains("nearby") ? "repeaters"
+        String icon = n.contains("last heard") ? "intercom" : n.contains("fav") ? "star" : n.contains("weather") || n.contains("wx") ? "alert" : n.contains("dmr") ? "radio" : n.contains("nearby") ? "repeaters"
                 : n.contains("gmrs") || n.contains("family") || n.contains("frs") ? "intercom" : n.contains("all") ? "channels" : "zone";
         // a bare glyph on transparent ground: Android Auto tints folder icons (the zone tabs) to one colour
         String key = "zone|" + icon;

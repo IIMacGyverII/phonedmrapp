@@ -222,6 +222,10 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     private int notifyId = 100;
     public void notifyUser(String title, String text, boolean alert) {
+        // messages and weather alerts as conversations, so Android Auto reads them aloud (and offers a reply)
+        if (title != null && title.startsWith("APRS-IS message from ")) { CarMessages.aprs(this, title.substring("APRS-IS message from ".length()), text, true); return; }
+        if (title != null && title.startsWith("APRS message from ")) { CarMessages.aprs(this, title.substring("APRS message from ".length()), text, false); return; }
+        if (alert && title != null && title.startsWith("\u26C8")) { CarMessages.alert(this, title.replaceFirst("^\\S+\\s*", ""), text); return; }
         try {
             NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
             if (nm == null) return;
@@ -982,6 +986,8 @@ public class RadioService extends Service implements RadioEngine.Events {
     @Override public void sms(int type, int fromId, String text) {
         int t = type == 3 ? 1 : type == 2 ? 2 : 0;                         // store with our contact-type codes
         store.addMessage(fromId, t, false, text, 1);
+        String nm = t == 1 ? store.contactName(fromId, 1) : callerName(fromId);
+        CarMessages.dmr(this, fromId, t, nm, text);   // the phone and Android Auto (read aloud, voice reply)
         history("sms", "✉ Text from " + fromId + ": " + (text.length() > 40 ? text.substring(0, 40) + "…" : text));
         ui.post(() -> { for (Listener l : listeners) l.onSms(fromId, t, text); });
     }
@@ -1055,12 +1061,34 @@ public class RadioService extends Service implements RadioEngine.Events {
      */
     private volatile boolean inCar;
     public boolean inCar() { return inCar; }
+
+    // ---- in the car: coverage logging for the drive, steering-wheel Talk -----------------------------
+    public boolean coverageInCar() { return getSharedPreferences("radio", MODE_PRIVATE).getBoolean("covInCar", true); }
+    public void setCoverageInCar(boolean on) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("covInCar", on).apply(); if (inCar) carCoverage(true); }
+    public boolean wheelTalk() { return getSharedPreferences("radio", MODE_PRIVATE).getBoolean("wheelTalk", false); }
+    public void setWheelTalk(boolean on) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("wheelTalk", on).apply(); }
+    private boolean coverageForDrive;   // switched on by the car connecting (not by you): switched off again when it disconnects
+    private void carCoverage(boolean car) {
+        try {
+            com.macdmr.radio.coverage.CoverageLogger cl = coverage();
+            if (car && coverageInCar() && !cl.running()) { cl.start(); coverageForDrive = true; startForegroundTyped(true); log("coverage logging on for the drive"); history("cov", "\uD83D\uDCF6 Coverage logging on while Android Auto is connected"); }
+            else if (!car && coverageForDrive) { coverageForDrive = false; if (!cl.enabled()) { cl.stop(); startForegroundTyped(false); log("coverage logging off (car disconnected)"); } }
+            refreshControls();
+        } catch (Throwable t) { log("car coverage: " + t); }
+    }
+    /** Steering-wheel play/pause (a media button) while in the car with the setting on: start or stop talking. */
+    public boolean wheelButton() {
+        if (!inCar || !wheelTalk()) return false;
+        if (pttHeld()) ptt(false); else ptt(true);
+        return true;
+    }
     private void watchCar() {
         try {
             new androidx.car.app.connection.CarConnection(this).getType().observeForever(t -> {
                 boolean car = t != null && t == androidx.car.app.connection.CarConnection.CONNECTION_TYPE_PROJECTION;
                 if (car == inCar) return;
                 inCar = car; log(car ? "Android Auto connected" : "Android Auto disconnected");
+                carCoverage(car);
             });
         } catch (Throwable t) { log("car connection: " + t); }
     }
