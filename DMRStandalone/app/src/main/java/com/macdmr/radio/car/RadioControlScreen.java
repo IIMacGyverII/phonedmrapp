@@ -111,8 +111,9 @@ public class RadioControlScreen extends Screen {
                 .build());
 
         ActionStrip strip = new ActionStrip.Builder()
-                // only one strip button may carry a label: channel down / up as arrow icons
-                .addAction(new Action.Builder().setIcon(icon(c, "left", 0xFFFFFFFF)).setOnClickListener(() -> { RadioService r = svc(); if (r != null) r.stepChannel(-1); }).build())
+                // the car allows two strip buttons, one of them with a label: the channel list, and next channel
+                // (previous: the steering wheel, or pick it in the list)
+                .addAction(new Action.Builder().setTitle("Channels").setIcon(icon(c, "channels", 0xFFFFFFFF)).setOnClickListener(() -> getScreenManager().push(new ChannelListScreen(getCarContext()))).build())
                 .addAction(new Action.Builder().setIcon(icon(c, "right", 0xFFFFFFFF)).setOnClickListener(() -> { RadioService r = svc(); if (r != null) r.stepChannel(1); }).build())
                 .build();
         return new PaneTemplate.Builder(pane.build()).setHeaderAction(Action.APP_ICON).setTitle("Radio controls").setActionStrip(strip).build();

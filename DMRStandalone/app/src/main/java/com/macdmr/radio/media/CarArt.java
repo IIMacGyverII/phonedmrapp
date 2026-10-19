@@ -132,6 +132,8 @@ public final class CarArt {
     }
 
     // ---- list tiles ---------------------------------------------------------------------------------
+    public static Bitmap channelTilePublic(Context c, ChannelStore.Channel ch) { return channelTile(c, ch); }
+    public static Bitmap zoneTilePublic(Context c, String name) { return zoneTile(c, name); }
     static synchronized Bitmap channelTile(Context c, ChannelStore.Channel ch) {
         String key = "ch" + ch.number + "|" + ch.type;
         Bitmap b = tiles.get(key); if (b != null) return b;
