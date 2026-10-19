@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-19 — Android Auto: why the car hides the radio (diagnosed from the second drive; help corrected)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Second drive: sound and previous/next (also on the steering wheel) worked, but DMR Radio was still missing from the car's app list and its home-screen card opened the phone app. The drive's car events (radio history, 18:25–18:32) show Android Auto connecting to the media service each time. Cause: Android Auto only trusts apps installed from the Play Store. The app is sideloaded (`installer=null`) and Android Auto's developer setting **Unknown sources** was off (`allow_unknown_sources=false`). In that state it plays the app's sound but hides it from the launcher and won't open its car screen; the desktop head unit doesn't check this, which is why it worked there. Help → Android Auto → "If the radio is missing" now gives the symptoms and the steps (Android Auto settings → tap the version ten times → ⋮ → Developer settings → Unknown sources → reconnect). Removed the earlier sentence that blamed the car for rejecting Radio controls. | `ui/HelpView.java` | Read Android Auto's prefs and the package installer on the phone; release build installed. Car retest pending |
+
 ## 2026-10-19 — APRS transmit hardening after a user report (shipped in v4.1.1; module and standalone device- and HackRF-verified)
 
 A user reported that APRS beacons, messages and KISS frames from WoAD key the radio and sound like packets, but never show on aprs.fi. Re-checked against the 2026-10-16/17 HackRF captures: the radio's real transmission decodes in direwolf as well as an ideal packet does in added noise (both stop at 0 dB SNR), and every frame is built fresh from the callsign/path/text (it is not a recording; every packet just sounds alike: a 1.6 s settling tone, then the frame twice). Measured on those captures: about 4 kHz peak deviation, and the radio's limiter hard-clips the lead tone (3rd harmonic at -15 dB). Three device-independent ways a packet could go out undecodable were found and fixed.
