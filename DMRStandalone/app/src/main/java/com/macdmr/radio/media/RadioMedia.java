@@ -103,8 +103,11 @@ public final class RadioMedia {
     public void update(RadioService s, boolean playing, String status, String zone, boolean scanning) {
         ChannelStore.Channel ch = s.current();
         String title = ch == null ? "DMR Radio" : ch.name;
-        String key = ch == null ? "-" : ch.number + "|" + ch.name;
-        if (!key.equals(artKey)) { artKey = key; art = art(ch); }
+        CarArt.State st = new CarArt.State();
+        st.ch = ch; st.zone = zone; st.tx = s.isTransmitting(); st.rx = s.hearing(); st.scanning = scanning; st.ready = s.isReady(); st.muted = !playing;
+        st.dbm = s.lastRssi(); st.caller = s.currentCaller();
+        String key = st.key();
+        if (!key.equals(artKey)) { artKey = key; try { art = CarArt.panel(ctx, st); } catch (Throwable t) { art = null; } }
         session.setMetadata(new MediaMetadataCompat.Builder()
                 .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, ch == null ? "" : RadioMediaService.CHANNEL + ch.number)
                 .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
@@ -125,23 +128,5 @@ public final class RadioMedia {
                 .addCustomAction(new PlaybackStateCompat.CustomAction.Builder(ACTION_TALK, s.pttHeld() ? "Stop talking" : "Talk", s.pttHeld() ? R.drawable.ic_w_ptt_tx : R.drawable.ic_w_ptt).build())
                 .addCustomAction(new PlaybackStateCompat.CustomAction.Builder(ACTION_SCAN, scanning ? "Stop scan" : "Scan", scanning ? R.drawable.ic_w_stop : R.drawable.ic_w_scan).build())
                 .build());
-    }
-
-    /** Channel art: the neon channel number on the dark panel colour, as on the intercom. */
-    private Bitmap art(ChannelStore.Channel ch) {
-        int size = 320;
-        Bitmap b = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
-        Canvas c = new Canvas(b);
-        Paint bg = new Paint(); bg.setShader(new RadialGradient(size / 2f, size / 2f, size * 0.75f, 0xFF0D1B2B, 0xFF060B12, Shader.TileMode.CLAMP));
-        c.drawRect(0, 0, size, size, bg);
-        Paint ring = new Paint(Paint.ANTI_ALIAS_FLAG); ring.setStyle(Paint.Style.STROKE); ring.setStrokeWidth(6); ring.setColor(0x6619D3FF);
-        c.drawRoundRect(14, 14, size - 14, size - 14, 40, 40, ring);
-        String text = ch == null ? "--" : String.format(Locale.US, "%02d", ch.number);
-        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-        try { p.setTypeface(android.graphics.Typeface.createFromAsset(ctx.getAssets(), "fonts/orbitron.ttf")); } catch (Throwable ignored) { }
-        p.setTextSize(text.length() > 2 ? 120 : 150); p.setColor(0xFF2BEA7A); p.setFakeBoldText(true); p.setShadowLayer(22, 0, 0, 0xB02BEA7A); p.setTextAlign(Paint.Align.CENTER);
-        Paint.FontMetrics fm = p.getFontMetrics();
-        c.drawText(text, size / 2f, size / 2f - (fm.ascent + fm.descent) / 2, p);
-        return b;
     }
 }

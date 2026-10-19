@@ -953,7 +953,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         }
     }
 
-    @Override public void rssi(int raw, double dbm) { rssi = (int) Math.round(dbm); if (coverage != null) coverage.onRssi(rssi); ui.post(() -> { for (Listener l : listeners) l.onRssi(rssi); }); }
+    @Override public void rssi(int raw, double dbm) { rssi = (int) Math.round(dbm); if (coverage != null) coverage.onRssi(rssi); if (hearing()) refreshControls(); /* the car screen's signal meter */ ui.post(() -> { for (Listener l : listeners) l.onRssi(rssi); }); }
     @Override public void version(int v, String text) { log("module " + text); }
     @Override public void callerInfo(int type, int caller, int target) {
         if (caller <= 0) return;
@@ -1126,6 +1126,12 @@ public class RadioService extends Service implements RadioEngine.Events {
     private void refreshControls() { ui.removeCallbacks(controlsRefresh); ui.postDelayed(controlsRefresh, 150); }
 
     public boolean isTransmitting() { return transmitting || pttDown; }
+    public int lastRssi() { return rssi; }
+    /** Who is talking on a DMR channel right now (name from RadioID, or the ID), else "". */
+    public String currentCaller() {
+        if (current == null || !current.isDigital() || !hearing() || lastCaller <= 0) return "";
+        String n = callerName(lastCaller); return n.isEmpty() ? "ID " + lastCaller : n;
+    }
 
     // ---- coverage mapping ---------------------------------------------------------------------------
     private com.macdmr.radio.coverage.CoverageLogger coverage;
