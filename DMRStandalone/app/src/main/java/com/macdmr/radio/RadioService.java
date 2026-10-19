@@ -825,7 +825,11 @@ public class RadioService extends Service implements RadioEngine.Events {
                     if (!pttDown) return;
                     pttDown = false; refreshControls();
                     ui.removeCallbacks(txWatchdog);
-                    try { if (audio != null) audio.stopTx(); } finally { engine.ptt(false); }
+                    try {
+                        if (audio != null) audio.stopTx();
+                        short[] roger = rogerPcm(rogerStyle());
+                        if (roger != null && audio != null) audio.playPcm(roger);    // still keyed: the tone goes out before the carrier drops
+                    } finally { engine.ptt(false); }
                     if (rxAudioOn && audio != null) audio.startRx(true);
                 }
             } catch (Throwable t) { log("ptt: " + t); try { engine.ptt(false); } catch (Throwable ignored) { } pttDown = false; }
@@ -984,6 +988,68 @@ public class RadioService extends Service implements RadioEngine.Events {
     private void refreshControls() { ui.removeCallbacks(controlsRefresh); ui.postDelayed(controlsRefresh, 150); }
 
     public boolean isTransmitting() { return transmitting || pttDown; }
+
+    // ---- roger beep ---------------------------------------------------------------------------------
+    public static final String[] ROGER_NAMES = { "Off", "Beep", "Two-tone", "Morse K" };
+    public int rogerStyle() { int s = getSharedPreferences("radio", MODE_PRIVATE).getInt("roger", 0); return s >= 0 && s < ROGER_NAMES.length ? s : 0; }
+    public void setRogerStyle(int s) { getSharedPreferences("radio", MODE_PRIVATE).edit().putInt("roger", s).apply(); }
+    /** The end-of-transmission tone at 8 kHz (null = off): 40 ms lead, soft 6 ms edges, about a third of full scale. */
+    public static short[] rogerPcm(int style) {
+        int[][] seg;   // {hz (0 = silence), ms}
+        switch (style) {
+            case 1: seg = new int[][] { { 0, 40 }, { 1000, 180 } }; break;
+            case 2: seg = new int[][] { { 0, 40 }, { 1200, 110 }, { 0, 30 }, { 1800, 130 } }; break;
+            case 3: seg = new int[][] { { 0, 40 }, { 800, 180 }, { 0, 60 }, { 800, 60 }, { 0, 60 }, { 800, 180 } }; break;
+            default: return null;
+        }
+        int n = 0; for (int[] s : seg) n += s[1] * 8;
+        short[] out = new short[n]; int pos = 0;
+        for (int[] s : seg) {
+            int len = s[1] * 8, edge = 48;
+            for (int i = 0; i < len; i++) {
+                double env = Math.min(1.0, Math.min(i, len - 1 - i) / (double) edge);
+                out[pos + i] = s[0] == 0 ? 0 : (short) (11000 * env * Math.sin(2 * Math.PI * s[0] * i / 8000.0));
+            }
+            pos += len;
+        }
+        return out;
+    }
+    /** Play a roger tone on the phone speaker (Device page preview). */
+    public static void previewRoger(int style) {
+        final short[] pcm = rogerPcm(style); if (pcm == null) return;
+        new Thread(() -> {
+            try {
+                android.media.AudioTrack t = new android.media.AudioTrack(android.media.AudioManager.STREAM_MUSIC, 8000, android.media.AudioFormat.CHANNEL_OUT_MONO,
+                        android.media.AudioFormat.ENCODING_PCM_16BIT, Math.max(pcm.length * 2, 4096), android.media.AudioTrack.MODE_STATIC);
+                t.write(pcm, 0, pcm.length); t.play(); Thread.sleep(pcm.length / 8 + 150); t.release();
+            } catch (Throwable ignored) { }
+        }, "roger-preview").start();
+    }
+
+    // ---- emergency ----------------------------------------------------------------------------------
+    /** Send an emergency on the current channel: DMR text with coordinates, or an APRS emergency position. Returns what happened. */
+    public String emergency(String text, int toNumber, int toType, String toName) {
+        ChannelStore.Channel ch = current;
+        if (!isReady() || ch == null) return "Not sent: the radio is not on";
+        if (txInhibited()) return "Not sent: this channel is receive-only";
+        String m = text == null || text.trim().isEmpty() ? "Need help" : text.trim();
+        if (ch.isDigital()) {
+            if (toNumber <= 0) return "Not sent: choose who receives the emergency text";
+            android.location.Location l = lastKnownLocation();
+            String pos = l == null ? "position unknown" : String.format(Locale.US, "%.5f,%.5f", l.getLatitude(), l.getLongitude()) + (l.hasAccuracy() ? " +-" + Math.round(l.getAccuracy()) + "m" : "");
+            String body = "EMERGENCY " + m + " @ " + pos;
+            if (body.length() > 120) body = body.substring(0, 120);
+            ChannelStore.Contact to = new ChannelStore.Contact(); to.number = toNumber; to.type = toType; to.name = toName == null ? "" : toName;
+            sendSms(to, body);
+            String who = to.name.isEmpty() ? String.valueOf(toNumber) : to.name;
+            history("tx", "🆘 Emergency text to " + who + ": " + body);
+            return "Emergency text sent to " + who + (l == null ? " (no position fix)" : "");
+        }
+        if (packet == null) return "Not sent: packet radio is not available";
+        String e = packet.sendEmergency(m);
+        if (e != null) return "Not sent: " + e;
+        return "Emergency APRS " + (lastKnownLocation() != null ? "position" : "status (no position fix)") + " sent on " + ch.name;
+    }
     public boolean pttHeld() { return pttDown; }
     public boolean isScanning() { return scanner != null && scanner.isScanning(); }
     public boolean isScanHolding() { return scanner != null && scanner.isHolding(); }

@@ -110,6 +110,12 @@ public class HelpView extends LinearLayout {
             s("Talk from the widget", "A widget cannot feel a held finger, so Talk works tap to start, tap to stop: the button turns red while you transmit. Transmitting stops by itself after 28 seconds, before the radio's own 30-second limit. Receive-only channels refuse it."),
             s("When the radio is off", "The buttons need the app to own the radio. If it does not, they say so; tap the channel to open the app.")),
 
+        new Topic("Good to know", "alert", Neo.RED, "Emergency and roger beep", "Send your position; an end-of-talk tone.",
+            s("Emergency", "Intercom menu \u2192 Emergency, or Device \u2192 Emergency. It sends on the channel you are on. On a DMR channel: a text 'EMERGENCY <message> @ latitude,longitude +-accuracy' to the contact or talkgroup you choose in the sheet (it is remembered). On an analog channel: an APRS position with the emergency symbol and 'EMERGENCY <message>' as the comment, or an EMERGENCY status report when the phone has no position fix; this needs your callsign in PKT \u2192 APRS settings."),
+            s("Hold to send", "The red key must be held for two seconds, so a stray tap never sends. Lifting early cancels. Afterwards the sheet says what was sent; hold again to repeat it."),
+            s("Pick the right channel", "Switch to the channel where someone will hear you first: your repeater or talkgroup for DMR, the local APRS frequency (144.390 MHz in North America) for APRS. Only use it for a real emergency."),
+            s("Roger beep", "Device \u2192 Roger beep: Off, Beep, Two-tone or Morse K. The tone is sent when you release the talk key, just before the carrier drops, so listeners know you are done. Tapping the row plays the new tone on the phone speaker.")),
+
         new Topic("Good to know", "alert", Neo.AMBER, "Transmitting legally", "Licences, power and the 30-second limit.",
             s("Licences", "You are responsible for the frequencies you use: amateur bands need an amateur licence, GMRS needs a licence in the US, FRS limits power, and NOAA weather channels are receive-only."),
             s("Time limit", "The radio ends any single transmission after 30 seconds; release and key again to continue.")),
