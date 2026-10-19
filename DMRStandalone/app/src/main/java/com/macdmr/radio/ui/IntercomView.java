@@ -41,6 +41,25 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     private TextView[] readLabel;
     private SMeterView smeter;
     private String zoneName = "ALL";
+    private LinearLayout scanZoneRow;
+    private String lastZoneText = "";
+
+    /**
+     * Share the SCAN / ZONE row by what each label needs: SCAN keeps room for its longest state ("SCANNING", so it does
+     * not jump when a scan starts), ZONE gets the rest; if both cannot fit, both shrink their text (auto-size).
+     */
+    private void rebalanceScanZone() {
+        if (scanZoneRow == null) return;
+        if (scanZoneRow.getWidth() <= 0) { scanZoneRow.post(this::rebalanceScanZone); return; }
+        android.text.TextPaint p = new android.text.TextPaint(scanBtn.getPaint());
+        p.setTextSize(15.5f * getResources().getDisplayMetrics().scaledDensity);
+        float d = Theme.dp(getContext()), extra = (18 + 8 + 24 + 6) * d;   // icon, icon gap, side padding, slack
+        float scanNeed = Math.max(p.measureText("SCANNING"), Math.max(p.measureText("SCAN"), p.measureText("HOLD"))) + extra;
+        float zoneNeed = p.measureText(zoneBtn.getText().toString()) + extra;
+        ((LayoutParams) scanBtn.getLayoutParams()).weight = scanNeed;
+        ((LayoutParams) zoneBtn.getLayoutParams()).weight = zoneNeed;
+        scanZoneRow.requestLayout();
+    }
 
     /** Animate the panel's drops on a quiet channel (Device setting, on by default; it always animates while receiving). */
     public static boolean animatedPanel(Context c) { return c.getSharedPreferences("radio", Context.MODE_PRIVATE).getBoolean("animPanel", true); }
@@ -377,10 +396,14 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         // SCAN / ZONE
         LinearLayout br = new LinearLayout(c); br.setBaselineAligned(false);
         scanBtn = Neo.button(c, "SCAN", "scan", Neo.CYAN); zoneBtn = Neo.button(c, "ZONE: ALL", "zone", Neo.CYAN);
-        for (TextView t : new TextView[] { scanBtn, zoneBtn }) { t.setLetterSpacing(0.12f); t.setTextSize(15.5f); t.setMinHeight((int) (44 * d)); t.setSingleLine(true); }
+        for (TextView t : new TextView[] { scanBtn, zoneBtn }) {
+            t.setLetterSpacing(0.12f); t.setTextSize(15.5f); t.setMinHeight((int) (44 * d)); t.setSingleLine(true); t.setMaxLines(1);
+            // long zone names: the text shrinks to fit (down to 10 sp) instead of being cut off
+            androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(t, (int) (10 * getResources().getDisplayMetrics().scaledDensity), (int) (15.5f * getResources().getDisplayMetrics().scaledDensity), 1, android.util.TypedValue.COMPLEX_UNIT_PX);
+        }
         LayoutParams b1 = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f); b1.rightMargin = (int) (4 * d);
         LayoutParams b2 = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f); b2.leftMargin = (int) (4 * d);
-        br.addView(scanBtn, b1); br.addView(zoneBtn, b2);
+        br.addView(scanBtn, b1); br.addView(zoneBtn, b2); scanZoneRow = br;
         LayoutParams brl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); brl.setMargins(m, (int) (6 * d), m, 0);
         addView(br, brl);
         scanBtn.setOnClickListener(v -> { if (svc != null) android.widget.Toast.makeText(c, svc.toggleScan(), android.widget.Toast.LENGTH_SHORT).show(); });
@@ -471,13 +494,13 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     private void refreshNeoHeadline() {
         String t; int col;
         if (tx) { t = "TRANSMITTING"; col = Neo.RED; }
-        else if (rx) { t = "RECEIVING"; col = Neo.GREEN; }
+        else if (receivingNow()) { t = "RECEIVING"; col = Neo.GREEN; }
         else if (svc != null && "no root".equals(svc.link())) { t = "ROOT NEEDED · allow in Magisk, then Device → Take over"; col = Neo.AMBER; }
         else if (svc != null && "unsupported".equals(svc.link())) { t = "PHONE NOT SUPPORTED YET · Device → Device report"; col = Neo.AMBER; }
         else if (svc != null && svc.isReady()) { t = "READY"; col = Neo.GREEN; }
         else { t = svc != null ? svc.link().toUpperCase(java.util.Locale.US) : ""; col = Neo.AMBER; }
         headline.setText("●  " + t); headline.setTextColor(col);
-        ptt.setState(tx ? PttButton.State.TX : rx ? PttButton.State.RX : (svc != null && svc.isReady() && svc.txInhibited() ? PttButton.State.BUSY : PttButton.State.IDLE));
+        ptt.setState(tx ? PttButton.State.TX : receivingNow() ? PttButton.State.RX : (svc != null && svc.isReady() && svc.txInhibited() ? PttButton.State.BUSY : PttButton.State.IDLE));
         board.isReceiving = rx;
     }
 
@@ -544,8 +567,8 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         if (!neo) return;
         boolean on = receivingNow() && lastDbm != -999;
         smeter.setDbm(on ? lastDbm : -999);
-        if (on) { smeterText.setText(SMeterView.sUnits(lastDbm) + "  " + lastDbm + " dBm"); smeterText.setTextColor(lastDbm > -93 ? Neo.AMBER_LIGHT : Neo.TEXT); }
-        else { smeterText.setText(lastDbm == -999 ? "NO SIGNAL" : "NO SIGNAL  \u00B7  floor " + lastDbm + " dBm"); smeterText.setTextColor(Neo.DIM); }
+        if (on) { smeterText.setText(SMeterView.sUnits(lastDbm) + "  " + lastDbm + " dBm"); smeterText.setTextColor(lastDbm > -93 ? Neo.AMBER_LIGHT : Neo.TEXT); smeterText.setTextSize(17); }
+        else { smeterText.setText(lastDbm == -999 ? "NO SIGNAL" : "NO SIGNAL  \u00B7  floor " + lastDbm + " dBm"); smeterText.setTextColor(Neo.DIM); smeterText.setTextSize(12.5f); }
     }
     @Override public void onRssi(int dbm) {
         if (neo) { lastDbm = dbm; updateMeter(); return; }
@@ -574,12 +597,13 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
     @Override public void onModes(boolean sq, int level, boolean open, boolean monitor, boolean recording, boolean scanning, boolean holding, String zoneName) {
         if (sq && open && !gateWasOpen) reopenPanel("soft squelch opened");
         boolean was = gateWasOpen; gateWasOpen = sq && open;   // Soft SQ channels: the gate opening is the reception
-        if (was != gateWasOpen) updateMeter();
+        if (was != gateWasOpen) { updateMeter(); refreshHeadline(); }   // headline and talk key follow what is actually heard
         softSq.setOn(sq); mon.setOn(monitor); rec.setOn(recording); pkt.setOn(svc != null && svc.packetActive());
         if (!sqFromUser) { sqSeek.setProgress(level); sqValue.setText(String.valueOf(level)); }
         sqValue.setTextColor(sq ? (open ? Theme.GREEN : Theme.AMBER) : Theme.CYAN);
         zoneBtn.setText("ZONE: " + zoneName.toUpperCase(java.util.Locale.US));
         if (neo) {
+            if (!zoneBtn.getText().toString().equals(lastZoneText)) { lastZoneText = zoneBtn.getText().toString(); rebalanceScanZone(); }
             this.zoneName = zoneName; Neo.headerSubtitle(neoHeader).setText(("Zone · " + zoneName).toUpperCase(java.util.Locale.US));
             sqValue.setTextColor(sq ? (open ? Neo.GREEN : Neo.AMBER) : Neo.CYAN);
             int scanState = scanning ? (holding ? 2 : 1) : 0;
