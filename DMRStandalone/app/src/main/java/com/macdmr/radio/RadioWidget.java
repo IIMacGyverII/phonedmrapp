@@ -52,6 +52,7 @@ public class RadioWidget extends AppWidgetProvider {
         if (!s.isReady()) return "Radio " + s.link();
         ChannelStore.Channel ch = s.current();
         String f = ch == null ? "" : ch.freqText(ch.rxFreq) + " MHz · ";
+        if (s.coverageLogging() && !s.isTransmitting() && !s.hearing()) f = f + "Mapping coverage · ";
         if (s.isTransmitting()) return f + "TRANSMITTING";
         if (s.hearing()) return f + "Receiving";
         if (s.isScanning()) return f + (s.isScanHolding() ? "Scan holding" : "Scanning " + s.zoneName());

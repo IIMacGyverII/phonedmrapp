@@ -1010,7 +1010,8 @@ public class RadioService extends Service implements RadioEngine.Events {
         return coverage;
     }
     /** Coverage logging on/off; on also asks for location in the foreground service so it keeps working with the screen off. */
-    public void setCoverageLogging(boolean on) { coverage().setEnabled(on); startForegroundTyped(on); }
+    public void setCoverageLogging(boolean on) { coverage().setEnabled(on); startForegroundTyped(on); refreshControls(); }
+    public boolean coverageLogging() { return coverage != null && coverage.running(); }
 
     /** The foreground service: microphone always, plus location while coverage logging is on (allowed only while the app is in front). */
     private void startForegroundTyped(boolean location) {
