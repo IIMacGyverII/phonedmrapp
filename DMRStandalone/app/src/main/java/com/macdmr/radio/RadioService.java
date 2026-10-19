@@ -301,6 +301,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     @Override public void onDestroy() {
         running = null; RadioWidget.refresh(this, null);
         try { if (coverage != null) coverage.stop(); } catch (Throwable ignored) { }
+        stopBluetoothMic();
         try { if (pttKey != null) unregisterReceiver(pttKey); } catch (Throwable ignored) { }
         try { if (pttDown) { if (audio != null) audio.stopTx(); engine.ptt(false); } } catch (Throwable ignored) { }
         try { if (audio != null) { audio.stopRx(); } } catch (Throwable ignored) { }
@@ -381,7 +382,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             if (audio == null) {
                 audio = profile.audio == DeviceProfile.Audio.UART_PCM ? new UartPcmAudio(profile.pcmPort, profile.pcmBaud) : new TinyServiceAudio();
                 audio.setSink((b, len) -> onRxPcm(b, len));
-                audio.setGate(() -> squelchOpen);
+                audio.setGate(() -> squelchOpen && !muted);
             }
             log(audio.startRx(true)); rxAudioOn = true;
         } catch (Throwable t) { log("audio: " + t); }
@@ -855,6 +856,9 @@ public class RadioService extends Service implements RadioEngine.Events {
                     if (pttDown) return;
                     pttDown = true; refreshControls();
                     if (audio != null) audio.stopRx();              // never play the RX stream while the mic is live (feedback)
+                    boolean carMic = inCar && carMic() && startBluetoothMic();   // in the car: its microphone, through the hands-free link
+                    if (audio != null) audio.setTxSource(carMic ? android.media.MediaRecorder.AudioSource.VOICE_COMMUNICATION : android.media.MediaRecorder.AudioSource.MIC);
+                    if (carMic) log("TX with the car microphone");
                     engine.ptt(true);
                     if (audio != null) log(audio.startTx());
                     ui.removeCallbacks(txWatchdog); ui.postDelayed(txWatchdog, 28000);
@@ -864,6 +868,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                     ui.removeCallbacks(txWatchdog);
                     try {
                         if (audio != null) audio.stopTx();
+                        stopBluetoothMic();
                         short[] roger = rogerPcm(rogerStyle());
                         if (roger != null && audio != null) audio.playPcm(roger);    // still keyed: the tone goes out before the carrier drops
                     } finally { engine.ptt(false); }
@@ -1006,7 +1011,9 @@ public class RadioService extends Service implements RadioEngine.Events {
             b.addAction(new Notification.Action.Builder(android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_w_left), "Ch −", RadioWidget.command(this, RadioWidget.CMD_PREV, 1)).build());
             b.addAction(new Notification.Action.Builder(android.graphics.drawable.Icon.createWithResource(this, scanning ? R.drawable.ic_w_stop : R.drawable.ic_w_scan), scanning ? "Stop scan" : "Scan", RadioWidget.command(this, RadioWidget.CMD_SCAN, 3)).build());
             b.addAction(new Notification.Action.Builder(android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_w_right), "Ch +", RadioWidget.command(this, RadioWidget.CMD_NEXT, 2)).build());
-            if (Build.VERSION.SDK_INT >= 24) b.setStyle(new Notification.MediaStyle().setShowActionsInCompactView(0, 1, 2));
+            Notification.MediaStyle ms = new Notification.MediaStyle().setShowActionsInCompactView(0, 1, 2);
+            try { ms.setMediaSession((android.media.session.MediaSession.Token) com.macdmr.radio.media.RadioMedia.get(this).session().getSessionToken().getToken()); } catch (Throwable ignored) { }
+            b.setStyle(ms);
         }
         return b.build();
     }
@@ -1021,6 +1028,9 @@ public class RadioService extends Service implements RadioEngine.Events {
         } catch (Throwable ignored) { }
         RadioWidget.refresh(this, this);
         updateAudioFocus();
+        try {
+            com.macdmr.radio.media.RadioMedia.get(this).update(this, !isMuted(), isReady() ? RadioWidget.status(this).replace("Mapping coverage · ", "") : "Radio " + link, zoneName(), isScanning());   // the car screen does not need the logging note
+        } catch (Throwable t) { log("media session: " + t); }
     };
 
     // ---- audio focus --------------------------------------------------------------------------------
@@ -1060,8 +1070,44 @@ public class RadioService extends Service implements RadioEngine.Events {
     }
     private final Runnable refocus = this::updateAudioFocus;
 
+    // ---- media (Android Auto, lock screen, headset buttons) --------------------------------------------
+    /** Paused from the media controls: nothing is played, but reception, decoding and logging carry on. */
+    private volatile boolean muted;
+    /** Played from the media controls (Android Auto's media screen, play button): the radio is the media source and
+     *  holds permanent focus, which the car plays on its media channel. Ends with pause or when another player takes over. */
+    private volatile boolean mediaMode;
+    public boolean isMuted() { return muted; }
+    public void mediaPlay(boolean play) {
+        ui.post(() -> {
+            boolean wasMuted = muted;
+            muted = !play; mediaMode = play;
+            if (wasMuted != muted) history("media", muted ? "\uD83D\uDD07 Radio sound paused (media controls); still receiving" : "\uD83D\uDD0A Radio sound playing");
+            if (focusHeld) { ui.removeCallbacks(focusRelease); focusRelease.run(); }   // re-take the right kind of focus
+            updateAudioFocus(); refreshControls();
+        });
+    }
+    private android.media.AudioFocusRequest mediaFocusRequest; private boolean mediaFocusHeld;
+    private void updateMediaFocus() {
+        android.media.AudioManager am = (android.media.AudioManager) getSystemService(AUDIO_SERVICE);
+        if (mediaMode && !muted) {
+            if (mediaFocusHeld) return;
+            if (mediaFocusRequest == null) mediaFocusRequest = new android.media.AudioFocusRequest.Builder(android.media.AudioManager.AUDIOFOCUS_GAIN)
+                    .setAudioAttributes(new android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH).build())
+                    .setOnAudioFocusChangeListener(ch -> {
+                        log("media focus change " + ch);
+                        if (ch == android.media.AudioManager.AUDIOFOCUS_LOSS) { mediaFocusHeld = false; mediaPlay(false); }   // another player took over: pause, as media apps do
+                    }, ui).build();
+            mediaFocusHeld = am.requestAudioFocus(mediaFocusRequest) == android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
+            log("media focus " + (mediaFocusHeld ? "held" : "refused"));
+        } else if (mediaFocusHeld) {
+            try { am.abandonAudioFocusRequest(mediaFocusRequest); } catch (Throwable ignored) { }
+            mediaFocusHeld = false; log("media focus released");
+        }
+    }
+
     private void updateAudioFocus() {
-        boolean want = rxAudioOn && !pttDown && hearing();
+        updateMediaFocus();
+        boolean want = rxAudioOn && !pttDown && !muted && !mediaMode && hearing();
         if (want) {
             ui.removeCallbacks(focusRelease);
             if (focusHeld) return;
@@ -1101,6 +1147,47 @@ public class RadioService extends Service implements RadioEngine.Events {
     }
     /** Coverage logging on/off; on also asks for location in the foreground service so it keeps working with the screen off. */
     public void setCoverageLogging(boolean on) { coverage().setEnabled(on); startForegroundTyped(on); refreshControls(); }
+    // ---- car microphone (Bluetooth hands-free) -------------------------------------------------------
+    public boolean carMic() { return getSharedPreferences("radio", MODE_PRIVATE).getBoolean("carMic", true); }
+    public void setCarMic(boolean on) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("carMic", on).apply(); }
+    private volatile boolean btMicOn;
+    /**
+     * Route the microphone to a connected Bluetooth hands-free device (the car) and wait for the link (up to 2 s),
+     * so the first words are not lost. False when there is none; the phone microphone is used then.
+     */
+    private boolean startBluetoothMic() {
+        try {
+            android.media.AudioManager am = (android.media.AudioManager) getSystemService(AUDIO_SERVICE);
+            am.setMode(android.media.AudioManager.MODE_IN_COMMUNICATION);
+            boolean asked = false;
+            if (Build.VERSION.SDK_INT >= 31) {
+                for (android.media.AudioDeviceInfo d : am.getAvailableCommunicationDevices())
+                    if (d.getType() == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO) { asked = am.setCommunicationDevice(d); break; }
+            } else if (am.isBluetoothScoAvailableOffCall()) { am.startBluetoothSco(); am.setBluetoothScoOn(true); asked = true; }
+            if (!asked) { am.setMode(android.media.AudioManager.MODE_NORMAL); return false; }
+            btMicOn = true;
+            for (int i = 0; i < 40; i++) {
+                boolean up = Build.VERSION.SDK_INT >= 31
+                        ? am.getCommunicationDevice() != null && am.getCommunicationDevice().getType() == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+                        : am.isBluetoothScoOn();
+                if (up) { Thread.sleep(150); return true; }       // the audio path needs a moment after the link reports up
+                Thread.sleep(50);
+            }
+            log("car microphone: the hands-free link did not come up; using the phone microphone");
+            stopBluetoothMic();
+            return false;
+        } catch (Throwable t) { log("car microphone: " + t); stopBluetoothMic(); return false; }
+    }
+    private void stopBluetoothMic() {
+        if (!btMicOn) return;
+        btMicOn = false;
+        try {
+            android.media.AudioManager am = (android.media.AudioManager) getSystemService(AUDIO_SERVICE);
+            if (Build.VERSION.SDK_INT >= 31) am.clearCommunicationDevice(); else { am.setBluetoothScoOn(false); am.stopBluetoothSco(); }
+            am.setMode(android.media.AudioManager.MODE_NORMAL);
+        } catch (Throwable ignored) { }
+    }
+
     public boolean coverageLogging() { return coverage != null && coverage.running(); }
 
     /**

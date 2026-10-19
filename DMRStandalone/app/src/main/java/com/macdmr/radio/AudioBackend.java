@@ -17,6 +17,8 @@ public interface AudioBackend {
     String stopRx();
     /** Phone microphone to the radio while keyed. */
     String startTx();
+    /** Microphone for the next {@link #startTx}: MediaRecorder.AudioSource.MIC (phone) or VOICE_COMMUNICATION (a Bluetooth hands-free mic, e.g. the car's). */
+    default void setTxSource(int source) { }
     String stopTx();
     /** Play 8 kHz mono PCM into the TX path, paced to real time; blocks until done. */
     String playPcm(short[] mono);
