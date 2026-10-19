@@ -1,9 +1,9 @@
-# Changelog — v4.1.0 (released 2026-10-17)
+# Changelog — v4.1.1 (released 2026-10-19)
 
-Everything between here and the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
+The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
-## 2026-10-19 — APRS transmit hardening after a user report (not in v4.1.0; module and standalone device- and HackRF-verified)
+## 2026-10-19 — APRS transmit hardening after a user report (shipped in v4.1.1; module and standalone device- and HackRF-verified)
 
 A user reported that APRS beacons, messages and KISS frames from WoAD key the radio and sound like packets, but never show on aprs.fi. Re-checked against the 2026-10-16/17 HackRF captures: the radio's real transmission decodes in direwolf as well as an ideal packet does in added noise (both stop at 0 dB SNR), and every frame is built fresh from the callsign/path/text (it is not a recording; every packet just sounds alike: a 1.6 s settling tone, then the frame twice). Measured on those captures: about 4 kHz peak deviation, and the radio's limiter hard-clips the lead tone (3rd harmonic at -15 dB). Three device-independent ways a packet could go out undecodable were found and fixed.
 
