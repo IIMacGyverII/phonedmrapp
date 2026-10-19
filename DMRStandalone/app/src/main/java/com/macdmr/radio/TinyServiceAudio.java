@@ -75,13 +75,16 @@ public final class TinyServiceAudio implements AudioBackend {
     }
 
     /** TX: phone mic → 8 kHz mono → duplicated to stereo → PrizeTinyService.writeFrame while keyed. */
+    private volatile int txSource = MediaRecorder.AudioSource.MIC;
+    @Override public void setTxSource(int source) { txSource = source; }
+
     @Override public synchronized String startTx() {
         try {
             Object ok = openWrite.invoke(svc);
             int fs = (Integer) frameSize.invoke(svc);
             if (!Boolean.TRUE.equals(ok) || fs <= 0) return "openWritePcm=" + ok + " frameSize=" + fs;
             int min = AudioRecord.getMinBufferSize(8000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-            rec = new AudioRecord(MediaRecorder.AudioSource.MIC, 8000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(min, 4096));
+            rec = new AudioRecord(txSource, 8000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(min, 4096));
             rec.startRecording();
             txRunning = true;
             final int frame = fs;

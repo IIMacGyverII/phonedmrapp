@@ -81,11 +81,14 @@ public final class UartPcmAudio implements AudioBackend {
         return "UART PCM RX stopped";
     }
 
+    private volatile int txSource = MediaRecorder.AudioSource.MIC;
+    @Override public void setTxSource(int source) { txSource = source; }
+
     @Override public synchronized String startTx() {
         try {
             open();
             int min = AudioRecord.getMinBufferSize(SR, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-            rec = new AudioRecord(MediaRecorder.AudioSource.MIC, SR, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(min, 4096));
+            rec = new AudioRecord(txSource, SR, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(min, 4096));
             rec.startRecording();
             txRunning = true;
             txThread = new Thread(() -> {
