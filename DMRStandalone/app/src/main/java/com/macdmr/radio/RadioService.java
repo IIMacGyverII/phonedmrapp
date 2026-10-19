@@ -1045,7 +1045,9 @@ public class RadioService extends Service implements RadioEngine.Events {
         RadioWidget.refresh(this, this);
         updateAudioFocus();
         try {
-            com.macdmr.radio.media.RadioMedia.get(this).update(this, !isMuted(), carStatus(), zoneName(), isScanning());
+            // in the car "playing" means the radio is the car's media source (media focus, the car's media channel); the
+            // ducking focus it holds otherwise is played on the car's voice-prompt channel, so show Play there instead
+            com.macdmr.radio.media.RadioMedia.get(this).update(this, inCar() ? inMediaMode() && !isMuted() : !isMuted(), carStatus(), zoneName(), isScanning());
         } catch (Throwable t) { log("media session: " + t); }
     };
 
@@ -1082,12 +1084,35 @@ public class RadioService extends Service implements RadioEngine.Events {
         if (pttHeld()) ptt(false); else ptt(true);
         return true;
     }
+    // ---- car presence: media app (default) or the full-screen Radio controls template app ---------------
+    public boolean carControlsScreen() {
+        try {
+            int st = getPackageManager().getComponentEnabledSetting(new android.content.ComponentName(this, com.macdmr.radio.car.RadioCarAppService.class));
+            return st == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED;
+        } catch (Throwable t) { return false; }
+    }
+    public void setCarControlsScreen(boolean on) {
+        getPackageManager().setComponentEnabledSetting(new android.content.ComponentName(this, com.macdmr.radio.car.RadioCarAppService.class),
+                on ? android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED : android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DEFAULT,
+                android.content.pm.PackageManager.DONT_KILL_APP);
+        log("car screen: " + (on ? "Radio controls" : "media app"));
+    }
+    /** Car milestones go into the radio history (kept across reboots), so a drive can be looked at afterwards. */
+    private String lastCarEvent; private long lastCarEventAt;
+    public void carEvent(String line) {
+        long now = System.currentTimeMillis();
+        if (line.equals(lastCarEvent) && now - lastCarEventAt < 60_000) return;   // once a minute at most per kind
+        lastCarEvent = line; lastCarEventAt = now;
+        log(line); history("car", line);
+    }
+
     private void watchCar() {
         try {
             new androidx.car.app.connection.CarConnection(this).getType().observeForever(t -> {
                 boolean car = t != null && t == androidx.car.app.connection.CarConnection.CONNECTION_TYPE_PROJECTION;
                 if (car == inCar) return;
                 inCar = car; log(car ? "Android Auto connected" : "Android Auto disconnected");
+                carEvent(car ? "🚗 Android Auto connected (" + (carControlsScreen() ? "Radio controls screen" : "media app") + ")" : "🚗 Android Auto disconnected");
                 carCoverage(car);
             });
         } catch (Throwable t) { log("car connection: " + t); }
@@ -1115,6 +1140,7 @@ public class RadioService extends Service implements RadioEngine.Events {
      *  holds permanent focus, which the car plays on its media channel. Ends with pause or when another player takes over. */
     private volatile boolean mediaMode;
     public boolean isMuted() { return muted; }
+    public boolean inMediaMode() { return mediaMode; }
     public void mediaPlay(boolean play) {
         ui.post(() -> {
             boolean wasMuted = muted;
@@ -1133,7 +1159,10 @@ public class RadioService extends Service implements RadioEngine.Events {
                     .setAudioAttributes(new android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH).build())
                     .setOnAudioFocusChangeListener(ch -> {
                         log("media focus change " + ch);
-                        if (ch == android.media.AudioManager.AUDIOFOCUS_LOSS) { mediaFocusHeld = false; mediaPlay(false); }   // another player took over: pause, as media apps do
+                        if (ch == android.media.AudioManager.AUDIOFOCUS_LOSS) {   // another player took over: pause, as media apps do
+                            mediaFocusHeld = false; mediaPlay(false);
+                            if (inCar) carEvent("🚗 Android Auto took the sound away (another source played)");
+                        }
                     }, ui).build();
             mediaFocusHeld = am.requestAudioFocus(mediaFocusRequest) == android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
             log("media focus " + (mediaFocusHeld ? "held" : "refused"));

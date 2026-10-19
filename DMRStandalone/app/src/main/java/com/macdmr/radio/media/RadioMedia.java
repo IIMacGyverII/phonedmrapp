@@ -62,7 +62,7 @@ public final class RadioMedia {
             @Override public void onSkipToPrevious() { RadioService s = service(); if (s != null) s.stepChannel(-1); }
             @Override public void onPlayFromMediaId(String id, Bundle extras) {
                 RadioService s = service(); if (s == null) return;
-                if (id != null && id.startsWith(RadioMediaService.CHANNEL)) { try { s.selectChannel(Integer.parseInt(id.substring(RadioMediaService.CHANNEL.length()))); } catch (NumberFormatException ignored) { } }
+                if (id != null && id.startsWith(RadioMediaService.CHANNEL)) { try { s.selectChannel(Integer.parseInt(id.substring(RadioMediaService.CHANNEL.length()).replaceFirst("#.*$", ""))); } catch (NumberFormatException ignored) { } }
                 s.mediaPlay(true);
             }
             @Override public void onPlayFromSearch(String query, Bundle extras) {

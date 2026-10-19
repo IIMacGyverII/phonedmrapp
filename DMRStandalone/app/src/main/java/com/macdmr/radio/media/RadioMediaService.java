@@ -19,7 +19,7 @@ import java.util.Locale;
  * channels. Picking a channel tunes it and plays the radio (handled by the session in {@link RadioMedia}).
  */
 public class RadioMediaService extends MediaBrowserServiceCompat {
-    static final String ROOT = "root", ZONE = "zone:", ALL = "all", CHANNEL = "ch:";
+    static final String ROOT = "root", ZONE = "zone:", ALL = "all", CHANNEL = "ch:", HEARD = "heard";
 
     @Override public void onCreate() {
         super.onCreate();
@@ -28,6 +28,8 @@ public class RadioMediaService extends MediaBrowserServiceCompat {
 
     @Override public BrowserRoot onGetRoot(@NonNull String clientPackageName, int clientUid, Bundle rootHints) {
         android.util.Log.i("RadioMediaService", "root for " + clientPackageName);
+        RadioService rs = RadioService.running;
+        if (rs != null && clientPackageName != null && clientPackageName.contains("gearhead")) rs.carEvent("🚗 Android Auto opened the media app");
         Bundle extras = new Bundle();
         extras.putBoolean("android.media.browse.CONTENT_STYLE_SUPPORTED", true);
         extras.putBoolean("android.media.browse.SEARCH_SUPPORTED", true);
@@ -45,9 +47,21 @@ public class RadioMediaService extends MediaBrowserServiceCompat {
         if (ROOT.equals(parentId)) {
             List<ChannelStore.Zone> zones = new ArrayList<>(store.zones());
             zones.sort((a, b) -> Boolean.compare(!com.macdmr.radio.ui.ChannelsView.FAV_ZONE.equals(a.name), !com.macdmr.radio.ui.ChannelsView.FAV_ZONE.equals(b.name)));   // Favourites first
+            out.add(folder(HEARD, "Last heard", "Who and what was received, newest first", CarArt.zoneTile(this, "last heard")));
             for (ChannelStore.Zone z : zones)
                 out.add(folder(ZONE + z.id, z.name, z.numbers.length + (z.numbers.length == 1 ? " channel" : " channels"), CarArt.zoneTile(this, z.name)));
             out.add(folder(ALL, "All channels", store.all().size() + " channels", CarArt.zoneTile(this, "all")));
+        } else if (HEARD.equals(parentId)) {
+            if (s != null) {
+                int i = 0;
+                for (com.macdmr.radio.car.LastHeard.Item it : com.macdmr.radio.car.LastHeard.items(s, 30)) {
+                    if (!it.known) continue;
+                    ChannelStore.Channel c = store.byNumber(it.channel);
+                    // unique ids (one channel can appear on several lines); the part after '#' is ignored when playing
+                    out.add(new MediaBrowserCompat.MediaItem(new MediaDescriptionCompat.Builder().setMediaId(CHANNEL + it.channel + "#" + (i++))
+                            .setTitle(it.title).setSubtitle(it.sub).setIconBitmap(c != null ? CarArt.channelTile(this, c) : null).build(), MediaBrowserCompat.MediaItem.FLAG_PLAYABLE));
+                }
+            }
         } else if (ALL.equals(parentId)) {
             for (ChannelStore.Channel c : store.all()) out.add(channel(this, c));
         } else if (parentId.startsWith(ZONE)) {

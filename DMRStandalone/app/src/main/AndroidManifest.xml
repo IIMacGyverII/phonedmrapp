@@ -43,7 +43,9 @@
         <!-- Android Auto: the radio as a media app (browse channels and zones, now playing, next/previous, Scan, Talk) -->
         <meta-data android:name="com.google.android.gms.car.application" android:resource="@xml/automotive_app_desc" />
         <meta-data android:name="androidx.car.app.minCarApiLevel" android:value="1" />
-        <service android:name=".car.RadioCarAppService" android:exported="true" android:label="Radio controls" android:icon="@mipmap/ic_launcher">
+        <!-- off by default (Device -> Full-screen Radio controls in the car): while it is enabled Android Auto lists only
+             this entry and hides the media app, and a car that does not accept it is left with no way in and no sound -->
+        <service android:name=".car.RadioCarAppService" android:exported="true" android:enabled="false" android:label="Radio controls" android:icon="@mipmap/ic_launcher">
             <intent-filter>
                 <action android:name="androidx.car.app.CarAppService" />
                 <category android:name="androidx.car.app.category.IOT" />
