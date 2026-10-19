@@ -52,6 +52,8 @@ public class CoverageMathTest {
     @Test public void sUnits() {
         assertEquals("S9", CoverageMath.sUnits(-93));
         assertEquals("S9+20", CoverageMath.sUnits(-73));
+        assertEquals("S9+5", CoverageMath.sUnits(-88));
+        assertEquals("S9+30", CoverageMath.sUnits(-65));
         assertEquals("S8", CoverageMath.sUnits(-99));
         assertEquals("S5", CoverageMath.sUnits(-117));
     }

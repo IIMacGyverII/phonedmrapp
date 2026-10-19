@@ -99,9 +99,9 @@ public final class CoverageMath {
         return 0xFF000000 | (r << 16) | (g << 8) | bl;
     }
 
-    /** S-units for a reading (S9 = -93 dBm, 6 dB per S-unit), for labels: "S7", "S9+10". */
+    /** S-units for a reading (S9 = -93 dBm, 6 dB per S-unit; above S9 in 5 dB steps), for labels: "S7", "S9+5". */
     public static String sUnits(int dbm) {
-        if (dbm >= -93) { int over = (int) Math.round((dbm + 93) / 10.0) * 10; return over <= 0 ? "S9" : "S9+" + over; }
+        if (dbm >= -93) { int over = (int) Math.round((dbm + 93) / 5.0) * 5; return over <= 0 ? "S9" : "S9+" + over; }
         int s = 9 - (int) Math.ceil((-93 - dbm) / 6.0); return "S" + Math.max(0, s);
     }
 }
