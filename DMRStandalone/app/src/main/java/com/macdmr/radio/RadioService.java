@@ -929,7 +929,12 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     @Override public void status(int code, String name) {
         switch (code) {
-            case 1: receiving = true; refreshControls(); rxStart = System.currentTimeMillis(); rxCounts = rxReportsReception(); softSq.rxStarted(); ui.post(() -> { for (Listener l : listeners) l.onRx(true); }); pollRssi(); break;
+            case 1: receiving = true;
+                if (current != null && current.isDigital()) {           // a DMR call: forget the last talker, ask who this is now and again a second later
+                    lastCaller = 0; callLogged = false;
+                    for (long ms : new long[] { 300, 1200 }) ui.postDelayed(() -> { if (receiving) worker.execute(() -> { try { engine.queryCallerInfo(); } catch (IOException ignored) { } }); }, ms);
+                }
+                refreshControls(); rxStart = System.currentTimeMillis(); rxCounts = rxReportsReception(); softSq.rxStarted(); ui.post(() -> { for (Listener l : listeners) l.onRx(true); }); pollRssi(); break;
             case 2: {
                 receiving = false; refreshControls(); long len = rxStart > 0 ? System.currentTimeMillis() - rxStart : 0; rxStart = 0;
                 if (softSq.isEnabled() && squelchOpen) { softSq.closeNow(); softGateHistory(false); squelchOpen = false; log("soft squelch closed (carrier gone)"); }
@@ -955,9 +960,14 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     @Override public void rssi(int raw, double dbm) { rssi = (int) Math.round(dbm); if (coverage != null) coverage.onRssi(rssi); if (hearing()) refreshControls(); /* the car screen's signal meter */ ui.post(() -> { for (Listener l : listeners) l.onRssi(rssi); }); }
     @Override public void version(int v, String text) { log("module " + text); }
+    /** One history line, voice announcement and caller report per call (the caller is asked at the start, a second in, and at the end). */
+    private volatile boolean callLogged; private volatile int loggedCaller, loggedTarget;
     @Override public void callerInfo(int type, int caller, int target) {
         if (caller <= 0) return;
         lastCaller = caller; lastCallType = type; lastTarget = target;
+        refreshControls();   // the car screens show who is talking
+        if (callLogged && caller == loggedCaller && target == loggedTarget) return;
+        callLogged = true; loggedCaller = caller; loggedTarget = target;
         String t = (type == 1 ? "TG " + target : type == 2 ? "All call" : "Private") ;
         String who = callerName(caller);
         history("dmr", "📻 Voice RX " + t + " from " + (who.isEmpty() ? String.valueOf(caller) : who + " (" + caller + ")"));
@@ -1029,7 +1039,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         RadioWidget.refresh(this, this);
         updateAudioFocus();
         try {
-            com.macdmr.radio.media.RadioMedia.get(this).update(this, !isMuted(), isReady() ? RadioWidget.status(this).replace("Mapping coverage · ", "") : "Radio " + link, zoneName(), isScanning());   // the car screen does not need the logging note
+            com.macdmr.radio.media.RadioMedia.get(this).update(this, !isMuted(), carStatus(), zoneName(), isScanning());
         } catch (Throwable t) { log("media session: " + t); }
     };
 
@@ -1127,10 +1137,45 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     public boolean isTransmitting() { return transmitting || pttDown; }
     public int lastRssi() { return rssi; }
-    /** Who is talking on a DMR channel right now (name from RadioID, or the ID), else "". */
+    /** Who is talking on a DMR channel right now (name from the contacts or RadioID, or the ID), else "". */
     public String currentCaller() {
-        if (current == null || !current.isDigital() || !hearing() || lastCaller <= 0) return "";
+        if (!dmrCallNow()) return "";
         String n = callerName(lastCaller); return n.isEmpty() ? "ID " + lastCaller : n;
+    }
+    private boolean dmrCallNow() { return current != null && current.isDigital() && hearing() && lastCaller > 0; }
+    /** The talker's DMR ID during a call, else 0. */
+    public int currentCallerId() { return dmrCallNow() ? lastCaller : 0; }
+    /** The talker's callsign when the name starts with one ("VE3UOD Richard ..." gives "VE3UOD"), else the name or "ID n". */
+    public String currentCallsign() {
+        String c = currentCaller(); if (c.isEmpty()) return "";
+        String first = c.split("\\s+")[0];
+        return first.matches("[A-Z0-9]{1,3}[0-9][A-Z0-9]{1,4}") ? first : c;
+    }
+    /** What the call goes to: "TG 11904 Ontario" (the talkgroup's contact name when known), "Private call", "All call", or "". */
+    public String currentTarget() {
+        if (!dmrCallNow()) return "";
+        if (lastCallType == 1) { String n = store.contactName(lastTarget, 1); return "TG " + lastTarget + (n == null || n.isEmpty() || n.equals(String.valueOf(lastTarget)) ? "" : " " + n); }
+        if (lastCallType == 2) return "All call";
+        return "Private call";
+    }
+    /**
+     * The zone to show with a channel: the selected zone when it holds the channel; otherwise the first other zone
+     * that does (Favourites last); "" when none does.
+     */
+    public String zoneLabelFor(ChannelStore.Channel ch) {
+        if (ch == null) return "";
+        ChannelStore.Zone sel = zoneId > 0 ? store.zone(zoneId) : null;
+        if (zoneId <= 0) return "ALL";
+        if (sel != null) for (int n : sel.numbers) if (n == ch.number) return sel.name;
+        String fav = null;
+        for (ChannelStore.Zone z : store.zones()) for (int n : z.numbers) if (n == ch.number) { if (com.macdmr.radio.ui.ChannelsView.FAV_ZONE.equals(z.name)) fav = z.name; else return z.name; }
+        return fav != null ? fav : "";
+    }
+    /** The car's subtitle: during a DMR call who is talking and to what; otherwise frequency and state. */
+    public String carStatus() {
+        String who = currentCaller();
+        if (!who.isEmpty()) { int id = currentCallerId(); String t = currentTarget(); return who + (who.startsWith("ID ") ? "" : " \u00b7 " + id) + (t.isEmpty() ? "" : " \u00b7 " + t); }
+        return isReady() ? RadioWidget.status(this).replace("Mapping coverage \u00b7 ", "") : "Radio " + link;
     }
 
     // ---- coverage mapping ---------------------------------------------------------------------------
