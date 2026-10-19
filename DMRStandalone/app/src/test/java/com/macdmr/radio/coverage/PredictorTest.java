@@ -23,13 +23,48 @@ public class PredictorTest {
         assertTrue("flat " + l, l > Propagation.fspl(10_000, 450e6) + 5 && l < 128);
     }
 
+    @Test public void smoothEarthMatchesTheTextbook() {
+        // plane earth at 20 km (inside the 27.6 km radio horizon), 30 m and 1.5 m: 40 log d - 20 log h1 h2 = 139.0 dB
+        assertEquals(139.0, Propagation.smoothEarth(20_000, 30, 1.5, 162.5e6), 0.2);
+        // beyond the horizon it keeps falling much faster than free space
+        double at60 = Propagation.smoothEarth(60_000, 30, 1.5, 162.5e6), at120 = Propagation.smoothEarth(120_000, 30, 1.5, 162.5e6);
+        assertTrue("60 km " + at60 + ", 120 km " + at120, at120 - at60 > 25);
+        // a taller antenna sees further: less loss at the same distance
+        assertTrue(Propagation.smoothEarth(60_000, 100, 1.5, 162.5e6) < at60 - 10);
+        // never better than free space
+        assertTrue(Propagation.smoothEarth(500, 30, 1.5, 162.5e6) >= Propagation.fspl(500, 162.5e6));
+    }
+
     @Test public void ridgeShadows() {
         double[] flat = new double[101], ridge = new double[101];
         for (int i = 45; i <= 55; i++) ridge[i] = 150;                  // a 150 m hill halfway
         double open = Propagation.pathLoss(flat, 100, 30, 1.5, 450e6), hidden = Propagation.pathLoss(ridge, 100, 30, 1.5, 450e6);
-        assertTrue("ridge adds " + (hidden - open), hidden - open > 20);
+        assertTrue("ridge adds " + (hidden - open), hidden - open > 8);    // on top of the flat-ground (plane earth) loss
         double[] high = ridge.clone(); high[0] = 400;                   // repeater on a 400 m mountain sees over it
         assertTrue(Propagation.pathLoss(high, 100, 30, 1.5, 450e6) < hidden - 15);
+    }
+
+    @Test public void fitsTheAntennaHeight() {
+        Predictor.Elevation hills = (lat, lon) -> 250 + 40 * Math.sin(lat * 900) + 30 * Math.cos(lon * 700);
+        Predictor.Params truth = new Predictor.Params(); truth.lat = 45.0; truth.lon = -93.0; truth.hz = 162.55e6; truth.antennaAgl = 120;
+        java.util.List<double[]> m = new ArrayList<>();
+        for (int i = 0; i < 24; i++) {                                   // readings 3 to 40 km out in different directions
+            double brg = i * 0.9, km = 3 + i * 1.6;
+            double lat = 45.0 + km / 111.32 * Math.cos(brg), lon = -93.0 + km / (111.32 * Math.cos(Math.toRadians(45))) * Math.sin(brg);
+            m.add(new double[] { lat, lon, Predictor.DOWNLINK_BUDGET - Predictor.loss(hills, truth, lat, lon) + 10 });
+        }
+        Predictor.Params guess = new Predictor.Params(); guess.lat = 45.0; guess.lon = -93.0; guess.hz = 162.55e6; guess.antennaAgl = 30;
+        double[] fit = Predictor.fitAntenna(hills, guess, m);
+        assertEquals(120, fit[0], 1e-9);
+        assertEquals(10, fit[1], 0.5);
+        assertEquals(30, guess.antennaAgl, 1e-9);                        // the caller's params are left as they were
+    }
+
+    @Test public void reachGrowsWithPowerAndHeight() {
+        Predictor.Params small = new Predictor.Params(); small.hz = 162.5e6; small.antennaAgl = 30; small.budget = Predictor.downlinkBudget(50);
+        Predictor.Params big = new Predictor.Params(); big.hz = 162.5e6; big.antennaAgl = 85; big.budget = Predictor.downlinkBudget(1000);
+        double a = Predictor.reachM(small, CoverageMath.SCALE_LOW, 200_000), b = Predictor.reachM(big, CoverageMath.SCALE_LOW, 200_000);
+        assertTrue("50 W/30 m " + a + ", 1000 W/85 m " + b, b > a * 1.5 && a >= 10_000);
     }
 
     @Test public void gridAndCalibration() {

@@ -45,8 +45,12 @@ public final class MapDialog {
     private com.macdmr.radio.coverage.Prediction.Result pred; private volatile int predRun; private String predStatus = "";
     private android.content.SharedPreferences cprefs() { return c.getSharedPreferences("coverage", Context.MODE_PRIVATE); }
     private boolean predictOn() { return cprefs().getBoolean("predict", true); }
-    private int antennaM() { return focusKey == null ? 30 : cprefs().getInt("ant_" + focusKey, 30); }
-    private int rangeMi() { return cprefs().getInt("predRangeMi", 20); }
+    /** The repeater antenna height chosen for the focused repeater; 0 = Auto (fitted from the measurements, 30 m without enough of them). */
+    private int antennaM() { return focusKey == null ? 0 : cprefs().getInt("ant_" + focusKey, 0); }
+    /** Prediction range in miles; 0 = Auto (as far as the transmitter can reach, up to 50 miles). */
+    private int rangeMi() { return cprefs().getInt("predRangeMi", 0); }
+    /** Transmitter power for the focused repeater (W); 0 = not known (50 W assumed, the measurements correct the level). */
+    private int powerW() { return focusKey == null ? 0 : cprefs().getInt("pwr_" + focusKey, 0); }
     private void focus(String key, String name, double lat, double lon, double hz) { focusKey = key; focusName = name; focusLat = lat; focusLon = lon; focusHz = hz; pred = null; }
     private LinearLayout legend;
     private final int[] counts = new int[4];
@@ -285,12 +289,14 @@ public final class MapDialog {
         if (!predictOn() || focusKey == null || layer == MapView.LAYER_NONE) { map.setPredicted(null); predStatus = ""; return; }
         if (pred != null) { map.setPredicted(layer == MapView.LAYER_RX ? pred.rx : pred.tx); predStatus = pred.summary(layer == MapView.LAYER_RX); return; }
         final int run = ++predRun;
-        final String key = focusKey; final double lat = focusLat, lon = focusLon, hz = focusHz, ant = antennaM(), rad = rangeMi() * 1609.344;
+        final String key = focusKey; final double lat = focusLat, lon = focusLon, hz = focusHz, ant = antennaM(), erp = powerW(), rad = rangeMi() * 1609.344;
+        final android.location.Location here = svc.lastKnownLocation();
+        final double meLat = here != null ? here.getLatitude() : Double.NaN, meLon = here != null ? here.getLongitude() : Double.NaN;
         predStatus = "Terrain prediction: starting\u2026";
         new Thread(() -> {
             com.macdmr.radio.coverage.Prediction.Result r; String err = null;
             try {
-                r = com.macdmr.radio.coverage.Prediction.run(c, svc.coverage().store(), key, lat, lon, hz, ant, rad, text -> {
+                r = com.macdmr.radio.coverage.Prediction.run(c, svc.coverage().store(), key, lat, lon, hz, ant, erp, rad, meLat, meLon, text -> {
                     if (run != predRun) return false;
                     ui.post(() -> { if (run == predRun) { predStatus = "Terrain prediction: " + text; showLegend(measuredSquares); } });
                     return true;
@@ -347,7 +353,7 @@ public final class MapDialog {
             if (layer == MapView.LAYER_RX) {
                 cardTitle.setText("About " + cell.value + " dBm \u00b7 " + com.macdmr.radio.coverage.CoverageMath.sUnits(cell.value)); cardTitle.setTextColor(com.macdmr.radio.coverage.CoverageMath.signalColor(cell.value));
                 cardSub.setText("Predicted \u00b7 " + focusName + " \u00b7 " + where);
-                cardBody.setText("Not measured here: calculated from the terrain between this square and the repeater (antenna " + antennaM() + " m above ground). " + (pred != null ? pred.summary(true) + "." : "") + " Trees and buildings are not in the terrain data, so expect less in forest and town.");
+                cardBody.setText("Not measured here: calculated from the terrain between this square and the repeater (antenna " + (pred != null ? Math.round(pred.antennaUsed) : 30) + " m above ground" + (pred != null && pred.antennaFitted ? ", fitted to your measurements" : "") + "). " + (pred != null ? pred.summary(true) + "." : "") + " Trees and buildings are not in the terrain data, so expect less in forest and town.");
             } else {
                 cardTitle.setText("Should key up (" + cell.value + " dB to spare)"); cardTitle.setTextColor(Neo.GREEN);
                 cardSub.setText("Predicted \u00b7 " + focusName + " \u00b7 " + where);
@@ -449,9 +455,14 @@ public final class MapDialog {
             prow.setBackground(Neo.rowCard(c)); box.addView(prow);
             ps.setOnChange(on -> { cprefs().edit().putBoolean("predict", on).apply(); updatePrediction(); showLegend(measuredSquares); });
             box.addView(Neo.sheetHint(c, "Repeater antenna height above ground"));
-            box.addView(choiceRow(new int[] { 15, 30, 60, 100 }, " m", antennaM(), v -> { cprefs().edit().putInt("ant_" + focusKey, v).apply(); pred = null; updatePrediction(); }));
-            box.addView(Neo.sheetHint(c, "Range"));
-            box.addView(choiceRow(new int[] { 10, 20, 30 }, " mi", rangeMi(), v -> { cprefs().edit().putInt("predRangeMi", v).apply(); pred = null; updatePrediction(); }));
+            box.addView(choiceRow(new int[] { 0, 15, 30, 60, 100 }, new String[] { "Auto", "15 m", "30 m", "60 m", "100 m" }, antennaM(), " m", "Antenna height above ground (m)", 3, 600,
+                    v -> { cprefs().edit().putInt("ant_" + focusKey, v).apply(); pred = null; updatePrediction(); }));
+            box.addView(Neo.sheetHint(c, "Auto fits the height to your Heard measurements once they cover a range of distances (it shapes how far the signal carries over the hills); until then it uses 30 m. If you know it (the tower registry lists tower heights), Set it."));
+            box.addView(Neo.sheetHint(c, "Transmitter power (effective radiated). Unknown: 50 W is assumed and your Heard readings correct the level. NOAA Weather Radio stations list theirs (most are 1000 W)."));
+            box.addView(choiceRow(new int[] { 0, 25, 100, 300, 1000 }, new String[] { "Unknown", "25 W", "100 W", "300 W", "1000 W" }, powerW(), " W", "Transmitter power (W)", 1, 100000,
+                    v -> { cprefs().edit().putInt("pwr_" + focusKey, v).apply(); pred = null; updatePrediction(); }));
+            box.addView(Neo.sheetHint(c, "Range: Auto reaches as far as this transmitter's power and antenna height can carry over flat ground (hills only shorten it), up to 50 miles; a fixed range is a minimum. It always reaches your position and everything you have measured."));
+            box.addView(choiceRow(new int[] { 0, 10, 20, 30, 50 }, new String[] { "Auto", "10 mi", "20 mi", "30 mi", "50 mi" }, rangeMi(), null, null, 0, 0, v -> { cprefs().edit().putInt("predRangeMi", v).apply(); pred = null; updatePrediction(); }));
             box.addView(Neo.sheetHint(c, "Terrain heights come from the open Terrain Tiles (about 55 m detail) and are kept on the phone. The first prediction for an area downloads them."));
         }
         int located = 0; for (ChannelStore.Channel x : svc.store().all()) if (x.lat != 0 || x.lon != 0) located++;
@@ -478,16 +489,35 @@ public final class MapDialog {
     }
 
     private interface IntPick { void pick(int v); }
-    private LinearLayout choiceRow(int[] values, String unit, int current, IntPick pick) {
+    /**
+     * A row of choice pills. With {@code unit} set, a last "Set" pill takes any whole number from {@code min} to
+     * {@code max} (it shows the value when the current one is not among the pills).
+     */
+    private LinearLayout choiceRow(int[] values, String[] labels, int current, String unit, String askTitle, int min, int max, IntPick pick) {
         LinearLayout row = new LinearLayout(c); row.setPadding(0, (int) (4 * d), 0, (int) (4 * d));
         final List<TextView> all = new ArrayList<>();
+        boolean listed = false; for (int v : values) if (v == current) listed = true;
         for (int i = 0; i < values.length; i++) {
             final int v = values[i];
-            TextView t = Neo.label(c, v + unit, Neo.VIOLET, 14, true); t.setGravity(Gravity.CENTER); t.setPadding(0, (int) (8 * d), 0, (int) (8 * d));
+            TextView t = Neo.label(c, labels[i], Neo.VIOLET, 14, true); t.setGravity(Gravity.CENTER); t.setPadding(0, (int) (8 * d), 0, (int) (8 * d));
             Neo.pillStyle(t, v == current, Neo.VIOLET); all.add(t);
             LinearLayout.LayoutParams l = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f); l.setMargins(i == 0 ? 0 : (int) (3 * d), 0, i == values.length - 1 ? 0 : (int) (3 * d), 0);
             row.addView(t, l);
             t.setOnClickListener(x -> { for (TextView o : all) Neo.pillStyle(o, o == x, Neo.VIOLET); pick.pick(v); });
+        }
+        if (unit != null) {
+            final TextView set = Neo.label(c, listed ? "Set" : current + unit, Neo.VIOLET, 14, true); set.setGravity(Gravity.CENTER); set.setPadding(0, (int) (8 * d), 0, (int) (8 * d));
+            Neo.pillStyle(set, !listed, Neo.VIOLET); all.add(set);
+            LinearLayout.LayoutParams l = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.15f); l.setMargins((int) (3 * d), 0, 0, 0);
+            row.addView(set, l);
+            set.setOnClickListener(x -> {
+                final android.widget.EditText in = new android.widget.EditText(c); in.setInputType(android.text.InputType.TYPE_CLASS_NUMBER); in.setHint(min + " to " + max);
+                new android.app.AlertDialog.Builder(c).setTitle(askTitle).setView(in).setPositiveButton("Set", (dd, w) -> {
+                    int v; try { v = Integer.parseInt(in.getText().toString().trim()); } catch (NumberFormatException e) { return; }
+                    if (v < min || v > max) { Toast.makeText(c, "Between " + min + " and " + max, Toast.LENGTH_SHORT).show(); return; }
+                    for (TextView o : all) Neo.pillStyle(o, o == set, Neo.VIOLET); set.setText(v + unit); pick.pick(v);
+                }).setNegativeButton("Cancel", null).show();
+            });
         }
         return row;
     }
