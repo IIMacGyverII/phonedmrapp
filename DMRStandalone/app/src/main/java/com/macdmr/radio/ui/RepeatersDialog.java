@@ -69,8 +69,8 @@ public final class RepeatersDialog {
             if (n++ >= 150) break;
             LinearLayout rowv = shell();
             String kind = r.dmr && r.fm ? "DMR + FM" : r.dmr ? "DMR" + (r.cc >= 0 ? " CC" + r.cc : "") : "FM" + (hasTone(r.toneUp) ? " " + r.toneUp : "");
-            rowv.addView(Theme.label(c, nz(r.callsign) + "  ·  " + kind, r.dmr ? Theme.AMBER : Theme.CYAN, 15, true));
-            rowv.addView(Theme.label(c, String.format(Locale.US, "%.4f MHz %s%.1f  ·  %s %s%s", r.rxHz / 1e6, r.offsetHz() >= 0 ? "+" : "−", Math.abs(r.offsetHz()) / 1e6, GeoUtil.formatDistanceWithArrow(lat, lon, r.lat, r.lon), nz(r.city), r.approx ? " (approx.)" : ""), 0xFFBFC8D0, 12, false));
+            rowv.addView(Neo.label(c, nz(r.callsign) + "  ·  " + kind, r.dmr ? Theme.AMBER : Theme.CYAN, 15, true));
+            rowv.addView(Neo.label(c, String.format(Locale.US, "%.4f MHz %s%.1f  ·  %s %s%s", r.rxHz / 1e6, r.offsetHz() >= 0 ? "+" : "−", Math.abs(r.offsetHz()) / 1e6, GeoUtil.formatDistanceWithArrow(lat, lon, r.lat, r.lon), nz(r.city), r.approx ? " (approx.)" : ""), 0xFFBFC8D0, 12, false));
             rowv.setClickable(true); rowv.setOnClickListener(x -> details(r, lat, lon));
             list.addView(rowv);
         }
@@ -78,7 +78,7 @@ public final class RepeatersDialog {
 
     private void details(final Repeater r, double lat, double lon) {
         LinearLayout body = page("📡  " + nz(r.callsign));
-        body.addView(Theme.label(c, String.format(Locale.US, "RX %.4f MHz  ·  TX %.4f MHz", r.rxHz / 1e6, r.txHz / 1e6), Theme.CYAN, 15, true));
+        body.addView(Neo.label(c, String.format(Locale.US, "RX %.4f MHz  ·  TX %.4f MHz", r.rxHz / 1e6, r.txHz / 1e6), Theme.CYAN, 15, true));
         body.addView(hint((r.dmr ? "DMR" + (r.cc >= 0 ? ", colour code " + r.cc : "") + (r.network != null ? ", " + r.network : "") : "FM" + (hasTone(r.toneUp) ? ", TX tone " + r.toneUp : "") + (hasTone(r.toneDown) ? ", RX tone " + r.toneDown : "")) + "\n" + nz(r.city) + (r.region != null && !r.region.isEmpty() ? ", " + r.region : "") + "  ·  " + GeoUtil.formatDistanceWithArrow(lat, lon, r.lat, r.lon) + (r.approx ? " (position approximate)" : "") + (r.status != null && !r.status.isEmpty() ? "\nStatus: " + r.status : "") + (r.lastSeen != null && !r.lastSeen.isEmpty() ? "\nLast seen: " + r.lastSeen : "")));
         final Set<Integer> talk = new LinkedHashSet<>();
         final LinearLayout tgBox = new LinearLayout(c); tgBox.setOrientation(LinearLayout.VERTICAL); body.addView(tgBox);
@@ -93,7 +93,7 @@ public final class RepeatersDialog {
                     for (final Talkgroup tg : tgs) {
                         final boolean[] on = { "static".equalsIgnoreCase(tg.kind) };
                         if (on[0]) talk.add(tg.id);
-                        final TextView t = Theme.label(c, (on[0] ? "☑ " : "☐ ") + "TS" + (tg.slot == 2 ? 2 : 1) + "  TG " + tg.id + (tg.name != null && !tg.name.isEmpty() ? "  " + tg.name : "") + (tg.kind != null ? "  (" + tg.kind + ")" : ""), on[0] ? Theme.AMBER : 0xFFBFC8D0, 13, false);
+                        final TextView t = Neo.label(c, (on[0] ? "☑ " : "☐ ") + "TS" + (tg.slot == 2 ? 2 : 1) + "  TG " + tg.id + (tg.name != null && !tg.name.isEmpty() ? "  " + tg.name : "") + (tg.kind != null ? "  (" + tg.kind + ")" : ""), on[0] ? Theme.AMBER : 0xFFBFC8D0, 13, false);
                         t.setPadding(0, dp(4), 0, dp(4)); t.setClickable(true);
                         t.setOnClickListener(x -> { on[0] = !on[0]; if (on[0]) talk.add(tg.id); else talk.remove(tg.id); t.setText((on[0] ? "☑ " : "☐ ") + t.getText().toString().substring(2)); t.setTextColor(on[0] ? Theme.AMBER : 0xFFBFC8D0); });
                         tgBox.addView(t);
@@ -125,13 +125,13 @@ public final class RepeatersDialog {
     private static boolean hasTone(String t) { if (t == null) return false; String x = t.trim(); return !x.isEmpty() && !x.equalsIgnoreCase("None") && !x.equals("0") && !x.equals("0.0") && !x.equals("0.00"); }
     private int dp(float x) { return Math.round(x * d); }
     private void toast(String s) { Toast.makeText(c, s, Toast.LENGTH_LONG).show(); }
-    private LinearLayout page(String title) { LinearLayout b = new LinearLayout(c); b.setOrientation(LinearLayout.VERTICAL); b.setBackgroundColor(Theme.BG); b.setPadding(dp(16), dp(12), dp(16), dp(8)); b.addView(Theme.label(c, title, Theme.PKT[3], 20, true)); return b; }
-    private AlertDialog dialog(LinearLayout body) { ScrollView sv = new ScrollView(c); sv.addView(body); AlertDialog a = new AlertDialog.Builder(c).setView(sv).create();  a.show(); return a; }
-    private TextView hint(String s) { TextView t = Theme.label(c, s, 0xFF8A98A6, 12, false); t.setPadding(0, dp(4), 0, dp(6)); return t; }
-    private TextView section(String s) { TextView t = Theme.label(c, s, 0xFFBFC8D0, 13, true); t.setPadding(0, dp(8), 0, dp(4)); return t; }
+    private LinearLayout page(String title) { return Neo.sheetBody(c, title); }
+    private AlertDialog dialog(LinearLayout body) { return Neo.showSheet(c, body); }
+    private TextView hint(String s) { return Neo.sheetHint(c, s); }
+    private TextView section(String s) { return Neo.sheetSection(c, s); }
     private LinearLayout row() { LinearLayout r = new LinearLayout(c); r.setOrientation(LinearLayout.HORIZONTAL); r.setGravity(Gravity.CENTER_VERTICAL); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT); lp.topMargin = dp(2); lp.bottomMargin = dp(4); r.setLayoutParams(lp); return r; }
-    private LinearLayout shell() { LinearLayout r = new LinearLayout(c); r.setOrientation(LinearLayout.VERTICAL); r.setBackground(Theme.rounded(c, 0x18000000, 0x3300BFFF, 1, 8)); r.setPadding(dp(12), dp(8), dp(12), dp(8)); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT); lp.bottomMargin = dp(6); r.setLayoutParams(lp); return r; }
-    private TextView pill(LinearLayout row, String text, boolean on, View.OnClickListener l) { TextView t = Theme.label(c, text, 0xFFBFC8D0, 13, true); t.setGravity(Gravity.CENTER); t.setPadding(dp(6), dp(8), dp(6), dp(8)); t.setClickable(true); t.setOnClickListener(l); style(t, on); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f); lp.setMargins(dp(2), 0, dp(2), 0); row.addView(t, lp); return t; }
-    private void style(TextView t, boolean on) { t.setTextColor(on ? Theme.PKT[3] : 0xFFBFC8D0); t.setBackground(Theme.rounded(c, on ? Theme.PKT[0] : 0x18000000, on ? Theme.PKT[2] : 0x3300BFFF, on ? 2 : 1, 16)); }
-    private TextView button(LinearLayout row, String text, int[] accent, View.OnClickListener l) { TextView b = Theme.label(c, text, accent[3], 13, true); b.setGravity(Gravity.CENTER); b.setBackground(Theme.rounded(c, accent[0], accent[2], 2, 18)); b.setPadding(dp(6), dp(10), dp(6), dp(10)); b.setClickable(true); b.setOnClickListener(l); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f); lp.setMargins(dp(3), dp(2), dp(3), dp(2)); row.addView(b, lp); return b; }
+    private LinearLayout shell() { LinearLayout r = new LinearLayout(c); r.setOrientation(LinearLayout.VERTICAL); r.setBackground(Neo.rowCard(c)); r.setPadding(dp(12), dp(8), dp(12), dp(8)); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT); lp.bottomMargin = dp(6); r.setLayoutParams(lp); return r; }
+    private TextView pill(LinearLayout row, String text, boolean on, View.OnClickListener l) { TextView t = Neo.label(c, text, 0xFFBFC8D0, 13, true); t.setGravity(Gravity.CENTER); t.setPadding(dp(6), dp(8), dp(6), dp(8)); t.setClickable(true); t.setOnClickListener(l); style(t, on); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f); lp.setMargins(dp(2), 0, dp(2), 0); row.addView(t, lp); return t; }
+    private void style(TextView t, boolean on) { Neo.pillStyle(t, on, Neo.GREEN); }
+    private TextView button(LinearLayout row, String text, int[] accent, View.OnClickListener l) { TextView b = Neo.button(c, text, null, Neo.accentOf(accent)); b.setTextSize(14); b.setOnClickListener(l); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f); lp.setMargins(dp(3), dp(4), dp(3), dp(2)); row.setBaselineAligned(false); row.addView(b, lp); return b; }
 }

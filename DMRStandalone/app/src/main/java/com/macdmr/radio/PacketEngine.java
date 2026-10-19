@@ -311,6 +311,7 @@ public final class PacketEngine {
         try {
             List<byte[]> frames = AFSKDecoder.decode(up6(samples));
             for (byte[] frame : frames) {
+                if (!Ax25.plausible(frame)) continue;   // noise that passed the FCS: never log, gate, digipeat or hand it to the TNC
                 if (duplicate(frame)) continue;
                 kiss.deliver(frame);
                 maybeDigipeat(frame);
@@ -323,7 +324,8 @@ public final class PacketEngine {
                 if (p.isMessage()) messageReceived(p, from);
                 else if (p.status != null) store.log("status", from, p.destCallsign, p.status, null, false);
                 else if (!p.hasPosition) store.log("other", from, p.destCallsign, p.rawInfo, null, false);
-                host.event("📡 " + from + ": " + APRSPacketDecoder.describe(p));
+                String desc = APRSPacketDecoder.describe(p);
+                host.event("📡 " + from + ": " + (desc == null || desc.trim().isEmpty() ? (p.rawInfo == null ? "" : p.rawInfo.trim()) : desc));   // no summary for this packet type: show its text
             }
         } catch (Throwable t) { Log.w(TAG, "decode: " + t); }
     }

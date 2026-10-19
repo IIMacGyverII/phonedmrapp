@@ -65,6 +65,36 @@ public final class Ax25 {
         return sb.toString();
     }
 
+    /**
+     * Is this a well-formed APRS UI frame (FCS already checked and stripped)? 2 to 10 address fields of 6 shifted
+     * characters A-Z / 0-9, space-padded only at the end, at least one character each; then control 0x03 and PID 0xF0.
+     * Noise that happens to pass the 16-bit FCS (about 1 in 65,536 candidates on a busy noisy channel) fails this.
+     */
+    public static boolean plausible(byte[] f) {
+        if (f == null || f.length < 16) return false;
+        int off = 0, n = 0;
+        while (true) {
+            if (off + 7 > f.length) return false;
+            boolean pad = false; int chars = 0;
+            for (int i = 0; i < 6; i++) {
+                int b = f[off + i] & 0xFF; if ((b & 1) != 0) return false;
+                char ch = (char) (b >> 1);
+                if (ch == ' ') { pad = true; continue; }
+                if (pad) return false;
+                if (!((ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9'))) return false;
+                chars++;
+            }
+            if (chars == 0) return false;
+            n++;
+            boolean last = (f[off + 6] & 0x01) != 0;
+            off += 7;
+            if (last) break;
+            if (n >= 10) return false;
+        }
+        if (n < 2 || off + 2 > f.length) return false;
+        return (f[off] & 0xFF) == 0x03 && (f[off + 1] & 0xFF) == 0xF0;
+    }
+
     /** "SRC>DST,PATH*:info" (TNC2 monitor format) for display and logs; FCS must already be stripped. */
     public static String tnc2(byte[] f) {
         try {

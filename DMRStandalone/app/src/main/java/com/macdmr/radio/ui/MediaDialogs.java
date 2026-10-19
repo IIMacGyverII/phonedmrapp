@@ -44,9 +44,9 @@ public final class MediaDialogs {
         for (final File file : files) {
             if (n++ >= 150) break;
             final LinearLayout row = shell(c);
-            final TextView t = Theme.label(c, "▶ " + file.getParentFile().getName() + "  ·  " + file.getName().replace(".wav", ""), Theme.CYAN, 14, true);
+            final TextView t = Neo.label(c, "▶ " + file.getParentFile().getName() + "  ·  " + file.getName().replace(".wav", ""), Theme.CYAN, 14, true);
             row.addView(t);
-            row.addView(Theme.label(c, f.format(new Date(file.lastModified())) + String.format(Locale.US, "  ·  %.0f s  ·  %.0f kB", Math.max(0, file.length() - 44) / 16000.0, file.length() / 1024.0), 0xFFBFC8D0, 12, false));
+            row.addView(Neo.label(c, f.format(new Date(file.lastModified())) + String.format(Locale.US, "  ·  %.0f s  ·  %.0f kB", Math.max(0, file.length() - 44) / 16000.0, file.length() / 1024.0), 0xFFBFC8D0, 12, false));
             row.setClickable(true); row.setLongClickable(true);
             row.setOnClickListener(v -> toggle(c, file, t));
             row.setOnLongClickListener(v -> { new AlertDialog.Builder(c).setTitle("Delete recording?").setMessage(file.getName()).setPositiveButton("Delete", (dd, w) -> { stop(); if (file.delete()) { body.removeView(row); Toast.makeText(c, "Deleted", Toast.LENGTH_SHORT).show(); } }).setNegativeButton("Cancel", null).show(); return true; });
@@ -79,16 +79,16 @@ public final class MediaDialogs {
         for (Object[] r : rows) {
             ChannelStore.Channel ch = svc.store().byNumber((Integer) r[1]);
             LinearLayout row = shell(c);
-            row.addView(Theme.label(c, ((String) r[2]).replace("📝 ", ""), Theme.WHITE, 14, false));
-            row.addView(Theme.label(c, f.format(new Date((Long) r[0])) + "  ·  " + (ch != null ? ch.name : "channel " + r[1]), 0xFF8A98A6, 11, false));
+            row.addView(Neo.label(c, ((String) r[2]).replace("📝 ", ""), Theme.WHITE, 14, false));
+            row.addView(Neo.label(c, f.format(new Date((Long) r[0])) + "  ·  " + (ch != null ? ch.name : "channel " + r[1]), 0xFF8A98A6, 11, false));
             body.addView(row);
         }
         dialog(c, body);
     }
 
     // ---- widgets ----
-    private static LinearLayout page(Context c, String title) { float d = Theme.dp(c); LinearLayout b = new LinearLayout(c); b.setOrientation(LinearLayout.VERTICAL); b.setBackgroundColor(Theme.BG); b.setPadding((int) (16 * d), (int) (12 * d), (int) (16 * d), (int) (8 * d)); b.addView(Theme.label(c, title, Theme.CYAN, 20, true)); return b; }
-    private static AlertDialog dialog(Context c, LinearLayout body) { ScrollView sv = new ScrollView(c); sv.addView(body); AlertDialog a = new AlertDialog.Builder(c).setView(sv).create(); a.show(); return a; }
-    private static TextView hint(Context c, String s) { float d = Theme.dp(c); TextView t = Theme.label(c, s, 0xFF8A98A6, 12, false); t.setPadding(0, (int) (4 * d), 0, (int) (8 * d)); return t; }
-    private static LinearLayout shell(Context c) { float d = Theme.dp(c); LinearLayout r = new LinearLayout(c); r.setOrientation(LinearLayout.VERTICAL); r.setBackground(Theme.rounded(c, 0x18000000, 0x3300BFFF, 1, 8)); r.setPadding((int) (12 * d), (int) (8 * d), (int) (12 * d), (int) (8 * d)); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT); lp.bottomMargin = (int) (6 * d); r.setLayoutParams(lp); return r; }
+    private static LinearLayout page(Context c, String title) { return Neo.sheetBody(c, title); }
+    private static AlertDialog dialog(Context c, LinearLayout body) { return Neo.showSheet(c, body); }
+    private static TextView hint(Context c, String s) { return Neo.sheetHint(c, s); }
+    private static LinearLayout shell(Context c) { float d = Theme.dp(c); LinearLayout r = new LinearLayout(c); r.setOrientation(LinearLayout.VERTICAL); r.setBackground(Neo.rowCard(c)); r.setPadding((int) (12 * d), (int) (8 * d), (int) (12 * d), (int) (8 * d)); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT); lp.bottomMargin = (int) (6 * d); r.setLayoutParams(lp); return r; }
 }

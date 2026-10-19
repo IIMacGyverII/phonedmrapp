@@ -317,4 +317,76 @@ public final class Neo {
         t.setClickable(true); t.setFocusable(true);
         return t;
     }
+
+    // ---- sheets: the pop-up pages (VFO, packet tools, Last heard, Nearby repeaters, recordings, captions) ----
+
+    /** A label in the new look: old palette colours mapped to the new roles, Rajdhani text. */
+    public static TextView label(Context c, String s, int color, float sp, boolean bold) {
+        TextView t = text(c, s, remap(color), sp + (bold ? 0.5f : 1f), bold ? ui(c) : uiMedium(c));
+        t.setLineSpacing(0, 1.08f);
+        return t;
+    }
+    private static int remap(int col) {
+        switch (col) {
+            case 0xFF00E5FF: case 0xFF00BFFF: return CYAN;          // Theme.CYAN, CYAN2, SOFTSQ text
+            case 0xFFFFD54F: case 0xFFFFCC80: return AMBER_LIGHT;   // Theme.AMBER, MON / VFO text
+            case 0xFF69F0AE: case 0xFF00FF00: return GREEN_LIGHT;   // PKT text, Theme.GREEN
+            case 0xFFFF8A80: case 0xFFF44336: return RED;           // REC text, Theme.RED
+            case 0xFFE1BEE7: return VIOLET_LIGHT;                   // TXT text
+            case 0xFFFFFFFF: return TEXT;
+            case 0xFFBFC8D0: case 0xFFC8D2DC: case 0xFFD0D8E0: return TEXT_SOFT;
+            case 0xFF8A98A6: case 0xFF9AA4AE: case 0xFF6F7F8F: return MUTED;
+            default: return col;
+        }
+    }
+    /** New-look accent for one of the old Theme accent sets. */
+    public static int accentOf(int[] a) {
+        if (a == Theme.PKT) return GREEN; if (a == Theme.VFO || a == Theme.MON) return AMBER; if (a == Theme.REC) return RED; if (a == Theme.TXT) return VIOLET;
+        return CYAN;
+    }
+    public static int light(int accent) { return accent == CYAN ? CYAN_LIGHT : accent == GREEN ? GREEN_LIGHT : accent == AMBER ? AMBER_LIGHT : accent == VIOLET ? VIOLET_LIGHT : accent; }
+
+    private static String iconFor(String title) {
+        String t = title.toLowerCase(java.util.Locale.US);
+        if (t.contains("packet")) return "pkt"; if (t.contains("vfo")) return "vfo"; if (t.contains("repeater")) return "repeaters";
+        if (t.contains("record")) return "rec"; if (t.contains("caption") || t.contains("transcript")) return "txt"; if (t.contains("last heard")) return "intercom";
+        if (t.contains("station")) return "globe"; if (t.contains("dtmf")) return "channels"; if (t.contains("weather") || t.contains("same")) return "alert";
+        if (t.contains("setting")) return "device"; if (t.contains("sstv") || t.contains("picture")) return "report"; if (t.contains("log")) return "diag";
+        return "radio";
+    }
+
+    /** The body of a sheet: opaque card, icon tile and title (a leading emoji in the old titles is dropped). */
+    public static LinearLayout sheetBody(Context c, String title) {
+        float d = Theme.dp(c);
+        LinearLayout body = new LinearLayout(c); body.setOrientation(LinearLayout.VERTICAL);
+        body.setBackground(sheet(c, alpha(CYAN, 0x66), 20)); body.setPadding((int) (18 * d), (int) (16 * d), (int) (18 * d), (int) (14 * d));
+        String clean = title.replaceFirst("^[^\\p{L}\\p{N}]+", "").trim();
+        LinearLayout head = new LinearLayout(c); head.setGravity(android.view.Gravity.CENTER_VERTICAL); head.setPadding(0, 0, 0, (int) (4 * d));
+        head.addView(iconTile(c, iconFor(clean), CYAN, 40), new LinearLayout.LayoutParams((int) (40 * d), (int) (40 * d)));
+        TextView t = text(c, clean, TEXT, 20, ui(c)); t.setPadding((int) (12 * d), 0, 0, 0);
+        head.addView(t, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        body.addView(head);
+        return body;
+    }
+    /** Show a sheet: scrollable, the card is the whole window (no stock dialog frame). */
+    public static android.app.AlertDialog showSheet(Context c, View body) {
+        android.widget.ScrollView sv = new android.widget.ScrollView(c); sv.setVerticalScrollBarEnabled(false); sv.addView(body);
+        android.app.AlertDialog a = new android.app.AlertDialog.Builder(c).setView(sv).create();
+        a.show();
+        if (a.getWindow() != null) a.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0));
+        return a;
+    }
+    public static TextView sheetHint(Context c, String s) { float d = Theme.dp(c); TextView t = label(c, s, MUTED, 12.5f, false); t.setPadding(0, (int) (4 * d), 0, (int) (8 * d)); return t; }
+    public static TextView sheetSection(Context c, String s) { float d = Theme.dp(c); TextView t = caps(c, s); t.setPadding(0, (int) (14 * d), 0, (int) (6 * d)); return t; }
+    public static GradientDrawable rowCard(Context c) {
+        GradientDrawable g = new GradientDrawable(); g.setColor(0xFF0E1A27); g.setCornerRadius(Theme.dp(c, 12)); g.setStroke(Theme.dp(c, 1), 0xFF1A2C3E);
+        return g;
+    }
+    /** Choice pill: lit in its accent when selected, quiet otherwise. */
+    public static void pillStyle(TextView t, boolean on, int accent) {
+        Context c = t.getContext();
+        if (on) t.setBackground(outline(c, accent, 0x33, 14, 1.5f));
+        else { GradientDrawable g = new GradientDrawable(); g.setColor(PANEL_SOLID); g.setCornerRadius(Theme.dp(c, 14)); g.setStroke(Theme.dp(c, 1), 0xFF22364A); t.setBackground(g); }
+        t.setTextColor(on ? light(accent) : 0xFF9FB4C8); t.setTypeface(ui(c));
+    }
 }
