@@ -72,7 +72,13 @@ public class RadioService extends Service implements RadioEngine.Events {
         @Override public boolean receiving() { return softSq.isEnabled() ? squelchOpen : receiving; }   // with Soft SQ on the module's squelch is open and it reports a reception all the time: the soft gate is the activity signal
         @Override public boolean softGated() { return softSq.isEnabled(); }
         @Override public ChannelStore.Channel priority() { int n = scanPriority(); return n > 0 ? store.byNumber(n) : null; }
-        @Override public void status(boolean s, boolean h, ChannelStore.Channel on) { if (!s) { final ChannelStore.Channel ch = current; if (ch != null && !ch.isDigital() && !ch.softSq && scanSoftSq()) worker.execute(() -> refreshSquelch(ch)); } pushModes(); }   // scan over: a channel that only had Soft SQ for the scan goes back to its own squelch
+        @Override public void status(boolean s, boolean h, ChannelStore.Channel on) {
+            if (voiceOn()) {
+                if (s && h && on != null) sayChannel("Holding " + channelWords(on));                       // the scan stopped on activity
+                else if (s && !h) { ui.removeCallbacks(channelSay); pendingChannelSay = null; if (speakingChannel && tts != null) try { tts.stop(); } catch (Throwable ignored) { } }   // moving on: drop it
+                else if (!s && current != null) sayChannel(channelWords(current));                          // scan off: where you are
+            }
+            if (!s) { final ChannelStore.Channel ch = current; if (ch != null && !ch.isDigital() && !ch.softSq && scanSoftSq()) worker.execute(() -> refreshSquelch(ch)); } pushModes(); }   // scan over: a channel that only had Soft SQ for the scan goes back to its own squelch
     });
     /** Every MCU/audio action runs here, in order — a PTT release can never overtake its press. */
     private final java.util.concurrent.ExecutorService worker = java.util.concurrent.Executors.newSingleThreadExecutor(r -> new Thread(r, "radio-worker"));
@@ -96,7 +102,35 @@ public class RadioService extends Service implements RadioEngine.Events {
     private android.speech.tts.TextToSpeech tts; private volatile boolean ttsReady;
     public boolean voiceOn() { return getSharedPreferences("radio", MODE_PRIVATE).getBoolean("voice", false); }
     public void setVoiceOn(boolean on) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("voice", on).apply(); if (on) say("Voice announcements on"); }
+    /** True while the speech queue holds only a channel announcement, which a newer one may cut off. */
+    private volatile boolean speakingChannel;
+    private String pendingChannelSay;
+    private final Runnable channelSay = () -> {
+        String t = pendingChannelSay; pendingChannelSay = null;
+        if (t == null || !voiceOn()) return;
+        try {
+            if (tts == null || !ttsReady) { say(t); speakingChannel = true; return; }
+            boolean cut = speakingChannel || !tts.isSpeaking();      // never cut off a caller name or a keyword alert
+            log("voice: " + t + (cut ? "" : " (queued behind other speech)"));
+            tts.speak(t, cut ? android.speech.tts.TextToSpeech.QUEUE_FLUSH : android.speech.tts.TextToSpeech.QUEUE_ADD, null, "channel");
+            speakingChannel = true;
+        } catch (Throwable e) { log("tts: " + e); }
+    };
+    /**
+     * Channel announcement: waits 350 ms so quick channel changes announce only where you land, and replaces a
+     * channel announcement that is still playing instead of queueing behind it.
+     */
+    public void sayChannel(final String text) {
+        pendingChannelSay = text;
+        ui.removeCallbacks(channelSay); ui.postDelayed(channelSay, 350);
+    }
+
+    private static String channelWords(ChannelStore.Channel ch) {
+        return "Channel " + ch.number + ", " + ch.name.replaceAll("[_]+", " ").replaceAll("\\((UHF|VHF)\\)", "").trim() + (ch.isDigital() ? ", digital" : "");
+    }
+
     public void say(final String text) {
+        speakingChannel = false;
         try {
             if (tts == null) { tts = new android.speech.tts.TextToSpeech(this, st -> { ttsReady = st == android.speech.tts.TextToSpeech.SUCCESS; if (ttsReady) { tts.setLanguage(Locale.US); tts.speak(text, android.speech.tts.TextToSpeech.QUEUE_ADD, null, "say"); } }); return; }
             if (ttsReady) tts.speak(text, android.speech.tts.TextToSpeech.QUEUE_ADD, null, "say");
@@ -623,7 +657,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             softSq.onRetune();
             squelchOpen = !softSq.isEnabled();                     // with Soft SQ on, stay muted until the detector opens (no burst of static after a retune)
             ui.post(() -> { for (Listener l : listeners) l.onChannel(ch); });
-            if (fromStore && voiceOn()) say("Channel " + ch.number + ", " + ch.name.replaceAll("[_]+", " ").replaceAll("\\((UHF|VHF)\\)", "").trim() + (ch.isDigital() ? ", digital" : ""));
+            if (fromStore && voiceOn() && !scanner.isScanning()) sayChannel(channelWords(ch));   // while scanning only a stop is announced (see the scanner status)
             pushModes();
             describeLocation(ch);
             updateNotification();
