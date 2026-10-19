@@ -28,7 +28,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
     private final View linkDot;
     private final ImageView heroIcon;
     private final TextView takeOver, handBack, reportNow;
-    private final Neo.NeonSwitch ownAtBoot, voiceSw, hwPttSw, volPttSw, scanSqSw, styleSw, animSw;
+    private final Neo.NeonSwitch ownAtBoot, voiceSw, hwPttSw, volPttSw, scanSqSw, styleSw, animSw, covSw;
     private final LinearLayout radioIdTile;
     private RadioService svc;
     private Host host;
@@ -84,7 +84,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
 
         // ---- radio settings ----
         LinearLayout set = card(body, "Radio settings");
-        ownAtBoot = sw(); hwPttSw = sw(); volPttSw = sw(); scanSqSw = sw(); voiceSw = sw(); styleSw = sw(); animSw = sw();
+        ownAtBoot = sw(); hwPttSw = sw(); volPttSw = sw(); scanSqSw = sw(); voiceSw = sw(); styleSw = sw(); animSw = sw(); covSw = sw();
         addRow(set, Neo.switchRow(c, "power", Neo.GREEN, "Own the radio at boot", "Otherwise the stock app is restored after a reboot", ownAtBoot));
         addRow(set, Neo.switchRow(c, "ptt", Neo.AMBER, "Side PTT key", "The phone's hardware push-to-talk button transmits", hwPttSw));
         addRow(set, Neo.switchRow(c, "volume", Neo.AMBER, "Volume-up transmits", "While the Intercom page is open", volPttSw));
@@ -93,6 +93,8 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         addRow(set, rogerRow(c));
         addRow(set, Neo.switchRow(c, "intercom", Neo.CYAN, "New intercom look", "Off: the classic intercom page", styleSw));
         addRow(set, Neo.switchRow(c, "diag", Neo.CYAN, "Animated panel when quiet", "Falling lines on an idle channel (uses a little battery)", animSw));
+        addRow(set, Neo.switchRow(c, "signal", Neo.VIOLET, "Coverage logging", "Records signal and key-ups with GPS for the coverage maps (Map → Coverage)", covSw));
+        covSw.setOnChange(on -> { if (svc != null) { svc.setCoverageLogging(on); android.widget.Toast.makeText(c, on ? "Coverage logging is on" : "Coverage logging is off", android.widget.Toast.LENGTH_SHORT).show(); } });
         animSw.setOnChange(on -> { if (host != null) host.animatedPanelChanged(on); });
         ownAtBoot.setOnChange(on -> { if (svc != null) svc.setOwnAtBoot(on); });
         hwPttSw.setOnChange(on -> { if (svc != null) svc.setHwPtt(on); });
@@ -325,6 +327,12 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
 
     public void setHost(Host h) { host = h; }
     public void attach(RadioService s) { svc = s; s.addListener(this); refresh(); }
+
+    /** The map can switch coverage logging too: show the current state whenever this page comes back. */
+    @Override protected void onVisibilityChanged(android.view.View changed, int visibility) {
+        super.onVisibilityChanged(changed, visibility);
+        if (visibility == VISIBLE && svc != null && covSw != null) covSw.setChecked(svc.coverage().enabled());
+    }
     public void detach() { if (svc != null) svc.removeListener(this); svc = null; }
 
     private void refresh() {
@@ -349,7 +357,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         if (rogerValue != null) rogerValue.setText(com.macdmr.radio.RadioService.ROGER_NAMES[svc.rogerStyle()]);
         ownAtBoot.setChecked(svc.ownAtBoot()); voiceSw.setChecked(svc.voiceOn()); hwPttSw.setChecked(svc.hwPtt()); scanSqSw.setChecked(svc.scanSoftSq());
         volPttSw.setChecked(c.getSharedPreferences("radio", Context.MODE_PRIVATE).getBoolean("volPtt", false));
-        styleSw.setChecked(IntercomView.newLook(c)); animSw.setChecked(IntercomView.animatedPanel(c));
+        styleSw.setChecked(IntercomView.newLook(c)); animSw.setChecked(IntercomView.animatedPanel(c)); covSw.setChecked(svc.coverage().enabled());
         ((TextView) radioIdTile.findViewWithTag("sub")).setText(svc.radioId().status());
     }
 
