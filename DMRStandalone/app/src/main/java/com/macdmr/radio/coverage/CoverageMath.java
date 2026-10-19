@@ -55,6 +55,12 @@ public final class CoverageMath {
         return best >= floorDbm + KEYUP_MARGIN_DB ? KEYED : NO_REPLY;
     }
 
+    /**
+     * A station that transmits all the time (NOAA Weather Radio, 162.400-162.550 MHz): every reading counts,
+     * heard or not, because silence means no coverage rather than nobody talking.
+     */
+    public static boolean continuousStation(int rxHz) { return rxHz >= 162_390_000 && rxHz <= 162_560_000; }
+
     /** Repeater identity: its output frequency and position (a channel can be renumbered or renamed). */
     public static String repeaterKey(int rxHz, double lat, double lon) {
         return String.format(Locale.US, "%d@%.3f,%.3f", rxHz, lat, lon);
