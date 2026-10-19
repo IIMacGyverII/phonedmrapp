@@ -29,8 +29,8 @@ public final class CarArt {
     /** The live panel for the radio's current state (shared by the media screen and the control screen). */
     public static Bitmap panelFor(Context c, com.macdmr.radio.RadioService s) {
         State st = new State();
-        st.ch = s.current(); st.zone = s.zoneName(); st.tx = s.isTransmitting(); st.rx = s.hearing(); st.scanning = s.isScanning();
-        st.ready = s.isReady(); st.muted = s.isMuted(); st.dbm = s.lastRssi(); st.caller = s.currentCaller();
+        st.ch = s.current(); st.zone = s.zoneLabelFor(s.current()); st.tx = s.isTransmitting(); st.rx = s.hearing(); st.scanning = s.isScanning();
+        st.ready = s.isReady(); st.muted = s.isMuted(); st.dbm = s.lastRssi(); st.caller = s.currentCallsign(); st.target = s.currentTarget();
         return panel(c, st);
     }
 
@@ -39,10 +39,10 @@ public final class CarArt {
 
     /** What the panel shows. */
     static final class State {
-        ChannelStore.Channel ch; String zone = ""; boolean tx, rx, scanning, ready, muted; int dbm = -999; String caller = "";
+        ChannelStore.Channel ch; String zone = ""; boolean tx, rx, scanning, ready, muted; int dbm = -999; String caller = "", target = "";
         String key() {
             int bucket = rx && dbm != -999 ? Math.max(0, Math.min(15, (dbm - CoverageMath.SCALE_LOW) / 4)) : -1;
-            return (ch == null ? "-" : ch.number + "|" + ch.name + "|" + ch.rxFreq + "|" + ch.power) + "|" + zone + "|" + tx + rx + scanning + ready + muted + "|" + bucket + "|" + caller;
+            return (ch == null ? "-" : ch.number + "|" + ch.name + "|" + ch.rxFreq + "|" + ch.power) + "|" + zone + "|" + tx + rx + scanning + ready + muted + "|" + bucket + "|" + caller + "|" + target;
         }
     }
 
@@ -60,7 +60,7 @@ public final class CarArt {
 
         // top: zone and state badge
         Paint caps = text(c, Neo.ui(c), 26, Neo.MUTED); caps.setLetterSpacing(0.18f);
-        cv.drawText(("ZONE · " + (s.zone == null ? "" : s.zone)).toUpperCase(Locale.US), 40, 70, caps);
+        if (s.zone != null && !s.zone.isEmpty()) cv.drawText(("ZONE · " + s.zone).toUpperCase(Locale.US), 40, 70, caps);   // only a zone the channel is in
         String badge; int bc;
         if (!s.ready) { badge = "RADIO OFF"; bc = Neo.AMBER; }
         else if (s.tx) { badge = "TRANSMITTING"; bc = Neo.RED; }
@@ -87,7 +87,12 @@ public final class CarArt {
             cv.drawText(s.ch.freqText(s.ch.rxFreq) + " MHz", W / 2f, 372, f);
             String[] chips = { s.ch.isDigital() ? "DMR" : "FM", s.ch.rxFreq < 300_000_000 ? "VHF" : "UHF", s.ch.power == 1 ? "HIGH PWR" : "LOW PWR" };
             int[] cc = { s.ch.isDigital() ? Neo.VIOLET : Neo.CYAN, Neo.CYAN, s.ch.power == 1 ? Neo.RED : Neo.AMBER };
-            if (s.caller != null && !s.caller.isEmpty()) { chips = new String[] { s.caller.length() > 18 ? s.caller.substring(0, 17) + "…" : s.caller }; cc = new int[] { Neo.AMBER }; }
+            if (s.caller != null && !s.caller.isEmpty()) {                       // during a DMR call: who (callsign) and to what
+                String who = s.caller.length() > 14 ? s.caller.substring(0, 13) + "…" : s.caller;
+                String to = s.target == null ? "" : s.target.length() > 14 ? s.target.substring(0, 13) + "…" : s.target;
+                if (to.isEmpty()) { chips = new String[] { who }; cc = new int[] { Neo.AMBER }; }
+                else { chips = new String[] { who, to }; cc = new int[] { Neo.AMBER, Neo.VIOLET }; }
+            }
             Paint ct = text(c, Neo.ui(c), 24, 0); ct.setLetterSpacing(0.1f);
             float total = 0; float[] w = new float[chips.length];
             for (int i = 0; i < chips.length; i++) { w[i] = ct.measureText(chips[i]) + 30; total += w[i]; }

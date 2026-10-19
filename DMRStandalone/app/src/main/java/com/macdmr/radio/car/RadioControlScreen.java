@@ -60,7 +60,7 @@ public class RadioControlScreen extends Screen {
         if (s == null) return "off";
         ChannelStore.Channel ch = s.current();
         int bucket = s.hearing() && s.lastRssi() != -999 ? (s.lastRssi() - CoverageMath.SCALE_LOW) / 4 : -1;
-        return (ch == null ? "-" : ch.number + ch.name) + s.isReady() + s.isTransmitting() + s.pttHeld() + s.hearing() + s.isScanning() + s.isMuted() + bucket + s.currentCaller() + s.zoneName();
+        return (ch == null ? "-" : ch.number + ch.name) + s.isReady() + s.isTransmitting() + s.pttHeld() + s.hearing() + s.isScanning() + s.isMuted() + bucket + s.currentCaller() + s.currentCallerId() + s.currentTarget() + s.zoneName();
     }
 
     @NonNull @Override public Template onGetTemplate() {
@@ -86,7 +86,12 @@ public class RadioControlScreen extends Screen {
         if (s.hearing() && s.lastRssi() != -999) status += " · " + CoverageMath.sUnits(s.lastRssi());
         pane.addRow(new Row.Builder().setTitle(ch == null ? "No channel" : "Ch " + ch.number + " · " + ch.name).addText(status).build());
         String caller = s.currentCaller();
-        if (!caller.isEmpty()) pane.addRow(new Row.Builder().setTitle("Talking: " + caller).build());
+        if (!caller.isEmpty()) {
+            int id = s.currentCallerId(); String to = s.currentTarget();
+            Row.Builder talk = new Row.Builder().setTitle("Talking: " + caller + (caller.startsWith("ID ") ? "" : " · " + id));
+            if (!to.isEmpty()) talk.addText(to);
+            pane.addRow(talk.build());
+        }
 
         // the picture: the same live panel as the media screen
         try {

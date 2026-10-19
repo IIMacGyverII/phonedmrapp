@@ -105,7 +105,7 @@ public final class RadioMedia {
         String title = ch == null ? "DMR Radio" : ch.name;
         CarArt.State st = new CarArt.State();
         st.ch = ch; st.zone = zone; st.tx = s.isTransmitting(); st.rx = s.hearing(); st.scanning = scanning; st.ready = s.isReady(); st.muted = !playing;
-        st.dbm = s.lastRssi(); st.caller = s.currentCaller();
+        st.dbm = s.lastRssi(); st.caller = s.currentCallsign(); st.target = s.currentTarget(); st.zone = s.zoneLabelFor(ch);
         String key = st.key();
         if (!key.equals(artKey)) { artKey = key; try { art = CarArt.panel(ctx, st); } catch (Throwable t) { art = null; } }
         session.setMetadata(new MediaMetadataCompat.Builder()
