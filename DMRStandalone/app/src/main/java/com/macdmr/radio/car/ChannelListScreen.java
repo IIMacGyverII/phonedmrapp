@@ -27,6 +27,7 @@ import java.util.Set;
  */
 public class ChannelListScreen extends Screen {
     private final long zoneId; private final boolean all; private final String title;
+    static final String FAV = com.macdmr.radio.ui.ChannelsView.FAV_ZONE;
 
     /** The zone list. */
     public ChannelListScreen(@NonNull CarContext c) { this(c, -1, false, "Channels"); }
@@ -46,8 +47,21 @@ public class ChannelListScreen extends Screen {
         if (s == null) {
             list.addItem(new Row.Builder().setTitle("The radio is off").addText("Open DMR Radio on the phone").build());
         } else if (zoneId < 0 && !all) {
-            List<ChannelStore.Zone> zones = s.store().zones();
-            int n = 0;
+            List<ChannelStore.Zone> zones = new ArrayList<>(s.store().zones());
+            ChannelStore.Zone fav = null;
+            for (ChannelStore.Zone z : zones) if (FAV.equals(z.name)) fav = z;
+            if (fav != null) zones.remove(fav);
+            // Favourites first, always: until channels are starred it says how
+            if (fav != null && fav.numbers.length > 0) {
+                final ChannelStore.Zone f = fav;
+                list.addItem(new Row.Builder().setTitle(FAV).addText(f.numbers.length + (f.numbers.length == 1 ? " channel" : " channels"))
+                        .setImage(icon(CarArt.zoneTilePublic(getCarContext(), FAV))).setBrowsable(true)
+                        .setOnClickListener(() -> getScreenManager().push(new ChannelListScreen(getCarContext(), f.id, false, FAV))).build());
+            } else {
+                list.addItem(new Row.Builder().setTitle(FAV).addText("Star channels on the phone (Channels page) to list them here")
+                        .setImage(icon(CarArt.zoneTilePublic(getCarContext(), FAV))).build());
+            }
+            int n = 1;
             for (final ChannelStore.Zone z : zones) {
                 if (n++ >= max - 1) break;
                 list.addItem(new Row.Builder().setTitle(z.name).addText(z.numbers.length + (z.numbers.length == 1 ? " channel" : " channels"))
@@ -71,7 +85,19 @@ public class ChannelListScreen extends Screen {
             }
             if (chans.isEmpty()) list.setNoItemsMessage("No channels in this zone");
         }
-        return new ListTemplate.Builder().setSingleList(list.build()).setTitle(title).setHeaderAction(Action.BACK).build();
+        ListTemplate.Builder t = new ListTemplate.Builder().setSingleList(list.build()).setTitle(title).setHeaderAction(Action.BACK);
+        if (s != null && (zoneId >= 0 || all)) {                    // a channel list: scan exactly these channels
+            final boolean scanning = s.isScanning();
+            t.setActionStrip(new androidx.car.app.model.ActionStrip.Builder().addAction(new Action.Builder()
+                    .setTitle(scanning ? "Stop scan" : "Scan")
+                    .setOnClickListener(() -> {
+                        RadioService r = RadioService.running; if (r == null) return;
+                        if (r.isScanning()) r.toggleScan();
+                        else { r.setZone(all ? 0 : zoneId); r.toggleScan(); }
+                        getScreenManager().popToRoot();
+                    }).build()).build());
+        }
+        return t.build();
     }
 
     private static CarIcon icon(android.graphics.Bitmap b) { return new CarIcon.Builder(IconCompat.createWithBitmap(b)).build(); }

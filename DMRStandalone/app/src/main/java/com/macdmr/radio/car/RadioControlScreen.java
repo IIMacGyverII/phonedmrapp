@@ -103,17 +103,15 @@ public class RadioControlScreen extends Screen {
                 .setFlags(Action.FLAG_PRIMARY)
                 .setOnClickListener(() -> { RadioService r = svc(); if (r == null) return; if (r.pttHeld()) r.ptt(false); else r.ptt(true); ui.postDelayed(this::invalidate, 300); })
                 .build());
-        boolean scanning = s.isScanning();
         pane.addAction(new Action.Builder()
-                .setTitle(scanning ? "Stop scan" : "Scan")
-                .setIcon(icon(c, scanning ? "stop" : "scan", 0xFFFFFFFF))
-                .setOnClickListener(() -> { RadioService r = svc(); if (r != null) r.toggleScan(); ui.postDelayed(this::invalidate, 300); })
+                .setTitle("Channels")
+                .setIcon(icon(c, "channels", 0xFFFFFFFF))
+                .setOnClickListener(() -> getScreenManager().push(new ChannelListScreen(getCarContext())))
                 .build());
 
+        // the car allows two buttons up here: previous and next channel (scan: in the channel lists, per zone)
         ActionStrip strip = new ActionStrip.Builder()
-                // the car allows two strip buttons, one of them with a label: the channel list, and next channel
-                // (previous: the steering wheel, or pick it in the list)
-                .addAction(new Action.Builder().setTitle("Channels").setIcon(icon(c, "channels", 0xFFFFFFFF)).setOnClickListener(() -> getScreenManager().push(new ChannelListScreen(getCarContext()))).build())
+                .addAction(new Action.Builder().setIcon(icon(c, "left", 0xFFFFFFFF)).setOnClickListener(() -> { RadioService r = svc(); if (r != null) r.stepChannel(-1); }).build())
                 .addAction(new Action.Builder().setIcon(icon(c, "right", 0xFFFFFFFF)).setOnClickListener(() -> { RadioService r = svc(); if (r != null) r.stepChannel(1); }).build())
                 .build();
         return new PaneTemplate.Builder(pane.build()).setHeaderAction(Action.APP_ICON).setTitle("Radio controls").setActionStrip(strip).build();

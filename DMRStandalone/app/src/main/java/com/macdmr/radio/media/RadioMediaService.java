@@ -43,7 +43,9 @@ public class RadioMediaService extends MediaBrowserServiceCompat {
         RadioService s = RadioService.running;
         ChannelStore store = s != null ? s.store() : new ChannelStore(this);
         if (ROOT.equals(parentId)) {
-            for (ChannelStore.Zone z : store.zones())
+            List<ChannelStore.Zone> zones = new ArrayList<>(store.zones());
+            zones.sort((a, b) -> Boolean.compare(!com.macdmr.radio.ui.ChannelsView.FAV_ZONE.equals(a.name), !com.macdmr.radio.ui.ChannelsView.FAV_ZONE.equals(b.name)));   // Favourites first
+            for (ChannelStore.Zone z : zones)
                 out.add(folder(ZONE + z.id, z.name, z.numbers.length + (z.numbers.length == 1 ? " channel" : " channels"), CarArt.zoneTile(this, z.name)));
             out.add(folder(ALL, "All channels", store.all().size() + " channels", CarArt.zoneTile(this, "all")));
         } else if (ALL.equals(parentId)) {
