@@ -6,7 +6,7 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
 **Status**: ✅ **FULLY FUNCTIONAL** - RadioID Caller Lookup + Export/Import + GPS + Zones + Transcription + APRS + VFO + SSTV + NOAA APT!
 
-> **🚀 Current Stable Release: v4.1.0** (October 17, 2026) - **Packet radio on air**: APRS TX/RX (messages, beacon, KISS TNC, digipeater, APRS-IS iGate), SSTV send, NOAA SAME weather alerts, DTMF send/decode, CTCSS tone decoder, **on-device live captions** (Vosk, no cloud) with keyword alerts, Last heard, voice announcements, channel search — 90 changes, all device-tested  
+> **🚀 Current Stable Release: v4.1.1** (October 19, 2026) - APRS transmit fixes (CALL-SSID callsign split, no packets over DMR, TX audio follows the recorder format). Built on v4.1.0: **Packet radio on air**: APRS TX/RX (messages, beacon, KISS TNC, digipeater, APRS-IS iGate), SSTV send, NOAA SAME weather alerts, DTMF send/decode, CTCSS tone decoder, **on-device live captions** (Vosk, no cloud) with keyword alerts, Last heard, voice announcements, channel search — 90 changes, all device-tested  
 > **🔧 Prior Stable: v4.0.0** (October 15, 2026) - Nearby Repeaters + in-app updater (no root) + on-air **group-call RX fix** + the full October correctness/diagnostics batch (channel scanner, live S-meter, in-app help) - see [What's New in v4.0.0](#whats-new-in-v400-october-15-2026) and [`CHANGELOG_DRAFT.md`](CHANGELOG_DRAFT.md)  
 > **📻 Major Feature: v3.4.5** (June 16, 2026) - **RadioID.net global DMR ID lookup** — see who's calling with callsign, name & location (~300k IDs, offline)  
 > **🔧 Also in v3.4.5** — Double-slot import fix, squelch default to normal
@@ -75,7 +75,7 @@ The LSPosed module hooks the Ulefone's stock walkie-talkie app, so it only ever 
 
 | Phone | Status |
 |---|---|
-| **Ulefone Armor 26 Ultra** (walkie-talkie model) | Module v4.1.0 supported today; standalone app feature-complete on it (pre-release) |
+| **Ulefone Armor 26 Ultra** (walkie-talkie model) | Module v4.1.1 supported today; standalone app feature-complete on it (pre-release) |
 | **Blackview Xplore 1** | Its stock app uses the **same radio-module protocol** ([analysis](docs/multi-device-xplore1-findings.md)); needs a profile (audio is PCM over a second UART) and root. Looking for an owner to run the info script |
 | Oukitel WP61 Plus/Ultra/Ti, Ulefone Armor 20WT, UNIWA P2 Plus… | Unknown — send us the stock app APK and the info dump |
 
@@ -86,6 +86,14 @@ The LSPosed module hooks the Ulefone's stock walkie-talkie app, so it only ever 
 The module keeps getting releases until the standalone app ships.
 
 ---
+
+## What's New in v4.1.1 (October 19, 2026)
+
+A fix release after a user report that APRS beacons, messages and KISS frames transmitted but never reached aprs.fi. Verified on the radio with a HackRF capture decoded by direwolf.
+
+- **Callsign typed with its SSID** (`N0CALL-7` in the callsign box) is split into callsign and SSID. Before, it was sent as the address itself; an AX.25 address cannot contain `-`, so every digipeater and iGate dropped the packet. Callsigns must now be 1–6 letters and digits, and one saved the old way still goes out correctly.
+- **No packets over a DMR channel**: APRS, KISS, DTMF and SSTV transmissions are refused when the current channel is digital (before, a KISS session or beacon on "current channel" could send AFSK through the DMR vocoder).
+- **TX audio follows the stock recorder's real format** (sample rate, channels, sample size) instead of assuming 8 kHz stereo, and each transmission is logged with its frequency, analog/digital and power, plus the mic format once.
 
 ## What's New in v4.1.0 (October 17, 2026)
 
@@ -1186,13 +1194,13 @@ See [DMRModHooks/README.md](DMRModHooks/README.md) for complete LSPosed implemen
 
 1. **Download Latest Release**:
    - Go to [Releases](https://github.com/IIMacGyverII/phonedmrapp/releases/latest)
-   - Download `DMRModHooks-v4.1.0.apk` (**latest version**)
+   - Download `DMRModHooks-v4.1.1.apk` (**latest version**)
    - Download `DMRTranscriptionService-v1.1.0.apk` (companion app — needed for on-device live captions)
    - Download `OpenGD77CPS-Mac_Build_*.zip` from the same release (desktop CPS fork)
 
 2. **Install** (reboot after — required for LSPosed):
    ```powershell
-   adb install -r DMRModHooks-v4.1.0.apk
+   adb install -r DMRModHooks-v4.1.1.apk
    adb install -r DMRTranscriptionService-v1.1.0.apk
    adb reboot
    ```
