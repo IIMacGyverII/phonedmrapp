@@ -133,7 +133,7 @@ public final class MapDialog {
         dlg.setContentView(root);
         Window w = dlg.getWindow();
         if (w != null) { w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Neo.GROUND)); w.setStatusBarColor(Neo.GROUND); w.setNavigationBarColor(Neo.BAR); }
-        dlg.setOnDismissListener(x -> map.shutdown());
+        dlg.setOnDismissListener(x -> { stopFollowing(); svc.coverage().setOnData(null); ui.removeCallbacks(liveRefresh); map.shutdown(); });
         dlg.show();
 
         close.setOnClickListener(v -> dlg.dismiss());
@@ -145,11 +145,33 @@ public final class MapDialog {
         map.setOnCell(this::showCellCard);
 
         me = svc.lastKnownLocation();
-        if (me != null) map.center(me.getLatitude(), me.getLongitude(), 10);
+        if (me != null) { map.center(me.getLatitude(), me.getLongitude(), 10); map.setMe(me.getLatitude(), me.getLongitude(), me.hasAccuracy() ? me.getAccuracy() : 0); }
+        startFollowing();
+        svc.coverage().setOnData(() -> { ui.removeCallbacks(liveRefresh); ui.postDelayed(liveRefresh, 1500); });
         load();
         android.content.SharedPreferences cp = c.getSharedPreferences("coverage", Context.MODE_PRIVATE);
         if (!cp.getBoolean("introShown", false)) { cp.edit().putBoolean("introShown", true).apply(); ui.postDelayed(this::coverageIntro, 600); }
         else if (svc.coverage().store().rxCount() + svc.coverage().store().txCount() > 0) setLayer(MapView.LAYER_RX);
+    }
+
+    // ---- your position, live while the map is open ----
+    private android.location.LocationListener follow;
+    private void startFollowing() {
+        try {
+            android.location.LocationManager lm = (android.location.LocationManager) c.getSystemService(Context.LOCATION_SERVICE);
+            follow = l -> {
+                Location cur = me;   // a network fix only replaces a GPS one when GPS has been quiet for 10 s
+                if (cur != null && !android.location.LocationManager.GPS_PROVIDER.equals(l.getProvider()) && android.location.LocationManager.GPS_PROVIDER.equals(cur.getProvider())
+                        && l.getElapsedRealtimeNanos() - cur.getElapsedRealtimeNanos() < 10_000_000_000L) return;
+                me = l; map.setMe(l.getLatitude(), l.getLongitude(), l.hasAccuracy() ? l.getAccuracy() : 0);
+            };
+            lm.requestLocationUpdates(android.location.LocationManager.GPS_PROVIDER, 1000, 0, follow, Looper.getMainLooper());
+            try { lm.requestLocationUpdates(android.location.LocationManager.NETWORK_PROVIDER, 3000, 0, follow, Looper.getMainLooper()); } catch (Throwable ignored) { }
+        } catch (Throwable ignored) { }   // no permission: the dot stays where the last fix put it
+    }
+    private void stopFollowing() {
+        try { if (follow != null) ((android.location.LocationManager) c.getSystemService(Context.LOCATION_SERVICE)).removeUpdates(follow); } catch (Throwable ignored) { }
+        follow = null;
     }
 
     private ImageView floating(String icon, String desc) {
@@ -183,7 +205,6 @@ public final class MapDialog {
                     ms.add(new MapView.Marker(x.lat, x.lon, MapView.CHANNEL, x.name, x)); ch++;
                 }
             } catch (Throwable ignored) { }
-            if (me != null) ms.add(new MapView.Marker(me.getLatitude(), me.getLongitude(), MapView.ME, "You", null));
             final int fst = st, fch = ch;
             ui.post(() -> { publish(ms, fst, fch, -1); if (me == null) fitVisible(); });
             if (me == null) return;
@@ -283,6 +304,23 @@ public final class MapDialog {
     }
 
     private int measuredSquares;
+    private long predAt;
+
+    /** New readings while the map is open: redraw the measured squares now; re-calibrate the prediction at most every 2 minutes. */
+    private final Runnable liveRefresh = this::refreshLive;
+    private void refreshLive() {
+        if (layer == MapView.LAYER_NONE) return;
+        final int l = layer; final String key = focusKey;
+        new Thread(() -> {
+            com.macdmr.radio.coverage.CoverageStore st = svc.coverage().store();
+            final List<com.macdmr.radio.coverage.CoverageStore.Cell> cells = l == MapView.LAYER_RX ? st.rxCells(key) : st.txCells(key);
+            ui.post(() -> {
+                if (layer != l || (key == null ? focusKey != null : !key.equals(focusKey))) return;
+                map.setCells(cells, l); measuredSquares = cells.size(); showLegend(cells.size());
+                if (pred != null && System.currentTimeMillis() - predAt > 120_000) { pred = null; updatePrediction(); }
+            });
+        }, "coverage-live").start();
+    }
 
     /** Run (or reuse) the terrain prediction for the focused repeater and show it under the measured squares. */
     private void updatePrediction() {
@@ -306,7 +344,7 @@ public final class MapDialog {
             ui.post(() -> {
                 if (run != predRun) return;
                 if (fr == null) { predStatus = fe == null ? "" : "Terrain prediction failed: " + fe; showLegend(measuredSquares); return; }
-                pred = fr; map.setPredicted(layer == MapView.LAYER_RX ? fr.rx : fr.tx);
+                pred = fr; predAt = System.currentTimeMillis(); map.setPredicted(layer == MapView.LAYER_RX ? fr.rx : fr.tx);
                 predStatus = "Faint squares: terrain prediction. " + fr.summary(layer == MapView.LAYER_RX);
                 showLegend(measuredSquares);
             });
