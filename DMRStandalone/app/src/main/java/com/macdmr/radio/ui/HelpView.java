@@ -46,6 +46,7 @@ public class HelpView extends LinearLayout {
         new Topic("On the intercom", "scan", Neo.CYAN, "Scanning and zones", "SCAN searches a zone; ZONE picks one.",
             s("Scan", "SCAN steps through the channels of the current zone, about two seconds each, and stops on a channel with activity. It moves on about two and a half seconds after the activity ends. Tap SCAN again to stop."),
             s("Skip a channel", "Long-press SCAN while it is holding on a channel to leave that channel out for the rest of this scan."),
+            s("Priority channel", "In Channels, tap a channel and Make scan priority. While scanning, that channel (even one outside the zone) is checked again after every three other channels and the scan stops there when it is busy, so you do not miss it. While the scan is held on another busy channel, it still checks the priority channel every 10 seconds (a short gap in the audio) and moves to it if it is busy. Its card shows PRIORITY; the same button clears it."),
             s("Soft SQ while scanning", "While scanning, Soft SQ is used on every analog channel at that channel's own level, so weak stations are caught and static is not. A channel that only had Soft SQ for the scan returns to its own squelch when the scan stops. Turn this off in Device → Radio settings to scan with the radio's own squelch."),
             s("Zones", "ZONE picks which group of channels the arrows and the scanner use. Starred channels form the ★ Favourites zone; nearby-repeater imports create a zone of their own.")),
 
