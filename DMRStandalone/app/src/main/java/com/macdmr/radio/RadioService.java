@@ -256,6 +256,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         super.onCreate();
         startForegroundTyped(false);
         running = this;
+        watchCar();
         profile = DeviceProfile.detect();
         store = new ChannelStore(this);
         zoneId = getSharedPreferences("radio", MODE_PRIVATE).getLong("zone", 0);
@@ -1027,11 +1028,38 @@ public class RadioService extends Service implements RadioEngine.Events {
     // radio, and Android Auto (which only sends the focus holder's media to the car) plays it through the car.
     // Released 2.5 s after reception ends, so the music does not bounce back between phrases.
     private android.media.AudioFocusRequest focusRequest; private boolean focusHeld;
+    /**
+     * Projecting to a car (Android Auto). Measured with the head unit emulator: any transient focus (may duck or not)
+     * is streamed on the car's voice-prompt channel (16 kHz, above the radio's 8 kHz; the car dips its media under it),
+     * only permanent focus on the media channel; so the request is the same in the car, and this is for the car UI.
+     */
+    private volatile boolean inCar;
+    public boolean inCar() { return inCar; }
+    private void watchCar() {
+        try {
+            new androidx.car.app.connection.CarConnection(this).getType().observeForever(t -> {
+                boolean car = t != null && t == androidx.car.app.connection.CarConnection.CONNECTION_TYPE_PROJECTION;
+                if (car == inCar) return;
+                inCar = car; log(car ? "Android Auto connected" : "Android Auto disconnected");
+            });
+        } catch (Throwable t) { log("car connection: " + t); }
+    }
     private final Runnable focusRelease = () -> {
         if (!focusHeld) return;
         try { ((android.media.AudioManager) getSystemService(AUDIO_SERVICE)).abandonAudioFocusRequest(focusRequest); } catch (Throwable ignored) { }
         focusHeld = false; log("audio focus released");
     };
+    /**
+     * Focus taken away. For good (Android Auto connecting grabs it, another player starts): ask again in a second
+     * while the radio is still heard. For a while (a phone call): Android gives it back by itself.
+     */
+    private void onFocusChange(int change) {
+        log("audio focus change " + change);
+        // 3 s: Android Auto takes the focus when it starts projecting; ask again once it has settled
+        if (change == android.media.AudioManager.AUDIOFOCUS_LOSS) { focusHeld = false; ui.removeCallbacks(refocus); ui.postDelayed(refocus, 3000); }
+    }
+    private final Runnable refocus = this::updateAudioFocus;
+
     private void updateAudioFocus() {
         boolean want = rxAudioOn && !pttDown && hearing();
         if (want) {
@@ -1041,10 +1069,10 @@ public class RadioService extends Service implements RadioEngine.Events {
                 android.media.AudioManager am = (android.media.AudioManager) getSystemService(AUDIO_SERVICE);
                 if (focusRequest == null) focusRequest = new android.media.AudioFocusRequest.Builder(android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
                         .setAudioAttributes(new android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH).build())
-                        .setWillPauseWhenDucked(false).setOnAudioFocusChangeListener(ch -> log("audio focus change " + ch), ui).build();
+                        .setWillPauseWhenDucked(false).setOnAudioFocusChangeListener(this::onFocusChange, ui).build();
                 int r = am.requestAudioFocus(focusRequest);
                 focusHeld = r == android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
-                log("audio focus " + (focusHeld ? "held" : "refused (" + r + ")"));
+                log("audio focus " + (focusHeld ? "held" + (inCar ? " (in the car)" : "") : "refused (" + r + ")"));
             } catch (Throwable t) { log("audio focus: " + t); }
         } else if (focusHeld) { ui.removeCallbacks(focusRelease); ui.postDelayed(focusRelease, 2500); }
     }

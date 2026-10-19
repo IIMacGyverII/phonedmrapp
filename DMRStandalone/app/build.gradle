@@ -43,6 +43,8 @@ android {
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.core:core:1.12.0'
+    // Android Auto: knowing when the phone is projecting to a car (audio goes to the car's media channel)
+    implementation 'androidx.car.app:app:1.4.0'
     testImplementation 'junit:junit:4.13.2'
     // Unlocks the vendor audio class android.os.PrizeTinyService (hidden API) at runtime
     implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:4.3'
