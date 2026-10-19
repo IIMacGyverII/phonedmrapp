@@ -69,6 +69,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         @Override public void tune(ChannelStore.Channel ch) { selectChannel(ch.number); }
         @Override public boolean receiving() { return softSq.isEnabled() ? squelchOpen : receiving; }   // with Soft SQ on the module's squelch is open and it reports a reception all the time: the soft gate is the activity signal
         @Override public boolean softGated() { return softSq.isEnabled(); }
+        @Override public ChannelStore.Channel priority() { int n = scanPriority(); return n > 0 ? store.byNumber(n) : null; }
         @Override public void status(boolean s, boolean h, ChannelStore.Channel on) { if (!s) { final ChannelStore.Channel ch = current; if (ch != null && !ch.isDigital() && !ch.softSq && scanSoftSq()) worker.execute(() -> refreshSquelch(ch)); } pushModes(); }   // scan over: a channel that only had Soft SQ for the scan goes back to its own squelch
     });
     /** Every MCU/audio action runs here, in order — a PTT release can never overtake its press. */
@@ -573,6 +574,9 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     /** Soft SQ applies to an analog channel when it is switched on for that channel, or on every analog channel while scanning (setting, default on). */
     private boolean softSqFor(ChannelStore.Channel ch) { return !ch.isDigital() && (ch.softSq || (scanner.isScanning() && scanSoftSq())); }
+    /** The scan priority channel number (0 = none). */
+    public int scanPriority() { return getSharedPreferences("radio", MODE_PRIVATE).getInt("scanPriority", 0); }
+    public void setScanPriority(int number) { getSharedPreferences("radio", MODE_PRIVATE).edit().putInt("scanPriority", number).apply(); }
     public boolean scanSoftSq() { return getSharedPreferences("radio", MODE_PRIVATE).getBoolean("scanSoftSq", true); }
     public void setScanSoftSq(boolean on) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("scanSoftSq", on).apply(); }
 

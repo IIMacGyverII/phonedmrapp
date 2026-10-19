@@ -200,6 +200,16 @@ public class ChannelsView extends LinearLayout implements RadioService.Listener 
             });
         }
         box.addView(btns);
+        final boolean isPrio = svc != null && svc.scanPriority() == ch.number;
+        TextView pb = Neo.button(c, isPrio ? "Stop using as scan priority" : "Make scan priority", "scan", Neo.VIOLET); pb.setTextSize(14);
+        LayoutParams pbl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); pbl.setMargins((int) (3 * d), (int) (8 * d), (int) (3 * d), 0);
+        box.addView(pb, pbl);
+        pb.setOnClickListener(v -> {
+            dlg.dismiss(); if (svc == null) return;
+            svc.setScanPriority(isPrio ? 0 : ch.number);
+            android.widget.Toast.makeText(c, isPrio ? "No scan priority channel" : ch.name + " is checked again after every " + com.macdmr.radio.Scanner.PRIORITY_EVERY + " channels while scanning", android.widget.Toast.LENGTH_LONG).show();
+            reload();
+        });
         dlg.setContentView(box);
         if (dlg.getWindow() != null) dlg.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0));
         dlg.show();
@@ -289,6 +299,7 @@ public class ChannelsView extends LinearLayout implements RadioService.Listener 
             ((TextView) row.findViewWithTag("freq")).setText(mhz(ch.rxFreq));
             LinearLayout badges = row.findViewWithTag("badges"); badges.removeAllViews();
             badges.addView(Neo.chip(c, ch.isDigital() ? "DMR" : "FM", ch.isDigital() ? Neo.VIOLET : Neo.CYAN));
+            if (svc != null && svc.scanPriority() == ch.number) { TextView pc = Neo.chip(c, "PRIORITY", Neo.VIOLET); LayoutParams pl2 = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT); pl2.leftMargin = (int) (6 * d); badges.addView(pc, pl2); }
             String det = detail(ch);
             if (!det.isEmpty()) { TextView dc = Neo.chip(c, det, 0xFF9FB4C8); LayoutParams dl = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT); dl.leftMargin = (int) (6 * d); badges.addView(dc, dl); }
             ImageView star = row.findViewWithTag("star");
