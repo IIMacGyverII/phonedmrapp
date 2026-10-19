@@ -42,6 +42,9 @@ public class DiagnosticsView extends LinearLayout implements RadioService.Listen
         LayoutParams rtl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); rtl.setMargins(4, 0, 4, 8); addView(rt, rtl);
         rt.setOnClickListener(v -> { if (svc == null) return; say("backup round trip: exporting and restoring into a scratch database…");
             new Thread(() -> { final String r = com.macdmr.radio.Backup.selfTest(c, svc.store(), svc.packet() != null ? svc.packet().dtmfSaved() : null); post(() -> { for (String l : r.split("\n")) say(l); new android.app.AlertDialog.Builder(c).setTitle("Backup round trip").setMessage(r).setPositiveButton("OK", null).show(); }); }).start(); });
+        TextView cm = Theme.pillButton(c, "Post a test car message");
+        LayoutParams cml = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); cml.setMargins(4, 0, 4, 8); addView(cm, cml);
+        cm.setOnClickListener(v -> { com.macdmr.radio.CarMessages.test(c); say("test message posted (shows on the phone and in Android Auto; its reply is not sent)"); });
         down.setOnClickListener(v -> { if (svc != null) svc.shutDown(true); });
         rssi.setOnClickListener(v -> { if (svc != null) svc.pollRssi(); });
         ScrollView sv = new ScrollView(c);

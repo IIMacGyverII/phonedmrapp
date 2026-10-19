@@ -51,6 +51,9 @@ public class ChannelListScreen extends Screen {
             ChannelStore.Zone fav = null;
             for (ChannelStore.Zone z : zones) if (FAV.equals(z.name)) fav = z;
             if (fav != null) zones.remove(fav);
+            list.addItem(new Row.Builder().setTitle("Last heard").addText("Who and what was received, newest first")
+                    .setImage(icon(CarArt.zoneTilePublic(getCarContext(), "last heard"))).setBrowsable(true)
+                    .setOnClickListener(() -> getScreenManager().push(new LastHeardScreen(getCarContext()))).build());
             // Favourites first, always: until channels are starred it says how
             if (fav != null && fav.numbers.length > 0) {
                 final ChannelStore.Zone f = fav;
@@ -61,7 +64,7 @@ public class ChannelListScreen extends Screen {
                 list.addItem(new Row.Builder().setTitle(FAV).addText("Star channels on the phone (Channels page) to list them here")
                         .setImage(icon(CarArt.zoneTilePublic(getCarContext(), FAV))).build());
             }
-            int n = 1;
+            int n = 2;
             for (final ChannelStore.Zone z : zones) {
                 if (n++ >= max - 1) break;
                 list.addItem(new Row.Builder().setTitle(z.name).addText(z.numbers.length + (z.numbers.length == 1 ? " channel" : " channels"))
