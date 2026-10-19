@@ -126,12 +126,13 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         LinearLayout upd = Neo.tile(c, "update", Neo.CYAN, "Updates", "Check GitHub releases");
         LinearLayout help = Neo.tile(c, "help", Neo.GREEN, "Help & how-to", "Every screen explained");
         LinearLayout diag = Neo.tile(c, "diag", Neo.AMBER, "Diagnostics", "Live protocol log");
-        LinearLayout[] tiles = { backup, restore, reimport, radioIdTile, report, upd, help, diag };
+        LinearLayout widget = Neo.tile(c, "widget", Neo.VIOLET, "Home widget", "Channel, scan and Talk");
+        LinearLayout[] tiles = { backup, restore, reimport, radioIdTile, report, upd, help, diag, widget, null };
         for (int i = 0; i < tiles.length; i += 2) {
             LinearLayout r = new LinearLayout(c); r.setBaselineAligned(false);
             LayoutParams l1 = new LayoutParams(0, LayoutParams.MATCH_PARENT, 1f); l1.setMargins(0, 0, (int) (4 * d), (int) (8 * d));
             LayoutParams l2 = new LayoutParams(0, LayoutParams.MATCH_PARENT, 1f); l2.setMargins((int) (4 * d), 0, 0, (int) (8 * d));
-            r.addView(tiles[i], l1); r.addView(tiles[i + 1], l2);
+            r.addView(tiles[i], l1); r.addView(tiles[i + 1] != null ? tiles[i + 1] : new android.view.View(c), l2);
             body.addView(r);
         }
         backup.setOnClickListener(v -> doBackup());
@@ -142,10 +143,32 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         upd.setOnClickListener(v -> com.macdmr.radio.Updater.check(c));
         help.setOnClickListener(v -> { if (host != null) host.openHelp(); });
         diag.setOnClickListener(v -> { if (host != null) host.openDiagnostics(); });
+        widget.setOnClickListener(v -> widgetSheet());
 
         TextView foot = Neo.text(c, "Backups are the five CSV files (Contacts, TG_Lists, Channels, Zones, DTMF) the DMRModHooks module and the OpenGD77 CPS fork use, in Download/DMR/DMR_Backups.\n\nDMR Radio " + com.macdmr.radio.BuildConfig.VERSION_NAME + ", the standalone edition of DMRModHooks.", Neo.DIM, 12.5f, Neo.uiMedium(c));
         foot.setLineSpacing(0, 1.1f); foot.setPadding((int) (2 * d), (int) (8 * d), (int) (2 * d), 0);
         body.addView(foot);
+    }
+
+    /** Device → Home widget: the live widget as it will look, and a button that asks the launcher to add it. */
+    private void widgetSheet() {
+        Context c = getContext(); float d = Theme.dp(c);
+        LinearLayout box = Neo.sheetBody(c, "Home widget");
+        box.addView(Neo.sheetHint(c, "The channel, what the radio is doing, and previous / scan / next / Talk buttons on your home screen. Talk is tap to start, tap to stop, and ends by itself after 28 seconds. The notification has the same channel and scan buttons."));
+        android.widget.FrameLayout holder = new android.widget.FrameLayout(c);
+        try { holder.addView(com.macdmr.radio.RadioWidget.build(c, com.macdmr.radio.RadioService.running).apply(c.getApplicationContext(), holder)); /* app context: the activity inflater swaps in AppCompat views, which RemoteViews refuses */ } catch (Throwable t) { holder.addView(Neo.sheetHint(c, "Preview unavailable: " + t.getMessage())); }
+        LayoutParams hl = new LayoutParams(LayoutParams.MATCH_PARENT, (int) (150 * d)); hl.setMargins(0, (int) (10 * d), 0, (int) (12 * d));
+        box.addView(holder, hl);
+        TextView add = Neo.button(c, "Add to home screen", "widget", Neo.VIOLET);
+        box.addView(add, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+        final android.app.Dialog dlg = Neo.showSheet(c, box);
+        add.setOnClickListener(v -> {
+            android.appwidget.AppWidgetManager m = android.appwidget.AppWidgetManager.getInstance(c);
+            boolean asked = false;
+            try { if (m.isRequestPinAppWidgetSupported()) asked = m.requestPinAppWidget(new android.content.ComponentName(c, com.macdmr.radio.RadioWidget.class), null, null); } catch (Throwable ignored) { }
+            if (dlg != null) dlg.dismiss();
+            if (!asked) android.widget.Toast.makeText(c, "Long-press the home screen, choose Widgets and drag out DMR Radio", android.widget.Toast.LENGTH_LONG).show();
+        });
     }
 
     private Neo.NeonSwitch sw() { return new Neo.NeonSwitch(getContext()); }

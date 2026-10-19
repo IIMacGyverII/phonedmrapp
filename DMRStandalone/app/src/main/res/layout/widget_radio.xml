@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/w_root"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical"
+    android:background="@drawable/widget_bg" android:padding="12dp">
+    <LinearLayout android:id="@+id/w_open" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+        android:orientation="horizontal" android:gravity="center_vertical">
+        <FrameLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:minWidth="72dp">
+            <TextView android:id="@+id/w_num" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center"
+                android:text="--" android:textSize="34sp" android:textColor="#FF2BEA7A" android:fontFamily="sans-serif-condensed" android:textStyle="bold"
+                android:shadowColor="#AA2BEA7A" android:shadowRadius="14" android:includeFontPadding="false"/>
+            <ImageView android:id="@+id/w_num_img" android:layout_width="wrap_content" android:layout_height="52dp" android:layout_gravity="center"
+                android:adjustViewBounds="true" android:scaleType="fitCenter" android:visibility="gone" android:contentDescription="Channel number"/>
+        </FrameLayout>
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical"
+            android:layout_marginStart="10dp">
+            <TextView android:id="@+id/w_name" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Radio"
+                android:textSize="19sp" android:textColor="#FFE2EDF7" android:fontFamily="sans-serif-condensed" android:textStyle="bold" android:maxLines="1" android:ellipsize="end"/>
+            <TextView android:id="@+id/w_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Tap to open"
+                android:textSize="14sp" android:textColor="#FF8DA2B8" android:fontFamily="sans-serif-condensed" android:textStyle="bold" android:maxLines="1" android:ellipsize="end"/>
+        </LinearLayout>
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="46dp" android:orientation="horizontal" android:layout_marginTop="8dp">
+        <ImageView android:id="@+id/w_prev" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent"
+            android:src="@drawable/ic_w_left" android:background="@drawable/widget_btn" android:padding="11dp" android:contentDescription="Previous channel"/>
+        <ImageView android:id="@+id/w_scan" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:layout_marginStart="6dp"
+            android:src="@drawable/ic_w_scan" android:background="@drawable/widget_btn_scan" android:padding="11dp" android:contentDescription="Scan"/>
+        <ImageView android:id="@+id/w_next" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:layout_marginStart="6dp"
+            android:src="@drawable/ic_w_right" android:background="@drawable/widget_btn" android:padding="11dp" android:contentDescription="Next channel"/>
+        <ImageView android:id="@+id/w_talk" android:layout_width="0dp" android:layout_weight="1.6" android:layout_height="match_parent" android:layout_marginStart="6dp"
+            android:src="@drawable/ic_w_ptt" android:background="@drawable/widget_btn_talk" android:padding="10dp" android:contentDescription="Talk"/>
+    </LinearLayout>
+</LinearLayout>
