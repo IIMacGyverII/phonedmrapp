@@ -174,6 +174,29 @@ public final class ChannelStore extends SQLiteOpenHelper {
 
     public void update(Channel ch) { getWritableDatabase().update("channels", values(ch), "_id=?", new String[] { String.valueOf(ch.id) }); }
 
+    /**
+     * Delete packet lines ("📡 SRC>…") whose source is not a callsign: noise frames that passed the FCS were logged
+     * before {@code Ax25.plausible} existed. Returns how many were removed.
+     */
+    public int purgeGarbledPacketHistory() {
+        java.util.List<Long> bad = new java.util.ArrayList<>();
+        java.util.regex.Pattern call = java.util.regex.Pattern.compile("^[A-Z0-9]{1,6}(-\\d{1,2})?$");
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT _id, text FROM history WHERE kind = 'pkt'", null)) {
+            while (c.moveToNext()) {
+                String t = c.getString(1); if (t == null || !t.startsWith("\uD83D\uDCE1 ")) continue;   // only received-packet lines
+                String body = t.startsWith("\uD83D\uDCE1 ") ? t.substring(3) : t;
+                boolean control = false; for (int i = 0; i < t.length(); i++) { char ch = t.charAt(i); if (ch < 0x20 || ch == 0x7F || ch == '\uFFFD') { control = true; break; } }
+                int end = body.length(); for (char stop : new char[] { '>', ':' }) { int k = body.indexOf(stop); if (k > 0 && k < end) end = k; }
+                String src = body.substring(0, end).trim();
+                boolean outgoing = body.startsWith("Sent ") || body.startsWith("Beacon ") || body.startsWith("Digipeated") || body.startsWith("APRS") || body.startsWith("SSTV") || body.startsWith("DTMF");
+                if (control || (!outgoing && !call.matcher(src).matches())) bad.add(c.getLong(0));
+            }
+        }
+        SQLiteDatabase db = getWritableDatabase();
+        for (long id : bad) db.delete("history", "_id=?", new String[] { String.valueOf(id) });
+        return bad.size();
+    }
+
     public void addHistory(int channel, String kind, String text, int rssi, int dmrId) {
         ContentValues v = new ContentValues();
         v.put("channel", channel); v.put("ts", System.currentTimeMillis()); v.put("kind", kind); v.put("text", text); v.put("rssi", rssi); v.put("dmrId", dmrId);

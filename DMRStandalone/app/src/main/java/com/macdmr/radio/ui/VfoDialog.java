@@ -47,11 +47,8 @@ public final class VfoDialog {
 
     private void open() {
         ScrollView sv = new ScrollView(c);
-        LinearLayout body = new LinearLayout(c); body.setOrientation(LinearLayout.VERTICAL); body.setBackgroundColor(Theme.BG);
-        body.setPadding(dp(16), dp(12), dp(16), dp(8));
+        LinearLayout body = Neo.sheetBody(c, "VFO");
         sv.addView(body);
-
-        TextView title = Theme.label(c, "🎛️  VFO", Theme.VFO[3], 20, true); body.addView(title);
         body.addView(hint("Tune any frequency without saving a channel. While VFO is on, the intercom arrows step the frequency; long-press VFO to go back to your channel."));
 
         // mode
@@ -103,9 +100,7 @@ public final class VfoDialog {
         save.setOnClickListener(x -> { if (apply()) saveAsChannel(); });
         off2.setOnClickListener(x -> { if (svc.vfoActive()) svc.exitVfo(); dlg.dismiss(); });
 
-        dlg = new AlertDialog.Builder(c).setView(sv).create();
-        
-        dlg.show();
+        sv.removeView(body); dlg = Neo.showSheet(c, body);
     }
 
     private void sections() { analog.setVisibility(v.type == 1 ? View.VISIBLE : View.GONE); digital.setVisibility(v.type == 0 ? View.VISIBLE : View.GONE); }
@@ -165,8 +160,8 @@ public final class VfoDialog {
     private interface IntSetter { void set(int x); }
     private int dp(float x) { return Math.round(x * d); }
 
-    private TextView hint(String s) { TextView t = Theme.label(c, s, 0xFF8A98A6, 12, false); t.setPadding(0, dp(4), 0, dp(6)); return t; }
-    private TextView section(String s) { TextView t = Theme.label(c, s, 0xFFBFC8D0, 13, true); t.setPadding(0, dp(8), 0, dp(4)); return t; }
+    private TextView hint(String s) { return Neo.sheetHint(c, s); }
+    private TextView section(String s) { return Neo.sheetSection(c, s); }
 
     private LinearLayout pillRow() {
         LinearLayout r = new LinearLayout(c); r.setOrientation(LinearLayout.HORIZONTAL); r.setGravity(Gravity.CENTER_VERTICAL);
@@ -175,23 +170,17 @@ public final class VfoDialog {
     }
 
     private TextView pill(LinearLayout row, String text, boolean on, View.OnClickListener l) {
-        TextView t = Theme.label(c, text, on ? Theme.VFO[3] : 0xFFBFC8D0, 13, true); t.setGravity(Gravity.CENTER);
+        TextView t = Neo.label(c, text, on ? Theme.VFO[3] : 0xFFBFC8D0, 13, true); t.setGravity(Gravity.CENTER);
         t.setPadding(dp(6), dp(8), dp(6), dp(8)); t.setClickable(true); t.setOnClickListener(l);
         style(t, on);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f); lp.setMargins(dp(2), 0, dp(2), 0);
         row.addView(t, lp);
         return t;
     }
-    private void style(TextView t, boolean on) { t.setTextColor(on ? Theme.VFO[3] : 0xFFBFC8D0); t.setBackground(Theme.rounded(c, on ? Theme.VFO[0] : 0x18000000, on ? Theme.VFO[2] : 0x3300BFFF, on ? 2 : 1, 16)); }
+    private void style(TextView t, boolean on) { Neo.pillStyle(t, on, Neo.AMBER); }
     private void select(List<TextView> pills, int idx) { for (int i = 0; i < pills.size(); i++) style(pills.get(i), i == idx); }
 
-    private TextView button(LinearLayout row, String text, int[] accent) {
-        TextView b = Theme.label(c, text, accent[3], 14, true); b.setGravity(Gravity.CENTER);
-        b.setBackground(Theme.rounded(c, accent[0], accent[2], 2, 20)); b.setPadding(dp(8), dp(10), dp(8), dp(10)); b.setClickable(true);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f); lp.setMargins(dp(3), dp(12), dp(3), dp(4));
-        row.addView(b, lp);
-        return b;
-    }
+    private TextView button(LinearLayout row, String text, int[] accent) { TextView b = Neo.button(c, text, null, Neo.accentOf(accent)); b.setTextSize(14); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f); lp.setMargins(dp(3), dp(12), dp(3), dp(4)); row.setBaselineAligned(false); row.addView(b, lp); return b; }
 
     private EditText freqField(LinearLayout target, String label, int hz) {
         return textField(target, label, hz > 0 ? String.format(Locale.US, "%.4f", hz / 1e6) : "", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
@@ -199,7 +188,7 @@ public final class VfoDialog {
 
     private EditText textField(LinearLayout target, String label, String value, int inputType) {
         LinearLayout row = shell();
-        row.addView(Theme.label(c, label, 0xFF9AA4AE, 12, false));
+        row.addView(Neo.label(c, label, 0xFF9AA4AE, 12, false));
         EditText e = new EditText(c); e.setText(value); e.setInputType(inputType); e.setTextSize(18); e.setTextColor(Theme.WHITE); e.setSingleLine(true);
         e.setBackground(null); e.setPadding(0, dp(4), 0, dp(4));
         row.addView(e); target.addView(row);
@@ -208,9 +197,9 @@ public final class VfoDialog {
 
     private TextView cycleRow(LinearLayout target, String label, final String[] options, int index, final IntSetter setter) {
         LinearLayout row = shell(); row.setOrientation(LinearLayout.HORIZONTAL); row.setGravity(Gravity.CENTER_VERTICAL);
-        row.addView(Theme.label(c, label, 0xFFBFC8D0, 15, false), new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-        final TextView val = Theme.label(c, options[Math.max(0, Math.min(index, options.length - 1))], Theme.CYAN, 15, true);
-        val.setBackground(Theme.rounded(c, 0x1400E5FF, 0x8000E5FF, 1, 14)); val.setPadding(dp(12), dp(6), dp(12), dp(6));
+        row.addView(Neo.label(c, label, 0xFFBFC8D0, 15, false), new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        final TextView val = Neo.label(c, options[Math.max(0, Math.min(index, options.length - 1))], Theme.CYAN, 15, true);
+        val.setBackground(Neo.outline(c, Neo.CYAN, 0x16, 12, 1)); val.setPadding(dp(12), dp(6), dp(12), dp(6));
         row.addView(val);
         final int[] cur = { index };
         View.OnClickListener cl = x -> { cur[0] = (cur[0] + 1) % options.length; val.setText(options[cur[0]]); setter.set(cur[0]); };
@@ -222,11 +211,11 @@ public final class VfoDialog {
     /** Tone type cycles; the code opens a list (both sides share the layout of the channel editor). */
     private TextView toneRow(LinearLayout target, String label, final boolean txSide) {
         LinearLayout row = shell(); row.setOrientation(LinearLayout.HORIZONTAL); row.setGravity(Gravity.CENTER_VERTICAL);
-        row.addView(Theme.label(c, label, 0xFFBFC8D0, 15, false), new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        row.addView(Neo.label(c, label, 0xFFBFC8D0, 15, false), new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         int type = txSide ? v.txType : v.rxType, code = txSide ? v.txSubCode : v.rxSubCode;
-        final TextView typeV = Theme.label(c, TONE_TYPES[Math.max(0, Math.min(type, 2))], Theme.CYAN, 14, true);
-        typeV.setBackground(Theme.rounded(c, 0x1400E5FF, 0x8000E5FF, 1, 14)); typeV.setPadding(dp(10), dp(6), dp(10), dp(6));
-        final TextView codeV = Theme.label(c, toneName(type, code), Theme.VFO[3], 14, true);
+        final TextView typeV = Neo.label(c, TONE_TYPES[Math.max(0, Math.min(type, 2))], Theme.CYAN, 14, true);
+        typeV.setBackground(Neo.outline(c, Neo.CYAN, 0x16, 12, 1)); typeV.setPadding(dp(10), dp(6), dp(10), dp(6));
+        final TextView codeV = Neo.label(c, toneName(type, code), Theme.VFO[3], 14, true);
         codeV.setBackground(Theme.rounded(c, Theme.VFO[0], Theme.VFO[2], 1, 14)); codeV.setPadding(dp(10), dp(6), dp(10), dp(6));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT); lp.leftMargin = dp(6);
         row.addView(typeV); row.addView(codeV, lp);
@@ -246,7 +235,7 @@ public final class VfoDialog {
 
     private LinearLayout shell() {
         LinearLayout row = new LinearLayout(c); row.setOrientation(LinearLayout.VERTICAL);
-        row.setBackground(Theme.rounded(c, 0x18000000, 0x3300BFFF, 1, 8)); row.setPadding(dp(12), dp(8), dp(12), dp(8));
+        row.setBackground(Neo.rowCard(c)); row.setPadding(dp(12), dp(8), dp(12), dp(8));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT); lp.bottomMargin = dp(6);
         row.setLayoutParams(lp);
         return row;

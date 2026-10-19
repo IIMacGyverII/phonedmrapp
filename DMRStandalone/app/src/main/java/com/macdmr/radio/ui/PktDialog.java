@@ -176,9 +176,9 @@ public final class PktDialog {
             if (me != null) { float[] r = new float[2]; android.location.Location.distanceBetween(me.getLatitude(), me.getLongitude(), s.lat, s.lon, r); dist = String.format(Locale.US, "  %.1f mi %s", r[0] / 1609.344, compass(r[1])); }
             String extra = (s.speedKmh >= 0 ? String.format(Locale.US, " · %.0f mph", s.speedKmh * 0.621371) : "") + (s.alt != 0 ? " · " + Math.round(s.alt * 3.28084) + " ft" : "");
             LinearLayout rowv = shell();
-            rowv.addView(Theme.label(c, s.call + dist, Theme.CYAN, 15, true));
-            rowv.addView(Theme.label(c, f.format(new Date(s.lastTs)) + " · " + String.format(Locale.US, "%.4f, %.4f", s.lat, s.lon) + extra + (s.count > 1 ? " · " + s.count + "×" : "") + (s.via.isEmpty() ? "" : " · via " + s.via), 0xFFBFC8D0, 12, false));
-            if (!s.comment.isEmpty()) rowv.addView(Theme.label(c, s.comment, 0xFF8A98A6, 12, false));
+            rowv.addView(Neo.label(c, s.call + dist, Theme.CYAN, 15, true));
+            rowv.addView(Neo.label(c, f.format(new Date(s.lastTs)) + " · " + String.format(Locale.US, "%.4f, %.4f", s.lat, s.lon) + extra + (s.count > 1 ? " · " + s.count + "×" : "") + (s.via.isEmpty() ? "" : " · via " + s.via), 0xFFBFC8D0, 12, false));
+            if (!s.comment.isEmpty()) rowv.addView(Neo.label(c, s.comment, 0xFF8A98A6, 12, false));
             final PacketStore.Station fs = s;
             rowv.setClickable(true); rowv.setOnClickListener(x -> {
                 try { c.startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(String.format(Locale.US, "geo:%f,%f?q=%f,%f(%s)", fs.lat, fs.lon, fs.lat, fs.lon, android.net.Uri.encode(fs.call))))); } catch (Throwable t) { toast("No map app"); }
@@ -217,8 +217,8 @@ public final class PktDialog {
         for (PacketStore.LogEntry e : list) {
             String icon = e.kind.startsWith("msg") ? (e.kind.equals("msg-tx") ? "⬆️" : (e.mine ? "✉️" : "💬")) : e.kind.startsWith("ack") ? "✅" : e.kind.equals("beacon") ? "📍" : e.kind.equals("digi") ? "🔁" : e.kind.equals("pos") ? "📍" : "ℹ️";
             LinearLayout rowv = shell();
-            rowv.addView(Theme.label(c, icon + " " + e.from + (e.to == null || e.to.isEmpty() ? "" : " → " + e.to) + (e.mine ? "  (for you)" : ""), e.mine ? Theme.AMBER : Theme.CYAN, 14, true));
-            rowv.addView(Theme.label(c, f.format(new Date(e.ts)) + "  " + e.text + (e.id != null ? " {" + e.id : ""), 0xFFBFC8D0, 12, false));
+            rowv.addView(Neo.label(c, icon + " " + e.from + (e.to == null || e.to.isEmpty() ? "" : " → " + e.to) + (e.mine ? "  (for you)" : ""), e.mine ? Theme.AMBER : Theme.CYAN, 14, true));
+            rowv.addView(Neo.label(c, f.format(new Date(e.ts)) + "  " + e.text + (e.id != null ? " {" + e.id : ""), 0xFFBFC8D0, 12, false));
             body.addView(rowv);
         }
         sub = dialog(body);
@@ -231,8 +231,8 @@ public final class PktDialog {
         SimpleDateFormat f = new SimpleDateFormat("MM-dd HH:mm:ss", Locale.US);
         for (PacketStore.Dtmf e : list) {
             LinearLayout rowv = shell();
-            rowv.addView(Theme.label(c, e.digits, Theme.CYAN, 18, true));
-            rowv.addView(Theme.label(c, f.format(new Date(e.ts)) + "  ch " + e.channel + " " + e.channelName, 0xFFBFC8D0, 12, false));
+            rowv.addView(Neo.label(c, e.digits, Theme.CYAN, 18, true));
+            rowv.addView(Neo.label(c, f.format(new Date(e.ts)) + "  ch " + e.channel + " " + e.channelName, 0xFFBFC8D0, 12, false));
             body.addView(rowv);
         }
         sub = dialog(body);
@@ -245,8 +245,8 @@ public final class PktDialog {
         SimpleDateFormat f = new SimpleDateFormat("MM-dd HH:mm", Locale.US);
         for (PacketStore.Alert a : list) {
             LinearLayout rowv = shell();
-            rowv.addView(Theme.label(c, (a.eom ? "End of message" : a.summary), a.eom ? 0xFF8A98A6 : Theme.AMBER, 14, true));
-            rowv.addView(Theme.label(c, f.format(new Date(a.ts)) + "  " + a.raw, 0xFFBFC8D0, 11, false));
+            rowv.addView(Neo.label(c, (a.eom ? "End of message" : a.summary), a.eom ? 0xFF8A98A6 : Theme.AMBER, 14, true));
+            rowv.addView(Neo.label(c, f.format(new Date(a.ts)) + "  " + a.raw, 0xFFBFC8D0, 11, false));
             body.addView(rowv);
         }
         sub = dialog(body);
@@ -300,8 +300,8 @@ public final class PktDialog {
 
     private void toggle(LinearLayout body, String label, final boolean[] flags, final int i) {
         LinearLayout rowv = shell(); rowv.setOrientation(LinearLayout.HORIZONTAL); rowv.setGravity(Gravity.CENTER_VERTICAL);
-        rowv.addView(Theme.label(c, label, 0xFFBFC8D0, 14, false), new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-        final TextView v = Theme.label(c, flags[i] ? "ON" : "OFF", flags[i] ? Theme.PKT[3] : 0xFF8A98A6, 13, true);
+        rowv.addView(Neo.label(c, label, 0xFFBFC8D0, 14, false), new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        final TextView v = Neo.label(c, flags[i] ? "ON" : "OFF", flags[i] ? Theme.PKT[3] : 0xFF8A98A6, 13, true);
         v.setBackground(Theme.rounded(c, flags[i] ? Theme.PKT[0] : 0x18000000, flags[i] ? Theme.PKT[2] : 0x3300BFFF, 1, 14)); v.setPadding(dp(12), dp(6), dp(12), dp(6));
         rowv.addView(v);
         View.OnClickListener cl = x -> { flags[i] = !flags[i]; v.setText(flags[i] ? "ON" : "OFF"); v.setTextColor(flags[i] ? Theme.PKT[3] : 0xFF8A98A6); v.setBackground(Theme.rounded(c, flags[i] ? Theme.PKT[0] : 0x18000000, flags[i] ? Theme.PKT[2] : 0x3300BFFF, 1, 14)); };
@@ -314,48 +314,32 @@ public final class PktDialog {
     private int dp(float x) { return Math.round(x * d); }
     private void toast(String s) { Toast.makeText(c, s, Toast.LENGTH_LONG).show(); }
 
-    private LinearLayout page(String title) {
-        LinearLayout body = new LinearLayout(c); body.setOrientation(LinearLayout.VERTICAL); body.setBackgroundColor(Theme.BG); body.setPadding(dp(16), dp(12), dp(16), dp(8));
-        body.addView(Theme.label(c, title, Theme.PKT[3], 20, true));
-        return body;
-    }
-    private AlertDialog dialog(LinearLayout body) {
-        ScrollView sv = new ScrollView(c); sv.addView(body);
-        AlertDialog a = new AlertDialog.Builder(c).setView(sv).create();
-        
-        a.show();
-        return a;
-    }
-    private TextView hint(String s) { TextView t = Theme.label(c, s, 0xFF8A98A6, 12, false); t.setPadding(0, dp(4), 0, dp(6)); return t; }
-    private TextView section(String s) { TextView t = Theme.label(c, s, 0xFFBFC8D0, 13, true); t.setPadding(0, dp(10), 0, dp(4)); return t; }
+    private LinearLayout page(String title) { return Neo.sheetBody(c, title); }
+    private AlertDialog dialog(LinearLayout body) { return Neo.showSheet(c, body); }
+    private TextView hint(String s) { return Neo.sheetHint(c, s); }
+    private TextView section(String s) { return Neo.sheetSection(c, s); }
     private LinearLayout row() {
         LinearLayout r = new LinearLayout(c); r.setOrientation(LinearLayout.HORIZONTAL); r.setGravity(Gravity.CENTER_VERTICAL);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT); lp.topMargin = dp(2); lp.bottomMargin = dp(4); r.setLayoutParams(lp);
         return r;
     }
-    private TextView button(LinearLayout row, String text, int[] accent, View.OnClickListener l) {
-        TextView b = Theme.label(c, text, accent[3], 13, true); b.setGravity(Gravity.CENTER);
-        b.setBackground(Theme.rounded(c, accent[0], accent[2], 2, 18)); b.setPadding(dp(6), dp(10), dp(6), dp(10)); b.setClickable(true); b.setOnClickListener(l);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f); lp.setMargins(dp(3), dp(2), dp(3), dp(2));
-        row.addView(b, lp);
-        return b;
-    }
+    private TextView button(LinearLayout row, String text, int[] accent, View.OnClickListener l) { TextView b = Neo.button(c, text, null, Neo.accentOf(accent)); b.setTextSize(14); b.setOnClickListener(l); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f); lp.setMargins(dp(3), dp(4), dp(3), dp(2)); row.setBaselineAligned(false); row.addView(b, lp); return b; }
     private LinearLayout shell() {
         LinearLayout r = new LinearLayout(c); r.setOrientation(LinearLayout.VERTICAL);
-        r.setBackground(Theme.rounded(c, 0x18000000, 0x3300BFFF, 1, 8)); r.setPadding(dp(12), dp(8), dp(12), dp(8));
+        r.setBackground(Neo.rowCard(c)); r.setPadding(dp(12), dp(8), dp(12), dp(8));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT); lp.bottomMargin = dp(6); r.setLayoutParams(lp);
         return r;
     }
     private EditText field(LinearLayout target, String label, String value, int inputType) {
-        LinearLayout r = shell(); r.addView(Theme.label(c, label, 0xFF9AA4AE, 12, false));
+        LinearLayout r = shell(); r.addView(Neo.label(c, label, 0xFF9AA4AE, 12, false));
         EditText e = new EditText(c); e.setText(value); e.setInputType(inputType); e.setTextSize(17); e.setTextColor(Theme.WHITE); e.setSingleLine(true); e.setBackground(null); e.setPadding(0, dp(4), 0, dp(4));
         r.addView(e); target.addView(r);
         return e;
     }
     private TextView cycle(LinearLayout target, String label, final String[] options, int index, final IntSetter setter) {
         LinearLayout r = shell(); r.setOrientation(LinearLayout.HORIZONTAL); r.setGravity(Gravity.CENTER_VERTICAL);
-        r.addView(Theme.label(c, label, 0xFFBFC8D0, 14, false), new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-        final TextView v = Theme.label(c, options[index], Theme.CYAN, 14, true); v.setBackground(Theme.rounded(c, 0x1400E5FF, 0x8000E5FF, 1, 14)); v.setPadding(dp(12), dp(6), dp(12), dp(6));
+        r.addView(Neo.label(c, label, 0xFFBFC8D0, 14, false), new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        final TextView v = Neo.label(c, options[index], Theme.CYAN, 14, true); v.setBackground(Neo.outline(c, Neo.CYAN, 0x16, 12, 1)); v.setPadding(dp(12), dp(6), dp(12), dp(6));
         r.addView(v);
         final int[] cur = { index };
         View.OnClickListener cl = x -> { cur[0] = (cur[0] + 1) % options.length; v.setText(options[cur[0]]); setter.set(cur[0]); };

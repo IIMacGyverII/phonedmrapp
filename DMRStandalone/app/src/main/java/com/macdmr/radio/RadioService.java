@@ -300,6 +300,10 @@ public class RadioService extends Service implements RadioEngine.Events {
                     log(n >= 0 ? "imported " + n + " channels from the stock app" : "stock import failed: " + err);
                     if (n >= 0) getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("tgListsImported", true).apply();
                 }
+                if (!getSharedPreferences("radio", MODE_PRIVATE).getBoolean("garbledPktPurged", false)) {   // noise frames logged before the AX.25 plausibility check
+                    int k = store.purgeGarbledPacketHistory(); log("removed " + k + " garbled packet lines from the history");
+                    getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("garbledPktPurged", true).apply();
+                }
                 if (!getSharedPreferences("radio", MODE_PRIVATE).getBoolean("tgListsImported", false)) {   // installs imported before TG lists were read
                     StringBuilder err = new StringBuilder();
                     int k = store.repairModuleTgLists(this, profile.stockApp, "default_uhf", err);
@@ -845,6 +849,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     }
 
     private void history(String kind, String text) {
+        text = text.replaceAll("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]", "\u00B7");   // no control characters on screen (they also break screen readers)
         int chNum = current != null ? current.number : 0;
         store.addHistory(chNum, kind, text, rssi, lastCaller);
         String line = new java.text.SimpleDateFormat("HH:mm:ss", Locale.US).format(new java.util.Date()) + " " + text + (rssi != -999 ? " " + rssi + " dBm" : "");
