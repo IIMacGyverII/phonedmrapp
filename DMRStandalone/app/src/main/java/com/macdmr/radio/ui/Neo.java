@@ -192,6 +192,7 @@ public final class Neo {
         ICONS.put("pkt", "M12 10v11M8 21h8M8.5 6.5a5 5 0 0 1 7 0M5.5 3.5a9 9 0 0 1 13 0");
         ICONS.put("repeaters", "M5 14a7 7 0 0 0 9.9 0L5 4.1a7 7 0 0 0 0 9.9zM10 9l3-3M14 4a6 6 0 0 1 6 6M14 7.5a2.5 2.5 0 0 1 2.5 2.5M8 18l-2 3h8l-2-3");
         ICONS.put("plus", "M12 5v14M5 12h14");
+        ICONS.put("widget", "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z");
         ICONS.put("search", "M11 4.5a6.5 6.5 0 1 0 0.01 0M16 16l4.5 4.5");
         ICONS.put("star", "M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z");
         ICONS.put("menu", "M4 7h16M4 12h16M4 17h10");

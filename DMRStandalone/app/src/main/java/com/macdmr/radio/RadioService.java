@@ -45,6 +45,8 @@ public class RadioService extends Service implements RadioEngine.Events {
     private final LocalBinder binder = new LocalBinder();
     private final List<Listener> listeners = new ArrayList<>();
     private final Handler ui = new Handler(Looper.getMainLooper());
+    /** The running service, for the widget and notification buttons (set in onCreate, cleared in onDestroy). */
+    public static volatile RadioService running;
 
     private DeviceProfile profile;
     private RadioEngine engine;
@@ -219,6 +221,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     @Override public void onCreate() {
         super.onCreate();
         startForeground(1, notification("Radio idle"));
+        running = this;
         profile = DeviceProfile.detect();
         store = new ChannelStore(this);
         zoneId = getSharedPreferences("radio", MODE_PRIVATE).getLong("zone", 0);
@@ -260,6 +263,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     public void setHwPtt(boolean on) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("hwPtt", on).apply(); if (!on && pttDown) ptt(false); }
 
     @Override public void onDestroy() {
+        running = null; RadioWidget.refresh(this, null);
         try { if (pttKey != null) unregisterReceiver(pttKey); } catch (Throwable ignored) { }
         try { if (pttDown) { if (audio != null) audio.stopTx(); engine.ptt(false); } } catch (Throwable ignored) { }
         try { if (audio != null) { audio.stopRx(); } } catch (Throwable ignored) { }
@@ -420,6 +424,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     public boolean scanHolding() { return scanner.isHolding(); }
 
     private void pushModes() {
+        refreshControls();
         final String zn = zoneName();
         ui.post(() -> { for (Listener l : listeners) l.onModes(softSq.isEnabled(), softSq.level(), squelchOpen, monitorOn, recordOn, scanner.isScanning(), scanner.isHolding(), zn); });
     }
@@ -811,14 +816,14 @@ public class RadioService extends Service implements RadioEngine.Events {
                     if (!isReady()) { log("PTT ignored: radio not ready"); return; }
                     if (txInhibited()) { log("PTT blocked: receive-only channel"); ui.post(() -> { for (Listener l : listeners) l.onHistory("⛔ TX blocked on a receive-only channel"); }); return; }
                     if (pttDown) return;
-                    pttDown = true;
+                    pttDown = true; refreshControls();
                     if (audio != null) audio.stopRx();              // never play the RX stream while the mic is live (feedback)
                     engine.ptt(true);
                     if (audio != null) log(audio.startTx());
                     ui.removeCallbacks(txWatchdog); ui.postDelayed(txWatchdog, 28000);
                 } else {
                     if (!pttDown) return;
-                    pttDown = false;
+                    pttDown = false; refreshControls();
                     ui.removeCallbacks(txWatchdog);
                     try { if (audio != null) audio.stopTx(); } finally { engine.ptt(false); }
                     if (rxAudioOn && audio != null) audio.startRx(true);
@@ -878,9 +883,9 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     @Override public void status(int code, String name) {
         switch (code) {
-            case 1: receiving = true; rxStart = System.currentTimeMillis(); rxCounts = rxReportsReception(); softSq.rxStarted(); ui.post(() -> { for (Listener l : listeners) l.onRx(true); }); pollRssi(); break;
+            case 1: receiving = true; refreshControls(); rxStart = System.currentTimeMillis(); rxCounts = rxReportsReception(); softSq.rxStarted(); ui.post(() -> { for (Listener l : listeners) l.onRx(true); }); pollRssi(); break;
             case 2: {
-                receiving = false; long len = rxStart > 0 ? System.currentTimeMillis() - rxStart : 0; rxStart = 0;
+                receiving = false; refreshControls(); long len = rxStart > 0 ? System.currentTimeMillis() - rxStart : 0; rxStart = 0;
                 if (softSq.isEnabled() && squelchOpen) { softSq.closeNow(); softGateHistory(false); squelchOpen = false; log("soft squelch closed (carrier gone)"); }
                 softSq.awaitRxStart();                                   // with the module squelch held open a RECEIVE_STOP only happens while the receiver re-settles
                 if (current != null && current.isDigital()) { try { engine.queryCallerInfo(); } catch (IOException ignored) { } }   // who was that (0x2B)
@@ -892,8 +897,8 @@ public class RadioService extends Service implements RadioEngine.Events {
                 ui.post(() -> { for (Listener l : listeners) l.onRx(false); });
                 break;
             }
-            case 3: transmitting = true; ui.post(() -> { for (Listener l : listeners) l.onTx(true); }); break;
-            case 4: transmitting = false; history("tx", "📻 Voice TX"); ui.post(() -> { for (Listener l : listeners) l.onTx(false); }); break;
+            case 3: transmitting = true; refreshControls(); ui.post(() -> { for (Listener l : listeners) l.onTx(true); }); break;
+            case 4: transmitting = false; refreshControls(); history("tx", "📻 Voice TX"); ui.post(() -> { for (Listener l : listeners) l.onTx(false); }); break;
             case 5: try { engine.fetchSms(); } catch (IOException ignored) { } break;             // SMS_RECEIVED -> ask for it
             case 8: smsResult(true); break;
             case 9: smsResult(false); break;
@@ -951,14 +956,37 @@ public class RadioService extends Service implements RadioEngine.Events {
         NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (Build.VERSION.SDK_INT >= 26 && nm != null) nm.createNotificationChannel(new NotificationChannel("radio", "Radio", NotificationManager.IMPORTANCE_LOW));
         Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, "radio") : new Notification.Builder(this);
-        return b.setContentTitle("DMR Radio").setContentText(text).setSmallIcon(android.R.drawable.stat_sys_speakerphone).setOngoing(true).build();
+        ChannelStore.Channel ch = current;
+        b.setContentTitle(ch != null ? "Ch " + ch.number + " · " + ch.name : "DMR Radio").setContentText(text)
+                .setSmallIcon(R.drawable.ic_stat_radio).setColor(0xFF19D3FF).setOngoing(true).setOnlyAlertOnce(true).setShowWhen(false)
+                .setContentIntent(RadioWidget.openApp(this));
+        if (isReady()) {
+            boolean scanning = scanner != null && scanner.isScanning();
+            b.addAction(new Notification.Action.Builder(android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_w_left), "Ch −", RadioWidget.command(this, RadioWidget.CMD_PREV, 1)).build());
+            b.addAction(new Notification.Action.Builder(android.graphics.drawable.Icon.createWithResource(this, scanning ? R.drawable.ic_w_stop : R.drawable.ic_w_scan), scanning ? "Stop scan" : "Scan", RadioWidget.command(this, RadioWidget.CMD_SCAN, 3)).build());
+            b.addAction(new Notification.Action.Builder(android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_w_right), "Ch +", RadioWidget.command(this, RadioWidget.CMD_NEXT, 2)).build());
+            if (Build.VERSION.SDK_INT >= 24) b.setStyle(new Notification.MediaStyle().setShowActionsInCompactView(0, 1, 2));
+        }
+        return b.build();
     }
 
-    private void updateNotification() {
+    private void updateNotification() { refreshControls(); }
+
+    private final Runnable controlsRefresh = () -> {
         try {
             NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-            String t = current != null ? "Ch " + current.number + "  " + current.name + "  (" + link + ")" : link;
+            String t = isReady() ? RadioWidget.status(this) : "Radio " + link;
             if (nm != null) nm.notify(1, notification(t));
         } catch (Throwable ignored) { }
-    }
+        RadioWidget.refresh(this, this);
+    };
+    /** Notification + widget, coalesced: state can flip several times in a few ms (gate, RX start, TX). */
+    private void refreshControls() { ui.removeCallbacks(controlsRefresh); ui.postDelayed(controlsRefresh, 150); }
+
+    public boolean isTransmitting() { return transmitting || pttDown; }
+    public boolean pttHeld() { return pttDown; }
+    public boolean isScanning() { return scanner != null && scanner.isScanning(); }
+    public boolean isScanHolding() { return scanner != null && scanner.isHolding(); }
+    /** Something is actually heard: the Soft SQ gate on Soft SQ channels, the radio's own report otherwise. */
+    public boolean hearing() { return softSq != null && softSq.isEnabled() ? squelchOpen : receiving && rxCounts; }
 }
