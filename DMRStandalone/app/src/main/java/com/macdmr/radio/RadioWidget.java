@@ -47,7 +47,7 @@ public class RadioWidget extends AppWidgetProvider {
     }
 
     /** One line for the widget and the notification: TX / receiving / scanning / ready, or the link state. */
-    static String status(RadioService s) {
+    public static String status(RadioService s) {
         if (s == null) return "Radio off · tap to open";
         if (!s.isReady()) return "Radio " + s.link();
         ChannelStore.Channel ch = s.current();
