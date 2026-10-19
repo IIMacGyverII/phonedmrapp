@@ -68,8 +68,12 @@ public final class NoiseSquelchDetector {
                 smoothed = smoothed > 900 ? amp : smoothed * (1 - EMA) + amp * EMA;
                 double open = threshFor(level);
                 double close = Math.min(open * 1.3, 46);   // hysteresis, but stay below the static floor
-                boolean quiet = totalEnergy < (window * 2500.0);   // RMS < ~50 -> no real audio (don't open)
-                if (quiet) signal = false;
+                boolean quiet = totalEnergy < (window * 2500.0);   // RMS < ~50: near silence
+                // Silence never opens (a retune or a muted receiver is silent too), but it never closes either: with the
+                // module's squelch held open, silence on an open channel is a carrier with nobody speaking (full FM
+                // quieting), e.g. the pauses between NOAA Weather Radio phrases. A carrier that really drops turns into
+                // hiss, which closes the gate below.
+                if (quiet) { }
                 else if (!signal && smoothed < open) signal = true;
                 else if (signal && smoothed > close) signal = false;
                 resetWindow();

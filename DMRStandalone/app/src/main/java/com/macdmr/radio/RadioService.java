@@ -1019,7 +1019,35 @@ public class RadioService extends Service implements RadioEngine.Events {
             if (nm != null) nm.notify(1, notification(t));
         } catch (Throwable ignored) { }
         RadioWidget.refresh(this, this);
+        updateAudioFocus();
     };
+
+    // ---- audio focus --------------------------------------------------------------------------------
+    // While something is heard the app holds transient, may-duck audio focus: music and podcasts dip under the
+    // radio, and Android Auto (which only sends the focus holder's media to the car) plays it through the car.
+    // Released 2.5 s after reception ends, so the music does not bounce back between phrases.
+    private android.media.AudioFocusRequest focusRequest; private boolean focusHeld;
+    private final Runnable focusRelease = () -> {
+        if (!focusHeld) return;
+        try { ((android.media.AudioManager) getSystemService(AUDIO_SERVICE)).abandonAudioFocusRequest(focusRequest); } catch (Throwable ignored) { }
+        focusHeld = false; log("audio focus released");
+    };
+    private void updateAudioFocus() {
+        boolean want = rxAudioOn && !pttDown && hearing();
+        if (want) {
+            ui.removeCallbacks(focusRelease);
+            if (focusHeld) return;
+            try {
+                android.media.AudioManager am = (android.media.AudioManager) getSystemService(AUDIO_SERVICE);
+                if (focusRequest == null) focusRequest = new android.media.AudioFocusRequest.Builder(android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                        .setAudioAttributes(new android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH).build())
+                        .setWillPauseWhenDucked(false).setOnAudioFocusChangeListener(ch -> log("audio focus change " + ch), ui).build();
+                int r = am.requestAudioFocus(focusRequest);
+                focusHeld = r == android.media.AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
+                log("audio focus " + (focusHeld ? "held" : "refused (" + r + ")"));
+            } catch (Throwable t) { log("audio focus: " + t); }
+        } else if (focusHeld) { ui.removeCallbacks(focusRelease); ui.postDelayed(focusRelease, 2500); }
+    }
     /** Notification + widget, coalesced: state can flip several times in a few ms (gate, RX start, TX). */
     private void refreshControls() { ui.removeCallbacks(controlsRefresh); ui.postDelayed(controlsRefresh, 150); }
 
