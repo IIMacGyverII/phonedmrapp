@@ -54,6 +54,6 @@ public class FoxHuntTest {
     @Test public void beaconFitsTheTransmitLimit() {
         short[] b = FoxHunt.beacon(5, "N0CALL");
         assertTrue(b.length > 8000 * 5 && b.length < 8000 * 20);
-        assertEquals(8000 * 3 / 10 + 20 * 2000, FoxHunt.beacon(5, null).length);
+        assertEquals(8000 * 3 / 2 + 20 * 2000, FoxHunt.beacon(5, null).length);
     }
 }

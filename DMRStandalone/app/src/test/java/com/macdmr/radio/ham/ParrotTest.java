@@ -36,10 +36,10 @@ public class ParrotTest {
         short[] out = h.await();
         assertNotNull("transmitted", out);
         int voice = 2048 / 64 * 512;
-        assertEquals(8000 / 4 + voice, out.length);
+        assertEquals(8000 * 3 / 2 + voice, out.length);
         int peak = 0; for (short v : out) peak = Math.max(peak, Math.abs(v));
         assertTrue("normalized near 22000, was " + peak, peak > 20000 && peak <= 22100);
-        for (int i = 0; i < 8000 / 4; i++) assertEquals(0, out[i]);
+        for (int i = 0; i < 8000 * 3 / 2; i++) assertEquals(0, out[i]);
     }
 
     @Test public void ignoresKerchunks() throws Exception {
@@ -52,7 +52,7 @@ public class ParrotTest {
         FakeHost h = new FakeHost(); h.call = "N0CALL"; Parrot p = new Parrot(h); p.setEnabled(true);
         long t = play(p, 1000, 1024);
         short[] first = h.await(); assertNotNull(first);
-        int bare = 8000 / 4 + 1024 / 64 * 512;
+        int bare = 8000 * 3 / 2 + 1024 / 64 * 512;
         assertTrue("first playback carries the ID", first.length > bare + 8000);
         Thread.sleep(1300);   // the playback thread records the ID time
         synchronized (h.sent) { h.sent.clear(); }
@@ -67,6 +67,6 @@ public class ParrotTest {
         short[] out = h.await(); assertNotNull(out);
         assertTrue(out.length <= 8000 * 28);
         Thread.sleep(300);
-        assertTrue(h.events.get(0).contains("cut at 27 s"));
+        assertTrue(h.events.get(0).contains("cut at 26 s"));
     }
 }
