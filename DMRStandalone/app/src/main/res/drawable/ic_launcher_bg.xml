@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SignalDeck icon background: charcoal with a faint cyan lift behind the panel. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:pathData="M0,0 H108 V108 H0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="54" android:centerY="50" android:gradientRadius="64"
+                android:startColor="#FF1E2A33" android:centerColor="#FF181B1F" android:endColor="#FF121416"/>
+        </aapt:attr>
+    </path>
+</vector>

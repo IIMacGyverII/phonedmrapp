@@ -35,6 +35,13 @@ public final class DiagReceiver extends BroadcastReceiver {
                 com.macdmr.radio.ham.SatTrack.Pass p = new com.macdmr.radio.ham.SatTrack.Pass(); p.aos = System.currentTimeMillis() + 60_000; p.los = p.aos + 30_000; p.tca = p.aos;
                 Log.i("DiagReceiver", "sattest: " + s.trackSat(com.macdmr.radio.ham.Satellites.ALL[0], e, p)); break;
             }
+            case "iconpng": try {                                  // the launcher icon as the launcher draws it (adaptive, circle mask), for checking the artwork
+                android.graphics.drawable.Drawable d = s.getPackageManager().getApplicationIcon(s.getPackageName());
+                android.graphics.Bitmap bm = android.graphics.Bitmap.createBitmap(432, 432, android.graphics.Bitmap.Config.ARGB_8888);
+                android.graphics.Canvas cv = new android.graphics.Canvas(bm); d.setBounds(0, 0, 432, 432); d.draw(cv);
+                try (java.io.FileOutputStream o = new java.io.FileOutputStream(new java.io.File(s.getExternalFilesDir(null), "icon.png"))) { bm.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, o); }
+                Log.i("DiagReceiver", "icon saved");
+            } catch (Throwable t) { Log.w("DiagReceiver", "iconpng: " + t); } break;
             case "callstart": Log.i("DiagReceiver", "talk call: " + com.macdmr.radio.car.RadioCallService.start(s)); break;   // places the call only: no transmission unless a wheel start is pending
             case "callend": com.macdmr.radio.car.RadioCallService.end(); break;
             case "benchIgate": if (s.packet() != null) s.packet().benchIgate = i.getBooleanExtra("on", false); break;
