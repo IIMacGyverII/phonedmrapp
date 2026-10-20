@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Activity statistics
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | **Last heard → Activity** (`ham/ActivityStats.java`, `ui/ActivityDialog.java`, `ChannelStore.activity`): today / 7 / 30 days of `rx` and `dmr` history rows: total receptions and analog minutes (parsed from "Received N s"), a 24-bar hour-of-day chart (busiest in amber), busiest channels with receptions, minutes and last time (tap to tune), and **Make a scan zone of the busiest** (up to 12 channels into a "Busiest channels" zone, selected). Help updated. | `ham/ActivityStats.java`, `ui/ActivityDialog.java` (new), `ChannelStore.java`, `ui/LastHeardDialog.java`, `ui/HelpView.java`; test `ActivityStatsTest` | Unit test 1/1. On the phone: the Activity sheet showed the real history for the last 7 days (1475 receptions, 327 min, busiest channel NOAA WX6, peak hour 15:00) |
+
 ## 2026-10-20 — Callsign lookup and grid squares
 
 | Backlog | Change | Files | Test |

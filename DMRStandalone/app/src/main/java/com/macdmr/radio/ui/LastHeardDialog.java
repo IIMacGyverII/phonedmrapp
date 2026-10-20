@@ -29,10 +29,10 @@ public final class LastHeardDialog {
         hint.setPadding(0, (int) (4 * d), 0, (int) (8 * d)); body.addView(hint);
         LinearLayout tools = new LinearLayout(c); tools.setGravity(Gravity.CENTER);
         tools.setBaselineAligned(false);
-        for (String[] t : new String[][] { { "Recordings", "rec" }, { "Captions", "txt" } }) {
-            TextView b = Neo.button(c, t[0], t[1], t[1].equals("rec") ? Neo.RED : Neo.VIOLET); b.setTextSize(14);
-            final boolean rec = t[1].equals("rec");
-            b.setOnClickListener(v -> { if (rec) MediaDialogs.recordings(c, svc); else MediaDialogs.captions(c, svc); });
+        for (String[] t : new String[][] { { "Recordings", "rec" }, { "Captions", "txt" }, { "Activity", "signal" } }) {
+            TextView b = Neo.button(c, t[0], t[1], t[1].equals("rec") ? Neo.RED : t[1].equals("txt") ? Neo.VIOLET : Neo.CYAN); b.setTextSize(14);
+            final String which = t[1];
+            b.setOnClickListener(v -> { if (which.equals("rec")) MediaDialogs.recordings(c, svc); else if (which.equals("txt")) MediaDialogs.captions(c, svc); else ActivityDialog.show(c, svc); });
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f); lp.setMargins((int) (3 * d), (int) (6 * d), (int) (3 * d), (int) (10 * d)); tools.addView(b, lp);
         }
         body.addView(tools);

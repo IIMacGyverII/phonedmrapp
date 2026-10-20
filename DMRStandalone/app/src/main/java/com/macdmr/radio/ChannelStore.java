@@ -243,6 +243,15 @@ public final class ChannelStore extends SQLiteOpenHelper {
         return out;
     }
 
+    /** Receptions since {@code sinceTs} (analog and DMR), for the activity statistics: [ts, channel, kind, text]. */
+    public List<Object[]> activity(long sinceTs) {
+        List<Object[]> out = new ArrayList<>();
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT ts, channel, kind, text FROM history WHERE ts>=? AND kind IN ('rx','dmr')", new String[] { String.valueOf(sinceTs) })) {
+            while (c.moveToNext()) out.add(new Object[] { c.getLong(0), c.getInt(1), c.getString(2), c.getString(3) });
+        }
+        return out;
+    }
+
     /** Every history line within {@code ms} of {@code ts}, oldest first (the "Around this time" list of an event). */
     public List<Object[]> around(long ts, long ms) {
         List<Object[]> out = new ArrayList<>();
