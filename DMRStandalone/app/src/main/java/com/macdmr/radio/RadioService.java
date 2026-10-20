@@ -137,6 +137,10 @@ public class RadioService extends Service implements RadioEngine.Events {
         }
     }
 
+    // ---- nets (net control) ----
+    private com.macdmr.radio.ham.NetStore nets;
+    public com.macdmr.radio.ham.NetStore nets() { if (nets == null) nets = new com.macdmr.radio.ham.NetStore(this); return nets; }
+
     // ---- logbook ----
     private com.macdmr.radio.ham.Logbook logbook;
     public com.macdmr.radio.ham.Logbook logbook() { if (logbook == null) logbook = new com.macdmr.radio.ham.Logbook(this); return logbook; }
@@ -1117,7 +1121,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         if (current != null && !current.isDigital() && len >= 700) history("rx", "📻 Received " + Math.round(len / 1000.0) + " s");
     }
 
-    private void history(String kind, String text) {
+    public void history(String kind, String text) {
         text = text.replaceAll("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]", "\u00B7");   // no control characters on screen (they also break screen readers)
         int chNum = current != null ? current.number : 0;
         store.addHistory(chNum, kind, text, rssi, lastCaller);

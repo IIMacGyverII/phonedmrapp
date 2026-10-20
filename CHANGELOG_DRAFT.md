@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Net control
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | **PKT → Net control** (`ham/NetStore.java`, own `nets.db`; `ui/NetDialog.java`): start a named net on the current channel (live run clock, survives closing the sheet); check in by callsign (name taken from the logbook) or with one tap from stations heard in the last 30 min (logbook heard entries); duplicates merged; late flag automatic after 15 min; Traffic/Late/Out flags; remove by long-press; End → plain-text report (net, date, channel and MHz, open/close times and minutes, net control, check-in count and traffic count, numbered check-ins with flags and notes), Share, Add to logbook (each check-in as a QSO noted with the net name); past nets with reports and delete. History lines for start/end. New help topic. | `ham/NetStore.java`, `ui/NetDialog.java` (new), `RadioService.java`, `ui/PktDialog.java`, `ui/HelpView.java`; test `NetReportTest` | Unit test 1/1 (report contents). On the phone: started a test net, checked a station in, flagged it, ended it and opened the report; the test net and its history lines were removed |
+
 ## 2026-10-20 — Voice keyer and ID timer; fewer false Morse decodes
 
 | Backlog | Change | Files | Test |
