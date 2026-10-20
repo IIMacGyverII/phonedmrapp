@@ -1022,7 +1022,10 @@ public class RadioService extends Service implements RadioEngine.Events {
     /** APRS, SSTV and satellite channels: the radio's squelch wide open (its single threshold sits near -90 dBm, far
      *  above a satellite or a distant digipeater), so the decoders get every signal; Soft SQ keeps the speaker quiet
      *  until something is really there. */
-    private static void dataModeSquelch(ChannelStore.Channel c) { c.sq = 0; c.softSq = true; c.softSqLevel = 5; }
+    private void dataModeSquelch(ChannelStore.Channel c) {
+        c.sq = 0; c.softSq = true; c.softSqLevel = 5;
+        c.power = packet != null ? packet.dataTxPower() : 1;      // APRS settings: high (default) or low on these frequencies
+    }
 
     /** Soft SQ applies to an analog channel when it is switched on for that channel, or on every analog channel while scanning (setting, default on). */
     private boolean softSqFor(ChannelStore.Channel ch) { return !ch.isDigital() && (ch.softSq || (scanner.isScanning() && scanSoftSq())); }
