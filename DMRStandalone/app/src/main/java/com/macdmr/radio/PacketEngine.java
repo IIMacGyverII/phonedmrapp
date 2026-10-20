@@ -231,6 +231,9 @@ public final class PacketEngine {
         if (AprsIsClient.shouldGate(t)) c.gate(t);
     }
 
+    /** Bench: handle a line as if the APRS-IS server sent it (DiagReceiver). */
+    public void diagServerLine(String line) { if (line != null) isServerLine(line); }
+
     /** Lines from the server: messages for our login are logged, notified and acked over the internet. */
     private void isServerLine(String line) {
         try {
