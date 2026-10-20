@@ -15,6 +15,12 @@
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />   <!-- recordings made by an earlier install / the module -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />   <!-- in-app updates from GitHub releases -->
 
+    <!-- Android Auto: to tell whether it will show this app in the car (car/AutoTrust) and open its settings -->
+    <queries>
+        <package android:name="com.google.android.projection.gearhead" />
+        <intent><action android:name="android.intent.action.APPLICATION_PREFERENCES" /></intent>
+    </queries>
+
     <application
         android:name=".RadioApp"
         android:label="DMR Radio"

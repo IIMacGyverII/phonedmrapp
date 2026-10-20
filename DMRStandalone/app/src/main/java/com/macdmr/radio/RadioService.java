@@ -1114,6 +1114,13 @@ public class RadioService extends Service implements RadioEngine.Events {
                 inCar = car; log(car ? "Android Auto connected" : "Android Auto disconnected");
                 carEvent(car ? "🚗 Android Auto connected (" + (carControlsScreen() ? "Radio controls screen" : "media app") + ")" : "🚗 Android Auto disconnected");
                 carCoverage(car);
+                if (car) new Thread(() -> {   // a sideloaded app stays off the car's app list unless Unknown sources is on
+                    com.macdmr.radio.car.AutoTrust.State st = com.macdmr.radio.car.AutoTrust.check(this);
+                    if (st == com.macdmr.radio.car.AutoTrust.State.OFF || st == com.macdmr.radio.car.AutoTrust.State.LOCKED) {
+                        ui.post(() -> carEvent("⚠️ Android Auto is hiding DMR Radio: Unknown sources is off (Device page shows how to fix it)"));
+                        com.macdmr.radio.car.AutoTrust.notifyHidden(this, st);
+                    } else if (st == com.macdmr.radio.car.AutoTrust.State.OK) com.macdmr.radio.car.AutoTrust.clearNotice(this);
+                }, "autotrust").start();
             });
         } catch (Throwable t) { log("car connection: " + t); }
     }

@@ -316,8 +316,7 @@ public final class Neo {
         col.addView(text(c, title, TEXT, 16, ui(c)));
         if (sub != null) { TextView s = text(c, sub, MUTED, 13, uiMedium(c)); s.setPadding(0, Theme.dp(c, 2), 0, 0); col.addView(s); }
         row.addView(col, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-        row.addView(sw);
-        row.setOnClickListener(v -> sw.performClick());
+        if (sw != null) { row.addView(sw); row.setOnClickListener(v -> sw.performClick()); }   // null: a plain tappable row
         return row;
     }
 

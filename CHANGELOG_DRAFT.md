@@ -3,6 +3,14 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-19 — Android Auto: warning when the car would hide the radio; crash adding a repeater from the map
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | **Unknown sources warning.** New `car/AutoTrust`: when the app isn't installed from the Play Store and Android Auto is on the phone, it reads Android Auto's developer prefs with root (`allow_unknown_sources`; whether the developer settings are unlocked is read from either prefs file). While the setting is off, Device → Radio settings shows the amber row "Android Auto is hiding this app". Tapping it opens a sheet with the symptoms, the steps (including unlocking the developer settings when that is still needed), **Open Android Auto settings** (resolves to Android Auto's `DefaultSettingsActivity` through `APPLICATION_PREFERENCES`) and **Check again**. The page re-checks when shown and when you come back to it. When the car connects in that state, the phone gets a notification (tap: Android Auto's settings) and the radio history records it. Once the setting is on, the notification is cleared. Manifest `<queries>` for Android Auto. Help updated. | `car/AutoTrust.java`, `RadioService.java`, `ui/DeviceView.java`, `ui/Neo.java` (`switchRow` without a switch), `AndroidManifest.xml`, `ui/HelpView.java` | On the phone with Unknown sources on: logcat `AutoTrust: … OK`, row hidden, settings intent resolves. The warning-shown state (setting off) is not device-tested (the owner had already turned it on) |
+| N8 | **Crash fix: adding a repeater from the map.** Map → repeater → Details → Add crashed after the channels were saved (`NullPointerException` on `list.post`: the details sheet opened from the map has no list). The result now goes to the main thread directly. The Buffalo repeater from the drive had been saved (channel 52, zone "»N0FWG Buffalo, MN"). | `ui/RepeatersDialog.java` | Crash read from the phone's dropbox; fix built and installed, not re-run from the map |
+| N8 | Help → steering-wheel Talk: only the wheel's media buttons reach an app; the voice button is Google's assistant (needs the Google app enabled) and the phone button the car's dialer. | `ui/HelpView.java` | — |
+
 ## 2026-10-19 — Android Auto: why the car hides the radio (diagnosed from the second drive; help corrected)
 
 | Backlog | Change | Files | Test |
