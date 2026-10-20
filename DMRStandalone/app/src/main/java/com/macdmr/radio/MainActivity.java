@@ -52,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
             svc = ((RadioService.LocalBinder) b).get();
             intercom.attach(svc); diagnostics.attach(svc); channels.attach(svc); contacts.attach(svc); messages.attach(svc); device.attach(svc);
             if (!svc.isReady()) svc.bringUp();
-            ui.post(rssiTick);
+            ui.post(rssiTick); ui.removeCallbacks(modeTick); ui.post(modeTick);
             applyPendingLocation();
             ui.postDelayed(MainActivity.this::announceCoverage, 3000);
             if (!svc.profile().supported && !getSharedPreferences("radio", MODE_PRIVATE).getBoolean("unsupportedShown", false)) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("unsupportedShown", true).apply(); show(4); }
@@ -83,6 +83,8 @@ public class MainActivity extends AppCompatActivity {
             tabs[i] = t; tabIcon[i] = e; tabInd[i] = ind; tabCell[i] = tab;
             nav.addView(tab, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         }
+        modeBar = buildModeBar();
+        root.addView(modeBar, 1);                                  // under the page, over the tab bar: a running mode, tap to open its page
         root.addView(nav);
         setContentView(root);
         if (b == null) {                                          // only when the screen is created fresh (first start, or after it was closed); returning to the open app never replays it
@@ -175,7 +177,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void show(int idx) {
         tab = idx;
-        content.removeAllViews();
+        content.removeAllViews(); overlay = null; editor = null;      // a tab tap leaves any page on top of the old tab
         View v;
         switch (idx) {
             case 0: v = intercom; break;
@@ -210,8 +212,59 @@ public class MainActivity extends AppCompatActivity {
         TextView t = Theme.label(this, name + "\n\ncoming next", 0xFF8A7FB0, 18, false); t.setGravity(Gravity.CENTER); return t;
     }
 
+    // ---- modes that take the radio over (APRS monitor, KISS, SSTV, parrot): their own full-screen page ----
+    private LinearLayout modeBar; private TextView modeBarText;
+    private boolean modeScreenOffered;
+    private final Runnable modeTick = new Runnable() { @Override public void run() { updateModeBar(); ui.postDelayed(this, 1000); } };
+    private com.macdmr.radio.ui.ModeScreen modeScreenFor() {
+        RadioService s = svc; if (s == null || s.packet() == null) return null;
+        Runnable close = this::closeOverlay;
+        if (s.packet().sstvRx()) return new com.macdmr.radio.ui.SstvScreen(this, s, close);
+        if (s.packet().monitoring() || s.packet().kiss().isActive()) return new com.macdmr.radio.ui.AprsScreen(this, s, close);
+        if (s.parrot().enabled()) return new com.macdmr.radio.ui.ParrotScreen(this, s, close);
+        return null;
+    }
+    /** Show the running mode's page; false when no mode has one. */
+    public boolean openModeScreen() {
+        com.macdmr.radio.ui.ModeScreen m = modeScreenFor();
+        if (m == null) return false;
+        if (tab != 0) show(0);
+        showOverlay(m); updateModeBar();
+        return true;
+    }
+    private String modeLabel() {
+        RadioService s = svc; if (s == null || s.packet() == null) return null;
+        com.macdmr.radio.PacketEngine pe = s.packet();
+        if (pe.sstvRx()) return "📺  SSTV receive";
+        if (pe.monitoring()) return "📡  APRS monitoring  ·  " + (s.aprsMonitorHz() == RadioService.ISS_APRS_HZ ? "ISS 145.825" : "144.390");
+        if (pe.kiss().isActive()) return "📡  KISS TNC";
+        if (s.parrot().enabled()) return "🦜  Parrot";
+        return null;
+    }
+    private LinearLayout buildModeBar() {
+        LinearLayout b = new LinearLayout(this); b.setGravity(Gravity.CENTER_VERTICAL); b.setVisibility(View.GONE);
+        b.setBackgroundColor(com.macdmr.radio.ui.Neo.alpha(com.macdmr.radio.ui.Neo.GREEN, 0x26));
+        b.setPadding(Theme.dp(this, 16), Theme.dp(this, 9), Theme.dp(this, 12), Theme.dp(this, 9));
+        modeBarText = com.macdmr.radio.ui.Neo.text(this, "", com.macdmr.radio.ui.Neo.GREEN_LIGHT, 15, com.macdmr.radio.ui.Neo.uiSemi(this)); modeBarText.setSingleLine(true);
+        b.addView(modeBarText, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        TextView open = com.macdmr.radio.ui.Neo.text(this, "OPEN  ›", com.macdmr.radio.ui.Neo.GREEN, 14, com.macdmr.radio.ui.Neo.ui(this)); open.setLetterSpacing(0.1f);
+        b.addView(open);
+        b.setOnClickListener(v -> openModeScreen());
+        b.setContentDescription("Open the running mode's page");
+        return b;
+    }
+    private void updateModeBar() {
+        if (modeBar == null) return;
+        String l = modeLabel();
+        boolean show = l != null && !(overlay instanceof com.macdmr.radio.ui.ModeScreen) && editor == null;
+        int vis = show ? View.VISIBLE : View.GONE; if (modeBar.getVisibility() != vis) modeBar.setVisibility(vis);
+        if (show && !l.contentEquals(modeBarText.getText())) modeBarText.setText(l);
+        if (l != null && !modeScreenOffered) { modeScreenOffered = true; if (overlay == null && editor == null && tab == 0) openModeScreen(); }   // opening the app while a mode runs: its page first
+        if (l == null) modeScreenOffered = true;
+    }
+
     private void showOverlay(View v) { closeOverlay(); overlay = v; content.addView(v, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)); }
-    private void closeOverlay() { if (overlay != null) { content.removeView(overlay); overlay = null; } }
+    private void closeOverlay() { if (overlay != null) { content.removeView(overlay); overlay = null; } updateModeBar(); }
 
     // ---- image picker for views (SSTV send) ----
     private java.util.function.Consumer<android.net.Uri> imagePick;
@@ -255,7 +308,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override protected void onDestroy() {
         super.onDestroy();
-        ui.removeCallbacks(rssiTick);
+        ui.removeCallbacks(rssiTick); ui.removeCallbacks(modeTick);
         if (svc != null) { intercom.detach(); diagnostics.detach(); }
         try { unbindService(conn); } catch (Throwable ignored) { }
     }

@@ -262,7 +262,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         if (ch == null || ch.isDigital()) return "The parrot needs an analog FM channel";
         if (txInhibited()) return "This channel is receive-only";
         if (!softSq.isEnabled() && hardwareSq(ch) == 0) return "Turn the channel's squelch up (or Soft SQ on) first: with squelch 0 the parrot would repeat static";
-        parrotChannel = ch.number; parrot.setEnabled(true);
+        parrotChannel = ch.number; modeSince = System.currentTimeMillis(); parrot.setEnabled(true);
         history("pkt", "\uD83E\uDD9C Parrot on: repeating what is heard on " + ch.name);
         pushModes();
         return "Parrot on " + ch.name + ": transmissions are repeated a second after they end";
@@ -341,6 +341,10 @@ public class RadioService extends Service implements RadioEngine.Events {
             }
         } catch (Throwable t) { log("keywords: " + t); }
     }
+    private volatile long modeSince;
+    /** When the mode that has the radio (APRS monitor, KISS, SSTV, parrot) started; 0 if none. */
+    public long modeSince() { return packetActive() ? modeSince : 0; }
+    public void markModeStart() { modeSince = System.currentTimeMillis(); }
     public boolean packetActive() { return parrot.enabled() || foxTxOn() || (packet != null && (packet.monitoring() || packet.kiss().isActive() || packet.sstvRx())); }
 
     /** SSTV receive: on the SSTV calling frequency (through the VFO) or on the current channel. */
@@ -352,6 +356,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                 a.type = 1; a.rxFreq = a.txFreq = PacketEngine.SSTV_FREQ_HZ; a.band = 1; a.power = 1; a.name = "SSTV 144.500";
                 applyVfo(a, false);
             }
+            if (!packet.sstvRx()) modeSince = System.currentTimeMillis();
             packet.setSstvRx(true); pushModes();
             return park ? "SSTV receive on 144.500 MHz" : "SSTV receive on this channel";
         }
@@ -502,6 +507,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             aprsMonitorHz = hz;
             ChannelStore.Channel a = new ChannelStore.Channel();
             a.type = 1; a.rxFreq = a.txFreq = hz; a.band = 1; a.power = 1; a.name = name;
+            if (!packet.monitoring()) modeSince = System.currentTimeMillis();
             packet.setMonitoring(true);
             applyVfo(a, false);
             pushModes();

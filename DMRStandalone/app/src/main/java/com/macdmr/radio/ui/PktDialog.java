@@ -29,6 +29,16 @@ public final class PktDialog {
     private AlertDialog dlg;
 
     public static void show(Context c, RadioService svc) { if (svc.packet() != null) new PktDialog(c, svc).open(); }
+    /** One of the packet sheets on its own, for the mode screens: message[:CALL], settings, sstvSend. */
+    public static void sheet(Context c, RadioService svc, String which) {
+        if (svc.packet() == null) return;
+        PktDialog p = new PktDialog(c, svc);
+        if (which.startsWith("message")) p.message(which.startsWith("message:") ? which.substring(8) : "");
+        else if (which.equals("settings")) p.settings();
+        else if (which.equals("sstvSend")) p.sstvSend();
+    }
+    /** After a mode that takes the radio started: its full-screen page instead of the intercom. */
+    private void openScreen() { dlg.dismiss(); if (c instanceof com.macdmr.radio.MainActivity) ((com.macdmr.radio.MainActivity) c).openModeScreen(); }
     private PktDialog(Context c, RadioService svc) { this.c = c; this.svc = svc; this.pe = svc.packet(); d = Theme.dp(c); }
 
     private void open() {
@@ -37,11 +47,11 @@ public final class PktDialog {
         body.addView(section("APRS"));
         body.addView(status());
         LinearLayout r1 = row();
-        button(r1, pe.monitoring() ? "Stop monitoring" : "Monitor 144.390", Theme.PKT, x -> { toast(svc.aprsMonitor(!pe.monitoring())); dlg.dismiss(); });
+        button(r1, pe.monitoring() ? "Stop monitoring" : "Monitor 144.390", Theme.PKT, x -> { boolean start = !pe.monitoring(); toast(svc.aprsMonitor(start)); if (start) openScreen(); else dlg.dismiss(); });
         button(r1, pe.kiss().isActive() ? "Stop KISS TNC" : "KISS TNC", Theme.PKT, x -> {
             if (pe.kiss().isActive()) { pe.kissStop(); toast("KISS TNC stopped"); }
-            else { String e = pe.kissStart(); toast(e == null ? "KISS TNC on 127.0.0.1:" + pe.kissPort() + " — point APRSdroid/YAAC at it (TCP KISS)" : e); }
-            svc.aprsMonitor(pe.monitoring()); dlg.dismiss();
+            else { if (!pe.monitoring()) svc.markModeStart(); String e = pe.kissStart(); toast(e == null ? "KISS TNC on 127.0.0.1:" + pe.kissPort() + " — point APRSdroid/YAAC at it (TCP KISS)" : e); }
+            svc.aprsMonitor(pe.monitoring()); if (pe.kiss().isActive()) openScreen(); else dlg.dismiss();
         });
         body.addView(r1);
         LinearLayout r2 = row();
@@ -61,7 +71,7 @@ public final class PktDialog {
         body.addView(rSat);
         LinearLayout rIss = row();
         final boolean issMon = pe.monitoring() && svc.aprsMonitorHz() == com.macdmr.radio.RadioService.ISS_APRS_HZ;
-        button(rIss, issMon ? "Stop ISS monitor" : "ISS: monitor 145.825", Theme.PKT, x -> { toast(issMon ? svc.aprsMonitor(false) : svc.aprsMonitorAt(true, com.macdmr.radio.RadioService.ISS_APRS_HZ, "ISS APRS 145.825")); dlg.dismiss(); });
+        button(rIss, issMon ? "Stop ISS monitor" : "ISS: monitor 145.825", Theme.PKT, x -> { toast(issMon ? svc.aprsMonitor(false) : svc.aprsMonitorAt(true, com.macdmr.radio.RadioService.ISS_APRS_HZ, "ISS APRS 145.825")); if (issMon) dlg.dismiss(); else openScreen(); });
         button(rIss, "Beacon via ISS", Theme.VFO, x -> toast(svc.issBeacon()));
         body.addView(rIss);
         String[] autoNames = { "off", "every " + pe.beaconMin() + " min", "SmartBeaconing" };
@@ -86,7 +96,7 @@ public final class PktDialog {
         body.addView(section("Simplex repeater (parrot)"));
         LinearLayout pr = row();
         final boolean parrotOn = svc.parrot().enabled();
-        button(pr, parrotOn ? "Stop the parrot" : "Parrot on this channel", Theme.PKT, x -> { toast(svc.setParrot(!parrotOn)); dlg.dismiss(); });
+        button(pr, parrotOn ? "Stop the parrot" : "Parrot on this channel", Theme.PKT, x -> { toast(svc.setParrot(!parrotOn)); if (svc.parrot().enabled()) openScreen(); else dlg.dismiss(); });
         body.addView(pr);
         body.addView(hint((parrotOn ? "\uD83E\uDD9C On, " + svc.parrot().played() + " repeated so far. " : "") + "Records each transmission heard on this channel and sends it back a second after it ends (up to 26 s), so a station can hear how it sounds, or two stations out of each other's range can talk through you. On amateur channels your callsign is sent in Morse at most every ten minutes. Needs the squelch closed on silence (squelch above 0 or Soft SQ); stops when you change channel."));
         // ---- text modes ----
@@ -145,7 +155,7 @@ public final class PktDialog {
         body.addView(hint("\uD83D\uDD38 " + pe.sstvStatus()));
         LinearLayout s1 = row();
         if (pe.sstvRx()) button(s1, "Stop receiving", Theme.PKT, x -> { toast(svc.sstvMonitor(false, false)); dlg.dismiss(); });
-        else { button(s1, "Receive on 144.500", Theme.PKT, x -> { toast(svc.sstvMonitor(true, true)); dlg.dismiss(); }); button(s1, "Receive here", Theme.PKT, x -> { toast(svc.sstvMonitor(true, false)); dlg.dismiss(); }); }
+        else { button(s1, "Receive on 144.500", Theme.PKT, x -> { toast(svc.sstvMonitor(true, true)); openScreen(); }); button(s1, "Receive here", Theme.PKT, x -> { toast(svc.sstvMonitor(true, false)); openScreen(); }); }
         body.addView(s1);
         LinearLayout s2 = row();
         button(s2, "Live picture", Theme.SOFTSQ, x -> sstvView());
@@ -176,9 +186,10 @@ public final class PktDialog {
     }
 
     // ---- APRS message ----
-    private void message() {
+    private void message() { message(""); }
+    private void message(String toCall) {
         LinearLayout body = page("✉️  APRS message");
-        final EditText to = field(body, "To (callsign-SSID)", "", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+        final EditText to = field(body, "To (callsign-SSID)", toCall, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
         final EditText text = field(body, "Message (up to 67 characters)", "", InputType.TYPE_CLASS_TEXT);
         body.addView(hint("Sent from " + (pe.callsignSet() ? pe.myCall() : "(set your callsign in Settings)") + " via " + String.join(",", pe.path()) + " with a message number, so the other station acks it."));
         LinearLayout r = row();

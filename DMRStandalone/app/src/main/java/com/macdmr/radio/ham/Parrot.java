@@ -33,6 +33,9 @@ public final class Parrot {
     public boolean enabled() { return enabled; }
     public boolean busy() { return recording || playing; }
     public int played() { return played; }
+    public synchronized boolean recording() { return recording; }
+    public boolean playing() { return playing; }
+    public long lastHeardMs() { return lastHeardMs; }
     public synchronized void setEnabled(boolean on) { enabled = on; recording = false; len = 0; if (on) played = 0; }
 
     /** One receive block; {@code now} in ms (a parameter so tests can run faster than real time). */
