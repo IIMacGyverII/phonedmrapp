@@ -98,6 +98,47 @@ public class RadioService extends Service implements RadioEngine.Events {
     });
     private volatile int parrotChannel = -1;
     private volatile long txStartedAt;
+
+    // ---- fox hunt: the hunter's marks, the fox beacon and the off-frequency trick ----
+    private final com.macdmr.radio.ham.FoxHunt fox = new com.macdmr.radio.ham.FoxHunt();
+    public com.macdmr.radio.ham.FoxHunt fox() { return fox; }
+    private volatile Thread foxThread; private volatile int foxChannel = -1;
+    public boolean foxTxOn() { return foxThread != null; }
+    /** Start or stop the fox beacon (5 s of beeps every minute on the current channel). Returns a message. */
+    public String setFoxTx(boolean on) {
+        Thread t = foxThread; foxThread = null; if (t != null) t.interrupt();
+        if (!on) { if (t != null) history("pkt", "\uD83E\uDD8A Fox beacon off"); pushModes(); return "Fox beacon off"; }
+        ChannelStore.Channel ch = current;
+        if (ch == null || ch.isDigital()) return "The fox beacon needs an analog FM channel";
+        if (txInhibited()) return "This channel is receive-only";
+        foxChannel = ch.number;
+        final Thread nt = new Thread(() -> {
+            while (foxThread == Thread.currentThread()) {
+                ChannelStore.Channel c = current;
+                if (c == null || c.number != foxChannel) { foxThread = null; history("pkt", "\uD83E\uDD8A Fox beacon stopped: the channel changed"); pushModes(); break; }
+                if (isReady() && !pttDown && !scanner.isScanning() && !txInhibited()) {
+                    String id = amateurBand(c.txFreq) && packet != null && packet.callsignSet() ? packet.callsign() : null;
+                    transmitPcm(com.macdmr.radio.ham.FoxHunt.beacon(5, id), "fox beacon", null);
+                }
+                try { Thread.sleep(60_000); } catch (InterruptedException e) { break; }
+            }
+        }, "fox-beacon");
+        foxThread = nt; nt.setDaemon(true); nt.start();
+        history("pkt", "\uD83E\uDD8A Fox beacon on " + ch.name + " (every minute)");
+        pushModes();
+        return "Fox beacon on " + ch.name + ": 5 s of beeps every minute";
+    }
+    private ChannelStore.Channel foxHome;
+    /** Listen {@code hz} above the channel (0 = back on it): close to the fox, an off-frequency signal is weaker and easier to judge. Error or null. */
+    public String foxOffset(int hz) {
+        if (hz == 0) { if (foxHome != null) { foxHome = null; exitVfo(); } return null; }
+        ChannelStore.Channel base = foxHome != null ? foxHome : current;
+        if (base == null || base.isDigital()) return "Needs an analog channel";
+        if (foxHome == null) foxHome = base;
+        ChannelStore.Channel v = vfoCopy(base); v.rxFreq = base.rxFreq + hz; v.txFreq = base.txFreq; v.name = base.name + " +" + (hz / 1000) + " kHz";
+        applyVfo(v, false);
+        return null;
+    }
     public com.macdmr.radio.ham.Parrot parrot() { return parrot; }
     /** Turn the parrot on for the current channel (or off). Returns what happened, for a toast. */
     public String setParrot(boolean on) {
@@ -185,7 +226,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             }
         } catch (Throwable t) { log("keywords: " + t); }
     }
-    public boolean packetActive() { return parrot.enabled() || (packet != null && (packet.monitoring() || packet.kiss().isActive() || packet.sstvRx())); }
+    public boolean packetActive() { return parrot.enabled() || foxTxOn() || (packet != null && (packet.monitoring() || packet.kiss().isActive() || packet.sstvRx())); }
 
     /** SSTV receive: on the SSTV calling frequency (through the VFO) or on the current channel. */
     public String sstvMonitor(boolean on, boolean park) {

@@ -68,6 +68,12 @@ public final class PktDialog {
         button(pr, parrotOn ? "Stop the parrot" : "Parrot on this channel", Theme.PKT, x -> { toast(svc.setParrot(!parrotOn)); dlg.dismiss(); });
         body.addView(pr);
         body.addView(hint((parrotOn ? "\uD83E\uDD9C On, " + svc.parrot().played() + " repeated so far. " : "") + "Records each transmission heard on this channel and sends it back a second after it ends (up to 27 s), so a station can hear how it sounds, or two stations out of each other's range can talk through you. On amateur channels your callsign is sent in Morse at most every ten minutes. Needs the squelch closed on silence (squelch above 0 or Soft SQ); stops when you change channel."));
+        // ---- fox hunt ----
+        body.addView(section("Fox hunt"));
+        LinearLayout fr = row();
+        button(fr, "Fox hunt", Theme.SOFTSQ, x -> { dlg.dismiss(); FoxHuntDialog.show(c, svc); });
+        body.addView(fr);
+        body.addView(hint((svc.foxTxOn() ? "\uD83E\uDD8A The fox beacon is on. " : "") + "Find a hidden transmitter: live signal strength, compass bearings and an estimate of where the fox is. Or be the fox."));
         // ---- Morse ----
         body.addView(section("Morse"));
         LinearLayout mr = row();
