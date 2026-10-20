@@ -125,6 +125,23 @@ public final class Neo {
         return t;
     }
 
+    /**
+     * Fit a button's label in narrow rows: never break inside a word. A one-word label stays on one line and a longer
+     * one wraps only between words (at most two lines); the text shrinks (down to 10 sp) instead of splitting a word,
+     * and any icon is dropped to make room.
+     */
+    public static TextView fit(TextView t) {
+        String s = t.getText() == null ? "" : t.getText().toString().trim();
+        int words = s.isEmpty() ? 1 : s.split(" +").length;
+        float sp = t.getTextSize() / t.getResources().getDisplayMetrics().scaledDensity;
+        t.setCompoundDrawables(null, null, null, null);                    // in a tight row the label needs the room more than the icon
+        t.setMaxLines(Math.min(2, words));
+        t.setBreakStrategy(android.graphics.text.LineBreaker.BREAK_STRATEGY_BALANCED);
+        t.setHyphenationFrequency(android.text.Layout.HYPHENATION_FREQUENCY_NONE);
+        t.setAutoSizeTextTypeUniformWithConfiguration(10, Math.max(11, Math.round(sp)), 1, android.util.TypedValue.COMPLEX_UNIT_SP);
+        return t;
+    }
+
     /** Square icon button (header actions). */
     public static ImageView iconButton(Context c, String icon, int accent, String description) {
         ImageView v = new ImageView(c); v.setImageDrawable(new IconDrawable(icon, accent)); v.setScaleType(ImageView.ScaleType.CENTER_INSIDE);

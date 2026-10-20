@@ -42,7 +42,7 @@ public final class LogbookDialog {
         TextView filter = Neo.button(c, qsoOnly ? "Showing: contacts" : "Showing: all", "search", Neo.CYAN), auto = Neo.button(c, svc.logHeard() ? "Log heard: on" : "Log heard: off", "signal", Neo.VIOLET),
                 online = Neo.button(c, svc.lookupOnline() ? "Look up: on" : "Look up: off", "globe", Neo.VIOLET);
         online.setOnClickListener(v -> { svc.setLookupOnline(!svc.lookupOnline()); online.setText(svc.lookupOnline() ? "Look up: on" : "Look up: off"); });
-        for (TextView b : new TextView[] { filter, auto, online }) { b.setTextSize(14); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f); lp.setMargins((int) (3 * d), (int) (6 * d), (int) (3 * d), (int) (6 * d)); r2.addView(b, lp); }
+        for (TextView b : new TextView[] { filter, auto, online }) { b.setTextSize(14); Neo.fit(b); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f); lp.setMargins((int) (3 * d), (int) (6 * d), (int) (3 * d), (int) (6 * d)); r2.addView(b, lp); }
         body.addView(r2);
 
         List<Logbook.Entry> list = lb.list(300, qsoOnly);
