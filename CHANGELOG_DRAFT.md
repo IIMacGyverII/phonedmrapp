@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Steering-wheel Next: rules rebuilt from the car's event log
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Second drive, `files/wheel.log`: holds arrive as press + one repeat ~0.4 s later; at the release the car sent a proper release 1 time in 5, a late repeat plus a release once, only a late repeat once, and nothing twice (the radio then talked 17–18 s until stopped elsewhere). After a lost release the next press arrived as a lone repeat, which the previous version took for a hold (two short unwanted key-ups, 12:25:01 and 12:25:42). Short presses were always press + release within 0.1–0.3 s. `WheelNext` now: in Hold, any key event more than 1 s after the transmission started ends it (release, late repeat or new press); a repeat that is not within 1 s of a press is a stray and is ignored with its release, never a key-up; in Double-press, a "press" is any key-down that is not the quick repeat of the one before, so presses delivered as repeats still count. Releases that never come cannot be detected: then a press of Next stops. | `ham/WheelNext.java`, test `WheelNextTest` | Unit tests 7/7, including a replay of the drive's 41 events (every hold talks, each is ended by the car's next event, no stray key-ups, short presses step) and the drive's quick pairs in Double-press mode. **Needs a drive**; Double-press is the dependable mode for this car |
+
 ## 2026-10-20 — Steering-wheel Next: robust hold, and double-press
 
 | Backlog | Change | Files | Test |

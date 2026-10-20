@@ -65,4 +65,33 @@ public class WheelNextTest {
         w.down(0, s.now); s.advance(2000); w.up(s.now);
         assertTrue(s.log.isEmpty());
     }
+
+    /** The owner's drive of 2026-10-20 12:24-12:26 (files/wheel.log), event by event: d = down (repeat), u = up, s = stopped elsewhere. */
+    static final String DRIVE =
+        "33477 d0, 33887 d1, 50276 s, 61425 d1, 61548 u, 61617 d0, 61753 u, 64667 d0, 64788 u, 64912 d0, 65006 u, 69008 d0, 69166 u, "
+      + "71307 d0, 71425 u, 71479 d0, 71780 u, 73197 d0, 73330 u, 73393 d0, 73704 u, 74692 d0, 75095 d1, 76023 u, 76537 d0, 76911 d1, "
+      + "78627 d1, 78767 u, 78887 d0, 79289 d1, 81765 d1, 97090 s, 102725 d2, 102861 u, 102981 d0, 103183 u, 107333 d0, 107435 u, "
+      + "107629 d0, 108000 d1, 126532 s";
+
+    @Test public void replaysTheOwnersDrive() {
+        Sim s = new Sim(); WheelNext w = new WheelNext(s); w.setMode(WheelNext.HOLD);
+        for (String e : DRIVE.split(", ")) {
+            String[] f = e.trim().split(" "); long t = Long.parseLong(f[0]); s.advance(t - s.now);
+            if (f[1].startsWith("d")) w.down(Integer.parseInt(f[1].substring(1)), s.now); else if (f[1].equals("u")) w.up(s.now); else w.stopped();
+        }
+        // every hold talks; each one is ended by the car's next event (release, late repeat or new press) where it sent one;
+        // stray repeats after a lost release never key up; short presses step
+        assertEquals("[TALK, STEP, STEP, STEP, STEP, STEP, STEP, STEP, STEP, TALK, STOP, TALK, STOP, TALK, STOP, STEP, STEP, TALK]", s.log.toString());
+    }
+
+    @Test public void doublePressOnTheOwnersQuickPairs() {   // the pairs 0.17-0.25 s apart in that drive
+        Sim s = new Sim(); WheelNext w = new WheelNext(s); w.setMode(WheelNext.DOUBLE);
+        for (String e : "64667 d0, 64788 u, 64912 d0, 65006 u, 71307 d0, 71425 u, 71479 d0, 71780 u".split(", ")) {
+            String[] f = e.split(" "); s.advance(Long.parseLong(f[0]) - s.now);
+            if (f[1].startsWith("d")) w.down(0, s.now); else w.up(s.now);
+        }
+        assertEquals("first pair talks, second pair: first press stops, second starts a pending single press", "[TALK, STOP]", s.log.toString());
+        s.advance(1000);
+        assertEquals("[TALK, STOP, STEP]", s.log.toString());
+    }
 }
