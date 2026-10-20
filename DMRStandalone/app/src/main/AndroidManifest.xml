@@ -26,7 +26,7 @@
 
     <application
         android:name=".RadioApp"
-        android:label="DMR Radio"
+        android:label="SignalDeck"
         android:icon="@mipmap/ic_launcher"
         android:theme="@style/AppTheme">
 
@@ -60,7 +60,7 @@
                 <category android:name="androidx.car.app.category.IOT" />
             </intent-filter>
         </service>
-        <service android:name=".media.RadioMediaService" android:exported="true" android:label="DMR Radio">
+        <service android:name=".media.RadioMediaService" android:exported="true" android:label="SignalDeck">
             <intent-filter><action android:name="android.media.browse.MediaBrowserService" /></intent-filter>
         </service>
         <receiver android:name="androidx.media.session.MediaButtonReceiver" android:exported="true">

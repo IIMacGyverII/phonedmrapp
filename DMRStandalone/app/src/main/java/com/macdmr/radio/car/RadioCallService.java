@@ -33,7 +33,7 @@ public final class RadioCallService extends ConnectionService {
     public static boolean register(Context c) {
         try {
             TelecomManager tm = (TelecomManager) c.getSystemService(Context.TELECOM_SERVICE);
-            PhoneAccount pa = PhoneAccount.builder(handle(c), "DMR Radio Talk").setCapabilities(PhoneAccount.CAPABILITY_SELF_MANAGED).addSupportedUriScheme("radio").build();
+            PhoneAccount pa = PhoneAccount.builder(handle(c), "SignalDeck Talk").setCapabilities(PhoneAccount.CAPABILITY_SELF_MANAGED).addSupportedUriScheme("radio").build();
             tm.registerPhoneAccount(pa);
             return true;
         } catch (Throwable t) { Log.w(TAG, "register: " + t); return false; }
@@ -60,7 +60,7 @@ public final class RadioCallService extends ConnectionService {
         t.setConnectionProperties(Connection.PROPERTY_SELF_MANAGED);
         t.setAudioModeIsVoip(true);
         t.setAddress(Uri.fromParts("radio", "talk", null), TelecomManager.PRESENTATION_ALLOWED);
-        t.setCallerDisplayName("DMR Radio: talking", TelecomManager.PRESENTATION_ALLOWED);
+        t.setCallerDisplayName("SignalDeck: talking", TelecomManager.PRESENTATION_ALLOWED);
         t.setInitializing();
         t.setActive();
         current = t;

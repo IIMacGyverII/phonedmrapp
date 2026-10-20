@@ -33,7 +33,7 @@ public final class RadioProbe {
 
     public static String run(android.content.Context ctx, Progress p, boolean pulsePower) {
         StringBuilder r = new StringBuilder();
-        if (!RootSetup.haveRoot()) return "Root is not granted: the probe needs Magisk root (Superuser → allow DMR Radio).";
+        if (!RootSetup.haveRoot()) return "Root is not granted: the probe needs Magisk root (Superuser → allow SignalDeck).";
         p.step("Labels");
         String ls = RootSetup.run("ls -Z /dev/ttyS* /dev/ttyMT* /dev/ttyHS* 2>/dev/null");
         r.append("Serial ports and labels:\n").append(ls).append('\n');

@@ -52,7 +52,7 @@ public final class CallLookup extends SQLiteOpenHelper {
         }
         try {
             synchronized (this) { long wait = 1100 - (System.currentTimeMillis() - lastRequest); if (wait > 0) Thread.sleep(wait); lastRequest = System.currentTimeMillis(); }   // at most one request a second
-            HttpURLConnection h = (HttpURLConnection) new URL("https://api.hamdb.org/v1/" + c + "/json/DMRRadio").openConnection();
+            HttpURLConnection h = (HttpURLConnection) new URL("https://api.hamdb.org/v1/" + c + "/json/SignalDeck").openConnection();
             h.setConnectTimeout(8000); h.setReadTimeout(8000);
             if (h.getResponseCode() != 200) return cached(c);
             String body; try (InputStream in = h.getInputStream()) { body = new String(readAll(in), StandardCharsets.UTF_8); }

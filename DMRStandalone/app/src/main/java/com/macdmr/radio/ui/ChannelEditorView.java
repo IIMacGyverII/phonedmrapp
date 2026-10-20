@@ -57,7 +57,7 @@ public class ChannelEditorView extends LinearLayout {
     private static final String H_SQ = "The radio's own squelch, used when Soft SQ is off for this channel. 0 keeps it fully open: you hear static and the radio reports a reception all the time. 1 to 9 close it; on this radio they behave as one threshold, about −90 dBm.";
     private static final String H_SOFTSQ = "Soft SQ holds the radio's squelch open and lets the app decide what you hear: the channel's CTCSS tone when it has one, otherwise a noise squelch that tells speech from static. It catches weaker stations than the radio's own squelch. The SOFT SQ key on the intercom switches it too.";
     private static final String H_SOFTSQ_LVL = "How strict Soft SQ is, from 1 (lenient: opens on weaker, noisier signals) to 9 (strict: only clean signals). Same as the slider on the intercom.";
-    private static final String H_MAPS = "Open Maps shows this position (or yours) in your maps app. Find the place there and use Share \u2192 DMR Radio, or copy its coordinates or link and come back to tap Paste. Paste reads coordinates, geo: links and Google, Apple or OpenStreetMap links from the clipboard, following short share links.";
+    private static final String H_MAPS = "Open Maps shows this position (or yours) in your maps app. Find the place there and use Share \u2192 SignalDeck, or copy its coordinates or link and come back to tap Paste. Paste reads coordinates, geo: links and Google, Apple or OpenStreetMap links from the clipboard, following short share links.";
     private static final String H_TXT = "A sub-audible tone sent with your transmission: CTCSS (a low tone, 62.5 to 254.1 Hz) or DCS (a digital code). Repeaters and radios that use tone squelch only open for the right one; a repeater's listing gives its access tone.";
     private static final String H_TXC = "The CTCSS frequency or DCS code to send. Tap to pick from the list.";
     private static final String H_RXT = "Only signals carrying this tone open the squelch, so other users on the frequency stay quiet. With Soft SQ on, the app checks the CTCSS tone itself; DCS is checked by the radio.";
@@ -149,7 +149,7 @@ public class ChannelEditorView extends LinearLayout {
             lat.setText(String.format(Locale.US, "%.5f", me.getLatitude())); lon.setText(String.format(Locale.US, "%.5f", me.getLongitude()));
         });
         LayoutParams hl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); hl.topMargin = (int) (2 * d); form.addView(locRow, hl);
-        TextView how = Neo.text(c, "Pick a place in your maps app: Open Maps, find the place, then Share \u2192 DMR Radio. Or copy its coordinates or link and tap Paste.", Neo.DIM, 13, Neo.uiMedium(c));
+        TextView how = Neo.text(c, "Pick a place in your maps app: Open Maps, find the place, then Share \u2192 SignalDeck. Or copy its coordinates or link and tap Paste.", Neo.DIM, 13, Neo.uiMedium(c));
         how.setLineSpacing(0, 1.1f); how.setPadding((int) (4 * d), (int) (8 * d), (int) (4 * d), 0); form.addView(how);
         refreshGroups();
     }
@@ -166,7 +166,7 @@ public class ChannelEditorView extends LinearLayout {
         try { la = Double.parseDouble(lat.getText().toString().trim()); lo = Double.parseDouble(lon.getText().toString().trim()); } catch (Throwable ignored) { }
         String label = android.net.Uri.encode(ch.name == null || ch.name.isEmpty() ? "Channel" : ch.name);
         android.net.Uri u = la != 0 || lo != 0 ? android.net.Uri.parse("geo:" + la + "," + lo + "?q=" + la + "," + lo + "(" + label + ")") : android.net.Uri.parse("geo:0,0?q=");
-        try { c.startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, u)); android.widget.Toast.makeText(c, "Find the place, then Share \u2192 DMR Radio (or copy it and tap Paste)", android.widget.Toast.LENGTH_LONG).show(); }
+        try { c.startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, u)); android.widget.Toast.makeText(c, "Find the place, then Share \u2192 SignalDeck (or copy it and tap Paste)", android.widget.Toast.LENGTH_LONG).show(); }
         catch (Throwable t) { android.widget.Toast.makeText(c, "No maps app is installed", android.widget.Toast.LENGTH_LONG).show(); }
     }
 

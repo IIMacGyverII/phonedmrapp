@@ -479,7 +479,7 @@ public final class PacketEngine {
     public boolean callsignSet() { String c = callsign(); return !c.isEmpty() && !"N0CALL".equals(c); }
     public char symTable() { return prefs.getString("symTable", "/").charAt(0); }
     public char symCode() { return prefs.getString("symCode", "[").charAt(0); }
-    public String comment() { return prefs.getString("comment", "DMR Radio"); }
+    public String comment() { return prefs.getString("comment", "SignalDeck"); }
     public String[] path() { String p = prefs.getString("path", "WIDE1-1,WIDE2-1").trim(); return p.isEmpty() ? new String[0] : p.split("\\s*,\\s*"); }
     public int passiveMode() { return prefs.getInt("passive", 2); }       // 0 off, 1 flagged channels, 2 every analog channel
     public boolean autoAck() { return prefs.getBoolean("autoAck", true); }
@@ -544,7 +544,7 @@ public final class PacketEngine {
         isStop();
         if (!callsignSet()) return "Set your callsign first";
         String pass = prefs.getString("isPasscode", "-1").trim(); if (pass.isEmpty()) pass = "-1";
-        AprsIsClient c = new AprsIsClient(isServer(), isPort(), myCall(), pass, "DMRRadio 1.0", null, new AprsIsClient.Listener() {
+        AprsIsClient c = new AprsIsClient(isServer(), isPort(), myCall(), pass, "SignalDeck 1.0", null, new AprsIsClient.Listener() {
             @Override public void onStatus(String status, boolean connected) { isStatus = status; if (connected && isBeaconMin() > 0) new Thread(() -> { try { Thread.sleep(5000); } catch (InterruptedException ignored) { } isBeacon(); }, "aprs-is-beacon").start(); }
             @Override public void onServerLine(String line) { isServerLine(line); }
         });

@@ -116,8 +116,8 @@ public final class Logbook extends SQLiteOpenHelper {
 
     /** The entries as an ADIF 3.1 file. */
     public static String adif(List<Entry> entries, String version) {
-        StringBuilder sb = new StringBuilder("DMR Radio logbook export\n");
-        field(sb, "ADIF_VER", "3.1.4"); field(sb, "PROGRAMID", "DMR Radio"); field(sb, "PROGRAMVERSION", version);
+        StringBuilder sb = new StringBuilder("SignalDeck logbook export\n");
+        field(sb, "ADIF_VER", "3.1.4"); field(sb, "PROGRAMID", "SignalDeck"); field(sb, "PROGRAMVERSION", version);
         sb.append("<EOH>\n");
         SimpleDateFormat d = new SimpleDateFormat("yyyyMMdd", Locale.US), t = new SimpleDateFormat("HHmmss", Locale.US);
         d.setTimeZone(TimeZone.getTimeZone("UTC")); t.setTimeZone(TimeZone.getTimeZone("UTC"));

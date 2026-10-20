@@ -78,7 +78,7 @@ public class RadioControlScreen extends Screen {
         CarContext c = getCarContext();
         Pane.Builder pane = new Pane.Builder();
         if (s == null) {
-            pane.addRow(new Row.Builder().setTitle("The radio is off").addText("Open DMR Radio on the phone to start it").build());
+            pane.addRow(new Row.Builder().setTitle("The radio is off").addText("Open SignalDeck on the phone to start it").build());
             return new PaneTemplate.Builder(pane.build()).setHeaderAction(Action.APP_ICON).setTitle("Radio controls").build();
         }
         ChannelStore.Channel ch = s.current();

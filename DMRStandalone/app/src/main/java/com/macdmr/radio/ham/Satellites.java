@@ -65,7 +65,7 @@ public final class Satellites {
 
     private static String get(String url) {
         try {
-            HttpURLConnection h = (HttpURLConnection) new URL(url).openConnection(); h.setConnectTimeout(10000); h.setReadTimeout(15000); h.setRequestProperty("User-Agent", "DMRRadio");
+            HttpURLConnection h = (HttpURLConnection) new URL(url).openConnection(); h.setConnectTimeout(10000); h.setReadTimeout(15000); h.setRequestProperty("User-Agent", "SignalDeck");
             if (h.getResponseCode() != 200) return null;
             try (InputStream in = h.getInputStream()) { java.io.ByteArrayOutputStream o = new java.io.ByteArrayOutputStream(); byte[] b = new byte[8192]; int n; while ((n = in.read(b)) > 0) o.write(b, 0, n); return o.toString("US-ASCII"); }
         } catch (Throwable t) { Log.w("Satellites", url + ": " + t); return null; }

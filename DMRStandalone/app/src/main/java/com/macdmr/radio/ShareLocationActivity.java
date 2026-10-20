@@ -6,7 +6,7 @@ import android.os.Bundle;
 import android.widget.Toast;
 
 /**
- * Share target for maps apps: "Share" a place from Google Maps, Organic Maps, OsmAnd… to DMR Radio and its
+ * Share target for maps apps: "Share" a place from Google Maps, Organic Maps, OsmAnd… to SignalDeck and its
  * coordinates go to the open channel editor (or to a channel you pick). No screen of its own: it resolves the
  * shared text (following short links), then hands the position to {@link MainActivity}.
  */

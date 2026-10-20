@@ -594,7 +594,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                     boolean stockRunning = !RootSetup.run("pidof " + profile.stockApp).trim().replaceAll("[^0-9]", "").isEmpty();
                     if (stockRunning || !new java.io.File(profile.controlPort).canRead()) {
                         setLink("no root");
-                        log("Root was not granted. Open the Magisk app → Superuser → allow \"DMR Radio\", then tap Bring radio up. (Without root the stock app keeps the radio and the UART stays locked.)");
+                        log("Root was not granted. Open the Magisk app → Superuser → allow \"SignalDeck\", then tap Bring radio up. (Without root the stock app keeps the radio and the UART stays locked.)");
                         return;
                     }
                     log("No root granted, but the UART is reachable and the stock app is not running — continuing");
@@ -1328,7 +1328,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         if (Build.VERSION.SDK_INT >= 26 && nm != null) nm.createNotificationChannel(new NotificationChannel("radio", "Radio", NotificationManager.IMPORTANCE_LOW));
         Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, "radio") : new Notification.Builder(this);
         ChannelStore.Channel ch = current;
-        b.setContentTitle(ch != null ? "Ch " + ch.number + " · " + ch.name : "DMR Radio").setContentText(text)
+        b.setContentTitle(ch != null ? "Ch " + ch.number + " · " + ch.name : "SignalDeck").setContentText(text)
                 .setSmallIcon(R.drawable.ic_stat_radio).setColor(0xFF19D3FF).setOngoing(true).setOnlyAlertOnce(true).setShowWhen(false)
                 .setContentIntent(RadioWidget.openApp(this));
         if (isReady()) {
@@ -1546,7 +1546,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         if (!inCar || System.currentTimeMillis() - carMediaBoundAt < 60_000) return;
         com.macdmr.radio.car.AutoTrust.State st = com.macdmr.radio.car.AutoTrust.last();
         if (st == com.macdmr.radio.car.AutoTrust.State.OFF || st == com.macdmr.radio.car.AutoTrust.State.LOCKED) return;   // that alert already explains it
-        carEvent("⚠️ Android Auto did not load DMR Radio on this connection: unplug the cable and plug it in again");
+        carEvent("⚠️ Android Auto did not load SignalDeck on this connection: unplug the cable and plug it in again");
         com.macdmr.radio.car.AutoTrust.notifyNotLoaded(this);
     };
 
@@ -1563,7 +1563,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                 if (car) new Thread(() -> {   // a sideloaded app stays off the car's app list unless Unknown sources is on
                     com.macdmr.radio.car.AutoTrust.State st = com.macdmr.radio.car.AutoTrust.check(this);
                     if (st == com.macdmr.radio.car.AutoTrust.State.OFF || st == com.macdmr.radio.car.AutoTrust.State.LOCKED) {
-                        ui.post(() -> carEvent("⚠️ Android Auto is hiding DMR Radio: Unknown sources is off (Device page shows how to fix it)"));
+                        ui.post(() -> carEvent("⚠️ Android Auto is hiding SignalDeck: Unknown sources is off (Device page shows how to fix it)"));
                         com.macdmr.radio.car.AutoTrust.notifyHidden(this, st);
                     } else if (st == com.macdmr.radio.car.AutoTrust.State.OK) com.macdmr.radio.car.AutoTrust.clearNotice(this);
                 }, "autotrust").start();

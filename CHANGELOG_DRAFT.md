@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — The standalone app is now **SignalDeck**, with an animated launch screen
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Owner made the name official. Every user-visible "DMR Radio" became **SignalDeck**: launcher label, media app in Android Auto, notifications, widget, car screens, the talk call ("SignalDeck: talking", account "SignalDeck Talk"), help, device report, root/Magisk texts, logbook ADIF `PROGRAMID`, GPX `creator`, default APRS comment (new installs), web user-agents and the APRS-IS software name. Package `com.macdmr.radio` and Magisk module id unchanged. Updater accepts `SignalDeck-*.apk` and the old `DMRRadio-*.apk` assets. **Launch screen** `ui/SplashView.java` (owner's mock-up, no bitmaps): wordmark rises in with a cyan glow and a glint, "Advanced Radio Control", the angular panel traces itself in, a wave packet travels TX → RX with the meters following, the 7-dot row scans, version (from the package) near the bottom above the toast area; ~2.6 s then fades to the intercom, tap to skip, finished frame when animations are off; cold start only. Help: Getting started → The launch screen. `docs/DEVICE_SUPPORT_REQUEST.md` renamed too. | `ui/SplashView.java` (new), `MainActivity.java`, `Updater.java`, `AndroidManifest.xml`, ~20 files with the display name, `ui/HelpView.java`, `CLAUDE.md` + mirror | Installed (release build): launch frames captured on the phone (wordmark, panel, wave, dots, version all drawn; fades to the intercom), focus ok, no crash |
+
 ## 2026-10-20 — Car defaults: Double-press Next talks, stop after 1.5 s of quiet
 
 | Backlog | Change | Files | Test |

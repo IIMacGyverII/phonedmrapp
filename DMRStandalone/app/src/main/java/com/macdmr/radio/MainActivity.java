@@ -85,6 +85,12 @@ public class MainActivity extends AppCompatActivity {
         }
         root.addView(nav);
         setContentView(root);
+        if (b == null) {                                          // cold start: the animated launch screen over the app while it comes up
+            String ver; try { ver = "v" + getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Throwable t) { ver = ""; }
+            final com.macdmr.radio.ui.SplashView[] sp = new com.macdmr.radio.ui.SplashView[1];
+            sp[0] = new com.macdmr.radio.ui.SplashView(this, ver, () -> { if (sp[0].getParent() != null) ((android.view.ViewGroup) sp[0].getParent()).removeView(sp[0]); });
+            addContentView(sp[0], new android.view.ViewGroup.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT));
+        }
         getWindow().setStatusBarColor(0xFF0A1420); getWindow().setNavigationBarColor(com.macdmr.radio.ui.Neo.BAR);
 
         intercom = new IntercomView(this);

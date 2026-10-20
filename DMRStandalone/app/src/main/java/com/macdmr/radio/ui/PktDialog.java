@@ -378,7 +378,7 @@ public final class PktDialog {
             LinearLayout r = row();
             button(r, "Export GPX", Theme.SOFTSQ, x -> {
                 try {
-                    StringBuilder g = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<gpx version=\"1.1\" creator=\"DMR Radio\" xmlns=\"http://www.topografix.com/GPX/1/1\">\n");
+                    StringBuilder g = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<gpx version=\"1.1\" creator=\"SignalDeck\" xmlns=\"http://www.topografix.com/GPX/1/1\">\n");
                     SimpleDateFormat iso = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US); iso.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
                     for (PacketStore.Station s : list) g.append(String.format(Locale.US, "  <wpt lat=\"%.6f\" lon=\"%.6f\">%s<time>%s</time><name>%s</name><desc>%s</desc></wpt>\n", s.lat, s.lon, s.alt != 0 ? "<ele>" + s.alt + "</ele>" : "", iso.format(new Date(s.lastTs)), xml(s.call), xml(s.comment)));
                     g.append("</gpx>\n");

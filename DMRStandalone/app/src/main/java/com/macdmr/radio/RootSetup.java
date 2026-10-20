@@ -63,8 +63,8 @@ public final class RootSetup {
         try {
             File zip = new File(cacheDir, "dmr-standalone-access.zip");
             try (ZipOutputStream z = new ZipOutputStream(new FileOutputStream(zip))) {
-                String prop = "id=dmr-standalone\n" + "name=DMR Radio access\n" + "version=v1\n" + "versionCode=1\n" + "author=DMR Radio app\n"
-                        + "description=Lets the DMR Radio app open the radio module's serial port and GPIO lines (" + p.name + ").\n";
+                String prop = "id=dmr-standalone\n" + "name=SignalDeck access\n" + "version=v1\n" + "versionCode=1\n" + "author=SignalDeck app\n"
+                        + "description=Lets the SignalDeck app open the radio module's serial port and GPIO lines (" + p.name + ").\n";
                 z.putNextEntry(new ZipEntry("module.prop")); z.write(prop.getBytes("UTF-8")); z.closeEntry();
                 StringBuilder rules = new StringBuilder();
                 for (String l : p.sepolicy) rules.append(l).append('\n');
@@ -75,7 +75,7 @@ public final class RootSetup {
             run("chmod 644 " + zip.getAbsolutePath());
             String r = run("magisk --install-module " + zip.getAbsolutePath() + " 2>&1; ls /data/adb/modules_update/dmr-standalone /data/adb/modules/dmr-standalone 2>/dev/null");
             boolean ok = r.contains("sepolicy.rule") || r.toLowerCase(Locale.US).contains("done");
-            return ok ? "Installed. Reboot once; from then on the rules load at every boot (Magisk → Modules shows \"DMR Radio access\")." : "Could not install the module:\n" + r;
+            return ok ? "Installed. Reboot once; from then on the rules load at every boot (Magisk → Modules shows \"SignalDeck access\")." : "Could not install the module:\n" + r;
         } catch (Exception e) { return "Could not build the module zip: " + e; }
     }
 

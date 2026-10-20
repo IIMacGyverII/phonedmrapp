@@ -89,7 +89,7 @@ public class RadioWidget extends AppWidgetProvider {
             RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_radio);
             ChannelStore.Channel ch = s == null ? null : s.current();
             v.setTextViewText(R.id.w_num, ch == null ? "--" : String.format(java.util.Locale.US, "%02d", ch.number));
-            v.setTextViewText(R.id.w_name, ch == null ? "DMR Radio" : ch.name);
+            v.setTextViewText(R.id.w_name, ch == null ? "SignalDeck" : ch.name);
             String st = status(s);
             boolean tx = s != null && s.isTransmitting(), rx = s != null && s.hearing();
             v.setTextViewText(R.id.w_status, st);

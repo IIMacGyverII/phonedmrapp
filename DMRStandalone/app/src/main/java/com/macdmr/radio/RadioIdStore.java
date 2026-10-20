@@ -67,7 +67,7 @@ public final class RadioIdStore extends SQLiteOpenHelper {
     public int downloadAndImport(Progress p) throws Exception {
         File f = new File(ctx.getCacheDir(), "radioid_user.csv");
         HttpURLConnection c = (HttpURLConnection) new URL(URL).openConnection();
-        c.setConnectTimeout(30000); c.setReadTimeout(120000); c.setRequestProperty("User-Agent", "DMR Radio (Android)");
+        c.setConnectTimeout(30000); c.setReadTimeout(120000); c.setRequestProperty("User-Agent", "SignalDeck (Android)");
         if (c.getResponseCode() != 200) throw new Exception("HTTP " + c.getResponseCode());
         long total = c.getContentLengthLong(), got = 0; int lastPct = -1;
         try (InputStream in = c.getInputStream(); OutputStream out = new FileOutputStream(f)) {

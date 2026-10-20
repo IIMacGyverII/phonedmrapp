@@ -60,7 +60,7 @@ public class MapView extends View {
     public int layer() { return layer; }
 
     private static final String TILE_URL = "https://tile.openstreetmap.org/%d/%d/%d.png";
-    private static final String UA = "DMRRadio/1.0 (Android; com.macdmr.radio)";
+    private static final String UA = "SignalDeck/1.0 (Android; com.macdmr.radio)";
     private static final long TILE_MAX_AGE = 30L * 24 * 3600 * 1000;
 
     private double cx = lonToX(-98.35), cy = latToY(39.5), zoom = 4;      // centre in normalised Web Mercator (0..1)

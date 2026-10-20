@@ -47,7 +47,7 @@ public final class Terrain implements Predictor.Elevation {
         try {
             if (!f.exists()) {
                 HttpURLConnection c = (HttpURLConnection) new URL(String.format(Locale.US, URL_FMT, Z, x, y)).openConnection();
-                c.setRequestProperty("User-Agent", "DMRRadio/1.0 (Android; com.macdmr.radio)"); c.setConnectTimeout(10000); c.setReadTimeout(15000);
+                c.setRequestProperty("User-Agent", "SignalDeck/1.0 (Android; com.macdmr.radio)"); c.setConnectTimeout(10000); c.setReadTimeout(15000);
                 if (c.getResponseCode() != 200) { c.disconnect(); return null; }
                 File tmp = new File(dir, x + "/" + y + ".part"); tmp.getParentFile().mkdirs();
                 try (InputStream in = c.getInputStream(); OutputStream out = new FileOutputStream(tmp)) { byte[] b = new byte[16384]; int r; while ((r = in.read(b)) > 0) out.write(b, 0, r); }

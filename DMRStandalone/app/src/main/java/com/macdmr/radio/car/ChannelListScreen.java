@@ -45,7 +45,7 @@ public class ChannelListScreen extends Screen {
         int max = 100;
         try { max = getCarContext().getCarService(androidx.car.app.constraints.ConstraintManager.class).getContentLimit(androidx.car.app.constraints.ConstraintManager.CONTENT_LIMIT_TYPE_LIST); } catch (Throwable ignored) { }
         if (s == null) {
-            list.addItem(new Row.Builder().setTitle("The radio is off").addText("Open DMR Radio on the phone").build());
+            list.addItem(new Row.Builder().setTitle("The radio is off").addText("Open SignalDeck on the phone").build());
         } else if (zoneId < 0 && !all) {
             List<ChannelStore.Zone> zones = new ArrayList<>(s.store().zones());
             ChannelStore.Zone fav = null;

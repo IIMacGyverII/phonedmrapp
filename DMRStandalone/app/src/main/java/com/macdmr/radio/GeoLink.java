@@ -54,7 +54,7 @@ public final class GeoLink {
             for (int hop = 0; hop < 8; hop++) {
                 HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
                 c.setInstanceFollowRedirects(false); c.setConnectTimeout(8000); c.setReadTimeout(8000);
-                c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) DMRRadio");
+                c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) SignalDeck");
                 int code = c.getResponseCode();
                 String loc = c.getHeaderField("Location");
                 if (code >= 300 && code < 400 && loc != null) {
