@@ -1371,6 +1371,39 @@ public class RadioService extends Service implements RadioEngine.Events {
             refreshControls();
         } catch (Throwable t) { log("car coverage: " + t); }
     }
+    // ---- hold the wheel's Next to talk ----
+    public boolean holdNextTalk() { return getSharedPreferences("radio", MODE_PRIVATE).getBoolean("holdNextTalk", false); }
+    public void setHoldNextTalk(boolean on) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("holdNextTalk", on).apply(); }
+    public static final int HOLD_MS = 500;
+    private volatile long nextDownAt, lastWheelKeyAt; private volatile boolean nextTalking; private int wheelKeysLogged;
+    private final Runnable nextHold = () -> { if (nextDownAt != 0 && !nextTalking && inCar && !pttDown) { nextTalking = true; log("wheel: Next held, talking"); ptt(true); } };
+    /** A KEYCODE_MEDIA_NEXT event from the car: held past {@link #HOLD_MS} it keys the radio until released; a short press steps the channel. */
+    public void wheelNext(android.view.KeyEvent ev) {
+        long now = System.currentTimeMillis();
+        if (ev.getAction() == android.view.KeyEvent.ACTION_DOWN) {
+            if (ev.getRepeatCount() == 0) { nextDownAt = now; nextTalking = false; ui.removeCallbacks(nextHold); ui.postDelayed(nextHold, HOLD_MS); }
+            else if (!nextTalking && nextDownAt != 0 && now - nextDownAt >= HOLD_MS - 100) { ui.removeCallbacks(nextHold); nextHold.run(); }   // the car repeats while held
+        } else if (ev.getAction() == android.view.KeyEvent.ACTION_UP) {
+            ui.removeCallbacks(nextHold);
+            boolean was = nextTalking; nextDownAt = 0; nextTalking = false;
+            if (was) { log("wheel: Next released, stop talking"); ptt(false); } else stepChannel(1);
+        }
+    }
+    /** The first few raw wheel events of each drive go to the history, so what this car sends can be seen afterwards. */
+    public void wheelKeySeen(android.view.KeyEvent ev) {
+        lastWheelKeyAt = System.currentTimeMillis();
+        log("wheel key " + android.view.KeyEvent.keyCodeToString(ev.getKeyCode()) + (ev.getAction() == android.view.KeyEvent.ACTION_DOWN ? " down" : " up") + " repeat " + ev.getRepeatCount());
+        if (holdNextTalk() && wheelKeysLogged < 6) {
+            wheelKeysLogged++;
+            carEvent("\uD83C\uDF9B Wheel: " + android.view.KeyEvent.keyCodeToString(ev.getKeyCode()).replace("KEYCODE_", "") + (ev.getAction() == android.view.KeyEvent.ACTION_DOWN ? " pressed" + (ev.getRepeatCount() > 0 ? " (repeat " + ev.getRepeatCount() + ")" : "") : " released"));
+        }
+    }
+    /** Android Auto sent Next as a command (no button events): holding cannot be told from tapping in this car. */
+    public void wheelSkipCommand() {
+        if (holdNextTalk() && inCar && System.currentTimeMillis() - lastWheelKeyAt > 2000)
+            carEvent("\u26A0\uFE0F Android Auto sends the wheel's Next as a command, not a button press: hold Next to talk cannot work in this car");
+    }
+
     /** Steering-wheel play/pause (a media button) while in the car with the setting on: start or stop talking. */
     public boolean wheelButton() {
         if (!inCar || !wheelTalk()) return false;
@@ -1449,7 +1482,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             new androidx.car.app.connection.CarConnection(this).getType().observeForever(t -> {
                 boolean car = t != null && t == androidx.car.app.connection.CarConnection.CONNECTION_TYPE_PROJECTION;
                 if (car == inCar) return;
-                inCar = car; log(car ? "Android Auto connected" : "Android Auto disconnected");
+                inCar = car; log(car ? "Android Auto connected" : "Android Auto disconnected"); if (car) wheelKeysLogged = 0;
                 if (!car && txJustNow()) usbDropDuringTx(true);
                 carEvent(car ? "🚗 Android Auto connected (" + (carControlsScreen() ? "Radio controls screen" : "media app") + ")" : "🚗 Android Auto disconnected");
                 carCoverage(car);

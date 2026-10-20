@@ -28,7 +28,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
     private final View linkDot;
     private final ImageView heroIcon;
     private final TextView takeOver, handBack, reportNow;
-    private final Neo.NeonSwitch ownAtBoot, voiceSw, hwPttSw, volPttSw, scanSqSw, styleSw, animSw, covSw, carMicSw, carCovSw, wheelSw, carScreenSw;
+    private final Neo.NeonSwitch ownAtBoot, voiceSw, hwPttSw, volPttSw, scanSqSw, styleSw, animSw, covSw, carMicSw, carCovSw, wheelSw, carScreenSw, holdNextSw;
     private final LinearLayout radioIdTile;
     private RadioService svc;
     private Host host;
@@ -84,7 +84,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
 
         // ---- radio settings ----
         LinearLayout set = card(body, "Radio settings");
-        ownAtBoot = sw(); hwPttSw = sw(); volPttSw = sw(); scanSqSw = sw(); voiceSw = sw(); styleSw = sw(); animSw = sw(); covSw = sw(); carMicSw = sw(); carCovSw = sw(); wheelSw = sw(); carScreenSw = sw();
+        ownAtBoot = sw(); hwPttSw = sw(); volPttSw = sw(); scanSqSw = sw(); voiceSw = sw(); styleSw = sw(); animSw = sw(); covSw = sw(); carMicSw = sw(); carCovSw = sw(); wheelSw = sw(); carScreenSw = sw(); holdNextSw = sw();
         addRow(set, Neo.switchRow(c, "power", Neo.GREEN, "Own the radio at boot", "Otherwise the stock app is restored after a reboot", ownAtBoot));
         addRow(set, Neo.switchRow(c, "ptt", Neo.AMBER, "Side PTT key", "The phone's hardware push-to-talk button transmits", hwPttSw));
         addRow(set, Neo.switchRow(c, "volume", Neo.AMBER, "Volume-up transmits", "While the Intercom page is open", volPttSw));
@@ -106,6 +106,8 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         carCovSw.setOnChange(on -> { if (svc != null) svc.setCoverageInCar(on); });
         addRow(set, Neo.switchRow(c, "ptt", Neo.RED, "Steering-wheel play/pause talks", "In Android Auto: the wheel's play/pause starts and stops transmitting", wheelSw));
         wheelSw.setOnChange(on -> { if (svc != null) svc.setWheelTalk(on); });
+        addRow(set, Neo.switchRow(c, "ptt", Neo.RED, "Hold steering-wheel Next to talk", "In Android Auto: hold Next to transmit, let go to stop; a short press still goes to the next channel", holdNextSw));
+        holdNextSw.setOnChange(on -> { if (svc != null) svc.setHoldNextTalk(on); });
         addRow(set, Neo.switchRow(c, "intercom", Neo.CYAN, "Full-screen Radio controls in the car", "Off: a media app (works in every car). On: a big Talk screen instead; reconnect the car after changing", carScreenSw));
         carScreenSw.setOnChange(on -> { if (svc != null) svc.setCarControlsScreen(on); });
         covSw.setOnChange(on -> { if (svc != null) { svc.setCoverageLogging(on); android.widget.Toast.makeText(c, on ? "Coverage logging is on" : "Coverage logging is off", android.widget.Toast.LENGTH_SHORT).show(); } });
@@ -403,7 +405,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         if (rogerValue != null) rogerValue.setText(com.macdmr.radio.RadioService.ROGER_NAMES[svc.rogerStyle()]);
         ownAtBoot.setChecked(svc.ownAtBoot()); voiceSw.setChecked(svc.voiceOn()); hwPttSw.setChecked(svc.hwPtt()); scanSqSw.setChecked(svc.scanSoftSq());
         volPttSw.setChecked(c.getSharedPreferences("radio", Context.MODE_PRIVATE).getBoolean("volPtt", false));
-        styleSw.setChecked(IntercomView.newLook(c)); animSw.setChecked(IntercomView.animatedPanel(c)); covSw.setChecked(svc.coverage().enabled()); carMicSw.setChecked(svc.carMic()); carCovSw.setChecked(svc.coverageInCar()); wheelSw.setChecked(svc.wheelTalk()); carScreenSw.setChecked(svc.carControlsScreen());
+        styleSw.setChecked(IntercomView.newLook(c)); animSw.setChecked(IntercomView.animatedPanel(c)); covSw.setChecked(svc.coverage().enabled()); carMicSw.setChecked(svc.carMic()); carCovSw.setChecked(svc.coverageInCar()); wheelSw.setChecked(svc.wheelTalk()); holdNextSw.setChecked(svc.holdNextTalk()); carScreenSw.setChecked(svc.carControlsScreen());
         ((TextView) radioIdTile.findViewWithTag("sub")).setText(svc.radioId().status());
     }
 
