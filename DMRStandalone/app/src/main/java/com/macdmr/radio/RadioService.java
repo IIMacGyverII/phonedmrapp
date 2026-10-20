@@ -99,6 +99,17 @@ public class RadioService extends Service implements RadioEngine.Events {
     private volatile int parrotChannel = -1;
     private volatile long txStartedAt;
 
+    // ---- logbook ----
+    private com.macdmr.radio.ham.Logbook logbook;
+    public com.macdmr.radio.ham.Logbook logbook() { if (logbook == null) logbook = new com.macdmr.radio.ham.Logbook(this); return logbook; }
+    public boolean logHeard() { return getSharedPreferences("radio", MODE_PRIVATE).getBoolean("logHeard", true); }
+    public void setLogHeard(boolean on) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("logHeard", on).apply(); }
+    void logHeardStation(String call, String mode, String note) {
+        if (!logHeard()) return;
+        ChannelStore.Channel c = current;
+        try { logbook().heard(call, c != null ? c.rxFreq : 0, mode, null, note); } catch (Throwable t) { log("logbook: " + t); }
+    }
+
     // ---- fox hunt: the hunter's marks, the fox beacon and the off-frequency trick ----
     private final com.macdmr.radio.ham.FoxHunt fox = new com.macdmr.radio.ham.FoxHunt();
     public com.macdmr.radio.ham.FoxHunt fox() { return fox; }
@@ -259,6 +270,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         @Override public void notifyUser(String title, String text, boolean alert) { RadioService.this.notifyUser(title, text, alert); }
         @Override public int rssiDbm() { return rssi; }
         @Override public void wantLocation(boolean on) { ui.post(() -> aprsLocation(on)); }
+        @Override public void logHeard(String call, String mode, String note) { RadioService.this.logHeardStation(call, mode, note); }
         @Override public void dtmfSequence(String digits) { if (packet != null) remote.handle(digits, packet.remotePin(), packet.remoteOn(), System.currentTimeMillis()); }
     };
 
@@ -1133,6 +1145,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         String t = (type == 1 ? "TG " + target : type == 2 ? "All call" : "Private") ;
         String who = callerName(caller);
         history("dmr", "📻 Voice RX " + t + " from " + (who.isEmpty() ? String.valueOf(caller) : who + " (" + caller + ")"));
+        if (logHeard()) { RadioIdStore.Record rr = radioId != null ? radioId.lookup(caller) : null; ChannelStore.Channel lc = current; if (rr != null && rr.callsign != null && !rr.callsign.isEmpty()) try { logbook().heard(rr.callsign, lc != null ? lc.rxFreq : 0, "DMR", rr.first, t + ", DMR ID " + caller); } catch (Throwable x) { log("logbook: " + x); } }
         ui.post(() -> { for (Listener l : listeners) l.onCaller((who.isEmpty() ? "ID " + caller : who + "  " + caller) + "  " + t); });
         if (voiceOn() && !who.isEmpty()) say(who.split(" ")[0]);
     }

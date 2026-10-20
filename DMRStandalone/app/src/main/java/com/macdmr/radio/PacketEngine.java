@@ -55,6 +55,8 @@ public final class PacketEngine {
         void wantLocation(boolean on);
         /** A decoded DTMF sequence (the remote control looks for its PIN). */
         void dtmfSequence(String digits);
+        /** A station identified itself (APRS source, Morse ID): for the logbook. */
+        void logHeard(String call, String mode, String note);
     }
 
     public static final int TX_LEAD_MS = 1600, TX_REPS = 2, TX_GAP_MS = 250;
@@ -450,7 +452,10 @@ public final class PacketEngine {
                 dtmf.processAudio(mono, n);
             }
             if (cwEnabled() && !weatherBand) {
-                if (cw == null) cw = new com.macdmr.radio.ham.CwDecoder((text, hz, wpm) -> host.event("\uD83D\uDD24 Morse: " + text + String.format(Locale.US, "  (%.0f Hz, %d WPM)", hz, wpm)));
+                if (cw == null) cw = new com.macdmr.radio.ham.CwDecoder((text, hz, wpm) -> {
+                    host.event("\uD83D\uDD24 Morse: " + text + String.format(Locale.US, "  (%.0f Hz, %d WPM)", hz, wpm));
+                    for (String w : text.split(" ")) if (com.macdmr.radio.ham.Logbook.baseCall(w) != null) host.logHeard(w, "CW", "Morse ID");
+                });
                 cw.process(mono, n);
             }
             if (wxEnabled() && f >= 162_400_000 && f <= 162_550_000) {
@@ -503,6 +508,7 @@ public final class PacketEngine {
                 String from = p.isValid ? p.sourceCallsign + (p.sourceSSID != 0 ? "-" + p.sourceSSID : "") : Ax25.addr(frame, 7);
                 heard(from);
                 if (!p.isValid) { host.event("📡 " + Ax25.tnc2(frame)); continue; }
+                host.logHeard(from, "PKT", "APRS");
                 long now = System.currentTimeMillis();
                 if (p.hasPosition) { store.storeStation(p, now); store.log("pos", from, p.destCallsign, APRSPacketDecoder.describe(p), null, false); }
                 if (p.isMessage()) messageReceived(p, from);

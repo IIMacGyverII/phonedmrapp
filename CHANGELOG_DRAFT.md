@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Logbook with ADIF export
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | **PKT → Logbook** (`ham/Logbook.java`, own `logbook.db`; `ui/LogbookDialog.java`): contacts (QSO) and stations heard, newest first; Add contact (now, current channel, 59/59), edit any entry (call, MHz, mode FM/DMR/PKT/CW, RST sent/received, name, notes, QSO or heard), delete; filter all/contacts. **Log heard** (default on): DMR callers with a RadioID callsign (name and TG noted), every decoded APRS source, and callsign-shaped words in Morse IDs; one entry per call and mode per hour (`baseCall` strips SSID and /R-style suffixes; `looksLikeCall` = 1–3 char prefix with a letter, last digit, 1–4 letter suffix). **Export ADIF** 3.1.4 to Download/DMR/Logbook/*.adi + share: CALL, QSO_DATE/TIME_ON (UTC), FREQ, BAND (2m/1.25m/70cm/6m/33cm), MODE (DMR as DIGITALVOICE/DMR), RST, NAME, COMMENT, SWL=Y for heard-only. New help topic. | `ham/Logbook.java`, `ui/LogbookDialog.java` (new), `RadioService.java`, `PacketEngine.java`, `ui/PktDialog.java`, `ui/HelpView.java`; test `LogbookTest` | Unit tests 2/2 (call shapes and base calls; ADIF fields for an FM QSO and a heard DMR station). On the phone: an injected Morse ID was logged as heard (CW, Family Analog frequency), the sheet listed it, Export ADIF wrote a valid .adi; the test entry and file were deleted afterwards |
+
 ## 2026-10-20 — DTMF remote control
 
 | Backlog | Change | Files | Test |
