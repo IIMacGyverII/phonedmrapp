@@ -77,6 +77,8 @@ public final class TinyServiceAudio implements AudioBackend {
     /** TX: phone mic → 8 kHz mono → duplicated to stereo → PrizeTinyService.writeFrame while keyed. */
     private volatile int txSource = MediaRecorder.AudioSource.MIC;
     @Override public void setTxSource(int source) { txSource = source; }
+    private volatile Level txLevel;
+    @Override public void setTxLevel(Level l) { txLevel = l; }
 
     @Override public synchronized String startTx() {
         try {
@@ -94,6 +96,7 @@ public final class TinyServiceAudio implements AudioBackend {
                     int n = rec.read(mono, 0, mono.length);
                     if (n <= 0) continue;
                     for (int i = 0, o = 0; i + 1 < n; i += 2) { st[o++] = mono[i]; st[o++] = mono[i + 1]; st[o++] = mono[i]; st[o++] = mono[i + 1]; }
+                    Level lv = txLevel; if (lv != null) { int pk = 0; for (int i = 0; i + 1 < n; i += 2) pk = Math.max(pk, Math.abs((short) ((mono[i] & 0xFF) | (mono[i + 1] << 8)))); lv.peak(pk); }
                     try { writeFrame.invoke(svc, st, n * 2); } catch (Throwable t) { synchronized (err) { err.append(t).append('\n'); } break; }
                 }
             }, "tiny-tx");

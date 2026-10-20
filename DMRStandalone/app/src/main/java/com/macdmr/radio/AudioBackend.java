@@ -19,6 +19,9 @@ public interface AudioBackend {
     String startTx();
     /** Microphone for the next {@link #startTx}: MediaRecorder.AudioSource.MIC (phone) or VOICE_COMMUNICATION (a Bluetooth hands-free mic, e.g. the car's). */
     default void setTxSource(int source) { }
+    /** The microphone's peak level (0..32767) of each block while keyed, or null for none. */
+    interface Level { void peak(int peak); }
+    default void setTxLevel(Level l) { }
     String stopTx();
     /** Play 8 kHz mono PCM into the TX path, paced to real time; blocks until done. */
     String playPcm(short[] mono);

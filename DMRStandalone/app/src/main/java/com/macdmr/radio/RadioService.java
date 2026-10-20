@@ -526,6 +526,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         engine = new RadioEngine(profile, this);
         packet = new PacketEngine(packetHost);
         packet.applySettings();
+        com.macdmr.radio.car.RadioCallService.register(this);
         // developer bench tools: adb only (the sender must hold DUMP, which the shell has and apps cannot get)
         try {
             android.content.IntentFilter df = new android.content.IntentFilter(DiagReceiver.ACTION);
@@ -1141,7 +1142,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         worker.execute(() -> {
             try {
                 if (down) {
-                    final boolean fromWheel = wheelPtt; wheelPtt = false;      // read once, whatever happens next
+                    final boolean fromWheel = wheelPtt, fromCall = callPtt; wheelPtt = false; callPtt = false;      // read once, whatever happens next
                     if (!isReady()) { log("PTT ignored: radio not ready"); return; }
                     if (txInhibited()) { log("PTT blocked: receive-only channel"); history("warn", "⛔ TX blocked on a receive-only channel"); return; }
                     if (pttDown) return;
@@ -1149,8 +1150,13 @@ public class RadioService extends Service implements RadioEngine.Events {
                     txChannel = current; txInCar = inCar; txCharging = charging(); txDropNoted = false; txStartedAt = System.currentTimeMillis();
                     idTimerOnKey();
                     if (audio != null) audio.stopRx();              // never play the RX stream while the mic is live (feedback)
-                    boolean carMic = inCar && carMic() && !fromWheel && startBluetoothMic();   // not for the wheel's Next: the hands-free link turns the wheel into call controls and the stop press never arrives   // in the car: its microphone, through the hands-free link
+                    boolean carMic = fromCall || (inCar && carMic() && !fromWheel && startBluetoothMic());   // a talk call: Telecom has opened the car's link   // not for the wheel's Next: the hands-free link turns the wheel into call controls and the stop press never arrives   // in the car: its microphone, through the hands-free link
                     if (audio != null) audio.setTxSource(carMic ? android.media.MediaRecorder.AudioSource.VOICE_COMMUNICATION : android.media.MediaRecorder.AudioSource.MIC);
+                    int vi = voxStop();
+                    if ((fromWheel || fromCall) && vi > 0 && vi < VOX_MS.length && audio != null) {          // stop when the talking stops
+                        final com.macdmr.radio.ham.VoxStop v = new com.macdmr.radio.ham.VoxStop(VOX_MS[vi], System.currentTimeMillis()); vox = v;
+                        audio.setTxLevel(pk -> { if (vox == v && v.level(pk, System.currentTimeMillis())) { vox = null; log("stopped: quiet for " + VOX_NAMES[vi]); ptt(false); } });
+                    } else if (audio != null) { vox = null; audio.setTxLevel(null); }
                     if (carMic) log("TX with the car microphone"); else if (fromWheel && inCar && carMic()) log("TX from the wheel: phone microphone (keeps the wheel's buttons working)");
                     engine.ptt(true);
                     if (audio != null) log(audio.startTx());
@@ -1158,7 +1164,8 @@ public class RadioService extends Service implements RadioEngine.Events {
                 } else {
                     if (!pttDown) return;
                     pttDown = false; refreshControls();
-                    wheel.stopped();
+                    wheel.stopped(); vox = null; if (audio != null) audio.setTxLevel(null);
+                    if (com.macdmr.radio.car.RadioCallService.active()) ui.post(com.macdmr.radio.car.RadioCallService::end);   // the talk call ends with the transmission
                     txEndedAt = System.currentTimeMillis();
                     ui.removeCallbacks(txWatchdog);
                     try {
@@ -1384,8 +1391,44 @@ public class RadioService extends Service implements RadioEngine.Events {
     private volatile long lastWheelKeyAt; private int wheelKeysLogged;
     /** The transmission in progress was started by the wheel's Next (it then uses the phone microphone). */
     private volatile boolean wheelPtt;
+    /** The transmission rides a talk "call" (car microphone through Telecom; the car's hang-up stops it). */
+    private volatile boolean callPtt, talkCallPending;
+
+    // wheel microphone: 0 phone, 1 car through a talk call; stop on silence: 0 off, else the quiet gap in ms
+    public static final String[] WHEEL_MIC_NAMES = { "Phone", "Car (as a call)" };
+    public static final int[] VOX_MS = { 0, 1500, 2500, 4000 };
+    public static final String[] VOX_NAMES = { "Off", "1.5 s", "2.5 s", "4 s" };
+    public int wheelMic() { return getSharedPreferences("radio", MODE_PRIVATE).getInt("wheelMic", 1); }
+    public void setWheelMic(int m) { getSharedPreferences("radio", MODE_PRIVATE).edit().putInt("wheelMic", m).apply(); }
+    public int voxStop() { return getSharedPreferences("radio", MODE_PRIVATE).getInt("voxStop", 0); }
+    public void setVoxStop(int i) { getSharedPreferences("radio", MODE_PRIVATE).edit().putInt("voxStop", i).apply(); }
+    private final Runnable talkCallTimeout = () -> { if (talkCallPending) { talkCallPending = false; log("talk call: no car audio route in 4 s, using the phone microphone"); history("car", "\u26A0\uFE0F The car did not open its microphone for the talk call: this transmission uses the phone microphone"); com.macdmr.radio.car.RadioCallService.end(); wheelPtt = true; ptt(true); } };
+    /** A steering-wheel start: with the car microphone as a call when set, else the phone microphone. */
+    private void wheelTalkStart() {
+        if (carMic() && wheelMic() == 1) {
+            String e = com.macdmr.radio.car.RadioCallService.start(this);
+            if (e == null) { talkCallPending = true; ui.removeCallbacks(talkCallTimeout); ui.postDelayed(talkCallTimeout, 4000); log("talk call placed"); return; }
+            log("talk call: " + e + "; phone microphone");
+        }
+        wheelPtt = true; ptt(true);
+    }
+    /** Telecom opened the car's audio route for the talk call: key the radio with the car's microphone. */
+    public void talkCallReady(boolean bluetooth) {
+        if (!talkCallPending) return;
+        talkCallPending = false; ui.removeCallbacks(talkCallTimeout);
+        log("talk call active, route " + (bluetooth ? "car (Bluetooth)" : "not Bluetooth"));
+        if (bluetooth) callPtt = true; else wheelPtt = true;
+        ptt(true);
+    }
+    public void talkCallFailed() { if (talkCallPending) { ui.removeCallbacks(talkCallTimeout); talkCallTimeout.run(); } }
+    /** Hang-up or End in the car: stop transmitting. */
+    public void talkCallHungUp() { talkCallPending = false; history("car", "\uD83D\uDCDE Hung up in the car: transmission stopped"); if (pttDown) ptt(false); }
+    private volatile com.macdmr.radio.ham.VoxStop vox;
     private final com.macdmr.radio.ham.WheelNext wheel = new com.macdmr.radio.ham.WheelNext(new com.macdmr.radio.ham.WheelNext.Out() {
-        @Override public void talk(boolean on) { if (on) { if (inCar && !pttDown) { wheelPtt = true; ptt(true); } } else if (pttDown) ptt(false); }
+        @Override public void talk(boolean on) {
+            if (on) { if (inCar && !pttDown) wheelTalkStart(); }
+            else { if (talkCallPending) { talkCallPending = false; com.macdmr.radio.car.RadioCallService.end(); } if (pttDown) ptt(false); }
+        }
         @Override public void step() { stepChannel(1); }
         @Override public void schedule(Runnable r, long ms) { ui.postDelayed(r, ms); }
         @Override public void cancel(Runnable r) { ui.removeCallbacks(r); }
@@ -1429,7 +1472,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     /** Steering-wheel play/pause (a media button) while in the car with the setting on: start or stop talking. */
     public boolean wheelButton() {
         if (!inCar || !wheelTalk()) return false;
-        if (pttHeld()) ptt(false); else { wheelPtt = true; ptt(true); }   // phone microphone: see wheelPtt
+        if (pttHeld() || talkCallPending) { if (talkCallPending) { talkCallPending = false; com.macdmr.radio.car.RadioCallService.end(); } ptt(false); } else wheelTalkStart();
         return true;
     }
     // ---- car presence: media app (default) or the full-screen Radio controls template app ---------------

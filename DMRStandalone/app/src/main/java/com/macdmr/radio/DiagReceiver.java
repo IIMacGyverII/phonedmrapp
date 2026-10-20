@@ -35,6 +35,8 @@ public final class DiagReceiver extends BroadcastReceiver {
                 com.macdmr.radio.ham.SatTrack.Pass p = new com.macdmr.radio.ham.SatTrack.Pass(); p.aos = System.currentTimeMillis() + 60_000; p.los = p.aos + 30_000; p.tca = p.aos;
                 Log.i("DiagReceiver", "sattest: " + s.trackSat(com.macdmr.radio.ham.Satellites.ALL[0], e, p)); break;
             }
+            case "callstart": Log.i("DiagReceiver", "talk call: " + com.macdmr.radio.car.RadioCallService.start(s)); break;   // places the call only: no transmission unless a wheel start is pending
+            case "callend": com.macdmr.radio.car.RadioCallService.end(); break;
             case "benchIgate": if (s.packet() != null) s.packet().benchIgate = i.getBooleanExtra("on", false); break;
             case "pkt": if (s.packet() != null) Log.i("DiagReceiver", "pkt " + i.getStringExtra("what") + ": " + s.packet().diagSend(i.getStringExtra("what"))); break;
             default: Log.w("DiagReceiver", "unknown cmd " + cmd);
