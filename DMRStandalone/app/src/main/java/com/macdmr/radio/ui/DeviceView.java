@@ -108,7 +108,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         addRow(set, Neo.switchRow(c, "ptt", Neo.RED, "Steering-wheel play/pause talks", "In Android Auto: the wheel's play/pause starts and stops transmitting", wheelSw));
         wheelSw.setOnChange(on -> { if (svc != null) svc.setWheelTalk(on); });
         LinearLayout nextRow = Neo.switchRow(c, "ptt", Neo.RED, "Steering-wheel Next talks", "Hold: hold Next to talk, press again if it keeps talking. Double-press: press twice to talk, once to stop. Tap to change", null);
-        nextTalkValue = Neo.chip(c, com.macdmr.radio.RadioService.NEXT_TALK_NAMES[0], Neo.RED); nextRow.addView(nextTalkValue);
+        nextTalkValue = Neo.chip(c, com.macdmr.radio.RadioService.NEXT_TALK_NAMES[com.macdmr.radio.ham.WheelNext.DOUBLE], Neo.RED); nextRow.addView(nextTalkValue);
         nextRow.setOnClickListener(v -> { if (svc == null) return; int m = (svc.nextTalkMode() + 1) % 3; svc.setNextTalkMode(m); nextTalkValue.setText(com.macdmr.radio.RadioService.NEXT_TALK_NAMES[m]); });
         addRow(set, nextRow);
         LinearLayout micRow = Neo.switchRow(c, "voice", Neo.RED, "Steering-wheel microphone", "Car (as a call): the car's microphone; stop with the wheel's hang-up or End. Phone: the phone's microphone; stop with the wheel. Tap to change", null);
@@ -116,7 +116,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         micRow.setOnClickListener(v -> { if (svc == null) return; int m = (svc.wheelMic() + 1) % 2; svc.setWheelMic(m); wheelMicValue.setText(com.macdmr.radio.RadioService.WHEEL_MIC_NAMES[m]); });
         addRow(set, micRow);
         LinearLayout voxRow = Neo.switchRow(c, "mon", Neo.RED, "Stop when I stop talking", "For transmissions started from the wheel: unkey after this much quiet. Tap to change", null);
-        voxValue = Neo.chip(c, com.macdmr.radio.RadioService.VOX_NAMES[0], Neo.RED); voxRow.addView(voxValue);
+        voxValue = Neo.chip(c, com.macdmr.radio.RadioService.VOX_NAMES[1], Neo.RED); voxRow.addView(voxValue);
         voxRow.setOnClickListener(v -> { if (svc == null) return; int m = (svc.voxStop() + 1) % com.macdmr.radio.RadioService.VOX_NAMES.length; svc.setVoxStop(m); voxValue.setText(com.macdmr.radio.RadioService.VOX_NAMES[m]); });
         addRow(set, voxRow);
         addRow(set, Neo.switchRow(c, "intercom", Neo.CYAN, "Full-screen Radio controls in the car", "Off: a media app (works in every car). On: a big Talk screen instead; reconnect the car after changing", carScreenSw));

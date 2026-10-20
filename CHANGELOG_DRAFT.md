@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Car defaults: Double-press Next talks, stop after 1.5 s of quiet
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Owner, after a drive where both worked (car microphone as a call, hang-up and stop-on-silence all verified): new defaults **Steering-wheel Next talks = Double-press** (was Off; only while Android Auto is connected, so a headset's Next on the phone is unchanged; an install that had the old Hold switch keeps its choice) and **Stop when I stop talking = 1.5 s** (was Off). Settings already chosen are kept. Help updated. | `RadioService.java`, `ui/DeviceView.java`, `ui/HelpView.java` | Built and installed; the owner's settings already were these values |
+
 ## 2026-10-20 — MON switches off on a channel change
 
 | Backlog | Change | Files | Test |
