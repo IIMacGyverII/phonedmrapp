@@ -83,6 +83,8 @@ public final class UartPcmAudio implements AudioBackend {
 
     private volatile int txSource = MediaRecorder.AudioSource.MIC;
     @Override public void setTxSource(int source) { txSource = source; }
+    private volatile Level txLevel;
+    @Override public void setTxLevel(Level l) { txLevel = l; }
 
     @Override public synchronized String startTx() {
         try {
@@ -96,6 +98,7 @@ public final class UartPcmAudio implements AudioBackend {
                 while (txRunning) {
                     int n = rec.read(buf, 0, buf.length);
                     if (n <= 0) continue;
+                    Level lv = txLevel; if (lv != null) { int pk = 0; for (int i = 0; i + 1 < n; i += 2) pk = Math.max(pk, Math.abs((short) ((buf[i] & 0xFF) | (buf[i + 1] << 8)))); lv.peak(pk); }
                     try { out.write(buf, 0, n); out.flush(); } catch (Throwable t) { break; }
                 }
             }, "uart-pcm-tx");

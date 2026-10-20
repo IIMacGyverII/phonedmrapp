@@ -29,7 +29,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
     private final ImageView heroIcon;
     private final TextView takeOver, handBack, reportNow;
     private final Neo.NeonSwitch ownAtBoot, voiceSw, hwPttSw, volPttSw, scanSqSw, styleSw, animSw, covSw, carMicSw, carCovSw, wheelSw, carScreenSw;
-    private TextView nextTalkValue;
+    private TextView nextTalkValue, wheelMicValue, voxValue;
     private final LinearLayout radioIdTile;
     private RadioService svc;
     private Host host;
@@ -111,6 +111,14 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         nextTalkValue = Neo.chip(c, com.macdmr.radio.RadioService.NEXT_TALK_NAMES[0], Neo.RED); nextRow.addView(nextTalkValue);
         nextRow.setOnClickListener(v -> { if (svc == null) return; int m = (svc.nextTalkMode() + 1) % 3; svc.setNextTalkMode(m); nextTalkValue.setText(com.macdmr.radio.RadioService.NEXT_TALK_NAMES[m]); });
         addRow(set, nextRow);
+        LinearLayout micRow = Neo.switchRow(c, "voice", Neo.RED, "Steering-wheel microphone", "Car (as a call): the car's microphone; stop with the wheel's hang-up or End. Phone: the phone's microphone; stop with the wheel. Tap to change", null);
+        wheelMicValue = Neo.chip(c, com.macdmr.radio.RadioService.WHEEL_MIC_NAMES[1], Neo.RED); micRow.addView(wheelMicValue);
+        micRow.setOnClickListener(v -> { if (svc == null) return; int m = (svc.wheelMic() + 1) % 2; svc.setWheelMic(m); wheelMicValue.setText(com.macdmr.radio.RadioService.WHEEL_MIC_NAMES[m]); });
+        addRow(set, micRow);
+        LinearLayout voxRow = Neo.switchRow(c, "mon", Neo.RED, "Stop when I stop talking", "For transmissions started from the wheel: unkey after this much quiet. Tap to change", null);
+        voxValue = Neo.chip(c, com.macdmr.radio.RadioService.VOX_NAMES[0], Neo.RED); voxRow.addView(voxValue);
+        voxRow.setOnClickListener(v -> { if (svc == null) return; int m = (svc.voxStop() + 1) % com.macdmr.radio.RadioService.VOX_NAMES.length; svc.setVoxStop(m); voxValue.setText(com.macdmr.radio.RadioService.VOX_NAMES[m]); });
+        addRow(set, voxRow);
         addRow(set, Neo.switchRow(c, "intercom", Neo.CYAN, "Full-screen Radio controls in the car", "Off: a media app (works in every car). On: a big Talk screen instead; reconnect the car after changing", carScreenSw));
         carScreenSw.setOnChange(on -> { if (svc != null) svc.setCarControlsScreen(on); });
         covSw.setOnChange(on -> { if (svc != null) { svc.setCoverageLogging(on); android.widget.Toast.makeText(c, on ? "Coverage logging is on" : "Coverage logging is off", android.widget.Toast.LENGTH_SHORT).show(); } });
@@ -408,7 +416,8 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         if (rogerValue != null) rogerValue.setText(com.macdmr.radio.RadioService.ROGER_NAMES[svc.rogerStyle()]);
         ownAtBoot.setChecked(svc.ownAtBoot()); voiceSw.setChecked(svc.voiceOn()); hwPttSw.setChecked(svc.hwPtt()); scanSqSw.setChecked(svc.scanSoftSq());
         volPttSw.setChecked(c.getSharedPreferences("radio", Context.MODE_PRIVATE).getBoolean("volPtt", false));
-        styleSw.setChecked(IntercomView.newLook(c)); animSw.setChecked(IntercomView.animatedPanel(c)); covSw.setChecked(svc.coverage().enabled()); carMicSw.setChecked(svc.carMic()); carCovSw.setChecked(svc.coverageInCar()); wheelSw.setChecked(svc.wheelTalk()); nextTalkValue.setText(com.macdmr.radio.RadioService.NEXT_TALK_NAMES[svc.nextTalkMode()]); carScreenSw.setChecked(svc.carControlsScreen());
+        styleSw.setChecked(IntercomView.newLook(c)); animSw.setChecked(IntercomView.animatedPanel(c)); covSw.setChecked(svc.coverage().enabled()); carMicSw.setChecked(svc.carMic()); carCovSw.setChecked(svc.coverageInCar()); wheelSw.setChecked(svc.wheelTalk()); nextTalkValue.setText(com.macdmr.radio.RadioService.NEXT_TALK_NAMES[svc.nextTalkMode()]);
+        wheelMicValue.setText(com.macdmr.radio.RadioService.WHEEL_MIC_NAMES[Math.max(0, Math.min(1, svc.wheelMic()))]); voxValue.setText(com.macdmr.radio.RadioService.VOX_NAMES[Math.max(0, Math.min(3, svc.voxStop()))]); carScreenSw.setChecked(svc.carControlsScreen());
         ((TextView) radioIdTile.findViewWithTag("sub")).setText(svc.radioId().status());
     }
 
