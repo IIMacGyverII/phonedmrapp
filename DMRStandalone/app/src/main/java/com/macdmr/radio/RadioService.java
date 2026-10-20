@@ -1141,6 +1141,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         worker.execute(() -> {
             try {
                 if (down) {
+                    final boolean fromWheel = wheelPtt; wheelPtt = false;      // read once, whatever happens next
                     if (!isReady()) { log("PTT ignored: radio not ready"); return; }
                     if (txInhibited()) { log("PTT blocked: receive-only channel"); history("warn", "⛔ TX blocked on a receive-only channel"); return; }
                     if (pttDown) return;
@@ -1148,9 +1149,9 @@ public class RadioService extends Service implements RadioEngine.Events {
                     txChannel = current; txInCar = inCar; txCharging = charging(); txDropNoted = false; txStartedAt = System.currentTimeMillis();
                     idTimerOnKey();
                     if (audio != null) audio.stopRx();              // never play the RX stream while the mic is live (feedback)
-                    boolean carMic = inCar && carMic() && startBluetoothMic();   // in the car: its microphone, through the hands-free link
+                    boolean carMic = inCar && carMic() && !fromWheel && startBluetoothMic();   // not for the wheel's Next: the hands-free link turns the wheel into call controls and the stop press never arrives   // in the car: its microphone, through the hands-free link
                     if (audio != null) audio.setTxSource(carMic ? android.media.MediaRecorder.AudioSource.VOICE_COMMUNICATION : android.media.MediaRecorder.AudioSource.MIC);
-                    if (carMic) log("TX with the car microphone");
+                    if (carMic) log("TX with the car microphone"); else if (fromWheel && inCar && carMic()) log("TX from the wheel: phone microphone (keeps the wheel's buttons working)");
                     engine.ptt(true);
                     if (audio != null) log(audio.startTx());
                     ui.removeCallbacks(txWatchdog); ui.postDelayed(txWatchdog, 28000);
@@ -1381,8 +1382,10 @@ public class RadioService extends Service implements RadioEngine.Events {
     public void setNextTalkMode(int m) { getSharedPreferences("radio", MODE_PRIVATE).edit().putInt("nextTalk", m).apply(); wheel.setMode(m); }
     public boolean holdNextTalk() { return nextTalkMode() != 0; }
     private volatile long lastWheelKeyAt; private int wheelKeysLogged;
+    /** The transmission in progress was started by the wheel's Next (it then uses the phone microphone). */
+    private volatile boolean wheelPtt;
     private final com.macdmr.radio.ham.WheelNext wheel = new com.macdmr.radio.ham.WheelNext(new com.macdmr.radio.ham.WheelNext.Out() {
-        @Override public void talk(boolean on) { if (on) { if (inCar && !pttDown) ptt(true); } else if (pttDown) ptt(false); }
+        @Override public void talk(boolean on) { if (on) { if (inCar && !pttDown) { wheelPtt = true; ptt(true); } } else if (pttDown) ptt(false); }
         @Override public void step() { stepChannel(1); }
         @Override public void schedule(Runnable r, long ms) { ui.postDelayed(r, ms); }
         @Override public void cancel(Runnable r) { ui.removeCallbacks(r); }
@@ -1426,7 +1429,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     /** Steering-wheel play/pause (a media button) while in the car with the setting on: start or stop talking. */
     public boolean wheelButton() {
         if (!inCar || !wheelTalk()) return false;
-        if (pttHeld()) ptt(false); else ptt(true);
+        if (pttHeld()) ptt(false); else { wheelPtt = true; ptt(true); }   // phone microphone: see wheelPtt
         return true;
     }
     // ---- car presence: media app (default) or the full-screen Radio controls template app ---------------

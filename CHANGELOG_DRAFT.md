@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Wheel-started transmissions use the phone microphone (so the wheel can stop them)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Third drive, `files/wheel.log`: Double-press started talking 4 of 4 times, but once transmitting, **no wheel event reached the app at all** until the transmission ended otherwise 7–13 s later; the one stop that worked was a 1.5 s hold, released before the hands-free link came up. Cause: Car microphone (default on) opens the Bluetooth SCO/hands-free link (`MODE_IN_COMMUNICATION`) for TX, and while it is open the car treats the steering wheel as call controls, so media keys stop. Transmissions started by the wheel (Next or play/pause, `wheelPtt`, read once at key-down) now use the phone microphone; the car-screen and phone Talk buttons keep the car microphone. Logged as "TX from the wheel: phone microphone". Help updated. | `RadioService.java`, `ui/HelpView.java` | Built and installed. **Needs a drive** to confirm the stop press now arrives |
+
 ## 2026-10-20 — Steering-wheel Next: rules rebuilt from the car's event log
 
 | Backlog | Change | Files | Test |
