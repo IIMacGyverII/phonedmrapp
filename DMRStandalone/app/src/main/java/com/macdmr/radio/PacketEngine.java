@@ -269,6 +269,74 @@ public final class PacketEngine {
         return out;
     }
 
+    // ---- packet terminal: an AX.25 connected-mode session with a BBS or node -----------------------
+    public interface TerminalListener { void update(String transcript, String state); }
+    private volatile com.macdmr.radio.pkt.Ax25Session terminal;
+    private final StringBuilder transcript = new StringBuilder();
+    private volatile String termState = "disconnected";
+    private volatile TerminalListener termListener;
+    public void setTerminalListener(TerminalListener l) { termListener = l; if (l != null) l.update(transcriptText(), termState); }
+    public synchronized String transcriptText() { return transcript.toString(); }
+    public String terminalState() { return termState; }
+    public boolean acceptConnections() { return prefs.getBoolean("acceptConnect", false); }
+    public void setAcceptConnections(boolean on) { prefs.edit().putBoolean("acceptConnect", on).apply(); com.macdmr.radio.pkt.Ax25Session t = terminal(); if (t != null) t.setAcceptIncoming(on); }
+    private boolean terminalActive() { com.macdmr.radio.pkt.Ax25Session t = terminal; return t != null && (t.state() != com.macdmr.radio.pkt.Ax25Session.State.DISCONNECTED || acceptConnections()); }
+    private synchronized void termAppend(String s) {
+        transcript.append(s); if (transcript.length() > 20000) transcript.delete(0, transcript.length() - 16000);
+        TerminalListener l = termListener; String t = transcript.toString(), st = termState;
+        if (l != null) new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> l.update(t, st));
+    }
+    /** The session for our callsign (made on first use; null without a callsign). */
+    public synchronized com.macdmr.radio.pkt.Ax25Session terminal() {
+        if (!callsignSet()) return null;
+        if (terminal == null) {
+            terminal = new com.macdmr.radio.pkt.Ax25Session(callsign(), ssid(), new com.macdmr.radio.pkt.Ax25Session.Link() {
+                @Override public void send(java.util.List<byte[]> frames) { txFramesRaw(frames, "AX.25 " + frames.size() + (frames.size() == 1 ? " frame" : " frames")); }
+                @Override public void received(String text) { termAppend(text); }
+                @Override public void state(String state) {
+                    termState = state; termAppend("\n*** " + state + " ***\n"); host.event("\uD83D\uDCBB Packet terminal: " + state);
+                    if (state.endsWith("(they called)")) host.notifyUser("Packet connection", state, false);
+                }
+            });
+            terminal.setAcceptIncoming(acceptConnections());
+            Thread t = new Thread(() -> { while (true) { try { Thread.sleep(500); com.macdmr.radio.pkt.Ax25Session s = terminal; if (s != null) s.tick(System.currentTimeMillis()); } catch (InterruptedException e) { break; } catch (Throwable x) { Log.w(TAG, "ax25: " + x); } } }, "ax25-timers");
+            t.setDaemon(true); t.start();
+        }
+        return terminal;
+    }
+    public String terminalConnect(String call, String via) {
+        com.macdmr.radio.pkt.Ax25Session t = terminal();
+        if (t == null) return "Set your callsign first (PKT \u2192 Settings)";
+        if (call == null || !call.trim().toUpperCase(Locale.US).matches("[A-Z0-9]{1,6}(-[0-9]{1,2})?")) return "Callsign like N0ABC or N0ABC-1";
+        if (!host.analogRx()) return "Packet needs an analog channel: tune the BBS or node's frequency";
+        java.util.List<String> path = new java.util.ArrayList<>();
+        for (String v : (via == null ? "" : via).toUpperCase(Locale.US).split(",")) { v = v.trim(); if (!v.isEmpty()) path.add(v); }
+        if (path.size() > 2) return "At most two digipeaters";
+        termAppend("\n> connecting to " + call.trim().toUpperCase(Locale.US) + (path.isEmpty() ? "" : " via " + String.join(",", path)) + "\n");
+        t.connect(call, path.toArray(new String[0]), System.currentTimeMillis());
+        return null;
+    }
+    public void terminalDisconnect() { com.macdmr.radio.pkt.Ax25Session t = terminal; if (t != null) t.disconnect(System.currentTimeMillis()); }
+    public String terminalSend(String line) {
+        com.macdmr.radio.pkt.Ax25Session t = terminal;
+        if (t == null || t.state() != com.macdmr.radio.pkt.Ax25Session.State.CONNECTED) return "Not connected";
+        termAppend(line + "\n");
+        t.sendText(line + "\r", System.currentTimeMillis());
+        return null;
+    }
+
+    /** Frames of our own (no FCS yet) in one key-up: one settling lead, each frame once. */
+    private void txFramesRaw(java.util.List<byte[]> frames, String label) {
+        if (!host.analogRx()) { host.event("\u26D4 Not sent (" + label + "): packet needs an analog channel"); return; }
+        int lead = SR * TX_LEAD_MS / 1000, gap = SR * TX_GAP_MS / 1000;
+        java.util.List<short[]> parts = new java.util.ArrayList<>(); int total = lead;
+        for (byte[] f : frames) { short[] a = AFSKGenerator.generateAFSKWithNRZI(Ax25.appendFcs(f)); parts.add(a); total += a.length + gap; }
+        short[] src = new short[total];
+        for (int i = 0; i < lead; i++) src[i] = (short) (30000 * Math.sin(2.0 * Math.PI * 1200 * i / SR));
+        int p = lead; for (short[] a : parts) { System.arraycopy(a, 0, src, p, a.length); p += a.length + gap; }
+        host.transmitPcm(src, label, null);
+    }
+
     // ---- two-way iGate: internet messages for stations heard on the radio go out on RF -----------
     private final HashMap<String, Long> heardRf = new HashMap<>(), gatedToRf = new HashMap<>();
     private volatile int gatedToRfCount;
@@ -467,7 +535,7 @@ public final class PacketEngine {
                 for (int i = 0, o = 0; i + 1 < n; i += 2) { sstvBytes[o++] = mono[i]; sstvBytes[o++] = mono[i + 1]; sstvBytes[o++] = mono[i]; sstvBytes[o++] = mono[i + 1]; }   // the receiver runs at 16 kHz (each 8 kHz sample twice, exactly the module's input)
                 sstv.processAudio(sstvBytes, n * 2);
             }
-            if (!sstvRx && (monitor || kiss.isActive() || (passiveWanted() && !weatherBand))) {
+            if (!sstvRx && (monitor || kiss.isActive() || terminalActive() || (passiveWanted() && !weatherBand))) {
                 for (int i = 0; i + 1 < n && fill < WINDOW; i += 2) window[fill++] = (short) ((mono[i] & 0xFF) | (mono[i + 1] << 8));
                 if (fill >= WINDOW) {
                     long now = System.currentTimeMillis();
@@ -499,6 +567,11 @@ public final class PacketEngine {
         try {
             List<byte[]> frames = AFSKDecoder.decode(up6(samples));
             for (byte[] frame : frames) {
+                com.macdmr.radio.pkt.Ax25Session ts = terminal;
+                if (ts != null && com.macdmr.radio.pkt.Ax25Session.addressedTo(frame, callsign(), ssid())) {   // connected-mode traffic for our terminal
+                    if (duplicate(frame)) continue;
+                    if (ts.receive(frame, System.currentTimeMillis())) continue;
+                }
                 if (!Ax25.plausible(frame)) continue;   // noise that passed the FCS: never log, gate, digipeat or hand it to the TNC
                 if (duplicate(frame)) continue;
                 kiss.deliver(frame);
