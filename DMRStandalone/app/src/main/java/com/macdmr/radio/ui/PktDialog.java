@@ -68,6 +68,12 @@ public final class PktDialog {
         button(pr, parrotOn ? "Stop the parrot" : "Parrot on this channel", Theme.PKT, x -> { toast(svc.setParrot(!parrotOn)); dlg.dismiss(); });
         body.addView(pr);
         body.addView(hint((parrotOn ? "\uD83E\uDD9C On, " + svc.parrot().played() + " repeated so far. " : "") + "Records each transmission heard on this channel and sends it back a second after it ends (up to 27 s), so a station can hear how it sounds, or two stations out of each other's range can talk through you. On amateur channels your callsign is sent in Morse at most every ten minutes. Needs the squelch closed on silence (squelch above 0 or Soft SQ); stops when you change channel."));
+        // ---- Morse ----
+        body.addView(section("Morse"));
+        LinearLayout mr = row();
+        button(mr, "Send my callsign in Morse", Theme.VFO, x -> { String e = pe.sendCwId(); toast(e == null ? "Sending " + pe.callsign() + " in Morse" : e); });
+        body.addView(mr);
+        body.addView(hint((pe.cwEnabled() ? "Morse heard on analog channels (a repeater's identification, for example) is decoded into the history. " : "The Morse decoder is off (Settings). ") + (pe.cwIdEnabled() ? "Your callsign is sent in Morse after you talk on amateur channels, at most every ten minutes." : "Settings can add your callsign in Morse after you talk on amateur channels, every ten minutes.")));
         // ---- SSTV ----
         body.addView(section("SSTV pictures"));
         body.addView(hint("\uD83D\uDD38 " + pe.sstvStatus()));
@@ -279,11 +285,13 @@ public final class PktDialog {
         final String[] modes = { "Off", "Flagged channels", "Every analog channel" };
         final int[] passive = { pe.passiveMode() };
         final TextView modeV = cycle(body, "Decode on", modes, passive[0], v -> passive[0] = v);
-        final boolean[] flags = { pe.autoAck(), pe.digipeat(), pe.dtmfEnabled(), pe.wxEnabled() };
+        final boolean[] flags = { pe.autoAck(), pe.digipeat(), pe.dtmfEnabled(), pe.wxEnabled(), pe.cwEnabled(), pe.cwIdEnabled() };
         toggle(body, "Auto-ack messages addressed to me (monitoring)", flags, 0);
         toggle(body, "Fill-in digipeater for WIDE1-1 (monitoring)", flags, 1);
         toggle(body, "DTMF decoder", flags, 2);
         toggle(body, "NOAA SAME weather alerts", flags, 3);
+        toggle(body, "Morse decoder", flags, 4);
+        toggle(body, "Morse ID after I talk (amateur channels, every 10 min)", flags, 5);
         LinearLayout r = row();
         button(r, "Save", Theme.PKT, x -> {
             try {
@@ -302,7 +310,7 @@ public final class PktDialog {
                         .putString("isServer", isServer.getText().toString().trim()).putInt("isPort", Integer.parseInt(isPort.getText().toString().trim()))
                         .putString("isPasscode", isPass.getText().toString().trim().isEmpty() ? "-1" : isPass.getText().toString().trim())
                         .putInt("isBeaconMin", Integer.parseInt(isMin.getText().toString().trim())).putString("isComment", isComment.getText().toString().trim())
-                        .putBoolean("autoAck", flags[0]).putBoolean("digipeat", flags[1]).putBoolean("dtmf", flags[2]).putBoolean("wx", flags[3]).apply();
+                        .putBoolean("autoAck", flags[0]).putBoolean("digipeat", flags[1]).putBoolean("dtmf", flags[2]).putBoolean("wx", flags[3]).putBoolean("cw", flags[4]).putBoolean("cwId", flags[5]).apply();
                 toast("Saved"); sub.dismiss();
             } catch (NumberFormatException e) { toast("Check the numbers"); }
         });

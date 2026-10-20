@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Morse decoder and Morse ID
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | **Morse decoder** (`ham/CwDecoder.java`, default on, PKT settings): on analog channels (not NOAA) every 128 ms the strongest tone at 400–1100 Hz is looked for (20 Hz Goertzel bins over 128 ms); it must be ≥ 12× the median bin, with no strong 2nd harmonic or DTMF high tone (1209/1336/1477/1633), on two looks within 40 Hz. Then a 5 ms envelope with adaptive floor/level and hysteresis gives key timings; on lock the last 512 ms are replayed so the first letter is kept, and levels start from the look. The whole message is decoded at its end (1.5 s without keying or squelch close): dit length from two-cluster k-means of the marks (or by duration when all are alike), marks under 0.4 dit dropped, gaps of 2/5 dits end letters/words. Output only with ≥ 3 known characters, ≥ 2 distinct, few unknown and 4–45 WPM; history line "🔤 Morse: TEXT (Hz, WPM)". **Morse ID**: PKT → Send my callsign in Morse; setting "Morse ID after I talk" appends the callsign at 20 WPM after the roger beep, still keyed, on amateur bands at most every 10 min and only if the transmission is under 25 s. Help updated. | `ham/CwDecoder.java` (new), `PacketEngine.java`, `RadioService.java`, `ui/PktDialog.java`, `ui/HelpView.java`; test `CwDecoderTest` | Unit tests 5/5: 12/20/28 WPM at 600/800/1000 Hz, noise σ 2500 with a 9000 tone, first letter a dah, speed report, no output from noise, gliding voice-like audio or DTMF. On the phone: an injected 20 WPM 900 Hz ID with noise decoded into the history on Family Analog. The Morse ID transmission was not keyed on air (it would send the owner's callsign); it uses the same `playPcm` path as the roger beep and the parrot |
+
 ## 2026-10-20 — Simplex repeater (parrot)
 
 | Backlog | Change | Files | Test |

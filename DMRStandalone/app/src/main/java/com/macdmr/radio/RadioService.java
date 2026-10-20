@@ -97,6 +97,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         @Override public void event(String line) { history("pkt", line); }
     });
     private volatile int parrotChannel = -1;
+    private volatile long txStartedAt;
     public com.macdmr.radio.ham.Parrot parrot() { return parrot; }
     /** Turn the parrot on for the current channel (or off). Returns what happened, for a toast. */
     public String setParrot(boolean on) {
@@ -899,7 +900,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                     if (txInhibited()) { log("PTT blocked: receive-only channel"); history("warn", "⛔ TX blocked on a receive-only channel"); return; }
                     if (pttDown) return;
                     pttDown = true; refreshControls();
-                    txChannel = current; txInCar = inCar; txCharging = charging(); txDropNoted = false;
+                    txChannel = current; txInCar = inCar; txCharging = charging(); txDropNoted = false; txStartedAt = System.currentTimeMillis();
                     if (audio != null) audio.stopRx();              // never play the RX stream while the mic is live (feedback)
                     boolean carMic = inCar && carMic() && startBluetoothMic();   // in the car: its microphone, through the hands-free link
                     if (audio != null) audio.setTxSource(carMic ? android.media.MediaRecorder.AudioSource.VOICE_COMMUNICATION : android.media.MediaRecorder.AudioSource.MIC);
@@ -917,6 +918,9 @@ public class RadioService extends Service implements RadioEngine.Events {
                         stopBluetoothMic();
                         short[] roger = rogerPcm(rogerStyle());
                         if (roger != null && audio != null) audio.playPcm(roger);    // still keyed: the tone goes out before the carrier drops
+                        ChannelStore.Channel tc = current;
+                        short[] id = tc != null && !tc.isDigital() && amateurBand(tc.txFreq) && packet != null && System.currentTimeMillis() - txStartedAt < 25_000 ? packet.cwIdIfDue(System.currentTimeMillis()) : null;
+                        if (id != null && audio != null) { log("Morse ID after the transmission"); audio.playPcm(id); history("pkt", "\uD83D\uDD24 Morse ID " + packet.callsign()); }   // the station identification every ten minutes
                     } finally { engine.ptt(false); }
                     if (rxAudioOn && audio != null) audio.startRx(true);
                 }

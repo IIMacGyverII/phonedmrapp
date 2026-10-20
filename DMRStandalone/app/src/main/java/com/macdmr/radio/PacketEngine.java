@@ -166,6 +166,26 @@ public final class PacketEngine {
     public int kissPort() { return prefs.getInt("kissPort", 8001); }
     public boolean dtmfEnabled() { return prefs.getBoolean("dtmf", true); }
     public boolean wxEnabled() { return prefs.getBoolean("wx", true); }
+    public boolean cwEnabled() { return prefs.getBoolean("cw", true); }
+    /** Send the callsign in Morse after talking on amateur channels, at most every ten minutes. */
+    public boolean cwIdEnabled() { return prefs.getBoolean("cwId", false); }
+    private volatile long lastCwIdMs;
+    /** Morse ID audio to append now, or null when none is due (or no callsign is set). */
+    public short[] cwIdIfDue(long now) {
+        if (!cwIdEnabled() || !callsignSet() || (lastCwIdMs != 0 && now - lastCwIdMs < 10 * 60_000L)) return null;
+        lastCwIdMs = now;
+        return com.macdmr.radio.coverage.Morse.pcm(callsign(), 20, 800);
+    }
+    /** Transmit the callsign in Morse now on the current channel. Error text or null. */
+    public String sendCwId() {
+        if (!callsignSet()) return "Set your callsign first (PKT \u2192 Settings)";
+        if (!host.analogRx()) return "Morse needs an analog channel";
+        lastCwIdMs = System.currentTimeMillis();
+        host.transmitPcm(com.macdmr.radio.coverage.Morse.pcm(callsign(), 20, 800), "Morse ID", () -> host.event("\uD83D\uDD24 Sent Morse ID " + callsign()));
+        return null;
+    }
+    private com.macdmr.radio.ham.CwDecoder cw;
+    private boolean wasOpen;
     public SharedPreferences prefs() { return prefs; }
 
     /** Saved DTMF sequences: name → code (also exported as DTMF.csv in backups). */
@@ -271,13 +291,18 @@ public final class PacketEngine {
     /** Every 8 kHz mono block the radio delivers; {@code open} = the (soft) squelch passes it. */
     public void feed(byte[] mono, int n, boolean open) {
         if (!host.analogRx()) { fill = 0; return; }
-        if (!open) return;
+        if (!open) { if (wasOpen && cw != null) cw.flush(); wasOpen = false; return; }
+        wasOpen = true;
         try {
             int f = host.rxFreqHz();
             boolean weatherBand = f >= 162_400_000 && f <= 162_550_000;      // NOAA carries no DTMF or APRS: save the CPU there
             if (dtmfEnabled() && !weatherBand) {
                 if (dtmf == null) dtmf = new DTMFDecoder(SR, false, dtmfListener);
                 dtmf.processAudio(mono, n);
+            }
+            if (cwEnabled() && !weatherBand) {
+                if (cw == null) cw = new com.macdmr.radio.ham.CwDecoder((text, hz, wpm) -> host.event("\uD83D\uDD24 Morse: " + text + String.format(Locale.US, "  (%.0f Hz, %d WPM)", hz, wpm)));
+                cw.process(mono, n);
             }
             if (wxEnabled() && f >= 162_400_000 && f <= 162_550_000) {
                 if (same == null) same = new SAMEDecoder(SR, false, sameListener);
