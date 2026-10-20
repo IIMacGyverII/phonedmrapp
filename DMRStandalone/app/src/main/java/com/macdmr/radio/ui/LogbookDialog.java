@@ -29,6 +29,9 @@ public final class LogbookDialog {
         float d = Theme.dp(c);
         Logbook lb = svc.logbook();
         LinearLayout body = Neo.sheetBody(c, "Logbook");
+        android.location.Location me = svc.lastKnownLocation();
+        java.util.Set<String> grids = lb.gridsWorked();
+        body.addView(Neo.label(c, (me != null ? "You are in " + com.macdmr.radio.ham.Maidenhead.grid(me.getLatitude(), me.getLongitude(), 6) + "  \u00B7  " : "") + grids.size() + (grids.size() == 1 ? " grid square" : " grid squares") + " worked", Theme.CYAN, 14, true));
         body.addView(Neo.sheetHint(c, lb.count(true) + " contacts, " + (lb.count(false) - lb.count(true)) + " stations heard. Heard stations are logged by themselves (DMR callers with a RadioID callsign, APRS stations, Morse IDs); tap one to fill in the reports and mark it a contact. Export ADIF for your logging program or QSL service."));
         final AlertDialog[] self = new AlertDialog[1];
         LinearLayout r1 = new LinearLayout(c); r1.setBaselineAligned(false);
@@ -36,8 +39,10 @@ public final class LogbookDialog {
         for (TextView b : new TextView[] { add, exp }) { b.setTextSize(14); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f); lp.setMargins((int) (3 * d), (int) (4 * d), (int) (3 * d), 0); r1.addView(b, lp); }
         body.addView(r1);
         LinearLayout r2 = new LinearLayout(c); r2.setBaselineAligned(false);
-        TextView filter = Neo.button(c, qsoOnly ? "Showing: contacts" : "Showing: all", "search", Neo.CYAN), auto = Neo.button(c, svc.logHeard() ? "Log heard: on" : "Log heard: off", "signal", Neo.VIOLET);
-        for (TextView b : new TextView[] { filter, auto }) { b.setTextSize(14); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f); lp.setMargins((int) (3 * d), (int) (6 * d), (int) (3 * d), (int) (6 * d)); r2.addView(b, lp); }
+        TextView filter = Neo.button(c, qsoOnly ? "Showing: contacts" : "Showing: all", "search", Neo.CYAN), auto = Neo.button(c, svc.logHeard() ? "Log heard: on" : "Log heard: off", "signal", Neo.VIOLET),
+                online = Neo.button(c, svc.lookupOnline() ? "Look up: on" : "Look up: off", "globe", Neo.VIOLET);
+        online.setOnClickListener(v -> { svc.setLookupOnline(!svc.lookupOnline()); online.setText(svc.lookupOnline() ? "Look up: on" : "Look up: off"); });
+        for (TextView b : new TextView[] { filter, auto, online }) { b.setTextSize(14); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f); lp.setMargins((int) (3 * d), (int) (6 * d), (int) (3 * d), (int) (6 * d)); r2.addView(b, lp); }
         body.addView(r2);
 
         List<Logbook.Entry> list = lb.list(300, qsoOnly);
@@ -52,6 +57,10 @@ public final class LogbookDialog {
             row.addView(top);
             String rst = (e.rstSent == null || e.rstSent.isEmpty() ? "" : "  ·  sent " + e.rstSent) + (e.rstRcvd == null || e.rstRcvd.isEmpty() ? "" : " rcvd " + e.rstRcvd);
             row.addView(Neo.label(c, f.format(new Date(e.ts)) + "  ·  " + (e.freqHz > 0 ? String.format(Locale.US, "%.4f", e.freqHz / 1e6) + " MHz  ·  " : "") + e.mode + rst + (e.source == null || e.source.isEmpty() ? "" : "  ·  " + e.source), 0xFFBFC8D0, 12, false));
+            String where = (e.qth == null || e.qth.isEmpty() ? "" : e.qth) + (e.grid == null || e.grid.isEmpty() ? "" : ((e.qth == null || e.qth.isEmpty()) ? "" : "  \u00B7  ") + e.grid);
+            double[] at = e.grid == null ? null : com.macdmr.radio.ham.Maidenhead.centre(e.grid);
+            if (at != null && me != null) { double km = com.macdmr.radio.ham.Maidenhead.km(me.getLatitude(), me.getLongitude(), at[0], at[1]); where += String.format(Locale.US, "  \u00B7  %.0f mi %s", km / 1.609344, com.macdmr.radio.ham.Maidenhead.compass(com.macdmr.radio.ham.Maidenhead.bearing(me.getLatitude(), me.getLongitude(), at[0], at[1]))); }
+            if (!where.isEmpty()) row.addView(Neo.label(c, where, 0xFF9FB4C8, 12, false));
             if (e.notes != null && !e.notes.isEmpty()) row.addView(Neo.label(c, e.notes, 0xFF8A98A6, 12, false));
             row.setClickable(true);
             row.setOnClickListener(v -> edit(c, svc, e, () -> { if (self[0] != null) self[0].dismiss(); show(c, svc, qsoOnly); }));
@@ -82,6 +91,24 @@ public final class LogbookDialog {
         final EditText sent = field(c, body, "Report sent (e.g. 59)", e.rstSent, InputType.TYPE_CLASS_TEXT);
         final EditText rcvd = field(c, body, "Report received", e.rstRcvd, InputType.TYPE_CLASS_TEXT);
         final EditText name = field(c, body, "Name", e.name, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        final EditText qth = field(c, body, "Location", e.qth, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        final EditText grid = field(c, body, "Grid square", e.grid, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        final TextView look = Neo.button(c, "Look up the callsign", "globe", Neo.VIOLET); body.addView(look, lp(d, 6));
+        look.setOnClickListener(v -> {
+            final String cs = call.getText().toString().trim();
+            if (com.macdmr.radio.ham.Logbook.baseCall(cs) == null) { Toast.makeText(c, "Enter a callsign first", Toast.LENGTH_SHORT).show(); return; }
+            look.setText("Looking up\u2026");
+            new Thread(() -> {
+                com.macdmr.radio.ham.CallLookup.Info i = svc.callLookup().lookup(cs);
+                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                    look.setText("Look up the callsign");
+                    if (i == null || !i.found) { Toast.makeText(c, "Not found (HamDB lists US, Canadian and some other licences)", Toast.LENGTH_LONG).show(); return; }
+                    if (name.getText().length() == 0) name.setText(i.name);
+                    qth.setText(i.place()); grid.setText(i.grid);
+                    Toast.makeText(c, i.name + (i.licClass.isEmpty() ? "" : ", class " + i.licClass), Toast.LENGTH_SHORT).show();
+                });
+            }, "lookup").start();
+        });
         final EditText notes = field(c, body, "Notes", e.notes, InputType.TYPE_CLASS_TEXT);
         final boolean[] qso = { e.qso };
         final TextView qb = Neo.button(c, qso[0] ? "This was a contact (QSO)" : "Only heard (not a contact)", "check", Neo.GREEN); body.addView(qb, lp(d, 8));
@@ -96,6 +123,7 @@ public final class LogbookDialog {
             if (cs.isEmpty()) { Toast.makeText(c, "Enter the callsign", Toast.LENGTH_SHORT).show(); return; }
             e.call = cs; e.mode = MODES[mode[0]]; e.rstSent = sent.getText().toString().trim(); e.rstRcvd = rcvd.getText().toString().trim();
             e.name = name.getText().toString().trim(); e.notes = notes.getText().toString().trim(); e.qso = qso[0];
+            e.qth = qth.getText().toString().trim(); e.grid = grid.getText().toString().trim();
             try { String fs = freq.getText().toString().trim(); e.freqHz = fs.isEmpty() ? 0 : Math.round(Double.parseDouble(fs) * 1e6); } catch (NumberFormatException x) { Toast.makeText(c, "Frequency in MHz, e.g. 146.520", Toast.LENGTH_SHORT).show(); return; }
             svc.logbook().save(e);
             if (self[0] != null) self[0].dismiss(); after.run();

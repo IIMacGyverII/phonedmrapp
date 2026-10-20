@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Callsign lookup and grid squares
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | `ham/CallLookup.java`: HamDB (`api.hamdb.org/v1/<call>/json/DMRRadio`) lookups, cached in `calls.db` (30 days found / 7 days not found), at most one request a second, only the callsign sent; setting "Look up" (default on). `ham/Maidenhead.java`: locator from lat/lon (4/6/8), centre of a locator, great-circle km and bearing. Logbook (schema v2: `grid`, `qth` columns): heard stations and DMR callers are looked up in the background and their name, place and grid filled in; rows show place · grid · distance and direction; header shows your grid and grid squares worked (contacts, 4-char); edit sheet gets Location, Grid square and "Look up the callsign"; ADIF exports GRIDSQUARE and QTH. Net control check-ins without a name get one from the lookup. Help updated. | `ham/CallLookup.java`, `ham/Maidenhead.java` (new), `ham/Logbook.java`, `RadioService.java`, `ui/LogbookDialog.java`, `ui/NetDialog.java`, `ui/HelpView.java`, `app/build.gradle` (`org.json` for unit tests); test `MaidenheadTest` | Unit tests 4/4 (W1AW FN31pr from HamDB's position, Greenwich JO01, centre round trip, CT–MN ≈ 1720 km WNW, lookup JSON parsing). On the phone: looking up W1AW in a new logbook entry filled in the ARRL club, Newington, CT and FN31pr (entry not saved) |
+
 ## 2026-10-20 — Net control
 
 | Backlog | Change | Files | Test |

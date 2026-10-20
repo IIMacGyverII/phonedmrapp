@@ -20,16 +20,33 @@ import java.util.TimeZone;
  */
 public final class Logbook extends SQLiteOpenHelper {
     public static final class Entry {
-        public long id, ts; public long freqHz; public String call = "", mode = "FM", name = "", notes = "", rstSent = "", rstRcvd = "", source = "";
+        public long id, ts; public long freqHz; public String call = "", mode = "FM", name = "", notes = "", rstSent = "", rstRcvd = "", source = "", grid = "", qth = "";
         public boolean qso;
     }
 
-    public Logbook(Context c) { super(c, "logbook.db", null, 1); }
+    public Logbook(Context c) { super(c, "logbook.db", null, 2); }
 
     @Override public void onCreate(SQLiteDatabase db) {
-        db.execSQL("CREATE TABLE log (_id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER, call TEXT, freq INTEGER, mode TEXT, rstSent TEXT, rstRcvd TEXT, name TEXT, notes TEXT, qso INTEGER, source TEXT)");
+        db.execSQL("CREATE TABLE log (_id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER, call TEXT, freq INTEGER, mode TEXT, rstSent TEXT, rstRcvd TEXT, name TEXT, notes TEXT, qso INTEGER, source TEXT, grid TEXT DEFAULT '', qth TEXT DEFAULT '')");
     }
-    @Override public void onUpgrade(SQLiteDatabase db, int o, int n) { }
+    @Override public void onUpgrade(SQLiteDatabase db, int o, int n) {
+        if (o < 2) { db.execSQL("ALTER TABLE log ADD COLUMN grid TEXT DEFAULT ''"); db.execSQL("ALTER TABLE log ADD COLUMN qth TEXT DEFAULT ''"); }   // callsign lookup
+    }
+
+    /** Fill in name, grid and place for every entry of {@code call} that lacks them (from a callsign lookup). */
+    public synchronized void enrich(String call, String name, String grid, String qth) {
+        String c = baseCall(call); if (c == null) return;
+        SQLiteDatabase db = getWritableDatabase();
+        if (name != null && !name.isEmpty()) { ContentValues v = new ContentValues(); v.put("name", name); db.update("log", v, "call=? AND (name IS NULL OR name='')", new String[] { c }); }
+        if (grid != null && !grid.isEmpty()) { ContentValues v = new ContentValues(); v.put("grid", grid); db.update("log", v, "call=? AND (grid IS NULL OR grid='')", new String[] { c }); }
+        if (qth != null && !qth.isEmpty()) { ContentValues v = new ContentValues(); v.put("qth", qth); db.update("log", v, "call=? AND (qth IS NULL OR qth='')", new String[] { c }); }
+    }
+    /** Distinct 4-character grid squares among contacts (VUCC-style count). */
+    public synchronized java.util.Set<String> gridsWorked() {
+        java.util.Set<String> g = new java.util.TreeSet<>();
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT grid FROM log WHERE qso=1 AND grid IS NOT NULL AND length(grid)>=4", null)) { while (c.moveToNext()) g.add(c.getString(0).substring(0, 2).toUpperCase(Locale.US) + c.getString(0).substring(2, 4)); }
+        return g;
+    }
 
     /** A station heard: a new entry, or the time of the last heard entry for it (same mode, within an hour) moved on. */
     public synchronized void heard(String call, long freqHz, String mode, String name, String source) {
@@ -46,7 +63,7 @@ public final class Logbook extends SQLiteOpenHelper {
     public synchronized long save(Entry e) {
         ContentValues v = new ContentValues();
         v.put("ts", e.ts); v.put("call", e.call.trim().toUpperCase(Locale.US)); v.put("freq", e.freqHz); v.put("mode", e.mode); v.put("rstSent", e.rstSent); v.put("rstRcvd", e.rstRcvd);
-        v.put("name", e.name); v.put("notes", e.notes); v.put("qso", e.qso ? 1 : 0); v.put("source", e.source);
+        v.put("name", e.name); v.put("notes", e.notes); v.put("qso", e.qso ? 1 : 0); v.put("source", e.source); v.put("grid", e.grid == null ? "" : e.grid); v.put("qth", e.qth == null ? "" : e.qth);
         if (e.id > 0) { getWritableDatabase().update("log", v, "_id=?", new String[] { String.valueOf(e.id) }); return e.id; }
         return e.id = getWritableDatabase().insert("log", null, v);
     }
@@ -55,10 +72,10 @@ public final class Logbook extends SQLiteOpenHelper {
 
     public synchronized List<Entry> list(int limit, boolean qsoOnly) {
         List<Entry> out = new ArrayList<>();
-        try (Cursor c = getReadableDatabase().rawQuery("SELECT _id, ts, call, freq, mode, rstSent, rstRcvd, name, notes, qso, source FROM log" + (qsoOnly ? " WHERE qso=1" : "") + " ORDER BY ts DESC LIMIT " + limit, null)) {
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT _id, ts, call, freq, mode, rstSent, rstRcvd, name, notes, qso, source, grid, qth FROM log" + (qsoOnly ? " WHERE qso=1" : "") + " ORDER BY ts DESC LIMIT " + limit, null)) {
             while (c.moveToNext()) {
                 Entry e = new Entry(); e.id = c.getLong(0); e.ts = c.getLong(1); e.call = c.getString(2); e.freqHz = c.getLong(3); e.mode = c.getString(4); e.rstSent = c.getString(5); e.rstRcvd = c.getString(6);
-                e.name = c.getString(7); e.notes = c.getString(8); e.qso = c.getInt(9) == 1; e.source = c.getString(10); out.add(e);
+                e.name = c.getString(7); e.notes = c.getString(8); e.qso = c.getInt(9) == 1; e.source = c.getString(10); e.grid = c.getString(11) == null ? "" : c.getString(11); e.qth = c.getString(12) == null ? "" : c.getString(12); out.add(e);
             }
         }
         return out;
@@ -110,7 +127,7 @@ public final class Logbook extends SQLiteOpenHelper {
             field(sb, "BAND", band(e.freqHz));
             if ("DMR".equals(e.mode)) { field(sb, "MODE", "DIGITALVOICE"); field(sb, "SUBMODE", "DMR"); }
             else field(sb, "MODE", e.mode);
-            field(sb, "RST_SENT", e.rstSent); field(sb, "RST_RCVD", e.rstRcvd); field(sb, "NAME", e.name);
+            field(sb, "RST_SENT", e.rstSent); field(sb, "RST_RCVD", e.rstRcvd); field(sb, "NAME", e.name); field(sb, "GRIDSQUARE", e.grid); field(sb, "QTH", e.qth);
             String comment = (e.notes == null ? "" : e.notes.trim()) + (e.source == null || e.source.isEmpty() ? "" : ((e.notes == null || e.notes.trim().isEmpty()) ? "" : "; ") + e.source);
             field(sb, "COMMENT", comment);
             if (!e.qso) field(sb, "SWL", "Y");

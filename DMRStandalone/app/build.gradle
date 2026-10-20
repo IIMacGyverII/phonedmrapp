@@ -48,6 +48,7 @@ dependencies {
     // Media session + browser: the radio as an Android Auto media app and on the lock screen
     implementation 'androidx.media:media:1.7.0'
     testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20231013'   // the real org.json for unit tests (android.jar only has stubs)
     // Unlocks the vendor audio class android.os.PrizeTinyService (hidden API) at runtime
     implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:4.3'
     // Compile-time stubs of the vendor framework classes; the real ones live in the boot class path
