@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — DTMF remote control
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | **PKT → DTMF → Remote** (off by default): a decoded sequence shaped exactly PIN + one digit (optional leading `*` / trailing `#`) runs a command (`ham/DtmfRemote.java`): 1 position by voice (Geocoder town + coordinates), 2 status by voice (battery, channel, signal), 3 APRS beacon, 4/5 parrot on/off, 6 Morse ID. Three wrong PINs in 10 min lock it for 10 min; sequences of other lengths (repeater codes) are ignored and never count. The PIN is masked as "remote command" in both the history and the DTMF log. Voice replies: `ham/VoiceReply.java` synthesizes with TextToSpeech to a cache WAV, resamples to 8 kHz (windowed-sinc low-pass at 3.6 kHz, peak 26000), transmits 1.5 s after the sequence with a 0.3 s lead, Morse ID appended on amateur bands, capped at 28 s. **Fix during testing:** `VoiceReply` first called `getApplicationContext()` from its constructor as a `RadioService` field and crash-looped the service (radio down about a minute, 09:04–09:05) until reinstalled; it now keeps the Context and resolves it lazily. Help updated. | `ham/DtmfRemote.java`, `ham/VoiceReply.java` (new), `PacketEngine.java`, `RadioService.java`, `ui/PktDialog.java`, `ui/HelpView.java`; test `DtmfRemoteTest` | Unit tests 4/4 (commands, off/no-PIN/other codes ignored, lockout and recovery, unknown command). On the phone with a throwaway PIN: an injected DTMF "PIN + 2" got a 6.7 s spoken status reply transmitted on Family Analog 3 s after the sequence; history showed only "remote command"; the remote was switched off and the PIN cleared afterwards |
+
 ## 2026-10-20 — APRS: two-way iGate, SmartBeaconing, telemetry, weather, objects, bulletins, groups, ISS
 
 | Backlog | Change | Files | Test |
