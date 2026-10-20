@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-19 — More standard zone lists: Business, Railroad, ISS and satellites, UHF CB
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Add a zone gains four lists (owner: "yes add them"). **Business** (US Part 90 itinerant: Red/Purple Dot, 151.700/151.760, Brown/Yellow Dot, 469.500/469.550, Silver/Gold/Red/Blue Star; the text notes VHF is wide-only on this radio, so talk on UHF). **Railroad**: the 96 AAR channels 02–97 (159.810/159.930/160.050, then 160.185–161.565 in 15 kHz steps, checked against the AAR table), receive-only; `ChannelStore.receiveOnly` now also covers 159.810–161.565 MHz (the owner's only channel there is a listen-only weather channel). **ISS and satellites**: ISS Voice (RX 145.800 / TX 144.490), ISS APRS 145.825, ISS cross-band repeater (TX 145.990 with 67 Hz, RX 437.800 with Doppler +/- channels) and SO-50 (TX 145.850 with 67 Hz, RX 436.795 ± 10 kHz); presets can now carry a fixed TX tone; cross-band split is untested on this radio and says so. **UHF CB** (Australia/NZ): 43 simplex channels plus 16 duplex R channels (RX 1–8/41–48, TX +750 kHz), leaving out the repeater inputs, data channels 22/23 and reserved 61–63; channel 5/40/18/10/11 labelled. Help and the receive-only explanation updated. | `ChannelPresets.java`, `ChannelStore.java`, `ui/HelpView.java`, `ui/LastHeardDialog.java` | Built and installed; the Add a zone sheet lists the new lists and their previews show the expected channels. Not added to the owner's channels (see test notes) |
+
 ## 2026-10-19 — Zones sheet with standard channel lists (FRS, GMRS, NOAA, MURS, marine, ham, DMR simplex, PMR446)
 
 | Backlog | Change | Files | Test |
