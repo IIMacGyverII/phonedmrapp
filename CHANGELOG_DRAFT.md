@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — APRS text and email gateways
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | PKT → Send message → **Text a phone** (SMSGTE, `@<10 digits> text`) and **Send an email** (EMAIL-2, `address text`): number/address and text fields, a live 67-character counter, validation, sent as a numbered APRS message to the gateway through the existing `sendMessage` path. Help: a "Text and email gateways" section. | `ui/PktDialog.java`, `ui/HelpView.java` | Built and installed; the sheets open and count. Not sent on air (SMSGTE/EMAIL-2 are only reached through an iGate on 144.390 or APRS-IS; the message frame itself is the proven APRS message) |
+
 ## 2026-10-20 — Band-plan hints in the VFO and the channel editor
 
 | Backlog | Change | Files | Test |
