@@ -257,7 +257,36 @@ public class RadioService extends Service implements RadioEngine.Events {
         @Override public android.location.Location location() { return lastKnownLocation(); }
         @Override public void event(String line) { history("pkt", line); }
         @Override public void notifyUser(String title, String text, boolean alert) { RadioService.this.notifyUser(title, text, alert); }
+        @Override public int rssiDbm() { return rssi; }
+        @Override public void wantLocation(boolean on) { ui.post(() -> aprsLocation(on)); }
     };
+    private android.location.LocationListener aprsGps;
+    private void aprsLocation(boolean on) {
+        android.location.LocationManager lm = (android.location.LocationManager) getSystemService(LOCATION_SERVICE);
+        if (lm == null) return;
+        if (on && aprsGps == null) {
+            aprsGps = l -> { if (packet != null) packet.onLocation(l); };
+            try { lm.requestLocationUpdates(android.location.LocationManager.GPS_PROVIDER, 5000, 10, aprsGps, android.os.Looper.getMainLooper()); log("SmartBeaconing: GPS on"); } catch (Throwable t) { log("SmartBeaconing GPS: " + t); aprsGps = null; }
+        } else if (!on && aprsGps != null) { try { lm.removeUpdates(aprsGps); } catch (Throwable ignored) { } aprsGps = null; }
+    }
+
+    /** Beacon through the space station's digipeater: tune 145.825, send with path ARISS, come back. */
+    public static final int ISS_APRS_HZ = 145_825_000;
+    public String issBeacon() {
+        if (packet == null) return "not ready";
+        if (!packet.callsignSet()) return "Set your callsign first (PKT \u2192 Settings)";
+        if (lastKnownLocation() == null) return "No position fix yet";
+        final boolean tuned = vfo == null || vfo.rxFreq != ISS_APRS_HZ;
+        if (tuned) { ChannelStore.Channel a = new ChannelStore.Channel(); a.type = 1; a.rxFreq = a.txFreq = ISS_APRS_HZ; a.band = 1; a.power = 1; a.name = "ISS APRS 145.825"; applyVfo(a, false); }
+        new Thread(() -> {
+            try { Thread.sleep(tuned ? 4000 : 0); } catch (InterruptedException ignored) { }       // the retune settles before keying
+            String e = packet.sendBeaconVia(new String[] { "ARISS" });
+            if (e != null) history("pkt", "\u26D4 ISS beacon not sent: " + e);
+            try { Thread.sleep(12000); } catch (InterruptedException ignored) { }
+            if (tuned && !packet.monitoring() && vfo != null && vfo.rxFreq == ISS_APRS_HZ) exitVfo();
+        }, "iss-beacon").start();
+        return tuned ? "Tuning 145.825 and beaconing via ARISS" : "Beaconing via ARISS";
+    }
 
     /** Hands-free one-shot transmission: key, play the PCM through the TX path, release, resume RX. */
     public void transmitPcm(final short[] pcm, final String label, final Runnable onDone) {
@@ -310,18 +339,23 @@ public class RadioService extends Service implements RadioEngine.Events {
     }
 
     /** APRS monitoring: park on the APRS frequency (through the VFO, so the channel comes back) and decode. */
-    public String aprsMonitor(boolean on) {
+    public String aprsMonitor(boolean on) { return aprsMonitorAt(on, PacketEngine.APRS_FREQ_HZ, "APRS 144.390"); }
+    private volatile int aprsMonitorHz = PacketEngine.APRS_FREQ_HZ;
+    public int aprsMonitorHz() { return aprsMonitorHz; }
+    /** APRS monitoring on another frequency (the ISS digipeater on 145.825). */
+    public String aprsMonitorAt(boolean on, int hz, String name) {
         if (packet == null) return "not ready";
         if (on) {
+            aprsMonitorHz = hz;
             ChannelStore.Channel a = new ChannelStore.Channel();
-            a.type = 1; a.rxFreq = a.txFreq = PacketEngine.APRS_FREQ_HZ; a.band = 1; a.power = 1; a.name = "APRS 144.390";
+            a.type = 1; a.rxFreq = a.txFreq = hz; a.band = 1; a.power = 1; a.name = name;
             packet.setMonitoring(true);
             applyVfo(a, false);
             pushModes();
-            return "APRS monitoring on 144.390 MHz";
+            return "APRS monitoring on " + String.format(Locale.US, "%.3f", hz / 1e6) + " MHz";
         }
         packet.setMonitoring(false);
-        if (vfo != null && vfo.rxFreq == PacketEngine.APRS_FREQ_HZ) exitVfo();
+        if (vfo != null && vfo.rxFreq == aprsMonitorHz) exitVfo();
         pushModes();
         return "APRS monitoring off";
     }
@@ -338,6 +372,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         if (coverage().enabled()) { coverage.resume(); startForegroundTyped(true); }
         engine = new RadioEngine(profile, this);
         packet = new PacketEngine(packetHost);
+        packet.applySettings();
         // developer bench tools: adb only (the sender must hold DUMP, which the shell has and apps cannot get)
         try {
             android.content.IntentFilter df = new android.content.IntentFilter(DiagReceiver.ACTION);
