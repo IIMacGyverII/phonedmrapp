@@ -259,7 +259,43 @@ public class RadioService extends Service implements RadioEngine.Events {
         @Override public void notifyUser(String title, String text, boolean alert) { RadioService.this.notifyUser(title, text, alert); }
         @Override public int rssiDbm() { return rssi; }
         @Override public void wantLocation(boolean on) { ui.post(() -> aprsLocation(on)); }
+        @Override public void dtmfSequence(String digits) { if (packet != null) remote.handle(digits, packet.remotePin(), packet.remoteOn(), System.currentTimeMillis()); }
     };
+
+    // ---- DTMF remote control: PIN + command digit, answered on the channel ----
+    private final com.macdmr.radio.ham.VoiceReply voice = new com.macdmr.radio.ham.VoiceReply(this);
+    private final com.macdmr.radio.ham.DtmfRemote remote = new com.macdmr.radio.ham.DtmfRemote(new com.macdmr.radio.ham.DtmfRemote.Actions() {
+        @Override public void speakPosition() {
+            android.location.Location l = lastKnownLocation();
+            if (l == null) { voiceTx("No position fix."); return; }
+            String place = "";
+            try { java.util.List<android.location.Address> a = new android.location.Geocoder(RadioService.this, Locale.US).getFromLocation(l.getLatitude(), l.getLongitude(), 1); if (a != null && !a.isEmpty() && a.get(0).getLocality() != null) place = "Near " + a.get(0).getLocality() + (a.get(0).getAdminArea() != null ? ", " + a.get(0).getAdminArea() : "") + ". "; } catch (Throwable ignored) { }
+            voiceTx("Position. " + place + String.format(Locale.US, "%.3f %s, %.3f %s.", Math.abs(l.getLatitude()), l.getLatitude() >= 0 ? "north" : "south", Math.abs(l.getLongitude()), l.getLongitude() >= 0 ? "east" : "west"));
+        }
+        @Override public void speakStatus() {
+            android.content.Intent b = registerReceiver(null, new android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED));
+            int level = b == null ? -1 : b.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, 0) * 100 / Math.max(1, b.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100));
+            ChannelStore.Channel c = current;
+            voiceTx("Status. " + (level >= 0 ? "Battery " + level + " percent. " : "") + (c != null ? "Channel " + c.name + ". " : "") + (rssi != -999 ? "Signal minus " + Math.abs(rssi) + " dBm." : ""));
+        }
+        @Override public void beacon() { if (packet != null) { String e = packet.sendBeacon(); if (e != null) history("pkt", "\u26D4 Remote beacon not sent: " + e); } }
+        @Override public void parrot(boolean on) { ui.post(() -> history("pkt", "\uD83D\uDCDF " + setParrot(on))); }
+        @Override public void morseId() { if (packet != null) { String e = packet.sendCwId(); if (e != null) history("pkt", "\u26D4 " + e); } }
+        @Override public void event(String line) { history("pkt", line); }
+    });
+    /** Speak {@code text} on the channel 1.5 s after the caller unkeys; on amateur channels the Morse ID follows. */
+    private void voiceTx(String text) {
+        voice.say(text, pcm -> {
+            try { Thread.sleep(1500); } catch (InterruptedException ignored) { }
+            ChannelStore.Channel c = current;
+            short[] id = c != null && amateurBand(c.txFreq) && packet != null && packet.callsignSet() ? com.macdmr.radio.coverage.Morse.pcm(packet.callsign(), 20, 800) : new short[0];
+            int lead = 2400, max = 8000 * 28;
+            int voiceN = Math.min(pcm.length, max - lead - id.length);
+            short[] out = new short[lead + voiceN + id.length];
+            System.arraycopy(pcm, 0, out, lead, voiceN); System.arraycopy(id, 0, out, lead + voiceN, id.length);
+            transmitPcm(out, "remote reply", () -> history("pkt", "\uD83D\uDDE3 Remote reply sent: " + text));
+        });
+    }
     private android.location.LocationListener aprsGps;
     private void aprsLocation(boolean on) {
         android.location.LocationManager lm = (android.location.LocationManager) getSystemService(LOCATION_SERVICE);

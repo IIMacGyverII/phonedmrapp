@@ -53,6 +53,8 @@ public final class PacketEngine {
         int rssiDbm();                           // last signal reading, -999 = none
         /** Keep GPS updates coming to {@link #onLocation} (SmartBeaconing) or stop them. */
         void wantLocation(boolean on);
+        /** A decoded DTMF sequence (the remote control looks for its PIN). */
+        void dtmfSequence(String digits);
     }
 
     public static final int TX_LEAD_MS = 1600, TX_REPS = 2, TX_GAP_MS = 250;
@@ -311,6 +313,8 @@ public final class PacketEngine {
     public boolean dtmfEnabled() { return prefs.getBoolean("dtmf", true); }
     public boolean wxEnabled() { return prefs.getBoolean("wx", true); }
     public boolean cwEnabled() { return prefs.getBoolean("cw", true); }
+    public boolean remoteOn() { return prefs.getBoolean("remote", false); }
+    public String remotePin() { return prefs.getString("remotePin", ""); }
     /** Send the callsign in Morse after talking on amateur channels, at most every ten minutes. */
     public boolean cwIdEnabled() { return prefs.getBoolean("cwId", false); }
     private volatile long lastCwIdMs;
@@ -587,8 +591,11 @@ public final class PacketEngine {
             }, "dtmf-flush").start();
         }
         @Override public void onSequence(String digits, long startMs, long endMs) {
-            store.dtmf(digits, host.channelNumber(), host.channelName());
-            host.event("📟 DTMF " + digits);
+            boolean remote = remoteOn() && remotePin().length() >= 4 && digits.replace("*", "").replace("#", "").startsWith(remotePin());
+            String shown = remote ? "remote command" : digits;                       // the PIN is never written to the log or the history
+            store.dtmf(shown, host.channelNumber(), host.channelName());
+            host.event("📟 DTMF " + shown);
+            host.dtmfSequence(digits);
         }
     };
 

@@ -111,6 +111,7 @@ public final class PktDialog {
         LinearLayout r4 = row();
         button(r4, "Send DTMF", Theme.VFO, x -> dtmfSend());
         button(r4, "Heard", Theme.SOFTSQ, x -> dtmfLog());
+        button(r4, "Remote\u2026", Theme.MON, x -> remoteSheet());
         body.addView(r4);
         body.addView(hint("Touch-tone keys heard on any analog channel are decoded and logged" + (pe.dtmfEnabled() ? "." : " (decoder off in Settings).")));
         // ---- Weather ----
@@ -141,6 +142,29 @@ public final class PktDialog {
         sub = dialog(body);
     }
     private AlertDialog sub;
+
+    // ---- DTMF remote control ----
+    private void remoteSheet() {
+        final SharedPreferences p = pe.prefs();
+        LinearLayout body = page("\uD83D\uDCDF  DTMF remote control");
+        final boolean[] on = { pe.remoteOn() };
+        toggle(body, "Answer DTMF commands on this phone", on, 0);
+        final EditText pin = field(body, "PIN (4 to 6 digits, keep it to yourself)", pe.remotePin(), InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        StringBuilder sb = new StringBuilder("From another radio, key the PIN and then one command digit, as one sequence (a * before and # after are fine). The phone answers on the channel 1.5 seconds later:\n");
+        for (int i = 1; i < com.macdmr.radio.ham.DtmfRemote.COMMANDS.length; i++) sb.append("\n").append(i).append("   ").append(com.macdmr.radio.ham.DtmfRemote.COMMANDS[i]);
+        sb.append("\n\nThree wrong PINs within ten minutes lock the remote for ten minutes. The PIN never appears in the history. Voice replies end with your callsign in Morse on amateur channels.");
+        body.addView(hint(sb.toString()));
+        LinearLayout r = row();
+        button(r, "Save", Theme.PKT, x -> {
+            String v = pin.getText().toString().trim();
+            if (on[0] && !v.matches("[0-9]{4,6}")) { toast("The PIN is 4 to 6 digits"); return; }
+            p.edit().putBoolean("remote", on[0]).putString("remotePin", v).apply();
+            toast(on[0] ? "DTMF remote on" : "DTMF remote off"); sub.dismiss();
+        });
+        button(r, "Cancel", Theme.MON, x -> sub.dismiss());
+        body.addView(r);
+        sub = dialog(body);
+    }
 
     // ---- object, bulletin ----
     private void objectSheet() {
