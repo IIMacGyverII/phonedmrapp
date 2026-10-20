@@ -34,6 +34,7 @@ public final class DiagReceiver extends BroadcastReceiver {
                 s.diagVfo(hz); break;
             }
             case "vfooff": s.diagVfoOff(); break;
+            case "leadtest": if (s.packet() != null) Log.i("DiagReceiver", "leadtest: " + s.packet().diagLeadTest(i.getIntExtra("kind", 0), i.getIntExtra("ms", 1600), i.getIntExtra("reps", 1), String.valueOf(i.getStringExtra("tag")))); break;   // one status packet, current channel
             case "sattest": {                                                   // a fake ISS pass from a minute from now for 30 s (or --el ms), --es key iss-rptr|iss-aprs|iss-sstv; nothing is keyed
                 com.macdmr.radio.ham.Sgp4 e = s.satellites().elements().get(25544);
                 if (e == null) { Log.w("DiagReceiver", "no ISS elements"); break; }
