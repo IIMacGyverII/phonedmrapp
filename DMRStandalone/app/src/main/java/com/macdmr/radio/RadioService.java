@@ -946,6 +946,13 @@ public class RadioService extends Service implements RadioEngine.Events {
                 engine.setAnalog(ch.rxFreq, ch.txFreq, band, ch.power, hardwareSq(ch), ch.rxType, ch.rxSubCode, ch.txType, ch.txSubCode, 8, 2);
             }
             finishRecording();
+            ChannelStore.Channel was = current;
+            boolean moved = was == null || was.number != ch.number || was.rxFreq != ch.rxFreq || was.isDigital() != ch.isDigital();
+            if (moved && monitorOn) {                                  // the module leaves monitor mode on a channel change: so does the button
+                monitorOn = false;
+                try { engine.setMonitor(false); } catch (IOException e) { log("monitor: " + e); }
+                log("MON off: the channel changed");
+            }
             current = ch; if (fromStore) store.setActive(ch.number);
             softSq.configure(softSqFor(ch), ch.softSqLevel, ch.rxType, ch.rxSubCode);
             softSq.onRetune();
