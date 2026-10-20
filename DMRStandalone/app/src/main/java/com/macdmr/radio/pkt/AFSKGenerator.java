@@ -104,8 +104,11 @@ public class AFSKGenerator {
      * @param frame Plain AX.25 frame (addresses + control + PID + info + FCS, NO flags)
      * @return 16-bit PCM audio samples (mono)
      */
-    public static short[] generateAFSKWithNRZI(byte[] frame) {
-        final int PREAMBLE_FLAGS = 50;  // 50 flag bytes (reasonable for sync)
+    public static short[] generateAFSKWithNRZI(byte[] frame) { return generateAFSKWithNRZI(frame, 50); }
+
+    /** As above with {@code preambleFlags} flag bytes before the frame (50 = ~333 ms; a longer run is the standard TXDELAY). */
+    public static short[] generateAFSKWithNRZI(byte[] frame, int preambleFlags) {
+        final int PREAMBLE_FLAGS = Math.max(1, preambleFlags);
         final int TRAILING_FLAGS = 10;  // 10 flag bytes after frame
         final byte FLAG = 0x7E;
         

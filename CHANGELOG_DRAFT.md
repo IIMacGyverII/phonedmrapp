@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Lead-in kinds bench: tone vs flags (standard TXDELAY) vs silence
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Owner asked whether the 1.6 s 1200 Hz lead tone is standard (it is not: AX.25 TXDELAY is HDLC flags) and whether silence would do. SignalDeck: all packet audio now comes from one builder (`packetAudio`) with a lead-in **kind** (pref `txLeadKind`: 0 tone (default, unchanged), 1 flags = one continuous run of flags into the first frame, 2 silence); `AFSKGenerator.generateAFSKWithNRZI(frame, preambleFlags)`; bench command `DIAG leadtest --ei kind --ei ms --ei reps --es tag`. No settings UI yet. | `PacketEngine.java`, `pkt/AFSKGenerator.java`, `DiagReceiver.java` | **On air, Family Analog, ONE copy per packet** (no second copy to rescue it), HackRF capture → FM demod → direwolf atest: lead 1.6 s tone 3/4, flags 3/4, silence 4/4 (the tone and flags misses back to back); 1.2 s tone 2/3, flags 3/3, silence 3/3; 0.8 s tone 2/3, flags 3/3, silence 2/3; 0.4 s 2/2 each; 0.2 s tone 2/2, flags 2/2, **silence 0/2**; none 0/2. Totals: **flags 13/14, tone 11/14, silence 11/14**. In SignalDeck (radio keyed directly) the dead window is far shorter than the ~1.5 s measured with the module (stock-app PTT path); silence fails at short leads (consistent with a gate/AGC in the radio's TX audio) |
+
 ## 2026-10-20 — SignalDeck: transmit power setting for the frequencies it tunes itself
 
 | Backlog | Change | Files | Test |

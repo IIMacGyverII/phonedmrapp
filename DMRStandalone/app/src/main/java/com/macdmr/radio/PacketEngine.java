@@ -67,6 +67,39 @@ public final class PacketEngine {
     public static final String[] LEAD_NAMES = { "1.6 s (default)", "1.0 s", "0.5 s", "None" };
     /** Power on the frequencies the app tunes itself (APRS monitoring, ISS, SSTV 144.500): 1 high (default), 0 low. */
     public int dataTxPower() { return prefs.getInt("txPower", 1) == 0 ? 0 : 1; }
+    /** What the lead-in is made of: 0 steady 1200 Hz tone, 1 HDLC flags (the standard TXDELAY), 2 silence. */
+    public static final String[] LEAD_KINDS = { "Tone", "Flags (standard)", "Silence" };
+    public int packetLeadKind() { int k = prefs.getInt("txLeadKind", 0); return k >= 0 && k < LEAD_KINDS.length ? k : 0; }
+
+    /**
+     * The audio of one packet transmission: the settling lead-in, then each frame (with FCS) and a gap. A flags lead-in
+     * is one continuous run of flags into the first frame (a long TXDELAY); tone and silence are separate samples.
+     */
+    private short[] packetAudio(java.util.List<byte[]> framesWithFcs, int leadMs, int kind) {
+        int gap = SR * TX_GAP_MS / 1000;
+        int lead = kind == 1 ? 0 : SR * leadMs / 1000;
+        int leadFlags = kind == 1 ? Math.round(leadMs * 1200f / 8000f) : 0;      // 1200 bit/s, 8 bits per flag
+        java.util.List<short[]> parts = new java.util.ArrayList<>(); int total = lead;
+        for (int i = 0; i < framesWithFcs.size(); i++) {
+            short[] a = AFSKGenerator.generateAFSKWithNRZI(framesWithFcs.get(i), 50 + (i == 0 ? leadFlags : 0));
+            parts.add(a); total += a.length + gap;
+        }
+        short[] src = new short[total];
+        if (kind == 0) for (int i = 0; i < lead; i++) src[i] = (short) (30000 * Math.sin(2.0 * Math.PI * 1200 * i / SR));
+        int p = lead; for (short[] a : parts) { System.arraycopy(a, 0, src, p, a.length); p += a.length + gap; }
+        return src;
+    }
+
+    /** Bench (DIAG leadtest): one status packet with a given lead-in, for comparing tone / flags / silence on the air. */
+    public String diagLeadTest(int kind, int ms, int reps, String tag) {
+        if (!host.analogRx()) return "needs an analog channel";
+        if (!callsignSet()) return "no callsign";
+        byte[] frame = Ax25.buildUiFrame("APZDMR", 0, callsign(), ssid(), new String[0], (">lead " + LEAD_KINDS[kind].split(" ")[0].toLowerCase(Locale.US) + " " + ms + " " + tag).getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+        java.util.List<byte[]> l = new java.util.ArrayList<>(); for (int r = 0; r < Math.max(1, reps); r++) l.add(frame);
+        host.transmitPcm(packetAudio(l, ms, kind), "lead test " + kind + "/" + ms + " " + tag, null);
+        return null;
+    }
+
     public int packetLeadMs() { return Math.max(0, Math.min(3000, prefs.getInt("txLeadMs", TX_LEAD_MS))); }
     public static final int APRS_FREQ_HZ = 144_390_000;
     private static final String TAG = "PacketEngine";
@@ -419,13 +452,8 @@ public final class PacketEngine {
     /** Frames of our own (no FCS yet) in one key-up: one settling lead, each frame once. */
     private void txFramesRaw(java.util.List<byte[]> frames, String label) {
         if (!host.analogRx()) { host.event("\u26D4 Not sent (" + label + "): packet needs an analog channel"); return; }
-        int lead = SR * packetLeadMs() / 1000, gap = SR * TX_GAP_MS / 1000;
-        java.util.List<short[]> parts = new java.util.ArrayList<>(); int total = lead;
-        for (byte[] f : frames) { short[] a = AFSKGenerator.generateAFSKWithNRZI(Ax25.appendFcs(f)); parts.add(a); total += a.length + gap; }
-        short[] src = new short[total];
-        for (int i = 0; i < lead; i++) src[i] = (short) (30000 * Math.sin(2.0 * Math.PI * 1200 * i / SR));
-        int p = lead; for (short[] a : parts) { System.arraycopy(a, 0, src, p, a.length); p += a.length + gap; }
-        host.transmitPcm(src, label, null);
+        java.util.List<byte[]> l = new java.util.ArrayList<>(); for (byte[] f : frames) l.add(Ax25.appendFcs(f));
+        host.transmitPcm(packetAudio(l, packetLeadMs(), packetLeadKind()), label, null);
     }
 
     // ---- two-way iGate: internet messages for stations heard on the radio go out on RF -----------
@@ -818,13 +846,8 @@ public final class PacketEngine {
     /** AFSK-modulate a complete frame (with FCS), prefix the settling lead, repeat, and transmit. */
     private void txFrame(byte[] frame, String label, int reps, Runnable onDone) {
         if (!host.analogRx()) { host.event("⛔ Not sent (" + label + "): packet needs an analog channel, the current one is DMR"); return; }
-        short[] afsk = AFSKGenerator.generateAFSKWithNRZI(frame);
-        int lead = SR * packetLeadMs() / 1000, gap = SR * TX_GAP_MS / 1000;
-        short[] src = new short[lead + reps * (afsk.length + gap)];
-        for (int i = 0; i < lead; i++) src[i] = (short) (30000 * Math.sin(2.0 * Math.PI * 1200 * i / SR));
-        int p = lead;
-        for (int r = 0; r < reps; r++) { System.arraycopy(afsk, 0, src, p, afsk.length); p += afsk.length + gap; }
-        host.transmitPcm(src, label, onDone);
+        java.util.List<byte[]> l = new java.util.ArrayList<>(); for (int r = 0; r < Math.max(1, reps); r++) l.add(frame);
+        host.transmitPcm(packetAudio(l, packetLeadMs(), packetLeadKind()), label, onDone);
     }
 
     private void txRaw(byte[] noFcs, String label, int reps, Runnable onDone) { txFrame(Ax25.appendFcs(noFcs), label, reps, onDone); }
@@ -832,13 +855,9 @@ public final class PacketEngine {
     /** Several frames in one transmission (one settling lead): telemetry with its definitions. */
     private void txInfos(java.util.List<String> infos, String label, Runnable onDone) {
         if (!host.analogRx()) { host.event("⛔ Not sent (" + label + "): packet needs an analog channel, the current one is DMR"); return; }
-        int lead = SR * packetLeadMs() / 1000, gap = SR * TX_GAP_MS / 1000;
-        java.util.List<short[]> parts = new java.util.ArrayList<>(); int total = lead;
-        for (String info : infos) { short[] a = AFSKGenerator.generateAFSKWithNRZI(Ax25.buildUiFrame("APZDMR", 0, callsign(), ssid(), path(), info.getBytes(java.nio.charset.StandardCharsets.US_ASCII))); parts.add(a); total += a.length + gap; }
-        short[] src = new short[total];
-        for (int i = 0; i < lead; i++) src[i] = (short) (30000 * Math.sin(2.0 * Math.PI * 1200 * i / SR));
-        int p = lead; for (short[] a : parts) { System.arraycopy(a, 0, src, p, a.length); p += a.length + gap; }
-        host.transmitPcm(src, label, onDone);
+        java.util.List<byte[]> l = new java.util.ArrayList<>();
+        for (String info : infos) l.add(Ax25.buildUiFrame("APZDMR", 0, callsign(), ssid(), path(), info.getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
+        host.transmitPcm(packetAudio(l, packetLeadMs(), packetLeadKind()), label, onDone);
     }
 
     private void txInfo(String info, String[] path, String label, int reps, Runnable onDone) {
