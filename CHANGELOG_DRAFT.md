@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Morse trainer
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | **PKT → Morse → Morse trainer** (`ham/MorseTrainer.java`, `ui/MorseTrainerDialog.java`): Koch lessons in the LCWO order (`KMURESNAPTLWI.JZ=FOY,VG5/Q92H38B?47C1D60X`, 40 lessons), five random groups of five with the lesson's new character weighted, played on the phone speaker at the character speed with ARRL Farnsworth spacing (character and spacing WPM steppers, remembered); type and Check: edit-distance score, sent vs copied, 90 % unlocks the next lesson. Sending practice: a KEY with a sidetone; the presses are turned into audio and read by `CwDecoder` in a new non-strict mode (no callsign rule), showing the text and speed. Help updated. | `ham/MorseTrainer.java`, `ui/MorseTrainerDialog.java` (new), `ham/CwDecoder.java` (strict flag), `ui/PktDialog.java`, `ui/HelpView.java`; test `MorseTrainerTest` | Unit tests 4/4 (lessons and groups, scoring, Farnsworth timing = 20 WPM PARIS exactly and same key-down time, decoder reads trainer audio). On the phone: the trainer opened, played a lesson and scored a check |
+
 ## 2026-10-20 — Activity statistics
 
 | Backlog | Change | Files | Test |
