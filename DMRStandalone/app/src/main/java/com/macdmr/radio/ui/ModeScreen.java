@@ -37,7 +37,8 @@ public abstract class ModeScreen extends LinearLayout implements RadioService.Li
     private final long openedAt = System.currentTimeMillis();
     private final Runnable tick = new Runnable() { @Override public void run() {
         if (!stillRunning()) { onClose.run(); return; }      // the mode was stopped elsewhere
-        set(timeText, elapsed(since()));
+        showWaiting();
+        if (!waiting) set(timeText, elapsed(since()));
         refresh();
         ui.postDelayed(this, 1000);
     } };
@@ -128,7 +129,39 @@ public abstract class ModeScreen extends LinearLayout implements RadioService.Li
         long s = Math.max(0, (System.currentTimeMillis() - since) / 1000);
         return s >= 3600 ? String.format(java.util.Locale.US, "%d:%02d:%02d", s / 3600, s % 3600 / 60, s % 60) : String.format(java.util.Locale.US, "%02d:%02d", s / 60, s % 60);
     }
+    /** A satellite pass the mode waits for: the frequency it will use (0 = not waiting). The radio stays on the
+     *  channel until a minute before the pass, so the strip shows the pass frequency, dimmed, not the channel's. */
+    protected long waitingHz() { return 0; }
+    /** When the radio leaves the channel for the pass (with {@link #waitingHz}). */
+    protected long waitingUntil() { return 0; }
+    private boolean waiting;
+    private void showWaiting() {
+        long hz = waitingHz();
+        boolean w = hz > 0;
+        if (w) {
+            set(stateText, "WAITING FOR THE PASS"); color(stateText, Neo.AMBER);
+            stateDot.setBackground(Neo.outline(c, Neo.AMBER, 0xFF, 6, 0));
+            android.text.SpannableString f = freqSpan(hz);
+            if (!android.text.TextUtils.equals(freqText.getText(), f)) freqText.setText(f);
+            color(freqText, Neo.MUTED);
+            set(timeText, "");
+            set(signalText, "tunes at " + new java.text.SimpleDateFormat("HH:mm", java.util.Locale.US).format(new java.util.Date(waitingUntil())));
+            if (signal.getVisibility() != GONE) signal.setVisibility(GONE);      // nothing to measure yet: the radio is still on your channel
+        } else if (waiting) {                                 // the pass began: back to the live radio
+            signal.setVisibility(VISIBLE); set(signalText, "no signal");
+            waiting = false; color(freqText, Neo.TEXT); showState();
+            com.macdmr.radio.ChannelStore.Channel ch = svc.current(); if (ch != null) freqText.setText(freqSpan(ch.rxFreq));
+        }
+        waiting = w;
+    }
+    private static android.text.SpannableString freqSpan(long hz) {
+        android.text.SpannableString f = new android.text.SpannableString(String.format(java.util.Locale.US, "%.4f", hz / 1e6) + " MHz");
+        f.setSpan(new android.text.style.RelativeSizeSpan(0.5f), f.length() - 4, f.length(), 0);
+        f.setSpan(new android.text.style.ForegroundColorSpan(Neo.MUTED), f.length() - 4, f.length(), 0);
+        return f;
+    }
     private void showState() {
+        if (waiting) return;
         int col = tx ? Neo.RED : rx ? Neo.GREEN : Neo.CYAN;
         set(stateText, tx ? "TRANSMITTING" : rx ? "RECEIVING" : "LISTENING"); color(stateText, col);
         stateDot.setBackground(Neo.outline(c, col, 0xFF, 6, 0));
@@ -139,15 +172,12 @@ public abstract class ModeScreen extends LinearLayout implements RadioService.Li
 
     // ---- RadioService.Listener ----
     @Override public void onChannel(ChannelStore.Channel ch) {
-        if (ch == null) return;
-        android.text.SpannableString f = new android.text.SpannableString(String.format(java.util.Locale.US, "%.4f", ch.rxFreq / 1e6) + " MHz");
-        f.setSpan(new android.text.style.RelativeSizeSpan(0.5f), f.length() - 4, f.length(), 0);
-        f.setSpan(new android.text.style.ForegroundColorSpan(Neo.MUTED), f.length() - 4, f.length(), 0);
-        freqText.setText(f);
+        if (ch == null || waiting) return;
+        freqText.setText(freqSpan(ch.rxFreq));
     }
-    @Override public void onRx(boolean receiving) { rx = receiving; showState(); if (!receiving) { signal.set(-999); signalText.setText("no signal"); } }
+    @Override public void onRx(boolean receiving) { rx = receiving; showState(); if (!receiving && !waiting) { signal.set(-999); signalText.setText("no signal"); } }
     @Override public void onTx(boolean transmitting) { tx = transmitting; showState(); }
-    @Override public void onRssi(int dbm) { signal.set(dbm); signalText.setText(dbm <= -999 ? "no signal" : SMeterView.sUnits(dbm) + "  " + dbm + " dBm"); }
+    @Override public void onRssi(int dbm) { if (waiting) return; signal.set(dbm); signalText.setText(dbm <= -999 ? "no signal" : SMeterView.sUnits(dbm) + "  " + dbm + " dBm"); }
     @Override public void onAudioLevel(int amplitude) { }
     @Override public void onHistory(String line) { }
     @Override public void onCaller(String text) { }

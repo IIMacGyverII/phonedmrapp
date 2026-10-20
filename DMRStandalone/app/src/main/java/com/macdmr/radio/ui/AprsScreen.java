@@ -107,6 +107,8 @@ public final class AprsScreen extends ModeScreen {
     private int tabShown = -1;
     private void scrollTop() { scroll.post(() -> scroll.scrollTo(0, 0)); }
 
+    @Override protected long waitingHz() { com.macdmr.radio.RadioService.SatState st = svc.satState(); return st != null && st.mode == com.macdmr.radio.ham.Satellites.APRS && st.waiting ? st.nominalHz : 0; }
+    @Override protected long waitingUntil() { com.macdmr.radio.RadioService.SatState st = svc.satState(); return st == null ? 0 : st.aos - 60_000; }
     @Override protected boolean stillRunning() { return pe.monitoring() || pe.kiss().isActive() || svc.satMode() == com.macdmr.radio.ham.Satellites.APRS; }
 
     @Override protected void refresh() {

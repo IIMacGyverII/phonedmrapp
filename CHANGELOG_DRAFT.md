@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — ISS pages while waiting: the pass frequency, not the channel's
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Owner: ISS SSTV opened the SSTV page showing 467.6250 (the intercom channel) instead of 437.550. By design the radio stays on the channel until a minute before AOS (the next pass was 11 h away), but the page's live strip said LISTENING on the channel's frequency with a running timer, and the picture was an old one from another session. While an ISS pass is awaited, `ModeScreen` now shows **WAITING FOR THE PASS** (amber), the pass frequency **dimmed** (437.5500 MHz), "tunes at HH:mm", no signal bar and no timer; it switches back to the live radio when tuning starts. The SSTV page starts an ISS session with an empty picture and "The decoder starts with the pass". APRS page the same for ISS APRS. Help (ISS) updated. | `ui/ModeScreen.java`, `ui/SstvScreen.java`, `ui/AprsScreen.java`, `ui/HelpView.java` | On the phone (release): PKT → ISS SSTV 437.550 → page shows WAITING FOR THE PASS · 437.5500 MHz · tunes at 04:01, pass card "Next ISS pass Wed 04:02 · in 11 h 32 min", empty picture; screenshots checked. The switch back to live at tuning was exercised earlier with `sattest`, not re-run for this build |
+
 ## 2026-10-20 — ISS on 437 MHz with Doppler tracking (APRS 437.825, SSTV 437.550), and wide-open squelch for data modes
 
 | Backlog | Change | Files | Test |

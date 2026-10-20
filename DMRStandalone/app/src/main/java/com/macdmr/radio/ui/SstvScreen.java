@@ -73,7 +73,7 @@ public final class SstvScreen extends ModeScreen {
             toast(svc.sstvMonitor(false, false)); close();
         });
 
-        if (pe.sstvLast() != null) live.setImageBitmap(pe.sstvLast());
+        if (pe.sstvLast() != null && !iss()) live.setImageBitmap(pe.sstvLast());      // an ISS session starts empty: the last picture came from elsewhere
         status.setText(nice(pe.sstvStatus()));
     }
 
@@ -97,10 +97,13 @@ public final class SstvScreen extends ModeScreen {
     }
 
     private boolean iss() { return svc.satMode() == com.macdmr.radio.ham.Satellites.SSTV; }
+    @Override protected long waitingHz() { com.macdmr.radio.RadioService.SatState st = svc.satState(); return st != null && st.mode == com.macdmr.radio.ham.Satellites.SSTV && st.waiting ? st.nominalHz : 0; }
+    @Override protected long waitingUntil() { com.macdmr.radio.RadioService.SatState st = svc.satState(); return st == null ? 0 : st.aos - 60_000; }
     @Override protected boolean stillRunning() { return pe.sstvRx() || iss(); }
 
     @Override protected void refresh() {
         passCard.update(svc);
+        if (waitingHz() > 0) { set(status, "The decoder starts with the pass"); set(progressText, ""); }
         if (iss()) {
             setSubtitle("ISS SSTV " + String.format(Locale.US, "%.3f", svc.satState().nominalHz / 1e6) + " \u00B7 Doppler-tracked");
             if (switchBtn.getVisibility() != GONE) { switchBtn.setVisibility(GONE); sendBtn.setVisibility(GONE); }    // an ISS downlink: receive only
