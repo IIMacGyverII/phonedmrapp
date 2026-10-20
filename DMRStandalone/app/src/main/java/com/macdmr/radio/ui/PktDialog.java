@@ -157,9 +157,45 @@ public final class PktDialog {
         button(r, "Send", Theme.PKT, x -> { String e = pe.sendMessage(to.getText().toString(), text.getText().toString()); toast(e == null ? "Message queued" : e); if (e == null) sub.dismiss(); });
         button(r, "Cancel", Theme.MON, x -> sub.dismiss());
         body.addView(r);
+        body.addView(section("Gateways"));
+        LinearLayout g = row();
+        button(g, "Text a phone", Theme.VFO, x -> { sub.dismiss(); gateway(true); });
+        button(g, "Send an email", Theme.VFO, x -> { sub.dismiss(); gateway(false); });
+        body.addView(g);
+        body.addView(hint("Internet gateways reached through APRS: a text message to a phone (SMSGTE, US and Canada numbers) or an email (EMAIL-2), useful where there is no phone signal but an APRS iGate hears you."));
         sub = dialog(body);
     }
     private AlertDialog sub;
+
+    /** SMSGTE ("@number text") or EMAIL-2 ("address text"), sent as an APRS message to the gateway. */
+    private void gateway(final boolean sms) {
+        LinearLayout body = page(sms ? "\uD83D\uDCF1  Text a phone (SMSGTE)" : "\u2709\uFE0F  Send an email (EMAIL-2)");
+        final EditText to = field(body, sms ? "Phone number (10 digits)" : "Email address", "", sms ? InputType.TYPE_CLASS_PHONE : InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        final EditText text = field(body, "Message", "", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        final TextView left = hint(""); body.addView(left);
+        Runnable count = () -> { int n = 67 - gatewayText(sms, to.getText().toString(), text.getText().toString()).length(); left.setText(n >= 0 ? n + " characters left (APRS messages hold 67)" : "Too long by " + (-n) + " characters"); };
+        android.text.TextWatcher w = new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int a, int b, int n) { } @Override public void onTextChanged(CharSequence s, int a, int b, int n) { }
+            @Override public void afterTextChanged(android.text.Editable e) { count.run(); }
+        };
+        to.addTextChangedListener(w); text.addTextChangedListener(w); count.run();
+        body.addView(hint(sms ? "Sent as an APRS message to SMSGTE, which texts the phone. A reply from the phone comes back to your callsign as an APRS message when the SMSGTE service knows you (see smsgte.org). Standard message rates apply to the recipient." : "Sent as an APRS message to EMAIL-2, which emails the text from your callsign. Most email gateways answer with an acknowledgement; replies by email are not relayed back."));
+        LinearLayout r = row();
+        button(r, "Send", Theme.PKT, x -> {
+            String addr = to.getText().toString().trim();
+            if (sms && addr.replaceAll("[^0-9]", "").length() < 10) { toast("Ten-digit phone number"); return; }
+            if (!sms && !addr.contains("@")) { toast("Email address"); return; }
+            String e = pe.sendMessage(sms ? "SMSGTE" : "EMAIL-2", gatewayText(sms, addr, text.getText().toString()));
+            toast(e == null ? "Message queued for the gateway" : e); if (e == null) sub.dismiss();
+        });
+        button(r, "Cancel", Theme.MON, x -> sub.dismiss());
+        body.addView(r);
+        sub = dialog(body);
+    }
+    static String gatewayText(boolean sms, String to, String text) {
+        String a = sms ? "@" + to.replaceAll("[^0-9]", "") : to.trim();
+        return (a + " " + text.trim()).trim();
+    }
 
     // ---- DTMF remote control ----
     private void remoteSheet() {
