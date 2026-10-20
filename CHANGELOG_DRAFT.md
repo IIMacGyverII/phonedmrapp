@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Packet terminal (AX.25 connected mode)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | **PKT → Terminal**: connect to a packet BBS, node or another terminal on the current channel. `pkt/Ax25Session.java` implements AX.25 2.0 connected mode modulo 8: SABM/UA/DM/DISC/FRMR, I frames (PACLEN 128, window 4) with N(S)/N(R), RR acks delayed by T2 2 s so several frames are answered at once, REJ on a gap (once), go-back-N on T1 timeout with poll, answers to polls; T1 15 s and N2 6 tries to suit this radio's 1.6 s TX lead and decode lag; digipeater path (up to two, reversed for replies); command/response C bits; optional accepting of incoming connections (notification). `PacketEngine`: frames addressed to our call/SSID go to the session before the APRS path (duplicates dropped); decoding runs while a session is up or incoming is allowed; frames go out in one key-up per batch (`txFramesRaw`, one lead, each once); transcript kept (20 k chars) for the sheet. `ui/TerminalDialog.java`: state, call and via fields (remembered), Connect/Disconnect, Incoming accept/refuse, transcript, input line + Send (CR line ends). Help updated. | `pkt/Ax25Session.java`, `ui/TerminalDialog.java` (new), `PacketEngine.java`, `ui/PktDialog.java`, `ui/HelpView.java`; test `Ax25SessionTest` | Unit tests 5/5 with two sessions over a simulated channel: connect, 40-line message both ways, disconnect; 20 % frame loss still delivers every byte in order exactly once; refused when not accepting (DM); gives up after 6 SABMs; address and control bits. On the phone: the Terminal sheet opens and shows its state. **Not on air:** a connect would transmit the owner's callsign; no BBS is reachable on a bench channel |
+
 ## 2026-10-20 — Logbook with ADIF export
 
 | Backlog | Change | Files | Test |
