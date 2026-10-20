@@ -16,8 +16,10 @@ public final class ChannelPresets {
 
     public static final class Ch {
         public final String name; public final int rx, tx; public final boolean digital, high, wide, repeater;
-        Ch(String name, double rxMhz, double txMhz, boolean digital, boolean high, boolean wide, boolean repeater) {
-            this.name = name; rx = hz(rxMhz); tx = hz(txMhz); this.digital = digital; this.high = high; this.wide = wide; this.repeater = repeater;
+        public final double txTone;   // a fixed CTCSS tone sent on transmit (Hz, 0 = none), e.g. a satellite's access tone
+        Ch(String name, double rxMhz, double txMhz, boolean digital, boolean high, boolean wide, boolean repeater) { this(name, rxMhz, txMhz, digital, high, wide, repeater, 0); }
+        Ch(String name, double rxMhz, double txMhz, boolean digital, boolean high, boolean wide, boolean repeater, double txTone) {
+            this.name = name; rx = hz(rxMhz); tx = hz(txMhz); this.digital = digital; this.high = high; this.wide = wide; this.repeater = repeater; this.txTone = txTone;
         }
     }
 
@@ -27,6 +29,7 @@ public final class ChannelPresets {
         public boolean hasRepeaters() { for (Ch c : channels) if (c.repeater) return true; return false; }
         public boolean receiveOnly() { for (Ch c : channels) if (!ChannelStore.receiveOnly(c.tx)) return false; return true; }
         Preset fm(String name, double mhz, boolean high, boolean wide) { channels.add(new Ch(name, mhz, mhz, false, high, wide, false)); return this; }
+        Preset split(String name, double rxMhz, double txMhz, boolean high, boolean wide, double txTone) { channels.add(new Ch(name, rxMhz, txMhz, false, high, wide, false, txTone)); return this; }
     }
 
     /** The DMR simplex talkgroup (BrandMeister and most networks): every DMR simplex channel calls and listens on it. */
@@ -72,6 +75,34 @@ public final class ChannelPresets {
         Preset dmr = new Preset("DMR simplex", "Worldwide", "Amateur DMR simplex: the channels most DMR radios carry, all colour code 1, time slot 1, talkgroup 99.", "Amateur licence needed");
         for (double f : new double[] { 441.000, 446.500, 446.075, 433.450, 145.790, 145.510 }) dmr.channels.add(new Ch(String.format(Locale.US, "DMR S %.3f", f), f, f, true, true, true, false));
         out.add(dmr);
+
+        Preset biz = new Preset("Business", "US", "Business itinerant channels: the \"dot\" and \"star\" frequencies that rental and store business radios come set to, used at events, shops, farms and job sites. Listening is free. On VHF this radio only works wide band, which these channels no longer allow for transmitting: talk on the UHF ones.", "FCC business (Part 90) licence needed");
+        biz.fm("Red Dot", 151.625, true, true).fm("Purple Dot", 151.955, true, true).fm("Biz 151.700", 151.700, true, true).fm("Biz 151.760", 151.760, true, true)
+           .fm("Brown Dot", 464.500, true, false).fm("Yellow Dot", 464.550, true, false).fm("Biz 469.500", 469.500, true, false).fm("Biz 469.550", 469.550, true, false)
+           .fm("Silver Star", 467.850, true, false).fm("Gold Star", 467.875, true, false).fm("Red Star", 467.900, true, false).fm("Blue Star", 467.925, true, false);
+        out.add(biz);
+
+        Preset rail = new Preset("Railroad", "US / Canada", "The 96 AAR railroad channels (02 to 97, 159.810 to 161.565 MHz; 02 to 04 are used in Canada): dispatchers, trains, yards and the trackside defect detectors that read out axle counts. Receive-only. Scan the zone to find your local railroad's channels, then star them.", "Receive-only");
+        rail.fm("AAR 02", 159.810, false, true).fm("AAR 03", 159.930, false, true).fm("AAR 04", 160.050, false, true);
+        for (int n = 5; n <= 97; n++) rail.fm(String.format(Locale.US, "AAR %02d", n), 160.185 + (n - 5) * 0.015, false, true);
+        out.add(rail);
+
+        Preset sat = new Preset("ISS and satellites", "Worldwide", "The International Space Station and the SO-50 FM satellite, each heard for about ten minutes per pass (an app such as Heavens-Above gives the times). ISS Voice: crew contacts on 145.800 (the crew listens on 144.490 in the Americas). ISS APRS: the station's packet digipeater. ISS Rptr and SO-50 listen on 2 m and send on 70 cm, opened with a 67 Hz tone; their 70 cm signal shifts with Doppler, so use the + channel as the pass begins, the plain one overhead and the - one as it ends. Talking through a satellite with a handheld is hard: listen first. Cross-band (2 m transmit, 70 cm receive) is untested on this radio.", "Amateur licence needed to transmit");
+        sat.split("ISS Voice", 145.800, 144.490, true, true, 0).fm("ISS APRS", 145.825, true, true)
+           .split("ISS Rptr +", 437.810, 145.990, true, true, 67.0).split("ISS Rptr", 437.800, 145.990, true, true, 67.0).split("ISS Rptr -", 437.790, 145.990, true, true, 67.0)
+           .split("SO-50 +", 436.805, 145.850, true, true, 67.0).split("SO-50", 436.795, 145.850, true, true, 67.0).split("SO-50 -", 436.785, 145.850, true, true, 67.0);
+        out.add(sat);
+
+        Preset cb = new Preset("UHF CB", "Australia / NZ", "The 80-channel UHF CB band (476.425 to 477.4125 MHz, narrow band, 5 W). The R channels use the repeaters: they listen on 1 to 8 and 41 to 48 and transmit 750 kHz higher (on 31 to 38 and 71 to 78, which are left out as simplex channels). Channel 5 is the emergency channel (not in New Zealand), 40 the highway channel, 18 caravans and convoys, 10 four-wheel-drive clubs, 11 calling. 22 and 23 (data only) and 61 to 63 (reserved) are left out.", "No licence needed in Australia and NZ; not for use in the US");
+        for (int n = 1; n <= 80; n++) {
+            boolean output = n <= 8 || (n >= 41 && n <= 48), input = (n >= 31 && n <= 38) || (n >= 71 && n <= 78);
+            if (n == 22 || n == 23 || (n >= 61 && n <= 63) || input) continue;
+            double f = n <= 40 ? 476.425 + (n - 1) * 0.025 : 476.4375 + (n - 41) * 0.025;
+            String tag = n == 5 ? " Emerg" : n == 40 ? " Road" : n == 18 ? " Caravan" : n == 10 ? " 4WD" : n == 11 ? " Call" : "";
+            if (output) cb.channels.add(new Ch(String.format(Locale.US, "CB %dR%s", n, tag), f, f + 0.750, false, true, false, true));
+            else cb.fm(String.format(Locale.US, "CB %d%s", n, tag), f, true, false);
+        }
+        out.add(cb);
 
         Preset pmr = new Preset("PMR446", "Europe / UK", "PMR446, the licence-free walkie-talkie channels of Europe and the UK: 16 narrow-band channels. Low power (the limit is 0.5 W).", "No licence needed in Europe; not for use in the US");
         for (int n = 1; n <= 16; n++) pmr.fm(String.format(Locale.US, "PMR %d", n), 446.00625 + (n - 1) * 0.0125, false, false);
@@ -125,6 +156,8 @@ public final class ChannelPresets {
         } else {
             ch.type = 1; ch.contactType = 0; ch.interrupt = 0;
             if (c.repeater && repeaterTone >= 0) { ch.rxType = ch.txType = 1; ch.rxSubCode = ch.txSubCode = repeaterTone; }
+            int t = c.txTone > 0 ? ctcssIndex(c.txTone) : -1;
+            if (t >= 0) { ch.txType = 1; ch.txSubCode = t; }
         }
         return ch;
     }
@@ -149,6 +182,7 @@ public final class ChannelPresets {
         for (Ch c : p.channels) {
             sb.append(String.format(Locale.US, "%-13s %9.4f", c.name, c.rx / 1e6));
             if (c.tx != c.rx) sb.append(String.format(Locale.US, " TX %.4f", c.tx / 1e6));
+            if (c.txTone > 0) sb.append(String.format(Locale.US, " %.1f", c.txTone));
             sb.append(ChannelStore.receiveOnly(c.tx) ? "  RX only" : c.digital ? "  DMR" : c.high ? "" : "  low").append('\n');
         }
         return sb.toString().trim();

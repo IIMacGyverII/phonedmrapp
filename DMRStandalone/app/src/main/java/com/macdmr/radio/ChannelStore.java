@@ -179,9 +179,9 @@ public final class ChannelStore extends SQLiteOpenHelper {
         }
     }
 
-    /** Frequencies this radio never transmits on: NOAA weather (162.400 to 162.550 MHz) and the marine VHF band (156.000 to 157.450 MHz). */
+    /** Frequencies this radio never transmits on: NOAA weather (162.400 to 162.550 MHz), the marine VHF band (156.000 to 157.450 MHz) and the AAR railroad channels (159.810 to 161.565 MHz). */
     public static boolean receiveOnly(int txHz) {
-        return (txHz >= 162_400_000 && txHz <= 162_550_000) || (txHz >= 156_000_000 && txHz <= 157_450_000);
+        return (txHz >= 162_400_000 && txHz <= 162_550_000) || (txHz >= 156_000_000 && txHz <= 157_450_000) || (txHz >= 159_810_000 && txHz <= 161_565_000);
     }
 
     public void update(Channel ch) { getWritableDatabase().update("channels", values(ch), "_id=?", new String[] { String.valueOf(ch.id) }); }
