@@ -50,6 +50,9 @@ public final class PacketEngine {
         Location location();
         void event(String line);                 // a history line / toast on the intercom
         void notifyUser(String title, String text, boolean alert);
+        int rssiDbm();                           // last signal reading, -999 = none
+        /** Keep GPS updates coming to {@link #onLocation} (SmartBeaconing) or stop them. */
+        void wantLocation(boolean on);
     }
 
     public static final int TX_LEAD_MS = 1600, TX_REPS = 2, TX_GAP_MS = 250;
@@ -141,9 +144,150 @@ public final class PacketEngine {
             }
         }, "kiss-tx");
         sender.setDaemon(true); sender.start();
+        Thread auto = new Thread(() -> { while (true) { try { Thread.sleep(30_000); autoTick(); } catch (InterruptedException e) { break; } catch (Throwable t) { Log.w(TAG, "auto: " + t); } } }, "aprs-auto");
+        auto.setDaemon(true); auto.start();
     }
 
     public PacketStore store() { return store; }
+
+    // ---- automatic beacons, telemetry, weather reports, objects, bulletins, groups ---------------
+    public int autoBeacon() { return prefs.getInt("autoBeacon", 0); }        // 0 off, 1 every N minutes, 2 SmartBeaconing
+    public int beaconMin() { return Math.max(1, prefs.getInt("beaconMin", 15)); }
+    public boolean telemetryOn() { return prefs.getBoolean("telemetry", false); }
+    public boolean weatherOn() { return prefs.getBoolean("weather", false); }
+    public boolean txIgate() { return prefs.getBoolean("txIgate", false); }
+    public java.util.List<String> groups() {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (String g : prefs.getString("groups", "").toUpperCase(Locale.US).split(",")) { g = g.trim(); if (!g.isEmpty()) out.add(g); }
+        return out;
+    }
+    private final com.macdmr.radio.pkt.AprsExtras.SmartBeacon smart = new com.macdmr.radio.pkt.AprsExtras.SmartBeacon();
+    private volatile long lastAutoBeacon, lastTelemetry, lastWeather;
+    private volatile double pressureHpa;
+    private android.hardware.SensorEventListener baro;
+
+    /** On the APRS frequency (analog, 144.390) and not handing the radio to a TNC client: our own beacons may go out. */
+    public boolean onAprsFrequency() { return host.analogRx() && host.rxFreqHz() == APRS_FREQ_HZ && !kiss.isActive(); }
+
+    /** Re-read the settings that need a sensor or GPS running. */
+    public void applySettings() {
+        host.wantLocation(autoBeacon() == 2);
+        boolean needBaro = telemetryOn() || weatherOn();
+        android.hardware.SensorManager sm = (android.hardware.SensorManager) host.context().getSystemService(Context.SENSOR_SERVICE);
+        if (sm == null) return;
+        if (needBaro && baro == null) {
+            android.hardware.Sensor s = sm.getDefaultSensor(android.hardware.Sensor.TYPE_PRESSURE);
+            if (s == null) return;
+            baro = new android.hardware.SensorEventListener() {
+                @Override public void onSensorChanged(android.hardware.SensorEvent e) { pressureHpa = e.values[0]; }
+                @Override public void onAccuracyChanged(android.hardware.Sensor x, int a) { }
+            };
+            sm.registerListener(baro, s, 5_000_000);
+        } else if (!needBaro && baro != null) { sm.unregisterListener(baro); baro = null; }
+    }
+    public boolean hasBarometer() { android.hardware.SensorManager sm = (android.hardware.SensorManager) host.context().getSystemService(Context.SENSOR_SERVICE); return sm != null && sm.getDefaultSensor(android.hardware.Sensor.TYPE_PRESSURE) != null; }
+
+    /** GPS fixes while SmartBeaconing is on. */
+    public void onLocation(Location l) {
+        if (autoBeacon() != 2 || !callsignSet() || !onAprsFrequency() || host.txBusy()) return;
+        double mph = l.hasSpeed() ? l.getSpeed() * 2.23694 : 0, hd = l.hasBearing() ? l.getBearing() : Double.NaN;
+        if (smart.due(System.currentTimeMillis(), mph, hd)) { if (sendBeacon() == null) lastAutoBeacon = System.currentTimeMillis(); }
+    }
+
+    /** Every 30 s: timed beacon, telemetry and weather reports, when on the APRS frequency. */
+    private void autoTick() {
+        long now = System.currentTimeMillis();
+        if (!callsignSet() || !onAprsFrequency() || host.txBusy()) return;
+        if (autoBeacon() == 1 && now - lastAutoBeacon >= beaconMin() * 60_000L) { lastAutoBeacon = now; sendBeacon(); return; }
+        if (telemetryOn() && now - lastTelemetry >= 30 * 60_000L) { lastTelemetry = now; sendTelemetry(); return; }
+        if (weatherOn() && pressureHpa > 0 && now - lastWeather >= 30 * 60_000L) { lastWeather = now; sendWeather(); }
+    }
+
+    private int telSeq = -1;
+    /** Battery, voltage, temperature, pressure and signal as APRS telemetry; the first report (and every tenth) carries the definitions. */
+    public String sendTelemetry() {
+        if (!callsignSet()) return "Set your callsign first (PKT \u2192 Settings)";
+        if (!host.analogRx()) return "Packet needs an analog channel";
+        android.content.Intent b = host.context().registerReceiver(null, new android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED));
+        int level = b == null ? 0 : b.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, 0) * 100 / Math.max(1, b.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100));
+        double volts = b == null ? 0 : b.getIntExtra(android.os.BatteryManager.EXTRA_VOLTAGE, 0) / 1000.0, temp = b == null ? 0 : b.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, 0) / 10.0;
+        Location l = host.location();
+        double hpa = pressureHpa > 0 ? com.macdmr.radio.pkt.AprsExtras.seaLevel(pressureHpa, l != null && l.hasAltitude() ? l.getAltitude() : 0) : 0;
+        if (telSeq < 0) telSeq = prefs.getInt("telSeq", 0);
+        telSeq = (telSeq + 1) % 1000; prefs.edit().putInt("telSeq", telSeq).apply();
+        final String info = com.macdmr.radio.pkt.AprsExtras.telemetryInfo(telSeq, com.macdmr.radio.pkt.AprsExtras.telemetryValues(level, volts, temp, hpa, host.rssiDbm()));
+        java.util.List<String> infos = new java.util.ArrayList<>(); infos.add(info);
+        if (telSeq % 10 == 1) for (String def : new String[] { com.macdmr.radio.pkt.AprsExtras.PARM, com.macdmr.radio.pkt.AprsExtras.UNIT, com.macdmr.radio.pkt.AprsExtras.EQNS }) infos.add(Ax25.messageInfo(myCall(), def, 0));
+        txInfos(infos, "telemetry #" + telSeq, () -> { store.log("beacon", myCall(), "APZDMR", info, null, false); host.event("\uD83D\uDCCA Telemetry sent: battery " + level + " %, " + String.format(Locale.US, "%.2f V, %.0f \u00B0C", volts, temp) + (hpa > 0 ? String.format(Locale.US, ", %.1f hPa", hpa) : "")); });
+        return null;
+    }
+
+    /** A weather report with the phone's air pressure (converted to sea level) at your position. */
+    public String sendWeather() {
+        if (!callsignSet()) return "Set your callsign first (PKT \u2192 Settings)";
+        if (!hasBarometer()) return "This phone has no barometer";
+        if (pressureHpa <= 0) { applySettings(); return "No pressure reading yet: turn on Weather reports in Settings, then try again"; }
+        Location l = host.location(); if (l == null) return "No position fix yet";
+        if (!host.analogRx()) return "Packet needs an analog channel";
+        double hpa = com.macdmr.radio.pkt.AprsExtras.seaLevel(pressureHpa, l.hasAltitude() ? l.getAltitude() : 0);
+        final String info = com.macdmr.radio.pkt.AprsExtras.weatherInfo(l.getLatitude(), l.getLongitude(), hpa, "");
+        txInfo(info, path(), "weather report", TX_REPS, () -> { store.log("beacon", myCall(), "APZDMR", info, null, false); host.event(String.format(Locale.US, "\u26C5 Weather report sent: %.1f hPa", hpa)); });
+        return null;
+    }
+
+    /** Place (or with {@code live} false, remove) an APRS object at a position. Error text or null. */
+    public String sendObject(String name, boolean live, double lat, double lon, String symbol, String comment) {
+        if (!callsignSet()) return "Set your callsign first (PKT \u2192 Settings)";
+        if (name == null || name.trim().isEmpty()) return "Give the object a name (up to 9 characters)";
+        if (!host.analogRx()) return "Packet needs an analog channel";
+        char t = symbol != null && symbol.length() >= 1 ? symbol.charAt(0) : '/', cd = symbol != null && symbol.length() >= 2 ? symbol.charAt(1) : '.';
+        final String info = com.macdmr.radio.pkt.AprsExtras.objectInfo(name.trim().toUpperCase(Locale.US), live, lat, lon, t, cd, comment == null ? "" : comment.trim(), System.currentTimeMillis());
+        final String nm = name.trim().toUpperCase(Locale.US);
+        txInfo(info, path(), (live ? "object " : "remove object ") + nm, TX_REPS, () -> { store.log("object", myCall(), nm, info, null, false); host.event("\uD83D\uDCCC " + (live ? "Object placed: " : "Object removed: ") + nm); });
+        return null;
+    }
+
+    /** A bulletin (BLN0 to BLN9) for everyone in range. */
+    public String sendBulletin(int n, String text) {
+        if (!callsignSet()) return "Set your callsign first (PKT \u2192 Settings)";
+        if (text == null || text.trim().isEmpty()) return "Write the bulletin first";
+        if (text.length() > 67) return "Bulletins are at most 67 characters";
+        if (!host.analogRx()) return "Packet needs an analog channel";
+        final String to = "BLN" + Math.max(0, Math.min(9, n)), tx = text.trim();
+        txInfo(Ax25.messageInfo(to, tx, 0), path(), "bulletin " + to, TX_REPS, () -> { store.log("msg-tx", myCall(), to, tx, null, false); host.event("\uD83D\uDCE2 Bulletin " + to + " sent: " + tx); });
+        return null;
+    }
+
+    /** Bulletins and NWS announcements heard, newest first. */
+    public java.util.List<PacketStore.LogEntry> bulletins(int limit) {
+        java.util.List<PacketStore.LogEntry> out = new java.util.ArrayList<>();
+        for (PacketStore.LogEntry e : store.aprsLog(500)) if (e.to != null && (e.to.startsWith("BLN") || e.to.startsWith("NWS")) && !"msg-tx".equals(e.kind)) { out.add(e); if (out.size() >= limit) break; }
+        return out;
+    }
+
+    // ---- two-way iGate: internet messages for stations heard on the radio go out on RF -----------
+    private final HashMap<String, Long> heardRf = new HashMap<>(), gatedToRf = new HashMap<>();
+    private volatile int gatedToRfCount;
+    public int gatedToRfCount() { return gatedToRfCount; }
+    private void heard(String call) { if (call == null) return; synchronized (heardRf) { heardRf.put(call.toUpperCase(Locale.US), System.currentTimeMillis()); if (heardRf.size() > 2000) heardRf.clear(); } }
+    private boolean heardRecently(String call) { synchronized (heardRf) { Long t = heardRf.get(call.toUpperCase(Locale.US).trim()); return t != null && System.currentTimeMillis() - t < 30 * 60_000L; } }
+    /** Bench: pretend a station was heard on RF (DiagReceiver). */
+    public void diagHeard(String call) { heard(call); }
+
+    private void maybeGateToRf(String line, APRSPacketDecoder.APRSPacket p) {
+        if (!txIgate() || !p.isMessage() || p.messageTo == null || !heardRecently(p.messageTo)) return;
+        AprsIsClient c = is; if (c == null || !c.isVerified()) return;
+        String from = p.sourceCallsign + (p.sourceSSID != 0 ? "-" + p.sourceSSID : "");
+        if (heardRecently(from)) return;                                          // the sender is local too: it hears the addressee itself
+        String key = from + ">" + p.messageTo.trim() + ":" + p.messageText + "{" + p.messageId;
+        long now = System.currentTimeMillis();
+        synchronized (gatedToRf) { Long t = gatedToRf.get(key); if (t != null && now - t < 30 * 60_000L) return; gatedToRf.put(key, now); if (gatedToRf.size() > 500) gatedToRf.clear(); }
+        if (!onAprsFrequency()) { host.event("\uD83C\uDF10 Not gated to the radio (not on 144.390): " + from + " \u2192 " + p.messageTo.trim()); return; }
+        final String tp = com.macdmr.radio.pkt.AprsExtras.thirdParty(line, myCall());
+        if (tp == null) return;
+        final String to = p.messageTo.trim(), text = p.messageText;
+        txInfo(tp, new String[] { "WIDE1-1" }, "iGate " + from + " to " + to, 1, () -> { gatedToRfCount++; store.log("igate-rf", from + " (IS)", to, text, p.messageId, false); host.event("\uD83C\uDF10\u2192\uD83D\uDCE1 Gated to the radio: " + from + " \u2192 " + to + ": " + text); });
+    }
 
     // ---- settings -------------------------------------------------------------------------------
 
@@ -258,7 +402,8 @@ public final class PacketEngine {
     private void isServerLine(String line) {
         try {
             APRSPacketDecoder.APRSPacket p = APRSPacketDecoder.decodeTnc2(line);
-            if (!p.isValid || !p.isMessage() || !addressedToMe(p.messageTo)) return;
+            if (!p.isValid || !p.isMessage()) return;
+            if (!addressedToMe(p.messageTo)) { maybeGateToRf(line, p); return; }
             String from = p.sourceCallsign + (p.sourceSSID != 0 ? "-" + p.sourceSSID : "");
             store.log(p.isAck ? "ack" : p.isRej ? "rej" : "msg", from + " (IS)", p.messageTo, p.messageText, p.messageId, true);
             if (p.isAck || p.isRej) return;
@@ -352,6 +497,7 @@ public final class PacketEngine {
                 igate(frame);
                 APRSPacketDecoder.APRSPacket p = APRSPacketDecoder.decode(frame);
                 String from = p.isValid ? p.sourceCallsign + (p.sourceSSID != 0 ? "-" + p.sourceSSID : "") : Ax25.addr(frame, 7);
+                heard(from);
                 if (!p.isValid) { host.event("📡 " + Ax25.tnc2(frame)); continue; }
                 long now = System.currentTimeMillis();
                 if (p.hasPosition) { store.storeStation(p, now); store.log("pos", from, p.destCallsign, APRSPacketDecoder.describe(p), null, false); }
@@ -381,6 +527,8 @@ public final class PacketEngine {
     private void messageReceived(APRSPacketDecoder.APRSPacket p, String from) {
         boolean mine = addressedToMe(p.messageTo);
         boolean bulletin = p.messageTo != null && (p.messageTo.startsWith("BLN") || p.messageTo.startsWith("NWS"));
+        String group = null; if (p.messageTo != null) for (String g : groups()) if (p.messageTo.trim().equalsIgnoreCase(g)) group = g;
+        if (group != null && !p.isAck && !p.isRej) { store.log("msg", from, p.messageTo, p.messageText, p.messageId, true); host.notifyUser("APRS group " + group + ": " + from, p.messageText, false); return; }
         store.log(p.isAck ? "ack" : p.isRej ? "rej" : "msg", from, p.messageTo, p.messageText, p.messageId, mine);
         if (mine && !p.isAck && !p.isRej && p.messageId != null) maybeAutoAck(from, p.messageId);
         if ((mine || bulletin) && !p.isAck && !p.isRej) host.notifyUser((mine ? "APRS message from " : "APRS bulletin from ") + from, p.messageText, false);
@@ -469,6 +617,18 @@ public final class PacketEngine {
 
     private void txRaw(byte[] noFcs, String label, int reps, Runnable onDone) { txFrame(Ax25.appendFcs(noFcs), label, reps, onDone); }
 
+    /** Several frames in one transmission (one settling lead): telemetry with its definitions. */
+    private void txInfos(java.util.List<String> infos, String label, Runnable onDone) {
+        if (!host.analogRx()) { host.event("⛔ Not sent (" + label + "): packet needs an analog channel, the current one is DMR"); return; }
+        int lead = SR * TX_LEAD_MS / 1000, gap = SR * TX_GAP_MS / 1000;
+        java.util.List<short[]> parts = new java.util.ArrayList<>(); int total = lead;
+        for (String info : infos) { short[] a = AFSKGenerator.generateAFSKWithNRZI(Ax25.buildUiFrame("APZDMR", 0, callsign(), ssid(), path(), info.getBytes(java.nio.charset.StandardCharsets.US_ASCII))); parts.add(a); total += a.length + gap; }
+        short[] src = new short[total];
+        for (int i = 0; i < lead; i++) src[i] = (short) (30000 * Math.sin(2.0 * Math.PI * 1200 * i / SR));
+        int p = lead; for (short[] a : parts) { System.arraycopy(a, 0, src, p, a.length); p += a.length + gap; }
+        host.transmitPcm(src, label, onDone);
+    }
+
     private void txInfo(String info, String[] path, String label, int reps, Runnable onDone) {
         byte[] frame = Ax25.buildUiFrame("APZDMR", 0, callsign(), ssid(), path, info.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
         txFrame(frame, label, reps, onDone);
@@ -516,13 +676,16 @@ public final class PacketEngine {
     }
 
     /** Transmit one position report from the phone's last fix. Returns an error text or null. */
-    public String sendBeacon() {
+    public String sendBeacon() { return sendBeaconVia(path()); }
+
+    /** A position report through a given path (ARISS for the space station's digipeater). */
+    public String sendBeaconVia(String[] via) {
         if (!callsignSet()) return "Set your callsign first (PKT → APRS settings)";
         Location l = host.location();
         if (l == null) return "No position fix yet (turn on location and open Maps once)";
         if (!host.analogRx()) return "Packet needs an analog channel: tune the APRS channel (144.390 MHz in North America)";
         final String info = Ax25.positionInfo(l.getLatitude(), l.getLongitude(), symTable(), symCode(), comment());
-        txInfo(info, path(), "position beacon", TX_REPS, () -> { store.log("beacon", myCall(), "APZDMR", info, null, false); host.event("📡 Beacon sent " + String.format(Locale.US, "%.4f, %.4f", l.getLatitude(), l.getLongitude())); });
+        txInfo(info, via, "position beacon", TX_REPS, () -> { store.log("beacon", myCall(), "APZDMR", info, null, false); host.event("📡 Beacon sent" + (via.length > 0 ? " via " + String.join(",", via) : "")); });
         return null;
     }
 

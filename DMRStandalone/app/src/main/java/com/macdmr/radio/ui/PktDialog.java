@@ -48,6 +48,19 @@ public final class PktDialog {
         button(r2, "Send message", Theme.VFO, x -> message());
         button(r2, "Position beacon", Theme.VFO, x -> { String e = pe.sendBeacon(); toast(e == null ? "Beacon queued" : e); });
         body.addView(r2);
+        LinearLayout r2b = row();
+        button(r2b, "Object\u2026", Theme.VFO, x -> objectSheet());
+        button(r2b, "Bulletin\u2026", Theme.VFO, x -> bulletinSheet());
+        button(r2b, "Telemetry", Theme.VFO, x -> { String e = pe.sendTelemetry(); toast(e == null ? "Telemetry queued" : e); });
+        if (pe.hasBarometer()) button(r2b, "Weather", Theme.VFO, x -> { String e = pe.sendWeather(); toast(e == null ? "Weather report queued" : e); });
+        body.addView(r2b);
+        LinearLayout rIss = row();
+        final boolean issMon = pe.monitoring() && svc.aprsMonitorHz() == com.macdmr.radio.RadioService.ISS_APRS_HZ;
+        button(rIss, issMon ? "Stop ISS monitor" : "ISS: monitor 145.825", Theme.PKT, x -> { toast(issMon ? svc.aprsMonitor(false) : svc.aprsMonitorAt(true, com.macdmr.radio.RadioService.ISS_APRS_HZ, "ISS APRS 145.825")); dlg.dismiss(); });
+        button(rIss, "Beacon via ISS", Theme.VFO, x -> toast(svc.issBeacon()));
+        body.addView(rIss);
+        String[] autoNames = { "off", "every " + pe.beaconMin() + " min", "SmartBeaconing" };
+        body.addView(hint("Automatic beacons: " + autoNames[Math.max(0, Math.min(2, pe.autoBeacon()))] + (pe.telemetryOn() ? ", telemetry every 30 min" : "") + (pe.weatherOn() ? ", weather every 30 min" : "") + " (only on 144.390, set in Settings)." + (pe.txIgate() ? " Two-way iGate on: " + pe.gatedToRfCount() + " internet messages sent to the radio." : "") + (pe.groups().isEmpty() ? "" : " Following groups: " + String.join(", ", pe.groups()) + ".")));
         LinearLayout rIs = row();
         button(rIs, (pe.isEnabled() ? "Stop APRS-IS" : "APRS-IS (internet)") , Theme.PKT, x -> {
             if (pe.isEnabled()) { pe.isStop(); toast("APRS-IS off"); } else { String e = pe.isStart(); toast(e == null ? "Connecting to " + pe.isServer() : e); }
@@ -58,6 +71,7 @@ public final class PktDialog {
         LinearLayout r3 = row();
         button(r3, "Stations heard (" + pe.store().stationCount() + ")", Theme.SOFTSQ, x -> stations());
         button(r3, "APRS log", Theme.SOFTSQ, x -> aprsLog());
+        button(r3, "Bulletins", Theme.SOFTSQ, x -> bulletinsHeard());
         button(r3, "Settings", Theme.MON, x -> settings());
         body.addView(r3);
         body.addView(hint("Passive decode runs on " + (pe.passiveMode() == 2 ? "every analog channel" : pe.passiveMode() == 1 ? "flagged channels" : "no channel (off)") + ". Monitoring parks the radio on 144.390 MHz, acks messages for you" + (pe.digipeat() ? " and digipeats WIDE1-1" : "") + ". Your channel comes back when you stop."));
@@ -127,6 +141,56 @@ public final class PktDialog {
         sub = dialog(body);
     }
     private AlertDialog sub;
+
+    // ---- object, bulletin ----
+    private void objectSheet() {
+        LinearLayout body = page("\uD83D\uDCCC  APRS object");
+        final EditText name = field(body, "Name (up to 9 characters, e.g. NETCTL or HAZARD)", "", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+        android.location.Location me = svc.lastKnownLocation();
+        final EditText pos = field(body, "Position (latitude, longitude)", me == null ? "" : String.format(Locale.US, "%.5f, %.5f", me.getLatitude(), me.getLongitude()), InputType.TYPE_CLASS_TEXT);
+        final EditText sym = field(body, "Symbol (table + code: /N net control, /! police, \\! emergency, /E event, /. X)", "/.", InputType.TYPE_CLASS_TEXT);
+        final EditText comment = field(body, "Comment", "", InputType.TYPE_CLASS_TEXT);
+        body.addView(hint("An object is a marker on everyone's APRS map that you own: a net control point, an event, a hazard. Remove sends it again as deleted. The position starts at yours; edit it to place the object elsewhere."));
+        LinearLayout r = row();
+        button(r, "Place", Theme.PKT, x -> objectSend(name, pos, sym, comment, true));
+        button(r, "Remove", Theme.REC, x -> objectSend(name, pos, sym, comment, false));
+        button(r, "Cancel", Theme.MON, x -> sub.dismiss());
+        body.addView(r);
+        sub = dialog(body);
+    }
+    private void objectSend(EditText name, EditText pos, EditText sym, EditText comment, boolean live) {
+        try {
+            String[] p = pos.getText().toString().split(",");
+            double lat = Double.parseDouble(p[0].trim()), lon = Double.parseDouble(p[1].trim());
+            if (Math.abs(lat) > 90 || Math.abs(lon) > 180) throw new NumberFormatException();
+            String e = pe.sendObject(name.getText().toString(), live, lat, lon, sym.getText().toString().trim(), comment.getText().toString());
+            toast(e == null ? (live ? "Object queued" : "Removal queued") : e); if (e == null) sub.dismiss();
+        } catch (Throwable t) { toast("Position: latitude, longitude in degrees (e.g. 45.123, -93.456)"); }
+    }
+    private void bulletinSheet() {
+        LinearLayout body = page("\uD83D\uDCE2  APRS bulletin");
+        final EditText num = field(body, "Bulletin number (0 to 9)", "0", InputType.TYPE_CLASS_NUMBER);
+        final EditText text = field(body, "Text (up to 67 characters)", "", InputType.TYPE_CLASS_TEXT);
+        body.addView(hint("A bulletin goes to everyone in range (BLN0 to BLN9) and is not acknowledged; most APRS apps list them on a bulletin board. Send it again to keep it current."));
+        LinearLayout r = row();
+        button(r, "Send", Theme.PKT, x -> { int n; try { n = Integer.parseInt(num.getText().toString().trim()); } catch (Throwable t) { n = 0; } String e = pe.sendBulletin(n, text.getText().toString()); toast(e == null ? "Bulletin queued" : e); if (e == null) sub.dismiss(); });
+        button(r, "Cancel", Theme.MON, x -> sub.dismiss());
+        body.addView(r);
+        sub = dialog(body);
+    }
+    private void bulletinsHeard() {
+        LinearLayout body = page("\uD83D\uDCE2  Bulletins heard");
+        List<PacketStore.LogEntry> list = pe.bulletins(100);
+        if (list.isEmpty()) body.addView(hint("No bulletins or NWS announcements heard yet."));
+        SimpleDateFormat f = new SimpleDateFormat("MM-dd HH:mm", Locale.US);
+        for (PacketStore.LogEntry e : list) {
+            LinearLayout rowv = shell();
+            rowv.addView(Neo.label(c, e.to + "  from " + e.from, Theme.AMBER, 14, true));
+            rowv.addView(Neo.label(c, f.format(new Date(e.ts)) + "  " + e.text, 0xFFBFC8D0, 13, false));
+            body.addView(rowv);
+        }
+        sub = dialog(body);
+    }
 
     // ---- DTMF send ----
     private void dtmfSend() {
@@ -287,6 +351,16 @@ public final class PktDialog {
         final EditText isPass = field(body, "Passcode (-1 = receive-only; never shown or logged)", p.getString("isPasscode", "-1"), InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         final EditText isMin = field(body, "Internet beacon every N minutes (0 = off)", String.valueOf(pe.isBeaconMin()), InputType.TYPE_CLASS_NUMBER);
         final EditText isComment = field(body, "Internet beacon comment", p.getString("isComment", pe.comment()), InputType.TYPE_CLASS_TEXT);
+        body.addView(section("Automatic beacons (on 144.390 only)"));
+        final String[] autoModes = { "Off", "Every N minutes", "SmartBeaconing" };
+        final int[] auto = { Math.max(0, Math.min(2, pe.autoBeacon())) };
+        cycle(body, "Beacon", autoModes, auto[0], v -> auto[0] = v);
+        final EditText bMin = field(body, "Every N minutes (Every N minutes mode)", String.valueOf(pe.beaconMin()), InputType.TYPE_CLASS_NUMBER);
+        final boolean[] extra = { pe.telemetryOn(), pe.weatherOn(), pe.txIgate() };
+        toggle(body, "Telemetry every 30 min (battery, volts, temperature, pressure, signal)", extra, 0);
+        if (pe.hasBarometer()) toggle(body, "Weather report every 30 min (air pressure)", extra, 1);
+        toggle(body, "Two-way iGate: internet messages to stations heard here go out on the radio", extra, 2);
+        final EditText groups = field(body, "Message groups I follow (comma separated, e.g. CQ,ARES)", String.join(",", pe.groups()), InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
         body.addView(section("Passive APRS decode"));
         final String[] modes = { "Off", "Flagged channels", "Every analog channel" };
         final int[] passive = { pe.passiveMode() };
@@ -316,7 +390,10 @@ public final class PktDialog {
                         .putString("isServer", isServer.getText().toString().trim()).putInt("isPort", Integer.parseInt(isPort.getText().toString().trim()))
                         .putString("isPasscode", isPass.getText().toString().trim().isEmpty() ? "-1" : isPass.getText().toString().trim())
                         .putInt("isBeaconMin", Integer.parseInt(isMin.getText().toString().trim())).putString("isComment", isComment.getText().toString().trim())
+                        .putInt("autoBeacon", auto[0]).putInt("beaconMin", Math.max(1, Integer.parseInt(bMin.getText().toString().trim())))
+                        .putBoolean("telemetry", extra[0]).putBoolean("weather", extra[1]).putBoolean("txIgate", extra[2]).putString("groups", groups.getText().toString().trim().toUpperCase(Locale.US))
                         .putBoolean("autoAck", flags[0]).putBoolean("digipeat", flags[1]).putBoolean("dtmf", flags[2]).putBoolean("wx", flags[3]).putBoolean("cw", flags[4]).putBoolean("cwId", flags[5]).apply();
+                pe.applySettings();
                 toast("Saved"); sub.dismiss();
             } catch (NumberFormatException e) { toast("Check the numbers"); }
         });
