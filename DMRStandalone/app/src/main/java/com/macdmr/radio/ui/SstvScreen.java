@@ -30,6 +30,8 @@ public final class SstvScreen extends ModeScreen {
     private final LinearLayout gallery;
     private long galleryStamp = -1;
     private final TextView switchBtn;
+    private final PassCard passCard;
+    private TextView sendBtn;
 
     public SstvScreen(Context c, RadioService svc, Runnable onClose) {
         super(c, svc, "SSTV", "pkt", Neo.VIOLET, onClose);
@@ -37,6 +39,7 @@ public final class SstvScreen extends ModeScreen {
         ScrollView sv = new ScrollView(c); sv.setVerticalScrollBarEnabled(false);
         LinearLayout body = new LinearLayout(c); body.setOrientation(VERTICAL); body.setPadding(dp(14), dp(4), dp(14), dp(10));
         sv.addView(body);
+        passCard = new PassCard(c); body.addView(passCard);
 
         live = new ImageView(c); live.setAdjustViewBounds(true); live.setScaleType(ImageView.ScaleType.FIT_CENTER);
         live.setBackground(Neo.card(c, Neo.alpha(Neo.VIOLET, 0x66), 12)); live.setPadding(dp(3), dp(3), dp(3), dp(3));
@@ -59,13 +62,16 @@ public final class SstvScreen extends ModeScreen {
         content.addView(sv);
 
         LinearLayout r1 = buttonRow();
-        button(r1, "Send picture", "send", Neo.AMBER, v -> PktDialog.sheet(c, svc, "sstvSend"));
+        sendBtn = button(r1, "Send picture", "send", Neo.AMBER, v -> PktDialog.sheet(c, svc, "sstvSend"));
         switchBtn = button(r1, "", "radio", Neo.CYAN, v -> {
             boolean parked = parked();
             svc.sstvMonitor(false, false); toast(svc.sstvMonitor(true, !parked));
         });
         LinearLayout r2 = buttonRow();
-        button(r2, "Stop receiving", "stop", Neo.RED, v -> { toast(svc.sstvMonitor(false, false)); close(); });
+        button(r2, "Stop receiving", "stop", Neo.RED, v -> {
+            if (iss()) { svc.endSatTracking(); toast("ISS SSTV stopped"); close(); return; }
+            toast(svc.sstvMonitor(false, false)); close();
+        });
 
         if (pe.sstvLast() != null) live.setImageBitmap(pe.sstvLast());
         status.setText(nice(pe.sstvStatus()));
@@ -90,12 +96,20 @@ public final class SstvScreen extends ModeScreen {
         return s.substring(0, 1).toUpperCase(Locale.US) + s.substring(1);
     }
 
-    @Override protected boolean stillRunning() { return pe.sstvRx(); }
+    private boolean iss() { return svc.satMode() == com.macdmr.radio.ham.Satellites.SSTV; }
+    @Override protected boolean stillRunning() { return pe.sstvRx() || iss(); }
 
     @Override protected void refresh() {
-        setSubtitle(parked() ? "Receiving on 144.500 MHz" : "Receiving on this channel");
-        String sw = parked() ? "Use this channel" : "Go to 144.500";
-        if (!sw.contentEquals(switchBtn.getText())) { switchBtn.setText(sw); Neo.fit(switchBtn); }
+        passCard.update(svc);
+        if (iss()) {
+            setSubtitle("ISS SSTV " + String.format(Locale.US, "%.3f", svc.satState().nominalHz / 1e6) + " \u00B7 Doppler-tracked");
+            if (switchBtn.getVisibility() != GONE) { switchBtn.setVisibility(GONE); sendBtn.setVisibility(GONE); }    // an ISS downlink: receive only
+        } else {
+            setSubtitle(parked() ? "Receiving on 144.500 MHz" : "Receiving on this channel");
+            if (switchBtn.getVisibility() != VISIBLE) { switchBtn.setVisibility(VISIBLE); sendBtn.setVisibility(VISIBLE); }
+            String sw = parked() ? "Use this channel" : "Go to 144.500";
+            if (!sw.contentEquals(switchBtn.getText())) { switchBtn.setText(sw); Neo.fit(switchBtn); }
+        }
         File dir = new File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "DMR/SSTV");
         File[] fs = dir.listFiles((x, n) -> n.toLowerCase(Locale.US).endsWith(".png") || n.toLowerCase(Locale.US).endsWith(".jpg"));
         long stamp = fs == null ? 0 : fs.length + dir.lastModified();

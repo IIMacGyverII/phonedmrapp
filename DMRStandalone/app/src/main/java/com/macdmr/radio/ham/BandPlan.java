@@ -38,7 +38,7 @@ public final class BandPlan {
             if (m < 145.20) return hamCare("2 m linear translator outputs", "Not for FM");
             if (m < 145.50) return ham("2 m FM repeater outputs");
             if (m < 145.80) return ham("2 m miscellaneous and experimental");
-            if (m < 146.00) return hamCare(Math.abs(m - 145.80) < 0.0051 ? "ISS voice downlink" : Math.abs(m - 145.825) < 0.0051 ? "ISS APRS digipeater" : "2 m satellite subband", "For satellites only: no terrestrial FM");
+            if (m < 146.00) return hamCare(Math.abs(m - 145.80) < 0.0051 ? "ISS voice downlink" : Math.abs(m - 145.825) < 0.0051 ? "Satellite APRS (the ISS moved to 437.825)" : Math.abs(m - 145.99) < 0.0051 ? "ISS repeater uplink" : "2 m satellite subband", "For satellites only: no terrestrial FM");
             if (m < 146.40) return ham("2 m FM repeater inputs");
             if (m < 146.60) return ham(Math.abs(m - 146.52) < 0.0051 ? "2 m national FM simplex calling" : "2 m FM simplex");
             if (m < 147.00) return ham("2 m FM repeater outputs");
@@ -53,7 +53,7 @@ public final class BandPlan {
             if (m < 432.30) return hamCare("70 cm weak-signal CW and SSB (432.100 calling)", "No FM here");
             if (m < 433) return hamCare("70 cm weak signal and beacons", "No FM here");
             if (m < 435) return ham("70 cm auxiliary and repeater links");
-            if (m < 438) return hamCare("70 cm satellite subband", "For satellites only: no terrestrial FM");
+            if (m < 438) return hamCare(Math.abs(m - 437.825) < 0.0151 ? "ISS APRS digipeater" : Math.abs(m - 437.55) < 0.0151 ? "ISS SSTV downlink" : Math.abs(m - 437.80) < 0.0101 ? "ISS repeater downlink" : "70 cm satellite subband", "For satellites only: no terrestrial FM");
             if (m < 442) return ham("70 cm amateur television, repeaters and links (local plans vary)");
             if (m < 445) return ham("70 cm FM repeaters (local plans vary)");
             if (m < 447) return ham(Math.abs(m - 446.0) < 0.0051 ? "70 cm national FM simplex calling" : "70 cm FM simplex and links");

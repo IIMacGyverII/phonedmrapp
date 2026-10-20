@@ -22,6 +22,7 @@ import java.util.Locale;
  */
 public final class AprsScreen extends ModeScreen {
     private final PacketEngine pe;
+    private final PassCard passCard;
     private final TextView statPackets, statStations, statMsgs, statLast;
     private final TextView[] tabs = new TextView[3];
     private final TextView ackChip, digiChip, beaconChip, isChip;
@@ -36,6 +37,7 @@ public final class AprsScreen extends ModeScreen {
         pe = svc.packet();
 
         LinearLayout body = new LinearLayout(c); body.setOrientation(VERTICAL); body.setPadding(dp(14), dp(4), dp(14), 0);
+        passCard = new PassCard(c); body.addView(passCard);
         // counters
         LinearLayout stats = new LinearLayout(c);
         statPackets = stat(stats, "PACKETS"); statStations = stat(stats, "STATIONS"); statMsgs = stat(stats, "FOR YOU"); statLast = stat(stats, "LAST HEARD");
@@ -67,12 +69,16 @@ public final class AprsScreen extends ModeScreen {
 
         LinearLayout r1 = buttonRow();
         button(r1, "Message", "send", Neo.AMBER, v -> PktDialog.sheet(c, svc, "message"));
-        button(r1, "Beacon", "locate", Neo.AMBER, v -> { String e = pe.sendBeacon(); toast(e == null ? "Beacon queued" : e); });
+        button(r1, "Beacon", "locate", Neo.AMBER, v -> {
+            if (svc.satMode() == com.macdmr.radio.ham.Satellites.APRS) { toast(svc.issBeacon()); return; }          // through the ISS (path ARISS), Doppler-corrected
+            String e = pe.sendBeacon(); toast(e == null ? "Beacon queued" : e);
+        });
         button(r1, "Map", "map", Neo.CYAN, v -> MapDialog.show(c, svc));
         LinearLayout r2 = buttonRow();
         button(r2, "Settings", "menu", Neo.CYAN, v -> PktDialog.sheet(c, svc, "settings"));
         button(r2, "Stop", "stop", Neo.RED, v -> {
             if (pe.kiss().isActive()) pe.kissStop();
+            if (svc.satMode() == com.macdmr.radio.ham.Satellites.APRS) { svc.endSatTracking(); toast("ISS APRS stopped"); close(); return; }
             toast(svc.aprsMonitor(false)); close();
         });
     }
@@ -101,11 +107,12 @@ public final class AprsScreen extends ModeScreen {
     private int tabShown = -1;
     private void scrollTop() { scroll.post(() -> scroll.scrollTo(0, 0)); }
 
-    @Override protected boolean stillRunning() { return pe.monitoring() || pe.kiss().isActive(); }
+    @Override protected boolean stillRunning() { return pe.monitoring() || pe.kiss().isActive() || svc.satMode() == com.macdmr.radio.ham.Satellites.APRS; }
 
     @Override protected void refresh() {
-        boolean iss = pe.monitoring() && svc.aprsMonitorHz() == RadioService.ISS_APRS_HZ;
-        String what = !pe.monitoring() ? "KISS TNC on this channel" : iss ? "ISS digipeater 145.825" : "Monitoring 144.390";
+        boolean iss = svc.satMode() == com.macdmr.radio.ham.Satellites.APRS;
+        String what = iss ? "ISS APRS " + String.format(Locale.US, "%.3f", svc.satState().nominalHz / 1e6) + " \u00B7 Doppler-tracked" : !pe.monitoring() ? "KISS TNC on this channel" : "Monitoring " + String.format(Locale.US, "%.3f", svc.aprsMonitorHz() / 1e6);
+        passCard.update(svc);
         if (pe.kiss().isActive()) what += pe.monitoring() ? " · KISS TNC :" + pe.kissPort() : " · port " + pe.kissPort();
         setSubtitle(what + (pe.callsignSet() ? "" : " · set your callsign in Settings"));
 

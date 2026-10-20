@@ -34,6 +34,51 @@ public final class SatelliteDialog {
         open(c, svc);
     }
 
+    /** The ISS frequencies (ARISS changes the station's modes often): edit, reset, or check the ARISS status page. */
+    private static void issFrequencies(Context c, RadioService svc) {
+        LinearLayout body = Neo.sheetBody(c, "ISS frequencies");
+        body.addView(Neo.sheetHint(c, "ARISS changes what the space station's radios do: APRS moves between 145.825 and 437.825, the repeater comes and goes, SSTV runs only during announced events. Set what the ARISS status page says now. The defaults are the status of 7 October 2026."));
+        final String[][] f = { { "issAprs", "APRS digipeater (MHz)" }, { "issSstv", "SSTV pictures (MHz)" }, { "issRptrDown", "Repeater: listen (MHz)" }, { "issRptrUp", "Repeater: talk (MHz)" }, { "issVoiceDown", "Crew voice: listen (MHz)" }, { "issVoiceUp", "Crew voice: talk (MHz)" } };
+        final long[] def = { Satellites.ISS_APRS_HZ, Satellites.ISS_SSTV_HZ, Satellites.ISS_RPTR_DOWN_HZ, Satellites.ISS_RPTR_UP_HZ, Satellites.ISS_VOICE_DOWN_HZ, Satellites.ISS_VOICE_UP_HZ };
+        final android.widget.EditText[] e = new android.widget.EditText[f.length];
+        for (int i = 0; i < f.length; i++) e[i] = field(c, body, f[i][1], String.format(Locale.US, "%.3f", Satellites.issHz(c, f[i][0], def[i]) / 1e6));
+        final android.widget.EditText tone = field(c, body, "Repeater tone (Hz)", String.format(Locale.US, "%.1f", Satellites.issRptrTone(c)));
+        final AlertDialog[] self = new AlertDialog[1];
+        LinearLayout row = new LinearLayout(c);
+        TextView save = Neo.button(c, "Save", "check", Neo.GREEN), reset = Neo.button(c, "Defaults", "restore", Neo.AMBER), status = Neo.button(c, "ARISS status", "globe", Neo.CYAN);
+        for (TextView b : new TextView[] { save, reset, status }) { b.setTextSize(14); Neo.fit(b); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, (int) (48 * Theme.dp(c)), 1f); lp.setMargins(4, 8, 4, 0); row.addView(b, lp); }
+        body.addView(row);
+        save.setOnClickListener(v -> {
+            try {
+                long[] hz = new long[f.length];
+                for (int i = 0; i < f.length; i++) {
+                    double m = Double.parseDouble(e[i].getText().toString().trim().replace(',', '.'));
+                    if (m < 136 || m > 480) throw new NumberFormatException(f[i][1]);
+                    hz[i] = Math.round(m * 1000) * 1000L;
+                }
+                double t = Double.parseDouble(tone.getText().toString().trim().replace(',', '.'));
+                for (int i = 0; i < f.length; i++) Satellites.setIssHz(c, f[i][0], hz[i]);
+                Satellites.setIssRptrTone(c, t);
+                Toast.makeText(c, "Saved: used from the next pass you track", Toast.LENGTH_LONG).show();
+                if (self[0] != null) self[0].dismiss();
+            } catch (Throwable x) { Toast.makeText(c, "Check the numbers (MHz between 136 and 480)", Toast.LENGTH_LONG).show(); }
+        });
+        reset.setOnClickListener(v -> { Satellites.resetIss(c); Toast.makeText(c, "ISS frequencies back to the defaults", Toast.LENGTH_LONG).show(); if (self[0] != null) self[0].dismiss(); });
+        status.setOnClickListener(v -> { try { c.startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(Satellites.ARISS_STATUS_URL))); } catch (Throwable x) { Toast.makeText(c, "No browser", Toast.LENGTH_LONG).show(); } });
+        self[0] = Neo.showSheet(c, body);
+    }
+    private static android.widget.EditText field(Context c, LinearLayout body, String label, String value) {
+        float d = Theme.dp(c);
+        LinearLayout r = new LinearLayout(c); r.setOrientation(LinearLayout.VERTICAL); r.setBackground(Neo.rowCard(c)); r.setPadding((int) (12 * d), (int) (6 * d), (int) (12 * d), (int) (6 * d));
+        r.addView(Neo.label(c, label, Neo.MUTED, 12, false));
+        android.widget.EditText e = new android.widget.EditText(c); e.setText(value); e.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        e.setTextSize(17); e.setTextColor(Neo.TEXT); e.setSingleLine(true); e.setBackground(null); e.setPadding(0, (int) (2 * d), 0, (int) (2 * d));
+        r.addView(e);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT); lp.bottomMargin = (int) (6 * d);
+        body.addView(r, lp);
+        return e;
+    }
+
     private static void open(Context c, RadioService svc) {
         float d = Theme.dp(c);
         Satellites sats = svc.satellites();
@@ -44,14 +89,15 @@ public final class SatelliteDialog {
         final TextView live = Neo.label(c, "", Theme.CYAN, 14, true); body.addView(live);
         final TextView stop = Neo.button(c, "Stop tracking", "stop", Neo.RED); body.addView(stop);
         final AlertDialog[] self = new AlertDialog[1];
-        stop.setOnClickListener(v -> { svc.stopSatTrack(); Toast.makeText(c, "Tracking stopped", Toast.LENGTH_SHORT).show(); if (self[0] != null) self[0].dismiss(); });
+        stop.setOnClickListener(v -> { svc.endSatTracking(); Toast.makeText(c, "Tracking stopped", Toast.LENGTH_SHORT).show(); if (self[0] != null) self[0].dismiss(); });
         if (me == null) body.addView(Neo.sheetHint(c, "No position fix yet: turn on location, then open this again."));
         Map<Integer, Sgp4> el = sats.elements();
         SimpleDateFormat f = new SimpleDateFormat("EEE HH:mm", Locale.US);
         long now = System.currentTimeMillis();
-        for (Satellites.Sat s : Satellites.ALL) {
+        for (Satellites.Sat s : Satellites.all(c)) {
             body.addView(Neo.sheetSection(c, s.name));
-            body.addView(Neo.sheetHint(c, String.format(Locale.US, "Listen %.3f, talk %.3f MHz%s. %s", s.downHz / 1e6, s.upHz / 1e6, s.toneHz > 0 ? String.format(Locale.US, " with %.1f Hz", s.toneHz) : "", s.about)));
+            body.addView(Neo.sheetHint(c, s.listenOnly() ? String.format(Locale.US, "Listen %.3f MHz (receive only). %s", s.downHz / 1e6, s.about)
+                    : String.format(Locale.US, "Listen %.3f, talk %.3f MHz%s. %s", s.downHz / 1e6, s.upHz / 1e6, s.toneHz > 0 ? String.format(Locale.US, " with %.1f Hz", s.toneHz) : "", s.about)));
             Sgp4 e = el.get(s.catalog);
             if (e == null || me == null) { body.addView(Neo.sheetHint(c, e == null ? "No orbit for it in the download." : "")); continue; }
             List<SatTrack.Pass> ps = SatTrack.passes(e, now - 15 * 60_000L, 24, me.getLatitude(), me.getLongitude(), me.hasAltitude() ? me.getAltitude() : 0, 10);
@@ -65,15 +111,19 @@ public final class SatelliteDialog {
                 r.addView(Neo.text(c, "Rises " + Maidenhead.compass(p.aosAz) + ", sets " + Maidenhead.compass(p.losAz) + "  ·  tap to track", Neo.MUTED, 12.5f, Neo.uiMedium(c)));
                 r.setClickable(true);
                 r.setOnClickListener(v -> {
+                    svc.setIssRepeat(-1);
                     String err = svc.trackSat(s, e, p);
                     Toast.makeText(c, err != null ? err : "Tracking " + s.name + (p.aos > System.currentTimeMillis() ? " from " + new SimpleDateFormat("HH:mm", Locale.US).format(new Date(p.aos - 60_000)) : " now"), Toast.LENGTH_LONG).show();
                     if (self[0] != null) self[0].dismiss();
+                    if (err == null && s.mode != Satellites.VOICE && c instanceof com.macdmr.radio.MainActivity) ((com.macdmr.radio.MainActivity) c).openModeScreen();   // APRS / SSTV: their page
                 });
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT); lp.bottomMargin = (int) (6 * d);
                 body.addView(r, lp);
             }
             if (n == 0) body.addView(Neo.sheetHint(c, "No pass above 10° in the next 24 hours."));
         }
+        TextView freqs = Neo.button(c, "ISS frequencies", "radio", Neo.AMBER); body.addView(freqs);
+        freqs.setOnClickListener(v -> { if (self[0] != null) self[0].dismiss(); issFrequencies(c, svc); });
         TextView upd = Neo.button(c, "Update orbits", "update", Neo.CYAN); body.addView(upd);
         upd.setOnClickListener(v -> new Thread(() -> { String e = sats.update(); new Handler(Looper.getMainLooper()).post(() -> { Toast.makeText(c, e == null ? "Orbits updated" : e, Toast.LENGTH_LONG).show(); if (e == null) { if (self[0] != null) self[0].dismiss(); open(c, svc); } }); }, "tle").start());
         final Handler h = new Handler(Looper.getMainLooper());
