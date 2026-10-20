@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Licence exam practice
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | **PKT → Exam practice** (`ham/ExamPool.java`, `ui/ExamDialog.java`): the current US pools bundled as assets (Technician 2026–2030, 409 questions; General 2023–2027, 423; Extra 2024–2028, 599; 14 figures) from NCVEC (public domain) via russolsen/ham_radio_question_pool (Apache-2.0); the JSON and figures were committed with the satellite change by accident and are used from here. Practice exam = one random question per group (35/35/50), no feedback until the end, pass marks 26/26/37, best score kept; study a subelement with the answer after each question; missed questions kept per element until answered right; results list each miss with the right answer. New help topic. | `ham/ExamPool.java`, `ui/ExamDialog.java` (new), `assets/exam/*`, `ui/PktDialog.java`, `ui/HelpView.java`; test `ExamPoolTest` | Unit tests 2/2 (pool sizes, one group per exam question, four answers, figures present, Technician subelements sum to 409). On the phone: the Technician pool opened; studying T6 showed question T6C06 with its schematic figure and marked the answer; test progress cleared |
+
 ## 2026-10-20 — Satellite passes with Doppler tracking
 
 | Backlog | Change | Files | Test |
