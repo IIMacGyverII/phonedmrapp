@@ -269,6 +269,68 @@ public final class PacketEngine {
         return out;
     }
 
+    // ---- keyboard text modes: RTTY and PSK31 ---------------------------------------------------------
+    public static final String[] TEXT_MODES = { "Off", "RTTY 45", "PSK31" };
+    public interface TextListener { void update(String text, String status); }
+    private volatile int textMode;                                        // 0 off (not listening), 1 RTTY, 2 PSK31
+    private int textTxMode = 2;
+    private com.macdmr.radio.ham.Rtty rtty; private com.macdmr.radio.ham.Psk31 psk;
+    private final StringBuilder textRx = new StringBuilder();
+    private volatile TextListener textListener;
+    public int textMode() { return textMode; }
+    public void setTextMode(int m) {
+        textMode = m; if (m > 0) textTxMode = m;
+        if (m == 1) rtty = new com.macdmr.radio.ham.Rtty(this::textChar);
+        if (m == 2) psk = new com.macdmr.radio.ham.Psk31(this::textChar);
+        textPost();
+    }
+    public int textTxMode() { return textTxMode; }
+    public void setTextTxMode(int m) { textTxMode = m; textPost(); }
+    public void setTextListener(TextListener l) { textListener = l; textPost(); }
+    public synchronized void textClear() { textRx.setLength(0); textPost(); }
+    public String textStatus() {
+        if (textMode == 1 && rtty != null) return rtty.locked() ? String.format(Locale.US, "RTTY: listening, mark %.0f Hz", rtty.markHz()) : "RTTY: looking for a signal";
+        if (textMode == 2 && psk != null) return psk.locked() ? String.format(Locale.US, "PSK31: listening on %.1f Hz", psk.freq()) : "PSK31: looking for a signal";
+        return "Not listening";
+    }
+    private synchronized void textChar(char ch) { textRx.append(ch); if (textRx.length() > 20000) textRx.delete(0, 4000); textPost(); }
+    private volatile boolean textPostPending;
+    private void textPost() {
+        TextListener l = textListener; if (l == null || textPostPending) return;
+        textPostPending = true;                                          // at most five refreshes a second
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> { textPostPending = false; textPostNow(); }, 200);
+    }
+    private void textPostNow() {
+        TextListener l = textListener; if (l == null) return;
+        final String t; synchronized (this) { t = textRx.toString(); } final String st = textStatus();
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> l.update(t, st));
+    }
+    /** Send text in the chosen mode, on the frequency being received if one is locked; long text goes out in several transmissions. */
+    public String textSend(String text) {
+        if (text == null || text.trim().isEmpty()) return "Nothing to send";
+        if (!host.analogRx()) return "Text modes need an analog channel";
+        final int m = textTxMode == 1 ? 1 : 2;
+        final double hz = m == 1 ? (rtty != null && rtty.locked() ? rtty.markHz() : 2125) : (psk != null && psk.locked() ? psk.freq() : 1000);
+        final java.util.List<String> parts = new java.util.ArrayList<>();
+        StringBuilder cur = new StringBuilder();
+        int limit = m == 1 ? 130 : 55;                                    // characters that fit about 26 s with the lead and tail (capitals are the longest in PSK31)
+        for (String w : text.trim().split(" ")) { if (cur.length() + w.length() + 1 > limit && cur.length() > 0) { parts.add(cur.toString()); cur.setLength(0); } if (cur.length() > 0) cur.append(' '); cur.append(w); }
+        if (cur.length() > 0) parts.add(cur.toString());
+        synchronized (this) { textRx.append("\n> ").append(text.trim()).append('\n'); } textPost();
+        sendPart(parts, 0, m, hz);
+        return null;
+    }
+    private void sendPart(java.util.List<String> parts, int i, int m, double hz) {
+        if (i >= parts.size()) return;
+        String p = parts.get(i) + (i == parts.size() - 1 ? " " : "");
+        short[] pcm = m == 1 ? com.macdmr.radio.ham.Rtty.encode(p, hz, 1000) : com.macdmr.radio.ham.Psk31.encode(p, hz);
+        if (pcm.length > SR * 28) { short[] cut = new short[SR * 28]; System.arraycopy(pcm, 0, cut, 0, cut.length); pcm = cut; }
+        host.transmitPcm(pcm, (m == 1 ? "RTTY " : "PSK31 ") + (i + 1) + "/" + parts.size(), () -> {
+            if (i + 1 < parts.size()) { try { Thread.sleep(2000); } catch (InterruptedException ignored) { } sendPart(parts, i + 1, m, hz); }
+            else host.event((m == 1 ? "\u2328 RTTY sent: " : "\u2328 PSK31 sent: ") + String.join(" ", parts));
+        });
+    }
+
     // ---- packet terminal: an AX.25 connected-mode session with a BBS or node -----------------------
     public interface TerminalListener { void update(String transcript, String state); }
     private volatile com.macdmr.radio.pkt.Ax25Session terminal;
@@ -519,6 +581,8 @@ public final class PacketEngine {
                 if (dtmf == null) dtmf = new DTMFDecoder(SR, false, dtmfListener);
                 dtmf.processAudio(mono, n);
             }
+            if (textMode == 1 && rtty != null) rtty.process(mono, n);
+            else if (textMode == 2 && psk != null) psk.process(mono, n);
             if (cwEnabled() && !weatherBand) {
                 if (cw == null) cw = new com.macdmr.radio.ham.CwDecoder((text, hz, wpm) -> {
                     host.event("\uD83D\uDD24 Morse: " + text + String.format(Locale.US, "  (%.0f Hz, %d WPM)", hz, wpm));
