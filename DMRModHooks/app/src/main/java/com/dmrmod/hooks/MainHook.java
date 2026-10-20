@@ -5803,9 +5803,7 @@ public class MainHook implements IXposedHookLoadPackage {
             TextView leadHelp = new TextView(activity);
             leadHelp.setText("A steady tone before each packet while this radio's transmit audio settles: measured on the bench, the audio is not on the air "
                     + "for about 1.5 s after keying, and a packet sent without the lead-in did not decode. Shorter settings are for testing with your radio and "
-                    + "digipeaters; go back to the default if decodes get worse. Applies to messages, beacons, acks, the digipeater and the KISS TNC.
-
-"
+                    + "digipeaters; go back to the default if decodes get worse. Applies to messages, beacons, acks, the digipeater and the KISS TNC.\n\n"
                     + "Every beacon and APRS transmission is written to Download/DMR/APRS/aprs_tx_log.txt (time, channel and power, lead-in, GPS fix age, "
                     + "whether the radio keyed and how much of the packet audio went out): share that file when reporting a problem.");
             leadHelp.setTextSize(12); leadHelp.setTextColor(0xFF999999);
