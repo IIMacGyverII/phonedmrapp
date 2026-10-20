@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — MON switches off on a channel change
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Owner: the MON button stayed lit after a channel change although monitoring had stopped (the module leaves monitor mode when the channel changes, the app's flag did not follow). `applyChannelNow` now clears MON (and sends monitor off) when the channel really changes (number, receive frequency or mode), so the button goes dark; re-applying the same channel keeps it. Help (Monitor) updated. | `RadioService.java`, `ui/HelpView.java` | On the phone: MON on, channel up → log "MON off: the channel changed", button dark; tapping MON lights it again |
+
 ## 2026-10-20 — Steering-wheel talk with the car's microphone: a talk "call" stopped by hang-up, and stop-on-silence
 
 | Backlog | Change | Files | Test |
