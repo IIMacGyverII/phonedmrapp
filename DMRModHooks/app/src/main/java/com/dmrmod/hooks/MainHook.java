@@ -5803,7 +5803,11 @@ public class MainHook implements IXposedHookLoadPackage {
             TextView leadHelp = new TextView(activity);
             leadHelp.setText("A steady tone before each packet while this radio's transmit audio settles: measured on the bench, the audio is not on the air "
                     + "for about 1.5 s after keying, and a packet sent without the lead-in did not decode. Shorter settings are for testing with your radio and "
-                    + "digipeaters; go back to the default if decodes get worse. Applies to messages, beacons, acks, the digipeater and the KISS TNC.");
+                    + "digipeaters; go back to the default if decodes get worse. Applies to messages, beacons, acks, the digipeater and the KISS TNC.
+
+"
+                    + "Every beacon and APRS transmission is written to Download/DMR/APRS/aprs_tx_log.txt (time, channel and power, lead-in, GPS fix age, "
+                    + "whether the radio keyed and how much of the packet audio went out): share that file when reporting a problem.");
             leadHelp.setTextSize(12); leadHelp.setTextColor(0xFF999999);
             mainLayout.addView(leadHelp);
 
@@ -10860,6 +10864,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                     isTransmitting = true;
                                     ChannelScanner.stop("PTT");
                                     XposedBridge.log(TAG + ": SEND_START detected");
+                                    if (aprsTxActive) txLogKeyedAt = System.currentTimeMillis();
                                     startTxTimer();
                                     activityType = "📻 Voice TX";
                                     showActivity = true;
@@ -15813,6 +15818,27 @@ public class MainHook implements IXposedHookLoadPackage {
         } catch (Throwable t) { return "channel unknown"; }
     }
 
+    /**
+     * APRS TX log for users: Download/DMR/APRS/aprs_tx_log.txt, one line per beacon tick and per packet transmission
+     * (time, what, channel and power, lead-in, GPS fix age, whether the radio keyed, how much of the audio went out).
+     * Added 2026-10-20 for a field report (beacons on a drive barely heard): it shows whether beacons fired at all
+     * with the screen off. Kept under ~512 kB (the older half is dropped).
+     */
+    private static volatile long txLogKeyedAt;
+    static void aprsTxLog(String line) {
+        try {
+            File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "DMR/APRS");
+            if (!dir.exists()) dir.mkdirs();
+            File f = new File(dir, "aprs_tx_log.txt");
+            if (f.length() > 512 * 1024) {
+                byte[] all = java.nio.file.Files.readAllBytes(f.toPath());
+                java.nio.file.Files.write(f.toPath(), java.util.Arrays.copyOfRange(all, all.length / 2, all.length));
+            }
+            String ts = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(new java.util.Date());
+            try (java.io.FileWriter w = new java.io.FileWriter(f, true)) { w.write(ts + "  " + line + "\n"); }
+        } catch (Throwable t) { XposedBridge.log(TAG + ": [aprs-txlog] " + t.getMessage()); }
+    }
+
     /** Longest audio we will key for: the firmware stops TX at 30 s, keep margin for key-up + lead-in. */
     private static final int TX_MAX_AUDIO_MS = 28500;
 
@@ -15878,6 +15904,7 @@ public class MainHook implements IXposedHookLoadPackage {
             if (reps < 1) reps = 1;
             if (currentChannelIsDigital()) {
                 XposedBridge.log(TAG + ": [aprs-msg] REFUSED: current channel is digital (" + describeTxChannel() + ") — " + humanLabel);
+                aprsTxLog("REFUSED (digital channel) " + humanLabel);
                 if (toast) try { Toast.makeText(ctx, "APRS needs an analog channel: the current channel is digital", Toast.LENGTH_LONG).show(); } catch (Throwable ignored) { }
                 return -1;
             }
@@ -15905,12 +15932,19 @@ public class MainHook implements IXposedHookLoadPackage {
             ctx.sendBroadcast(new android.content.Intent("com.interphone.ptt.down"));
             XposedBridge.log(TAG + ": [aprs-msg] TX start frame=" + frame.length + "B afsk=" + afsk.length
                     + " lead=" + leadMs + "ms reps=" + reps + " total=" + src.length + " (~" + durationMs + "ms) on " + describeTxChannel() + ": " + humanLabel);
+            final long keyedAt = System.currentTimeMillis(); txLogKeyedAt = 0;
+            final int totalSamples = src.length;
+            aprsTxLog("TX   " + humanLabel + "  |  " + describeTxChannel() + ", lead-in " + leadMs + " ms, " + reps + "x, ~" + durationMs + " ms");
 
             final android.content.Context appCtx = ctx.getApplicationContext();
             final int holdMs = durationMs + 600;   // packet + tail margin (recording already running)
             new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(new Runnable() {
                 @Override public void run() {
                     try { appCtx.sendBroadcast(new android.content.Intent("com.interphone.ptt.up")); } catch (Throwable ignored) { }
+                    int sent = aprsTxPos;
+                    long k = txLogKeyedAt;
+                    aprsTxLog("DONE " + (k >= keyedAt ? "radio keyed after " + (k - keyedAt) + " ms" : "radio did NOT report keying")
+                            + ", audio sent " + Math.min(100, sent * 100L / Math.max(1, totalSamples)) + " %" + (sent == 0 ? " (the mic path never ran: nothing modulated)" : ""));
                     aprsTxActive = false;
                     aprsTxSamples = null;
                     aprsTxPos = 0; aprsTxFrac = 0;
@@ -15923,6 +15957,7 @@ public class MainHook implements IXposedHookLoadPackage {
             aprsTxActive = false;
             aprsTxSamples = null;
             XposedBridge.log(TAG + ": [aprs-msg] TX error: " + t.getMessage());
+            aprsTxLog("ERR  " + humanLabel + ": " + t.getMessage());
             if (toast) try { Toast.makeText(ctx, "TX failed: " + t.getMessage(), Toast.LENGTH_LONG).show(); } catch (Throwable ignored) { }
             return -1;
         }
@@ -16480,6 +16515,8 @@ public class MainHook implements IXposedHookLoadPackage {
                     android.location.Location last = getCurrentLocation(activity), live = beaconFix;
                     final android.location.Location loc = live != null && (last == null || live.getTime() >= last.getTime()) ? live : last;
                     if (loc != null) XposedBridge.log(TAG + ": [aprs-beacon] tick, fix " + ((System.currentTimeMillis() - loc.getTime()) / 1000) + " s old");
+                    aprsTxLog("BEACON tick" + (loc == null ? ": no GPS fix, skipped" : ", GPS fix " + ((System.currentTimeMillis() - loc.getTime()) / 1000) + " s old"
+                            + (beaconUseAprsFreq ? ", tuning " + (beaconFreqHz / 1e6) + " MHz" : ", current channel")));
                     if (beaconUseAprsFreq) {
                         // blip to the APRS freq for this beacon, then restore the user's channel
                         captureTxFreqBackup();
