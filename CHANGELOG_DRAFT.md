@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Module: Share APRS log button
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| R | Owner: the user should get the log with one tap and attach it to a forum post or PM. APRS Settings → **📤 Share APRS log**: builds a copy of `aprs_tx_log.txt` with a header (module version, phone, Android/SDK, APRS frequency, lead-in, auto-ack, digipeater, beacon state and interval), **positions blanked** (`ddmm.mmN` / `dddmm.mmW` and decimal pairs → `####.##N` …; fix ages, times and frequencies kept), writes it to Download/DMR/APRS through **MediaStore** (a `content://` link the share menu can read; plain file paths are refused between apps; Android 8/9 fall back to a file link) and opens the share sheet (subject "DMRModHooks APRS TX log (version)"). | `DMRModHooks/…/MainHook.java` | Built (`assembleDebug`); blanking patterns checked on sample lines (coordinates gone, "144.3900 MHz", fix ages and times intact). Not run on a device (the phone runs SignalDeck) |
+
 ## 2026-10-20 — Module: APRS TX log file for field reports
 
 | Backlog | Change | Files | Test |
