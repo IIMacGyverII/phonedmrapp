@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Module: APRS transmit power setting
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| R | Owner: the advice "set the channel you're on to high power" should be a setting instead. When the module tunes to the APRS frequency, the beacon blip, Send Message on the APRS frequency and the KISS session kept the **current channel's** power (APRS monitoring forced high). APRS Settings → **APRS transmit power**: High (default) / Low / Same as the current channel (pref `tx_power` 1/0/−1), applied to the beacon, messages, the KISS session and monitoring mode (auto-acks, digipeater). Beacons and messages sent on the "current channel" keep that channel's power. The shared log's header shows the setting. | `DMRModHooks/…/MainHook.java` | **On the owner's phone** (stock app + module, module APRS frequency set to 467.625 for the test and restored to 144.390 after; channel Family Analog at high power): Low → log `467.6250 MHz analog, low power`, keyed after 269 ms, 100 % audio; High → `high power`, keyed 223 ms, 100 %. Cleanup: test log deleted, SignalDeck took the radio back, ISS SSTV restarted |
+
 ## 2026-10-20 — Module: Share APRS log button
 
 | Backlog | Change | Files | Test |
