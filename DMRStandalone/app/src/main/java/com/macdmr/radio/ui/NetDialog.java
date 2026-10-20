@@ -122,7 +122,8 @@ public final class NetDialog {
             String cs = call.getText().toString().trim().toUpperCase(Locale.US);
             if (cs.isEmpty()) return;
             String nm = ""; for (Logbook.Entry e : svc.logbook().list(300, false)) if (e.call.equals(Logbook.baseCall(cs) == null ? cs : Logbook.baseCall(cs)) && e.name != null && !e.name.isEmpty()) { nm = e.name; break; }
-            svc.nets().checkIn(n, cs, nm); call.setText(""); fill[0].run();
+            NetStore.CheckIn k = svc.nets().checkIn(n, cs, nm); call.setText(""); fill[0].run();
+            if (nm.isEmpty()) svc.enrichCall(cs, i -> { if (k.name == null || k.name.isEmpty()) { k.name = i.name; svc.nets().save(k); new android.os.Handler(Looper.getMainLooper()).post(fill[0]); } });   // the name from HamDB
         });
         final Handler h = new Handler(Looper.getMainLooper());
         final Runnable tick = new Runnable() { @Override public void run() { long s = (System.currentTimeMillis() - n.start) / 1000; clock.setText(String.format(Locale.US, "Net running %d:%02d", s / 60, s % 60)); h.postDelayed(this, 1000); } };

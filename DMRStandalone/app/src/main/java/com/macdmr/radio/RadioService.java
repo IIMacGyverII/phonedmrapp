@@ -137,6 +137,23 @@ public class RadioService extends Service implements RadioEngine.Events {
         }
     }
 
+    // ---- callsign lookup (HamDB) ----
+    private com.macdmr.radio.ham.CallLookup lookup;
+    public com.macdmr.radio.ham.CallLookup callLookup() { if (lookup == null) lookup = new com.macdmr.radio.ham.CallLookup(this); return lookup; }
+    public boolean lookupOnline() { return getSharedPreferences("radio", MODE_PRIVATE).getBoolean("lookupOnline", true); }
+    public void setLookupOnline(boolean on) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("lookupOnline", on).apply(); }
+    private final java.util.concurrent.ExecutorService lookups = java.util.concurrent.Executors.newSingleThreadExecutor(r -> { Thread t = new Thread(r, "call-lookup"); t.setDaemon(true); return t; });
+    /** Look a callsign up in the background and fill in the logbook (and {@code then}, with the result, on the worker). */
+    public void enrichCall(final String call, final java.util.function.Consumer<com.macdmr.radio.ham.CallLookup.Info> then) {
+        if (!lookupOnline() || com.macdmr.radio.ham.Logbook.baseCall(call) == null) return;
+        lookups.execute(() -> {
+            com.macdmr.radio.ham.CallLookup.Info i = callLookup().lookup(call);
+            if (i == null || !i.found) return;
+            try { logbook().enrich(call, i.name, i.grid, i.place()); } catch (Throwable t) { log("lookup: " + t); }
+            if (then != null) then.accept(i);
+        });
+    }
+
     // ---- nets (net control) ----
     private com.macdmr.radio.ham.NetStore nets;
     public com.macdmr.radio.ham.NetStore nets() { if (nets == null) nets = new com.macdmr.radio.ham.NetStore(this); return nets; }
@@ -149,7 +166,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     void logHeardStation(String call, String mode, String note) {
         if (!logHeard()) return;
         ChannelStore.Channel c = current;
-        try { logbook().heard(call, c != null ? c.rxFreq : 0, mode, null, note); } catch (Throwable t) { log("logbook: " + t); }
+        try { logbook().heard(call, c != null ? c.rxFreq : 0, mode, null, note); enrichCall(call, null); } catch (Throwable t) { log("logbook: " + t); }
     }
 
     // ---- fox hunt: the hunter's marks, the fox beacon and the off-frequency trick ----
@@ -1189,7 +1206,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         String t = (type == 1 ? "TG " + target : type == 2 ? "All call" : "Private") ;
         String who = callerName(caller);
         history("dmr", "📻 Voice RX " + t + " from " + (who.isEmpty() ? String.valueOf(caller) : who + " (" + caller + ")"));
-        if (logHeard()) { RadioIdStore.Record rr = radioId != null ? radioId.lookup(caller) : null; ChannelStore.Channel lc = current; if (rr != null && rr.callsign != null && !rr.callsign.isEmpty()) try { logbook().heard(rr.callsign, lc != null ? lc.rxFreq : 0, "DMR", rr.first, t + ", DMR ID " + caller); } catch (Throwable x) { log("logbook: " + x); } }
+        if (logHeard()) { RadioIdStore.Record rr = radioId != null ? radioId.lookup(caller) : null; ChannelStore.Channel lc = current; if (rr != null && rr.callsign != null && !rr.callsign.isEmpty()) try { logbook().heard(rr.callsign, lc != null ? lc.rxFreq : 0, "DMR", rr.first, t + ", DMR ID " + caller); enrichCall(rr.callsign, null); } catch (Throwable x) { log("logbook: " + x); } }
         ui.post(() -> { for (Listener l : listeners) l.onCaller((who.isEmpty() ? "ID " + caller : who + "  " + caller) + "  " + t); });
         if (voiceOn() && !who.isEmpty()) say(who.split(" ")[0]);
     }
