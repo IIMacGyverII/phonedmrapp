@@ -57,6 +57,8 @@ public final class PacketEngine {
         void dtmfSequence(String digits);
         /** A station identified itself (APRS source, Morse ID): for the logbook. */
         void logHeard(String call, String mode, String note);
+        /** The station identified (a Morse ID went out): restarts the ten-minute ID timer. */
+        void identified();
     }
 
     public static final int TX_LEAD_MS = 1600, TX_REPS = 2, TX_GAP_MS = 250;
@@ -494,14 +496,14 @@ public final class PacketEngine {
     /** Morse ID audio to append now, or null when none is due (or no callsign is set). */
     public short[] cwIdIfDue(long now) {
         if (!cwIdEnabled() || !callsignSet() || (lastCwIdMs != 0 && now - lastCwIdMs < 10 * 60_000L)) return null;
-        lastCwIdMs = now;
+        lastCwIdMs = now; host.identified();
         return com.macdmr.radio.coverage.Morse.pcm(callsign(), 20, 800);
     }
     /** Transmit the callsign in Morse now on the current channel. Error text or null. */
     public String sendCwId() {
         if (!callsignSet()) return "Set your callsign first (PKT \u2192 Settings)";
         if (!host.analogRx()) return "Morse needs an analog channel";
-        lastCwIdMs = System.currentTimeMillis();
+        lastCwIdMs = System.currentTimeMillis(); host.identified();
         short[] m = com.macdmr.radio.coverage.Morse.pcm(callsign(), 20, 800), pcm = new short[SR * 13 / 10 + m.length];   // the TX path needs ~1.5 s after key-up: silence first, or the first letters are lost
         System.arraycopy(m, 0, pcm, SR * 13 / 10, m.length);
         host.transmitPcm(pcm, "Morse ID", () -> host.event("\uD83D\uDD24 Sent Morse ID " + callsign()));

@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Voice keyer and ID timer; fewer false Morse decodes
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | **PKT → Voice keyer** (`ham/VoiceKeyer.java`, `ui/KeyerDialog.java`): three named slots recorded from the phone mic (8 kHz mono, ≤ 25 s, edges trimmed unless that leaves under 0.5 s, peak-normalized), Listen on the phone, Send on the current analog channel with a 1.5 s lead and an optional Morse ID on amateur channels (capped at 28 s). **ID timer**: on amateur channels, starts with the first transmission after the last identification; after 10 minutes the key-down vibrates, toasts and logs "⏰ Time to identify" (at most every 2 min; not when Morse ID after I talk is on); any Morse ID (PKT, keyer, after talking) resets it via `Host.identified()`, or "I just identified"; PKT and the keyer show the time left. `VIBRATE` permission added. **Morse decoder:** a decode must now contain a callsign-shaped word, or be ≥ 8 characters with ≥ 4 different letters: a real reception on channel 1 had produced "EN EE E" from paging tones. Help updated. | `ham/VoiceKeyer.java`, `ui/KeyerDialog.java` (new), `RadioService.java`, `PacketEngine.java`, `ham/CwDecoder.java`, `ui/PktDialog.java`, `ui/HelpView.java`, `AndroidManifest.xml`; test `CwDecoderTest` (+ stray dits) | Unit tests pass. On the phone: the keyer sheet, a recording, and Send transmitted 1.6 s on Family Analog; the test recording was deleted. ID-timer reminder not seen live (needs 10 minutes of talking on an amateur channel) |
+
 ## 2026-10-20 — APRS text and email gateways
 
 | Backlog | Change | Files | Test |

@@ -99,6 +99,44 @@ public class RadioService extends Service implements RadioEngine.Events {
     private volatile int parrotChannel = -1;
     private volatile long txStartedAt;
 
+    // ---- voice keyer and the ten-minute identification timer ----
+    private final com.macdmr.radio.ham.VoiceKeyer keyer = new com.macdmr.radio.ham.VoiceKeyer(this);
+    public com.macdmr.radio.ham.VoiceKeyer keyer() { return keyer; }
+    /** Transmit a recorded keyer message (with the Morse ID after it when set and on an amateur channel). Error or null. */
+    public String sendKeyer(int slot) {
+        short[] p = keyer.pcm(slot);
+        if (p == null || p.length == 0) return "Nothing recorded in " + keyer.name(slot);
+        ChannelStore.Channel c = current;
+        if (c == null || c.isDigital()) return "The voice keyer needs an analog FM channel";
+        if (txInhibited()) return "This channel is receive-only";
+        boolean id = keyer.addId(slot) && amateurBand(c.txFreq) && packet != null && packet.callsignSet();
+        short[] m = id ? com.macdmr.radio.coverage.Morse.pcm(packet.callsign(), 20, 800) : new short[0];
+        int lead = 12000, gap = id ? 2400 : 0;                                   // 1.5 s: the radio passes audio only ~1.5 s after keying
+        int voiceN = Math.min(p.length, 8000 * 28 - lead - gap - m.length);
+        short[] out = new short[lead + voiceN + gap + m.length];
+        System.arraycopy(p, 0, out, lead, voiceN); System.arraycopy(m, 0, out, lead + voiceN + gap, m.length);
+        final String nm = keyer.name(slot); final boolean sentId = id;
+        transmitPcm(out, "voice keyer: " + nm, () -> { history("pkt", "\uD83C\uDF99 Voice keyer sent: " + nm + (sentId ? " + Morse ID" : "")); if (sentId) markIdentified(); });
+        return null;
+    }
+    public static final long ID_EVERY_MS = 10 * 60_000L;
+    private volatile long idClockFrom, lastIdReminder;                       // first transmission since the last identification
+    public void markIdentified() { idClockFrom = 0; }
+    /** Milliseconds until the next identification is due (negative: overdue), or Long.MAX_VALUE when the timer is not running. */
+    public long idDueInMs() { long f = idClockFrom; return f == 0 ? Long.MAX_VALUE : f + ID_EVERY_MS - System.currentTimeMillis(); }
+    private void idTimerOnKey() {
+        ChannelStore.Channel c = current;
+        if (c == null || !amateurBand(c.txFreq) || packet == null || !packet.callsignSet()) return;
+        long now = System.currentTimeMillis();
+        if (idClockFrom == 0) { idClockFrom = now; return; }
+        if (now - idClockFrom >= ID_EVERY_MS && !packet.cwIdEnabled() && now - lastIdReminder > 120_000) {
+            lastIdReminder = now;
+            try { android.os.Vibrator v = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE); if (v != null) v.vibrate(android.os.VibrationEffect.createWaveform(new long[] { 0, 120, 80, 120 }, -1)); } catch (Throwable ignored) { }
+            ui.post(() -> android.widget.Toast.makeText(this, "Give your callsign: it has been 10 minutes since you identified", android.widget.Toast.LENGTH_LONG).show());
+            history("pkt", "\u23F0 Time to identify: 10 minutes since your last ID");
+        }
+    }
+
     // ---- logbook ----
     private com.macdmr.radio.ham.Logbook logbook;
     public com.macdmr.radio.ham.Logbook logbook() { if (logbook == null) logbook = new com.macdmr.radio.ham.Logbook(this); return logbook; }
@@ -271,6 +309,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         @Override public int rssiDbm() { return rssi; }
         @Override public void wantLocation(boolean on) { ui.post(() -> aprsLocation(on)); }
         @Override public void logHeard(String call, String mode, String note) { RadioService.this.logHeardStation(call, mode, note); }
+        @Override public void identified() { markIdentified(); }
         @Override public void dtmfSequence(String digits) { if (packet != null) remote.handle(digits, packet.remotePin(), packet.remoteOn(), System.currentTimeMillis()); }
     };
 
@@ -1025,6 +1064,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                     if (pttDown) return;
                     pttDown = true; refreshControls();
                     txChannel = current; txInCar = inCar; txCharging = charging(); txDropNoted = false; txStartedAt = System.currentTimeMillis();
+                    idTimerOnKey();
                     if (audio != null) audio.stopRx();              // never play the RX stream while the mic is live (feedback)
                     boolean carMic = inCar && carMic() && startBluetoothMic();   // in the car: its microphone, through the hands-free link
                     if (audio != null) audio.setTxSource(carMic ? android.media.MediaRecorder.AudioSource.VOICE_COMMUNICATION : android.media.MediaRecorder.AudioSource.MIC);

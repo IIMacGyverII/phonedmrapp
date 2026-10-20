@@ -35,7 +35,7 @@ public class CwDecoderTest {
     }
 
     @Test public void startsWithADah() {
-        assertEquals("[TEST]", run(Morse.pcm("TEST", 18, 700), 200).toString());
+        assertEquals("[TEST DE K0ABC]", run(Morse.pcm("TEST DE K0ABC", 18, 700), 200).toString());
         assertEquals("[KD0XYZ]", run(Morse.pcm("KD0XYZ", 22, 900), 200).toString());
     }
 
@@ -45,6 +45,12 @@ public class CwDecoderTest {
         short[] pcm = Morse.pcm("PARIS PARIS", 20, 800);
         d.process(pcm); d.process(new short[16000]);
         assertTrue("about 20 WPM, was " + wpm[0], wpm[0] >= 17 && wpm[0] <= 23);
+    }
+
+    @Test public void ignoresStrayDitsWithoutACallsign() {
+        assertEquals("[]", run(Morse.pcm("EN EE E", 28, 600), 200).toString());
+        assertEquals("[CQ TEST DE W1AW]", run(Morse.pcm("CQ TEST DE W1AW", 20, 700), 200).toString());
+        assertEquals("plain text of 8+ characters", "[THE QUICK BROWN]", run(Morse.pcm("THE QUICK BROWN", 20, 700), 200).toString());
     }
 
     @Test public void ignoresNoiseVoiceAndDtmf() {

@@ -106,6 +106,13 @@ public final class PktDialog {
         button(fr, "Fox hunt", Theme.SOFTSQ, x -> { dlg.dismiss(); FoxHuntDialog.show(c, svc); });
         body.addView(fr);
         body.addView(hint((svc.foxTxOn() ? "\uD83E\uDD8A The fox beacon is on. " : "") + "Find a hidden transmitter: live signal strength, compass bearings and an estimate of where the fox is. Or be the fox."));
+        // ---- voice keyer ----
+        body.addView(section("Voice keyer and ID timer"));
+        LinearLayout kr = row();
+        button(kr, "Voice keyer", Theme.SOFTSQ, x -> { dlg.dismiss(); KeyerDialog.show(c, svc); });
+        body.addView(kr);
+        long due = svc.idDueInMs();
+        body.addView(hint("Record a CQ, a net preamble or your ID once and send it with one tap. " + (due == Long.MAX_VALUE ? "The ID timer starts when you talk on an amateur channel." : due > 0 ? String.format(Locale.US, "Identify within %d:%02d.", due / 60000, due / 1000 % 60) : "Identification is due now.")));
         // ---- Morse ----
         body.addView(section("Morse"));
         LinearLayout mr = row();
