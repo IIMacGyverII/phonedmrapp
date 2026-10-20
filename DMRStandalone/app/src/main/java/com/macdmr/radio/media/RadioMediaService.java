@@ -29,7 +29,7 @@ public class RadioMediaService extends MediaBrowserServiceCompat {
     @Override public BrowserRoot onGetRoot(@NonNull String clientPackageName, int clientUid, Bundle rootHints) {
         android.util.Log.i("RadioMediaService", "root for " + clientPackageName);
         RadioService rs = RadioService.running;
-        if (rs != null && clientPackageName != null && clientPackageName.contains("gearhead")) rs.carEvent("🚗 Android Auto opened the media app");
+        if (rs != null && clientPackageName != null && clientPackageName.contains("gearhead")) { rs.carMediaBound(); rs.carEvent("🚗 Android Auto opened the media app"); }
         Bundle extras = new Bundle();
         extras.putBoolean("android.media.browse.CONTENT_STYLE_SUPPORTED", true);
         extras.putBoolean("android.media.browse.SEARCH_SUPPORTED", true);

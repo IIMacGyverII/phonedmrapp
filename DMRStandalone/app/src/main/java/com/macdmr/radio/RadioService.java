@@ -1140,6 +1140,21 @@ public class RadioService extends Service implements RadioEngine.Events {
         com.macdmr.radio.car.AutoTrust.notifyUsbDrop(this, ch.name, freq, car || txInCar);
     }
 
+    // ---- Android Auto connected but never loaded the radio ----------------------------------------------
+    // Measured 2026-10-19: on every working connection Android Auto binds the media service within ~7 s of connecting
+    // (12 of 12). Once, with Unknown sources on, it never did: the radio was missing from the car's app list and its card
+    // opened the phone app, until the cable was unplugged and plugged in again. Nothing in the app can make Android Auto
+    // load it, so the user is told how to recover.
+    private volatile long carMediaBoundAt;
+    public void carMediaBound() { carMediaBoundAt = System.currentTimeMillis(); try { androidx.core.app.NotificationManagerCompat.from(this).cancel("notloaded", 10); } catch (Throwable ignored) { } }
+    private final Runnable carBindCheck = () -> {
+        if (!inCar || System.currentTimeMillis() - carMediaBoundAt < 60_000) return;
+        com.macdmr.radio.car.AutoTrust.State st = com.macdmr.radio.car.AutoTrust.last();
+        if (st == com.macdmr.radio.car.AutoTrust.State.OFF || st == com.macdmr.radio.car.AutoTrust.State.LOCKED) return;   // that alert already explains it
+        carEvent("⚠️ Android Auto did not load DMR Radio on this connection: unplug the cable and plug it in again");
+        com.macdmr.radio.car.AutoTrust.notifyNotLoaded(this);
+    };
+
     private void watchCar() {
         try {
             new androidx.car.app.connection.CarConnection(this).getType().observeForever(t -> {
@@ -1149,6 +1164,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                 if (!car && txJustNow()) usbDropDuringTx(true);
                 carEvent(car ? "🚗 Android Auto connected (" + (carControlsScreen() ? "Radio controls screen" : "media app") + ")" : "🚗 Android Auto disconnected");
                 carCoverage(car);
+                ui.removeCallbacks(carBindCheck); if (car) ui.postDelayed(carBindCheck, 30_000);
                 if (car) new Thread(() -> {   // a sideloaded app stays off the car's app list unless Unknown sources is on
                     com.macdmr.radio.car.AutoTrust.State st = com.macdmr.radio.car.AutoTrust.check(this);
                     if (st == com.macdmr.radio.car.AutoTrust.State.OFF || st == com.macdmr.radio.car.AutoTrust.State.LOCKED) {
