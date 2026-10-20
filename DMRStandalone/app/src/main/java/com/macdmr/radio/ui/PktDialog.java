@@ -97,6 +97,12 @@ public final class PktDialog {
         button(tr, "Terminal (BBS, node)", Theme.SOFTSQ, x -> { dlg.dismiss(); TerminalDialog.show(c, svc); });
         body.addView(tr);
         body.addView(hint("Connect to a packet bulletin board or node on this channel: " + pe.terminalState() + "."));
+        // ---- licence exam practice ----
+        body.addView(section("Licence exam practice"));
+        LinearLayout xr2 = row();
+        button(xr2, "Exam practice", Theme.SOFTSQ, x -> { dlg.dismiss(); ExamDialog.show(c); });
+        body.addView(xr2);
+        body.addView(hint("Technician, General and Extra question pools: practice exams, study by subelement, review what you missed."));
         // ---- logbook ----
         body.addView(section("Logbook"));
         LinearLayout lr = row();
