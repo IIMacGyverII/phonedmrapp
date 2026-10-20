@@ -96,6 +96,12 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         addRow(set, Neo.switchRow(c, "signal", Neo.VIOLET, "Coverage logging", "Records signal and key-ups with GPS for the coverage maps (Map → Coverage)", covSw));
         addRow(set, Neo.switchRow(c, "ptt", Neo.AMBER, "Car microphone in Android Auto", "Talk uses the car's microphone through its hands-free link", carMicSw));
         carMicSw.setOnChange(on -> { if (svc != null) svc.setCarMic(on); });
+        autoWarn = Neo.switchRow(c, "alert", Neo.AMBER, "Android Auto is hiding this app", "Unknown sources is off, so the car does not list DMR Radio. Tap for the fix", null);
+        autoWarnDiv = new View(c); autoWarnDiv.setBackgroundColor(Neo.DIVIDER);
+        set.addView(autoWarnDiv, new LayoutParams(LayoutParams.MATCH_PARENT, 1)); set.addView(autoWarn);
+        autoWarn.setOnClickListener(v -> autoTrustSheet());
+        autoWarn.setVisibility(GONE); autoWarnDiv.setVisibility(GONE);
+        checkAutoTrust();
         addRow(set, Neo.switchRow(c, "signal", Neo.VIOLET, "Log coverage in the car", "Coverage logging while Android Auto is connected", carCovSw));
         carCovSw.setOnChange(on -> { if (svc != null) svc.setCoverageInCar(on); });
         addRow(set, Neo.switchRow(c, "ptt", Neo.RED, "Steering-wheel play/pause talks", "In Android Auto: the wheel's play/pause starts and stops transmitting", wheelSw));
@@ -340,8 +346,40 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
     @Override protected void onVisibilityChanged(android.view.View changed, int visibility) {
         super.onVisibilityChanged(changed, visibility);
         if (visibility == VISIBLE && svc != null && covSw != null) covSw.setChecked(svc.coverage().enabled());
+        if (visibility == VISIBLE && autoWarn != null) checkAutoTrust();   // also after coming back from Android Auto's settings
     }
     public void detach() { if (svc != null) svc.removeListener(this); svc = null; }
+
+    // ---- Android Auto trust: the warning row shows only while Android Auto would hide the app ----
+    private LinearLayout autoWarn; private View autoWarnDiv;
+    @Override protected void onWindowVisibilityChanged(int visibility) {
+        super.onWindowVisibilityChanged(visibility);
+        if (visibility == VISIBLE && autoWarn != null && isShown()) checkAutoTrust();
+    }
+    private void checkAutoTrust() {
+        final Context app = getContext().getApplicationContext();
+        new Thread(() -> {
+            com.macdmr.radio.car.AutoTrust.State st = com.macdmr.radio.car.AutoTrust.check(app);
+            post(() -> {
+                boolean hidden = st == com.macdmr.radio.car.AutoTrust.State.OFF || st == com.macdmr.radio.car.AutoTrust.State.LOCKED;
+                if (autoWarn != null) { autoWarn.setVisibility(hidden ? VISIBLE : GONE); autoWarnDiv.setVisibility(hidden ? VISIBLE : GONE); }
+                if (st == com.macdmr.radio.car.AutoTrust.State.OK) com.macdmr.radio.car.AutoTrust.clearNotice(app);
+            });
+        }, "autotrust").start();
+    }
+    private void autoTrustSheet() {
+        Context c = getContext(); float d = Theme.dp(c);
+        LinearLayout box = Neo.sheetBody(c, "Show the radio in the car");
+        box.addView(Neo.sheetHint(c, "Android Auto only trusts apps installed from the Play Store. For DMR Radio it plays the sound and the steering-wheel buttons work, but the app is missing from the car's app list and tapping its card opens the app on the phone."));
+        box.addView(Neo.sheetHint(c, com.macdmr.radio.car.AutoTrust.steps(com.macdmr.radio.car.AutoTrust.last())));
+        TextView open = Neo.button(c, "Open Android Auto settings", "intercom", Neo.AMBER);
+        TextView again = Neo.button(c, "Check again", "update", Neo.CYAN);
+        LayoutParams bl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); bl.setMargins(0, (int) (10 * d), 0, 0);
+        box.addView(open, bl); box.addView(again, new LayoutParams(bl));
+        final android.app.Dialog dlg = Neo.showSheet(c, box);
+        open.setOnClickListener(v -> { try { c.startActivity(com.macdmr.radio.car.AutoTrust.settingsIntent(c)); } catch (Throwable t) { android.widget.Toast.makeText(c, "Could not open Android Auto: " + t.getMessage(), android.widget.Toast.LENGTH_LONG).show(); } });
+        again.setOnClickListener(v -> { dlg.dismiss(); checkAutoTrust(); });
+    }
 
     private void refresh() {
         if (svc == null) return;

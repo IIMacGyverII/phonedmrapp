@@ -129,11 +129,12 @@ public final class RepeatersDialog {
             }, "repeater-tgs").start();
         }
         LinearLayout row = row();
+        // the result goes to the main thread directly, not list.post: from the map (showDetails) there is no list
         button(row, "Add to my channels", Theme.PKT, x -> {
             Plan p = rs.plan(r, talk);
             if (p.channels.isEmpty()) { toast(p.warnings.isEmpty() ? "Nothing to program" : p.warnings.get(0)); return; }
             new AlertDialog.Builder(c).setTitle("Add " + nz(r.callsign) + "?").setMessage(RepeaterService.preview(p))
-                    .setPositiveButton("Add", (dd, w) -> new Thread(() -> { final String res = rs.program(r, p); list.post(() -> { toast(res); if (sub != null) sub.dismiss(); }); }).start())
+                    .setPositiveButton("Add", (dd, w) -> new Thread(() -> { final String res = rs.program(r, p); new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> { toast(res); if (sub != null) sub.dismiss(); }); }).start())
                     .setNegativeButton("Cancel", null).show();
         });
         button(row, "Map", Theme.SOFTSQ, x -> { try { c.startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(String.format(Locale.US, "geo:%f,%f?q=%f,%f(%s)", r.lat, r.lon, r.lat, r.lon, android.net.Uri.encode(nz(r.callsign)))))); } catch (Throwable t) { toast("No map app"); } });
