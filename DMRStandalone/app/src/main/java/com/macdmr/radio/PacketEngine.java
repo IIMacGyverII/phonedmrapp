@@ -65,6 +65,8 @@ public final class PacketEngine {
     /** Packet lead-in choices (APRS settings, for testing): the measured 1.6 s by default. SSTV and DTMF keep TX_LEAD_MS. */
     public static final int[] LEAD_CHOICES = { 1600, 1000, 500, 0 };
     public static final String[] LEAD_NAMES = { "1.6 s (default)", "1.0 s", "0.5 s", "None" };
+    /** Power on the frequencies the app tunes itself (APRS monitoring, ISS, SSTV 144.500): 1 high (default), 0 low. */
+    public int dataTxPower() { return prefs.getInt("txPower", 1) == 0 ? 0 : 1; }
     public int packetLeadMs() { return Math.max(0, Math.min(3000, prefs.getInt("txLeadMs", TX_LEAD_MS))); }
     public static final int APRS_FREQ_HZ = 144_390_000;
     private static final String TAG = "PacketEngine";

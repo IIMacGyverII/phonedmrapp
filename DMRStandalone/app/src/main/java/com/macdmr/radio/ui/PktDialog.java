@@ -498,6 +498,10 @@ public final class PktDialog {
         final String[] modes = { "Off", "Flagged channels", "Every analog channel" };
         final int[] passive = { pe.passiveMode() };
         final TextView modeV = cycle(body, "Decode on", modes, passive[0], v -> passive[0] = v);
+        body.addView(section("Transmit power"));
+        final int[] power = { pe.dataTxPower() == 0 ? 1 : 0 };
+        cycle(body, "Power", new String[] { "High (default)", "Low" }, power[0], v -> power[0] = v);
+        body.addView(hint("Used on the frequencies the app tunes itself: APRS monitoring on 144.390 (automatic beacons, auto-acks, digipeats), ISS APRS and its beacon, and SSTV on 144.500. Messages and beacons sent from one of your channels use that channel's power."));
         body.addView(section("Packet lead-in (testing)"));
         final int[] lead = { 0 };
         for (int k = 0; k < PacketEngine.LEAD_CHOICES.length; k++) if (PacketEngine.LEAD_CHOICES[k] == pe.packetLeadMs()) lead[0] = k;
@@ -528,7 +532,7 @@ public final class PktDialog {
                         .putString("isServer", isServer.getText().toString().trim()).putInt("isPort", Integer.parseInt(isPort.getText().toString().trim()))
                         .putString("isPasscode", isPass.getText().toString().trim().isEmpty() ? "-1" : isPass.getText().toString().trim())
                         .putInt("isBeaconMin", Integer.parseInt(isMin.getText().toString().trim())).putString("isComment", isComment.getText().toString().trim())
-                        .putInt("txLeadMs", PacketEngine.LEAD_CHOICES[lead[0]]).putInt("autoBeacon", auto[0]).putInt("beaconMin", Math.max(1, Integer.parseInt(bMin.getText().toString().trim())))
+                        .putInt("txLeadMs", PacketEngine.LEAD_CHOICES[lead[0]]).putInt("txPower", power[0] == 1 ? 0 : 1).putInt("autoBeacon", auto[0]).putInt("beaconMin", Math.max(1, Integer.parseInt(bMin.getText().toString().trim())))
                         .putBoolean("telemetry", extra[0]).putBoolean("weather", extra[1]).putBoolean("txIgate", extra[2]).putString("groups", groups.getText().toString().trim().toUpperCase(Locale.US))
                         .putBoolean("autoAck", flags[0]).putBoolean("digipeat", flags[1]).putBoolean("dtmf", flags[2]).putBoolean("wx", flags[3]).putBoolean("cw", flags[4]).putBoolean("cwId", flags[5]).apply();
                 pe.applySettings();

@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — SignalDeck: transmit power setting for the frequencies it tunes itself
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Parity with the module's new APRS power setting. SignalDeck already used high power on every frequency it tunes itself (APRS monitoring on 144.390 with its automatic beacons, auto-acks and digipeats; ISS APRS and its beacon; SSTV 144.500); APRS settings → **Transmit power**: High (default) / Low (`txPower`), applied in `dataModeSquelch` to those channels. Messages and beacons sent from one of your channels keep that channel's power. Help (APRS) updated. | `PacketEngine.java`, `RadioService.java`, `ui/PktDialog.java`, `ui/HelpView.java` | On the phone (release): Low → Monitor 144.390 shows the VFO as **LOW PWR**; set back to High; nothing transmitted |
+
 ## 2026-10-20 — Module: APRS transmit power setting
 
 | Backlog | Change | Files | Test |
