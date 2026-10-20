@@ -62,6 +62,10 @@ public final class PacketEngine {
     }
 
     public static final int TX_LEAD_MS = 1600, TX_REPS = 2, TX_GAP_MS = 250;
+    /** Packet lead-in choices (APRS settings, for testing): the measured 1.6 s by default. SSTV and DTMF keep TX_LEAD_MS. */
+    public static final int[] LEAD_CHOICES = { 1600, 1000, 500, 0 };
+    public static final String[] LEAD_NAMES = { "1.6 s (default)", "1.0 s", "0.5 s", "None" };
+    public int packetLeadMs() { return Math.max(0, Math.min(3000, prefs.getInt("txLeadMs", TX_LEAD_MS))); }
     public static final int APRS_FREQ_HZ = 144_390_000;
     private static final String TAG = "PacketEngine";
     private static final int SR = 8000, WINDOW = SR * 2, OVERLAP = SR;
@@ -177,7 +181,7 @@ public final class PacketEngine {
 
     /** Re-read the settings that need a sensor or GPS running. */
     public void applySettings() {
-        host.wantLocation(autoBeacon() == 2);
+        updateGps();
         boolean needBaro = telemetryOn() || weatherOn();
         android.hardware.SensorManager sm = (android.hardware.SensorManager) host.context().getSystemService(Context.SENSOR_SERVICE);
         if (sm == null) return;
@@ -413,7 +417,7 @@ public final class PacketEngine {
     /** Frames of our own (no FCS yet) in one key-up: one settling lead, each frame once. */
     private void txFramesRaw(java.util.List<byte[]> frames, String label) {
         if (!host.analogRx()) { host.event("\u26D4 Not sent (" + label + "): packet needs an analog channel"); return; }
-        int lead = SR * TX_LEAD_MS / 1000, gap = SR * TX_GAP_MS / 1000;
+        int lead = SR * packetLeadMs() / 1000, gap = SR * TX_GAP_MS / 1000;
         java.util.List<short[]> parts = new java.util.ArrayList<>(); int total = lead;
         for (byte[] f : frames) { short[] a = AFSKGenerator.generateAFSKWithNRZI(Ax25.appendFcs(f)); parts.add(a); total += a.length + gap; }
         short[] src = new short[total];
@@ -596,7 +600,10 @@ public final class PacketEngine {
     }
 
     public boolean monitoring() { return monitor; }
-    public void setMonitoring(boolean on) { monitor = on; if (!on) { fill = 0; overlapTail = null; } }
+    public void setMonitoring(boolean on) { monitor = on; if (!on) { fill = 0; overlapTail = null; } updateGps(); }
+    /** GPS fixes while automatic beacons can go out (monitoring): a timed beacon used to send the last known
+     *  position, which goes stale when no other app keeps the GPS on (only SmartBeaconing asked for fixes). */
+    public void updateGps() { host.wantLocation(autoBeacon() != 0 && monitor); }
     public KissTnc kiss() { return kiss; }
 
     public String kissStart() {
@@ -810,7 +817,7 @@ public final class PacketEngine {
     private void txFrame(byte[] frame, String label, int reps, Runnable onDone) {
         if (!host.analogRx()) { host.event("⛔ Not sent (" + label + "): packet needs an analog channel, the current one is DMR"); return; }
         short[] afsk = AFSKGenerator.generateAFSKWithNRZI(frame);
-        int lead = SR * TX_LEAD_MS / 1000, gap = SR * TX_GAP_MS / 1000;
+        int lead = SR * packetLeadMs() / 1000, gap = SR * TX_GAP_MS / 1000;
         short[] src = new short[lead + reps * (afsk.length + gap)];
         for (int i = 0; i < lead; i++) src[i] = (short) (30000 * Math.sin(2.0 * Math.PI * 1200 * i / SR));
         int p = lead;
@@ -823,7 +830,7 @@ public final class PacketEngine {
     /** Several frames in one transmission (one settling lead): telemetry with its definitions. */
     private void txInfos(java.util.List<String> infos, String label, Runnable onDone) {
         if (!host.analogRx()) { host.event("⛔ Not sent (" + label + "): packet needs an analog channel, the current one is DMR"); return; }
-        int lead = SR * TX_LEAD_MS / 1000, gap = SR * TX_GAP_MS / 1000;
+        int lead = SR * packetLeadMs() / 1000, gap = SR * TX_GAP_MS / 1000;
         java.util.List<short[]> parts = new java.util.ArrayList<>(); int total = lead;
         for (String info : infos) { short[] a = AFSKGenerator.generateAFSKWithNRZI(Ax25.buildUiFrame("APZDMR", 0, callsign(), ssid(), path(), info.getBytes(java.nio.charset.StandardCharsets.US_ASCII))); parts.add(a); total += a.length + gap; }
         short[] src = new short[total];

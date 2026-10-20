@@ -208,6 +208,12 @@ public class MainHook implements IXposedHookLoadPackage {
     private static volatile int beaconSsid = 7;
     private static volatile String beaconComment = "";
     private static android.os.Handler beaconHandler = null;  // created lazily (never in <clinit> — Zygote)
+    // While the position beacon runs: keep the CPU awake (a main-looper timer stops in deep sleep, e.g. screen off in
+    // the car, so beacons stopped until the phone was picked up) and keep the GPS on (getLastKnownLocation alone repeats
+    // a stale fix when no other app uses the GPS). Both created lazily, released when the beacon stops.
+    private static android.os.PowerManager.WakeLock beaconWake = null;
+    private static android.location.LocationListener beaconGps = null;
+    private static volatile android.location.Location beaconFix = null;
     private static Runnable beaconRunnable = null;
     private static volatile boolean beaconUseAprsFreq = true;   // beacon on the APRS freq (vs current channel)
     private static volatile int beaconFreqHz = 144390000;
@@ -5783,6 +5789,24 @@ public class MainHook implements IXposedHookLoadPackage {
             passiveHelp.setTextSize(12); passiveHelp.setTextColor(0xFF999999);
             mainLayout.addView(passiveHelp);
 
+            TextView leadLabel = new TextView(activity);
+            leadLabel.setText("\nPacket lead-in (for testing):");
+            leadLabel.setTextSize(14);
+            mainLayout.addView(leadLabel);
+            final android.widget.Spinner leadSpin = new android.widget.Spinner(activity);
+            leadSpin.setAdapter(new android.widget.ArrayAdapter<String>(activity, android.R.layout.simple_spinner_dropdown_item,
+                    new String[]{ "1.6 s tone (default)", "1.0 s tone", "0.5 s tone", "No lead-in" }));
+            int curLead = activity.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE).getInt("tx_lead_ms", APRS_TX_LEAD_MS), leadIdx = 0;
+            for (int k = 0; k < APRS_LEAD_CHOICES.length; k++) if (APRS_LEAD_CHOICES[k] == curLead) leadIdx = k;
+            leadSpin.setSelection(leadIdx);
+            mainLayout.addView(leadSpin);
+            TextView leadHelp = new TextView(activity);
+            leadHelp.setText("A steady tone before each packet while this radio's transmit audio settles: measured on the bench, the audio is not on the air "
+                    + "for about 1.5 s after keying, and a packet sent without the lead-in did not decode. Shorter settings are for testing with your radio and "
+                    + "digipeaters; go back to the default if decodes get worse. Applies to messages, beacons, acks, the digipeater and the KISS TNC.");
+            leadHelp.setTextSize(12); leadHelp.setTextColor(0xFF999999);
+            mainLayout.addView(leadHelp);
+
             TextView infoText = new TextView(activity);
             infoText.setText("\nThe APRS frequency is used by APRS monitoring, Send Message, Position Beacon and the KISS TNC.\n\n" +
                            "📡 Receive: positions (incl. Mic-E and compressed), objects, messages, status and weather are decoded; stations are stored with callsign, location and time.\n" +
@@ -5843,6 +5867,7 @@ public class MainHook implements IXposedHookLoadPackage {
                         activity.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE)
                                 .edit().putBoolean("auto_ack", autoAckBox.isChecked())
                                 .putInt("passive_mode", passiveSpin.getSelectedItemPosition())
+                                .putInt("tx_lead_ms", APRS_LEAD_CHOICES[Math.max(0, Math.min(APRS_LEAD_CHOICES.length - 1, leadSpin.getSelectedItemPosition()))])
                                 .putBoolean("digipeat", digiBox.isChecked()).apply();
                         aprsPassiveMode = -1;   // reload on the next audio chunk
                         aprsDigiEnabled = digiBox.isChecked() ? 1 : 0;
@@ -15722,7 +15747,14 @@ public class MainHook implements IXposedHookLoadPackage {
     private static int transmitAprsPacket(final android.content.Context ctx, final String srcCall, final int srcSsid,
                                           final String[] path, final String info, final String humanLabel) {
         return transmitAprsPacket(ctx, srcCall, srcSsid, path, info, humanLabel,
-                APRS_TX_LEAD_MS, APRS_TX_REPS, APRS_TX_GAP_MS);
+                aprsLeadMs(ctx), APRS_TX_REPS, APRS_TX_GAP_MS);
+    }
+
+    /** Packet lead-in (APRS Settings, for testing): 1600 ms by default, as measured; 1000, 500 or 0 to try. */
+    static final int[] APRS_LEAD_CHOICES = { 1600, 1000, 500, 0 };
+    private static int aprsLeadMs(android.content.Context ctx) {
+        try { int v = ctx.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE).getInt("tx_lead_ms", APRS_TX_LEAD_MS); return Math.max(0, Math.min(3000, v)); }
+        catch (Throwable t) { return APRS_TX_LEAD_MS; }
     }
 
     /**
@@ -15758,7 +15790,7 @@ public class MainHook implements IXposedHookLoadPackage {
         System.arraycopy(ax25NoFcs, 0, frame, 0, ax25NoFcs.length);
         frame[ax25NoFcs.length] = (byte) (fcs & 0xFF);
         frame[ax25NoFcs.length + 1] = (byte) ((fcs >> 8) & 0xFF);
-        return txAfskFrame(ctx, frame, label, APRS_TX_LEAD_MS, reps, APRS_TX_GAP_MS, toast);
+        return txAfskFrame(ctx, frame, label, aprsLeadMs(ctx), reps, APRS_TX_GAP_MS, toast);
     }
 
     /** True when the radio's current channel is DMR (AFSK through the vocoder would arrive as garble). */
@@ -16421,11 +16453,33 @@ public class MainHook implements IXposedHookLoadPackage {
         final char symCode = aprsDb.getDefaultSymbolCode();
         beaconActive = true;
         if (beaconHandler == null) beaconHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+        try {
+            if (beaconWake == null) {
+                android.os.PowerManager pm = (android.os.PowerManager) activity.getApplicationContext().getSystemService(android.content.Context.POWER_SERVICE);
+                beaconWake = pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "dmrmod:aprsBeacon");
+                beaconWake.setReferenceCounted(false);
+            }
+            beaconWake.acquire();
+        } catch (Throwable t) { XposedBridge.log(TAG + ": [aprs-beacon] wake lock: " + t); }
+        try {
+            if (locationManager == null) locationManager = (android.location.LocationManager) activity.getSystemService(android.content.Context.LOCATION_SERVICE);
+            if (beaconGps == null && locationManager != null) {
+                beaconGps = new android.location.LocationListener() {
+                    @Override public void onLocationChanged(android.location.Location l) { beaconFix = l; }
+                    @Override public void onStatusChanged(String provider, int status, android.os.Bundle extras) { }
+                    @Override public void onProviderEnabled(String provider) { }
+                    @Override public void onProviderDisabled(String provider) { }
+                };
+                locationManager.requestLocationUpdates(android.location.LocationManager.GPS_PROVIDER, 5000, 10, beaconGps, android.os.Looper.getMainLooper());
+            }
+        } catch (Throwable t) { XposedBridge.log(TAG + ": [aprs-beacon] GPS updates: " + t); }
         beaconRunnable = new Runnable() {
             @Override public void run() {
                 if (!beaconActive) return;
                 try {
-                    final android.location.Location loc = getCurrentLocation(activity);
+                    android.location.Location last = getCurrentLocation(activity), live = beaconFix;
+                    final android.location.Location loc = live != null && (last == null || live.getTime() >= last.getTime()) ? live : last;
+                    if (loc != null) XposedBridge.log(TAG + ": [aprs-beacon] tick, fix " + ((System.currentTimeMillis() - loc.getTime()) / 1000) + " s old");
                     if (beaconUseAprsFreq) {
                         // blip to the APRS freq for this beacon, then restore the user's channel
                         captureTxFreqBackup();
@@ -16456,6 +16510,9 @@ public class MainHook implements IXposedHookLoadPackage {
     private void stopPositionBeacon() {
         beaconActive = false;
         if (beaconHandler != null && beaconRunnable != null) beaconHandler.removeCallbacks(beaconRunnable);
+        try { if (beaconWake != null && beaconWake.isHeld()) beaconWake.release(); } catch (Throwable ignored) { }
+        try { if (beaconGps != null && locationManager != null) locationManager.removeUpdates(beaconGps); } catch (Throwable ignored) { }
+        beaconGps = null; beaconFix = null;
         XposedBridge.log(TAG + ": [aprs-beacon] stopped");
     }
 
