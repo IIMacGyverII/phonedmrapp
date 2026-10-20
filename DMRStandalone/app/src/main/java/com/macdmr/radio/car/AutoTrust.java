@@ -57,7 +57,7 @@ public final class AutoTrust {
     /** What to do, for the Device warning and the notification. */
     public static String steps(State s) {
         String unlock = s == State.LOCKED ? "On the phone open Android Auto's settings, scroll to the bottom and tap Version ten times (confirm the prompt) to unlock the developer settings. Then tap the ⋮ menu at the top right" : "On the phone open Android Auto's settings and tap the ⋮ menu at the top right";
-        return unlock + ", choose Developer settings and turn on Unknown sources. Then disconnect and reconnect the car: DMR Radio appears on the car's app list and its card opens the car's media screen.";
+        return unlock + ", choose Developer settings and turn on Unknown sources. Then disconnect and reconnect the car: SignalDeck appears on the car's app list and its card opens the car's media screen.";
     }
 
     /** Android Auto's settings screen, or its app page when that cannot be opened directly. */
@@ -76,7 +76,7 @@ public final class AutoTrust {
             if (Build.VERSION.SDK_INT >= 26 && nm != null) nm.createNotificationChannel(new NotificationChannel("car", "Android Auto", NotificationManager.IMPORTANCE_DEFAULT));
             String text = steps(s);
             NotificationCompat.Builder b = new NotificationCompat.Builder(c, "car").setSmallIcon(R.drawable.ic_stat_radio).setColor(0xFFFFB020)
-                    .setContentTitle("Android Auto is hiding DMR Radio").setContentText("Turn on Unknown sources in Android Auto's developer settings")
+                    .setContentTitle("Android Auto is hiding SignalDeck").setContentText("Turn on Unknown sources in Android Auto's developer settings")
                     .setStyle(new NotificationCompat.BigTextStyle().bigText(text)).setAutoCancel(true)
                     .setContentIntent(PendingIntent.getActivity(c, 0x7A57, settingsIntent(c), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
             NotificationManagerCompat.from(c).notify("autotrust", 8, b.build());
@@ -106,9 +106,9 @@ public final class AutoTrust {
         try {
             NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
             if (Build.VERSION.SDK_INT >= 26 && nm != null) nm.createNotificationChannel(new NotificationChannel("car", "Android Auto", NotificationManager.IMPORTANCE_DEFAULT));
-            String text = "Android Auto connected but did not load the radio, so DMR Radio is missing from the car's app list and its card opens the phone. Unplug the USB cable and plug it in again: Android Auto loads it on the new connection.";
+            String text = "Android Auto connected but did not load the radio, so SignalDeck is missing from the car's app list and its card opens the phone. Unplug the USB cable and plug it in again: Android Auto loads it on the new connection.";
             NotificationCompat.Builder b = new NotificationCompat.Builder(c, "car").setSmallIcon(R.drawable.ic_stat_radio).setColor(0xFFFFB020)
-                    .setContentTitle("Reconnect to show DMR Radio in the car").setContentText("Unplug the cable and plug it in again")
+                    .setContentTitle("Reconnect to show SignalDeck in the car").setContentText("Unplug the cable and plug it in again")
                     .setStyle(new NotificationCompat.BigTextStyle().bigText(text)).setAutoCancel(true).setTimeoutAfter(10 * 60_000L)
                     .setContentIntent(PendingIntent.getActivity(c, 0x7A59, new Intent(c, com.macdmr.radio.MainActivity.class), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
             NotificationManagerCompat.from(c).notify("notloaded", 10, b.build());

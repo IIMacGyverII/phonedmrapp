@@ -9,9 +9,9 @@ your phone can tell us. Nothing below changes anything on the phone; it only rea
 (Settings → About phone → tap *Build number* 7× → Developer options → *USB debugging*), and a USB cable.
 Root is **not** required for steps 1–3. If the phone is rooted, step 4 adds a little more.
 
-## 0. The easy way: let the DMR Radio app do it
+## 0. The easy way: let the SignalDeck app do it
 
-Install the standalone **DMR Radio** app (`DMRRadio-*.apk` from the releases page). On a phone it does not know it
+Install the standalone **SignalDeck** app (`SignalDeck-*.apk` from the releases page). On a phone it does not know it
 starts in discovery mode (it touches nothing radio-related) and opens the **Device** tab:
 
 1. **Generate device report** — collects everything in sections 1–4 below automatically, copies the stock

@@ -20,17 +20,17 @@ import java.util.Locale;
 
 /**
  * In-app updates from the GitHub releases of this repo. A release counts for this app only when it carries an
- * APK asset whose name starts with "DMRRadio" (the module and the companion attach their own APKs to the same
+ * APK asset whose name starts with "SignalDeck" (or the earlier "DMRRadio") (the module and the companion attach their own APKs to the same
  * releases). Download through DownloadManager, then hand the file to the package installer.
  */
 public final class Updater {
     private static final String LATEST = "https://api.github.com/repos/IIMacGyverII/phonedmrapp/releases";
-    private static final String ASSET_PREFIX = "DMRRadio";
+    private static final String[] ASSET_PREFIXES = { "SignalDeck", "DMRRadio" };   // the app was called DMR Radio before 2026-10-20
 
     public static final class Release { public String tag, version, name, notes, apkUrl, apkName; public long apkSize; }
     private Updater() { }
 
-    /** Newest release that has a DMRRadio APK (looks through the last releases, not only "latest"). */
+    /** Newest release that has a SignalDeck APK (looks through the last releases, not only "latest"). */
     public static Release fetchLatest() throws Exception {
         HttpClient.Response r = HttpClient.get(LATEST + "?per_page=15", null, 0L, "application/vnd.github+json");
         if (!r.isOk()) throw new Exception("GitHub API returned HTTP " + r.code);
@@ -41,12 +41,13 @@ public final class Updater {
             JSONArray assets = o.optJSONArray("assets"); if (assets == null) continue;
             for (int i = 0; i < assets.length(); i++) {
                 JSONObject a = assets.getJSONObject(i); String n = a.optString("name", "");
-                if (!n.startsWith(ASSET_PREFIX) || !n.endsWith(".apk")) continue;
+                String pre = null; for (String p : ASSET_PREFIXES) if (n.startsWith(p)) { pre = p; break; }
+                if (pre == null || !n.endsWith(".apk")) continue;
                 Release rel = new Release();
                 rel.tag = o.optString("tag_name", ""); rel.name = o.optString("name", rel.tag); rel.notes = o.optString("body", "");
                 rel.apkUrl = a.optString("browser_download_url", null); rel.apkName = n; rel.apkSize = a.optLong("size", 0);
-                // version from the asset name (DMRRadio-1.0.0-beta.2.apk) so module tags (v4.x) are never compared against ours
-                String v = n.substring(ASSET_PREFIX.length()).replaceFirst("^[-_v]+", "").replaceFirst("\\.apk$", "");
+                // version from the asset name (SignalDeck-1.0.0-beta.2.apk) so module tags (v4.x) are never compared against ours
+                String v = n.substring(pre.length()).replaceFirst("^[-_v]+", "").replaceFirst("\\.apk$", "");
                 rel.version = v.isEmpty() ? rel.tag.replaceFirst("^v", "") : v;
                 return rel;
             }
@@ -80,7 +81,7 @@ public final class Updater {
             try {
                 final Release rel = fetchLatest();
                 new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
-                    if (rel == null) { Toast.makeText(c, "No DMR Radio release published yet (you have " + BuildConfig.VERSION_NAME + ")", Toast.LENGTH_LONG).show(); return; }
+                    if (rel == null) { Toast.makeText(c, "No SignalDeck release published yet (you have " + BuildConfig.VERSION_NAME + ")", Toast.LENGTH_LONG).show(); return; }
                     if (compareVersions(rel.version, BuildConfig.VERSION_NAME) <= 0) { Toast.makeText(c, "You are on the latest version (" + BuildConfig.VERSION_NAME + ")", Toast.LENGTH_LONG).show(); return; }
                     offer(c, rel);
                 });
@@ -98,7 +99,7 @@ public final class Updater {
     private static void download(final Context c, Release rel) {
         try {
             DownloadManager dm = (DownloadManager) c.getSystemService(Context.DOWNLOAD_SERVICE);
-            DownloadManager.Request req = new DownloadManager.Request(Uri.parse(rel.apkUrl)).setTitle("DMR Radio " + rel.version).setMimeType("application/vnd.android.package-archive")
+            DownloadManager.Request req = new DownloadManager.Request(Uri.parse(rel.apkUrl)).setTitle("SignalDeck " + rel.version).setMimeType("application/vnd.android.package-archive")
                     .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED).setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, rel.apkName);
             final long id = dm.enqueue(req);
             Toast.makeText(c, "Downloading… the installer opens when it is done", Toast.LENGTH_LONG).show();

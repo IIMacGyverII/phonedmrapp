@@ -147,6 +147,8 @@ See `.grok/rules/packet-layouts.md` for byte offsets, and `docs/deep-dive/01-…
 
 ## 11. Standalone app (`DMRStandalone/`, `com.macdmr.radio`) — standing direction (2026-10-17)
 
+**Name: SignalDeck** (official 2026-10-20; was "DMR Radio"). Only the display name changed: the package stays `com.macdmr.radio` (data and the Magisk grant carry over), the Magisk module id stays `dmr-standalone`; release APK assets are named `SignalDeck-<version>.apk` (the updater also accepts the old `DMRRadio-` prefix). Launch screen: `ui/SplashView.java`, drawn in code.
+
 The LSPosed module is being superseded by a standalone app that drives the radio module directly (feasibility
 and on-air spike: `docs/standalone-app-evaluation*.md`; other phones: `docs/multi-device-xplore1-findings.md`,
 backlog N8). Rules from the owner:

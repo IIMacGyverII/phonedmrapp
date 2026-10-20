@@ -135,7 +135,7 @@ public final class LastHeardDialog {
         }
         LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT); bl.setMargins(0, (int) (10 * d), 0, 0);
         final AlertDialog[] self = new AlertDialog[1];
-        if (r.text.contains("hiding DMR Radio")) {
+        if (r.text.contains("hiding SignalDeck")) {
             TextView open = Neo.button(c, "Open Android Auto settings", "intercom", Neo.AMBER); box.addView(open, bl);
             open.setOnClickListener(x -> { try { c.startActivity(com.macdmr.radio.car.AutoTrust.settingsIntent(c)); } catch (Throwable t) { android.widget.Toast.makeText(c, "Could not open Android Auto: " + t.getMessage(), android.widget.Toast.LENGTH_LONG).show(); } });
         }
@@ -150,14 +150,14 @@ public final class LastHeardDialog {
     static String[] explain(String t) {
         if (t.contains("while transmitting") && (t.contains("Android Auto dropped") || t.contains("USB cable dropped")))
             return new String[] { "Talking knocked out the USB cable", "While you transmitted on this channel the phone's USB port reset: the phone stopped charging and, with Android Auto on a cable, the car disconnected until you stopped talking. It does not matter which Talk button you used.\n\nThe radio's own signal gets into the USB cable. Whether it does depends on the frequency, not on where the antenna is: in one car a 2 m repeater transmitting on 144.770 MHz at high power did it every time, while 146.370 MHz did not.\n\nWhat helps:\n• a snap-on ferrite choke on the cable, close to the phone\n• a shorter, better-shielded cable\n• Low power for this channel (Channels → edit the channel)\n• wireless Android Auto, if the car has it" };
-        if (t.contains("did not load DMR Radio"))
-            return new String[] { "Android Auto skipped the radio", "Android Auto connected but never loaded the radio on this connection (normally it does within a few seconds), so DMR Radio was missing from the car's app list and its card opened the app on the phone. Unknown sources was on, so this is Android Auto's own hiccup, seen once after it had just started up. Unplug the USB cable and plug it in again: on the new connection it loads the radio." };
-        if (t.contains("hiding DMR Radio"))
-            return new String[] { "Android Auto is hiding the radio", "Android Auto only trusts apps installed from the Play Store. For this app it plays the sound and the steering-wheel buttons work, but DMR Radio is missing from the car's app list and tapping its card opens the app on the phone.\n\n" + com.macdmr.radio.car.AutoTrust.steps(com.macdmr.radio.car.AutoTrust.State.OFF) };
+        if (t.contains("did not load SignalDeck"))
+            return new String[] { "Android Auto skipped the radio", "Android Auto connected but never loaded the radio on this connection (normally it does within a few seconds), so SignalDeck was missing from the car's app list and its card opened the app on the phone. Unknown sources was on, so this is Android Auto's own hiccup, seen once after it had just started up. Unplug the USB cable and plug it in again: on the new connection it loads the radio." };
+        if (t.contains("hiding SignalDeck"))
+            return new String[] { "Android Auto is hiding the radio", "Android Auto only trusts apps installed from the Play Store. For this app it plays the sound and the steering-wheel buttons work, but SignalDeck is missing from the car's app list and tapping its card opens the app on the phone.\n\n" + com.macdmr.radio.car.AutoTrust.steps(com.macdmr.radio.car.AutoTrust.State.OFF) };
         if (t.contains("took the sound away"))
             return new String[] { "The car played something else", "Another source started playing in the car (music, an audio app, the car's own radio, or a call), so Android Auto gave it the speakers and the radio's sound paused. The radio keeps receiving, recording and decoding meanwhile. Press play on the radio's card or media screen to get the speakers back. Just before a disconnection this line is normal: Android Auto takes the sound away as it closes." };
         if (t.contains("Android Auto connected"))
-            return new String[] { "Android Auto connected", "The phone connected to the car. In brackets: what the car lists for the radio, the media app (DMR Radio) or the full-screen Radio controls (Device → Full-screen Radio controls in the car)." };
+            return new String[] { "Android Auto connected", "The phone connected to the car. In brackets: what the car lists for the radio, the media app (SignalDeck) or the full-screen Radio controls (Device → Full-screen Radio controls in the car)." };
         if (t.contains("Android Auto disconnected"))
             return new String[] { "Android Auto disconnected", "The connection to the car ended: the car was switched off, the cable was unplugged, or the link dropped. Look at Around this time below: if you were transmitting just before (a Voice TX line), the transmission probably disturbed the USB cable, and an alert says so when the app noticed." };
         if (t.contains("Android Auto opened"))

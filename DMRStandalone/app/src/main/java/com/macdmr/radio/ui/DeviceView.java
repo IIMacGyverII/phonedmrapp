@@ -97,7 +97,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         addRow(set, Neo.switchRow(c, "signal", Neo.VIOLET, "Coverage logging", "Records signal and key-ups with GPS for the coverage maps (Map → Coverage)", covSw));
         addRow(set, Neo.switchRow(c, "ptt", Neo.AMBER, "Car microphone in Android Auto", "Talk uses the car's microphone through its hands-free link", carMicSw));
         carMicSw.setOnChange(on -> { if (svc != null) svc.setCarMic(on); });
-        autoWarn = Neo.switchRow(c, "alert", Neo.AMBER, "Android Auto is hiding this app", "Unknown sources is off, so the car does not list DMR Radio. Tap for the fix", null);
+        autoWarn = Neo.switchRow(c, "alert", Neo.AMBER, "Android Auto is hiding this app", "Unknown sources is off, so the car does not list SignalDeck. Tap for the fix", null);
         autoWarnDiv = new View(c); autoWarnDiv.setBackgroundColor(Neo.DIVIDER);
         set.addView(autoWarnDiv, new LayoutParams(LayoutParams.MATCH_PARENT, 1)); set.addView(autoWarn);
         autoWarn.setOnClickListener(v -> autoTrustSheet());
@@ -177,7 +177,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         widget.setOnClickListener(v -> widgetSheet());
         sos.setOnClickListener(v -> EmergencyDialog.show(c, svc));
 
-        TextView foot = Neo.text(c, "Backups are the five CSV files (Contacts, TG_Lists, Channels, Zones, DTMF) the DMRModHooks module and the OpenGD77 CPS fork use, in Download/DMR/DMR_Backups.\n\nDMR Radio " + com.macdmr.radio.BuildConfig.VERSION_NAME + ", the standalone edition of DMRModHooks.", Neo.DIM, 12.5f, Neo.uiMedium(c));
+        TextView foot = Neo.text(c, "Backups are the five CSV files (Contacts, TG_Lists, Channels, Zones, DTMF) the DMRModHooks module and the OpenGD77 CPS fork use, in Download/DMR/DMR_Backups.\n\nSignalDeck " + com.macdmr.radio.BuildConfig.VERSION_NAME + ", the standalone edition of DMRModHooks.", Neo.DIM, 12.5f, Neo.uiMedium(c));
         foot.setLineSpacing(0, 1.1f); foot.setPadding((int) (2 * d), (int) (8 * d), (int) (2 * d), 0);
         body.addView(foot);
     }
@@ -199,7 +199,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
             boolean asked = false;
             try { if (m.isRequestPinAppWidgetSupported()) asked = m.requestPinAppWidget(new android.content.ComponentName(c, com.macdmr.radio.RadioWidget.class), null, null); } catch (Throwable ignored) { }
             if (dlg != null) dlg.dismiss();
-            if (!asked) android.widget.Toast.makeText(c, "Long-press the home screen, choose Widgets and drag out DMR Radio", android.widget.Toast.LENGTH_LONG).show();
+            if (!asked) android.widget.Toast.makeText(c, "Long-press the home screen, choose Widgets and drag out SignalDeck", android.widget.Toast.LENGTH_LONG).show();
         });
     }
 
@@ -383,7 +383,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
     private void autoTrustSheet() {
         Context c = getContext(); float d = Theme.dp(c);
         LinearLayout box = Neo.sheetBody(c, "Show the radio in the car");
-        box.addView(Neo.sheetHint(c, "Android Auto only trusts apps installed from the Play Store. For DMR Radio it plays the sound and the steering-wheel buttons work, but the app is missing from the car's app list and tapping its card opens the app on the phone."));
+        box.addView(Neo.sheetHint(c, "Android Auto only trusts apps installed from the Play Store. For SignalDeck it plays the sound and the steering-wheel buttons work, but the app is missing from the car's app list and tapping its card opens the app on the phone."));
         box.addView(Neo.sheetHint(c, com.macdmr.radio.car.AutoTrust.steps(com.macdmr.radio.car.AutoTrust.last())));
         TextView open = Neo.button(c, "Open Android Auto settings", "intercom", Neo.AMBER);
         TextView again = Neo.button(c, "Check again", "update", Neo.CYAN);
