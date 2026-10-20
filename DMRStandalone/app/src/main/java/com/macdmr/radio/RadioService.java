@@ -1391,7 +1391,8 @@ public class RadioService extends Service implements RadioEngine.Events {
     public static final String[] NEXT_TALK_NAMES = { "Off", "Hold", "Double-press" };
     public int nextTalkMode() {
         android.content.SharedPreferences p = getSharedPreferences("radio", MODE_PRIVATE);
-        return p.contains("nextTalk") ? p.getInt("nextTalk", 0) : p.getBoolean("holdNextTalk", false) ? com.macdmr.radio.ham.WheelNext.HOLD : 0;   // the first version was a hold on/off switch
+        return p.contains("nextTalk") ? p.getInt("nextTalk", 0) : !p.contains("holdNextTalk") ? com.macdmr.radio.ham.WheelNext.DOUBLE      // default: double-press (only presses, works with every car)
+                : p.getBoolean("holdNextTalk", false) ? com.macdmr.radio.ham.WheelNext.HOLD : 0;   // the first version was a hold on/off switch
     }
     public void setNextTalkMode(int m) { getSharedPreferences("radio", MODE_PRIVATE).edit().putInt("nextTalk", m).apply(); wheel.setMode(m); }
     public boolean holdNextTalk() { return nextTalkMode() != 0; }
@@ -1407,7 +1408,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     public static final String[] VOX_NAMES = { "Off", "1.5 s", "2.5 s", "4 s" };
     public int wheelMic() { return getSharedPreferences("radio", MODE_PRIVATE).getInt("wheelMic", 1); }
     public void setWheelMic(int m) { getSharedPreferences("radio", MODE_PRIVATE).edit().putInt("wheelMic", m).apply(); }
-    public int voxStop() { return getSharedPreferences("radio", MODE_PRIVATE).getInt("voxStop", 0); }
+    public int voxStop() { return getSharedPreferences("radio", MODE_PRIVATE).getInt("voxStop", 1); }   // default 1.5 s
     public void setVoxStop(int i) { getSharedPreferences("radio", MODE_PRIVATE).edit().putInt("voxStop", i).apply(); }
     private final Runnable talkCallTimeout = () -> { if (talkCallPending) { talkCallPending = false; log("talk call: no car audio route in 4 s, using the phone microphone"); history("car", "\u26A0\uFE0F The car did not open its microphone for the talk call: this transmission uses the phone microphone"); com.macdmr.radio.car.RadioCallService.end(); wheelPtt = true; ptt(true); } };
     /** A steering-wheel start: with the car microphone as a call when set, else the phone microphone. */
