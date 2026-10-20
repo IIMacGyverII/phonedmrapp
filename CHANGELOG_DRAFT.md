@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Hold the steering wheel's Next to talk
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Owner request. Device → **Hold steering-wheel Next to talk** (off by default): in Android Auto, `RadioMedia.onMediaButtonEvent` hands `KEYCODE_MEDIA_NEXT` to `RadioService.wheelNext`: key-down starts a 500 ms timer (or a repeat event after ~400 ms) that keys the radio; key-up unkeys, or, when it was a short press, steps to the next channel. Because some cars deliver Next only as a transport command (no key events, so a hold cannot be detected), the first six raw wheel events of each drive are logged in the history ("🎛 Wheel: MEDIA_NEXT pressed / released") and a warning is logged when `onSkipToNext` arrives without key events. The existing 28 s TX watchdog covers a lost release. Help updated. | `media/RadioMedia.java`, `RadioService.java`, `ui/DeviceView.java`, `ui/HelpView.java` | Built and installed. **Not tested in the car yet**: it only acts while Android Auto is connected; the history lines from the next drive will show what this car sends |
+
 ## 2026-10-20 — Choosing a zone tunes its last used channel
 
 | Backlog | Change | Files | Test |

@@ -46,6 +46,11 @@ public final class RadioMedia {
                 // the steering wheel's play/pause as Talk (setting, in the car); the on-screen button is not a media button
                 android.view.KeyEvent ev = i == null ? null : i.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
                 RadioService s = RadioService.running;
+                if (ev != null && s != null && s.inCar()) s.wheelKeySeen(ev);       // what the car sends, for the history (hold-to-talk check)
+                if (ev != null && s != null && s.inCar() && s.holdNextTalk() && ev.getKeyCode() == android.view.KeyEvent.KEYCODE_MEDIA_NEXT) {
+                    s.wheelNext(ev);
+                    return true;                                         // handled here: a short press steps, a hold talks
+                }
                 if (ev != null && s != null && s.inCar() && s.wheelTalk()) {
                     int k = ev.getKeyCode();
                     if (k == android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || k == android.view.KeyEvent.KEYCODE_HEADSETHOOK || k == android.view.KeyEvent.KEYCODE_MEDIA_PLAY || k == android.view.KeyEvent.KEYCODE_MEDIA_PAUSE) {
@@ -58,7 +63,7 @@ public final class RadioMedia {
             @Override public void onPlay() { RadioService s = service(); if (s != null) s.mediaPlay(true); }
             @Override public void onPause() { RadioService s = service(); if (s != null) s.mediaPlay(false); }
             @Override public void onStop() { RadioService s = service(); if (s != null) s.mediaPlay(false); }
-            @Override public void onSkipToNext() { RadioService s = service(); if (s != null) s.stepChannel(1); }
+            @Override public void onSkipToNext() { RadioService s = service(); if (s != null) { s.wheelSkipCommand(); s.stepChannel(1); } }
             @Override public void onSkipToPrevious() { RadioService s = service(); if (s != null) s.stepChannel(-1); }
             @Override public void onPlayFromMediaId(String id, Bundle extras) {
                 RadioService s = service(); if (s == null) return;
