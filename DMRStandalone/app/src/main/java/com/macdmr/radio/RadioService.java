@@ -194,10 +194,10 @@ public class RadioService extends Service implements RadioEngine.Events {
         worker.execute(() -> {
             try {
                 if (!isReady()) { log("TX " + label + " skipped: radio not ready"); return; }
-                if (txInhibited()) { log("TX " + label + " blocked: receive-only channel"); ui.post(() -> { for (Listener l : listeners) l.onHistory("\u26D4 TX blocked on a receive-only channel"); }); return; }
+                if (txInhibited()) { log("TX " + label + " blocked: receive-only channel"); history("warn", "\u26D4 TX blocked on a receive-only channel"); return; }
                 if (pttDown) { log("TX " + label + " skipped: PTT busy"); return; }
                 int ms = pcm.length / 8;
-                if (ms > 28500) { log("TX " + label + " refused: " + ms + " ms exceeds the 30 s transmit limit"); ui.post(() -> { for (Listener l : listeners) l.onHistory("\u26D4 Too long for this radio's 30 s transmit limit"); }); return; }
+                if (ms > 28500) { log("TX " + label + " refused: " + ms + " ms exceeds the 30 s transmit limit"); history("warn", "\u26D4 Too long for this radio's 30 s transmit limit (" + label + ")"); return; }
                 pttDown = true;
                 if (audio != null) audio.stopRx();
                 engine.ptt(true);
@@ -858,7 +858,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             try {
                 if (down) {
                     if (!isReady()) { log("PTT ignored: radio not ready"); return; }
-                    if (txInhibited()) { log("PTT blocked: receive-only channel"); ui.post(() -> { for (Listener l : listeners) l.onHistory("⛔ TX blocked on a receive-only channel"); }); return; }
+                    if (txInhibited()) { log("PTT blocked: receive-only channel"); history("warn", "⛔ TX blocked on a receive-only channel"); return; }
                     if (pttDown) return;
                     pttDown = true; refreshControls();
                     txChannel = current; txInCar = inCar; txCharging = charging(); txDropNoted = false;
