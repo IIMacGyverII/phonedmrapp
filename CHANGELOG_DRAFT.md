@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Satellite passes with Doppler tracking
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | **PKT → Satellite passes**. `ham/Sgp4.java`: near-earth SGP4 (Vallado's revised algorithm, WGS-72, TEME), TLE parsing, GMST. `ham/SatTrack.java`: WGS-84 observer, earth-fixed look angles, range and range rate, pass search (30 s steps, rise/set bisected to 1 s, peak refined), Doppler for downlink and uplink. `ham/Satellites.java`: ISS repeater (437.800 / 145.990, 67 Hz), ISS voice (145.800 / 144.490), ISS APRS (145.825), SO-50 (436.795 / 145.850, 67 Hz), PO-101 (145.900 / 437.500, 141.3 Hz); elements from AMSAT `nasabare.txt` (CelesTrak GP fallback), refreshed after 2 days. `ui/SatelliteDialog.java`: next 24 h of passes above 10° per satellite (time, peak, minutes, rise/set direction), tap to track, live azimuth/elevation and frequencies, Stop, Update orbits. `RadioService.trackSat`: from AOS − 1 min the VFO takes the Doppler-corrected RX/TX (500 Hz rounding) with the tone, retuned when the RX error exceeds 2 kHz and never while PTT is down; back to the channel 30 s after LOS. Bench DIAG `sattest` (60 s ISS track from now). Help updated. | `ham/Sgp4.java`, `ham/SatTrack.java`, `ham/Satellites.java`, `ui/SatelliteDialog.java` (new), `RadioService.java`, `DiagReceiver.java`, `ui/PktDialog.java`, `ui/HelpView.java`; tests `Sgp4Test`, `SatTrackTest`, `PassBench` | SGP4 matches Vallado's verification for satellite 00005 at 0 and 360 min (1 m / 0.01 m/s); GMST at J2000 exact. Against Skyfield 1.55 with the day's AMSAT ISS elements at a test location: all 8 passes of the next 24 h within 0.5 s at rise and set and 0.01° at peak; range rate, azimuth and elevation equal to 0.1 m/s and 0.01°. On the phone: the pass list showed the ISS passes; a bench track tuned the VFO to 437.8100 / 145.9865 MHz (Doppler-corrected) and returned to Family Analog at its end. Not yet tried on a real pass |
+
 ## 2026-10-20 — Morse trainer
 
 | Backlog | Change | Files | Test |
