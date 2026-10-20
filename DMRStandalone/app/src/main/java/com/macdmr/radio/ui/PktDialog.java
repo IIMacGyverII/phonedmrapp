@@ -61,6 +61,13 @@ public final class PktDialog {
         button(r3, "Settings", Theme.MON, x -> settings());
         body.addView(r3);
         body.addView(hint("Passive decode runs on " + (pe.passiveMode() == 2 ? "every analog channel" : pe.passiveMode() == 1 ? "flagged channels" : "no channel (off)") + ". Monitoring parks the radio on 144.390 MHz, acks messages for you" + (pe.digipeat() ? " and digipeats WIDE1-1" : "") + ". Your channel comes back when you stop."));
+        // ---- simplex repeater ----
+        body.addView(section("Simplex repeater (parrot)"));
+        LinearLayout pr = row();
+        final boolean parrotOn = svc.parrot().enabled();
+        button(pr, parrotOn ? "Stop the parrot" : "Parrot on this channel", Theme.PKT, x -> { toast(svc.setParrot(!parrotOn)); dlg.dismiss(); });
+        body.addView(pr);
+        body.addView(hint((parrotOn ? "\uD83E\uDD9C On, " + svc.parrot().played() + " repeated so far. " : "") + "Records each transmission heard on this channel and sends it back a second after it ends (up to 27 s), so a station can hear how it sounds, or two stations out of each other's range can talk through you. On amateur channels your callsign is sent in Morse at most every ten minutes. Needs the squelch closed on silence (squelch above 0 or Soft SQ); stops when you change channel."));
         // ---- SSTV ----
         body.addView(section("SSTV pictures"));
         body.addView(hint("\uD83D\uDD38 " + pe.sstvStatus()));

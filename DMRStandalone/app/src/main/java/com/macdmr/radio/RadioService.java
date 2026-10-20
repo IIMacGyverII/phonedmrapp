@@ -85,7 +85,35 @@ public class RadioService extends Service implements RadioEngine.Events {
     private volatile boolean pttDown;
     private final Runnable txWatchdog = () -> { if (pttDown) { log("TX watchdog: releasing PTT after 28 s"); ptt(false); } };
     private PacketEngine packet;
+
+    // ---- simplex repeater (parrot): repeats each reception on the channel it was enabled on ----
+    private final com.macdmr.radio.ham.Parrot parrot = new com.macdmr.radio.ham.Parrot(new com.macdmr.radio.ham.Parrot.Host() {
+        @Override public boolean transmit(short[] pcm, String label, Runnable done) {
+            ChannelStore.Channel ch = current;
+            if (!isReady() || ch == null || ch.isDigital() || txInhibited() || pttDown || scanner.isScanning()) return false;
+            transmitPcm(pcm, label, done); return true;
+        }
+        @Override public String idCallsign() { ChannelStore.Channel ch = current; return ch != null && amateurBand(ch.txFreq) && packet != null && packet.callsignSet() ? packet.callsign() : null; }
+        @Override public void event(String line) { history("pkt", line); }
+    });
+    private volatile int parrotChannel = -1;
+    public com.macdmr.radio.ham.Parrot parrot() { return parrot; }
+    /** Turn the parrot on for the current channel (or off). Returns what happened, for a toast. */
+    public String setParrot(boolean on) {
+        if (!on) { if (parrot.enabled()) history("pkt", "\uD83E\uDD9C Parrot off (" + parrot.played() + " repeated)"); parrot.setEnabled(false); parrotChannel = -1; pushModes(); return "Parrot off"; }
+        ChannelStore.Channel ch = current;
+        if (ch == null || ch.isDigital()) return "The parrot needs an analog FM channel";
+        if (txInhibited()) return "This channel is receive-only";
+        if (!softSq.isEnabled() && hardwareSq(ch) == 0) return "Turn the channel's squelch up (or Soft SQ on) first: with squelch 0 the parrot would repeat static";
+        parrotChannel = ch.number; parrot.setEnabled(true);
+        history("pkt", "\uD83E\uDD9C Parrot on: repeating what is heard on " + ch.name);
+        pushModes();
+        return "Parrot on " + ch.name + ": transmissions are repeated a second after they end";
+    }
+    /** 2 m, 1.25 m and 70 cm amateur bands (US). */
+    public static boolean amateurBand(int hz) { return (hz >= 144_000_000 && hz <= 148_000_000) || (hz >= 222_000_000 && hz <= 225_000_000) || (hz >= 420_000_000 && hz <= 450_000_000); }
     public PacketEngine packet() { return packet; }
+    private final DiagReceiver diag = new DiagReceiver();
     private RadioIdStore radioId;
     public RadioIdStore radioId() { return radioId; }
 
@@ -156,7 +184,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             }
         } catch (Throwable t) { log("keywords: " + t); }
     }
-    public boolean packetActive() { return packet != null && (packet.monitoring() || packet.kiss().isActive() || packet.sstvRx()); }
+    public boolean packetActive() { return parrot.enabled() || (packet != null && (packet.monitoring() || packet.kiss().isActive() || packet.sstvRx())); }
 
     /** SSTV receive: on the SSTV calling frequency (through the VFO) or on the current channel. */
     public String sstvMonitor(boolean on, boolean park) {
@@ -268,6 +296,11 @@ public class RadioService extends Service implements RadioEngine.Events {
         if (coverage().enabled()) { coverage.resume(); startForegroundTyped(true); }
         engine = new RadioEngine(profile, this);
         packet = new PacketEngine(packetHost);
+        // developer bench tools: adb only (the sender must hold DUMP, which the shell has and apps cannot get)
+        try {
+            android.content.IntentFilter df = new android.content.IntentFilter(DiagReceiver.ACTION);
+            if (Build.VERSION.SDK_INT >= 33) registerReceiver(diag, df, "android.permission.DUMP", null, RECEIVER_EXPORTED); else registerReceiver(diag, df, "android.permission.DUMP", null);
+        } catch (Throwable t) { log("diag receiver: " + t); }
         radioId = new RadioIdStore(this);
         if (!getSharedPreferences("radio", MODE_PRIVATE).getBoolean("smsStatusMigrated", false)) {     // texts marked failed before 2026-10-17 were only unacknowledged
             try { store.getWritableDatabase().execSQL("UPDATE messages SET status=3 WHERE status=2 AND outgoing=1"); } catch (Throwable ignored) { }
@@ -308,6 +341,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         try { if (coverage != null) coverage.stop(); } catch (Throwable ignored) { }
         stopBluetoothMic();
         try { if (pttKey != null) unregisterReceiver(pttKey); } catch (Throwable ignored) { }
+        try { unregisterReceiver(diag); } catch (Throwable ignored) { }
         try { if (powerOff != null) unregisterReceiver(powerOff); } catch (Throwable ignored) { }
         try { if (pttDown) { if (audio != null) audio.stopTx(); engine.ptt(false); } } catch (Throwable ignored) { }
         try { if (audio != null) { audio.stopRx(); } } catch (Throwable ignored) { }
@@ -387,7 +421,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         try {
             if (audio == null) {
                 audio = profile.audio == DeviceProfile.Audio.UART_PCM ? new UartPcmAudio(profile.pcmPort, profile.pcmBaud) : new TinyServiceAudio();
-                audio.setSink((b, len) -> onRxPcm(b, len));
+                audio.setSink((b, len) -> { if (!injecting) onRxPcm(b, len); });   // a bench injection replaces the live audio while it plays
                 audio.setGate(() -> squelchOpen && !muted);
             }
             log(audio.startRx(true)); rxAudioOn = true;
@@ -399,7 +433,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     private void onRxPcm(byte[] b, int len) {
         int n = 0;
         for (int i = 0; i + 3 < len && n + 1 < mono.length; i += 4) { mono[n++] = b[i]; mono[n++] = b[i + 1]; }
-        boolean open = current == null || current.isDigital() ? true : softSq.process(mono, n);
+        boolean open = injecting || current == null || current.isDigital() ? true : softSq.process(mono, n);
         if (BuildConfig.DEBUG && softSq.isEnabled() && System.currentTimeMillis() - lastSqDiag > 2000) { lastSqDiag = System.currentTimeMillis(); log("soft sq: " + softSq.describe() + " gate=" + open); }
         if (open != squelchOpen && softSq.isEnabled()) log("soft squelch " + (open ? "open" : "closed") + (current != null && current.rxType == 1 ? " (CTCSS " + com.macdmr.radio.dsp.ToneTable.ctcssLabel(current.rxSubCode) + ")" : ""));
         if (open != squelchOpen && softSq.isEnabled()) { softGateHistory(open); squelchOpen = open; pushModes(); }   // pages see the gate (activity box, Soft SQ number colour)
@@ -412,6 +446,11 @@ public class RadioService extends Service implements RadioEngine.Events {
             else if (peak > 400 && System.currentTimeMillis() - captionLastEnd > 1500 && captions != null) { Log.i(TAG, "captions: starting utterance (peak " + peak + ")"); captions.start(); }
         }
         if (packet != null) packet.feed(mono, n, open);
+        if (parrot.enabled()) {
+            ChannelStore.Channel pc = current;
+            if (pc == null || pc.number != parrotChannel) { ui.post(() -> { if (parrot.enabled()) { setParrot(false); history("pkt", "\uD83E\uDD9C Parrot stopped: the channel changed"); } }); }
+            else parrot.feed(mono, n, open && hearing(), System.currentTimeMillis());
+        }
         if (open && current != null && !current.isDigital() && !(current.rxFreq >= 162_400_000 && current.rxFreq <= 162_550_000)) {
             toneBank.processMono(mono, n);
             int ti = toneBank.detectedIndex();
@@ -1453,5 +1492,40 @@ public class RadioService extends Service implements RadioEngine.Events {
     public boolean isScanning() { return scanner != null && scanner.isScanning(); }
     public boolean isScanHolding() { return scanner != null && scanner.isHolding(); }
     /** Something is actually heard: the Soft SQ gate on Soft SQ channels, the radio's own report otherwise. */
-    public boolean hearing() { return softSq != null && softSq.isEnabled() ? squelchOpen : receiving && rxCounts; }
+    public boolean hearing() { return injecting || (softSq != null && softSq.isEnabled() ? squelchOpen : receiving && rxCounts); }
+
+    // ---- bench: play a WAV into the receive path as if the radio heard it (DiagReceiver, adb only) ----
+    private volatile boolean injecting;
+    public void injectWav(final java.io.File f) {
+        new Thread(() -> {
+            try {
+                byte[] all = java.nio.file.Files.readAllBytes(f.toPath());
+                java.nio.ByteBuffer bb = java.nio.ByteBuffer.wrap(all).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+                int ch = 1, rate = 8000, pos = 12, dataAt = -1, dataLen = 0;
+                while (pos + 8 <= all.length) {
+                    String id = new String(all, pos, 4, java.nio.charset.StandardCharsets.US_ASCII); int len = bb.getInt(pos + 4);
+                    if (id.equals("fmt ")) { ch = bb.getShort(pos + 10); rate = bb.getInt(pos + 12); }
+                    if (id.equals("data")) { dataAt = pos + 8; dataLen = Math.min(len, all.length - dataAt); break; }
+                    pos += 8 + len + (len & 1);
+                }
+                if (dataAt < 0) { log("inject: no data chunk in " + f); return; }
+                int frames = dataLen / (2 * ch);
+                int outN = (int) ((long) frames * 8000 / rate);
+                log("inject " + f.getName() + ": " + rate + " Hz, " + ch + " ch, " + (outN / 8) + " ms");
+                injecting = true;
+                byte[] blk = new byte[2048];   // 512 stereo samples = 64 ms
+                long t0 = System.currentTimeMillis(); int k = 0;
+                for (int o = 0; o < outN; ) {
+                    int m = 0;
+                    for (; m < 512 && o < outN; m++, o++) {
+                        int src = (int) ((long) o * rate / 8000); short v = bb.getShort(dataAt + src * 2 * ch);
+                        blk[m * 4] = blk[m * 4 + 2] = (byte) v; blk[m * 4 + 1] = blk[m * 4 + 3] = (byte) (v >> 8);
+                    }
+                    onRxPcm(blk, m * 4);
+                    k += m; long due = t0 + k / 8; long now = System.currentTimeMillis(); if (due > now) Thread.sleep(due - now);
+                }
+            } catch (Throwable t) { log("inject: " + t); }
+            finally { injecting = false; byte[] quiet = new byte[2048]; for (int r = 0; r < 4; r++) onRxPcm(quiet, quiet.length); log("inject done"); }
+        }, "diag-inject").start();
+    }
 }

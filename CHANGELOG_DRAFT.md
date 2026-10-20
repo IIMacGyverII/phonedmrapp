@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Simplex repeater (parrot)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | First of the ham features the owner asked for ("all of the ones we can"). **PKT → Parrot on this channel**: records each reception on the current analog channel (`ham/Parrot.java`, fed from `onRxPcm` with the squelch state) and, 0.7 s after the squelch closes plus a 1 s pause, transmits it back with a 250 ms lead, level-normalized (peak ≈ 22000, gain 0.5–4×). Key-ups under 0.7 s are ignored; recordings are capped at 27 s (the firmware's 30 s TX limit) and the history says so. On amateur bands (`RadioService.amateurBand`: 144–148, 222–225, 420–450 MHz) with a callsign set, a 20 WPM Morse ID is appended at most every 10 minutes. Refuses DMR, receive-only channels and squelch 0 without Soft SQ (it would repeat static); turns itself off on a channel change; PKT key lights while on. **Bench tool (developer):** `com.macdmr.radio.DIAG` broadcast (`DiagReceiver`, registered by the service with the DUMP permission required of the sender, so only adb can use it): `cmd=inject path=<wav>` plays a WAV into the receive path in real time, replacing the live audio; `cmd=isline` feeds an APRS-IS server line. Help (Packet radio) updated. | `ham/Parrot.java` (new), `DiagReceiver.java` (new), `RadioService.java`, `PacketEngine.java`, `ui/PktDialog.java`, `ui/HelpView.java`; test `ParrotTest` | Unit tests 4/4 (lead + level, kerchunk ignored, ID once per 10 min, 27 s cap). On the phone, on Family Analog (ch 2, 467.625): a 2.0 s injected recording was transmitted back as 2.25 s, 1.7 s after it ended, once (no loop); PKT shows the count; Stop works |
+
 ## 2026-10-19 — More standard zone lists: Business, Railroad, ISS and satellites, UHF CB
 
 | Backlog | Change | Files | Test |
