@@ -221,6 +221,26 @@ public final class ChannelStore extends SQLiteOpenHelper {
         return out;
     }
 
+    /** Warnings, errors and car/coverage events (the Alerts and Events sections of Last heard), newest first. */
+    public List<Object[]> events(long sinceTs, int limit) {
+        List<Object[]> out = new ArrayList<>();
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT ts, channel, kind, text, dmrId FROM history WHERE ts>=? AND (kind IN ('car','cov','warn','busy','alert') OR text LIKE '⛔%' OR text LIKE '⚠%') ORDER BY ts DESC LIMIT " + limit,
+                new String[] { String.valueOf(sinceTs) })) {
+            while (c.moveToNext()) out.add(new Object[] { c.getLong(0), c.getInt(1), c.getString(2), c.getString(3), c.getInt(4) });
+        }
+        return out;
+    }
+
+    /** Every history line within {@code ms} of {@code ts}, oldest first (the "Around this time" list of an event). */
+    public List<Object[]> around(long ts, long ms) {
+        List<Object[]> out = new ArrayList<>();
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT ts, channel, kind, text FROM history WHERE ts BETWEEN ? AND ? ORDER BY ts ASC LIMIT 40",
+                new String[] { String.valueOf(ts - ms), String.valueOf(ts + ms) })) {
+            while (c.moveToNext()) out.add(new Object[] { c.getLong(0), c.getInt(1), c.getString(2), c.getString(3) });
+        }
+        return out;
+    }
+
     public List<String> recentHistory(int channel, int limit) {
         List<String> out = new ArrayList<>();
         // the module shows the newest N lines in chronological order (oldest at the top)

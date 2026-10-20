@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-19 — Last heard lists alerts and car events, each with what it means
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Owner: tapping the Android Auto disconnection line in the intercom's history box opened Last heard, which didn't show it (it lists only received traffic). Last heard now starts with **Alerts (last 7 days)**: lines starting ⚠/⛔ of any kind, channel busy, keyword alerts. Then **Car and coverage**: Android Auto and coverage events. Runs of the same line collapse to n×. Tapping one opens a details sheet: a plain title, the line, its time, its channel with TX/RX frequency, mode and power, what it means and what to do (the USB-cable remedies, the Unknown sources steps with an Open Android Auto settings button, why the car took the sound away, coverage no-reply / keyed, receive-only, 30 s limit, channel busy, keyword, packet needs FM), every history line within ±20 s ("Around this time"), and a Tune button when it's another channel. Refusals that were only shown and never saved (TX blocked on a receive-only channel, over the 30 s limit) are now saved as history kind `warn`, so they appear there too; refusals are no longer listed under Heard. Help → Intercom → Activity panel updated. | `ui/LastHeardDialog.java`, `ChannelStore.java` (`events`, `around`), `RadioService.java`, `ui/HelpView.java` | On the phone with the owner's drive history: both sections listed the 21:01:27 USB alert and the car events; the disconnect details showed the alert and the Voice TX line in Around this time; the alert details showed the remedies |
+
 ## 2026-10-19 — Transmitting can knock out the USB cable: detected, explained, documented
 
 | Backlog | Change | Files | Test |
