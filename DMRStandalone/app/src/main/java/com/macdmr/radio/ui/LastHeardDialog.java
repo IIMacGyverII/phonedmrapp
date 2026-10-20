@@ -169,7 +169,7 @@ public final class LastHeardDialog {
         if (t.contains("Coverage logging"))
             return new String[] { "Coverage logging", "Coverage logging records the signal and your key-ups with GPS for the coverage maps (Map → Coverage). With Device → Log coverage in the car on, it starts when Android Auto connects and stops when it disconnects." };
         if (t.contains("receive-only"))
-            return new String[] { "Receive-only channel", "NOAA weather channels (162.400 to 162.550 MHz) are receive-only. The radio does not transmit there, whatever button is pressed." };
+            return new String[] { "Receive-only channel", "NOAA weather channels (162.400 to 162.550 MHz) and marine VHF channels (156.000 to 157.450 MHz) are receive-only. The radio does not transmit there, whatever button is pressed." };
         if (t.contains("30 s transmit limit"))
             return new String[] { "Too long to send", "This radio's firmware ends every transmission after 30 seconds, so the app refuses audio longer than about 28.5 seconds (for example a long recording or an SSTV mode that needs more time)." };
         if (t.contains("Channel busy"))

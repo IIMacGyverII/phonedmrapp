@@ -52,8 +52,8 @@ public class ChannelsView extends LinearLayout implements RadioService.Listener 
         header = Neo.header(c, "Channels", "");
         ImageView nearby = Neo.iconButton(c, "repeaters", Neo.CYAN, "Nearby repeaters");
         nearby.setOnClickListener(v -> { if (svc != null) RepeatersDialog.show(c, svc); });
-        ImageView zone = Neo.iconButton(c, "zone", Neo.CYAN, "Choose zone");
-        zone.setOnClickListener(v -> pickZone());
+        ImageView zone = Neo.iconButton(c, "zone", Neo.CYAN, "Zones");
+        zone.setOnClickListener(v -> { if (svc != null) ZonesDialog.show(c, svc, this::reload); });
         ImageView add = Neo.iconButton(c, "plus", Neo.GREEN, "Add channel");
         add.setOnClickListener(v -> { if (host != null) host.openEditor(null, true); });
         ImageView mapBtn = Neo.iconButton(c, "map", Neo.CYAN, "Map");
@@ -140,14 +140,6 @@ public class ChannelsView extends LinearLayout implements RadioService.Listener 
         adapter.notifyDataSetChanged();
     }
 
-    private void pickZone() {
-        if (svc == null) return;
-        final java.util.List<ChannelStore.Zone> zones = svc.store().zones();
-        String[] names = new String[zones.size() + 1]; names[0] = "ALL channels";
-        for (int i = 0; i < zones.size(); i++) names[i + 1] = zones.get(i).name + "  (" + zones.get(i).numbers.length + ")";
-        new android.app.AlertDialog.Builder(getContext()).setTitle("Zone").setItems(names, (d2, w) -> { svc.setZone(w == 0 ? 0 : zones.get(w - 1).id); reload(); }).show();
-    }
-
     static String mhz(int hz) { return String.format(Locale.US, "%.4f", hz / 1e6); }
 
     /** The one extra detail worth a badge: colour code + slot on DMR, else repeater shift and/or tone. */
@@ -156,6 +148,7 @@ public class ChannelsView extends LinearLayout implements RadioService.Listener 
         List<String> parts = new ArrayList<>();
         int shift = ch.txFreq - ch.rxFreq;
         if (ch.rxFreq >= 162_400_000 && ch.rxFreq <= 162_550_000) parts.add("WX · RX ONLY");
+        else if (ChannelStore.receiveOnly(ch.txFreq)) parts.add("RX ONLY");
         else if (Math.abs(shift) >= 100_000) parts.add((shift > 0 ? "+" : "−") + String.format(Locale.US, "%s MHz", trim(Math.abs(shift) / 1e6)));
         if (ch.rxType == 1 && com.macdmr.radio.dsp.ToneTable.ctcssHz(ch.rxSubCode) > 0) parts.add(String.format(Locale.US, "%.1f", com.macdmr.radio.dsp.ToneTable.ctcssHz(ch.rxSubCode)));
         else if (ch.rxType == 2) parts.add(String.format(Locale.US, "D%03oN", ch.rxSubCode));
