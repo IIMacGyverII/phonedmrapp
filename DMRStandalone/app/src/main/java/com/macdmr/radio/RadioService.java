@@ -1157,6 +1157,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                 } else {
                     if (!pttDown) return;
                     pttDown = false; refreshControls();
+                    wheel.stopped();
                     txEndedAt = System.currentTimeMillis();
                     ui.removeCallbacks(txWatchdog);
                     try {
@@ -1371,28 +1372,46 @@ public class RadioService extends Service implements RadioEngine.Events {
             refreshControls();
         } catch (Throwable t) { log("car coverage: " + t); }
     }
-    // ---- hold the wheel's Next to talk ----
-    public boolean holdNextTalk() { return getSharedPreferences("radio", MODE_PRIVATE).getBoolean("holdNextTalk", false); }
-    public void setHoldNextTalk(boolean on) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("holdNextTalk", on).apply(); }
-    public static final int HOLD_MS = 500;
-    private volatile long nextDownAt, lastWheelKeyAt; private volatile boolean nextTalking; private int wheelKeysLogged;
-    private final Runnable nextHold = () -> { if (nextDownAt != 0 && !nextTalking && inCar && !pttDown) { nextTalking = true; log("wheel: Next held, talking"); ptt(true); } };
-    /** A KEYCODE_MEDIA_NEXT event from the car: held past {@link #HOLD_MS} it keys the radio until released; a short press steps the channel. */
+    // ---- the wheel's Next as a talk key (hold, or double-press) ----
+    public static final String[] NEXT_TALK_NAMES = { "Off", "Hold", "Double-press" };
+    public int nextTalkMode() {
+        android.content.SharedPreferences p = getSharedPreferences("radio", MODE_PRIVATE);
+        return p.contains("nextTalk") ? p.getInt("nextTalk", 0) : p.getBoolean("holdNextTalk", false) ? com.macdmr.radio.ham.WheelNext.HOLD : 0;   // the first version was a hold on/off switch
+    }
+    public void setNextTalkMode(int m) { getSharedPreferences("radio", MODE_PRIVATE).edit().putInt("nextTalk", m).apply(); wheel.setMode(m); }
+    public boolean holdNextTalk() { return nextTalkMode() != 0; }
+    private volatile long lastWheelKeyAt; private int wheelKeysLogged;
+    private final com.macdmr.radio.ham.WheelNext wheel = new com.macdmr.radio.ham.WheelNext(new com.macdmr.radio.ham.WheelNext.Out() {
+        @Override public void talk(boolean on) { if (on) { if (inCar && !pttDown) ptt(true); } else if (pttDown) ptt(false); }
+        @Override public void step() { stepChannel(1); }
+        @Override public void schedule(Runnable r, long ms) { ui.postDelayed(r, ms); }
+        @Override public void cancel(Runnable r) { ui.removeCallbacks(r); }
+        @Override public void note(String what) { wheelLog("-> " + what); }
+    });
+    private boolean wheelModeSet;
+    /** A KEYCODE_MEDIA_NEXT event from the car, for the talk-key modes. */
     public void wheelNext(android.view.KeyEvent ev) {
-        long now = System.currentTimeMillis();
-        if (ev.getAction() == android.view.KeyEvent.ACTION_DOWN) {
-            if (ev.getRepeatCount() == 0) { nextDownAt = now; nextTalking = false; ui.removeCallbacks(nextHold); ui.postDelayed(nextHold, HOLD_MS); }
-            else if (!nextTalking && nextDownAt != 0 && now - nextDownAt >= HOLD_MS - 100) { ui.removeCallbacks(nextHold); nextHold.run(); }   // the car repeats while held
-        } else if (ev.getAction() == android.view.KeyEvent.ACTION_UP) {
-            ui.removeCallbacks(nextHold);
-            boolean was = nextTalking; nextDownAt = 0; nextTalking = false;
-            if (was) { log("wheel: Next released, stop talking"); ptt(false); } else stepChannel(1);
-        }
+        if (!wheelModeSet) { wheelModeSet = true; wheel.setMode(nextTalkMode()); }
+        long now = android.os.SystemClock.uptimeMillis();
+        if (ev.getAction() == android.view.KeyEvent.ACTION_DOWN) wheel.down(ev.getRepeatCount(), now); else if (ev.getAction() == android.view.KeyEvent.ACTION_UP) wheel.up(now);
+    }
+    /** Every wheel event and decision, with milliseconds, in files/wheel.log (last 400 lines): how this car behaves. */
+    private synchronized void wheelLog(String line) {
+        try {
+            java.io.File f = new java.io.File(getFilesDir(), "wheel.log");
+            String stamp = new java.text.SimpleDateFormat("MM-dd HH:mm:ss.SSS", Locale.US).format(new java.util.Date());
+            try (java.io.FileWriter w = new java.io.FileWriter(f, true)) { w.write(stamp + "  " + line + "\n"); }
+            if (f.length() > 40_000) {
+                java.util.List<String> l = java.nio.file.Files.readAllLines(f.toPath());
+                java.nio.file.Files.write(f.toPath(), l.subList(Math.max(0, l.size() - 400), l.size()));
+            }
+        } catch (Throwable ignored) { }
     }
     /** The first few raw wheel events of each drive go to the history, so what this car sends can be seen afterwards. */
     public void wheelKeySeen(android.view.KeyEvent ev) {
         lastWheelKeyAt = System.currentTimeMillis();
-        log("wheel key " + android.view.KeyEvent.keyCodeToString(ev.getKeyCode()) + (ev.getAction() == android.view.KeyEvent.ACTION_DOWN ? " down" : " up") + " repeat " + ev.getRepeatCount());
+        String k = android.view.KeyEvent.keyCodeToString(ev.getKeyCode()).replace("KEYCODE_", "") + (ev.getAction() == android.view.KeyEvent.ACTION_DOWN ? " down" : " up") + " repeat " + ev.getRepeatCount() + " (event time " + ev.getEventTime() + ", now " + android.os.SystemClock.uptimeMillis() + ")";
+        log("wheel key " + k); wheelLog(k);
         if (holdNextTalk() && wheelKeysLogged < 6) {
             wheelKeysLogged++;
             carEvent("\uD83C\uDF9B Wheel: " + android.view.KeyEvent.keyCodeToString(ev.getKeyCode()).replace("KEYCODE_", "") + (ev.getAction() == android.view.KeyEvent.ACTION_DOWN ? " pressed" + (ev.getRepeatCount() > 0 ? " (repeat " + ev.getRepeatCount() + ")" : "") : " released"));
