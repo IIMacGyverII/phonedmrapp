@@ -64,7 +64,8 @@ public class HelpView extends LinearLayout {
 
         new Topic("On the intercom", "vfo", Neo.AMBER, "VFO", "Tune any frequency without a saved channel.",
             s("Tuning", "VFO lets you set mode, receive and transmit frequency (with repeater-offset shortcuts), power, bandwidth and tones, or colour code, slot and call target for DMR, without saving a channel."),
-            s("While VFO is on", "The arrows step the frequency by the step you chose and the big number reads VFO. Long-press VFO to return to your channel. Save as channel keeps a frequency you want to come back to.")),
+            s("While VFO is on", "The arrows step the frequency by the step you chose and the big number reads VFO. Long-press VFO to return to your channel. Save as channel keeps a frequency you want to come back to."),
+            s("Band plan", "Under the frequencies, the VFO and the channel editor say what each one is used for: the US amateur band plan for 2 m and 70 cm (repeater inputs and outputs, simplex and calling frequencies, satellites, weak signal, APRS) and the other services in this radio's range (FRS and GMRS, MURS, marine, railroad, NOAA, land mobile, government). It turns amber with a caution where transmitting needs another licence, is not allowed or would disturb a special use. Amateur plans are the typical ARRL ones; your area's coordinator may differ.")),
 
         new Topic("On the intercom", "rec", Neo.RED, "Record and monitor", "REC saves audio; MON hears every DMR call.",
             s("Record", "REC records everything received on the channel to Download/DMR/Audio. Play them from Last heard → Recordings."),

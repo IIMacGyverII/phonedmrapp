@@ -94,6 +94,7 @@ public class ChannelEditorView extends LinearLayout {
         choiceInto(form, "Channel type", H_TYPE, new String[] { "Digital", "Analog" }, ch.type, v -> { ch.type = v; refreshGroups(); });
         tx = textInto(form, "Send frequency (MHz)", H_TX, ch.txFreq > 0 ? String.format(Locale.US, "%.5f", ch.txFreq / 1e6) : "", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         rx = textInto(form, "Receive frequency (MHz)", H_RX, ch.rxFreq > 0 ? String.format(Locale.US, "%.5f", ch.rxFreq / 1e6) : "", InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        form.addView(VfoDialog.bandPlanLine(getContext(), rx, tx));
 
         section(form, "Radio");
         choiceInto(form, "Power", H_POWER, new String[] { "Low power", "High power" }, ch.power, v -> ch.power = v);

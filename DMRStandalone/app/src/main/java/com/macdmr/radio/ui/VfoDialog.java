@@ -57,6 +57,7 @@ public final class VfoDialog {
 
         // frequencies
         rx = freqField(body, "Receive MHz", v.rxFreq); tx = freqField(body, "Transmit MHz", v.txFreq);
+        body.addView(bandPlanLine(c, rx, tx));
         body.addView(hint("Repeater offset shortcuts set Transmit from Receive:"));
         LinearLayout off = pillRow();
         pill(off, "Simplex", false, x -> offset(0)); pill(off, "−0.600", false, x -> offset(-600_000)); pill(off, "+0.600", false, x -> offset(600_000));
@@ -161,6 +162,27 @@ public final class VfoDialog {
     private int dp(float x) { return Math.round(x * d); }
 
     private TextView hint(String s) { return Neo.sheetHint(c, s); }
+    /** A live band-plan line under the frequency fields: what RX and TX are used for, and any caution. */
+    static TextView bandPlanLine(android.content.Context c, final EditText rx, final EditText tx) {
+        final TextView t = Neo.sheetHint(c, "");
+        final Runnable upd = () -> {
+            StringBuilder sb = new StringBuilder();
+            long r = mhz(rx), x = mhz(tx);
+            if (r > 0) sb.append("Receive ").append(com.macdmr.radio.ham.BandPlan.line(r));
+            if (x > 0 && x != r) sb.append(sb.length() > 0 ? "\n" : "").append("Send ").append(com.macdmr.radio.ham.BandPlan.line(x));
+            com.macdmr.radio.ham.BandPlan.Info i = x > 0 ? com.macdmr.radio.ham.BandPlan.of(x) : null;
+            t.setText(sb.toString());
+            t.setTextColor(i != null && i.caution != null ? Neo.AMBER_LIGHT : Neo.MUTED);
+        };
+        android.text.TextWatcher w = new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int a, int b, int n) { } @Override public void onTextChanged(CharSequence s, int a, int b, int n) { }
+            @Override public void afterTextChanged(android.text.Editable e) { upd.run(); }
+        };
+        rx.addTextChangedListener(w); tx.addTextChangedListener(w); upd.run();
+        return t;
+    }
+    private static long mhz(EditText e) { try { return Math.round(Double.parseDouble(e.getText().toString().trim()) * 1e6); } catch (Throwable x) { return 0; } }
+
     private TextView section(String s) { return Neo.sheetSection(c, s); }
 
     private LinearLayout pillRow() {
