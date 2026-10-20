@@ -174,7 +174,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         if (me == null) return "No position fix: turn on location";
         stopSatTrack();
         final SatState st = new SatState(); st.name = sat.name; st.aos = pass.aos; st.los = pass.los; st.maxEl = pass.maxEl; st.waiting = true;
-        st.mode = sat.mode; st.listenOnly = sat.listenOnly(); st.nominalHz = sat.downHz; satState = st;
+        st.mode = sat.mode; st.listenOnly = sat.listenOnly(); st.nominalHz = sat.downHz; satState = st; updateModeWake();
         if (sat.mode != com.macdmr.radio.ham.Satellites.VOICE) modeSince = System.currentTimeMillis();
         final Thread t = new Thread(() -> {
             boolean tuned = false, started = false, natural = false;
@@ -370,6 +370,32 @@ public class RadioService extends Service implements RadioEngine.Events {
     /** When the mode that has the radio (APRS monitor, KISS, SSTV, parrot) started; 0 if none. */
     public long modeSince() { return packetActive() ? modeSince : 0; }
     public void markModeStart() { modeSince = System.currentTimeMillis(); }
+    // Keep the CPU awake while a mode runs or a satellite pass is awaited: the beacon / telemetry timer, the pass
+    // wait and the decoders are plain threads and timers, which stop in deep sleep (screen off in the car). Until
+    // 2026-10-20 the phone only stayed awake by accident, through the audio mixer's wake lock while RX audio played.
+    private android.os.PowerManager.WakeLock modeWake;
+    void updateModeWake() {
+        boolean want = packetActive() || satState != null;
+        try {
+            if (modeWake == null) { android.os.PowerManager pm = (android.os.PowerManager) getSystemService(POWER_SERVICE); modeWake = pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "signaldeck:mode"); modeWake.setReferenceCounted(false); }
+            if (want && !modeWake.isHeld()) { modeWake.acquire(); log("wake lock on (a mode is running)"); exemptFromDoze(); }
+            else if (!want && modeWake.isHeld()) { modeWake.release(); log("wake lock off"); }
+        } catch (Throwable t) { log("wake lock: " + t); }
+    }
+    /** Doze ignores the wake locks of apps that are not exempt (phone unplugged, still and dark, e.g. on the nightstand
+     *  for a 4 a.m. ISS pass): put the app on the battery-optimisation allowlist with root, once. */
+    private volatile boolean dozeChecked;
+    private void exemptFromDoze() {
+        if (dozeChecked) return; dozeChecked = true;
+        worker.execute(() -> {
+            try {
+                android.os.PowerManager pm = (android.os.PowerManager) getSystemService(POWER_SERVICE);
+                if (pm.isIgnoringBatteryOptimizations(getPackageName())) return;
+                RootSetup.run("dumpsys deviceidle whitelist +" + getPackageName());
+                log(pm.isIgnoringBatteryOptimizations(getPackageName()) ? "battery optimisation: exempt (Doze no longer pauses modes)" : "battery optimisation: could not exempt the app");
+            } catch (Throwable t) { log("doze exemption: " + t); }
+        });
+    }
     public boolean packetActive() { return parrot.enabled() || foxTxOn() || (packet != null && (packet.monitoring() || packet.kiss().isActive() || packet.sstvRx())); }
 
     /** SSTV receive: on the SSTV calling frequency (through the VFO) or on the current channel. */
@@ -824,6 +850,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     public boolean scanHolding() { return scanner.isHolding(); }
 
     private void pushModes() {
+        updateModeWake();
         refreshControls();
         final String zn = zoneName();
         ui.post(() -> { for (Listener l : listeners) l.onModes(softSq.isEnabled(), softSq.level(), squelchOpen, monitorOn, recordOn, scanner.isScanning(), scanner.isHolding(), zn); });
