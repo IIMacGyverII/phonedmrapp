@@ -124,6 +124,7 @@ public final class PktDialog {
         body.addView(section("Morse"));
         LinearLayout mr = row();
         button(mr, "Send my callsign in Morse", Theme.VFO, x -> { String e = pe.sendCwId(); toast(e == null ? "Sending " + pe.callsign() + " in Morse" : e); });
+        button(mr, "Morse trainer", Theme.SOFTSQ, x -> { dlg.dismiss(); MorseTrainerDialog.show(c); });
         body.addView(mr);
         body.addView(hint((pe.cwEnabled() ? "Morse heard on analog channels (a repeater's identification, for example) is decoded into the history. " : "The Morse decoder is off (Settings). ") + (pe.cwIdEnabled() ? "Your callsign is sent in Morse after you talk on amateur channels, at most every ten minutes." : "Settings can add your callsign in Morse after you talk on amateur channels, every ten minutes.")));
         // ---- SSTV ----

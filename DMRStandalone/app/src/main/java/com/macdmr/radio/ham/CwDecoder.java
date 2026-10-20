@@ -30,7 +30,10 @@ public final class CwDecoder {
     private int unknown;
     private long idleSteps;
 
-    public CwDecoder(Listener l) { listener = l; }
+    private final boolean strict;
+    public CwDecoder(Listener l) { this(l, true); }
+    /** {@code strict} false: report any text (the trainer's sending practice), not only what looks like an identification. */
+    public CwDecoder(Listener l, boolean strict) { listener = l; this.strict = strict; }
 
     /** 8 kHz mono 16-bit little-endian. */
     public void process(byte[] mono, int n) {
@@ -177,7 +180,7 @@ public final class CwDecoder {
         java.util.Set<Character> distinct = new java.util.HashSet<>(); for (char ch : t.toCharArray()) if (ch != ' ' && ch != '?') distinct.add(ch);
         boolean call = false; for (String w : t.split(" ")) if (Logbook.looksLikeCall(w.replace("/", ""))) call = true;
         boolean wordy = known >= 8 && distinct.size() >= 4;                     // plain text, not a few stray dits from paging tones or static
-        if ((call || wordy) && unknown <= Math.max(1, known / 5) && wpm >= 4 && wpm <= 45) listener.onText(t, tone, (int) Math.round(wpm));
+        if ((call || wordy || (!strict && known >= 1)) && unknown <= Math.max(1, known / 5) && wpm >= 4 && wpm <= 45) listener.onText(t, tone, (int) Math.round(wpm));
     }
 
     private static final String LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/=?.,";
