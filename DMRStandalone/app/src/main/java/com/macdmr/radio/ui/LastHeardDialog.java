@@ -174,6 +174,10 @@ public final class LastHeardDialog {
             return new String[] { "Too long to send", "This radio's firmware ends every transmission after 30 seconds, so the app refuses audio longer than about 28.5 seconds (for example a long recording or an SSTV mode that needs more time)." };
         if (t.contains("Channel busy"))
             return new String[] { "Channel busy", "The radio refused to transmit because the channel was busy: another station was on it, or on DMR the repeater's time slot was in use. Wait for it to clear and try again." };
+        if (t.contains("Repeater ID ") && t.contains("Morse"))
+            return new String[] { "Repeater identification", "The repeater sent its callsign in Morse, as repeaters must every few minutes while in use, and the app decoded it. It matches the callsign in this channel's name, so you are hearing the repeater you programmed (not another one on the same frequency). The tone and speed are shown in brackets." };
+        if (t.contains("Morse:"))
+            return new String[] { "Morse heard", "Morse code was heard on this channel and decoded: usually a repeater's identification, or a station sending its callsign. Callsigns in it are added to the Logbook as heard. PKT \u2192 Settings \u2192 Morse decoder turns it off." };
         if (t.contains("Keyword"))
             return new String[] { "Keyword heard", "Live captions heard one of your keywords in received speech. Keywords are set on the intercom: long-press TXT → Keywords." };
         if (t.contains("Not sent"))

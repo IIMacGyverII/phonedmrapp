@@ -79,6 +79,15 @@ public class Ax25SessionTest {
         assertEquals("first try plus 5 retries", 6, ea.transmissions);
     }
 
+    @Test public void cancellingAConnectStopsTheRetries() {
+        End ea = new End();
+        Ax25Session a = new Ax25Session("N0AAA", 7, ea);
+        a.connect("N0ZZZ", null, now); now += 3000; a.disconnect(now);
+        for (int k = 0; k < 200; k++) { now += 500; a.tick(now); }
+        assertEquals("one SABM, no retries after cancel", 1, ea.transmissions);
+        assertEquals("[connecting to N0ZZZ, disconnected: cancelled]", ea.states.toString());
+    }
+
     @Test public void framesUseTheRightAddressBits() {
         End ea = new End();
         Ax25Session a = new Ax25Session("N0AAA", 7, ea);

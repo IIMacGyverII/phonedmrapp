@@ -70,7 +70,7 @@ public final class FoxHunt {
 
     /** Beeps (alternating 800 / 1200 Hz, 250 ms each) for {@code seconds}, then the Morse ID when given; 8 kHz mono. */
     public static short[] beacon(int seconds, String morseId) {
-        int sr = 8000, lead = sr * 3 / 10, beepN = sr / 4, n = seconds * 4;
+        int sr = 8000, lead = sr * 3 / 2, beepN = sr / 4, n = seconds * 4;   // 1.5 s lead: the radio passes audio only ~1.5 s after keying
         short[] id = morseId == null || morseId.isEmpty() ? new short[0] : com.macdmr.radio.coverage.Morse.pcm(morseId, 20, 800);
         short[] out = new short[lead + n * beepN + id.length];
         for (int k = 0; k < n; k++) {

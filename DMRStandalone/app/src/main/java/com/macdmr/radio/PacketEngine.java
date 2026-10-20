@@ -189,6 +189,20 @@ public final class PacketEngine {
             sm.registerListener(baro, s, 5_000_000);
         } else if (!needBaro && baro != null) { sm.unregisterListener(baro); baro = null; }
     }
+    /** Wait up to {@code ms} for one barometer reading (when the periodic listener is not running). */
+    private void readPressureOnce(long ms) {
+        android.hardware.SensorManager sm = (android.hardware.SensorManager) host.context().getSystemService(Context.SENSOR_SERVICE);
+        android.hardware.Sensor s = sm == null ? null : sm.getDefaultSensor(android.hardware.Sensor.TYPE_PRESSURE);
+        if (s == null) return;
+        final java.util.concurrent.CountDownLatch got = new java.util.concurrent.CountDownLatch(1);
+        android.hardware.SensorEventListener one = new android.hardware.SensorEventListener() {
+            @Override public void onSensorChanged(android.hardware.SensorEvent e) { pressureHpa = e.values[0]; got.countDown(); }
+            @Override public void onAccuracyChanged(android.hardware.Sensor x, int a) { }
+        };
+        sm.registerListener(one, s, android.hardware.SensorManager.SENSOR_DELAY_NORMAL, new android.os.Handler(android.os.Looper.getMainLooper()));
+        try { got.await(ms, java.util.concurrent.TimeUnit.MILLISECONDS); } catch (InterruptedException ignored) { }
+        sm.unregisterListener(one);
+    }
     public boolean hasBarometer() { android.hardware.SensorManager sm = (android.hardware.SensorManager) host.context().getSystemService(Context.SENSOR_SERVICE); return sm != null && sm.getDefaultSensor(android.hardware.Sensor.TYPE_PRESSURE) != null; }
 
     /** GPS fixes while SmartBeaconing is on. */
@@ -212,6 +226,10 @@ public final class PacketEngine {
     public String sendTelemetry() {
         if (!callsignSet()) return "Set your callsign first (PKT \u2192 Settings)";
         if (!host.analogRx()) return "Packet needs an analog channel";
+        if (pressureHpa <= 0 && hasBarometer()) { new Thread(() -> { readPressureOnce(3000); sendTelemetryNow(); }, "baro-once").start(); return null; }
+        return sendTelemetryNow();
+    }
+    private String sendTelemetryNow() {
         android.content.Intent b = host.context().registerReceiver(null, new android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED));
         int level = b == null ? 0 : b.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, 0) * 100 / Math.max(1, b.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100));
         double volts = b == null ? 0 : b.getIntExtra(android.os.BatteryManager.EXTRA_VOLTAGE, 0) / 1000.0, temp = b == null ? 0 : b.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, 0) / 10.0;
@@ -230,9 +248,12 @@ public final class PacketEngine {
     public String sendWeather() {
         if (!callsignSet()) return "Set your callsign first (PKT \u2192 Settings)";
         if (!hasBarometer()) return "This phone has no barometer";
-        if (pressureHpa <= 0) { applySettings(); return "No pressure reading yet: turn on Weather reports in Settings, then try again"; }
         Location l = host.location(); if (l == null) return "No position fix yet";
         if (!host.analogRx()) return "Packet needs an analog channel";
+        if (pressureHpa <= 0) {                                              // not running: take one reading, then send
+            new Thread(() -> { readPressureOnce(3000); if (pressureHpa > 0) sendWeather(); else host.event("\u26D4 Weather report not sent: no barometer reading"); }, "baro-once").start();
+            return null;
+        }
         double hpa = com.macdmr.radio.pkt.AprsExtras.seaLevel(pressureHpa, l.hasAltitude() ? l.getAltitude() : 0);
         final String info = com.macdmr.radio.pkt.AprsExtras.weatherInfo(l.getLatitude(), l.getLongitude(), hpa, "");
         txInfo(info, path(), "weather report", TX_REPS, () -> { store.log("beacon", myCall(), "APZDMR", info, null, false); host.event(String.format(Locale.US, "\u26C5 Weather report sent: %.1f hPa", hpa)); });
@@ -408,15 +429,35 @@ public final class PacketEngine {
     /** Bench: pretend a station was heard on RF (DiagReceiver). */
     public void diagHeard(String call) { heard(call); }
 
+    /** Bench (DiagReceiver only): gate to RF without an APRS-IS login and on any analog channel. */
+    public volatile boolean benchIgate;
+
+    /** Bench: send one packet of each kind on the current channel. */
+    public String diagSend(String what) {
+        if (what == null) return "what?";
+        Location l = host.location();
+        switch (what) {
+            case "object": return String.valueOf(l == null ? "no fix" : sendObject("BENCH", true, l.getLatitude(), l.getLongitude(), "/E", "bench test object"));
+            case "bulletin": return String.valueOf(sendBulletin(1, "Bench test bulletin"));
+            case "telemetry": return String.valueOf(sendTelemetry());
+            case "weather": return String.valueOf(sendWeather());
+            case "cwid": return String.valueOf(sendCwId());
+            case "beacon": return String.valueOf(sendBeacon());
+            case "connect": return String.valueOf(terminalConnect("N0BBS-1", ""));
+            case "disconnect": terminalDisconnect(); return "ok";
+            default: return "unknown " + what;
+        }
+    }
+
     private void maybeGateToRf(String line, APRSPacketDecoder.APRSPacket p) {
-        if (!txIgate() || !p.isMessage() || p.messageTo == null || !heardRecently(p.messageTo)) return;
-        AprsIsClient c = is; if (c == null || !c.isVerified()) return;
+        if (!(txIgate() || benchIgate) || !p.isMessage() || p.messageTo == null || !heardRecently(p.messageTo)) return;
+        AprsIsClient c = is; if (!benchIgate && (c == null || !c.isVerified())) return;
         String from = p.sourceCallsign + (p.sourceSSID != 0 ? "-" + p.sourceSSID : "");
         if (heardRecently(from)) return;                                          // the sender is local too: it hears the addressee itself
         String key = from + ">" + p.messageTo.trim() + ":" + p.messageText + "{" + p.messageId;
         long now = System.currentTimeMillis();
         synchronized (gatedToRf) { Long t = gatedToRf.get(key); if (t != null && now - t < 30 * 60_000L) return; gatedToRf.put(key, now); if (gatedToRf.size() > 500) gatedToRf.clear(); }
-        if (!onAprsFrequency()) { host.event("\uD83C\uDF10 Not gated to the radio (not on 144.390): " + from + " \u2192 " + p.messageTo.trim()); return; }
+        if (!onAprsFrequency() && !benchIgate) { host.event("\uD83C\uDF10 Not gated to the radio (not on 144.390): " + from + " \u2192 " + p.messageTo.trim()); return; }
         final String tp = com.macdmr.radio.pkt.AprsExtras.thirdParty(line, myCall());
         if (tp == null) return;
         final String to = p.messageTo.trim(), text = p.messageText;
@@ -461,7 +502,9 @@ public final class PacketEngine {
         if (!callsignSet()) return "Set your callsign first (PKT \u2192 Settings)";
         if (!host.analogRx()) return "Morse needs an analog channel";
         lastCwIdMs = System.currentTimeMillis();
-        host.transmitPcm(com.macdmr.radio.coverage.Morse.pcm(callsign(), 20, 800), "Morse ID", () -> host.event("\uD83D\uDD24 Sent Morse ID " + callsign()));
+        short[] m = com.macdmr.radio.coverage.Morse.pcm(callsign(), 20, 800), pcm = new short[SR * 13 / 10 + m.length];   // the TX path needs ~1.5 s after key-up: silence first, or the first letters are lost
+        System.arraycopy(m, 0, pcm, SR * 13 / 10, m.length);
+        host.transmitPcm(pcm, "Morse ID", () -> host.event("\uD83D\uDD24 Sent Morse ID " + callsign()));
         return null;
     }
     private com.macdmr.radio.ham.CwDecoder cw;
@@ -585,7 +628,10 @@ public final class PacketEngine {
             else if (textMode == 2 && psk != null) psk.process(mono, n);
             if (cwEnabled() && !weatherBand) {
                 if (cw == null) cw = new com.macdmr.radio.ham.CwDecoder((text, hz, wpm) -> {
-                    host.event("\uD83D\uDD24 Morse: " + text + String.format(Locale.US, "  (%.0f Hz, %d WPM)", hz, wpm));
+                    String id = null;                                                      // the channel's own callsign (repeater channels are named after it)
+                    for (String w : host.channelName().toUpperCase(Locale.US).replace(",", " ").split(" ")) { String b = com.macdmr.radio.ham.Logbook.baseCall(w.startsWith("\u00BB") ? w.substring(1) : w); if (b != null && text.contains(b)) id = b; }
+                    host.event(id != null ? "\uD83D\uDD24 Repeater ID " + id + " in Morse (matches this channel): " + text + String.format(Locale.US, "  (%.0f Hz, %d WPM)", hz, wpm)
+                                          : "\uD83D\uDD24 Morse: " + text + String.format(Locale.US, "  (%.0f Hz, %d WPM)", hz, wpm));
                     for (String w : text.split(" ")) if (com.macdmr.radio.ham.Logbook.baseCall(w) != null) host.logHeard(w, "CW", "Morse ID");
                 });
                 cw.process(mono, n);

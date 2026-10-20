@@ -301,7 +301,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             try { Thread.sleep(1500); } catch (InterruptedException ignored) { }
             ChannelStore.Channel c = current;
             short[] id = c != null && amateurBand(c.txFreq) && packet != null && packet.callsignSet() ? com.macdmr.radio.coverage.Morse.pcm(packet.callsign(), 20, 800) : new short[0];
-            int lead = 2400, max = 8000 * 28;
+            int lead = 12000, max = 8000 * 28;                     // 1.5 s: the radio passes audio only ~1.5 s after keying
             int voiceN = Math.min(pcm.length, max - lead - id.length);
             short[] out = new short[lead + voiceN + id.length];
             System.arraycopy(pcm, 0, out, lead, voiceN); System.arraycopy(id, 0, out, lead + voiceN, id.length);

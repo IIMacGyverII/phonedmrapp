@@ -3,7 +3,7 @@ package com.macdmr.radio.ham;
 /**
  * Simplex repeater ("parrot"): records each transmission heard on the channel and, a second after it ends, sends it
  * back on the same channel. A station hears how it sounds, and two stations out of each other's range can relay
- * through the phone. Recordings are capped at {@link #MAX_MS} (the radio stops every transmission at 30 s). With a
+ * through the phone. Recordings are capped at {@link #MAX_MS}, so with the 1.5 s lead the playback stays under the radio's 30 s limit. With a
  * callsign set, the station identification (Morse) is added to a playback at most every ten minutes.
  *
  * Fed with every 8 kHz mono receive block; {@code heard} is the squelch (a real reception, not noise).
@@ -16,7 +16,7 @@ public final class Parrot {
         void event(String line);
     }
 
-    public static final int MAX_MS = 27_000, MIN_MS = 700, HANG_MS = 700, REPLY_DELAY_MS = 1000;
+    public static final int MAX_MS = 26_000, MIN_MS = 700, HANG_MS = 700, REPLY_DELAY_MS = 1000;
     public static final long ID_EVERY_MS = 10 * 60_000L;
     private static final int SR = 8000;
 
@@ -55,7 +55,7 @@ public final class Parrot {
         boolean id = call != null && !call.isEmpty() && (lastIdMs == 0 || now - lastIdMs >= ID_EVERY_MS);
         short[] voice = normalize(buf, len);
         short[] morse = id ? com.macdmr.radio.coverage.Morse.pcm(call, 20, 800) : new short[0];
-        int lead = SR / 4, gap = id ? SR * 3 / 10 : 0;
+        int lead = SR * 3 / 2, gap = id ? SR * 3 / 10 : 0;          // the radio passes audio only ~1.5 s after keying (measured 2026-10-20)
         int total = lead + voice.length + gap + morse.length;
         if (total > SR * 28) { morse = new short[0]; gap = 0; id = false; total = lead + voice.length; }   // the radio's limit wins over an ID this time
         short[] out = new short[total];
@@ -68,7 +68,7 @@ public final class Parrot {
             boolean ok = host.transmit(out, "parrot " + secs + " s", () -> { synchronized (Parrot.this) { playing = false; played++; } });
             if (!ok) { synchronized (Parrot.this) { playing = false; } host.event("🦜 Parrot could not transmit the " + secs + " s recording"); return; }
             if (sentId) lastIdMs = System.currentTimeMillis();
-            host.event("🦜 Parrot repeated " + secs + " s" + (cut ? " (cut at 27 s, the radio's limit)" : "") + (sentId ? " + ID" : ""));
+            host.event("🦜 Parrot repeated " + secs + " s" + (cut ? " (cut at 26 s, the radio's limit)" : "") + (sentId ? " + ID" : ""));
         }, "parrot").start();
     }
 

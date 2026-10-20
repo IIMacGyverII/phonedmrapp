@@ -60,7 +60,7 @@ public final class Ax25Session {
 
     public synchronized void disconnect(long now) {
         if (state == State.DISCONNECTED) return;
-        if (state == State.CONNECTING) { state = State.DISCONNECTED; link.state("disconnected: cancelled"); return; }
+        if (state == State.CONNECTING) { state = State.DISCONNECTED; reset(); link.state("disconnected: cancelled"); return; }   // reset stops the retry timer
         state = State.DISCONNECTING; tries = 1; queue.clear();
         send(u(DISC | PF, true)); t1At = now + T1_MS;
         link.state("disconnecting");
@@ -78,6 +78,7 @@ public final class Ax25Session {
 
     public synchronized void tick(long now) {
         if (t2At != 0 && now >= t2At) { t2At = 0; if (state == State.CONNECTED) send(s(RR, false, false)); }
+        if (state == State.DISCONNECTED) { t1At = t2At = 0; return; }
         if (t1At == 0 || now < t1At) return;
         if (++tries > N2) {
             State was = state; state = State.DISCONNECTED; reset();
