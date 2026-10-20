@@ -3,6 +3,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />   <!-- localhost socket to the companion recognizer, elevation lookup -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />   <!-- coverage logging with the screen off -->

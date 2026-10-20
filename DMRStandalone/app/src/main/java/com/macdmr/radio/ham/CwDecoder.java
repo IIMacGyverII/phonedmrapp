@@ -175,7 +175,9 @@ public final class CwDecoder {
         int known = 0; for (char ch : t.toCharArray()) if (ch != ' ' && ch != '?') known++;
         double wpm = unitSteps > 0 ? 1200.0 / (unitSteps * 5) : 0;
         java.util.Set<Character> distinct = new java.util.HashSet<>(); for (char ch : t.toCharArray()) if (ch != ' ' && ch != '?') distinct.add(ch);
-        if (known >= 3 && distinct.size() >= 2 && unknown <= Math.max(1, known / 5) && wpm >= 4 && wpm <= 45) listener.onText(t, tone, (int) Math.round(wpm));
+        boolean call = false; for (String w : t.split(" ")) if (Logbook.looksLikeCall(w.replace("/", ""))) call = true;
+        boolean wordy = known >= 8 && distinct.size() >= 4;                     // plain text, not a few stray dits from paging tones or static
+        if ((call || wordy) && unknown <= Math.max(1, known / 5) && wpm >= 4 && wpm <= 45) listener.onText(t, tone, (int) Math.round(wpm));
     }
 
     private static final String LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/=?.,";
