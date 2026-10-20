@@ -84,5 +84,22 @@ public final class AutoTrust {
         catch (Throwable ignored) { }
     }
 
+    /** The radio's transmission knocked out the USB cable (measured on one 2 m frequency in the owner's car). */
+    public static void notifyUsbDrop(Context c, String channel, String freq, boolean car) {
+        try {
+            NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (Build.VERSION.SDK_INT >= 26 && nm != null) nm.createNotificationChannel(new NotificationChannel("car", "Android Auto", NotificationManager.IMPORTANCE_DEFAULT));
+            String title = (car ? "Android Auto dropped" : "USB dropped") + " while transmitting";
+            String text = "Transmitting on " + channel + " (" + freq + ") disturbed the USB cable" + (car ? ", so Android Auto disconnected until you stopped talking" : "")
+                    + ". The radio's signal gets into the cable; it depends on the frequency, so other channels may be fine. What helps: a snap-on ferrite choke on the cable near the phone, a shorter shielded cable, Low power for this channel (Channels → edit), or wireless Android Auto.";
+            NotificationCompat.Builder b = new NotificationCompat.Builder(c, "car").setSmallIcon(R.drawable.ic_stat_radio).setColor(0xFFFFB020)
+                    .setContentTitle(title).setContentText(channel + " (" + freq + ") disturbed the USB cable")
+                    .setStyle(new NotificationCompat.BigTextStyle().bigText(text)).setAutoCancel(true)
+                    .setContentIntent(PendingIntent.getActivity(c, 0x7A58, new Intent(c, com.macdmr.radio.MainActivity.class), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
+            NotificationManagerCompat.from(c).notify("usbdrop", 9, b.build());
+        } catch (SecurityException se) { /* notifications not allowed */ }
+        catch (Throwable ignored) { }
+    }
+
     public static void clearNotice(Context c) { try { NotificationManagerCompat.from(c).cancel("autotrust", 8); } catch (Throwable ignored) { } }
 }

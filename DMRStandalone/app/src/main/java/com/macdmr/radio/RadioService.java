@@ -261,6 +261,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         startForegroundTyped(false);
         running = this;
         watchCar();
+        watchUsbDuringTx();
         profile = DeviceProfile.detect();
         store = new ChannelStore(this);
         zoneId = getSharedPreferences("radio", MODE_PRIVATE).getLong("zone", 0);
@@ -307,6 +308,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         try { if (coverage != null) coverage.stop(); } catch (Throwable ignored) { }
         stopBluetoothMic();
         try { if (pttKey != null) unregisterReceiver(pttKey); } catch (Throwable ignored) { }
+        try { if (powerOff != null) unregisterReceiver(powerOff); } catch (Throwable ignored) { }
         try { if (pttDown) { if (audio != null) audio.stopTx(); engine.ptt(false); } } catch (Throwable ignored) { }
         try { if (audio != null) { audio.stopRx(); } } catch (Throwable ignored) { }
         engine.close();
@@ -859,6 +861,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                     if (txInhibited()) { log("PTT blocked: receive-only channel"); ui.post(() -> { for (Listener l : listeners) l.onHistory("⛔ TX blocked on a receive-only channel"); }); return; }
                     if (pttDown) return;
                     pttDown = true; refreshControls();
+                    txChannel = current; txInCar = inCar; txCharging = charging(); txDropNoted = false;
                     if (audio != null) audio.stopRx();              // never play the RX stream while the mic is live (feedback)
                     boolean carMic = inCar && carMic() && startBluetoothMic();   // in the car: its microphone, through the hands-free link
                     if (audio != null) audio.setTxSource(carMic ? android.media.MediaRecorder.AudioSource.VOICE_COMMUNICATION : android.media.MediaRecorder.AudioSource.MIC);
@@ -869,6 +872,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                 } else {
                     if (!pttDown) return;
                     pttDown = false; refreshControls();
+                    txEndedAt = System.currentTimeMillis();
                     ui.removeCallbacks(txWatchdog);
                     try {
                         if (audio != null) audio.stopTx();
@@ -1106,12 +1110,43 @@ public class RadioService extends Service implements RadioEngine.Events {
         log(line); history("car", line);
     }
 
+    // ---- the transmission knocking out the USB cable ---------------------------------------------------
+    // Measured 2026-10-19 in the owner's car: on one 2 m channel (TX 144.770 MHz, high power) every transmission reset
+    // the phone's USB port about 1.5 s after key-up (USB port change, charging stopped), so a wired Android Auto dropped
+    // until the carrier ended; 146.370 MHz on the same band did not. The cable picks up the RF (the antenna is at the
+    // far end of the phone), and only some frequencies couple. Software cannot stop it; the user is told what helps.
+    private volatile ChannelStore.Channel txChannel; private volatile boolean txInCar, txCharging, txDropNoted; private volatile long txEndedAt;
+    private android.content.BroadcastReceiver powerOff;
+    private boolean txJustNow() { return pttDown || System.currentTimeMillis() - txEndedAt < 3000; }
+    private boolean charging() {
+        try { android.content.Intent b = registerReceiver(null, new android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED)); return b != null && b.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, 0) != 0; }
+        catch (Throwable t) { return false; }
+    }
+    private void watchUsbDuringTx() {
+        powerOff = new android.content.BroadcastReceiver() {
+            @Override public void onReceive(android.content.Context c, android.content.Intent i) { if (txCharging && txJustNow()) usbDropDuringTx(false); }
+        };
+        try { registerReceiver(powerOff, new android.content.IntentFilter(android.content.Intent.ACTION_POWER_DISCONNECTED)); } catch (Throwable t) { log("usb watch: " + t); }
+    }
+    /** Android Auto dropped (car) or charging stopped (power) during or right after a transmission: once per transmission. */
+    private void usbDropDuringTx(boolean car) {
+        if (txDropNoted) return;
+        ChannelStore.Channel ch = txChannel;
+        if (ch == null || (car && !txInCar)) return;
+        txDropNoted = true;
+        String freq = String.format(java.util.Locale.US, "%.3f MHz", ch.txFreq / 1e6);
+        String what = car || txInCar ? "Android Auto dropped" : "The USB cable dropped (charging stopped)";
+        carEvent("⚠️ " + what + " while transmitting on " + ch.name + " (" + freq + "): the transmission is disturbing the USB cable");
+        com.macdmr.radio.car.AutoTrust.notifyUsbDrop(this, ch.name, freq, car || txInCar);
+    }
+
     private void watchCar() {
         try {
             new androidx.car.app.connection.CarConnection(this).getType().observeForever(t -> {
                 boolean car = t != null && t == androidx.car.app.connection.CarConnection.CONNECTION_TYPE_PROJECTION;
                 if (car == inCar) return;
                 inCar = car; log(car ? "Android Auto connected" : "Android Auto disconnected");
+                if (!car && txJustNow()) usbDropDuringTx(true);
                 carEvent(car ? "🚗 Android Auto connected (" + (carControlsScreen() ? "Radio controls screen" : "media app") + ")" : "🚗 Android Auto disconnected");
                 carCoverage(car);
                 if (car) new Thread(() -> {   // a sideloaded app stays off the car's app list unless Unknown sources is on
