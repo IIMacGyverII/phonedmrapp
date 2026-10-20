@@ -5809,6 +5809,20 @@ public class MainHook implements IXposedHookLoadPackage {
             leadHelp.setTextSize(12); leadHelp.setTextColor(0xFF999999);
             mainLayout.addView(leadHelp);
 
+            android.widget.Button shareLog = new android.widget.Button(activity);
+            shareLog.setText("\uD83D\uDCE4 Share APRS log");
+            shareLog.setAllCaps(false);
+            shareLog.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) { shareAprsTxLog(activity); }
+            });
+            mainLayout.addView(shareLog);
+            TextView shareHelp = new TextView(activity);
+            shareHelp.setText("Sends the transmit log (every beacon tick and APRS transmission) with the app version, phone and these settings, "
+                    + "through the normal share menu: email, messages, Drive, or save it and attach it to a forum post. Positions are blanked "
+                    + "in the shared copy; the file itself is Download/DMR/APRS/aprs_tx_log.txt.");
+            shareHelp.setTextSize(12); shareHelp.setTextColor(0xFF999999);
+            mainLayout.addView(shareHelp);
+
             TextView infoText = new TextView(activity);
             infoText.setText("\nThe APRS frequency is used by APRS monitoring, Send Message, Position Beacon and the KISS TNC.\n\n" +
                            "📡 Receive: positions (incl. Mic-E and compressed), objects, messages, status and weather are decoded; stations are stored with callsign, location and time.\n" +
@@ -15835,6 +15849,61 @@ public class MainHook implements IXposedHookLoadPackage {
             String ts = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(new java.util.Date());
             try (java.io.FileWriter w = new java.io.FileWriter(f, true)) { w.write(ts + "  " + line + "\n"); }
         } catch (Throwable t) { XposedBridge.log(TAG + ": [aprs-txlog] " + t.getMessage()); }
+    }
+
+    /**
+     * Share the APRS TX log (button in APRS Settings): a copy with a header (module version, phone, Android, APRS
+     * settings) and the positions blanked, written to Download/DMR/APRS through MediaStore so the share menu gets a
+     * content:// link it can read (a plain file path is refused between apps), then ACTION_SEND.
+     */
+    static void shareAprsTxLog(final Activity activity) {
+        try {
+            File log = new File(new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "DMR/APRS"), "aprs_tx_log.txt");
+            String body = log.exists() ? new String(java.nio.file.Files.readAllBytes(log.toPath()), java.nio.charset.StandardCharsets.UTF_8) : "";
+            // positions out: uncompressed lat/lon (ddmm.mmN / dddmm.mmW) and decimal pairs
+            body = body.replaceAll("\\d{4}\\.\\d{2}([NS])", "####.##$1").replaceAll("\\d{5}\\.\\d{2}([EW])", "#####.##$1")
+                       .replaceAll("-?\\d{1,3}\\.\\d{3,}\\s*,\\s*-?\\d{1,3}\\.\\d{3,}", "(position removed)");
+            android.content.SharedPreferences g = activity.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE);
+            APRSDatabase db = APRSDatabase.getInstance(activity);
+            StringBuilder h = new StringBuilder();
+            h.append("DMRModHooks APRS TX log\n");
+            h.append("Module ").append(VERSION).append("  |  ").append(android.os.Build.MANUFACTURER).append(' ').append(android.os.Build.MODEL)
+             .append("  |  Android ").append(android.os.Build.VERSION.RELEASE).append(" (SDK ").append(android.os.Build.VERSION.SDK_INT).append(")\n");
+            h.append("Shared ").append(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z", java.util.Locale.US).format(new java.util.Date())).append('\n');
+            h.append("Settings: APRS ").append(db.getAprsFrequency()).append(" MHz, lead-in ").append(g.getInt("tx_lead_ms", APRS_TX_LEAD_MS)).append(" ms, auto-ack ")
+             .append(g.getBoolean("auto_ack", true) ? "on" : "off").append(", digipeater ").append(g.getBoolean("digipeat", false) ? "on" : "off")
+             .append(", beacon ").append(beaconActive ? "running every " + (beaconIntervalMs / 60000) + " min on " + (beaconUseAprsFreq ? (beaconFreqHz / 1e6) + " MHz" : "the current channel") : "off").append('\n');
+            h.append("Positions are blanked in this copy.\n");
+            h.append("--------------------------------------------------------------------------------\n");
+            String text = h + (body.isEmpty() ? "(the log is empty: nothing has been transmitted since the update)\n" : body);
+
+            String name = "aprs_tx_log_" + new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(new java.util.Date()) + ".txt";
+            android.net.Uri uri;
+            if (android.os.Build.VERSION.SDK_INT >= 29) {
+                android.content.ContentValues cv = new android.content.ContentValues();
+                cv.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, name);
+                cv.put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "text/plain");
+                cv.put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/DMR/APRS");
+                uri = activity.getContentResolver().insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
+                if (uri == null) throw new java.io.IOException("could not create the shared copy");
+                try (java.io.OutputStream o = activity.getContentResolver().openOutputStream(uri)) { o.write(text.getBytes(java.nio.charset.StandardCharsets.UTF_8)); }
+            } else {
+                File out = new File(log.getParentFile(), name);
+                java.nio.file.Files.write(out.toPath(), text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                android.os.StrictMode.setVmPolicy(new android.os.StrictMode.VmPolicy.Builder().build());   // Android 8/9 only: allow the file:// link
+                uri = android.net.Uri.fromFile(out);
+            }
+            android.content.Intent send = new android.content.Intent(android.content.Intent.ACTION_SEND)
+                    .setType("text/plain")
+                    .putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                    .putExtra(android.content.Intent.EXTRA_SUBJECT, "DMRModHooks APRS TX log (" + VERSION + ")")
+                    .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            activity.startActivity(android.content.Intent.createChooser(send, "Share APRS log"));
+            XposedBridge.log(TAG + ": [aprs-txlog] shared " + name + " (" + text.length() + " chars)");
+        } catch (Throwable t) {
+            XposedBridge.log(TAG + ": [aprs-txlog] share failed: " + t);
+            try { Toast.makeText(activity, "Could not share the log: " + t.getMessage(), Toast.LENGTH_LONG).show(); } catch (Throwable ignored) { }
+        }
     }
 
     /** Longest audio we will key for: the firmware stops TX at 30 s, keep margin for key-up + lead-in. */
