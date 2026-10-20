@@ -5809,6 +5809,24 @@ public class MainHook implements IXposedHookLoadPackage {
             leadHelp.setTextSize(12); leadHelp.setTextColor(0xFF999999);
             mainLayout.addView(leadHelp);
 
+            TextView powerLabel = new TextView(activity);
+            powerLabel.setText("\nAPRS transmit power:");
+            powerLabel.setTextSize(14);
+            mainLayout.addView(powerLabel);
+            final android.widget.Spinner powerSpin = new android.widget.Spinner(activity);
+            powerSpin.setAdapter(new android.widget.ArrayAdapter<String>(activity, android.R.layout.simple_spinner_dropdown_item,
+                    new String[]{ "High (default)", "Low", "Same as the current channel" }));
+            int curPw = activity.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE).getInt("tx_power", 1), pwIdx = 0;
+            for (int k = 0; k < APRS_POWER_CHOICES.length; k++) if (APRS_POWER_CHOICES[k] == curPw) pwIdx = k;
+            powerSpin.setSelection(pwIdx);
+            mainLayout.addView(powerSpin);
+            TextView powerHelp = new TextView(activity);
+            powerHelp.setText("Used whenever APRS tunes to the APRS frequency: Position Beacon and Send Message on the APRS frequency, the KISS TNC "
+                    + "and APRS monitoring (auto-acks, digipeater). High reaches the most digipeaters. Beacons and messages sent on the \"current channel\" "
+                    + "use that channel's power.");
+            powerHelp.setTextSize(12); powerHelp.setTextColor(0xFF999999);
+            mainLayout.addView(powerHelp);
+
             android.widget.Button shareLog = new android.widget.Button(activity);
             shareLog.setText("\uD83D\uDCE4 Share APRS log");
             shareLog.setAllCaps(false);
@@ -5884,6 +5902,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 .edit().putBoolean("auto_ack", autoAckBox.isChecked())
                                 .putInt("passive_mode", passiveSpin.getSelectedItemPosition())
                                 .putInt("tx_lead_ms", APRS_LEAD_CHOICES[Math.max(0, Math.min(APRS_LEAD_CHOICES.length - 1, leadSpin.getSelectedItemPosition()))])
+                                .putInt("tx_power", APRS_POWER_CHOICES[Math.max(0, Math.min(APRS_POWER_CHOICES.length - 1, powerSpin.getSelectedItemPosition()))])
                                 .putBoolean("digipeat", digiBox.isChecked()).apply();
                         aprsPassiveMode = -1;   // reload on the next audio chunk
                         aprsDigiEnabled = digiBox.isChecked() ? 1 : 0;
@@ -7039,7 +7058,7 @@ public class MainHook implements IXposedHookLoadPackage {
             XposedHelpers.setIntField(currentChannel, "sq", 2);  // Hardware squelch 2 (default - only 0 or 2 supported)
             XposedHelpers.setIntField(currentChannel, "band", 1);  // VHF
             XposedHelpers.setIntField(currentChannel, "channelMode", 0);  // Narrow bandwidth (NFM 12.5kHz for SSTV)
-            XposedHelpers.setIntField(currentChannel, "power", 1);  // High power
+            { int pw = aprsTxPower(); if (pw >= 0) XposedHelpers.setIntField(currentChannel, "power", pw); }  // APRS Settings: high (default), low, or the channel's own
             XposedHelpers.setIntField(currentChannel, "rxType", 0);  // No tone
             XposedHelpers.setIntField(currentChannel, "rxSubCode", 0);
             XposedHelpers.setIntField(currentChannel, "txType", 0);
@@ -15767,6 +15786,18 @@ public class MainHook implements IXposedHookLoadPackage {
                 aprsLeadMs(ctx), APRS_TX_REPS, APRS_TX_GAP_MS);
     }
 
+    /** APRS transmit power when the module tunes to the APRS frequency (APRS Settings): 1 high (default), 0 low,
+     *  -1 the current channel's own power. Used by the beacon, messages, the KISS session and monitoring mode. */
+    static final int[] APRS_POWER_CHOICES = { 1, 0, -1 };
+    private static int aprsTxPower() {
+        try {
+            android.content.Context c = appContext;
+            if (c == null) c = (android.content.Context) XposedHelpers.callStaticMethod(XposedHelpers.findClass("com.pri.prizeinterphone.PrizeInterPhoneApp", appClassLoader), "getContext");
+            int v = c.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE).getInt("tx_power", 1);
+            return v == 0 || v == -1 ? v : 1;
+        } catch (Throwable t) { return 1; }
+    }
+
     /** Packet lead-in (APRS Settings, for testing): 1600 ms by default, as measured; 1000, 500 or 0 to try. */
     static final int[] APRS_LEAD_CHOICES = { 1600, 1000, 500, 0 };
     private static int aprsLeadMs(android.content.Context ctx) {
@@ -15870,7 +15901,7 @@ public class MainHook implements IXposedHookLoadPackage {
             h.append("Module ").append(VERSION).append("  |  ").append(android.os.Build.MANUFACTURER).append(' ').append(android.os.Build.MODEL)
              .append("  |  Android ").append(android.os.Build.VERSION.RELEASE).append(" (SDK ").append(android.os.Build.VERSION.SDK_INT).append(")\n");
             h.append("Shared ").append(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z", java.util.Locale.US).format(new java.util.Date())).append('\n');
-            h.append("Settings: APRS ").append(db.getAprsFrequency()).append(" MHz, lead-in ").append(g.getInt("tx_lead_ms", APRS_TX_LEAD_MS)).append(" ms, auto-ack ")
+            h.append("Settings: APRS ").append(db.getAprsFrequency()).append(" MHz, lead-in ").append(g.getInt("tx_lead_ms", APRS_TX_LEAD_MS)).append(" ms, power ").append(g.getInt("tx_power", 1) == 1 ? "high" : g.getInt("tx_power", 1) == 0 ? "low" : "channel's").append(", auto-ack ")
              .append(g.getBoolean("auto_ack", true) ? "on" : "off").append(", digipeater ").append(g.getBoolean("digipeat", false) ? "on" : "off")
              .append(", beacon ").append(beaconActive ? "running every " + (beaconIntervalMs / 60000) + " min on " + (beaconUseAprsFreq ? (beaconFreqHz / 1e6) + " MHz" : "the current channel") : "off").append('\n');
             h.append("Positions are blanked in this copy.\n");
@@ -16406,7 +16437,7 @@ public class MainHook implements IXposedHookLoadPackage {
             return;
         }
         captureTxFreqBackup();
-        tuneCurrentChannelAnalog(freqHz);
+        tuneCurrentChannelAnalog(freqHz, aprsTxPower());
         h.postDelayed(new Runnable() {
             @Override public void run() {
                 int ms = 3000;
@@ -16587,7 +16618,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     if (beaconUseAprsFreq) {
                         // blip to the APRS freq for this beacon, then restore the user's channel
                         captureTxFreqBackup();
-                        tuneCurrentChannelAnalog(beaconFreqHz);
+                        tuneCurrentChannelAnalog(beaconFreqHz, aprsTxPower());
                         beaconHandler.postDelayed(new Runnable() {
                             @Override public void run() {
                                 int ms = sendPositionBeaconOnce(activity, beaconCall, beaconSsid, symTable, symCode, beaconComment, loc);
@@ -16731,7 +16762,7 @@ public class MainHook implements IXposedHookLoadPackage {
         // decides), so tune once here and restore in stopKissTnc — not per packet.
         if (useAprsFreq) {
             captureTxFreqBackup();
-            tuneCurrentChannelAnalog(freqHz);
+            tuneCurrentChannelAnalog(freqHz, aprsTxPower());
             kissTunedForSession = true;
             XposedBridge.log(TAG + ": [kiss] tuned to " + (freqHz / 1000000.0) + " MHz for the session");
         } else {
