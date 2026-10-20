@@ -51,6 +51,8 @@ public final class PktDialog {
         LinearLayout r2b = row();
         button(r2b, "Object\u2026", Theme.VFO, x -> objectSheet());
         button(r2b, "Bulletin\u2026", Theme.VFO, x -> bulletinSheet());
+        body.addView(r2b);
+        r2b = row();                                                         // two per row: the labels stay whole
         button(r2b, "Telemetry", Theme.VFO, x -> { String e = pe.sendTelemetry(); toast(e == null ? "Telemetry queued" : e); });
         if (pe.hasBarometer()) button(r2b, "Weather", Theme.VFO, x -> { String e = pe.sendWeather(); toast(e == null ? "Weather report queued" : e); });
         body.addView(r2b);
@@ -74,6 +76,8 @@ public final class PktDialog {
         LinearLayout r3 = row();
         button(r3, "Stations heard (" + pe.store().stationCount() + ")", Theme.SOFTSQ, x -> stations());
         button(r3, "APRS log", Theme.SOFTSQ, x -> aprsLog());
+        body.addView(r3);
+        r3 = row();
         button(r3, "Bulletins", Theme.SOFTSQ, x -> bulletinsHeard());
         button(r3, "Settings", Theme.MON, x -> settings());
         body.addView(r3);
@@ -529,7 +533,7 @@ public final class PktDialog {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT); lp.topMargin = dp(2); lp.bottomMargin = dp(4); r.setLayoutParams(lp);
         return r;
     }
-    private TextView button(LinearLayout row, String text, int[] accent, View.OnClickListener l) { TextView b = Neo.button(c, text, null, Neo.accentOf(accent)); b.setTextSize(14); b.setOnClickListener(l); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f); lp.setMargins(dp(3), dp(4), dp(3), dp(2)); row.setBaselineAligned(false); row.addView(b, lp); return b; }
+    private TextView button(LinearLayout row, String text, int[] accent, View.OnClickListener l) { TextView b = Neo.button(c, text, null, Neo.accentOf(accent)); b.setTextSize(14); Neo.fit(b); b.setOnClickListener(l); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f); lp.setMargins(dp(3), dp(4), dp(3), dp(2)); row.setBaselineAligned(false); row.addView(b, lp); return b; }
     private LinearLayout shell() {
         LinearLayout r = new LinearLayout(c); r.setOrientation(LinearLayout.VERTICAL);
         r.setBackground(Neo.rowCard(c)); r.setPadding(dp(12), dp(8), dp(12), dp(8));

@@ -44,7 +44,7 @@ public final class KeyerDialog {
             recB[s] = Neo.button(c, "Record", "rec", Neo.RED);
             TextView listen = Neo.button(c, "Listen", "volume", Neo.CYAN), send = Neo.button(c, "Send", "send", Neo.GREEN);
             idB[s] = Neo.button(c, "", null, Neo.VIOLET);
-            for (TextView b : new TextView[] { recB[s], listen, send, idB[s] }) { b.setTextSize(13); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f); lp.setMargins((int) (2 * d), (int) (6 * d), (int) (2 * d), 0); r.addView(b, lp); }
+            for (TextView b : new TextView[] { recB[s], listen, send, idB[s] }) { b.setTextSize(13); Neo.fit(b); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f); lp.setMargins((int) (2 * d), (int) (6 * d), (int) (2 * d), 0); r.addView(b, lp); }
             card.addView(r);
             LinearLayout.LayoutParams cl = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT); cl.bottomMargin = (int) (8 * d);
             body.addView(card, cl);

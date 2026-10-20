@@ -52,7 +52,7 @@ public final class FoxHuntDialog {
 
         LinearLayout r1 = new LinearLayout(c); r1.setBaselineAligned(false);
         TextView mark = Neo.button(c, "Mark", "locate", Neo.GREEN), beep = Neo.button(c, "Beeper off", "volume", Neo.CYAN), off = Neo.button(c, "Off-frequency", "vfo", Neo.AMBER);
-        for (TextView b : new TextView[] { mark, beep, off }) { b.setTextSize(14); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f); lp.setMargins((int) (3 * d), (int) (8 * d), (int) (3 * d), 0); r1.addView(b, lp); }
+        for (TextView b : new TextView[] { mark, beep, off }) { b.setTextSize(14); Neo.fit(b); LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f); lp.setMargins((int) (3 * d), (int) (8 * d), (int) (3 * d), 0); r1.addView(b, lp); }
         body.addView(r1);
         LinearLayout r2 = new LinearLayout(c); r2.setBaselineAligned(false);
         TextView map = Neo.button(c, "Open in maps", "map", Neo.CYAN), clear = Neo.button(c, "Clear marks", "close", Neo.RED);

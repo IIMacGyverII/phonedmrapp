@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Button labels no longer break inside words
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Owner: several PKT buttons wrapped mid-word ("Telemet/ry", "Weathe/r", "Station/s heard", "Bulletin/s", "Setting/s"). PKT now has at most three buttons per row (Object/Bulletin and Telemetry/Weather, Stations heard/APRS log and Bulletins/Settings in pairs), and `Neo.fit` makes buttons in tight rows keep one-word labels on one line and wrap longer ones only between words (max two lines), shrinking the text to 10 sp before ever splitting a word, without hyphenation, and dropping the icon to make room. Applied to every PKT button and the tight rows of Fox hunt (Off-frequency was cut off), Logbook and Voice keyer. Layout only; help unchanged. | `ui/Neo.java`, `ui/PktDialog.java`, `ui/FoxHuntDialog.java`, `ui/LogbookDialog.java`, `ui/KeyerDialog.java` | Screenshots on the phone (callsign and location lines blacked out before viewing, deleted after): PKT, Fox hunt, Logbook and Voice keyer show every label whole |
+
 ## 2026-10-20 — Licence exam practice
 
 | Backlog | Change | Files | Test |
