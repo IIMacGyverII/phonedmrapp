@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Module: APRS TX log file for field reports
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| R | The module had no user-readable transmit log (only LSPosed's module log, cleared at reboot, and the raw UART log behind Diagnostics). New **Download/DMR/APRS/aprs_tx_log.txt**: a line for every beacon tick (GPS fix age, or "no GPS fix, skipped"; the tune) and every packet TX (what, channel and power, lead-in, repeats, length), then at key-down whether the radio reported **SEND_START** (and after how many ms) and **how much of the packet audio was consumed** by the mic path (0 % = the OEM recorder never ran: nothing modulated); errors and refusals too. Trimmed to the newer half past 512 kB. Mentioned in APRS Settings. | `DMRModHooks/…/MainHook.java` | Built (`assembleDebug`); not installed (the phone runs SignalDeck) |
+
 ## 2026-10-20 — Beacons that keep going with the screen off, with a fresh position; a packet lead-in test setting (module 4.1.1 and SignalDeck)
 
 | Backlog | Change | Files | Test |
