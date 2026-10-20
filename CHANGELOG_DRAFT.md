@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-19 — Transmitting can knock out the USB cable: detected, explained, documented
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Owner report: with wired Android Auto, Talk on channel 54 (K0MSP, TX 144.770 MHz, high power) dropped the car connection until un-key. The phone's log showed the **USB port itself resetting** about 1.5 s after key-up (`USB port changed`, `ACTION_POWER_DISCONNECTED`, then Android Auto released projection). Channel 53 (TX 146.370 MHz, same band) and the UHF channels did not, and the antenna is at the far end of the phone: the cable picks up the RF at some frequencies. It isn't app logic (phone and car Talk share one code path). The app now notices it: if Android Auto disconnects, or charging stops, while transmitting or within 3 s after, the radio history notes the channel and frequency and a notification gives the remedies (ferrite choke near the phone, shorter shielded cable, Low power for the channel, wireless Android Auto). New Help → Android Auto section "If Android Auto drops while you talk". Noted in `CLAUDE.md` §3. | `RadioService.java`, `car/AutoTrust.java`, `ui/HelpView.java`, `CLAUDE.md`, `.grok/rules/00-session-start.md` | Phone on USB, Family Analog: key, `dumpsys battery unplug` 1.5 s in, un-key → history line and notification within 1.3 s (test entry removed afterwards, battery reset, channel restored). The Android Auto-disconnect trigger shares the code but needs the car |
+
 ## 2026-10-19 — Android Auto: warning when the car would hide the radio; crash adding a repeater from the map
 
 | Backlog | Change | Files | Test |
