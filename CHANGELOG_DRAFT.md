@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Fox hunt
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | **Fox hunt** sheet (PKT → Fox hunt; new-look intercom menu → Fox hunt): RSSI polled every 250 ms as a big dBm readout (colour by strength), S-meter and peak hold; an optional beeper (ToneGenerator, faster and higher with the signal); compass bearing from the rotation-vector sensor corrected to true north with `GeomagneticField`; **Mark** saves position, dBm and bearing; `ham/FoxHunt.estimate()` intersects the bearing lines by weighted least squares (weight 10^((dBm−max)/20)), rejects parallel bearings and a crossing behind most hunters, and falls back to the strongest mark; a plot view shows marks, bearing lines, you and the estimate; Open in maps; **Off-frequency** (+10/20/30 kHz through the VFO, restored on close) for when the signal saturates; **Be the fox**: 5 s of alternating 800/1200 Hz beeps every minute on the current channel (callsign in Morse on amateur bands), stops on a channel change, PKT key lit. New help topic. | `ham/FoxHunt.java`, `ui/FoxHuntDialog.java` (new), `RadioService.java`, `ui/PktDialog.java`, `ui/IntercomView.java`, `ui/HelpView.java`; test `FoxHuntTest` | Unit tests 4/4 (3 bearings with ±2° error cross within 120 m of the fox; parallel → strongest; crossing behind rejected; beacon length). On the phone: readout −108 dBm/S7 and compass shown, Mark and Clear work, Off-frequency tuned 467.635 and closing returned to Family Analog, fox beacon transmitted 5.3 s on Family Analog and stopped |
+
 ## 2026-10-20 — Morse decoder and Morse ID
 
 | Backlog | Change | Files | Test |
