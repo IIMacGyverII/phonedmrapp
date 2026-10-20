@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Steering-wheel Next: robust hold, and double-press
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Owner's drive: holding Next keyed the radio, but most times it did not unkey on release. The history showed why: the car sends the press and a repeat ~1 s later reliably, but the release late (one came 37 s after the press) or not at all. `ham/WheelNext.java` (unit-tested state machine) replaces the hold logic: **Hold** keys on a 500 ms hold or the car's repeat and stops on the release, and if the release does not come, **pressing Next again stops**; a late release of an earlier hold is ignored, and a short press still steps the channel. New **Double-press** mode uses presses only (two within 500 ms talk, one stops, a lone press steps after the window), so missing releases cannot matter. Device → "Steering-wheel Next talks" now cycles Off / Hold / Double-press (the old on switch becomes Hold). A transmission ended elsewhere (30 s limit, the screen) resets the wheel. Every wheel event and decision is written with milliseconds to `files/wheel.log` (last 400 lines) for diagnosis. Help updated. | `ham/WheelNext.java` (new), `RadioService.java`, `ui/DeviceView.java`, `ui/HelpView.java`; test `WheelNextTest` | Unit tests 5/5 (hold and release, short press steps, missing release fixed by pressing again with the 37 s-late release ignored, double-press toggle without releases, off). On the phone the setting cycles and the earlier switch migrated to Hold. **Needs a drive** to confirm in the car |
+
 ## 2026-10-20 — Hold the steering wheel's Next to talk
 
 | Backlog | Change | Files | Test |
