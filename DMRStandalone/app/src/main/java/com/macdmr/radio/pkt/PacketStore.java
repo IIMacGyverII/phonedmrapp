@@ -20,6 +20,9 @@ public final class PacketStore extends SQLiteOpenHelper {
     public static final class Alert { public long ts; public String event, summary, raw; public boolean eom; }
 
     public PacketStore(Context c) { super(c, "packet.db", null, 1); }
+    private volatile long changes;
+    /** Goes up with every stored packet, station or clear: screens redraw their lists only when it moved. */
+    public long changes() { return changes; }
 
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE stations (call TEXT PRIMARY KEY, lat REAL, lon REAL, alt INTEGER, symTable TEXT, symCode TEXT, comment TEXT, speed REAL, course INTEGER, lastTs INTEGER, count INTEGER, via TEXT)");
@@ -30,6 +33,7 @@ public final class PacketStore extends SQLiteOpenHelper {
     @Override public void onUpgrade(SQLiteDatabase db, int o, int n) { }
 
     public synchronized void storeStation(APRSPacketDecoder.APRSPacket p, long ts) {
+        changes++;
         String call = p.sourceCallsign + (p.sourceSSID != 0 ? "-" + p.sourceSSID : "");
         SQLiteDatabase db = getWritableDatabase();
         int count = 0;
@@ -57,9 +61,10 @@ public final class PacketStore extends SQLiteOpenHelper {
     }
 
     public synchronized int stationCount() { try (Cursor c = getReadableDatabase().rawQuery("SELECT COUNT(*) FROM stations", null)) { return c.moveToFirst() ? c.getInt(0) : 0; } }
-    public synchronized void clearStations() { getWritableDatabase().delete("stations", null, null); }
+    public synchronized void clearStations() { getWritableDatabase().delete("stations", null, null); changes++; }
 
     public synchronized void log(String kind, String from, String to, String text, String id, boolean mine) {
+        changes++;
         ContentValues v = new ContentValues();
         v.put("ts", System.currentTimeMillis()); v.put("kind", kind); v.put("src", from); v.put("dst", to == null ? "" : to); v.put("text", text == null ? "" : text); v.put("msgId", id); v.put("mine", mine ? 1 : 0);
         SQLiteDatabase db = getWritableDatabase();

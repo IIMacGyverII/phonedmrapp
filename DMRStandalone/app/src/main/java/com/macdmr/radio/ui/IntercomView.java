@@ -290,7 +290,11 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         });
         vfo.setOnClickListener(v -> { if (svc != null) VfoDialog.show(c, svc); });
         vfo.setOnLongClickListener(v -> { if (svc != null && svc.vfoActive()) { svc.exitVfo(); android.widget.Toast.makeText(c, "VFO off", android.widget.Toast.LENGTH_SHORT).show(); } return true; });
-        pkt.setOnClickListener(v -> { if (svc != null) PktDialog.show(c, svc); });
+        pkt.setOnClickListener(v -> {                             // a running mode's own page, else the packet tools
+            if (svc == null) return;
+            if (c instanceof com.macdmr.radio.MainActivity && ((com.macdmr.radio.MainActivity) c).openModeScreen()) return;
+            PktDialog.show(c, svc);
+        });
         ptt.setListener(down -> { if (svc != null) svc.ptt(down); });
     }
 
