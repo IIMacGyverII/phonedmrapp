@@ -29,6 +29,12 @@ public final class DiagReceiver extends BroadcastReceiver {
             case "inject": s.injectWav(new java.io.File(i.getStringExtra("path"))); break;
             case "isline": if (s.packet() != null) s.packet().diagServerLine(i.getStringExtra("line")); break;
             case "heard": if (s.packet() != null) s.packet().diagHeard(i.getStringExtra("call")); break;
+            case "sattest": {                                                   // track the ISS for 60 s from now (VFO retunes only, nothing is keyed)
+                com.macdmr.radio.ham.Sgp4 e = s.satellites().elements().get(25544);
+                if (e == null) { Log.w("DiagReceiver", "no ISS elements"); break; }
+                com.macdmr.radio.ham.SatTrack.Pass p = new com.macdmr.radio.ham.SatTrack.Pass(); p.aos = System.currentTimeMillis() + 60_000; p.los = p.aos + 30_000; p.tca = p.aos;
+                Log.i("DiagReceiver", "sattest: " + s.trackSat(com.macdmr.radio.ham.Satellites.ALL[0], e, p)); break;
+            }
             case "benchIgate": if (s.packet() != null) s.packet().benchIgate = i.getBooleanExtra("on", false); break;
             case "pkt": if (s.packet() != null) Log.i("DiagReceiver", "pkt " + i.getStringExtra("what") + ": " + s.packet().diagSend(i.getStringExtra("what"))); break;
             default: Log.w("DiagReceiver", "unknown cmd " + cmd);

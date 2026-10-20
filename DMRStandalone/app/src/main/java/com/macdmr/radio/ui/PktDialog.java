@@ -54,6 +54,9 @@ public final class PktDialog {
         button(r2b, "Telemetry", Theme.VFO, x -> { String e = pe.sendTelemetry(); toast(e == null ? "Telemetry queued" : e); });
         if (pe.hasBarometer()) button(r2b, "Weather", Theme.VFO, x -> { String e = pe.sendWeather(); toast(e == null ? "Weather report queued" : e); });
         body.addView(r2b);
+        LinearLayout rSat = row();
+        button(rSat, svc.satState() != null ? "Satellites: tracking " + svc.satState().name : "Satellite passes", Theme.PKT, x -> { dlg.dismiss(); SatelliteDialog.show(c, svc); });
+        body.addView(rSat);
         LinearLayout rIss = row();
         final boolean issMon = pe.monitoring() && svc.aprsMonitorHz() == com.macdmr.radio.RadioService.ISS_APRS_HZ;
         button(rIss, issMon ? "Stop ISS monitor" : "ISS: monitor 145.825", Theme.PKT, x -> { toast(issMon ? svc.aprsMonitor(false) : svc.aprsMonitorAt(true, com.macdmr.radio.RadioService.ISS_APRS_HZ, "ISS APRS 145.825")); dlg.dismiss(); });

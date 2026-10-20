@@ -154,6 +154,51 @@ public class RadioService extends Service implements RadioEngine.Events {
         });
     }
 
+    // ---- satellite tracking: Doppler-corrected VFO during a pass ----
+    private com.macdmr.radio.ham.Satellites sats;
+    public com.macdmr.radio.ham.Satellites satellites() { if (sats == null) sats = new com.macdmr.radio.ham.Satellites(this); return sats; }
+    public static final class SatState { public String name = ""; public com.macdmr.radio.ham.SatTrack.Look look; public long rxHz, txHz, aos, los; public boolean waiting; }
+    private volatile Thread satThread; private volatile SatState satState;
+    public SatState satState() { return satState; }
+    public void stopSatTrack() { Thread t = satThread; satThread = null; if (t != null) t.interrupt(); }
+    /** Track a pass: at AOS minus a minute the VFO takes the satellite's channel, corrected for Doppler every 2 s, until LOS. */
+    public String trackSat(final com.macdmr.radio.ham.Satellites.Sat sat, final com.macdmr.radio.ham.Sgp4 el, final com.macdmr.radio.ham.SatTrack.Pass pass) {
+        final android.location.Location me = lastKnownLocation();
+        if (me == null) return "No position fix: turn on location";
+        stopSatTrack();
+        final SatState st = new SatState(); st.name = sat.name; st.aos = pass.aos; st.los = pass.los; st.waiting = true; satState = st;
+        final Thread t = new Thread(() -> {
+            boolean tuned = false;
+            try {
+                while (satThread == Thread.currentThread() && System.currentTimeMillis() < pass.aos - 60_000) Thread.sleep(1000);
+                history("pkt", "\uD83D\uDEF0 Tracking " + sat.name + ": tuning for the pass");
+                ChannelStore.Channel v = new ChannelStore.Channel(); v.type = 1; v.band = 1; v.power = 1; v.sq = 2; v.name = sat.name;
+                int tone = sat.toneHz > 0 ? com.macdmr.radio.ChannelPresets.ctcssIndex(sat.toneHz) : -1;
+                if (tone >= 0) { v.txType = 1; v.txSubCode = tone; }
+                long lastRx = 0;
+                while (satThread == Thread.currentThread() && System.currentTimeMillis() < pass.los + 30_000) {
+                    long now = System.currentTimeMillis();
+                    com.macdmr.radio.ham.SatTrack.Look l = com.macdmr.radio.ham.SatTrack.look(el, now, me.getLatitude(), me.getLongitude(), me.hasAltitude() ? me.getAltitude() : 0);
+                    long rx = com.macdmr.radio.ham.SatTrack.downlink(sat.downHz, l.rangeRateKmS), tx = com.macdmr.radio.ham.SatTrack.uplink(sat.upHz, l.rangeRateKmS);
+                    st.look = l; st.rxHz = rx; st.txHz = tx; st.waiting = false;
+                    if (!pttDown && (!tuned || Math.abs(rx - lastRx) >= 2000)) {      // 2 kHz is well inside an FM channel; fewer retunes, fewer gaps
+                        v.rxFreq = (int) (Math.round(rx / 500.0) * 500); v.txFreq = (int) (Math.round(tx / 500.0) * 500);
+                        applyVfo(v, false); lastRx = rx; tuned = true;
+                    }
+                    Thread.sleep(2000);
+                }
+            } catch (InterruptedException ignored) {
+            } catch (Throwable x) { log("sat track: " + x); }
+            finally {
+                if (tuned && vfo != null && sat.name.equals(vfo.name)) exitVfo();
+                if (satState == st) satState = null;
+                history("pkt", "\uD83D\uDEF0 " + sat.name + " pass over");
+            }
+        }, "sat-track");
+        satThread = t; t.setDaemon(true); t.start();
+        return null;
+    }
+
     // ---- nets (net control) ----
     private com.macdmr.radio.ham.NetStore nets;
     public com.macdmr.radio.ham.NetStore nets() { if (nets == null) nets = new com.macdmr.radio.ham.NetStore(this); return nets; }
