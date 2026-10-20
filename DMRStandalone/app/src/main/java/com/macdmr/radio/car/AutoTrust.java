@@ -101,5 +101,20 @@ public final class AutoTrust {
         catch (Throwable ignored) { }
     }
 
+    /** Android Auto connected but never bound the media service (the radio is missing from the car this time). */
+    public static void notifyNotLoaded(Context c) {
+        try {
+            NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (Build.VERSION.SDK_INT >= 26 && nm != null) nm.createNotificationChannel(new NotificationChannel("car", "Android Auto", NotificationManager.IMPORTANCE_DEFAULT));
+            String text = "Android Auto connected but did not load the radio, so DMR Radio is missing from the car's app list and its card opens the phone. Unplug the USB cable and plug it in again: Android Auto loads it on the new connection.";
+            NotificationCompat.Builder b = new NotificationCompat.Builder(c, "car").setSmallIcon(R.drawable.ic_stat_radio).setColor(0xFFFFB020)
+                    .setContentTitle("Reconnect to show DMR Radio in the car").setContentText("Unplug the cable and plug it in again")
+                    .setStyle(new NotificationCompat.BigTextStyle().bigText(text)).setAutoCancel(true).setTimeoutAfter(10 * 60_000L)
+                    .setContentIntent(PendingIntent.getActivity(c, 0x7A59, new Intent(c, com.macdmr.radio.MainActivity.class), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
+            NotificationManagerCompat.from(c).notify("notloaded", 10, b.build());
+        } catch (SecurityException se) { /* notifications not allowed */ }
+        catch (Throwable ignored) { }
+    }
+
     public static void clearNotice(Context c) { try { NotificationManagerCompat.from(c).cancel("autotrust", 8); } catch (Throwable ignored) { } }
 }

@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-19 — Alert when Android Auto connects without loading the radio
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Owner: on the first connection of a drive (Unknown sources on), DMR Radio was missing from the car's app list and its card opened the phone app. Unplugging and replugging fixed it. The history shows Android Auto binding the media service within about 7 s on all 12 working connections today, but never on that one (21:43:03; gearhead had just started fresh and run `PlayGearheadService`). The card taps show as three `MainActivity` launches from uid 10120. Android Auto doesn't log why. The app now checks: if Android Auto hasn't bound the media service 30 s after connecting (and the Unknown sources alert doesn't apply), the radio history gets "⚠️ Android Auto did not load DMR Radio on this connection: unplug the cable and plug it in again" and a notification says the same. The notification is cleared when Android Auto binds. Last heard explains the alert; help updated. | `RadioService.java`, `media/RadioMediaService.java`, `car/AutoTrust.java`, `ui/LastHeardDialog.java`, `ui/HelpView.java` | Built and installed; diagnosed from the drive's history and logcat. The alert itself needs a car connection where Android Auto skips the radio, so it isn't triggered yet |
+
 ## 2026-10-19 — Last heard lists alerts and car events, each with what it means
 
 | Backlog | Change | Files | Test |
