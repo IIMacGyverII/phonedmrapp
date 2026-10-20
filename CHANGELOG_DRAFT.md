@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — One main screen: the launcher icon no longer replays the launch screen
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Owner: switching back through recent apps was seamless, but the launcher icon showed the splash again. `dumpsys activity` showed **three** `MainActivity` instances stacked in the task: notification taps (status, car warnings, car messages) and other shortcuts started a new copy each time (standard launch mode), and every new copy ran the splash (and held its own views and service listeners). `MainActivity` is now `launchMode="singleTask"`: launcher, notifications, widget and shares all bring the one open screen forward (`onNewIntent`, which already handles shared places). The launch screen plays only when the screen is created fresh (first start, or after it was closed). Help (The launch screen) updated. | `AndroidManifest.xml`, `MainActivity.java`, `ui/HelpView.java` | On the phone: app open → Home → launcher intent: "task brought to the front", no splash on screen (uiautomator); a plain start as the notifications do it: same; one `MainActivity` in the task (was 3); no crash |
+
 ## 2026-10-20 — SignalDeck app icon
 
 | Backlog | Change | Files | Test |
