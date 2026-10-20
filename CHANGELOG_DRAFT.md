@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Choosing a zone tunes its last used channel
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Owner request. `RadioService.setZone` now tunes the channel last used in the newly chosen zone (pref `zoneLast_<zoneId>`, written by `selectChannelNow` whenever a channel of the current zone is selected, not by scan steps); with no remembered channel it stays put if the current channel is in the zone, else tunes the zone's first channel; nothing changes while PTT is down, while scanning (the scan continues in the new zone) or on the VFO (APRS/SSTV/satellite parking). Applies everywhere a zone is chosen (intercom, Channels, car, standard lists, Activity). Help (Zones) updated. | `RadioService.java`, `ui/HelpView.java` | On the phone (receive only): Weather → its first channel NOAA WX1 (no memory yet), stepped to WX3, Family → its first channel, Weather again → WX3; ALL kept the current channel |
+
 ## 2026-10-20 — Button labels no longer break inside words
 
 | Backlog | Change | Files | Test |

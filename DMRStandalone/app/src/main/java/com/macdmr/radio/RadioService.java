@@ -849,7 +849,22 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     public long zoneId() { return zoneId; }
     public String zoneName() { if (zoneId <= 0) return "ALL"; ChannelStore.Zone z = store.zone(zoneId); return z == null ? "ALL" : z.name; }
-    public void setZone(long id) { zoneId = id; getSharedPreferences("radio", MODE_PRIVATE).edit().putLong("zone", id).apply(); pushModes(); }
+    public void setZone(long id) {
+        zoneId = id; getSharedPreferences("radio", MODE_PRIVATE).edit().putLong("zone", id).apply(); pushModes();
+        // tune the channel last used in this zone (or stay, when the current channel is in it; else its first channel)
+        if (pttDown || scanner.isScanning() || vfo != null) return;              // not while talking, scanning (it carries on in the new zone) or on the VFO
+        java.util.List<ChannelStore.Channel> in = zoneChannels(); if (in.isEmpty()) return;
+        int last = getSharedPreferences("radio", MODE_PRIVATE).getInt("zoneLast_" + id, -1);
+        ChannelStore.Channel cur = current; int target = -1; boolean curIn = false;
+        for (ChannelStore.Channel c : in) { if (c.number == last) target = last; if (cur != null && c.number == cur.number) curIn = true; }
+        if (target < 0) { if (curIn) return; target = in.get(0).number; }
+        if (cur == null || cur.number != target) selectChannel(target);
+    }
+    /** Remember the channel as the last one used in the current zone (not for channels the scanner steps through). */
+    private void rememberZoneChannel(int number) {
+        if (scanner.isScanning()) return;
+        for (ChannelStore.Channel c : zoneChannels()) if (c.number == number) { getSharedPreferences("radio", MODE_PRIVATE).edit().putInt("zoneLast_" + zoneId, number).apply(); return; }
+    }
     /** Channels in the selected zone, in channel order (all channels when no zone is selected). */
     public java.util.List<ChannelStore.Channel> zoneChannels() {
         java.util.List<ChannelStore.Channel> all = store.all();
@@ -885,6 +900,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         if (ch == null) { log("no channel " + number); return; }
         vfo = null;
         applyChannelNow(ch, true);
+        rememberZoneChannel(number);
     }
 
     /** Squelch byte for the module: with Soft SQ on the radio's squelch is held open (0) and the app decides; otherwise the channel's own level. */
