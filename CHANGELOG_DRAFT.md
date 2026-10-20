@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — Band-plan hints in the VFO and the channel editor
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | First of ten ham features the owner asked for. `ham/BandPlan.java`: the ARRL 2 m and 70 cm plans (EME/CW, weak-signal SSB, beacons, satellite subbands with ISS 145.800/145.825, translators, repeater inputs/outputs, simplex and calling frequencies, APRS 144.390, packet) and the other services in 136–174 / 400–480 MHz (space and weather satellites, government, land mobile and public safety, MURS, marine, AAR railroad, NOAA, FRS/GMRS and GMRS repeater inputs, TV 14–15), each with a caution where needed. A live line under the frequency fields of the VFO and the channel editor names the use of RX and TX, amber when there is a caution. Help (VFO) updated. | `ham/BandPlan.java` (new), `ui/VfoDialog.java`, `ui/ChannelEditorView.java`, `ui/HelpView.java`; test `BandPlanTest` | Unit tests 2/2. On the phone the VFO shows "467.6250 MHz: GMRS repeater inputs. FCC GMRS licence needed" for Family Analog |
+
 ## 2026-10-20 — On-air check of the callsign packets; one-shot TX lead fixed; repeater IDs labelled
 
 | Backlog | Change | Files | Test |
