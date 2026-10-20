@@ -170,6 +170,18 @@ public final class ChannelStore extends SQLiteOpenHelper {
         SQLiteDatabase db = getWritableDatabase();
         db.delete("channels", "_id=?", new String[] { String.valueOf(ch.id) });
         db.execSQL("UPDATE channels SET number = number - 1 WHERE number > ?", new Object[] { ch.number });   // keep 1..n contiguous
+        for (Zone z : zones()) {   // zones hold channel numbers: drop this one and follow the renumbering
+            List<Integer> l = new ArrayList<>(); boolean changed = false;
+            for (int n : z.numbers) { if (n == ch.number) { changed = true; continue; } if (n > ch.number) { n--; changed = true; } l.add(n); }
+            if (!changed) continue;
+            z.numbers = new int[l.size()]; for (int i = 0; i < l.size(); i++) z.numbers[i] = l.get(i);
+            saveZone(z);
+        }
+    }
+
+    /** Frequencies this radio never transmits on: NOAA weather (162.400 to 162.550 MHz) and the marine VHF band (156.000 to 157.450 MHz). */
+    public static boolean receiveOnly(int txHz) {
+        return (txHz >= 162_400_000 && txHz <= 162_550_000) || (txHz >= 156_000_000 && txHz <= 157_450_000);
     }
 
     public void update(Channel ch) { getWritableDatabase().update("channels", values(ch), "_id=?", new String[] { String.valueOf(ch.id) }); }

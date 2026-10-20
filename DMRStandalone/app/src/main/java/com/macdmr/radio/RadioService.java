@@ -849,8 +849,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     public boolean txInhibited() {
         ChannelStore.Channel ch = current;
         if (ch == null) return true;
-        int f = ch.txFreq;
-        return f >= 162_400_000 && f <= 162_550_000;      // NOAA weather channels are receive-only
+        return ChannelStore.receiveOnly(ch.txFreq);      // NOAA weather and marine channels are receive-only
     }
 
     public void ptt(final boolean down) {

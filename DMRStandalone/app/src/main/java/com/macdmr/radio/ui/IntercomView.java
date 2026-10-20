@@ -471,13 +471,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
                 }).setNegativeButton("Cancel", null).show();
     }
 
-    private void pickZone() {
-        if (svc == null) return;
-        final java.util.List<ChannelStore.Zone> zones = svc.store().zones();
-        String[] names = new String[zones.size() + 1]; names[0] = "ALL channels";
-        for (int i = 0; i < zones.size(); i++) names[i + 1] = zones.get(i).name + "  (" + zones.get(i).numbers.length + ")";
-        new android.app.AlertDialog.Builder(getContext()).setTitle("Zone").setItems(names, (d, w) -> svc.setZone(w == 0 ? 0 : zones.get(w - 1).id)).show();
-    }
+    private void pickZone() { if (svc != null) ZonesDialog.show(getContext(), svc, null); }
     public void detach() { if (svc != null) svc.removeListener(this); svc = null; }
 
     private void refreshHeadline() {
