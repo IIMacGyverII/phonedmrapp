@@ -29,11 +29,18 @@ public final class DiagReceiver extends BroadcastReceiver {
             case "inject": s.injectWav(new java.io.File(i.getStringExtra("path"))); break;
             case "isline": if (s.packet() != null) s.packet().diagServerLine(i.getStringExtra("line")); break;
             case "heard": if (s.packet() != null) s.packet().diagHeard(i.getStringExtra("call")); break;
-            case "sattest": {                                                   // track the ISS for 60 s from now (VFO retunes only, nothing is keyed)
+            case "vfo": {                                                       // receive bench: the VFO on --ei hz (wide, low power; nothing is keyed)
+                int hz = i.getIntExtra("hz", 0); if (hz < 136_000_000 || hz > 480_000_000) { Log.w("DiagReceiver", "vfo: bad hz " + hz); break; }
+                s.diagVfo(hz); break;
+            }
+            case "vfooff": s.diagVfoOff(); break;
+            case "sattest": {                                                   // a fake ISS pass from a minute from now for 30 s (or --el ms), --es key iss-rptr|iss-aprs|iss-sstv; nothing is keyed
                 com.macdmr.radio.ham.Sgp4 e = s.satellites().elements().get(25544);
                 if (e == null) { Log.w("DiagReceiver", "no ISS elements"); break; }
-                com.macdmr.radio.ham.SatTrack.Pass p = new com.macdmr.radio.ham.SatTrack.Pass(); p.aos = System.currentTimeMillis() + 60_000; p.los = p.aos + 30_000; p.tca = p.aos;
-                Log.i("DiagReceiver", "sattest: " + s.trackSat(com.macdmr.radio.ham.Satellites.ALL[0], e, p)); break;
+                long len = i.getLongExtra("len", 30_000);
+                com.macdmr.radio.ham.SatTrack.Pass p = new com.macdmr.radio.ham.SatTrack.Pass(); p.aos = System.currentTimeMillis() + 60_000; p.los = p.aos + len; p.tca = p.aos; p.maxEl = 45;
+                String key = i.getStringExtra("key"); if (key == null) key = "iss-rptr";
+                Log.i("DiagReceiver", "sattest " + key + ": " + s.trackSat(com.macdmr.radio.ham.Satellites.byKey(s, key), e, p)); break;
             }
             case "iconpng": try {                                  // the launcher icon as the launcher draws it (adaptive, circle mask), for checking the artwork
                 android.graphics.drawable.Drawable d = s.getPackageManager().getApplicationIcon(s.getPackageName());

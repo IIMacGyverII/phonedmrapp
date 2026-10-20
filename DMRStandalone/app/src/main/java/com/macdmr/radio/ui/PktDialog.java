@@ -70,8 +70,14 @@ public final class PktDialog {
         button(rSat, svc.satState() != null ? "Satellites: tracking " + svc.satState().name : "Satellite passes", Theme.PKT, x -> { dlg.dismiss(); SatelliteDialog.show(c, svc); });
         body.addView(rSat);
         LinearLayout rIss = row();
-        final boolean issMon = pe.monitoring() && svc.aprsMonitorHz() == com.macdmr.radio.RadioService.ISS_APRS_HZ;
-        button(rIss, issMon ? "Stop ISS monitor" : "ISS: monitor 145.825", Theme.PKT, x -> { toast(issMon ? svc.aprsMonitor(false) : svc.aprsMonitorAt(true, com.macdmr.radio.RadioService.ISS_APRS_HZ, "ISS APRS 145.825")); if (issMon) dlg.dismiss(); else openScreen(); });
+        final boolean issMon = svc.satMode() == com.macdmr.radio.ham.Satellites.APRS;
+        final String issAprs = String.format(java.util.Locale.US, "%.3f", com.macdmr.radio.ham.Satellites.issHz(c, "issAprs", com.macdmr.radio.ham.Satellites.ISS_APRS_HZ) / 1e6);
+        button(rIss, issMon ? "Stop ISS APRS" : "ISS APRS " + issAprs, Theme.PKT, x -> {
+            if (issMon) { svc.endSatTracking(); toast("ISS APRS stopped"); dlg.dismiss(); return; }
+            String e = svc.startIssMode(com.macdmr.radio.ham.Satellites.APRS);
+            if (e != null) { toast(e); return; }
+            svc.setIssRepeat(com.macdmr.radio.ham.Satellites.APRS); openScreen();
+        });
         button(rIss, "Beacon via ISS", Theme.VFO, x -> toast(svc.issBeacon()));
         body.addView(rIss);
         String[] autoNames = { "off", "every " + pe.beaconMin() + " min", "SmartBeaconing" };
@@ -154,9 +160,19 @@ public final class PktDialog {
         body.addView(section("SSTV pictures"));
         body.addView(hint("\uD83D\uDD38 " + pe.sstvStatus()));
         LinearLayout s1 = row();
-        if (pe.sstvRx()) button(s1, "Stop receiving", Theme.PKT, x -> { toast(svc.sstvMonitor(false, false)); dlg.dismiss(); });
+        if (pe.sstvRx() && svc.satMode() != com.macdmr.radio.ham.Satellites.SSTV) button(s1, "Stop receiving", Theme.PKT, x -> { toast(svc.sstvMonitor(false, false)); dlg.dismiss(); });
+        else if (svc.satMode() == com.macdmr.radio.ham.Satellites.SSTV) button(s1, "Stop ISS SSTV", Theme.PKT, x -> { svc.endSatTracking(); toast("ISS SSTV stopped"); dlg.dismiss(); });
         else { button(s1, "Receive on 144.500", Theme.PKT, x -> { toast(svc.sstvMonitor(true, true)); openScreen(); }); button(s1, "Receive here", Theme.PKT, x -> { toast(svc.sstvMonitor(true, false)); openScreen(); }); }
         body.addView(s1);
+        if (svc.satMode() != com.macdmr.radio.ham.Satellites.SSTV && !pe.sstvRx()) {
+            LinearLayout s1b = row();
+            button(s1b, "ISS SSTV " + String.format(java.util.Locale.US, "%.3f", com.macdmr.radio.ham.Satellites.issHz(c, "issSstv", com.macdmr.radio.ham.Satellites.ISS_SSTV_HZ) / 1e6), Theme.PKT, x -> {
+                String e = svc.startIssMode(com.macdmr.radio.ham.Satellites.SSTV);
+                if (e != null) { toast(e); return; }
+                svc.setIssRepeat(com.macdmr.radio.ham.Satellites.SSTV); openScreen();
+            });
+            body.addView(s1b);
+        }
         LinearLayout s2 = row();
         button(s2, "Live picture", Theme.SOFTSQ, x -> sstvView());
         button(s2, "Send picture", Theme.VFO, x -> sstvSend());

@@ -219,7 +219,8 @@ public class MainActivity extends AppCompatActivity {
     private com.macdmr.radio.ui.ModeScreen modeScreenFor() {
         RadioService s = svc; if (s == null || s.packet() == null) return null;
         Runnable close = this::closeOverlay;
-        if (s.packet().sstvRx()) return new com.macdmr.radio.ui.SstvScreen(this, s, close);
+        if (s.packet().sstvRx() || s.satMode() == com.macdmr.radio.ham.Satellites.SSTV) return new com.macdmr.radio.ui.SstvScreen(this, s, close);
+        if (s.satMode() == com.macdmr.radio.ham.Satellites.APRS) return new com.macdmr.radio.ui.AprsScreen(this, s, close);
         if (s.packet().monitoring() || s.packet().kiss().isActive()) return new com.macdmr.radio.ui.AprsScreen(this, s, close);
         if (s.parrot().enabled()) return new com.macdmr.radio.ui.ParrotScreen(this, s, close);
         return null;
@@ -235,8 +236,13 @@ public class MainActivity extends AppCompatActivity {
     private String modeLabel() {
         RadioService s = svc; if (s == null || s.packet() == null) return null;
         com.macdmr.radio.PacketEngine pe = s.packet();
-        if (pe.sstvRx()) return "📺  SSTV receive";
-        if (pe.monitoring()) return "📡  APRS monitoring  ·  " + (s.aprsMonitorHz() == RadioService.ISS_APRS_HZ ? "ISS 145.825" : "144.390");
+        RadioService.SatState ss = s.satState();
+        if (ss != null && ss.mode != com.macdmr.radio.ham.Satellites.VOICE) {
+            String when = ss.waiting ? "next pass " + new java.text.SimpleDateFormat("HH:mm", java.util.Locale.US).format(new java.util.Date(ss.aos)) : "pass in progress";
+            return (ss.mode == com.macdmr.radio.ham.Satellites.SSTV ? "\uD83D\uDCFA  ISS SSTV" : "\uD83D\uDCE1  ISS APRS") + "  \u00B7  " + when;
+        }
+        if (pe.sstvRx()) return "\uD83D\uDCFA  SSTV receive";
+        if (pe.monitoring()) return "\uD83D\uDCE1  APRS monitoring  \u00B7  " + String.format(java.util.Locale.US, "%.3f", s.aprsMonitorHz() / 1e6);
         if (pe.kiss().isActive()) return "📡  KISS TNC";
         if (s.parrot().enabled()) return "🦜  Parrot";
         return null;

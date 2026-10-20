@@ -157,22 +157,31 @@ public class RadioService extends Service implements RadioEngine.Events {
     // ---- satellite tracking: Doppler-corrected VFO during a pass ----
     private com.macdmr.radio.ham.Satellites sats;
     public com.macdmr.radio.ham.Satellites satellites() { if (sats == null) sats = new com.macdmr.radio.ham.Satellites(this); return sats; }
-    public static final class SatState { public String name = ""; public com.macdmr.radio.ham.SatTrack.Look look; public long rxHz, txHz, aos, los; public boolean waiting; }
+    public static final class SatState { public String name = ""; public com.macdmr.radio.ham.SatTrack.Look look; public long rxHz, txHz, aos, los, nominalHz; public double maxEl; public boolean waiting, listenOnly; public int mode; }
     private volatile Thread satThread; private volatile SatState satState;
     public SatState satState() { return satState; }
+    /** The tracked pass's mode (Satellites.APRS / SSTV), or -1 when nothing is tracked. */
+    public int satMode() { SatState s = satState; return s == null ? -1 : s.mode; }
     public void stopSatTrack() { Thread t = satThread; satThread = null; if (t != null) t.interrupt(); }
+    /** Stop tracking and following passes (the Stop buttons). */
+    public void endSatTracking() { issRepeatMode = -1; stopSatTrack(); }
+    /** Bench (DIAG vfo): listen on a frequency through the VFO, wide, low power. */
+    void diagVfo(int hz) { ChannelStore.Channel a = new ChannelStore.Channel(); a.type = 1; a.rxFreq = a.txFreq = hz; a.band = 1; a.power = 1; a.name = "Bench"; applyVfo(a, false); }
+    void diagVfoOff() { if (vfo != null && "Bench".equals(vfo.name)) exitVfo(); }
     /** Track a pass: at AOS minus a minute the VFO takes the satellite's channel, corrected for Doppler every 2 s, until LOS. */
     public String trackSat(final com.macdmr.radio.ham.Satellites.Sat sat, final com.macdmr.radio.ham.Sgp4 el, final com.macdmr.radio.ham.SatTrack.Pass pass) {
         final android.location.Location me = lastKnownLocation();
         if (me == null) return "No position fix: turn on location";
         stopSatTrack();
-        final SatState st = new SatState(); st.name = sat.name; st.aos = pass.aos; st.los = pass.los; st.waiting = true; satState = st;
+        final SatState st = new SatState(); st.name = sat.name; st.aos = pass.aos; st.los = pass.los; st.maxEl = pass.maxEl; st.waiting = true;
+        st.mode = sat.mode; st.listenOnly = sat.listenOnly(); st.nominalHz = sat.downHz; satState = st;
+        if (sat.mode != com.macdmr.radio.ham.Satellites.VOICE) modeSince = System.currentTimeMillis();
         final Thread t = new Thread(() -> {
-            boolean tuned = false;
+            boolean tuned = false, started = false, natural = false;
             try {
                 while (satThread == Thread.currentThread() && System.currentTimeMillis() < pass.aos - 60_000) Thread.sleep(1000);
                 history("pkt", "\uD83D\uDEF0 Tracking " + sat.name + ": tuning for the pass");
-                ChannelStore.Channel v = new ChannelStore.Channel(); v.type = 1; v.band = 1; v.power = 1; v.sq = 2; v.name = sat.name;
+                ChannelStore.Channel v = new ChannelStore.Channel(); v.type = 1; v.band = 1; v.power = 1; v.name = sat.name; dataModeSquelch(v);   // satellites arrive far below the radio's squelch
                 int tone = sat.toneHz > 0 ? com.macdmr.radio.ChannelPresets.ctcssIndex(sat.toneHz) : -1;
                 if (tone >= 0) { v.txType = 1; v.txSubCode = tone; }
                 long lastRx = 0;
@@ -181,17 +190,33 @@ public class RadioService extends Service implements RadioEngine.Events {
                     com.macdmr.radio.ham.SatTrack.Look l = com.macdmr.radio.ham.SatTrack.look(el, now, me.getLatitude(), me.getLongitude(), me.hasAltitude() ? me.getAltitude() : 0);
                     long rx = com.macdmr.radio.ham.SatTrack.downlink(sat.downHz, l.rangeRateKmS), tx = com.macdmr.radio.ham.SatTrack.uplink(sat.upHz, l.rangeRateKmS);
                     st.look = l; st.rxHz = rx; st.txHz = tx; st.waiting = false;
-                    if (!pttDown && (!tuned || Math.abs(rx - lastRx) >= 2000)) {      // 2 kHz is well inside an FM channel; fewer retunes, fewer gaps
-                        v.rxFreq = (int) (Math.round(rx / 500.0) * 500); v.txFreq = (int) (Math.round(tx / 500.0) * 500);
-                        applyVfo(v, false); lastRx = rx; tuned = true;
+                    // 2 kHz is well inside an FM channel; fewer retunes, fewer gaps. While an SSTV picture is coming in, up to
+                    // 5 kHz is tolerated so the retune gap does not tear the picture.
+                    boolean picture = sat.mode == com.macdmr.radio.ham.Satellites.SSTV && packet != null && packet.sstvStatus() != null && packet.sstvStatus().startsWith("receiving");
+                    if (!pttDown && (!tuned || Math.abs(rx - lastRx) >= (picture ? 5000 : 2000))) {
+                        v.rxFreq = (int) (Math.round(rx / 500.0) * 500); v.txFreq = sat.listenOnly() ? v.rxFreq : (int) (Math.round(tx / 500.0) * 500);
+                        applyVfo(v, false); lastRx = rx; tuned = true; lastSatRetune = System.currentTimeMillis();
+                    }
+                    if (tuned && !started && packet != null) {         // the pass's job: decode APRS or SSTV on the moving frequency
+                        started = true;
+                        if (sat.mode == com.macdmr.radio.ham.Satellites.APRS) { aprsMonitorHz = (int) sat.downHz; packet.setMonitoring(true); pushModes(); }
+                        else if (sat.mode == com.macdmr.radio.ham.Satellites.SSTV) { packet.setSstvRx(true); pushModes(); }
                     }
                     Thread.sleep(2000);
                 }
+                natural = satThread == Thread.currentThread();      // the pass ended (not stopped)
             } catch (InterruptedException ignored) {
             } catch (Throwable x) { log("sat track: " + x); }
             finally {
+                if (started && packet != null) {
+                    if (sat.mode == com.macdmr.radio.ham.Satellites.APRS) packet.setMonitoring(false);
+                    else if (sat.mode == com.macdmr.radio.ham.Satellites.SSTV) packet.setSstvRx(false);
+                }
                 if (tuned && vfo != null && sat.name.equals(vfo.name)) exitVfo();
                 if (satState == st) satState = null;
+                if (natural && sat.catalog == com.macdmr.radio.ham.Satellites.ISS_CATALOG && issRepeatMode == sat.mode)   // following every pass: the next one
+                    ui.postDelayed(() -> { if (issRepeatMode == sat.mode && satState == null) { String e = startIssMode(sat.mode); if (e != null) { history("pkt", "\uD83D\uDEF0 " + e); issRepeatMode = -1; } } }, 5000);
+                pushModes();
                 history("pkt", "\uD83D\uDEF0 " + sat.name + " pass over");
             }
         }, "sat-track");
@@ -353,7 +378,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         if (on) {
             if (park) {
                 ChannelStore.Channel a = new ChannelStore.Channel();
-                a.type = 1; a.rxFreq = a.txFreq = PacketEngine.SSTV_FREQ_HZ; a.band = 1; a.power = 1; a.name = "SSTV 144.500";
+                a.type = 1; a.rxFreq = a.txFreq = PacketEngine.SSTV_FREQ_HZ; a.band = 1; a.power = 1; a.name = "SSTV 144.500"; dataModeSquelch(a);
                 applyVfo(a, false);
             }
             if (!packet.sstvRx()) modeSince = System.currentTimeMillis();
@@ -428,23 +453,78 @@ public class RadioService extends Service implements RadioEngine.Events {
         } else if (!on && aprsGps != null) { try { lm.removeUpdates(aprsGps); } catch (Throwable ignored) { } aprsGps = null; }
     }
 
-    /** Beacon through the space station's digipeater: tune 145.825, send with path ARISS, come back. */
-    public static final int ISS_APRS_HZ = 145_825_000;
+    private volatile long lastSatRetune;
+    /** Wait after a retune before keying: the MCU's channel change completes about 3 s later and would cut the transmission. */
+    static final long RETUNE_SETTLE_MS = 4000;
+    /** Beacon through the space station's digipeater (path ARISS) on the ISS APRS frequency, corrected for Doppler.
+     *  Only while the ISS is above the horizon: during a tracked ISS APRS pass it uses that tuning, otherwise it tunes
+     *  for the moment, beacons and comes back. */
     public String issBeacon() {
         if (packet == null) return "not ready";
         if (!packet.callsignSet()) return "Set your callsign first (PKT \u2192 Settings)";
-        if (lastKnownLocation() == null) return "No position fix yet";
-        final boolean tuned = vfo == null || vfo.rxFreq != ISS_APRS_HZ;
-        if (tuned) { ChannelStore.Channel a = new ChannelStore.Channel(); a.type = 1; a.rxFreq = a.txFreq = ISS_APRS_HZ; a.band = 1; a.power = 1; a.name = "ISS APRS 145.825"; applyVfo(a, false); }
+        final android.location.Location me = lastKnownLocation();
+        if (me == null) return "No position fix yet";
+        SatState st = satState;
+        if (st != null && st.mode == com.macdmr.radio.ham.Satellites.APRS && !st.waiting && st.look != null) {
+            if (st.look.el < 0) return "The ISS is below the horizon";
+            new Thread(() -> {
+                try { long wait = RETUNE_SETTLE_MS - (System.currentTimeMillis() - lastSatRetune); if (wait > 0) Thread.sleep(wait); } catch (InterruptedException ignored) { }
+                String e = packet.sendBeaconVia(new String[] { "ARISS" });
+                if (e != null) history("pkt", "\u26D4 ISS beacon not sent: " + e);
+            }, "iss-beacon").start();
+            return "Beaconing via the ISS (ARISS)";
+        }
+        com.macdmr.radio.ham.Sgp4 el = satellites().elements().get(com.macdmr.radio.ham.Satellites.ISS_CATALOG);
+        if (el == null) return "No ISS orbit yet: open Satellite passes once to download it";
+        long now = System.currentTimeMillis();
+        com.macdmr.radio.ham.SatTrack.Look l = com.macdmr.radio.ham.SatTrack.look(el, now, me.getLatitude(), me.getLongitude(), me.hasAltitude() ? me.getAltitude() : 0);
+        if (l.el < 5) {
+            String next = nextIssPassText(el, me);
+            return "The ISS is not in view" + (next != null ? ": next pass " + next : "");
+        }
+        long hz = com.macdmr.radio.ham.Satellites.issHz(this, "issAprs", com.macdmr.radio.ham.Satellites.ISS_APRS_HZ);
+        ChannelStore.Channel a = new ChannelStore.Channel(); a.type = 1; a.band = 1; a.power = 1; a.name = "ISS APRS"; dataModeSquelch(a);
+        // the beacon goes out about 5 s from now: aim for the Doppler then
+        com.macdmr.radio.ham.SatTrack.Look l5 = com.macdmr.radio.ham.SatTrack.look(el, now + 5000, me.getLatitude(), me.getLongitude(), me.hasAltitude() ? me.getAltitude() : 0);
+        a.rxFreq = (int) (Math.round(com.macdmr.radio.ham.SatTrack.downlink(hz, l5.rangeRateKmS) / 500.0) * 500);
+        a.txFreq = (int) (Math.round(com.macdmr.radio.ham.SatTrack.uplink(hz, l5.rangeRateKmS) / 500.0) * 500);
+        applyVfo(a, false);
+        final int rxHz = a.rxFreq;
         new Thread(() -> {
-            try { Thread.sleep(tuned ? 4000 : 0); } catch (InterruptedException ignored) { }       // the retune settles before keying
+            try { Thread.sleep(RETUNE_SETTLE_MS); } catch (InterruptedException ignored) { }       // the retune settles before keying
             String e = packet.sendBeaconVia(new String[] { "ARISS" });
             if (e != null) history("pkt", "\u26D4 ISS beacon not sent: " + e);
             try { Thread.sleep(12000); } catch (InterruptedException ignored) { }
-            if (tuned && !packet.monitoring() && vfo != null && vfo.rxFreq == ISS_APRS_HZ) exitVfo();
+            if (vfo != null && vfo.rxFreq == rxHz && satState == null) exitVfo();
         }, "iss-beacon").start();
-        return tuned ? "Tuning 145.825 and beaconing via ARISS" : "Beaconing via ARISS";
+        return String.format(Locale.US, "ISS at %.0f\u00B0: beaconing on %.4f MHz (Doppler-corrected) via ARISS", l.el, a.txFreq / 1e6);
     }
+
+    /** The next ISS pass above 10\u00B0 as "Tue 15:42 (highest 48\u00B0)", or null. */
+    public String nextIssPassText(com.macdmr.radio.ham.Sgp4 el, android.location.Location me) {
+        java.util.List<com.macdmr.radio.ham.SatTrack.Pass> ps = com.macdmr.radio.ham.SatTrack.passes(el, System.currentTimeMillis(), 24, me.getLatitude(), me.getLongitude(), me.hasAltitude() ? me.getAltitude() : 0, 10);
+        for (com.macdmr.radio.ham.SatTrack.Pass p : ps) if (p.aos > System.currentTimeMillis())
+            return new java.text.SimpleDateFormat("EEE HH:mm", Locale.US).format(new java.util.Date(p.aos)) + String.format(Locale.US, " (highest %.0f\u00B0)", p.maxEl);
+        return null;
+    }
+
+    /** ISS APRS or ISS SSTV: track the pass that is up now, or the next one above 10\u00B0 in the next day; the pass page
+     *  shows the countdown and the decoding. Returns an error, or null when tracking starts. */
+    public String startIssMode(int mode) {
+        android.location.Location me = lastKnownLocation();
+        if (me == null) return "No position fix: turn on location";
+        com.macdmr.radio.ham.Sgp4 el = satellites().elements().get(com.macdmr.radio.ham.Satellites.ISS_CATALOG);
+        if (el == null) return "No ISS orbit yet: open Satellite passes once to download it";
+        com.macdmr.radio.ham.Satellites.Sat sat = com.macdmr.radio.ham.Satellites.byKey(this, mode == com.macdmr.radio.ham.Satellites.SSTV ? "iss-sstv" : "iss-aprs");
+        long now = System.currentTimeMillis();
+        for (com.macdmr.radio.ham.SatTrack.Pass p : com.macdmr.radio.ham.SatTrack.passes(el, now - 15 * 60_000L, 24, me.getLatitude(), me.getLongitude(), me.hasAltitude() ? me.getAltitude() : 0, 10))
+            if (p.los > now + 60_000) return trackSat(sat, el, p);
+        return "No ISS pass above 10\u00B0 in the next 24 hours";
+    }
+    /** Keep tracking the ISS pass after pass (for an SSTV event or a day of APRS): restarted at each LOS. */
+    private volatile int issRepeatMode = -1;
+    public void setIssRepeat(int mode) { issRepeatMode = mode; }
+    public int issRepeat() { return issRepeatMode; }
 
     /** Hands-free one-shot transmission: key, play the PCM through the TX path, release, resume RX. */
     public void transmitPcm(final short[] pcm, final String label, final Runnable onDone) {
@@ -506,7 +586,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         if (on) {
             aprsMonitorHz = hz;
             ChannelStore.Channel a = new ChannelStore.Channel();
-            a.type = 1; a.rxFreq = a.txFreq = hz; a.band = 1; a.power = 1; a.name = name;
+            a.type = 1; a.rxFreq = a.txFreq = hz; a.band = 1; a.power = 1; a.name = name; dataModeSquelch(a);
             if (!packet.monitoring()) modeSince = System.currentTimeMillis();
             packet.setMonitoring(true);
             applyVfo(a, false);
@@ -682,7 +762,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             else if (captions != null && captions.isActive()) captions.feed8kMono(mono, n);
             else if (peak > 400 && System.currentTimeMillis() - captionLastEnd > 1500 && captions != null) { Log.i(TAG, "captions: starting utterance (peak " + peak + ")"); captions.start(); }
         }
-        if (packet != null) packet.feed(mono, n, open);
+        if (packet != null) packet.feed(mono, n, open, packet.monitoring() || packet.sstvRx());   // APRS / SSTV decode below any squelch (noise fails the CRC / VIS); Morse and DTMF wait for a signal
         if (parrot.enabled()) {
             ChannelStore.Channel pc = current;
             if (pc == null || pc.number != parrotChannel) { ui.post(() -> { if (parrot.enabled()) { setParrot(false); history("pkt", "\uD83E\uDD9C Parrot stopped: the channel changed"); } }); }
@@ -912,6 +992,10 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     /** Squelch byte for the module: with Soft SQ on the radio's squelch is held open (0) and the app decides; otherwise the channel's own level. */
     private int hardwareSq(ChannelStore.Channel ch) { return softSqFor(ch) ? 0 : ch.sq; }
+    /** APRS, SSTV and satellite channels: the radio's squelch wide open (its single threshold sits near -90 dBm, far
+     *  above a satellite or a distant digipeater), so the decoders get every signal; Soft SQ keeps the speaker quiet
+     *  until something is really there. */
+    private static void dataModeSquelch(ChannelStore.Channel c) { c.sq = 0; c.softSq = true; c.softSqLevel = 5; }
 
     /** Soft SQ applies to an analog channel when it is switched on for that channel, or on every analog channel while scanning (setting, default on). */
     private boolean softSqFor(ChannelStore.Channel ch) { return !ch.isDigital() && (ch.softSq || (scanner.isScanning() && scanSoftSq())); }
@@ -1148,6 +1232,8 @@ public class RadioService extends Service implements RadioEngine.Events {
     public boolean txInhibited() {
         ChannelStore.Channel ch = current;
         if (ch == null) return true;
+        SatState ss = satState;
+        if (ss != null && ss.listenOnly && vfo != null && ss.name.equals(vfo.name)) return true;     // a satellite downlink (ISS SSTV)
         return ChannelStore.receiveOnly(ch.txFreq);      // NOAA weather and marine channels are receive-only
     }
 

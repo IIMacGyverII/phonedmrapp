@@ -615,20 +615,25 @@ public final class PacketEngine {
     // ---- RX ---------------------------------------------------------------------------------------
 
     /** Every 8 kHz mono block the radio delivers; {@code open} = the (soft) squelch passes it. */
-    public void feed(byte[] mono, int n, boolean open) {
+    public void feed(byte[] mono, int n, boolean open) { feed(mono, n, open, false); }
+    /** {@code open}: the squelch passes a signal. {@code data}: a data mode runs (APRS monitoring, SSTV), whose
+     *  decoders also get the audio below the squelch; Morse, DTMF, RTTY/PSK and SAME still wait for {@code open}
+     *  (on noise they would invent text). */
+    public void feed(byte[] mono, int n, boolean open, boolean data) {
         if (!host.analogRx()) { fill = 0; return; }
-        if (!open) { if (wasOpen && cw != null) cw.flush(); wasOpen = false; return; }
-        wasOpen = true;
+        if (!open && wasOpen && cw != null) cw.flush();
+        wasOpen = open;
+        if (!open && !data) return;
         try {
             int f = host.rxFreqHz();
             boolean weatherBand = f >= 162_400_000 && f <= 162_550_000;      // NOAA carries no DTMF or APRS: save the CPU there
-            if (dtmfEnabled() && !weatherBand) {
+            if (open && dtmfEnabled() && !weatherBand) {
                 if (dtmf == null) dtmf = new DTMFDecoder(SR, false, dtmfListener);
                 dtmf.processAudio(mono, n);
             }
-            if (textMode == 1 && rtty != null) rtty.process(mono, n);
-            else if (textMode == 2 && psk != null) psk.process(mono, n);
-            if (cwEnabled() && !weatherBand) {
+            if (open && textMode == 1 && rtty != null) rtty.process(mono, n);
+            else if (open && textMode == 2 && psk != null) psk.process(mono, n);
+            if (open && cwEnabled() && !weatherBand) {
                 if (cw == null) cw = new com.macdmr.radio.ham.CwDecoder((text, hz, wpm) -> {
                     String id = null;                                                      // the channel's own callsign (repeater channels are named after it)
                     for (String w : host.channelName().toUpperCase(Locale.US).replace(",", " ").split(" ")) { String b = com.macdmr.radio.ham.Logbook.baseCall(w.startsWith("\u00BB") ? w.substring(1) : w); if (b != null && text.contains(b)) id = b; }
@@ -638,7 +643,7 @@ public final class PacketEngine {
                 });
                 cw.process(mono, n);
             }
-            if (wxEnabled() && f >= 162_400_000 && f <= 162_550_000) {
+            if (open && wxEnabled() && f >= 162_400_000 && f <= 162_550_000) {
                 if (same == null) same = new SAMEDecoder(SR, false, sameListener);
                 same.processAudio(mono, n);
             }
