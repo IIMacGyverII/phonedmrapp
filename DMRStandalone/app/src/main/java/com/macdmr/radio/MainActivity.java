@@ -85,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
         }
         root.addView(nav);
         setContentView(root);
-        if (b == null) {                                          // cold start: the animated launch screen over the app while it comes up
+        if (b == null) {                                          // only when the screen is created fresh (first start, or after it was closed); returning to the open app never replays it
             String ver; try { ver = "v" + getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Throwable t) { ver = ""; }
             final com.macdmr.radio.ui.SplashView[] sp = new com.macdmr.radio.ui.SplashView[1];
             sp[0] = new com.macdmr.radio.ui.SplashView(this, ver, () -> { if (sp[0].getParent() != null) ((android.view.ViewGroup) sp[0].getParent()).removeView(sp[0]); });
