@@ -170,10 +170,26 @@ public final class DeviceReport {
     }
 
     /** The newest report folder, or null. */
+    /** The most recently created report folder (by the time in its name: appending to a report changes its mtime). */
     public static File newestDir() {
         File[] fs = reportRoot().listFiles(); if (fs == null) return null;
-        File newest = null; for (File f : fs) if (f.isDirectory() && (newest == null || f.lastModified() > newest.lastModified())) newest = f;
+        File newest = null; for (File f : fs) if (f.isDirectory() && (newest == null || createdAt(f) > createdAt(newest))) newest = f;
         return newest;
+    }
+
+    /** When a report folder was made, from its name (…_yyyyMMdd_HHmmss); its mtime if the name has none. */
+    public static long createdAt(File dir) {
+        java.util.regex.Matcher m = Pattern.compile("_(\\d{8}_\\d{6})$").matcher(dir.getName());
+        if (m.find()) try { return new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).parse(m.group(1)).getTime(); } catch (Throwable ignored) { }
+        return dir.lastModified();
+    }
+
+    /** The report folder a follow-up step (listen check) should add to: the newest one if it was made today, else a new report. */
+    public static File currentOrNew(Context c) {
+        File d = newestDir();
+        if (d != null && System.currentTimeMillis() - createdAt(d) < 12 * 3600_000L) return d;
+        try { generate(c, s -> { }); } catch (Throwable ignored) { }
+        return newestDir();
     }
 
     /**
@@ -281,8 +297,7 @@ public final class DeviceReport {
     /** Re-zip the newest report folder (after appends) and return the zip. */
     public static File zipNewest(Context c) throws Exception { return zipNewest(c, true); }
     public static File zipNewest(Context c, boolean withApks) throws Exception {
-        File[] fs = reportRoot().listFiles(); File newest = null;
-        if (fs != null) for (File f : fs) if (f.isDirectory() && (newest == null || f.lastModified() > newest.lastModified())) newest = f;
+        File newest = newestDir();
         if (newest == null) throw new Exception("no report yet");
         File zip = new File(new File(c.getCacheDir(), "share"), newest.getName() + (withApks ? "" : "_noapk") + ".zip"); zip.getParentFile().mkdirs();
         try (ZipOutputStream z = new ZipOutputStream(new FileOutputStream(zip))) {
@@ -298,7 +313,7 @@ public final class DeviceReport {
         body.append("- Phone: ").append(Build.MANUFACTURER).append(' ').append(Build.MODEL).append(" (").append(Build.DEVICE).append(", ").append(Build.BOARD).append(")\n");
         body.append("- Android: ").append(Build.VERSION.RELEASE).append(" / SDK ").append(Build.VERSION.SDK_INT).append("\n- Build: ").append(Build.DISPLAY).append("\n- Platform: ").append(getprop("ro.board.platform")).append("\n");
         body.append("- Rooted (Magisk): ").append(suPresent() ? "yes" : "no").append("\n- SignalDeck app: ").append(BuildConfig.VERSION_NAME).append("\n\n");
-        File[] fs = reportRoot().listFiles(); File newest = null; if (fs != null) for (File f : fs) if (f.isDirectory() && (newest == null || f.lastModified() > newest.lastModified())) newest = f;
+        File newest = newestDir();
         if (newest != null) {
             body.append("Device report folder: `Download/DMR/DeviceReport/").append(newest.getName()).append("`\n**Please drag the report zip (Device → Share last report, or the folder zipped) into this issue.**\n\n");
             String rep = cat(new File(newest, "report.txt").getAbsolutePath());

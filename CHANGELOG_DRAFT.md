@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-21 — Listen check in two parts; follow-up steps never go into an old report
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | **Listen check in two parts** (owner's question: should the squelch be open?): part 1, 10 s with **MON on** (squelch forced open) — "Did you hear static (a hiss) from the speaker?" tests playback alone (skipped on DMR channels, no static); part 2, 50 s with the normal squelch on the owner's busy channel — "Did you hear the station?" tests that a real signal opens it and sounds clean. Both answers and measurements go into the report, so "no sound" points at the speaker path or at the squelch/signal. MON is restored afterwards. **Fix:** the listen check appended to the *newest report folder by modification time* — after test reports were deleted that was an old report from 2026-10-18 (and the test clean-up then deleted that old report from the owner's phone; not recoverable). Reports are now ordered by the creation time in their folder name, and a follow-up step adds to a report from the last 12 hours or makes a new one (`DeviceReport.currentOrNew`); zip and GitHub-issue sharing use the same rule. Part of 1.0.0-beta.8. | `ui/DeviceView.java`, `DeviceReport.java`, `ui/HelpView.java` | **device (Armor):** part 1 heard 10 of 10 s with MON on, part 2 0 of 50 s on NOAA at −91 dBm with the squelch note; MON off afterwards; with only an old 10-18 report present, the check created a new report and left the old one unchanged (file times 2026-10-18, no listen-check section); test report deleted |
+
 ## 2026-10-21 — 1.0.0-beta.8: phone profiles with revisions, a signed profile list, and owner-controlled advisories
 
 | Backlog | Change | Files | Test |
