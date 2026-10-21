@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-21 — 1.0.0-beta.7: Help support this phone (checklist + listen check), global squelch on the Xplore 1
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | **Help support this phone** (Device page button on untested/unknown phones; Device report → first item): the support stages in order with ticks and locks — 1 Run all checks, 2 **Listen check**, 3 Send the results — each with its own instructions. The **listen check** (SignalDeck owns the radio, the owner picks a channel where stations are heard): 60 s of signal strength per second, seconds with something heard, audio bytes (and packet stats on UART phones), then "Did you hear the station?" (clearly / distorted / no sound / nobody talking); answer and measurements go into the report. **Xplore 1 receive:** the module follows its global squelch (`0x30`) — QuickChat sends it after every channel and leaves it at 5 — so the profile sets `globalSquelch` and SignalDeck now sends `0x30` with every analog channel write and Soft SQ change (open when Soft SQ is on, else the channel's level). New `docs/NEW_PHONE_PLAYBOOK.md` (how to read each report section into a profile, the pitfalls we hit). Version **1.0.0-beta.7** (code 106). | `ui/DeviceView.java`, `FirstRunCheck.java`, `RadioService.java`, `RadioEngine.java`, `DeviceProfile.java`, `ui/HelpView.java`, `build.gradle`, `docs/NEW_PHONE_PLAYBOOK.md` | **device (Armor, receive only):** checklist shows the stages and locks; stage 1 run unlocks stage 2; listen check on NOAA WX6: 60 RSSI samples (−91…−90 dBm), 1.9 MB of audio, the answer saved into the report; test report deleted. `0x30` path only on the Xplore profile (code-reviewed). 123 host tests pass |
+
 ## 2026-10-21 — 1.0.0-beta.6: receive audio silent after Hand back → Take over (Armor)
 
 | Backlog | Change | Files | Test |

@@ -1017,6 +1017,8 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     public ChannelStore store() { return store; }
     public ChannelStore.Channel current() { return current; }
+    /** Something is being heard right now (the Soft SQ gate when it is on, else the module's own receive state). */
+    public boolean rxActive() { return softSq.isEnabled() ? squelchOpen : receiving; }
     public DeviceProfile profile() { return profile; }
     public String link() { return link; }
     public boolean isReady() { return "ready".equals(link); }
@@ -1084,6 +1086,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             int band = ch.rxFreq < 300_000_000 ? 1 : ch.band;
             synchronized (tunes) { tunes.addLast(new Object[] { ch, false }); }   // answered like any channel write
             engine.setAnalog(ch.rxFreq, ch.txFreq, band, ch.power, hardwareSq(ch), ch.rxType, ch.rxSubCode, ch.txType, ch.txSubCode, 8, 2);
+            if (profile.globalSquelch) engine.setSquelch(hardwareSq(ch));
         } catch (IOException e) { log("squelch rewrite: " + e); }
     }
 
@@ -1105,6 +1108,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             } else {
                 int band = ch.rxFreq < 300_000_000 ? 1 : ch.band;      // VHF must be band=1 (band=0 deafens the RX)
                 engine.setAnalog(ch.rxFreq, ch.txFreq, band, ch.power, hardwareSq(ch), ch.rxType, ch.rxSubCode, ch.txType, ch.txSubCode, 8, 2);
+                if (profile.globalSquelch) engine.setSquelch(hardwareSq(ch));   // this module's squelch follows 0x30 (as QuickChat sends it)
             }
             finishRecording();
             ChannelStore.Channel was = current;
@@ -1407,6 +1411,7 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     /** First-run check: bytes the receive audio path has delivered, and a raw copy of the next few seconds (UART PCM phones). */
     private volatile long rxPcmBytes;
+    public String audioStats() { AudioBackend a = audio; return a instanceof UartPcmAudio ? ((UartPcmAudio) a).frameStats() : ""; }
     public byte[] rxAudioHead() { AudioBackend a = audio; return a instanceof UartPcmAudio ? ((UartPcmAudio) a).head() : null; }
     public long rxAudioBytes() { AudioBackend a = audio; return a instanceof UartPcmAudio ? ((UartPcmAudio) a).rxBytes() : rxPcmBytes; }
     public String captureRxAudio(java.io.File f, int ms) {

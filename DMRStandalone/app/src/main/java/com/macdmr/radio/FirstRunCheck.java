@@ -77,6 +77,32 @@ public final class FirstRunCheck {
         return DeviceReport.zipNewest(c, true);
     }
 
+    /**
+     * Listen check (support stage 2, receive only): with SignalDeck owning the radio on a channel the owner chose because
+     * stations are heard there, record for {@code seconds} the signal strength, how much of the time something was heard
+     * and how much audio arrived. The owner's answer ("did you hear it?") is added by the caller.
+     */
+    public static String listenCheck(RadioService svc, int seconds, Progress p) throws InterruptedException {
+        StringBuilder r = new StringBuilder();
+        ChannelStore.Channel ch = svc.current();
+        if (!svc.isReady() || ch == null) return "not run: SignalDeck does not own the radio or no channel is selected\n";
+        r.append(String.format(Locale.US, "channel: %s, %s MHz, %s\n", ch.name, ch.freqText(ch.rxFreq), ch.isDigital() ? "DMR" : "analog FM"));
+        long bytes0 = svc.rxAudioBytes(), t0 = System.currentTimeMillis();
+        int samples = 0, heard = 0, rmin = 0, rmax = -999; StringBuilder rs = new StringBuilder();
+        while (System.currentTimeMillis() - t0 < seconds * 1000L) {
+            svc.pollRssi(); Thread.sleep(1000);
+            int v = svc.lastRssi(); samples++; if (svc.rxActive()) heard++;
+            if (v > -999) { rmax = Math.max(rmax, v); rmin = rmin == 0 ? v : Math.min(rmin, v); }
+            if (samples <= 60) rs.append(v).append(svc.rxActive() ? "*" : "").append(' ');
+            p.step(String.format(Locale.US, "Listening: %d of %d s, something heard %d s", samples, seconds, heard));
+        }
+        long bytes = svc.rxAudioBytes() - bytes0;
+        r.append(String.format(Locale.US, "something heard in %d of %d seconds; signal %d … %d dBm\n", heard, samples, rmin, rmax));
+        r.append("signal each second (* = heard): ").append(rs.toString().trim()).append('\n');
+        r.append(String.format(Locale.US, "receive audio: %d bytes in %d s%s\n", bytes, seconds, svc.audioStats().isEmpty() ? "" : " (" + svc.audioStats() + ")"));
+        return r.toString();
+    }
+
     private static final String KMSG = "dmesg 2>/dev/null | grep -i -E 'intercom|dmr|interphone|walkie|ptt|pwd|pdt|ttyS|ttyMT' | tail -40";
 
     /**
