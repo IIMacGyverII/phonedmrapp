@@ -22,8 +22,8 @@ function renderTrainer() {
     + '<div class="row wrap"><button class="btn primary" id="mtCheck" disabled>Check</button><span id="mtResult" class="muted"></span></div>';
   const save = () => { MT.lesson = +$('mtLesson').value; MT.wpm = +$('mtWpm').value; MT.fw = +$('mtFw').value; act('trainer', { lesson: MT.lesson, wpm: MT.wpm, fw: MT.fw }); renderTrainer(); };
   $('mtLesson').onchange = save; $('mtWpm').onchange = save; $('mtFw').onchange = save;
-  $('mtPlay').onclick = () => { MT.sent = groups(MT.lesson, 10); $('mtCopy').value = ''; $('mtResult').textContent = ''; play(MT.sent); $('mtAgain').disabled = false; $('mtCheck').disabled = false; $('mtCopy').focus(); };
-  $('mtAgain').onclick = () => play(MT.sent);
+  $('mtPlay').onclick = () => { MT.sent = groups(MT.lesson, 10); $('mtCopy').value = ''; $('mtResult').textContent = ''; morsePlay(MT.sent); $('mtAgain').disabled = false; $('mtCheck').disabled = false; $('mtCopy').focus(); };
+  $('mtAgain').onclick = () => morsePlay(MT.sent);
   $('mtStop').onclick = stopMorse;
   $('mtCheck').onclick = check;
 }
@@ -33,7 +33,7 @@ function groups(lesson, n) {
   return out.join(' ');
 }
 function stopMorse() { if (MT.ctx) { MT.ctx.close(); MT.ctx = null; } }
-function play(text) {
+function morsePlay(text) {
   stopMorse();
   const ctx = new (window.AudioContext || window.webkitAudioContext)(); MT.ctx = ctx;
   const wpm = MT.wpm, f = Math.min(MT.fw, wpm), dit = 1.2 / wpm;
