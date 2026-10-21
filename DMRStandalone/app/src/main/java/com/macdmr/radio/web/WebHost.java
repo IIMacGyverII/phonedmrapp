@@ -107,7 +107,7 @@ public final class WebHost {
 
     // ---- static files: assets/web/, fonts from assets/fonts/ ----
     private byte[] asset(String path) throws java.io.IOException {
-        String p = path.startsWith("fonts/") ? path : "web/" + path;
+        String p = path.startsWith("fonts/") || path.startsWith("exam/") ? path : "web/" + path;     // the exam pools and figures come straight from the phone's assets
         try (InputStream in = svc.getAssets().open(p)) { return readAll(in); } catch (FileNotFoundException e) { return null; }
     }
     private static byte[] readAll(InputStream in) throws java.io.IOException {
@@ -702,6 +702,30 @@ public final class WebHost {
                 if (bmp == null) return WebServer.Response.error(400, "That is not a picture this phone can read (use PNG or JPEG)");
                 String e = onMain(() -> svc.packet().sendSstv(bmp, modes[m]));
                 return e == null ? ok("Sending the picture as " + com.macdmr.radio.pkt.SSTVEncoder.name(modes[m])) : WebServer.Response.error(409, e);
+            }
+            case "/api/exam": {                                                 // the pools and this phone's progress (shared with the phone's Exam practice)
+                android.content.SharedPreferences ep = svc.getSharedPreferences("exam", Context.MODE_PRIVATE);
+                JSONArray a = new JSONArray();
+                for (com.macdmr.radio.ham.ExamPool.Element e : com.macdmr.radio.ham.ExamPool.ELEMENTS)
+                    a.put(new JSONObject().put("key", e.key).put("name", e.name).put("asset", e.asset).put("questions", e.questions).put("pass", e.pass)
+                            .put("best", ep.getInt("best_" + e.key, -1)).put("missed", new JSONArray(ep.getStringSet("missed_" + e.key, new java.util.HashSet<>()))));
+                return ok(new JSONObject().put("elements", a));
+            }
+            case "/api/exam/answer": if (!post) break; {                       // {element, id, right}: keeps the missed list like the phone
+                String key = b.optString("element", ""), id = b.optString("id", "");
+                if (!key.matches("tech|general|extra") || !id.matches("[A-Z][0-9][A-Z][0-9]{2}")) return WebServer.Response.error(400, "element and id");
+                android.content.SharedPreferences ep = svc.getSharedPreferences("exam", Context.MODE_PRIVATE);
+                java.util.Set<String> miss = new java.util.HashSet<>(ep.getStringSet("missed_" + key, new java.util.HashSet<>()));
+                if (b.optBoolean("right", false)) miss.remove(id); else miss.add(id);
+                ep.edit().putStringSet("missed_" + key, miss).apply();
+                return ok(new JSONObject().put("missed", miss.size()));
+            }
+            case "/api/exam/result": if (!post) break; {                       // {element, right}: a full practice exam's score
+                String key = b.optString("element", ""); int right = b.optInt("right", -1);
+                if (!key.matches("tech|general|extra") || right < 0) return WebServer.Response.error(400, "element and right");
+                android.content.SharedPreferences ep = svc.getSharedPreferences("exam", Context.MODE_PRIVATE);
+                boolean best = right > ep.getInt("best_" + key, -1); if (best) ep.edit().putInt("best_" + key, right).apply();
+                return ok(new JSONObject().put("best", best));
             }
             case "/api/nets": {                                                 // the running net (check-ins, stations heard lately) and past nets
                 com.macdmr.radio.ham.NetStore ns = svc.nets();
