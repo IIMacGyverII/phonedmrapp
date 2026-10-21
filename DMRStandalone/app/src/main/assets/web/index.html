@@ -62,6 +62,7 @@
             <button class="tog" id="monBtn">MON</button>
             <button class="tog" id="recBtn">REC</button>
             <button class="tog" id="sqBtn">SOFT SQ</button>
+            <button class="tog" id="vfoBtn" title="Tune any frequency">VFO</button>
             <select id="zoneSel" aria-label="Zone"></select>
           </div>
           <div class="sq"><span class="label">SOFT SQ</span><input type="range" id="sqLevel" min="0" max="100"><span id="sqVal" class="mono">--</span></div>
@@ -85,7 +86,7 @@
     <section id="page-channels" class="page hidden">
       <div class="grid-side wide">
         <div class="panel">
-          <div class="row between"><span class="label">CHANNELS</span><button class="btn small-btn" id="chNew">New channel</button></div>
+          <div class="row between"><span class="label">CHANNELS</span><div class="row"><button class="btn small-btn" id="chVfo">VFO</button><button class="btn small-btn" id="chNew">New channel</button></div></div>
           <input id="chSearch" placeholder="Search name, frequency or number" class="search full" style="margin-top:10px">
           <div id="chList" class="list"></div>
         </div>

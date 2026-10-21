@@ -90,7 +90,7 @@ function renderStatus() {
   $('chType').textContent = ch.rxFreq ? (ch.digital ? 'DMR · CC' + ch.cc + ' · TS' + ((ch.slot || 0) + 1) : 'FM') : '';
   $('tone').textContent = ch.rxFreq && ch.txFreq && ch.txFreq !== ch.rxFreq ? 'TX ' + mhz(ch.txFreq) : '';
   const link = $('link'); link.textContent = s.ready ? 'RADIO READY' : (s.link || '').toUpperCase(); link.className = 'chip ' + (s.ready ? 'green' : 'amber');
-  $('scanBtn').classList.toggle('on', !!s.scanning); $('monBtn').classList.toggle('on', !!s.monitor); $('recBtn').classList.toggle('on', !!s.record); $('sqBtn').classList.toggle('on', !!s.softSq);
+  $('scanBtn').classList.toggle('on', !!s.scanning); $('monBtn').classList.toggle('on', !!s.monitor); $('recBtn').classList.toggle('on', !!s.record); $('sqBtn').classList.toggle('on', !!s.softSq); $('vfoBtn').classList.toggle('on', !!s.vfo);
   if (document.activeElement !== $('sqLevel')) $('sqLevel').value = s.softSqLevel; $('sqVal').textContent = s.softSqLevel;
   const z = $('zoneSel'); if (z.dataset.loaded !== '1') loadZones(); else z.value = String(s.zoneId);
   const ptt = $('ptt'); const canTx = s.webTx && s.ready && !s.txInhibited && !(s.sat && s.sat.tracking && s.sat.listenOnly && !s.sat.waiting);

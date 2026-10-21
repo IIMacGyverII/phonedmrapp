@@ -335,7 +335,7 @@ public class ChannelEditorView extends LinearLayout {
             ch.name = name.getText().toString().trim();
             ch.txFreq = (int) Math.round(Double.parseDouble(tx.getText().toString().trim()) * 1e6);
             ch.rxFreq = (int) Math.round(Double.parseDouble(rx.getText().toString().trim()) * 1e6);
-            if (ch.rxFreq < 136_000_000 || ch.rxFreq > 480_000_000 || ch.txFreq < 136_000_000 || ch.txFreq > 480_000_000) throw new IllegalArgumentException("Frequencies must be 136–174 or 400–480 MHz");
+            if (!ChannelStore.inBand(ch.rxFreq) || !ChannelStore.inBand(ch.txFreq)) throw new IllegalArgumentException("Frequencies must be 136–174 or 400–480 MHz");
             if (ch.rxFreq < 300_000_000) ch.band = 1;                                  // VHF must be wide on this radio
             String la = lat.getText().toString().trim(), lo = lon.getText().toString().trim();
             if (la.isEmpty() && lo.isEmpty()) { ch.lat = 0; ch.lon = 0; }

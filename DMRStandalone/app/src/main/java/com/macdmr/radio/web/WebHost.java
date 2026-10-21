@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
  */
 public final class WebHost {
     public static final int DEFAULT_PORT = 8080;
+    private static final int[] VFO_STEPS = { 5000, 6250, 10000, 12500, 25000 };     // VfoDialog.STEPS
     private static final String TX_OFF = "Transmit from the web is off (phone: Device → SignalDeck Web)";
     private final RadioService svc;
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -53,7 +54,7 @@ public final class WebHost {
         return p;
     }
     /** A new PIN logs every browser out. */
-    public void newPin() { prefs().edit().putString("pin", WebServer.newPin()).apply(); if (running()) { stop(); start(); } }
+    public void newPin() { prefs().edit().putString("pin", WebServer.newPin()).remove("sessions").apply(); if (running()) { stop(); start(); } }
     public boolean running() { WebServer s = server; return s != null && s.running(); }
     public int clients() { WebServer s = server; return s == null ? 0 : s.clients(); }
     public int listeners() { WebServer s = server; return s == null ? 0 : s.audioClients(); }
@@ -70,7 +71,14 @@ public final class WebHost {
 
     public synchronized String start() {
         if (running()) return null;
-        WebServer s = new WebServer(port(), pin(), this::asset, this::api);
+        WebServer s = new WebServer(port(), pin(), this::asset, this::api, new WebServer.SessionStore() {
+            @Override public java.util.Map<String, Long> load() {
+                java.util.Map<String, Long> m = new java.util.HashMap<>();
+                try { JSONObject o = new JSONObject(prefs().getString("sessions", "{}")); for (java.util.Iterator<String> it = o.keys(); it.hasNext(); ) { String k = it.next(); m.put(k, o.getLong(k)); } } catch (Exception ignored) { }
+                return m;
+            }
+            @Override public void save(java.util.Map<String, Long> m) { prefs().edit().putString("sessions", new JSONObject(m).toString()).apply(); }
+        });
         try { s.start(); } catch (Exception e) { lastError = "Port " + port() + ": " + e.getMessage(); return lastError; }
         server = s; lastError = null;
         ui.post(() -> svc.addListener(events));
@@ -181,7 +189,7 @@ public final class WebHost {
             ch.type = b.optInt("type", ch.type) == 0 ? 0 : 1;
             ch.txFreq = (int) Math.round(b.getDouble("txMHz") * 1e6);
             ch.rxFreq = (int) Math.round(b.getDouble("rxMHz") * 1e6);
-            if (ch.rxFreq < 136_000_000 || ch.rxFreq > 480_000_000 || ch.txFreq < 136_000_000 || ch.txFreq > 480_000_000) return "Frequencies must be 136–174 or 400–480 MHz";
+            if (!ChannelStore.inBand(ch.rxFreq) || !ChannelStore.inBand(ch.txFreq)) return "Frequencies must be 136–174 or 400–480 MHz";
             ch.power = b.optInt("power", ch.power) == 1 ? 1 : 0;
             ch.relay = b.optInt("relay", ch.relay) == 1 ? 1 : 2;
             String la = b.optString("lat", "").trim(), lo = b.optString("lon", "").trim();
@@ -459,6 +467,26 @@ public final class WebHost {
                 onMain(() -> { svc.saveChannel(c, isNew); return null; });
                 return WebServer.Response.json(200, new JSONObject().put("ok", true).put("message", "Saved " + (c.name.isEmpty() ? "channel " + c.number : c.name)).put("number", c.number).toString());
             }
+            case "/api/vfo": {                                                  // GET: the VFO's settings; POST: tune it (enters VFO mode)
+                if (!post) {
+                    JSONObject help = new JSONObject(); for (String[] h : com.macdmr.radio.ui.ChannelEditorView.helpForWeb()) help.put(h[0], h[1]);
+                    JSONArray steps = new JSONArray(); for (int s : VFO_STEPS) steps.put(s);
+                    return ok(new JSONObject().put("channel", channelFull(svc.vfoChannel())).put("active", svc.vfoActive()).put("step", svc.vfoStepHz()).put("steps", steps)
+                            .put("help", help).put("tones", toneLists()));
+                }
+                if (svc.isTransmitting()) return WebServer.Response.error(409, "Not while transmitting");
+                ChannelStore.Channel v = svc.vfoChannel();
+                if (!b.has("lat")) b.put("lat", ""); if (!b.has("lon")) b.put("lon", "");
+                String err = applyChannel(v, b);
+                if (err != null) return WebServer.Response.error(400, err);
+                if (v.isDigital() && v.contactType != 2 && v.txContact <= 0) return WebServer.Response.error(400, "A call number is needed for a private or group call");
+                v.name = ""; v.lat = 0; v.lon = 0;
+                int step = b.optInt("step", svc.vfoStepHz()); boolean stepOk = false; for (int s : VFO_STEPS) stepOk |= s == step;
+                final boolean setStep = stepOk;
+                onMain(() -> { if (setStep) svc.setVfoStepHz(step); svc.applyVfo(v); return null; });
+                return ok(String.format(java.util.Locale.US, "VFO %.4f MHz", v.rxFreq / 1e6));
+            }
+            case "/api/vfo/exit": if (!post) break; onMain(() -> { svc.exitVfo(); return null; }); return ok("Back to the channel");
             case "/api/channel/delete": if (!post) break; {
                 ChannelStore.Channel ch = svc.store().byNumber(b.optInt("number", 0));
                 if (ch == null) return WebServer.Response.error(404, "No such channel");
