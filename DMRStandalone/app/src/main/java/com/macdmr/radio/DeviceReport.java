@@ -45,6 +45,8 @@ public final class DeviceReport {
 
     /** Volatile hook the activity feeds hardware key events into while a PTT capture runs. */
     public static volatile Consumer<KeyEvent> keyCapture;
+    /** Packages the last report took for the stock walkie-talkie app (the first-run check watches the first one). */
+    public static volatile List<String> lastCandidates = new ArrayList<>();
 
     public static File generate(Context c, Progress p) throws Exception {
         String tag = (Build.MANUFACTURER + "_" + Build.MODEL).replaceAll("[^A-Za-z0-9._-]+", "_");
@@ -82,12 +84,21 @@ public final class DeviceReport {
             if (fs != null) for (File f : fs) if (f.isFile()) r.append(String.format(Locale.US, "      %-24s r=%s w=%s  %s\n", f.getName(), f.canRead(), f.canWrite(), f.canRead() ? cat(f.getAbsolutePath()).trim().replace('\n', ' ').substring(0, Math.min(80, cat(f.getAbsolutePath()).trim().length())) : ""));
         }
         if (root) r.append(RootSetup.run("for d in /sys/devices/platform/*dmr* /sys/devices/platform/*intercom* /sys/devices/platform/*walkie* /sys/devices/platform/*ptt* /sys/devices/platform/*sy88*; do [ -d \"$d\" ] && echo \"--- $d\" && ls -lZ \"$d\" && for f in \"$d\"/*; do [ -f \"$f\" ] && printf '%s = ' \"$f\" && (head -c 80 \"$f\" 2>&1; echo); done; done 2>/dev/null")).append('\n');
+        if (root) {                                       // how the kernel describes the module's wiring: pin names, compatible string
+            h(r, "Device tree of the radio module (root)");
+            String dt = RootSetup.run("for d in /sys/devices/platform/*dmr*/of_node /sys/devices/platform/*intercom*/of_node /sys/devices/platform/*walkie*/of_node; do [ -d \"$d\" ] || continue; echo \"--- $d\"; for f in \"$d\"/*; do [ -f \"$f\" ] && echo \"$(basename \"$f\") $(od -An -tx1 -N160 \"$f\" | tr -s ' \\n' ' ')\"; done; done; true");
+            for (String l : dt.split("\n")) {
+                if (l.startsWith("---") || l.trim().isEmpty()) { r.append(l).append('\n'); continue; }
+                String[] kv = l.trim().split(" ", 2);
+                r.append("  ").append(kv[0]).append(" = ").append(kv.length > 1 ? dtValue(kv[1]) : "").append('\n');
+            }
+        }
         h(r, "GPIO / misc nodes"); r.append(root ? RootSetup.run("ls -lZ /dev/ | grep -iE 'dmr|intercom|walkie|ptt|gpio|misc' ; ls /sys/class/gpio 2>/dev/null | head -40") : ls("/sys/class/gpio", null)).append('\n');
 
         p.step("Walkie-talkie apps");
         h(r, "Installed apps that look like the stock walkie-talkie app");
         PackageManager pm = c.getPackageManager();
-        List<String> candidates = new ArrayList<>();
+        List<String> candidates = new ArrayList<>(); lastCandidates = candidates;
         for (PackageInfo pi : pm.getInstalledPackages(PackageManager.GET_PERMISSIONS | PackageManager.GET_RECEIVERS | PackageManager.GET_SERVICES)) {
             if (pi.packageName.equals(c.getPackageName()) || !RADIO.matcher(pi.packageName).find()) continue;
             if (pi.packageName.matches("(?i).*(android\\.|google\\.|qualcomm|mediatek|mtk).*") && !pi.packageName.matches("(?i).*(intercom|interphone|walkie|dmr|ptt|quickchat).*")) continue;
@@ -110,6 +121,8 @@ public final class DeviceReport {
             } catch (Throwable t) { r.append("  could not copy ").append(pkg).append(": ").append(t).append('\n'); }
             if (root) { h(r, "dumpsys package " + pkg + " (root)"); r.append(redact(RootSetup.run("dumpsys package " + pkg + " | grep -v '^ *$' | grep -iE 'Receiver|Service|Activity|action|filter|flags|codePath|resourcePath|nativeLibraryPath|primaryCpuAbi|versionName|sharedUser|uid=|perm' | head -300"))).append('\n'); }
             if (root) { h(r, "Databases of " + pkg + " (structure only: tables, columns, row counts; root)"); r.append(dbStructure(c, pkg)).append('\n'); }
+            try { p.step("Reading " + pkg + "'s code"); h(r, "Clues in " + pkg + "'s code (paths, audio parameters, serial speeds, PTT log texts)"); r.append(apkClues(new File(pm.getApplicationInfo(pkg, 0).sourceDir))).append('\n'); }
+            catch (Throwable t) { r.append("  ").append(t).append('\n'); }
         }
 
         p.step("System files");
@@ -119,6 +132,11 @@ public final class DeviceReport {
         h(r, "Serial-looking system libraries and their JNI classes");
         for (File lf : serialLibs(c, null)) { String syms = jniSymbols(lf); if (syms.isEmpty()) syms = registeredNatives(lf); r.append("  ").append(lf.getAbsolutePath()).append(" (").append(lf.length() / 1024).append(" kB)\n").append(syms); }
         h(r, "Binder services"); r.append(exec("service list")).append('\n');
+        h(r, "Audio clues (does radio audio go through Android's audio system?)");
+        r.append(exec("getprop | grep -iE 'pdt|intercom|interphone|dmr|walkie|ptt|pcm' | grep -v -E 'known_codenames|macdmr' | head -40")).append('\n');
+        if (root) r.append(RootSetup.run("grep -il -E 'pdt|intercom|interphone|dmr|walkie' /vendor/etc/*.xml /vendor/etc/audio/* /odm/etc/*.xml /system/etc/audio* 2>/dev/null | head; "
+                + "for f in $(grep -il -E 'pdt|intercom|interphone|dmr|walkie' /vendor/etc/*.xml /vendor/etc/audio/* /odm/etc/*.xml 2>/dev/null | head -5); do echo \"--- $f\"; grep -i -E 'pdt|intercom|interphone|dmr|walkie' \"$f\" | head -20; done; "
+                + "dumpsys media.audio_flinger 2>/dev/null | grep -i -E 'pdt|intercom|interphone|dmr|walkie' | grep -v macdmr | head -20; true")).append('\n');
         h(r, "Audio devices"); r.append(cat("/proc/asound/cards")).append(ls("/dev/snd", null)).append('\n');
 
         if (root) {
@@ -147,6 +165,64 @@ public final class DeviceReport {
         File[] fs = reportRoot().listFiles(); if (fs == null) return null;
         File newest = null; for (File f : fs) if (f.isDirectory() && (newest == null || f.lastModified() > newest.lastModified())) newest = f;
         return newest;
+    }
+
+    /**
+     * Strings from the stock app's code and native libraries that tell how it drives the radio: every /sys and /dev path,
+     * audio-system parameters ("pdt_play=off"), serial speeds, and log texts about PTT, receive, transmit, power and PCM
+     * (QuickChat's "setPttLaunch" / "setPttReceive" told us that ptt_control 0 keys its transmitter). Only short ASCII
+     * strings from the code, never resources or user data.
+     */
+    public static String apkClues(File apk) {
+        java.util.TreeSet<String> paths = new java.util.TreeSet<>(), params = new java.util.TreeSet<>(), bauds = new java.util.TreeSet<>(), logs = new java.util.TreeSet<>();
+        Pattern pPath = Pattern.compile("/(sys|dev|proc)/[A-Za-z0-9_./-]{2,80}"), pParam = Pattern.compile("\\b[a-z][a-z0-9_]{2,30}=(on|off|1|0|true|false)\\b"),
+                pBaud = Pattern.compile("\\bB(9600|19200|38400|57600|115200|230400|460800|921600)\\b"),
+                pLog = Pattern.compile("[ -~]{0,50}(?i:ptt|pcm|serial ?port|intercom|interphone|walkie|dmr)[ -~]{0,50}"),
+                pFramework = Pattern.compile("(?i).*(activity|intent|content|receiver|launcher|shortcut|broadcast|permission|fragment|view|layout|leanback|androidx|java|kotlin).*");
+        try (java.util.zip.ZipFile z = new java.util.zip.ZipFile(apk)) {
+            java.util.Enumeration<? extends ZipEntry> en = z.entries();
+            while (en.hasMoreElements()) {
+                ZipEntry e = en.nextElement(); String n = e.getName();
+                boolean dex = n.matches("classes\\d*\\.dex"), so = n.startsWith("lib/arm64") && n.endsWith(".so");
+                if ((!dex && !so) || e.getSize() > 40_000_000) continue;
+                byte[] b; try (InputStream in = z.getInputStream(e)) { java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream(); byte[] t = new byte[65536]; int k; while ((k = in.read(t)) > 0) bo.write(t, 0, k); b = bo.toByteArray(); }
+                // split into printable runs, as `strings` would
+                StringBuilder run = new StringBuilder();
+                for (int i = 0; i <= b.length; i++) {
+                    int ch = i < b.length ? b[i] & 0xFF : 0;
+                    if (ch >= 0x20 && ch < 0x7F) { if (run.length() < 200) run.append((char) ch); continue; }
+                    if (run.length() >= 4) {
+                        String s = run.toString();
+                        if (dex && s.charAt(0) == s.length() - 1) s = s.substring(1);        // the dex string's length byte happened to be printable
+                        java.util.regex.Matcher m = pPath.matcher(s); while (m.find()) paths.add(m.group());
+                        m = pParam.matcher(s); while (m.find()) params.add(m.group());
+                        m = pBaud.matcher(s); while (m.find()) bauds.add(m.group());
+                        if (dex && s.length() <= 100 && logs.size() < 120 && !s.contains("/") && (s.contains(" ") || s.contains(":") || s.contains(","))
+                                && pLog.matcher(s).matches() && !pFramework.matcher(s).matches()) logs.add(s.trim());           // log-like texts, not framework names
+                    }
+                    run.setLength(0);
+                }
+            }
+        } catch (Throwable t) { return "  could not read " + apk + ": " + t + "\n"; }
+        StringBuilder out = new StringBuilder();
+        out.append("  paths: ").append(paths.isEmpty() ? "-" : String.join("  ", paths)).append('\n');
+        out.append("  audio/system parameters: ").append(params.isEmpty() ? "-" : String.join("  ", params)).append('\n');
+        out.append("  serial speeds: ").append(bauds.isEmpty() ? "-" : String.join(" ", bauds)).append('\n');
+        out.append("  log texts about the radio:\n"); for (String s : logs) out.append("    ").append(mask(s)).append('\n');
+        return out.toString();
+    }
+
+    /** A device-tree property from its hex dump: NUL-separated text ("coosea,dmr009") as text, anything else (GPIO specifiers, phandles) as 32-bit cells. */
+    static String dtValue(String hex) {
+        String[] hb = hex.trim().split("\\s+"); byte[] b = new byte[hb.length]; int n = 0;
+        for (String h : hb) if (h.matches("[0-9a-fA-F]{2}")) b[n++] = (byte) Integer.parseInt(h, 16);
+        boolean text = n > 0 && b[n - 1] == 0 && (b[0] & 0xFF) >= 0x20;
+        for (int i = 0; i < n && text; i++) { int ch = b[i] & 0xFF; if (ch != 0 && (ch < 0x20 || ch > 0x7E)) text = false; }
+        if (text) return "\"" + new String(b, 0, n - 1, java.nio.charset.StandardCharsets.ISO_8859_1).replace('\u0000', '|') + "\"";
+        StringBuilder s = new StringBuilder("<");
+        for (int i = 0; i + 3 < n; i += 4) s.append(i == 0 ? "" : " ").append(String.format(Locale.US, "0x%02x%02x%02x%02x", b[i], b[i + 1], b[i + 2], b[i + 3]));
+        if (n % 4 != 0) for (int i = n - n % 4; i < n; i++) s.append(String.format(Locale.US, " %02x", b[i]));
+        return s.append(">").toString();
     }
 
     /** Copy a library folder with root into the cache (to scan its JNI names); lists what it holds. */
