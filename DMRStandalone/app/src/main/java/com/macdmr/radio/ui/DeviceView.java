@@ -81,9 +81,9 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
             final String r = svc != null ? RootSetup.installBootModule(svc.profile(), getContext().getCacheDir()) : "service not ready";
             post(() -> new android.app.AlertDialog.Builder(getContext()).setTitle("Boot persistence").setMessage(r).setPositiveButton("OK", null).show());
         }).start());
-        reportNow = Neo.button(c, "Run all checks for this phone", "report", Neo.VIOLET);
+        reportNow = Neo.button(c, "Help support this phone", "report", Neo.VIOLET);
         hero.addView(reportNow, new LayoutParams(bl)); reportNow.setVisibility(GONE);
-        reportNow.setOnClickListener(v -> offerChecks(false));
+        reportNow.setOnClickListener(v -> supportMenu());
         TextView note = Neo.text(c, "Needs root (Magisk). While this app owns the radio the stock walkie-talkie app is paused and its icon hidden; Hand back restores it. The Magisk module keeps the SELinux rules across reboots so the radio can be owned straight from boot.", Neo.MUTED, 13, Neo.uiMedium(c));
         note.setLineSpacing(0, 1.1f); note.setPadding(0, (int) (10 * d), 0, 0);
         hero.addView(note);
@@ -320,8 +320,8 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
     private void reportMenu() {
         final Context c = getContext();
         new android.app.AlertDialog.Builder(c).setTitle("Device report")
-                .setItems(new String[] { "Run all checks (one button)", "Generate device report", "Share last report", "Capture the PTT key (10 s)", "Radio probe (root)", "Open a GitHub issue with the facts filled in", "What is in it?" }, (dd, w) -> {
-                    if (w == 0) offerChecks(false);
+                .setItems(new String[] { "Help support this phone (step by step)", "Generate device report", "Share last report", "Capture the PTT key (10 s)", "Radio probe (root)", "Open a GitHub issue with the facts filled in", "What is in it?" }, (dd, w) -> {
+                    if (w == 0) supportMenu();
                     else if (w == 1) generateReport();
                     else if (w == 2) shareReport();
                     else if (w == 3) captureKeys();
@@ -329,6 +329,67 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
                     else if (w == 5) com.macdmr.radio.DeviceReport.openIssue(c);
                     else new android.app.AlertDialog.Builder(c).setTitle("Device report").setMessage("For a phone that has no profile yet, or to help debug one: gathers the facts a profile needs (serial ports, radio-module nodes, the stock walkie-talkie app and its APK, vendor libraries, framework jars, services; with root also SELinux labels and the PTT key broadcasts), saves it under Download/DMR/DeviceReport and offers to share the zip to a GitHub issue. Nothing on the phone is changed.").setPositiveButton("OK", null).show();
                 }).show();
+    }
+
+    /**
+     * "Help support this phone": the stages a new phone goes through, in order, each with its instructions and a status.
+     * 1 Run all checks (receive only), 2 Listen check (a real station on a channel the owner picks), 3 Send the results.
+     */
+    public void supportMenu() {
+        final Context c = getContext(); if (svc == null) return;
+        final android.content.SharedPreferences sp = c.getSharedPreferences("radio", Context.MODE_PRIVATE);
+        final boolean s1 = sp.getLong("supportChecks", 0) > 0, s2 = sp.getLong("supportListen", 0) > 0;
+        String[] rows = {
+                (s1 ? "✓ " : "") + "1  Run all checks\nAbout two minutes, only listens; needs Magisk root",
+                (s2 ? "✓ " : s1 ? "" : "🔒 ") + "2  Listen check\nTake over the radio, pick a channel where stations are heard, then 60 s of listening",
+                ((s1 || s2) ? "" : "🔒 ") + "3  Send the results\nShare the report zip, or open a GitHub issue",
+                "What is this?" };
+        new android.app.AlertDialog.Builder(c).setTitle("Help support this phone — " + svc.profile().name)
+                .setItems(rows, (dd, w) -> {
+                    if (w == 0) offerChecks(false);
+                    else if (w == 1) { if (s1) listenCheckIntro(); else locked("Run all checks first."); }
+                    else if (w == 2) { if (s1 || s2) shareReport(); else locked("Run all checks first, then the listen check."); }
+                    else new android.app.AlertDialog.Builder(c).setTitle("Help support this phone")
+                            .setMessage("Each step tells us something about how this phone's radio works. After each one, send the results (step 3): we write or fix this phone's profile from them, and you get a new version through Device → Updates. The steps only listen: nothing is transmitted.")
+                            .setPositiveButton("OK", null).show();
+                }).setNegativeButton("Close", null).show();
+    }
+
+    private void locked(String why) { android.widget.Toast.makeText(getContext(), why, android.widget.Toast.LENGTH_LONG).show(); }
+
+    private void listenCheckIntro() {
+        final Context c = getContext(); if (svc == null) return;
+        String need = svc.isReady() ? "" : "\n\nSignalDeck does not have the radio yet: tap Take over on the Device page first.";
+        new android.app.AlertDialog.Builder(c).setTitle("Listen check")
+                .setMessage("1. On the Intercom page, choose a channel where you can hear stations right now (a busy repeater, a weather channel, a friend calling on another radio).\n"
+                        + "2. Come back here and tap Start.\n"
+                        + "3. For 60 seconds SignalDeck records the signal strength and the received audio. Listen to the speaker meanwhile.\n"
+                        + "4. Then say whether you heard the station clearly." + need)
+                .setPositiveButton("Start", (dd, w) -> { if (svc.isReady()) runListenCheck(); else locked("Take over the radio first (Device page)."); })
+                .setNegativeButton("Later", null).show();
+    }
+
+    private void runListenCheck() {
+        final Context c = getContext(); final com.macdmr.radio.RadioService s = svc; if (s == null) return;
+        final android.app.AlertDialog pd = new android.app.AlertDialog.Builder(c).setTitle("Listen check").setMessage("Starting…").setCancelable(false).create(); pd.show();
+        new Thread(() -> {
+            String r;
+            try { r = com.macdmr.radio.FirstRunCheck.listenCheck(s, 60, t -> post(() -> pd.setMessage(t))); } catch (Throwable t) { r = "failed: " + t + "\n"; }
+            final String result = r;
+            post(() -> {
+                pd.dismiss();
+                final String[] answers = { "Yes, clearly", "Yes, but distorted, choppy or too quiet", "No sound at all", "Nobody was talking" };
+                new android.app.AlertDialog.Builder(c).setTitle("Did you hear the station?").setCancelable(false)
+                        .setItems(answers, (dd, w) -> new Thread(() -> {
+                            if (com.macdmr.radio.DeviceReport.newestDir() == null) { try { com.macdmr.radio.DeviceReport.generate(c, x -> { }); } catch (Throwable ignored) { } }
+                            com.macdmr.radio.DeviceReport.append("Listen check", result + "owner's answer: " + answers[w] + "\n");
+                            c.getSharedPreferences("radio", Context.MODE_PRIVATE).edit().putLong("supportListen", System.currentTimeMillis()).apply();
+                            post(() -> new android.app.AlertDialog.Builder(c).setTitle("Listen check saved")
+                                    .setMessage(result + "\nYour answer: " + answers[w] + "\n\nNext: Help support this phone → 3 Send the results.")
+                                    .setPositiveButton("Send now", (d2, w2) -> shareReport()).setNegativeButton("Later", null).show());
+                        }).start()).show();
+            });
+        }, "listen-check").start();
     }
 
     /** The guided first run: one dialog, one button, one zip to send. */
@@ -427,6 +488,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         new Thread(() -> {
             try {
                 final java.io.File zip = com.macdmr.radio.FirstRunCheck.run(c, s, trial, watchPkg, t -> post(() -> pd.setMessage(t + "…")));
+                c.getSharedPreferences("radio", Context.MODE_PRIVATE).edit().putLong("supportChecks", System.currentTimeMillis()).apply();
                 final java.io.File dir = com.macdmr.radio.DeviceReport.newestDir();
                 String rep = dir == null ? "" : com.macdmr.radio.DeviceReport.cat(new java.io.File(dir, "report.txt").getAbsolutePath());
                 int k = rep.lastIndexOf("==== Summary ====");

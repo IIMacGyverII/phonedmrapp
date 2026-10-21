@@ -80,6 +80,8 @@ public final class RadioEngine implements UartPort.Listener {
     public void setVolume(int v) throws IOException { port.send(Frame.request(CMD_VOLUME, (byte) v)); }
     public void setMic(int gain) throws IOException { port.send(Frame.request(CMD_MIC, (byte) gain)); }
     /** Monitor: 1 = hear every decodable digital call, 2 = normal filtering (enum 1/2 like the rest). */
+    /** Global squelch level (0 open … 9), the same scale as a channel's sq byte. */
+    public void setSquelch(int level) throws IOException { port.send(Frame.request(CMD_SQUELCH, (byte) Math.max(0, Math.min(9, level)))); }
     public void setMonitor(boolean on) throws IOException { port.send(Frame.request(CMD_MONITOR, (byte) (on ? 1 : 2))); }
     public void setSpkEn(boolean on) throws IOException { port.send(Frame.request(CMD_SPK_EN, (byte) (on ? 1 : 0))); }
 
