@@ -504,7 +504,16 @@ public final class ChannelStore extends SQLiteOpenHelper {
         int n = 0;
         SQLiteDatabase db = getWritableDatabase();
         db.beginTransaction();
-        try (Cursor c = sdb.query("channel_table", null, null, null, null, null, "id")) {
+        // the bundled database has channel_table; the phone's own (QuickChat on the Xplore 1, 2026-10-21) has "channels" with
+        // 311 rows in 15 country lists (countryId, channelIdInCountry): take the country that holds the active channel
+        String table = "channel_table", where = null, order = "id";
+        try (Cursor t = sdb.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='channels'", null)) {
+            if (t.moveToFirst()) {
+                table = "channels"; order = "channelIdInCountry, id";
+                try (Cursor k = sdb.rawQuery("SELECT countryId FROM channels ORDER BY enbale DESC, id LIMIT 1", null)) { if (k.moveToFirst()) where = "countryId=" + k.getInt(0); }
+            }
+        } catch (Throwable ignored) { }
+        try (Cursor c = sdb.query(table, null, where, null, null, null, order)) {
             db.delete("channels", null, null);
             while (c.moveToNext()) {
                 Channel ch = new Channel();

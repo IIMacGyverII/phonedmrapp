@@ -22,7 +22,7 @@ public final class FirstRunCheck {
         DeviceProfile dp = svc.profile();
         StringBuilder sum = new StringBuilder();
         if (dp.supported && !dp.stockApp.isEmpty() && !svc.isReady() && RootSetup.haveRoot()
-                && !RootSetup.run("pidof " + dp.stockApp).replaceAll("[^0-9]", "").isEmpty()) {
+                && !RootSetup.run("pidof " + dp.stockApp + " || true").replaceAll("[^0-9]", "").isEmpty()) {
             p.step("Closing " + dp.stockApp + " so the ports are free");
             RootSetup.run("am force-stop " + dp.stockApp);
             Thread.sleep(1500);
@@ -49,6 +49,8 @@ public final class FirstRunCheck {
             sum.append("watched ").append(watchPkg).append(" start up for 15 s\n");
         } else sum.append("stock app not watched: ").append(watchPkg == null ? "skipped (no app chosen)" : svc.isReady() ? "SignalDeck owns the radio" : "no root").append('\n');
 
+        if (!svc.isReady() && !dp.stockApp.isEmpty() && RootSetup.haveRoot() && !RootSetup.run("pidof " + dp.stockApp + " || true").replaceAll("[^0-9]", "").isEmpty())
+            sum.append("stock app was running again before the probe: ").append(stopFully(dp.stockApp)).append('\n');
         if (svc.isReady()) {
             sum.append("radio probe skipped: SignalDeck owns the radio (Hand back first to probe the ports)\n");
         } else {
@@ -92,7 +94,7 @@ public final class FirstRunCheck {
         p.step("The stock walkie-talkie app is open for 15 s — please do not press PTT");
         r.append("start ").append(comp).append(": ").append(RootSetup.run("am start -n " + comp + " 2>&1 | tail -1")).append('\n');
         Thread.sleep(8000);
-        String pid = RootSetup.run("pidof " + pkg).trim().split("\\s+")[0];
+        String pid = RootSetup.run("pidof " + pkg + " || true").trim().split("\\s+")[0];
         if (pid.matches("\\d+")) {
             String fds = RootSetup.run("ls -l /proc/" + pid + "/fd 2>/dev/null | grep -o '/dev/[A-Za-z0-9_]*' | sort -u");
             r.append("devices it holds open: ").append(fds.replace('\n', ' ')).append('\n');
@@ -110,9 +112,21 @@ public final class FirstRunCheck {
         r.append("\nits log (").append(hexLines).append(" data-dump lines shortened to 3 samples; personal details removed):\n").append(DeviceReport.redact(kept.toString()));
         String kAfter = RootSetup.run(KMSG);
         r.append("\nradio driver kernel messages that appeared meanwhile:\n").append(newLines(kBefore, kAfter));
-        r.append("\nclosed: ").append(RootSetup.run("am force-stop " + pkg + " && echo ok")).append('\n');
-        Thread.sleep(1500);
+        r.append("\nclosed: ").append(stopFully(pkg)).append('\n');
         return r.toString();
+    }
+
+    /**
+     * Force-stop an app and make sure it stays stopped: QuickChat restarts itself (its service), and the probe found it
+     * holding both ports again right after a single force-stop (2026-10-21). Up to 4 tries over ~6 s.
+     */
+    static String stopFully(String pkg) throws InterruptedException {
+        for (int i = 1; i <= 4; i++) {
+            RootSetup.run("am force-stop " + pkg);
+            Thread.sleep(1500);
+            if (RootSetup.run("pidof " + pkg + " || true").replaceAll("[^0-9]", "").isEmpty()) return "stopped" + (i > 1 ? " (after " + i + " tries: it restarted itself)" : "");
+        }
+        return "still running after 4 force-stops: " + RootSetup.run("pidof " + pkg + " || true").trim();
     }
 
     /** Lines of {@code after} that were not in {@code before}. */
@@ -143,8 +157,12 @@ public final class FirstRunCheck {
             if (!svc.profile().verified) {                              // untested phone: give the audio path something to carry
                 p.step("Trial: listening on 446.00625 MHz with the squelch open");
                 svc.listenTest(446_006_250, "Listen test 446.00625");
-                Thread.sleep(4000);                                     // the module settles after a retune
-                r.append("tuned 446.00625 MHz analog, squelch open (receive only)\n");
+                Thread.sleep(3000);                                     // the module settles after a retune
+                // the module only streams audio while its squelch is open, and QuickChat sets a separate global squelch (0x30):
+                // the monitor command (0x2F, as the MON key) forces it open, so noise flows with nobody on the channel
+                svc.setMonitor(true);
+                Thread.sleep(1500);
+                r.append("tuned 446.00625 MHz analog, squelch open and monitor on (receive only)\n");
             }
             p.step("Trial: reading signal strength and audio");
             File dir = DeviceReport.newestDir();
@@ -156,6 +174,13 @@ public final class FirstRunCheck {
             r.append("RSSI readings (dBm, -999 = no answer): ").append(rs.toString().trim()).append('\n');
             r.append("receive audio: ").append(cap).append('\n');
             r.append("received audio bytes so far: ").append(svc.rxAudioBytes()).append('\n');
+            byte[] head = svc.rxAudioHead();                           // the first bytes the audio port ever delivered
+            if (head != null && head.length > 0 && dir != null) {
+                try (java.io.FileOutputStream o = new java.io.FileOutputStream(new File(dir, "rx_audio_first.bin"))) { o.write(head); } catch (java.io.IOException e) { r.append("could not save the first bytes: ").append(e).append('\n'); }
+                StringBuilder hx = new StringBuilder(); for (int i = 0; i < Math.min(64, head.length); i++) hx.append(String.format(Locale.US, "%02x ", head[i] & 0xFF));
+                r.append("first ").append(head.length).append(" bytes saved to rx_audio_first.bin; they start: ").append(hx.toString().trim()).append('\n');
+            }
+            if (!svc.profile().verified) svc.setMonitor(false);
         }
         p.step("Trial: handing the radio back");
         svc.shutDown(true);

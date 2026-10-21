@@ -64,6 +64,7 @@ public final class UartPcmAudio implements AudioBackend {
                     try { n = in.read(mono); } catch (Throwable t) { break; }
                     if (n <= 0) continue;
                     rxBytes += n;
+                    synchronized (headBuf) { int k = Math.min(n, headBuf.length - headLen); if (k > 0) { System.arraycopy(mono, 0, headBuf, headLen, k); headLen += k; } }
                     OutputStream c = capture;                                  // first-run check: the stream exactly as the port delivers it
                     if (c != null) { try { int k = (int) Math.min(n, captureLeft); c.write(mono, 0, k); captureLeft -= k; if (captureLeft <= 0) { capture = null; c.close(); } } catch (Throwable t) { capture = null; } }
                     if (txRunning) continue;                                   // half duplex: ignore echo while keyed
@@ -81,6 +82,9 @@ public final class UartPcmAudio implements AudioBackend {
     }
 
     private final PcmFramer framer = new PcmFramer();
+    private final byte[] headBuf = new byte[8192]; private int headLen;
+    /** The first bytes the port ever delivered (a device report shows what the module sends, framed or not). */
+    public byte[] head() { synchronized (headBuf) { return java.util.Arrays.copyOf(headBuf, headLen); } }
     public String frameStats() { return framer.frames + " audio packets, " + framer.skipped + " bytes skipped"; }
     private volatile long rxBytes, captureLeft;
     private volatile OutputStream capture;

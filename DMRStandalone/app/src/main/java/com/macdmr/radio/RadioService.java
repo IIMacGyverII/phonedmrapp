@@ -711,7 +711,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                 setLink("root");
                 boolean root = RootSetup.haveRoot();
                 if (!root) {
-                    boolean stockRunning = !RootSetup.run("pidof " + profile.stockApp).trim().replaceAll("[^0-9]", "").isEmpty();
+                    boolean stockRunning = !RootSetup.run("pidof " + profile.stockApp + " || true").trim().replaceAll("[^0-9]", "").isEmpty();
                     if (stockRunning || !new java.io.File(profile.controlPort).canRead()) {
                         setLink("no root");
                         log("Root was not granted. Open the Magisk app → Superuser → allow \"SignalDeck\", then tap Bring radio up. (Without root the stock app keeps the radio and the UART stays locked.)");
@@ -1407,6 +1407,7 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     /** First-run check: bytes the receive audio path has delivered, and a raw copy of the next few seconds (UART PCM phones). */
     private volatile long rxPcmBytes;
+    public byte[] rxAudioHead() { AudioBackend a = audio; return a instanceof UartPcmAudio ? ((UartPcmAudio) a).head() : null; }
     public long rxAudioBytes() { AudioBackend a = audio; return a instanceof UartPcmAudio ? ((UartPcmAudio) a).rxBytes() : rxPcmBytes; }
     public String captureRxAudio(java.io.File f, int ms) {
         AudioBackend a = audio;
