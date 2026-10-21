@@ -162,6 +162,73 @@ public final class WebHost {
         if (ch.lat != 0 || ch.lon != 0) o.put("lat", ch.lat).put("lon", ch.lon);
         return o;
     }
+    /** Every field the channel editor has (the encrypt key itself stays on the phone: only whether one is set). */
+    private static JSONObject channelFull(ChannelStore.Channel ch) throws Exception {
+        JSONObject o = channelObj(ch);
+        o.put("type", ch.type).put("relay", ch.relay).put("mode", ch.mode).put("contactType", ch.contactType).put("encryptSw", ch.encryptSw)
+                .put("hasKey", ch.encryptKey != null && !ch.encryptKey.isEmpty()).put("interrupt", ch.interrupt).put("sq", ch.sq)
+                .put("softSq", ch.softSq).put("softSqLevel", ch.softSqLevel);
+        JSONArray g = new JSONArray(); for (int x : ch.groups) g.put(x); o.put("groups", g);
+        return o;
+    }
+    /** The phone editor's checks (ChannelEditorView.apply), applied to a JSON body; returns null or the problem. */
+    static String applyChannel(ChannelStore.Channel ch, JSONObject b) {
+        try {
+            ch.name = b.optString("name", ch.name).trim();
+            ch.type = b.optInt("type", ch.type) == 0 ? 0 : 1;
+            ch.txFreq = (int) Math.round(b.getDouble("txMHz") * 1e6);
+            ch.rxFreq = (int) Math.round(b.getDouble("rxMHz") * 1e6);
+            if (ch.rxFreq < 136_000_000 || ch.rxFreq > 480_000_000 || ch.txFreq < 136_000_000 || ch.txFreq > 480_000_000) return "Frequencies must be 136–174 or 400–480 MHz";
+            ch.power = b.optInt("power", ch.power) == 1 ? 1 : 0;
+            ch.relay = b.optInt("relay", ch.relay) == 1 ? 1 : 2;
+            String la = b.optString("lat", "").trim(), lo = b.optString("lon", "").trim();
+            if (la.isEmpty() && lo.isEmpty()) { ch.lat = 0; ch.lon = 0; }
+            else {
+                ch.lat = Double.parseDouble(la); ch.lon = Double.parseDouble(lo);
+                if (Math.abs(ch.lat) > 90 || Math.abs(ch.lon) > 180) return "Latitude must be within ±90 and longitude within ±180";
+            }
+            if (ch.isDigital()) {
+                ch.cc = Math.max(0, Math.min(15, b.optInt("cc", ch.cc)));
+                ch.mode = b.optInt("mode", ch.mode) == 4 ? 4 : 0;
+                ch.inSlot = ch.outSlot = b.optInt("slot", ch.inSlot) == 1 ? 1 : 0;
+                ch.contactType = Math.max(0, Math.min(2, b.optInt("contactType", ch.contactType)));
+                String call = b.optString("txContact", "").trim();
+                ch.txContact = call.isEmpty() ? 0 : Integer.parseInt(call);
+                if (ch.txContact < 0 || ch.txContact > 0xFFFFFF) return "The call number must be a DMR ID or talkgroup (1 to 16777215)";
+                java.util.List<Integer> g = new java.util.ArrayList<>();
+                for (String s : b.optString("groups", "").split("[,; ]+")) { s = s.trim(); if (!s.isEmpty()) g.add(Integer.parseInt(s)); }
+                // the radio passes a group call only if its talkgroup is in this list (measured on air 2026-10-15): include the call target
+                if (ch.contactType == 1 && ch.txContact > 0 && !g.contains(ch.txContact)) g.add(0, ch.txContact);
+                if (g.size() > 32) return "At most 32 talkgroups in the RX list (including the call number)";
+                ch.groups = new int[g.size()]; for (int i = 0; i < g.size(); i++) ch.groups[i] = g.get(i);
+                ch.encryptSw = b.optInt("encryptSw", ch.encryptSw) == 1 ? 1 : 2;
+                if (b.has("encryptKey")) ch.encryptKey = b.getString("encryptKey");            // absent: keep the stored key
+                if (ch.encryptSw == 1 && (ch.encryptKey == null || ch.encryptKey.length() != 8)) return "Encrypt key must be exactly 8 characters";
+                ch.interrupt = b.optInt("interrupt", ch.interrupt) == 1 ? 1 : 2;
+            } else {
+                ch.band = b.optInt("band", ch.band) == 0 ? 0 : 1;
+                ch.softSq = b.optBoolean("softSq", ch.softSq);
+                ch.softSqLevel = Math.max(1, Math.min(9, b.optInt("softSqLevel", ch.softSqLevel)));
+                ch.sq = Math.max(0, Math.min(9, b.optInt("sq", ch.sq)));
+                ch.txType = Math.max(0, Math.min(2, b.optInt("txType", ch.txType)));
+                ch.rxType = Math.max(0, Math.min(2, b.optInt("rxType", ch.rxType)));
+                int nTx = ch.txType == 1 ? com.macdmr.radio.dsp.ToneTable.CTCSS.length : 104, nRx = ch.rxType == 1 ? com.macdmr.radio.dsp.ToneTable.CTCSS.length : 104;
+                ch.txSubCode = ch.txType == 0 ? 0 : Math.max(0, Math.min(nTx - 1, b.optInt("txSubCode", 0)));
+                ch.rxSubCode = ch.rxType == 0 ? 0 : Math.max(0, Math.min(nRx - 1, b.optInt("rxSubCode", 0)));
+            }
+            if (ch.rxFreq < 300_000_000) ch.band = 1;                                  // VHF must be wide on this radio
+            return null;
+        } catch (NumberFormatException e) {
+            return "Check the numbers: " + e.getMessage();
+        } catch (Exception e) {
+            return e.getMessage() == null ? e.toString() : e.getMessage();
+        }
+    }
+    private static JSONObject toneLists() throws Exception {
+        JSONArray c = new JSONArray(); for (int i = 0; i < com.macdmr.radio.dsp.ToneTable.CTCSS.length; i++) c.put(com.macdmr.radio.dsp.ToneTable.ctcssLabel(i));
+        JSONArray d = new JSONArray(); for (int i = 0; i < 104; i++) d.put(String.format(java.util.Locale.US, "DCS D%03oN", i));
+        return new JSONObject().put("ctcss", c).put("dcs", d);
+    }
     private JSONObject statusJson() throws Exception {
         JSONObject o = new JSONObject();
         o.put("link", svc.link()).put("ready", svc.isReady()).put("channel", channelObj(svc.current()));
@@ -317,6 +384,34 @@ public final class WebHost {
                 if (mode < 0) return WebServer.Response.error(400, "mode: aprs, sstv or stop");
                 String e = onMain(() -> { String err = svc.startIssMode(mode); if (err == null) svc.setIssRepeat(mode); return err; });
                 return e == null ? ok("Tracking the ISS (" + m + ")") : WebServer.Response.error(409, e);
+            }
+            case "/api/channel": {                                              // one channel with everything the editor needs (number 0: a new one)
+                int n = parse(r.param("number"), 0);
+                ChannelStore.Channel ch = n > 0 ? svc.store().byNumber(n) : null;
+                if (n > 0 && ch == null) return WebServer.Response.error(404, "No channel " + n);
+                if (ch == null) {
+                    ch = new ChannelStore.Channel(); ChannelStore.Channel cur = svc.current();
+                    if (cur != null) { ch.type = cur.type; ch.rxFreq = cur.rxFreq; ch.txFreq = cur.txFreq; }
+                }
+                JSONObject help = new JSONObject(); for (String[] h : com.macdmr.radio.ui.ChannelEditorView.helpForWeb()) help.put(h[0], h[1]);
+                return ok(new JSONObject().put("channel", channelFull(ch)).put("isNew", n <= 0).put("help", help).put("tones", toneLists()));
+            }
+            case "/api/channel/save": if (!post) break; {
+                int n = b.optInt("number", 0);
+                ChannelStore.Channel ch = n > 0 ? svc.store().byNumber(n) : new ChannelStore.Channel();
+                if (ch == null) return WebServer.Response.error(404, "No channel " + n);
+                String err = applyChannel(ch, b);
+                if (err != null) return WebServer.Response.error(400, err);
+                final ChannelStore.Channel c = ch; final boolean isNew = n <= 0;
+                onMain(() -> { svc.saveChannel(c, isNew); return null; });
+                return WebServer.Response.json(200, new JSONObject().put("ok", true).put("message", "Saved " + (c.name.isEmpty() ? "channel " + c.number : c.name)).put("number", c.number).toString());
+            }
+            case "/api/channel/delete": if (!post) break; {
+                ChannelStore.Channel ch = svc.store().byNumber(b.optInt("number", 0));
+                if (ch == null) return WebServer.Response.error(404, "No such channel");
+                if (svc.isTransmitting()) return WebServer.Response.error(409, "Not while transmitting");
+                onMain(() -> { svc.deleteChannel(ch); return null; });
+                return ok("Deleted " + (ch.name.isEmpty() ? "channel " + ch.number : ch.name));
             }
             case "/api/help": {
                 JSONArray a = new JSONArray();

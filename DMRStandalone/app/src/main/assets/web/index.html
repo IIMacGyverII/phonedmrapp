@@ -74,9 +74,17 @@
 
     <!-- CHANNELS -->
     <section id="page-channels" class="page hidden">
-      <div class="panel">
-        <div class="row between"><span class="label">CHANNELS</span><input id="chSearch" placeholder="Search" class="search"></div>
-        <div id="chList" class="list"></div>
+      <div class="grid-side wide">
+        <div class="panel">
+          <div class="row between"><span class="label">CHANNELS</span><button class="btn small-btn" id="chNew">New channel</button></div>
+          <input id="chSearch" placeholder="Search name, frequency or number" class="search full" style="margin-top:10px">
+          <div id="chList" class="list"></div>
+        </div>
+        <div class="panel" id="edPanel">
+          <div class="row between"><span class="label" id="edTitle">CHANNEL</span><span id="edSub" class="chip dim"></span></div>
+          <div id="edEmpty" class="empty">Click a channel's Edit to change it, or New channel. Clicking a channel's name tunes it.</div>
+          <form id="edForm" class="edform hidden" autocomplete="off"></form>
+        </div>
       </div>
     </section>
 
@@ -174,6 +182,7 @@
   <div id="toast" class="toast hidden"></div>
 </div>
 <script src="app.js"></script>
+<script src="editor.js"></script>
 <script src="pages.js"></script>
 </body>
 </html>
