@@ -14,6 +14,7 @@ import android.os.Build;
 public class BootReceiver extends BroadcastReceiver {
     @Override public void onReceive(final Context ctx, Intent intent) {
         if (intent == null || !Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) return;
+        ProfileRegistry.init(ctx);
         final boolean own = ctx.getSharedPreferences("radio", Context.MODE_PRIVATE).getBoolean("ownAtBoot", false);
         if (!DeviceProfile.detect().supported) return;
         if (own && DeviceProfile.detect().verified) {                       // an untested profile never takes the radio by itself

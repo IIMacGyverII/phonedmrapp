@@ -62,6 +62,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
+        ProfileRegistry.init(this);                                 // before any page asks which phone this is
         LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
         getWindow().setBackgroundDrawable(com.macdmr.radio.ui.Neo.page(this));   // the one full-screen background layer; tab pages draw none of their own (overdraw cost ~40 ms of GPU per frame)
         content = new FrameLayout(this);

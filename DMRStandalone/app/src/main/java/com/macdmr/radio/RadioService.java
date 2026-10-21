@@ -631,7 +631,9 @@ public class RadioService extends Service implements RadioEngine.Events {
         running = this;
         watchCar();
         watchUsbDuringTx();
+        ProfileRegistry.init(this);
         profile = DeviceProfile.detect();
+        ProfileRegistry.maybeFetch();                               // a newer revision or an advisory, at most every 12 h
         store = new ChannelStore(this);
         zoneId = getSharedPreferences("radio", MODE_PRIVATE).getLong("zone", 0);
         if (coverage().enabled()) { coverage.resume(); startForegroundTyped(true); }
@@ -1305,7 +1307,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     // ---- PTT ----------------------------------------------------------------------------------------
 
     public boolean txInhibited() {
-        if (!profile.verified) return true;                     // an untested profile never transmits (the Xplore 1 keys through a GPIO line)
+        if (!profile.verified || ProfileRegistry.transmitBlocked()) return true;   // an untested profile never transmits; an advisory can switch it off (the Xplore 1 keys through a GPIO line)
         ChannelStore.Channel ch = current;
         if (ch == null) return true;
         SatState ss = satState;

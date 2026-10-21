@@ -100,6 +100,8 @@ public final class FirstRunCheck {
         r.append(String.format(Locale.US, "something heard in %d of %d seconds; signal %d … %d dBm\n", heard, samples, rmin, rmax));
         r.append("signal each second (* = heard): ").append(rs.toString().trim()).append('\n');
         r.append(String.format(Locale.US, "receive audio: %d bytes in %d s%s\n", bytes, seconds, svc.audioStats().isEmpty() ? "" : " (" + svc.audioStats() + ")"));
+        if (heard * 10 < samples && rmax > -999 && rmax <= -88)                // the radio's squelch sits near -90 dBm (measured on the Ulefone)
+            r.append(String.format(Locale.US, "note: the strongest signal was %d dBm, at or below the radio's squelch level (about -90 dBm), so the squelch stayed closed most of the time — that is normal for a signal this weak. Pick a stronger channel, or turn MON on (Intercom) to hear it anyway, and run the check again.\n", rmax));
         return r.toString();
     }
 
