@@ -292,6 +292,9 @@ public final class WebHost {
         return out;
     }
     private static int parse(String s, int def) { try { return s == null ? def : Integer.parseInt(s); } catch (Exception e) { return def; } }
+    private static JSONObject checkInJson(com.macdmr.radio.ham.NetStore.CheckIn k) throws Exception {
+        return new JSONObject().put("id", k.id).put("ts", k.ts).put("call", k.call).put("name", k.name).put("notes", k.notes).put("traffic", k.traffic).put("late", k.late).put("out", k.out);
+    }
     private com.macdmr.radio.repeaters.RepeaterService repeaterService;
     private final java.util.Map<String, com.macdmr.radio.repeaters.RepeaterModels.Repeater> lastRepeaters = new java.util.concurrent.ConcurrentHashMap<>();
     private synchronized com.macdmr.radio.repeaters.RepeaterService repeaters() {
@@ -699,6 +702,72 @@ public final class WebHost {
                 if (bmp == null) return WebServer.Response.error(400, "That is not a picture this phone can read (use PNG or JPEG)");
                 String e = onMain(() -> svc.packet().sendSstv(bmp, modes[m]));
                 return e == null ? ok("Sending the picture as " + com.macdmr.radio.pkt.SSTVEncoder.name(modes[m])) : WebServer.Response.error(409, e);
+            }
+            case "/api/nets": {                                                 // the running net (check-ins, stations heard lately) and past nets
+                com.macdmr.radio.ham.NetStore ns = svc.nets();
+                JSONObject o = new JSONObject();
+                com.macdmr.radio.ham.NetStore.Net n = ns.running();
+                if (n != null) {
+                    JSONArray ins = new JSONArray(); java.util.Set<String> in = new java.util.HashSet<>();
+                    for (com.macdmr.radio.ham.NetStore.CheckIn k : ns.checkIns(n.id)) { in.add(k.call); ins.put(checkInJson(k)); }
+                    JSONArray heard = new JSONArray(); java.util.Set<String> seen = new java.util.HashSet<>(); long since = System.currentTimeMillis() - 30 * 60_000L;
+                    for (com.macdmr.radio.ham.Logbook.Entry e : svc.logbook().list(80, false))
+                        if (e.ts >= since && !in.contains(e.call) && seen.add(e.call)) heard.put(new JSONObject().put("call", e.call).put("name", e.name == null ? "" : e.name));
+                    o.put("running", new JSONObject().put("id", n.id).put("name", n.name).put("channel", n.channel).put("freqHz", n.freqHz).put("start", n.start).put("checkIns", ins).put("heard", heard));
+                }
+                JSONArray past = new JSONArray();
+                for (com.macdmr.radio.ham.NetStore.Net p0 : ns.past(30)) past.put(new JSONObject().put("id", p0.id).put("name", p0.name).put("channel", p0.channel).put("start", p0.start).put("end", p0.end).put("count", ns.checkIns(p0.id).size()));
+                return ok(o.put("past", past).put("lastName", svc.getSharedPreferences("nets", Context.MODE_PRIVATE).getString("last", "")));
+            }
+            case "/api/nets/start": if (!post) break; {
+                if (svc.nets().running() != null) return WebServer.Response.error(409, "A net is already running");
+                String nm = b.optString("name", "").trim(); if (nm.isEmpty()) nm = "Net";
+                svc.getSharedPreferences("nets", Context.MODE_PRIVATE).edit().putString("last", nm).apply();
+                ChannelStore.Channel cur = svc.current();
+                svc.nets().start(nm, cur == null ? "" : cur.name, cur == null ? 0 : cur.rxFreq);
+                final String name = nm; onMain(() -> { svc.history("pkt", "📋 Net started: " + name); return null; });
+                return ok("Net started: " + nm);
+            }
+            case "/api/nets/end": if (!post) break; {
+                com.macdmr.radio.ham.NetStore.Net n = svc.nets().running(); if (n == null) return WebServer.Response.error(409, "No net is running");
+                svc.nets().end(n); int c = svc.nets().checkIns(n.id).size();
+                onMain(() -> { svc.history("pkt", "📋 Net ended: " + n.name + " (" + c + " check-ins)"); return null; });
+                return ok("Net ended: " + c + " check-ins");
+            }
+            case "/api/nets/checkin": if (!post) break; {
+                com.macdmr.radio.ham.NetStore.Net n = svc.nets().running(); if (n == null) return WebServer.Response.error(409, "No net is running");
+                String cs = b.optString("call", "").trim().toUpperCase(java.util.Locale.US), nm = b.optString("name", "").trim();
+                if (!cs.matches("[A-Z0-9/]{3,12}")) return WebServer.Response.error(400, "That does not look like a callsign");
+                com.macdmr.radio.ham.NetStore.CheckIn k = svc.nets().checkIn(n, cs, nm);
+                if (nm.isEmpty()) svc.enrichCall(cs, i -> { if (k.name == null || k.name.isEmpty()) { k.name = i.name; svc.nets().save(k); pub("net", "{}"); } });   // the name from the callsign lookup
+                return ok("Checked in " + cs);
+            }
+            case "/api/nets/update": if (!post) break; {                        // {id, traffic?, late?, out?, notes?, remove?}
+                com.macdmr.radio.ham.NetStore.Net n = svc.nets().running(); if (n == null) return WebServer.Response.error(409, "No net is running");
+                long id = b.optLong("id", 0);
+                for (com.macdmr.radio.ham.NetStore.CheckIn k : svc.nets().checkIns(n.id)) if (k.id == id) {
+                    if (b.optBoolean("remove", false)) { svc.nets().remove(k); return ok("Removed " + k.call); }
+                    if (b.has("traffic")) k.traffic = b.getBoolean("traffic"); if (b.has("late")) k.late = b.getBoolean("late"); if (b.has("out")) k.out = b.getBoolean("out");
+                    if (b.has("notes")) k.notes = b.getString("notes"); if (b.has("name")) k.name = b.getString("name");
+                    svc.nets().save(k); return ok(k.call + " updated");
+                }
+                return WebServer.Response.error(404, "No such check-in");
+            }
+            case "/api/nets/report": {                                          // the net's report text (the phone's NetStore.report)
+                long id = r.param("id") == null ? -1 : Long.parseLong(r.param("id"));
+                com.macdmr.radio.ham.NetStore.Net n = null;
+                com.macdmr.radio.ham.NetStore.Net run = svc.nets().running(); if (run != null && (id < 0 || run.id == id)) n = run;
+                if (n == null) for (com.macdmr.radio.ham.NetStore.Net p0 : svc.nets().past(200)) if (p0.id == id) n = p0;
+                if (n == null) return WebServer.Response.error(404, "No such net");
+                String text = com.macdmr.radio.ham.NetStore.report(n, svc.nets().checkIns(n.id), svc.packet() != null && svc.packet().callsignSet() ? svc.packet().callsign() : "");
+                WebServer.Response x = WebServer.Response.bytes("text/plain; charset=utf-8", text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                if ("1".equals(r.param("download"))) x.headers.put("Content-Disposition", "attachment; filename=\"net_report.txt\"");
+                return x;
+            }
+            case "/api/nets/delete": if (!post) break; {
+                long id = b.optLong("id", 0); com.macdmr.radio.ham.NetStore.Net run = svc.nets().running();
+                if (run != null && run.id == id) return WebServer.Response.error(409, "End the net first");
+                svc.nets().deleteNet(id); return ok("Net deleted");
             }
             case "/api/repeaters": {                                            // nearby repeaters (RadioID / BrandMeister / Hearham, cached by the phone)
                 android.location.Location me = svc.lastKnownLocation(); if (me == null) return WebServer.Response.error(409, "No position fix on the phone yet");

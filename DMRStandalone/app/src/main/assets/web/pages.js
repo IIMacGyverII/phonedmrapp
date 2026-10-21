@@ -264,6 +264,37 @@ $('qsoForm').addEventListener('submit', async e => {
   if (await act('logbook', body)) { editQso(null); loadLog(); }
 });
 
+// ---- net control (under the logbook) ----
+async function loadNet() {
+  try {
+    const j = await api('nets'); S.net = j; const n = j.running;
+    $('netState').textContent = n ? 'RUNNING · ' + n.checkIns.length + ' CHECK-INS' : 'NO NET RUNNING'; $('netState').className = 'chip ' + (n ? 'green' : 'dim');
+    if (!n) {
+      $('netActions').innerHTML = '';
+      $('netBody').innerHTML = '<form id="netStart" class="row wrap" style="margin-top:12px"><input id="netName" placeholder="Net name" value="' + esc(j.lastName || '') + '" class="grow"><button class="btn primary">Start a net on this channel</button></form>'
+        + '<div class="group">PAST NETS</div>' + (j.past.map(p => '<div class="item"><div class="main"><b>' + esc(p.name) + '</b><div class="sub">' + new Date(p.start).toLocaleString() + ' · ' + esc(p.channel) + ' · ' + p.count + ' check-ins</div></div><a class="act" target="_blank" href="/api/nets/report?id=' + p.id + '">Report</a><a class="act" href="/api/nets/report?download=1&id=' + p.id + '">Download</a><button class="act" data-netdel="' + p.id + '">Delete</button></div>').join('') || '<div class="empty">No past nets</div>');
+      $('netStart').addEventListener('submit', async e => { e.preventDefault(); if (await act('nets/start', { name: $('netName').value })) loadNet(); });
+      return;
+    }
+    $('netActions').innerHTML = '<a class="btn small-btn" target="_blank" href="/api/nets/report">Report</a><button class="btn small-btn danger" id="netEnd">End the net</button>';
+    $('netEnd').onclick = async () => { if (confirm('End ' + n.name + '?')) { await act('nets/end', {}); loadNet(); } };
+    const flag = (k, f, label, color) => '<button type="button" class="act" data-flag="' + f + '" data-id="' + k.id + '" style="' + (k[f] ? 'background:' + color + ';color:var(--ground);border-color:' + color : '') + '">' + label + '</button>';
+    $('netBody').innerHTML = '<div class="sub" style="margin-top:6px">' + esc(n.name) + ' · ' + esc(n.channel) + (n.freqHz ? ' · ' + mhz(n.freqHz) + ' MHz' : '') + ' · started ' + hhmm(n.start) + '</div>'
+      + '<form id="netCheckin" class="row wrap" style="margin-top:12px"><input id="ciCall" placeholder="Callsign" style="text-transform:uppercase" maxlength="12"><input id="ciName" placeholder="Name (looked up if empty)" class="grow"><button class="btn primary">Check in</button></form>'
+      + (n.heard.length ? '<div class="quick" style="margin-top:10px">' + n.heard.map(h => '<button type="button" data-heard="' + esc(h.call) + '" data-name="' + esc(h.name) + '">+ ' + esc(h.call) + '</button>').join('') + '</div><div class="sub">Heard in the last 30 minutes: click to check in</div>' : '')
+      + '<div class="list">' + (n.checkIns.map((k, i) => '<div class="item"><span class="n">' + (i + 1) + '</span><div class="main"><b class="pk-from">' + esc(k.call) + '</b> ' + esc(k.name) + '<div class="sub">' + hhmm(k.ts) + (k.notes ? ' · ' + esc(k.notes) : '') + '</div></div>'
+        + flag(k, 'traffic', 'Traffic', 'var(--amber)') + flag(k, 'late', 'Late', 'var(--violet)') + flag(k, 'out', 'Out', 'var(--red)') + '<button class="act" data-rm="' + k.id + '">Remove</button></div>').join('') || '<div class="empty">No check-ins yet</div>') + '</div>';
+    $('netCheckin').addEventListener('submit', async e => { e.preventDefault(); if (await act('nets/checkin', { call: $('ciCall').value, name: $('ciName').value })) { $('ciCall').value = ''; $('ciName').value = ''; loadNet(); $('ciCall').focus(); } });
+  } catch (e) { }
+}
+$('netBody').addEventListener('click', async e => {
+  const t = e.target; const n = S.net && S.net.running;
+  if (t.dataset.heard) { if (await act('nets/checkin', { call: t.dataset.heard, name: t.dataset.name })) loadNet(); }
+  else if (t.dataset.flag && n) { const k = n.checkIns.find(x => x.id === +t.dataset.id); const body = { id: k.id }; body[t.dataset.flag] = !k[t.dataset.flag]; if (await act('nets/update', body)) loadNet(); }
+  else if (t.dataset.rm) { if (await act('nets/update', { id: +t.dataset.rm, remove: true })) loadNet(); }
+  else if (t.dataset.netdel) { if (confirm('Delete this net and its check-ins?') && await act('nets/delete', { id: +t.dataset.netdel })) loadNet(); }
+});
+
 // ---- recordings ----
 async function loadRecordings() {
   try {

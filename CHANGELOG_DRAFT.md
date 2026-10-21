@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — SignalDeck Web: Net control
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Logbook page → **Net control** on the phone's `NetStore`: start a net on the current channel (last name remembered, history line like the phone), check in by callsign (format-checked; empty names filled by the phone's callsign lookup and pushed live), one-click check-in of stations heard in the last 30 min, Traffic / Late / Out flags, remove, end (history line with the count), report (the phone's `NetStore.report`) to view or download, past nets with delete. API `/api/nets`, `/start`, `/end`, `/checkin`, `/update`, `/report`, `/delete`. | `web/WebHost.java`, `assets/web/pages.js`, `index.html`, `app.js`, `ui/HelpView.java` | On the phone over Wi-Fi: a WEBTEST NET started (a second start refused), a bad callsign refused, N0CALL checked in, flagged Traffic, in the report, removed, net ended and deleted; the two test history lines removed afterwards. |
+
 ## 2026-10-20 — SignalDeck Web: repeaters on the map, Add to my channels
 
 | Backlog | Change | Files | Test |
