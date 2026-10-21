@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — SignalDeck Web: zones editor
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Channels page → **Zones**: zone list (the one in use marked), New zone, rename, delete (channels kept; deleting the zone in use falls back to ALL like the phone), and a filterable channel checklist with All / None. Unknown channel numbers are dropped, empty zones refused, and saving the zone in use re-applies it so scan and arrows follow. API `/api/zones` (GET / POST), `/api/zones/delete`. | `web/WebHost.java`, `assets/web/pages.js`, `index.html`, `app.js`, `app.css`, `ui/HelpView.java` | On the phone over Wi-Fi: a WEBTEST zone created (9999 dropped → [5,6]), renamed with [7], deleted (8 zones before and after); the editor rendered 55 channels with the zone's 4 ticked. |
+
 ## 2026-10-20 — SignalDeck Web: backup and restore from the browser
 
 | Backlog | Change | Files | Test |

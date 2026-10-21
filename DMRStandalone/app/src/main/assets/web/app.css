@@ -198,6 +198,12 @@ input:not([type]), input[type=text] { padding: 10px 12px; border-radius: 10px; b
 .item.playing { background: rgba(43,234,122,.08); }
 a.btn, a.act { text-decoration: none; display: inline-block; }
 
+/* zones */
+.zchans { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; margin-top: 10px; max-height: 460px; overflow-y: auto; }
+.zchans label { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--divider); cursor: pointer; }
+.zchans label:has(input:checked) { border-color: var(--cyan); background: rgba(25,211,255,.07); }
+.zchans input { accent-color: var(--cyan); } .zchans .n { font: 700 13px Orbitron, sans-serif; color: var(--cyan); min-width: 26px; }
+
 /* settings */
 .set { display: flex; gap: 14px; align-items: center; justify-content: space-between; padding: 12px 4px; border-bottom: 1px solid var(--divider); }
 .set .main { flex: 1; min-width: 0; } .set .sub { color: var(--muted); font-size: 14px; }
