@@ -79,6 +79,30 @@ public class WebServerTest {
         assertFalse(WebServer.lanAddress(InetAddress.getByName("2001:4860::8888")));
     }
 
+    @Test public void loginsSurviveARestartAsHashesAndLogoutEndsThem() throws Exception {
+        final java.util.Map<String, Long> disk = new java.util.HashMap<>();
+        WebServer.SessionStore store = new WebServer.SessionStore() {
+            @Override public java.util.Map<String, Long> load() { return new java.util.HashMap<>(disk); }
+            @Override public void save(java.util.Map<String, Long> m) { disk.clear(); disk.putAll(m); }
+        };
+        WebServer a = new WebServer(0, "ABCD2345", p -> null, r -> WebServer.Response.json(200, "{}"), store);
+        String body = "{\"pin\":\"ABCD2345\"}";
+        WebServer.Request li = parse("POST /api/login HTTP/1.1\r\nContent-Length: " + body.length() + "\r\n\r\n" + body); li.remote = "10.0.0.2";
+        String cookie = a.route(li).headers.get("Set-Cookie"); String tok = cookie.substring(11, cookie.indexOf(';'));
+        assertEquals(1, disk.size());
+        assertFalse("the token itself is never stored", disk.containsKey(tok));
+        assertTrue(disk.containsKey(WebServer.hash(tok)));
+
+        WebServer b = new WebServer(0, "ABCD2345", p -> null, r -> WebServer.Response.json(200, "{}"), store);   // the app restarted
+        WebServer.Request q = parse("GET /api/x HTTP/1.1\r\nCookie: sd_session=" + tok + "\r\n\r\n"); q.remote = "10.0.0.2";
+        assertEquals(200, b.route(q).status);
+        WebServer.Request lo = parse("GET /api/logout HTTP/1.1\r\nCookie: sd_session=" + tok + "\r\n\r\n"); lo.remote = "10.0.0.2";
+        b.route(lo);
+        assertTrue(disk.isEmpty());
+        WebServer.Request q2 = parse("GET /api/x HTTP/1.1\r\nCookie: sd_session=" + tok + "\r\n\r\n"); q2.remote = "10.0.0.2";
+        assertEquals(401, new WebServer(0, "ABCD2345", p -> null, r -> WebServer.Response.json(200, "{}"), store).route(q2).status);
+    }
+
     @Test public void quoteEscapes() {
         assertEquals("\"a\\\"b\\\\c\\n\\u0001\"", WebServer.quote("a\"b\\c\n\u0001"));
         assertEquals("null", WebServer.quote(null));

@@ -3,9 +3,20 @@
 
 const ED = { ch: null, isNew: false, help: {}, tones: { ctcss: [], dcs: [] } };
 
+/** The VFO in the same editor: any frequency without saving a channel; Tune enters VFO mode. */
+async function openVfo() {
+  try {
+    if (location.hash !== '#channels') { location.hash = 'channels'; await new Promise(r => setTimeout(r, 50)); }
+    const j = await api('vfo');
+    ED.vfo = true; ED.vfoActive = j.active; ED.step = j.step; ED.steps = j.steps;
+    ED.ch = j.channel; ED.isNew = false; ED.help = j.help; ED.tones = j.tones;
+    renderEditor();
+  } catch (e) { toast(e.message); }
+}
 async function openEditor(number) {
   try {
     const j = await api('channel?number=' + (number || 0));
+    ED.vfo = false;
     ED.ch = j.channel; ED.isNew = j.isNew; ED.help = j.help; ED.tones = j.tones;
     renderEditor();
     if (window.innerWidth < 900) $('edPanel').scrollIntoView({ behavior: 'smooth' });
@@ -14,8 +25,8 @@ async function openEditor(number) {
 
 function renderEditor() {
   const c = ED.ch, digital = c.type === 0;
-  $('edTitle').textContent = ED.isNew ? 'NEW CHANNEL' : 'EDIT CHANNEL';
-  $('edSub').textContent = ED.isNew ? '' : 'CHANNEL ' + c.number;
+  $('edTitle').textContent = ED.vfo ? 'VFO' : ED.isNew ? 'NEW CHANNEL' : 'EDIT CHANNEL';
+  $('edSub').textContent = ED.vfo ? (ED.vfoActive ? 'ON' : 'OFF') : ED.isNew ? '' : 'CHANNEL ' + c.number;
   $('edEmpty').classList.add('hidden'); $('edForm').classList.remove('hidden');
   const mhzIn = hz => hz > 0 ? (hz / 1e6).toFixed(5) : '';
   const opt = (vals, cur) => vals.map(([v, t]) => '<option value="' + v + '"' + (String(v) === String(cur) ? ' selected' : '') + '>' + esc(t) + '</option>').join('');
@@ -25,8 +36,8 @@ function renderEditor() {
   const txt = (id, val, extra) => '<input id="' + id + '" value="' + esc(val) + '" ' + (extra || '') + '>';
   const toneVals = type => type === 1 ? ED.tones.ctcss.map((t, i) => [i, t]) : type === 2 ? ED.tones.dcs.map((t, i) => [i, t]) : [[0, '—']];
   let h = '';
-  h += '<div class="sect">CHANNEL</div>';
-  h += field('name', 'Channel name', txt('fName', c.name, 'maxlength="16"'));
+  h += '<div class="sect">' + (ED.vfo ? 'FREQUENCY' : 'CHANNEL') + '</div>';
+  if (!ED.vfo) h += field('name', 'Channel name', txt('fName', c.name, 'maxlength="16"'));
   h += field('type', 'Channel type', sel('fType', [[0, 'Digital'], [1, 'Analog']], c.type));
   h += field('tx', 'Send frequency (MHz)', txt('fTx', mhzIn(c.txFreq), 'inputmode="decimal"'));
   h += field('rx', 'Receive frequency (MHz)', txt('fRx', mhzIn(c.rxFreq), 'inputmode="decimal"'));
@@ -54,12 +65,18 @@ function renderEditor() {
     h += field('rxType', 'RX tone type', sel('fRxType', [[0, 'None'], [1, 'CTCSS'], [2, 'DCS']], c.rxType));
     h += field('rxTone', 'RX tone', sel('fRxCode', toneVals(c.rxType), c.rxSubCode));
   }
-  h += '<div class="sect">LOCATION</div>';
-  h += field('pos', 'Latitude (optional)', txt('fLat', c.lat != null ? c.lat.toFixed(5) : '', 'inputmode="decimal"'));
-  h += field('pos', 'Longitude (optional)', txt('fLon', c.lon != null ? c.lon.toFixed(5) : '', 'inputmode="decimal"'));
-  h += '<div class="actions"><button class="btn primary">' + (ED.isNew ? 'Add channel' : 'Save') + '</button><button type="button" class="btn" id="edCancel">Close</button>'
-    + (ED.isNew ? '' : '<button type="button" class="btn" id="edTune">Tune</button><button type="button" class="btn danger" id="edDelete">Delete</button>') + '</div>';
-  h += '<div class="note">Saving an active channel re-programs the radio at once. VHF channels are always saved as wide band (narrow makes this radio deaf on VHF).</div>';
+  if (ED.vfo) {
+    h += field('step', 'Arrow step', sel('fStep', ED.steps.map(s => [s, (s / 1000) + ' kHz']), ED.step));
+    h += '<div class="actions"><button class="btn primary">Tune</button>' + (ED.vfoActive ? '<button type="button" class="btn" id="edExitVfo">Back to the channel</button>' : '') + '<button type="button" class="btn" id="edCancel">Close</button></div>';
+    h += '<div class="note">Tune puts the radio on this frequency without saving a channel; the intercom arrows then step it by the arrow step. VHF is always wide band. Back to the channel returns to the channel you were on.</div>';
+  } else {
+    h += '<div class="sect">LOCATION</div>';
+    h += field('pos', 'Latitude (optional)', txt('fLat', c.lat != null ? c.lat.toFixed(5) : '', 'inputmode="decimal"'));
+    h += field('pos', 'Longitude (optional)', txt('fLon', c.lon != null ? c.lon.toFixed(5) : '', 'inputmode="decimal"'));
+    h += '<div class="actions"><button class="btn primary">' + (ED.isNew ? 'Add channel' : 'Save') + '</button><button type="button" class="btn" id="edCancel">Close</button>'
+      + (ED.isNew ? '' : '<button type="button" class="btn" id="edTune">Tune</button><button type="button" class="btn danger" id="edDelete">Delete</button>') + '</div>';
+    h += '<div class="note">Saving an active channel re-programs the radio at once. VHF channels are always saved as wide band (narrow makes this radio deaf on VHF).</div>';
+  }
   $('edForm').innerHTML = h;
 
   // a change of type redraws the form (keeping what was typed); a tone type change refills its tone list
@@ -67,6 +84,7 @@ function renderEditor() {
   const toneSwap = (typeId, codeId) => { const t = $(typeId); if (t) t.onchange = () => { $(codeId).innerHTML = opt(toneVals(+t.value), 0); }; };
   toneSwap('fTxType', 'fTxCode'); toneSwap('fRxType', 'fRxCode');
   $('edCancel').onclick = closeEditor;
+  if (ED.vfo) { const x = $('edExitVfo'); if (x) x.onclick = async () => { if (await act('vfo/exit', {})) setTimeout(openVfo, 1500); }; return; }
   if (!ED.isNew) {
     $('edTune').onclick = () => act('channel/select', { number: ED.ch.number });
     $('edDelete').onclick = async () => {
@@ -96,6 +114,7 @@ function closeEditor() { ED.ch = null; $('edForm').classList.add('hidden'); $('e
 $('edForm').addEventListener('submit', async e => {
   e.preventDefault();
   if (isNaN(parseFloat($('fTx').value)) || isNaN(parseFloat($('fRx').value))) { toast('Enter both frequencies in MHz'); return; }
+  if (ED.vfo) { const o = collect(false); o.step = +$('fStep').value; if (await act('vfo', o)) setTimeout(openVfo, 1500); return; }
   const j = await act('channel/save', collect(false));
   if (j) { await loadChannels(); openEditor(j.number); }
 });
@@ -105,3 +124,5 @@ $('edForm').addEventListener('click', e => {
   tip.textContent = ED.help[b.dataset.help] || ''; b.classList.toggle('on', on);
 });
 $('chNew').onclick = () => openEditor(0);
+$('chVfo').onclick = openVfo;
+$('vfoBtn').onclick = openVfo;

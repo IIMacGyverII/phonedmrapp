@@ -31,6 +31,8 @@ import java.util.concurrent.TimeUnit;
 public final class WebServer {
     public interface Assets { byte[] read(String path) throws IOException; }
     public interface Api { Response handle(Request r) throws Exception; }
+    /** Where logins survive a restart: hashes of the session tokens (never the tokens) with their last use. */
+    public interface SessionStore { Map<String, Long> load(); void save(Map<String, Long> sessions); }
 
     public static final class Request {
         public String method, path, query = ""; public final Map<String, String> headers = new HashMap<>(); public byte[] body = new byte[0];
@@ -64,7 +66,24 @@ public final class WebServer {
     private final SecureRandom rnd = new SecureRandom();
     public static final long SESSION_IDLE_MS = 30L * 24 * 3600 * 1000;
 
-    public WebServer(int port, String pin, Assets assets, Api api) { this.port = port; this.pin = pin; this.assets = assets; this.api = api; }
+    public WebServer(int port, String pin, Assets assets, Api api) { this(port, pin, assets, api, null); }
+    public WebServer(int port, String pin, Assets assets, Api api, SessionStore store) {
+        this.port = port; this.pin = pin; this.assets = assets; this.api = api; this.store = store;
+        if (store != null) { Map<String, Long> m = store.load(); if (m != null) sessions.putAll(m); prune(); }
+    }
+    private final SessionStore store;
+    private volatile long lastSave;
+    private void saveSessions(boolean force) {
+        long now = System.currentTimeMillis();
+        if (store == null || (!force && now - lastSave < 10 * 60_000L)) return;     // last-use times are saved at most every 10 minutes
+        lastSave = now; store.save(new HashMap<>(sessions));
+    }
+    static String hash(String token) {
+        try {
+            byte[] d = java.security.MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8));
+            StringBuilder b = new StringBuilder(); for (byte x : d) b.append(String.format("%02x", x)); return b.toString();
+        } catch (Exception e) { throw new IllegalStateException(e); }
+    }
 
     public synchronized void start() throws IOException {
         if (running) return;
@@ -127,7 +146,7 @@ public final class WebServer {
     Response route(Request r) {
         try {
             if (r.path.equals("/api/login") && "POST".equals(r.method)) return login(r);
-            if (r.path.equals("/api/logout")) { String t = token(r); if (t != null) sessions.remove(t); Response x = Response.json(200, "{\"ok\":true}"); x.headers.put("Set-Cookie", "sd_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict"); return x; }
+            if (r.path.equals("/api/logout")) { String t = token(r); if (t != null) { sessions.remove(hash(t)); saveSessions(true); } Response x = Response.json(200, "{\"ok\":true}"); x.headers.put("Set-Cookie", "sd_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict"); return x; }
             if (r.path.startsWith("/api/")) {
                 if (!authed(r)) return Response.error(401, "login required");
                 Response x = api.handle(r);
@@ -153,16 +172,16 @@ public final class WebServer {
         if (given == null || !constantEquals(given.trim().toUpperCase(Locale.US), pin.toUpperCase(Locale.US))) { f[0]++; return Response.error(403, "wrong PIN"); }
         byte[] b = new byte[24]; rnd.nextBytes(b);
         StringBuilder t = new StringBuilder(); for (byte x : b) t.append(String.format("%02x", x));
-        sessions.put(t.toString(), System.currentTimeMillis());
+        sessions.put(hash(t.toString()), System.currentTimeMillis()); saveSessions(true);
         Response x = Response.json(200, "{\"ok\":true}");
         x.headers.put("Set-Cookie", "sd_session=" + t + "; Path=/; Max-Age=" + (SESSION_IDLE_MS / 1000) + "; HttpOnly; SameSite=Strict");
         return x;
     }
     boolean authed(Request r) {
         String t = token(r); if (t == null) return false;
-        Long last = sessions.get(t); long now = System.currentTimeMillis();
-        if (last == null || now - last > SESSION_IDLE_MS) { if (last != null) sessions.remove(t); return false; }
-        sessions.put(t, now); return true;
+        String h = hash(t); Long last = sessions.get(h); long now = System.currentTimeMillis();
+        if (last == null || now - last > SESSION_IDLE_MS) { if (last != null) { sessions.remove(h); saveSessions(true); } return false; }
+        sessions.put(h, now); saveSessions(false); return true;
     }
     private static String token(Request r) {
         String c = r.headers.get("cookie"); if (c == null) return null;
