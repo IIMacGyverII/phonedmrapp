@@ -11,15 +11,18 @@ Root is **not** required for steps 1–3. If the phone is rooted, step 4 adds a 
 
 ## 0. The easy way: let the SignalDeck app do it
 
-Install the standalone **SignalDeck** app (`SignalDeck-*.apk` from the releases page). On a phone it does not know it
-starts in discovery mode (it touches nothing radio-related) and opens the **Device** tab:
+Install the standalone **SignalDeck** app (the `SignalDeck-*.apk` you were sent, or from the releases page) and allow
+root when Magisk asks. On a phone it does not know, or whose profile has not been tested yet, it does **not** take
+over the radio; the first time it opens it offers **Run all checks** (also under Device → Device report):
 
-1. **Generate device report** — collects everything in sections 1–4 below automatically, copies the stock
-   walkie-talkie app's APK into the report, and saves it under `Download/DMR/DeviceReport/`.
-2. **Capture the PTT key (10 s)** — press the side button a few times; what the phone sends is recorded.
-3. If the phone is rooted (Magisk): **Radio probe (root)** — finds the serial ports, derives the SELinux rules
-   from their labels, sends the module's version query at several speeds and sniffs for a PCM audio port.
-4. **Share last report** — attach the zip to a new issue. Done.
+1. Tap **Checks + trial** (or **Checks only** to leave the radio alone). It takes about two minutes and needs you once:
+   press the side PTT key a few times when it asks (10 s).
+2. It closes the stock walkie-talkie app, makes the device report (copies the stock app's APK into it), captures the
+   PTT key, runs the radio probe (serial ports, SELinux labels, the module's version query, the power line), and in the
+   trial takes the radio for ~30 s **receive only** (module answer, signal strength, 5 s of received audio), then hands
+   it back to the stock app. Its own log goes in too, with packet, position, message and caller lines removed.
+3. **Send** shares the zip (e-mail, messenger, Drive…), or **GitHub issue** opens a pre-filled issue to drag it into.
+   With a computer: `adb pull /sdcard/Download/DMR/DeviceReport`.
 
 The manual steps below give the same information with `adb`, for phones where the app cannot be installed.
 

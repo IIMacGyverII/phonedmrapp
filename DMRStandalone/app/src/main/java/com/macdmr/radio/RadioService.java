@@ -789,6 +789,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     /** Every received 8 kHz stereo (L == R) block: take the left channel, run the squelch, record, meter. */
     private final byte[] mono = new byte[4096];
     private void onRxPcm(byte[] b, int len) {
+        rxPcmBytes += len;
         int n = 0;
         for (int i = 0; i + 3 < len && n + 1 < mono.length; i += 4) { mono[n++] = b[i]; mono[n++] = b[i + 1]; }
         boolean open = injecting || current == null || current.isDigital() ? true : softSq.process(mono, n);
@@ -1386,6 +1387,17 @@ public class RadioService extends Service implements RadioEngine.Events {
     private final java.text.SimpleDateFormat logTf = new java.text.SimpleDateFormat("HH:mm:ss.SSS", Locale.US);
     public void setUiLog(boolean on) { uiLog = on; }
     public java.util.List<String> recentLog() { synchronized (logRing) { return new java.util.ArrayList<>(logRing); } }
+
+    /** First-run check: bytes the receive audio path has delivered, and a raw copy of the next few seconds (UART PCM phones). */
+    private volatile long rxPcmBytes;
+    public long rxAudioBytes() { AudioBackend a = audio; return a instanceof UartPcmAudio ? ((UartPcmAudio) a).rxBytes() : rxPcmBytes; }
+    public String captureRxAudio(java.io.File f, int ms) {
+        AudioBackend a = audio;
+        if (a instanceof UartPcmAudio) return ((UartPcmAudio) a).capture(f, ms);
+        long before = rxPcmBytes;
+        try { Thread.sleep(ms); } catch (InterruptedException ignored) { }
+        return (rxPcmBytes - before) + " bytes in " + ms + " ms from the vendor audio service (not saved)";
+    }
 
     @Override public void log(String s) {
         Log.i(TAG, s);

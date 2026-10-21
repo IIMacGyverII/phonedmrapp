@@ -63,6 +63,9 @@ public final class UartPcmAudio implements AudioBackend {
                     int n;
                     try { n = in.read(mono); } catch (Throwable t) { break; }
                     if (n <= 0) continue;
+                    rxBytes += n;
+                    OutputStream c = capture;                                  // first-run check: the stream exactly as the port delivers it
+                    if (c != null) { try { int k = (int) Math.min(n, captureLeft); c.write(mono, 0, k); captureLeft -= k; if (captureLeft <= 0) { capture = null; c.close(); } } catch (Throwable t) { capture = null; } }
                     if (txRunning) continue;                                   // half duplex: ignore echo while keyed
                     for (int i = 0, o = 0; i + 1 < n; i += 2) { st[o++] = mono[i]; st[o++] = mono[i + 1]; st[o++] = mono[i]; st[o++] = mono[i + 1]; }
                     Sink s = sink; if (s != null) s.onPcm(st, (n / 2) * 4);
@@ -73,6 +76,21 @@ public final class UartPcmAudio implements AudioBackend {
             rxThread.setDaemon(true); rxThread.start();
             return "UART PCM RX on " + path + " @ " + baud;
         } catch (Throwable t) { return "startRx failed: " + t; }
+    }
+
+    private volatile long rxBytes, captureLeft;
+    private volatile OutputStream capture;
+    public long rxBytes() { return rxBytes; }
+    /** Copy the next {@code ms} of received bytes, untouched, into {@code f} (for a device report). */
+    public String capture(java.io.File f, int ms) {
+        try {
+            long before = rxBytes;
+            captureLeft = (long) SR * 2 * ms / 1000; capture = new FileOutputStream(f);
+            Thread.sleep(ms + 300);
+            OutputStream c = capture; if (c != null) { capture = null; c.close(); }
+            long got = rxBytes - before;
+            return String.format(java.util.Locale.US, "%d bytes in %d ms on %s (8 kHz mono 16-bit would be %d); saved to %s", got, ms, path, (long) SR * 2 * ms / 1000, f.getName());
+        } catch (Throwable t) { return "capture failed: " + t; }
     }
 
     @Override public synchronized String stopRx() {

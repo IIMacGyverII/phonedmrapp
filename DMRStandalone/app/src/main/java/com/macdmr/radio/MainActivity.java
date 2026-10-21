@@ -55,7 +55,7 @@ public class MainActivity extends AppCompatActivity {
             ui.post(rssiTick); ui.removeCallbacks(modeTick); ui.post(modeTick);
             applyPendingLocation();
             ui.postDelayed(MainActivity.this::announceCoverage, 3000);
-            if (!svc.profile().verified && !getSharedPreferences("radio", MODE_PRIVATE).getBoolean("unsupportedShown", false)) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("unsupportedShown", true).apply(); show(4); }
+            if (!svc.profile().verified && !getSharedPreferences("radio", MODE_PRIVATE).getBoolean("unsupportedShown", false)) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("unsupportedShown", true).apply(); show(4); device.offerChecks(true); }
         }
         @Override public void onServiceDisconnected(ComponentName n) { svc = null; }
     };

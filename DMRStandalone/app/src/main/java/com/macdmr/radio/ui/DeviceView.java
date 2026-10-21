@@ -81,9 +81,9 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
             final String r = svc != null ? RootSetup.installBootModule(svc.profile(), getContext().getCacheDir()) : "service not ready";
             post(() -> new android.app.AlertDialog.Builder(getContext()).setTitle("Boot persistence").setMessage(r).setPositiveButton("OK", null).show());
         }).start());
-        reportNow = Neo.button(c, "Make a device report for this phone", "report", Neo.VIOLET);
+        reportNow = Neo.button(c, "Run all checks for this phone", "report", Neo.VIOLET);
         hero.addView(reportNow, new LayoutParams(bl)); reportNow.setVisibility(GONE);
-        reportNow.setOnClickListener(v -> generateReport());
+        reportNow.setOnClickListener(v -> offerChecks(false));
         TextView note = Neo.text(c, "Needs root (Magisk). While this app owns the radio the stock walkie-talkie app is paused and its icon hidden; Hand back restores it. The Magisk module keeps the SELinux rules across reboots so the radio can be owned straight from boot.", Neo.MUTED, 13, Neo.uiMedium(c));
         note.setLineSpacing(0, 1.1f); note.setPadding(0, (int) (10 * d), 0, 0);
         hero.addView(note);
@@ -320,15 +320,19 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
     private void reportMenu() {
         final Context c = getContext();
         new android.app.AlertDialog.Builder(c).setTitle("Device report")
-                .setItems(new String[] { "Generate device report", "Share last report", "Capture the PTT key (10 s)", "Radio probe (root)", "Open a GitHub issue with the facts filled in", "What is in it?" }, (dd, w) -> {
-                    if (w == 0) generateReport();
-                    else if (w == 1) shareReport();
-                    else if (w == 2) captureKeys();
-                    else if (w == 3) probe();
-                    else if (w == 4) com.macdmr.radio.DeviceReport.openIssue(c);
+                .setItems(new String[] { "Run all checks (one button)", "Generate device report", "Share last report", "Capture the PTT key (10 s)", "Radio probe (root)", "Open a GitHub issue with the facts filled in", "What is in it?" }, (dd, w) -> {
+                    if (w == 0) offerChecks(false);
+                    else if (w == 1) generateReport();
+                    else if (w == 2) shareReport();
+                    else if (w == 3) captureKeys();
+                    else if (w == 4) probe();
+                    else if (w == 5) com.macdmr.radio.DeviceReport.openIssue(c);
                     else new android.app.AlertDialog.Builder(c).setTitle("Device report").setMessage("For a phone that has no profile yet, or to help debug one: gathers the facts a profile needs (serial ports, radio-module nodes, the stock walkie-talkie app and its APK, vendor libraries, framework jars, services; with root also SELinux labels and the PTT key broadcasts), saves it under Download/DMR/DeviceReport and offers to share the zip to a GitHub issue. Nothing on the phone is changed.").setPositiveButton("OK", null).show();
                 }).show();
     }
+
+    /** The guided first run: one dialog, one button, one zip to send. */
+    public void offerChecks(boolean firstLaunch) { checks(firstLaunch); }
 
     private void generateReport() {
         final Context c = getContext();
@@ -339,9 +343,50 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         }).start();
     }
 
+    private void checks(boolean firstLaunch) {
+        final Context c = getContext(); if (svc == null) return;
+        final com.macdmr.radio.DeviceProfile dp = svc.profile();
+        final boolean canTrial = dp.supported && !svc.isReady();
+        String msg = (firstLaunch ? (dp.supported ? "SignalDeck has a profile for this phone that has not been tested on it yet. " : "SignalDeck does not know this phone yet. ")
+                + "One run of the checks tells us what we need to make it work. It takes about two minutes.\n\n" : "")
+                + "What happens:\n• a device report (phone, ports, radio module, the stock walkie-talkie app; only reads)\n"
+                + "• 10 s to press the side PTT key a few times\n"
+                + "• with Magisk root, the radio probe (asks the module for its version on the serial ports; switches the module on if it does not answer"
+                + (dp.supported ? "" : ", only on phones with a profile") + ")\n"
+                + (canTrial ? "• optionally a 30-second trial: SignalDeck takes the radio (receive only, nothing is transmitted), records what the module and the audio do, then gives it back to " + dp.stockApp + "\n" : "")
+                + (dp.supported && !dp.stockApp.isEmpty() ? "\n" + dp.stockApp + " is closed for the checks; open it again afterwards as usual.\n" : "")
+                + "\nAt the end you get one zip to send us.";
+        android.app.AlertDialog.Builder b = new android.app.AlertDialog.Builder(c).setTitle(firstLaunch ? "Help us support this phone" : "Run all checks").setMessage(msg)
+                .setPositiveButton(canTrial ? "Checks + trial" : "Run checks", (dd, w) -> runChecks(canTrial))
+                .setNegativeButton(firstLaunch ? "Later" : "Cancel", null);
+        if (canTrial) b.setNeutralButton("Checks only", (dd, w) -> runChecks(false));
+        b.show();
+    }
+
+    private void runChecks(final boolean trial) {
+        final Context c = getContext(); if (svc == null) return;
+        final android.app.AlertDialog pd = new android.app.AlertDialog.Builder(c).setTitle("Checking this phone").setMessage("Starting…").setCancelable(false).create(); pd.show();
+        final com.macdmr.radio.RadioService s = svc;
+        new Thread(() -> {
+            try {
+                final java.io.File zip = com.macdmr.radio.FirstRunCheck.run(c, s, trial, t -> post(() -> pd.setMessage(t + "…")));
+                final java.io.File dir = com.macdmr.radio.DeviceReport.newestDir();
+                String rep = dir == null ? "" : com.macdmr.radio.DeviceReport.cat(new java.io.File(dir, "report.txt").getAbsolutePath());
+                int k = rep.lastIndexOf("==== Summary ====");
+                final String summary = k >= 0 ? rep.substring(k + 17).trim() : "";
+                post(() -> {
+                    pd.dismiss();
+                    new android.app.AlertDialog.Builder(c).setTitle("Checks done")
+                            .setMessage((summary.isEmpty() ? "" : summary + "\n\n") + "Everything is in one zip (" + zip.length() / 1024 + " kB). Tap Send to share it by e-mail, a messenger or a cloud drive, or open a GitHub issue and drag the zip in.\n\nThe folder is also on the phone: Download/DMR/DeviceReport/" + (dir != null ? dir.getName() : "") + " (with a computer: adb pull /sdcard/Download/DMR/DeviceReport).")
+                            .setPositiveButton("Send", (dd, w) -> shareReport()).setNeutralButton("GitHub issue", (dd, w) -> com.macdmr.radio.DeviceReport.openIssue(c)).setNegativeButton("Close", null).show();
+                });
+            } catch (Throwable t) { post(() -> { pd.dismiss(); android.widget.Toast.makeText(c, "Checks failed: " + t.getMessage(), android.widget.Toast.LENGTH_LONG).show(); }); }
+        }, "first-run-check").start();
+    }
+
     private void shareReport() {
         new android.app.AlertDialog.Builder(getContext()).setTitle("Share the device report")
-                .setMessage("The report holds phone model and build facts, serial-port and radio-module node names, the walkie-talkie app's package details, library and framework file names, running radio processes, and (with root) SELinux labels and short radio-related log excerpts with message text removed and long numbers masked. No accounts, contacts, messages, location or identifiers such as IMEI.\n\nThe copied stock walkie-talkie APK is the manufacturer's software: include it if you are comfortable posting it, or share without it (we can ask for it privately).")
+                .setMessage("The report holds phone model and build facts, serial-port and radio-module node names, the walkie-talkie app's package details, library and framework file names, running radio processes, and (with root) SELinux labels and short radio-related log excerpts with message text removed and long numbers masked. After Run all checks it also holds SignalDeck's own log (packet, position, message and caller lines removed; callsigns and IDs masked) and, after the trial, a 5-second raw copy of what the radio received (rx_audio_raw.bin: whatever the channel carried). No accounts, contacts, messages, location or identifiers such as IMEI.\n\nThe copied stock walkie-talkie APK is the manufacturer's software: include it if you are comfortable posting it, or share without it (we can ask for it privately).")
                 .setPositiveButton("Share all", (dd, w) -> shareZip(true)).setNeutralButton("Without the APK", (dd, w) -> shareZip(false)).setNegativeButton("Cancel", null).show();
     }
 
