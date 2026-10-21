@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — SignalDeck Web: satellite passes, Logbook and Recordings pages
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | **Satellites** page lists every satellite (frequencies, tone, notes) with its passes over the phone in the next 24 h (time, highest elevation, rise/set direction, length; "Up now" highlighted); clicking one tracks it after a confirmation, since it replaces the current tracking (the phone's position is used on the phone and never sent). **Logbook**: log a contact (frequency and mode prefilled from the channel), edit, delete, contacts-only filter, ADIF export as a download; heard stations with their RadioID names and grids. **Recordings**: the REC files newest first with channel, time and length; play in the page, download, delete (paths confined to Download/DMR/Audio). API `/api/sat/passes`, `/api/sat/track`, `/api/logbook` (+`?format=adif`, `/delete`), `/api/recordings`, `/api/recording` (+`/delete`). | `web/WebHost.java`, `assets/web/pages.js`, `index.html`, `app.js`, `app.css`, `ui/HelpView.java` | On the phone over Wi-Fi in headless Chrome: passes for 6 satellites; a N0CALL test entry logged on 146.520 (band 2m), present in the ADIF, deleted; 181 recordings listed; all three pages rendered with real data. Not yet tested: tracking a pass from the web (would have replaced the overnight ISS tracking). |
+
 ## 2026-10-20 — SignalDeck Web: hear the radio in the browser (LISTEN)
 
 | Backlog | Change | Files | Test |

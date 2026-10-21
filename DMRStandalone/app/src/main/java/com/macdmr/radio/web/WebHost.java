@@ -284,6 +284,14 @@ public final class WebHost {
         return out;
     }
     private static int parse(String s, int def) { try { return s == null ? def : Integer.parseInt(s); } catch (Exception e) { return def; } }
+    /** A recording by its id "channel/file.wav", only inside Download/DMR/Audio. */
+    private static File recording(String id) {
+        if (id == null) return null;
+        String[] p = id.split("/");
+        if (p.length != 2 || p[0].isEmpty() || p[1].isEmpty() || id.contains("..") || id.contains("\\") || !p[1].endsWith(".wav")) return null;
+        File f = new File(new File(com.macdmr.radio.ui.MediaDialogs.audioRoot(), p[0]), p[1]);
+        return f.isFile() ? f : null;
+    }
     private File sstvDir() { return new File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "DMR/SSTV"); }
 
     // ---- the API ----
@@ -416,6 +424,90 @@ public final class WebHost {
                 onMain(() -> { svc.deleteChannel(ch); return null; });
                 return ok("Deleted " + (ch.name.isEmpty() ? "channel " + ch.number : ch.name));
             }
+            case "/api/sat/passes": {                                           // every satellite's next passes over the phone (no position sent)
+                android.location.Location me = svc.lastKnownLocation();
+                com.macdmr.radio.ham.Satellites sats = svc.satellites();
+                java.util.Map<Integer, com.macdmr.radio.ham.Sgp4> el = sats.elements();
+                long now = System.currentTimeMillis();
+                JSONArray a = new JSONArray();
+                for (com.macdmr.radio.ham.Satellites.Sat s : com.macdmr.radio.ham.Satellites.all(svc)) {
+                    JSONObject o = new JSONObject().put("key", s.key).put("name", s.name).put("about", s.about).put("downHz", s.downHz).put("upHz", s.upHz)
+                            .put("toneHz", s.toneHz).put("mode", s.mode).put("listenOnly", s.listenOnly());
+                    JSONArray ps = new JSONArray(); com.macdmr.radio.ham.Sgp4 e = el.get(s.catalog);
+                    if (e == null) o.put("problem", "No orbit for it in the download");
+                    else if (me != null) {
+                        for (com.macdmr.radio.ham.SatTrack.Pass pa : com.macdmr.radio.ham.SatTrack.passes(e, now - 15 * 60_000L, 24, me.getLatitude(), me.getLongitude(), me.hasAltitude() ? me.getAltitude() : 0, 10)) {
+                            if (pa.los < now) continue;
+                            ps.put(new JSONObject().put("aos", pa.aos).put("los", pa.los).put("maxEl", pa.maxEl).put("aosAz", pa.aosAz).put("losAz", pa.losAz));
+                            if (ps.length() >= 6) break;
+                        }
+                    }
+                    a.put(o.put("passes", ps));
+                }
+                return ok(new JSONObject().put("satellites", a).put("hasFix", me != null).put("elementsAgeH", sats.elementsAgeMs() / 3_600_000.0));
+            }
+            case "/api/sat/track": if (!post) break; {                          // track one pass {key, aos}
+                android.location.Location me = svc.lastKnownLocation(); if (me == null) return WebServer.Response.error(409, "No position fix on the phone yet");
+                String key = b.optString("key", ""); long aos = b.optLong("aos", 0);
+                for (com.macdmr.radio.ham.Satellites.Sat s : com.macdmr.radio.ham.Satellites.all(svc)) {
+                    if (!s.key.equals(key)) continue;
+                    com.macdmr.radio.ham.Sgp4 e = svc.satellites().elements().get(s.catalog); if (e == null) return WebServer.Response.error(409, "No orbit for " + s.name);
+                    for (com.macdmr.radio.ham.SatTrack.Pass pa : com.macdmr.radio.ham.SatTrack.passes(e, System.currentTimeMillis() - 15 * 60_000L, 24, me.getLatitude(), me.getLongitude(), me.hasAltitude() ? me.getAltitude() : 0, 10)) {
+                        if (Math.abs(pa.aos - aos) > 120_000) continue;
+                        String err = onMain(() -> { svc.setIssRepeat(-1); return svc.trackSat(s, e, pa); });
+                        return err == null ? ok("Tracking " + s.name) : WebServer.Response.error(409, err);
+                    }
+                    return WebServer.Response.error(404, "That pass is no longer ahead");
+                }
+                return WebServer.Response.error(404, "No such satellite");
+            }
+            case "/api/recordings": {                                           // REC files: Download/DMR/Audio/<channel>/*.wav
+                java.util.List<File> files = new java.util.ArrayList<>();
+                File[] chans = com.macdmr.radio.ui.MediaDialogs.audioRoot().listFiles();
+                if (chans != null) for (File d : chans) { File[] fs = d.listFiles(); if (fs != null) for (File f : fs) if (f.getName().endsWith(".wav")) files.add(f); }
+                files.sort((x, y) -> Long.compare(y.lastModified(), x.lastModified()));
+                JSONArray a = new JSONArray();
+                for (File f : files) { if (a.length() >= 300) break; a.put(new JSONObject().put("id", f.getParentFile().getName() + "/" + f.getName()).put("channel", f.getParentFile().getName()).put("name", f.getName()).put("ts", f.lastModified()).put("seconds", Math.max(0, (f.length() - 44) / 16000.0))); }
+                return ok(new JSONObject().put("recordings", a));
+            }
+            case "/api/recording": case "/api/recording/delete": {
+                File f = recording(post ? b.optString("id", "") : r.param("id"));
+                if (f == null) return WebServer.Response.error(404, "No such recording");
+                if (post) return f.delete() ? ok("Deleted " + f.getName()) : WebServer.Response.error(500, "Could not delete " + f.getName());
+                byte[] data; try (InputStream in = new java.io.FileInputStream(f)) { data = readAll(in); }
+                WebServer.Response x = WebServer.Response.bytes("audio/wav", data);
+                if ("1".equals(r.param("download"))) x.headers.put("Content-Disposition", "attachment; filename=\"" + f.getName().replace("\"", "") + "\"");
+                return x;
+            }
+            case "/api/logbook": {
+                com.macdmr.radio.ham.Logbook lb = svc.logbook();
+                if (post) {                                                     // save {id?, call, freqMHz, mode, rstSent, rstRcvd, name, notes, ts?}
+                    com.macdmr.radio.ham.Logbook.Entry e = null;
+                    long id = b.optLong("id", 0);
+                    if (id > 0) for (com.macdmr.radio.ham.Logbook.Entry x : lb.list(5000, false)) if (x.id == id) e = x;
+                    if (e == null) { e = new com.macdmr.radio.ham.Logbook.Entry(); e.ts = System.currentTimeMillis(); e.qso = true; e.source = "web"; }
+                    String call = b.optString("call", "").trim().toUpperCase(java.util.Locale.US);
+                    if (call.isEmpty()) return WebServer.Response.error(400, "A callsign is needed");
+                    e.call = call; e.mode = b.optString("mode", e.mode); e.rstSent = b.optString("rstSent", e.rstSent); e.rstRcvd = b.optString("rstRcvd", e.rstRcvd);
+                    e.name = b.optString("name", e.name); e.notes = b.optString("notes", e.notes); e.qso = b.optBoolean("qso", e.qso);
+                    if (b.has("freqMHz")) e.freqHz = Math.round(b.getDouble("freqMHz") * 1e6);
+                    if (b.has("ts")) e.ts = b.getLong("ts");
+                    lb.save(e);
+                    return ok("Logged " + e.call);
+                }
+                boolean qsoOnly = "1".equals(r.param("qso"));
+                java.util.List<com.macdmr.radio.ham.Logbook.Entry> list = lb.list(Math.min(2000, parse(r.param("limit"), 500)), qsoOnly);
+                if ("adif".equals(r.param("format"))) {
+                    WebServer.Response x = WebServer.Response.bytes("text/plain; charset=utf-8", com.macdmr.radio.ham.Logbook.adif(list, com.macdmr.radio.BuildConfig.VERSION_NAME).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    x.headers.put("Content-Disposition", "attachment; filename=\"signaldeck_log.adi\""); return x;
+                }
+                JSONArray a = new JSONArray();
+                for (com.macdmr.radio.ham.Logbook.Entry e : list)
+                    a.put(new JSONObject().put("id", e.id).put("ts", e.ts).put("call", e.call).put("freqHz", e.freqHz).put("band", com.macdmr.radio.ham.Logbook.band(e.freqHz)).put("mode", e.mode)
+                            .put("name", e.name).put("notes", e.notes).put("rstSent", e.rstSent).put("rstRcvd", e.rstRcvd).put("qso", e.qso).put("source", e.source).put("grid", e.grid).put("qth", e.qth));
+                return ok(new JSONObject().put("entries", a).put("qsos", lb.count(true)).put("total", lb.count(false)));
+            }
+            case "/api/logbook/delete": if (!post) break; { svc.logbook().delete(b.optLong("id", 0)); return ok("Deleted"); }
             case "/api/help": {
                 JSONArray a = new JSONArray();
                 for (String[] t : com.macdmr.radio.ui.HelpView.topicsForWeb()) {

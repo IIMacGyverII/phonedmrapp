@@ -181,6 +181,20 @@ input:not([type]), input[type=text] { padding: 10px 12px; border-radius: 10px; b
 .helpbody .lead { color: var(--muted); }
 .group { font: 600 11px Orbitron, sans-serif; color: var(--dim); letter-spacing: .14em; padding: 14px 6px 4px; }
 
+/* satellite passes */
+.passgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; margin-top: 12px; }
+.satbox { padding: 14px; border-radius: 14px; background: var(--panel-solid); border: 1px solid var(--line-soft); }
+.satbox h4 { margin: 0 0 4px; font: 700 15px Orbitron, sans-serif; color: var(--cyan-light); letter-spacing: .05em; }
+.satbox .about { color: var(--muted); font-size: 14px; margin-bottom: 8px; }
+.pass { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; margin-top: 6px; border-radius: 10px; border: 1px solid var(--divider); cursor: pointer; }
+.pass:hover { border-color: var(--cyan); } .pass.up { border-color: rgba(43,234,122,.5); background: rgba(43,234,122,.08); }
+.pass b { font: 700 16px ShareTech, monospace; } .pass .sub { color: var(--muted); font-size: 13px; }
+
+/* logbook / recordings */
+.player { width: 100%; margin-top: 12px; filter: invert(.9) hue-rotate(180deg); }
+.item.playing { background: rgba(43,234,122,.08); }
+a.btn, a.act { text-decoration: none; display: inline-block; }
+
 /* login */
 .login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
 .login-card { width: 100%; max-width: 380px; background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 30px; text-align: center; }
