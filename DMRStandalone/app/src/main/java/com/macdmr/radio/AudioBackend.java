@@ -15,6 +15,9 @@ public interface AudioBackend {
     /** Open the RX stream and play it (through the gate). */
     String startRx(boolean speaker);
     String stopRx();
+    /** The stock app may take the audio service over while this app does not own the radio (Hand back): the next
+     *  {@link #startRx} must attach to it again instead of trusting its old registration. */
+    default void releaseForStockApp() { }
     /** Phone microphone to the radio while keyed. */
     String startTx();
     /** Microphone for the next {@link #startTx}: MediaRecorder.AudioSource.MIC (phone) or VOICE_COMMUNICATION (a Bluetooth hands-free mic, e.g. the car's). */

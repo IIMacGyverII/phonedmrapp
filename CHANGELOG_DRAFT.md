@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-21 — 1.0.0-beta.6: receive audio silent after Hand back → Take over (Armor)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | **Fix (reported by the owner):** no receive audio on the Ulefone after the radio had been handed back to the stock app and taken over again in the same app session. SignalDeck registered its PrizeTinyService receive callback only once, when its AudioTrack was created; while the stock app owned the radio it registered its own callback, which replaced ours, so after Take over the vendor service kept delivering PCM to the stock app's dead callback (tinyserver read 2048 B every 64 ms, SignalDeck's track idle since the hand back). Hand back now marks the audio backend for re-attachment and the next start registers the callback again (`AudioBackend.releaseForStockApp`). Every Run all checks trial and stock-app watch hits this path. Version **1.0.0-beta.6** (code 105). | `AudioBackend.java`, `TinyServiceAudio.java`, `RadioService.java`, `build.gradle` | **device (Armor):** Hand back → stock app opened → Take over: SignalDeck's AudioTrack active, frames advancing ~8 k/s (before: idle since 15:15:29, the hand back). Nothing transmitted |
+
 ## 2026-10-21 — 1.0.0-beta.5: Xplore 1 trial opens the squelch with monitor, QuickChat's real channel table, stock app kept closed
 
 | Backlog | Change | Files | Test |

@@ -43,6 +43,9 @@ public final class TinyServiceAudio implements AudioBackend {
     /** Start RX: register the binder callback, open the PCM stream, play through an AudioTrack. */
     @Override public synchronized String startRx(boolean speaker) {
         try {
+            if (track == null || reregister) {
+                if (track != null) { reregister = false; register.invoke(svc, callback); }   // after Hand back: the stock app replaced our callback
+            }
             if (track == null) {
                 int min = AudioTrack.getMinBufferSize(8000, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT);
                 track = new AudioTrack(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
@@ -51,7 +54,7 @@ public final class TinyServiceAudio implements AudioBackend {
                                 .setEncoding(AudioFormat.ENCODING_PCM_16BIT).build(),
                         Math.max(min * 2, 8192), AudioTrack.MODE_STREAM, AudioManager.AUDIO_SESSION_ID_GENERATE);
                 track.play();
-                register.invoke(svc, new ITinyRecvCallback.Stub() {
+                callback = new ITinyRecvCallback.Stub() {
                     @Override public void onRecv(byte[] data, int len) {
                         Sink s = sink; if (s != null) s.onPcm(data, len);            // squelch decision first
                         Gate g = gate;
@@ -60,13 +63,18 @@ public final class TinyServiceAudio implements AudioBackend {
                             else { byte[] z = new byte[len]; track.write(z, 0, len); }  // keep the stream timing, play silence
                         }
                     }
-                });
+                };
+                register.invoke(svc, callback);
             }
             Object r = openRecv.invoke(svc);
             playing = true;
             return "openRecvPcm=" + r;
         } catch (Throwable t) { return "startRx failed: " + t + (t.getCause() != null ? " / " + t.getCause() : ""); }
     }
+
+    private ITinyRecvCallback.Stub callback;
+    private volatile boolean reregister;
+    @Override public void releaseForStockApp() { reregister = true; }
 
     @Override public synchronized String stopRx() {
         playing = false;
