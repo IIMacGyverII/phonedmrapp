@@ -31,7 +31,7 @@ $('logout').addEventListener('click', async () => { await fetch('/api/logout'); 
 // ---- pages ----
 function route() {
   const p = (location.hash || '#intercom').slice(1);
-  S.page = ['intercom', 'channels', 'messages', 'contacts', 'aprs', 'sstv', 'pkt', 'sat', 'map', 'log', 'rec', 'settings', 'help'].includes(p) ? p : 'intercom';
+  S.page = ['intercom', 'channels', 'messages', 'contacts', 'aprs', 'sstv', 'pkt', 'sat', 'map', 'log', 'rec', 'exam', 'settings', 'help'].includes(p) ? p : 'intercom';
   document.querySelectorAll('.page').forEach(el => el.classList.toggle('hidden', el.id !== 'page-' + S.page));
   document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('on', a.dataset.page === S.page));
   if (S.page === 'channels') { loadChannels(); loadZonesEditor(); }
@@ -45,6 +45,7 @@ function route() {
   if (S.page === 'help') loadHelp();
   if (S.page === 'log') { if (!S.qso) editQso(null); loadLog(); loadNet(); }
   if (S.page === 'rec') loadRecordings();
+  if (S.page === 'exam') loadExam();
   if (S.page === 'settings') { loadSettings(); loadBackups(); }
   if (S.page === 'pkt') loadPacket();
 }

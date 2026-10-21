@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — SignalDeck Web: Exam practice
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | **Exam** page: Technician / General / Extra with best score and missed count, practice exam (one question per group like the real exam, no feedback until the end), study a subelement (shuffled, instant feedback), review missed; figures; keyboard A–D and Enter; results with the misses explained. The pools and figures are served straight from the phone's assets (`exam/`), and progress uses the phone's own `exam` prefs (missed list per answer, best score for a full exam), so the phone and the browser share it. API `/api/exam`, `/api/exam/answer`, `/api/exam/result`. | `web/WebHost.java`, `assets/web/exam.js`, `index.html`, `app.js`, `app.css`, `ui/HelpView.java` | On the phone over Wi-Fi: a Technician practice exam drew 35 questions, figure T-2 served and rendered, one correct answer recorded; the test created an empty progress file on a phone that had never used Exam practice, which was removed afterwards. |
+
 ## 2026-10-20 — SignalDeck Web: Net control
 
 | Backlog | Change | Files | Test |
