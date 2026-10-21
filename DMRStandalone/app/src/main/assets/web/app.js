@@ -34,6 +34,7 @@ function route() {
   S.page = ['intercom', 'channels', 'messages', 'contacts', 'aprs', 'sstv', 'pkt', 'sat', 'map', 'log', 'rec', 'exam', 'settings', 'help'].includes(p) ? p : 'intercom';
   document.querySelectorAll('.page').forEach(el => el.classList.toggle('hidden', el.id !== 'page-' + S.page));
   document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('on', a.dataset.page === S.page));
+  const on = document.querySelector('#nav a.on'); if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'center', block: 'nearest' });   // narrow screens scroll the tabs
   if (S.page === 'channels') { loadChannels(); loadZonesEditor(); }
   if (S.page === 'aprs') loadAprs();
   if (S.page === 'sstv') loadSstv();
