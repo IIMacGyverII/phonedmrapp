@@ -62,7 +62,7 @@ wide screen (side navigation, intercom panel always visible on large screens, re
 
 1. **Foundation (shipped 2026-10-20 night)**: server, PIN login, `/api/status`, events stream, intercom page (live
    state, channel/zone stepping, history), APRS live/stations/messages pages, SSTV live picture + gallery, Device switch.
-2. **Parity of the read/write pages**: channels + editor, contacts, messages, packet tools, satellites, map, logbook,
+2. **Parity of the read/write pages** (started 2026-10-20: messages, contacts, map, help done): channels + editor, contacts, messages, packet tools, satellites, map, logbook,
    nets, recordings, settings, help.
 3. **Audio**: RX audio to the browser (8 kHz PCM over WebSocket, Web Audio playback with jitter buffer); talk from the
    browser mic over HTTPS (Opus or PCM up, injected through the same TX path as the phone mic, same 30 s guard).

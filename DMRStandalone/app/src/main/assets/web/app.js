@@ -31,13 +31,17 @@ $('logout').addEventListener('click', async () => { await fetch('/api/logout'); 
 // ---- pages ----
 function route() {
   const p = (location.hash || '#intercom').slice(1);
-  S.page = ['intercom', 'channels', 'aprs', 'sstv', 'sat'].includes(p) ? p : 'intercom';
+  S.page = ['intercom', 'channels', 'messages', 'contacts', 'aprs', 'sstv', 'sat', 'map', 'help'].includes(p) ? p : 'intercom';
   document.querySelectorAll('.page').forEach(el => el.classList.toggle('hidden', el.id !== 'page-' + S.page));
   document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('on', a.dataset.page === S.page));
   if (S.page === 'channels') loadChannels();
   if (S.page === 'aprs') loadAprs();
   if (S.page === 'sstv') loadSstv();
   if (S.page === 'sat') renderSat();
+  if (S.page === 'messages') loadConversations();
+  if (S.page === 'contacts') loadContacts();
+  if (S.page === 'map') loadMap();
+  if (S.page === 'help') loadHelp();
 }
 window.addEventListener('hashchange', route);
 
@@ -62,6 +66,8 @@ function connect() {
   on('link', d => { S.status.link = d.state; S.status.ready = d.state === 'ready'; renderStatus(); });
   on('modes', d => { Object.assign(S.status, { softSq: d.softSq, softSqLevel: d.softSqLevel, monitor: d.monitor, record: d.record, scanning: d.scanning, zone: d.zone }); renderStatus(); });
   on('caption', d => renderCaption(d));
+  on('sms', () => { if (S.page === 'messages') loadConversations(); });
+  on('smsResult', d => { toast(d.ok ? 'Text delivered' : 'No acknowledgement (the text may still have arrived)'); if (S.page === 'messages') loadConversations(); });
   on('sat', d => { S.status.sat = d; renderModebar(); if (S.page === 'sat') renderSat(); });
   on('mode', d => { S.status.mode = d; renderModebar(); renderAprsState(); renderSstvState(); });
   on('aprs', () => { if (S.page === 'aprs') loadAprs(); });
@@ -85,7 +91,7 @@ function renderStatus() {
   const ptt = $('ptt'); const canTx = s.webTx && s.ready && !s.txInhibited && !(s.sat && s.sat.tracking && s.sat.listenOnly && !s.sat.waiting);
   ptt.disabled = !canTx;
   $('pttNote').textContent = !s.webTx ? 'Transmit from the web is off. Turn it on at the phone: Device → SignalDeck Web.' : s.txInhibited ? 'This channel is receive-only.' : 'Hold to talk (or hold the space bar). Speak at the phone: the browser microphone comes in a later update.';
-  renderState(); renderMeter(); renderModebar(); renderAprsState(); renderSstvState();
+  renderState(); renderMeter(); renderModebar(); renderAprsState(); renderSstvState(); renderSendState();
 }
 function renderState() {
   const s = S.status; const b = $('rxtx');
@@ -219,4 +225,4 @@ function renderSat() {
 }
 document.querySelectorAll('[data-iss]').forEach(b => b.onclick = () => act('iss', { mode: b.dataset.iss }).then(refresh));
 
-start().catch(() => showLogin());
+// start() runs at the end of pages.js, once every page's code is loaded

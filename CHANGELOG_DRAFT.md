@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — SignalDeck Web: Messages, Contacts, Map and Help pages
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Phase 2 of `docs/signaldeck-web-plan.md`, first pages. **Messages**: conversations with names, thread bubbles with delivery state (sending / delivered / failed / sent without acknowledgement), the phone's quick replies, live refresh on incoming texts and delivery results; sending follows *Allow transmit from the web*. **Contacts**: searchable list, add / edit / delete (DMR ID 1–16777215, private / group / all call), Text opens the conversation. **Map**: own small slippy map (no library): OpenStreetMap tiles darkened like the phone's map, APRS stations at their reported positions and channels with a location, drag, wheel and button zoom, Fit all, click for details (speed, course, altitude, path) or to tune a channel. **Help**: the phone's whole guide, grouped and searchable. API: `/api/help`, `/api/contacts` (+`/delete`), `/api/conversations`, `/api/messages` (GET thread, POST send); channels now carry their positions. | `assets/web/pages.js`, `index.html`, `app.css`, `app.js`, `web/WebHost.java`, `ui/HelpView.java` | On the phone over Wi-Fi in headless Chrome: Messages, Contacts and Help rendered with real data; map checked by script (20 tiles loaded, 15 APRS stations placed, zoom works). Not yet tested: sending a text and editing contacts from the web. |
+
 ## 2026-10-20 — SignalDeck Web (phase 1): use the radio from a browser on the same Wi-Fi
 
 | Backlog | Change | Files | Test |
