@@ -159,6 +159,7 @@ public final class WebHost {
         o.put("number", ch.number).put("name", ch.name).put("digital", ch.isDigital()).put("rxFreq", ch.rxFreq).put("txFreq", ch.txFreq)
                 .put("power", ch.power).put("band", ch.band).put("cc", ch.cc).put("slot", ch.inSlot).put("txContact", ch.txContact)
                 .put("rxType", ch.rxType).put("rxSubCode", ch.rxSubCode).put("txType", ch.txType).put("txSubCode", ch.txSubCode).put("location", ch.location);
+        if (ch.lat != 0 || ch.lon != 0) o.put("lat", ch.lat).put("lon", ch.lon);
         return o;
     }
     private JSONObject statusJson() throws Exception {
@@ -206,6 +207,12 @@ public final class WebHost {
     private static WebServer.Response ok(JSONObject o) { return WebServer.Response.json(200, o.toString()); }
     private static WebServer.Response ok(String msg) { return WebServer.Response.json(200, "{\"ok\":true,\"message\":" + WebServer.quote(msg) + "}"); }
     private static JSONObject body(WebServer.Request r) { try { return r.body.length == 0 ? new JSONObject() : new JSONObject(r.bodyText()); } catch (Exception e) { return new JSONObject(); } }
+    private static final String DEFAULT_QUICK = "QSL\nCopy, I will call you back\nOn my way\nWhere are you?\nSwitch to the other channel\nAll OK here";
+    private List<String> quickReplies() {
+        java.util.ArrayList<String> out = new java.util.ArrayList<>();
+        for (String q : svc.getSharedPreferences("radio", Context.MODE_PRIVATE).getString("quickReplies", DEFAULT_QUICK).split("\n")) if (!q.trim().isEmpty()) out.add(q.trim());
+        return out;
+    }
     private static int parse(String s, int def) { try { return s == null ? def : Integer.parseInt(s); } catch (Exception e) { return def; } }
     private File sstvDir() { return new File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "DMR/SSTV"); }
 
@@ -310,6 +317,56 @@ public final class WebHost {
                 if (mode < 0) return WebServer.Response.error(400, "mode: aprs, sstv or stop");
                 String e = onMain(() -> { String err = svc.startIssMode(mode); if (err == null) svc.setIssRepeat(mode); return err; });
                 return e == null ? ok("Tracking the ISS (" + m + ")") : WebServer.Response.error(409, e);
+            }
+            case "/api/help": {
+                JSONArray a = new JSONArray();
+                for (String[] t : com.macdmr.radio.ui.HelpView.topicsForWeb()) {
+                    JSONArray secs = new JSONArray(); for (int i = 3; i + 1 < t.length; i += 2) secs.put(new JSONObject().put("head", t[i]).put("text", t[i + 1]));
+                    a.put(new JSONObject().put("group", t[0]).put("title", t[1]).put("summary", t[2]).put("sections", secs));
+                }
+                return ok(new JSONObject().put("topics", a));
+            }
+            case "/api/contacts": {
+                if (post) {                                                     // create or update {id?, name, number, type}
+                    ChannelStore.Contact ct = new ChannelStore.Contact();
+                    ct.id = b.optLong("id", 0); ct.name = b.optString("name", "").trim(); ct.number = b.optInt("number", 0); ct.type = b.optInt("type", 0);
+                    if (ct.number <= 0 || ct.number > 0xFFFFFF) return WebServer.Response.error(400, "The DMR ID must be 1 to 16777215");
+                    if (ct.type < 0 || ct.type > 2) return WebServer.Response.error(400, "type: 0 private, 1 group, 2 all");
+                    if (ct.id > 0) svc.store().updateContact(ct); else svc.store().insertContact(ct);
+                    return ok("Saved " + (ct.name.isEmpty() ? String.valueOf(ct.number) : ct.name));
+                }
+                JSONArray a = new JSONArray();
+                for (ChannelStore.Contact ct : svc.store().contacts()) a.put(new JSONObject().put("id", ct.id).put("name", ct.name).put("number", ct.number).put("type", ct.type));
+                return ok(new JSONObject().put("contacts", a));
+            }
+            case "/api/contacts/delete": if (!post) break; {
+                long id = b.optLong("id", 0);
+                for (ChannelStore.Contact ct : svc.store().contacts()) if (ct.id == id) { svc.store().deleteContact(ct); return ok("Deleted " + (ct.name.isEmpty() ? String.valueOf(ct.number) : ct.name)); }
+                return WebServer.Response.error(404, "No such contact");
+            }
+            case "/api/conversations": {
+                JSONArray a = new JSONArray();
+                for (ChannelStore.Conversation c : svc.store().conversations())
+                    a.put(new JSONObject().put("peer", c.peer).put("type", c.type).put("name", c.name).put("lastText", c.lastText).put("lastTs", c.lastTs).put("outgoing", c.outgoing));
+                return ok(new JSONObject().put("conversations", a).put("quickReplies", new JSONArray(quickReplies())));
+            }
+            case "/api/messages": {
+                if (post) {                                                     // send {peer, type, text}
+                    if (!allowTx()) return WebServer.Response.error(403, TX_OFF);
+                    String text = b.optString("text", "").trim(); int peer = b.optInt("peer", 0), type = b.optInt("type", 0);
+                    if (text.isEmpty() || peer <= 0) return WebServer.Response.error(400, "A recipient and a text are needed");
+                    if (text.length() > 140) return WebServer.Response.error(400, "Texts are at most 140 characters");
+                    if (!svc.isReady()) return WebServer.Response.error(409, "The radio is not ready");
+                    ChannelStore.Contact to = new ChannelStore.Contact(); to.number = peer; to.type = type;
+                    String nm = svc.store().contactName(peer, type); to.name = nm == null ? "" : nm;
+                    onMain(() -> { svc.sendSms(to, text); return null; });
+                    return ok("Sending to " + (to.name.isEmpty() ? String.valueOf(peer) : to.name));
+                }
+                int peer = parse(r.param("peer"), 0), type = parse(r.param("type"), 0);
+                JSONArray a = new JSONArray();
+                for (ChannelStore.Message m : svc.store().messages(peer, type))
+                    a.put(new JSONObject().put("id", m.id).put("outgoing", m.outgoing).put("ts", m.ts).put("text", m.text).put("status", m.status));
+                return ok(new JSONObject().put("messages", a));
             }
             default: break;
         }

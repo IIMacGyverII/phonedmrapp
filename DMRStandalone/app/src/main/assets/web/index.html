@@ -26,9 +26,13 @@
     <nav id="nav">
       <a href="#intercom" data-page="intercom">Intercom</a>
       <a href="#channels" data-page="channels">Channels</a>
+      <a href="#messages" data-page="messages">Messages</a>
+      <a href="#contacts" data-page="contacts">Contacts</a>
       <a href="#aprs" data-page="aprs">APRS</a>
       <a href="#sstv" data-page="sstv">SSTV</a>
       <a href="#sat" data-page="sat">Satellites</a>
+      <a href="#map" data-page="map">Map</a>
+      <a href="#help" data-page="help">Help</a>
     </nav>
     <div class="conn"><span id="connDot" class="dot"></span><span id="connText">Connecting…</span><button id="logout" class="link">Log out</button></div>
   </header>
@@ -76,6 +80,36 @@
       </div>
     </section>
 
+    <!-- MESSAGES -->
+    <section id="page-messages" class="page hidden">
+      <div class="grid-side">
+        <div class="panel"><div class="row between"><span class="label">CONVERSATIONS</span><button class="btn small-btn" id="newMsg">New</button></div><div id="convList" class="list"></div></div>
+        <div class="panel thread">
+          <div class="row between"><span class="label" id="threadTitle">MESSAGES</span><span id="threadSub" class="chip dim"></span></div>
+          <div id="thread" class="bubbles"></div>
+          <div id="quick" class="quick"></div>
+          <form id="sendForm" class="row"><input id="sendText" placeholder="Text (up to 140 characters)" maxlength="140" class="grow"><button class="btn primary">Send</button></form>
+          <p id="sendNote" class="muted small"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTACTS -->
+    <section id="page-contacts" class="page hidden">
+      <div class="grid-side">
+        <div class="panel"><div class="row between"><span class="label">CONTACTS</span><input id="ctSearch" placeholder="Search" class="search"></div><div id="ctList" class="list"></div></div>
+        <div class="panel">
+          <span class="label" id="ctFormTitle">NEW CONTACT</span>
+          <form id="ctForm" class="form">
+            <label>Name<input id="ctName" maxlength="32"></label>
+            <label>DMR ID or talkgroup<input id="ctNumber" inputmode="numeric" maxlength="8"></label>
+            <label>Type<select id="ctType"><option value="0">Private call</option><option value="1">Group call (talkgroup)</option><option value="2">All call</option></select></label>
+            <div class="row"><button class="btn primary">Save</button><button type="button" class="btn" id="ctNew">Clear</button><button type="button" class="btn danger hidden" id="ctDel">Delete</button><button type="button" class="btn hidden" id="ctText">Text</button></div>
+          </form>
+        </div>
+      </div>
+    </section>
+
     <!-- APRS -->
     <section id="page-aprs" class="page hidden">
       <div class="panel">
@@ -117,9 +151,29 @@
         <p class="muted small">Tracking follows every pass: the radio tunes a few minutes before it, corrects the Doppler shift and listens only.</p>
       </div>
     </section>
+    <!-- MAP -->
+    <section id="page-map" class="page hidden">
+      <div class="panel mappanel">
+        <div class="row between wrap"><div><span class="label">MAP</span> <span id="mapCount" class="chip dim"></span></div>
+          <div class="row"><label class="chk"><input type="checkbox" id="mapAprs" checked> APRS stations</label><label class="chk"><input type="checkbox" id="mapCh" checked> Channels</label><button class="btn" id="mapFit">Fit all</button></div></div>
+        <div id="map" class="map"><div id="mapTiles" class="tiles"></div><div id="mapMarks" class="marks"></div>
+          <div class="zoom"><button id="zIn" aria-label="Zoom in">+</button><button id="zOut" aria-label="Zoom out">−</button></div>
+          <div id="mapCard" class="mapcard hidden"></div>
+          <div class="attrib">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors</div></div>
+      </div>
+    </section>
+
+    <!-- HELP -->
+    <section id="page-help" class="page hidden">
+      <div class="grid-side">
+        <div class="panel"><input id="helpSearch" placeholder="Search the guide" class="search full"><div id="helpList" class="list"></div></div>
+        <div class="panel"><div id="helpBody" class="helpbody"></div></div>
+      </div>
+    </section>
   </main>
   <div id="toast" class="toast hidden"></div>
 </div>
 <script src="app.js"></script>
+<script src="pages.js"></script>
 </body>
 </html>

@@ -119,6 +119,50 @@ input:not([type]), input[type=text] { padding: 10px 12px; border-radius: 10px; b
 .satcard .grid div span { display: block; font: 600 11px Orbitron, sans-serif; color: var(--muted); letter-spacing: .12em; }
 .satcard .grid div b { font: 700 20px ShareTech, monospace; }
 
+/* two columns: list + detail */
+.grid-side { display: grid; grid-template-columns: minmax(260px, 380px) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 900px) { .grid-side { grid-template-columns: minmax(0, 1fr); } }
+.small-btn { padding: 6px 12px; font-size: 12px; }
+.search.full { width: 100%; }
+.form { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; max-width: 460px; }
+.form label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font-weight: 600; }
+.form input, .form select { width: 100%; }
+.chk { display: flex; gap: 6px; align-items: center; color: var(--muted); font-weight: 600; cursor: pointer; } .chk input { accent-color: var(--cyan); }
+
+/* messages */
+.thread { display: flex; flex-direction: column; min-height: 520px; }
+.bubbles { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin: 12px 0; max-height: 560px; }
+.bubble { max-width: 75%; padding: 9px 13px; border-radius: 14px; background: var(--panel-solid); border: 1px solid var(--line-soft); word-break: break-word; }
+.bubble.out { align-self: flex-end; background: rgba(25,211,255,.14); border-color: var(--line); }
+.bubble .meta { display: block; margin-top: 3px; font-size: 12px; color: var(--dim); }
+.bubble .meta.fail { color: var(--red); }
+.quick { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.quick button { padding: 5px 11px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--cyan-light); font: 600 14px Rajdhani, sans-serif; cursor: pointer; }
+.quick button:hover { border-color: var(--cyan); }
+
+/* map */
+.mappanel { padding-bottom: 12px; }
+.map { position: relative; height: 70vh; min-height: 420px; margin-top: 12px; border-radius: 14px; overflow: hidden; background: #0a1520; border: 1px solid var(--line); cursor: grab; touch-action: none; user-select: none; }
+.map.drag { cursor: grabbing; }
+.tiles, .marks { position: absolute; inset: 0; }
+.tiles img { position: absolute; width: 256px; height: 256px; filter: invert(1) hue-rotate(180deg) brightness(.72) contrast(1.05) saturate(.6); pointer-events: none; }
+.mk { position: absolute; transform: translate(-50%, -50%); width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; }
+.mk.aprs { background: var(--green); box-shadow: 0 0 10px var(--green); }
+.mk.ch { background: var(--cyan); box-shadow: 0 0 10px var(--cyan); border-radius: 3px; }
+.mk-label { position: absolute; transform: translate(10px, -50%); font: 600 13px Rajdhani, sans-serif; color: var(--text); text-shadow: 0 0 3px #000, 0 0 6px #000; white-space: nowrap; pointer-events: none; }
+.zoom { position: absolute; right: 12px; top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.zoom button { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-solid); color: var(--cyan); font-size: 22px; cursor: pointer; }
+.mapcard { position: absolute; left: 12px; bottom: 30px; max-width: min(380px, calc(100% - 24px)); padding: 12px 14px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); }
+.attrib { position: absolute; right: 6px; bottom: 4px; font-size: 11px; color: var(--muted); background: rgba(6,11,18,.7); padding: 1px 6px; border-radius: 6px; }
+.attrib a { color: var(--muted); }
+
+/* help */
+.helpbody h2 { font: 700 22px Orbitron, sans-serif; color: var(--cyan); letter-spacing: .05em; margin: 0 0 4px; }
+.helpbody h3 { font: 700 17px Orbitron, sans-serif; color: var(--cyan-light); letter-spacing: .04em; margin: 22px 0 6px; }
+.helpbody p { margin: 0; color: var(--text); font-size: 18px; line-height: 1.5; }
+.helpbody .lead { color: var(--muted); }
+.group { font: 600 11px Orbitron, sans-serif; color: var(--dim); letter-spacing: .14em; padding: 14px 6px 4px; }
+
 /* login */
 .login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
 .login-card { width: 100%; max-width: 380px; background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 30px; text-align: center; }
