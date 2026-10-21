@@ -135,7 +135,7 @@ function drawMap() {
     if (ty < 0 || ty >= n) continue;
     for (let tx = Math.floor(x0 / TS); tx <= Math.floor((x0 + W) / TS); tx++) {
       const tw = ((tx % n) + n) % n;
-      html += '<img alt="" src="https://tile.openstreetmap.org/' + M.z + '/' + tw + '/' + ty + '.png" style="left:' + Math.round(tx * TS - x0) + 'px;top:' + Math.round(ty * TS - y0) + 'px">';
+      html += '<img alt="" referrerpolicy="origin" src="https://tile.openstreetmap.org/' + M.z + '/' + tw + '/' + ty + '.png" style="left:' + Math.round(tx * TS - x0) + 'px;top:' + Math.round(ty * TS - y0) + 'px">';
     }
   }
   $('mapTiles').innerHTML = html;
