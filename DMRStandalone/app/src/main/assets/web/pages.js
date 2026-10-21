@@ -484,6 +484,10 @@ $('trDisc').onclick = () => act('terminal', { disconnect: true });
 $('trAccept').onchange = () => act('terminal', { accept: $('trAccept').checked });
 $('trForm').addEventListener('submit', async e => { e.preventDefault(); if (await act('terminal', { send: $('trLine').value })) $('trLine').value = ''; });
 
+// ---- diagnostics log (Settings) ----
+async function loadDiagLog() { try { const j = await api('log'); const el = $('diagLog'); el.textContent = j.lines.join(String.fromCharCode(10)); el.scrollTop = el.scrollHeight; } catch (e) { } }
+$('logRefresh').onclick = loadDiagLog;
+
 // ---- settings ----
 async function loadSettings() { try { renderSettings(await api('settings')); } catch (e) { } }
 function renderSettings(j) {

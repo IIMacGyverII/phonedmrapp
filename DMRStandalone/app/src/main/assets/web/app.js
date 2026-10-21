@@ -47,7 +47,7 @@ function route() {
   if (S.page === 'log') { if (!S.qso) editQso(null); loadLog(); loadNet(); }
   if (S.page === 'rec') loadRecordings();
   if (S.page === 'exam') { loadExam(); loadTrainer(); }
-  if (S.page === 'settings') { loadSettings(); loadBackups(); }
+  if (S.page === 'settings') { loadSettings(); loadBackups(); loadDiagLog(); }
   if (S.page === 'pkt') { loadPacket(); loadKeyer(); }
 }
 window.addEventListener('hashchange', route);
@@ -68,6 +68,7 @@ function connect() {
   on('rx', d => { S.status.hearing = d.on; renderState(); });
   on('tx', d => { S.status.transmitting = d.on; renderState(); });
   on('rssi', d => { S.status.rssi = d.dbm; renderMeter(); });
+  on('level', d => { $('vuFill').style.width = Math.min(100, Math.round(Math.sqrt(d.amp / 32767) * 100)) + '%'; clearTimeout(S.vuT); S.vuT = setTimeout(() => { $('vuFill').style.width = '0'; }, 400); });
   on('history', d => addHistory(d.line));
   on('caller', d => { S.status.caller = d.text; renderState(); });
   on('link', d => { S.status.link = d.state; S.status.ready = d.state === 'ready'; renderStatus(); });
