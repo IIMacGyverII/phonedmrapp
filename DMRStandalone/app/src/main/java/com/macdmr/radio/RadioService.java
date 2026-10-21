@@ -1058,13 +1058,22 @@ public class RadioService extends Service implements RadioEngine.Events {
         if (ch == null || ch.isDigital() || current != ch) return;
         try {
             int band = ch.rxFreq < 300_000_000 ? 1 : ch.band;
+            synchronized (tunes) { tunes.addLast(new Object[] { ch, false }); }   // answered like any channel write
             engine.setAnalog(ch.rxFreq, ch.txFreq, band, ch.power, hardwareSq(ch), ch.rxType, ch.rxSubCode, ch.txType, ch.txSubCode, 8, 2);
         } catch (IOException e) { log("squelch rewrite: " + e); }
     }
 
     /** Program the radio with a channel; {@code fromStore} = a real channel (remembered as active), else the VFO. */
-    private synchronized void applyChannelNow(ChannelStore.Channel ch, boolean fromStore) {
+    private synchronized boolean applyChannelNow(ChannelStore.Channel ch, boolean fromStore) {
+        if (!ChannelStore.inBand(ch.rxFreq) || !ChannelStore.inBand(ch.txFreq)) {         // the module refuses these and stays where it is: never show them as tuned
+            ChannelStore.Channel on = current;
+            history("warn", "⚠ " + ch.name + " (" + ch.freqText(ch.rxFreq) + (ch.txFreq != ch.rxFreq ? " / " + ch.freqText(ch.txFreq) : "") + " MHz) is outside what this radio can tune (136–174 and 400–480 MHz)"
+                    + (on != null ? "; still on " + on.name + ", " + on.freqText(on.rxFreq) + " MHz" : ""));
+            if (!fromStore && vfo == ch) vfo = on != null && on.number == 0 ? on : null;
+            return false;
+        }
         try {
+            synchronized (tunes) { if (tunes.size() > 8) tunes.clear(); tunes.addLast(new Object[] { ch, fromStore }); }
             if (ch.isDigital()) {
                 int id = !fromStore && ch.mode > 0 ? ch.mode : localId();          // VFO may transmit under another DMR ID
                 engine.setDigital(ch.rxFreq, ch.txFreq, id, ch.groups, ch.txContact, ch.contactType, ch.power, ch.cc, ch.inSlot, ch.outSlot, 8, 4);
@@ -1090,7 +1099,8 @@ public class RadioService extends Service implements RadioEngine.Events {
             pushModes();
             describeLocation(ch);
             updateNotification();
-        } catch (IOException e) { log("select: " + e); }
+            return true;
+        } catch (IOException e) { log("select: " + e); return false; }
     }
 
     /** Reverse-geocode the channel's stored position and add distance/bearing from the phone, like the module. */
@@ -1221,8 +1231,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             if (scanner.isScanning()) scanner.stop();
             if (vfo == null && current != null) vfoReturn = current.number;
             vfo = v;
-            applyChannelNow(v, false);
-            log("VFO " + v.freqText(v.rxFreq) + "/" + v.freqText(v.txFreq) + (v.isDigital() ? " DMR cc" + v.cc + " TG " + v.txContact : " FM"));
+            if (applyChannelNow(v, false)) log("VFO " + v.freqText(v.rxFreq) + "/" + v.freqText(v.txFreq) + (v.isDigital() ? " DMR cc" + v.cc + " TG " + v.txContact : " FM"));
         });
     }
 
@@ -1242,8 +1251,8 @@ public class RadioService extends Service implements RadioEngine.Events {
         ChannelStore.Channel v = vfoCopy(vfo);
         int hz = delta * vfoStepHz();
         v.rxFreq += hz; v.txFreq += hz;
-        if (v.rxFreq < 136_000_000 || v.rxFreq > 480_000_000 || v.txFreq < 136_000_000 || v.txFreq > 480_000_000) return;
-        if (v.rxFreq > 174_000_000 && v.rxFreq < 400_000_000) { v.rxFreq = delta > 0 ? 400_000_000 : 174_000_000; v.txFreq = v.rxFreq; }
+        if (v.rxFreq > 174_000_000 && v.rxFreq < 400_000_000) { v.rxFreq = delta > 0 ? 400_000_000 : 174_000_000; v.txFreq = v.rxFreq; }   // jump the gap the radio cannot tune
+        if (!ChannelStore.inBand(v.rxFreq) || !ChannelStore.inBand(v.txFreq)) return;                                                     // at an end, or a repeater offset would leave the band
         v.name = "";
         applyVfo(v);
     }
@@ -1424,7 +1433,31 @@ public class RadioService extends Service implements RadioEngine.Events {
         ui.post(() -> { for (Listener l : listeners) l.onCaller((who.isEmpty() ? "ID " + caller : who + "  " + caller) + "  " + t); });
         if (voiceOn() && !who.isEmpty()) say(who.split(" ")[0]);
     }
-    @Override public void ack(int cmd, boolean ok) { if (!ok) log(String.format(Locale.US, "MCU rejected 0x%02X", cmd)); }
+    @Override public void ack(int cmd, boolean ok) {
+        if (!ok) log(String.format(Locale.US, "MCU rejected 0x%02X", cmd));
+        if (cmd != RadioEngine.CMD_SET_ANALOG && cmd != RadioEngine.CMD_SET_DIGITAL) return;
+        Object[] t; synchronized (tunes) { t = tunes.pollFirst(); }
+        if (t == null) return;
+        final ChannelStore.Channel ch = (ChannelStore.Channel) t[0];
+        if (ok) { if (ch.isDigital() == (cmd == RadioEngine.CMD_SET_DIGITAL)) confirmed = ch; return; }
+        // The radio refused the channel and kept its previous settings: show the truth, not the channel that was asked for.
+        final ChannelStore.Channel was = confirmed;
+        worker.execute(() -> {
+            if (current != ch) return;                                      // something else was tuned since
+            String why = ch.isDigital() && ch.txContact <= 0 ? " (a DMR channel needs a call number)" : "";
+            history("warn", "⚠ The radio refused " + ch.name + " (" + ch.freqText(ch.rxFreq) + " MHz)" + why
+                    + (was != null && was != ch ? "; it is still on " + was.name + ", " + was.freqText(was.rxFreq) + " MHz" : ""));
+            if (was == null || was == ch) return;
+            current = was;
+            vfo = was.number == 0 ? was : null;
+            if (was.number > 0) store.setActive(was.number);
+            ui.post(() -> { for (Listener l : listeners) l.onChannel(was); });
+            pushModes(); updateNotification();
+        });
+    }
+    /** Channel writes waiting for the module's answer (oldest first) and the last one it accepted. */
+    private final java.util.ArrayDeque<Object[]> tunes = new java.util.ArrayDeque<>();
+    private volatile ChannelStore.Channel confirmed;
     @Override public void booted(String banner) { log("module booted: " + banner); }
 
     private volatile long pendingSmsId = -1;

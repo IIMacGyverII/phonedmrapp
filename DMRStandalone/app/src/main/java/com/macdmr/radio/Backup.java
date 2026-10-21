@@ -259,6 +259,7 @@ public final class Backup {
             listByName.put(col(r, 0).toLowerCase(Locale.US), a);
         }
         List<ChannelStore.Channel> out = new ArrayList<>();
+        List<String> outOfBand = new ArrayList<>();
         for (int i = 1; i < chans.size(); i++) {
             List<String> r = chans.get(i); if (r.size() < off + 17) continue;
             ChannelStore.Channel ch = new ChannelStore.Channel();
@@ -297,6 +298,7 @@ public final class Backup {
             }
             if (softSqCol >= 0) ch.softSq = col(r, softSqCol).equalsIgnoreCase("On");
             if (softSqLevelCol >= 0) ch.softSqLevel = Math.max(1, Math.min(9, num(col(r, softSqLevelCol), 5)));
+            if (!ChannelStore.inBand(ch.rxFreq) || !ChannelStore.inBand(ch.txFreq)) { outOfBand.add(ch.name + " " + ch.freqText(ch.rxFreq)); continue; }   // the radio refuses these (e.g. a 220 MHz channel from another radio's codeplug)
             out.add(ch);
         }
         if (out.isEmpty()) throw new Exception("no channels could be read");
@@ -330,6 +332,7 @@ public final class Backup {
             }
             db.setTransactionSuccessful();
         } finally { db.endTransaction(); }
-        return out.size() + " channels, " + cts.size() + " contacts, " + zs.size() + " zones restored from " + dir.getName();
+        return out.size() + " channels, " + cts.size() + " contacts, " + zs.size() + " zones restored from " + dir.getName()
+                + (outOfBand.isEmpty() ? "" : "\n" + outOfBand.size() + " skipped: outside what this radio can tune (136–174 and 400–480 MHz): " + String.join(", ", outOfBand.subList(0, Math.min(5, outOfBand.size()))) + (outOfBand.size() > 5 ? " …" : ""));
     }
 }
