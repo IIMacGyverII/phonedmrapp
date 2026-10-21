@@ -1047,6 +1047,10 @@ public final class WebHost {
                 onMain(() -> { svc.selectChannel(svc.store().activeNumber()); return null; });
                 return ok(res);
             }
+            case "/api/log": {                                                  // the Diagnostics page's log (last 300 lines)
+                JSONArray a = new JSONArray(); for (String l : svc.recentLog()) a.put(l);
+                return ok(new JSONObject().put("lines", a));
+            }
             case "/api/heard": {                                                // Last heard, grouped like the phone's sheet, plus alerts and events
                 java.util.LinkedHashMap<String, JSONObject> rows = new java.util.LinkedHashMap<>();
                 for (Object[] h : svc.store().lastHeard(400)) {
