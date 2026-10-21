@@ -77,6 +77,8 @@ public final class TinyServiceAudio implements AudioBackend {
     /** TX: phone mic → 8 kHz mono → duplicated to stereo → PrizeTinyService.writeFrame while keyed. */
     private volatile int txSource = MediaRecorder.AudioSource.MIC;
     @Override public void setTxSource(int source) { txSource = source; }
+    private volatile TxFeed txFeed;
+    @Override public void setTxFeed(TxFeed f) { txFeed = f; }
     private volatile Level txLevel;
     @Override public void setTxLevel(Level l) { txLevel = l; }
 
@@ -85,15 +87,18 @@ public final class TinyServiceAudio implements AudioBackend {
             Object ok = openWrite.invoke(svc);
             int fs = (Integer) frameSize.invoke(svc);
             if (!Boolean.TRUE.equals(ok) || fs <= 0) return "openWritePcm=" + ok + " frameSize=" + fs;
-            int min = AudioRecord.getMinBufferSize(8000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-            rec = new AudioRecord(txSource, 8000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(min, 4096));
-            rec.startRecording();
+            final TxFeed feed = txFeed;
+            if (feed == null) {                                                  // the microphone (a web feed paces itself)
+                int min = AudioRecord.getMinBufferSize(8000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+                rec = new AudioRecord(txSource, 8000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(min, 4096));
+                rec.startRecording();
+            }
             txRunning = true;
             final int frame = fs;
             txThread = new Thread(() -> {
                 byte[] mono = new byte[frame / 2]; byte[] st = new byte[frame];
                 while (txRunning) {
-                    int n = rec.read(mono, 0, mono.length);
+                    int n = feed != null ? feed.read(mono, 0, mono.length) : rec.read(mono, 0, mono.length);
                     if (n <= 0) continue;
                     for (int i = 0, o = 0; i + 1 < n; i += 2) { st[o++] = mono[i]; st[o++] = mono[i + 1]; st[o++] = mono[i]; st[o++] = mono[i + 1]; }
                     Level lv = txLevel; if (lv != null) { int pk = 0; for (int i = 0; i + 1 < n; i += 2) pk = Math.max(pk, Math.abs((short) ((mono[i] & 0xFF) | (mono[i + 1] << 8)))); lv.peak(pk); }

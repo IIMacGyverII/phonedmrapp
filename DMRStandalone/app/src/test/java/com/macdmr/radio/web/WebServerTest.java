@@ -103,6 +103,55 @@ public class WebServerTest {
         assertEquals(401, new WebServer(0, "ABCD2345", p -> null, r -> WebServer.Response.json(200, "{}"), store).route(q2).status);
     }
 
+    @Test public void webSocketAcceptKeyMatchesTheRfcExample() {
+        assertEquals("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", WebServer.acceptKey("dGhlIHNhbXBsZSBub25jZQ=="));
+    }
+
+    @Test public void webSocketNeedsLoginAndSameOriginThenCarriesTextAndBinary() throws Exception {
+        WebServer s = new WebServer(18472, "PIN23456", p -> null, r -> null);
+        final java.util.List<String> got = new java.util.concurrent.CopyOnWriteArrayList<>();
+        s.webSocket("/api/ws/echo", (req, peer) -> new WebServer.WebSocketSession() {
+            @Override public void text(String t) { got.add("text:" + t); peer.sendText("echo:" + t); }
+            @Override public void binary(byte[] b, int n) { got.add("binary:" + n); }
+            @Override public void closed() { got.add("closed"); }
+        });
+        s.start();
+        try {
+            String body = "{\"pin\":\"PIN23456\"}";
+            WebServer.Request li = parse("POST /api/login HTTP/1.1\r\nContent-Length: " + body.length() + "\r\n\r\n" + body); li.remote = "127.0.0.1";
+            String cookie = s.route(li).headers.get("Set-Cookie"); String tok = cookie.substring(11, cookie.indexOf(';'));
+            String hs = "GET /api/ws/echo HTTP/1.1\r\nHost: 127.0.0.1:18472\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n";
+            // no login: refused
+            try (java.net.Socket c = new java.net.Socket("127.0.0.1", 18472)) {
+                c.getOutputStream().write((hs + "\r\n").getBytes(StandardCharsets.UTF_8));
+                assertTrue(new String(c.getInputStream().readNBytes(12), StandardCharsets.UTF_8).startsWith("HTTP/1.1 401"));
+            }
+            // another site's page: refused
+            try (java.net.Socket c = new java.net.Socket("127.0.0.1", 18472)) {
+                c.getOutputStream().write((hs + "Cookie: sd_session=" + tok + "\r\nOrigin: http://evil.example\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+                assertTrue(new String(c.getInputStream().readNBytes(12), StandardCharsets.UTF_8).startsWith("HTTP/1.1 403"));
+            }
+            try (java.net.Socket c = new java.net.Socket("127.0.0.1", 18472)) {
+                c.setSoTimeout(3000);
+                java.io.OutputStream o = c.getOutputStream(); java.io.InputStream in = c.getInputStream();
+                o.write((hs + "Cookie: sd_session=" + tok + "\r\nOrigin: http://127.0.0.1:18472\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+                StringBuilder head = new StringBuilder(); while (!head.toString().endsWith("\r\n\r\n")) head.append((char) in.read());
+                assertTrue(head.toString(), head.toString().startsWith("HTTP/1.1 101") && head.toString().contains("s3pPLMBiTxaQ9kYGzzhZRbK+xOo="));
+                byte[] mask = { 1, 2, 3, 4 };
+                byte[] t = "down".getBytes(StandardCharsets.UTF_8);
+                o.write(new byte[] { (byte) 0x81, (byte) (0x80 | t.length), 1, 2, 3, 4 }); for (int i = 0; i < t.length; i++) o.write(t[i] ^ mask[i & 3]);
+                byte[] pcm = new byte[640];
+                o.write(new byte[] { (byte) 0x82, (byte) (0x80 | 126), (byte) (pcm.length >> 8), (byte) pcm.length, 1, 2, 3, 4 }); for (int i = 0; i < pcm.length; i++) o.write(pcm[i] ^ mask[i & 3]);
+                o.flush();
+                assertEquals(0x81, in.read()); int len = in.read();
+                assertEquals("echo:down", new String(in.readNBytes(len), StandardCharsets.UTF_8));
+                o.write(new byte[] { (byte) 0x88, (byte) 0x80, 1, 2, 3, 4 }); o.flush();
+                Thread.sleep(300);
+            }
+            assertEquals(java.util.Arrays.asList("text:down", "binary:640", "closed"), got);
+        } finally { s.stop(); }
+    }
+
     @Test public void quoteEscapes() {
         assertEquals("\"a\\\"b\\\\c\\n\\u0001\"", WebServer.quote("a\"b\\c\n\u0001"));
         assertEquals("null", WebServer.quote(null));

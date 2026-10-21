@@ -446,7 +446,8 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         if (!w.running()) { webSub.setText("Not running" + (w.lastError() != null ? ": " + w.lastError() : "")); return; }
         java.util.List<String> u = w.urls();
         webSub.setText((u.isEmpty() ? "Connect to Wi-Fi to get an address" : "Open " + android.text.TextUtils.join("  or  ", u)) + "\nPIN  " + w.pin()
-                + (w.clients() > 0 ? "   ·  " + w.clients() + " browser" + (w.clients() == 1 ? "" : "s") + " connected" : ""));
+                + (w.tlsRunning() && !u.isEmpty() ? "\nTo talk with a computer's microphone: " + w.secureUrls().get(0) + " (accept the certificate warning once; fingerprint " + com.macdmr.radio.web.WebTls.fingerprint().substring(0, 11) + "…)" : "")
+                + (w.clients() > 0 ? "\n" + w.clients() + " browser" + (w.clients() == 1 ? "" : "s") + " connected" : ""));
     }
 
     @Override public void onLink(String state) { refresh(); }

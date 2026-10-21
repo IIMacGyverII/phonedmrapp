@@ -86,6 +86,7 @@ select { font-family: Rajdhani, sans-serif; font-size: 16px; }
   background: radial-gradient(circle at 50% 35%, #2a1520, #12080c); color: var(--red); font: 700 26px Orbitron, sans-serif; letter-spacing: .12em; cursor: pointer;
   box-shadow: 0 0 24px rgba(255,84,104,.2); user-select: none; touch-action: none; }
 .ptt:disabled { color: var(--off); border-color: var(--track); box-shadow: none; cursor: not-allowed; }
+#pttNote a, .modebar a, .muted a { color: var(--cyan); }
 .ptt.down { background: radial-gradient(circle, #ff5468, #a01a2c); color: #fff; box-shadow: 0 0 40px rgba(255,84,104,.7); }
 .history { height: 560px; overflow-y: auto; font-size: 15px; margin-top: 10px; padding-right: 6px; }
 .history div { padding: 5px 0; border-bottom: 1px solid var(--divider); word-break: break-word; }

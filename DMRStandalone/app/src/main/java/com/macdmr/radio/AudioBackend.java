@@ -22,6 +22,11 @@ public interface AudioBackend {
     /** The microphone's peak level (0..32767) of each block while keyed, or null for none. */
     interface Level { void peak(int peak); }
     default void setTxLevel(Level l) { }
+    /** Transmit audio from somewhere other than a microphone (SignalDeck Web: the browser's microphone): a blocking,
+     *  real-time paced source of 8 kHz mono 16-bit little-endian bytes, read like {@code AudioRecord.read}. */
+    interface TxFeed { int read(byte[] buf, int off, int len); }
+    /** The feed for the next {@link #startTx} instead of the microphone, or null for the microphone. */
+    default void setTxFeed(TxFeed f) { }
     String stopTx();
     /** Play 8 kHz mono PCM into the TX path, paced to real time; blocks until done. */
     String playPcm(short[] mono);

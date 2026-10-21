@@ -97,7 +97,10 @@ function renderStatus() {
   const z = $('zoneSel'); if (z.dataset.loaded !== '1') loadZones(); else z.value = String(s.zoneId);
   const ptt = $('ptt'); const canTx = s.webTx && s.ready && !s.txInhibited && !(s.sat && s.sat.tracking && s.sat.listenOnly && !s.sat.waiting);
   ptt.disabled = !canTx;
-  $('pttNote').textContent = !s.webTx ? 'Transmit from the web is off. Turn it on at the phone: Device → SignalDeck Web.' : s.txInhibited ? 'This channel is receive-only.' : 'Hold to talk (or hold the space bar). Speak at the phone: the browser microphone comes in a later update.';
+  const secureUrl = 'https://' + location.hostname + ':' + (s.tlsPort || 8443) + '/';
+  $('pttNote').innerHTML = !s.webTx ? 'Transmit from the web is off. Turn it on at the phone: Device → SignalDeck Web.' : s.txInhibited ? 'This channel is receive-only.'
+    : TALK.usable() ? 'Hold to talk with this computer\'s microphone (or hold the space bar).'
+    : 'Hold to talk (or the space bar): the phone\'s microphone transmits.' + (s.tls ? ' To talk with this computer\'s microphone open <a href="' + secureUrl + '">' + esc(secureUrl) + '</a> (accept the certificate warning once).' : '');
   renderState(); renderMeter(); renderModebar(); renderAprsState(); renderSstvState(); renderSendState();
 }
 function renderState() {
@@ -139,6 +142,7 @@ $('zoneSel').onchange = async () => { await act('zone', { id: +$('zoneSel').valu
 // PTT: hold the button (mouse/touch) or the space bar; always release on leave/blur so the radio never stays keyed
 let pttDown = false;
 async function ptt(down) {
+  if (TALK.usable()) return talkPtt(down);                                // https: this computer's microphone (talk.js)
   if (down === pttDown) return; pttDown = down; $('ptt').classList.toggle('down', down);
   const j = await act('ptt', { down }); if (down && !j) { pttDown = false; $('ptt').classList.remove('down'); }
 }
