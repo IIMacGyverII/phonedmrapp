@@ -411,7 +411,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         new android.app.AlertDialog.Builder(c).setTitle("Listen check")
                 .setMessage("1. On the Intercom page, choose a channel where you can hear stations right now (a busy repeater, a weather channel, a friend calling on another radio).\n"
                         + "2. Come back here and tap Start.\n"
-                        + "3. Part 1, 10 seconds: SignalDeck opens the squelch (MON) so you should hear static from the speaker; it asks whether you did. (Skipped on a DMR channel, which has no static.)\n"
+                        + "3. Part 1, 10 seconds: SignalDeck holds the squelch open (MON), so the speaker should play something — static, or the station if it is talking; it asks what you heard. (Skipped on a DMR channel, which has no static.)\n"
                         + "4. Part 2, 50 seconds with the normal squelch: it opens by itself when the station talks. SignalDeck records the signal strength and the audio; then say whether you heard the station clearly.\n\n"
                         + "Turn the media volume up first." + need)
                 .setPositiveButton("Start", (dd, w) -> { if (svc.isReady()) runListenCheck(); else locked("Take over the radio first (Device page)."); })
@@ -433,14 +433,15 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
             String r;
             try {
                 if (!wasMon) s.setMonitor(true);                       // squelch forced open: receiver noise plays even with nobody on the channel
-                r = com.macdmr.radio.FirstRunCheck.listenCheck(s, 10, t -> post(() -> pd.setMessage("Listen to the speaker: you should hear static (a hiss).\n\n" + t)));
+                r = com.macdmr.radio.FirstRunCheck.listenCheck(s, 10, t -> post(() -> pd.setMessage("Listen to the speaker: with the squelch held open you should hear something — static (a hiss), or the station if one is on the air.\n\n" + t)),
+                        new java.io.File(listenDir(c), "listen_static.wav"), 5000, false);         // 5 s of receiver noise: nothing private in it
             } catch (Throwable t) { r = "failed: " + t + "\n"; }
             finally { if (!wasMon) s.setMonitor(false); }
             final String part1 = r;
             post(() -> {
                 pd.dismiss();
-                final String[] answers = { "Yes, I heard static", "No sound at all", "Not sure" };
-                new android.app.AlertDialog.Builder(c).setTitle("Did you hear static (a hiss) from the speaker?").setCancelable(false)
+                final String[] answers = { "Yes: static (a hiss)", "Yes: a station talking", "No sound at all", "Not sure" };
+                new android.app.AlertDialog.Builder(c).setTitle("Did you hear anything from the speaker?").setCancelable(false)
                         .setItems(answers, (dd, w) -> listenStation(s, "part 1 (static, MON on, 10 s):\n" + part1 + "owner's answer: " + answers[w] + "\n")).show();
             });
         }, "listen-check-static").start();
@@ -454,14 +455,18 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
                     final android.app.AlertDialog pd = new android.app.AlertDialog.Builder(c).setTitle("Listen check · part 2 of 2").setMessage("Starting…").setCancelable(false).create(); pd.show();
                     new Thread(() -> {
                         String r;
-                        try { r = com.macdmr.radio.FirstRunCheck.listenCheck(s, 50, t -> post(() -> pd.setMessage(t))); } catch (Throwable t) { r = "failed: " + t + "\n"; }
+                        try { r = com.macdmr.radio.FirstRunCheck.listenCheck(s, 50, t -> post(() -> pd.setMessage(t)),
+                                new java.io.File(listenDir(c), com.macdmr.radio.DeviceReport.STATION_CLIP), 20000, true); }   // up to 20 s, only while something is heard
+                        catch (Throwable t) { r = "failed: " + t + "\n"; }
                         final String result = part1 + "\npart 2 (station, normal squelch, 50 s):\n" + r;
                         post(() -> {
                             pd.dismiss();
                             final String[] answers = { "Yes, clearly", "Yes, but distorted, choppy or too quiet", "No sound at all", "Nobody was talking" };
                             new android.app.AlertDialog.Builder(c).setTitle("Did you hear the station?").setCancelable(false)
                                     .setItems(answers, (dd, w) -> new Thread(() -> {
-                                        com.macdmr.radio.DeviceReport.currentOrNew(c);             // never into an old, unrelated report
+                                        java.io.File rep = com.macdmr.radio.DeviceReport.currentOrNew(c);             // never into an old, unrelated report
+                                        if (rep != null) for (java.io.File w2 : new java.io.File[] { new java.io.File(listenDir(c), "listen_static.wav"), new java.io.File(listenDir(c), com.macdmr.radio.DeviceReport.STATION_CLIP) })
+                                            if (w2.length() > 44) { com.macdmr.radio.DeviceReport.copyFile(w2, new java.io.File(rep, w2.getName())); w2.delete(); }
                                         com.macdmr.radio.DeviceReport.append("Listen check", result + "owner's answer: " + answers[w] + "\n");
                                         c.getSharedPreferences("radio", Context.MODE_PRIVATE).edit().putLong("supportListen", System.currentTimeMillis()).apply();
                                         post(() -> new android.app.AlertDialog.Builder(c).setTitle("Listen check saved")
@@ -587,7 +592,19 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
     private void shareReport() {
         new android.app.AlertDialog.Builder(getContext()).setTitle("Share the device report")
                 .setMessage("The report holds phone model and build facts, serial-port and radio-module node names, the walkie-talkie app's package details, library and framework file names, running radio processes, and (with root) SELinux labels and short radio-related log excerpts with message text removed and long numbers masked. After Run all checks it also holds SignalDeck's own log (packet, position, message and caller lines removed; callsigns and IDs masked) and, after the trial, a 5-second raw copy of what the radio received (rx_audio_raw.bin: whatever the channel carried). No accounts, contacts, messages, location or identifiers such as IMEI.\n\nThe copied stock walkie-talkie APK is the manufacturer's software: include it if you are comfortable posting it, or share without it (we can ask for it privately).")
-                .setPositiveButton("Share all", (dd, w) -> shareZip(true)).setNeutralButton("Without the APK", (dd, w) -> shareZip(false)).setNegativeButton("Cancel", null).show();
+                .setPositiveButton("Share all", (dd, w) -> askStation(true)).setNeutralButton("Without the APK", (dd, w) -> askStation(false)).setNegativeButton("Cancel", null).show();
+    }
+
+    private static java.io.File listenDir(Context c) { java.io.File d = new java.io.File(c.getCacheDir(), "listen"); d.mkdirs(); return d; }
+
+    /** The listen check's station recording may hold other people's voices: only with the owner's yes (default: leave it out). */
+    private void askStation(final boolean withApks) {
+        java.io.File dir = com.macdmr.radio.DeviceReport.newestDir();
+        if (dir == null || !new java.io.File(dir, com.macdmr.radio.DeviceReport.STATION_CLIP).exists()) { shareZip(withApks, false); return; }
+        final boolean[] include = { false };
+        new android.app.AlertDialog.Builder(getContext()).setTitle("Include the station recording?")
+                .setSingleChoiceItems(new String[] { "Leave it out", "Include it (up to 20 s of what the station sent; it may contain other people's voices)" }, 0, (dd, w) -> include[0] = w == 1)
+                .setPositiveButton("Share", (dd, w) -> shareZip(withApks, include[0])).setNegativeButton("Cancel", null).show();
     }
 
     private void captureKeys() {
@@ -601,9 +618,9 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
                 .setPositiveButton("Probe", (dd, w) -> runProbe(false)).setNeutralButton(svc != null && svc.profile().supported ? "Probe + power pulse" : null, (dd, w) -> runProbe(true)).setNegativeButton("Cancel", null).show();
     }
 
-    private void shareZip(final boolean withApks) {
+    private void shareZip(final boolean withApks, final boolean withStation) {
         final Context c = getContext();
-        new Thread(() -> { try { final java.io.File zip = com.macdmr.radio.DeviceReport.zipNewest(c, withApks); post(() -> com.macdmr.radio.DeviceReport.share(c, zip)); } catch (Throwable t) { post(() -> android.widget.Toast.makeText(c, "No report yet: generate one first", android.widget.Toast.LENGTH_LONG).show()); } }).start();
+        new Thread(() -> { try { final java.io.File zip = com.macdmr.radio.DeviceReport.zipNewest(c, withApks, withStation); post(() -> com.macdmr.radio.DeviceReport.share(c, zip)); } catch (Throwable t) { post(() -> android.widget.Toast.makeText(c, "No report yet: generate one first", android.widget.Toast.LENGTH_LONG).show()); } }).start();
     }
 
     private void runProbe(boolean pulse) {

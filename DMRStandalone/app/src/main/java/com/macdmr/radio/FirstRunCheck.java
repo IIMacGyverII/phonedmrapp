@@ -82,11 +82,16 @@ public final class FirstRunCheck {
      * stations are heard there, record for {@code seconds} the signal strength, how much of the time something was heard
      * and how much audio arrived. The owner's answer ("did you hear it?") is added by the caller.
      */
-    public static String listenCheck(RadioService svc, int seconds, Progress p) throws InterruptedException {
+    public static String listenCheck(RadioService svc, int seconds, Progress p) throws InterruptedException { return listenCheck(svc, seconds, p, null, 0, false); }
+
+    /** As above, recording up to {@code clipMs} of the received audio into {@code clipFile} (only while heard, if asked). */
+    public static String listenCheck(RadioService svc, int seconds, Progress p, File clipFile, int clipMs, boolean onlyHeard) throws InterruptedException {
         StringBuilder r = new StringBuilder();
         ChannelStore.Channel ch = svc.current();
         if (!svc.isReady() || ch == null) return "not run: SignalDeck does not own the radio or no channel is selected\n";
         r.append(String.format(Locale.US, "channel: %s, %s MHz, %s\n", ch.name, ch.freqText(ch.rxFreq), ch.isDigital() ? "DMR" : "analog FM"));
+        ClipRecorder clip = null;
+        if (clipFile != null) try { clipFile.getParentFile().mkdirs(); clip = new ClipRecorder(clipFile, clipMs); svc.recordClip(clip, onlyHeard); } catch (Throwable t) { r.append("recording failed: ").append(t).append('\n'); }
         long bytes0 = svc.rxAudioBytes(), t0 = System.currentTimeMillis();
         int samples = 0, heard = 0, rmin = 0, rmax = -999; StringBuilder rs = new StringBuilder();
         while (System.currentTimeMillis() - t0 < seconds * 1000L) {
@@ -97,6 +102,7 @@ public final class FirstRunCheck {
             p.step(String.format(Locale.US, "Listening: %d of %d s, something heard %d s", samples, seconds, heard));
         }
         long bytes = svc.rxAudioBytes() - bytes0;
+        if (clip != null) { svc.recordClip(null, false); clip.finish(); r.append("recording ").append(clip.stats()).append(onlyHeard ? " (only while something was heard)" : "").append('\n'); }
         r.append(String.format(Locale.US, "something heard in %d of %d seconds; signal %d … %d dBm\n", heard, samples, rmin, rmax));
         r.append("signal each second (* = heard): ").append(rs.toString().trim()).append('\n');
         r.append(String.format(Locale.US, "receive audio: %d bytes in %d s%s\n", bytes, seconds, svc.audioStats().isEmpty() ? "" : " (" + svc.audioStats() + ")"));

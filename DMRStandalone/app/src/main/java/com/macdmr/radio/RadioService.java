@@ -807,6 +807,8 @@ public class RadioService extends Service implements RadioEngine.Events {
         if (open != squelchOpen && softSq.isEnabled()) { softGateHistory(open); squelchOpen = open; pushModes(); }   // pages see the gate (activity box, Soft SQ number colour)
         squelchOpen = open;
         if (web != null && open && !muted && !pttDown) web.rxAudio(mono, n);      // SignalDeck Web listeners hear what the speaker plays
+        ClipRecorder clip = this.clip;                                            // listen check: what arrived, before the speaker
+        if (clip != null && (!clipOnlyHeard || rxActive()) && !clip.write(mono, n)) this.clip = null;
         int peak = 0;
         if (open) for (int i = 0; i + 1 < n; i += 2) { int v = Math.abs((short) ((mono[i] & 0xFF) | (mono[i + 1] << 8))); if (v > peak) peak = v; }
         if (captionsOn && open) {
@@ -1413,6 +1415,10 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     /** First-run check: bytes the receive audio path has delivered, and a raw copy of the next few seconds (UART PCM phones). */
     private volatile long rxPcmBytes;
+    private volatile ClipRecorder clip; private volatile boolean clipOnlyHeard;
+    /** Record the received audio into a WAV clip (null stops); {@code onlyHeard}: only while something is being heard. */
+    public void recordClip(ClipRecorder c, boolean onlyHeard) { ClipRecorder old = clip; clipOnlyHeard = onlyHeard; clip = c; if (old != null && old != c) old.finish(); }
+
     public String audioStats() { AudioBackend a = audio; return a instanceof UartPcmAudio ? ((UartPcmAudio) a).frameStats() : ""; }
     public byte[] rxAudioHead() { AudioBackend a = audio; return a instanceof UartPcmAudio ? ((UartPcmAudio) a).head() : null; }
     public long rxAudioBytes() { AudioBackend a = audio; return a instanceof UartPcmAudio ? ((UartPcmAudio) a).rxBytes() : rxPcmBytes; }
