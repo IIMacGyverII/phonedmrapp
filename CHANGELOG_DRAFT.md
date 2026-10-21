@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-21 — SignalDeck Web: phone-width fixes
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | At phone width the settings-row field rule stretched checkboxes (voice keyer "Morse ID after it" took a whole row); rows now wrap with full-width fields and normal checkboxes. The scrolling tab bar now scrolls the current page's tab into view. Fox transmitter text tidied. | `assets/web/app.css`, `app.js`, `pages.js` | Headless Chrome at 390 px: no page wider than the screen (Intercom, Channels, Packet, Settings, Logbook, Exam), keyer rows and the centred Packet tab checked on a screenshot. |
+
 ## 2026-10-21 — SignalDeck Web: talk with the computer's microphone (HTTPS + WebSocket)
 
 | Backlog | Change | Files | Test |

@@ -335,7 +335,7 @@ async function loadPacket() {
     const sw = (key, label, sub, on) => '<div class="set"><div class="main"><div>' + esc(label) + '</div><div class="sub">' + esc(sub) + '</div></div><button type="button" class="switch' + (on ? ' on' : '') + '" data-tool="' + key + '" role="switch" aria-checked="' + on + '" aria-label="' + esc(label) + '"></button></div>';
     $('pktTools').innerHTML = sw('is', 'APRS-IS', 'Internet gateway: ' + t.isStatus, t.is) + sw('kiss', 'KISS TNC', t.kiss ? (t.kissClient ? 'A client is connected' : 'Waiting for a client on port ' + st.kissPort) : 'For APRSdroid, YAAC and other packet programs (TCP port ' + st.kissPort + ')', t.kiss)
       + sw('parrot', 'Parrot repeater', 'Plays back what it hears on this channel (needs transmit)', t.parrot)
-      + sw('fox', 'Fox transmitter', 'Be the fox: a short tone beacon repeating on this channel (with your Morse ID on amateur bands) (needs transmit). Hunting is done on the phone', t.fox);
+      + sw('fox', 'Fox transmitter', 'Be the fox: a short tone beacon repeating on this channel, with your Morse ID on amateur bands. Needs transmit; the hunt itself is done on the phone', t.fox);
     $('cwIdBtn').disabled = $('dtmfForm').querySelector('button').disabled = !t.webTx;
     $('dtmfSaved').innerHTML = (j.dtmfSaved || []).map(d => '<button type="button" data-seq="' + esc(d.code) + '">' + esc(d.name + ' · ' + d.code) + '</button>').join('');
     $('dtmfLog').innerHTML = j.dtmf.map(d => '<div class="item"><span class="t">' + hhmmss(d.ts) + '</span><div class="main mono">' + esc(d.digits) + '<div class="sub">' + esc(d.channelName || ('Channel ' + d.channel)) + '</div></div></div>').join('') || '<div class="empty">No DTMF heard yet</div>';
