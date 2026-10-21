@@ -162,10 +162,13 @@ async function loadChannels() { try { const j = await api('channels'); S.channel
 function renderChannels() {
   const q = $('chSearch').value.trim().toLowerCase(); const cur = (S.status.channel || {}).number;
   const rows = S.channels.filter(c => !q || (c.name || '').toLowerCase().includes(q) || mhz(c.rxFreq).includes(q) || String(c.number) === q);
-  $('chList').innerHTML = rows.map(c => '<div class="item click' + (c.number === cur ? ' cur' : '') + '" data-n="' + c.number + '"><span class="n">' + c.number + '</span><div class="main"><div>' + esc(c.name || '—') + '</div><div class="sub mono">' + mhz(c.rxFreq) + ' MHz · ' + (c.digital ? 'DMR CC' + c.cc : 'FM') + '</div></div></div>').join('') || '<div class="empty">No channels</div>';
+  $('chList').innerHTML = rows.map(c => '<div class="item click' + (c.number === cur ? ' cur' : '') + '" data-n="' + c.number + '"><span class="n">' + c.number + '</span><div class="main"><div>' + esc(c.name || '—') + '</div><div class="sub mono">' + mhz(c.rxFreq) + ' MHz · ' + (c.digital ? 'DMR CC' + c.cc : 'FM') + '</div></div><button type="button" class="act" data-edit="' + c.number + '">Edit</button></div>').join('') || '<div class="empty">No channels</div>';
 }
 $('chSearch').oninput = renderChannels;
-$('chList').onclick = e => { const it = e.target.closest('.item'); if (it) act('channel/select', { number: +it.dataset.n }); };
+$('chList').onclick = e => {
+  const ed = e.target.closest('[data-edit]'); if (ed) { openEditor(+ed.dataset.edit); return; }
+  const it = e.target.closest('.item'); if (it) act('channel/select', { number: +it.dataset.n });
+};
 
 // ---- APRS ----
 async function loadAprs() {

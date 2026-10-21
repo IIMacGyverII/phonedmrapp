@@ -35,6 +35,13 @@ public class ChannelEditorView extends LinearLayout {
     private LinearLayout digitalGroup, analogGroup;
 
     private static final String[] TONE_TYPES = { "None", "CTCSS", "DCS" };
+    /** The field help texts, for SignalDeck Web's channel editor: {key, text}. */
+    public static String[][] helpForWeb() {
+        return new String[][] { { "name", H_NAME }, { "type", H_TYPE }, { "tx", H_TX }, { "rx", H_RX }, { "pos", H_POS }, { "power", H_POWER }, { "band", H_BAND },
+                { "relay", H_RELAY }, { "cc", H_CC }, { "mode", H_MODE }, { "slot", H_SLOT }, { "contactType", H_CTYPE }, { "call", H_CALL }, { "groups", H_GROUPS },
+                { "encrypt", H_ENC }, { "key", H_KEY }, { "interrupt", H_INT }, { "sq", H_SQ }, { "softSq", H_SOFTSQ }, { "softSqLevel", H_SOFTSQ_LVL },
+                { "txType", H_TXT }, { "txTone", H_TXC }, { "rxType", H_RXT }, { "rxTone", H_RXC } };
+    }
 
     // ---- field help (what each setting does on this radio) ----
     private static final String H_NAME = "Shown on the intercom, in the channel list and in voice announcements.";

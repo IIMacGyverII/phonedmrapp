@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — SignalDeck Web: channel editor
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Web Channels page: Edit on every row and New channel open an editor with every field of the phone's (name, type, frequencies, power, relay; DMR colour code, mode, slot, contact type, call number, RX group list, encrypt + key, interrupt; FM band, Soft SQ + level, squelch, CTCSS/DCS on both sides; position), each with the phone's own i explanation (`ChannelEditorView.helpForWeb`). The checks are the phone editor's, run on the phone (`WebHost.applyChannel`): 136–174/400–480 MHz, ±90/±180, ≤32 talkgroups with the call number added for group calls, 8-character key when encryption is on, VHF always saved wide. The encrypt key is never sent to the browser (only whether one is set; leave the field empty to keep it). Tune and Delete (with a confirmation) from the editor. API `/api/channel`, `/api/channel/save`, `/api/channel/delete`. | `assets/web/editor.js`, `index.html`, `app.js`, `app.css`, `web/WebHost.java`, `ui/ChannelEditorView.java`, `ui/HelpView.java` | On the phone over Wi-Fi: 500 MHz refused, encryption without key refused, a WEBTEST channel saved (VHF sent narrow came back wide, CTCSS 97.4 Hz kept), read back and deleted; editor rendered with 16 analog fields and working i tips in headless Chrome. |
+
 ## 2026-10-20 — SignalDeck Web: Messages, Contacts, Map and Help pages
 
 | Backlog | Change | Files | Test |

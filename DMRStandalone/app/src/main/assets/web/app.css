@@ -129,6 +129,24 @@ input:not([type]), input[type=text] { padding: 10px 12px; border-radius: 10px; b
 .form input, .form select { width: 100%; }
 .chk { display: flex; gap: 6px; align-items: center; color: var(--muted); font-weight: 600; cursor: pointer; } .chk input { accent-color: var(--cyan); }
 
+.grid-side.wide { grid-template-columns: minmax(300px, 440px) minmax(0, 1fr); }
+@media (max-width: 900px) { .grid-side.wide { grid-template-columns: minmax(0, 1fr); } }
+.item .act { padding: 5px 10px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--cyan-light); font: 600 13px Rajdhani, sans-serif; cursor: pointer; }
+.item .act:hover { border-color: var(--cyan); }
+
+/* channel editor */
+.edform { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px 18px; margin-top: 14px; }
+.edform .sect { grid-column: 1 / -1; font: 600 12px Orbitron, sans-serif; color: var(--cyan); letter-spacing: .14em; padding-top: 8px; border-top: 1px solid var(--divider); }
+.edform .f { display: flex; flex-direction: column; gap: 5px; }
+.edform .f > span { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-weight: 600; }
+.edform input, .edform select { width: 100%; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-solid); color: var(--text); font: 500 16px Rajdhani, sans-serif; }
+.edform input:focus, .edform select:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(25,211,255,.18); }
+.info { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--cyan); font: 700 12px Orbitron, sans-serif; cursor: pointer; line-height: 1; padding: 0; }
+.info.on { background: var(--cyan); color: var(--ground); }
+.edform .tip { font-size: 14px; color: var(--cyan-light); background: rgba(25,211,255,.06); border: 1px solid var(--line-soft); border-radius: 8px; padding: 8px 10px; }
+.edform .actions { grid-column: 1 / -1; display: flex; gap: 10px; flex-wrap: wrap; padding-top: 6px; }
+.edform .note { grid-column: 1 / -1; color: var(--muted); font-size: 14px; }
+
 /* messages */
 .thread { display: flex; flex-direction: column; min-height: 520px; }
 .bubbles { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin: 12px 0; max-height: 560px; }
