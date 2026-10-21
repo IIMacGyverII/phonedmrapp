@@ -38,6 +38,13 @@ public final class VoiceKeyer {
         catch (Throwable t) { return null; }
     }
 
+    /** Store a message made elsewhere (SignalDeck Web: an uploaded file, 8 kHz mono 16-bit), cut at {@link #MAX_MS}. */
+    public synchronized void save(int slot, short[] pcm) throws java.io.IOException {
+        int n = Math.min(pcm.length, MAX_MS * SR / 1000);
+        ByteBuffer b = ByteBuffer.allocate(n * 2).order(ByteOrder.LITTLE_ENDIAN); for (int i = 0; i < n; i++) b.putShort(pcm[i]);
+        Files.write(file(slot).toPath(), b.array());
+    }
+
     /** Start recording into {@code slot} from the microphone; stops by itself at {@link #MAX_MS}. Error or null. */
     public synchronized String start(int slot, Runnable stopped) {
         if (rec != null) return "Already recording";

@@ -394,6 +394,8 @@ public final class PacketEngine {
     public void setTextTxMode(int m) { textTxMode = m; textPost(); }
     public void setTextListener(TextListener l) { textListener = l; textPost(); }
     public synchronized void textClear() { textRx.setLength(0); textPost(); }
+    /** Everything received (and sent) in the text modes so far, for SignalDeck Web. */
+    public synchronized String textReceived() { return textRx.toString(); }
     public String textStatus() {
         if (textMode == 1 && rtty != null) return rtty.locked() ? String.format(Locale.US, "RTTY: listening, mark %.0f Hz", rtty.markHz()) : "RTTY: looking for a signal";
         if (textMode == 2 && psk != null) return psk.locked() ? String.format(Locale.US, "PSK31: listening on %.1f Hz", psk.freq()) : "PSK31: looking for a signal";

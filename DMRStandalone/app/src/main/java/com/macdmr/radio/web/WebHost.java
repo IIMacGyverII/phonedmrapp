@@ -301,6 +301,14 @@ public final class WebHost {
         if (repeaterService == null) repeaterService = new com.macdmr.radio.repeaters.RepeaterService(svc, svc.store());
         return repeaterService;
     }
+    /** 8 kHz mono 16-bit samples as a WAV file. */
+    static byte[] wav(short[] pcm) {
+        java.nio.ByteBuffer b = java.nio.ByteBuffer.allocate(44 + pcm.length * 2).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+        b.put("RIFF".getBytes()).putInt(36 + pcm.length * 2).put("WAVEfmt ".getBytes()).putInt(16).putShort((short) 1).putShort((short) 1).putInt(8000).putInt(16000).putShort((short) 2).putShort((short) 16)
+                .put("data".getBytes()).putInt(pcm.length * 2);
+        for (short v : pcm) b.putShort(v);
+        return b.array();
+    }
     /** A backup folder by name, only inside Download/DMR/DMR_Backups. */
     private static File backupDir(String name) {
         if (name == null || name.isEmpty() || name.contains("/") || name.contains("\\") || name.contains("..")) return null;
@@ -633,7 +641,7 @@ public final class WebHost {
                 JSONArray al = new JSONArray();
                 for (PacketStore.Alert x : pe.store().alerts(50)) al.put(new JSONObject().put("ts", x.ts).put("event", x.event).put("summary", x.summary).put("eom", x.eom));
                 JSONObject tools = new JSONObject().put("is", pe.isEnabled()).put("isStatus", pe.isStatus()).put("kiss", pe.kiss().isActive()).put("kissClient", pe.kiss().clientConnected())
-                        .put("parrot", svc.parrot().enabled()).put("webTx", allowTx());
+                        .put("parrot", svc.parrot().enabled()).put("fox", svc.foxTxOn()).put("webTx", allowTx());
                 return ok(new JSONObject().put("settings", st).put("leadKinds", lk).put("leadChoices", lc).put("tools", tools).put("dtmf", dt).put("alerts", al)
                         .put("dtmfSaved", new JSONArray(pp.getString("dtmfSaved", "[]"))));
             }
@@ -672,15 +680,17 @@ public final class WebHost {
             }
             case "/api/packet/tool": if (!post) break; {                       // {tool: is|kiss|parrot, on}
                 com.macdmr.radio.PacketEngine pe = svc.packet(); String tool = b.optString("tool", ""); boolean on = b.optBoolean("on", false);
+                if (on && (tool.equals("parrot") || tool.equals("fox")) && !allowTx()) return WebServer.Response.error(403, TX_OFF);     // both transmit
                 String msg = onMain(() -> {
                     switch (tool) {
                         case "is": if (on) { String e = pe.isStart(); return e == null ? "APRS-IS starting" : e; } pe.isStop(); return "APRS-IS off";
                         case "kiss": if (on) { String e = pe.kissStart(); return e == null ? "KISS TNC on" : e; } pe.kissStop(); return "KISS TNC off";
                         case "parrot": return svc.setParrot(on);
+                        case "fox": return svc.setFoxTx(on);
                         default: return null;
                     }
                 });
-                return msg == null ? WebServer.Response.error(400, "tool: is, kiss or parrot") : ok(msg);
+                return msg == null ? WebServer.Response.error(400, "tool: is, kiss, parrot or fox") : ok(msg);
             }
             case "/api/dtmf": if (!post) break; {
                 if (!allowTx()) return WebServer.Response.error(403, TX_OFF);
@@ -804,6 +814,68 @@ public final class WebHost {
                 long id = b.optLong("id", 0); com.macdmr.radio.ham.NetStore.Net run = svc.nets().running();
                 if (run != null && run.id == id) return WebServer.Response.error(409, "End the net first");
                 svc.nets().deleteNet(id); return ok("Net deleted");
+            }
+            case "/api/keyer": {                                                // the voice keyer's three messages and the station-ID timer
+                com.macdmr.radio.ham.VoiceKeyer k = svc.keyer();
+                if (post) {
+                    int slot = b.optInt("slot", -1); if (slot < 0 || slot >= com.macdmr.radio.ham.VoiceKeyer.SLOTS) return WebServer.Response.error(400, "slot 0 to 2");
+                    if (b.has("name")) k.setName(slot, b.getString("name").trim());
+                    if (b.has("addId")) k.setAddId(slot, b.getBoolean("addId"));
+                    if (b.optBoolean("delete", false)) k.delete(slot);
+                    if (b.optBoolean("send", false)) {
+                        if (!allowTx()) return WebServer.Response.error(403, TX_OFF);
+                        String e = onMain(() -> svc.sendKeyer(slot)); if (e != null) return WebServer.Response.error(409, e);
+                    }
+                }
+                JSONArray a = new JSONArray();
+                for (int i = 0; i < com.macdmr.radio.ham.VoiceKeyer.SLOTS; i++) a.put(new JSONObject().put("name", k.name(i)).put("has", k.has(i)).put("ms", k.lengthMs(i)).put("addId", k.addId(i)));
+                long due = svc.idDueInMs();
+                return ok(new JSONObject().put("slots", a).put("idDueMs", due == Long.MAX_VALUE ? null : due).put("webTx", allowTx()));
+            }
+            case "/api/keyer/audio": {                                          // GET ?slot= : the message as WAV; POST ?slot= : raw 8 kHz mono s16le body
+                int slot = parse(r.param("slot"), -1); if (slot < 0 || slot >= com.macdmr.radio.ham.VoiceKeyer.SLOTS) return WebServer.Response.error(400, "slot 0 to 2");
+                if (post) {
+                    if (r.body.length < 1600) return WebServer.Response.error(400, "That recording is too short");
+                    short[] pcm = new short[r.body.length / 2]; java.nio.ByteBuffer.wrap(r.body).order(java.nio.ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(pcm);
+                    svc.keyer().save(slot, pcm);
+                    return ok("Saved " + svc.keyer().name(slot) + String.format(java.util.Locale.US, " (%.1f s)", Math.min(pcm.length, 200_000) / 8000.0));
+                }
+                short[] p0 = svc.keyer().pcm(slot); if (p0 == null || p0.length == 0) return WebServer.Response.error(404, "Nothing recorded");
+                return WebServer.Response.bytes("audio/wav", wav(p0));
+            }
+            case "/api/textmodes": {                                            // RTTY / PSK31: GET state + text; POST {mode?, txMode?, clear?, send?}
+                com.macdmr.radio.PacketEngine pe = svc.packet();
+                if (post) {
+                    if (b.has("send")) {
+                        if (!allowTx()) return WebServer.Response.error(403, TX_OFF);
+                        String e = onMain(() -> pe.textSend(b.getString("send")));
+                        if (e != null) return WebServer.Response.error(409, e);
+                    }
+                    onMain(() -> {
+                        if (b.has("mode")) pe.setTextMode(Math.max(0, Math.min(2, b.getInt("mode"))));
+                        if (b.has("txMode")) pe.setTextTxMode(b.getInt("txMode") == 1 ? 1 : 2);
+                        if (b.optBoolean("clear", false)) pe.textClear();
+                        return null;
+                    });
+                }
+                JSONArray modes = new JSONArray(); for (String m : com.macdmr.radio.PacketEngine.TEXT_MODES) modes.put(m);
+                return ok(new JSONObject().put("mode", pe.textMode()).put("txMode", pe.textTxMode()).put("status", pe.textStatus()).put("text", pe.textReceived()).put("modes", modes).put("webTx", allowTx()));
+            }
+            case "/api/terminal": {                                             // AX.25 connected-mode terminal: GET transcript; POST {connect, via} | {send} | {disconnect} | {accept}
+                com.macdmr.radio.PacketEngine pe = svc.packet();
+                if (post) {
+                    boolean tx = b.has("connect") || b.has("send") || (b.has("accept") && b.getBoolean("accept"));
+                    if (tx && !allowTx()) return WebServer.Response.error(403, TX_OFF);
+                    String e = onMain(() -> {
+                        if (b.has("connect")) return pe.terminalConnect(b.getString("connect"), b.optString("via", ""));
+                        if (b.has("send")) return pe.terminalSend(b.getString("send"));
+                        if (b.optBoolean("disconnect", false)) { pe.terminalDisconnect(); return null; }
+                        if (b.has("accept")) { pe.setAcceptConnections(b.getBoolean("accept")); return null; }
+                        return null;
+                    });
+                    if (e != null) return WebServer.Response.error(409, e);
+                }
+                return ok(new JSONObject().put("state", pe.terminalState()).put("transcript", pe.transcriptText()).put("accept", pe.acceptConnections()).put("callsignSet", pe.callsignSet()).put("webTx", allowTx()));
             }
             case "/api/coverage": {                                             // measured coverage cells: rx (median signal) or tx (keyed / no reply)
                 boolean tx = "tx".equals(r.param("layer"));

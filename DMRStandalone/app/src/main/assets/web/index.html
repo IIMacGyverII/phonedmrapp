@@ -245,11 +245,22 @@
         <div>
           <div class="panel"><span class="label">TOOLS</span><div id="pktTools"></div>
             <div class="row" style="margin-top:12px"><button class="btn" id="cwIdBtn">Send Morse ID</button></div></div>
+          <div class="panel"><div class="row between wrap"><span class="label">VOICE KEYER</span><span id="idTimer" class="chip dim"></span></div><div id="keyerList"></div>
+            <p class="muted small">Upload a recording (any audio file; it is converted to the radio's 8 kHz and cut at 25 s), play it here, then Send it on the current analog channel. Messages recorded on the phone show up here too.</p></div>
           <div class="panel"><span class="label">DTMF</span>
             <form id="dtmfForm" class="row" style="margin-top:12px"><input id="dtmfSeq" placeholder="Digits (0-9, A-D, *, #)" maxlength="32" class="grow mono"><button class="btn primary">Send</button></form>
             <div id="dtmfSaved" class="quick" style="margin-top:10px"></div>
             <div id="dtmfLog" class="list small"></div></div>
           <div class="panel"><span class="label">WEATHER ALERTS (SAME)</span><div id="alertList" class="list small"></div></div>
+          <div class="panel"><div class="row between wrap"><span class="label">TEXT MODES</span><span id="tmStatus" class="chip dim"></span></div>
+            <div class="row wrap" style="margin-top:10px"><select id="tmMode" aria-label="Listen"></select><select id="tmTx" aria-label="Send as"><option value="2">Send as PSK31</option><option value="1">Send as RTTY 45</option></select><button class="btn small-btn" id="tmClear">Clear</button></div>
+            <pre id="tmText" class="term"></pre>
+            <form id="tmForm" class="row"><input id="tmLine" placeholder="Text to send" class="grow"><button class="btn primary">Send</button></form></div>
+          <div class="panel"><div class="row between wrap"><span class="label">PACKET TERMINAL</span><span id="trState" class="chip dim"></span></div>
+            <form id="trConnect" class="row wrap" style="margin-top:10px"><input id="trCall" placeholder="BBS or node (N0ABC-1)" style="text-transform:uppercase"><input id="trVia" placeholder="via (optional, up to 2)" style="text-transform:uppercase" class="grow"><button class="btn primary">Connect</button><button type="button" class="btn" id="trDisc">Disconnect</button></form>
+            <label class="chk" style="margin-top:8px"><input type="checkbox" id="trAccept"> Accept incoming connections</label>
+            <pre id="trText" class="term"></pre>
+            <form id="trForm" class="row"><input id="trLine" placeholder="Command or text" class="grow mono"><button class="btn primary">Send</button></form></div>
         </div>
         <div class="panel"><span class="label">APRS SETTINGS</span><form id="aprsSet" class="edform" autocomplete="off"></form></div>
       </div>

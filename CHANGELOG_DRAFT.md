@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-21 — SignalDeck Web: voice keyer, text modes, packet terminal, fox transmitter
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Packet page gains the remaining transmit tools, every transmit action behind *Allow transmit from the web*: **Voice keyer** (the phone's three messages: rename, Morse ID after it, upload any audio file — decoded and resampled to 8 kHz mono and normalised in the browser, cut at 25 s, stored with the new `VoiceKeyer.save` — play as WAV, Send through the phone's `sendKeyer`, delete; the station-ID timer), **Text modes** (listen for RTTY 45 / PSK31, the decoded text live, send as PSK31 or RTTY; `PacketEngine.textReceived()` added so a browser can read the text without taking the phone dialog's listener), **Packet terminal** (connect with up to two digipeaters, send, disconnect, accept incoming connections), **Fox transmitter** switch (hunting stays on the phone: it is done walking). The parrot repeater switch now also needs the transmit permission (it transmits). API `/api/keyer`, `/api/keyer/audio`, `/api/textmodes`, `/api/terminal`, `/api/packet/tool` + fox. | `web/WebHost.java`, `ham/VoiceKeyer.java`, `PacketEngine.java`, `assets/web/pages.js`, `index.html`, `app.js`, `app.css`, `ui/HelpView.java` | On the phone over Wi-Fi with transmit off: a 2 s 44.1 kHz test tone uploaded into an empty keyer slot (stored 2.0 s at 8 kHz, read back as WAV), Send refused (403), slot deleted; PSK31 listening switched on ("looking for a signal") and back off; text send, terminal connect and accept-incoming refused (403). **Not yet tested on air:** keyer send, text-mode send, terminal session, fox beacon from the web. |
+
 ## 2026-10-20 — SignalDeck Web: coverage maps on the web map
 
 | Backlog | Change | Files | Test |

@@ -334,7 +334,8 @@ async function loadPacket() {
     const j = await api('packet'); S.pkt = j; const t = j.tools, st = j.settings;
     const sw = (key, label, sub, on) => '<div class="set"><div class="main"><div>' + esc(label) + '</div><div class="sub">' + esc(sub) + '</div></div><button type="button" class="switch' + (on ? ' on' : '') + '" data-tool="' + key + '" role="switch" aria-checked="' + on + '" aria-label="' + esc(label) + '"></button></div>';
     $('pktTools').innerHTML = sw('is', 'APRS-IS', 'Internet gateway: ' + t.isStatus, t.is) + sw('kiss', 'KISS TNC', t.kiss ? (t.kissClient ? 'A client is connected' : 'Waiting for a client on port ' + st.kissPort) : 'For APRSdroid, YAAC and other packet programs (TCP port ' + st.kissPort + ')', t.kiss)
-      + sw('parrot', 'Parrot repeater', 'Plays back what it hears on this channel (needs transmit)', t.parrot);
+      + sw('parrot', 'Parrot repeater', 'Plays back what it hears on this channel (needs transmit)', t.parrot)
+      + sw('fox', 'Fox transmitter', 'Be the fox: a short tone beacon repeating on this channel (with your Morse ID on amateur bands) (needs transmit). Hunting is done on the phone', t.fox);
     $('cwIdBtn').disabled = $('dtmfForm').querySelector('button').disabled = !t.webTx;
     $('dtmfSaved').innerHTML = (j.dtmfSaved || []).map(d => '<button type="button" data-seq="' + esc(d.code) + '">' + esc(d.name + ' · ' + d.code) + '</button>').join('');
     $('dtmfLog').innerHTML = j.dtmf.map(d => '<div class="item"><span class="t">' + hhmmss(d.ts) + '</span><div class="main mono">' + esc(d.digits) + '<div class="sub">' + esc(d.channelName || ('Channel ' + d.channel)) + '</div></div></div>').join('') || '<div class="empty">No DTMF heard yet</div>';
@@ -412,6 +413,76 @@ async function loadHeard() {
 }
 $('heardRefresh').onclick = loadHeard;
 $('heardList').onclick = e => { const it = e.target.closest('.item.click'); if (it && confirm('Tune channel ' + it.dataset.ch + '?')) act('channel/select', { number: +it.dataset.ch }); };
+
+// ---- voice keyer ----
+async function loadKeyer() {
+  try {
+    const j = await api('keyer'); S.keyer = j;
+    const due = j.idDueMs; $('idTimer').textContent = due == null ? 'ID TIMER IDLE' : due <= 0 ? 'STATION ID DUE NOW' : 'ID DUE IN ' + Math.ceil(due / 60000) + ' MIN';
+    $('idTimer').className = 'chip ' + (due != null && due <= 0 ? 'amber' : 'dim');
+    $('keyerList').innerHTML = j.slots.map((k, i) => '<div class="set"><div class="main"><input data-kname="' + i + '" value="' + esc(k.name) + '" maxlength="24" style="width:180px"> <span class="sub">' + (k.has ? (k.ms / 1000).toFixed(1) + ' s' : 'empty') + '</span>'
+      + '<label class="chk" style="margin-top:6px"><input type="checkbox" data-kid="' + i + '"' + (k.addId ? ' checked' : '') + '> Morse ID after it</label></div>'
+      + '<div class="row wrap"><label class="btn small-btn">Upload<input type="file" accept="audio/*" data-kup="' + i + '" hidden></label>'
+      + (k.has ? '<button class="btn small-btn" data-kplay="' + i + '">▶ Play</button><button class="btn small-btn primary" data-ksend="' + i + '"' + (j.webTx ? '' : ' disabled') + '>Send</button><button class="btn small-btn danger" data-kdel="' + i + '">Delete</button>' : '') + '</div></div>').join('');
+  } catch (e) { }
+}
+/** Any audio file → 8 kHz mono 16-bit little-endian, at most 25 s. */
+async function toKeyerPcm(file) {
+  const buf = await file.arrayBuffer();
+  const dec = await new (window.AudioContext || window.webkitAudioContext)().decodeAudioData(buf);
+  const secs = Math.min(25, dec.duration); const off = new OfflineAudioContext(1, Math.ceil(secs * 8000), 8000);
+  const src = off.createBufferSource(); src.buffer = dec; src.connect(off.destination); src.start();
+  const out = await off.startRendering(); const f = out.getChannelData(0);
+  let peak = 0; for (const v of f) peak = Math.max(peak, Math.abs(v)); const g = peak > 0 ? Math.min(4, 0.9 / peak) : 1;   // normalise quiet recordings
+  const dv = new DataView(new ArrayBuffer(f.length * 2)); for (let i = 0; i < f.length; i++) dv.setInt16(i * 2, Math.max(-32768, Math.min(32767, Math.round(f[i] * g * 32767))), true);
+  return dv.buffer;
+}
+let keyerAudio = null;
+$('keyerList').addEventListener('change', async e => {
+  const t = e.target;
+  if (t.dataset.kname) act('keyer', { slot: +t.dataset.kname, name: t.value });
+  if (t.dataset.kid) act('keyer', { slot: +t.dataset.kid, addId: t.checked });
+  if (t.dataset.kup && t.files[0]) {
+    try {
+      const pcm = await toKeyerPcm(t.files[0]);
+      const r = await fetch('/api/keyer/audio?slot=' + t.dataset.kup, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: pcm });
+      const j = await r.json(); toast(r.ok ? j.message : j.error); loadKeyer();
+    } catch (err) { toast('Could not read that file: ' + err.message); }
+  }
+});
+$('keyerList').addEventListener('click', async e => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.kplay) { if (keyerAudio) keyerAudio.pause(); keyerAudio = new Audio('/api/keyer/audio?slot=' + t.dataset.kplay + '&t=' + Date.now()); keyerAudio.play().catch(() => {}); }
+  if (t.dataset.ksend) act('keyer', { slot: +t.dataset.ksend, send: true });
+  if (t.dataset.kdel && confirm('Delete ' + S.keyer.slots[+t.dataset.kdel].name + '?')) { await act('keyer', { slot: +t.dataset.kdel, delete: true }); loadKeyer(); }
+});
+
+// ---- text modes (RTTY / PSK31) and the packet terminal, refreshed while the Packet page is open ----
+function setTerm(el, text) { const atEnd = el.scrollTop + el.clientHeight >= el.scrollHeight - 20; if (el.textContent !== text) { el.textContent = text; if (atEnd) el.scrollTop = el.scrollHeight; } }
+async function pollPacketTools() {
+  if (S.page !== 'pkt') return;
+  try {
+    const [t, r] = await Promise.all([api('textmodes'), api('terminal')]);
+    if (!$('tmMode').options.length) $('tmMode').innerHTML = t.modes.map((m, i) => '<option value="' + i + '">' + (i ? 'Listen: ' + esc(m) : 'Not listening') + '</option>').join('');
+    if (document.activeElement !== $('tmMode')) $('tmMode').value = t.mode;
+    if (document.activeElement !== $('tmTx')) $('tmTx').value = t.txMode;
+    $('tmStatus').textContent = t.status.toUpperCase(); setTerm($('tmText'), t.text || '');
+    $('tmForm').querySelector('button').disabled = !t.webTx;
+    $('trState').textContent = r.state.toUpperCase(); $('trState').className = 'chip ' + (/^connected/.test(r.state) ? 'green' : 'dim');
+    $('trAccept').checked = r.accept; $('trAccept').disabled = !r.webTx && !r.accept;
+    $('trConnect').querySelector('button').disabled = $('trForm').querySelector('button').disabled = !r.webTx || !r.callsignSet;
+    setTerm($('trText'), r.transcript || (r.callsignSet ? '' : 'Set your callsign in the APRS settings first.'));
+  } catch (e) { }
+}
+setInterval(pollPacketTools, 1000);
+$('tmMode').onchange = () => act('textmodes', { mode: +$('tmMode').value });
+$('tmTx').onchange = () => act('textmodes', { txMode: +$('tmTx').value });
+$('tmClear').onclick = () => act('textmodes', { clear: true });
+$('tmForm').addEventListener('submit', async e => { e.preventDefault(); if (await act('textmodes', { send: $('tmLine').value })) $('tmLine').value = ''; });
+$('trConnect').addEventListener('submit', e => { e.preventDefault(); act('terminal', { connect: $('trCall').value.trim(), via: $('trVia').value.trim() }); });
+$('trDisc').onclick = () => act('terminal', { disconnect: true });
+$('trAccept').onchange = () => act('terminal', { accept: $('trAccept').checked });
+$('trForm').addEventListener('submit', async e => { e.preventDefault(); if (await act('terminal', { send: $('trLine').value })) $('trLine').value = ''; });
 
 // ---- settings ----
 async function loadSettings() { try { renderSettings(await api('settings')); } catch (e) { } }

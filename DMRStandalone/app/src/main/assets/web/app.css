@@ -219,6 +219,8 @@ a.btn, a.act { text-decoration: none; display: inline-block; }
 #exNext { margin-top: 12px; }
 .mtcopy { width: 100%; min-height: 110px; margin: 12px 0; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-solid); color: var(--text); font-size: 20px; letter-spacing: .15em; text-transform: uppercase; }
 
+.term { height: 220px; overflow-y: auto; margin: 10px 0; padding: 10px 12px; border-radius: 10px; background: #03070c; border: 1px solid var(--line-soft); color: #9ff3c2; font: 14px/1.4 ShareTech, monospace; white-space: pre-wrap; word-break: break-word; }
+
 /* settings */
 .set { display: flex; gap: 14px; align-items: center; justify-content: space-between; padding: 12px 4px; border-bottom: 1px solid var(--divider); }
 .set .main { flex: 1; min-width: 0; } .set .sub { color: var(--muted); font-size: 14px; }
