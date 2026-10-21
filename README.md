@@ -6,7 +6,7 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
 **Status**: ✅ **FULLY FUNCTIONAL** - RadioID Caller Lookup + Export/Import + GPS + Zones + Transcription + APRS + VFO + SSTV + NOAA APT!
 
-> **🧪 New: SignalDeck 1.0.0-beta.1** (October 21, 2026) - the standalone app as a public **beta for testing** (root required, bugs expected) - see [SignalDeck](#-signaldeck--the-standalone-app-public-beta-100-beta1) and the [pre-release](https://github.com/IIMacGyverII/phonedmrapp/releases/tag/signaldeck-v1.0.0-beta.1)  
+> **🧪 New: SignalDeck 1.0.0-beta.2** (October 21, 2026) - the standalone app as a public **beta for testing** (root required, bugs expected) - see [SignalDeck](#-signaldeck--the-standalone-app-public-beta) and the [pre-release](https://github.com/IIMacGyverII/phonedmrapp/releases/tag/signaldeck-v1.0.0-beta.2)  
 > **🚀 Current Stable Module Release: v4.1.4** (October 20, 2026) - standard packet lead-in (HDLC flags, after v4.1.2 beacon fixes + APRS TX log and v4.1.3 APRS transmit power); see the [releases](https://github.com/IIMacGyverII/phonedmrapp/releases/latest) and [`CHANGELOG_DRAFT.md`](CHANGELOG_DRAFT.md)  
 > **📦 Prior Release: v4.1.1** (October 19, 2026) - APRS transmit fixes (CALL-SSID callsign split, no packets over DMR, TX audio follows the recorder format). Built on v4.1.0: **Packet radio on air**: APRS TX/RX (messages, beacon, KISS TNC, digipeater, APRS-IS iGate), SSTV send, NOAA SAME weather alerts, DTMF send/decode, CTCSS tone decoder, **on-device live captions** (Vosk, no cloud) with keyword alerts, Last heard, voice announcements, channel search — 90 changes, all device-tested  
 > **🔧 Prior Stable: v4.0.0** (October 15, 2026) - Nearby Repeaters + in-app updater (no root) + on-air **group-call RX fix** + the full October correctness/diagnostics batch (channel scanner, live S-meter, in-app help) - see [What's New in v4.0.0](#whats-new-in-v400-october-15-2026) and [`CHANGELOG_DRAFT.md`](CHANGELOG_DRAFT.md)  
@@ -67,12 +67,12 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
 ---
 
-## 🧪 SignalDeck — the standalone app (public beta: 1.0.0-beta.1)
+## 🧪 SignalDeck — the standalone app (public beta)
 
 > [!WARNING]
-> **Beta, for testing only — bugs are expected.** SignalDeck needs a rooted phone and takes direct control of its radio module. It is provided as is, without warranty (GPL v3); the author is not responsible for any damage to your phone, its radio or your data, and transmitting legally is your responsibility. Read the disclaimer in the [release notes](https://github.com/IIMacGyverII/phonedmrapp/releases/tag/signaldeck-v1.0.0-beta.1) before installing.
+> **Beta, for testing only — bugs are expected.** SignalDeck needs a rooted phone and takes direct control of its radio module. It is provided as is, without warranty (GPL v3); the author is not responsible for any damage to your phone, its radio or your data, and transmitting legally is your responsibility. Read the disclaimer in the [release notes](https://github.com/IIMacGyverII/phonedmrapp/releases/tag/signaldeck-v1.0.0-beta.2) before installing.
 
-**Download:** [SignalDeck 1.0.0-beta.1 (pre-release)](https://github.com/IIMacGyverII/phonedmrapp/releases/tag/signaldeck-v1.0.0-beta.1) → `SignalDeck-1.0.0-beta.1.apk`. It is published as a GitHub *pre-release*, so the DMRModHooks module's "latest release" and its updater are unaffected; SignalDeck's own *Device → Updates* finds later test builds.
+**Download:** [SignalDeck 1.0.0-beta.2 (pre-release)](https://github.com/IIMacGyverII/phonedmrapp/releases/tag/signaldeck-v1.0.0-beta.2) → `SignalDeck-1.0.0-beta.2.apk`. It is published as a GitHub *pre-release*, so the DMRModHooks module's "latest release" and its updater are unaffected; SignalDeck's own *Device → Updates* finds later test builds.
 
 The LSPosed module hooks the Ulefone's stock walkie-talkie app, so it only ever works on the Ulefone Armor 26 Ultra. **SignalDeck** (`DMRStandalone/`, package `com.macdmr.radio`; called "DMR Radio" before 2026-10-20) drives the radio module directly instead: one shared protocol engine plus a small **device profile** per phone (serial port and its opener, audio path, power/PTT lines, PTT key broadcasts, SELinux rules). On the Armor it does everything the module does and more, tested on the phone and most of it on the air:
 
