@@ -5789,21 +5789,32 @@ public class MainHook implements IXposedHookLoadPackage {
             passiveHelp.setTextSize(12); passiveHelp.setTextColor(0xFF999999);
             mainLayout.addView(passiveHelp);
 
+            TextView kindLabel = new TextView(activity);
+            kindLabel.setText("\nPacket lead-in sound:");
+            kindLabel.setTextSize(14);
+            mainLayout.addView(kindLabel);
+            final android.widget.Spinner kindSpin = new android.widget.Spinner(activity);
+            kindSpin.setAdapter(new android.widget.ArrayAdapter<String>(activity, android.R.layout.simple_spinner_dropdown_item,
+                    new String[]{ "Tone", "Flags (standard, default)", "Silence" }));
+            kindSpin.setSelection(Math.max(0, Math.min(2, activity.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE).getInt("tx_lead_kind", 1))));
+            mainLayout.addView(kindSpin);
+
             TextView leadLabel = new TextView(activity);
-            leadLabel.setText("\nPacket lead-in (for testing):");
+            leadLabel.setText("Packet lead-in length (for testing):");
             leadLabel.setTextSize(14);
             mainLayout.addView(leadLabel);
             final android.widget.Spinner leadSpin = new android.widget.Spinner(activity);
             leadSpin.setAdapter(new android.widget.ArrayAdapter<String>(activity, android.R.layout.simple_spinner_dropdown_item,
-                    new String[]{ "1.6 s tone (default)", "1.0 s tone", "0.5 s tone", "No lead-in" }));
+                    new String[]{ "1.6 s (default)", "1.0 s", "0.5 s", "No lead-in" }));
             int curLead = activity.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE).getInt("tx_lead_ms", APRS_TX_LEAD_MS), leadIdx = 0;
             for (int k = 0; k < APRS_LEAD_CHOICES.length; k++) if (APRS_LEAD_CHOICES[k] == curLead) leadIdx = k;
             leadSpin.setSelection(leadIdx);
             mainLayout.addView(leadSpin);
             TextView leadHelp = new TextView(activity);
-            leadHelp.setText("A steady tone before each packet while this radio's transmit audio settles: measured on the bench, the audio is not on the air "
-                    + "for about 1.5 s after keying, and a packet sent without the lead-in did not decode. Shorter settings are for testing with your radio and "
-                    + "digipeaters; go back to the default if decodes get worse. Applies to messages, beacons, acks, the digipeater and the KISS TNC.\n\n"
+            leadHelp.setText("Sent before each packet while this radio's transmit audio settles (its audio reaches the air about 1 s after the carrier). "
+                    + "Flags are the standard AX.25 TXDELAY that every TNC sends; tone is a steady 1200 Hz; silence is dead air. Bench test (252 packets): "
+                    + "at 1.6 s all three decode alike, shorter than 1.6 s loses packets on this path, silence is the weakest. Shorter settings are for "
+                    + "testing; go back to the defaults if decodes get worse. Applies to messages, beacons, acks, the digipeater and the KISS TNC.\n\n"
                     + "Every beacon and APRS transmission is written to Download/DMR/APRS/aprs_tx_log.txt (time, channel and power, lead-in, GPS fix age, "
                     + "whether the radio keyed and how much of the packet audio went out): share that file when reporting a problem.");
             leadHelp.setTextSize(12); leadHelp.setTextColor(0xFF999999);
@@ -5902,6 +5913,7 @@ public class MainHook implements IXposedHookLoadPackage {
                                 .edit().putBoolean("auto_ack", autoAckBox.isChecked())
                                 .putInt("passive_mode", passiveSpin.getSelectedItemPosition())
                                 .putInt("tx_lead_ms", APRS_LEAD_CHOICES[Math.max(0, Math.min(APRS_LEAD_CHOICES.length - 1, leadSpin.getSelectedItemPosition()))])
+                                .putInt("tx_lead_kind", Math.max(0, Math.min(2, kindSpin.getSelectedItemPosition())))
                                 .putInt("tx_power", APRS_POWER_CHOICES[Math.max(0, Math.min(APRS_POWER_CHOICES.length - 1, powerSpin.getSelectedItemPosition()))])
                                 .putBoolean("digipeat", digiBox.isChecked()).apply();
                         aprsPassiveMode = -1;   // reload on the next audio chunk
@@ -15459,6 +15471,21 @@ public class MainHook implements IXposedHookLoadPackage {
                 return;
             }
 
+            // mode=lead: one status packet with a chosen lead-in (bench comparison of tone / flags / silence), from the
+            // configured callsign, no path, on the current channel.
+            // adb shell am broadcast -a com.dmrmod.APRS_TX_TEST --es mode lead --ei kind 1 --ei leadms 1600 --ei reps 1 --es tag x1
+            if ("lead".equalsIgnoreCase(mode)) {
+                APRSDatabase db = APRSDatabase.getInstance(ctx);
+                int kind = Math.max(0, Math.min(2, intent.getIntExtra("kind", 0)));
+                int leadMs = intent.getIntExtra("leadms", APRS_TX_LEAD_MS), reps = intent.getIntExtra("reps", 1);
+                String tag = String.valueOf(intent.getStringExtra("tag"));
+                String info = ">lead " + (kind == 1 ? "flags" : kind == 2 ? "silence" : "tone") + " " + leadMs + " " + tag;
+                benchLeadKind = kind;
+                try { transmitAprsPacket(ctx, db.getCallsign(), db.getSSID(), new String[0], info, "lead test " + kind + "/" + leadMs + " " + tag, leadMs, reps, APRS_TX_GAP_MS); }
+                finally { benchLeadKind = -1; }
+                return;
+            }
+
             // mode=kissstart/kissstop: run the KISS-over-TCP TNC server (for APRSdroid or adb-forward tests).
             if ("kissstart".equalsIgnoreCase(mode)) {
                 // optional --ei freqhz: park the radio there for the session (restored on kissstop)
@@ -15798,6 +15825,16 @@ public class MainHook implements IXposedHookLoadPackage {
         } catch (Throwable t) { return 1; }
     }
 
+    /** What the lead-in is made of: 0 steady 1200 Hz tone, 1 HDLC flags (the standard TXDELAY, default since 4.1.4), 2 silence
+     *  (pref tx_lead_kind). Bench 2026-10-20, 252 single-copy packets over both apps: at 1.6 s all three decode alike; the length
+     *  is what matters (this path: shorter than 1.6 s loses packets); silence is weakest at short leads. */
+    static volatile int benchLeadKind = -1;          // APRS_TX_TEST mode=lead: overrides the setting for one packet
+    private static int aprsLeadKind(android.content.Context ctx) {
+        if (benchLeadKind >= 0) return benchLeadKind;
+        try { int k = ctx.getSharedPreferences("dmrmod_aprs_global", android.content.Context.MODE_PRIVATE).getInt("tx_lead_kind", 1); return k >= 0 && k <= 2 ? k : 1; }
+        catch (Throwable t) { return 1; }
+    }
+
     /** Packet lead-in (APRS Settings, for testing): 1600 ms by default, as measured; 1000, 500 or 0 to try. */
     static final int[] APRS_LEAD_CHOICES = { 1600, 1000, 500, 0 };
     private static int aprsLeadMs(android.content.Context ctx) {
@@ -15901,7 +15938,7 @@ public class MainHook implements IXposedHookLoadPackage {
             h.append("Module ").append(VERSION).append("  |  ").append(android.os.Build.MANUFACTURER).append(' ').append(android.os.Build.MODEL)
              .append("  |  Android ").append(android.os.Build.VERSION.RELEASE).append(" (SDK ").append(android.os.Build.VERSION.SDK_INT).append(")\n");
             h.append("Shared ").append(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z", java.util.Locale.US).format(new java.util.Date())).append('\n');
-            h.append("Settings: APRS ").append(db.getAprsFrequency()).append(" MHz, lead-in ").append(g.getInt("tx_lead_ms", APRS_TX_LEAD_MS)).append(" ms, power ").append(g.getInt("tx_power", 1) == 1 ? "high" : g.getInt("tx_power", 1) == 0 ? "low" : "channel's").append(", auto-ack ")
+            h.append("Settings: APRS ").append(db.getAprsFrequency()).append(" MHz, lead-in ").append(g.getInt("tx_lead_ms", APRS_TX_LEAD_MS)).append(" ms ").append(new String[] { "tone", "flags", "silence" }[Math.max(0, Math.min(2, g.getInt("tx_lead_kind", 1)))]).append(", power ").append(g.getInt("tx_power", 1) == 1 ? "high" : g.getInt("tx_power", 1) == 0 ? "low" : "channel's").append(", auto-ack ")
              .append(g.getBoolean("auto_ack", true) ? "on" : "off").append(", digipeater ").append(g.getBoolean("digipeat", false) ? "on" : "off")
              .append(", beacon ").append(beaconActive ? "running every " + (beaconIntervalMs / 60000) + " min on " + (beaconUseAprsFreq ? (beaconFreqHz / 1e6) + " MHz" : "the current channel") : "off").append('\n');
             h.append("Positions are blanked in this copy.\n");
@@ -16006,17 +16043,21 @@ public class MainHook implements IXposedHookLoadPackage {
                 if (toast) try { Toast.makeText(ctx, "APRS needs an analog channel: the current channel is digital", Toast.LENGTH_LONG).show(); } catch (Throwable ignored) { }
                 return -1;
             }
-            short[] afsk = AFSKGenerator.generateAFSKWithNRZI(frame);
             final int SR = 8000;
-            int lead = (int) (leadMs / 1000.0 * SR);
+            final int leadKind = aprsLeadKind(ctx);
+            // flags: one continuous run of flags into the first copy (a long TXDELAY); tone / silence: separate samples
+            short[] afsk = AFSKGenerator.generateAFSKWithNRZI(frame);
+            short[] first = leadKind == 1 ? AFSKGenerator.generateAFSKWithNRZI(frame, 50 + Math.round(leadMs * 1200f / 8000f)) : afsk;
+            int lead = leadKind == 1 ? 0 : (int) (leadMs / 1000.0 * SR);
             int gap  = (int) (gapMs  / 1000.0 * SR);
-            short[] src = new short[lead + reps * (afsk.length + gap)];
-            // settling lead-in: steady 1200 Hz mark at the AFSK amplitude so the radio's AGC/PA settle
-            for (int i = 0; i < lead; i++) src[i] = (short) (30000 * Math.sin(2.0 * Math.PI * 1200 * i / SR));
+            short[] src = new short[lead + first.length + gap + (reps - 1) * (afsk.length + gap)];
+            // settling lead-in: steady 1200 Hz mark at the AFSK amplitude so the radio's AGC/PA settle (kind 0); silence (kind 2) stays 0
+            if (leadKind == 0) for (int i = 0; i < lead; i++) src[i] = (short) (30000 * Math.sin(2.0 * Math.PI * 1200 * i / SR));
             int p = lead;
             for (int r = 0; r < reps; r++) {
-                System.arraycopy(afsk, 0, src, p, afsk.length);
-                p += afsk.length + gap;   // gap samples stay 0 (silence between copies)
+                short[] part = r == 0 ? first : afsk;
+                System.arraycopy(part, 0, src, p, part.length);
+                p += part.length + gap;   // gap samples stay 0 (silence between copies)
             }
             final int durationMs = (int) (src.length / 8.0);
 
@@ -16032,7 +16073,7 @@ public class MainHook implements IXposedHookLoadPackage {
                     + " lead=" + leadMs + "ms reps=" + reps + " total=" + src.length + " (~" + durationMs + "ms) on " + describeTxChannel() + ": " + humanLabel);
             final long keyedAt = System.currentTimeMillis(); txLogKeyedAt = 0;
             final int totalSamples = src.length;
-            aprsTxLog("TX   " + humanLabel + "  |  " + describeTxChannel() + ", lead-in " + leadMs + " ms, " + reps + "x, ~" + durationMs + " ms");
+            aprsTxLog("TX   " + humanLabel + "  |  " + describeTxChannel() + ", lead-in " + leadMs + " ms " + (leadKind == 1 ? "flags" : leadKind == 2 ? "silence" : "tone") + ", " + reps + "x, ~" + durationMs + " ms");
 
             final android.content.Context appCtx = ctx.getApplicationContext();
             final int holdMs = durationMs + 600;   // packet + tail margin (recording already running)
