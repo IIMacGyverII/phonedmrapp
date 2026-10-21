@@ -31,7 +31,7 @@ $('logout').addEventListener('click', async () => { await fetch('/api/logout'); 
 // ---- pages ----
 function route() {
   const p = (location.hash || '#intercom').slice(1);
-  S.page = ['intercom', 'channels', 'messages', 'contacts', 'aprs', 'sstv', 'sat', 'map', 'log', 'rec', 'help'].includes(p) ? p : 'intercom';
+  S.page = ['intercom', 'channels', 'messages', 'contacts', 'aprs', 'sstv', 'sat', 'map', 'log', 'rec', 'settings', 'help'].includes(p) ? p : 'intercom';
   document.querySelectorAll('.page').forEach(el => el.classList.toggle('hidden', el.id !== 'page-' + S.page));
   document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('on', a.dataset.page === S.page));
   if (S.page === 'channels') loadChannels();
@@ -44,6 +44,7 @@ function route() {
   if (S.page === 'help') loadHelp();
   if (S.page === 'log') { if (!S.qso) editQso(null); loadLog(); }
   if (S.page === 'rec') loadRecordings();
+  if (S.page === 'settings') loadSettings();
 }
 window.addEventListener('hashchange', route);
 

@@ -34,6 +34,7 @@
       <a href="#map" data-page="map">Map</a>
       <a href="#log" data-page="log">Logbook</a>
       <a href="#rec" data-page="rec">Recordings</a>
+      <a href="#settings" data-page="settings">Settings</a>
       <a href="#help" data-page="help">Help</a>
     </nav>
     <div class="conn"><span id="connDot" class="dot"></span><span id="connText">Connecting…</span><button id="logout" class="link">Log out</button></div>
@@ -206,6 +207,22 @@
         <div class="row between wrap"><span class="label">RECORDINGS</span><span class="muted small">REC on the intercom saves every reception to Download/DMR/Audio on the phone.</span></div>
         <audio id="player" controls class="player"></audio>
         <div id="recList" class="list"></div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="page-settings" class="page hidden">
+      <div class="grid-side wide">
+        <div class="panel">
+          <span class="label">RADIO</span>
+          <div id="radioCard" class="satcard"></div>
+          <div class="row wrap"><button class="btn" id="takeOver">Take over</button><button class="btn danger" id="handBack">Hand back</button></div>
+          <p class="muted small">Take over gives the radio to SignalDeck; Hand back returns it to the stock walkie-talkie app (and this page loses the radio until you take it over again).</p>
+          <span class="label" style="display:block;margin-top:18px">THIS CONNECTION</span>
+          <div id="webCard" class="satcard"></div>
+          <p class="muted small">Web access, the PIN and “Allow transmit from the web” are changed only on the phone (Device → SignalDeck Web), so a browser can never give itself more rights.</p>
+        </div>
+        <div class="panel"><span class="label">SETTINGS</span><div id="setList"></div></div>
       </div>
     </section>
 

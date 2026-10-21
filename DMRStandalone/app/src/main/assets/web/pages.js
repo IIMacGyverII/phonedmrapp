@@ -210,6 +210,30 @@ $('recList').onclick = async e => {
   if (d) { const r = S.recs[+d.dataset.del]; if (confirm('Delete ' + r.name + '?') && await act('recording/delete', { id: r.id })) loadRecordings(); }
 };
 
+// ---- settings ----
+async function loadSettings() { try { renderSettings(await api('settings')); } catch (e) { } }
+function renderSettings(j) {
+  S.settings = j.settings;
+  const f = (k, v) => '<div><span>' + k + '</span><b>' + esc(v) + '</b></div>';
+  $('radioCard').innerHTML = '<div class="big">' + (j.ready ? 'SIGNALDECK OWNS THE RADIO' : esc(String(j.link || '').toUpperCase())) + '</div><div class="grid">' + f('PHONE', j.profile || '—') + f('VERSION', j.version) + '</div>';
+  $('webCard').innerHTML = '<div class="grid">' + f('BROWSERS', j.browsers) + f('LISTENING', j.listeners) + f('TRANSMIT FROM WEB', j.webTx ? 'Allowed' : 'Off') + '</div>';
+  let html = '', group = null;
+  j.settings.forEach((s, i) => {
+    if (s.group !== group) { group = s.group; html += '<div class="group">' + esc(group).toUpperCase() + '</div>'; }
+    let ctl;
+    if (s.kind === 'bool') ctl = '<button type="button" class="switch' + (s.value ? ' on' : '') + '" data-i="' + i + '" role="switch" aria-checked="' + !!s.value + '" aria-label="' + esc(s.label) + '"></button>';
+    else if (s.kind === 'choice') ctl = '<select data-i="' + i + '">' + s.choices.map((c, ci) => '<option value="' + ci + '"' + (ci === s.value ? ' selected' : '') + '>' + esc(c) + '</option>').join('') + '</select>';
+    else ctl = '<input data-i="' + i + '" value="' + esc(s.value) + '"' + (s.kind === 'int' ? ' inputmode="numeric"' : '') + ' title="Enter to save">';
+    html += '<div class="set"><div class="main"><div>' + esc(s.label) + '</div><div class="sub">' + esc(s.sub) + '</div></div>' + ctl + '</div>';
+  });
+  $('setList').innerHTML = html;
+}
+async function saveSetting(i, value) { const s = S.settings[i]; const j = await act('settings', { key: s.key, value }); if (j) renderSettings(j); else loadSettings(); }
+$('setList').addEventListener('click', e => { const b = e.target.closest('.switch'); if (b) saveSetting(+b.dataset.i, !S.settings[+b.dataset.i].value); });
+$('setList').addEventListener('change', e => { const el = e.target; if (el.tagName === 'SELECT') saveSetting(+el.dataset.i, +el.value); else if (el.tagName === 'INPUT') { const s = S.settings[+el.dataset.i]; saveSetting(+el.dataset.i, s.kind === 'int' ? parseInt(el.value, 10) : el.value); } });
+$('takeOver').onclick = async () => { await act('radio', { action: 'takeover' }); setTimeout(loadSettings, 4000); };
+$('handBack').onclick = async () => { if (confirm('Hand the radio back to the stock app? SignalDeck (and this page) stops controlling the radio until you take it over again.')) { await act('radio', { action: 'handback' }); setTimeout(loadSettings, 3000); } };
+
 // ---- help: the phone's guide ----
 S.help = null;
 async function loadHelp() {
