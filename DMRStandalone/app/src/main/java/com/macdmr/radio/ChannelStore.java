@@ -491,6 +491,71 @@ public final class ChannelStore extends SQLiteOpenHelper {
     }
 
     /** Root-copy one of the stock app's database files into our cache and open it read-only (null if unavailable). */
+    /**
+     * Blackview Xplore 1: QuickChat keeps its channels in a Room database {@code databases/channel_database} (table
+     * {@code channel_table}) and contacts in {@code contacts_table}; the fields mean the same as the module's (type 0 digital /
+     * 1 analog, Hz, relay 2, encryptSw 2 = off, groupList "1-0-0-…", contact type 0 private / 1 group). Room writes through a
+     * WAL, so the -wal/-shm files are copied too.
+     * @return channels imported, or -1 (err says why)
+     */
+    public int importFromQuickChat(Context ctx, String stockPackage, StringBuilder err) {
+        SQLiteDatabase sdb = copyRoom(ctx, stockPackage, new String[] { "channel_database", "channel.db" }, "qc_channels.db");
+        if (sdb == null) { err.append("QuickChat channels not readable: ").append(RootSetup.run("ls /data/data/" + stockPackage + "/databases/ 2>&1 | head -8")); return -1; }
+        int n = 0;
+        SQLiteDatabase db = getWritableDatabase();
+        db.beginTransaction();
+        try (Cursor c = sdb.query("channel_table", null, null, null, null, null, "id")) {
+            db.delete("channels", null, null);
+            while (c.moveToNext()) {
+                Channel ch = new Channel();
+                ch.number = ++n;
+                ch.name = col(c, "channelName", "Channel " + n); ch.type = coli(c, "channelType", 1);
+                ch.rxFreq = coli(c, "rx_freq", 0); ch.txFreq = coli(c, "tx_freq", 0); ch.power = coli(c, "power", 1);
+                ch.band = coli(c, "band", 1); ch.sq = coli(c, "sq", 2); ch.rxType = coli(c, "rx_type", 0); ch.rxSubCode = coli(c, "rx_subcode", 0);
+                ch.txType = coli(c, "tx_type", 0); ch.txSubCode = coli(c, "tx_subcode", 0); ch.relay = coli(c, "relay", 2); ch.mode = coli(c, "channelMode", 0);
+                ch.cc = coli(c, "cc", 1); ch.inSlot = coli(c, "inboundSlot", 0); ch.outSlot = coli(c, "outboundSlot", 0);
+                ch.contactType = coli(c, "contactType", 1); ch.txContact = coli(c, "tx_contact", 0); ch.encryptSw = coli(c, "encryptSw", 2);
+                ch.encryptKey = col(c, "encryptKey", ""); ch.active = coli(c, "enbale", 0) == 1;
+                if (ch.relay == 0) ch.relay = 2;
+                String groups = col(c, "groupList", null);
+                if (groups != null) {
+                    List<Integer> gl = new ArrayList<>();
+                    for (String s : groups.split("[,;\\- ]")) { s = s.trim(); if (!s.isEmpty()) try { int v = Integer.parseInt(s); if (v > 0) gl.add(v); } catch (NumberFormatException ignored) { } }
+                    ch.groups = new int[gl.size()]; for (int i = 0; i < gl.size(); i++) ch.groups[i] = gl.get(i);
+                }
+                db.insert("channels", null, values(ch));
+            }
+            db.setTransactionSuccessful();
+        } catch (Throwable t) { err.append("channels: ").append(t.getMessage()); n = -1; }
+        finally { db.endTransaction(); sdb.close(); }
+        SQLiteDatabase cdb = copyRoom(ctx, stockPackage, new String[] { "contacts_database", "contact_database", "contacts.db" }, "qc_contacts.db");
+        if (cdb != null) {
+            try (Cursor c = cdb.query("contacts_table", null, null, null, null, null, "id")) {
+                db.delete("contacts", null, null);
+                while (c.moveToNext()) {
+                    ContentValues v = new ContentValues();
+                    v.put("name", col(c, "name", "")); v.put("number", coli(c, "number", 0)); v.put("type", coli(c, "type", 0));
+                    db.insert("contacts", null, v);
+                }
+            } catch (Throwable t) { err.append("contacts: ").append(t.getMessage()).append("; "); }
+            finally { cdb.close(); }
+        } else err.append("no QuickChat contacts database; ");
+        return n;
+    }
+
+    /** Copy the first Room database found (with its -wal/-shm) into the cache and open the copy. */
+    private static SQLiteDatabase copyRoom(Context ctx, String stockPackage, String[] names, String localName) {
+        File dst = new File(ctx.getCacheDir(), localName);
+        for (String name : names) for (String base : new String[] { "/data/user/0/", "/data/data/" }) {
+            String src = base + stockPackage + "/databases/" + name, owner = "$(stat -c %u:%g " + ctx.getCacheDir().getAbsolutePath() + ")";
+            RootSetup.run("rm -f " + dst + " " + dst + "-wal " + dst + "-shm; cp " + src + " " + dst + " && (cp " + src + "-wal " + dst + "-wal; cp " + src + "-shm " + dst + "-shm; true) 2>/dev/null; chmod 666 " + dst + "*; chown " + owner + " " + dst + "*");
+            if (dst.exists() && dst.length() > 0) {
+                try { return SQLiteDatabase.openDatabase(dst.getAbsolutePath(), null, SQLiteDatabase.OPEN_READWRITE); } catch (Throwable t) { return null; }   // the copy, so the WAL can be replayed
+            }
+        }
+        return null;
+    }
+
     private static SQLiteDatabase copyStock(Context ctx, String stockPackage, String file, String localName) {
         File dst = new File(ctx.getCacheDir(), localName);
         for (String base : new String[] { "/data/user/0/", "/data/data/" }) {

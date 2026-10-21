@@ -13,17 +13,16 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
- * Raw PCM over a second UART (Blackview Xplore 1 family: {@code /dev/ttyS1} at 230400 baud, 8 kHz mono 16-bit
- * little-endian, no framing seen in the stock app's code). RX bytes are played through an AudioTrack and handed to
+ * PCM over a second UART (Blackview Xplore 1 family: {@code /dev/ttyS1} at 230400 baud, 8 kHz mono 16-bit little-endian).
+ * Receive arrives framed (see {@link PcmFramer}); transmit is raw 160-byte blocks every 10 ms, as QuickChat sends it. RX bytes are played through an AudioTrack and handed to
  * the sink as stereo-duplicated frames, so the rest of the app is identical to the Ulefone path.
  *
- * <p><b>Not yet exercised on hardware</b> (no Xplore 1 here). What must be confirmed on a real unit: that the
- * stream is headerless, the byte order, whether the MCU wants a fixed packet size and pacing (the stock app
- * queues 20 ms packets), and that the port is already in raw mode at 230400 (the profile's stty fallback runs
- * if its serial library is unknown).
+ * <p><b>Receive and transmit audio not yet confirmed on hardware.</b> The first owner's trial (2026-10-21) opened the
+ * port at 230400 (stty fallback) but saw no bytes: the module had no channel and its PTT line was never set to receive
+ * (QuickChat writes intercom_ptt_control 1 for receive; see DeviceProfile.lineSetup). Framing above is from QuickChat's code.
  */
 public final class UartPcmAudio implements AudioBackend {
-    private static final int SR = 8000, PACKET = 320;           // 20 ms of 8 kHz mono 16-bit
+    private static final int SR = 8000, PACKET = 80;            // 10 ms of 8 kHz mono 16-bit: QuickChat's 160-byte transmit block
     private final String path; private final int baud;
     private volatile Sink sink; private volatile Gate gate;
     private InputStream in; private OutputStream out;
@@ -58,7 +57,8 @@ public final class UartPcmAudio implements AudioBackend {
             }
             rxRunning = true;
             rxThread = new Thread(() -> {
-                byte[] mono = new byte[PACKET * 2], st = new byte[PACKET * 4], silence = new byte[PACKET * 2];
+                byte[] mono = new byte[1024];
+                final byte[] st = new byte[PcmFramer.PAYLOAD * 2], silence = new byte[PcmFramer.PAYLOAD];
                 while (rxRunning) {
                     int n;
                     try { n = in.read(mono); } catch (Throwable t) { break; }
@@ -67,10 +67,12 @@ public final class UartPcmAudio implements AudioBackend {
                     OutputStream c = capture;                                  // first-run check: the stream exactly as the port delivers it
                     if (c != null) { try { int k = (int) Math.min(n, captureLeft); c.write(mono, 0, k); captureLeft -= k; if (captureLeft <= 0) { capture = null; c.close(); } } catch (Throwable t) { capture = null; } }
                     if (txRunning) continue;                                   // half duplex: ignore echo while keyed
-                    for (int i = 0, o = 0; i + 1 < n; i += 2) { st[o++] = mono[i]; st[o++] = mono[i + 1]; st[o++] = mono[i]; st[o++] = mono[i + 1]; }
-                    Sink s = sink; if (s != null) s.onPcm(st, (n / 2) * 4);
-                    Gate g = gate;
-                    if (track != null) { if (g == null || g.open()) track.write(mono, 0, n); else track.write(silence, 0, n); }
+                    framer.feed(mono, n, (p, off, len) -> {                    // BB 00 … 44 packets, 160 bytes of PCM each
+                        for (int i = 0, o = 0; i + 1 < len; i += 2) { st[o++] = p[off + i]; st[o++] = p[off + i + 1]; st[o++] = p[off + i]; st[o++] = p[off + i + 1]; }
+                        Sink s = sink; if (s != null) s.onPcm(st, len * 2);
+                        Gate g = gate;
+                        if (track != null) { if (g == null || g.open()) track.write(p, off, len); else track.write(silence, 0, len); }
+                    });
                 }
             }, "uart-pcm-rx");
             rxThread.setDaemon(true); rxThread.start();
@@ -78,6 +80,8 @@ public final class UartPcmAudio implements AudioBackend {
         } catch (Throwable t) { return "startRx failed: " + t; }
     }
 
+    private final PcmFramer framer = new PcmFramer();
+    public String frameStats() { return framer.frames + " audio packets, " + framer.skipped + " bytes skipped"; }
     private volatile long rxBytes, captureLeft;
     private volatile OutputStream capture;
     public long rxBytes() { return rxBytes; }
@@ -85,11 +89,11 @@ public final class UartPcmAudio implements AudioBackend {
     public String capture(java.io.File f, int ms) {
         try {
             long before = rxBytes;
-            captureLeft = (long) SR * 2 * ms / 1000; capture = new FileOutputStream(f);
+            captureLeft = (long) PcmFramer.FRAME * ms / 10 + 4096; capture = new FileOutputStream(f);
             Thread.sleep(ms + 300);
             OutputStream c = capture; if (c != null) { capture = null; c.close(); }
             long got = rxBytes - before;
-            return String.format(java.util.Locale.US, "%d bytes in %d ms on %s (8 kHz mono 16-bit would be %d); saved to %s", got, ms, path, (long) SR * 2 * ms / 1000, f.getName());
+            return String.format(java.util.Locale.US, "%d bytes in %d ms on %s (167-byte packets at 10 ms would be %d); %s; saved to %s", got, ms, path, (long) PcmFramer.FRAME * ms / 10, frameStats(), f.getName());
         } catch (Throwable t) { return "capture failed: " + t; }
     }
 

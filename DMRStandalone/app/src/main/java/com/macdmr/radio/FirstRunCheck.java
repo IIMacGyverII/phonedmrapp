@@ -50,7 +50,7 @@ public final class FirstRunCheck {
         if (trial && dp.supported && !svc.isReady()) {
             String t = trialTakeOver(c, svc, p);
             DeviceReport.append("Trial take-over", t);
-            sum.append(t.substring(0, t.indexOf('\n') > 0 ? t.indexOf('\n') : t.length())).append('\n');
+            sum.append("trial: ").append(t.replace("\n", "\n  ").trim()).append('\n');
         } else if (trial) sum.append("trial take-over skipped: ").append(!dp.supported ? "no profile for this phone yet" : "SignalDeck already owns the radio").append('\n');
 
         DeviceReport.append("SignalDeck log (personal details removed)", DeviceReport.redactAppLog(svc.recentLog()));
@@ -75,6 +75,12 @@ public final class FirstRunCheck {
         long took = System.currentTimeMillis() - t0;
         r.append("result: ").append("ready".equals(link) ? "radio came up in " + took / 1000 + " s" : "did not come up (" + link + " after " + took / 1000 + " s)").append('\n');
         if ("ready".equals(link)) {
+            if (!svc.profile().verified) {                              // untested phone: give the audio path something to carry
+                p.step("Trial: listening on 446.00625 MHz with the squelch open");
+                svc.listenTest(446_006_250, "Listen test 446.00625");
+                Thread.sleep(4000);                                     // the module settles after a retune
+                r.append("tuned 446.00625 MHz analog, squelch open (receive only)\n");
+            }
             p.step("Trial: reading signal strength and audio");
             File dir = DeviceReport.newestDir();
             File raw = dir != null ? new File(dir, "rx_audio_raw.bin") : null;

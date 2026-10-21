@@ -25,7 +25,8 @@ public final class DeviceProfile {
     public final String[] sepolicy;      // Magisk sepolicy.rule lines an untrusted app needs
     public final String serialLib;       // the stock app's serial JNI library on /system (configures the line); null = stty fallback
     public final boolean supported;      // false = a phone we have no profile for: discovery mode only
-    public final boolean verified;       // false = written from an APK and dumps, never run on the phone: no automatic take-over
+    public final boolean verified;       // false = written from an APK and dumps, never run on the phone: no automatic take-over, no transmit
+    public String[][] lineSetup;         // {node, value} written in this order before the power line, every bring-up (null = none)
 
     private DeviceProfile(String name, String controlPort, int baud, Audio audio, String pcmPort, int pcmBaud,
                           String powerNode, String pttNode, String powerOnToken, String[] pttActions,
@@ -64,6 +65,14 @@ public final class DeviceProfile {
                     "allow untrusted_app ttyS_device chr_file { open read write ioctl getattr lock }",
                     "typeattribute ttyS_device mlstrustedobject" },
             null, true, false);
+    static {
+        // QuickChat's power-up (j0.a.run): power_control, pwd_control and ptt_control all 1; its power-off writes all 0, and
+        // ptt_control 0 is its transmit state (setPttLaunch). So the PTT line goes to receive first, before the module is
+        // powered, or a module left by QuickChat's power-off would come up with its PTT line asserted.
+        XPLORE_1.lineSetup = new String[][] {
+                { "/sys/devices/platform/intercom/intercom_ptt_control", "1" },
+                { "/sys/devices/platform/intercom/intercom_power_control", "1" } };
+    }
 
     /** Any other phone: nothing is touched until a device report has been made and a profile written. */
     public static final DeviceProfile UNKNOWN = new DeviceProfile(
