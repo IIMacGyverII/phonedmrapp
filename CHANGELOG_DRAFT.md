@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-21 — 1.0.0-beta.4: the report finds the walkie-talkie app by evidence, and asks before opening it
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Matching package names failed both ways (on the Xplore 1 `com.chamsion.systemupdater` matched before QuickChat, so a phone without a profile would have opened the **system updater** for the 15 s watch; a radio app with a neutral name matched nothing). New `RadioAppFinder` scores every system app that is not Google's or a framework part: holds a serial port now (+6), ships a serial library (+4), its code opens `/dev/tty…` (+4), listens for PTT broadcasts (+3), radio-ish name (+3), uses `/sys/devices/platform` (+1), launcher icon (+1); updaters, providers, overlays, telephony, camera etc. are left out. The report lists the ranking with the evidence and examines the top apps (APK, code clues, database structure). **Run all checks asks before opening anything:** "Open which walkie-talkie app for 15 s?" with the profile's app (known phones) or the ranked apps preselected, **Choose another app…** (every app with a launcher icon, system apps first, then a confirmation) and **None — skip this step**; an app picked by hand gets its APK and code clues added to the report. Version **1.0.0-beta.4** (code 103). | `RadioAppFinder.java` (new), `DeviceReport.java`, `FirstRunCheck.java`, `ui/DeviceView.java`, `ui/HelpView.java`, `build.gradle` | **device (Armor, radio handed back):** chooser shows InterPhone (the profile's app) and None; ranking `9 InterPhone: name, launcher, opens /dev/tty…, /sys/devices/platform`; checks ran with it (watched 15 s); *Choose another app…* lists all launcher apps; test reports deleted. 123 host tests pass |
+
 ## 2026-10-21 — 1.0.0-beta.3: richer device reports (the stock app at work, code clues, device tree, driver messages, audio clues)
 
 | Backlog | Change | Files | Test |
