@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-21 — The app never shows a frequency the radio is not on
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Receive bench (same day): the module itself accepts only 136.000–174.000 and 400.000–480.000 MHz; anything else (174.005, 175–225 incl. the 220 band, 300, 399.995) is answered `sr=1` and the radio keeps its previous frequency. The app now matches that everywhere. **One gate before the radio:** every channel write (channels, VFO, scan, zones, satellites, the web, the car) checks the band first; an out-of-band request is not sent, the history says "… is outside what this radio can tune (136–174 and 400–480 MHz); still on …", and no "VFO …" line is logged for it. **Refusals are shown and undone:** the app now matches each channel write to the module's answer; if the radio refuses one (e.g. a DMR channel with no call number), the history says "The radio refused … it is still on …" and the display, the notification and the active channel go back to what the radio is really tuned to. **VFO arrows:** at the band ends or where a repeater offset would leave the band they stop instead of producing a frequency the radio refuses. **Restore:** channels outside the bands (a 220 MHz channel in another radio's codeplug) are skipped and listed in the result. Help: VFO "Frequency range", Device → Tools restore sentence, channel editor RX info. | `RadioService.java`, `Backup.java`, `ui/VfoDialog.java`, `ui/HelpView.java`, `ui/ChannelEditorView.java` | **device (receive only, nothing keyed)**: on NOAA 162.500 (−75 dBm), a 220 MHz VFO was not sent (no 0x23 frame), the warning appeared and RSSI stayed −75; a DMR VFO on 446.500 with no call number was refused by the radio (`sr=1`) and the app reverted to 162.500 (RSSI −75); 300 MHz likewise not sent. Restore skip and VFO arrow ends: code-reviewed. 116 host tests pass |
+
 ## 2026-10-21 — SignalDeck Web: audio level bar, diagnostics log
 
 | Backlog | Change | Files | Test |

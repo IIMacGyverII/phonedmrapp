@@ -116,7 +116,7 @@ public final class VfoDialog {
         try {
             v.rxFreq = (int) Math.round(Double.parseDouble(rx.getText().toString().trim()) * 1e6);
             v.txFreq = (int) Math.round(Double.parseDouble(tx.getText().toString().trim()) * 1e6);
-            if (!inBand(v.rxFreq) || !inBand(v.txFreq)) throw new IllegalArgumentException("Frequencies must be within 136–174 or 400–480 MHz");
+            if (!com.macdmr.radio.ChannelStore.inBand(v.rxFreq) || !com.macdmr.radio.ChannelStore.inBand(v.txFreq)) throw new IllegalArgumentException("Frequencies must be within 136–174 or 400–480 MHz");
             if (v.rxFreq < 300_000_000) v.band = 1;
             if (v.isDigital()) {
                 String cn = call.getText().toString().trim();
@@ -147,7 +147,6 @@ public final class VfoDialog {
                 }).setNegativeButton("Cancel", null).show();
     }
 
-    private static boolean inBand(int hz) { return (hz >= 136_000_000 && hz <= 174_000_000) || (hz >= 400_000_000 && hz <= 480_000_000); }
     private static String[] names(int from, int to) { String[] s = new String[to - from + 1]; for (int i = from; i <= to; i++) s[i - from] = String.valueOf(i); return s; }
     private static String join(int[] a) { StringBuilder b = new StringBuilder(); for (int x : a) { if (b.length() > 0) b.append(", "); b.append(x); } return b.toString(); }
     private static String toneName(int type, int code) {
