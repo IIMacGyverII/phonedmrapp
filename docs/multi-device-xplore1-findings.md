@@ -148,3 +148,13 @@ through root instead (`SysfsGpio`), and the profile stays marked **unverified** 
   `AudioRecord` source MIC. beta.1's trial got 0 bytes (no channel programmed, PTT line unset).
 - **QuickChat data:** Room DBs `databases/channel_database` (`channel_table`: same fields as the module, Hz, type 0 digital / 1 analog,
   `groupList` "1-0-0-…") and contacts (`contacts_table`: type 0 private / 1 group).
+
+## QuickChat's own startup log (beta.3 report, 2026-10-21)
+
+Order: open `ttyS1` 230400 8N1 → lines power/pwd/ptt `0` → open `ttyS0` 57600 → lines `1` → boot banner `BF AA …` →
+`0x27` (query init complete, answer `68 27 00 00 …`) → `0x34` version → `0x23` channel (446.00625, body
+`01 01 05 00 00 00 00 02 00 02 02`: band 1, power 1, **sq 5**, …, pwrsave 2, volume 0, monitor 2, relay 2) → `0x35` interrupt 2 →
+`0x37` polite 0 → `0x2F` monitor 2 → `0x30` squelch 5. With nobody on the channel no PCM packet arrived on `ttyS1`: audio flows
+only while the squelch is open. Live database: `databases/channel_database`, table **`channels`** (311 rows, `countryId`,
+`channelIdInCountry`, `smsType` + the module fields) and `countries` (15). Kernel: `state:intercom connect/disconnect` from the
+intercom driver at each power change. QuickChat restarts itself after one force-stop.
