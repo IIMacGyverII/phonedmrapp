@@ -61,6 +61,7 @@
             <select id="zoneSel" aria-label="Zone"></select>
           </div>
           <div class="sq"><span class="label">SOFT SQ</span><input type="range" id="sqLevel" min="0" max="100"><span id="sqVal" class="mono">--</span></div>
+          <div class="sq listen"><button class="tog" id="listenBtn" title="Play the radio's audio in this browser">🔈 LISTEN</button><input type="range" id="vol" min="0" max="200" value="100" aria-label="Volume"><span id="listenState" class="mono small muted"></span></div>
           <button id="ptt" class="ptt" disabled>PTT</button>
           <p id="pttNote" class="muted small center"></p>
         </div>
@@ -183,6 +184,7 @@
 </div>
 <script src="app.js"></script>
 <script src="editor.js"></script>
+<script src="audio.js"></script>
 <script src="pages.js"></script>
 </body>
 </html>
