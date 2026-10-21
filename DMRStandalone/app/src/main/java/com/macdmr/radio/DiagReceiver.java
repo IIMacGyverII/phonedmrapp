@@ -34,6 +34,13 @@ public final class DiagReceiver extends BroadcastReceiver {
                 s.diagVfo(hz); break;
             }
             case "vfooff": s.diagVfoOff(); break;
+            case "web": Log.i("DiagReceiver", "web: " + (s.web() == null ? "no host" : String.valueOf(s.web().setEnabled(i.getBooleanExtra("on", true))) + " running=" + s.web().running() + " " + s.web().urls())); break;
+            case "aprs144": Log.i("DiagReceiver", "aprs144: " + s.aprsMonitor(i.getBooleanExtra("on", true))); break;      // standard APRS monitoring on/off (receive)
+            case "issaprs": {                                                   // ISS APRS: track the next pass and every one after it
+                String e = s.startIssMode(com.macdmr.radio.ham.Satellites.APRS);
+                if (e == null) s.setIssRepeat(com.macdmr.radio.ham.Satellites.APRS);
+                Log.i("DiagReceiver", "issaprs: " + (e == null ? "tracking" : e)); break;
+            }
             case "afsk": {                                                      // bench: --ez legacy true = the old single-slicer decoder
                 boolean legacy = i.getBooleanExtra("legacy", false);
                 com.macdmr.radio.pkt.AFSKDecoder.MULTI_SLICER = !legacy; com.macdmr.radio.pkt.AFSKDecoder.BIT_FIX = !legacy;
