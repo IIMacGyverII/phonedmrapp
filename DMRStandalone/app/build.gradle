@@ -3,6 +3,7 @@ plugins {
 }
 
 android {
+    testOptions { unitTests.returnDefaultValues = true }   // host tests: android.util.Log calls in shared DSP code are no-ops
     namespace 'com.macdmr.radio'
     compileSdk 34
 

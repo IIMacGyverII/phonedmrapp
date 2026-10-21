@@ -49,7 +49,69 @@ public class AFSKDecoder {
     /**
      * Decode AFSK audio samples into AX.25 packets
      */
+    /** Several slicers with different tone balance (twist) on one demodulation (default on). */
+    public static volatile boolean MULTI_SLICER = true;
+    /** Repair frames whose checksum fails by trying every single-bit flip (default on). */
+    public static volatile boolean BIT_FIX = true;
+    /** Mark-tone gains: 0 dB first, then +-3 and +-6 dB. */
+    private static final float[] SLICER_GAINS = { 1.0f, 0.708f, 1.413f, 0.5f, 2.0f };
+    /** Wider set (+-9 dB) for the benchmark comparison. */
+    public static volatile float[] slicerGainsOverride;
+    /** Normalise mark and space to their own envelopes before slicing (direwolf's twist cancellation; default on). */
+    public static volatile boolean TONE_AGC = false;     // measured worse on the benchmark in every combination (2026-10-20)
+    /** Frames repaired by a bit flip since start (diagnostics). */
+    public static volatile int fixedFrames;
+
     public static List<byte[]> decode(short[] audioSamples) {
+        if (!MULTI_SLICER && !BIT_FIX && !TONE_AGC) return decodeLegacy(audioSamples);
+        List<byte[]> packets = new ArrayList<>();
+        try {
+            short[] s = applyAGC(audioSamples);
+            float[][] tones = AFSKDecoderIQ.toneStrengths(s);
+            if (TONE_AGC) tones = AFSKDecoderIQ.normalise(tones[0], tones[1]);
+            java.util.HashSet<String> seen = new java.util.HashSet<>();
+            float[] gains = !MULTI_SLICER ? new float[] { 1.0f } : slicerGainsOverride != null ? slicerGainsOverride : SLICER_GAINS;
+            for (float g : gains) {
+                boolean[] nrzi = decodeNRZI(AFSKDecoderIQ.slice(tones[0], tones[1], g));
+                for (boolean[] raw : findPacketBits(nrzi)) {
+                    byte[] frame = frameFromRaw(raw);
+                    if (frame == null && BIT_FIX && raw.length <= 2800) frame = repairOneBit(raw);
+                    if (frame != null && seen.add(java.util.Arrays.toString(frame))) packets.add(frame);
+                }
+            }
+        } catch (Exception e) {
+            android.util.Log.d("pkt", TAG + ": Error decoding AFSK: " + e.getMessage());
+        }
+        return packets;
+    }
+
+    /** Raw (stuffed) frame bits to the frame without FCS, or null when too short or the checksum fails. */
+    private static byte[] frameFromRaw(boolean[] raw) {
+        boolean[] u = removeBitStuffingFromBits(raw);
+        if (u == null || u.length < 144) return null;
+        int nb = u.length / 8; byte[] p = new byte[nb];
+        for (int i = 0; i < nb; i++) { int v = 0; for (int j = 0; j < 8; j++) if (u[i * 8 + j]) v |= 1 << j; p[i] = (byte) v; }
+        if (!fcsOk(p)) return null;
+        return java.util.Arrays.copyOf(p, nb - 2);
+    }
+    private static boolean fcsOk(byte[] p) {
+        if (p.length < 3) return false;
+        return calculateFCS(p, 0, p.length - 2) == ((p[p.length - 2] & 0xFF) | ((p[p.length - 1] & 0xFF) << 8));
+    }
+    /** Flip each raw bit in turn (before de-stuffing, as direwolf's FIX_BITS 1); the first flip that passes the checksum
+     *  and still looks like AX.25 is accepted. */
+    private static byte[] repairOneBit(boolean[] raw) {
+        for (int i = 0; i < raw.length; i++) {
+            raw[i] = !raw[i];
+            byte[] f = frameFromRaw(raw);
+            raw[i] = !raw[i];
+            if (f != null && Ax25.plausible(f)) { fixedFrames++; return f; }
+        }
+        return null;
+    }
+
+    /** The original single-slicer decoder (kept for comparisons and as the reference behaviour). */
+    public static List<byte[]> decodeLegacy(short[] audioSamples) {
         List<byte[]> packets = new ArrayList<>();
         
         try {

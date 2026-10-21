@@ -34,6 +34,16 @@ public final class DiagReceiver extends BroadcastReceiver {
                 s.diagVfo(hz); break;
             }
             case "vfooff": s.diagVfoOff(); break;
+            case "afsk": {                                                      // bench: --ez legacy true = the old single-slicer decoder
+                boolean legacy = i.getBooleanExtra("legacy", false);
+                com.macdmr.radio.pkt.AFSKDecoder.MULTI_SLICER = !legacy; com.macdmr.radio.pkt.AFSKDecoder.BIT_FIX = !legacy;
+                com.macdmr.radio.pkt.AFSKDecoderIQ.PREFILTER = !legacy; com.macdmr.radio.pkt.AFSKDecoderIQ.toneFilterSize = legacy ? 32 : 52;
+                Log.i("DiagReceiver", "afsk decoder: " + (legacy ? "legacy" : "new")); break;
+            }
+            case "sstv": {                                                      // bench: --ez on, --ez park (144.500), --ez cont (continuous Robot 36)
+                if (s.packet() != null && i.hasExtra("cont")) s.packet().setSstvContinuousMode(i.getBooleanExtra("cont", false));
+                Log.i("DiagReceiver", "sstv: " + s.sstvMonitor(i.getBooleanExtra("on", false), i.getBooleanExtra("park", true))); break;
+            }
             case "leadtest": if (s.packet() != null) Log.i("DiagReceiver", "leadtest: " + s.packet().diagLeadTest(i.getIntExtra("kind", 0), i.getIntExtra("ms", 1600), i.getIntExtra("reps", 1), String.valueOf(i.getStringExtra("tag")))); break;   // one status packet, current channel
             case "sattest": {                                                   // a fake ISS pass from a minute from now for 30 s (or --el ms), --es key iss-rptr|iss-aprs|iss-sstv; nothing is keyed
                 com.macdmr.radio.ham.Sgp4 e = s.satellites().elements().get(25544);

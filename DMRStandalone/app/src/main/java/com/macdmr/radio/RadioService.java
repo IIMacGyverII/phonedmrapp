@@ -200,7 +200,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                     if (tuned && !started && packet != null) {         // the pass's job: decode APRS or SSTV on the moving frequency
                         started = true;
                         if (sat.mode == com.macdmr.radio.ham.Satellites.APRS) { aprsMonitorHz = (int) sat.downHz; packet.setMonitoring(true); pushModes(); }
-                        else if (sat.mode == com.macdmr.radio.ham.Satellites.SSTV) { packet.setSstvRx(true); pushModes(); }
+                        else if (sat.mode == com.macdmr.radio.ham.Satellites.SSTV) { packet.setSstvForceContinuous(true); packet.setSstvRx(true); pushModes(); }   // ISS events are Robot 36: no VIS needed, partial pictures kept
                     }
                     Thread.sleep(2000);
                 }
@@ -210,7 +210,7 @@ public class RadioService extends Service implements RadioEngine.Events {
             finally {
                 if (started && packet != null) {
                     if (sat.mode == com.macdmr.radio.ham.Satellites.APRS) packet.setMonitoring(false);
-                    else if (sat.mode == com.macdmr.radio.ham.Satellites.SSTV) packet.setSstvRx(false);
+                    else if (sat.mode == com.macdmr.radio.ham.Satellites.SSTV) { packet.setSstvRx(false); packet.setSstvForceContinuous(false); }
                 }
                 if (tuned && vfo != null && sat.name.equals(vfo.name)) exitVfo();
                 if (satState == st) satState = null;
