@@ -250,6 +250,12 @@
           <span class="label" style="display:block;margin-top:18px">THIS CONNECTION</span>
           <div id="webCard" class="satcard"></div>
           <p class="muted small">Web access, the PIN and “Allow transmit from the web” are changed only on the phone (Device → SignalDeck Web), so a browser can never give itself more rights.</p>
+          <span class="label" style="display:block;margin-top:18px">BACKUP AND RESTORE</span>
+          <div class="row wrap" style="margin-top:10px"><button class="btn primary" id="backupNow">Back up now</button></div>
+          <div id="backupList" class="list small"></div>
+          <label class="f" style="margin-top:12px"><span class="muted">Restore from files on this computer (select Contacts.csv, TG_Lists.csv, Channels.csv, Zones.csv and DTMF.csv of one backup or OpenGD77 CPS export)</span>
+            <input type="file" id="restoreFiles" accept=".csv,text/csv" multiple></label>
+          <p class="muted small">A restore replaces every channel, contact and zone with the backup; history, messages and settings are kept.</p>
         </div>
         <div class="panel"><span class="label">SETTINGS</span><div id="setList"></div></div>
       </div>

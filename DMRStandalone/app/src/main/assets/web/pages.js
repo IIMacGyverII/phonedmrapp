@@ -316,6 +316,28 @@ function renderSettings(j) {
 async function saveSetting(i, value) { const s = S.settings[i]; const j = await act('settings', { key: s.key, value }); if (j) renderSettings(j); else loadSettings(); }
 $('setList').addEventListener('click', e => { const b = e.target.closest('.switch'); if (b) saveSetting(+b.dataset.i, !S.settings[+b.dataset.i].value); });
 $('setList').addEventListener('change', e => { const el = e.target; if (el.tagName === 'SELECT') saveSetting(+el.dataset.i, +el.value); else if (el.tagName === 'INPUT') { const s = S.settings[+el.dataset.i]; saveSetting(+el.dataset.i, s.kind === 'int' ? parseInt(el.value, 10) : el.value); } });
+// backup and restore
+async function loadBackups() {
+  try {
+    const j = await api('backups'); S.backups = j.backups;
+    $('backupList').innerHTML = j.backups.slice(0, 30).map((b, i) => '<div class="item"><div class="main"><b>' + esc(b.name) + '</b><div class="sub">' + new Date(b.ts).toLocaleString() + ' · ' + b.files.length + ' files</div></div>'
+      + '<a class="act" href="/api/backup/zip?name=' + encodeURIComponent(b.name) + '">Download</a><button class="act" data-restore="' + i + '">Restore</button></div>').join('') || '<div class="empty">No backups yet</div>';
+  } catch (e) { }
+}
+$('backupNow').onclick = async () => { if (await act('backup', {})) loadBackups(); };
+$('backupList').onclick = async e => {
+  const b = e.target.closest('[data-restore]'); if (!b) return; const bk = S.backups[+b.dataset.restore];
+  if (!confirm('Restore ' + bk.name + '? It replaces every channel, contact and zone in SignalDeck with this backup.')) return;
+  if (await act('restore', { name: bk.name })) { loadChannels(); refresh(); }
+};
+$('restoreFiles').onchange = async () => {
+  const fl = [...$('restoreFiles').files]; if (!fl.length) return;
+  const files = {}; for (const f of fl) files[f.name] = await f.text();
+  if (!files['Channels.csv']) { toast('Channels.csv is needed'); $('restoreFiles').value = ''; return; }
+  if (!confirm('Restore from ' + Object.keys(files).join(', ') + '? It replaces every channel, contact and zone in SignalDeck.')) { $('restoreFiles').value = ''; return; }
+  if (await act('restore', { files })) { loadChannels(); refresh(); }
+  $('restoreFiles').value = '';
+};
 $('takeOver').onclick = async () => { await act('radio', { action: 'takeover' }); setTimeout(loadSettings, 4000); };
 $('handBack').onclick = async () => { if (confirm('Hand the radio back to the stock app? SignalDeck (and this page) stops controlling the radio until you take it over again.')) { await act('radio', { action: 'handback' }); setTimeout(loadSettings, 3000); } };
 
