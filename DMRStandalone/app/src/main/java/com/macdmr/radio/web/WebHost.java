@@ -694,6 +694,28 @@ public final class WebHost {
                 String e = onMain(() -> svc.packet().sendSstv(bmp, modes[m]));
                 return e == null ? ok("Sending the picture as " + com.macdmr.radio.pkt.SSTVEncoder.name(modes[m])) : WebServer.Response.error(409, e);
             }
+            case "/api/zones": {
+                if (post) {                                                     // save {id?, name, numbers[]}
+                    ChannelStore.Zone z = new ChannelStore.Zone(); z.id = b.optLong("id", 0); z.name = b.optString("name", "").trim();
+                    if (z.name.isEmpty()) return WebServer.Response.error(400, "A zone needs a name");
+                    JSONArray ns = b.optJSONArray("numbers"); java.util.List<Integer> keep = new java.util.ArrayList<>();
+                    if (ns != null) for (int i = 0; i < ns.length(); i++) { int n = ns.getInt(i); if (svc.store().byNumber(n) != null && !keep.contains(n)) keep.add(n); }
+                    if (keep.isEmpty()) return WebServer.Response.error(400, "Pick at least one channel for the zone");
+                    java.util.Collections.sort(keep); z.numbers = new int[keep.size()]; for (int i = 0; i < keep.size(); i++) z.numbers[i] = keep.get(i);
+                    long id = svc.store().saveZone(z);
+                    if (svc.zoneId() == id) onMain(() -> { svc.setZone(id); return null; });   // the active zone changed: scan and arrows follow it
+                    return WebServer.Response.json(200, new JSONObject().put("ok", true).put("message", "Saved zone " + z.name).put("id", id).toString());
+                }
+                JSONArray zs = new JSONArray();
+                for (ChannelStore.Zone z : svc.store().zones()) { JSONArray ns = new JSONArray(); for (int n : z.numbers) ns.put(n); zs.put(new JSONObject().put("id", z.id).put("name", z.name).put("numbers", ns)); }
+                JSONArray all = new JSONArray(); for (ChannelStore.Channel ch : svc.store().all()) all.put(new JSONObject().put("number", ch.number).put("name", ch.name).put("rxFreq", ch.rxFreq).put("digital", ch.isDigital()));
+                return ok(new JSONObject().put("zones", zs).put("channels", all).put("active", svc.zoneId()));
+            }
+            case "/api/zones/delete": if (!post) break; {
+                long id = b.optLong("id", 0); ChannelStore.Zone z = svc.store().zone(id); if (z == null) return WebServer.Response.error(404, "No such zone");
+                onMain(() -> { if (svc.zoneId() == id) svc.setZone(0); svc.store().deleteZone(id); return null; });
+                return ok("Deleted zone " + z.name);
+            }
             case "/api/backups": {                                              // the backups in Download/DMR/DMR_Backups
                 JSONArray a = new JSONArray();
                 for (File d : com.macdmr.radio.Backup.backups()) {

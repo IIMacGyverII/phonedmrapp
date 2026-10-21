@@ -96,6 +96,17 @@
           <form id="edForm" class="edform hidden" autocomplete="off"></form>
         </div>
       </div>
+      <div class="panel">
+        <div class="row between wrap"><span class="label">ZONES</span><button class="btn small-btn" id="zNew">New zone</button></div>
+        <div class="grid-side" style="margin-top:12px">
+          <div id="zList" class="list"></div>
+          <form id="zForm" class="hidden" autocomplete="off">
+            <div class="row wrap"><input id="zName" placeholder="Zone name" maxlength="24" class="grow"><button class="btn primary">Save zone</button><button type="button" class="btn danger" id="zDel">Delete</button></div>
+            <div class="row wrap" style="margin-top:8px"><button type="button" class="btn small-btn" id="zAll">All</button><button type="button" class="btn small-btn" id="zNone">None</button><input id="zFilter" placeholder="Filter channels" class="search grow"></div>
+            <div id="zChans" class="zchans"></div>
+          </form>
+        </div>
+      </div>
     </section>
 
     <!-- MESSAGES -->

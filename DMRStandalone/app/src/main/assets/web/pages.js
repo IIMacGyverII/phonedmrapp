@@ -169,6 +169,37 @@ $('passList').onclick = async e => {
   await act('sat/track', { key: s.key, aos: +p.dataset.aos }); refresh();
 };
 
+// ---- zones (under the channel list) ----
+S.zone = null;
+async function loadZonesEditor() {
+  try {
+    const j = await api('zones'); S.zonesEd = j;
+    $('zList').innerHTML = j.zones.map(z => '<div class="item click' + (S.zone && S.zone.id === z.id ? ' cur' : '') + '" data-id="' + z.id + '"><div class="main"><b>' + esc(z.name) + '</b>' + (z.id === j.active ? ' <span class="chip green">IN USE</span>' : '') + '<div class="sub">' + z.numbers.length + ' channels</div></div></div>').join('') || '<div class="empty">No zones yet</div>';
+    if (S.zone) renderZoneForm();
+  } catch (e) { }
+}
+function editZone(z) { S.zone = z ? { id: z.id, name: z.name, numbers: z.numbers.slice() } : { id: 0, name: '', numbers: [] }; $('zForm').classList.remove('hidden'); $('zName').value = S.zone.name; $('zDel').classList.toggle('hidden', !S.zone.id); renderZoneForm(); loadZonesEditor(); }
+function renderZoneForm() {
+  const q = $('zFilter').value.trim().toLowerCase(); const sel = new Set(S.zone.numbers);
+  $('zChans').innerHTML = S.zonesEd.channels.filter(c => !q || (c.name || '').toLowerCase().includes(q) || mhz(c.rxFreq).includes(q))
+    .map(c => '<label><input type="checkbox" data-n="' + c.number + '"' + (sel.has(c.number) ? ' checked' : '') + '><span class="n">' + c.number + '</span><span>' + esc(c.name || '—') + '<div class="sub mono">' + mhz(c.rxFreq) + (c.digital ? ' DMR' : ' FM') + '</div></span></label>').join('');
+}
+$('zList').onclick = e => { const it = e.target.closest('.item'); if (it) editZone(S.zonesEd.zones.find(z => z.id === +it.dataset.id)); };
+$('zNew').onclick = () => editZone(null);
+$('zFilter').oninput = renderZoneForm;
+$('zChans').onchange = e => { const n = +e.target.dataset.n; if (e.target.checked) S.zone.numbers.push(n); else S.zone.numbers = S.zone.numbers.filter(x => x !== n); };
+$('zAll').onclick = () => { const vis = [...$('zChans').querySelectorAll('input')].map(i => +i.dataset.n); S.zone.numbers = [...new Set(S.zone.numbers.concat(vis))]; renderZoneForm(); };
+$('zNone').onclick = () => { const vis = new Set([...$('zChans').querySelectorAll('input')].map(i => +i.dataset.n)); S.zone.numbers = S.zone.numbers.filter(n => !vis.has(n)); renderZoneForm(); };
+$('zForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const j = await act('zones', { id: S.zone.id, name: $('zName').value, numbers: S.zone.numbers });
+  if (j) { S.zone.id = j.id; $('zDel').classList.remove('hidden'); loadZonesEditor(); loadZones(); loadChannels(); }
+});
+$('zDel').onclick = async () => {
+  if (!S.zone.id || !confirm('Delete zone ' + S.zone.name + '? Its channels are kept.')) return;
+  if (await act('zones/delete', { id: S.zone.id })) { S.zone = null; $('zForm').classList.add('hidden'); loadZonesEditor(); loadZones(); loadChannels(); }
+};
+
 // ---- logbook ----
 S.qso = null;
 async function loadLog() {
