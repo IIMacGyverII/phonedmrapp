@@ -58,6 +58,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         tc.addView(st);
         profileText = Neo.text(c, "", 0xFF9FB4C8, 13, Neo.mono(c)); profileText.setPadding(0, (int) (5 * d), 0, 0);
         tc.addView(profileText);
+        profileText.setOnClickListener(v -> profileDialog());
         top.addView(tc, new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f));
         hero.addView(top);
         LinearLayout hb = new LinearLayout(c); hb.setBaselineAligned(false);
@@ -355,6 +356,53 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
                 }).setNegativeButton("Close", null).show();
     }
 
+    /** Which profile this phone uses, the profile list and its advisories; the owner decides about every advisory. */
+    private void profileDialog() {
+        final Context c = getContext();
+        final com.macdmr.radio.ProfileRegistry.Selection s = com.macdmr.radio.ProfileRegistry.selection();
+        StringBuilder m = new StringBuilder(com.macdmr.radio.ProfileRegistry.describe(s)).append('.');
+        long last = com.macdmr.radio.ProfileRegistry.lastCheck();
+        m.append("\n\nProfile list last checked: ").append(last == 0 ? "never" : android.text.format.DateFormat.getDateFormat(c).format(new java.util.Date(last)) + " " + android.text.format.DateFormat.getTimeFormat(c).format(new java.util.Date(last)));
+        if (com.macdmr.radio.ProfileRegistry.useBuiltIn()) m.append("\nUpdated profiles are switched off: the built-in profile is used.");
+        for (com.macdmr.radio.ProfileRegistry.Advisory a : s.advisories)
+            m.append("\n\n⚠ ").append(a.title).append(a.overridden ? " — you chose to keep using it" : "").append("\n").append(a.restrictionText()).append(".\n").append(a.why)
+                    .append(a.expires.isEmpty() ? "" : "\n(until " + a.expires + " unless renewed)");
+        m.append("\n\nTested profiles are part of each SignalDeck release and work without the internet. A newer revision, or an advisory about a problem, can come from the project's signed profile list. Changes other than transmit take effect the next time SignalDeck starts.");
+        android.app.AlertDialog.Builder b = new android.app.AlertDialog.Builder(c).setTitle("Phone profile").setMessage(m)
+                .setPositiveButton("Check now", (dd, w) -> new Thread(() -> { final String r = com.macdmr.radio.ProfileRegistry.fetch(); post(() -> { android.widget.Toast.makeText(c, r, android.widget.Toast.LENGTH_LONG).show(); refresh(); }); }).start())
+                .setNegativeButton(com.macdmr.radio.ProfileRegistry.useBuiltIn() ? "Allow updated profiles" : "Use the built-in profile", (dd, w) -> { com.macdmr.radio.ProfileRegistry.setUseBuiltIn(!com.macdmr.radio.ProfileRegistry.useBuiltIn()); refresh(); });
+        if (!s.advisories.isEmpty()) b.setNeutralButton("Advisories", (dd, w) -> advisoryList(s));
+        b.show();
+    }
+
+    private void advisoryList(final com.macdmr.radio.ProfileRegistry.Selection s) {
+        final Context c = getContext();
+        String[] rows = new String[s.advisories.size()];
+        for (int i = 0; i < rows.length; i++) { com.macdmr.radio.ProfileRegistry.Advisory a = s.advisories.get(i); rows[i] = (a.overridden ? "Overridden by you · " : "In effect · ") + a.title; }
+        new android.app.AlertDialog.Builder(c).setTitle("Advisories for this phone").setItems(rows, (dd, w) -> advisory(s.advisories.get(w))).setNegativeButton("Close", null).show();
+    }
+
+    /** Keep or override one advisory: overriding takes two confirmations, restoring takes one. */
+    private void advisory(final com.macdmr.radio.ProfileRegistry.Advisory a) {
+        final Context c = getContext();
+        String body = a.restrictionText() + ".\n\nWhy: " + a.why + "\n\nIssued " + a.issued + (a.expires.isEmpty() ? "" : ", lapses " + a.expires + " unless renewed") + ".";
+        if (a.overridden) {
+            new android.app.AlertDialog.Builder(c).setTitle(a.title).setMessage(body + "\n\nYou chose to keep using it anyway.")
+                    .setPositiveButton("Apply the advisory again", (dd, w) -> { com.macdmr.radio.ProfileRegistry.setOverride(a.id, false); refresh(); }).setNegativeButton("Close", null).show();
+            return;
+        }
+        new android.app.AlertDialog.Builder(c).setTitle(a.title).setMessage(body)
+                .setPositiveButton("Keep restricted", null)
+                .setNegativeButton("Use it anyway…", (dd, w) -> new android.app.AlertDialog.Builder(c).setTitle("Use it anyway? (1 of 2)")
+                        .setMessage("This advisory says: " + a.restrictionText().toLowerCase(java.util.Locale.ROOT) + ", because:\n\n" + a.why + "\n\nIf you continue, SignalDeck works on this phone as if the advisory did not exist.")
+                        .setPositiveButton("Continue", (d2, w2) -> new android.app.AlertDialog.Builder(c).setTitle("Your decision (2 of 2)")
+                                .setMessage("It is your phone and your decision. You take responsibility for using this despite the advisory. This applies to this advisory only; you can apply it again at any time from the Device page.")
+                                .setPositiveButton("I understand, use it anyway", (d3, w3) -> { com.macdmr.radio.ProfileRegistry.setOverride(a.id, true); refresh(); android.widget.Toast.makeText(c, "Overridden: takes effect now for transmit, at the next start for the rest", android.widget.Toast.LENGTH_LONG).show(); })
+                                .setNegativeButton("Cancel", null).show())
+                        .setNegativeButton("Cancel", null).show())
+                .show();
+    }
+
     private void locked(String why) { android.widget.Toast.makeText(getContext(), why, android.widget.Toast.LENGTH_LONG).show(); }
 
     private void listenCheckIntro() {
@@ -542,6 +590,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
     @Override protected void onVisibilityChanged(android.view.View changed, int visibility) {
         super.onVisibilityChanged(changed, visibility);
         if (visibility == VISIBLE && svc != null && covSw != null) covSw.setChecked(svc.coverage().enabled());
+        if (visibility == VISIBLE && svc != null && profileText != null) refresh();      // a profile-list check may have brought an advisory
         if (visibility == VISIBLE && autoWarn != null) checkAutoTrust();   // also after coming back from Android Auto's settings
     }
     public void detach() { if (svc != null) svc.removeListener(this); svc = null; }
@@ -583,6 +632,9 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         Context c = getContext(); float d = Theme.dp(c);
         Neo.headerSubtitle(header).setText(svc.profile().name.toUpperCase(java.util.Locale.US));
         profileText.setText(svc.profile().controlPort + " · " + svc.profile().baud + " · " + (svc.profile().audio == com.macdmr.radio.DeviceProfile.Audio.TINY_SERVICE ? "vendor audio" : "UART PCM"));
+        com.macdmr.radio.ProfileRegistry.Selection ps = com.macdmr.radio.ProfileRegistry.selection();
+        if (ps.profile.supported || !ps.advisories.isEmpty()) profileText.append(" · r" + ps.profile.revision + ("updated".equals(ps.source) ? " updated" : ""));
+        for (com.macdmr.radio.ProfileRegistry.Advisory a : ps.advisories) if (!a.overridden) { profileText.append(" · ⚠ advisory"); break; }
         String l = svc.link();
         if (!svc.profile().verified && svc.profile().supported) profileText.append(" · untested");
         boolean ready = "ready".equals(l), unsupported = "unsupported".equals(l), bad = "no root".equals(l) || unsupported;

@@ -34,6 +34,10 @@ public final class DiagReceiver extends BroadcastReceiver {
                 s.diagVfo(hz); break;
             }
             case "vfooff": s.diagVfoOff(); break;
+            // bench: load a signed profile list from a file (--es path …), regardless of its serial, to try advisories on this
+            // phone without publishing them; "profileclear" removes it again (and the owner's overrides)
+            case "profiletest": Log.i("DiagReceiver", "profiletest: " + ProfileRegistry.loadForTest(new java.io.File(i.getStringExtra("path")))); break;
+            case "profileclear": Log.i("DiagReceiver", "profileclear: " + ProfileRegistry.clearForTest()); break;
             case "web": Log.i("DiagReceiver", "web: " + (s.web() == null ? "no host" : String.valueOf(s.web().setEnabled(i.getBooleanExtra("on", true))) + " running=" + s.web().running() + " " + s.web().urls())); break;
             case "aprs144": Log.i("DiagReceiver", "aprs144: " + s.aprsMonitor(i.getBooleanExtra("on", true))); break;      // standard APRS monitoring on/off (receive)
             case "issaprs": {                                                   // ISS APRS: track the next pass and every one after it
