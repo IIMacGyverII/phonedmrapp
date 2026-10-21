@@ -130,6 +130,19 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         voiceSw.setOnChange(on -> { if (svc != null) svc.setVoiceOn(on); });
         styleSw.setOnChange(on -> { IntercomView.setNewLook(c, on); if (host != null) host.intercomStyleChanged(); });
 
+        // ---- SignalDeck Web ----
+        LinearLayout web = card(body, "SignalDeck Web");
+        webSw = sw(); webTxSw = sw();
+        LinearLayout webRow = Neo.switchRow(c, WEB_ICON, Neo.CYAN, "Web access", "Use SignalDeck from a browser on the same Wi-Fi", webSw);
+        webSub = (TextView) ((LinearLayout) webRow.getChildAt(1)).getChildAt(1);
+        addRow(web, webRow);
+        addRow(web, Neo.switchRow(c, "ptt", Neo.RED, "Allow transmit from the web", "Off: a browser can listen and change channels but never keys the radio", webTxSw));
+        LinearLayout pinRow = Neo.switchRow(c, "shield", Neo.AMBER, "New PIN", "Makes a new PIN and logs every browser out", null);
+        pinRow.setOnClickListener(v -> { if (svc != null) { svc.web().newPin(); updateWeb(); } });
+        addRow(web, pinRow);
+        webSw.setOnChange(on -> { if (svc == null) return; String e = svc.web().setEnabled(on); if (e != null) android.widget.Toast.makeText(c, e, android.widget.Toast.LENGTH_LONG).show(); updateWeb(); });
+        webTxSw.setOnChange(on -> { if (svc != null) svc.web().setAllowTx(on); });
+
         // ---- identity ----
         LinearLayout id = card(body, "Your DMR ID");
         LinearLayout idRow = new LinearLayout(c); idRow.setGravity(Gravity.CENTER_VERTICAL); idRow.setPadding((int) (14 * d), (int) (4 * d), (int) (14 * d), (int) (12 * d));
@@ -419,6 +432,21 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         styleSw.setChecked(IntercomView.newLook(c)); animSw.setChecked(IntercomView.animatedPanel(c)); covSw.setChecked(svc.coverage().enabled()); carMicSw.setChecked(svc.carMic()); carCovSw.setChecked(svc.coverageInCar()); wheelSw.setChecked(svc.wheelTalk()); nextTalkValue.setText(com.macdmr.radio.RadioService.NEXT_TALK_NAMES[svc.nextTalkMode()]);
         wheelMicValue.setText(com.macdmr.radio.RadioService.WHEEL_MIC_NAMES[Math.max(0, Math.min(1, svc.wheelMic()))]); voxValue.setText(com.macdmr.radio.RadioService.VOX_NAMES[Math.max(0, Math.min(3, svc.voxStop()))]); carScreenSw.setChecked(svc.carControlsScreen());
         ((TextView) radioIdTile.findViewWithTag("sub")).setText(svc.radioId().status());
+        updateWeb();
+    }
+
+    private static final String WEB_ICON = "M12,3 A9,9 0 1,0 12.01,3 Z M3,12 H21 M12,3 C8.5,7 8.5,17 12,21 M12,3 C15.5,7 15.5,17 12,21";
+    private Neo.NeonSwitch webSw, webTxSw; private TextView webSub;
+    /** The web card: address and PIN while the server runs. */
+    private void updateWeb() {
+        if (svc == null || svc.web() == null || webSw == null) return;
+        com.macdmr.radio.web.WebHost w = svc.web();
+        webSw.setChecked(w.enabled()); webTxSw.setChecked(w.allowTx());
+        if (!w.enabled()) { webSub.setText("Use SignalDeck from a browser on the same Wi-Fi"); return; }
+        if (!w.running()) { webSub.setText("Not running" + (w.lastError() != null ? ": " + w.lastError() : "")); return; }
+        java.util.List<String> u = w.urls();
+        webSub.setText((u.isEmpty() ? "Connect to Wi-Fi to get an address" : "Open " + android.text.TextUtils.join("  or  ", u)) + "\nPIN  " + w.pin()
+                + (w.clients() > 0 ? "   ·  " + w.clients() + " browser" + (w.clients() == 1 ? "" : "s") + " connected" : ""));
     }
 
     @Override public void onLink(String state) { refresh(); }

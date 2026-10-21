@@ -650,7 +650,13 @@ public class RadioService extends Service implements RadioEngine.Events {
             getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("smsStatusMigrated", true).apply();
         }
         registerHardwarePtt();
+        web = new com.macdmr.radio.web.WebHost(this);
+        if (web.enabled()) { String e = web.start(); if (e != null) log("web: " + e); }
     }
+
+    /** SignalDeck Web: the built-in web server (Device → SignalDeck Web). */
+    private com.macdmr.radio.web.WebHost web;
+    public com.macdmr.radio.web.WebHost web() { return web; }
 
     @Override public IBinder onBind(Intent i) { return binder; }
     @Override public int onStartCommand(Intent i, int f, int id) {
@@ -681,6 +687,7 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     @Override public void onDestroy() {
         running = null; RadioWidget.refresh(this, null);
+        try { if (web != null) web.stop(); } catch (Throwable ignored) { }
         try { if (coverage != null) coverage.stop(); } catch (Throwable ignored) { }
         stopBluetoothMic();
         try { if (pttKey != null) unregisterReceiver(pttKey); } catch (Throwable ignored) { }

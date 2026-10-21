@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#060B12">
+<title>SignalDeck Web</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="login" class="login hidden">
+  <form class="login-card" id="loginForm" autocomplete="off">
+    <img src="icon.svg" alt="" class="login-icon">
+    <h1>SIGNAL<span>DECK</span></h1>
+    <p class="muted">Enter the PIN shown on the phone under <b>Device → SignalDeck Web</b>.</p>
+    <input id="pin" maxlength="12" placeholder="PIN" spellcheck="false" autocapitalize="characters" aria-label="PIN">
+    <button type="submit" class="btn primary">Log in</button>
+    <p id="loginErr" class="err"></p>
+  </form>
+</div>
+
+<div id="app" class="hidden">
+  <header class="top">
+    <div class="brand"><img src="icon.svg" alt=""><b>SIGNAL</b><span>DECK</span></div>
+    <nav id="nav">
+      <a href="#intercom" data-page="intercom">Intercom</a>
+      <a href="#channels" data-page="channels">Channels</a>
+      <a href="#aprs" data-page="aprs">APRS</a>
+      <a href="#sstv" data-page="sstv">SSTV</a>
+      <a href="#sat" data-page="sat">Satellites</a>
+    </nav>
+    <div class="conn"><span id="connDot" class="dot"></span><span id="connText">Connecting…</span><button id="logout" class="link">Log out</button></div>
+  </header>
+
+  <div id="modebar" class="modebar hidden"><span id="modeText"></span><a id="modeOpen" href="#aprs">Open ›</a></div>
+
+  <main>
+    <!-- INTERCOM -->
+    <section id="page-intercom" class="page">
+      <div class="grid2">
+        <div class="panel radio">
+          <div class="row between"><span class="label">CHANNEL</span><span id="link" class="chip"></span></div>
+          <div class="chan">
+            <button class="arrow" id="chDown" aria-label="Previous channel">‹</button>
+            <div class="chan-mid"><div id="chNum" class="digits">--</div><div id="chName" class="chname">—</div></div>
+            <button class="arrow" id="chUp" aria-label="Next channel">›</button>
+          </div>
+          <div class="freqrow"><span id="freq" class="mono freq">---.----</span><span id="chType" class="chip"></span><span id="tone" class="chip dim"></span></div>
+          <div class="smeter"><div class="smeter-fill" id="smeterFill"></div><span id="smeterText" class="mono">— dBm</span></div>
+          <div class="state"><span id="rxtx" class="badge">IDLE</span><span id="caller" class="caller"></span></div>
+          <div class="controls">
+            <button class="tog" id="scanBtn">SCAN</button>
+            <button class="tog" id="monBtn">MON</button>
+            <button class="tog" id="recBtn">REC</button>
+            <button class="tog" id="sqBtn">SOFT SQ</button>
+            <select id="zoneSel" aria-label="Zone"></select>
+          </div>
+          <div class="sq"><span class="label">SOFT SQ</span><input type="range" id="sqLevel" min="0" max="100"><span id="sqVal" class="mono">--</span></div>
+          <button id="ptt" class="ptt" disabled>PTT</button>
+          <p id="pttNote" class="muted small center"></p>
+        </div>
+        <div class="panel">
+          <div class="row between"><span class="label">HISTORY</span><span id="captionState" class="chip dim"></span></div>
+          <div id="caption" class="caption hidden"></div>
+          <div id="history" class="history mono"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHANNELS -->
+    <section id="page-channels" class="page hidden">
+      <div class="panel">
+        <div class="row between"><span class="label">CHANNELS</span><input id="chSearch" placeholder="Search" class="search"></div>
+        <div id="chList" class="list"></div>
+      </div>
+    </section>
+
+    <!-- APRS -->
+    <section id="page-aprs" class="page hidden">
+      <div class="panel">
+        <div class="row between wrap">
+          <div><span class="label">APRS</span> <span id="aprsState" class="chip"></span></div>
+          <div class="row"><button class="btn" id="aprsToggle">Monitor 144.390</button><button class="btn" id="beaconBtn">Send beacon</button></div>
+        </div>
+        <div class="stats"><div><b id="aprsCount">0</b><span>PACKETS</span></div><div><b id="stationCount">0</b><span>STATIONS</span></div><div><b id="forYou">0</b><span>FOR YOU</span></div></div>
+      </div>
+      <div class="grid2">
+        <div class="panel"><span class="label">PACKETS</span><div id="aprsLog" class="list mono small"></div></div>
+        <div class="panel"><span class="label">STATIONS</span><div id="stations" class="list small"></div></div>
+      </div>
+      <div class="panel">
+        <span class="label">SEND A MESSAGE</span>
+        <form id="msgForm" class="row wrap"><input id="msgTo" placeholder="To (callsign)" maxlength="9" class="w9"><input id="msgText" placeholder="Message" maxlength="67" class="grow"><button class="btn primary">Send</button></form>
+        <p id="msgNote" class="muted small"></p>
+      </div>
+    </section>
+
+    <!-- SSTV -->
+    <section id="page-sstv" class="page hidden">
+      <div class="grid2">
+        <div class="panel">
+          <div class="row between"><span class="label">SSTV</span><span id="sstvState" class="chip"></span></div>
+          <div class="sstvbox"><img id="sstvLive" alt="Live SSTV picture" class="hidden"><div id="sstvEmpty" class="muted">No picture yet</div></div>
+          <div class="row"><button class="btn" id="sstvToggle">Listen on 144.500</button></div>
+        </div>
+        <div class="panel"><span class="label">PICTURES</span><div id="gallery" class="gallery"></div></div>
+      </div>
+    </section>
+
+    <!-- SATELLITES -->
+    <section id="page-sat" class="page hidden">
+      <div class="panel">
+        <span class="label">ISS</span>
+        <div id="satCard" class="satcard"></div>
+        <div class="row wrap"><button class="btn" data-iss="aprs">ISS APRS 437.825</button><button class="btn" data-iss="sstv">ISS SSTV 437.550</button><button class="btn danger" data-iss="stop">Stop tracking</button></div>
+        <p class="muted small">Tracking follows every pass: the radio tunes a few minutes before it, corrects the Doppler shift and listens only.</p>
+      </div>
+    </section>
+  </main>
+  <div id="toast" class="toast hidden"></div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
