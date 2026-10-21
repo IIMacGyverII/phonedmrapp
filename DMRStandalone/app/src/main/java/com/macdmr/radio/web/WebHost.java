@@ -650,6 +650,33 @@ public final class WebHost {
                 String e = onMain(() -> svc.packet().sendCwId());
                 return e == null ? ok("Sending the Morse ID") : WebServer.Response.error(409, e);
             }
+            case "/api/sstv/send": if (!post) break; {                          // body: the picture's bytes (PNG/JPEG); ?mode=0..2
+                if (!allowTx()) return WebServer.Response.error(403, TX_OFF);
+                int[] modes = { com.macdmr.radio.pkt.SSTVEncoder.ROBOT_24_COLOR, com.macdmr.radio.pkt.SSTVEncoder.ROBOT_12_BW, com.macdmr.radio.pkt.SSTVEncoder.ROBOT_8_BW };
+                int m = parse(r.param("mode"), 0); if (m < 0 || m >= modes.length) return WebServer.Response.error(400, "mode: 0 Robot 24 Color, 1 Robot 12 BW, 2 Robot 8 BW");
+                android.graphics.Bitmap bmp = android.graphics.BitmapFactory.decodeByteArray(r.body, 0, r.body.length);
+                if (bmp == null) return WebServer.Response.error(400, "That is not a picture this phone can read (use PNG or JPEG)");
+                String e = onMain(() -> svc.packet().sendSstv(bmp, modes[m]));
+                return e == null ? ok("Sending the picture as " + com.macdmr.radio.pkt.SSTVEncoder.name(modes[m])) : WebServer.Response.error(409, e);
+            }
+            case "/api/heard": {                                                // Last heard, grouped like the phone's sheet, plus alerts and events
+                java.util.LinkedHashMap<String, JSONObject> rows = new java.util.LinkedHashMap<>();
+                for (Object[] h : svc.store().lastHeard(400)) {
+                    long ts = (Long) h[0]; int ch = (Integer) h[1]; String kind = (String) h[2], text = (String) h[3]; int id = (Integer) h[4];
+                    if (text != null && (text.startsWith("⛔") || text.startsWith("⚠"))) continue;
+                    String key = ch + ":" + (kind.equals("dmr") || kind.equals("sms") ? id : kind);
+                    JSONObject e = rows.get(key);
+                    if (e != null) { e.put("count", e.getInt("count") + 1); continue; }
+                    ChannelStore.Channel c = svc.store().byNumber(ch);
+                    rows.put(key, new JSONObject().put("ts", ts).put("channel", ch).put("channelName", c != null ? c.name : ch == 0 ? "VFO" : "channel " + ch)
+                            .put("kind", kind).put("text", text).put("dmrId", id).put("name", id > 0 ? svc.callerName(id) : "").put("count", 1));
+                }
+                JSONArray a = new JSONArray(); for (JSONObject o : rows.values()) a.put(o);
+                JSONArray ev = new JSONArray();
+                for (Object[] h : svc.store().events(System.currentTimeMillis() - 7L * 24 * 3600 * 1000, 100))
+                    ev.put(new JSONObject().put("ts", h[0]).put("channel", h[1]).put("kind", h[2]).put("text", h[3]));
+                return ok(new JSONObject().put("heard", a).put("events", ev));
+            }
             case "/api/help": {
                 JSONArray a = new JSONArray();
                 for (String[] t : com.macdmr.radio.ui.HelpView.topicsForWeb()) {
