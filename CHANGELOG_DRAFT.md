@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — SignalDeck Web: Morse trainer
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Exam page → **Morse trainer (Koch)**, played in the browser with Web Audio: the phone's `MorseTrainer` rules ported (LCWO order, lesson characters, groups of five with the newest character favoured, ARRL Farnsworth timing, 5 ms edges, edit-distance score, 90 % advances), with lesson and speeds shared with the phone's trainer (`trainer` prefs). API `/api/trainer`. | `web/WebHost.java`, `assets/web/morse.js`, `index.html`, `app.js`, `app.css`, `ui/HelpView.java` | Headless Chrome against the phone: lesson 1 = K M, 10 groups of 5 using only lesson characters, audio context running, scores 1 / 0.9 / 0 for perfect / one wrong / empty (same as the Java). The phone's trainer settings were only read. |
+
 ## 2026-10-20 — SignalDeck Web: Exam practice
 
 | Backlog | Change | Files | Test |
