@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — SignalDeck Web: Last heard, alerts and events, SSTV send
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Under the web Intercom: **Last heard** (grouped per channel and caller like the phone's sheet, RadioID names, counts; click to tune) and **Alerts and events** of the last 7 days. SSTV page: **Send a picture** (PNG/JPEG/WebP upload, Robot 24 Color / 12 BW / 8 BW, the phone decodes and scales it and transmits through the same path as the phone's Send; refused unless *Allow transmit from the web*). API `/api/heard`, `/api/sstv/send`. | `web/WebHost.java`, `assets/web/pages.js`, `index.html`, `app.js`, `ui/HelpView.java` | On the phone over Wi-Fi: Last heard showed 9 groups with names, events 100 rows; SSTV send refused (403) with transmit off. Not yet tested: an on-air SSTV send from the web. |
+
 ## 2026-10-20 — SignalDeck Web: Packet page (APRS settings, APRS-IS / KISS / parrot, DTMF, weather alerts)
 
 | Backlog | Change | Files | Test |

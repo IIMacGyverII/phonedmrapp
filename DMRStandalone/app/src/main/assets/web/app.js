@@ -38,6 +38,7 @@ function route() {
   if (S.page === 'aprs') loadAprs();
   if (S.page === 'sstv') loadSstv();
   if (S.page === 'sat') { renderSat(); loadPasses(); }
+  if (S.page === 'intercom') loadHeard();
   if (S.page === 'messages') loadConversations();
   if (S.page === 'contacts') loadContacts();
   if (S.page === 'map') loadMap();

@@ -269,6 +269,32 @@ $('dtmfForm').addEventListener('submit', async e => { e.preventDefault(); if (aw
 $('dtmfSaved').onclick = e => { const b = e.target.closest('[data-seq]'); if (b) $('dtmfSeq').value = b.dataset.seq; };
 $('cwIdBtn').onclick = () => act('cwid', {});
 
+// ---- SSTV: send a picture (the phone scales it to the mode's 320 x 240 and transmits) ----
+$('sstvSend').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!S.status.webTx) { toast('Transmit from the web is off (phone: Device → SignalDeck Web)'); return; }
+  const f = $('sstvFile').files[0]; if (!f) { toast('Choose a picture first'); return; }
+  if (f.size > 8 * 1024 * 1024) { toast('That picture is too large (8 MB at most)'); return; }
+  try {
+    const r = await fetch('/api/sstv/send?mode=' + $('sstvMode').value, { method: 'POST', headers: { 'Content-Type': f.type || 'application/octet-stream' }, body: f });
+    const j = await r.json().catch(() => ({})); toast(r.ok ? j.message : (j.error || 'HTTP ' + r.status));
+  } catch (err) { toast(err.message); }
+});
+
+// ---- last heard + alerts (under the intercom) ----
+async function loadHeard() {
+  try {
+    const j = await api('heard');
+    const day = ts => new Date(ts).toLocaleDateString([], { month: '2-digit', day: '2-digit' }) + ' ' + hhmmss(ts);
+    $('heardList').innerHTML = j.heard.map(h => '<div class="item' + (h.channel > 0 ? ' click' : '') + '" data-ch="' + h.channel + '"><span class="t">' + day(h.ts) + '</span><div class="main">'
+      + (h.dmrId > 0 ? '<b style="color:var(--amber)">' + esc(h.name || ('ID ' + h.dmrId)) + '</b> <span class="sub mono">' + h.dmrId + '</span>' : '<span class="pk-from">' + esc(h.text.length > 70 ? h.text.slice(0, 70) + '…' : h.text) + '</span>')
+      + '<div class="sub">' + esc(h.channelName) + (h.count > 1 ? ' · ' + h.count + '×' : '') + (h.dmrId > 0 && h.text ? ' · ' + esc(h.text) : '') + '</div></div></div>').join('') || '<div class="empty">Nothing heard yet</div>';
+    $('eventList').innerHTML = j.events.map(e => '<div class="item"><span class="t">' + day(e.ts) + '</span><div class="main">' + esc(e.text) + '</div></div>').join('') || '<div class="empty">No alerts or events this week</div>';
+  } catch (e) { }
+}
+$('heardRefresh').onclick = loadHeard;
+$('heardList').onclick = e => { const it = e.target.closest('.item.click'); if (it && confirm('Tune channel ' + it.dataset.ch + '?')) act('channel/select', { number: +it.dataset.ch }); };
+
 // ---- settings ----
 async function loadSettings() { try { renderSettings(await api('settings')); } catch (e) { } }
 function renderSettings(j) {

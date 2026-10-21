@@ -75,6 +75,10 @@
           <div id="history" class="history mono"></div>
         </div>
       </div>
+      <div class="grid2">
+        <div class="panel"><div class="row between"><span class="label">LAST HEARD</span><button class="btn small-btn" id="heardRefresh">Refresh</button></div><div id="heardList" class="list small"></div></div>
+        <div class="panel"><span class="label">ALERTS AND EVENTS · 7 DAYS</span><div id="eventList" class="list small"></div></div>
+      </div>
     </section>
 
     <!-- CHANNELS -->
@@ -150,6 +154,13 @@
           <div class="row between"><span class="label">SSTV</span><span id="sstvState" class="chip"></span></div>
           <div class="sstvbox"><img id="sstvLive" alt="Live SSTV picture" class="hidden"><div id="sstvEmpty" class="muted">No picture yet</div></div>
           <div class="row"><button class="btn" id="sstvToggle">Listen on 144.500</button></div>
+          <span class="label" style="display:block;margin-top:18px">SEND A PICTURE</span>
+          <form id="sstvSend" class="row wrap" style="margin-top:10px">
+            <input type="file" id="sstvFile" accept="image/png,image/jpeg,image/webp" class="grow">
+            <select id="sstvMode"><option value="0">Robot 24 Color (≈24 s)</option><option value="1">Robot 12 BW (≈12 s)</option><option value="2">Robot 8 BW (≈8 s)</option></select>
+            <button class="btn primary">Send</button>
+          </form>
+          <p id="sstvSendNote" class="muted small">Sends on the current analog channel. The radio stops any transmission after 30 seconds, so only these short modes are offered.</p>
         </div>
         <div class="panel"><span class="label">PICTURES</span><div id="gallery" class="gallery"></div></div>
       </div>
