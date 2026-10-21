@@ -296,13 +296,16 @@ public final class DeviceReport {
 
     /** Re-zip the newest report folder (after appends) and return the zip. */
     public static File zipNewest(Context c) throws Exception { return zipNewest(c, true); }
-    public static File zipNewest(Context c, boolean withApks) throws Exception {
+    public static File zipNewest(Context c, boolean withApks) throws Exception { return zipNewest(c, withApks, true); }
+    /** The station recording (listen_station.wav) can hold other people's voices: shared only when the owner says so. */
+    public static final String STATION_CLIP = "listen_station.wav";
+    public static File zipNewest(Context c, boolean withApks, boolean withStation) throws Exception {
         File newest = newestDir();
         if (newest == null) throw new Exception("no report yet");
-        File zip = new File(new File(c.getCacheDir(), "share"), newest.getName() + (withApks ? "" : "_noapk") + ".zip"); zip.getParentFile().mkdirs();
+        File zip = new File(new File(c.getCacheDir(), "share"), newest.getName() + (withApks ? "" : "_noapk") + (withStation ? "" : "_nostation") + ".zip"); zip.getParentFile().mkdirs();
         try (ZipOutputStream z = new ZipOutputStream(new FileOutputStream(zip))) {
             File[] in = newest.listFiles();
-            if (in != null) for (File f : in) { if (!withApks && f.getName().endsWith(".apk")) continue; z.putNextEntry(new ZipEntry(f.getName())); try (InputStream i = new FileInputStream(f)) { byte[] b = new byte[65536]; int n; while ((n = i.read(b)) > 0) z.write(b, 0, n); } z.closeEntry(); }
+            if (in != null) for (File f : in) { if (!withApks && f.getName().endsWith(".apk")) continue; if (!withStation && f.getName().equals(STATION_CLIP)) continue; z.putNextEntry(new ZipEntry(f.getName())); try (InputStream i = new FileInputStream(f)) { byte[] b = new byte[65536]; int n; while ((n = i.read(b)) > 0) z.write(b, 0, n); } z.closeEntry(); }
         }
         return zip;
     }

@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-21 — Listen check records what it heard (WAV clips with level, clipping and dropouts)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Owner's question: do the "did you hear it?" checks record audio we can check, or only the answer? Now both. Each part records what SignalDeck received (8 kHz mono 16-bit, after the stereo→mono step, before the speaker; new `ClipRecorder`): part 1 **`listen_static.wav`**, 5 s with MON on (receiver noise or an open broadcast, always shared); part 2 **`listen_station.wav`**, up to 20 s **only while something is heard**. The report lists each clip's length, RMS level (dBFS), peak, clipping % and dropouts (≥10 ms of exact digital silence: lost or zero-filled packets). Sharing asks "Include the station recording?" with **Leave it out** preselected, because it may contain other people's voices. Part 1 now asks "Did you hear anything from the speaker?" (static / a station talking / no sound / not sure) — the owner heard the NOAA voice there, not static. Help explains that a station at the squelch level sounds choppy because the squelch keeps opening and closing. | `ClipRecorder.java` (new), `RadioService.java`, `FirstRunCheck.java`, `DeviceReport.java`, `ui/DeviceView.java`, `ui/HelpView.java`, test `ClipRecorderTest.java` | **device (Armor, NOAA WX6 at −92 dBm):** `listen_static.wav` 5.0 s, −25 dBFS, no clipping, no dropouts, 94 % of its energy in the voice band (the owner heard the broadcast); `listen_station.wav` 1.7 s in 50 s (squelch opened twice at the threshold — the owner heard it as choppy), clean (no clipping, no dropouts). Note: the owner's own part-2 answer was overwritten by my automated tap during the test. Test report deleted. 129 host tests pass |
+
 ## 2026-10-21 — Listen check in two parts; follow-up steps never go into an old report
 
 | Backlog | Change | Files | Test |
