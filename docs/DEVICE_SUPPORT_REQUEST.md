@@ -87,10 +87,24 @@ In the issue, add a few lines:
 ## 4. Optional, rooted phones only
 
 These show us the SELinux labels we will need to allow in a Magisk module. Still read-only.
+The commands are fed to `su` on its standard input: `adb shell su -c "a; b; c"` does **not** work,
+because adb joins the arguments again and only the first command runs as root (the rest run as the
+normal shell user, which cannot see the labels).
 
 ```sh
-adb shell su -c "ls -lZ /dev/ttyS0 /dev/ttyS1; ls -lZ /sys/devices/platform/*dmr* /sys/devices/platform/*intercom* 2>/dev/null; dmesg | grep -iE 'dmr|intercom|walkie|ptt|ttyS' | tail -40; magisk -v" > dmr-root-info.txt 2>&1
+adb shell su > dmr-root-info.txt 2>&1 <<'EOF'
+id -Z
+ls -lZ /dev/ttyS* /dev/ttyMT* 2>/dev/null
+for d in /sys/devices/platform/*dmr* /sys/devices/platform/*intercom*; do [ -d "$d" ] && echo "--- $d" && ls -lZ "$d"; done
+for f in /sys/devices/platform/*dmr*/* /sys/devices/platform/*intercom*/*; do [ -f "$f" ] && echo "$f = $(head -c 80 "$f" 2>&1)"; done
+ls /system/lib64 /system/lib /vendor/lib64 /system/app/*/lib/* 2>/dev/null | grep -iE "serial|uart|dmr|intercom|walkie"
+dmesg | grep -iE "dmr|intercom|walkie|ptt|ttyS" | tail -40
+magisk -v
+EOF
 ```
+
+The first line of the file should read `u:r:magisk:s0` (or another root context); if it reads
+`u:r:shell:s0`, root was not granted to the shell (Magisk → Superuser → allow *Shell*).
 
 Attach `dmr-root-info.txt` too.
 

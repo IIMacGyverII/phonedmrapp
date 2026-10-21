@@ -104,3 +104,23 @@ How to collect the same facts from any other phone: `docs/DEVICE_SUPPORT_REQUEST
 packet size/pacing, the SELinux labels of `ttyS0/ttyS1` and the `intercom_*` sysfs nodes, and the name of the stock app's serial
 JNI library (`ls /system/lib64 | grep -i serial`, now in `DEVICE_SUPPORT_REQUEST.md`) so `DeviceProfile.serialLib` can be set.
 
+
+## First owner dump (2026-10-21)
+
+An Xplore 1 owner ran the §2 dump and the §4 root step of `DEVICE_SUPPORT_REQUEST.md` (an older copy without the
+serial-library line). Confirmed against the profile:
+
+| Fact | Dump | Profile |
+|---|---|---|
+| Model / build | `XPLORE 1 Walkie Talkie`, device `XPLORE_1_WT`, Android 15 (SDK 35), `mt6877`, build `…_EEA_F253_V1.0_A15_…20260318`, SELinux enforcing | detect() matches on `/sys/devices/platform/intercom` or "xplore" ✓ |
+| Stock app | `com.chamsion.quickchat` V1.0 in `/system/app/QuickChatEEA` (plain system app, **not** priv-app, not persistent; not running when the dump was taken) | ✓ |
+| UARTs | only `/dev/ttyS0` (4,64) and `/dev/ttyS1` (4,65), both `u:object_r:ttyS_device:s0`, mode **0777** | the `ttyS_device` rules cover both ✓ |
+| Module nodes | `/sys/devices/platform/intercom/` holds `intercom_power_control`, `intercom_pwd_control`, `intercom_ptt_control`, `intercom_factory_test` (dir label `sysfs`); the shell user cannot even stat the files, so they carry a vendor label | **label still unknown → the profile has no sysfs rule yet**, so powering the module from the app would be denied |
+| PTT key | `com.android.intent.ptt.down` / `.up` sent by `system` on a press | ✓ |
+| Vendor audio service | none (no tiny/dmr service) — consistent with PCM on `ttyS1` | ✓ |
+| Root | Magisk 31.0 | — |
+
+The root step returned nothing new: `adb shell su -c "a; b; c"` only runs the first command as root (adb re-joins the
+arguments; the same trap noted for the Armor), so the sysfs listing still showed `?` and `dmesg` was denied. The guide
+now feeds the commands to `su` on stdin. Still needed: the `intercom_*` file labels and values, the serial JNI library
+name, and a first `0x34` version query on `ttyS0` — the in-app **Radio probe (root)** collects all three.
