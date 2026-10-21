@@ -45,7 +45,7 @@ function route() {
   if (S.page === 'help') loadHelp();
   if (S.page === 'log') { if (!S.qso) editQso(null); loadLog(); }
   if (S.page === 'rec') loadRecordings();
-  if (S.page === 'settings') loadSettings();
+  if (S.page === 'settings') { loadSettings(); loadBackups(); }
   if (S.page === 'pkt') loadPacket();
 }
 window.addEventListener('hashchange', route);

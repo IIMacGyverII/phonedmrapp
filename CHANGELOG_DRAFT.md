@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — SignalDeck Web: backup and restore from the browser
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Settings page → **Backup and restore**: Back up now (the phone's `Backup.export`, five CSVs incl. DTMF), the backup list with **Download** as a .zip and **Restore** (confirmation), and **restore from CSV files on the computer** (a backup or an OpenGD77 CPS export; only the five known file names are written, into the app's cache, then the phone's `Backup.restore` + saved DTMF, then the active channel is re-selected like the phone does). Folder names are confined to Download/DMR/DMR_Backups. API `/api/backups`, `/api/backup`, `/api/backup/zip`, `/api/restore`. | `web/WebHost.java`, `assets/web/pages.js`, `index.html`, `app.js`, `ui/HelpView.java` | On the phone over Wi-Fi: a backup made and downloaded as a zip with the 5 CSVs (Channels.csv 8 kB), then deleted; uploads without Channels.csv / with an empty one and a `../` name refused before anything was replaced (55 channels, 9 zones intact). A real restore from the web was not run (it would have replaced the channels during the overnight watch). |
+
 ## 2026-10-20 — SignalDeck Web: VFO; logins survive restarts · Channel editor: refuses 175–399 MHz
 
 | Backlog | Change | Files | Test |

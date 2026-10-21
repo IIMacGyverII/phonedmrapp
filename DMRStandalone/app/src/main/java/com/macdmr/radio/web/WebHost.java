@@ -292,6 +292,13 @@ public final class WebHost {
         return out;
     }
     private static int parse(String s, int def) { try { return s == null ? def : Integer.parseInt(s); } catch (Exception e) { return def; } }
+    /** A backup folder by name, only inside Download/DMR/DMR_Backups. */
+    private static File backupDir(String name) {
+        if (name == null || name.isEmpty() || name.contains("/") || name.contains("\\") || name.contains("..")) return null;
+        File d = new File(com.macdmr.radio.Backup.backupRoot(), name);
+        return d.isDirectory() ? d : null;
+    }
+    private static void deleteTree(File f) { File[] l = f.listFiles(); if (l != null) for (File x : l) deleteTree(x); f.delete(); }
     /** A recording by its id "channel/file.wav", only inside Download/DMR/Audio. */
     private static File recording(String id) {
         if (id == null) return null;
@@ -686,6 +693,55 @@ public final class WebHost {
                 if (bmp == null) return WebServer.Response.error(400, "That is not a picture this phone can read (use PNG or JPEG)");
                 String e = onMain(() -> svc.packet().sendSstv(bmp, modes[m]));
                 return e == null ? ok("Sending the picture as " + com.macdmr.radio.pkt.SSTVEncoder.name(modes[m])) : WebServer.Response.error(409, e);
+            }
+            case "/api/backups": {                                              // the backups in Download/DMR/DMR_Backups
+                JSONArray a = new JSONArray();
+                for (File d : com.macdmr.radio.Backup.backups()) {
+                    JSONArray fs = new JSONArray(); File[] l = d.listFiles(); if (l != null) for (File f : l) if (f.getName().endsWith(".csv")) fs.put(f.getName());
+                    a.put(new JSONObject().put("name", d.getName()).put("ts", d.lastModified()).put("files", fs));
+                }
+                return ok(new JSONObject().put("backups", a));
+            }
+            case "/api/backup": if (!post) break; {
+                File dir = com.macdmr.radio.Backup.export(svc.store(), svc.packet() != null ? svc.packet().dtmfSaved() : null);
+                return WebServer.Response.json(200, new JSONObject().put("ok", true).put("message", "Backed up to Download/DMR/DMR_Backups/" + dir.getName()).put("name", dir.getName()).toString());
+            }
+            case "/api/backup/zip": {                                           // one backup as a .zip download
+                File dir = backupDir(r.param("name")); if (dir == null) return WebServer.Response.error(404, "No such backup");
+                ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                try (java.util.zip.ZipOutputStream z = new java.util.zip.ZipOutputStream(bo)) {
+                    File[] l = dir.listFiles(); if (l != null) for (File f : l) if (f.isFile() && f.getName().endsWith(".csv")) {
+                        z.putNextEntry(new java.util.zip.ZipEntry(dir.getName() + "/" + f.getName()));
+                        try (InputStream in = new java.io.FileInputStream(f)) { z.write(readAll(in)); }
+                        z.closeEntry();
+                    }
+                }
+                WebServer.Response x = WebServer.Response.bytes("application/zip", bo.toByteArray());
+                x.headers.put("Content-Disposition", "attachment; filename=\"" + dir.getName() + ".zip\""); return x;
+            }
+            case "/api/restore": if (!post) break; {                            // {name} an existing backup, or {files: {"Channels.csv": text, …}} uploaded from the computer
+                if (svc.isTransmitting()) return WebServer.Response.error(409, "Not while transmitting");
+                File dir;
+                if (b.has("files")) {
+                    JSONObject fs = b.getJSONObject("files");
+                    java.util.Set<String> allowed = new java.util.HashSet<>(java.util.Arrays.asList("Contacts.csv", "TG_Lists.csv", "Channels.csv", "Zones.csv", "DTMF.csv"));
+                    if (!fs.has("Channels.csv")) return WebServer.Response.error(400, "Channels.csv is needed (with Contacts.csv, TG_Lists.csv and Zones.csv from the same backup)");
+                    dir = new File(svc.getCacheDir(), "web_restore"); deleteTree(dir); dir.mkdirs();
+                    for (java.util.Iterator<String> it = fs.keys(); it.hasNext(); ) {
+                        String n = it.next(); if (!allowed.contains(n)) continue;
+                        try (java.io.FileOutputStream o = new java.io.FileOutputStream(new File(dir, n))) { o.write(fs.getString(n).getBytes(java.nio.charset.StandardCharsets.UTF_8)); }
+                    }
+                } else {
+                    dir = backupDir(b.optString("name", "")); if (dir == null) return WebServer.Response.error(404, "No such backup");
+                }
+                final File from = dir;
+                String res;
+                try {
+                    res = com.macdmr.radio.Backup.restore(svc.store(), from);
+                    if (svc.packet() != null) for (java.util.Map.Entry<String, String> e : com.macdmr.radio.Backup.readDtmf(from).entrySet()) svc.packet().dtmfSave(e.getKey(), e.getValue());
+                } catch (Exception e) { return WebServer.Response.error(400, "Restore failed: " + e.getMessage()); }
+                onMain(() -> { svc.selectChannel(svc.store().activeNumber()); return null; });
+                return ok(res);
             }
             case "/api/heard": {                                                // Last heard, grouped like the phone's sheet, plus alerts and events
                 java.util.LinkedHashMap<String, JSONObject> rows = new java.util.LinkedHashMap<>();
