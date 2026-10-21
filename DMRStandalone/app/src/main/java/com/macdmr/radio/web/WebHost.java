@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
  * Settings live in prefs "web": enabled, pin, tx (transmit from the web), port.
  */
 public final class WebHost {
-    public static final int DEFAULT_PORT = 8080;
+    public static final int DEFAULT_PORT = 8080, TLS_PORT = 8443;
     private static final int[] VFO_STEPS = { 5000, 6250, 10000, 12500, 25000 };     // VfoDialog.STEPS
     private static final String TX_OFF = "Transmit from the web is off (phone: Device → SignalDeck Web)";
     private final RadioService svc;
@@ -81,6 +81,9 @@ public final class WebHost {
         });
         try { s.start(); } catch (Exception e) { lastError = "Port " + port() + ": " + e.getMessage(); return lastError; }
         server = s; lastError = null;
+        s.webSocket("/api/ws/talk", (req, peer) -> new TalkSession(req, peer));
+        try { s.startTls(TLS_PORT, WebTls.serverFactory()); tlsError = null; }                 // HTTPS: the browser microphone needs it
+        catch (Exception e) { tlsError = String.valueOf(e.getMessage()); android.util.Log.w("WebHost", "https: " + e); }
         ui.post(() -> svc.addListener(events));
         Thread t = new Thread(this::tick, "web-tick"); t.setDaemon(true); ticker = t; t.start();
         return null;
@@ -92,6 +95,15 @@ public final class WebHost {
         ui.post(() -> svc.removeListener(events));
     }
 
+    private volatile String tlsError;
+    public boolean tlsRunning() { WebServer s = server; return s != null && s.tlsRunning(); }
+    public String tlsError() { return tlsError; }
+    /** The secure addresses (for talking with the browser's microphone). */
+    public List<String> secureUrls() {
+        java.util.ArrayList<String> out = new java.util.ArrayList<>();
+        for (String u : urls()) out.add(u.replace("http://", "https://").replaceAll(":\\d+$", "") + ":" + TLS_PORT);
+        return out;
+    }
     /** The addresses a browser on the same network can use. */
     public List<String> urls() {
         java.util.ArrayList<String> out = new java.util.ArrayList<>();
@@ -112,8 +124,53 @@ public final class WebHost {
     }
     private static byte[] readAll(InputStream in) throws java.io.IOException {
         ByteArrayOutputStream b = new ByteArrayOutputStream(); byte[] buf = new byte[16384]; int n;
-        while ((n = in.read(buf)) > 0) b.write(buf, 0, n);
+        while ((n = in.read(buf)) != -1) if (n > 0) b.write(buf, 0, n);      // a read may return 0 bytes before the end (compressed assets)
         return b.toByteArray();
+    }
+
+    // ---- talk: the browser's microphone over a WebSocket ("down" / "up" text, 8 kHz s16le binary audio) ----
+    private static volatile TalkSession talker;                           // one talker at a time
+    private final class TalkSession implements WebServer.WebSocketSession {
+        private final WebServer.Request req; private final WebServer.WebSocketPeer peer;
+        private volatile WebTxFeed feed;
+        TalkSession(WebServer.Request r, WebServer.WebSocketPeer p) { req = r; peer = p; p.sendText(state("ready", null)); }
+        private String state(String st, String err) {
+            try { JSONObject o = new JSONObject().put("state", st); if (err != null) o.put("error", err); return o.toString(); } catch (Exception e) { return "{}"; }
+        }
+        @Override public void text(String t) {
+            if ("down".equals(t)) down(); else if ("up".equals(t)) release("released");
+        }
+        private synchronized void down() {
+            if (feed != null) return;
+            if (!allowTx()) { peer.sendText(state("rx", TX_OFF)); return; }
+            RadioService.SatState sat = svc.satState();
+            if (sat != null && sat.listenOnly && !sat.waiting) { peer.sendText(state("rx", "Receive only during this satellite pass")); return; }
+            if (svc.txInhibited()) { peer.sendText(state("rx", "This channel is receive-only")); return; }
+            if (!svc.isReady()) { peer.sendText(state("rx", "The radio is not ready")); return; }
+            TalkSession other = talker;
+            if ((other != null && other != this) || svc.isTransmitting()) { peer.sendText(state("rx", "Someone is already transmitting")); return; }
+            talker = this;
+            final WebTxFeed f = new WebTxFeed(); feed = f;
+            svc.history("warn", "\uD83C\uDF10 Talking from the web with the browser microphone (" + req.remote + ")");
+            ui.post(() -> svc.pttFromWeb(true, f));
+            peer.sendText(state("tx", null));
+            Thread w = new Thread(() -> {                                 // watchdog: no audio for 1.5 s (tab hidden, network gone) unkeys
+                while (feed == f) {
+                    try { Thread.sleep(200); } catch (InterruptedException e) { return; }
+                    if (feed == f && f.idleNanos() > 1_500_000_000L) { release("no audio from the browser"); return; }
+                }
+            }, "web-talk-watchdog");
+            w.setDaemon(true); w.start();
+        }
+        private synchronized void release(String why) {
+            WebTxFeed f = feed; if (f == null) return;
+            feed = null; f.close();
+            if (talker == this) talker = null;
+            ui.post(() -> svc.ptt(false));
+            peer.sendText(state("rx", "released".equals(why) ? null : "Stopped: " + why));
+        }
+        @Override public void binary(byte[] b, int n) { WebTxFeed f = feed; if (f != null) f.push(b, 0, n); }
+        @Override public void closed() { release("the connection closed"); }
     }
 
     // ---- live events ----
@@ -246,7 +303,7 @@ public final class WebHost {
         o.put("transmitting", svc.isTransmitting()).put("hearing", svc.hearing()).put("rssi", svc.lastRssi()).put("caller", svc.currentCaller());
         o.put("softSq", svc.softSqOn()).put("softSqLevel", svc.softSqLevel()).put("monitor", svc.monitorOn()).put("record", svc.recordOn())
                 .put("scanning", svc.scanning()).put("vfo", svc.vfoActive()).put("zone", svc.zoneName()).put("zoneId", svc.zoneId())
-                .put("txInhibited", svc.txInhibited()).put("webTx", allowTx());
+                .put("txInhibited", svc.txInhibited()).put("webTx", allowTx()).put("tls", tlsRunning()).put("tlsPort", TLS_PORT);
         o.put("mode", modeJson()).put("sat", satJson()).put("sstv", sstvJson());
         o.put("version", com.macdmr.radio.BuildConfig.VERSION_NAME);
         return o;

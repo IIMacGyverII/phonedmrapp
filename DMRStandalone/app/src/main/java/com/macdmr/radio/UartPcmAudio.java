@@ -83,20 +83,25 @@ public final class UartPcmAudio implements AudioBackend {
 
     private volatile int txSource = MediaRecorder.AudioSource.MIC;
     @Override public void setTxSource(int source) { txSource = source; }
+    private volatile TxFeed txFeed;
+    @Override public void setTxFeed(TxFeed f) { txFeed = f; }
     private volatile Level txLevel;
     @Override public void setTxLevel(Level l) { txLevel = l; }
 
     @Override public synchronized String startTx() {
         try {
             open();
-            int min = AudioRecord.getMinBufferSize(SR, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-            rec = new AudioRecord(txSource, SR, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(min, 4096));
-            rec.startRecording();
+            final TxFeed feed = txFeed;
+            if (feed == null) {                                                  // the microphone (a web feed paces itself)
+                int min = AudioRecord.getMinBufferSize(SR, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+                rec = new AudioRecord(txSource, SR, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(min, 4096));
+                rec.startRecording();
+            }
             txRunning = true;
             txThread = new Thread(() -> {
                 byte[] buf = new byte[PACKET * 2];
                 while (txRunning) {
-                    int n = rec.read(buf, 0, buf.length);
+                    int n = feed != null ? feed.read(buf, 0, buf.length) : rec.read(buf, 0, buf.length);
                     if (n <= 0) continue;
                     Level lv = txLevel; if (lv != null) { int pk = 0; for (int i = 0; i + 1 < n; i += 2) pk = Math.max(pk, Math.abs((short) ((buf[i] & 0xFF) | (buf[i + 1] << 8)))); lv.peak(pk); }
                     try { out.write(buf, 0, n); out.flush(); } catch (Throwable t) { break; }

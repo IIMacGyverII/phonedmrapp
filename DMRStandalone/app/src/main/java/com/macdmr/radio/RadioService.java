@@ -1275,11 +1275,17 @@ public class RadioService extends Service implements RadioEngine.Events {
         return ChannelStore.receiveOnly(ch.txFreq);      // NOAA weather and marine channels are receive-only
     }
 
+    /** The browser's microphone for the next key-down (SignalDeck Web talk); read once by {@link #ptt}. */
+    private volatile AudioBackend.TxFeed webFeedNext;
+    /** Key or unkey with a browser's microphone as the audio (SignalDeck Web). */
+    public void pttFromWeb(boolean down, AudioBackend.TxFeed feed) { if (down) webFeedNext = feed; ptt(down); }
+
     public void ptt(final boolean down) {
         worker.execute(() -> {
             try {
                 if (down) {
                     final boolean fromWheel = wheelPtt, fromCall = callPtt; wheelPtt = false; callPtt = false;      // read once, whatever happens next
+                    final AudioBackend.TxFeed webFeed = webFeedNext; webFeedNext = null;
                     if (!isReady()) { log("PTT ignored: radio not ready"); return; }
                     if (txInhibited()) { log("PTT blocked: receive-only channel"); history("warn", "⛔ TX blocked on a receive-only channel"); return; }
                     if (pttDown) return;
@@ -1287,8 +1293,9 @@ public class RadioService extends Service implements RadioEngine.Events {
                     txChannel = current; txInCar = inCar; txCharging = charging(); txDropNoted = false; txStartedAt = System.currentTimeMillis();
                     idTimerOnKey();
                     if (audio != null) audio.stopRx();              // never play the RX stream while the mic is live (feedback)
-                    boolean carMic = fromCall || (inCar && carMic() && !fromWheel && startBluetoothMic());   // a talk call: Telecom has opened the car's link   // not for the wheel's Next: the hands-free link turns the wheel into call controls and the stop press never arrives   // in the car: its microphone, through the hands-free link
+                    boolean carMic = webFeed == null && (fromCall || (inCar && carMic() && !fromWheel && startBluetoothMic()));   // a talk call: Telecom has opened the car's link   // not for the wheel's Next: the hands-free link turns the wheel into call controls and the stop press never arrives   // in the car: its microphone, through the hands-free link
                     if (audio != null) audio.setTxSource(carMic ? android.media.MediaRecorder.AudioSource.VOICE_COMMUNICATION : android.media.MediaRecorder.AudioSource.MIC);
+                    if (audio != null) audio.setTxFeed(webFeed);                     // SignalDeck Web: the browser's microphone instead of the phone's
                     int vi = voxStop();
                     if ((fromWheel || fromCall) && vi > 0 && vi < VOX_MS.length && audio != null) {          // stop when the talking stops
                         final com.macdmr.radio.ham.VoxStop v = new com.macdmr.radio.ham.VoxStop(VOX_MS[vi], System.currentTimeMillis()); vox = v;

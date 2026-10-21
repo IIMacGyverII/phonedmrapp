@@ -36,7 +36,7 @@ public final class WebServer {
 
     public static final class Request {
         public String method, path, query = ""; public final Map<String, String> headers = new HashMap<>(); public byte[] body = new byte[0];
-        public String remote;
+        public String remote; public boolean secure;
         public String param(String k) {
             for (String kv : query.split("&")) { int e = kv.indexOf('='); if (e > 0 && kv.substring(0, e).equals(k)) return decode(kv.substring(e + 1)); }
             return null;
@@ -89,11 +89,25 @@ public final class WebServer {
         if (running) return;
         ServerSocket s = new ServerSocket(); s.setReuseAddress(true); s.bind(new InetSocketAddress(port), 16);
         server = s; running = true;
-        pool.execute(() -> { while (running) { try { Socket c = s.accept(); pool.execute(() -> serve(c)); } catch (IOException e) { if (!running) break; } } });
+        accept(s, false);
+    }
+    private volatile ServerSocket tlsServer;
+    /** Also serve HTTPS on {@code tlsPort} (the browser microphone needs a secure page); same app, API and logins. */
+    public synchronized void startTls(int tlsPort, javax.net.ssl.SSLServerSocketFactory f) throws IOException {
+        if (!running || tlsServer != null) return;
+        ServerSocket s = f.createServerSocket(); s.setReuseAddress(true); s.bind(new InetSocketAddress(tlsPort), 16);
+        tlsServer = s;
+        accept(s, true);
+    }
+    public boolean tlsRunning() { return tlsServer != null; }
+    private void accept(ServerSocket s, boolean secure) {
+        pool.execute(() -> { while (running) { try { Socket c = s.accept(); pool.execute(() -> serve(c, secure)); } catch (IOException e) { if (!running || s.isClosed()) break; } } });
     }
     public synchronized void stop() {
         running = false;
         try { if (server != null) server.close(); } catch (IOException ignored) { }
+        try { if (tlsServer != null) tlsServer.close(); } catch (IOException ignored) { } tlsServer = null;
+        for (WebSocketPeer p : sockets) p.close();
         for (LinkedBlockingQueue<String> q : streams) q.offer("\u0000");                   // wake the event writers so they end
         streams.clear();
         for (LinkedBlockingQueue<byte[]> q : audio) q.offer(new byte[0]);
@@ -118,7 +132,7 @@ public final class WebServer {
     }
 
     // ---- connection ----
-    private void serve(Socket c) {
+    private void serve(Socket c, boolean secure) {
         try {
             c.setSoTimeout(30_000);
             InetAddress ra = c.getInetAddress();
@@ -126,8 +140,15 @@ public final class WebServer {
             InputStream in = new BufferedInputStream(c.getInputStream()); OutputStream out = c.getOutputStream();
             for (int keep = 0; keep < 100; keep++) {
                 Request r = read(in); if (r == null) break;
-                r.remote = ra.getHostAddress();
+                r.remote = ra.getHostAddress(); r.secure = secure;
                 if ("GET".equals(r.method) && "/api/events".equals(r.path)) { if (authed(r)) { stream(c, out); return; } write(out, Response.error(401, "login required"), true); continue; }
+                if ("GET".equals(r.method) && "websocket".equalsIgnoreCase(r.headers.get("upgrade"))) {
+                    WebSocketHandler h = webSockets.get(r.path);
+                    if (h == null) { write(out, Response.error(404, "no such socket"), false); return; }
+                    if (!authed(r)) { write(out, Response.error(401, "login required"), false); return; }
+                    if (!sameOrigin(r)) { write(out, Response.error(403, "cross-site request refused"), false); return; }
+                    webSocket(c, in, out, r, h); return;
+                }
                 if ("GET".equals(r.method) && "/api/audio".equals(r.path)) { if (authed(r)) { streamAudio(c, out); return; } write(out, Response.error(401, "login required"), true); continue; }
                 Response resp = route(r);
                 boolean close = "close".equalsIgnoreCase(r.headers.get("connection"));
@@ -210,6 +231,71 @@ public final class WebServer {
         } catch (InterruptedException ignored) {
         } finally { streams.remove(q); }
     }
+
+    // ---- WebSocket (RFC 6455): the browser microphone's link ----
+    public interface WebSocketPeer { void sendText(String s); void close(); }
+    public interface WebSocketSession { void text(String s); void binary(byte[] b, int n); void closed(); }
+    public interface WebSocketHandler { WebSocketSession open(Request r, WebSocketPeer peer); }
+    private final Map<String, WebSocketHandler> webSockets = new ConcurrentHashMap<>();
+    private final CopyOnWriteArrayList<WebSocketPeer> sockets = new CopyOnWriteArrayList<>();
+    public void webSocket(String path, WebSocketHandler h) { webSockets.put(path, h); }
+
+    /** Only pages of this server may open a socket (the Origin header must name this host). */
+    static boolean sameOrigin(Request r) {
+        String o = r.headers.get("origin"), h = r.headers.get("host");
+        if (o == null) return true;                                      // non-browser clients send no Origin (they still need the login)
+        if (h == null) return false;
+        int s = o.indexOf("://"); return s > 0 && o.substring(s + 3).equalsIgnoreCase(h);
+    }
+    static String acceptKey(String key) {
+        try {
+            byte[] d = java.security.MessageDigest.getInstance("SHA-1").digest((key.trim() + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").getBytes(StandardCharsets.UTF_8));
+            return java.util.Base64.getEncoder().encodeToString(d);
+        } catch (Exception e) { throw new IllegalStateException(e); }
+    }
+    private void webSocket(Socket c, InputStream in, OutputStream out, Request r, WebSocketHandler h) throws IOException {
+        String key = r.headers.get("sec-websocket-key"); if (key == null) { write(out, Response.error(400, "no key"), false); return; }
+        out.write(("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: " + acceptKey(key) + "\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+        out.flush();
+        c.setSoTimeout(0); c.setTcpNoDelay(true);
+        final Object wlock = new Object();
+        WebSocketPeer peer = new WebSocketPeer() {
+            @Override public void sendText(String s) { try { synchronized (wlock) { writeFrame(out, 0x1, s.getBytes(StandardCharsets.UTF_8)); } } catch (IOException e) { close(); } }
+            @Override public void close() { try { synchronized (wlock) { writeFrame(out, 0x8, new byte[0]); } } catch (IOException ignored) { } try { c.close(); } catch (IOException ignored) { } }
+        };
+        sockets.add(peer);
+        WebSocketSession ses = h.open(r, peer);
+        try {
+            ByteArrayOutputStream msg = new ByteArrayOutputStream(); int msgOp = 0;
+            while (running) {
+                int b0 = in.read(), b1 = in.read(); if (b0 < 0 || b1 < 0) break;
+                int op = b0 & 0x0F; boolean fin = (b0 & 0x80) != 0, masked = (b1 & 0x80) != 0;
+                long len = b1 & 0x7F;
+                if (len == 126) len = (in.read() << 8) | in.read();
+                else if (len == 127) { len = 0; for (int i = 0; i < 8; i++) len = (len << 8) | in.read(); }
+                if (len < 0 || len > 1 << 20 || !masked) break;                  // clients must mask; 1 MB at most
+                byte[] mask = new byte[4]; readFully(in, mask);
+                byte[] p = new byte[(int) len]; readFully(in, p);
+                for (int i = 0; i < p.length; i++) p[i] ^= mask[i & 3];
+                if (op == 0x8) { peer.close(); break; }
+                if (op == 0x9) { synchronized (wlock) { writeFrame(out, 0xA, p); } continue; }
+                if (op == 0xA) continue;
+                if (op != 0) { msg.reset(); msgOp = op; }
+                msg.write(p);
+                if (!fin) continue;
+                if (msgOp == 0x1) ses.text(msg.toString("UTF-8")); else if (msgOp == 0x2) ses.binary(msg.toByteArray(), msg.size());
+            }
+        } catch (IOException ignored) {
+        } finally { sockets.remove(peer); ses.closed(); }
+    }
+    static void writeFrame(OutputStream out, int op, byte[] p) throws IOException {
+        ByteArrayOutputStream f = new ByteArrayOutputStream(); f.write(0x80 | op);
+        if (p.length < 126) f.write(p.length);
+        else if (p.length < 65536) { f.write(126); f.write(p.length >> 8); f.write(p.length); }
+        else { f.write(127); for (int i = 7; i >= 0; i--) f.write((int) ((long) p.length >> (8 * i))); }
+        f.write(p); out.write(f.toByteArray()); out.flush();
+    }
+    private static void readFully(InputStream in, byte[] b) throws IOException { int o = 0; while (o < b.length) { int k = in.read(b, o, b.length - o); if (k < 0) throw new IOException("eof"); o += k; } }
 
     /** Raw 8 kHz mono PCM for as long as the browser reads it (the response ends when either side closes). */
     private void streamAudio(Socket c, OutputStream out) throws IOException {
