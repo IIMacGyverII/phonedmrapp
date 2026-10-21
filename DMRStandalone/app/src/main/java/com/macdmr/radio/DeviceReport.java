@@ -140,10 +140,16 @@ public final class DeviceReport {
         return zip;
     }
 
+    /** The newest report folder, or null. */
+    public static File newestDir() {
+        File[] fs = reportRoot().listFiles(); if (fs == null) return null;
+        File newest = null; for (File f : fs) if (f.isDirectory() && (newest == null || f.lastModified() > newest.lastModified())) newest = f;
+        return newest;
+    }
+
     /** Append a section to the newest report folder (PTT capture, radio probe). */
     public static File append(String title, String body) {
-        File[] fs = reportRoot().listFiles(); if (fs == null || fs.length == 0) return null;
-        File newest = null; for (File f : fs) if (f.isDirectory() && (newest == null || f.lastModified() > newest.lastModified())) newest = f;
+        File newest = newestDir();
         if (newest == null) return null;
         try (OutputStream o = new FileOutputStream(new File(newest, "report.txt"), true)) { o.write(("\n\n==== " + title + " ====\n" + body + "\n").getBytes("UTF-8")); } catch (Throwable ignored) { }
         return newest;
@@ -275,16 +281,40 @@ public final class DeviceReport {
         StringBuilder out = new StringBuilder();
         for (String line : log.split("\n")) {
             if (line.matches("(?i).*(msgContent|SmsMessage|content=|callNumber|passcode|password|token|api_key|apikey).*")) continue;
-            out.append(line.replaceAll("\\b\\d{6,}\\b", "######").replaceAll("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "***@***")).append('\n');
+            out.append(mask(line)).append('\n');
         }
         return out.toString();
+    }
+
+    /** Long numbers (DMR IDs, phone numbers), e-mail addresses and amateur callsigns. */
+    static String mask(String line) {
+        return line.replaceAll("\\b\\d{6,}\\b", "######").replaceAll("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "***@***")
+                .replaceAll("(?<![\\w.])[A-Z]{1,2}[0-9][A-Z]{1,3}(-[0-9]{1,2})?(?![\\w.])", "CALL");   // not inside a dotted firmware name (DMR003.UV4T.V022)
+    }
+
+    /** Frames whose bytes carry IDs, keys or message text: digital channel (own ID), encryption, caller info, texts. */
+    private static final Pattern PRIVATE_FRAME = Pattern.compile("(?i).*cmd=0x(22|29|2b|2c|2d)\\b.*");
+
+    /**
+     * SignalDeck's own log for a report that may be posted publicly: what the radio and the app did (bring-up steps,
+     * port and power lines, module answers, errors) stays; anything about people, places or content goes: packet,
+     * position, message, caption and caller lines are dropped, coordinates (4+ decimals) and the rest masked.
+     */
+    public static String redactAppLog(List<String> lines) {
+        StringBuilder out = new StringBuilder();
+        for (String l : lines) {
+            if (l.matches("(?i).*(aprs|packet|pkt|position|beacon|igate|digipeat|sms|text|message|caption|heard|caller|contact|location|gps|coverage|lat[ :=]|lon[ :=]|pin|passcode|password|token|key=|radioid|talker|from the web).*")) continue;
+            if (PRIVATE_FRAME.matcher(l).matches()) l = l.replaceAll("\\[[^\\]]*\\]", "[…]").replaceAll("<[^>]*>", "<…>");
+            out.append(mask(l).replaceAll("-?\\b\\d{1,3}\\.\\d{4,}\\b", "#.####")).append('\n');
+        }
+        return out.length() == 0 ? "(empty)\n" : out.toString();
     }
 
     // ---- helpers ----
     private static void h(StringBuilder r, String s) { r.append("\n==== ").append(s).append(" ====\n"); }
     private static void kv(StringBuilder r, String k, String v) { r.append(String.format(Locale.US, "  %-28s %s\n", k, v == null ? "" : v.trim())); }
     private static boolean suPresent() { for (String p : new String[] { "/system/bin/su", "/system/xbin/su", "/sbin/su", "/data/adb/magisk", "/debug_ramdisk/su" }) if (new File(p).exists()) return true; return false; }
-    static String cat(String path) { try (BufferedReader b = new BufferedReader(new InputStreamReader(new FileInputStream(path)))) { StringBuilder s = new StringBuilder(); String l; int n = 0; while ((l = b.readLine()) != null && n++ < 200) s.append(l).append('\n'); return s.toString(); } catch (Throwable t) { return ""; } }
+    public static String cat(String path) { try (BufferedReader b = new BufferedReader(new InputStreamReader(new FileInputStream(path)))) { StringBuilder s = new StringBuilder(); String l; int n = 0; while ((l = b.readLine()) != null && n++ < 200) s.append(l).append('\n'); return s.toString(); } catch (Throwable t) { return ""; } }
     static String ls(String dir, Pattern filter) { File[] fs = dir == null ? null : new File(dir).listFiles(); if (fs == null) return "(not readable)"; StringBuilder s = new StringBuilder(); for (File f : fs) if (filter == null || filter.matcher(f.getName()).find()) s.append(f.getName()).append(' '); return s.length() == 0 ? "-" : s.toString(); }
     static String getprop(String k) { return exec("getprop " + k).trim(); }
     static String exec(String cmd) { try { Process p = new ProcessBuilder("sh", "-c", cmd).redirectErrorStream(true).start(); BufferedReader b = new BufferedReader(new InputStreamReader(p.getInputStream())); StringBuilder s = new StringBuilder(); String l; int n = 0; while ((l = b.readLine()) != null && n++ < 400) s.append(l).append('\n'); p.waitFor(); return s.toString(); } catch (Throwable t) { return "(" + t.getMessage() + ")"; } }
