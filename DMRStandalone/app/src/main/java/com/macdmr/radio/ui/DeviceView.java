@@ -342,7 +342,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         final boolean s1 = sp.getLong("supportChecks", 0) > 0, s2 = sp.getLong("supportListen", 0) > 0;
         String[] rows = {
                 (s1 ? "✓ " : "") + "1  Run all checks\nAbout two minutes, only listens; needs Magisk root",
-                (s2 ? "✓ " : s1 ? "" : "🔒 ") + "2  Listen check\nTake over the radio, pick a channel where stations are heard, then 60 s of listening",
+                (s2 ? "✓ " : s1 ? "" : "🔒 ") + "2  Listen check\nTake over the radio, pick a channel where stations are heard, then static (10 s) and the station (50 s)",
                 ((s1 || s2) ? "" : "🔒 ") + "3  Send the results\nShare the report zip, or open a GitHub issue",
                 "What is this?" };
         new android.app.AlertDialog.Builder(c).setTitle("Help support this phone — " + svc.profile().name)
@@ -411,33 +411,66 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         new android.app.AlertDialog.Builder(c).setTitle("Listen check")
                 .setMessage("1. On the Intercom page, choose a channel where you can hear stations right now (a busy repeater, a weather channel, a friend calling on another radio).\n"
                         + "2. Come back here and tap Start.\n"
-                        + "3. For 60 seconds SignalDeck records the signal strength and the received audio. Listen to the speaker meanwhile.\n"
-                        + "4. Then say whether you heard the station clearly." + need)
+                        + "3. Part 1, 10 seconds: SignalDeck opens the squelch (MON) so you should hear static from the speaker; it asks whether you did. (Skipped on a DMR channel, which has no static.)\n"
+                        + "4. Part 2, 50 seconds with the normal squelch: it opens by itself when the station talks. SignalDeck records the signal strength and the audio; then say whether you heard the station clearly.\n\n"
+                        + "Turn the media volume up first." + need)
                 .setPositiveButton("Start", (dd, w) -> { if (svc.isReady()) runListenCheck(); else locked("Take over the radio first (Device page)."); })
                 .setNegativeButton("Later", null).show();
     }
 
+    /**
+     * Two parts, each with its own question, so a "no" means one thing: 1 static (10 s, MON forces the squelch open: does
+     * the speaker play anything at all?), 2 station (50 s, normal squelch on the owner's busy channel: does a real signal
+     * open it and sound clean?). DMR has no static, so part 1 runs on analog channels only.
+     */
     private void runListenCheck() {
         final Context c = getContext(); final com.macdmr.radio.RadioService s = svc; if (s == null) return;
-        final android.app.AlertDialog pd = new android.app.AlertDialog.Builder(c).setTitle("Listen check").setMessage("Starting…").setCancelable(false).create(); pd.show();
+        final com.macdmr.radio.ChannelStore.Channel ch = s.current();
+        if (ch != null && ch.isDigital()) { listenStation(s, "part 1 (static) skipped: DMR channel, no static to hear\n"); return; }
+        final android.app.AlertDialog pd = new android.app.AlertDialog.Builder(c).setTitle("Listen check · part 1 of 2: static").setMessage("Starting…").setCancelable(false).create(); pd.show();
+        final boolean wasMon = s.monitorOn();
         new Thread(() -> {
             String r;
-            try { r = com.macdmr.radio.FirstRunCheck.listenCheck(s, 60, t -> post(() -> pd.setMessage(t))); } catch (Throwable t) { r = "failed: " + t + "\n"; }
-            final String result = r;
+            try {
+                if (!wasMon) s.setMonitor(true);                       // squelch forced open: receiver noise plays even with nobody on the channel
+                r = com.macdmr.radio.FirstRunCheck.listenCheck(s, 10, t -> post(() -> pd.setMessage("Listen to the speaker: you should hear static (a hiss).\n\n" + t)));
+            } catch (Throwable t) { r = "failed: " + t + "\n"; }
+            finally { if (!wasMon) s.setMonitor(false); }
+            final String part1 = r;
             post(() -> {
                 pd.dismiss();
-                final String[] answers = { "Yes, clearly", "Yes, but distorted, choppy or too quiet", "No sound at all", "Nobody was talking" };
-                new android.app.AlertDialog.Builder(c).setTitle("Did you hear the station?").setCancelable(false)
-                        .setItems(answers, (dd, w) -> new Thread(() -> {
-                            if (com.macdmr.radio.DeviceReport.newestDir() == null) { try { com.macdmr.radio.DeviceReport.generate(c, x -> { }); } catch (Throwable ignored) { } }
-                            com.macdmr.radio.DeviceReport.append("Listen check", result + "owner's answer: " + answers[w] + "\n");
-                            c.getSharedPreferences("radio", Context.MODE_PRIVATE).edit().putLong("supportListen", System.currentTimeMillis()).apply();
-                            post(() -> new android.app.AlertDialog.Builder(c).setTitle("Listen check saved")
-                                    .setMessage(result + "\nYour answer: " + answers[w] + "\n\nNext: Help support this phone → 3 Send the results.")
-                                    .setPositiveButton("Send now", (d2, w2) -> shareReport()).setNegativeButton("Later", null).show());
-                        }).start()).show();
+                final String[] answers = { "Yes, I heard static", "No sound at all", "Not sure" };
+                new android.app.AlertDialog.Builder(c).setTitle("Did you hear static (a hiss) from the speaker?").setCancelable(false)
+                        .setItems(answers, (dd, w) -> listenStation(s, "part 1 (static, MON on, 10 s):\n" + part1 + "owner's answer: " + answers[w] + "\n")).show();
             });
-        }, "listen-check").start();
+        }, "listen-check-static").start();
+    }
+
+    private void listenStation(final com.macdmr.radio.RadioService s, final String part1) {
+        final Context c = getContext();
+        new android.app.AlertDialog.Builder(c).setTitle("Listen check · part 2 of 2: a station")
+                .setMessage("Now 50 seconds on this channel with the normal squelch. It opens by itself when a station is on the air: listen for it, then say whether you heard it clearly.")
+                .setCancelable(false).setPositiveButton("Start part 2", (d0, w0) -> {
+                    final android.app.AlertDialog pd = new android.app.AlertDialog.Builder(c).setTitle("Listen check · part 2 of 2").setMessage("Starting…").setCancelable(false).create(); pd.show();
+                    new Thread(() -> {
+                        String r;
+                        try { r = com.macdmr.radio.FirstRunCheck.listenCheck(s, 50, t -> post(() -> pd.setMessage(t))); } catch (Throwable t) { r = "failed: " + t + "\n"; }
+                        final String result = part1 + "\npart 2 (station, normal squelch, 50 s):\n" + r;
+                        post(() -> {
+                            pd.dismiss();
+                            final String[] answers = { "Yes, clearly", "Yes, but distorted, choppy or too quiet", "No sound at all", "Nobody was talking" };
+                            new android.app.AlertDialog.Builder(c).setTitle("Did you hear the station?").setCancelable(false)
+                                    .setItems(answers, (dd, w) -> new Thread(() -> {
+                                        com.macdmr.radio.DeviceReport.currentOrNew(c);             // never into an old, unrelated report
+                                        com.macdmr.radio.DeviceReport.append("Listen check", result + "owner's answer: " + answers[w] + "\n");
+                                        c.getSharedPreferences("radio", Context.MODE_PRIVATE).edit().putLong("supportListen", System.currentTimeMillis()).apply();
+                                        post(() -> new android.app.AlertDialog.Builder(c).setTitle("Listen check saved")
+                                                .setMessage(result + "\nYour answer: " + answers[w] + "\n\nNext: Help support this phone → 3 Send the results.")
+                                                .setPositiveButton("Send now", (d2, w2) -> shareReport()).setNegativeButton("Later", null).show());
+                                    }).start()).show();
+                        });
+                    }, "listen-check-station").start();
+                }).show();
     }
 
     /** The guided first run: one dialog, one button, one zip to send. */
