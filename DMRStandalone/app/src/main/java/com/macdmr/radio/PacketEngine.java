@@ -69,7 +69,9 @@ public final class PacketEngine {
     public int dataTxPower() { return prefs.getInt("txPower", 1) == 0 ? 0 : 1; }
     /** What the lead-in is made of: 0 steady 1200 Hz tone, 1 HDLC flags (the standard TXDELAY), 2 silence. */
     public static final String[] LEAD_KINDS = { "Tone", "Flags (standard)", "Silence" };
-    public int packetLeadKind() { int k = prefs.getInt("txLeadKind", 0); return k >= 0 && k < LEAD_KINDS.length ? k : 0; }
+    /** Flags by default: bench 2026-10-20 (252 single-copy packets over both apps) found the three kinds equal at 1.6 s, silence
+     *  weakest at short leads; flags are the standard AX.25 TXDELAY. */
+    public int packetLeadKind() { int k = prefs.getInt("txLeadKind", 1); return k >= 0 && k < LEAD_KINDS.length ? k : 1; }
 
     /**
      * The audio of one packet transmission: the settling lead-in, then each frame (with FCS) and a gap. A flags lead-in

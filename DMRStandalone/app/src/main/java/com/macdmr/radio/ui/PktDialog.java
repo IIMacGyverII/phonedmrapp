@@ -505,8 +505,10 @@ public final class PktDialog {
         body.addView(section("Packet lead-in (testing)"));
         final int[] lead = { 0 };
         for (int k = 0; k < PacketEngine.LEAD_CHOICES.length; k++) if (PacketEngine.LEAD_CHOICES[k] == pe.packetLeadMs()) lead[0] = k;
-        cycle(body, "Lead-in", PacketEngine.LEAD_NAMES, lead[0], v -> lead[0] = v);
-        body.addView(hint("A steady tone before each packet while the radio's transmit audio settles. Measured on the bench, the audio reaches the air about 1.5 s after keying and a packet sent without the lead-in did not decode; shorter settings are for testing with your digipeaters. SSTV and DTMF keep their own lead."));
+        final int[] kind = { pe.packetLeadKind() };
+        cycle(body, "Sound", new String[] { "Tone", "Flags (standard)", "Silence" }, kind[0], v -> kind[0] = v);
+        cycle(body, "Length", PacketEngine.LEAD_NAMES, lead[0], v -> lead[0] = v);
+        body.addView(hint("Sent before each packet while the radio's transmit audio settles (it reaches the air about 1 s after the carrier). Flags (the default) are the standard AX.25 TXDELAY every TNC sends; tone is a steady 1200 Hz; silence is dead air. Bench test, 252 packets: at 1.6 s all three decode alike, silence is the weakest when short. Shorter lengths are for testing with your digipeaters. SSTV and DTMF keep their own lead."));
         final boolean[] flags = { pe.autoAck(), pe.digipeat(), pe.dtmfEnabled(), pe.wxEnabled(), pe.cwEnabled(), pe.cwIdEnabled() };
         toggle(body, "Auto-ack messages addressed to me (monitoring)", flags, 0);
         toggle(body, "Fill-in digipeater for WIDE1-1 (monitoring)", flags, 1);
@@ -532,7 +534,7 @@ public final class PktDialog {
                         .putString("isServer", isServer.getText().toString().trim()).putInt("isPort", Integer.parseInt(isPort.getText().toString().trim()))
                         .putString("isPasscode", isPass.getText().toString().trim().isEmpty() ? "-1" : isPass.getText().toString().trim())
                         .putInt("isBeaconMin", Integer.parseInt(isMin.getText().toString().trim())).putString("isComment", isComment.getText().toString().trim())
-                        .putInt("txLeadMs", PacketEngine.LEAD_CHOICES[lead[0]]).putInt("txPower", power[0] == 1 ? 0 : 1).putInt("autoBeacon", auto[0]).putInt("beaconMin", Math.max(1, Integer.parseInt(bMin.getText().toString().trim())))
+                        .putInt("txLeadMs", PacketEngine.LEAD_CHOICES[lead[0]]).putInt("txLeadKind", kind[0]).putInt("txPower", power[0] == 1 ? 0 : 1).putInt("autoBeacon", auto[0]).putInt("beaconMin", Math.max(1, Integer.parseInt(bMin.getText().toString().trim())))
                         .putBoolean("telemetry", extra[0]).putBoolean("weather", extra[1]).putBoolean("txIgate", extra[2]).putString("groups", groups.getText().toString().trim().toUpperCase(Locale.US))
                         .putBoolean("autoAck", flags[0]).putBoolean("digipeat", flags[1]).putBoolean("dtmf", flags[2]).putBoolean("wx", flags[3]).putBoolean("cw", flags[4]).putBoolean("cwId", flags[5]).apply();
                 pe.applySettings();
