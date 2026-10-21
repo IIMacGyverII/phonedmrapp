@@ -23,11 +23,14 @@ public final class SysfsGpio {
 
     public boolean isOn() { return read().equals(onToken); }
 
-    public void set(boolean on) throws IOException {
-        try (FileOutputStream f = new FileOutputStream(node)) { f.write((on ? "1" : "0").getBytes()); }
+    public void set(boolean on) throws IOException { write(node, on ? "1" : "0"); }
+
+    /** Write a value to a sysfs line, through root when the app may not open it. */
+    public static void write(String node, String value) throws IOException {
+        try (FileOutputStream f = new FileOutputStream(node)) { f.write(value.getBytes()); }
         catch (IOException e) {
             if (!RootSetup.haveRoot()) throw e;
-            String r = RootSetup.run("echo " + (on ? "1" : "0") + " > " + node + " && echo ok");
+            String r = RootSetup.run("echo " + value + " > " + node + " && echo ok");
             if (!r.endsWith("ok")) throw new IOException(node + ": " + e.getMessage() + " / root: " + r);
         }
     }

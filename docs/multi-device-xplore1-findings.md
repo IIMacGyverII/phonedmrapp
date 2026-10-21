@@ -132,3 +132,19 @@ and `libwonder_serialport.so`, which registers its methods from `JNI_OnLoad` on 
 (strings: `openSerial`, `setupSerial`, `readData`, `writeData`; signatures `(Ljava/lang/String;I)I`, `(IIICI)I`, `(I[BI)I`,
 `(I[BII)I`, `(I)V`). A policy rule for plain `sysfs` would open all of sysfs to every app, so SignalDeck writes these nodes
 through root instead (`SysfsGpio`), and the profile stays marked **unverified** until it has run on the phone.
+
+## First Run all checks (2026-10-21, SignalDeck 1.0.0-beta.1)
+
+- **Works:** `ttyS0` at 57600 via the stty fallback; module powered through root (`intercom_pwd_control`); boot banner `BF AA … 0D 0A`
+  ("开机初始化完成"); `0x34` version **DMR003BN.UV4P.V016** (Armor: DMR003.UV4T.V022); `0x32` RSSI answers; side key →
+  `com.android.intent.ptt.down/up` (input `intercom`/`mtk-kpd` `KEY_F1`). `intercom_*` files are write-only (read back empty).
+- **Lines (QuickChat `j0.a.run`, `DmrService.d`, `q0.g0.q/s`):** power-up = `power_control`, `pwd_control`, `ptt_control` all `1`;
+  power-down = all `0`; **`ptt_control` 0 = transmit (`setPttLaunch`), 1 = receive (`setPttReceive`)** — the Xplore keys through
+  this GPIO. The firmware-update screen sets `ptt_control 0` before powering the module (likely bootloader entry).
+  beta.1 never wrote `ptt_control`, so its trial may have powered the module with the PTT line low; beta.2 sets it to 1 first and
+  blocks all transmit on unverified profiles.
+- **Audio (`q0.e0.onDataReceived`, `t0.g.c`, `q0.b0.run`):** RX on `ttyS1` (230400 8N1) = 167-byte packets
+  `BB 00 h h h h <160 B PCM> 44`, 8 kHz mono 16-bit, 10 ms each; TX = raw 160-byte blocks, one every ≥10 ms, no header,
+  `AudioRecord` source MIC. beta.1's trial got 0 bytes (no channel programmed, PTT line unset).
+- **QuickChat data:** Room DBs `databases/channel_database` (`channel_table`: same fields as the module, Hz, type 0 digital / 1 analog,
+  `groupList` "1-0-0-…") and contacts (`contacts_table`: type 0 private / 1 group).

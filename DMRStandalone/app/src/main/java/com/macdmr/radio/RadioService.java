@@ -723,12 +723,19 @@ public class RadioService extends Service implements RadioEngine.Events {
                     if (!com.pri.prizeinterphone.serial.port.SerialPort.load(this, profile.serialLib)) log("tty (stty fallback): " + RootSetup.ensureTty(profile));
                     if (RootSetup.stockAppEnabled(profile)) { log("stock app paused (its icon disappears while this app owns the radio; Device → Release brings it back): " + RootSetup.stockApp(profile, false)); pausedStock = true; Thread.sleep(1500); }
                 }
-                if (!getSharedPreferences("radio", MODE_PRIVATE).contains("dmrId")) {     // seed our DMR ID from the stock app's setting
+                final boolean quickChat = "com.chamsion.quickchat".equals(profile.stockApp);      // Xplore 1: a Room database, no module side tables
+                if (quickChat && store.count() == 0) {
+                    StringBuilder err = new StringBuilder();
+                    int n = store.importFromQuickChat(this, profile.stockApp, err);
+                    log(n >= 0 ? "imported " + n + " channels from QuickChat" + (err.length() > 0 ? " (" + err + ")" : "") : "QuickChat import failed: " + err);
+                    if (n >= 0) getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("tgListsImported", true).apply();
+                }
+                if (!quickChat && !getSharedPreferences("radio", MODE_PRIVATE).contains("dmrId")) {     // seed our DMR ID from the stock app's setting
                     String xml = RootSetup.run("cat /data/data/" + profile.stockApp + "/shared_prefs/com.pri.prizeinterphone.data.person.xml");
                     java.util.regex.Matcher m = java.util.regex.Pattern.compile("name=\"pref_person_device_id\" value=\"([0-9]+)\"").matcher(xml);
                     if (m.find()) { setLocalIdQuiet(Integer.parseInt(m.group(1))); log("DMR ID from the stock app: " + m.group(1)); }
                 }
-                if (store.count() == 0) {
+                if (!quickChat && store.count() == 0) {
                     StringBuilder err = new StringBuilder();
                     int n = store.importFromStock(this, profile.stockApp, "default_uhf", err);
                     log(n >= 0 ? "imported " + n + " channels from the stock app" : "stock import failed: " + err);
@@ -738,7 +745,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                     int k = store.purgeGarbledPacketHistory(); log("removed " + k + " garbled packet lines from the history");
                     getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("garbledPktPurged", true).apply();
                 }
-                if (!getSharedPreferences("radio", MODE_PRIVATE).getBoolean("tgListsImported", false)) {   // installs imported before TG lists were read
+                if (!quickChat && !getSharedPreferences("radio", MODE_PRIVATE).getBoolean("tgListsImported", false)) {   // installs imported before TG lists were read
                     StringBuilder err = new StringBuilder();
                     int k = store.repairModuleTgLists(this, profile.stockApp, "default_uhf", err);
                     log(k >= 0 ? "module TG lists imported; " + k + " channels got their list" : "TG list import failed: " + err);
@@ -1039,6 +1046,14 @@ public class RadioService extends Service implements RadioEngine.Events {
     /** APRS, SSTV and satellite channels: the radio's squelch wide open (its single threshold sits near -90 dBm, far
      *  above a satellite or a distant digipeater), so the decoders get every signal; Soft SQ keeps the speaker quiet
      *  until something is really there. */
+    /** First-run trial: listen on an analog frequency with the radio's squelch open (noise keeps the audio path busy); receive only. */
+    public void listenTest(int hz, String name) {
+        ChannelStore.Channel a = new ChannelStore.Channel();
+        a.type = 1; a.rxFreq = a.txFreq = hz; a.band = 1; a.power = 1; a.name = name;
+        a.sq = 0; a.softSq = true; a.softSqLevel = 5;                 // the radio passes everything; Soft SQ keeps the speaker quiet
+        applyVfo(a, false);
+    }
+
     private void dataModeSquelch(ChannelStore.Channel c) {
         c.sq = 0; c.softSq = true; c.softSqLevel = 5;
         c.power = packet != null ? packet.dataTxPower() : 1;      // APRS settings: high (default) or low on these frequencies
@@ -1286,6 +1301,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     // ---- PTT ----------------------------------------------------------------------------------------
 
     public boolean txInhibited() {
+        if (!profile.verified) return true;                     // an untested profile never transmits (the Xplore 1 keys through a GPIO line)
         ChannelStore.Channel ch = current;
         if (ch == null) return true;
         SatState ss = satState;
@@ -1305,6 +1321,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                     final boolean fromWheel = wheelPtt, fromCall = callPtt; wheelPtt = false; callPtt = false;      // read once, whatever happens next
                     final AudioBackend.TxFeed webFeed = webFeedNext; webFeedNext = null;
                     if (!isReady()) { log("PTT ignored: radio not ready"); return; }
+                    if (!profile.verified) { log("PTT blocked: untested profile"); history("warn", "⛔ Transmit is off on this phone until its profile has been tested"); return; }
                     if (txInhibited()) { log("PTT blocked: receive-only channel"); history("warn", "⛔ TX blocked on a receive-only channel"); return; }
                     if (pttDown) return;
                     pttDown = true; refreshControls();

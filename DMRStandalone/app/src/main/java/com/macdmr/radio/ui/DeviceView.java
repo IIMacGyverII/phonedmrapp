@@ -398,7 +398,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
 
     private void probe() {
         new android.app.AlertDialog.Builder(getContext()).setTitle("Radio probe").setMessage("Needs Magisk root. Reads the serial ports' SELinux labels, derives and applies the rules for this session, sends the module's version query on each port at several speeds, reads the power node and sniffs for a PCM stream. The stock walkie-talkie app should be closed. Also pulse the power node?")
-                .setPositiveButton("Probe", (dd, w) -> runProbe(false)).setNeutralButton("Probe + power pulse", (dd, w) -> runProbe(true)).setNegativeButton("Cancel", null).show();
+                .setPositiveButton("Probe", (dd, w) -> runProbe(false)).setNeutralButton(svc != null && svc.profile().supported ? "Probe + power pulse" : null, (dd, w) -> runProbe(true)).setNegativeButton("Cancel", null).show();
     }
 
     private void shareZip(final boolean withApks) {

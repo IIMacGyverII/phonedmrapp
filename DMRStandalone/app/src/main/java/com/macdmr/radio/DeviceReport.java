@@ -95,6 +95,7 @@ public final class DeviceReport {
             r.append(String.format(Locale.US, "  %s  v%s  uid=%d  system=%s  shared=%s\n      apk=%s\n      nativeLibs=%s\n", pi.packageName, pi.versionName, ai.uid, sys, pi.sharedUserId, ai.sourceDir, ai.nativeLibraryDir));
             r.append("      libs: ").append(ls(ai.nativeLibraryDir, null)).append('\n');
             File[] libs = ai.nativeLibraryDir == null ? null : new File(ai.nativeLibraryDir).listFiles();
+            if (libs == null && root && ai.nativeLibraryDir != null) libs = rootCopyLibs(c, ai.nativeLibraryDir, r);   // a system app's lib folder the app may not list
             if (libs != null) for (File lf : libs) if (lf.getName().endsWith(".so")) { File real = lf; try { real = lf.getCanonicalFile(); } catch (Throwable ignored) { } String syms = jniSymbols(real); if (syms.isEmpty()) syms = registeredNatives(real); if (!syms.isEmpty()) r.append("      ").append(lf.getName()).append(" -> ").append(real.getAbsolutePath()).append('\n').append(syms); }
             if (pi.requestedPermissions != null) { StringBuilder pp = new StringBuilder(); for (String q : pi.requestedPermissions) if (!q.startsWith("android.permission.") || q.matches(".*(SERIAL|SYSTEM_ALERT|RECORD_AUDIO|MODIFY_AUDIO|WRITE_SECURE|DEVICE_POWER|INJECT|BROADCAST).*")) pp.append(q).append(' '); r.append("      permissions: ").append(pp).append('\n'); }
             if (pi.receivers != null) { r.append("      receivers: "); for (android.content.pm.ActivityInfo x : pi.receivers) r.append(x.name).append(' '); r.append('\n'); }
@@ -107,7 +108,8 @@ public final class DeviceReport {
                 List<String> apks = new ArrayList<>(); apks.add(ai.sourceDir); if (ai.splitSourceDirs != null) for (String s : ai.splitSourceDirs) apks.add(s);
                 for (String a : apks) { File src = new File(a); File dst = new File(dir, pkg + "_" + src.getName()); p.step("Copying " + pkg); if (copy(src, dst)) r.append("  copied ").append(dst.getName()).append(" (").append(dst.length() / 1024).append(" kB)\n"); else if (root) { RootSetup.run("cp " + a + " " + dst.getAbsolutePath() + " && chmod 644 " + dst.getAbsolutePath()); r.append("  copied with root ").append(dst.getName()).append('\n'); } }
             } catch (Throwable t) { r.append("  could not copy ").append(pkg).append(": ").append(t).append('\n'); }
-            if (root) { h(r, "dumpsys package " + pkg + " (root)"); r.append(redact(RootSetup.run("dumpsys package " + pkg + " | grep -vE '^\\s*$' | grep -iE 'Receiver|Service|Activity|action|filter|flags|codePath|resourcePath|nativeLibraryPath|primaryCpuAbi|versionName|sharedUser|uid=|perm' | head -300"))).append('\n'); }
+            if (root) { h(r, "dumpsys package " + pkg + " (root)"); r.append(redact(RootSetup.run("dumpsys package " + pkg + " | grep -v '^ *$' | grep -iE 'Receiver|Service|Activity|action|filter|flags|codePath|resourcePath|nativeLibraryPath|primaryCpuAbi|versionName|sharedUser|uid=|perm' | head -300"))).append('\n'); }
+            if (root) { h(r, "Databases of " + pkg + " (structure only: tables, columns, row counts; root)"); r.append(dbStructure(c, pkg)).append('\n'); }
         }
 
         p.step("System files");
@@ -145,6 +147,42 @@ public final class DeviceReport {
         File[] fs = reportRoot().listFiles(); if (fs == null) return null;
         File newest = null; for (File f : fs) if (f.isDirectory() && (newest == null || f.lastModified() > newest.lastModified())) newest = f;
         return newest;
+    }
+
+    /** Copy a library folder with root into the cache (to scan its JNI names); lists what it holds. */
+    private static File[] rootCopyLibs(Context c, String dir, StringBuilder r) {
+        File dst = new File(c.getCacheDir(), "libscan"); dst.mkdirs();
+        String ls = RootSetup.run("ls " + dir + " 2>&1");
+        r.append("      libs (root): ").append(ls.replace('\n', ' ')).append('\n');
+        RootSetup.run("cp " + dir + "/*.so " + dst.getAbsolutePath() + "/ 2>/dev/null; chmod 644 " + dst.getAbsolutePath() + "/*; true");
+        return dst.listFiles();
+    }
+
+    /** Tables, columns and row counts (never the rows) of the stock app's databases: what a channel importer needs. */
+    private static String dbStructure(Context c, String pkg) {
+        StringBuilder out = new StringBuilder();
+        File dst = new File(c.getCacheDir(), "dbscan"); dst.mkdirs();
+        String names = RootSetup.run("ls /data/data/" + pkg + "/databases/ 2>&1");
+        out.append("  files: ").append(names.replace('\n', ' ')).append('\n');
+        for (String n : names.split("\\s+")) {
+            if (n.isEmpty() || n.endsWith("-wal") || n.endsWith("-shm") || n.endsWith("-journal") || n.contains("(")) continue;
+            File f = new File(dst, n);
+            String src = "/data/data/" + pkg + "/databases/" + n;
+            RootSetup.run("cp " + src + " " + f + "; (cp " + src + "-wal " + f + "-wal; cp " + src + "-shm " + f + "-shm) 2>/dev/null; chmod 666 " + f + "*; chown $(stat -c %u:%g " + c.getCacheDir() + ") " + f + "*; true");
+            try (android.database.sqlite.SQLiteDatabase db = android.database.sqlite.SQLiteDatabase.openDatabase(f.getAbsolutePath(), null, android.database.sqlite.SQLiteDatabase.OPEN_READWRITE)) {
+                out.append("  ").append(n).append(":\n");
+                try (android.database.Cursor t = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table'", null)) {
+                    while (t.moveToNext()) {
+                        String tn = t.getString(0); StringBuilder cols = new StringBuilder();
+                        try (android.database.Cursor ci = db.rawQuery("PRAGMA table_info(\"" + tn + "\")", null)) { while (ci.moveToNext()) cols.append(ci.getString(1)).append(' '); }
+                        long rows = 0; try (android.database.Cursor k = db.rawQuery("SELECT count(*) FROM \"" + tn + "\"", null)) { if (k.moveToFirst()) rows = k.getLong(0); }
+                        out.append("    ").append(tn).append(" (").append(rows).append(" rows): ").append(cols.toString().trim()).append('\n');
+                    }
+                }
+            } catch (Throwable e) { out.append("  ").append(n).append(": ").append(e.getMessage()).append('\n'); }
+            for (File x : new File[] { f, new File(f + "-wal"), new File(f + "-shm") }) x.delete();
+        }
+        return out.toString();
     }
 
     /** Append a section to the newest report folder (PTT capture, radio probe). */

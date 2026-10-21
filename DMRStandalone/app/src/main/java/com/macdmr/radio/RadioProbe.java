@@ -85,7 +85,11 @@ public final class RadioProbe {
         for (String line : sysls.split("\n")) { String path = line.trim().replaceAll(".*\\s(/sys/\\S+)$", "$1"); if (path.matches(".*/(pwd|power|intercom_power_control|intercom_pwd_control|enable|en)$")) { powerNode = path; break; } }
         if (powerNode != null) {
             r.append("Power-looking node: ").append(powerNode).append(" = ").append(RootSetup.run("cat " + powerNode)).append('\n');
-            if (pulsePower) r.append("  write 1 → ").append(RootSetup.run("echo 1 > " + powerNode + " 2>&1; sleep 3; cat " + powerNode)).append('\n');
+            DeviceProfile prof = DeviceProfile.detect();
+            if (pulsePower && prof.lineSetup != null) for (String[] l : prof.lineSetup) r.append("  first ").append(l[0]).append(" = ").append(l[1]).append(": ").append(RootSetup.run("echo " + l[1] + " > " + l[0] + " 2>&1 && echo ok")).append('\n');
+            if (pulsePower && prof.supported && prof.powerNode != null) powerNode = prof.powerNode;      // the profile knows which line powers the module
+            if (pulsePower && !prof.supported) r.append("  (no power pulse on a phone without a profile: which line keys the transmitter is unknown)\n");
+            else if (pulsePower) r.append("  write 1 to ").append(powerNode).append(" → ").append(RootSetup.run("echo 1 > " + powerNode + " 2>&1; sleep 3; cat " + powerNode)).append('\n');
         } else r.append("No power-looking node found under /sys/devices/platform/*{dmr,intercom,walkie,ptt}*\n");
 
         p.step("Serial probe");

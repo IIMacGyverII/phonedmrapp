@@ -52,6 +52,7 @@ public final class RadioEngine implements UartPort.Listener {
     /** pwd 0→1; the module then prints its banner ("…BF AA <GBK text>\r\n") within ~1 s and accepts commands. */
     /** @return true if the module was off and has just been switched on (caller must {@link #waitBooted}). */
     public boolean powerOn() throws IOException {
+        if (profile.lineSetup != null) for (String[] l : profile.lineSetup) { SysfsGpio.write(l[0], l[1]); ev.log("line " + l[0].substring(l[0].lastIndexOf('/') + 1) + " -> " + l[1]); }
         if (!power.isOn()) { bootLatch = new java.util.concurrent.CountDownLatch(1); power.set(true); ev.log("module power -> on (" + power.read() + ")"); return true; }
         ev.log("module already powered (" + power.read() + ")");
         return false;
