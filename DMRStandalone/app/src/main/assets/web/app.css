@@ -147,6 +147,8 @@ input:not([type]), input[type=text] { padding: 10px 12px; border-radius: 10px; b
 .edform .tip { font-size: 14px; color: var(--cyan-light); background: rgba(25,211,255,.06); border: 1px solid var(--line-soft); border-radius: 8px; padding: 8px 10px; }
 .edform .actions { grid-column: 1 / -1; display: flex; gap: 10px; flex-wrap: wrap; padding-top: 6px; }
 .edform .note { grid-column: 1 / -1; color: var(--muted); font-size: 14px; }
+.edform input[type=checkbox] { width: auto; padding: 0; accent-color: var(--cyan); }
+.edform .chk { white-space: nowrap; color: var(--text); font-weight: 500; }
 
 /* messages */
 .thread { display: flex; flex-direction: column; min-height: 520px; }

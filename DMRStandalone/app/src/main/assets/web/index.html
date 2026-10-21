@@ -30,6 +30,7 @@
       <a href="#contacts" data-page="contacts">Contacts</a>
       <a href="#aprs" data-page="aprs">APRS</a>
       <a href="#sstv" data-page="sstv">SSTV</a>
+      <a href="#pkt" data-page="pkt">Packet</a>
       <a href="#sat" data-page="sat">Satellites</a>
       <a href="#map" data-page="map">Map</a>
       <a href="#log" data-page="log">Logbook</a>
@@ -207,6 +208,22 @@
         <div class="row between wrap"><span class="label">RECORDINGS</span><span class="muted small">REC on the intercom saves every reception to Download/DMR/Audio on the phone.</span></div>
         <audio id="player" controls class="player"></audio>
         <div id="recList" class="list"></div>
+      </div>
+    </section>
+
+    <!-- PACKET -->
+    <section id="page-pkt" class="page hidden">
+      <div class="grid-side wide">
+        <div>
+          <div class="panel"><span class="label">TOOLS</span><div id="pktTools"></div>
+            <div class="row" style="margin-top:12px"><button class="btn" id="cwIdBtn">Send Morse ID</button></div></div>
+          <div class="panel"><span class="label">DTMF</span>
+            <form id="dtmfForm" class="row" style="margin-top:12px"><input id="dtmfSeq" placeholder="Digits (0-9, A-D, *, #)" maxlength="32" class="grow mono"><button class="btn primary">Send</button></form>
+            <div id="dtmfSaved" class="quick" style="margin-top:10px"></div>
+            <div id="dtmfLog" class="list small"></div></div>
+          <div class="panel"><span class="label">WEATHER ALERTS (SAME)</span><div id="alertList" class="list small"></div></div>
+        </div>
+        <div class="panel"><span class="label">APRS SETTINGS</span><form id="aprsSet" class="edform" autocomplete="off"></form></div>
       </div>
     </section>
 

@@ -569,6 +569,87 @@ public final class WebHost {
                 if (a.equals("handback")) { svc.shutDown(true); return ok("Handing the radio back to the stock app"); }
                 return WebServer.Response.error(400, "action: takeover or handback");
             }
+            case "/api/packet": {                                               // packet settings + tool states + DTMF log + weather alerts
+                com.macdmr.radio.PacketEngine pe = svc.packet(); if (pe == null) return WebServer.Response.error(409, "Packet engine not ready");
+                android.content.SharedPreferences pp = svc.getSharedPreferences("packet", Context.MODE_PRIVATE);
+                JSONObject st = new JSONObject()
+                        .put("callsignSet", pe.callsignSet()).put("ssid", pe.ssid()).put("comment", pe.comment()).put("path", pp.getString("path", "WIDE1-1,WIDE2-1"))
+                        .put("symbol", pp.getString("symTable", "/") + pp.getString("symCode", "[")).put("autoBeacon", pe.autoBeacon()).put("beaconMin", pe.beaconMin())
+                        .put("txPower", pe.dataTxPower()).put("leadKind", pe.packetLeadKind()).put("leadMs", pe.packetLeadMs()).put("passive", pe.passiveMode())
+                        .put("autoAck", pp.getBoolean("autoAck", true)).put("digipeat", pp.getBoolean("digipeat", false)).put("dtmf", pp.getBoolean("dtmf", true))
+                        .put("wx", pp.getBoolean("wx", true)).put("cw", pp.getBoolean("cw", true)).put("cwId", pp.getBoolean("cwId", false))
+                        .put("telemetry", pp.getBoolean("telemetry", false)).put("weather", pp.getBoolean("weather", false)).put("txIgate", pp.getBoolean("txIgate", false))
+                        .put("groups", pp.getString("groups", "")).put("kissPort", pp.getInt("kissPort", 8001))
+                        .put("isServer", pe.isServer()).put("isPort", pe.isPort()).put("isPasscodeSet", !"-1".equals(pp.getString("isPasscode", "-1")))
+                        .put("isBeaconMin", pe.isBeaconMin()).put("isComment", pp.getString("isComment", pe.comment()));
+                JSONArray lk = new JSONArray(); for (String k : com.macdmr.radio.PacketEngine.LEAD_KINDS) lk.put(k);
+                JSONArray lc = new JSONArray(); for (int ms : com.macdmr.radio.PacketEngine.LEAD_CHOICES) lc.put(ms);
+                JSONArray dt = new JSONArray();
+                for (PacketStore.Dtmf d : pe.store().dtmfLog(50)) dt.put(new JSONObject().put("ts", d.ts).put("digits", d.digits).put("channel", d.channel).put("channelName", d.channelName));
+                JSONArray al = new JSONArray();
+                for (PacketStore.Alert x : pe.store().alerts(50)) al.put(new JSONObject().put("ts", x.ts).put("event", x.event).put("summary", x.summary).put("eom", x.eom));
+                JSONObject tools = new JSONObject().put("is", pe.isEnabled()).put("isStatus", pe.isStatus()).put("kiss", pe.kiss().isActive()).put("kissClient", pe.kiss().clientConnected())
+                        .put("parrot", svc.parrot().enabled()).put("webTx", allowTx());
+                return ok(new JSONObject().put("settings", st).put("leadKinds", lk).put("leadChoices", lc).put("tools", tools).put("dtmf", dt).put("alerts", al)
+                        .put("dtmfSaved", new JSONArray(pp.getString("dtmfSaved", "[]"))));
+            }
+            case "/api/packet/settings": if (!post) break; {                   // the APRS settings sheet's checks (PktDialog)
+                android.content.SharedPreferences pp = svc.getSharedPreferences("packet", Context.MODE_PRIVATE);
+                android.content.SharedPreferences.Editor ed = pp.edit();
+                try {
+                    if (b.has("callsign") && !b.getString("callsign").trim().isEmpty()) {         // write-only: absent or empty keeps the stored one
+                        String cs = b.getString("callsign").trim().toUpperCase(java.util.Locale.US);
+                        int dash = cs.indexOf('-'); if (dash > 0) { b.put("ssid", Integer.parseInt(cs.substring(dash + 1).trim())); cs = cs.substring(0, dash).trim(); }
+                        if (!cs.matches("[A-Z0-9]{1,6}")) return WebServer.Response.error(400, "Callsign: 1 to 6 letters and digits; the SSID goes in its own box");
+                        ed.putString("callsign", cs);
+                    }
+                    if (b.has("ssid")) { int v = b.getInt("ssid"); if (v < 0 || v > 15) return WebServer.Response.error(400, "SSID is 0 to 15"); ed.putInt("ssid", v); }
+                    if (b.has("symbol")) { String s = b.getString("symbol").trim(); ed.putString("symTable", s.length() >= 1 ? s.substring(0, 1) : "/").putString("symCode", s.length() >= 2 ? s.substring(1, 2) : "["); }
+                    if (b.has("comment")) ed.putString("comment", b.getString("comment").trim());
+                    if (b.has("path")) ed.putString("path", b.getString("path").trim().toUpperCase(java.util.Locale.US));
+                    if (b.has("groups")) ed.putString("groups", b.getString("groups").trim().toUpperCase(java.util.Locale.US));
+                    if (b.has("autoBeacon")) ed.putInt("autoBeacon", Math.max(0, Math.min(2, b.getInt("autoBeacon"))));
+                    if (b.has("beaconMin")) ed.putInt("beaconMin", Math.max(1, b.getInt("beaconMin")));
+                    if (b.has("txPower")) ed.putInt("txPower", b.getInt("txPower") == 0 ? 0 : 1);
+                    if (b.has("leadKind")) ed.putInt("txLeadKind", Math.max(0, Math.min(com.macdmr.radio.PacketEngine.LEAD_KINDS.length - 1, b.getInt("leadKind"))));
+                    if (b.has("leadMs")) { int ms = b.getInt("leadMs"); boolean okMs = false; for (int c : com.macdmr.radio.PacketEngine.LEAD_CHOICES) okMs |= c == ms; if (!okMs) return WebServer.Response.error(400, "Lead-in length must be one of the listed choices"); ed.putInt("txLeadMs", ms); }
+                    if (b.has("passive")) ed.putInt("passive", Math.max(0, Math.min(2, b.getInt("passive"))));
+                    for (String k : new String[] { "autoAck", "digipeat", "dtmf", "wx", "cw", "cwId", "telemetry", "weather", "txIgate" }) if (b.has(k)) ed.putBoolean(k, b.getBoolean(k));
+                    if (b.has("kissPort")) { int v = b.getInt("kissPort"); if (v < 1024 || v > 65535) return WebServer.Response.error(400, "KISS port is 1024 to 65535"); ed.putInt("kissPort", v); }
+                    if (b.has("isServer")) ed.putString("isServer", b.getString("isServer").trim());
+                    if (b.has("isPort")) ed.putInt("isPort", b.getInt("isPort"));
+                    if (b.has("isPasscode") && !b.getString("isPasscode").trim().isEmpty()) ed.putString("isPasscode", b.getString("isPasscode").trim());   // write-only
+                    if (b.has("isBeaconMin")) ed.putInt("isBeaconMin", Math.max(0, b.getInt("isBeaconMin")));
+                    if (b.has("isComment")) ed.putString("isComment", b.getString("isComment").trim());
+                } catch (Exception e) { return WebServer.Response.error(400, "Check the numbers"); }
+                ed.apply();
+                onMain(() -> { svc.packet().applySettings(); return null; });
+                return ok("APRS settings saved");
+            }
+            case "/api/packet/tool": if (!post) break; {                       // {tool: is|kiss|parrot, on}
+                com.macdmr.radio.PacketEngine pe = svc.packet(); String tool = b.optString("tool", ""); boolean on = b.optBoolean("on", false);
+                String msg = onMain(() -> {
+                    switch (tool) {
+                        case "is": if (on) { String e = pe.isStart(); return e == null ? "APRS-IS starting" : e; } pe.isStop(); return "APRS-IS off";
+                        case "kiss": if (on) { String e = pe.kissStart(); return e == null ? "KISS TNC on" : e; } pe.kissStop(); return "KISS TNC off";
+                        case "parrot": return svc.setParrot(on);
+                        default: return null;
+                    }
+                });
+                return msg == null ? WebServer.Response.error(400, "tool: is, kiss or parrot") : ok(msg);
+            }
+            case "/api/dtmf": if (!post) break; {
+                if (!allowTx()) return WebServer.Response.error(403, TX_OFF);
+                String seq = b.optString("seq", "").trim().toUpperCase(java.util.Locale.US);
+                if (!seq.matches("[0-9A-D*#]{1,32}")) return WebServer.Response.error(400, "DTMF: 1 to 32 of 0-9, A-D, * and #");
+                String e = onMain(() -> svc.packet().sendDtmf(seq));
+                return e == null ? ok("Sending DTMF " + seq) : WebServer.Response.error(409, e);
+            }
+            case "/api/cwid": if (!post) break; {
+                if (!allowTx()) return WebServer.Response.error(403, TX_OFF);
+                String e = onMain(() -> svc.packet().sendCwId());
+                return e == null ? ok("Sending the Morse ID") : WebServer.Response.error(409, e);
+            }
             case "/api/help": {
                 JSONArray a = new JSONArray();
                 for (String[] t : com.macdmr.radio.ui.HelpView.topicsForWeb()) {
