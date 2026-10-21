@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-21 — SignalDeck Web: LISTEN works again
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | **Fix:** LISTEN on the web Intercom failed with "Audio: text.trim is not a function (retrying)" and played nothing. The Morse trainer's `play(text)` (morse.js, loaded later) replaced the audio player's global `play()`; it is now `morsePlay()`. Reported by the owner. | `assets/web/morse.js` | **device (headless Chrome over Wi-Fi)**: LISTEN shows LISTENING / audio, 96 kB of PCM in 6 s, no error toast |
+
 ## 2026-10-21 — The app never shows a frequency the radio is not on
 
 | Backlog | Change | Files | Test |
