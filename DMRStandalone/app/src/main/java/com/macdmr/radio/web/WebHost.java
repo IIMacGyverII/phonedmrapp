@@ -292,6 +292,12 @@ public final class WebHost {
         return out;
     }
     private static int parse(String s, int def) { try { return s == null ? def : Integer.parseInt(s); } catch (Exception e) { return def; } }
+    private com.macdmr.radio.repeaters.RepeaterService repeaterService;
+    private final java.util.Map<String, com.macdmr.radio.repeaters.RepeaterModels.Repeater> lastRepeaters = new java.util.concurrent.ConcurrentHashMap<>();
+    private synchronized com.macdmr.radio.repeaters.RepeaterService repeaters() {
+        if (repeaterService == null) repeaterService = new com.macdmr.radio.repeaters.RepeaterService(svc, svc.store());
+        return repeaterService;
+    }
     /** A backup folder by name, only inside Download/DMR/DMR_Backups. */
     private static File backupDir(String name) {
         if (name == null || name.isEmpty() || name.contains("/") || name.contains("\\") || name.contains("..")) return null;
@@ -693,6 +699,37 @@ public final class WebHost {
                 if (bmp == null) return WebServer.Response.error(400, "That is not a picture this phone can read (use PNG or JPEG)");
                 String e = onMain(() -> svc.packet().sendSstv(bmp, modes[m]));
                 return e == null ? ok("Sending the picture as " + com.macdmr.radio.pkt.SSTVEncoder.name(modes[m])) : WebServer.Response.error(409, e);
+            }
+            case "/api/repeaters": {                                            // nearby repeaters (RadioID / BrandMeister / Hearham, cached by the phone)
+                android.location.Location me = svc.lastKnownLocation(); if (me == null) return WebServer.Response.error(409, "No position fix on the phone yet");
+                double mi = Math.max(5, Math.min(150, parse(r.param("radiusMi"), svc.getSharedPreferences("repeaters", Context.MODE_PRIVATE).getInt("radiusMi", 30))));
+                StringBuilder st = new StringBuilder();
+                java.util.List<com.macdmr.radio.repeaters.RepeaterModels.Repeater> found = repeaters().nearby(me.getLatitude(), me.getLongitude(), mi * 1.609344, "1".equals(r.param("force")), st);
+                JSONArray a = new JSONArray(); lastRepeaters.clear();
+                for (com.macdmr.radio.repeaters.RepeaterModels.Repeater x : found) {
+                    lastRepeaters.put(x.key, x);
+                    JSONObject o = new JSONObject().put("key", x.key).put("callsign", x.callsign).put("rxHz", x.rxHz).put("txHz", x.txHz).put("fm", x.fm).put("dmr", x.dmr).put("cc", x.cc)
+                            .put("network", x.network).put("city", x.city).put("region", x.region).put("toneUp", x.toneUp).put("toneDown", x.toneDown).put("status", x.status)
+                            .put("distanceKm", Double.isNaN(x.distanceMeters) ? null : x.distanceMeters / 1000.0).put("approx", x.approx);
+                    if (x.hasCoords) o.put("lat", x.lat).put("lon", x.lon);
+                    a.put(o);
+                }
+                return ok(new JSONObject().put("repeaters", a).put("status", st.toString()).put("radiusMi", mi));
+            }
+            case "/api/repeaters/talkgroups": {
+                com.macdmr.radio.repeaters.RepeaterModels.Repeater x = lastRepeaters.get(r.param("key")); if (x == null) return WebServer.Response.error(404, "Search again: that repeater is not in the last list");
+                JSONArray a = new JSONArray();
+                for (com.macdmr.radio.repeaters.RepeaterModels.Talkgroup t : repeaters().talkgroups(x)) a.put(new JSONObject().put("id", t.id).put("slot", t.slot).put("name", t.name).put("kind", t.kind));
+                return ok(new JSONObject().put("talkgroups", a));
+            }
+            case "/api/repeaters/add": if (!post) break; {                      // {key, talk: [tg…], confirm}: without confirm only the preview
+                com.macdmr.radio.repeaters.RepeaterModels.Repeater x = lastRepeaters.get(b.optString("key", "")); if (x == null) return WebServer.Response.error(404, "Search again: that repeater is not in the last list");
+                java.util.Set<Integer> talk = new java.util.HashSet<>(); JSONArray ta = b.optJSONArray("talk"); if (ta != null) for (int i = 0; i < ta.length(); i++) talk.add(ta.getInt(i));
+                com.macdmr.radio.repeaters.RepeaterPlanner.Plan plan = repeaters().plan(x, talk);
+                if (plan.channels.isEmpty()) return WebServer.Response.error(409, plan.warnings.isEmpty() ? "Nothing to program" : plan.warnings.get(0));
+                if (!b.optBoolean("confirm", false)) return ok(new JSONObject().put("preview", com.macdmr.radio.repeaters.RepeaterService.preview(plan)));
+                String res = repeaters().program(x, plan);
+                return ok(res);
             }
             case "/api/zones": {
                 if (post) {                                                     // save {id?, name, numbers[]}

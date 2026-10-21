@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — SignalDeck Web: repeaters on the map, Add to my channels
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Web Map → **Repeaters** layer: the phone's repeater catalog (`RepeaterService.nearby`: RadioID, BrandMeister, Hearham, cached) within the Nearby repeaters radius, as violet markers; a card with frequency and offset, FM tone or DMR colour code and network, place and distance, the DMR talkgroups as checkboxes, and **Add to my channels**, which shows the phone planner's preview (`RepeaterService.preview`) and programs it after a confirmation (`program`, undoable on the phone). API `/api/repeaters`, `/api/repeaters/talkgroups`, `/api/repeaters/add` (preview unless `confirm`). | `web/WebHost.java`, `assets/web/pages.js`, `index.html`, `app.css`, `ui/HelpView.java` | On the phone over Wi-Fi, checked by script (no screenshot: the map shows the area): 89 repeaters within 30 mi (24 DMR, 66 FM) placed; FM previews produced; a DMR repeater with no known talkgroups declined with the planner's own message. Not run: adding a repeater (would change the channel list). |
+
 ## 2026-10-20 — SignalDeck Web: zones editor
 
 | Backlog | Change | Files | Test |

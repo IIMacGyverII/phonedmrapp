@@ -76,14 +76,50 @@ const latOf = (y, z) => { const n = Math.PI - 2 * Math.PI * y / (TS * 2 ** z); r
 async function loadMap() {
   try {
     const [st, ch] = await Promise.all([api('aprs/stations?limit=500'), api('channels')]);
-    M.marks = [];
+    M.marks = M.marks.filter(m => m.kind === 'rpt');
     for (const s of st.stations) if (s.lat != null) M.marks.push({ kind: 'aprs', lat: s.lat, lon: s.lon, name: s.call, s });
     for (const c of ch.channels) if (c.lat != null) M.marks.push({ kind: 'ch', lat: c.lat, lon: c.lon, name: c.name || ('Channel ' + c.number), c });
     $('mapCount').textContent = M.marks.filter(m => m.kind === 'aprs').length + ' STATIONS · ' + M.marks.filter(m => m.kind === 'ch').length + ' CHANNELS';
     if (!M.fitted) { M.fitted = true; fitMap(); } else drawMap();
   } catch (e) { }
 }
-function visibleMarks() { return M.marks.filter(m => (m.kind === 'aprs' ? $('mapAprs').checked : $('mapCh').checked)); }
+function visibleMarks() { return M.marks.filter(m => (m.kind === 'aprs' ? $('mapAprs').checked : m.kind === 'rpt' ? $('mapRpt').checked : $('mapCh').checked)); }
+/** Repeaters near the phone (the phone's catalog: RadioID, BrandMeister, Hearham) as a layer. */
+async function loadRepeaterLayer(force) {
+  M.marks = M.marks.filter(m => m.kind !== 'rpt');
+  if (!$('mapRpt').checked) { drawMap(); return; }
+  $('mapCount').textContent = 'LOOKING FOR REPEATERS…';
+  try {
+    const j = await api('repeaters' + (force ? '?force=1' : ''));
+    for (const r of j.repeaters) if (r.lat != null) M.marks.push({ kind: 'rpt', lat: r.lat, lon: r.lon, name: r.callsign + ' ' + mhz(r.rxHz), r });
+    $('mapCount').textContent = M.marks.filter(m => m.kind === 'aprs').length + ' STATIONS · ' + M.marks.filter(m => m.kind === 'ch').length + ' CHANNELS · ' + j.repeaters.length + ' REPEATERS (' + j.radiusMi + ' MI)';
+    if (j.status) toast(j.status);
+  } catch (e) { toast(e.message); }
+  drawMap();
+}
+async function showRepeater(m) {
+  const r = m.r, c = $('mapCard');
+  const off = r.txHz - r.rxHz;
+  c.innerHTML = '<b style="color:var(--violet)">' + esc(r.callsign) + '</b> <span class="sub mono">' + mhz(r.rxHz) + ' MHz' + (off ? ' ' + (off > 0 ? '+' : '−') + (Math.abs(off) / 1e6).toFixed(3) : ' simplex') + '</span>'
+    + '<div class="sub">' + [r.fm ? 'FM' + (r.toneUp ? ' tone ' + esc(r.toneUp) : '') : '', r.dmr ? 'DMR' + (r.cc >= 0 ? ' CC' + r.cc : '') + (r.network ? ' ' + esc(r.network) : '') : '', esc([r.city, r.region].filter(Boolean).join(', ')), r.distanceKm != null ? (r.distanceKm / 1.609344).toFixed(1) + ' mi' : '', r.approx ? 'approximate position' : ''].filter(Boolean).join(' · ') + '</div>'
+    + (r.dmr ? '<div class="tgs" id="rptTgs"><span class="sub">Loading talkgroups…</span></div>' : '')
+    + '<button class="btn small-btn" id="rptAdd">Add to my channels</button>';
+  c.classList.remove('hidden');
+  if (r.dmr) {
+    try {
+      const t = await api('repeaters/talkgroups?key=' + encodeURIComponent(r.key));
+      $('rptTgs').innerHTML = t.talkgroups.length ? t.talkgroups.map(g => '<label class="chk"><input type="checkbox" value="' + g.id + '"> TG ' + g.id + (g.name ? ' ' + esc(g.name) : '') + ' · TS' + g.slot + '</label>').join('') : '<span class="sub">No talkgroups listed: the plan uses the repeater\'s defaults</span>';
+    } catch (e) { $('rptTgs').textContent = e.message; }
+  }
+  $('rptAdd').onclick = async () => {
+    const talk = [...c.querySelectorAll('#rptTgs input:checked')].map(i => +i.value);
+    try {
+      const p = await api('repeaters/add', { key: r.key, talk });
+      if (!confirm('Add ' + r.callsign + '?\n\n' + p.preview)) return;
+      await act('repeaters/add', { key: r.key, talk, confirm: true }); loadChannels();
+    } catch (e) { toast(e.message); }
+  };
+}
 function fitMap() {
   const v = visibleMarks(); const el = $('map'); const W = el.clientWidth || 800, H = el.clientHeight || 500;
   if (!v.length) { M.lat = 39.8; M.lon = -98.6; M.z = 4; drawMap(); return; }
@@ -111,6 +147,7 @@ function drawMap() {
 }
 function showMark(m) {
   const c = $('mapCard'); let h;
+  if (m.kind === 'rpt') { showRepeater(m); return; }
   if (m.kind === 'aprs') {
     const s = m.s;
     h = '<b class="pk-from">' + esc(s.call) + '</b> <span class="sub">' + ago(s.lastTs) + ' · heard ' + s.count + '×</span><div>' + esc(s.comment) + '</div><div class="sub mono">' + s.lat.toFixed(4) + ', ' + s.lon.toFixed(4)
@@ -143,7 +180,7 @@ function showMark(m) {
   };
   el.addEventListener('wheel', e => { e.preventDefault(); const r = el.getBoundingClientRect(); zoomAt(e.deltaY < 0 ? 1 : -1, e.clientX - r.left, e.clientY - r.top); }, { passive: false });
   $('zIn').onclick = () => zoomAt(1); $('zOut').onclick = () => zoomAt(-1);
-  $('mapFit').onclick = fitMap; $('mapAprs').onchange = drawMap; $('mapCh').onchange = drawMap;
+  $('mapFit').onclick = fitMap; $('mapAprs').onchange = drawMap; $('mapCh').onchange = drawMap; $('mapRpt').onchange = () => loadRepeaterLayer(false);
   window.addEventListener('resize', () => { if (S.page === 'map') drawMap(); });
 })();
 
