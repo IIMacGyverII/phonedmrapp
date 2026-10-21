@@ -143,9 +143,51 @@ public final class PacketEngine {
         SstvListener l = sstvListener; if (l != null) new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> l.onSstv(st, b, lines, total, done));
     }
 
+    // ---- continuous Robot 36 (MMSSTV-style: no VIS needed, partial pictures, coasts through fades) ----
+    private com.macdmr.radio.pkt.SstvContinuous sstvCont;
+    private volatile boolean sstvContinuous;
+    private short[] contBuf = new short[4096];
+    private long contLastLive;
+    /** The SSTV decoder: false = any mode, started by the VIS header (the existing receiver); true = continuous Robot 36. */
+    public boolean sstvContinuousMode() { return prefs.getBoolean("sstvContinuous", false); }
+    public void setSstvContinuousMode(boolean on) { prefs.edit().putBoolean("sstvContinuous", on).apply(); if (sstvRx) setSstvRx(true); }
+    /** Continuous Robot 36 for this session regardless of the setting (ISS SSTV events are Robot 36). */
+    private volatile boolean sstvForceContinuous;
+    public void setSstvForceContinuous(boolean on) { sstvForceContinuous = on; }
+    public boolean sstvUsingContinuous() { return sstvContinuous; }
+
+    private com.macdmr.radio.pkt.SstvContinuous.Listener contListener() {
+        return new com.macdmr.radio.pkt.SstvContinuous.Listener() {
+            @Override public void onLive(int[] argb, int w, int h, boolean locked, int lines) {
+                long now = System.currentTimeMillis();
+                if (!locked && now - contLastLive < 450) return;           // static: a few frames a second is enough
+                contLastLive = now;
+                android.graphics.Bitmap b = android.graphics.Bitmap.createBitmap(argb, w, h, android.graphics.Bitmap.Config.ARGB_8888);
+                sstvPost(locked ? "receiving Robot 36, line " + lines + " of " + h : "listening (continuous Robot 36)", b, locked ? lines : 0, locked ? h : 0, false);
+            }
+            @Override public void onPicture(int[] argb, int w, int h, int lines, boolean complete) {
+                android.graphics.Bitmap b = android.graphics.Bitmap.createBitmap(argb, w, h, android.graphics.Bitmap.Config.ARGB_8888);
+                String name = saveSstv(b, complete);
+                host.event("\uD83D\uDCFA SSTV picture received (Robot 36" + (complete ? "" : ", partial: " + lines + " of " + h + " lines") + ") \u2192 Download/DMR/SSTV");
+                host.notifyUser("SSTV picture received", "Robot 36" + (complete ? "" : " (partial)"), false);
+                sstvPost("picture received" + (complete ? "" : " (partial, " + lines + " lines)") + (name != null ? "" : ", could not save"), b, lines, h, true);
+            }
+        };
+    }
+    private String saveSstv(android.graphics.Bitmap b, boolean complete) {
+        try {
+            java.io.File dir = new java.io.File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "DMR/SSTV"); dir.mkdirs();
+            String name = "SSTV_Robot36_" + new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new java.util.Date()) + (complete ? "" : "_partial") + ".png";
+            try (java.io.FileOutputStream o = new java.io.FileOutputStream(new java.io.File(dir, name))) { b.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, o); }
+            return name;
+        } catch (Throwable t) { Log.w(TAG, "sstv save: " + t); return null; }
+    }
+
     public void setSstvRx(boolean on) {
         sstvRx = on;
-        if (!on) { sstvPost("idle", null, 0, 0, false); return; }
+        if (!on) { com.macdmr.radio.pkt.SstvContinuous c = sstvCont; if (c != null) c.flush(); sstvCont = null; sstvContinuous = false; sstvPost("idle", null, 0, 0, false); return; }
+        sstvContinuous = sstvForceContinuous || sstvContinuousMode();
+        if (sstvContinuous) { sstvCont = new com.macdmr.radio.pkt.SstvContinuous(SR, contListener()); sstvPost("listening (continuous Robot 36)", null, 0, 0, false); return; }
         if (sstv == null) {
             sstv = SSTVReceiver.getInstance(host.context());
             sstv.setVISDetectedCallback(m -> { host.event("\uD83D\uDCFA SSTV " + m.name + " detected"); sstvPost("receiving " + m.name, null, 0, m.height, false); });
@@ -686,7 +728,14 @@ public final class PacketEngine {
                 if (same == null) same = new SAMEDecoder(SR, false, sameListener);
                 same.processAudio(mono, n);
             }
-            if (sstvRx && sstv != null) {
+            if (sstvRx && sstvContinuous) {
+                com.macdmr.radio.pkt.SstvContinuous c = sstvCont;
+                if (c != null) {
+                    int k = n / 2; if (contBuf.length < k) contBuf = new short[k];
+                    for (int i = 0; i < k; i++) contBuf[i] = (short) ((mono[2 * i] & 0xFF) | (mono[2 * i + 1] << 8));
+                    c.process(contBuf, k);
+                }
+            } else if (sstvRx && sstv != null) {
                 if (sstvBytes.length < n * 2) sstvBytes = new byte[n * 2];
                 for (int i = 0, o = 0; i + 1 < n; i += 2) { sstvBytes[o++] = mono[i]; sstvBytes[o++] = mono[i + 1]; sstvBytes[o++] = mono[i]; sstvBytes[o++] = mono[i + 1]; }   // the receiver runs at 16 kHz (each 8 kHz sample twice, exactly the module's input)
                 sstv.processAudio(sstvBytes, n * 2);

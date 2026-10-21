@@ -31,7 +31,7 @@ public final class SstvScreen extends ModeScreen {
     private long galleryStamp = -1;
     private final TextView switchBtn;
     private final PassCard passCard;
-    private TextView sendBtn;
+    private TextView sendBtn, decoderBtn;
 
     public SstvScreen(Context c, RadioService svc, Runnable onClose) {
         super(c, svc, "SSTV", "pkt", Neo.VIOLET, onClose);
@@ -52,7 +52,7 @@ public final class SstvScreen extends ModeScreen {
         body.addView(progress, new LayoutParams(LayoutParams.MATCH_PARENT, dp(8)));
         progressText = Neo.text(c, "", Neo.DIM, 12, Neo.mono(c)); progressText.setPadding(0, dp(4), 0, 0);
         body.addView(progressText);
-        body.addView(Neo.sheetHint(c, "Robot, Martin, Scottie and PD pictures are recognised from their VIS header and decoded automatically; each finished picture is saved to Download/DMR/SSTV."));
+        body.addView(Neo.sheetHint(c, "Two decoders (the button below switches): Any mode recognises Robot, Martin, Scottie and PD pictures from their VIS header at the start. Robot 36 continuous (always used for the ISS) needs no header: it locks on the line syncs, so a picture picked up halfway is drawn and placed at the bottom, fades are coasted through, and the screen shows the static until a picture comes in. Every picture, and every partial one of 16 lines or more, is saved to Download/DMR/SSTV."));
 
         galleryTitle = Neo.caps(c, "RECEIVED"); galleryTitle.setPadding(0, dp(14), 0, dp(6));
         body.addView(galleryTitle);
@@ -68,6 +68,12 @@ public final class SstvScreen extends ModeScreen {
             svc.sstvMonitor(false, false); toast(svc.sstvMonitor(true, !parked));
         });
         LinearLayout r2 = buttonRow();
+        decoderBtn = button(r2, "", "scan", Neo.VIOLET, v -> {
+            if (iss()) { toast("ISS events are Robot 36: the continuous decoder is always used"); return; }
+            pe.setSstvContinuousMode(!pe.sstvContinuousMode());
+            toast(pe.sstvContinuousMode() ? "Robot 36 continuous: no header needed, partial pictures kept" : "Any mode: starts on the VIS header");
+            refresh();
+        });
         button(r2, "Stop receiving", "stop", Neo.RED, v -> {
             if (iss()) { svc.endSatTracking(); toast("ISS SSTV stopped"); close(); return; }
             toast(svc.sstvMonitor(false, false)); close();
@@ -103,6 +109,8 @@ public final class SstvScreen extends ModeScreen {
 
     @Override protected void refresh() {
         passCard.update(svc);
+        String dec = pe.sstvUsingContinuous() || iss() ? "Robot 36 continuous" : "Any mode (header)";
+        if (!dec.contentEquals(decoderBtn.getText())) { decoderBtn.setText(dec); Neo.fit(decoderBtn); }
         if (waitingHz() > 0) { set(status, "The decoder starts with the pass"); set(progressText, ""); }
         if (iss()) {
             setSubtitle("ISS SSTV " + String.format(Locale.US, "%.3f", svc.satState().nominalHz / 1e6) + " \u00B7 Doppler-tracked");
