@@ -294,6 +294,48 @@ public final class WebHost {
     }
     private File sstvDir() { return new File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "DMR/SSTV"); }
 
+    // ---- settings: the Device page's switches and choices ----
+    private interface Get { Object get(); }
+    private interface Set { void set(JSONObject b) throws Exception; }
+    private static final class Setting {
+        final String key, group, label, sub, kind; final String[] choices; final Get get; final Set set;
+        Setting(String key, String group, String label, String sub, String kind, String[] choices, Get get, Set set) { this.key = key; this.group = group; this.label = label; this.sub = sub; this.kind = kind; this.choices = choices; this.get = get; this.set = set; }
+    }
+    private java.util.List<Setting> settings() {
+        java.util.List<Setting> l = new java.util.ArrayList<>();
+        android.content.SharedPreferences rp = svc.getSharedPreferences("radio", Context.MODE_PRIVATE);
+        l.add(new Setting("dmrId", "Identity", "Your DMR ID", "What other radios see when you talk on DMR channels", "int", null, svc::localId, b -> {
+            int v = b.getInt("value"); if (v < 1 || v > 0xFFFFFF) throw new IllegalArgumentException("A DMR ID is 1 to 16777215"); svc.setLocalId(v); }));
+        l.add(new Setting("ownAtBoot", "Radio", "Own the radio at boot", "Otherwise the stock app is restored after a reboot", "bool", null, svc::ownAtBoot, b -> svc.setOwnAtBoot(b.getBoolean("value"))));
+        l.add(new Setting("hwPtt", "Radio", "Side PTT key", "The phone's hardware push-to-talk button transmits", "bool", null, svc::hwPtt, b -> svc.setHwPtt(b.getBoolean("value"))));
+        l.add(new Setting("volPtt", "Radio", "Volume-up transmits", "While the Intercom page is open on the phone", "bool", null, () -> rp.getBoolean("volPtt", false), b -> rp.edit().putBoolean("volPtt", b.getBoolean("value")).apply()));
+        l.add(new Setting("scanSoftSq", "Radio", "Soft SQ while scanning", "Every analog channel, each at its own level", "bool", null, svc::scanSoftSq, b -> svc.setScanSoftSq(b.getBoolean("value"))));
+        l.add(new Setting("roger", "Radio", "Roger beep", "A short sound at the end of each transmission", "choice", RadioService.ROGER_NAMES, svc::rogerStyle, b -> svc.setRogerStyle(Math.max(0, Math.min(RadioService.ROGER_NAMES.length - 1, b.getInt("value"))))));
+        l.add(new Setting("voice", "Radio", "Voice announcements", "Channel changes, caller names, keyword alerts", "bool", null, svc::voiceOn, b -> svc.setVoiceOn(b.getBoolean("value"))));
+        l.add(new Setting("keywords", "Radio", "Keyword alerts", "Words in live captions that raise an alert, separated by commas", "text", null, svc::keywords, b -> svc.setKeywords(b.getString("value"))));
+        l.add(new Setting("logHeard", "Logbook", "Log stations heard", "DMR callers and APRS stations go into the logbook as Heard", "bool", null, svc::logHeard, b -> svc.setLogHeard(b.getBoolean("value"))));
+        l.add(new Setting("lookupOnline", "Logbook", "Look up names online", "RadioID / callsign lookups for callers and stations", "bool", null, svc::lookupOnline, b -> svc.setLookupOnline(b.getBoolean("value"))));
+        l.add(new Setting("coverage", "Coverage", "Coverage logging", "Records signal and key-ups with GPS for the coverage maps", "bool", null, () -> svc.coverage().enabled(), b -> svc.setCoverageLogging(b.getBoolean("value"))));
+        l.add(new Setting("covInCar", "Coverage", "Log coverage in the car", "Coverage logging while Android Auto is connected", "bool", null, svc::coverageInCar, b -> svc.setCoverageInCar(b.getBoolean("value"))));
+        l.add(new Setting("carMic", "Car", "Car microphone in Android Auto", "Talk uses the car's microphone through its hands-free link", "bool", null, svc::carMic, b -> svc.setCarMic(b.getBoolean("value"))));
+        l.add(new Setting("wheelTalk", "Car", "Steering-wheel play/pause talks", "In Android Auto: play/pause starts and stops transmitting", "bool", null, svc::wheelTalk, b -> svc.setWheelTalk(b.getBoolean("value"))));
+        l.add(new Setting("nextTalk", "Car", "Steering-wheel Next talks", "Hold Next to talk, or press it twice", "choice", RadioService.NEXT_TALK_NAMES, svc::nextTalkMode, b -> svc.setNextTalkMode(Math.max(0, Math.min(RadioService.NEXT_TALK_NAMES.length - 1, b.getInt("value"))))));
+        l.add(new Setting("wheelMic", "Car", "Steering-wheel microphone", "Car (as a call) or the phone's microphone", "choice", RadioService.WHEEL_MIC_NAMES, svc::wheelMic, b -> svc.setWheelMic(Math.max(0, Math.min(1, b.getInt("value"))))));
+        l.add(new Setting("voxStop", "Car", "Stop when I stop talking", "For transmissions started from the wheel", "choice", RadioService.VOX_NAMES, svc::voxStop, b -> svc.setVoxStop(Math.max(0, Math.min(RadioService.VOX_NAMES.length - 1, b.getInt("value"))))));
+        l.add(new Setting("carScreen", "Car", "Full-screen Radio controls in the car", "Off: a media app; on: a big Talk screen (reconnect the car after changing)", "bool", null, svc::carControlsScreen, b -> svc.setCarControlsScreen(b.getBoolean("value"))));
+        return l;
+    }
+    private JSONObject settingsJson() throws Exception {
+        JSONArray a = new JSONArray();
+        for (Setting s : settings()) {
+            JSONObject o = new JSONObject().put("key", s.key).put("group", s.group).put("label", s.label).put("sub", s.sub).put("kind", s.kind).put("value", s.get.get());
+            if (s.choices != null) o.put("choices", new JSONArray(java.util.Arrays.asList(s.choices)));
+            a.put(o);
+        }
+        return new JSONObject().put("settings", a).put("link", svc.link()).put("ready", svc.isReady()).put("profile", svc.profile() == null ? "" : svc.profile().name)
+                .put("version", com.macdmr.radio.BuildConfig.VERSION_NAME).put("webTx", allowTx()).put("browsers", clients()).put("listeners", listeners());
+    }
+
     // ---- the API ----
     private WebServer.Response api(WebServer.Request r) throws Exception {
         String p = r.path; boolean post = "POST".equals(r.method);
@@ -508,6 +550,25 @@ public final class WebHost {
                 return ok(new JSONObject().put("entries", a).put("qsos", lb.count(true)).put("total", lb.count(false)));
             }
             case "/api/logbook/delete": if (!post) break; { svc.logbook().delete(b.optLong("id", 0)); return ok("Deleted"); }
+            case "/api/settings": {
+                if (post) {
+                    String key = b.optString("key", "");
+                    for (Setting s : settings()) if (s.key.equals(key)) {
+                        try { onMain(() -> { s.set.set(b); return null; }); }
+                        catch (java.util.concurrent.ExecutionException e) { return WebServer.Response.error(400, e.getCause() == null ? String.valueOf(e) : String.valueOf(e.getCause().getMessage())); }
+                        return ok(settingsJson().put("message", s.label + " saved"));
+                    }
+                    return WebServer.Response.error(404, "No such setting");
+                }
+                return ok(settingsJson());
+            }
+            case "/api/radio": if (!post) break; {                              // take over / hand back the radio
+                String a = b.optString("action", "");
+                if (svc.isTransmitting()) return WebServer.Response.error(409, "Not while transmitting");
+                if (a.equals("takeover")) { svc.bringUp(); return ok("Taking over the radio"); }
+                if (a.equals("handback")) { svc.shutDown(true); return ok("Handing the radio back to the stock app"); }
+                return WebServer.Response.error(400, "action: takeover or handback");
+            }
             case "/api/help": {
                 JSONArray a = new JSONArray();
                 for (String[] t : com.macdmr.radio.ui.HelpView.topicsForWeb()) {

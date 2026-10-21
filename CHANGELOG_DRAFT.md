@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — SignalDeck Web: Settings page (Device settings, take over / hand back)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | **Settings** page: radio owner, phone profile and version, Take over / Hand back (with a confirmation), browsers connected and listening, and 18 of the Device page's settings from one table in `WebHost.settings()` (DMR ID with range check, own at boot, side PTT, volume-up PTT, Soft SQ while scanning, roger beep, voice announcements, keyword alerts, log heard, online lookups, coverage logging + in the car, car microphone, wheel play/pause, wheel Next, wheel microphone, stop when I stop talking, full-screen car controls), as neon switches, choices and fields that save at once. Web access, the PIN and the transmit permission are deliberately not on it: a browser can never widen its own rights. Top bar tightened for 13 pages. API `/api/settings` (GET / POST {key, value}), `/api/radio` {takeover, handback}. | `web/WebHost.java`, `assets/web/pages.js`, `index.html`, `app.js`, `app.css`, `ui/HelpView.java` | On the phone over Wi-Fi: Volume-up transmits toggled on and back off, DMR ID 0 refused (400), 18 settings rendered with the phone's values. Take over / Hand back not exercised (would have dropped the overnight session). |
+
 ## 2026-10-20 — SignalDeck Web: satellite passes, Logbook and Recordings pages
 
 | Backlog | Change | Files | Test |
