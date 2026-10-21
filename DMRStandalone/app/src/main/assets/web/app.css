@@ -215,6 +215,7 @@ a.btn, a.act { text-decoration: none; display: inline-block; }
 .exa:hover { border-color: var(--cyan); } .exa b { color: var(--cyan); margin-right: 6px; }
 .exa.right { border-color: var(--green); background: rgba(43,234,122,.12); } .exa.wrong { border-color: var(--red); background: rgba(255,84,104,.12); }
 #exNext { margin-top: 12px; }
+.mtcopy { width: 100%; min-height: 110px; margin: 12px 0; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-solid); color: var(--text); font-size: 20px; letter-spacing: .15em; text-transform: uppercase; }
 
 /* settings */
 .set { display: flex; gap: 14px; align-items: center; justify-content: space-between; padding: 12px 4px; border-bottom: 1px solid var(--divider); }

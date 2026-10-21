@@ -703,6 +703,18 @@ public final class WebHost {
                 String e = onMain(() -> svc.packet().sendSstv(bmp, modes[m]));
                 return e == null ? ok("Sending the picture as " + com.macdmr.radio.pkt.SSTVEncoder.name(modes[m])) : WebServer.Response.error(409, e);
             }
+            case "/api/trainer": {                                              // the Morse trainer's lesson and speeds (shared with the phone's trainer)
+                android.content.SharedPreferences tp = svc.getSharedPreferences("trainer", Context.MODE_PRIVATE);
+                if (post) {
+                    android.content.SharedPreferences.Editor ed = tp.edit();
+                    if (b.has("lesson")) ed.putInt("lesson", Math.max(1, Math.min(com.macdmr.radio.ham.MorseTrainer.LESSONS, b.getInt("lesson"))));
+                    if (b.has("wpm")) ed.putInt("wpm", Math.max(5, Math.min(40, b.getInt("wpm"))));
+                    if (b.has("fw")) ed.putInt("fw", Math.max(5, Math.min(40, b.getInt("fw"))));
+                    ed.apply();
+                }
+                return ok(new JSONObject().put("lesson", tp.getInt("lesson", 1)).put("wpm", tp.getInt("wpm", 20)).put("fw", tp.getInt("fw", 10))
+                        .put("koch", com.macdmr.radio.ham.MorseTrainer.KOCH).put("lessons", com.macdmr.radio.ham.MorseTrainer.LESSONS));
+            }
             case "/api/exam": {                                                 // the pools and this phone's progress (shared with the phone's Exam practice)
                 android.content.SharedPreferences ep = svc.getSharedPreferences("exam", Context.MODE_PRIVATE);
                 JSONArray a = new JSONArray();
