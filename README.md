@@ -6,7 +6,9 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
 **Status**: ✅ **FULLY FUNCTIONAL** - RadioID Caller Lookup + Export/Import + GPS + Zones + Transcription + APRS + VFO + SSTV + NOAA APT!
 
-> **🚀 Current Stable Release: v4.1.1** (October 19, 2026) - APRS transmit fixes (CALL-SSID callsign split, no packets over DMR, TX audio follows the recorder format). Built on v4.1.0: **Packet radio on air**: APRS TX/RX (messages, beacon, KISS TNC, digipeater, APRS-IS iGate), SSTV send, NOAA SAME weather alerts, DTMF send/decode, CTCSS tone decoder, **on-device live captions** (Vosk, no cloud) with keyword alerts, Last heard, voice announcements, channel search — 90 changes, all device-tested  
+> **🧪 New: SignalDeck 1.0.0-beta.1** (October 21, 2026) - the standalone app as a public **beta for testing** (root required, bugs expected) - see [SignalDeck](#-signaldeck--the-standalone-app-public-beta-100-beta1) and the [pre-release](https://github.com/IIMacGyverII/phonedmrapp/releases/tag/signaldeck-v1.0.0-beta.1)  
+> **🚀 Current Stable Module Release: v4.1.4** (October 20, 2026) - standard packet lead-in (HDLC flags, after v4.1.2 beacon fixes + APRS TX log and v4.1.3 APRS transmit power); see the [releases](https://github.com/IIMacGyverII/phonedmrapp/releases/latest) and [`CHANGELOG_DRAFT.md`](CHANGELOG_DRAFT.md)  
+> **📦 Prior Release: v4.1.1** (October 19, 2026) - APRS transmit fixes (CALL-SSID callsign split, no packets over DMR, TX audio follows the recorder format). Built on v4.1.0: **Packet radio on air**: APRS TX/RX (messages, beacon, KISS TNC, digipeater, APRS-IS iGate), SSTV send, NOAA SAME weather alerts, DTMF send/decode, CTCSS tone decoder, **on-device live captions** (Vosk, no cloud) with keyword alerts, Last heard, voice announcements, channel search — 90 changes, all device-tested  
 > **🔧 Prior Stable: v4.0.0** (October 15, 2026) - Nearby Repeaters + in-app updater (no root) + on-air **group-call RX fix** + the full October correctness/diagnostics batch (channel scanner, live S-meter, in-app help) - see [What's New in v4.0.0](#whats-new-in-v400-october-15-2026) and [`CHANGELOG_DRAFT.md`](CHANGELOG_DRAFT.md)  
 > **📻 Major Feature: v3.4.5** (June 16, 2026) - **RadioID.net global DMR ID lookup** — see who's calling with callsign, name & location (~300k IDs, offline)  
 > **🔧 Also in v3.4.5** — Double-slot import fix, squelch default to normal
@@ -65,25 +67,32 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
 ---
 
-## 🚧 The standalone app (`DMRStandalone/`, "DMR Radio")
+## 🧪 SignalDeck — the standalone app (public beta: 1.0.0-beta.1)
 
-The LSPosed module hooks the Ulefone's stock walkie-talkie app, so it only ever works on the Ulefone Armor 26 Ultra. The **standalone app** (`DMRStandalone/`, package `com.macdmr.radio`) drives the radio module directly instead: one shared protocol engine plus a small **device profile** per phone (serial port and its JNI opener, audio path, power/PTT lines, PTT key broadcasts, SELinux rules). It is not released yet, but as of 2026-10-17 it already does, all verified on the phone and on the air:
+> [!WARNING]
+> **Beta, for testing only — bugs are expected.** SignalDeck needs a rooted phone and takes direct control of its radio module. It is provided as is, without warranty (GPL v3); the author is not responsible for any damage to your phone, its radio or your data, and transmitting legally is your responsibility. Read the disclaimer in the [release notes](https://github.com/IIMacGyverII/phonedmrapp/releases/tag/signaldeck-v1.0.0-beta.1) before installing.
 
-- the intercom page exactly as the module draws it (same artwork and geometry), channels (list, search, editor, Star/favourites), contacts, DMR text messages with quick replies, zones, Soft SQ, REC, MON, scanner, VFO (any frequency, repeater offsets, arrow stepping, save as channel), live captions (TXT, on-device Vosk built in, model downloaded once; or Google Cloud with your key) with keyword alerts, voice announcements, Last heard, RadioID caller names;
-- the whole PKT suite: APRS (passive decode on every analog channel, monitoring on 144.390 with auto-ack and fill-in digipeater, messages, position beacon, KISS TNC for APRSdroid/YAAC, stations and log with map links, APRS-IS iGate/beacon/messages), DTMF decode and send, NOAA SAME weather alerts, SSTV receive (live view) and send;
-- Nearby Repeaters (BrandMeister, RadioID, hearham) programmed in one tap with undo, backups in the same five-CSV layout as the module and the OpenGD77 CPS fork, boot persistence (a real Magisk module; "Own the radio at boot", or the stock app is restored after a reboot), in-app help for every screen.
+**Download:** [SignalDeck 1.0.0-beta.1 (pre-release)](https://github.com/IIMacGyverII/phonedmrapp/releases/tag/signaldeck-v1.0.0-beta.1) → `SignalDeck-1.0.0-beta.1.apk`. It is published as a GitHub *pre-release*, so the DMRModHooks module's "latest release" and its updater are unaffected; SignalDeck's own *Device → Updates* finds later test builds.
 
-| Phone | Status |
+The LSPosed module hooks the Ulefone's stock walkie-talkie app, so it only ever works on the Ulefone Armor 26 Ultra. **SignalDeck** (`DMRStandalone/`, package `com.macdmr.radio`; called "DMR Radio" before 2026-10-20) drives the radio module directly instead: one shared protocol engine plus a small **device profile** per phone (serial port and its opener, audio path, power/PTT lines, PTT key broadcasts, SELinux rules). On the Armor it does everything the module does and more, tested on the phone and most of it on the air:
+
+- **Talk and listen:** the module's intercom page (same artwork), side PTT key, analog FM and DMR (group/private calls, RX group lists, text messages with quick replies), channels with favourites and an editor, zones, Nearby Repeaters, scanner, VFO, Soft SQ, REC, MON, live captions (on-device Vosk or Google Cloud) with keyword alerts, voice announcements, Last heard with RadioID names;
+- **Packet (PKT):** APRS (passive decode, monitoring with auto-ack, messages, beacons, digipeater, objects, telemetry, weather), APRS-IS iGate, KISS TNC for APRSdroid/YAAC, satellite passes with Doppler (ISS), SSTV receive and send, NOAA SAME alerts, DTMF (decode, send, remote control), RTTY/PSK31, packet terminal, parrot repeater, Morse, voice keyer, ID timer;
+- **Pages and tools:** logbook (ADIF), net control, fox hunt, exam practice, map and coverage maps, Android Auto, widget, **SignalDeck Web** (the radio in a browser on your Wi-Fi), backups in the module's five-CSV layout, boot persistence, in-app updates and in-app help for every screen.
+
+| Phone | SignalDeck status |
 |---|---|
-| **Ulefone Armor 26 Ultra** (walkie-talkie model) | Module v4.1.1 supported today; standalone app feature-complete on it (pre-release) |
-| **Blackview Xplore 1** | Its stock app uses the **same radio-module protocol** ([analysis](docs/multi-device-xplore1-findings.md)); needs a profile (audio is PCM over a second UART) and root. Looking for an owner to run the info script |
-| Oukitel WP61 Plus/Ultra/Ti, Ulefone Armor 20WT, UNIWA P2 Plus… | Unknown — send us the stock app APK and the info dump |
+| **Ulefone Armor 26 Ultra** (walkie-talkie model) | Tested profile — the beta's reference phone. The DMRModHooks module remains available as the stable option. |
+| **Blackview Xplore 1** | **Untested profile** ([analysis](docs/multi-device-xplore1-findings.md)): same radio-module protocol, audio over a second UART. The app does not take the radio by itself there; owners, please run **Device → Run all checks** and send us the zip. |
+| Oukitel WP61 Plus/Ultra/Ti, Ulefone Armor 20WT, UNIWA P2 Plus… | No profile — the app starts in discovery mode and offers **Run all checks** |
 
-**Root (Magisk) is required** on every phone: Android's SELinux policy only lets the stock app open the radio's serial port; the app installs a four-line `sepolicy.rule` Magisk module from its Device tab.
+**Root (Magisk) is required** on every phone: Android's SELinux policy only lets the stock app open the radio's serial port. SignalDeck applies the rules it needs with Magisk (Device → *Keep access after reboot* makes them permanent as a small Magisk module).
 
-**Have a different DMR phone?** Follow [`docs/DEVICE_SUPPORT_REQUEST.md`](docs/DEVICE_SUPPORT_REQUEST.md) — one copy-paste script and the stock APK tell us everything needed for a profile — and open an issue.
+**Have a different DMR phone?** Install the beta and run **Device → Run all checks** (one button, about two minutes; it only listens and hands the radio back to the stock app), then **Send** the zip or open an issue with it. Without the app: [`docs/DEVICE_SUPPORT_REQUEST.md`](docs/DEVICE_SUPPORT_REQUEST.md).
 
-The module keeps getting releases until the standalone app ships.
+**Bugs:** open an [issue](https://github.com/IIMacGyverII/phonedmrapp/issues) with your phone model, the SignalDeck version, what happened, and the zip from *Run all checks*.
+
+The module keeps getting releases until SignalDeck leaves beta.
 
 ---
 
