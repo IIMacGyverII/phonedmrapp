@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-21 — SignalDeck Web: map tiles load again
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | **Fix:** the web Map showed OpenStreetMap's "Access blocked … not following the tile usage policy" picture on every tile. The server sends `Referrer-Policy: no-referrer`, so tile requests carried no Referer, which the OSM tile policy refuses (it still answers 200 with a 7 kB blocked image). Tile images now carry `referrerpolicy="origin"`: OSM sees only `http://<phone>:8080/`, never a page path; everything else keeps no-referrer. Reported by the owner. | `assets/web/pages.js` | curl: same tile 7 kB blocked image without Referer, 22 kB real tile with the origin. **device (headless Chrome over Wi-Fi, script only)**: 18 tiles, all different sizes (real tiles), Referer = origin only |
+
 ## 2026-10-21 — SignalDeck Web: LISTEN works again
 
 | Backlog | Change | Files | Test |
