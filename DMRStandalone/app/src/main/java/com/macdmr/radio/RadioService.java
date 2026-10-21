@@ -788,6 +788,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         if (open != squelchOpen && softSq.isEnabled()) log("soft squelch " + (open ? "open" : "closed") + (current != null && current.rxType == 1 ? " (CTCSS " + com.macdmr.radio.dsp.ToneTable.ctcssLabel(current.rxSubCode) + ")" : ""));
         if (open != squelchOpen && softSq.isEnabled()) { softGateHistory(open); squelchOpen = open; pushModes(); }   // pages see the gate (activity box, Soft SQ number colour)
         squelchOpen = open;
+        if (web != null && open && !muted && !pttDown) web.rxAudio(mono, n);      // SignalDeck Web listeners hear what the speaker plays
         int peak = 0;
         if (open) for (int i = 0; i + 1 < n; i += 2) { int v = Math.abs((short) ((mono[i] & 0xFF) | (mono[i + 1] << 8))); if (v > peak) peak = v; }
         if (captionsOn && open) {

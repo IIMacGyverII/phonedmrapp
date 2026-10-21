@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — SignalDeck Web: hear the radio in the browser (LISTEN)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Phase 3 (receive half): Intercom → **LISTEN** plays the radio in the browser. `/api/audio` streams what the phone's speaker plays (after the squelch, nothing while transmitting or muted) as raw 8 kHz mono 16-bit PCM over a plain HTTP response (no WebSocket needed); each listener has a bounded queue so a stalled browser drops audio instead of lagging; a 2-byte keep-alive every 20 s ends streams of closed browsers. The browser schedules it with Web Audio and a 0.25 s jitter buffer, restarting the buffer after each pause and skipping ahead if it ever falls more than 1.2 s behind; volume slider (0–200 %); reconnects by itself. Talking through the browser microphone (needs HTTPS) is the remaining phase 3 step. | `web/WebServer.java`, `web/WebHost.java`, `RadioService.java` (`onRxPcm`), `assets/web/audio.js`, `index.html`, `ui/HelpView.java` | On the phone over Wi-Fi, NOAA 162.500 via the VFO (receive only): 19.97 s of audio in 20 s, 97 % of the energy in 300–3000 Hz with a speech envelope; headless Chrome player: 8.0 s received and scheduled in 8 s, 0.27 s behind live, stop works. On APRS 144.390 the stream carries only the gated packet bursts, as the speaker does. |
+
 ## 2026-10-20 — SignalDeck Web: channel editor
 
 | Backlog | Change | Files | Test |

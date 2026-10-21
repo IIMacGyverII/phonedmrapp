@@ -56,6 +56,9 @@ public final class WebHost {
     public void newPin() { prefs().edit().putString("pin", WebServer.newPin()).apply(); if (running()) { stop(); start(); } }
     public boolean running() { WebServer s = server; return s != null && s.running(); }
     public int clients() { WebServer s = server; return s == null ? 0 : s.clients(); }
+    public int listeners() { WebServer s = server; return s == null ? 0 : s.audioClients(); }
+    /** Received audio for the browsers that are listening (8 kHz mono 16-bit). */
+    public void rxAudio(byte[] mono, int n) { WebServer s = server; if (s != null) s.publishAudio(mono, n); }
     public String lastError() { return lastError; }
 
     /** Turn the web server on or off (and remember it). Returns null or an error. */

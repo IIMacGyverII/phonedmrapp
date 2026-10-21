@@ -60,6 +60,7 @@ public final class WebServer {
     private final Map<String, Long> sessions = new ConcurrentHashMap<>();       // token -> last use
     private final Map<String, int[]> failures = new ConcurrentHashMap<>();      // remote -> {count, minute}
     private final CopyOnWriteArrayList<LinkedBlockingQueue<String>> streams = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<LinkedBlockingQueue<byte[]>> audio = new CopyOnWriteArrayList<>();
     private final SecureRandom rnd = new SecureRandom();
     public static final long SESSION_IDLE_MS = 30L * 24 * 3600 * 1000;
 
@@ -76,9 +77,19 @@ public final class WebServer {
         try { if (server != null) server.close(); } catch (IOException ignored) { }
         for (LinkedBlockingQueue<String> q : streams) q.offer("\u0000");                   // wake the event writers so they end
         streams.clear();
+        for (LinkedBlockingQueue<byte[]> q : audio) q.offer(new byte[0]);
+        audio.clear();
     }
     public boolean running() { return running; }
     public int clients() { return streams.size(); }
+    public int audioClients() { return audio.size(); }
+
+    /** Received audio (8 kHz mono 16-bit little-endian) for every browser that is listening. */
+    public void publishAudio(byte[] pcm, int n) {
+        if (audio.isEmpty() || n <= 0) return;
+        byte[] b = java.util.Arrays.copyOf(pcm, n);
+        for (LinkedBlockingQueue<byte[]> q : audio) { if (q.size() > 64) q.clear(); q.offer(b); }   // a stalled browser drops audio rather than lagging
+    }
 
     /** Push one event to every connected browser ({@code type} plus a JSON object). */
     public void publish(String type, String json) {
@@ -98,6 +109,7 @@ public final class WebServer {
                 Request r = read(in); if (r == null) break;
                 r.remote = ra.getHostAddress();
                 if ("GET".equals(r.method) && "/api/events".equals(r.path)) { if (authed(r)) { stream(c, out); return; } write(out, Response.error(401, "login required"), true); continue; }
+                if ("GET".equals(r.method) && "/api/audio".equals(r.path)) { if (authed(r)) { streamAudio(c, out); return; } write(out, Response.error(401, "login required"), true); continue; }
                 Response resp = route(r);
                 boolean close = "close".equalsIgnoreCase(r.headers.get("connection"));
                 write(out, resp, !close);
@@ -178,6 +190,24 @@ public final class WebServer {
             }
         } catch (InterruptedException ignored) {
         } finally { streams.remove(q); }
+    }
+
+    /** Raw 8 kHz mono PCM for as long as the browser reads it (the response ends when either side closes). */
+    private void streamAudio(Socket c, OutputStream out) throws IOException {
+        LinkedBlockingQueue<byte[]> q = new LinkedBlockingQueue<>();
+        audio.add(q);
+        try {
+            c.setSoTimeout(0); c.setTcpNoDelay(true);
+            out.write(("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nCache-Control: no-store\r\nX-Audio-Format: s16le;rate=8000;channels=1\r\nConnection: close\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+            out.flush();
+            while (running) {
+                byte[] b = q.poll(20, TimeUnit.SECONDS);
+                if (b == null) { out.write(new byte[2]); out.flush(); continue; }       // one silent sample now and then finds a closed browser
+                if (b.length == 0) break;
+                out.write(b); out.flush();
+            }
+        } catch (InterruptedException ignored) {
+        } finally { audio.remove(q); }
     }
 
     // ---- HTTP parsing / writing ----
