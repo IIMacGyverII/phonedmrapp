@@ -351,6 +351,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
                 + "One run of the checks tells us what we need to make it work. It takes about two minutes.\n\n" : "")
                 + "What happens:\n• a device report (phone, ports, radio module, the stock walkie-talkie app; only reads)\n"
                 + "• 10 s to press the side PTT key a few times\n"
+                + "• with root, the stock walkie-talkie app is opened for 15 s so we can see how it starts the radio (do not press PTT then), and closed again\n"
                 + "• with Magisk root, the radio probe (asks the module for its version on the serial ports; switches the module on if it does not answer"
                 + (dp.supported ? "" : ", only on phones with a profile") + ")\n"
                 + (canTrial ? "• optionally a 30-second trial: SignalDeck takes the radio (receive only, nothing is transmitted), records what the module and the audio do, then gives it back to " + dp.stockApp + "\n" : "")

@@ -33,6 +33,13 @@ public final class FirstRunCheck {
         p.step("Press and release the side PTT key a few times now (10 s)");
         DeviceReport.append("PTT key capture", DeviceReport.captureKeys(c, 10));
 
+        String watchPkg = !dp.stockApp.isEmpty() ? dp.stockApp : DeviceReport.lastCandidates.isEmpty() ? null : DeviceReport.lastCandidates.get(0);
+        if (watchPkg != null && !svc.isReady() && RootSetup.haveRoot()) {
+            String w = watchStockApp(watchPkg, p);
+            DeviceReport.append("The stock app at work (" + watchPkg + ", 15 s, receive only)", w);
+            sum.append("watched ").append(watchPkg).append(" start up for 15 s\n");
+        } else sum.append("stock app not watched: ").append(watchPkg == null ? "no stock walkie-talkie app found" : svc.isReady() ? "SignalDeck owns the radio" : "no root").append('\n');
+
         if (svc.isReady()) {
             sum.append("radio probe skipped: SignalDeck owns the radio (Hand back first to probe the ports)\n");
         } else {
@@ -59,10 +66,59 @@ public final class FirstRunCheck {
         return DeviceReport.zipNewest(c, true);
     }
 
+    private static final String KMSG = "dmesg 2>/dev/null | grep -i -E 'intercom|dmr|interphone|walkie|ptt|pwd|pdt|ttyS|ttyMT' | tail -40";
+
+    /**
+     * Start the stock walkie-talkie app the way its icon does, let it power up and listen for 15 s, and record what it does:
+     * its own log lines (QuickChat logs every step: "setPttReceive", "initPcmSerialPort", its PCM packets), which serial
+     * ports it opens and the line settings it gives them, and the radio driver's kernel messages. Then close it. Nobody
+     * presses PTT meanwhile (the progress text says so): this only listens.
+     */
+    static String watchStockApp(String pkg, Progress p) throws InterruptedException {
+        StringBuilder r = new StringBuilder();
+        String comp = RootSetup.run("cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER " + pkg + " | tail -1").trim();
+        if (!comp.contains("/")) return "no launcher activity found for " + pkg + " (" + comp + ")\n";
+        String kBefore = RootSetup.run(KMSG);
+        RootSetup.run("logcat -c");
+        p.step("The stock walkie-talkie app is open for 15 s — please do not press PTT");
+        r.append("start ").append(comp).append(": ").append(RootSetup.run("am start -n " + comp + " 2>&1 | tail -1")).append('\n');
+        Thread.sleep(8000);
+        String pid = RootSetup.run("pidof " + pkg).trim().split("\\s+")[0];
+        if (pid.matches("\\d+")) {
+            String fds = RootSetup.run("ls -l /proc/" + pid + "/fd 2>/dev/null | grep -o '/dev/[A-Za-z0-9_]*' | sort -u");
+            r.append("devices it holds open: ").append(fds.replace('\n', ' ')).append('\n');
+            for (String dev : fds.split("\\s+")) if (dev.matches("/dev/tty\\w+"))
+                r.append("  ").append(dev).append(": ").append(RootSetup.run("stty -F " + dev + " -a 2>&1 | head -2").replace('\n', ' ')).append('\n');
+        } else r.append("not running after 8 s (pid: ").append(pid).append(")\n");
+        Thread.sleep(7000);
+        String log = pid.matches("\\d+") ? RootSetup.run("logcat -d --pid=" + pid + " 2>/dev/null | tail -600") : RootSetup.run("logcat -d 2>/dev/null | tail -400");
+        int hexLines = 0; StringBuilder kept = new StringBuilder();
+        for (String l : log.split("\n")) {
+            if (l.contains("ClassLoader referenced unknown path")) continue;   // framework noise
+            if (l.matches(".*[0-9A-Fa-f ,]{120,}.*")) { hexLines++; if (hexLines <= 3) kept.append(l, 0, Math.min(l.length(), 260)).append(" …\n"); continue; }   // data dumps: a sample is enough
+            kept.append(l.length() > 260 ? l.substring(0, 260) + " …" : l).append('\n');
+        }
+        r.append("\nits log (").append(hexLines).append(" data-dump lines shortened to 3 samples; personal details removed):\n").append(DeviceReport.redact(kept.toString()));
+        String kAfter = RootSetup.run(KMSG);
+        r.append("\nradio driver kernel messages that appeared meanwhile:\n").append(newLines(kBefore, kAfter));
+        r.append("\nclosed: ").append(RootSetup.run("am force-stop " + pkg + " && echo ok")).append('\n');
+        Thread.sleep(1500);
+        return r.toString();
+    }
+
+    /** Lines of {@code after} that were not in {@code before}. */
+    private static String newLines(String before, String after) {
+        java.util.HashSet<String> seen = new java.util.HashSet<>(java.util.Arrays.asList(before.split("\n")));
+        StringBuilder out = new StringBuilder();
+        for (String l : after.split("\n")) if (!l.trim().isEmpty() && !seen.contains(l)) out.append("  ").append(l).append('\n');
+        return out.length() == 0 ? "  (none)\n" : out.toString();
+    }
+
     /** Take the radio for a few seconds (receive only), record what happened, give it back. */
     private static String trialTakeOver(Context c, RadioService svc, Progress p) throws InterruptedException {
         StringBuilder r = new StringBuilder();
         p.step("Trial: taking over the radio (receive only)");
+        String kBefore = RootSetup.run(KMSG);
         long t0 = System.currentTimeMillis();
         svc.bringUp();
         String link = svc.link();
@@ -96,6 +152,7 @@ public final class FirstRunCheck {
         svc.shutDown(true);
         Thread.sleep(3000);
         r.append("handed back; stock app enabled: ").append(RootSetup.stockAppEnabled(svc.profile())).append('\n');
+        r.append("radio driver kernel messages during the trial:\n").append(newLines(kBefore, RootSetup.run(KMSG)));
         r.append(String.format(Locale.US, "(trial ran %d s)\n", (System.currentTimeMillis() - t0) / 1000));
         return r.toString();
     }
