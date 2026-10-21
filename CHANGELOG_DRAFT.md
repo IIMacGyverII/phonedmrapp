@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — SignalDeck Web: Packet page (APRS settings, APRS-IS / KISS / parrot, DTMF, weather alerts)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | **Packet** page: APRS-IS, KISS TNC and parrot repeater switches with live status, Send Morse ID, DTMF send (saved sequences as chips; follows *Allow transmit from the web*) and the DTMF log with channel names, SAME weather alerts, and the full APRS settings sheet (station, symbol, comment, path, message groups, automatic beacons, transmit power, lead-in sound and length, passive decoding, auto-ack, digipeater, decoders, Morse ID, telemetry/weather beacons, transmit iGate, APRS-IS server/port/passcode/beacon, KISS port) with the phone sheet's checks. **The callsign and APRS-IS passcode are write-only:** the API only says whether they are set, and an empty box keeps the stored value. API `/api/packet`, `/api/packet/settings`, `/api/packet/tool`, `/api/dtmf`, `/api/cwid`. | `web/WebHost.java`, `assets/web/pages.js`, `index.html`, `app.js`, `app.css`, `ui/HelpView.java` | On the phone over Wi-Fi: `/api/packet` carries 27 settings and neither the callsign nor the passcode; SSID 99 refused; DTMF refused (403) with transmit off; saving the sheet unchanged left `packet.xml` byte-identical (masked diff); page rendered with the real DTMF log. |
+
 ## 2026-10-20 — SignalDeck Web: Settings page (Device settings, take over / hand back)
 
 | Backlog | Change | Files | Test |

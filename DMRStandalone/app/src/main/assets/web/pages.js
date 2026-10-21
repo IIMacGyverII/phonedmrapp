@@ -210,6 +210,65 @@ $('recList').onclick = async e => {
   if (d) { const r = S.recs[+d.dataset.del]; if (confirm('Delete ' + r.name + '?') && await act('recording/delete', { id: r.id })) loadRecordings(); }
 };
 
+// ---- packet tools + APRS settings ----
+async function loadPacket() {
+  try {
+    const j = await api('packet'); S.pkt = j; const t = j.tools, st = j.settings;
+    const sw = (key, label, sub, on) => '<div class="set"><div class="main"><div>' + esc(label) + '</div><div class="sub">' + esc(sub) + '</div></div><button type="button" class="switch' + (on ? ' on' : '') + '" data-tool="' + key + '" role="switch" aria-checked="' + on + '" aria-label="' + esc(label) + '"></button></div>';
+    $('pktTools').innerHTML = sw('is', 'APRS-IS', 'Internet gateway: ' + t.isStatus, t.is) + sw('kiss', 'KISS TNC', t.kiss ? (t.kissClient ? 'A client is connected' : 'Waiting for a client on port ' + st.kissPort) : 'For APRSdroid, YAAC and other packet programs (TCP port ' + st.kissPort + ')', t.kiss)
+      + sw('parrot', 'Parrot repeater', 'Plays back what it hears on this channel (needs transmit)', t.parrot);
+    $('cwIdBtn').disabled = $('dtmfForm').querySelector('button').disabled = !t.webTx;
+    $('dtmfSaved').innerHTML = (j.dtmfSaved || []).map(d => '<button type="button" data-seq="' + esc(d.code) + '">' + esc(d.name + ' · ' + d.code) + '</button>').join('');
+    $('dtmfLog').innerHTML = j.dtmf.map(d => '<div class="item"><span class="t">' + hhmmss(d.ts) + '</span><div class="main mono">' + esc(d.digits) + '<div class="sub">' + esc(d.channelName || ('Channel ' + d.channel)) + '</div></div></div>').join('') || '<div class="empty">No DTMF heard yet</div>';
+    $('alertList').innerHTML = j.alerts.map(a => '<div class="item"><span class="t">' + new Date(a.ts).toLocaleString() + '</span><div class="main"><b style="color:var(--amber)">' + esc(a.event) + '</b><div class="sub">' + esc(a.summary) + '</div></div></div>').join('') || '<div class="empty">No alerts received</div>';
+    renderAprsSettings(j);
+  } catch (e) { }
+}
+function renderAprsSettings(j) {
+  const s = j.settings; const opt = (vals, cur) => vals.map(([v, t]) => '<option value="' + v + '"' + (String(v) === String(cur) ? ' selected' : '') + '>' + esc(t) + '</option>').join('');
+  const f = (label, input) => '<label class="f"><span>' + esc(label) + '</span>' + input + '</label>';
+  const chk = (k, label) => '<label class="chk"><input type="checkbox" data-k="' + k + '"' + (s[k] ? ' checked' : '') + '> ' + esc(label) + '</label>';
+  $('aprsSet').innerHTML = '<div class="sect">STATION</div>'
+    + f('Callsign', '<input data-k="callsign" placeholder="' + (s.callsignSet ? 'Set (hidden; type to change)' : 'Not set') + '" autocapitalize="characters">')
+    + f('SSID (0–15)', '<input data-k="ssid" inputmode="numeric" value="' + s.ssid + '">')
+    + f('Symbol (table + code)', '<input data-k="symbol" maxlength="2" value="' + esc(s.symbol) + '">')
+    + f('Comment', '<input data-k="comment" maxlength="40" value="' + esc(s.comment) + '">')
+    + f('Path', '<input data-k="path" value="' + esc(s.path) + '">')
+    + f('Message groups', '<input data-k="groups" value="' + esc(s.groups) + '" placeholder="e.g. CQ, QST">')
+    + '<div class="sect">BEACONS AND TRANSMIT</div>'
+    + f('Automatic beacons', '<select data-k="autoBeacon">' + opt([[0, 'Off'], [1, 'Every N minutes'], [2, 'SmartBeaconing']], s.autoBeacon) + '</select>')
+    + f('Every N minutes', '<input data-k="beaconMin" inputmode="numeric" value="' + s.beaconMin + '">')
+    + f('Transmit power', '<select data-k="txPower">' + opt([[1, 'High'], [0, 'Low']], s.txPower) + '</select>')
+    + f('Packet lead-in sound', '<select data-k="leadKind">' + opt(j.leadKinds.map((k, i) => [i, k]), s.leadKind) + '</select>')
+    + f('Lead-in length', '<select data-k="leadMs">' + opt(j.leadChoices.map(ms => [ms, ms ? (ms / 1000).toFixed(1) + ' s' : 'None']), s.leadMs) + '</select>')
+    + '<div class="sect">RECEIVE AND DECODERS</div>'
+    + f('Decode packets on analog channels', '<select data-k="passive">' + opt([[0, 'Off'], [1, 'Flagged channels'], [2, 'Every analog channel']], s.passive) + '</select>')
+    + '<div class="f" style="grid-column:1/-1;flex-direction:row;flex-wrap:wrap;gap:8px 18px">' + chk('autoAck', 'Acknowledge messages to me') + chk('digipeat', 'Fill-in digipeater') + chk('dtmf', 'DTMF decoder') + chk('wx', 'Weather alerts (SAME)') + chk('cw', 'Morse decoder') + chk('cwId', 'Morse ID after packets') + chk('telemetry', 'Telemetry beacon') + chk('weather', 'Weather beacon') + chk('txIgate', 'Transmit iGate') + '</div>'
+    + '<div class="sect">APRS-IS AND KISS</div>'
+    + f('APRS-IS server', '<input data-k="isServer" value="' + esc(s.isServer) + '">')
+    + f('APRS-IS port', '<input data-k="isPort" inputmode="numeric" value="' + s.isPort + '">')
+    + f('APRS-IS passcode', '<input data-k="isPasscode" type="password" placeholder="' + (s.isPasscodeSet ? 'Set (hidden; type to change)' : 'Not set: receive only') + '">')
+    + f('Internet beacon every N minutes (0 off)', '<input data-k="isBeaconMin" inputmode="numeric" value="' + s.isBeaconMin + '">')
+    + f('Internet beacon comment', '<input data-k="isComment" value="' + esc(s.isComment) + '">')
+    + f('KISS TCP port', '<input data-k="kissPort" inputmode="numeric" value="' + s.kissPort + '">')
+    + '<div class="actions"><button class="btn primary">Save APRS settings</button></div>'
+    + '<div class="note">Your callsign and APRS-IS passcode are never shown here: leave them empty to keep what is stored on the phone.</div>';
+}
+$('aprsSet').addEventListener('submit', async e => {
+  e.preventDefault(); const body = {};
+  $('aprsSet').querySelectorAll('[data-k]').forEach(el => {
+    const k = el.dataset.k; let v = el.type === 'checkbox' ? el.checked : el.value;
+    if (['ssid', 'beaconMin', 'isPort', 'isBeaconMin', 'kissPort', 'autoBeacon', 'txPower', 'leadKind', 'leadMs', 'passive'].includes(k)) v = parseInt(v, 10);
+    if ((k === 'callsign' || k === 'isPasscode') && !v) return;    // write-only: empty keeps the stored value
+    body[k] = v;
+  });
+  if (await act('packet/settings', body)) loadPacket();
+});
+$('pktTools').addEventListener('click', async e => { const b = e.target.closest('[data-tool]'); if (!b) return; const on = !b.classList.contains('on'); await act('packet/tool', { tool: b.dataset.tool, on }); setTimeout(loadPacket, 800); });
+$('dtmfForm').addEventListener('submit', async e => { e.preventDefault(); if (await act('dtmf', { seq: $('dtmfSeq').value })) $('dtmfSeq').value = ''; });
+$('dtmfSaved').onclick = e => { const b = e.target.closest('[data-seq]'); if (b) $('dtmfSeq').value = b.dataset.seq; };
+$('cwIdBtn').onclick = () => act('cwid', {});
+
 // ---- settings ----
 async function loadSettings() { try { renderSettings(await api('settings')); } catch (e) { } }
 function renderSettings(j) {
