@@ -776,7 +776,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     public void shutDown(final boolean restoreStock) {
         new Thread(() -> {
             if (restoreStock) log("stock app on: " + RootSetup.stockApp(profile, true));
-            try { if (audio != null) audio.stopRx(); } catch (Throwable ignored) { }
+            try { if (audio != null) { audio.stopRx(); audio.releaseForStockApp(); } } catch (Throwable ignored) { }
             engine.close();
             setLink("stopped");
         }, "radio-shutdown").start();
