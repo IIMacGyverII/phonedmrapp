@@ -139,11 +139,28 @@ function drawMap() {
     }
   }
   $('mapTiles').innerHTML = html;
+  $('mapCells').innerHTML = (M.cells || []).map((c, i) => {
+    const l = wx(c.w, M.z) - x0, r = wx(c.e, M.z) - x0, t = wy(c.n, M.z) - y0, b = wy(c.s, M.z) - y0;
+    if (r < 0 || l > W || b < 0 || t > H) return '';
+    return '<div class="cov" data-c="' + i + '" style="left:' + l + 'px;top:' + t + 'px;width:' + Math.max(3, r - l) + 'px;height:' + Math.max(3, b - t) + 'px;background:' + c.color + '"></div>';
+  }).join('');
   $('mapMarks').innerHTML = visibleMarks().map(m => {
     const x = wx(m.lon, M.z) - x0, y = wy(m.lat, M.z) - y0; if (x < -40 || y < -40 || x > W + 40 || y > H + 40) return '';
     return '<div class="mk ' + m.kind + '" data-i="' + M.marks.indexOf(m) + '" style="left:' + x + 'px;top:' + y + 'px" title="' + esc(m.name) + '"></div>'
       + (M.z >= 9 ? '<div class="mk-label" style="left:' + x + 'px;top:' + y + 'px">' + esc(m.name) + '</div>' : '');
   }).join('');
+}
+/** The coverage layer: the phone's measured grid squares, coloured on the phone's own scale. */
+async function loadCoverage() {
+  const l = $('mapCov').value; M.cells = [];
+  if (l) { try { const j = await api('coverage?layer=' + l); M.cells = j.cells; M.covLayer = l; if (!j.cells.length) toast(j.logging ? 'No coverage measured yet' : 'No coverage measured yet: turn Coverage logging on (Settings)'); } catch (e) { toast(e.message); } }
+  drawMap();
+}
+function showCell(c) {
+  $('mapCard').innerHTML = M.covLayer === 'tx'
+    ? '<b>Transmit from here</b><div class="sub">' + c.keyed + ' reached the repeater · ' + c.failed + ' got no reply</div>'
+    : '<b>Signal heard here</b><div class="sub mono">median ' + c.value + ' dBm · ' + c.count + ' readings</div>';
+  $('mapCard').classList.remove('hidden');
 }
 function showMark(m) {
   const c = $('mapCard'); let h;
@@ -164,6 +181,7 @@ function showMark(m) {
   el.addEventListener('pointerdown', e => {
     if (e.target.closest('.zoom,.mapcard,.attrib')) return;
     const mk = e.target.closest('.mk'); if (mk) { showMark(M.marks[+mk.dataset.i]); return; }
+    const cv = e.target.closest('.cov'); if (cv) { showCell(M.cells[+cv.dataset.c]); return; }
     drag = { x: e.clientX, y: e.clientY, cx: wx(M.lon, M.z), cy: wy(M.lat, M.z), moved: false }; el.setPointerCapture(e.pointerId); el.classList.add('drag');
   });
   el.addEventListener('pointermove', e => {
@@ -180,6 +198,7 @@ function showMark(m) {
   };
   el.addEventListener('wheel', e => { e.preventDefault(); const r = el.getBoundingClientRect(); zoomAt(e.deltaY < 0 ? 1 : -1, e.clientX - r.left, e.clientY - r.top); }, { passive: false });
   $('zIn').onclick = () => zoomAt(1); $('zOut').onclick = () => zoomAt(-1);
+  $('mapCov').onchange = loadCoverage;
   $('mapFit').onclick = fitMap; $('mapAprs').onchange = drawMap; $('mapCh').onchange = drawMap; $('mapRpt').onchange = () => loadRepeaterLayer(false);
   window.addEventListener('resize', () => { if (S.page === 'map') drawMap(); });
 })();

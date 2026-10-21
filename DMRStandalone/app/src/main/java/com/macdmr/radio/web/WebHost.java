@@ -805,6 +805,17 @@ public final class WebHost {
                 if (run != null && run.id == id) return WebServer.Response.error(409, "End the net first");
                 svc.nets().deleteNet(id); return ok("Net deleted");
             }
+            case "/api/coverage": {                                             // measured coverage cells: rx (median signal) or tx (keyed / no reply)
+                boolean tx = "tx".equals(r.param("layer"));
+                com.macdmr.radio.coverage.CoverageStore st = svc.coverage().store();
+                JSONArray a = new JSONArray();
+                for (com.macdmr.radio.coverage.CoverageStore.Cell c : tx ? st.txCells(null) : st.rxCells(null)) {
+                    int col = tx ? (c.keyed > 0 ? 0xFF2BEA7A : 0xFFFF5468) : com.macdmr.radio.coverage.CoverageMath.signalColor(c.value);
+                    a.put(new JSONObject().put("s", c.s).put("w", c.w).put("n", c.n).put("e", c.e).put("value", c.value).put("count", c.count).put("keyed", c.keyed).put("failed", c.failed)
+                            .put("color", String.format("#%06X", col & 0xFFFFFF)));
+                }
+                return ok(new JSONObject().put("cells", a).put("layer", tx ? "tx" : "rx").put("logging", svc.coverage().enabled()));
+            }
             case "/api/repeaters": {                                            // nearby repeaters (RadioID / BrandMeister / Hearham, cached by the phone)
                 android.location.Location me = svc.lastKnownLocation(); if (me == null) return WebServer.Response.error(409, "No position fix on the phone yet");
                 double mi = Math.max(5, Math.min(150, parse(r.param("radiusMi"), svc.getSharedPreferences("repeaters", Context.MODE_PRIVATE).getInt("radiusMi", 30))));

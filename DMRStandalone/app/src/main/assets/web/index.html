@@ -196,8 +196,8 @@
     <section id="page-map" class="page hidden">
       <div class="panel mappanel">
         <div class="row between wrap"><div><span class="label">MAP</span> <span id="mapCount" class="chip dim"></span></div>
-          <div class="row"><label class="chk"><input type="checkbox" id="mapAprs" checked> APRS stations</label><label class="chk"><input type="checkbox" id="mapCh" checked> Channels</label><label class="chk"><input type="checkbox" id="mapRpt"> Repeaters</label><button class="btn" id="mapFit">Fit all</button></div></div>
-        <div id="map" class="map"><div id="mapTiles" class="tiles"></div><div id="mapMarks" class="marks"></div>
+          <div class="row"><label class="chk"><input type="checkbox" id="mapAprs" checked> APRS stations</label><label class="chk"><input type="checkbox" id="mapCh" checked> Channels</label><label class="chk"><input type="checkbox" id="mapRpt"> Repeaters</label><select id="mapCov" aria-label="Coverage layer"><option value="">Coverage: off</option><option value="rx">Coverage: signal heard</option><option value="tx">Coverage: transmit reached</option></select><button class="btn" id="mapFit">Fit all</button></div></div>
+        <div id="map" class="map"><div id="mapTiles" class="tiles"></div><div id="mapCells" class="marks"></div><div id="mapMarks" class="marks"></div>
           <div class="zoom"><button id="zIn" aria-label="Zoom in">+</button><button id="zOut" aria-label="Zoom out">−</button></div>
           <div id="mapCard" class="mapcard hidden"></div>
           <div class="attrib">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors</div></div>
