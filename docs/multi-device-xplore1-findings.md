@@ -158,3 +158,12 @@ Order: open `ttyS1` 230400 8N1 → lines power/pwd/ptt `0` → open `ttyS0` 5760
 only while the squelch is open. Live database: `databases/channel_database`, table **`channels`** (311 rows, `countryId`,
 `channelIdInCountry`, `smsType` + the module fields) and `countries` (15). Kernel: `state:intercom connect/disconnect` from the
 intercom driver at each power change. QuickChat restarts itself after one force-stop.
+
+## Receive audio confirmed (beta.5 trial, 2026-10-21)
+
+With the radio on 446.00625 MHz analog and **monitor on (`0x2F` 1)**, `ttyS1` delivered **100 packets/s**, every one
+`BB 00 00 A0 xx xx <160 bytes> 44` (`00 A0` = payload length 160; the last two header bytes vary per packet), 0 bytes
+skipped by `PcmFramer`. Payload = 8 kHz mono 16-bit **little-endian** (squelch-open noise: RMS ≈ 3000, energy around 300 Hz,
+little above 2 kHz). Before monitor the packets were all-zero. RSSI −111…−114 dBm (nobody on the channel). QuickChat's
+channels imported (a digital channel was written at bring-up). Still open: transmit (QuickChat keys with `ptt_control 0` and
+sends raw 160-byte PCM blocks on `ttyS1`; not tried — transmit stays off on the unverified profile).
