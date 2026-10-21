@@ -170,6 +170,8 @@ input:not([type]), input[type=text] { padding: 10px 12px; border-radius: 10px; b
 .mk { position: absolute; transform: translate(-50%, -50%); width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; }
 .mk.aprs { background: var(--green); box-shadow: 0 0 10px var(--green); }
 .mk.ch { background: var(--cyan); box-shadow: 0 0 10px var(--cyan); border-radius: 3px; }
+.mk.rpt { background: var(--violet); box-shadow: 0 0 10px var(--violet); transform: translate(-50%, -50%) rotate(45deg); border-radius: 2px; }
+.mapcard .tgs { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 8px 0; max-height: 160px; overflow-y: auto; font-size: 14px; }
 .mk-label { position: absolute; transform: translate(10px, -50%); font: 600 13px Rajdhani, sans-serif; color: var(--text); text-shadow: 0 0 3px #000, 0 0 6px #000; white-space: nowrap; pointer-events: none; }
 .zoom { position: absolute; right: 12px; top: 12px; display: flex; flex-direction: column; gap: 6px; }
 .zoom button { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-solid); color: var(--cyan); font-size: 22px; cursor: pointer; }
