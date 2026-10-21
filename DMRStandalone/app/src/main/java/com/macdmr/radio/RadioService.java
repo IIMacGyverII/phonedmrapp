@@ -706,6 +706,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     public void bringUp() {
         if (!profile.supported) { setLink("unsupported"); log("This phone has no device profile yet. Device tab → Generate device report, then share it on the project's GitHub issues."); return; }
         new Thread(() -> {
+            boolean pausedStock = false;
             try {
                 setLink("root");
                 boolean root = RootSetup.haveRoot();
@@ -720,7 +721,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                 } else {
                     log("sepolicy: " + RootSetup.applySepolicy(getFilesDir(), profile));
                     if (!com.pri.prizeinterphone.serial.port.SerialPort.load(this, profile.serialLib)) log("tty (stty fallback): " + RootSetup.ensureTty(profile));
-                    if (RootSetup.stockAppEnabled(profile)) { log("stock app paused (its icon disappears while this app owns the radio; Device → Release brings it back): " + RootSetup.stockApp(profile, false)); Thread.sleep(1500); }
+                    if (RootSetup.stockAppEnabled(profile)) { log("stock app paused (its icon disappears while this app owns the radio; Device → Release brings it back): " + RootSetup.stockApp(profile, false)); pausedStock = true; Thread.sleep(1500); }
                 }
                 if (!getSharedPreferences("radio", MODE_PRIVATE).contains("dmrId")) {     // seed our DMR ID from the stock app's setting
                     String xml = RootSetup.run("cat /data/data/" + profile.stockApp + "/shared_prefs/com.pri.prizeinterphone.data.person.xml");
@@ -754,7 +755,14 @@ public class RadioService extends Service implements RadioEngine.Events {
                 selectChannel(store.activeNumber());
                 startRxAudio();
                 setLink("ready");
-            } catch (Throwable t) { log("bring-up failed: " + t); setLink("error: " + t.getMessage()); }
+            } catch (Throwable t) {
+                log("bring-up failed: " + t);
+                if (pausedStock) {                            // never leave the phone with no working radio app
+                    try { engine.close(); } catch (Throwable ignored) { }
+                    log("stock app on again: " + RootSetup.stockApp(profile, true));
+                }
+                setLink("error: " + t.getMessage());
+            }
         }, "radio-bringup").start();
     }
 

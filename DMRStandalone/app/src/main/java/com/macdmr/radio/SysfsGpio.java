@@ -15,13 +15,21 @@ public final class SysfsGpio {
         try (FileInputStream f = new FileInputStream(node)) {
             byte[] b = new byte[64]; int n = f.read(b);
             return n > 0 ? new String(b, 0, n).trim() : "";
-        } catch (IOException e) { return "ERR " + e.getMessage(); }
+        } catch (IOException e) {
+            if (!RootSetup.haveRoot()) return "ERR " + e.getMessage();
+            return RootSetup.run("cat " + node).trim();          // node with a label the app may not open (Xplore 1: plain sysfs)
+        }
     }
 
     public boolean isOn() { return read().equals(onToken); }
 
     public void set(boolean on) throws IOException {
         try (FileOutputStream f = new FileOutputStream(node)) { f.write((on ? "1" : "0").getBytes()); }
+        catch (IOException e) {
+            if (!RootSetup.haveRoot()) throw e;
+            String r = RootSetup.run("echo " + (on ? "1" : "0") + " > " + node + " && echo ok");
+            if (!r.endsWith("ok")) throw new IOException(node + ": " + e.getMessage() + " / root: " + r);
+        }
     }
 
     public String node() { return node; }
