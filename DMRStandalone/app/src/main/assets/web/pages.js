@@ -147,6 +147,69 @@ function showMark(m) {
   window.addEventListener('resize', () => { if (S.page === 'map') drawMap(); });
 })();
 
+// ---- satellite passes ----
+const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+const compass = az => COMPASS[Math.round(((az % 360) + 360) % 360 / 22.5) % 16];
+async function loadPasses() {
+  try {
+    const j = await api('sat/passes'); S.sats = j.satellites;
+    $('passNote').textContent = !j.hasFix ? 'NO POSITION FIX ON THE PHONE' : j.elementsAgeH > 72 ? 'ORBITS ' + Math.round(j.elementsAgeH / 24) + ' DAYS OLD' : '';
+    const now = Date.now(); const day = ts => new Date(ts).toLocaleDateString([], { weekday: 'short' }) + ' ' + hhmm(ts);
+    $('passList').innerHTML = j.satellites.map((s, si) => '<div class="satbox"><h4>' + esc(s.name) + '</h4><div class="about">'
+      + (s.listenOnly ? 'Listen ' + mhz(s.downHz) + ' MHz (receive only)' : 'Listen ' + mhz(s.downHz) + ', talk ' + mhz(s.upHz) + ' MHz' + (s.toneHz > 0 ? ' with ' + s.toneHz.toFixed(1) + ' Hz' : ''))
+      + '. ' + esc(s.about) + '</div>'
+      + (s.problem ? '<div class="empty">' + esc(s.problem) + '</div>' : s.passes.length ? s.passes.map(p => '<div class="pass' + (p.aos <= now ? ' up' : '') + '" data-s="' + si + '" data-aos="' + p.aos + '"><div><b>' + (p.aos <= now ? 'Up now' : day(p.aos)) + '</b><div class="sub">rises ' + compass(p.aosAz) + ', sets ' + compass(p.losAz) + ' · ' + Math.round((p.los - p.aos) / 60000) + ' min</div></div><span class="chip">' + Math.round(p.maxEl) + '°</span></div>').join('') : '<div class="empty">No pass above 10° in the next 24 hours</div>')
+      + '</div>').join('');
+  } catch (e) { }
+}
+$('passList').onclick = async e => {
+  const p = e.target.closest('.pass'); if (!p) return; const s = S.sats[+p.dataset.s];
+  const sat = S.status.sat || {};
+  if (sat.tracking && !confirm('Track this ' + s.name + ' pass instead? It replaces the current tracking' + (sat.repeat >= 0 ? ' (which follows every ISS pass)' : '') + '.')) return;
+  await act('sat/track', { key: s.key, aos: +p.dataset.aos }); refresh();
+};
+
+// ---- logbook ----
+S.qso = null;
+async function loadLog() {
+  try {
+    const j = await api('logbook?limit=500' + ($('logQso').checked ? '&qso=1' : '')); S.log = j.entries;
+    $('logCount').textContent = j.qsos + ' CONTACTS · ' + j.total + ' ENTRIES';
+    $('logList').innerHTML = j.entries.map(e => '<div class="item click' + (S.qso && S.qso.id === e.id ? ' cur' : '') + '" data-id="' + e.id + '"><span class="t">' + new Date(e.ts).toLocaleDateString() + '<br>' + hhmm(e.ts) + '</span><div class="main"><b class="pk-from">' + esc(e.call) + '</b> ' + (e.name ? esc(e.name) + ' ' : '') + '<span class="sub mono">' + (e.freqHz ? mhz(e.freqHz) + ' MHz ' : '') + esc(e.mode) + (e.band ? ' · ' + esc(e.band) : '') + '</span><div class="sub">' + (e.qso ? 'Contact' : 'Heard') + (e.rstSent || e.rstRcvd ? ' · sent ' + esc(e.rstSent || '—') + ' rcvd ' + esc(e.rstRcvd || '—') : '') + (e.grid ? ' · ' + esc(e.grid) : '') + (e.notes ? ' · ' + esc(e.notes) : '') + '</div></div></div>').join('') || '<div class="empty">Nothing logged yet</div>';
+  } catch (e) { }
+}
+function editQso(e) {
+  S.qso = e || null; $('qsoTitle').textContent = e ? 'EDIT ENTRY' : 'LOG A CONTACT';
+  const ch = (S.status && S.status.channel) || {};
+  $('qCall').value = e ? e.call : ''; $('qFreq').value = e ? (e.freqHz ? (e.freqHz / 1e6).toFixed(4) : '') : (ch.rxFreq ? (ch.rxFreq / 1e6).toFixed(4) : '');
+  $('qMode').value = e ? e.mode : (ch.digital ? 'DMR' : 'FM'); $('qSent').value = e ? e.rstSent : ''; $('qRcvd').value = e ? e.rstRcvd : '';
+  $('qName').value = e ? e.name : ''; $('qNotes').value = e ? e.notes : ''; $('qDel').classList.toggle('hidden', !e);
+}
+$('logList').onclick = e => { const it = e.target.closest('.item'); if (it) { editQso(S.log.find(x => x.id === +it.dataset.id)); loadLog(); } };
+$('logQso').onchange = loadLog;
+$('qClear').onclick = () => { editQso(null); loadLog(); };
+$('qDel').onclick = async () => { if (S.qso && confirm('Delete this entry for ' + S.qso.call + '?') && await act('logbook/delete', { id: S.qso.id })) { editQso(null); loadLog(); } };
+$('qsoForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const body = { id: S.qso ? S.qso.id : 0, call: $('qCall').value, mode: $('qMode').value, rstSent: $('qSent').value, rstRcvd: $('qRcvd').value, name: $('qName').value, notes: $('qNotes').value, qso: true };
+  const f = parseFloat($('qFreq').value); if (!isNaN(f)) body.freqMHz = f;
+  if (await act('logbook', body)) { editQso(null); loadLog(); }
+});
+
+// ---- recordings ----
+async function loadRecordings() {
+  try {
+    const j = await api('recordings'); S.recs = j.recordings;
+    $('recList').innerHTML = j.recordings.map((r, i) => '<div class="item" data-i="' + i + '"><span class="t">' + new Date(r.ts).toLocaleDateString() + '<br>' + hhmmss(r.ts) + '</span><div class="main"><b>' + esc(r.channel) + '</b><div class="sub mono">' + esc(r.name) + ' · ' + r.seconds.toFixed(1) + ' s</div></div>'
+      + '<button class="act" data-play="' + i + '">▶ Play</button><a class="act" href="/api/recording?download=1&id=' + encodeURIComponent(r.id) + '">Download</a><button class="act" data-del="' + i + '">Delete</button></div>').join('') || '<div class="empty">No recordings yet. Turn REC on at the intercom.</div>';
+  } catch (e) { }
+}
+$('recList').onclick = async e => {
+  const p = e.target.closest('[data-play]'), d = e.target.closest('[data-del]');
+  if (p) { const r = S.recs[+p.dataset.play]; const pl = $('player'); pl.src = '/api/recording?id=' + encodeURIComponent(r.id); pl.play().catch(() => {}); document.querySelectorAll('#recList .item').forEach(x => x.classList.toggle('playing', x.dataset.i === p.dataset.play)); }
+  if (d) { const r = S.recs[+d.dataset.del]; if (confirm('Delete ' + r.name + '?') && await act('recording/delete', { id: r.id })) loadRecordings(); }
+};
+
 // ---- help: the phone's guide ----
 S.help = null;
 async function loadHelp() {

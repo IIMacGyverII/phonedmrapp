@@ -32,6 +32,8 @@
       <a href="#sstv" data-page="sstv">SSTV</a>
       <a href="#sat" data-page="sat">Satellites</a>
       <a href="#map" data-page="map">Map</a>
+      <a href="#log" data-page="log">Logbook</a>
+      <a href="#rec" data-page="rec">Recordings</a>
       <a href="#help" data-page="help">Help</a>
     </nav>
     <div class="conn"><span id="connDot" class="dot"></span><span id="connText">Connecting…</span><button id="logout" class="link">Log out</button></div>
@@ -159,6 +161,10 @@
         <div class="row wrap"><button class="btn" data-iss="aprs">ISS APRS 437.825</button><button class="btn" data-iss="sstv">ISS SSTV 437.550</button><button class="btn danger" data-iss="stop">Stop tracking</button></div>
         <p class="muted small">Tracking follows every pass: the radio tunes a few minutes before it, corrects the Doppler shift and listens only.</p>
       </div>
+      <div class="panel">
+        <div class="row between wrap"><span class="label">PASSES · NEXT 24 HOURS</span><span id="passNote" class="chip dim"></span></div>
+        <div id="passList" class="passgrid"></div>
+      </div>
     </section>
     <!-- MAP -->
     <section id="page-map" class="page hidden">
@@ -169,6 +175,37 @@
           <div class="zoom"><button id="zIn" aria-label="Zoom in">+</button><button id="zOut" aria-label="Zoom out">−</button></div>
           <div id="mapCard" class="mapcard hidden"></div>
           <div class="attrib">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors</div></div>
+      </div>
+    </section>
+
+    <!-- LOGBOOK -->
+    <section id="page-log" class="page hidden">
+      <div class="grid-side wide">
+        <div class="panel">
+          <span class="label" id="qsoTitle">LOG A CONTACT</span>
+          <form id="qsoForm" class="form" autocomplete="off">
+            <label>Callsign<input id="qCall" maxlength="12" style="text-transform:uppercase"></label>
+            <div class="row"><label class="grow">Frequency (MHz)<input id="qFreq" inputmode="decimal"></label><label class="grow">Mode<select id="qMode"><option>FM</option><option>DMR</option><option>SSB</option><option>CW</option><option>APRS</option><option>SSTV</option><option>DIGITAL</option></select></label></div>
+            <div class="row"><label class="grow">Report sent<input id="qSent" maxlength="6" placeholder="59"></label><label class="grow">Report received<input id="qRcvd" maxlength="6" placeholder="59"></label></div>
+            <label>Name<input id="qName" maxlength="40"></label>
+            <label>Notes<input id="qNotes" maxlength="200"></label>
+            <div class="row"><button class="btn primary">Save</button><button type="button" class="btn" id="qClear">Clear</button><button type="button" class="btn danger hidden" id="qDel">Delete</button></div>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="row between wrap"><div><span class="label">LOGBOOK</span> <span id="logCount" class="chip dim"></span></div>
+            <div class="row"><label class="chk"><input type="checkbox" id="logQso"> Contacts only</label><a class="btn small-btn" id="adifBtn" href="/api/logbook?format=adif">Export ADIF</a></div></div>
+          <div id="logList" class="list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RECORDINGS -->
+    <section id="page-rec" class="page hidden">
+      <div class="panel">
+        <div class="row between wrap"><span class="label">RECORDINGS</span><span class="muted small">REC on the intercom saves every reception to Download/DMR/Audio on the phone.</span></div>
+        <audio id="player" controls class="player"></audio>
+        <div id="recList" class="list"></div>
       </div>
     </section>
 
