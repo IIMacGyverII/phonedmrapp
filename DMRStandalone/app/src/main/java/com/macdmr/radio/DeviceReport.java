@@ -64,7 +64,7 @@ public final class DeviceReport {
         kv(r, "magisk", root ? RootSetup.run("magisk -v 2>/dev/null; magisk -V 2>/dev/null").replace('\n', ' ') : "n/a");
         for (String prop : new String[] { "ro.product.model", "ro.board.platform", "ro.hardware", "ro.build.version.sdk", "ro.vendor.build.fingerprint", "persist.sys.usb.config", "ro.boot.verifiedbootstate" }) kv(r, prop, getprop(prop));
         DeviceProfile dp = DeviceProfile.detect();
-        kv(r, "profile detected", dp.supported ? dp.name : "none (this is an unsupported phone)");
+        kv(r, "profile detected", dp.supported ? dp.name + (dp.verified ? "" : " (untested on hardware)") : "none (this is an unsupported phone)");
 
         p.step("Serial ports");
         h(r, "Serial ports (File API)");
@@ -95,7 +95,7 @@ public final class DeviceReport {
             r.append(String.format(Locale.US, "  %s  v%s  uid=%d  system=%s  shared=%s\n      apk=%s\n      nativeLibs=%s\n", pi.packageName, pi.versionName, ai.uid, sys, pi.sharedUserId, ai.sourceDir, ai.nativeLibraryDir));
             r.append("      libs: ").append(ls(ai.nativeLibraryDir, null)).append('\n');
             File[] libs = ai.nativeLibraryDir == null ? null : new File(ai.nativeLibraryDir).listFiles();
-            if (libs != null) for (File lf : libs) if (lf.getName().endsWith(".so")) { File real = lf; try { real = lf.getCanonicalFile(); } catch (Throwable ignored) { } String syms = jniSymbols(real); if (!syms.isEmpty()) r.append("      ").append(lf.getName()).append(" -> ").append(real.getAbsolutePath()).append('\n').append(syms); }
+            if (libs != null) for (File lf : libs) if (lf.getName().endsWith(".so")) { File real = lf; try { real = lf.getCanonicalFile(); } catch (Throwable ignored) { } String syms = jniSymbols(real); if (syms.isEmpty()) syms = registeredNatives(real); if (!syms.isEmpty()) r.append("      ").append(lf.getName()).append(" -> ").append(real.getAbsolutePath()).append('\n').append(syms); }
             if (pi.requestedPermissions != null) { StringBuilder pp = new StringBuilder(); for (String q : pi.requestedPermissions) if (!q.startsWith("android.permission.") || q.matches(".*(SERIAL|SYSTEM_ALERT|RECORD_AUDIO|MODIFY_AUDIO|WRITE_SECURE|DEVICE_POWER|INJECT|BROADCAST).*")) pp.append(q).append(' '); r.append("      permissions: ").append(pp).append('\n'); }
             if (pi.receivers != null) { r.append("      receivers: "); for (android.content.pm.ActivityInfo x : pi.receivers) r.append(x.name).append(' '); r.append('\n'); }
             if (pi.services != null) { r.append("      services: "); for (android.content.pm.ServiceInfo x : pi.services) r.append(x.name).append(' '); r.append('\n'); }
@@ -115,7 +115,7 @@ public final class DeviceReport {
         for (String d : new String[] { "/system/framework", "/system_ext/framework", "/vendor/framework", "/system/lib64", "/system/lib", "/vendor/lib64", "/vendor/lib", "/system/etc/init", "/vendor/etc/init", "/system/etc/permissions", "/vendor/etc/permissions", "/system/priv-app", "/system/app", "/vendor/app", "/product/app", "/product/priv-app", "/system_ext/priv-app" })
             r.append(String.format(Locale.US, "  %-26s %s\n", d, ls(d, RADIO)));
         h(r, "Serial-looking system libraries and their JNI classes");
-        for (File lf : serialLibs(c, null)) { String syms = jniSymbols(lf); r.append("  ").append(lf.getAbsolutePath()).append(" (").append(lf.length() / 1024).append(" kB)\n").append(syms); }
+        for (File lf : serialLibs(c, null)) { String syms = jniSymbols(lf); if (syms.isEmpty()) syms = registeredNatives(lf); r.append("  ").append(lf.getAbsolutePath()).append(" (").append(lf.length() / 1024).append(" kB)\n").append(syms); }
         h(r, "Binder services"); r.append(exec("service list")).append('\n');
         h(r, "Audio devices"); r.append(cat("/proc/asound/cards")).append(ls("/dev/snd", null)).append('\n');
 
@@ -231,6 +231,32 @@ public final class DeviceReport {
                 String cls = sym.substring(0, cut).replace("_1", "\u0001").replace('_', '.').replace("\u0001", "_"), method = sym.substring(cut + 1).replaceFirst("__.*$", "");
                 out.append("      JNI ").append(cls).append('.').append(method).append("()\n");
             }
+        } catch (Throwable ignored) { }
+        return out.toString();
+    }
+
+    /**
+     * For a library without exported Java_ symbols (it calls RegisterNatives from JNI_OnLoad, like the Xplore 1's
+     * libwonder_serialport.so): the Java class paths, method signatures and method-like names it carries as strings,
+     * which is what a wrapper class needs.
+     */
+    public static String registeredNatives(File lib) {
+        StringBuilder out = new StringBuilder();
+        try (InputStream in = new FileInputStream(lib)) {
+            byte[] b = new byte[(int) Math.min(lib.length(), 4_000_000)]; int n = 0, k; while (n < b.length && (k = in.read(b, n, b.length - n)) > 0) n += k;
+            String s = new String(b, 0, n, "ISO-8859-1");
+            if (!s.contains("JNI_OnLoad")) return "";
+            java.util.LinkedHashSet<String> cls = new java.util.LinkedHashSet<>(), sig = new java.util.LinkedHashSet<>(), names = new java.util.LinkedHashSet<>();
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("[a-z][a-z0-9_]*(?:/[A-Za-z0-9_$]+){2,}").matcher(s);
+            while (m.find()) if (!m.group().matches("(java|android|dalvik|system|vendor|apex|data|proc|dev|sys)/.*")) cls.add(m.group().replace('/', '.'));
+            m = java.util.regex.Pattern.compile("\\([A-Za-z0-9/;\\[$]*\\)[A-Za-z0-9/;\\[$]+").matcher(s);
+            while (m.find()) sig.add(m.group());
+            m = java.util.regex.Pattern.compile("\u0000([a-z][A-Za-z0-9_]{2,30})(?=\u0000)").matcher(s);
+            while (m.find()) if (m.group(1).matches("(?i).*(open|close|read|write|setup|serial|baud).*")) names.add(m.group(1));
+            if (cls.isEmpty() && sig.isEmpty()) return "";
+            out.append("      registered at load time; classes: ").append(String.join(" ", cls)).append('\n');
+            out.append("      signatures: ").append(String.join(" ", sig)).append('\n');
+            out.append("      method-like names: ").append(String.join(" ", names)).append('\n');
         } catch (Throwable ignored) { }
         return out.toString();
     }

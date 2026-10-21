@@ -16,7 +16,7 @@ public class BootReceiver extends BroadcastReceiver {
         if (intent == null || !Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) return;
         final boolean own = ctx.getSharedPreferences("radio", Context.MODE_PRIVATE).getBoolean("ownAtBoot", false);
         if (!DeviceProfile.detect().supported) return;
-        if (own) {
+        if (own && DeviceProfile.detect().verified) {                       // an untested profile never takes the radio by itself
             Intent svc = new Intent(ctx, RadioService.class).putExtra("bringUp", true);
             if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(svc); else ctx.startService(svc);
             return;

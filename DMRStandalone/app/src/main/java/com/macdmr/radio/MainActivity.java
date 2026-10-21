@@ -51,11 +51,11 @@ public class MainActivity extends AppCompatActivity {
         @Override public void onServiceConnected(ComponentName n, IBinder b) {
             svc = ((RadioService.LocalBinder) b).get();
             intercom.attach(svc); diagnostics.attach(svc); channels.attach(svc); contacts.attach(svc); messages.attach(svc); device.attach(svc);
-            if (!svc.isReady()) svc.bringUp();
+            if (!svc.isReady() && svc.profile().verified) svc.bringUp();          // an untested profile waits for Device → Take over
             ui.post(rssiTick); ui.removeCallbacks(modeTick); ui.post(modeTick);
             applyPendingLocation();
             ui.postDelayed(MainActivity.this::announceCoverage, 3000);
-            if (!svc.profile().supported && !getSharedPreferences("radio", MODE_PRIVATE).getBoolean("unsupportedShown", false)) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("unsupportedShown", true).apply(); show(4); }
+            if (!svc.profile().verified && !getSharedPreferences("radio", MODE_PRIVATE).getBoolean("unsupportedShown", false)) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("unsupportedShown", true).apply(); show(4); }
         }
         @Override public void onServiceDisconnected(ComponentName n) { svc = null; }
     };

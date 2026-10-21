@@ -25,13 +25,14 @@ public final class DeviceProfile {
     public final String[] sepolicy;      // Magisk sepolicy.rule lines an untrusted app needs
     public final String serialLib;       // the stock app's serial JNI library on /system (configures the line); null = stty fallback
     public final boolean supported;      // false = a phone we have no profile for: discovery mode only
+    public final boolean verified;       // false = written from an APK and dumps, never run on the phone: no automatic take-over
 
     private DeviceProfile(String name, String controlPort, int baud, Audio audio, String pcmPort, int pcmBaud,
                           String powerNode, String pttNode, String powerOnToken, String[] pttActions,
-                          String stockApp, String[] sepolicy, String serialLib, boolean supported) {
+                          String stockApp, String[] sepolicy, String serialLib, boolean supported, boolean verified) {
         this.name = name; this.controlPort = controlPort; this.baud = baud; this.audio = audio;
         this.pcmPort = pcmPort; this.pcmBaud = pcmBaud; this.powerNode = powerNode; this.pttNode = pttNode;
-        this.powerOnToken = powerOnToken; this.pttActions = pttActions; this.stockApp = stockApp; this.sepolicy = sepolicy; this.serialLib = serialLib; this.supported = supported;
+        this.powerOnToken = powerOnToken; this.pttActions = pttActions; this.stockApp = stockApp; this.sepolicy = sepolicy; this.serialLib = serialLib; this.supported = supported; this.verified = verified;
     }
 
     /** Ulefone Armor 26 Ultra (walkie-talkie model) — measured 2026-10-17. */
@@ -47,9 +48,13 @@ public final class DeviceProfile {
                     "typeattribute ttyS_device mlstrustedobject",
                     "allow untrusted_app sysfs_prizefactory file { open read write getattr }",
                     "typeattribute sysfs_prizefactory mlstrustedobject" },
-            "/system/lib64/libinterphone_serial_port.so", true);
+            "/system/lib64/libinterphone_serial_port.so", true, true);
 
-    /** Blackview Xplore 1 — from its QuickChat APK (docs/multi-device-xplore1-findings.md); SELinux labels unknown. */
+    /**
+     * Blackview Xplore 1 — from its QuickChat APK and an owner's dumps (docs/multi-device-xplore1-findings.md): ttyS0/ttyS1
+     * are ttyS_device, the intercom_* nodes plain sysfs (mode 0777, so SELinux is the only gate; SysfsGpio writes them
+     * through root rather than opening all of sysfs to apps). Not run on the phone yet: unverified.
+     */
     public static final DeviceProfile XPLORE_1 = new DeviceProfile(
             "Blackview Xplore 1", "/dev/ttyS0", 57600, Audio.UART_PCM, "/dev/ttyS1", 230400,
             "/sys/devices/platform/intercom/intercom_pwd_control", "/sys/devices/platform/intercom/intercom_ptt_control", "1",
@@ -58,12 +63,12 @@ public final class DeviceProfile {
             new String[] {
                     "allow untrusted_app ttyS_device chr_file { open read write ioctl getattr lock }",
                     "typeattribute ttyS_device mlstrustedobject" },
-            null, true);
+            null, true, false);
 
     /** Any other phone: nothing is touched until a device report has been made and a profile written. */
     public static final DeviceProfile UNKNOWN = new DeviceProfile(
             Build.MANUFACTURER + " " + Build.MODEL + " (not supported yet)", "/dev/ttyS0", 57600, Audio.TINY_SERVICE, null, 0,
-            null, null, "1", null, "", new String[0], null, false);
+            null, null, "1", null, "", new String[0], null, false, false);
 
     public static DeviceProfile detect() {
         String m = (Build.MANUFACTURER + " " + Build.MODEL + " " + Build.DEVICE).toLowerCase();

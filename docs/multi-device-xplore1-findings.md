@@ -124,3 +124,11 @@ The root step returned nothing new: `adb shell su -c "a; b; c"` only runs the fi
 arguments; the same trap noted for the Armor), so the sysfs listing still showed `?` and `dmesg` was denied. The guide
 now feeds the commands to `su` on stdin. Still needed: the `intercom_*` file labels and values, the serial JNI library
 name, and a first `0x34` version query on `ttyS0` — the in-app **Radio probe (root)** collects all three.
+
+**Second root dump (same day, via `su` on stdin):** context `u:r:magisk:s0`; the `intercom_*` files are **plain
+`u:object_r:sysfs:s0`, mode 0777** (`intercom_factory_test`, `_power_control`, `_ptt_control`, `_pwd_control`); no serial
+library under `/system/lib*`. The QuickChat APK carries its own: `libserialport.so` (`me.f1reking.serialportlib.SerialPortHelper`)
+and `libwonder_serialport.so`, which registers its methods from `JNI_OnLoad` on `com.wonder.serial.SerialPort`
+(strings: `openSerial`, `setupSerial`, `readData`, `writeData`; signatures `(Ljava/lang/String;I)I`, `(IIICI)I`, `(I[BI)I`,
+`(I[BII)I`, `(I)V`). A policy rule for plain `sysfs` would open all of sysfs to every app, so SignalDeck writes these nodes
+through root instead (`SysfsGpio`), and the profile stays marked **unverified** until it has run on the phone.

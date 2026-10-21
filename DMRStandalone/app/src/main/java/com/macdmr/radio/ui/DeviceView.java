@@ -66,7 +66,13 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         LayoutParams hr = new LayoutParams(0, LayoutParams.MATCH_PARENT, 1f); hr.setMargins((int) (4 * d), (int) (12 * d), 0, 0);
         hb.addView(takeOver, hl); hb.addView(handBack, hr);
         hero.addView(hb);
-        takeOver.setOnClickListener(v -> { if (svc != null) svc.bringUp(); });
+        takeOver.setOnClickListener(v -> {
+            if (svc == null) return;
+            if (svc.profile().verified || svc.isReady()) { svc.bringUp(); return; }
+            new android.app.AlertDialog.Builder(getContext()).setTitle("Untested profile")
+                    .setMessage("SignalDeck has a profile for the " + svc.profile().name + ", written from its stock app and the owner's reports, but it has never run on this phone. Taking over pauses " + svc.profile().stockApp + " and opens the radio's serial ports. If it fails, the stock app is switched back on; Hand back or a reboot also gives it back.\n\nFirst run Device report → Generate device report and Radio probe (root) and share them: that is what turns this into a tested profile.")
+                    .setPositiveButton("Take over", (dd, w) -> svc.bringUp()).setNegativeButton("Cancel", null).show();
+        });
         handBack.setOnClickListener(v -> { if (svc != null) svc.shutDown(true); });
         TextView boot = Neo.button(c, "Keep access after reboot", "shield", Neo.CYAN);
         LayoutParams bl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); bl.topMargin = (int) (8 * d);
@@ -383,6 +389,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         if (visibility == VISIBLE && autoWarn != null && isShown()) checkAutoTrust();
     }
     private void checkAutoTrust() {
+        if (!com.macdmr.radio.DeviceProfile.detect().verified) return;     // reads Android Auto's files with root: no Magisk prompt before the radio is set up
         final Context app = getContext().getApplicationContext();
         new Thread(() -> {
             com.macdmr.radio.car.AutoTrust.State st = com.macdmr.radio.car.AutoTrust.check(app);
@@ -413,6 +420,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         Neo.headerSubtitle(header).setText(svc.profile().name.toUpperCase(java.util.Locale.US));
         profileText.setText(svc.profile().controlPort + " · " + svc.profile().baud + " · " + (svc.profile().audio == com.macdmr.radio.DeviceProfile.Audio.TINY_SERVICE ? "vendor audio" : "UART PCM"));
         String l = svc.link();
+        if (!svc.profile().verified && svc.profile().supported) profileText.append(" · untested");
         boolean ready = "ready".equals(l), unsupported = "unsupported".equals(l), bad = "no root".equals(l) || unsupported;
         int accent = ready ? Neo.GREEN : bad ? Neo.AMBER : "stopped".equals(l) ? Neo.CYAN : Neo.AMBER;
         linkText.setText(ready ? "This app owns the radio" : "no root".equals(l) ? "Root not granted (Magisk → Superuser)" : "stopped".equals(l) ? "The stock app owns the radio" : unsupported ? "No profile for this phone yet" : "Starting: " + l);
@@ -423,7 +431,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         heroIcon.setImageDrawable(new Neo.IconDrawable(unsupported ? "report" : "module", accent));
         android.graphics.drawable.GradientDrawable ib = new android.graphics.drawable.GradientDrawable(); ib.setColor(Neo.alpha(accent, 0x16)); ib.setCornerRadius(16 * d); ib.setStroke((int) d, Neo.alpha(accent, 0x77));
         heroIcon.setBackground(ib);
-        takeOver.setVisibility(unsupported ? GONE : VISIBLE); handBack.setVisibility(unsupported ? GONE : VISIBLE); reportNow.setVisibility(unsupported ? VISIBLE : GONE);
+        takeOver.setVisibility(unsupported ? GONE : VISIBLE); handBack.setVisibility(unsupported ? GONE : VISIBLE); reportNow.setVisibility(unsupported || !svc.profile().verified ? VISIBLE : GONE);
         takeOver.setAlpha(ready ? 0.55f : 1f); handBack.setAlpha(ready ? 1f : 0.55f);
         idText.setText("ID " + svc.localId());
         if (rogerValue != null) rogerValue.setText(com.macdmr.radio.RadioService.ROGER_NAMES[svc.rogerStyle()]);
