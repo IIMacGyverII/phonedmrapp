@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-20 — SignalDeck Web: coverage maps on the web map
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Web Map → **Coverage** choice: *signal heard* (the phone's `rxCells`, each grid square at its median dBm on `CoverageMath.signalColor`, the phone's scale) or *transmit reached* (`txCells`: green keyed, red no reply), drawn as squares under the markers, click for the numbers; a hint when nothing is measured or logging is off. API `/api/coverage?layer=rx|tx`. | `web/WebHost.java`, `assets/web/pages.js`, `index.html`, `app.css`, `ui/HelpView.java` | On the phone over Wi-Fi, by script (no screenshot: it is the owner's own coverage): 152 receive squares drawn, 0 transmit squares (none recorded), the layer clears when turned off. |
+
 ## 2026-10-20 — SignalDeck Web: Morse trainer
 
 | Backlog | Change | Files | Test |
