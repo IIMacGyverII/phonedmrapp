@@ -17,7 +17,8 @@ public final class FirstRunCheck {
     private FirstRunCheck() { }
 
     /** Runs on a worker thread; returns the zip to share. */
-    public static File run(Context c, RadioService svc, boolean trial, Progress p) throws Exception {
+    /** @param watchPkg the walkie-talkie app the owner confirmed for the 15 s watch, or null to skip that step */
+    public static File run(Context c, RadioService svc, boolean trial, String watchPkg, Progress p) throws Exception {
         DeviceProfile dp = svc.profile();
         StringBuilder sum = new StringBuilder();
         if (dp.supported && !dp.stockApp.isEmpty() && !svc.isReady() && RootSetup.haveRoot()
@@ -29,16 +30,24 @@ public final class FirstRunCheck {
         }
 
         DeviceReport.generate(c, s -> p.step("Report: " + s));
+        if (watchPkg != null && !DeviceReport.lastCandidates.contains(watchPkg)) {      // the owner picked an app the ranking did not examine
+            try {
+                File src = new File(c.getPackageManager().getApplicationInfo(watchPkg, 0).sourceDir), dir = DeviceReport.newestDir();
+                p.step("Reading " + watchPkg + "'s code");
+                String note = "chosen by the owner as the walkie-talkie app\n" + DeviceReport.apkClues(src);
+                if (dir != null && DeviceReport.copyFile(src, new File(dir, watchPkg + "_" + src.getName()))) note += "  copied " + watchPkg + "_" + src.getName() + "\n";
+                DeviceReport.append("Clues in " + watchPkg + "'s code", note);
+            } catch (Throwable t) { DeviceReport.append("Clues in " + watchPkg + "'s code", String.valueOf(t)); }
+        }
 
         p.step("Press and release the side PTT key a few times now (10 s)");
         DeviceReport.append("PTT key capture", DeviceReport.captureKeys(c, 10));
 
-        String watchPkg = !dp.stockApp.isEmpty() ? dp.stockApp : DeviceReport.lastCandidates.isEmpty() ? null : DeviceReport.lastCandidates.get(0);
         if (watchPkg != null && !svc.isReady() && RootSetup.haveRoot()) {
             String w = watchStockApp(watchPkg, p);
             DeviceReport.append("The stock app at work (" + watchPkg + ", 15 s, receive only)", w);
             sum.append("watched ").append(watchPkg).append(" start up for 15 s\n");
-        } else sum.append("stock app not watched: ").append(watchPkg == null ? "no stock walkie-talkie app found" : svc.isReady() ? "SignalDeck owns the radio" : "no root").append('\n');
+        } else sum.append("stock app not watched: ").append(watchPkg == null ? "skipped (no app chosen)" : svc.isReady() ? "SignalDeck owns the radio" : "no root").append('\n');
 
         if (svc.isReady()) {
             sum.append("radio probe skipped: SignalDeck owns the radio (Hand back first to probe the ports)\n");

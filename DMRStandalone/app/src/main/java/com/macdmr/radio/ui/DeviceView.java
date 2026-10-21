@@ -358,19 +358,75 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
                 + (dp.supported && !dp.stockApp.isEmpty() ? "\n" + dp.stockApp + " is closed for the checks; open it again afterwards as usual.\n" : "")
                 + "\nAt the end you get one zip to send us.";
         android.app.AlertDialog.Builder b = new android.app.AlertDialog.Builder(c).setTitle(firstLaunch ? "Help us support this phone" : "Run all checks").setMessage(msg)
-                .setPositiveButton(canTrial ? "Checks + trial" : "Run checks", (dd, w) -> runChecks(canTrial))
+                .setPositiveButton(canTrial ? "Checks + trial" : "Run checks", (dd, w) -> chooseApp(canTrial))
                 .setNegativeButton(firstLaunch ? "Later" : "Cancel", null);
-        if (canTrial) b.setNeutralButton("Checks only", (dd, w) -> runChecks(false));
+        if (canTrial) b.setNeutralButton("Checks only", (dd, w) -> chooseApp(false));
         b.show();
     }
 
-    private void runChecks(final boolean trial) {
+    /**
+     * Before the stock app is opened for 15 s the owner confirms which app it is: the profile's app on a known phone, else
+     * the apps ranked by evidence (RadioAppFinder), best first, or none at all.
+     */
+    private void chooseApp(final boolean trial) {
+        final Context c = getContext(); if (svc == null) return;
+        if (svc.isReady()) { runChecks(trial, null); return; }        // SignalDeck owns the radio: the stock app is not opened
+        final android.app.AlertDialog pd = new android.app.AlertDialog.Builder(c).setTitle("Run all checks").setMessage("Looking for the walkie-talkie app…").setCancelable(false).create(); pd.show();
+        final com.macdmr.radio.DeviceProfile dp = svc.profile();
+        new Thread(() -> {
+            final java.util.List<com.macdmr.radio.RadioAppFinder.App> ranked = com.macdmr.radio.RadioAppFinder.rank(c);
+            final boolean root = com.macdmr.radio.RootSetup.haveRoot();
+            post(() -> {
+                pd.dismiss();
+                if (!root) { runChecks(trial, null); return; }
+                final java.util.List<String> pkgs = new java.util.ArrayList<>(); final java.util.List<String> rows = new java.util.ArrayList<>();
+                if (dp.supported && !dp.stockApp.isEmpty()) { pkgs.add(dp.stockApp); rows.add(appLabel(c, dp.stockApp) + "\n" + dp.stockApp + " · the stock app for the " + dp.name); }
+                for (com.macdmr.radio.RadioAppFinder.App a : ranked) if (pkgs.size() < 5 && a.launcher && !pkgs.contains(a.pkg)) { pkgs.add(a.pkg); rows.add(a.label + "\n" + a.pkg + " · " + String.join(", ", a.why)); }
+                final String OTHER = "\u0000other";
+                pkgs.add(OTHER); rows.add("Choose another app…\nIf the walkie-talkie app is not listed");
+                pkgs.add(null); rows.add("None — skip this step");
+                final int[] pick = { 0 };
+                new android.app.AlertDialog.Builder(c).setTitle("Open which walkie-talkie app for 15 s?")
+                        .setSingleChoiceItems(rows.toArray(new String[0]), 0, (dd, w) -> pick[0] = w)
+                        .setPositiveButton("Continue", (dd, w) -> { if (OTHER.equals(pkgs.get(pick[0]))) chooseAnyApp(trial); else runChecks(trial, pkgs.get(pick[0])); })
+                        .setNegativeButton("Cancel", null).show();
+            });
+        }, "radio-app-finder").start();
+    }
+
+    /** Every app with a launcher icon (system apps first), for a walkie-talkie app the ranking did not find. */
+    private void chooseAnyApp(final boolean trial) {
+        final Context c = getContext();
+        final android.content.pm.PackageManager pm = c.getPackageManager();
+        final java.util.List<android.content.pm.ResolveInfo> ris = new java.util.ArrayList<>(pm.queryIntentActivities(new android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_LAUNCHER), 0));
+        final java.util.List<String> pkgs = new java.util.ArrayList<>(); final java.util.List<String> rows = new java.util.ArrayList<>();
+        java.util.List<String[]> all = new java.util.ArrayList<>();
+        for (android.content.pm.ResolveInfo ri : ris) {
+            String p = ri.activityInfo.packageName; if (p.equals(c.getPackageName()) || pkgs.contains(p)) continue;
+            boolean sys = (ri.activityInfo.applicationInfo.flags & android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0;
+            all.add(new String[] { (sys ? "0" : "1") + String.valueOf(ri.loadLabel(pm)).toLowerCase(java.util.Locale.ROOT), p, String.valueOf(ri.loadLabel(pm)) + "\n" + p + (sys ? " · system app" : "") });
+            pkgs.add(p);
+        }
+        java.util.Collections.sort(all, (x, y) -> x[0].compareTo(y[0]));
+        pkgs.clear(); for (String[] a : all) { pkgs.add(a[1]); rows.add(a[2]); }
+        new android.app.AlertDialog.Builder(c).setTitle("Which app is the walkie-talkie app?")
+                .setItems(rows.toArray(new String[0]), (dd, w) -> new android.app.AlertDialog.Builder(c).setTitle("Open " + rows.get(w).split("\n")[0] + " for 15 s?")
+                        .setMessage("The checks open it the way its icon does, record how it starts the radio, and close it again. Do not press PTT while it is open.")
+                        .setPositiveButton("Continue", (d2, w2) -> runChecks(trial, pkgs.get(w))).setNegativeButton("Back", (d2, w2) -> chooseAnyApp(trial)).show())
+                .setNegativeButton("Cancel", null).show();
+    }
+
+    private static String appLabel(Context c, String pkg) {
+        try { return String.valueOf(c.getPackageManager().getApplicationLabel(c.getPackageManager().getApplicationInfo(pkg, 0))); } catch (Throwable t) { return pkg; }
+    }
+
+    private void runChecks(final boolean trial, final String watchPkg) {
         final Context c = getContext(); if (svc == null) return;
         final android.app.AlertDialog pd = new android.app.AlertDialog.Builder(c).setTitle("Checking this phone").setMessage("Starting…").setCancelable(false).create(); pd.show();
         final com.macdmr.radio.RadioService s = svc;
         new Thread(() -> {
             try {
-                final java.io.File zip = com.macdmr.radio.FirstRunCheck.run(c, s, trial, t -> post(() -> pd.setMessage(t + "…")));
+                final java.io.File zip = com.macdmr.radio.FirstRunCheck.run(c, s, trial, watchPkg, t -> post(() -> pd.setMessage(t + "…")));
                 final java.io.File dir = com.macdmr.radio.DeviceReport.newestDir();
                 String rep = dir == null ? "" : com.macdmr.radio.DeviceReport.cat(new java.io.File(dir, "report.txt").getAbsolutePath());
                 int k = rep.lastIndexOf("==== Summary ====");

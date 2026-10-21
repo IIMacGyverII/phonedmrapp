@@ -113,6 +113,15 @@ public final class DeviceReport {
             if (pi.services != null) { r.append("      services: "); for (android.content.pm.ServiceInfo x : pi.services) r.append(x.name).append(' '); r.append('\n'); }
             if (pi.packageName.matches("(?i).*(intercom|interphone|walkie|dmr|ptt|quickchat|chamsion|prize|talkie).*")) candidates.add(pi.packageName);
         }
+        p.step("Ranking the walkie-talkie app candidates");
+        List<RadioAppFinder.App> ranked = RadioAppFinder.rank(c);
+        h(r, "Walkie-talkie app candidates, ranked (score: evidence)"); r.append(RadioAppFinder.describe(ranked));
+        if (!ranked.isEmpty()) {                          // the evidence wins over package names; name matches stay only when nothing scored
+            candidates.clear();
+            for (RadioAppFinder.App x : ranked) if (candidates.size() < 3 && x.score >= 5) candidates.add(x.pkg);
+            if (candidates.isEmpty()) candidates.add(ranked.get(0).pkg);
+        }
+        r.append("  examined below: ").append(String.join(", ", candidates)).append('\n');
         for (String pkg : candidates) {
             try {
                 ApplicationInfo ai = pm.getApplicationInfo(pkg, 0);
@@ -315,6 +324,7 @@ public final class DeviceReport {
      * PTT key capture: for {@code seconds}, record every hardware key the activity sees, every input event (root,
      * getevent), and every broadcast/log line that mentions ptt/intercom. The user presses the side button meanwhile.
      */
+    static String[] pttActions() { return PTT_ACTIONS; }
     private static final String[] PTT_ACTIONS = { "com.interphone.ptt.down", "com.interphone.ptt.up", "com.android.intent.ptt.down", "com.android.intent.ptt.up", "android.intent.action.PTT.down", "android.intent.action.PTT.up", "android.intent.action.PTT", "com.runbo.ptt.key.down", "com.runbo.ptt.key.up", "com.android.action.ptt.down", "com.android.action.ptt.up", "android.intent.action.ptt.down", "android.intent.action.ptt.up", "com.sonim.intent.action.PTT_KEY_DOWN", "com.sonim.intent.action.PTT_KEY_UP", "com.kyocera.android.intent.action.PTT_BUTTON", "android.intent.action.PTT_BUTTON_DOWN", "android.intent.action.PTT_BUTTON_UP", "com.zello.ptt.down", "com.zello.ptt.up" };
 
     public static String captureKeys(Context c, int seconds) {
@@ -432,5 +442,6 @@ public final class DeviceReport {
     static String ls(String dir, Pattern filter) { File[] fs = dir == null ? null : new File(dir).listFiles(); if (fs == null) return "(not readable)"; StringBuilder s = new StringBuilder(); for (File f : fs) if (filter == null || filter.matcher(f.getName()).find()) s.append(f.getName()).append(' '); return s.length() == 0 ? "-" : s.toString(); }
     static String getprop(String k) { return exec("getprop " + k).trim(); }
     static String exec(String cmd) { try { Process p = new ProcessBuilder("sh", "-c", cmd).redirectErrorStream(true).start(); BufferedReader b = new BufferedReader(new InputStreamReader(p.getInputStream())); StringBuilder s = new StringBuilder(); String l; int n = 0; while ((l = b.readLine()) != null && n++ < 400) s.append(l).append('\n'); p.waitFor(); return s.toString(); } catch (Throwable t) { return "(" + t.getMessage() + ")"; } }
+    public static boolean copyFile(File src, File dst) { return copy(src, dst); }
     private static boolean copy(File src, File dst) { try (InputStream i = new FileInputStream(src); OutputStream o = new FileOutputStream(dst)) { byte[] b = new byte[65536]; int n; while ((n = i.read(b)) > 0) o.write(b, 0, n); return true; } catch (Throwable t) { return false; } }
 }
