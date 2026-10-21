@@ -43,7 +43,7 @@ function route() {
   if (S.page === 'contacts') loadContacts();
   if (S.page === 'map') loadMap();
   if (S.page === 'help') loadHelp();
-  if (S.page === 'log') { if (!S.qso) editQso(null); loadLog(); }
+  if (S.page === 'log') { if (!S.qso) editQso(null); loadLog(); loadNet(); }
   if (S.page === 'rec') loadRecordings();
   if (S.page === 'settings') { loadSettings(); loadBackups(); }
   if (S.page === 'pkt') loadPacket();
@@ -72,6 +72,7 @@ function connect() {
   on('modes', d => { Object.assign(S.status, { softSq: d.softSq, softSqLevel: d.softSqLevel, monitor: d.monitor, record: d.record, scanning: d.scanning, zone: d.zone }); renderStatus(); });
   on('caption', d => renderCaption(d));
   on('sms', () => { if (S.page === 'messages') loadConversations(); });
+  on('net', () => { if (S.page === 'log') loadNet(); });
   on('smsResult', d => { toast(d.ok ? 'Text delivered' : 'No acknowledgement (the text may still have arrived)'); if (S.page === 'messages') loadConversations(); });
   on('sat', d => { S.status.sat = d; renderModebar(); if (S.page === 'sat') renderSat(); });
   on('mode', d => { S.status.mode = d; renderModebar(); renderAprsState(); renderSstvState(); });
