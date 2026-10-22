@@ -185,6 +185,8 @@ input:not([type]), input[type=text] { padding: 10px 12px; border-radius: 10px; b
 .predcv { position: absolute; left: 0; top: 0; pointer-events: none; }   /* predicted squares: tens of thousands, so one canvas */
 .covnote { margin: 6px 2px 8px; color: var(--muted); font-size: 14px; } .covnote b { color: var(--violet); }
 .cov:hover { outline: 2px solid #fff; }
+.mapcard .mcx { float: right; margin: -6px -8px 0 8px; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; }
+.mapcard .mcx:hover { color: var(--text); border-color: var(--cyan); }
 .mapcard .tgs { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 8px 0; max-height: 160px; overflow-y: auto; font-size: 14px; }
 .mk-label { position: absolute; transform: translate(10px, -50%); font: 600 13px Rajdhani, sans-serif; color: var(--text); text-shadow: 0 0 3px #000, 0 0 6px #000; white-space: nowrap; pointer-events: none; }
 .zoom { position: absolute; right: 12px; top: 12px; display: flex; flex-direction: column; gap: 6px; }

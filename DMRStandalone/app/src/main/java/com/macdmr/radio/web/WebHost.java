@@ -474,7 +474,7 @@ public final class WebHost {
             }
             case "/api/channels": {
                 java.util.Set<Integer> favs = svc.store().favourites();
-                JSONArray a = new JSONArray(); for (ChannelStore.Channel ch : svc.zoneChannels()) a.put(channelObj(ch).put("fav", favs.contains(ch.number)));
+                JSONArray a = new JSONArray(); for (ChannelStore.Channel ch : "1".equals(r.param("all")) ? svc.store().all() : svc.zoneChannels()) a.put(channelObj(ch).put("fav", favs.contains(ch.number)));   // all=1: every channel (the map)
                 JSONArray z = new JSONArray(); z.put(new JSONObject().put("id", 0).put("name", "ALL"));
                 for (ChannelStore.Zone zz : svc.store().zones()) z.put(new JSONObject().put("id", zz.id).put("name", zz.name));
                 return ok(new JSONObject().put("channels", a).put("zones", z).put("zoneId", svc.zoneId()));
