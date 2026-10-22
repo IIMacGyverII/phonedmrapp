@@ -652,6 +652,8 @@ public class RadioService extends Service implements RadioEngine.Events {
             getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("smsStatusMigrated", true).apply();
         }
         registerHardwarePtt();
+        customKey = new CustomPttKey.Listener(this, down -> { if (pttLearning) return; if (down) { if (isReady()) ptt(true); } else ptt(false); }, this::log);
+        if (profile.supported) customKey.start();
         web = new com.macdmr.radio.web.WebHost(this);
         if (web.enabled()) { String e = web.start(); if (e != null) log("web: " + e); }
     }
@@ -676,13 +678,25 @@ public class RadioService extends Service implements RadioEngine.Events {
         pttKey = new android.content.BroadcastReceiver() {
             @Override public void onReceive(android.content.Context c, Intent i) {
                 String a = i.getAction(); if (a == null) return;
-                if (!getSharedPreferences("radio", MODE_PRIVATE).getBoolean("hwPtt", true)) return;
+                if (!getSharedPreferences("radio", MODE_PRIVATE).getBoolean("hwPtt", true) || pttLearning) return;
                 for (int k = 0; k < profile.pttActions.length; k++) if (a.equals(profile.pttActions[k])) { if (k % 2 == 0) { if (isReady()) ptt(true); } else ptt(false); return; }
             }
         };
         android.content.IntentFilter f = new android.content.IntentFilter();
         for (String a : profile.pttActions) f.addAction(a);
         try { if (Build.VERSION.SDK_INT >= 33) registerReceiver(pttKey, f, RECEIVER_EXPORTED); else registerReceiver(pttKey, f); } catch (Throwable t) { log("ptt key: " + t); }
+    }
+    // ---- a PTT key the owner taught it (CustomPttKey): any hardware or Bluetooth button, read with root ----
+    private CustomPttKey.Listener customKey;
+    private volatile boolean pttLearning;
+    /** While a key is being learned no key transmits (the owner is pressing buttons on purpose). */
+    public void setPttLearning(boolean on) { pttLearning = on; if (on && pttDown) ptt(false); }
+    /** After the learned key or its switch changed. */
+    public void customPttChanged() { if (customKey == null) return; if (profile.supported && CustomPttKey.enabled(this)) customKey.start(); else customKey.stop(); }
+    /** The activity swallows the learned key's events while the listener does the keying (no volume change in the app). */
+    public boolean customPttConsumes(int keyCode) {
+        if (keyCode == 0 || customKey == null || !customKey.isRunning()) return false;
+        CustomPttKey.Key k = CustomPttKey.saved(this); return k != null && k.androidKey == keyCode;
     }
     public boolean hwPtt() { return getSharedPreferences("radio", MODE_PRIVATE).getBoolean("hwPtt", true); }
     public void setHwPtt(boolean on) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("hwPtt", on).apply(); if (!on && pttDown) ptt(false); }
@@ -693,6 +707,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         try { if (coverage != null) coverage.stop(); } catch (Throwable ignored) { }
         stopBluetoothMic();
         try { if (pttKey != null) unregisterReceiver(pttKey); } catch (Throwable ignored) { }
+        try { if (customKey != null) customKey.stop(); } catch (Throwable ignored) { }
         try { unregisterReceiver(diag); } catch (Throwable ignored) { }
         try { if (powerOff != null) unregisterReceiver(powerOff); } catch (Throwable ignored) { }
         try { if (pttDown) { if (audio != null) audio.stopTx(); engine.ptt(false); } } catch (Throwable ignored) { }

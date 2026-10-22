@@ -383,7 +383,7 @@ public final class Neo {
 
     private static String iconFor(String title) {
         String t = title.toLowerCase(java.util.Locale.US);
-        if (t.contains("packet")) return "pkt"; if (t.contains("vfo")) return "vfo"; if (t.contains("repeater")) return "repeaters";
+        if (t.contains("ptt")) return "ptt"; if (t.contains("packet")) return "pkt"; if (t.contains("vfo")) return "vfo"; if (t.contains("repeater")) return "repeaters";
         if (t.contains("record")) return "rec"; if (t.contains("caption") || t.contains("transcript")) return "txt"; if (t.contains("last heard")) return "intercom";
         if (t.contains("station")) return "globe"; if (t.contains("dtmf")) return "channels"; if (t.contains("weather") || t.contains("same")) return "alert";
         if (t.contains("coverage")) return "signal"; if (t.contains("emergency")) return "alert"; if (t.contains("widget")) return "widget";

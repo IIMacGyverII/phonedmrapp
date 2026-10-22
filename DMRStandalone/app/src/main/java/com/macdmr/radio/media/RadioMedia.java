@@ -46,6 +46,7 @@ public final class RadioMedia {
                 // the steering wheel's play/pause as Talk (setting, in the car); the on-screen button is not a media button
                 android.view.KeyEvent ev = i == null ? null : i.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
                 RadioService s = RadioService.running;
+                if (ev != null && s != null && s.customPttConsumes(ev.getKeyCode())) return true;   // the learned PTT key (a headset button): talking, never also play/pause
                 if (ev != null && s != null && s.inCar()) s.wheelKeySeen(ev);       // what the car sends, for the history (hold-to-talk check)
                 if (ev != null && s != null && s.inCar() && s.holdNextTalk() && ev.getKeyCode() == android.view.KeyEvent.KEYCODE_MEDIA_NEXT) {
                     s.wheelNext(ev);
