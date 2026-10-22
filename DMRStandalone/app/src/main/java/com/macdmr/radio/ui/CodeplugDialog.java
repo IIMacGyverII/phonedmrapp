@@ -119,9 +119,12 @@ public final class CodeplugDialog {
         update.run();
 
         body.addView(Neo.sheetSection(c, "Include"));
-        final Neo.NeonSwitch loc = new Neo.NeonSwitch(c), file = new Neo.NeonSwitch(c), chirp = new Neo.NeonSwitch(c);
+        final Neo.NeonSwitch loc = new Neo.NeonSwitch(c), file = new Neo.NeonSwitch(c), chirp = new Neo.NeonSwitch(c), netsSw = new Neo.NeonSwitch(c), notesSw = new Neo.NeonSwitch(c);
         android.content.SharedPreferences pr = c.getSharedPreferences("codeplug", Context.MODE_PRIVATE);
         loc.setChecked(pr.getBoolean("loc", false)); file.setChecked(pr.getBoolean("file", true)); chirp.setChecked(pr.getBoolean("chirp", false));
+        netsSw.setChecked(pr.getBoolean("nets", true)); notesSw.setChecked(pr.getBoolean("notes", false));
+        body.addView(Neo.switchRow(c, "contacts", Neo.AMBER, "Net schedules", "The nets you added to these channels (name, days, time, length)", netsSw));
+        body.addView(Neo.switchRow(c, "report", Neo.VIOLET, "Channel notes", "Your notes on each channel (off unless you turn it on: notes can be personal)", notesSw));
         body.addView(Neo.switchRow(c, "map", Neo.CYAN, "Channel locations", "The repeater positions you set in the channel editor", loc));
         body.addView(Neo.switchRow(c, "backup", Neo.GREEN, "A SignalDeck file", "The same list and code as a file, for apps that send files", file));
         body.addView(Neo.switchRow(c, "radio", Neo.AMBER, "A CHIRP file for other radios", "The analog channels as a CHIRP CSV (Baofeng, Yaesu, Kenwood, …)", chirp));
@@ -135,26 +138,27 @@ public final class CodeplugDialog {
 
         final java.util.function.Supplier<Codeplug> build = () -> {
             Codeplug p = new Codeplug(); p.name = name.getText().toString().trim(); if (p.name.isEmpty()) p.name = "Channels";
-            for (ChannelStore.Channel x : all) if (picked.contains(x.number)) p.channels.add(x);
-            pr.edit().putString("lastName", p.name).putBoolean("loc", loc.isChecked()).putBoolean("file", file.isChecked()).putBoolean("chirp", chirp.isChecked()).apply();
+            for (ChannelStore.Channel x : all) if (picked.contains(x.number)) { p.channels.add(x); List<com.macdmr.radio.ham.NetFinder.Manual> ns = svc.store().netsOf(x.id); if (!ns.isEmpty()) p.nets.put(x, ns); }
+            pr.edit().putString("lastName", p.name).putBoolean("loc", loc.isChecked()).putBoolean("file", file.isChecked()).putBoolean("chirp", chirp.isChecked())
+                    .putBoolean("nets", netsSw.isChecked()).putBoolean("notes", notesSw.isChecked()).apply();
             return p;
         };
         copy.setOnClickListener(v -> {
             Codeplug p = build.get(); if (p.channels.isEmpty()) { Toast.makeText(c, "Pick at least one channel", Toast.LENGTH_SHORT).show(); return; }
             ClipboardManager cm = (ClipboardManager) c.getSystemService(Context.CLIPBOARD_SERVICE);
-            if (cm != null) cm.setPrimaryClip(ClipData.newPlainText(p.name, Codeplug.shareText(p, loc.isChecked())));
+            if (cm != null) cm.setPrimaryClip(ClipData.newPlainText(p.name, Codeplug.shareText(p, loc.isChecked(), notesSw.isChecked(), netsSw.isChecked())));
             Toast.makeText(c, "Copied: paste it into a post or message", Toast.LENGTH_SHORT).show();
         });
         send.setOnClickListener(v -> {
             Codeplug p = build.get(); if (p.channels.isEmpty()) { Toast.makeText(c, "Pick at least one channel", Toast.LENGTH_SHORT).show(); return; }
-            try { c.startActivity(shareIntent(c, p, loc.isChecked(), file.isChecked(), chirp.isChecked())); dlg.dismiss(); }
+            try { c.startActivity(shareIntent(c, p, loc.isChecked(), notesSw.isChecked(), netsSw.isChecked(), file.isChecked(), chirp.isChecked())); dlg.dismiss(); }
             catch (Throwable t) { Toast.makeText(c, "Could not share: " + t.getMessage(), Toast.LENGTH_LONG).show(); }
         });
     }
 
     /** The chooser: the text always; the SignalDeck file and the CHIRP CSV when asked (CHIRP only with analog channels). */
-    static Intent shareIntent(Context c, Codeplug p, boolean withLoc, boolean withFile, boolean withChirp) throws Exception {
-        String text = Codeplug.shareText(p, withLoc);
+    static Intent shareIntent(Context c, Codeplug p, boolean withLoc, boolean withNotes, boolean withNets, boolean withFile, boolean withChirp) throws Exception {
+        String text = Codeplug.shareText(p, withLoc, withNotes, withNets);
         File dir = new File(c.getCacheDir(), "share"); dir.mkdirs();
         File[] old = dir.listFiles(); if (old != null) for (File f : old) if (f.getName().endsWith(".signaldeck.txt") || f.getName().endsWith(".chirp.csv")) f.delete();   // only what this sheet wrote before
         String safe = p.name.replaceAll("[^A-Za-z0-9 _.-]+", "").trim(); if (safe.isEmpty()) safe = "channels";
@@ -199,7 +203,9 @@ public final class CodeplugDialog {
         for (int k = 0; k < p.channels.size(); k++) {
             ChannelStore.Channel ch = p.channels.get(k);
             boolean dup = Codeplug.duplicate(ch, mine);
-            CheckRow r = new CheckRow(c, ch); r.index = k; if (dup) r.note("you already have it"); else picked.add(k);
+            CheckRow r = new CheckRow(c, ch); r.index = k;
+            int nn = p.netsOf(ch).size(); if (nn > 0 || !ch.notes.isEmpty()) r.note((nn > 0 ? nn + (nn == 1 ? " net" : " nets") : "") + (nn > 0 && !ch.notes.isEmpty() ? ", " : "") + (ch.notes.isEmpty() ? "" : "notes"));
+            if (dup) r.note("you already have it"); else picked.add(k);
             rows.add(r);
             r.setOnClickListener(v -> { if (!picked.remove(r.index)) picked.add(r.index); update.run(); });
             LinearLayout.LayoutParams rl = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT); rl.topMargin = (int) (4 * d);
@@ -207,6 +213,8 @@ public final class CodeplugDialog {
         }
         update.run();
         final Neo.NeonSwitch zone = new Neo.NeonSwitch(c); zone.setChecked(true);
+        final Neo.NeonSwitch extras = new Neo.NeonSwitch(c); extras.setChecked(true);
+        if (p.hasNotesOrNets()) body.addView(Neo.switchRow(c, "contacts", Neo.AMBER, "Their notes and net schedules", "Saved with the channels; the nets show in Nets near you", extras));
         body.addView(Neo.switchRow(c, "zone", Neo.CYAN, "Put them in a zone", "A new zone “" + p.name + "”, so they are easy to find, scan and remove", zone));
         TextView go = Neo.button(c, "Import", "import", Neo.GREEN);
         LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT); bl.topMargin = (int) (14 * d);
@@ -218,8 +226,10 @@ public final class CodeplugDialog {
             for (int k = 0; k < p.channels.size(); k++) {
                 if (!picked.contains(k)) continue;
                 ChannelStore.Channel ch = p.channels.get(k); ch.id = 0; ch.number = 0; ch.active = false;
+                if (!extras.isChecked()) ch.notes = "";
                 svc.saveChannel(ch, true);
                 numbers.add(ch.number);
+                if (extras.isChecked() && ch.id > 0) for (com.macdmr.radio.ham.NetFinder.Manual m : p.netsOf(ch)) { m.id = 0; m.channelId = ch.id; m.channel = ch.number; svc.store().saveNet(m); }
             }
             String where = "";
             if (zone.isChecked()) {
@@ -228,6 +238,7 @@ public final class CodeplugDialog {
                 svc.store().saveZone(z); where = " in the zone “" + z.name + "”";
             }
             dlg.dismiss();
+            svc.netWatch().placesChanged();
             Toast.makeText(c, "Added " + numbers.size() + " channel" + (numbers.size() == 1 ? "" : "s") + where, Toast.LENGTH_LONG).show();
             if (reload != null) reload.run();
         });

@@ -99,4 +99,32 @@ public class CodeplugTest {
         assertTrue(Codeplug.duplicate(analog("club rptr, MAIN", 146_940_000, 146_340_000, 0, 0, 0, 0), mine));
         assertFalse(Codeplug.duplicate(analog("Other", 146_940_000, 146_340_000, 0, 0, 0, 0), mine));
     }
+
+    @Test public void notesAndNetsTravelWhenAsked() {
+        Codeplug p = sample();
+        ChannelStore.Channel rpt = p.channels.get(0); rpt.notes = "Club; owner, \"W5\" | linked\nweekends";
+        com.macdmr.radio.ham.NetFinder.Manual m = new com.macdmr.radio.ham.NetFinder.Manual(); m.name = "Tues, Net; #1"; m.days = 1 << java.util.Calendar.TUESDAY; m.minute = 19 * 60 + 30; m.durationMin = 45; m.notes = "NCS: club";
+        p.nets.put(rpt, new java.util.ArrayList<>(java.util.Arrays.asList(m)));
+        String text = Codeplug.shareText(p, false, true, true);
+        assertTrue(text, text.contains("   Net: Tues, Net; #1, Tue 7:30 PM, 45 min (NCS: club)"));
+        assertTrue(text, text.contains("   Notes: Club; owner"));
+        Codeplug b = Codeplug.read(text, null);
+        ChannelStore.Channel r = b.channels.get(0);
+        assertEquals(rpt.notes, r.notes);
+        assertEquals(1, b.netsOf(r).size());
+        com.macdmr.radio.ham.NetFinder.Manual n = b.netsOf(r).get(0);
+        assertEquals("Tues, Net; #1", n.name); assertEquals(m.days, n.days); assertEquals(m.minute, n.minute); assertEquals(45, n.durationMin); assertEquals("NCS: club", n.notes);
+        assertTrue(b.hasNotesOrNets());
+        Codeplug none = Codeplug.read(Codeplug.shareText(p, false, false, false), null);   // not asked: nothing extra goes out
+        assertEquals("", none.channels.get(0).notes); assertTrue(none.netsOf(none.channels.get(0)).isEmpty()); assertFalse(none.hasNotesOrNets());
+    }
+
+    @Test public void readsCodesFromBeforeNotes() {
+        String old = "v1|Old\nc|Rptr|1|146940000|146340000|1|1|2|0|0|1|13|2|0|1|0|0|1|0||2|0|5|||\n";   // 26 fields, as written on 2026-10-21
+        java.util.zip.Deflater d = new java.util.zip.Deflater(); d.setInput(old.getBytes(java.nio.charset.StandardCharsets.UTF_8)); d.finish();
+        byte[] buf = new byte[512]; int n = d.deflate(buf);
+        String code = "SDCP1:" + java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(java.util.Arrays.copyOf(buf, n)) + ":END";
+        Codeplug p = Codeplug.read(code, null);
+        assertEquals(1, p.channels.size()); assertEquals("", p.channels.get(0).notes); assertEquals(13, p.channels.get(0).txSubCode);
+    }
 }

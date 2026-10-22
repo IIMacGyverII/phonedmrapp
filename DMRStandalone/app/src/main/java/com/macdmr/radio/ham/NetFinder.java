@@ -268,7 +268,7 @@ public final class NetFinder {
 
     /** A net the owner added: on {@link #channel}, on the weekdays in {@link #days} (bit 1 << Calendar.SUNDAY…SATURDAY). */
     public static final class Manual {
-        public long id; public String name = "", notes = ""; public int channel, days, minute, durationMin = 60;
+        public long id, channelId; public String name = "", notes = ""; public int channel, days, minute, durationMin = 60;   // channel: its number now; channelId: the row it belongs to
         public boolean on(int dow) { return (days & (1 << dow)) != 0; }
     }
     public static final int ALL_DAYS = 0xFE;   // bits 1..7

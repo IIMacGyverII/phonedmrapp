@@ -227,21 +227,12 @@ public final class NetWatch {
     }
 
     // ---- nets the owner added to a channel ----
-    public static List<NetFinder.Manual> manual(Context c) { return NetFinder.decode(c.getSharedPreferences("nets", Context.MODE_PRIVATE).getString("manual", "")); }
-    /** Add or replace (same id) a net; id 0 gets a new one. */
-    public static void saveManual(Context c, NetFinder.Manual m) {
-        List<NetFinder.Manual> l = manual(c);
-        if (m.id == 0) m.id = System.currentTimeMillis();
-        boolean replaced = false; for (int i = 0; i < l.size(); i++) if (l.get(i).id == m.id) { l.set(i, m); replaced = true; }
-        if (!replaced) l.add(m);
-        store(c, l);
-    }
-    public static void deleteManual(Context c, long id) { List<NetFinder.Manual> l = manual(c); l.removeIf(x -> x.id == id); store(c, l); }
-    private static void store(Context c, List<NetFinder.Manual> l) {
-        c.getSharedPreferences("nets", Context.MODE_PRIVATE).edit().putString("manual", NetFinder.encode(l)).apply();
-        RadioService s = RadioService.running; if (s != null) s.netWatch().placesChanged();
-    }
-    public static List<NetFinder.Manual> manualOn(Context c, int channel) { List<NetFinder.Manual> out = new ArrayList<>(); for (NetFinder.Manual m : manual(c)) if (m.channel == channel) out.add(m); return out; }
+    /** The nets you added: stored with their channel in the channel database (see {@link ChannelStore#nets}). */
+    public static List<NetFinder.Manual> manual(Context c) { RadioService s = RadioService.running; return s == null ? new ArrayList<>() : s.store().nets(); }
+    /** Add (id 0) or update a net. */
+    public static void saveManual(Context c, NetFinder.Manual m) { RadioService s = RadioService.running; if (s == null) return; s.store().saveNet(m); s.netWatch().placesChanged(); }
+    public static void deleteManual(Context c, long id) { RadioService s = RadioService.running; if (s == null) return; s.store().deleteNet(id); s.netWatch().placesChanged(); }
+    public static List<NetFinder.Manual> manualOn(Context c, long channelId) { RadioService s = RadioService.running; return s == null ? new ArrayList<>() : s.store().netsOf(channelId); }
 
     private List<NetFinder.Slot> schedule; private long scheduleAt;
     /** Learned and NetLogger slots, merged, soonest first. */
