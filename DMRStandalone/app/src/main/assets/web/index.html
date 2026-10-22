@@ -59,6 +59,7 @@
           <div class="freqrow"><span id="freq" class="mono freq">---.----</span><span id="chType" class="chip"></span><span id="tone" class="chip dim"></span></div>
           <div class="smeter"><div class="smeter-fill" id="smeterFill"></div><span id="smeterText" class="mono">— dBm</span></div>
           <div class="state"><span id="rxtx" class="badge">IDLE</span><span id="caller" class="caller"></span><div class="vu" aria-hidden="true"><div id="vuFill"></div></div></div>
+          <canvas id="specCv" class="spec" aria-label="Spectrum of the received audio" title="Spectrum of what is received: low notes left, high right (200 Hz – 3.6 kHz)"></canvas>
           <div class="controls">
             <button class="tog" id="scanBtn">SCAN</button>
             <button class="tog" id="monBtn">MON</button>

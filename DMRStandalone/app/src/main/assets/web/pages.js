@@ -281,6 +281,27 @@ function showMark(m) {
   window.addEventListener('resize', () => { if (S.page === 'map') drawMap(); });
 })();
 
+// ---- the intercom bars: the received audio's spectrum, drawn like the phone's panel (rise fast, fall slowly) ----
+S.spec = new Array(18).fill(0); S.specTarget = new Array(18).fill(0);
+function drawSpectrum() {
+  S.specRaf = 0;
+  const cv = $('specCv'); if (!cv || cv.offsetParent === null) return;
+  const dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+  if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  const n = S.spec.length, bw = W / n, gap = bw * 0.18; let moving = false;
+  for (let i = 0; i < n; i++) {
+    const t = (S.specTarget[i] || 0) / 100, v = S.spec[i];
+    S.spec[i] = v + (t - v) * (t > v ? 0.55 : 0.12); if (Math.abs(S.spec[i] - t) > 0.004) moving = true;
+    const h = Math.max(3, S.spec[i] * (H - 2));
+    g.fillStyle = 'rgba(0,229,255,' + (0.22 + S.spec[i] * 0.75).toFixed(3) + ')';
+    const x = i * bw + gap, w = bw - gap * 2, y = H - h, r = Math.min(3, w / 2);
+    g.beginPath(); g.moveTo(x, H); g.lineTo(x, y + r); g.quadraticCurveTo(x, y, x + r, y); g.lineTo(x + w - r, y); g.quadraticCurveTo(x + w, y, x + w, y + r); g.lineTo(x + w, H); g.fill();
+  }
+  if (moving) S.specRaf = requestAnimationFrame(drawSpectrum);
+}
+window.addEventListener('resize', () => { if (!S.specRaf) S.specRaf = requestAnimationFrame(drawSpectrum); });
+
 // ---- captions: the last few on the intercom page, all of them on the Transcripts page ----
 S.caps = []; S.trRows = [];
 const hhmmssDay = ts => { const d = new Date(ts); return (Date.now() - ts > 20 * 3600e3 ? d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' : '') + hhmmss(ts); };

@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-22 — Real spectrum bars (phone and web); ISS tracking survives restarts
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | Owner's request: the multiband EQ / spectrum in the browser. The phone's 18 intercom bars were not a spectrum: every bar followed the overall level with a centre envelope and random jitter. Now `dsp.Spectrum` (256-point Hann FFT every 32 ms at 8 kHz, 18 log-spaced bands 200 Hz–3.6 kHz, 60 dB scale) runs on what the speaker plays (squelch open, not muted; zeros once when it stops); `Listener.onSpectrum` (default method) drives `CircuitBoardView`'s bars (old level look kept as fallback) and an SSE `spectrum` event (~12/s, 0–100) draws the same 18 bars on a canvas on the web Intercom page (rise fast, fall slowly, like the phone). **ISS pass-after-pass** (`issRepeat`) is now kept in prefs and resumed after a restart (install, reboot), with a history line; DIAG `isssstv` arms ISS SSTV like `issaprs`. Help: Intercom → Activity panel; ISS. | `dsp/Spectrum.java` (new), `RadioService.java`, `CircuitBoardView.java`, `ui/IntercomView.java`, `web/WebHost.java`, `assets/web/index.html`, `assets/web/app.js`, `assets/web/pages.js`, `assets/web/app.css`, `DiagReceiver.java`, `ui/HelpView.java`, `SpectrumTest.java` (new, 3 tests) | Host tests pass (a tone lights its own band, others ≥ 0.3 below; silence 0; band edges). **Device + browser** (owner's Armor, 33 min before an ISS pass): a 300 Hz → 3 kHz sweep injected as received → the browser's loudest band climbed 3 → 15 and fell back to 0; `isssstv` armed, `issRepeat=2` saved, force-stop + start → tracking ISS SSTV again by itself (waiting for the 09:43 pass); test WAV removed. |
+
 ## 2026-10-22 — Updates: a Release path and a Beta path, with the changes since your version; go back from a beta to the release
 
 | Backlog | Change | Files | Test |

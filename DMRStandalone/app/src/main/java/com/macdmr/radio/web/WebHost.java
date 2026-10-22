@@ -182,6 +182,13 @@ public final class WebHost {
         @Override public void onRx(boolean r) { pub("rx", "{\"on\":" + r + "}"); }
         @Override public void onTx(boolean t) { pub("tx", "{\"on\":" + t + "}"); }
         @Override public void onRssi(int dbm) { long now = System.currentTimeMillis(); if (now - lastRssi < 400) return; lastRssi = now; pub("rssi", "{\"dbm\":" + dbm + "}"); }
+        private long lastSpec;
+        @Override public void onSpectrum(float[] b) {                     // the intercom bars in the browser, about 12 times a second
+            long now = System.currentTimeMillis(); boolean zero = true; for (float v : b) if (v > 0) { zero = false; break; }
+            if (!zero && now - lastSpec < 80) return; lastSpec = now;
+            StringBuilder s = new StringBuilder("{\"b\":["); for (int i = 0; i < b.length; i++) { if (i > 0) s.append(','); s.append(Math.round(b[i] * 100)); } s.append("]}");
+            pub("spectrum", s.toString());
+        }
         @Override public void onAudioLevel(int amp) { long now = System.currentTimeMillis(); if (now - lastLevel < 100) return; lastLevel = now; pub("level", "{\"amp\":" + amp + "}"); }
         @Override public void onHistory(String line) { pub("history", "{\"line\":" + WebServer.quote(line) + "}"); }
         @Override public void onCaller(String text) { pub("caller", "{\"text\":" + WebServer.quote(text) + "}"); }
