@@ -33,6 +33,7 @@ public final class DmrAudioCheck {
         public long pcmDuringCalls, pcmTotal;
         public double rms = -1;                         // of what arrived during calls (-1 = not measured)
         public boolean muted, mediaMode, rxAudioOn = true;
+        public boolean monTested; public long monPcm; public double monRms = -1;   // analog: 10 s with the squelch held open (MON): receiver noise must arrive
         public int musicVolume = -1, musicMax = -1;
         public String output = "";                      // where media plays (speaker, Bluetooth …)
     }
@@ -42,33 +43,50 @@ public final class DmrAudioCheck {
         List<String> v = new ArrayList<>();
         if (f.classMissing) {
             v.add("This ROM does not have Ulefone's PrizeTinyService framework class, which carries the radio's receive audio on this phone. "
-                    + "SignalDeck (and the stock app) can't get any receive audio on it, analog included."
-                    + (f.binderPresent ? " The vendor audio service itself is still running (binder \"tinyservice\"), so the audio exists below Android: support for this ROM means talking to that service directly — please send this report." : f.daemonRunning ? " The vendor audio daemon is running." : " The vendor audio service is not running either."));
+                    + "SignalDeck (and the stock app) can't get any receive audio on it, analog and DMR alike."
+                    + (f.binderPresent ? " The vendor audio service itself is still running (binder \"tinyservice\"), so the audio exists below Android: support for this ROM means talking to that service directly. Please send this report." : f.daemonRunning ? " The vendor audio daemon is running." : " The vendor audio service is not running either. Please send this report."));
             return v;
         }
         if (f.audioError != null) { v.add("Receive audio did not start: " + f.audioError + ". Please send this report."); return v; }
-        if (!f.digitalChannel) v.add("Note: the current channel is analog; for a DMR problem run this on the DMR channel where calls are expected.");
+        String rx = f.digitalChannel ? "call" : "reception";
+        if (f.monTested) {                                         // analog: the squelch was held open, so receiver noise had to arrive whatever was on the air
+            if (f.monPcm == 0) {
+                v.add("With the squelch held open (MON) for 10 seconds, no audio at all arrived from the phone's radio audio service. "
+                        + "The audio path below Android (the tinyservice/tinyserver daemon) is not delivering, so nothing can be heard on any channel. Please send this report.");
+                return v;
+            }
+            if (f.monRms >= 0 && f.monRms < 30) {
+                v.add(String.format(Locale.US, "With the squelch held open (MON) audio arrived but it was silent (level %.0f): receiver noise should be loud. "
+                        + "The radio's audio output is not reaching the audio service (muted or routed elsewhere below Android). Please send this report.", f.monRms));
+                return v;
+            }
+            v.add(String.format(Locale.US, "The audio path works: with the squelch held open, the radio's noise arrived (level %.0f).", f.monRms));
+        }
         if (f.receptions == 0) {
-            v.add("The radio never reported a reception in this minute. Either nobody transmitted, or the calls don't match this channel: "
+            if (f.digitalChannel) v.add("The radio never reported a call in this minute. Either nobody transmitted, or the calls don't match this channel: "
                     + "colour code, timeslot, or a talkgroup that is not in the channel's RX group list (the radio drops calls to talkgroups outside the list before they reach the app). "
                     + "Ask someone to key up on the talkgroup and run the check again, and check the channel's RX list.");
-            return v;
-        }
-        if (f.callsOutsideList > 0) v.add(f.callsOutsideList + " call(s) were to a target that is not in this channel's RX list or call number (they got through as private or all calls).");
-        if (f.pcmDuringCalls == 0) {
-            v.add("The radio received " + f.receptions + " call(s), but no audio arrived from the vendor audio service while they were on. "
-                    + "The audio path below Android (the tinyservice/tinyserver daemon) is not delivering on this ROM. Please send this report.");
-            return v;
-        }
-        if (f.rms >= 0 && f.rms < 30) {
-            v.add(String.format(Locale.US, "Audio arrived during the calls but it is silent (level %.0f). The radio passed the calls on without voice: "
-                    + "often a colour-code or slot mismatch on the radio side, or an encrypted call. Please send this report.", f.rms));
-            return v;
+            else v.add("No signal opened the squelch in this minute. Choose a channel with a station on the air (a NOAA weather channel always has one) and run the check again.");
+            if (!f.monTested || f.digitalChannel) return v;
+        } else {
+            if (f.callsOutsideList > 0) v.add(f.callsOutsideList + " call(s) were to a target that is not in this channel's RX list or call number (they got through as private or all calls).");
+            if (f.pcmDuringCalls == 0) {
+                v.add("The radio received " + f.receptions + " " + rx + "(s), but no audio arrived from the vendor audio service while they were on. "
+                        + "The audio path below Android (the tinyservice/tinyserver daemon) is not delivering on this ROM. Please send this report.");
+                return v;
+            }
+            if (f.rms >= 0 && f.rms < 30) {
+                v.add(String.format(Locale.US, "Audio arrived during the %ss but it is silent (level %.0f). ", rx, f.rms)
+                        + (f.digitalChannel ? "The radio passed the calls on without voice: often a colour-code or slot mismatch on the radio side, or an encrypted call. " : "")
+                        + "Please send this report.");
+                return v;
+            }
         }
         if (f.muted || !f.rxAudioOn) { v.add("Audio arrived, but SignalDeck's receive audio is muted or off (the media or car mode, or the speaker switched off)."); return v; }
         if (f.musicVolume == 0) { v.add("Audio arrived, but the phone's media volume is 0. Turn it up."); return v; }
-        v.add(String.format(Locale.US, "Audio arrived during the calls (level %s) and was played%s. If nothing is heard, check where the phone plays media%s and the media volume.",
-                f.rms < 0 ? "not measured" : String.format(Locale.US, "%.0f", f.rms), f.output.isEmpty() ? "" : " to " + f.output, f.output.contains("Bluetooth") ? " (a Bluetooth device is connected)" : ""));
+        double lvl = f.rms >= 0 ? f.rms : f.monRms;
+        v.add(String.format(Locale.US, "Audio arrived (level %s) and was played%s. If nothing is heard, check where the phone plays media%s and the media volume.",
+                lvl < 0 ? "not measured" : String.format(Locale.US, "%.0f", lvl), f.output.isEmpty() ? "" : " to " + f.output, f.output.contains("Bluetooth") ? " (a Bluetooth device is connected)" : ""));
         return v;
     }
 
@@ -136,17 +154,47 @@ public final class DmrAudioCheck {
             }
         }
 
+        // ---- analog: 10 s with the squelch held open (MON): receiver noise must arrive, whatever is on the air ----
+        String monStats = "";
+        if (ch != null && !ch.isDigital() && svc.isReady()) {
+            f.monTested = true;
+            boolean wasMon = svc.monitorOn();
+            File monFile = new File(c.getCacheDir(), "audio_check_static.wav");
+            ClipRecorder mc = null;
+            try {
+                if (!wasMon) svc.setMonitor(true);
+                Thread.sleep(800);                                                // the squelch opens
+                try { mc = new ClipRecorder(monFile, 10_000); svc.recordClip(mc, false); } catch (Throwable ignored) { }
+                long m0 = svc.rxAudioBytes(), mt = System.currentTimeMillis();
+                while (System.currentTimeMillis() - mt < 10_000) {
+                    Thread.sleep(1000);
+                    p.step(String.format(Locale.US, "Part 1 of 2: squelch held open (MON), %d of 10 s: the speaker should hiss (receiver noise) or play a station.", (System.currentTimeMillis() - mt) / 1000));
+                }
+                f.monPcm = svc.rxAudioBytes() - m0;
+            } finally {
+                if (mc != null) { svc.recordClip(null, false); mc.finish(); monStats = mc.stats(); f.monRms = mc.rms(); }
+                monFile.delete();
+                if (!wasMon) svc.setMonitor(false);
+            }
+            Thread.sleep(1500);                                                   // the squelch settles back before the minute
+        }
+
         // ---- the minute ----
         File clipFile = new File(c.getCacheDir(), "dmr_check.wav");
         ClipRecorder clip = null;
         try { clip = new ClipRecorder(clipFile, seconds * 1000); svc.recordClip(clip, true); } catch (Throwable ignored) { }   // only while something is received: just for the level, deleted after
         long t0 = System.currentTimeMillis(), pcm0 = svc.rxAudioBytes();
+        boolean rxAtStart = svc.rxActive(), prev = rxAtStart; long prevBytes = pcm0;
         StringBuilder rs = new StringBuilder(); int heard = 0;
         while (System.currentTimeMillis() - t0 < seconds * 1000L) {
             svc.pollRssi(); Thread.sleep(1000);
-            int s = (int) ((System.currentTimeMillis() - t0) / 1000); if (svc.rxActive()) heard++;
-            rs.append(svc.lastRssi()).append(svc.rxActive() ? "*" : "").append(' ');
-            p.step(String.format(Locale.US, "Listening on %s: %d of %d s · receiving %d s.\nAsk someone to talk on the talkgroup now.", ch == null ? "the channel" : ch.name, Math.min(s, seconds), seconds, heard));
+            boolean act = svc.rxActive(); long nb = svc.rxAudioBytes();
+            if (act || prev) f.pcmDuringCalls += Math.max(0, nb - prevBytes);   // audio in the seconds a reception was on (a continuous station like NOAA included)
+            prev = act; prevBytes = nb;
+            int s2 = (int) ((System.currentTimeMillis() - t0) / 1000); if (act) heard++;
+            rs.append(svc.lastRssi()).append(act ? "*" : "").append(' ');
+            p.step(String.format(Locale.US, "%s on %s: %d of %d s · receiving %d s.\n%s", f.monTested ? "Part 2 of 2: normal squelch" : "Listening", ch == null ? "the channel" : ch.name, Math.min(s2, seconds), seconds, heard,
+                    ch != null && ch.isDigital() ? "Ask someone to talk on the talkgroup now." : "A station on the air opens the squelch (NOAA weather always has one)."));
         }
         f.pcmTotal = svc.rxAudioBytes() - pcm0;
         String clipStats = "";
@@ -154,11 +202,11 @@ public final class DmrAudioCheck {
         clipFile.delete();                                                    // never kept: other people's voices
 
         StringBuilder ev = new StringBuilder("events (time, reception start/stop, caller reports; audio bytes so far):\n");
-        long startPcm = -1;
+        if (rxAtStart) { f.receptions++; ev.append("  +  0.0 s already receiving when the minute started\n"); }
         for (RadioService.DmrEvent e : svc.dmrEventsSince(t0)) {
             String t = String.format(Locale.US, "  +%5.1f s ", (e.ts - t0) / 1000.0);
-            if ("start".equals(e.kind)) { f.receptions++; startPcm = e.pcmBytes; ev.append(t).append("reception start").append('\n'); }
-            else if ("stop".equals(e.kind)) { if (startPcm >= 0) f.pcmDuringCalls += Math.max(0, e.pcmBytes - startPcm); startPcm = -1; ev.append(t).append("reception stop · ").append(e.pcmBytes - pcm0).append(" audio bytes so far\n"); }
+            if ("start".equals(e.kind)) { f.receptions++; ev.append(t).append("reception start").append('\n'); }
+            else if ("stop".equals(e.kind)) ev.append(t).append("reception stop · ").append(e.pcmBytes - pcm0).append(" audio bytes so far\n");
             else {
                 f.callerReports++;
                 boolean inList = e.type != 1 || rxList.contains(e.target);
@@ -167,14 +215,15 @@ public final class DmrAudioCheck {
                         .append(e.type == 1 && !inList ? " (TG not in the RX list)" : "").append('\n');
             }
         }
-        if (startPcm >= 0) f.pcmDuringCalls += Math.max(0, svc.rxAudioBytes() - startPcm);   // still receiving at the end
+        if (f.receptions == 0 && heard > 0) f.receptions = 1;                 // receiving was seen even without a start report
         f.receivedAnything = f.receptions > 0;
         if (f.receptions == 0 && f.callerReports == 0) ev.append("  (none)\n");
 
         StringBuilder out = new StringBuilder();
         out.append("verdict:\n"); for (String line : verdict(f)) out.append("  ").append(line).append('\n');
         out.append('\n').append(sys).append('\n').append(au).append('\n').append(chs).append('\n');
-        out.append(String.format(Locale.US, "minute: receiving %d of %d s · %d reception(s) · %d caller report(s) · audio %d bytes in total, %d during receptions%s\n",
+        if (f.monTested) out.append(String.format(Locale.US, "part 1, squelch held open (MON) 10 s: %d audio bytes%s\n", f.monPcm, monStats.isEmpty() ? "" : " · level: " + monStats));
+        out.append(String.format(Locale.US, (f.monTested ? "part 2, " : "") + "minute: receiving %d of %d s · %d reception(s) · %d caller report(s) · audio %d bytes in total, %d during receptions%s\n",
                 heard, seconds, f.receptions, f.callerReports, f.pcmTotal, f.pcmDuringCalls, clipStats.isEmpty() ? "" : " · level of what arrived while receiving: " + clipStats));
         out.append("signal each second (* = receiving): ").append(rs.toString().trim()).append('\n');
         out.append(ev).append('\n');

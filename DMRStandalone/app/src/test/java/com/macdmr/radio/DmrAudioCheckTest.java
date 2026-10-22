@@ -12,12 +12,22 @@ public class DmrAudioCheckTest {
 
     @Test public void customRomWithoutTheVendorClass() {
         DmrAudioCheck.Facts f = ok(); f.classMissing = true; f.binderPresent = true;
-        String s = v(f); assertTrue(s, s.contains("PrizeTinyService") && s.contains("analog included") && s.contains("still running"));
+        String s = v(f); assertTrue(s, s.contains("PrizeTinyService") && s.contains("analog and DMR alike") && s.contains("still running"));
         assertEquals(1, DmrAudioCheck.verdict(f).size());
     }
     @Test public void radioNeverReportedACall() {
         DmrAudioCheck.Facts f = ok(); f.receptions = 0; f.callerReports = 0; f.pcmDuringCalls = 0;
         assertTrue(v(f).contains("RX group list"));
+        f.digitalChannel = false; assertTrue(v(f).contains("NOAA"));
+    }
+    @Test public void analogStaticDecidesTheAudioPath() {
+        DmrAudioCheck.Facts f = ok(); f.digitalChannel = false; f.monTested = true; f.monPcm = 0;
+        String s = v(f); assertTrue(s, s.contains("no audio at all") && s.contains("squelch held open")); assertEquals(1, DmrAudioCheck.verdict(f).size());
+        f.monPcm = 160000; f.monRms = 5; assertTrue(v(f).contains("silent"));
+        f.monRms = 2500; f.receptions = 0; f.pcmDuringCalls = 0; f.rms = -1;      // the path works, just no station: still ends with the playback line
+        s = v(f); assertTrue(s, s.contains("The audio path works") && s.contains("No signal opened the squelch") && s.contains("was played"));
+        f.receptions = 1; f.pcmDuringCalls = 64000; f.rms = 900;                 // NOAA heard
+        s = v(f); assertTrue(s, s.contains("The audio path works") && s.contains("level 900"));
     }
     @Test public void callsButNoAudio() {
         DmrAudioCheck.Facts f = ok(); f.pcmDuringCalls = 0;
@@ -34,8 +44,8 @@ public class DmrAudioCheckTest {
         f = ok(); f.audioError = "startRx failed: x"; assertTrue(v(f).contains("did not start"));
     }
     @Test public void outsideTheList() {
-        DmrAudioCheck.Facts f = ok(); f.callsOutsideList = 1; f.digitalChannel = false;
-        String s = v(f); assertTrue(s.contains("analog") && s.contains("not in this channel's RX list"));
+        DmrAudioCheck.Facts f = ok(); f.callsOutsideList = 1;
+        String s = v(f); assertTrue(s.contains("not in this channel's RX list"));
     }
     @Test public void callerIdsAreShortened() {
         assertEquals("310xxxx", DmrAudioCheck.maskId(3101234));
