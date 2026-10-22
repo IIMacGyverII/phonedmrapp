@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-22 — SignalDeck 1.0.0-beta.9 (pre-release)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Owner's request: publish beta.9 (for the custom-ROM user's DMR audio check). `versionName` 1.0.0-beta.9, `versionCode` 108; GitHub pre-release `signaldeck-v1.0.0-beta.9` (`--prerelease --latest=false`, asset `SignalDeck-1.0.0-beta.9.apk`); contains everything since beta.8: DMR audio check, channel sharing (+CHIRP), nets near you, channel notes/nets, custom PTT key, web coverage per repeater and channels zones/favourites, map APRS toggle, DCS fix, backup zone fix. README links updated. | `DMRStandalone/app/build.gradle`, `README.md` | Clean release build, host tests pass, installed on the owner's Armor (reports 1.0.0-beta.9, radio ready). |
+
 ## 2026-10-22 — DMR audio check (diagnostics for "no audio on DMR", e.g. custom ROMs)
 
 | Backlog | Change | Files | Test |
