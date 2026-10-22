@@ -158,7 +158,36 @@ public class ChannelEditorView extends LinearLayout {
         LayoutParams hl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); hl.topMargin = (int) (2 * d); form.addView(locRow, hl);
         TextView how = Neo.text(c, "Pick a place in your maps app: Open Maps, find the place, then Share \u2192 SignalDeck. Or copy its coordinates or link and tap Paste.", Neo.DIM, 13, Neo.uiMedium(c));
         how.setLineSpacing(0, 1.1f); how.setPadding((int) (4 * d), (int) (8 * d), (int) (4 * d), 0); form.addView(how);
+
+        section(form, "Nets on this channel");
+        netsBox = new LinearLayout(c); netsBox.setOrientation(VERTICAL); form.addView(netsBox);
+        refreshNets();
         refreshGroups();
+    }
+
+    /** Nets the owner added to this channel: tap one to edit or delete it, Add a net for another. */
+    private LinearLayout netsBox;
+    private void refreshNets() {
+        final Context c = getContext(); float d = Theme.dp(c);
+        netsBox.removeAllViews();
+        if (isNew) { TextView t = Neo.text(c, "Save the channel first, then add the nets held on it.", Neo.DIM, 13, Neo.uiMedium(c)); t.setPadding((int) (4 * d), (int) (4 * d), (int) (4 * d), 0); netsBox.addView(t); return; }
+        for (final com.macdmr.radio.ham.NetFinder.Manual m : com.macdmr.radio.NetWatch.manualOn(c, ch.number)) {
+            LinearLayout r = new LinearLayout(c); r.setOrientation(VERTICAL); r.setBackground(Neo.rowCard(c)); r.setPadding((int) (12 * d), (int) (8 * d), (int) (12 * d), (int) (8 * d));
+            r.addView(Neo.text(c, m.name, Neo.AMBER_LIGHT, 15.5f, Neo.ui(c)));
+            r.addView(Neo.text(c, com.macdmr.radio.ham.NetFinder.when(m) + " · " + m.durationMin + " min" + (m.notes.isEmpty() ? "" : " · " + m.notes) + " · tap to edit", Neo.MUTED, 12.5f, Neo.uiMedium(c)));
+            r.setOnClickListener(v -> new android.app.AlertDialog.Builder(c).setTitle(m.name).setItems(new String[] { "Edit", "Delete" }, (dd, w) -> {
+                if (w == 0) NetsDialog.editManual(c, null, m, this::refreshNets);
+                else { com.macdmr.radio.NetWatch.deleteManual(c, m.id); refreshNets(); }
+            }).show());
+            LayoutParams rl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); rl.topMargin = (int) (6 * d);
+            netsBox.addView(r, rl);
+        }
+        TextView add = Neo.button(c, "Add a net", "plus", Neo.AMBER);
+        LayoutParams al = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); al.topMargin = (int) (8 * d);
+        netsBox.addView(add, al);
+        add.setOnClickListener(v -> { com.macdmr.radio.ham.NetFinder.Manual m = new com.macdmr.radio.ham.NetFinder.Manual(); m.channel = ch.number; NetsDialog.editManual(c, null, m, this::refreshNets); });
+        TextView how = Neo.text(c, "A net or get-together held on this channel. It shows in Nets near you (Intercom menu), with an optional reminder 10 minutes before.", Neo.DIM, 13, Neo.uiMedium(c));
+        how.setPadding((int) (4 * d), (int) (8 * d), (int) (4 * d), 0); netsBox.addView(how);
     }
 
     /** A position chosen elsewhere (shared from a maps app): fill the fields; Save keeps it. */

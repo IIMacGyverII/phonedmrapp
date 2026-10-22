@@ -53,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
             intercom.attach(svc); diagnostics.attach(svc); channels.attach(svc); contacts.attach(svc); messages.attach(svc); device.attach(svc);
             if (!svc.isReady() && svc.profile().verified) svc.bringUp();          // an untested profile waits for Device → Take over
             ui.post(rssiTick); ui.removeCallbacks(modeTick); ui.post(modeTick);
-            applyPendingLocation();
+            applyPendingLocation(); applyOpenNets();
             ui.postDelayed(MainActivity.this::announceCoverage, 3000);
             if (!svc.profile().verified && !getSharedPreferences("radio", MODE_PRIVATE).getBoolean("unsupportedShown", false)) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("unsupportedShown", true).apply(); show(4); device.offerChecks(true); }
         }
@@ -119,7 +119,7 @@ public class MainActivity extends AppCompatActivity {
             content.addView(editor, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         });
         show(0);
-        takeSharedLocation(getIntent());
+        takeSharedLocation(getIntent()); takeOpenNets(getIntent());
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
             ActivityCompat.requestPermissions(this, android.os.Build.VERSION.SDK_INT >= 33 ? new String[] { Manifest.permission.RECORD_AUDIO, Manifest.permission.POST_NOTIFICATIONS, Manifest.permission.ACCESS_FINE_LOCATION, "android.permission.READ_MEDIA_AUDIO" } : new String[] { Manifest.permission.RECORD_AUDIO, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.READ_EXTERNAL_STORAGE }, 1);
@@ -154,7 +154,13 @@ public class MainActivity extends AppCompatActivity {
     public static final String EXTRA_LAT = "com.macdmr.radio.lat", EXTRA_LON = "com.macdmr.radio.lon";
     private double[] pendingLocation;
 
-    @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); setIntent(i); takeSharedLocation(i); }
+    @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); setIntent(i); takeSharedLocation(i); takeOpenNets(i); }
+
+    /** A net reminder was tapped: open the Nets page (once the service is there). */
+    public static final String EXTRA_NETS = "com.macdmr.radio.nets";
+    private boolean pendingNets;
+    private void takeOpenNets(Intent i) { if (i == null || !i.getBooleanExtra(EXTRA_NETS, false)) return; i.removeExtra(EXTRA_NETS); pendingNets = true; applyOpenNets(); }
+    private void applyOpenNets() { if (!pendingNets || svc == null) return; pendingNets = false; com.macdmr.radio.ui.NetsDialog.show(this, svc); }
 
     /** A place shared from a maps app (ShareLocationActivity): into the open channel editor, or onto a channel you pick. */
     private void takeSharedLocation(Intent i) {
