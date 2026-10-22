@@ -138,6 +138,12 @@ input:not([type]), input[type=text] { padding: 10px 12px; border-radius: 10px; b
 @media (max-width: 900px) { .grid-side.wide { grid-template-columns: minmax(0, 1fr); } }
 .item .act { padding: 5px 10px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--cyan-light); font: 600 13px Rajdhani, sans-serif; cursor: pointer; }
 .item .act:hover { border-color: var(--cyan); }
+.chtools { gap: 8px; margin-top: 10px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.seg button { padding: 7px 11px; background: transparent; border: 0; color: var(--muted); font: 600 14px Rajdhani, sans-serif; cursor: pointer; }
+.seg button.on { background: rgba(25,211,255,.14); color: var(--cyan-light); }
+.item .star { border: 0; background: transparent; font-size: 20px; line-height: 1; color: var(--muted); cursor: pointer; padding: 4px 8px; }
+.item .star.on { color: var(--amber); }
 
 /* channel editor */
 .edform { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px 18px; margin-top: 14px; }

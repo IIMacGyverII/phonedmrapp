@@ -88,6 +88,8 @@
       <div class="grid-side wide">
         <div class="panel">
           <div class="row between"><span class="label">CHANNELS</span><div class="row"><button class="btn small-btn" id="chVfo">VFO</button><button class="btn small-btn" id="chNew">New channel</button></div></div>
+          <div class="row wrap chtools"><select id="chZone" aria-label="Zone shown in the list (the radio steps and scans in it)"></select>
+            <div class="seg" id="chFilter"><button type="button" data-f="0" class="on">All</button><button type="button" data-f="1">★ Favourites</button><button type="button" data-f="2">Analog</button><button type="button" data-f="3">DMR</button></div></div>
           <input id="chSearch" placeholder="Search name, frequency or number" class="search full" style="margin-top:10px">
           <div id="chList" class="list"></div>
         </div>

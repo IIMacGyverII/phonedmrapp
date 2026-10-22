@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-22 — SignalDeck Web channels: zone menu, favourites (stars) and filters; backups keep zones exact
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | Owner's requests. **Web Channels page:** a Zone menu on the list (switches the radio's zone, as the phone's zone button does; kept in sync when the zone changes elsewhere), filters All / ★ Favourites / Analog / DMR, and a star on every row that adds or removes the channel from the ★ Favourites zone (`/api/channel/star`; `/api/channels` rows carry `fav`). The favourites logic moved from `ChannelsView` into `ChannelStore` (`FAV_ZONE`, `favZone`, `favourites`, `setFavourite`), shared by the phone, the car and the web. **Backup fix:** Zones.csv names its channels (the module/CPS layout), so a zone holding a channel whose name repeats an earlier one restored to the wrong channel (the round-trip self-test reported one zone differing on the owner's phone). Backups now also write each zone's exact channel numbers into SignalDeck_Extras.csv; Restore uses them when the zone still lists the same channel names (so a zone edited in CPS still follows Zones.csv). Notes and nets in the extras file now follow the renumbering Restore applies (backup numbers → 1..n) instead of assuming the numbers are unchanged. | `ChannelStore.java`, `ui/ChannelsView.java`, `web/WebHost.java`, `assets/web/app.js`, `assets/web/index.html`, `assets/web/app.css`, `Backup.java`, `ui/HelpView.java` | Host tests pass. **Device + browser tested** (Armor 26 Ultra release, headless Chrome): zone menu 9 entries (ALL + 8) showing Weather; star channel → `fav` true, ★ filter 1 row, Analog 12; unstar; zone → Family (32 channels) → back to Weather; the test's empty ★ Favourites zone deleted (8 zones as before), zone/channel unchanged. Diagnostics → backup round trip: **ROUND TRIP OK**, "zones match (8)" (was "1 zone differs" before the fix). |
+
 ## 2026-10-22 — SignalDeck Web map: coverage per repeater with the terrain prediction; scripts never stale after an update
 
 | Backlog | Change | Files | Test |
