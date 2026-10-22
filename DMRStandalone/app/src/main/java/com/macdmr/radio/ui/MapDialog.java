@@ -109,8 +109,8 @@ public final class MapDialog {
         FrameLayout frame = new FrameLayout(c);
         frame.addView(map, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         LinearLayout tools = new LinearLayout(c); tools.setOrientation(LinearLayout.VERTICAL);
-        ImageView plus = floating("plus", "Zoom in"), minus = floating("minus", "Zoom out"), locate = floating("locate", "My position"), fit = floating("expand", "Show everything");
-        for (ImageView b : new ImageView[] { plus, minus, locate, fit }) { LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams((int) (46 * d), (int) (46 * d)); bl.bottomMargin = (int) (8 * d); tools.addView(b, bl); }
+        ImageView plus = floating("plus", "Zoom in"), minus = floating("minus", "Zoom out"), locate = floating("locate", "My position"), fit = floating("expand", "Show everything"), here = floating("repeaters", "Repeaters here");
+        for (ImageView b : new ImageView[] { plus, minus, locate, fit, here }) { LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams((int) (46 * d), (int) (46 * d)); bl.bottomMargin = (int) (8 * d); tools.addView(b, bl); }
         FrameLayout.LayoutParams tl = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.END | Gravity.TOP);
         tl.setMargins(0, (int) (12 * d), (int) (12 * d), 0);
         frame.addView(tools, tl);
@@ -145,6 +145,7 @@ public final class MapDialog {
         minus.setOnClickListener(v -> map.zoomBy(-1));
         locate.setOnClickListener(v -> { if (me != null) map.center(me.getLatitude(), me.getLongitude(), Math.max(map.zoom(), 11)); else Toast.makeText(c, "No position fix yet: turn on location", Toast.LENGTH_SHORT).show(); });
         fit.setOnClickListener(v -> fitVisible());
+        here.setOnClickListener(v -> repeatersHere());
         map.setOnSelect(this::showCard);
         map.setOnCell(this::showCellCard);
 
@@ -221,8 +222,37 @@ public final class MapDialog {
                 }
             } catch (Throwable ignored) { }
             final int frp = rp;
-            ui.post(() -> publish(ms, fst, fch, frp));
+            ui.post(() -> { if (!repeatersMoved) publish(ms, fst, fch, frp); });   // unless Repeaters here was used meanwhile
         }, "map-load").start();
+    }
+
+    /** The repeaters around the middle of the map (wherever it was moved), in place of those around the phone. */
+    private volatile boolean repeatersMoved;
+    private void repeatersHere() {
+        repeatersMoved = true;
+        final double lat = map.centerLat(), lon = map.centerLon();
+        final double mi = c.getSharedPreferences("repeaters", Context.MODE_PRIVATE).getInt("radiusMi", 30);
+        status.setText("Finding repeaters around the middle of the map\u2026");
+        new Thread(() -> {
+            final List<MapView.Marker> reps = new ArrayList<>();
+            try {
+                for (Repeater r : new RepeaterService(c, svc.store()).nearby(lat, lon, mi * 1.609344, false, new StringBuilder())) {
+                    if (!r.hasCoords) continue;
+                    reps.add(new MapView.Marker(r.lat, r.lon, r.dmr ? MapView.REPEATER_DMR : MapView.REPEATER_FM, (r.callsign == null ? "?" : r.callsign) + " " + String.format(Locale.US, "%.3f", r.rxHz / 1e6), r));
+                }
+            } catch (Throwable ignored) { }
+            ui.post(() -> {
+                List<MapView.Marker> ms = new ArrayList<>(); for (MapView.Marker m : all) if (m.kind != MapView.REPEATER_FM && m.kind != MapView.REPEATER_DMR) ms.add(m);
+                ms.addAll(reps);
+                publish(ms, counts[0], counts[2], reps.size());
+                if (!map.isVisible(MapView.REPEATER_FM)) {
+                    map.setVisible(MapView.REPEATER_FM, true); map.setVisible(MapView.REPEATER_DMR, true); Neo.pillStyle(pills[2], true, Neo.CYAN);
+                    c.getSharedPreferences("map", Context.MODE_PRIVATE).edit().putBoolean("showRepeaters", true).apply();
+                }
+                status.setText(reps.isEmpty() ? String.format(Locale.US, "No repeaters known within %.0f mi of the middle of the map", mi)
+                        : String.format(Locale.US, "%d repeaters within %.0f mi of the middle of the map", reps.size(), mi));
+            });
+        }, "map-repeaters-here").start();
     }
 
     private void publish(List<MapView.Marker> ms, int st, int ch, int rp) {

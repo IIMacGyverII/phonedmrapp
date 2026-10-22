@@ -85,14 +85,16 @@ async function loadMap() {
 }
 function visibleMarks() { return M.marks.filter(m => (m.kind === 'aprs' ? $('mapAprs').checked : m.kind === 'rpt' ? $('mapRpt').checked : $('mapCh').checked)); }
 /** Repeaters near the phone (the phone's catalog: RadioID, BrandMeister, Hearham) as a layer. */
-async function loadRepeaterLayer(force) {
+async function loadRepeaterLayer(force, here) {
   M.marks = M.marks.filter(m => m.kind !== 'rpt');
   if (!$('mapRpt').checked) { drawMap(); return; }
   $('mapCount').textContent = 'LOOKING FOR REPEATERS…';
   try {
-    const j = await api('repeaters' + (force ? '?force=1' : ''));
+    const q = [force ? 'force=1' : '', here ? 'lat=' + here.lat.toFixed(5) + '&lon=' + here.lon.toFixed(5) : ''].filter(Boolean).join('&');
+    const j = await api('repeaters' + (q ? '?' + q : ''));
     for (const r of j.repeaters) if (r.lat != null) M.marks.push({ kind: 'rpt', lat: r.lat, lon: r.lon, name: r.callsign + ' ' + mhz(r.rxHz), r });
-    $('mapCount').textContent = M.marks.filter(m => m.kind === 'aprs').length + ' STATIONS · ' + M.marks.filter(m => m.kind === 'ch').length + ' CHANNELS · ' + j.repeaters.length + ' REPEATERS (' + j.radiusMi + ' MI)';
+    $('mapCount').textContent = M.marks.filter(m => m.kind === 'aprs').length + ' STATIONS · ' + M.marks.filter(m => m.kind === 'ch').length + ' CHANNELS · ' + j.repeaters.length + ' REPEATERS (' + j.radiusMi + ' MI ' + (j.around === 'map' ? 'AROUND THE MAP CENTRE' : 'AROUND THE PHONE') + ')';
+    if (here && !j.repeaters.length) toast('No repeaters known within ' + j.radiusMi + ' miles of the middle of the map');
     if (j.status) toast(j.status);
   } catch (e) { toast(e.message); }
   drawMap();
@@ -275,6 +277,7 @@ function showMark(m) {
   $('mapCovRpt').onchange = () => { const k = $('mapCovRpt').value; if (!k) { M.covFocus = null; if ($('mapCov').value) loadCoverage(true); return; } focusCoverage({ key: k }); };
   $('mapPred').onchange = () => loadCoverage(false);
   $('mapFit').onclick = () => { if ($('mapCov').value && ((M.cells || []).length || (M.pred || []).length)) fitCoverage(); else fitMap(); }; $('mapAprs').onchange = drawMap; $('mapCh').onchange = drawMap; $('mapRpt').onchange = () => loadRepeaterLayer(false);
+  $('mapRptHere').onclick = () => { $('mapRpt').checked = true; hideCard(); loadRepeaterLayer(false, { lat: M.lat, lon: M.lon }); };
   window.addEventListener('resize', () => { if (S.page === 'map') drawMap(); });
 })();
 
