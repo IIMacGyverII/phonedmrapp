@@ -294,6 +294,38 @@ public final class WebHost {
             return e.getMessage() == null ? e.toString() : e.getMessage();
         }
     }
+    /** A coverage square for the browser, coloured as the phone's map draws it (predicted squares fainter, underneath). */
+    private static JSONObject cellJson(com.macdmr.radio.coverage.CoverageStore.Cell c, boolean tx, boolean predicted) throws Exception {
+        int col; double alpha;
+        if (predicted) { col = tx ? 0xFF2BEA7A : com.macdmr.radio.coverage.CoverageMath.signalColor(c.value); alpha = tx ? (0x22 + Math.min(20, c.value) * 4) / 255.0 : 0x4C / 255.0; }
+        else { col = tx ? (c.keyed > 0 ? 0xFF2BEA7A : 0xFFFF5468) : com.macdmr.radio.coverage.CoverageMath.signalColor(c.value); alpha = 0xA8 / 255.0; }
+        return new JSONObject().put("s", c.s).put("w", c.w).put("n", c.n).put("e", c.e).put("value", c.value).put("count", c.count).put("keyed", c.keyed).put("failed", c.failed)
+                .put("color", String.format("#%06X", col & 0xFFFFFF)).put("alpha", Math.round(alpha * 100) / 100.0).put("predicted", predicted)
+                .put("sunits", tx ? "" : com.macdmr.radio.coverage.CoverageMath.sUnits(c.value));
+    }
+
+    /** One terrain prediction at a time, run in the background (it can download terrain); the browser polls for it. Same settings as the phone's map. */
+    private static final class PredJob { String id; volatile String status = "starting\u2026"; volatile com.macdmr.radio.coverage.Prediction.Result res; volatile String err; volatile boolean done; volatile long doneAt; }
+    private volatile PredJob predJob;
+    private synchronized PredJob prediction(String key, double lat, double lon, double hz) {
+        android.content.SharedPreferences cp = svc.getSharedPreferences("coverage", Context.MODE_PRIVATE);
+        final double ant = cp.getInt("ant_" + key, 0), erp = cp.getInt("pwr_" + key, 0), rad = cp.getInt("predRangeMi", 0) * 1609.344;
+        android.location.Location me = svc.lastKnownLocation();
+        final double meLat = me != null ? me.getLatitude() : Double.NaN, meLon = me != null ? me.getLongitude() : Double.NaN;
+        String id = key + "|" + ant + "|" + erp + "|" + rad;
+        PredJob j = predJob; long age = j == null ? 0 : System.currentTimeMillis() - j.doneAt;
+        if (j != null && j.id.equals(id) && (!j.done || (j.err == null && age < 120_000) || (j.err != null && age < 60_000))) return j;   // as on the phone: re-calibrated with new readings at most every 2 minutes; a failure retried after a minute
+        final PredJob nj = new PredJob(); nj.id = id; predJob = nj;
+        new Thread(() -> {
+            try {
+                nj.res = com.macdmr.radio.coverage.Prediction.run(svc, svc.coverage().store(), key, lat, lon, hz, ant, erp, rad, meLat, meLon, t -> { nj.status = t; return predJob == nj; });
+                nj.status = nj.res == null ? "stopped" : "done";
+            } catch (Throwable t) { nj.err = t.getMessage() == null ? t.toString() : t.getMessage(); nj.status = "failed"; }
+            nj.doneAt = System.currentTimeMillis(); nj.done = true;
+        }, "web-prediction").start();
+        return nj;
+    }
+
     private static JSONObject toneLists() throws Exception {
         JSONArray c = new JSONArray(); for (int i = 0; i < com.macdmr.radio.dsp.ToneTable.CTCSS.length; i++) c.put(com.macdmr.radio.dsp.ToneTable.ctcssLabel(i));
         JSONArray d = new JSONArray(); for (int i = 0; i < com.macdmr.radio.dsp.ToneTable.DCS_COUNT; i++) d.put("DCS D" + com.macdmr.radio.dsp.ToneTable.dcsCode(i));   // the index the MCU gets; N/I comes from the type
@@ -350,6 +382,7 @@ public final class WebHost {
         for (String q : svc.getSharedPreferences("radio", Context.MODE_PRIVATE).getString("quickReplies", DEFAULT_QUICK).split("\n")) if (!q.trim().isEmpty()) out.add(q.trim());
         return out;
     }
+    private static double parseD(String s, double def) { try { return s == null || s.isEmpty() ? def : Double.parseDouble(s); } catch (Exception e) { return def; } }
     private static int parse(String s, int def) { try { return s == null ? def : Integer.parseInt(s); } catch (Exception e) { return def; } }
     private static JSONObject checkInJson(com.macdmr.radio.ham.NetStore.CheckIn k) throws Exception {
         return new JSONObject().put("id", k.id).put("ts", k.ts).put("call", k.call).put("name", k.name).put("notes", k.notes).put("traffic", k.traffic).put("late", k.late).put("out", k.out);
@@ -937,16 +970,32 @@ public final class WebHost {
                 }
                 return ok(new JSONObject().put("state", pe.terminalState()).put("transcript", pe.transcriptText()).put("accept", pe.acceptConnections()).put("callsignSet", pe.callsignSet()).put("webTx", allowTx()));
             }
-            case "/api/coverage": {                                             // measured coverage cells: rx (median signal) or tx (keyed / no reply)
+            case "/api/coverage": {                                             // coverage for all repeaters or one: measured squares (rx median signal / tx keyed or not), the repeaters with data, and the terrain prediction
                 boolean tx = "tx".equals(r.param("layer"));
                 com.macdmr.radio.coverage.CoverageStore st = svc.coverage().store();
-                JSONArray a = new JSONArray();
-                for (com.macdmr.radio.coverage.CoverageStore.Cell c : tx ? st.txCells(null) : st.rxCells(null)) {
-                    int col = tx ? (c.keyed > 0 ? 0xFF2BEA7A : 0xFFFF5468) : com.macdmr.radio.coverage.CoverageMath.signalColor(c.value);
-                    a.put(new JSONObject().put("s", c.s).put("w", c.w).put("n", c.n).put("e", c.e).put("value", c.value).put("count", c.count).put("keyed", c.keyed).put("failed", c.failed)
-                            .put("color", String.format("#%06X", col & 0xFFFFFF)));
+                String key = r.param("key"); if (key != null && key.isEmpty()) key = null;
+                double fLat = parseD(r.param("lat"), Double.NaN), fLon = parseD(r.param("lon"), Double.NaN), fHz = parseD(r.param("hz"), 0);
+                String fName = r.param("name");
+                if (key == null && fHz > 0 && !Double.isNaN(fLat)) key = com.macdmr.radio.coverage.CoverageMath.repeaterKey((int) fHz, fLat, fLon);   // a repeater from the map, measured or not
+                JSONArray reps = new JSONArray();
+                for (com.macdmr.radio.coverage.CoverageStore.Repeater x : st.repeaters()) {
+                    reps.put(new JSONObject().put("key", x.key).put("name", x.name).put("rxHz", x.rxHz).put("lat", x.lat).put("lon", x.lon).put("rx", x.rxCount).put("tx", x.txCount));
+                    if (x.key.equals(key)) { if (Double.isNaN(fLat)) { fLat = x.lat; fLon = x.lon; } if (fHz <= 0) fHz = x.rxHz; if (fName == null || fName.isEmpty()) fName = x.name; }
                 }
-                return ok(new JSONObject().put("cells", a).put("layer", tx ? "tx" : "rx").put("logging", svc.coverage().enabled()));
+                JSONArray a = new JSONArray();
+                for (com.macdmr.radio.coverage.CoverageStore.Cell c : tx ? st.txCells(key) : st.rxCells(key)) a.put(cellJson(c, tx, false));
+                JSONObject out = new JSONObject().put("cells", a).put("layer", tx ? "tx" : "rx").put("logging", svc.coverage().enabled()).put("repeaters", reps).put("key", key == null ? "" : key);
+                if (key != null && "1".equals(r.param("predict")) && !Double.isNaN(fLat) && fHz > 0) {
+                    PredJob j = prediction(key, fLat, fLon, fHz);
+                    out.put("predictStatus", j.status).put("predictDone", j.done);
+                    if (j.err != null) out.put("predictError", j.err);
+                    if (j.res != null) {
+                        JSONArray pa = new JSONArray(); for (com.macdmr.radio.coverage.CoverageStore.Cell c : tx ? j.res.tx : j.res.rx) pa.put(cellJson(c, tx, true));
+                        out.put("predicted", pa).put("predictSummary", j.res.summary(!tx));
+                    }
+                }
+                if (key != null) out.put("name", fName == null ? "" : fName).put("lat", fLat).put("lon", fLon);
+                return ok(out);
             }
             case "/api/repeaters": {                                            // nearby repeaters (RadioID / BrandMeister / Hearham, cached by the phone)
                 android.location.Location me = svc.lastKnownLocation(); if (me == null) return WebServer.Response.error(409, "No position fix on the phone yet");

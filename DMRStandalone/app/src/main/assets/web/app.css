@@ -176,6 +176,8 @@ input:not([type]), input[type=text] { padding: 10px 12px; border-radius: 10px; b
 .mk.ch { background: var(--cyan); box-shadow: 0 0 10px var(--cyan); border-radius: 3px; }
 .mk.rpt { background: var(--violet); box-shadow: 0 0 10px var(--violet); transform: translate(-50%, -50%) rotate(45deg); border-radius: 2px; }
 .cov { position: absolute; opacity: .66; cursor: pointer; min-width: 3px; min-height: 3px; }
+.predcv { position: absolute; left: 0; top: 0; pointer-events: none; }   /* predicted squares: tens of thousands, so one canvas */
+.covnote { margin: 6px 2px 8px; color: var(--muted); font-size: 14px; } .covnote b { color: var(--violet); }
 .cov:hover { outline: 2px solid #fff; }
 .mapcard .tgs { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 8px 0; max-height: 160px; overflow-y: auto; font-size: 14px; }
 .mk-label { position: absolute; transform: translate(10px, -50%); font: 600 13px Rajdhani, sans-serif; color: var(--text); text-shadow: 0 0 3px #000, 0 0 6px #000; white-space: nowrap; pointer-events: none; }

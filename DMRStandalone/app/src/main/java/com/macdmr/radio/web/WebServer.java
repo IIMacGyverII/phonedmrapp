@@ -164,6 +164,9 @@ public final class WebServer {
                 || (a.getAddress().length == 16 && (a.getAddress()[0] & 0xFE) == 0xFC);      // IPv6 unique local
     }
 
+    /** Changes whenever the app process starts (every update restarts it): the version tag on script and style URLs. */
+    private static final String ASSET_STAMP = Long.toString(System.currentTimeMillis() / 1000, 36);
+
     Response route(Request r) {
         try {
             if (r.path.equals("/api/login") && "POST".equals(r.method)) return login(r);
@@ -178,6 +181,8 @@ public final class WebServer {
             byte[] b = assets.read(p);
             if (b == null) { b = assets.read("index.html"); p = "index.html"; }       // the app routes itself
             if (b == null) return Response.error(404, "not found");
+            if (p.equals("index.html"))      // scripts and styles are cached for 5 minutes: a new app version gets new URLs, so a browser never mixes old and new
+                b = new String(b, java.nio.charset.StandardCharsets.UTF_8).replaceAll("(src|href)=\"([A-Za-z0-9_-]+\\.(?:js|css))\"", "$1=\"$2?v=" + ASSET_STAMP + "\"").getBytes(java.nio.charset.StandardCharsets.UTF_8);
             Response x = Response.bytes(mime(p), b);
             x.headers.put("Cache-Control", p.equals("index.html") ? "no-cache" : "max-age=300");
             return x;
