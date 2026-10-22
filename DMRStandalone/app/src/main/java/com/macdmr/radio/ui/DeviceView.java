@@ -179,7 +179,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         LinearLayout restore = Neo.tile(c, "restore", Neo.AMBER, "Restore", "From a backup folder");
         LinearLayout reimport = Neo.tile(c, "import", Neo.AMBER, "Re-import", "Channels from the stock app");
         radioIdTile = Neo.tile(c, "globe", Neo.CYAN, "RadioID list", "");
-        LinearLayout report = Neo.tile(c, "report", Neo.VIOLET, "Device report", "For unsupported phones");
+        LinearLayout report = Neo.tile(c, "report", Neo.VIOLET, "Device report", "Support reports and checks");
         LinearLayout upd = Neo.tile(c, "update", Neo.CYAN, "Updates", "Check GitHub releases");
         LinearLayout help = Neo.tile(c, "help", Neo.GREEN, "Help & how-to", "Every screen explained");
         LinearLayout diag = Neo.tile(c, "diag", Neo.AMBER, "Diagnostics", "Live protocol log");
@@ -328,7 +328,8 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
     private void reportMenu() {
         final Context c = getContext();
         new android.app.AlertDialog.Builder(c).setTitle("Device report")
-                .setItems(new String[] { "Help support this phone (step by step)", "Generate device report", "Share last report", "Capture the PTT key (10 s)", "Radio probe (root)", "Open a GitHub issue with the facts filled in", "What is in it?" }, (dd, w) -> {
+                .setItems(new String[] { "Help support this phone (step by step)", "Generate device report", "Share last report", "Capture the PTT key (10 s)", "Radio probe (root)", "Open a GitHub issue with the facts filled in", "What is in it?", "DMR audio check (1 minute)" }, (dd, w) -> {
+                    if (w == 7) { dmrAudioCheckIntro(); return; }
                     if (w == 0) supportMenu();
                     else if (w == 1) generateReport();
                     else if (w == 2) shareReport();
@@ -472,6 +473,34 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
                 });
             }, "ptt-learn").start();
         });
+    }
+
+    /** No audio on DMR: one minute on the current channel, a verdict, and everything that led to it in the report. */
+    private void dmrAudioCheckIntro() {
+        final Context c = getContext(); if (svc == null) return;
+        new android.app.AlertDialog.Builder(c).setTitle("DMR audio check")
+                .setMessage("For \u201Cno audio on DMR\u201D. SignalDeck listens for one minute on the current channel and records what the radio reports (receptions, who called which talkgroup), whether audio arrived from the phone's radio audio service and how loud it was, and how the phone plays it. It also checks the phone's system for the vendor audio service, which custom ROMs may lack.\n\n"
+                        + "1. On the Intercom page, choose the DMR channel where you expect calls.\n2. Tap Start, and have someone talk on that talkgroup during the minute (or wait for traffic).\n\n"
+                        + "Nothing transmits. The audio is only measured, never kept, and caller IDs are shortened in the report. At the end you can share the report." + (svc.isReady() ? "" : "\n\nSignalDeck does not have the radio yet: Take over first (the system checks still run)."))
+                .setPositiveButton("Start", (dd, w) -> runDmrAudioCheck()).setNegativeButton("Later", null).show();
+    }
+    private void runDmrAudioCheck() {
+        final Context c = getContext(); final com.macdmr.radio.RadioService s = svc; if (s == null) return;
+        final android.app.AlertDialog pd = new android.app.AlertDialog.Builder(c).setTitle("DMR audio check").setMessage("Starting\u2026").setCancelable(false).create(); pd.show();
+        new Thread(() -> {
+            String r;
+            try { r = com.macdmr.radio.DmrAudioCheck.run(c, s, s.isReady() ? 60 : 1, t -> post(() -> pd.setMessage(t))); }
+            catch (Throwable t) { r = "failed: " + t + "\n"; }
+            final String result = r;
+            com.macdmr.radio.DeviceReport.append("DMR audio check", result);
+            post(() -> {
+                pd.dismiss();
+                int a = result.indexOf("verdict:\n"), b = result.indexOf("\n\n", Math.max(0, a));
+                String v = a >= 0 && b > a ? result.substring(a + 9, b).trim() : result.substring(0, Math.min(600, result.length()));
+                new android.app.AlertDialog.Builder(c).setTitle("DMR audio check").setMessage(v + "\n\nThe full details are in the device report (Download/DMR/DeviceReport).")
+                        .setPositiveButton("Share the report", (d2, w2) -> shareReport()).setNegativeButton("Close", null).show();
+            });
+        }, "dmr-audio-check").start();
     }
 
     private void listenCheckIntro() {
