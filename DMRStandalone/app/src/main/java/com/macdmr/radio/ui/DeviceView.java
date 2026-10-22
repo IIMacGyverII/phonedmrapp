@@ -28,6 +28,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
     private final View linkDot;
     private final ImageView heroIcon;
     private final TextView takeOver, handBack, reportNow;
+    private Neo.NeonSwitch customPttSw; private TextView customPttSub;
     private final Neo.NeonSwitch ownAtBoot, voiceSw, hwPttSw, volPttSw, scanSqSw, styleSw, animSw, covSw, carMicSw, carCovSw, wheelSw, carScreenSw;
     private TextView nextTalkValue, wheelMicValue, voxValue;
     private final LinearLayout radioIdTile;
@@ -96,6 +97,12 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         addRow(set, Neo.switchRow(c, "power", Neo.GREEN, "Own the radio at boot", "Otherwise the stock app is restored after a reboot", ownAtBoot));
         addRow(set, Neo.switchRow(c, "ptt", Neo.AMBER, "Side PTT key", "The phone's hardware push-to-talk button transmits", hwPttSw));
         addRow(set, Neo.switchRow(c, "volume", Neo.AMBER, "Volume-up transmits", "While the Intercom page is open", volPttSw));
+        customPttSw = sw();
+        LinearLayout keyRow = Neo.switchRow(c, "ptt", Neo.AMBER, "Custom PTT key", "Not set. Tap to learn a button: press the one you want", customPttSw);
+        customPttSub = (TextView) ((LinearLayout) keyRow.getChildAt(1)).getChildAt(1);
+        keyRow.setOnClickListener(v -> learnKeySheet());                      // the row learns; the switch turns the learned key on and off
+        customPttSw.setOnChange(on -> { if (on && com.macdmr.radio.CustomPttKey.saved(c) == null) { customPttSw.setChecked(false); learnKeySheet(); return; } com.macdmr.radio.CustomPttKey.setEnabled(c, on); if (svc != null) svc.customPttChanged(); });
+        addRow(set, keyRow);
         addRow(set, Neo.switchRow(c, "softsq", Neo.CYAN, "Soft SQ while scanning", "Every analog channel, each at its own level", scanSqSw));
         addRow(set, Neo.switchRow(c, "voice", Neo.VIOLET, "Voice announcements", "Channel changes, caller names, keyword alerts", voiceSw));
         addRow(set, rogerRow(c));
@@ -405,6 +412,68 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
 
     private void locked(String why) { android.widget.Toast.makeText(getContext(), why, android.widget.Toast.LENGTH_LONG).show(); }
 
+    // ---- Custom PTT key: learn a button by pressing it, with the conflict check ----
+    private void refreshCustomPtt() {
+        if (customPttSw == null) return;
+        Context c = getContext(); com.macdmr.radio.CustomPttKey.Key k = com.macdmr.radio.CustomPttKey.saved(c);
+        customPttSw.setChecked(com.macdmr.radio.CustomPttKey.enabled(c));
+        customPttSub.setText(k == null ? "Not set. Tap to learn a button: press the one you want" : com.macdmr.radio.CustomPttKey.friendly(k.device, k.code) + " · tap to learn another");
+    }
+
+    private void learnKeySheet() {
+        final Context c = getContext(); float d = Theme.dp(c);
+        if (svc == null) return;
+        final com.macdmr.radio.CustomPttKey.Key had = com.macdmr.radio.CustomPttKey.saved(c);
+        LinearLayout box = Neo.sheetBody(c, "Learn a PTT key");
+        box.addView(Neo.sheetHint(c, "For a button that isn't the phone's own PTT key: another side key, a wired headset's button, a Bluetooth PTT button, a volume key. Tap Start, then press and hold the button for about two seconds and let go. Nothing transmits while learning.\n\nSignalDeck then checks the button: that it reports being held, that it isn't the power, home or back key, the touch screen or the fingerprint sensor, and whether pressing it also opened another app or does something else on the phone."
+                + (had == null ? "" : "\n\nNow: " + com.macdmr.radio.CustomPttKey.friendly(had.device, had.code) + ".")));
+        final TextView status = Neo.label(c, "", Neo.AMBER_LIGHT, 16, true); status.setPadding(0, (int) (8 * d), 0, (int) (4 * d)); status.setVisibility(GONE);
+        box.addView(status);
+        final LinearLayout found = new LinearLayout(c); found.setOrientation(VERTICAL); box.addView(found);
+        final TextView start = Neo.button(c, "Start", "ptt", Neo.AMBER), use = Neo.button(c, "Use this key", "check", Neo.GREEN), forget = Neo.button(c, "Forget the learned key", "close", Neo.RED);
+        LayoutParams bl = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); bl.setMargins(0, (int) (10 * d), 0, 0);
+        box.addView(start, bl); box.addView(use, new LayoutParams(bl)); box.addView(forget, new LayoutParams(bl));
+        use.setVisibility(GONE); forget.setVisibility(had == null ? GONE : VISIBLE);
+        final android.app.Dialog dlg = Neo.showSheet(c, box);
+        final com.macdmr.radio.CustomPttKey.Learned[] last = { null };
+        forget.setOnClickListener(v -> {
+            c.getSharedPreferences("radio", Context.MODE_PRIVATE).edit().remove("pttKeyCode").remove("pttKeyDevice").remove("pttKeyAndroid").putBoolean("pttKeyOn", false).apply();
+            if (svc != null) svc.customPttChanged(); refreshCustomPtt(); dlg.dismiss();
+        });
+        use.setOnClickListener(v -> {
+            com.macdmr.radio.CustomPttKey.Learned l = last[0]; if (l == null || l.key == null) return;
+            com.macdmr.radio.CustomPttKey.save(c, l.key);
+            if (svc != null) svc.customPttChanged();
+            refresh(); dlg.dismiss();
+            android.widget.Toast.makeText(c, l.label() + " now transmits" + (svc != null && !svc.profile().verified ? " (once this phone's profile is tested)" : ""), android.widget.Toast.LENGTH_LONG).show();
+        });
+        start.setOnClickListener(v -> {
+            start.setVisibility(GONE); use.setVisibility(GONE); forget.setVisibility(GONE); found.removeAllViews();
+            status.setVisibility(VISIBLE); status.setTextColor(Neo.AMBER_LIGHT); status.setText("Starting…");
+            final com.macdmr.radio.RadioService s = svc;
+            s.setPttLearning(true);
+            new Thread(() -> {
+                com.macdmr.radio.CustomPttKey.Learned l;
+                try { l = com.macdmr.radio.CustomPttKey.learn(c, s.profile(), 10, t -> post(() -> status.setText(t))); }
+                finally { s.setPttLearning(false); }
+                final com.macdmr.radio.CustomPttKey.Learned r = l;
+                post(() -> {
+                    last[0] = r;
+                    start.setText("Try again"); start.setVisibility(VISIBLE); forget.setVisibility(com.macdmr.radio.CustomPttKey.saved(c) == null ? GONE : VISIBLE);
+                    if (r.error != null) { status.setTextColor(Neo.AMBER_LIGHT); status.setText(r.error); return; }
+                    boolean blocked = com.macdmr.radio.CustomPttKey.blocked(r.findings);
+                    status.setTextColor(blocked ? Neo.RED : r.findings.isEmpty() ? Neo.GREEN_LIGHT : Neo.AMBER_LIGHT);
+                    status.setText(r.label() + (blocked ? ": can't be used" : r.findings.isEmpty() ? ": no conflicts found" : ": usable, but note"));
+                    for (com.macdmr.radio.CustomPttKey.Finding f : r.findings) {
+                        TextView t = Neo.label(c, (f.block ? "⛔  " : "⚠  ") + f.text, f.block ? 0xFFFFB3BC : Neo.TEXT_SOFT, 13.5f, false);
+                        t.setPadding(0, (int) (6 * d), 0, 0); found.addView(t);
+                    }
+                    if (!blocked) { use.setText(r.findings.isEmpty() ? "Use this key" : "Use it anyway"); use.setVisibility(VISIBLE); }
+                });
+            }, "ptt-learn").start();
+        });
+    }
+
     private void listenCheckIntro() {
         final Context c = getContext(); if (svc == null) return;
         String need = svc.isReady() ? "" : "\n\nSignalDeck does not have the radio yet: tap Take over on the Device page first.";
@@ -703,6 +772,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         if (rogerValue != null) rogerValue.setText(com.macdmr.radio.RadioService.ROGER_NAMES[svc.rogerStyle()]);
         ownAtBoot.setChecked(svc.ownAtBoot()); voiceSw.setChecked(svc.voiceOn()); hwPttSw.setChecked(svc.hwPtt()); scanSqSw.setChecked(svc.scanSoftSq());
         volPttSw.setChecked(c.getSharedPreferences("radio", Context.MODE_PRIVATE).getBoolean("volPtt", false));
+        refreshCustomPtt();
         styleSw.setChecked(IntercomView.newLook(c)); animSw.setChecked(IntercomView.animatedPanel(c)); covSw.setChecked(svc.coverage().enabled()); carMicSw.setChecked(svc.carMic()); carCovSw.setChecked(svc.coverageInCar()); wheelSw.setChecked(svc.wheelTalk()); nextTalkValue.setText(com.macdmr.radio.RadioService.NEXT_TALK_NAMES[svc.nextTalkMode()]);
         wheelMicValue.setText(com.macdmr.radio.RadioService.WHEEL_MIC_NAMES[Math.max(0, Math.min(1, svc.wheelMic()))]); voxValue.setText(com.macdmr.radio.RadioService.VOX_NAMES[Math.max(0, Math.min(3, svc.voxStop()))]); carScreenSw.setChecked(svc.carControlsScreen());
         ((TextView) radioIdTile.findViewWithTag("sub")).setText(svc.radioId().status());

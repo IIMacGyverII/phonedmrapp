@@ -297,6 +297,8 @@ public class MainActivity extends AppCompatActivity {
     private boolean volPttDown;
     @Override public boolean dispatchKeyEvent(android.view.KeyEvent e) {
         java.util.function.Consumer<android.view.KeyEvent> cap = DeviceReport.keyCapture; if (cap != null) { cap.accept(e); return true; }
+        java.util.function.Consumer<android.view.KeyEvent> learn = CustomPttKey.activityKey; if (learn != null) { learn.accept(e); return true; }
+        if (svc != null && svc.customPttConsumes(e.getKeyCode())) return true;     // the learned PTT key: keyed from the input device, not here
         if (e.getKeyCode() == android.view.KeyEvent.KEYCODE_VOLUME_UP && tab == 0 && svc != null && getSharedPreferences("radio", MODE_PRIVATE).getBoolean("volPtt", false)) {
             if (e.getAction() == android.view.KeyEvent.ACTION_DOWN) { if (e.getRepeatCount() == 0 && !volPttDown) { volPttDown = true; svc.ptt(true); } return true; }
             if (e.getAction() == android.view.KeyEvent.ACTION_UP) { if (volPttDown) { volPttDown = false; svc.ptt(false); } return true; }
