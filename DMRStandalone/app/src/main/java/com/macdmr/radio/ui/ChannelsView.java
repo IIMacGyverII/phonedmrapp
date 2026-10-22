@@ -58,7 +58,9 @@ public class ChannelsView extends LinearLayout implements RadioService.Listener 
         add.setOnClickListener(v -> { if (host != null) host.openEditor(null, true); });
         ImageView mapBtn = Neo.iconButton(c, "map", Neo.CYAN, "Map");
         mapBtn.setOnClickListener(v -> MapDialog.show(c, svc));
-        Neo.addAction(header, mapBtn); Neo.addAction(header, nearby); Neo.addAction(header, zone); Neo.addAction(header, add);
+        ImageView shareBtn = Neo.iconButton(c, "send", Neo.CYAN, "Share or import channels");
+        shareBtn.setOnClickListener(v -> { if (svc != null) CodeplugDialog.menu(c, svc, this::reload); });
+        Neo.addAction(header, shareBtn); Neo.addAction(header, mapBtn); Neo.addAction(header, nearby); Neo.addAction(header, zone); Neo.addAction(header, add);
         addView(header);
 
         // search field with a line icon
@@ -151,7 +153,7 @@ public class ChannelsView extends LinearLayout implements RadioService.Listener 
         else if (ChannelStore.receiveOnly(ch.txFreq)) parts.add("RX ONLY");
         else if (Math.abs(shift) >= 100_000) parts.add((shift > 0 ? "+" : "−") + String.format(Locale.US, "%s MHz", trim(Math.abs(shift) / 1e6)));
         if (ch.rxType == 1 && com.macdmr.radio.dsp.ToneTable.ctcssHz(ch.rxSubCode) > 0) parts.add(String.format(Locale.US, "%.1f", com.macdmr.radio.dsp.ToneTable.ctcssHz(ch.rxSubCode)));
-        else if (ch.rxType == 2) parts.add(String.format(Locale.US, "D%03oN", ch.rxSubCode));
+        else if (ch.rxType == 2 || ch.rxType == 3) parts.add(com.macdmr.radio.dsp.ToneTable.toneLabel(ch.rxType, ch.rxSubCode));
         StringBuilder sb = new StringBuilder(); for (String p : parts) { if (sb.length() > 0) sb.append(" · "); sb.append(p); }
         return sb.toString();
     }

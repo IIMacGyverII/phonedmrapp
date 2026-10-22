@@ -53,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
             intercom.attach(svc); diagnostics.attach(svc); channels.attach(svc); contacts.attach(svc); messages.attach(svc); device.attach(svc);
             if (!svc.isReady() && svc.profile().verified) svc.bringUp();          // an untested profile waits for Device → Take over
             ui.post(rssiTick); ui.removeCallbacks(modeTick); ui.post(modeTick);
-            applyPendingLocation(); applyOpenNets();
+            applyPendingLocation(); applyOpenNets(); applyCodeplug();
             ui.postDelayed(MainActivity.this::announceCoverage, 3000);
             if (!svc.profile().verified && !getSharedPreferences("radio", MODE_PRIVATE).getBoolean("unsupportedShown", false)) { getSharedPreferences("radio", MODE_PRIVATE).edit().putBoolean("unsupportedShown", true).apply(); show(4); device.offerChecks(true); }
         }
@@ -119,7 +119,7 @@ public class MainActivity extends AppCompatActivity {
             content.addView(editor, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         });
         show(0);
-        takeSharedLocation(getIntent()); takeOpenNets(getIntent());
+        takeSharedLocation(getIntent()); takeOpenNets(getIntent()); takeCodeplug(getIntent());
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
             ActivityCompat.requestPermissions(this, android.os.Build.VERSION.SDK_INT >= 33 ? new String[] { Manifest.permission.RECORD_AUDIO, Manifest.permission.POST_NOTIFICATIONS, Manifest.permission.ACCESS_FINE_LOCATION, "android.permission.READ_MEDIA_AUDIO" } : new String[] { Manifest.permission.RECORD_AUDIO, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.READ_EXTERNAL_STORAGE }, 1);
@@ -154,11 +154,26 @@ public class MainActivity extends AppCompatActivity {
     public static final String EXTRA_LAT = "com.macdmr.radio.lat", EXTRA_LON = "com.macdmr.radio.lon";
     private double[] pendingLocation;
 
-    @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); setIntent(i); takeSharedLocation(i); takeOpenNets(i); }
+    @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); setIntent(i); takeSharedLocation(i); takeOpenNets(i); takeCodeplug(i); }
 
     /** A net reminder was tapped: open the Nets page (once the service is there). */
     public static final String EXTRA_NETS = "com.macdmr.radio.nets";
     private boolean pendingNets;
+    /** Shared channels arrived (ImportCodeplugActivity): show the import preview once the service is there. */
+    public static final String EXTRA_CODEPLUG = "com.macdmr.radio.codeplug", EXTRA_CODEPLUG_NAME = "com.macdmr.radio.codeplugName";
+    private boolean pendingCodeplug; private String pendingCodeplugName;
+    private void takeCodeplug(Intent i) { if (i == null || !i.getBooleanExtra(EXTRA_CODEPLUG, false)) return; pendingCodeplugName = i.getStringExtra(EXTRA_CODEPLUG_NAME); i.removeExtra(EXTRA_CODEPLUG); pendingCodeplug = true; applyCodeplug(); }
+    private void applyCodeplug() {
+        if (!pendingCodeplug || svc == null) return; pendingCodeplug = false;
+        java.io.File f = new java.io.File(getCacheDir(), "incoming_codeplug.txt");
+        String text = null; try { text = new String(java.nio.file.Files.readAllBytes(f.toPath()), java.nio.charset.StandardCharsets.UTF_8); } catch (Throwable ignored) { }
+        f.delete();
+        Codeplug p = Codeplug.read(text, pendingCodeplugName);
+        if (p == null) { android.widget.Toast.makeText(this, "Nothing to import", android.widget.Toast.LENGTH_SHORT).show(); return; }
+        show(1);
+        com.macdmr.radio.ui.CodeplugDialog.preview(this, svc, p, channels::reload);
+    }
+
     private void takeOpenNets(Intent i) { if (i == null || !i.getBooleanExtra(EXTRA_NETS, false)) return; i.removeExtra(EXTRA_NETS); pendingNets = true; applyOpenNets(); }
     private void applyOpenNets() { if (!pendingNets || svc == null) return; pendingNets = false; com.macdmr.radio.ui.NetsDialog.show(this, svc); }
 
@@ -286,6 +301,13 @@ public class MainActivity extends AppCompatActivity {
         Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*");
         try { startActivityForResult(i, 77); } catch (Throwable t) { android.widget.Toast.makeText(this, "No picture app available", android.widget.Toast.LENGTH_LONG).show(); }
     }
+    private java.util.function.Consumer<android.net.Uri> docPick;
+    /** Any file (shared channels: a SignalDeck file or a CHIRP CSV). */
+    public void pickDocument(java.util.function.Consumer<android.net.Uri> cb) {
+        docPick = cb;
+        Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*");
+        try { startActivityForResult(i, 79); } catch (Throwable t) { android.widget.Toast.makeText(this, "No file picker available", android.widget.Toast.LENGTH_LONG).show(); }
+    }
     private java.util.function.Consumer<android.net.Uri> folderPick;
     /** Storage Access Framework folder picker (backups made by another app or install are invisible to the File API). */
     public void pickFolder(java.util.function.Consumer<android.net.Uri> cb) {
@@ -295,6 +317,7 @@ public class MainActivity extends AppCompatActivity {
     }
     @Override protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
+        if (req == 79 && docPick != null) { java.util.function.Consumer<android.net.Uri> cb = docPick; docPick = null; if (res == RESULT_OK && data != null && data.getData() != null) cb.accept(data.getData()); return; }
         if (req == 78 && folderPick != null) { java.util.function.Consumer<android.net.Uri> cb = folderPick; folderPick = null; if (res == RESULT_OK && data != null && data.getData() != null) cb.accept(data.getData()); return; }
         if (req == 77 && imagePick != null) { java.util.function.Consumer<android.net.Uri> cb = imagePick; imagePick = null; if (res == RESULT_OK && data != null && data.getData() != null) cb.accept(data.getData()); }
     }

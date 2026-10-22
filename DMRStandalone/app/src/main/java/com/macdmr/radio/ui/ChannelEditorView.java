@@ -34,7 +34,7 @@ public class ChannelEditorView extends LinearLayout {
     private TextView txCodeV, rxCodeV;
     private LinearLayout digitalGroup, analogGroup;
 
-    private static final String[] TONE_TYPES = { "None", "CTCSS", "DCS" };
+    private static final String[] TONE_TYPES = { "None", "CTCSS", "DCS", "DCS inverted" };
     /** The field help texts, for SignalDeck Web's channel editor: {key, text}. */
     public static String[][] helpForWeb() {
         return new String[][] { { "name", H_NAME }, { "type", H_TYPE }, { "tx", H_TX }, { "rx", H_RX }, { "pos", H_POS }, { "power", H_POWER }, { "band", H_BAND },
@@ -263,14 +263,14 @@ public class ChannelEditorView extends LinearLayout {
     private static String join(int[] a) { StringBuilder b = new StringBuilder(); for (int x : a) { if (b.length() > 0) b.append(", "); b.append(x); } return b.toString(); }
     private static String toneName(int type, int code) {
         if (type == 1) return com.macdmr.radio.dsp.ToneTable.ctcssHz(code) > 0 ? com.macdmr.radio.dsp.ToneTable.ctcssLabel(code) : "CTCSS #" + code;
-        if (type == 2) return "DCS " + String.format(Locale.US, "D%03oN", code);
+        if (type == 2 || type == 3) { String l = com.macdmr.radio.dsp.ToneTable.toneLabel(type, code); return l.equals("—") ? "DCS #" + code : "DCS " + l; }
         return "—";
     }
 
     private void pickTone(final boolean txSide) {
         int type = txSide ? ch.txType : ch.rxType;
         if (type == 0) { android.widget.Toast.makeText(getContext(), "Choose CTCSS or DCS in the tone type above first", android.widget.Toast.LENGTH_SHORT).show(); return; }
-        final String[] items; final int n = type == 1 ? com.macdmr.radio.dsp.ToneTable.CTCSS.length : 104;
+        final String[] items; final int n = type == 1 ? com.macdmr.radio.dsp.ToneTable.CTCSS.length : com.macdmr.radio.dsp.ToneTable.DCS_COUNT;
         items = new String[n]; for (int i = 0; i < n; i++) items[i] = toneName(type, i);
         new android.app.AlertDialog.Builder(getContext()).setTitle(txSide ? "TX tone" : "RX tone").setItems(items, (d, w) -> {
             if (txSide) { ch.txSubCode = w; txCodeV.setText(items[w]); } else { ch.rxSubCode = w; rxCodeV.setText(items[w]); }

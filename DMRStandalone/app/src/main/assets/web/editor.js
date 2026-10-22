@@ -34,7 +34,7 @@ function renderEditor() {
   const field = (key, label, input) => '<label class="f"><span>' + esc(label) + (ED.help[key] ? ' <button type="button" class="info" data-help="' + key + '" aria-label="About ' + esc(label) + '">i</button>' : '') + '</span>' + input + '<div class="tip hidden" data-tip="' + key + '"></div></label>';
   const sel = (id, vals, cur) => '<select id="' + id + '">' + opt(vals, cur) + '</select>';
   const txt = (id, val, extra) => '<input id="' + id + '" value="' + esc(val) + '" ' + (extra || '') + '>';
-  const toneVals = type => type === 1 ? ED.tones.ctcss.map((t, i) => [i, t]) : type === 2 ? ED.tones.dcs.map((t, i) => [i, t]) : [[0, '—']];
+  const toneVals = type => type === 1 ? ED.tones.ctcss.map((t, i) => [i, t]) : type === 2 || type === 3 ? ED.tones.dcs.map((t, i) => [i, t + (type === 3 ? 'I' : 'N')]) : [[0, '—']];
   let h = '';
   h += '<div class="sect">' + (ED.vfo ? 'FREQUENCY' : 'CHANNEL') + '</div>';
   if (!ED.vfo) h += field('name', 'Channel name', txt('fName', c.name, 'maxlength="16"'));
@@ -60,9 +60,9 @@ function renderEditor() {
     h += field('softSq', 'Soft SQ', sel('fSoft', [[0, 'Off'], [1, 'On']], c.softSq ? 1 : 0));
     h += field('softSqLevel', 'Soft SQ level', sel('fSoftLvl', range(1, 9), Math.max(1, Math.min(9, c.softSqLevel))));
     h += field('sq', 'Squelch level', sel('fSq', range(0, 9), c.sq));
-    h += field('txType', 'TX tone type', sel('fTxType', [[0, 'None'], [1, 'CTCSS'], [2, 'DCS']], c.txType));
+    h += field('txType', 'TX tone type', sel('fTxType', [[0, 'None'], [1, 'CTCSS'], [2, 'DCS'], [3, 'DCS inverted']], c.txType));
     h += field('txTone', 'TX tone', sel('fTxCode', toneVals(c.txType), c.txSubCode));
-    h += field('rxType', 'RX tone type', sel('fRxType', [[0, 'None'], [1, 'CTCSS'], [2, 'DCS']], c.rxType));
+    h += field('rxType', 'RX tone type', sel('fRxType', [[0, 'None'], [1, 'CTCSS'], [2, 'DCS'], [3, 'DCS inverted']], c.rxType));
     h += field('rxTone', 'RX tone', sel('fRxCode', toneVals(c.rxType), c.rxSubCode));
   }
   if (ED.vfo) {
