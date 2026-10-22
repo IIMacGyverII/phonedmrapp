@@ -657,6 +657,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         registerHardwarePtt();
         customKey = new CustomPttKey.Listener(this, down -> { if (pttLearning) return; if (down) { if (isReady()) ptt(true); } else ptt(false); }, this::log);
         if (profile.supported) customKey.start();
+        try { store.migrateNets(this); } catch (Throwable t) { log("nets migrate: " + t); }
         netWatch().start();
         web = new com.macdmr.radio.web.WebHost(this);
         if (web.enabled()) { String e = web.start(); if (e != null) log("web: " + e); }

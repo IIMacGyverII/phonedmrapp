@@ -29,7 +29,7 @@ public class ChannelEditorView extends LinearLayout {
     private final boolean isNew;
     private final Done done;
     private final LinearLayout form;
-    private EditText name, tx, rx, call, key, groups;
+    private EditText name, tx, rx, call, key, groups, notes;
     private EditText lat, lon;
     private TextView txCodeV, rxCodeV;
     private LinearLayout digitalGroup, analogGroup;
@@ -37,13 +37,14 @@ public class ChannelEditorView extends LinearLayout {
     private static final String[] TONE_TYPES = { "None", "CTCSS", "DCS", "DCS inverted" };
     /** The field help texts, for SignalDeck Web's channel editor: {key, text}. */
     public static String[][] helpForWeb() {
-        return new String[][] { { "name", H_NAME }, { "type", H_TYPE }, { "tx", H_TX }, { "rx", H_RX }, { "pos", H_POS }, { "power", H_POWER }, { "band", H_BAND },
+        return new String[][] { { "name", H_NAME }, { "notes", H_NOTES }, { "type", H_TYPE }, { "tx", H_TX }, { "rx", H_RX }, { "pos", H_POS }, { "power", H_POWER }, { "band", H_BAND },
                 { "relay", H_RELAY }, { "cc", H_CC }, { "mode", H_MODE }, { "slot", H_SLOT }, { "contactType", H_CTYPE }, { "call", H_CALL }, { "groups", H_GROUPS },
                 { "encrypt", H_ENC }, { "key", H_KEY }, { "interrupt", H_INT }, { "sq", H_SQ }, { "softSq", H_SOFTSQ }, { "softSqLevel", H_SOFTSQ_LVL },
                 { "txType", H_TXT }, { "txTone", H_TXC }, { "rxType", H_RXT }, { "rxTone", H_RXC } };
     }
 
     // ---- field help (what each setting does on this radio) ----
+    private static final String H_NOTES = "Anything worth remembering about this channel: who uses it, the repeater's owner or club, linking, hours, how to check in. It can go with the channel when you share it (Share channels \u2192 Channel notes).";
     private static final String H_NAME = "Shown on the intercom, in the channel list and in voice announcements.";
     private static final String H_TYPE = "Digital (DMR) channels carry voice and text as data and need a colour code, a time slot and a call target. Analog channels are classic FM. Switching shows the settings that apply.";
     private static final String H_TX = "The frequency you transmit on, in MHz. On a simplex channel it is the same as the receive frequency; on a repeater channel it is the repeater's input (for example +5 MHz on UHF GMRS, or ±0.6 MHz on 2 m). This radio covers 136–174 and 400–480 MHz.";
@@ -159,6 +160,10 @@ public class ChannelEditorView extends LinearLayout {
         TextView how = Neo.text(c, "Pick a place in your maps app: Open Maps, find the place, then Share \u2192 SignalDeck. Or copy its coordinates or link and tap Paste.", Neo.DIM, 13, Neo.uiMedium(c));
         how.setLineSpacing(0, 1.1f); how.setPadding((int) (4 * d), (int) (8 * d), (int) (4 * d), 0); form.addView(how);
 
+        section(form, "Notes");
+        notes = textInto(form, "Notes (optional)", H_NOTES, ch.notes == null ? "" : ch.notes, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        notes.setSingleLine(false); notes.setMinLines(2); notes.setMaxLines(8);
+
         section(form, "Nets on this channel");
         netsBox = new LinearLayout(c); netsBox.setOrientation(VERTICAL); form.addView(netsBox);
         refreshNets();
@@ -171,7 +176,7 @@ public class ChannelEditorView extends LinearLayout {
         final Context c = getContext(); float d = Theme.dp(c);
         netsBox.removeAllViews();
         if (isNew) { TextView t = Neo.text(c, "Save the channel first, then add the nets held on it.", Neo.DIM, 13, Neo.uiMedium(c)); t.setPadding((int) (4 * d), (int) (4 * d), (int) (4 * d), 0); netsBox.addView(t); return; }
-        for (final com.macdmr.radio.ham.NetFinder.Manual m : com.macdmr.radio.NetWatch.manualOn(c, ch.number)) {
+        for (final com.macdmr.radio.ham.NetFinder.Manual m : com.macdmr.radio.NetWatch.manualOn(c, ch.id)) {
             LinearLayout r = new LinearLayout(c); r.setOrientation(VERTICAL); r.setBackground(Neo.rowCard(c)); r.setPadding((int) (12 * d), (int) (8 * d), (int) (12 * d), (int) (8 * d));
             r.addView(Neo.text(c, m.name, Neo.AMBER_LIGHT, 15.5f, Neo.ui(c)));
             r.addView(Neo.text(c, com.macdmr.radio.ham.NetFinder.when(m) + " · " + m.durationMin + " min" + (m.notes.isEmpty() ? "" : " · " + m.notes) + " · tap to edit", Neo.MUTED, 12.5f, Neo.uiMedium(c)));
@@ -185,7 +190,7 @@ public class ChannelEditorView extends LinearLayout {
         TextView add = Neo.button(c, "Add a net", "plus", Neo.AMBER);
         LayoutParams al = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); al.topMargin = (int) (8 * d);
         netsBox.addView(add, al);
-        add.setOnClickListener(v -> { com.macdmr.radio.ham.NetFinder.Manual m = new com.macdmr.radio.ham.NetFinder.Manual(); m.channel = ch.number; NetsDialog.editManual(c, null, m, this::refreshNets); });
+        add.setOnClickListener(v -> { com.macdmr.radio.ham.NetFinder.Manual m = new com.macdmr.radio.ham.NetFinder.Manual(); m.channel = ch.number; m.channelId = ch.id; NetsDialog.editManual(c, null, m, this::refreshNets); });
         TextView how = Neo.text(c, "A net or get-together held on this channel. It shows in Nets near you (Intercom menu), with an optional reminder 10 minutes before.", Neo.DIM, 13, Neo.uiMedium(c));
         how.setPadding((int) (4 * d), (int) (8 * d), (int) (4 * d), 0); netsBox.addView(how);
     }
@@ -362,6 +367,7 @@ public class ChannelEditorView extends LinearLayout {
     private boolean apply() {
         try {
             ch.name = name.getText().toString().trim();
+            ch.notes = notes.getText().toString().trim();
             ch.txFreq = (int) Math.round(Double.parseDouble(tx.getText().toString().trim()) * 1e6);
             ch.rxFreq = (int) Math.round(Double.parseDouble(rx.getText().toString().trim()) * 1e6);
             if (!ChannelStore.inBand(ch.rxFreq) || !ChannelStore.inBand(ch.txFreq)) throw new IllegalArgumentException("Frequencies must be 136–174 or 400–480 MHz");

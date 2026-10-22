@@ -23,6 +23,7 @@ public final class ChannelStore extends SQLiteOpenHelper {
         public int cc = 1, inSlot, outSlot, contactType = 1, txContact, encryptSw = 2, interrupt = 2;
         public String encryptKey = ""; public int[] groups = new int[0]; public boolean active;
         public String location = "";
+        public String notes = "";                  // the owner's notes on this channel (shareable as an option)
         public double lat, lon, elev;              // from the module's location table (0 = none)
         public boolean softSq; public int softSqLevel = 5;   // software squelch (analog)
         public boolean isDigital() { return type == 0; }
@@ -62,7 +63,13 @@ public final class ChannelStore extends SQLiteOpenHelper {
     /** Tables added after v5 are created here (onUpgrade rebuilds everything, so the version stays put). */
     @Override public void onOpen(SQLiteDatabase db) {
         super.onOpen(db);
-        if (!db.isReadOnly()) db.execSQL("CREATE TABLE IF NOT EXISTS tglists (_id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, tgs TEXT)");
+        if (db.isReadOnly()) return;
+        db.execSQL("CREATE TABLE IF NOT EXISTS tglists (_id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, tgs TEXT)");
+        // nets held on a channel: tied to the channel's row id, so renumbering, zones and imports never move them
+        db.execSQL("CREATE TABLE IF NOT EXISTS nets (_id INTEGER PRIMARY KEY AUTOINCREMENT, channelId INTEGER, name TEXT, days INTEGER, minute INTEGER, duration INTEGER, notes TEXT)");
+        boolean hasNotes = false;
+        try (Cursor c = db.rawQuery("PRAGMA table_info(channels)", null)) { while (c.moveToNext()) if ("notes".equals(c.getString(1))) hasNotes = true; }
+        if (!hasNotes) db.execSQL("ALTER TABLE channels ADD COLUMN notes TEXT DEFAULT ''");
     }
 
     /** A named talkgroup list (the module's TG lists): a set of talkgroups to drop into a channel's RX group list. */
@@ -166,12 +173,13 @@ public final class ChannelStore extends SQLiteOpenHelper {
 
     public long insert(Channel ch) {
         if (ch.number <= 0) ch.number = count() + 1;
-        return getWritableDatabase().insert("channels", null, values(ch));
+        return ch.id = getWritableDatabase().insert("channels", null, values(ch));
     }
 
     public void delete(Channel ch) {
         SQLiteDatabase db = getWritableDatabase();
         db.delete("channels", "_id=?", new String[] { String.valueOf(ch.id) });
+        db.delete("nets", "channelId=?", new String[] { String.valueOf(ch.id) });
         db.execSQL("UPDATE channels SET number = number - 1 WHERE number > ?", new Object[] { ch.number });   // keep 1..n contiguous
         for (Zone z : zones()) {   // zones hold channel numbers: drop this one and follow the renumbering
             List<Integer> l = new ArrayList<>(); boolean changed = false;
@@ -284,6 +292,45 @@ public final class ChannelStore extends SQLiteOpenHelper {
         return out;
     }
 
+    // ---- nets held on channels ----
+
+    private static final String NET_QUERY = "SELECT n._id, n.channelId, c.number, n.name, n.days, n.minute, n.duration, n.notes FROM nets n JOIN channels c ON c._id = n.channelId";
+    private static com.macdmr.radio.ham.NetFinder.Manual readNet(Cursor c) {
+        com.macdmr.radio.ham.NetFinder.Manual m = new com.macdmr.radio.ham.NetFinder.Manual();
+        m.id = c.getLong(0); m.channelId = c.getLong(1); m.channel = c.getInt(2); m.name = c.getString(3) == null ? "" : c.getString(3);
+        m.days = c.getInt(4); m.minute = c.getInt(5); m.durationMin = c.getInt(6); m.notes = c.getString(7) == null ? "" : c.getString(7);
+        return m;
+    }
+    /** Every net on a channel that still exists, by channel number and start time. */
+    public List<com.macdmr.radio.ham.NetFinder.Manual> nets() {
+        List<com.macdmr.radio.ham.NetFinder.Manual> out = new ArrayList<>();
+        try (Cursor c = getReadableDatabase().rawQuery(NET_QUERY + " ORDER BY c.number, n.minute", null)) { while (c.moveToNext()) out.add(readNet(c)); }
+        return out;
+    }
+    public List<com.macdmr.radio.ham.NetFinder.Manual> netsOf(long channelId) {
+        List<com.macdmr.radio.ham.NetFinder.Manual> out = new ArrayList<>();
+        try (Cursor c = getReadableDatabase().rawQuery(NET_QUERY + " WHERE n.channelId=? ORDER BY n.minute", new String[] { String.valueOf(channelId) })) { while (c.moveToNext()) out.add(readNet(c)); }
+        return out;
+    }
+    /** Insert (id 0) or update a net; a net without a channel id is put on the channel with its number. */
+    public void saveNet(com.macdmr.radio.ham.NetFinder.Manual m) {
+        if (m.channelId <= 0) { Channel ch = byNumber(m.channel); if (ch == null) return; m.channelId = ch.id; }
+        ContentValues v = new ContentValues();
+        v.put("channelId", m.channelId); v.put("name", m.name); v.put("days", m.days); v.put("minute", m.minute); v.put("duration", m.durationMin); v.put("notes", m.notes == null ? "" : m.notes);
+        if (m.id > 0 && getWritableDatabase().update("nets", v, "_id=?", new String[] { String.valueOf(m.id) }) > 0) return;
+        m.id = getWritableDatabase().insert("nets", null, v);
+    }
+    public void deleteNet(long id) { getWritableDatabase().delete("nets", "_id=?", new String[] { String.valueOf(id) }); }
+
+    /** Nets added before they lived in this database (prefs "nets"/"manual", by channel number) move here once. */
+    public void migrateNets(Context ctx) {
+        android.content.SharedPreferences p = ctx.getSharedPreferences("nets", Context.MODE_PRIVATE);
+        String old = p.getString("manual", null);
+        if (old == null) return;
+        for (com.macdmr.radio.ham.NetFinder.Manual m : com.macdmr.radio.ham.NetFinder.decode(old)) { m.id = 0; m.channelId = 0; saveNet(m); }
+        p.edit().remove("manual").apply();
+    }
+
     // ---- zones ----
     public List<Zone> zones() {
         List<Zone> out = new ArrayList<>();
@@ -352,6 +399,7 @@ public final class ChannelStore extends SQLiteOpenHelper {
         StringBuilder g = new StringBuilder(); for (int x : ch.groups) { if (g.length() > 0) g.append(','); g.append(x); }
         v.put("groups", g.toString()); v.put("active", ch.active ? 1 : 0); v.put("location", ch.location);
         v.put("lat", ch.lat); v.put("lon", ch.lon); v.put("elev", ch.elev); v.put("softSq", ch.softSq ? 1 : 0); v.put("softSqLevel", ch.softSqLevel);
+        v.put("notes", ch.notes == null ? "" : ch.notes);
         return v;
     }
 
@@ -371,6 +419,7 @@ public final class ChannelStore extends SQLiteOpenHelper {
         ch.active = c.getInt(c.getColumnIndexOrThrow("active")) == 1; ch.location = c.getString(c.getColumnIndexOrThrow("location"));
         ch.lat = c.getDouble(c.getColumnIndexOrThrow("lat")); ch.lon = c.getDouble(c.getColumnIndexOrThrow("lon")); ch.elev = c.getDouble(c.getColumnIndexOrThrow("elev"));
         ch.softSq = c.getInt(c.getColumnIndexOrThrow("softSq")) == 1; ch.softSqLevel = c.getInt(c.getColumnIndexOrThrow("softSqLevel"));
+        int ni = c.getColumnIndex("notes"); ch.notes = ni >= 0 && !c.isNull(ni) ? c.getString(ni) : "";
         return ch;
     }
 

@@ -130,9 +130,27 @@ public final class Backup {
                 w.write(r + "\r\n");
             }
         }
+        try (Writer w = writer(new File(dir, EXTRAS))) {             // SignalDeck's own: channel notes and nets (other tools ignore the file)
+            w.write(EXTRAS_HEADER + "\r\n");
+            for (ChannelStore.Channel ch : channels) if (ch.notes != null && !ch.notes.isEmpty()) w.write(ch.number + "," + q(ch.name) + ",notes,,,,," + q(line(ch.notes)) + "\r\n");
+            for (com.macdmr.radio.ham.NetFinder.Manual m : store.nets())
+                w.write(m.channel + "," + q(nameOf(channels, m.channel)) + ",net," + q(line(m.name)) + "," + m.days + "," + String.format(Locale.US, "%02d:%02d", m.minute / 60, m.minute % 60) + "," + m.durationMin + "," + q(line(m.notes)) + "\r\n");
+        }
         try (Writer w = writer(new File(dir, "DTMF.csv"))) { w.write("Contact Name,Code\r\n"); if (dtmf != null) for (Map.Entry<String, String> e : dtmf.entrySet()) w.write(q(e.getKey()) + "," + q(e.getValue()) + "\r\n"); }
         return dir;
     }
+
+    /** SignalDeck's extra file in a backup folder: channel notes and the nets held on channels, by channel number. */
+    public static final String EXTRAS = "SignalDeck_Extras.csv";
+    static final String EXTRAS_HEADER = "Channel Number,Channel Name,Kind,Name,Days,Start,Minutes,Notes";
+    /** One CSV line per value: newlines become \\n (the reader is line based). */
+    private static String line(String s) { return s == null ? "" : s.replace("\\", "\\\\").replace("\r", "").replace("\n", "\\n"); }
+    private static String unline(String s) {
+        StringBuilder b = new StringBuilder();
+        for (int i = 0; i < s.length(); i++) { char ch = s.charAt(i); if (ch == '\\' && i + 1 < s.length()) { char n = s.charAt(++i); b.append(n == 'n' ? '\n' : n); } else b.append(ch); }
+        return b.toString();
+    }
+    private static String nameOf(List<ChannelStore.Channel> l, int number) { for (ChannelStore.Channel c : l) if (c.number == number) return c.name; return ""; }
 
     private static Writer writer(File f) throws Exception { return new OutputStreamWriter(new FileOutputStream(f), StandardCharsets.UTF_8); }
 
@@ -196,7 +214,17 @@ public final class Backup {
             int tbad = 0;
             for (ChannelStore.TgList t : live.tgLists()) { if (t.tgs.length == 0) continue; boolean ok = false; for (ChannelStore.TgList u : scratch.tgLists()) if (u.name.equals(t.name) && Arrays.equals(u.tgs, t.tgs)) ok = true; if (!ok) { tbad++; r.append("  TG list ").append(t.name).append(" missing\n"); } }
             r.append(tbad == 0 ? "talkgroup lists kept" : tbad + " talkgroup lists not kept").append('\n');
-            r.insert(0, bad == 0 && zbad == 0 && tbad == 0 && ca == cb ? "ROUND TRIP OK\n" : "ROUND TRIP: " + bad + " channels differ\n");
+            int notesBad = 0, netsBad = 0;
+            for (ChannelStore.Channel x : a) { ChannelStore.Channel y = scratch.byNumber(x.number); if (y != null && !x.notes.equals(y.notes)) { notesBad++; r.append("  Ch ").append(x.number).append(" notes not kept\n"); } }
+            List<com.macdmr.radio.ham.NetFinder.Manual> na = live.nets(), nb = scratch.nets();
+            for (com.macdmr.radio.ham.NetFinder.Manual m : na) {
+                boolean ok = false;
+                for (com.macdmr.radio.ham.NetFinder.Manual k : nb) if (k.channel == m.channel && k.name.equals(m.name) && k.days == m.days && k.minute == m.minute && k.durationMin == m.durationMin && k.notes.equals(m.notes)) ok = true;
+                if (!ok) { netsBad++; r.append("  net ").append(m.name).append(" not kept\n"); }
+            }
+            if (na.size() != nb.size()) netsBad++;
+            r.append(notesBad == 0 && netsBad == 0 ? "notes and nets kept (" + na.size() + " nets)" : notesBad + " notes and " + netsBad + " nets not kept").append('\n');
+            r.insert(0, bad == 0 && zbad == 0 && tbad == 0 && notesBad == 0 && netsBad == 0 && ca == cb ? "ROUND TRIP OK\n" : "ROUND TRIP: " + bad + " channels differ\n");
         } catch (Throwable t) { r.append("self-test failed: ").append(t); }
         finally {
             try { if (scratch != null) scratch.close(); ctx.deleteDatabase("backup_selftest.db"); } catch (Throwable ignored) { }
@@ -315,6 +343,8 @@ public final class Backup {
             zs.add(z);
         }
         int keep = store.activeNumber();
+        List<List<String>> extras = read(new File(dir, EXTRAS));
+        int extraNotes = 0, extraNets = 0;
         SQLiteDatabase db = store.getWritableDatabase();
         db.beginTransaction();
         try {
@@ -322,6 +352,18 @@ public final class Backup {
             for (ChannelStore.Channel ch : out) { ch.id = 0; ch.active = ch.number == keep; store.insert(ch); }
             for (ChannelStore.Contact c : cts) store.insertContact(c);
             for (ChannelStore.Zone z : zs) { z.id = 0; store.saveZone(z); }
+            db.delete("nets", null, null);                                       // they belonged to the channels just replaced
+            for (int i = 1; i < extras.size(); i++) {
+                List<String> r = extras.get(i); ChannelStore.Channel ch = store.byNumber(num(col(r, 0), 0)); if (ch == null) continue;
+                if ("notes".equalsIgnoreCase(col(r, 2))) { ch.notes = unline(col(r, 7)); store.update(ch); extraNotes++; }
+                else if ("net".equalsIgnoreCase(col(r, 2))) {
+                    com.macdmr.radio.ham.NetFinder.Manual m = new com.macdmr.radio.ham.NetFinder.Manual();
+                    m.channelId = ch.id; m.channel = ch.number; m.name = unline(col(r, 3)); m.days = num(col(r, 4), 0) & com.macdmr.radio.ham.NetFinder.ALL_DAYS;
+                    String[] hm = col(r, 5).split(":"); m.minute = hm.length == 2 ? Math.max(0, Math.min(1439, num(hm[0], 0) * 60 + num(hm[1], 0))) : 0;
+                    m.durationMin = Math.max(5, Math.min(600, num(col(r, 6), 60))); m.notes = unline(col(r, 7));
+                    if (m.days != 0 && !m.name.isEmpty()) { store.saveNet(m); extraNets++; }
+                }
+            }
             if (!listByName.isEmpty()) {
                 db.delete("tglists", null, null);
                 for (int i = 1; i < tgl.size(); i++) {
@@ -332,7 +374,7 @@ public final class Backup {
             }
             db.setTransactionSuccessful();
         } finally { db.endTransaction(); }
-        return out.size() + " channels, " + cts.size() + " contacts, " + zs.size() + " zones restored from " + dir.getName()
+        return out.size() + " channels, " + cts.size() + " contacts, " + zs.size() + " zones" + (extras.size() > 1 ? ", " + extraNotes + " channel notes, " + extraNets + " nets" : "") + " restored from " + dir.getName()
                 + (outOfBand.isEmpty() ? "" : "\n" + outOfBand.size() + " skipped: outside what this radio can tune (136–174 and 400–480 MHz): " + String.join(", ", outOfBand.subList(0, Math.min(5, outOfBand.size()))) + (outOfBand.size() > 5 ? " …" : ""));
     }
 }

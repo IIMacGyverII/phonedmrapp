@@ -26,16 +26,24 @@ public final class Codeplug {
     public final List<String> skipped = new ArrayList<>();
     /** Where it came from ("SignalDeck", "CHIRP"). */
     public String format = "SignalDeck";
+    /** The nets held on each channel (the net's channel fields are filled in on import). */
+    public final java.util.IdentityHashMap<ChannelStore.Channel, List<com.macdmr.radio.ham.NetFinder.Manual>> nets = new java.util.IdentityHashMap<>();
+    public List<com.macdmr.radio.ham.NetFinder.Manual> netsOf(ChannelStore.Channel c) { List<com.macdmr.radio.ham.NetFinder.Manual> l = nets.get(c); return l == null ? new ArrayList<>() : l; }
+    public boolean hasNotesOrNets() { for (ChannelStore.Channel c : channels) if (!c.notes.isEmpty() || !netsOf(c).isEmpty()) return true; return false; }
 
     static final String START = "SDCP1:", END = ":END";
 
     // ---- the channel lines inside the code ----
 
     private static String esc(String s) { return s == null ? "" : s.replace("%", "%25").replace("|", "%7C").replace("\n", "%0A").replace("\r", ""); }
+    private static String esc2(String s) { return esc(s).replace(",", "%2C").replace(";", "%3B"); }
+    private static String unesc2(String s) { return unesc(s.replace("%2C", ",").replace("%3B", ";")); }
     private static String unesc(String s) { return s.replace("%0A", "\n").replace("%7C", "|").replace("%25", "%"); }
 
     /** Version line, then one line per channel. Field order is fixed; later versions only append fields. */
-    static String lines(Codeplug p, boolean withLocations) {
+    static String lines(Codeplug p, boolean withLocations) { return lines(p, withLocations, false, false); }
+    /** Fields 27 and 28 (since 2026-10-22): the channel's notes, and its nets as name,days,minute,minutes,notes;… */
+    static String lines(Codeplug p, boolean withLocations, boolean withNotes, boolean withNets) {
         StringBuilder b = new StringBuilder("v1|").append(esc(p.name)).append('\n');
         for (ChannelStore.Channel c : p.channels) {
             StringBuilder g = new StringBuilder(); for (int x : c.groups) { if (g.length() > 0) g.append(';'); g.append(x); }
@@ -46,6 +54,11 @@ public final class Codeplug {
              .append(c.interrupt).append('|').append(c.softSq ? 1 : 0).append('|').append(c.softSqLevel).append('|');
             if (withLocations && (c.lat != 0 || c.lon != 0)) b.append(String.format(Locale.US, "%.5f|%.5f|%s", c.lat, c.lon, esc(c.location)));
             else b.append("||");
+            b.append('|').append(withNotes ? esc(c.notes) : "").append('|');
+            if (withNets) { boolean first = true; for (com.macdmr.radio.ham.NetFinder.Manual m : p.netsOf(c)) {
+                if (!first) b.append(';'); first = false;
+                b.append(esc2(m.name)).append(',').append(m.days).append(',').append(m.minute).append(',').append(m.durationMin).append(',').append(esc2(m.notes));
+            } }
             b.append('\n');
         }
         return b.toString();
@@ -67,6 +80,17 @@ public final class Codeplug {
                 c.interrupt = i(f[20]); c.softSq = "1".equals(f[21]); c.softSqLevel = i(f[22]);
                 if (!f[23].isEmpty() && !f[24].isEmpty()) { c.lat = Double.parseDouble(f[23]); c.lon = Double.parseDouble(f[24]); }
                 c.location = unesc(f[25]);
+                if (f.length > 26) c.notes = unesc(f[26]);
+                if (f.length > 27 && !f[27].isEmpty()) {
+                    List<com.macdmr.radio.ham.NetFinder.Manual> ns = new ArrayList<>();
+                    for (String e : f[27].split(";")) {
+                        String[] x = e.split(",", -1); if (x.length < 5) continue;
+                        com.macdmr.radio.ham.NetFinder.Manual m = new com.macdmr.radio.ham.NetFinder.Manual();
+                        m.name = unesc2(x[0]); m.days = i(x[1]) & com.macdmr.radio.ham.NetFinder.ALL_DAYS; m.minute = Math.max(0, Math.min(1439, i(x[2]))); m.durationMin = Math.max(5, Math.min(600, i(x[3]))); m.notes = unesc2(x[4]);
+                        if (m.days != 0 && !m.name.isEmpty()) ns.add(m);
+                    }
+                    if (!ns.isEmpty()) p.nets.put(c, ns);
+                }
                 c.encryptSw = 2; c.encryptKey = "";
                 if (!ChannelStore.inBand(c.rxFreq) || (c.txFreq != 0 && !ChannelStore.inBand(c.txFreq) && !ChannelStore.receiveOnly(c.txFreq))) { p.skipped.add(c.name + ": outside 136–174 / 400–480 MHz"); continue; }
                 p.channels.add(c);
@@ -79,8 +103,9 @@ public final class Codeplug {
     // ---- the import code ----
 
     /** {@code SDCP1:<base64url of the deflated lines>:END}. */
-    public static String code(Codeplug p, boolean withLocations) {
-        byte[] in = lines(p, withLocations).getBytes(StandardCharsets.UTF_8);
+    public static String code(Codeplug p, boolean withLocations) { return code(p, withLocations, false, false); }
+    public static String code(Codeplug p, boolean withLocations, boolean withNotes, boolean withNets) {
+        byte[] in = lines(p, withLocations, withNotes, withNets).getBytes(StandardCharsets.UTF_8);
         Deflater d = new Deflater(Deflater.BEST_COMPRESSION); d.setInput(in); d.finish();
         ByteArrayOutputStream o = new ByteArrayOutputStream(); byte[] buf = new byte[4096];
         while (!d.finished()) o.write(buf, 0, d.deflate(buf));
@@ -114,7 +139,8 @@ public final class Codeplug {
     }
 
     /** "1. Club Rptr 146.940 −0.600 tone 100.0" and so on, with the import code at the end. */
-    public static String shareText(Codeplug p, boolean withLocations) {
+    public static String shareText(Codeplug p, boolean withLocations) { return shareText(p, withLocations, false, false); }
+    public static String shareText(Codeplug p, boolean withLocations, boolean withNotes, boolean withNets) {
         StringBuilder b = new StringBuilder();
         b.append(p.name).append(" · ").append(p.channels.size()).append(p.channels.size() == 1 ? " channel" : " channels").append("\n\n");
         int n = 1;
@@ -134,9 +160,12 @@ public final class Codeplug {
             }
             if (withLocations && (c.lat != 0 || c.lon != 0)) b.append(String.format(Locale.US, " (%.4f, %.4f)", c.lat, c.lon));
             b.append('\n');
+            if (withNotes && !c.notes.isEmpty()) b.append("   Notes: ").append(c.notes.replace("\n", "\n   ")).append('\n');
+            if (withNets) for (com.macdmr.radio.ham.NetFinder.Manual m : p.netsOf(c))
+                b.append("   Net: ").append(m.name).append(", ").append(com.macdmr.radio.ham.NetFinder.when(m)).append(", ").append(m.durationMin).append(" min").append(m.notes.isEmpty() ? "" : " (" + m.notes + ")").append('\n');
         }
         b.append("\nTo import into SignalDeck: share this to SignalDeck, or copy all of it and use Channels → Share → Import.\n");
-        b.append(code(p, withLocations)).append('\n');
+        b.append(code(p, withLocations, withNotes, withNets)).append('\n');
         return b.toString();
     }
 

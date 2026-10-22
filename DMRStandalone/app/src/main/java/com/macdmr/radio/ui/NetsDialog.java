@@ -168,7 +168,7 @@ public final class NetsDialog {
     public static void editManual(final Context c, final List<com.macdmr.radio.ChannelStore.Channel> channels, final NetFinder.Manual src, final Runnable after) {
         final float d = Theme.dp(c);
         final NetFinder.Manual m = new NetFinder.Manual();
-        m.id = src.id; m.name = src.name; m.notes = src.notes; m.channel = src.channel; m.days = src.days; m.durationMin = src.durationMin;
+        m.id = src.id; m.channelId = src.channelId; m.name = src.name; m.notes = src.notes; m.channel = src.channel; m.days = src.days; m.durationMin = src.durationMin;
         m.minute = src.id == 0 && src.minute == 0 ? 19 * 60 : src.minute;          // a new net: 7:00 PM to start with
         LinearLayout body = Neo.sheetBody(c, src.id == 0 ? "Add a net" : "Edit net");
         body.addView(Neo.sheetHint(c, "A net or get-together you know about. It shows in Nets, Coming up; it can remind you 10 minutes before; tapping it tunes the channel."));
@@ -183,7 +183,7 @@ public final class NetsDialog {
         showCh.run();
         if (channels != null) chV.setOnClickListener(v -> {
             String[] names = new String[channels.size()]; for (int i = 0; i < names.length; i++) names[i] = channels.get(i).number + "  " + channels.get(i).name;
-            new AlertDialog.Builder(c).setTitle("Which channel?").setItems(names, (dd, w) -> { m.channel = channels.get(w).number; showCh.run(); }).show();
+            new AlertDialog.Builder(c).setTitle("Which channel?").setItems(names, (dd, w) -> { m.channel = channels.get(w).number; m.channelId = channels.get(w).id; showCh.run(); }).show();
         });
         body.addView(Neo.sheetSection(c, "Days"));
         LinearLayout days = new LinearLayout(c);

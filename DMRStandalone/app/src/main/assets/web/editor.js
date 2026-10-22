@@ -73,6 +73,8 @@ function renderEditor() {
     h += '<div class="sect">LOCATION</div>';
     h += field('pos', 'Latitude (optional)', txt('fLat', c.lat != null ? c.lat.toFixed(5) : '', 'inputmode="decimal"'));
     h += field('pos', 'Longitude (optional)', txt('fLon', c.lon != null ? c.lon.toFixed(5) : '', 'inputmode="decimal"'));
+    h += '<div class="sect">NOTES</div>';
+    h += field('notes', 'Notes (optional)', '<textarea id="fNotes" rows="3">' + esc(c.notes || '') + '</textarea>');
     h += '<div class="actions"><button class="btn primary">' + (ED.isNew ? 'Add channel' : 'Save') + '</button><button type="button" class="btn" id="edCancel">Close</button>'
       + (ED.isNew ? '' : '<button type="button" class="btn" id="edTune">Tune</button><button type="button" class="btn danger" id="edDelete">Delete</button>') + '</div>';
     h += '<div class="note">Saving an active channel re-programs the radio at once. VHF channels are always saved as wide band (narrow makes this radio deaf on VHF).</div>';
@@ -99,6 +101,7 @@ function collect(keepOnly) {
   const v = id => { const e = $(id); return e ? e.value : undefined; };
   const o = { number: ED.isNew ? 0 : ED.ch.number, name: v('fName'), type: +v('fType'), txMHz: parseFloat(v('fTx')), rxMHz: parseFloat(v('fRx')),
     power: +v('fPower'), relay: +v('fRelay'), lat: v('fLat'), lon: v('fLon') };
+  if ($('fNotes')) o.notes = v('fNotes');
   if ($('fCc')) Object.assign(o, { cc: +v('fCc'), mode: +v('fMode'), slot: +v('fSlot'), contactType: +v('fCtype'), txContact: v('fCall'), groups: v('fGroups'), encryptSw: +v('fEnc'), interrupt: +v('fInt') });
   if ($('fKey') && v('fKey')) o.encryptKey = v('fKey');
   if ($('fBand')) Object.assign(o, { band: +v('fBand'), softSq: v('fSoft') === '1', softSqLevel: +v('fSoftLvl'), sq: +v('fSq'), txType: +v('fTxType'), txSubCode: +v('fTxCode'), rxType: +v('fRxType'), rxSubCode: +v('fRxCode') });
