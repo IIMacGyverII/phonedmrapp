@@ -1,3 +1,9 @@
+/*
+ * SignalDeck - Copyright (C) 2026 IIMacGyverII
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Free software under the GNU General Public License v3 or later, with the additional terms in COPYRIGHT
+ * (keep this notice and the author credit, mark modified versions, no rights to the SignalDeck name or icon).
+ */
 // SignalDeck Web: the channel editor (every field of the phone's editor, its checks run on the phone, its help texts).
 'use strict';
 

@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-22 — Copyright, license terms and About (protecting the project)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | Owner's request: keep it open source but stop others (e.g. a manufacturer) claiming it. **LICENSE** restored to the verbatim GNU GPL v3 text (the copyright line and several sentences had been altered; the GPL text may not be changed). New **COPYRIGHT** file: Copyright (C) 2026 IIMacGyverII, GPL-3.0-or-later for the project's own work, **section 7 additional terms** (keep the notice and author credit; mark modified versions and don't present them as the original or the author's; no trademark rights to "SignalDeck"/"IIMacGyverII" or the icon), what is *not* covered (the manufacturer's decompiled app and firmware kept for interoperability research), third-party components and data credits. **SPDX/copyright headers** on SignalDeck's own 218 source files (Java, web JS/CSS/HTML; the robot36-derived files keep their own credit). **About and license** in the app (Mission Statement sheet) and SignalDeck Web (`/api/mission` `legal`), the GPL's "appropriate legal notices": version, copyright, license in plain words, section 7 terms, source link, credits (`About.legal()`, one text). README license section rewritten. Help: Device → About and license. | `LICENSE`, `COPYRIGHT` (new), `README.md`, `About.java` (new), `ui/DeviceView.java`, `ui/HelpView.java`, `web/WebHost.java`, `assets/web/*`, every SignalDeck source file (header only) | Build + host tests pass; installed on the owner's Armor 70 min before an ISS pass (tracking resumed by itself); phone sheet shows ABOUT AND LICENSE with the copyright; web card shows the same text (1038 chars). |
+
 ## 2026-10-22 — Mission Statement (README and Device page)
 
 | Backlog | Change | Files | Test |

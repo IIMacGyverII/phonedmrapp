@@ -1683,7 +1683,9 @@ For detailed technical information, see [DMRModHooks/README.md](DMRModHooks/READ
 
 ## License
 
-This project is licensed under the **GNU General Public License v3.0** - see the [LICENSE](LICENSE) file for details.
+Copyright (C) 2026 IIMacGyverII. This project is free software under the **GNU General Public License v3.0 or later** ([LICENSE](LICENSE)), with **additional terms under section 7** set out in [COPYRIGHT](COPYRIGHT): keep the copyright notice and the author credit, mark modified versions as modified and don't present them as the original or as the author's work, and no rights are granted to the names "SignalDeck" / "IIMacGyverII" or the SignalDeck icon (a modified version needs its own name and icon).
+
+[COPYRIGHT](COPYRIGHT) also lists the third-party components and their licenses, and the material in this repository that belongs to the radio's manufacturer (kept for interoperability research, not covered by this license). Official builds are signed with the project's release key and published only on this repository's Releases page.
 
 > **Disclaimer**: This tool hooks into the PriInterPhone app at runtime using LSPosed/Xposed. It does NOT modify or redistribute any proprietary code from Ulefone. Users must legally own the PriInterPhone app. For personal, educational, and interoperability purposes only.
 
