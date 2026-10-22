@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-21 — Map: APRS toggle (named), layer toggles remembered
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | Owner's request: a map toggle for APRS receptions. The pill that hid/showed the received APRS stations was labelled "Stations"; it is now **APRS N** (N = stations with a position). The APRS, Repeaters and Channels pills are remembered across map openings (prefs `map`: `showAprs`/`showRepeaters`/`showChannels`), so APRS stays hidden once turned off. Help and the map's legend sheet corrected: they said APRS-IS stations are shown, but only stations the radio decoded are stored (`PacketEngine.decodeWindow` → `storeStation`). | `ui/MapDialog.java`, `ui/HelpView.java` | **Device-tested** (Armor 26 Ultra, release): pill shows "APRS 109"; off → closed and reopened the map → still off (pref `showAprs=false`); back on. |
+
 ## 2026-10-21 — Custom PTT key: learn any button by pressing it, with an automatic conflict check
 
 | Backlog | Change | Files | Test |
