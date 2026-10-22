@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-22 — SignalDeck 1.0.0-beta.11 (pre-release)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Owner's request: publish for the Xplore owner's squelch test. `versionName` 1.0.0-beta.11, `versionCode` 110; GitHub pre-release `signaldeck-v1.0.0-beta.11` (`--prerelease --latest=false`, asset `SignalDeck-1.0.0-beta.11.apk`). Contains: Xplore channel writes in QuickChat's order (channel, monitor, squelch) and the radio audio check's squelch-close probe. README links updated. | `DMRStandalone/app/build.gradle`, `README.md` | Release build, host tests pass, installed on the owner's Armor (reports 1.0.0-beta.11). |
+
 ## 2026-10-22 — Xplore 1: squelch stays open after MON (listen check report); radio audio check probes the fix
 
 | Backlog | Change | Files | Test |
