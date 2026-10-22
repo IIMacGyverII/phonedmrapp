@@ -35,6 +35,7 @@
       <a href="#map" data-page="map">Map</a>
       <a href="#log" data-page="log">Logbook</a>
       <a href="#rec" data-page="rec">Recordings</a>
+      <a href="#trans" data-page="trans">Transcripts</a>
       <a href="#exam" data-page="exam">Exam</a>
       <a href="#settings" data-page="settings">Settings</a>
       <a href="#help" data-page="help">Help</a>
@@ -72,8 +73,9 @@
           <p id="pttNote" class="muted small center"></p>
         </div>
         <div class="panel">
-          <div class="row between"><span class="label">HISTORY</span><span id="captionState" class="chip dim"></span></div>
+          <div class="row between"><span class="label">HISTORY</span><div class="row"><span id="captionState" class="chip dim"></span><button class="tog small-tog" id="txtBtn" title="Live captions of what is received (TXT)">TXT</button></div></div>
           <div id="caption" class="caption hidden"></div>
+          <div id="capList" class="caplist hidden"></div>
           <div id="history" class="history mono"></div>
         </div>
       </div>
@@ -192,6 +194,16 @@
       <div class="panel">
         <div class="row between wrap"><span class="label">PASSES · NEXT 24 HOURS</span><span id="passNote" class="chip dim"></span></div>
         <div id="passList" class="passgrid"></div>
+      </div>
+    </section>
+    <!-- TRANSCRIPTS -->
+    <section id="page-trans" class="page hidden">
+      <div class="panel">
+        <div class="row between wrap"><div><span class="label">TRANSCRIPTS</span> <span id="trCount" class="chip dim"></span></div>
+          <div class="row"><button class="tog" id="trTxt">TXT</button><button class="btn" id="trDownload">Download .txt</button></div></div>
+        <input id="trSearch" placeholder="Search the captions (a word, a callsign, a name)" class="search full" style="margin-top:10px">
+        <p class="muted small">Every finished caption sentence the phone kept, newest first, with its time, channel and (on DMR) the caller. New ones appear as they are heard. Captions are made on the phone: turn TXT on here or on the phone.</p>
+        <div id="trList" class="list"></div>
       </div>
     </section>
     <!-- MAP -->

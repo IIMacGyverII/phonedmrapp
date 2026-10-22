@@ -227,6 +227,17 @@ public final class ChannelStore extends SQLiteOpenHelper {
     }
 
     /** Finished caption sentences, newest first: [ts, channel, text]. */
+    /** Finished caption sentences, newest first, optionally only those containing {@code q}: [ts, channel, text]. */
+    public List<Object[]> captions(int limit, String q) {
+        List<Object[]> out = new ArrayList<>();
+        String like = q == null || q.trim().isEmpty() ? null : "%" + q.trim().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+        try (Cursor c = like == null ? getReadableDatabase().rawQuery("SELECT ts, channel, text FROM history WHERE kind='txt' ORDER BY ts DESC LIMIT " + limit, null)
+                : getReadableDatabase().rawQuery("SELECT ts, channel, text FROM history WHERE kind='txt' AND text LIKE ? ESCAPE '\\' ORDER BY ts DESC LIMIT " + limit, new String[] { like })) {
+            while (c.moveToNext()) out.add(new Object[] { c.getLong(0), c.getInt(1), c.getString(2) });
+        }
+        return out;
+    }
+
     public List<Object[]> captions(int limit) {
         List<Object[]> out = new ArrayList<>();
         try (Cursor c = getReadableDatabase().rawQuery("SELECT ts, channel, text FROM history WHERE kind='txt' ORDER BY ts DESC LIMIT " + limit, null)) {
