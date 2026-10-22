@@ -38,7 +38,7 @@ public final class DiagReceiver extends BroadcastReceiver {
             // phone without publishing them; "profileclear" removes it again (and the owner's overrides)
             case "profiletest": Log.i("DiagReceiver", "profiletest: " + ProfileRegistry.loadForTest(new java.io.File(i.getStringExtra("path")))); break;
             // bench: the DMR audio check for --ei seconds (default 10) on the current channel; the section goes to logcat, not to a report
-            case "dmrcheck": { final int sec = i.getIntExtra("seconds", 10); final Context ctx = c.getApplicationContext();
+            case "audiocheck": case "dmrcheck": { final int sec = i.getIntExtra("seconds", 10); final Context ctx = c.getApplicationContext();
                 new Thread(() -> { try { for (String l : DmrAudioCheck.run(ctx, s, sec, t -> { }).split("\n")) Log.i("DmrAudioCheck", l); } catch (Throwable t) { Log.w("DmrAudioCheck", t); } }, "dmrcheck").start(); break; }
             case "profileclear": Log.i("DiagReceiver", "profileclear: " + ProfileRegistry.clearForTest()); break;
             case "web": Log.i("DiagReceiver", "web: " + (s.web() == null ? "no host" : String.valueOf(s.web().setEnabled(i.getBooleanExtra("on", true))) + " running=" + s.web().running() + " " + s.web().urls())); break;

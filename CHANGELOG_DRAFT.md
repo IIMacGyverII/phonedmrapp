@@ -3,6 +3,18 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-22 — SignalDeck 1.0.0-beta.10 (pre-release)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Owner's request: publish with the radio audio check (the custom-ROM user reports no audio at all, not only DMR). `versionName` 1.0.0-beta.10, `versionCode` 109; GitHub pre-release `signaldeck-v1.0.0-beta.10` (`--prerelease --latest=false`, asset `SignalDeck-1.0.0-beta.10.apk`). Contains everything since beta.9: radio audio check (analog + DMR), Repeaters here, web map fixes, web captions/transcripts, TXT key and caption engine/models on the web. README links updated. | `DMRStandalone/app/build.gradle`, `README.md` | Release build, host tests pass, installed on the owner's Armor (reports 1.0.0-beta.10). |
+
+## 2026-10-22 — Radio audio check: analog channels (squelch-open static test, continuous stations)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | The custom-ROM user has no audio on any channel, not only DMR; the check was DMR-only in two ways. **Renamed** "Radio audio check (no sound, DMR or analog)". **Analog:** first 10 s with the squelch held open (MON, restored afterwards), so receiver noise must arrive whatever is on the air — audio bytes and level measured (WAV deleted); the verdict decides the audio path from that alone ("no audio at all even with the squelch open" / "silent" / "the audio path works"). **Continuous stations** (NOAA, squelch 0, Soft SQ): a reception already in progress when the minute starts now counts, and audio during receptions is summed per second while the radio reports receiving (the minute used to count only receptions that *started* inside it, so a continuous NOAA broadcast read as "never reported a reception"). Analog wording (receptions, "no signal opened the squelch: choose a channel with a station, NOAA always has one"); the DMR advice only on DMR channels. Intro and help explain both modes. DIAG `audiocheck` (alias `dmrcheck`). | `DmrAudioCheck.java`, `ui/DeviceView.java`, `ui/HelpView.java`, `DiagReceiver.java`, `DmrAudioCheckTest.java` (8 tests) | Host tests pass. **Device-tested** (owner's Armor, release, NOAA WX6, DIAG 15 s): part 1 MON 10 s → 319,488 audio bytes, RMS 1883 (−25 dBFS), verdict "The audio path works"; part 2 WX6 at −88 dBm did not open the squelch → "No signal opened the squelch…"; media volume 0 reported; MON restored off, channel restored to the owner's (STMA EMS/Fire), no WAV left. Not exercised: a station strong enough to be received during the minute (all NOAA channels −103/−104 dBm indoors at the time). |
+
 ## 2026-10-22 — SignalDeck Web: TXT key on the intercom; caption engine and models
 
 | Backlog | Change | Files | Test |
