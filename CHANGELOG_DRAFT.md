@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-22 — Xplore 1: squelch stays open after MON (listen check report); radio audio check probes the fix
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| N8 | Xplore owner's beta.8 listen check (Faraday cage, Baofeng beside the phone): receive confirmed clean (834,833 bytes / 50 s, RMS 1179, no dropouts; "I could understand everything"), but the squelch stays open: after MON off every second counted as receiving, also at −105 dBm, and the owner hears noise all the time. Channel writes matched QuickChat's. **Changes:** on profiles with the global squelch (Xplore), analog channel writes now send channel → monitor (its current state; off after a channel change) → squelch, QuickChat's order. The **radio audio check**, after the MON part, checks whether the squelch closed with no signal (≤ −100 dBm); if not it tries (1) channel + monitor 2 + squelch, (2) monitor 0 (`RadioEngine.setMonitorRaw`), and the report and verdict say which closed it — receive only. Findings added to `docs/multi-device-xplore1-findings.md`. | `RadioService.java` (`squelchCloseAttempt`, `mcuReceiving`), `RadioEngine.java`, `DmrAudioCheck.java`, `ui/HelpView.java`, `DmrAudioCheckTest.java` (+1), `docs/multi-device-xplore1-findings.md` | Host tests pass (9). **Armor regression** (NOAA WX6, DIAG): "squelch closed after MON off (as it should)", audio path line, channel and MON restored. The stuck path itself can only run on the Xplore. |
+
 ## 2026-10-22 — SignalDeck 1.0.0-beta.10 (pre-release)
 
 | Backlog | Change | Files | Test |

@@ -167,3 +167,18 @@ skipped by `PcmFramer`. Payload = 8 kHz mono 16-bit **little-endian** (squelch-o
 little above 2 kHz). Before monitor the packets were all-zero. RSSI −111…−114 dBm (nobody on the channel). QuickChat's
 channels imported (a digital channel was written at bring-up). Still open: transmit (QuickChat keys with `ptt_control 0` and
 sends raw 160-byte PCM blocks on `ttyS1`; not tried — transmit stays off on the unverified profile).
+
+## Listen check on beta.8 (owner, 2026-10-22, Faraday cage, a Baofeng transmitting next to the phone)
+
+- **Receive works and sounds right.** 416.025 MHz analog: part 1 (MON, 10 s) 167,668 bytes, RMS 1595, 1 short dropout; part 2 (normal
+  squelch, 50 s) 834,833 bytes (the full 8 kHz rate), RMS 1179, peak 11582, no clipping, no dropouts; owner: "heard everything …
+  I could understand everything". Signal −48…−53 dBm with the Baofeng keyed.
+- **The squelch stays open.** After part 1 switched MON off (`0x2F` 2), the module kept reporting a reception in every second of part 2,
+  including seconds at −105/−106 dBm (no signal); the owner hears the noise all the time ("after the Step 3 test it stayed always on").
+  SignalDeck's channel writes matched QuickChat's (`0x23` sq 5, monitor byte 2; `0x30` 5, acked). Working theory: firmware V016
+  does not leave monitor on `0x2F` 2 (QuickChat only sends 2 at start-up, when monitor is off anyway), so once MON (or the beta.5/8
+  trial, which turns MON on) has been used the squelch stays open. The report's app log ended before the listen check, so the
+  frames of that minute are not in it.
+- **Next (beta.11):** analog channel writes on this profile send channel → monitor → squelch like QuickChat; the radio audio check
+  detects "squelch open with no signal after MON off" and tries (1) channel + `0x2F` 2 + `0x30`, (2) `0x2F` 0, reporting which closed it.
+

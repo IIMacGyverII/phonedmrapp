@@ -911,6 +911,34 @@ public class RadioService extends Service implements RadioEngine.Events {
     public boolean scanning() { return scanner.isScanning(); }
     /** Soft SQ decides what is heard on the current channel (the module then reports a reception all the time). */
     public boolean softSqActive() { return softSq.isEnabled(); }
+    private boolean moved(ChannelStore.Channel ch) { ChannelStore.Channel was = current; return was == null || was.number != ch.number || was.rxFreq != ch.rxFreq || was.isDigital() != ch.isDigital(); }
+    /** The module reports a reception (RECEIVE_START … STOP), whatever Soft SQ decides. */
+    public boolean mcuReceiving() { return receiving; }
+    /**
+     * Radio audio check: the squelch stayed open after MON off. Step 1 re-sends the channel the way QuickChat does
+     * (channel, monitor off, squelch); step 2 sends monitor 0. Receive only. Returns what was sent.
+     */
+    public String squelchCloseAttempt(int step) {
+        final ChannelStore.Channel ch = current; if (ch == null || ch.isDigital()) return "no analog channel";
+        final java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1); final String[] what = { "" };
+        worker.execute(() -> {
+            try {
+                if (step == 1) {
+                    int band = ch.rxFreq < 300_000_000 ? 1 : ch.band;
+                    synchronized (tunes) { tunes.addLast(new Object[] { ch, false }); }
+                    engine.setAnalog(ch.rxFreq, ch.txFreq, band, ch.power, hardwareSq(ch), ch.rxType, ch.rxSubCode, ch.txType, ch.txSubCode, 8, 2);
+                    engine.setMonitor(false); engine.setSquelch(hardwareSq(ch));
+                    what[0] = "channel (0x23), monitor 2 (0x2F), squelch " + hardwareSq(ch) + " (0x30)";
+                } else { engine.setMonitorRaw(0); what[0] = "monitor 0 (0x2F)"; }
+                monitorOn = false;
+            } catch (Throwable t) { what[0] = "failed: " + t; }
+            done.countDown();
+        });
+        try { done.await(3, java.util.concurrent.TimeUnit.SECONDS); } catch (InterruptedException ignored) { }
+        log("audio check, squelch close step " + step + ": " + what[0]);
+        return what[0];
+    }
+
     /** The radio's RECEIVE_START means a real reception: a DMR channel, or an analog one whose squelch is not held fully open (sq 0 reports "receiving" all the time). */
     public boolean rxReportsReception() { ChannelStore.Channel ch = current; return ch == null || ch.isDigital() || (!softSq.isEnabled() && hardwareSq(ch) > 0); }
     public boolean scanHolding() { return scanner.isHolding(); }
@@ -1154,7 +1182,10 @@ public class RadioService extends Service implements RadioEngine.Events {
             } else {
                 int band = ch.rxFreq < 300_000_000 ? 1 : ch.band;      // VHF must be band=1 (band=0 deafens the RX)
                 engine.setAnalog(ch.rxFreq, ch.txFreq, band, ch.power, hardwareSq(ch), ch.rxType, ch.rxSubCode, ch.txType, ch.txSubCode, 8, 2);
-                if (profile.globalSquelch) engine.setSquelch(hardwareSq(ch));   // this module's squelch follows 0x30 (as QuickChat sends it)
+                if (profile.globalSquelch) {                              // this module's squelch follows 0x30; QuickChat sends channel, monitor, squelch in that order
+                    engine.setMonitor(monitorOn && !moved(ch));
+                    engine.setSquelch(hardwareSq(ch));
+                }
             }
             finishRecording();
             ChannelStore.Channel was = current;

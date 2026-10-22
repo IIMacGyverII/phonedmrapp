@@ -52,4 +52,12 @@ public class DmrAudioCheckTest {
         assertEquals("123x", DmrAudioCheck.maskId(1234));
         assertEquals("91", DmrAudioCheck.maskId(91));
     }
+
+    @Test public void squelchStuckAfterMon() {
+        DmrAudioCheck.Facts f = ok(); f.digitalChannel = false; f.monTested = true; f.monPcm = 160000; f.monRms = 2000;
+        f.squelchStuck = true; f.closedBy = 1; assertTrue(v(f).contains("the way the stock app does closed it"));
+        f.closedBy = 2; assertTrue(v(f).contains("monitor value 0 closed it"));
+        f.closedBy = 0; assertTrue(v(f).contains("neither fix closed it"));
+        f.squelchStuck = false; assertFalse(v(f).contains("stayed open"));
+    }
 }
