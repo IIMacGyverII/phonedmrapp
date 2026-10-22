@@ -136,12 +136,13 @@ public final class PktDialog {
         body.addView(fr);
         body.addView(hint((svc.foxTxOn() ? "\uD83E\uDD8A The fox beacon is on. " : "") + "Find a hidden transmitter: live signal strength, compass bearings and an estimate of where the fox is. Or be the fox."));
         // ---- net control ----
-        body.addView(section("Net control"));
+        body.addView(section("Nets"));
         LinearLayout nr = row();
+        button(nr, "Nets near you", Theme.SOFTSQ, x -> { dlg.dismiss(); NetsDialog.show(c, svc); });
         com.macdmr.radio.ham.NetStore.Net running = svc.nets().running();
         button(nr, running != null ? "Net running: " + running.name : "Net control", Theme.SOFTSQ, x -> { dlg.dismiss(); NetDialog.show(c, svc); });
         body.addView(nr);
-        body.addView(hint("Run a net: check-ins, traffic, late and out flags, and a report at the end."));
+        body.addView(hint("Nets near you: in session now (NetLogger, and what the radio hears), when they come back, reminders. Net control: run a net with check-ins, traffic, late and out flags, and a report at the end."));
         // ---- voice keyer ----
         body.addView(section("Voice keyer and ID timer"));
         LinearLayout kr = row();

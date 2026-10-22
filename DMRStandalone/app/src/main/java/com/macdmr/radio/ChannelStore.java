@@ -247,6 +247,15 @@ public final class ChannelStore extends SQLiteOpenHelper {
     }
 
     /** Receptions since {@code sinceTs} (analog and DMR), for the activity statistics: [ts, channel, kind, text]. */
+    /** Receptions and captions since {@code sinceTs}, for finding nets in what the radio heard. */
+    public List<com.macdmr.radio.ham.NetFinder.Rx> netRows(long sinceTs) {
+        List<com.macdmr.radio.ham.NetFinder.Rx> out = new ArrayList<>();
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT ts, channel, kind, text, dmrId FROM history WHERE ts>=? AND kind IN ('rx','dmr','txt')", new String[] { String.valueOf(sinceTs) })) {
+            while (c.moveToNext()) out.add(new com.macdmr.radio.ham.NetFinder.Rx(c.getLong(0), c.getInt(1), c.getString(2), c.getString(3), c.isNull(4) ? 0 : c.getInt(4)));
+        }
+        return out;
+    }
+
     public List<Object[]> activity(long sinceTs) {
         List<Object[]> out = new ArrayList<>();
         try (Cursor c = getReadableDatabase().rawQuery("SELECT ts, channel, kind, text FROM history WHERE ts>=? AND kind IN ('rx','dmr')", new String[] { String.valueOf(sinceTs) })) {

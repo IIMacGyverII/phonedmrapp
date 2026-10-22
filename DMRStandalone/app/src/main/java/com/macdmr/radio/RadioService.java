@@ -227,6 +227,9 @@ public class RadioService extends Service implements RadioEngine.Events {
     // ---- nets (net control) ----
     private com.macdmr.radio.ham.NetStore nets;
     public com.macdmr.radio.ham.NetStore nets() { if (nets == null) nets = new com.macdmr.radio.ham.NetStore(this); return nets; }
+    private NetWatch netWatch;
+    /** Nets near you (NetLogger + what the radio heard) and their reminders. */
+    public NetWatch netWatch() { if (netWatch == null) netWatch = new NetWatch(this); return netWatch; }
 
     // ---- logbook ----
     private com.macdmr.radio.ham.Logbook logbook;
@@ -654,6 +657,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         registerHardwarePtt();
         customKey = new CustomPttKey.Listener(this, down -> { if (pttLearning) return; if (down) { if (isReady()) ptt(true); } else ptt(false); }, this::log);
         if (profile.supported) customKey.start();
+        netWatch().start();
         web = new com.macdmr.radio.web.WebHost(this);
         if (web.enabled()) { String e = web.start(); if (e != null) log("web: " + e); }
     }
@@ -708,6 +712,7 @@ public class RadioService extends Service implements RadioEngine.Events {
         stopBluetoothMic();
         try { if (pttKey != null) unregisterReceiver(pttKey); } catch (Throwable ignored) { }
         try { if (customKey != null) customKey.stop(); } catch (Throwable ignored) { }
+        try { if (netWatch != null) netWatch.stop(); } catch (Throwable ignored) { }
         try { unregisterReceiver(diag); } catch (Throwable ignored) { }
         try { if (powerOff != null) unregisterReceiver(powerOff); } catch (Throwable ignored) { }
         try { if (pttDown) { if (audio != null) audio.stopTx(); engine.ptt(false); } } catch (Throwable ignored) { }

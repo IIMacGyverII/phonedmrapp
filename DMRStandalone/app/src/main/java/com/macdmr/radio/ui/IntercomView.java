@@ -339,8 +339,8 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         LayoutParams lg = new LayoutParams((int) (28 * d), (int) (28 * d)); lg.rightMargin = (int) (12 * d);
         neoHeader.addView(logo, 0, lg);
         ImageView menu = Neo.iconButton(c, "menu", Neo.CYAN, "Menu");
-        menu.setOnClickListener(v -> new android.app.AlertDialog.Builder(c).setItems(new String[] { "Choose zone", "Last heard", "Map & coverage", "Fox hunt", "Emergency", "Classic intercom look" }, (dd, w) -> {
-            if (w == 0) pickZone(); else if (w == 1) { if (svc != null) LastHeardDialog.show(c, svc); } else if (w == 2) MapDialog.show(c, svc); else if (w == 3) FoxHuntDialog.show(c, svc); else if (w == 4) EmergencyDialog.show(c, svc); else offerLook(false);
+        menu.setOnClickListener(v -> new android.app.AlertDialog.Builder(c).setItems(new String[] { "Choose zone", "Last heard", "Nets near you", "Map & coverage", "Fox hunt", "Emergency", "Classic intercom look" }, (dd, w) -> {
+            if (w == 0) pickZone(); else if (w == 1) { if (svc != null) LastHeardDialog.show(c, svc); } else if (w == 2) NetsDialog.show(c, svc); else if (w == 3) MapDialog.show(c, svc); else if (w == 4) FoxHuntDialog.show(c, svc); else if (w == 5) EmergencyDialog.show(c, svc); else offerLook(false);
         }).show());
         Neo.addAction(neoHeader, menu);
         addView(neoHeader);
