@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-22 — Mission Statement (README and Device page)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | Owner's mission statement for the project, at the top of the README (under the title) and on a dedicated **Mission Statement** button on the Device page (above the tools), which opens a sheet with the statement and "— IIMacGyverII, SignalDeck". Help: Device → Mission Statement. | `README.md`, `ui/DeviceView.java`, `ui/HelpView.java` | Built; installed after the 09:43 ISS pass; button and sheet checked on the owner's Armor. |
+
 ## 2026-10-22 — Real spectrum bars (phone and web); ISS tracking survives restarts
 
 | Backlog | Change | Files | Test |
