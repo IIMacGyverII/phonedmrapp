@@ -182,3 +182,24 @@ sends raw 160-byte PCM blocks on `ttyS1`; not tried — transmit stays off on th
 - **Next (beta.11):** analog channel writes on this profile send channel → monitor → squelch like QuickChat; the radio audio check
   detects "squelch open with no signal after MON off" and tries (1) channel + `0x2F` 2 + `0x30`, (2) `0x2F` 0, reporting which closed it.
 
+
+
+## QuickChat decompiled (jadx 1.5.6, 2026-10-22): how the stock app drives the module
+
+Interoperability notes only (facts and values, no code). The protocol library is `com.wonder.dmr.DmrManager` ("version 1.0.9 (2025-4-27)") with `com.wonder.serial.SerialTools`; the app logic is obfuscated. Transmit was deliberately not analysed.
+
+- **Frames:** `68 cmd 01 01 ckH ckL lenH lenL body 10`; length big-endian (body only); checksum = 16-bit ones'-complement sum of big-endian words over the frame with the checksum field 0. Reply byte 3: 0 success, 1 failure, 2 checksum error.
+- **0x23 body (19 B):** rx LE32, tx LE32, band (0 narrow, 1 wide), power, sq 0–9, rxType (0 carrier, 1 CTCSS, 2 DCS N, 3 DCS I), rxSub, txType, txSub, **pwrsave (1/2), volume (QuickChat always 0), monitor (1/2), relay (1/2)**.
+- **0x22 body (163 B):** rx, tx, localId (LE32 each), 32 group IDs LE32, txContact LE32 (All = 0xFFFFFF), contactType, power, cc, in slot, out slot, channelMode (0 direct, 4 double slot), encryptSw (1/2), 8-byte key, pwrsave, volume (0), mic, relay.
+- **Other commands:** 0x27 init check, 0x28 remote functions (radio check, call alert, remote monitor, kill, activate), 0x31 power save (1/2), 0x35 transfer interrupt, 0x37 "polite" (**0 off / 1 on**), 0x3A SMS protocol type, 0x3C speaker enable. 0x2B and 0x32 are never used by QuickChat.
+- **Start-up:** sysfs power/pwd/ptt lines 0 → 200 ms → open ttyS0 (57600) → 100 ms → lines 1; boot banner → 0x27 → 0x34 → first channel write.
+- **Channel write timing:** at least **1000 ms** between channel writes (later ones dropped) and **1200 ms** between channel-button presses; **no channel change while receiving or transmitting**; after the 0x23 acknowledgement: 0x35 → (ack) 0x37, and **200 ms after the 0x23 acknowledgement 0x2F then 0x30**, whose answers are ignored. From the channel list: no 0x2F/0x30 at all.
+- **Errors:** no timeouts and no retries anywhere; refusals are ignored. A 5 s version watchdog re-powers the module if 0x34 never answered (buggy: never fires after the first answer).
+- **0x36 status values:** 1 RX start, 2 RX end, 3/4 TX start/end, 5 SMS waiting (→ 0x2D), 6 activation timeout, 7 re-key, 8 SMS delivered, 9 SMS failed. QuickChat **never acknowledges 0x36** and de-duplicates repeats (the module may repeat pushes; repeated value accepted again after 5 repeats or 5 s).
+- **No scanner, no tone scan, no RSSI polling** in QuickChat.
+- **Tones:** CTCSS index 0..50 = 62.5 … 254.1 Hz (index 0 is 62.5, "off" is type 0); DCS index into the 83-code list for both N and I (same as the Ulefone table).
+- **ttyS1 audio:** 230400 8N1; each read must be exactly **167 bytes: `BB 00 xx xx xx xx` + 160 bytes PCM (80 samples, 10 ms) + `44`**; 8 kHz mono 16-bit; played as-is, not gated by 0x36.
+- **SMS receive (0x2D reply):** type (0 private / 1 group), sender LE32, text (UTF-8 by default). Note for a later transmit review: QuickChat's 0x2C body has **no 9-byte header** (type, target, text), unlike what the Armor's firmware needed.
+- **Shipped channels:** band 0, sq 5, monitor 2, relay 2, pwrsave 1 (SignalDeck sends pwrsave 2).
+
+Applied in SignalDeck (2026-10-22, Xplore profile revision 2): channel writes at least 1 s apart (quick changes collapse into the last), monitor + squelch 200 ms after the channel's acknowledgement (1.5 s fallback), scan dwell 2.5 s, refused MON retried.
