@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-22 — SignalDeck Web map: every channel with a location; cards can be closed
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | Owner's report (screenshot): the web map showed only one channel and a card could not be closed. The map loaded `/api/channels`, which returns the selected zone's channels only, so it showed the channels with a location *in the current zone*; it now asks for `channels?all=1` (every channel, as the phone's map). Cards (channel, repeater, coverage square) get a × button, close with Esc, and close when the coverage layer or repeater changes (a predicted-square card stayed up after coverage was turned off). Help: SignalDeck Web → What it shows. | `web/WebHost.java`, `assets/web/pages.js`, `assets/web/app.css`, `ui/HelpView.java` | **Device + browser tested** (owner's Armor, headless Chrome): `/api/channels` 32 (zone) vs `?all=1` 55 channels, 4 with a location → map "4 CHANNELS" (was 1); card shows the ×, closes on ×, on Esc and on a layer change. |
+
 ## 2026-10-22 — SignalDeck 1.0.0-beta.9 (pre-release)
 
 | Backlog | Change | Files | Test |

@@ -75,7 +75,7 @@ const lonOf = (x, z) => x / (TS * 2 ** z) * 360 - 180;
 const latOf = (y, z) => { const n = Math.PI - 2 * Math.PI * y / (TS * 2 ** z); return 180 / Math.PI * Math.atan(Math.sinh(n)); };
 async function loadMap() {
   try {
-    const [st, ch] = await Promise.all([api('aprs/stations?limit=500'), api('channels')]);
+    const [st, ch] = await Promise.all([api('aprs/stations?limit=500'), api('channels?all=1')]);   // the map shows every channel with a location, as the phone's map does
     M.marks = M.marks.filter(m => m.kind === 'rpt');
     for (const s of st.stations) if (s.lat != null) M.marks.push({ kind: 'aprs', lat: s.lat, lon: s.lon, name: s.call, s });
     for (const c of ch.channels) if (c.lat != null) M.marks.push({ kind: 'ch', lat: c.lat, lon: c.lon, name: c.name || ('Channel ' + c.number), c });
@@ -104,7 +104,7 @@ async function showRepeater(m) {
     + '<div class="sub">' + [r.fm ? 'FM' + (r.toneUp ? ' tone ' + esc(r.toneUp) : '') : '', r.dmr ? 'DMR' + (r.cc >= 0 ? ' CC' + r.cc : '') + (r.network ? ' ' + esc(r.network) : '') : '', esc([r.city, r.region].filter(Boolean).join(', ')), r.distanceKm != null ? (r.distanceKm / 1.609344).toFixed(1) + ' mi' : '', r.approx ? 'approximate position' : ''].filter(Boolean).join(' · ') + '</div>'
     + (r.dmr ? '<div class="tgs" id="rptTgs"><span class="sub">Loading talkgroups…</span></div>' : '')
     + '<button class="btn small-btn" id="rptAdd">Add to my channels</button> <button class="btn small-btn" id="rptCov">Coverage</button>';
-  c.classList.remove('hidden');
+  showCard();
   $('rptCov').onclick = () => focusCoverage({ hz: r.rxHz, lat: m.lat, lon: m.lon, name: r.callsign });
   if (r.dmr) {
     try {
@@ -166,7 +166,7 @@ let covSeq = 0;
 /** Coverage for all repeaters, or for M.covFocus (one repeater: measured squares and its terrain prediction, polled while it runs). */
 async function loadCoverage(fit) {
   const l = $('mapCov').value, seq = ++covSeq, note = $('mapCovNote'), f = M.covFocus;
-  M.cells = []; M.pred = [];
+  M.cells = []; M.pred = []; hideCard();
   if (!l) { note.classList.add('hidden'); drawMap(); return; }
   let q = 'coverage?layer=' + l;
   if (f) q += '&key=' + encodeURIComponent(f.key || '') + (f.hz ? '&hz=' + f.hz + '&lat=' + f.lat + '&lon=' + f.lon + '&name=' + encodeURIComponent(f.name || '') : '') + ($('mapPred').checked ? '&predict=1' : '');
@@ -210,13 +210,21 @@ function showCell(c) {
     $('mapCard').innerHTML = M.covLayer === 'tx'
       ? '<b style="color:var(--green)">Should key up (' + c.value + ' dB to spare)</b><div class="sub">Predicted · ' + who + '</div><div class="sub">Calculated from the terrain and a typical handheld on high power; the more key-ups the phone logs, the better this gets.</div>'
       : '<b style="color:' + c.color + '">About ' + c.value + ' dBm · ' + esc(c.sunits) + '</b><div class="sub">Predicted · ' + who + '</div><div class="sub">Not measured here: calculated from the terrain between this square and the repeater.</div>';
-    $('mapCard').classList.remove('hidden'); return;
+    showCard(); return;
   }
   $('mapCard').innerHTML = M.covLayer === 'tx'
     ? '<b>Transmit from here</b><div class="sub">' + c.keyed + ' reached the repeater · ' + c.failed + ' got no reply</div>'
     : '<b>Signal heard here</b><div class="sub mono">median ' + c.value + ' dBm' + (c.sunits ? ' · ' + esc(c.sunits) : '') + ' · ' + c.count + ' readings · ' + who + '</div>';
-  $('mapCard').classList.remove('hidden');
+  showCard();
 }
+/** Show the card with its close button (it also closes with Esc, a click on empty map, or a layer change). */
+function showCard() {
+  const c = $('mapCard'); const x = document.createElement('button');
+  x.type = 'button'; x.className = 'mcx'; x.setAttribute('aria-label', 'Close'); x.textContent = '×'; x.onclick = hideCard;
+  c.prepend(x); c.classList.remove('hidden');
+}
+function hideCard() { $('mapCard').classList.add('hidden'); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.page === 'map') hideCard(); });
 function showMark(m) {
   const c = $('mapCard'); let h;
   if (m.kind === 'rpt') { showRepeater(m); return; }
@@ -228,7 +236,7 @@ function showMark(m) {
     const ch = m.c;
     h = '<b>' + esc(m.name) + '</b> <span class="sub mono">' + mhz(ch.rxFreq) + ' MHz</span><div class="sub">' + esc(ch.location) + '</div><button class="btn small-btn" id="mapTune">Tune channel ' + ch.number + '</button> <button class="btn small-btn" id="mapCovBtn">Coverage</button>';
   }
-  c.innerHTML = h; c.classList.remove('hidden');
+  c.innerHTML = h; showCard();
   const b = $('mapTune'); if (b) b.onclick = () => act('channel/select', { number: m.c.number });
   const cb = $('mapCovBtn'); if (cb) cb.onclick = () => focusCoverage({ hz: m.c.rxFreq, lat: m.lat, lon: m.lon, name: m.name });
 }
