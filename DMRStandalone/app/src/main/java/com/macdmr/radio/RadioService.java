@@ -30,6 +30,8 @@ public class RadioService extends Service implements RadioEngine.Events {
         void onTx(boolean transmitting);
         void onRssi(int dbm);
         void onAudioLevel(int amplitude);
+        /** The received audio's spectrum (Spectrum.BANDS values 0…1), every 32 ms while something is heard; all zero when it stops. */
+        default void onSpectrum(float[] bands) { }
         void onHistory(String line);
         void onCaller(String text);
         void onLog(String s);
@@ -164,7 +166,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     public int satMode() { SatState s = satState; return s == null ? -1 : s.mode; }
     public void stopSatTrack() { Thread t = satThread; satThread = null; if (t != null) t.interrupt(); }
     /** Stop tracking and following passes (the Stop buttons). */
-    public void endSatTracking() { issRepeatMode = -1; stopSatTrack(); }
+    public void endSatTracking() { setIssRepeat(-1); stopSatTrack(); }
     /** Bench (DIAG vfo): listen on a frequency through the VFO, wide, low power. */
     void diagVfo(int hz) { ChannelStore.Channel a = new ChannelStore.Channel(); a.type = 1; a.rxFreq = a.txFreq = hz; a.band = 1; a.power = 1; a.name = "Bench"; applyVfo(a, false); }
     void diagVfoOff() { if (vfo != null && "Bench".equals(vfo.name)) exitVfo(); }
@@ -215,7 +217,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                 if (tuned && vfo != null && sat.name.equals(vfo.name)) exitVfo();
                 if (satState == st) satState = null;
                 if (natural && sat.catalog == com.macdmr.radio.ham.Satellites.ISS_CATALOG && issRepeatMode == sat.mode)   // following every pass: the next one
-                    ui.postDelayed(() -> { if (issRepeatMode == sat.mode && satState == null) { String e = startIssMode(sat.mode); if (e != null) { history("pkt", "\uD83D\uDEF0 " + e); issRepeatMode = -1; } } }, 5000);
+                    ui.postDelayed(() -> { if (issRepeatMode == sat.mode && satState == null) { String e = startIssMode(sat.mode); if (e != null) { history("pkt", "\uD83D\uDEF0 " + e); setIssRepeat(-1); } } }, 5000);
                 pushModes();
                 history("pkt", "\uD83D\uDEF0 " + sat.name + " pass over");
             }
@@ -552,7 +554,18 @@ public class RadioService extends Service implements RadioEngine.Events {
     }
     /** Keep tracking the ISS pass after pass (for an SSTV event or a day of APRS): restarted at each LOS. */
     private volatile int issRepeatMode = -1;
-    public void setIssRepeat(int mode) { issRepeatMode = mode; }
+    public void setIssRepeat(int mode) { issRepeatMode = mode; getSharedPreferences("radio", MODE_PRIVATE).edit().putInt("issRepeat", mode).apply(); }   // kept across restarts (an install during an SSTV event must not end it)
+    /** After a restart: carry on following the ISS pass after pass if it was on. */
+    private void resumeIssRepeat() {
+        final int m = getSharedPreferences("radio", MODE_PRIVATE).getInt("issRepeat", -1);
+        if (m < 0 || satState != null) return;
+        ui.postDelayed(() -> {
+            if (satState != null) return;
+            String e = startIssMode(m);
+            if (e == null) { issRepeatMode = m; history("pkt", "\uD83D\uDEF0 Following the ISS again after a restart (" + (m == com.macdmr.radio.ham.Satellites.SSTV ? "SSTV" : "APRS") + ")"); }
+            else { history("pkt", "\uD83D\uDEF0 Could not resume ISS tracking: " + e); }
+        }, 4000);
+    }
     public int issRepeat() { return issRepeatMode; }
 
     /** Hands-free one-shot transmission: key, play the PCM through the TX path, release, resume RX. */
@@ -785,6 +798,7 @@ public class RadioService extends Service implements RadioEngine.Events {
                 selectChannel(store.activeNumber());
                 startRxAudio();
                 setLink("ready");
+                resumeIssRepeat();
             } catch (Throwable t) {
                 log("bring-up failed: " + t);
                 if (pausedStock) {                            // never leave the phone with no working radio app
@@ -879,7 +893,14 @@ public class RadioService extends Service implements RadioEngine.Events {
         }
         final int p = peak;
         ui.post(() -> { for (Listener l : listeners) l.onAudioLevel(p); });
+        // the intercom bars (phone and web): the spectrum of what the speaker plays; zeros once, when it stops
+        float[] sb = open && !muted ? spectrum.feed(mono, n) : null;
+        if (sb != null) { final float[] copy = sb.clone(); spectrumZero = false; ui.post(() -> { for (Listener l : listeners) l.onSpectrum(copy); }); }
+        else if (!(open && !muted) && !spectrumZero) { spectrumZero = true; spectrum.reset(); final float[] z = new float[com.macdmr.radio.dsp.Spectrum.BANDS]; ui.post(() -> { for (Listener l : listeners) l.onSpectrum(z); }); }
     }
+
+    private final com.macdmr.radio.dsp.Spectrum spectrum = new com.macdmr.radio.dsp.Spectrum();
+    private volatile boolean spectrumZero = true;
 
     // ---- CTCSS heard on an analog channel: offer it as the channel's tone ----
     private final com.macdmr.radio.dsp.CtcssDecoderBank toneBank = new com.macdmr.radio.dsp.CtcssDecoderBank(8000);

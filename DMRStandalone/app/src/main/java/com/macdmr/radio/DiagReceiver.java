@@ -50,6 +50,11 @@ public final class DiagReceiver extends BroadcastReceiver {
                 if (e == null) s.setIssRepeat(com.macdmr.radio.ham.Satellites.APRS);
                 Log.i("DiagReceiver", "issaprs: " + (e == null ? "tracking" : e)); break;
             }
+            case "isssstv": {                                                   // ISS SSTV: track the next pass and every one after it (an SSTV event)
+                String e = s.startIssMode(com.macdmr.radio.ham.Satellites.SSTV);
+                if (e == null) s.setIssRepeat(com.macdmr.radio.ham.Satellites.SSTV);
+                Log.i("DiagReceiver", "isssstv: " + (e == null ? "tracking" : e)); break;
+            }
             case "afsk": {                                                      // bench: --ez legacy true = the old single-slicer decoder
                 boolean legacy = i.getBooleanExtra("legacy", false);
                 com.macdmr.radio.pkt.AFSKDecoder.MULTI_SLICER = !legacy; com.macdmr.radio.pkt.AFSKDecoder.BIT_FIX = !legacy;

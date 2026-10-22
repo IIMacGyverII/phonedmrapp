@@ -573,6 +573,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
 
     }
     @Override public void onAudioLevel(int amplitude) { board.audioAmplitude = amplitude; }
+    @Override public void onSpectrum(float[] bands) { board.spectrum = bands; }
     @Override public void onHistory(String line) { reopenPanel("history: " + line); if (!history.isEmpty() && history.peekLast().equals(line)) return; history.addLast(line); while (history.size() > 3) history.removeFirst(); renderHistory(); }
     @Override public void onCaller(String text) { reopenPanel("caller: " + text); headline.setText(neo ? "●  " + text : "📻 " + text); }
     @Override public void onLog(String s) { }

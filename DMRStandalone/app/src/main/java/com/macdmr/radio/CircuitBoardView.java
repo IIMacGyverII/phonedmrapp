@@ -32,6 +32,8 @@ public class CircuitBoardView extends FrameLayout {
 
     /** Audio peak of the latest block (set from the audio thread). */
     public volatile int audioAmplitude = 0;
+    /** The received audio's spectrum (left = low notes), set by the intercom; null = fall back to the level. */
+    public volatile float[] spectrum;
     /** Captions visible: draw the VU bars as a thin strip so the transcription box can sit low without being drawn through. */
     public volatile boolean barsCompact = false;
     public volatile boolean isReceiving = false;
@@ -134,9 +136,11 @@ public class CircuitBoardView extends FrameLayout {
         }
         // VU bars: sqrt curve for low-end sensitivity; they decay to idle when nothing is received
         float norm = isReceiving ? (float) Math.sqrt(Math.min(1.0f, audioAmplitude / 3000.0f)) : 0f;
+        float[] sp = spectrum;
         for (int i = 0; i < NUM_BARS; i++) {
-            float center = NUM_BARS / 2.0f, dist = Math.abs(i - center) / center, env = 1.0f - dist * 0.55f;
-            float target = norm * env * (0.60f + rng.nextFloat() * 0.80f);
+            float target;
+            if (sp != null && sp.length == NUM_BARS) target = isReceiving ? sp[i] : 0f;                 // the real spectrum: one bar per band
+            else { float center = NUM_BARS / 2.0f, dist = Math.abs(i - center) / center, env = 1.0f - dist * 0.55f; target = norm * env * (0.60f + rng.nextFloat() * 0.80f); }
             barHeights[i] += (target > barHeights[i]) ? (target - barHeights[i]) * 0.55f : (target - barHeights[i]) * 0.12f;
         }
     }
