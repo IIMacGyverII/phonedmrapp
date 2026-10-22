@@ -1005,10 +1005,12 @@ public final class WebHost {
                 return ok(out);
             }
             case "/api/repeaters": {                                            // nearby repeaters (RadioID / BrandMeister / Hearham, cached by the phone)
-                android.location.Location me = svc.lastKnownLocation(); if (me == null) return WebServer.Response.error(409, "No position fix on the phone yet");
+                double cLat = parseD(r.param("lat"), Double.NaN), cLon = parseD(r.param("lon"), Double.NaN);       // lat/lon: around that point (the map's centre); otherwise around the phone
+                boolean atPoint = !Double.isNaN(cLat) && !Double.isNaN(cLon) && Math.abs(cLat) <= 90 && Math.abs(cLon) <= 180;
+                android.location.Location me = svc.lastKnownLocation(); if (!atPoint && me == null) return WebServer.Response.error(409, "No position fix on the phone yet");
                 double mi = Math.max(5, Math.min(150, parse(r.param("radiusMi"), svc.getSharedPreferences("repeaters", Context.MODE_PRIVATE).getInt("radiusMi", 30))));
                 StringBuilder st = new StringBuilder();
-                java.util.List<com.macdmr.radio.repeaters.RepeaterModels.Repeater> found = repeaters().nearby(me.getLatitude(), me.getLongitude(), mi * 1.609344, "1".equals(r.param("force")), st);
+                java.util.List<com.macdmr.radio.repeaters.RepeaterModels.Repeater> found = repeaters().nearby(atPoint ? cLat : me.getLatitude(), atPoint ? cLon : me.getLongitude(), mi * 1.609344, "1".equals(r.param("force")), st);
                 JSONArray a = new JSONArray(); lastRepeaters.clear();
                 for (com.macdmr.radio.repeaters.RepeaterModels.Repeater x : found) {
                     lastRepeaters.put(x.key, x);
@@ -1018,7 +1020,7 @@ public final class WebHost {
                     if (x.hasCoords) o.put("lat", x.lat).put("lon", x.lon);
                     a.put(o);
                 }
-                return ok(new JSONObject().put("repeaters", a).put("status", st.toString()).put("radiusMi", mi));
+                return ok(new JSONObject().put("repeaters", a).put("status", st.toString()).put("radiusMi", mi).put("around", atPoint ? "map" : "phone"));
             }
             case "/api/repeaters/talkgroups": {
                 com.macdmr.radio.repeaters.RepeaterModels.Repeater x = lastRepeaters.get(r.param("key")); if (x == null) return WebServer.Response.error(404, "Search again: that repeater is not in the last list");

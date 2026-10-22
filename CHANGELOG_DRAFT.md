@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-22 — Map: repeaters around the area shown ("Repeaters here", phone and web)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | Owner's request: when the map is moved to an area with no repeaters listed, a button shows the repeaters near the location displayed. Phone: a fifth floating map button (**Repeaters here**) loads the repeaters within the Nearby repeaters range of the map's centre (same catalog: BrandMeister, hearham, RadioID) in place of those around the phone, turns the Repeaters layer on and says how many were found; a phone-centred load still in flight no longer overwrites it. Web: a **Repeaters here** button next to the Repeaters tick; `/api/repeaters` takes `lat`/`lon` (the map centre) and reports `around: map/phone`; the count line says "around the map centre" or "around the phone", and a toast says when none are known there. Help: Map → Moving around; SignalDeck Web → What it shows. | `ui/MapDialog.java`, `web/WebHost.java`, `assets/web/pages.js`, `assets/web/index.html`, `ui/HelpView.java` | **Device + browser tested** (owner's Armor): web — around the phone 89, map moved to Chicago → 65 repeaters, all within 48 km (30 mi) of the centre, label "around the map centre"; phone — button at the map's centre 89, map dragged far away → "5 repeaters within 30 mi of the middle of the map", pill "Repeaters 5". |
+
 ## 2026-10-22 — SignalDeck Web map: every channel with a location; cards can be closed
 
 | Backlog | Change | Files | Test |
