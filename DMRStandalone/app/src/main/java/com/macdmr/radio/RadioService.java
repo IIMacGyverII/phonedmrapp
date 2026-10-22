@@ -805,6 +805,23 @@ public class RadioService extends Service implements RadioEngine.Events {
         }, "radio-shutdown").start();
     }
 
+    /** Why receive audio could not start (null when it did): a custom ROM without the vendor audio class shows here. */
+    private volatile String audioError, audioStart;
+    public String audioError() { return audioError; }
+    public String audioStartResult() { return audioStart; }
+    public String audioBackendName() { AudioBackend a = audio; return a == null ? "none" : a.getClass().getSimpleName(); }
+    public boolean rxAudioOn() { return rxAudioOn; }
+
+    // ---- DMR call events, for the DMR audio check: reception start/stop and caller reports, with the audio counter ----
+    public static final class DmrEvent { public long ts; public String kind; public int type, caller, target; public long pcmBytes; public boolean digital; }
+    private final java.util.ArrayDeque<DmrEvent> dmrEvents = new java.util.ArrayDeque<>();
+    private void dmrEvent(String kind, int type, int caller, int target) {
+        DmrEvent e = new DmrEvent(); e.ts = System.currentTimeMillis(); e.kind = kind; e.type = type; e.caller = caller; e.target = target; e.pcmBytes = rxAudioBytes();
+        ChannelStore.Channel c = current; e.digital = c != null && c.isDigital();
+        synchronized (dmrEvents) { dmrEvents.addLast(e); while (dmrEvents.size() > 200) dmrEvents.removeFirst(); }
+    }
+    public java.util.List<DmrEvent> dmrEventsSince(long ts) { java.util.List<DmrEvent> out = new java.util.ArrayList<>(); synchronized (dmrEvents) { for (DmrEvent e : dmrEvents) if (e.ts >= ts) out.add(e); } return out; }
+
     private void startRxAudio() {
         try {
             if (audio == null) {
@@ -812,8 +829,8 @@ public class RadioService extends Service implements RadioEngine.Events {
                 audio.setSink((b, len) -> { if (!injecting) onRxPcm(b, len); });   // a bench injection replaces the live audio while it plays
                 audio.setGate(() -> squelchOpen && !muted);
             }
-            log(audio.startRx(true)); rxAudioOn = true;
-        } catch (Throwable t) { log("audio: " + t); }
+            String r = audio.startRx(true); audioStart = r; log(r); rxAudioOn = true; audioError = r != null && r.startsWith("startRx failed") ? r : null;
+        } catch (Throwable t) { audioError = String.valueOf(t) + (t.getCause() != null ? " / " + t.getCause() : ""); log("audio: " + t); }
     }
 
     /** Every received 8 kHz stereo (L == R) block: take the left channel, run the squelch, record, meter. */
@@ -1459,13 +1476,14 @@ public class RadioService extends Service implements RadioEngine.Events {
 
     @Override public void status(int code, String name) {
         switch (code) {
-            case 1: receiving = true;
+            case 1: receiving = true; dmrEvent("start", 0, 0, 0);
                 if (current != null && current.isDigital()) {           // a DMR call: forget the last talker, ask who this is now and again a second later
                     lastCaller = 0; callLogged = false;
                     for (long ms : new long[] { 300, 1200 }) ui.postDelayed(() -> { if (receiving) worker.execute(() -> { try { engine.queryCallerInfo(); } catch (IOException ignored) { } }); }, ms);
                 }
                 refreshControls(); rxStart = System.currentTimeMillis(); rxCounts = rxReportsReception(); softSq.rxStarted(); ui.post(() -> { for (Listener l : listeners) l.onRx(true); }); pollRssi(); break;
             case 2: {
+                dmrEvent("stop", 0, 0, 0);
                 receiving = false; refreshControls(); long len = rxStart > 0 ? System.currentTimeMillis() - rxStart : 0; rxStart = 0;
                 if (softSq.isEnabled() && squelchOpen) { softSq.closeNow(); softGateHistory(false); squelchOpen = false; log("soft squelch closed (carrier gone)"); }
                 softSq.awaitRxStart();                                   // with the module squelch held open a RECEIVE_STOP only happens while the receiver re-settles
@@ -1494,6 +1512,7 @@ public class RadioService extends Service implements RadioEngine.Events {
     private volatile boolean callLogged; private volatile int loggedCaller, loggedTarget;
     @Override public void callerInfo(int type, int caller, int target) {
         if (caller <= 0) return;
+        dmrEvent("caller", type, caller, target);
         lastCaller = caller; lastCallType = type; lastTarget = target;
         refreshControls();   // the car screens show who is talking
         if (callLogged && caller == loggedCaller && target == loggedTarget) return;

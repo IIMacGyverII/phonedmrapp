@@ -53,6 +53,8 @@ public final class ClipRecorder {
         } catch (IOException ignored) { }
     }
 
+    /** Root-mean-square level of what was written (0 … 32768); -1 when nothing was written. */
+    public synchronized double rms() { return samples == 0 ? -1 : Math.sqrt((double) sumSq / samples); }
     public synchronized String stats() {
         double rms = samples == 0 ? 0 : Math.sqrt((double) sumSq / samples);
         return String.format(Locale.US, "%s: %.1f s, level RMS %d (%.0f dBFS), peak %d, clipped %.2f %%, dropouts (≥10 ms of digital silence) %d, longest %d ms",
