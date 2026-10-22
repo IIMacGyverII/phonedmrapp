@@ -7,6 +7,8 @@ import android.os.Looper;
 
 import com.macdmr.radio.ChannelStore;
 import com.macdmr.radio.RadioService;
+import com.macdmr.radio.TranscriptionClient;
+import com.macdmr.radio.VoskCaptions;
 import com.macdmr.radio.pkt.PacketStore;
 
 import org.json.JSONArray;
@@ -483,6 +485,40 @@ public final class WebHost {
                 if (on && !svc.captionsAvailable()) return WebServer.Response.error(409, "Captions need a Google Cloud key for the Google engine: set one on the phone, or switch to the on-device engine (long-press TXT)");
                 onMain(() -> { svc.setCaptions(on); return null; });
                 return ok(on ? "Captions on" + ("vosk".equals(svc.captionEngine()) ? " (the on-device model downloads on first use)" : "") : "Captions off");
+            }
+            case "/api/captions/models": {                                      // engine, the on-device models (size, downloaded, in use), the recognizer's state
+                JSONArray a = new JSONArray(); String sel = svc.captionModel(), loaded = svc.captionLoadedModel();
+                for (int i = 0; i < VoskCaptions.MODELS.length; i++) {
+                    String n = VoskCaptions.MODELS[i]; boolean present = VoskCaptions.modelPresent(svc, n);
+                    a.put(new JSONObject().put("name", n).put("label", VoskCaptions.MODEL_LABELS[i]).put("present", present).put("selected", n.equals(sel)).put("loaded", n.equals(loaded))
+                            .put("bytes", present ? VoskCaptions.modelBytes(svc, n) : 0));
+                }
+                return ok(new JSONObject().put("engine", svc.captionEngine()).put("models", a).put("status", svc.captionStatus()).put("busy", svc.captionModelBusy())
+                        .put("googleKeySet", !TranscriptionClient.isPlaceholderKey(svc.googleKey())).put("on", svc.captionsOn())
+                        .put("freeBytes", svc.getFilesDir().getUsableSpace()));
+            }
+            case "/api/captions/model": if (!post) break; {                     // use a model: downloaded first if it is not on the phone yet, then loaded
+                String n = b.optString("name", ""); if (!java.util.Arrays.asList(VoskCaptions.MODELS).contains(n)) return WebServer.Response.error(400, "Unknown model");
+                if (!VoskCaptions.modelPresent(svc, n)) {
+                    long need = n.contains("gigaspeech") ? 2_600_000_000L * 2 : n.contains("0.22-lgraph") ? 140_000_000L * 2 : n.contains("small") ? 45_000_000L * 2 : 1_900_000_000L * 2;   // the zip and its unpacked copy
+                    if (svc.getFilesDir().getUsableSpace() < need) return WebServer.Response.error(507, "Not enough free space on the phone for this model (needs about " + (need / 1_000_000_000.0 > 1 ? String.format(java.util.Locale.US, "%.1f GB", need / 1e9) : (need / 1_000_000) + " MB") + " while downloading)");
+                }
+                onMain(() -> { svc.setCaptionModel(n); return null; });
+                return ok(VoskCaptions.modelPresent(svc, n) ? "Loading the model" : "Downloading the model on the phone");
+            }
+            case "/api/captions/model/delete": if (!post) break; {
+                String n = b.optString("name", ""); if (!java.util.Arrays.asList(VoskCaptions.MODELS).contains(n)) return WebServer.Response.error(400, "Unknown model");
+                if (n.equals(svc.captionModel()) || n.equals(svc.captionLoadedModel())) return WebServer.Response.error(409, "That model is in use: choose another one first");
+                if (svc.captionModelBusy()) return WebServer.Response.error(409, "A model is being downloaded or loaded: try again when it is done");
+                return VoskCaptions.deleteModel(svc, n) ? ok("Deleted") : WebServer.Response.error(500, "Could not delete it");
+            }
+            case "/api/captions/engine": if (!post) break; {                    // vosk (on the phone) or google (your key; write-only here)
+                String e = b.optString("engine", svc.captionEngine()); if (!"vosk".equals(e) && !"google".equals(e)) return WebServer.Response.error(400, "Unknown engine");
+                String k = b.optString("googleKey", "").trim();
+                if (!k.isEmpty()) svc.setGoogleKey(k);
+                if ("google".equals(e) && TranscriptionClient.isPlaceholderKey(svc.googleKey())) return WebServer.Response.error(409, "Set a Google Cloud Speech API key first");
+                svc.setCaptionEngine(e);
+                return ok("google".equals(e) ? "Captions use Google Cloud Speech" : "Captions are made on the phone");
             }
             case "/api/history": {
                 ChannelStore.Channel ch = svc.current(); int lim = Math.min(500, parse(r.param("limit"), 120));

@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-22 — SignalDeck Web: TXT key on the intercom; caption engine and models
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | Owner's requests: the TXT button on the web Intercom page, and choosing/downloading the caption model from the browser. **TXT** now sits with SCAN / MON / REC / SOFT SQ / VFO (moved from the History header). **Transcripts → Caption engine:** On the phone (Vosk) or Google Cloud Speech (key saved write-only; Google refused without one), the four on-device models with size, *on the phone* / *not downloaded*, IN USE, loaded, live download/unpack/load progress (polled every 1.5 s while busy), **Use** / **Download and use** (refused when the phone lacks space for the zip plus the unpacked model), **Delete** for models not in use (refused for the selected or loaded model and while one loads), the phone's free space. API: `/api/captions/models`, `/api/captions/model`, `/api/captions/model/delete`, `/api/captions/engine`; `VoskCaptions.loadedName/isLoading/deleteModel/modelBytes`, `RadioService.captionStatus/captionLoadedModel/captionModelBusy`. Help: Live captions → In the browser. | `web/WebHost.java`, `VoskCaptions.java`, `RadioService.java`, `assets/web/index.html`, `assets/web/pages.js`, `assets/web/app.js`, `ui/HelpView.java` | **Device + browser tested** (owner's Armor): models listed (lgraph in use, 214 MB on the phone; the other three "not downloaded"), engine Vosk, free space shown; TXT in the intercom row; deleting the model in use → 409; Google without a key → 409, engine unchanged. No model was downloaded or deleted. |
+
 ## 2026-10-22 — SignalDeck Web: captions and transcripts
 
 | Backlog | Change | Files | Test |
