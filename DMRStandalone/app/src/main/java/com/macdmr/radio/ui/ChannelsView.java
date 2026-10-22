@@ -221,17 +221,12 @@ public class ChannelsView extends LinearLayout implements RadioService.Listener 
         return n;
     }
 
-    public static final String FAV_ZONE = "★ Favourites";
-    private ChannelStore.Zone favZone() { if (svc == null) return null; for (ChannelStore.Zone z : svc.store().zones()) if (FAV_ZONE.equals(z.name)) return z; return null; }
+    public static final String FAV_ZONE = ChannelStore.FAV_ZONE;
+    private ChannelStore.Zone favZone() { return svc == null ? null : svc.store().favZone(); }
     /** Starred channels live in a "★ Favourites" zone, so they work with the zone picker, stepping and scanning. */
     private void toggleFavourite(ChannelStore.Channel ch, boolean on) {
         if (svc == null) return;
-        ChannelStore.Zone z = favZone();
-        if (z == null) { if (!on) return; z = new ChannelStore.Zone(); z.name = FAV_ZONE; z.numbers = new int[0]; }
-        java.util.List<Integer> nums = new java.util.ArrayList<>(); for (int n : z.numbers) if (n != ch.number) nums.add(n);
-        if (on) nums.add(ch.number);
-        z.numbers = new int[nums.size()]; for (int i = 0; i < nums.size(); i++) z.numbers[i] = nums.get(i);
-        svc.store().saveZone(z);
+        svc.store().setFavourite(ch.number, on);
         android.widget.Toast.makeText(getContext(), on ? "Starred: " + ch.name + " is in the ★ Favourites zone" : "Removed from ★ Favourites", android.widget.Toast.LENGTH_SHORT).show();
         reload();
     }

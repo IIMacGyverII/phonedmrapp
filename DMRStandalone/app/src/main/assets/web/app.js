@@ -97,6 +97,7 @@ function renderStatus() {
   $('scanBtn').classList.toggle('on', !!s.scanning); $('monBtn').classList.toggle('on', !!s.monitor); $('recBtn').classList.toggle('on', !!s.record); $('sqBtn').classList.toggle('on', !!s.softSq); $('vfoBtn').classList.toggle('on', !!s.vfo);
   if (document.activeElement !== $('sqLevel')) $('sqLevel').value = s.softSqLevel; $('sqVal').textContent = s.softSqLevel;
   const z = $('zoneSel'); if (z.dataset.loaded !== '1') loadZones(); else z.value = String(s.zoneId);
+  const cz = $('chZone'); if (cz && cz.options.length && cz.value !== String(s.zoneId)) { cz.value = String(s.zoneId); if (S.page === 'channels') loadChannels(); }   // changed elsewhere (phone, intercom)
   const ptt = $('ptt'); const canTx = s.webTx && s.ready && !s.txInhibited && !(s.sat && s.sat.tracking && s.sat.listenOnly && !s.sat.waiting);
   ptt.disabled = !canTx;
   const secureUrl = 'https://' + location.hostname + ':' + (s.tlsPort || 8443) + '/';
@@ -139,7 +140,7 @@ $('recBtn').onclick = () => act('record', { on: !S.status.record });
 $('sqBtn').onclick = () => act('softsq', { on: !S.status.softSq });
 $('sqLevel').oninput = () => { $('sqVal').textContent = $('sqLevel').value; };
 $('sqLevel').onchange = () => act('softsq', { level: +$('sqLevel').value });
-$('zoneSel').onchange = async () => { await act('zone', { id: +$('zoneSel').value }); loadZones(); if (S.page === 'channels') loadChannels(); };
+$('zoneSel').onchange = async () => { await act('zone', { id: +$('zoneSel').value }); loadZones(); if (S.page === 'channels') loadChannels(); };   // the Channels page has its own copy (chZone)
 
 // PTT: hold the button (mouse/touch) or the space bar; always release on leave/blur so the radio never stays keyed
 let pttDown = false;
@@ -171,15 +172,28 @@ function renderModebar() {
 }
 
 // ---- channels ----
-async function loadChannels() { try { const j = await api('channels'); S.channels = j.channels; renderChannels(); } catch (e) { } }
-function renderChannels() {
-  const q = $('chSearch').value.trim().toLowerCase(); const cur = (S.status.channel || {}).number;
-  const rows = S.channels.filter(c => !q || (c.name || '').toLowerCase().includes(q) || mhz(c.rxFreq).includes(q) || String(c.number) === q);
-  $('chList').innerHTML = rows.map(c => '<div class="item click' + (c.number === cur ? ' cur' : '') + '" data-n="' + c.number + '"><span class="n">' + c.number + '</span><div class="main"><div>' + esc(c.name || '—') + '</div><div class="sub mono">' + mhz(c.rxFreq) + ' MHz · ' + (c.digital ? 'DMR CC' + c.cc : 'FM') + '</div></div><button type="button" class="act" data-edit="' + c.number + '">Edit</button></div>').join('') || '<div class="empty">No channels</div>';
+async function loadChannels() {
+  try {
+    const j = await api('channels'); S.channels = j.channels; S.zones = j.zones;
+    const z = $('chZone'); z.innerHTML = j.zones.map(x => '<option value="' + x.id + '">Zone: ' + esc(x.name) + '</option>').join(''); z.value = String(j.zoneId);
+    renderChannels();
+  } catch (e) { }
 }
+S.chFilter = 0;    // 0 all, 1 favourites, 2 analog, 3 DMR (as on the phone)
+function renderChannels() {
+  const q = $('chSearch').value.trim().toLowerCase(); const cur = (S.status.channel || {}).number; const f = S.chFilter;
+  const rows = S.channels.filter(c => (!q || (c.name || '').toLowerCase().includes(q) || mhz(c.rxFreq).includes(q) || String(c.number) === q)
+    && (f === 0 || (f === 1 && c.fav) || (f === 2 && !c.digital) || (f === 3 && c.digital)));
+  $('chList').innerHTML = rows.map(c => '<div class="item click' + (c.number === cur ? ' cur' : '') + '" data-n="' + c.number + '"><span class="n">' + c.number + '</span><div class="main"><div>' + esc(c.name || '—') + '</div><div class="sub mono">' + mhz(c.rxFreq) + ' MHz · ' + (c.digital ? 'DMR CC' + c.cc : 'FM') + '</div></div>'
+    + '<button type="button" class="star' + (c.fav ? ' on' : '') + '" data-star="' + c.number + '" aria-label="' + (c.fav ? 'Remove from favourites' : 'Add to favourites') + '" title="' + (c.fav ? 'Remove from ★ Favourites' : 'Add to ★ Favourites') + '">' + (c.fav ? '★' : '☆') + '</button>'
+    + '<button type="button" class="act" data-edit="' + c.number + '">Edit</button></div>').join('') || '<div class="empty">' + (f === 1 ? 'No favourites in this zone: tap a ☆ to star a channel' : 'No channels') + '</div>';
+}
+$('chZone').onchange = async () => { await act('zone', { id: +$('chZone').value }); loadZones(); loadChannels(); };
+$('chFilter').onclick = e => { const b = e.target.closest('button'); if (!b) return; S.chFilter = +b.dataset.f; $('chFilter').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); renderChannels(); };
 $('chSearch').oninput = renderChannels;
 $('chList').onclick = e => {
   const ed = e.target.closest('[data-edit]'); if (ed) { openEditor(+ed.dataset.edit); return; }
+  const st = e.target.closest('[data-star]'); if (st) { const n = +st.dataset.star, ch = S.channels.find(c => c.number === n); act('channel/star', { number: n, on: !(ch && ch.fav) }).then(() => { loadChannels(); loadZones(); if (S.page === 'channels') loadZonesEditor(); }); return; }
   const it = e.target.closest('.item'); if (it) act('channel/select', { number: +it.dataset.n });
 };
 

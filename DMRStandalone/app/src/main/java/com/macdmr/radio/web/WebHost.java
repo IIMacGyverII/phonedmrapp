@@ -473,10 +473,17 @@ public final class WebHost {
                 return ok(new JSONObject().put("lines", a));
             }
             case "/api/channels": {
-                JSONArray a = new JSONArray(); for (ChannelStore.Channel ch : svc.zoneChannels()) a.put(channelObj(ch));
+                java.util.Set<Integer> favs = svc.store().favourites();
+                JSONArray a = new JSONArray(); for (ChannelStore.Channel ch : svc.zoneChannels()) a.put(channelObj(ch).put("fav", favs.contains(ch.number)));
                 JSONArray z = new JSONArray(); z.put(new JSONObject().put("id", 0).put("name", "ALL"));
                 for (ChannelStore.Zone zz : svc.store().zones()) z.put(new JSONObject().put("id", zz.id).put("name", zz.name));
                 return ok(new JSONObject().put("channels", a).put("zones", z).put("zoneId", svc.zoneId()));
+            }
+            case "/api/channel/star": if (!post) break; {                    // star / unstar: the ★ Favourites zone
+                int n = b.optInt("number", 0); boolean on = b.optBoolean("on", true);
+                if (svc.store().byNumber(n) == null) return WebServer.Response.error(404, "No channel " + n);
+                onMain(() -> { svc.store().setFavourite(n, on); return null; });
+                return ok(on ? "Starred channel " + n : "Channel " + n + " is no longer a favourite");
             }
             case "/api/channel/select": if (!post) break; {
                 int n = b.optInt("number", -1); if (n < 0) return WebServer.Response.error(400, "number needed");

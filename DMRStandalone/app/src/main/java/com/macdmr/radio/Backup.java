@@ -133,6 +133,10 @@ public final class Backup {
         try (Writer w = writer(new File(dir, EXTRAS))) {             // SignalDeck's own: channel notes and nets (other tools ignore the file)
             w.write(EXTRAS_HEADER + "\r\n");
             for (ChannelStore.Channel ch : channels) if (ch.notes != null && !ch.notes.isEmpty()) w.write(ch.number + "," + q(ch.name) + ",notes,,,,," + q(line(ch.notes)) + "\r\n");
+            for (ChannelStore.Zone z : store.zones()) {                  // Zones.csv lists channels by name; two channels with one name need the exact numbers
+                StringBuilder nums = new StringBuilder(); for (int n : z.numbers) { if (nums.length() > 0) nums.append(';'); nums.append(n); }
+                w.write(",," + "zone," + q(line(z.name)) + ",,,," + nums + "\r\n");
+            }
             for (com.macdmr.radio.ham.NetFinder.Manual m : store.nets())
                 w.write(m.channel + "," + q(nameOf(channels, m.channel)) + ",net," + q(line(m.name)) + "," + m.days + "," + String.format(Locale.US, "%02d:%02d", m.minute / 60, m.minute % 60) + "," + m.durationMin + "," + q(line(m.notes)) + "\r\n");
         }
@@ -331,7 +335,15 @@ public final class Backup {
         }
         if (out.isEmpty()) throw new Exception("no channels could be read");
         out.sort((a, b) -> Integer.compare(a.number, b.number));
-        for (int i = 0; i < out.size(); i++) out.get(i).number = i + 1;
+        Map<Integer, Integer> renum = new HashMap<>();                       // the backup's channel numbers → the restored ones (1..n)
+        Map<Integer, String> nameByOld = new HashMap<>();
+        for (int i = 0; i < out.size(); i++) { if (!renum.containsKey(out.get(i).number)) { renum.put(out.get(i).number, i + 1); nameByOld.put(out.get(i).number, out.get(i).name); } out.get(i).number = i + 1; }
+        List<List<String>> extras = read(new File(dir, EXTRAS));
+        Map<String, List<Integer>> exactZones = new HashMap<>();             // zone name → its channels by backup number (SignalDeck_Extras.csv)
+        for (int i = 1; i < extras.size(); i++) if ("zone".equalsIgnoreCase(col(extras.get(i), 2))) {
+            List<Integer> l = new ArrayList<>(); for (String x : col(extras.get(i), 7).split(";")) { int n = num(x, -1); if (n > 0) l.add(n); }
+            exactZones.put(unline(col(extras.get(i), 3)), l);
+        }
         Map<String, Integer> numberByName = new HashMap<>(); for (ChannelStore.Channel ch : out) if (!numberByName.containsKey(ch.name.toLowerCase(Locale.US))) numberByName.put(ch.name.toLowerCase(Locale.US), ch.number);
         List<ChannelStore.Zone> zs = new ArrayList<>();
         for (int i = 1; i < zones.size(); i++) {
@@ -339,11 +351,17 @@ public final class Backup {
             ChannelStore.Zone z = new ChannelStore.Zone(); z.name = col(r, 0);
             List<Integer> nums = new ArrayList<>();
             for (int k = 1; k < r.size(); k++) { String s = col(r, k); if (s.isEmpty()) continue; Integer n = numberByName.get(s.toLowerCase(Locale.US)); if (n == null && s.contains("|")) n = numberByName.get(s.substring(s.lastIndexOf('|') + 1).toLowerCase(Locale.US)); if (n != null) nums.add(n); }
+            List<Integer> exact = exactZones.get(z.name);
+            if (exact != null) {                                              // the same zone as written (not edited elsewhere since): take the exact channels
+                List<String> names = new ArrayList<>(); for (int k = 1; k < r.size(); k++) if (!col(r, k).isEmpty()) names.add(col(r, k).toLowerCase(Locale.US));
+                List<String> exactNames = new ArrayList<>(); List<Integer> mapped = new ArrayList<>();
+                for (int n : exact) { String nm = nameByOld.get(n); Integer m = renum.get(n); if (nm == null || m == null) { mapped = null; break; } exactNames.add(nm.toLowerCase(Locale.US)); mapped.add(m); }
+                if (mapped != null && exactNames.equals(names)) nums = mapped;
+            }
             z.numbers = new int[nums.size()]; for (int k = 0; k < z.numbers.length; k++) z.numbers[k] = nums.get(k);
             zs.add(z);
         }
         int keep = store.activeNumber();
-        List<List<String>> extras = read(new File(dir, EXTRAS));
         int extraNotes = 0, extraNets = 0;
         SQLiteDatabase db = store.getWritableDatabase();
         db.beginTransaction();
@@ -354,7 +372,7 @@ public final class Backup {
             for (ChannelStore.Zone z : zs) { z.id = 0; store.saveZone(z); }
             db.delete("nets", null, null);                                       // they belonged to the channels just replaced
             for (int i = 1; i < extras.size(); i++) {
-                List<String> r = extras.get(i); ChannelStore.Channel ch = store.byNumber(num(col(r, 0), 0)); if (ch == null) continue;
+                List<String> r = extras.get(i); Integer nn = renum.get(num(col(r, 0), -1)); ChannelStore.Channel ch = nn == null ? null : store.byNumber(nn); if (ch == null) continue;
                 if ("notes".equalsIgnoreCase(col(r, 2))) { ch.notes = unline(col(r, 7)); store.update(ch); extraNotes++; }
                 else if ("net".equalsIgnoreCase(col(r, 2))) {
                     com.macdmr.radio.ham.NetFinder.Manual m = new com.macdmr.radio.ham.NetFinder.Manual();

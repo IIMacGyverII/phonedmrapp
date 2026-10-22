@@ -331,6 +331,19 @@ public final class ChannelStore extends SQLiteOpenHelper {
         p.edit().remove("manual").apply();
     }
 
+    // ---- favourites: starred channels form the "★ Favourites" zone (zone picker, stepping and scanning use it) ----
+    public static final String FAV_ZONE = "\u2605 Favourites";
+    public Zone favZone() { for (Zone z : zones()) if (FAV_ZONE.equals(z.name)) return z; return null; }
+    public java.util.Set<Integer> favourites() { java.util.Set<Integer> s = new java.util.HashSet<>(); Zone z = favZone(); if (z != null) for (int n : z.numbers) s.add(n); return s; }
+    public void setFavourite(int number, boolean on) {
+        Zone z = favZone();
+        if (z == null) { if (!on) return; z = new Zone(); z.name = FAV_ZONE; z.numbers = new int[0]; }
+        List<Integer> nums = new ArrayList<>(); for (int n : z.numbers) if (n != number) nums.add(n);
+        if (on) nums.add(number);
+        z.numbers = new int[nums.size()]; for (int i = 0; i < nums.size(); i++) z.numbers[i] = nums.get(i);
+        saveZone(z);
+    }
+
     // ---- zones ----
     public List<Zone> zones() {
         List<Zone> out = new ArrayList<>();
