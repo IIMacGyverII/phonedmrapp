@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-22 — SignalDeck Web: captions and transcripts
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| — | Owner's question/request: transcripts in the browser. Before, the web showed only the live (unfinished) caption line; finished sentences were filtered out of its history and could not be listed or switched. Now: the Intercom page's History panel has a **TXT** switch and the **last 8 finished sentences** (live, with time); a new **Transcripts** page lists every kept caption (newest 1,000) with time, channel and caller (in the text, as on the phone), a search box (SQL LIKE on the phone, matches highlighted) and **Download .txt** (up to 5,000 lines: UTC time, channel, text). API: `/api/captions?limit&q` (rows with channel names, the 📝 marker stripped; `on`, `available`, `engine`), `/api/captions/set {on}` (refuses Google without a key), `captions` in `/api/status`. The TXT button sets the state it asked for (the server's live update can arrive before the reply; flipping twice re-enabled captions in the first test). Help: Live captions → In the browser; SignalDeck Web → What it shows. | `ChannelStore.java` (`captions(limit, q)`), `web/WebHost.java`, `assets/web/index.html`, `assets/web/app.js`, `assets/web/pages.js`, `assets/web/app.css`, `ui/HelpView.java` | **Device + browser tested** (owner's Armor, headless Chrome): 103 kept captions listed, "the" → 59 rows with 102 highlights, no-match message; Intercom box shows 8 lines; TXT on → server on, off → server off, buttons in step (left off as the owner had it). |
+
 ## 2026-10-22 — Map: repeaters around the area shown ("Repeaters here", phone and web)
 
 | Backlog | Change | Files | Test |

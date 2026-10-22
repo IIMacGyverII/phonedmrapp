@@ -339,7 +339,7 @@ public final class WebHost {
                 .put("scanning", svc.scanning()).put("vfo", svc.vfoActive()).put("zone", svc.zoneName()).put("zoneId", svc.zoneId())
                 .put("txInhibited", svc.txInhibited()).put("webTx", allowTx()).put("tls", tlsRunning()).put("tlsPort", TLS_PORT);
         o.put("mode", modeJson()).put("sat", satJson()).put("sstv", sstvJson());
-        o.put("version", com.macdmr.radio.BuildConfig.VERSION_NAME);
+        o.put("version", com.macdmr.radio.BuildConfig.VERSION_NAME).put("captions", svc.captionsOn());
         return o;
     }
     private JSONObject modeJson() throws Exception {
@@ -467,6 +467,23 @@ public final class WebHost {
         final JSONObject b = post ? body(r) : new JSONObject();
         switch (p) {
             case "/api/status": return ok(statusJson());
+            case "/api/captions": {                                             // finished caption sentences, newest first (q: only those containing it)
+                int lim = Math.max(1, Math.min(5000, parse(r.param("limit"), 200)));
+                java.util.Map<Integer, String> names = new java.util.HashMap<>();
+                JSONArray a = new JSONArray();
+                for (Object[] row : svc.store().captions(lim, r.param("q"))) {
+                    int n = (Integer) row[1];
+                    String name = names.get(n); if (name == null) { ChannelStore.Channel ch = svc.store().byNumber(n); name = ch != null ? ch.name : "channel " + n; names.put(n, name); }
+                    a.put(new JSONObject().put("ts", row[0]).put("channel", n).put("channelName", name).put("text", ((String) row[2]).replaceFirst("^\uD83D\uDCDD\\s*", "")));
+                }
+                return ok(new JSONObject().put("captions", a).put("on", svc.captionsOn()).put("available", svc.captionsAvailable()).put("engine", svc.captionEngine()));
+            }
+            case "/api/captions/set": if (!post) break; {                        // TXT on/off, as the phone's TXT key
+                boolean on = b.optBoolean("on", !svc.captionsOn());
+                if (on && !svc.captionsAvailable()) return WebServer.Response.error(409, "Captions need a Google Cloud key for the Google engine: set one on the phone, or switch to the on-device engine (long-press TXT)");
+                onMain(() -> { svc.setCaptions(on); return null; });
+                return ok(on ? "Captions on" + ("vosk".equals(svc.captionEngine()) ? " (the on-device model downloads on first use)" : "") : "Captions off");
+            }
             case "/api/history": {
                 ChannelStore.Channel ch = svc.current(); int lim = Math.min(500, parse(r.param("limit"), 120));
                 JSONArray a = new JSONArray(); if (ch != null) for (String l : svc.store().recentHistory(ch.number, lim)) a.put(l);

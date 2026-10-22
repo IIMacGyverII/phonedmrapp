@@ -80,6 +80,10 @@ main { max-width: 1280px; margin: 0 auto; padding: 20px 16px 60px; }
   font: 700 14px Orbitron, sans-serif; letter-spacing: .06em; cursor: pointer; }
 select { font-family: Rajdhani, sans-serif; font-size: 16px; }
 .tog.on { color: var(--ground); background: var(--cyan); box-shadow: 0 0 14px rgba(25,211,255,.5); }
+.small-tog { padding: 4px 10px; font-size: 13px; margin-left: 6px; }
+.caplist { margin: 6px 0 10px; border-left: 2px solid var(--violet); padding-left: 10px; max-height: 190px; overflow-y: auto; }
+.caplist div { padding: 3px 0; } .caplist .t, #trList .t { color: var(--muted); font-size: 12px; margin-right: 8px; font-family: 'Share Tech Mono', monospace; }
+#trList mark { background: rgba(255,176,32,.3); color: inherit; border-radius: 3px; }
 .btn:hover, .tog:hover { border-color: var(--cyan); } .btn.primary { background: var(--cyan); color: var(--ground); }
 .btn.danger { color: var(--red); border-color: rgba(255,84,104,.4); }
 .btn:disabled, .tog:disabled { opacity: .45; cursor: default; }

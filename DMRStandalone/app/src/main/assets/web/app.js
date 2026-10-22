@@ -31,7 +31,7 @@ $('logout').addEventListener('click', async () => { await fetch('/api/logout'); 
 // ---- pages ----
 function route() {
   const p = (location.hash || '#intercom').slice(1);
-  S.page = ['intercom', 'channels', 'messages', 'contacts', 'aprs', 'sstv', 'pkt', 'sat', 'map', 'log', 'rec', 'exam', 'settings', 'help'].includes(p) ? p : 'intercom';
+  S.page = ['intercom', 'channels', 'messages', 'contacts', 'aprs', 'sstv', 'pkt', 'sat', 'map', 'log', 'rec', 'trans', 'exam', 'settings', 'help'].includes(p) ? p : 'intercom';
   document.querySelectorAll('.page').forEach(el => el.classList.toggle('hidden', el.id !== 'page-' + S.page));
   document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('on', a.dataset.page === S.page));
   const on = document.querySelector('#nav a.on'); if (on && on.scrollIntoView) on.scrollIntoView({ inline: 'center', block: 'nearest' });   // narrow screens scroll the tabs
@@ -46,6 +46,7 @@ function route() {
   if (S.page === 'help') loadHelp();
   if (S.page === 'log') { if (!S.qso) editQso(null); loadLog(); loadNet(); }
   if (S.page === 'rec') loadRecordings();
+  if (S.page === 'trans') loadTrans();
   if (S.page === 'exam') { loadExam(); loadTrainer(); }
   if (S.page === 'settings') { loadSettings(); loadBackups(); loadDiagLog(); }
   if (S.page === 'pkt') { loadPacket(); loadKeyer(); }
@@ -74,6 +75,7 @@ function connect() {
   on('link', d => { S.status.link = d.state; S.status.ready = d.state === 'ready'; renderStatus(); });
   on('modes', d => { Object.assign(S.status, { softSq: d.softSq, softSqLevel: d.softSqLevel, monitor: d.monitor, record: d.record, scanning: d.scanning, zone: d.zone }); renderStatus(); });
   on('caption', d => renderCaption(d));
+  loadCaptions();
   on('sms', () => { if (S.page === 'messages') loadConversations(); });
   on('net', () => { if (S.page === 'log') loadNet(); });
   on('smsResult', d => { toast(d.ok ? 'Text delivered' : 'No acknowledgement (the text may still have arrived)'); if (S.page === 'messages') loadConversations(); });
@@ -124,6 +126,8 @@ function renderHistory() { const h = $('history'); h.innerHTML = S.history.slice
 function addHistory(line) { if (S.history[S.history.length - 1] === line) return; S.history.push(line); if (S.history.length > 300) S.history.shift(); renderHistory(); }
 function renderCaption(d) {
   $('captionState').textContent = d.enabled ? 'CAPTIONS ON' : '';
+  setTxt(d.enabled);
+  if (d.sentence) addCaptionLine({ ts: Date.now(), channelName: (S.status.channel || {}).name || '', text: d.sentence.replace(/^\u{1F4DD}\s*/u, '') });
   const c = $('caption'); if (d.enabled && d.live) { c.textContent = d.live; c.classList.remove('hidden'); } else c.classList.add('hidden');
 }
 async function loadZones() {

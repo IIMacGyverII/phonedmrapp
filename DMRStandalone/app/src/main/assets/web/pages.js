@@ -281,6 +281,46 @@ function showMark(m) {
   window.addEventListener('resize', () => { if (S.page === 'map') drawMap(); });
 })();
 
+// ---- captions: the last few on the intercom page, all of them on the Transcripts page ----
+S.caps = []; S.trRows = [];
+const hhmmssDay = ts => { const d = new Date(ts); return (Date.now() - ts > 20 * 3600e3 ? d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' : '') + hhmmss(ts); };
+async function loadCaptions() {
+  try { const j = await api('captions?limit=8'); S.caps = j.captions; setTxt(j.on); renderCapList(); } catch (e) { }
+}
+function renderCapList() {
+  const el = $('capList');
+  el.innerHTML = S.caps.slice(0, 8).map(c => '<div><span class="t">' + hhmmssDay(c.ts) + '</span>' + esc(c.text) + '</div>').join('');
+  el.classList.toggle('hidden', !S.caps.length);
+}
+function addCaptionLine(c) {
+  S.caps.unshift(c); S.caps = S.caps.slice(0, 8); renderCapList();
+  if (S.page === 'trans' && !$('trSearch').value.trim()) { S.trRows.unshift(c); renderTrans(); }
+}
+function setTxt(on) { S.capOn = !!on; for (const id of ['txtBtn', 'trTxt']) { const b = $(id); if (b) b.classList.toggle('on', !!on); } }
+async function toggleTxt() { const want = !S.capOn; const j = await act('captions/set', { on: want }); if (j) setTxt(want); }   // the server's live update may arrive first: set what was asked, never flip twice
+$('txtBtn').onclick = toggleTxt; $('trTxt').onclick = toggleTxt;
+let trTimer = null;
+async function loadTrans() {
+  const q = $('trSearch').value.trim();
+  try { const j = await api('captions?limit=1000' + (q ? '&q=' + encodeURIComponent(q) : '')); S.trRows = j.captions; setTxt(j.on); renderTrans(); } catch (e) { toast(e.message); }
+}
+function renderTrans() {
+  const q = $('trSearch').value.trim();
+  const mark = t => { const e = esc(t); if (!q) return e; const re = new RegExp('(' + esc(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi'); return e.replace(re, '<mark>$1</mark>'); };
+  $('trCount').textContent = S.trRows.length + (q ? ' MATCHING' : '') + (S.trRows.length >= 1000 ? ' (NEWEST 1000)' : '');
+  $('trList').innerHTML = S.trRows.map(c => '<div class="item"><div class="main"><div>' + mark(c.text) + '</div><div class="sub"><span class="t">' + hhmmssDay(c.ts) + '</span>' + esc(c.channelName) + '</div></div></div>').join('')
+    || '<div class="empty">' + (q ? 'No caption contains “' + esc(q) + '”.' : 'No captions yet. Turn TXT on: every finished sentence is kept on the phone.') + '</div>';
+}
+$('trSearch').oninput = () => { clearTimeout(trTimer); trTimer = setTimeout(loadTrans, 300); };
+$('trDownload').onclick = async () => {
+  try {
+    const q = $('trSearch').value.trim(); const j = await api('captions?limit=5000' + (q ? '&q=' + encodeURIComponent(q) : ''));
+    const lines = j.captions.slice().reverse().map(c => new Date(c.ts).toISOString().replace('T', ' ').slice(0, 19) + 'Z\t' + c.channelName + '\t' + c.text);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([lines.join('\n') + '\n'], { type: 'text/plain' }));
+    a.download = 'signaldeck-transcripts' + (q ? '-' + q.replace(/[^\w-]+/g, '_') : '') + '.txt'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  } catch (e) { toast(e.message); }
+};
+
 // ---- satellite passes ----
 const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
 const compass = az => COMPASS[Math.round(((az % 360) + 360) % 360 / 22.5) % 16];
