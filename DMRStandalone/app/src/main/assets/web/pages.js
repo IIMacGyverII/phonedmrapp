@@ -1,3 +1,9 @@
+/*
+ * SignalDeck - Copyright (C) 2026 IIMacGyverII
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Free software under the GNU General Public License v3 or later, with the additional terms in COPYRIGHT
+ * (keep this notice and the author credit, mark modified versions, no rights to the SignalDeck name or icon).
+ */
 // SignalDeck Web: Messages, Contacts, Map and Help pages (loaded after app.js, which holds the shared helpers).
 'use strict';
 
@@ -283,7 +289,7 @@ function showMark(m) {
 
 // ---- mission statement (Settings) ----
 $('missionBtn').onclick = async () => {
-  try { const j = await api('mission'); $('missionText').textContent = '\u201C' + j.text + '\u201D'; $('missionBy').textContent = '\u2014 ' + j.by; $('missionDlg').classList.remove('hidden'); $('missionX').focus(); } catch (e) { toast(e.message); }
+  try { const j = await api('mission'); $('missionText').textContent = '\u201C' + j.text + '\u201D'; $('missionBy').textContent = '\u2014 ' + j.by; $('missionLegal').textContent = j.legal || ''; $('missionDlg').classList.remove('hidden'); $('missionX').focus(); } catch (e) { toast(e.message); }
 };
 const closeMission = () => $('missionDlg').classList.add('hidden');
 $('missionX').onclick = closeMission;

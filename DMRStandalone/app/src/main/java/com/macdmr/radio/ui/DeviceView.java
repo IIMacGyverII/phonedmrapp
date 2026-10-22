@@ -1,3 +1,9 @@
+/*
+ * SignalDeck - Copyright (C) 2026 IIMacGyverII
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Free software under the GNU General Public License v3 or later, with the additional terms in COPYRIGHT
+ * (keep this notice and the author credit, mark modified versions, no rights to the SignalDeck name or icon).
+ */
 package com.macdmr.radio.ui;
 
 import android.content.Context;
@@ -226,6 +232,10 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         TextView by = Neo.text(c, "\u2014 IIMacGyverII, SignalDeck", Neo.VIOLET_LIGHT, 15, Neo.ui(c));
         by.setGravity(android.view.Gravity.END); by.setPadding(0, 0, (int) (4 * d), (int) (6 * d));
         box.addView(by);
+        box.addView(Neo.sheetSection(c, "About and license"));
+        TextView legal = Neo.text(c, com.macdmr.radio.About.legal(), Neo.MUTED, 13, Neo.uiMedium(c));
+        legal.setLineSpacing(0, 1.12f); legal.setTextIsSelectable(true); legal.setPadding((int) (4 * d), 0, (int) (4 * d), (int) (6 * d));
+        box.addView(legal);
         Neo.showSheet(c, box);
     }
 

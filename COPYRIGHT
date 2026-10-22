@@ -1,0 +1,71 @@
+SignalDeck and the DMRModHooks project
+Copyright (C) 2026 IIMacGyverII
+https://github.com/IIMacGyverII/phonedmrapp
+
+"This project is a showcase of what an Android ham radio can do. It is built for innovation, and built on the
+innovation, discovery and hard work of those who came before me. I hope it inspires others to create, and to look
+for the next step."
+
+
+1. License
+----------
+
+The original work in this repository -- the SignalDeck app (DMRStandalone/), the DMRModHooks module (DMRModHooks/),
+the DMR Transcription Service (DMRTranscriptionService/), the scripts and the documentation written for this
+project -- is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
+License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
+later version, together with the additional terms in section 2 below.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License (the file
+LICENSE) for more details.
+
+Not covered: material in this repository that belongs to the radio's manufacturer or to other parties and is kept
+here only for interoperability research (the decompiled stock walkie-talkie app in app/, decompiled/,
+original-decompiled/ and original-extracted/, the radio module firmware images in radio_firmware/ and the copies of
+them elsewhere). That material remains the property of its owners; this project claims no rights to it and does not
+license it to anyone.
+
+
+2. Additional terms (section 7 of the GNU GPL version 3)
+--------------------------------------------------------
+
+These terms apply to every file of this project that refers to this COPYRIGHT file, and to the work as a whole:
+
+  a) Author attribution (section 7 b). Anyone who conveys this work or a work based on it must keep intact the
+     copyright notice "Copyright (C) 2026 IIMacGyverII", the author credit shown in the app (Device -> Mission
+     Statement), and this COPYRIGHT file.
+
+  b) No misrepresentation (section 7 c). The origin of this work must not be misrepresented. A modified version must
+     be marked in reasonable ways as different from the original (for example in its name, its About screen and its
+     release notes), and must not be presented as the original SignalDeck or as the work of IIMacGyverII.
+
+  c) Names and logos (section 7 e). This license grants no rights under trademark law to use the names "SignalDeck"
+     and "IIMacGyverII", or the SignalDeck icon and artwork, as trademarks. A modified version that is distributed
+     must use its own name and icon. Describing a work truthfully as "based on SignalDeck" is permitted.
+
+Official builds are signed with the project's release key and published only at
+https://github.com/IIMacGyverII/phonedmrapp/releases (each release lists the SHA-256 of its APK).
+
+
+3. Third-party components
+-------------------------
+
+SignalDeck includes or uses the following, each under its own license:
+
+  - robot36 by Ahmet Inan (https://github.com/xdsopl/robot36) -- SSTV decoding, ported to Java; GNU GPL v3.
+  - Vosk speech recognition (https://alphacephei.com/vosk) and its English models, downloaded on first use;
+    Apache License 2.0.
+  - JNA, Java Native Access (https://github.com/java-native-access/jna); Apache License 2.0 (or LGPL 2.1).
+  - AndroidX libraries (appcompat, core, car.app, media); Apache License 2.0.
+  - HiddenApiBypass by LSPosed (https://github.com/LSPosed/AndroidHiddenApiBypass); Apache License 2.0.
+  - Orbitron, Rajdhani and Share Tech Mono fonts; SIL Open Font License 1.1 (see the OFL-*.txt files with the
+    fonts in DMRStandalone/app/src/main/assets/fonts/).
+  - US amateur radio exam question pools (NCVEC, public domain); machine-readable edition by Russ Olsen,
+    Apache License 2.0.
+
+Data and services used at run time, with thanks:
+  - Map tiles (c) OpenStreetMap contributors, ODbL (https://www.openstreetmap.org/copyright).
+  - Terrain heights: Terrain Tiles on AWS Open Data (Mapzen "terrarium"), built from several public sources.
+  - RadioID.net (DMR IDs and repeaters), BrandMeister (repeaters and talkgroups), hearham.com (repeaters),
+    NetLogger (nets), CelesTrak and AMSAT (satellite orbits), ARISS (ISS station information).

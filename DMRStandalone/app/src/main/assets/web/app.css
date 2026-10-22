@@ -1,3 +1,9 @@
+/*
+ * SignalDeck - Copyright (C) 2026 IIMacGyverII
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Free software under the GNU General Public License v3 or later, with the additional terms in COPYRIGHT
+ * (keep this notice and the author credit, mark modified versions, no rights to the SignalDeck name or icon).
+ */
 @font-face { font-family: Orbitron; src: url(fonts/orbitron.ttf); font-display: swap; }
 @font-face { font-family: Rajdhani; src: url(fonts/rajdhani_medium.ttf); font-weight: 500; font-display: swap; }
 @font-face { font-family: Rajdhani; src: url(fonts/rajdhani_semibold.ttf); font-weight: 600; font-display: swap; }
@@ -80,6 +86,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 20px 16px 60px; }
 .dlg-x { position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; }
 .dlg-x:hover { color: var(--text); border-color: var(--cyan); }
 .mission-text { font-size: 21px; line-height: 1.45; margin: 14px 0 10px; color: var(--text); }
+.mission-legal { white-space: pre-line; color: var(--muted); font-size: 14px; line-height: 1.45; margin: 8px 0 0; max-height: 40vh; overflow-y: auto; }
 .mission-by { text-align: right; color: var(--violet); font-weight: 600; margin: 0; }
 .spec { display: block; width: 100%; height: 64px; margin: 10px 0 4px; }
 .vu div { height: 100%; width: 0; background: linear-gradient(90deg, var(--green), var(--amber), var(--red)); transition: width .1s; }

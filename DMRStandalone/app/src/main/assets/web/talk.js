@@ -1,3 +1,9 @@
+/*
+ * SignalDeck - Copyright (C) 2026 IIMacGyverII
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Free software under the GNU General Public License v3 or later, with the additional terms in COPYRIGHT
+ * (keep this notice and the author credit, mark modified versions, no rights to the SignalDeck name or icon).
+ */
 // SignalDeck Web: talk with this computer's microphone. Needs the secure address (https://phone:8443): the browser
 // captures the mic at 8 kHz, sends it over a WebSocket while PTT is held, and the phone transmits it instead of its own
 // microphone. Releasing, closing the tab, hiding it or losing the network always unkeys (the phone also stops after

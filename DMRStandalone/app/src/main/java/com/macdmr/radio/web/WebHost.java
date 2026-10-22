@@ -1,3 +1,9 @@
+/*
+ * SignalDeck - Copyright (C) 2026 IIMacGyverII
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Free software under the GNU General Public License v3 or later, with the additional terms in COPYRIGHT
+ * (keep this notice and the author credit, mark modified versions, no rights to the SignalDeck name or icon).
+ */
 package com.macdmr.radio.web;
 
 import android.content.Context;
@@ -527,7 +533,7 @@ public final class WebHost {
                 svc.setCaptionEngine(e);
                 return ok("google".equals(e) ? "Captions use Google Cloud Speech" : "Captions are made on the phone");
             }
-            case "/api/mission": return ok(new JSONObject().put("text", com.macdmr.radio.ui.DeviceView.MISSION).put("by", "IIMacGyverII, SignalDeck"));   // the same words as the phone's button and the README
+            case "/api/mission": return ok(new JSONObject().put("text", com.macdmr.radio.ui.DeviceView.MISSION).put("by", "IIMacGyverII, SignalDeck").put("legal", com.macdmr.radio.About.legal()));   // the same words as the phone's button and the README
             case "/api/history": {
                 ChannelStore.Channel ch = svc.current(); int lim = Math.min(500, parse(r.param("limit"), 120));
                 JSONArray a = new JSONArray(); if (ch != null) for (String l : svc.store().recentHistory(ch.number, lim)) a.put(l);
