@@ -33,7 +33,8 @@ public final class DmrAudioCheck {
         public long pcmDuringCalls, pcmTotal;
         public double rms = -1;                         // of what arrived during calls (-1 = not measured)
         public boolean muted, mediaMode, rxAudioOn = true;
-        public boolean monTested; public long monPcm; public double monRms = -1;   // analog: 10 s with the squelch held open (MON): receiver noise must arrive
+        public boolean monTested; public long monPcm; public double monRms = -1;
+        public boolean squelchStuck; public int closedBy = -1;      // after MON off the squelch stayed open with no signal; which step closed it (0 none)   // analog: 10 s with the squelch held open (MON): receiver noise must arrive
         public int musicVolume = -1, musicMax = -1;
         public String output = "";                      // where media plays (speaker, Bluetooth …)
     }
@@ -61,6 +62,9 @@ public final class DmrAudioCheck {
                 return v;
             }
             v.add(String.format(Locale.US, "The audio path works: with the squelch held open, the radio's noise arrived (level %.0f).", f.monRms));
+            if (f.squelchStuck) v.add(f.closedBy == 1 ? "After MON was switched off the squelch stayed open with no signal; re-sending the channel, monitor off and squelch the way the stock app does closed it. Please send this report: it tells us how to fix this phone."
+                    : f.closedBy == 2 ? "After MON was switched off the squelch stayed open with no signal; monitor value 0 closed it. Please send this report: it tells us how to fix this phone."
+                    : "After MON was switched off the squelch stayed open with no signal, and neither fix closed it. Please send this report.");
         }
         if (f.receptions == 0) {
             if (f.digitalChannel) v.add("The radio never reported a call in this minute. Either nobody transmitted, or the calls don't match this channel: "
@@ -155,7 +159,7 @@ public final class DmrAudioCheck {
         }
 
         // ---- analog: 10 s with the squelch held open (MON): receiver noise must arrive, whatever is on the air ----
-        String monStats = "";
+        String monStats = ""; StringBuilder sqProbe = new StringBuilder();
         if (ch != null && !ch.isDigital() && svc.isReady()) {
             f.monTested = true;
             boolean wasMon = svc.monitorOn();
@@ -176,7 +180,21 @@ public final class DmrAudioCheck {
                 monFile.delete();
                 if (!wasMon) svc.setMonitor(false);
             }
-            Thread.sleep(1500);                                                   // the squelch settles back before the minute
+            Thread.sleep(2000);                                                   // the squelch settles back before the minute
+            // did MON off really close the squelch? Only judged with no signal on the channel (below the radio's squelch level)
+            svc.pollRssi(); Thread.sleep(600);
+            if (svc.mcuReceiving() && svc.lastRssi() > -999 && svc.lastRssi() <= -100) {
+                f.squelchStuck = true; f.closedBy = 0;
+                for (int step = 1; step <= 2 && f.closedBy == 0; step++) {
+                    p.step("The squelch stayed open with no signal: trying fix " + step + " of 2 (receive only)…");
+                    String what = svc.squelchCloseAttempt(step);
+                    Thread.sleep(2500); svc.pollRssi(); Thread.sleep(600);
+                    boolean closed = !svc.mcuReceiving();
+                    sqProbe.append(String.format(Locale.US, "  fix %d: sent %s → %s (signal %d dBm)\n", step, what, closed ? "squelch CLOSED" : "still open", svc.lastRssi()));
+                    if (closed) f.closedBy = step;
+                }
+            } else sqProbe.append(svc.mcuReceiving() ? String.format(Locale.US, "  receiving after MON off with a signal of %d dBm: a station is on the air, so whether the squelch closes could not be judged\n", svc.lastRssi())
+                    : "  squelch closed after MON off (as it should)\n");
         }
 
         // ---- the minute ----
@@ -222,7 +240,7 @@ public final class DmrAudioCheck {
         StringBuilder out = new StringBuilder();
         out.append("verdict:\n"); for (String line : verdict(f)) out.append("  ").append(line).append('\n');
         out.append('\n').append(sys).append('\n').append(au).append('\n').append(chs).append('\n');
-        if (f.monTested) out.append(String.format(Locale.US, "part 1, squelch held open (MON) 10 s: %d audio bytes%s\n", f.monPcm, monStats.isEmpty() ? "" : " · level: " + monStats));
+        if (f.monTested) out.append(String.format(Locale.US, "part 1, squelch held open (MON) 10 s: %d audio bytes%s\n", f.monPcm, monStats.isEmpty() ? "" : " · level: " + monStats)).append("after MON off:\n").append(sqProbe);
         out.append(String.format(Locale.US, (f.monTested ? "part 2, " : "") + "minute: receiving %d of %d s · %d reception(s) · %d caller report(s) · audio %d bytes in total, %d during receptions%s\n",
                 heard, seconds, f.receptions, f.callerReports, f.pcmTotal, f.pcmDuringCalls, clipStats.isEmpty() ? "" : " · level of what arrived while receiving: " + clipStats));
         out.append("signal each second (* = receiving): ").append(rs.toString().trim()).append('\n');

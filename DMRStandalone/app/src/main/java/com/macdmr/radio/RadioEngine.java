@@ -83,6 +83,8 @@ public final class RadioEngine implements UartPort.Listener {
     /** Global squelch level (0 open … 9), the same scale as a channel's sq byte. */
     public void setSquelch(int level) throws IOException { port.send(Frame.request(CMD_SQUELCH, (byte) Math.max(0, Math.min(9, level)))); }
     public void setMonitor(boolean on) throws IOException { port.send(Frame.request(CMD_MONITOR, (byte) (on ? 1 : 2))); }
+    /** The monitor byte as given (the radio audio check tries 0 on a module whose squelch stays open after 2). */
+    public void setMonitorRaw(int v) throws IOException { port.send(Frame.request(CMD_MONITOR, (byte) v)); }
     public void setSpkEn(boolean on) throws IOException { port.send(Frame.request(CMD_SPK_EN, (byte) (on ? 1 : 0))); }
 
     public void setInterrupt(boolean on) throws IOException { port.send(Frame.request(CMD_INTERRUPT, (byte) (on ? 1 : 2))); }
