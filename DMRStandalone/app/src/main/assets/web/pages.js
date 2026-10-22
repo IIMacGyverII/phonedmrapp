@@ -281,6 +281,15 @@ function showMark(m) {
   window.addEventListener('resize', () => { if (S.page === 'map') drawMap(); });
 })();
 
+// ---- mission statement (Settings) ----
+$('missionBtn').onclick = async () => {
+  try { const j = await api('mission'); $('missionText').textContent = '\u201C' + j.text + '\u201D'; $('missionBy').textContent = '\u2014 ' + j.by; $('missionDlg').classList.remove('hidden'); $('missionX').focus(); } catch (e) { toast(e.message); }
+};
+const closeMission = () => $('missionDlg').classList.add('hidden');
+$('missionX').onclick = closeMission;
+$('missionDlg').onclick = e => { if (e.target === $('missionDlg')) closeMission(); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('missionDlg').classList.contains('hidden')) closeMission(); });
+
 // ---- the intercom bars: the received audio's spectrum, drawn like the phone's panel (rise fast, fall slowly) ----
 S.spec = new Array(18).fill(0); S.specTarget = new Array(18).fill(0);
 function drawSpectrum() {

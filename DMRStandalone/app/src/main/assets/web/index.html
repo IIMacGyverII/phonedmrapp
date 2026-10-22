@@ -198,6 +198,11 @@
         <div id="passList" class="passgrid"></div>
       </div>
     </section>
+    <div id="missionDlg" class="dlg hidden" role="dialog" aria-modal="true" aria-labelledby="missionTitle">
+      <div class="dlg-card"><button type="button" class="dlg-x" id="missionX" aria-label="Close">×</button>
+        <div class="label" id="missionTitle">MISSION STATEMENT</div>
+        <p id="missionText" class="mission-text"></p><p id="missionBy" class="mission-by"></p></div>
+    </div>
     <!-- TRANSCRIPTS -->
     <section id="page-trans" class="page hidden">
       <div class="panel">
@@ -299,6 +304,7 @@
 
     <!-- SETTINGS -->
     <section id="page-settings" class="page hidden">
+      <button class="btn mission-btn" id="missionBtn">★ Mission Statement</button>
       <div class="grid-side wide">
         <div class="panel">
           <span class="label">RADIO</span>
