@@ -81,13 +81,16 @@ public final class MapDialog {
         root.addView(head);
 
         LinearLayout pillRow = new LinearLayout(c); pillRow.setPadding((int) (12 * d), 0, (int) (12 * d), (int) (8 * d));
-        String[] names = { "Coverage", "Stations", "Repeaters", "Channels", "Help" };
+        String[] names = { "Coverage", "APRS", "Repeaters", "Channels", "Help" };
         int[] accents = { Neo.VIOLET, Neo.GREEN, Neo.CYAN, Neo.AMBER, Neo.MUTED };
+        final android.content.SharedPreferences mp = c.getSharedPreferences("map", Context.MODE_PRIVATE);   // which layers were on last time
+        final String[] showKey = { null, "showAprs", "showRepeaters", "showChannels", null };
+        for (int i = 1; i <= 3; i++) if (!mp.getBoolean(showKey[i], true)) { if (i == 2) { map.setVisible(MapView.REPEATER_FM, false); map.setVisible(MapView.REPEATER_DMR, false); } else map.setVisible(i == 1 ? MapView.STATION : MapView.CHANNEL, false); }
         for (int i = 0; i < 5; i++) {
             final int idx = i;
             TextView p = Neo.label(c, names[i], accents[i], 14, true); p.setGravity(Gravity.CENTER);
             p.setPadding((int) (14 * d), (int) (8 * d), (int) (14 * d), (int) (8 * d));
-            Neo.pillStyle(p, i >= 1 && i <= 3, accents[i]);
+            Neo.pillStyle(p, i >= 1 && i <= 3 && mp.getBoolean(showKey[i], true), accents[i]);
             LinearLayout.LayoutParams pl = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT); pl.rightMargin = (int) (8 * d);
             pillRow.addView(p, pl); pills[i] = p;
             p.setOnClickListener(v -> {
@@ -97,6 +100,7 @@ public final class MapDialog {
                 if (idx == 2) { on = !map.isVisible(MapView.REPEATER_FM); map.setVisible(MapView.REPEATER_FM, on); map.setVisible(MapView.REPEATER_DMR, on); }
                 else { int kind = idx == 1 ? MapView.STATION : MapView.CHANNEL; on = !map.isVisible(kind); map.setVisible(kind, on); }
                 Neo.pillStyle(p, on, accents[idx]);
+                mp.edit().putBoolean(showKey[idx], on).apply();
             });
         }
         HorizontalScrollView hs = new HorizontalScrollView(c); hs.setHorizontalScrollBarEnabled(false); hs.addView(pillRow);
@@ -224,7 +228,7 @@ public final class MapDialog {
     private void publish(List<MapView.Marker> ms, int st, int ch, int rp) {
         all.clear(); all.addAll(ms); map.setMarkers(new ArrayList<>(ms));
         counts[0] = st; counts[1] = rp; counts[2] = ch;
-        pills[1].setText("Stations " + st); pills[2].setText(rp < 0 ? "Repeaters …" : "Repeaters " + rp); pills[3].setText("Channels " + ch);
+        pills[1].setText("APRS " + st); pills[2].setText(rp < 0 ? "Repeaters …" : "Repeaters " + rp); pills[3].setText("Channels " + ch);
         status.setText(me == null ? "No position fix: showing what has a location" : rp < 0 ? "Finding repeaters near you…" : "Around you · pinch to zoom, tap a marker");
     }
 
@@ -571,7 +575,7 @@ public final class MapDialog {
 
     private void help() {
         LinearLayout box = Neo.sheetBody(c, "Map");
-        box.addView(Neo.sheetHint(c, "Green dots are APRS stations the radio (or APRS-IS) has heard, at their last reported position. Cyan diamonds are FM repeaters and violet diamonds DMR repeaters within your Nearby repeaters range. Amber pins are your channels that have a location (set one in the channel editor). The blue dot is you."));
+        box.addView(Neo.sheetHint(c, "Green dots are APRS stations the radio has heard, at their last reported position (the APRS pill hides or shows them). Cyan diamonds are FM repeaters and violet diamonds DMR repeaters within your Nearby repeaters range. Amber pins are your channels that have a location (set one in the channel editor). The blue dot is you."));
         box.addView(Neo.sheetHint(c, "Drag to move, pinch or double-tap to zoom, tap a marker for details. The pills hide or show each kind; the buttons on the right zoom, return to your position and fit everything on screen."));
         box.addView(Neo.sheetHint(c, "Coverage: the violet pill shows where you have heard each repeater (Heard) and where your transmissions opened it (Key-ups). Turn on logging there; Help \u2192 Coverage maps explains it all."));
         box.addView(Neo.sheetHint(c, "Map tiles come from OpenStreetMap and are kept on the phone for 30 days, so places you have looked at still show without a connection."));
