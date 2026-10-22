@@ -278,9 +278,9 @@ public final class WebHost {
                 ch.softSq = b.optBoolean("softSq", ch.softSq);
                 ch.softSqLevel = Math.max(1, Math.min(9, b.optInt("softSqLevel", ch.softSqLevel)));
                 ch.sq = Math.max(0, Math.min(9, b.optInt("sq", ch.sq)));
-                ch.txType = Math.max(0, Math.min(2, b.optInt("txType", ch.txType)));
-                ch.rxType = Math.max(0, Math.min(2, b.optInt("rxType", ch.rxType)));
-                int nTx = ch.txType == 1 ? com.macdmr.radio.dsp.ToneTable.CTCSS.length : 104, nRx = ch.rxType == 1 ? com.macdmr.radio.dsp.ToneTable.CTCSS.length : 104;
+                ch.txType = Math.max(0, Math.min(3, b.optInt("txType", ch.txType)));
+                ch.rxType = Math.max(0, Math.min(3, b.optInt("rxType", ch.rxType)));
+                int nTx = ch.txType == 1 ? com.macdmr.radio.dsp.ToneTable.CTCSS.length : com.macdmr.radio.dsp.ToneTable.DCS_COUNT, nRx = ch.rxType == 1 ? com.macdmr.radio.dsp.ToneTable.CTCSS.length : com.macdmr.radio.dsp.ToneTable.DCS_COUNT;
                 ch.txSubCode = ch.txType == 0 ? 0 : Math.max(0, Math.min(nTx - 1, b.optInt("txSubCode", 0)));
                 ch.rxSubCode = ch.rxType == 0 ? 0 : Math.max(0, Math.min(nRx - 1, b.optInt("rxSubCode", 0)));
             }
@@ -294,7 +294,7 @@ public final class WebHost {
     }
     private static JSONObject toneLists() throws Exception {
         JSONArray c = new JSONArray(); for (int i = 0; i < com.macdmr.radio.dsp.ToneTable.CTCSS.length; i++) c.put(com.macdmr.radio.dsp.ToneTable.ctcssLabel(i));
-        JSONArray d = new JSONArray(); for (int i = 0; i < 104; i++) d.put(String.format(java.util.Locale.US, "DCS D%03oN", i));
+        JSONArray d = new JSONArray(); for (int i = 0; i < com.macdmr.radio.dsp.ToneTable.DCS_COUNT; i++) d.put("DCS D" + com.macdmr.radio.dsp.ToneTable.dcsCode(i));   // the index the MCU gets; N/I comes from the type
         return new JSONObject().put("ctcss", c).put("dcs", d);
     }
     private JSONObject statusJson() throws Exception {

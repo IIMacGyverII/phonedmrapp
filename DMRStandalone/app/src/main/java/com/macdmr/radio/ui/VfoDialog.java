@@ -27,7 +27,7 @@ import java.util.Locale;
  * on, and "Save as channel" for when a tuned frequency turns out to be worth keeping.
  */
 public final class VfoDialog {
-    private static final String[] TONE_TYPES = { "None", "CTCSS", "DCS" };
+    private static final String[] TONE_TYPES = { "None", "CTCSS", "DCS", "DCS inverted" };
     private static final String[] CALL_TYPES = { "Private (DMR ID)", "Group (talkgroup)", "All (receive all)" };
     private static final int[] STEPS = { 5000, 6250, 10000, 12500, 25000 };
     private static final String[] STEP_LABELS = { "5", "6.25", "10", "12.5", "25 kHz" };
@@ -151,7 +151,7 @@ public final class VfoDialog {
     private static String join(int[] a) { StringBuilder b = new StringBuilder(); for (int x : a) { if (b.length() > 0) b.append(", "); b.append(x); } return b.toString(); }
     private static String toneName(int type, int code) {
         if (type == 1) return ToneTable.ctcssLabel(code);
-        if (type == 2) return "DCS " + String.format(Locale.US, "D%03oN", code);
+        if (type == 2 || type == 3) return "DCS " + ToneTable.toneLabel(type, code);
         return "—";
     }
 
@@ -234,7 +234,7 @@ public final class VfoDialog {
         LinearLayout row = shell(); row.setOrientation(LinearLayout.HORIZONTAL); row.setGravity(Gravity.CENTER_VERTICAL);
         row.addView(Neo.label(c, label, 0xFFBFC8D0, 15, false), new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         int type = txSide ? v.txType : v.rxType, code = txSide ? v.txSubCode : v.rxSubCode;
-        final TextView typeV = Neo.label(c, TONE_TYPES[Math.max(0, Math.min(type, 2))], Theme.CYAN, 14, true);
+        final TextView typeV = Neo.label(c, TONE_TYPES[Math.max(0, Math.min(type, 3))], Theme.CYAN, 14, true);
         typeV.setBackground(Neo.outline(c, Neo.CYAN, 0x16, 12, 1)); typeV.setPadding(dp(10), dp(6), dp(10), dp(6));
         final TextView codeV = Neo.label(c, toneName(type, code), Theme.VFO[3], 14, true);
         codeV.setBackground(Theme.rounded(c, Theme.VFO[0], Theme.VFO[2], 1, 14)); codeV.setPadding(dp(10), dp(6), dp(10), dp(6));
@@ -247,7 +247,7 @@ public final class VfoDialog {
         });
         codeV.setOnClickListener(x -> {
             int t = txSide ? v.txType : v.rxType; if (t == 0) return;
-            final int n = t == 1 ? ToneTable.CTCSS.length : 104; final String[] items = new String[n]; for (int i = 0; i < n; i++) items[i] = toneName(t, i);
+            final int n = t == 1 ? ToneTable.CTCSS.length : ToneTable.DCS_COUNT; final String[] items = new String[n]; for (int i = 0; i < n; i++) items[i] = toneName(t, i);
             new AlertDialog.Builder(c).setTitle(label).setItems(items, (dd, w) -> { if (txSide) v.txSubCode = w; else v.rxSubCode = w; codeV.setText(items[w]); }).show();
         });
         target.addView(row);

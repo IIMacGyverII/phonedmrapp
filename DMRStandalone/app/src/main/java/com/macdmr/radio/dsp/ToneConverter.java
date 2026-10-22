@@ -27,6 +27,11 @@ public class ToneConverter {
         return -1;
     }
 
+    /** Number of DCS codes in the OEM tables (types 2 and 3 index the same 83 codes). */
+    public static int dcsCount() { return FDCS_CODES.length; }
+    /** The three-digit octal DCS code at an index ("023"), or null. */
+    public static String dcsAt(int index) { return index >= 0 && index < FDCS_CODES.length ? FDCS_CODES[index].substring(0, 3) : null; }
+
     /** Number of standard CTCSS tones (for the decoder bank). */
     public static int ctcssCount() { return CTCSS_TONES.length; }
 

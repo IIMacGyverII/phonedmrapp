@@ -519,7 +519,7 @@ public class IntercomView extends LinearLayout implements RadioService.Listener 
         } else {
             readLabel[2].setText("SQ"); squelch.setText(String.valueOf(ch.sq));
             readLabel[3].setText("TONE");
-            String tone = ch.rxType == 1 && com.macdmr.radio.dsp.ToneTable.ctcssHz(ch.rxSubCode) > 0 ? String.format(java.util.Locale.US, "%.1f", com.macdmr.radio.dsp.ToneTable.ctcssHz(ch.rxSubCode)) : ch.rxType == 2 ? String.format(java.util.Locale.US, "D%03oN", ch.rxSubCode) : "NONE";
+            String tone = ch.rxType == 1 && com.macdmr.radio.dsp.ToneTable.ctcssHz(ch.rxSubCode) > 0 ? String.format(java.util.Locale.US, "%.1f", com.macdmr.radio.dsp.ToneTable.ctcssHz(ch.rxSubCode)) : ch.rxType == 2 || ch.rxType == 3 ? com.macdmr.radio.dsp.ToneTable.toneLabel(ch.rxType, ch.rxSubCode) : "NONE";
             power.setText(tone);
         }
     }
