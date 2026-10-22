@@ -983,6 +983,10 @@ public class RadioService extends Service implements RadioEngine.Events {
         }, "google-stt").start();
     }
     public String captionModel() { return getSharedPreferences("radio", MODE_PRIVATE).getString("captionModel", VoskCaptions.DEFAULT_MODEL); }
+    /** The on-device recognizer's state: idle, downloading … %, unpacking, loading, ready, or an error. */
+    public String captionStatus() { VoskCaptions v = captions; return v == null ? "idle" : v.status(); }
+    public String captionLoadedModel() { VoskCaptions v = captions; return v == null ? null : v.loadedName(); }
+    public boolean captionModelBusy() { VoskCaptions v = captions; return v != null && v.isLoading(); }
 
     public void setCaptionModel(String m) {
         getSharedPreferences("radio", MODE_PRIVATE).edit().putString("captionModel", m).apply();

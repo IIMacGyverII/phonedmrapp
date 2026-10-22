@@ -65,6 +65,7 @@
             <button class="tog" id="recBtn">REC</button>
             <button class="tog" id="sqBtn">SOFT SQ</button>
             <button class="tog" id="vfoBtn" title="Tune any frequency">VFO</button>
+            <button class="tog" id="txtBtn" title="Live captions of what is received; engine and models on the Transcripts page">TXT</button>
             <select id="zoneSel" aria-label="Zone"></select>
           </div>
           <div class="sq"><span class="label">SOFT SQ</span><input type="range" id="sqLevel" min="0" max="100"><span id="sqVal" class="mono">--</span></div>
@@ -73,7 +74,7 @@
           <p id="pttNote" class="muted small center"></p>
         </div>
         <div class="panel">
-          <div class="row between"><span class="label">HISTORY</span><div class="row"><span id="captionState" class="chip dim"></span><button class="tog small-tog" id="txtBtn" title="Live captions of what is received (TXT)">TXT</button></div></div>
+          <div class="row between"><span class="label">HISTORY</span><div class="row"><span id="captionState" class="chip dim"></span></div></div>
           <div id="caption" class="caption hidden"></div>
           <div id="capList" class="caplist hidden"></div>
           <div id="history" class="history mono"></div>
@@ -204,6 +205,14 @@
         <input id="trSearch" placeholder="Search the captions (a word, a callsign, a name)" class="search full" style="margin-top:10px">
         <p class="muted small">Every finished caption sentence the phone kept, newest first, with its time, channel and (on DMR) the caller. New ones appear as they are heard. Captions are made on the phone: turn TXT on here or on the phone.</p>
         <div id="trList" class="list"></div>
+      </div>
+      <div class="panel" style="margin-top:14px">
+        <div class="row between wrap"><span class="label">CAPTION ENGINE</span><span id="cmStatus" class="chip dim"></span></div>
+        <div class="row wrap" style="gap:8px;margin-top:10px"><div class="seg" id="cmEngine"><button type="button" data-e="vosk">On the phone (Vosk)</button><button type="button" data-e="google">Google Cloud Speech</button></div></div>
+        <div id="cmGoogle" class="row wrap hidden" style="gap:8px;margin-top:10px"><input id="cmKey" type="password" autocomplete="off" placeholder="Google Cloud Speech API key" class="search" style="flex:1;min-width:220px"><button class="btn" id="cmKeySave">Save key</button><span id="cmKeyState" class="muted small"></span></div>
+        <p class="muted small">On the phone: speech is recognised on the phone itself, nothing leaves it. The model is downloaded once (over the phone's connection) and kept; bigger models are more accurate but need more space and memory. Google: your own API key, audio is sent to Google.</p>
+        <div id="cmModels" class="list"></div>
+        <p id="cmFree" class="muted small"></p>
       </div>
     </section>
     <!-- MAP -->

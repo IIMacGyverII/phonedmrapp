@@ -296,6 +296,37 @@ function addCaptionLine(c) {
   S.caps.unshift(c); S.caps = S.caps.slice(0, 8); renderCapList();
   if (S.page === 'trans' && !$('trSearch').value.trim()) { S.trRows.unshift(c); renderTrans(); }
 }
+// ---- caption engine and models (Transcripts page) ----
+let cmTimer = null;
+const mb = n => n >= 1e9 ? (n / 1e9).toFixed(1) + ' GB' : Math.round(n / 1e6) + ' MB';
+async function loadModels() {
+  clearTimeout(cmTimer);
+  try {
+    const j = await api('captions/models');
+    $('cmEngine').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.e === j.engine));
+    $('cmGoogle').classList.toggle('hidden', j.engine !== 'google' && j.googleKeySet === false && !S.cmShowKey);
+    $('cmKeyState').textContent = j.googleKeySet ? 'A key is set (hidden).' : 'No key set.';
+    const busy = j.busy || /^(downloading|unpacking|loading)/.test(j.status);
+    $('cmStatus').textContent = j.engine === 'google' ? 'GOOGLE' : (j.status || 'idle').toUpperCase();
+    $('cmModels').innerHTML = j.models.map(m => '<div class="item"><div class="main"><div>' + esc(m.label) + (m.selected ? ' <span class="chip green">IN USE</span>' : '') + '</div><div class="sub">'
+      + (m.present ? 'on the phone · ' + mb(m.bytes) + (m.loaded ? ' · loaded' : '') : (m.selected && busy ? esc(j.status) : 'not downloaded')) + '</div></div>'
+      + (!m.selected ? '<button type="button" class="act" data-use="' + m.name + '"' + (busy ? ' disabled' : '') + '>' + (m.present ? 'Use' : 'Download and use') + '</button>' : '')
+      + (m.present && !m.selected && !m.loaded ? ' <button type="button" class="act" data-del="' + m.name + '"' + (busy ? ' disabled' : '') + '>Delete</button>' : '') + '</div>').join('');
+    $('cmFree').textContent = 'Free space on the phone: ' + mb(j.freeBytes) + '.';
+    if (busy && S.page === 'trans') cmTimer = setTimeout(loadModels, 1500);
+  } catch (e) { $('cmModels').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
+}
+$('cmModels').onclick = async e => {
+  const u = e.target.closest('[data-use]'), d = e.target.closest('[data-del]');
+  if (u) { if (await act('captions/model', { name: u.dataset.use })) loadModels(); }
+  if (d && confirm('Delete this model from the phone? It can be downloaded again later.')) { if (await act('captions/model/delete', { name: d.dataset.del })) loadModels(); }
+};
+$('cmEngine').onclick = async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.e === 'google') { S.cmShowKey = true; $('cmGoogle').classList.remove('hidden'); }
+  if (await act('captions/engine', { engine: b.dataset.e })) loadModels();
+};
+$('cmKeySave').onclick = async () => { const k = $('cmKey').value.trim(); if (!k) return; if (await act('captions/engine', { engine: 'google', googleKey: k })) { $('cmKey').value = ''; loadModels(); } };
 function setTxt(on) { S.capOn = !!on; for (const id of ['txtBtn', 'trTxt']) { const b = $(id); if (b) b.classList.toggle('on', !!on); } }
 async function toggleTxt() { const want = !S.capOn; const j = await act('captions/set', { on: want }); if (j) setTxt(want); }   // the server's live update may arrive first: set what was asked, never flip twice
 $('txtBtn').onclick = toggleTxt; $('trTxt').onclick = toggleTxt;

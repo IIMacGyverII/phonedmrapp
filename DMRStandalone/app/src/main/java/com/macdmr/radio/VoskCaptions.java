@@ -56,6 +56,14 @@ public final class VoskCaptions {
     public static File modelDir(Context c, String name) { return new File(new File(c.getFilesDir(), "models"), name); }
     public static boolean modelPresent(Context c, String name) { return new File(modelDir(c, name), "am/final.mdl").exists(); }
     public String status() { return status; }
+    /** The model in memory now (null before the first load). */
+    public String loadedName() { return loadedName; }
+    public boolean isLoading() { return loading; }
+    /** Remove a downloaded model (not the one loaded or being loaded). */
+    public static boolean deleteModel(Context c, String name) { File d = modelDir(c, name); if (!d.exists()) return true; deleteTree(d); return !d.exists(); }
+    private static void deleteTree(File f) { File[] k = f.listFiles(); if (k != null) for (File x : k) deleteTree(x); f.delete(); }
+    public static long modelBytes(Context c, String name) { return treeBytes(modelDir(c, name)); }
+    private static long treeBytes(File f) { if (f.isFile()) return f.length(); long n = 0; File[] k = f.listFiles(); if (k != null) for (File x : k) n += treeBytes(x); return n; }
     public boolean isActive() { return active; }
 
     /** Choose the model (downloaded on first use, kept across updates); loads in the background. */

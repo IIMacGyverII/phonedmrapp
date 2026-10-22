@@ -46,7 +46,7 @@ function route() {
   if (S.page === 'help') loadHelp();
   if (S.page === 'log') { if (!S.qso) editQso(null); loadLog(); loadNet(); }
   if (S.page === 'rec') loadRecordings();
-  if (S.page === 'trans') loadTrans();
+  if (S.page === 'trans') { loadTrans(); loadModels(); }
   if (S.page === 'exam') { loadExam(); loadTrainer(); }
   if (S.page === 'settings') { loadSettings(); loadBackups(); loadDiagLog(); }
   if (S.page === 'pkt') { loadPacket(); loadKeyer(); }
