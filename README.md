@@ -76,7 +76,7 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 ## 🧪 SignalDeck — the standalone app (public beta)
 
 > [!IMPORTANT]
-> **SignalDeck has moved to its own repository: [IIMacGyverII/SignalDeck](https://github.com/IIMacGyverII/SignalDeck)** (since 2026-10-22, with its full history). New builds, issues and the source are there; `DMRStandalone/` in this repository is the copy from before the move. Beta builds up to 1.0.0-beta.11 are on this repository's Releases page.
+> **SignalDeck has moved to its own repository: [IIMacGyverII/SignalDeck](https://github.com/IIMacGyverII/SignalDeck)** (since 2026-10-22, with its full history). New builds, issues and the source are there; `DMRStandalone/` here now only points there. Beta builds up to 1.0.0-beta.11 are on this repository's Releases page.
 
 > [!WARNING]
 > **Beta, for testing only — bugs are expected.** SignalDeck needs a rooted phone and takes direct control of its radio module. It is provided as is, without warranty (GPL v3); the author is not responsible for any damage to your phone, its radio or your data, and transmitting legally is your responsibility. Read the disclaimer in the [release notes](https://github.com/IIMacGyverII/phonedmrapp/releases/tag/signaldeck-v1.0.0-beta.11) before installing.
