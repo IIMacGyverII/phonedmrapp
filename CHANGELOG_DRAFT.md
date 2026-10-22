@@ -7,7 +7,7 @@ Built, installed and device-tested on the attached radio unless an entry says ot
 
 | Backlog | Change | Files | Test |
 |---|---|---|---|
-| — | Owner's mission statement for the project, at the top of the README (under the title) and on a dedicated **Mission Statement** button on the Device page (above the tools), which opens a sheet with the statement and "— IIMacGyverII, SignalDeck". Help: Device → Mission Statement. | `README.md`, `ui/DeviceView.java`, `ui/HelpView.java` | Built; installed after the 09:43 ISS pass; button and sheet checked on the owner's Armor. |
+| — | Owner's mission statement for the project, at the top of the README (under the title), on a dedicated **Mission Statement** button on the Device page (above the tools), which opens a sheet with the statement and "— IIMacGyverII, SignalDeck", and in SignalDeck Web (★ Mission Statement at the top of Settings: a card from `/api/mission`, same text, closes with ×, Esc or a click outside). Help: Device → Mission Statement. | `README.md`, `ui/DeviceView.java`, `ui/HelpView.java`, `web/WebHost.java`, `assets/web/index.html`, `assets/web/pages.js`, `assets/web/app.css` | Installed after the 09:43 ISS pass (tracking resumed by itself); phone sheet checked; web: button opens the card with the statement and signature, Esc closes it. |
 
 ## 2026-10-22 — Real spectrum bars (phone and web); ISS tracking survives restarts
 

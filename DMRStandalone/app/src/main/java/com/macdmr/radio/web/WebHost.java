@@ -527,6 +527,7 @@ public final class WebHost {
                 svc.setCaptionEngine(e);
                 return ok("google".equals(e) ? "Captions use Google Cloud Speech" : "Captions are made on the phone");
             }
+            case "/api/mission": return ok(new JSONObject().put("text", com.macdmr.radio.ui.DeviceView.MISSION).put("by", "IIMacGyverII, SignalDeck"));   // the same words as the phone's button and the README
             case "/api/history": {
                 ChannelStore.Channel ch = svc.current(); int lim = Math.min(500, parse(r.param("limit"), 120));
                 JSONArray a = new JSONArray(); if (ch != null) for (String l : svc.store().recentHistory(ch.number, lim)) a.put(l);
