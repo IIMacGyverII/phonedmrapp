@@ -173,6 +173,12 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
                     .setNegativeButton("Cancel", null).show();
         });
 
+        // ---- the project's mission statement: its own button, above the tools ----
+        TextView mission = Neo.button(c, "Mission Statement", "star", Neo.VIOLET);
+        LayoutParams ml = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT); ml.topMargin = (int) (18 * d);
+        body.addView(mission, ml);
+        mission.setOnClickListener(v -> missionSheet());
+
         // ---- tools ----
         TextView th = Neo.caps(c, "Tools"); th.setPadding((int) (2 * d), (int) (18 * d), 0, (int) (8 * d)); body.addView(th);
         LinearLayout backup = Neo.tile(c, "backup", Neo.GREEN, "Back up", "Five CSVs, CPS-ready");
@@ -207,6 +213,20 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         TextView foot = Neo.text(c, "Backups are the five CSV files (Contacts, TG_Lists, Channels, Zones, DTMF) the DMRModHooks module and the OpenGD77 CPS fork use, in Download/DMR/DMR_Backups.\n\nSignalDeck " + com.macdmr.radio.BuildConfig.VERSION_NAME + ", the standalone edition of DMRModHooks.", Neo.DIM, 12.5f, Neo.uiMedium(c));
         foot.setLineSpacing(0, 1.1f); foot.setPadding((int) (2 * d), (int) (8 * d), (int) (2 * d), 0);
         body.addView(foot);
+    }
+
+    /** The project's mission statement (also at the top of the README). */
+    public static final String MISSION = "This project is a showcase of what an Android ham radio can do. It is built for innovation, and built on the innovation, discovery and hard work of those who came before me. I hope it inspires others to create, and to look for the next step.";
+    private void missionSheet() {
+        Context c = getContext(); float d = Theme.dp(c);
+        LinearLayout box = Neo.sheetBody(c, "Mission Statement");
+        TextView t = Neo.text(c, "\u201C" + MISSION + "\u201D", Neo.TEXT, 20, Neo.uiMedium(c));
+        t.setLineSpacing(0, 1.18f); t.setPadding((int) (4 * d), (int) (14 * d), (int) (4 * d), (int) (10 * d));
+        box.addView(t);
+        TextView by = Neo.text(c, "\u2014 IIMacGyverII, SignalDeck", Neo.VIOLET_LIGHT, 15, Neo.ui(c));
+        by.setGravity(android.view.Gravity.END); by.setPadding(0, 0, (int) (4 * d), (int) (6 * d));
+        box.addView(by);
+        Neo.showSheet(c, box);
     }
 
     /** Device → Home widget: the live widget as it will look, and a button that asks the launcher to add it. */

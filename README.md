@@ -4,6 +4,12 @@ https://github.com/user-attachments/assets/c09941ab-2027-46b9-b862-79e4e7d11362
 
 ﻿# PriInterPhone DMR Radio - LSPosed Mod with OpenGD77 Integration + Advanced Features
 
+## Mission Statement
+
+> *This project is a showcase of what an Android ham radio can do. It is built for innovation, and built on the innovation, discovery and hard work of those who came before me. I hope it inspires others to create, and to look for the next step.*
+>
+> — IIMacGyverII
+
 **Status**: ✅ **FULLY FUNCTIONAL** - RadioID Caller Lookup + Export/Import + GPS + Zones + Transcription + APRS + VFO + SSTV + NOAA APT!
 
 > **🧪 New: SignalDeck 1.0.0-beta.11** (October 22, 2026) - the standalone app as a public **beta for testing** (root required, bugs expected) - see [SignalDeck](#-signaldeck--the-standalone-app-public-beta) and the [pre-release](https://github.com/IIMacGyverII/phonedmrapp/releases/tag/signaldeck-v1.0.0-beta.11)  
