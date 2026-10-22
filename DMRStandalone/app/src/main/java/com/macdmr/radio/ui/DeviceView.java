@@ -180,7 +180,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         LinearLayout reimport = Neo.tile(c, "import", Neo.AMBER, "Re-import", "Channels from the stock app");
         radioIdTile = Neo.tile(c, "globe", Neo.CYAN, "RadioID list", "");
         LinearLayout report = Neo.tile(c, "report", Neo.VIOLET, "Device report", "Support reports and checks");
-        LinearLayout upd = Neo.tile(c, "update", Neo.CYAN, "Updates", "Check GitHub releases");
+        LinearLayout upd = Neo.tile(c, "update", Neo.CYAN, "Updates", "Release and beta builds");
         LinearLayout help = Neo.tile(c, "help", Neo.GREEN, "Help & how-to", "Every screen explained");
         LinearLayout diag = Neo.tile(c, "diag", Neo.AMBER, "Diagnostics", "Live protocol log");
         LinearLayout widget = Neo.tile(c, "widget", Neo.VIOLET, "Home widget", "Channel, scan and Talk");
@@ -198,7 +198,7 @@ public class DeviceView extends LinearLayout implements RadioService.Listener {
         reimport.setOnClickListener(v -> doReimport());
         radioIdTile.setOnClickListener(v -> doRadioId());
         report.setOnClickListener(v -> reportMenu());
-        upd.setOnClickListener(v -> com.macdmr.radio.Updater.check(c));
+        upd.setOnClickListener(v -> com.macdmr.radio.Updater.show(c));
         help.setOnClickListener(v -> { if (host != null) host.openHelp(); });
         diag.setOnClickListener(v -> { if (host != null) host.openDiagnostics(); });
         widget.setOnClickListener(v -> widgetSheet());
