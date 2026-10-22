@@ -38,6 +38,8 @@ public final class DiagReceiver extends BroadcastReceiver {
             // phone without publishing them; "profileclear" removes it again (and the owner's overrides)
             case "profiletest": Log.i("DiagReceiver", "profiletest: " + ProfileRegistry.loadForTest(new java.io.File(i.getStringExtra("path")))); break;
             // bench: the DMR audio check for --ei seconds (default 10) on the current channel; the section goes to logcat, not to a report
+            // bench: the update path's root install (older versions included) from a local APK (--es path …); the app restarts as that APK
+            case "rootinstall": { final String path = i.getStringExtra("path"); if (path != null && path.endsWith(".apk")) new Thread(() -> Log.i("DiagReceiver", "rootinstall: " + Updater.rootInstall(path)), "rootinstall").start(); break; }
             case "audiocheck": case "dmrcheck": { final int sec = i.getIntExtra("seconds", 10); final Context ctx = c.getApplicationContext();
                 new Thread(() -> { try { for (String l : DmrAudioCheck.run(ctx, s, sec, t -> { }).split("\n")) Log.i("DmrAudioCheck", l); } catch (Throwable t) { Log.w("DmrAudioCheck", t); } }, "dmrcheck").start(); break; }
             case "profileclear": Log.i("DiagReceiver", "profileclear: " + ProfileRegistry.clearForTest()); break;
