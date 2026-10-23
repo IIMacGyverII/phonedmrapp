@@ -203,3 +203,9 @@ Interoperability notes only (facts and values, no code). The protocol library is
 - **Shipped channels:** band 0, sq 5, monitor 2, relay 2, pwrsave 1 (SignalDeck sends pwrsave 2).
 
 Applied in SignalDeck (2026-10-22, Xplore profile revision 2): channel writes at least 1 s apart (quick changes collapse into the last), monitor + squelch 200 ms after the channel's acknowledgement (1.5 s fallback), scan dwell 2.5 s, refused MON retried.
+
+## Stuck module after an app restart (beta.16/17, 2026-10-23)
+
+- **Symptom (beta.16):** after an update the module answered RSSI (0x32) at once but no 0x23/0x2F/0x30/0x34 for about four minutes, then answered them all in one burst and went quiet again: MON came on minutes late, the 60 s check heard nothing, CTCSS settings never took effect. No boot banner: the power line reads back empty on this phone, so "power on" never restarted a module that was already on.
+- **Fix (beta.17):** the start-up handshake waits 3 s for the 0x34 answer and otherwise really restarts the module (power, pwd and PTT lines off, 1 s, normal power-up; QuickChat does the same with a 5 s watchdog), and a runtime watchdog restarts it when a watched command waits 6 s while RSSI still answers.
+- **Result (tester, beta.17):** the handshake found the module silent, restarted it, the boot banner (`开机初始化完成`) arrived for the first time, and the second radio test passed: reception, MON and CTCSS 100 Hz all work; commands answered in 8–113 ms.
