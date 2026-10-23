@@ -17,7 +17,7 @@ Mandatory checklist for every new session on **phonedmrapp** / **DMRModHooks**.
 | **OEM app source** | `app/src/main/java/com/pri/prizeinterphone/` | Decompiled PriInterPhone |
 | **OpenGD77 CPS fork (binary)** | `OpenGD77Fork/*.zip` | Latest build zip for releases; **not** a git submodule |
 | **OpenGD77 CPS fork (source)** | `C:\Users\Joshua\Documents\android\OpenGD77CPS-Mac` | Separate repo — edit/build CPS here |
-| **MCU firmware RE** | `docs/grok-deep-dive/11-firmware-fw0-results.md` §12–14 | Image is **C-SKY V2**, not ARM. Disassemblers installed: `C:\Users\Joshua\tools\csky-elfabiv2\bin\csky-elfabiv2-objdump.exe` and the Ghidra C-SKY module; `scripts/fw1_ghidra_csky.ps1`. Never reuse the old `0x08xxxxxx` ARM addresses. **Plan to finish it: `docs/deep-dive/19-firmware-modification-plan.md`** (2026-10-23; TX audio path for digital modes, loader in SignalDeck, test loop; band limits and power out of scope) |
+| **MCU firmware RE** | `docs/grok-deep-dive/11-firmware-fw0-results.md` §12–14 | Image is **C-SKY V2**, not ARM. Disassemblers installed: `C:\Users\Joshua\tools\csky-elfabiv2\bin\csky-elfabiv2-objdump.exe` and the Ghidra C-SKY module; `scripts/fw1_ghidra_csky.ps1`. Never reuse the old `0x08xxxxxx` ARM addresses. **RF IC = AT1846S** (`0xFD011220`/`0xFD01125C` = register write/read; reg `0x58` = audio filters, `0x8405` analog / `0xBCFD` DMR; `11` §21); symbols in `radio_firmware/symbols.csv`, patches built by `tools/fw-patch`. **Plan to finish it: `docs/deep-dive/19-firmware-modification-plan.md`** (2026-10-23; TX audio path for digital modes, loader in SignalDeck, test loop; band limits and power out of scope) |
 
 ## 2. Trust, but verify
 

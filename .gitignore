@@ -141,3 +141,8 @@ OpenGD77Fork/*.apk
 
 # Python bytecode from the helper scripts
 scripts/__pycache__/
+
+# Ghidra symbol export (merge by hand into radio_firmware/symbols.csv)
+radio_firmware/symbols.export.csv
+radio_firmware/build/
+tools/fw-patch/__pycache__/
