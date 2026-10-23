@@ -435,3 +435,27 @@ Nothing was transmitted, and no image with a functional change was loaded.
 - **B1/E:** "Reload at start-up" isn't needed. A loaded modification stays until the user restores, so SignalDeck's firmware page must show the running image (via `0x34`) and always offer **Restore factory** as a real load, not a power-cycle.
 - **C2:** `fwtest.sh` must end with a factory load, not a power-cycle.
 - **Every patched image changes the radio until it is replaced.** Keep the tag-in-version-string rule, so `0x34` always tells what is in the flash.
+
+## 15. Review of the FW17/FW18 bench run (2026-10-23, commit `d363048b`)
+
+Reviewed the same evening against `radio_firmware/results.md`, `tools/fw-patch/patches.toml` and `11` §21.3.
+
+**Holds up.** The run kept every rule: one frequency, low power, the HackRF receive-only, a stop on the predicted deviation, a tag check before each measurement, and the factory image restored and verified. Three results are solid:
+- `0x58` bit 7 is the pre-emphasis. UVm2 and UVm4 are flat within about ±2 dB from 300 Hz to 3 kHz.
+- `0x58` bit 6 (voice high-pass bypass) does **not** open 50–200 Hz. The value was written (bit 7 in the same word took effect), so this is a real negative result.
+- Mid-band gain is the same on all four images.
+
+**The next candidate is in the same register: the CTCSS high-pass.** In the driver layout, bits 3 and 4 bypass the CTCSS high-pass and low-pass. They are `0` in `0x8405` and also in `0x84C5`, so the CTCSS high-pass was **on in every image measured**. Its job on transmit is to clear the sub-audio band below ~250 Hz for the tone, and bit 0 sets its corner to 250 Hz. That is exactly the measured cut. The DMR value `0xBCFD` sets bits 3 and 4, which fits a DC-coupled DMR path. The firmware's CTCSS code also points at it: `+0x3332…+0x3342` read-modify-writes `0x58 & 0xFFF7`, which clears bit 3. Before blaming a coupling capacitor or the module CPU, test:
+- **UVm5** = tag + `0x58` = **`0x84DD`** (UVm2 plus bits 3 and 4) at the same five sites;
+- **UVm6** = tag + **`0x84FD`** (also bit 5, the voice low-pass bypass; this is the DMR value's low byte, and it should lift the 3.5 kHz roll-off).
+
+If the CTCSS routine runs on a no-tone VFO tune, its `& 0xFFF7` re-enables the high-pass after the patched write. Check that first and neutralise it in the same image. A bench image without CTCSS needs no CTCSS.
+
+**UVm3 is inconclusive, not negative.** "UVm3 = factory curve" fits two explanations: the HR-C7000 FM chain is not in the transmit path, or the stub never ran. Nothing in the run tells them apart. Before more C7000 work, give the stub a visible canary, for example a much lower `tr_sig_lim` in `FM_DEV_COEF` at `+0x5B01C`. If the 1 kHz deviation at −12 dBFS drops, the stub runs and the C7000 chain is in the path. If nothing changes, either the stub isn't reached (check the `+0x3074` branch on a VFO `0x23` tune) or the chain is bypassed.
+
+**Smaller points.**
+- The −20 dBFS sweeps read low near the bottom edge: the factory 500 Hz tone at 184 Hz where about 390 Hz was expected, and UVm2's 300 Hz tone at 264 Hz where about 570 Hz was expected. The −30 dBFS rows were used without saying why. A level-dependent loss at the band edge would fit the compression seen before. Re-take one of these tones at three levels before trusting either row.
+- The limiter ceiling can be measured within the stop rule: −3 dBFS predicts about 4.5 kHz at 1 kHz. Only take this step on UVm5/UVm6 if they turn out flat.
+- The voice clips were not listened to, and receive was not compared. Both checks belong to the image that passes the response test, not to every one.
+
+**Conclusion.** FW18 is not finished. The cut below 250 Hz has one cheap untested candidate left in the same register, so this run does not yet show that the cut is hardware. Next on the bench: UVm5, then UVm6, with the same measurements (1), (3) and (4), and the C7000 canary as a separate image.
