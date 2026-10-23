@@ -33,7 +33,7 @@ public class FwCskyImportSymbols extends GhidraScript {
                 long off = Long.decode(f.get(0));
                 String kind = f.get(1), name = f.get(2);
                 String comment = f.size() > 3 ? f.get(3) : "";
-                Address a = toAddr(off);
+                Address a = FwCskyMapRegions.addr(this, currentProgram, off);
                 if (kind.equals("ext") || !currentProgram.getMemory().contains(a)) {
                     println("external, not applied: " + f.get(0) + " " + name);
                     ext++;

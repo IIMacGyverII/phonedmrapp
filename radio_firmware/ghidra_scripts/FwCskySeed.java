@@ -26,6 +26,7 @@ public class FwCskySeed extends GhidraScript {
         0x7A30L, // apply analog config
         0x304E8L, // memcpy
         0x794CL, 0x788CL, 0x7E94L, 0x2474L, 0x3DDCL, 0x3E40L,
+        0x54628L, 0x54664L, 0x3C390L, // IRAM: AT1846S I2C write/read, OSTaskCreate (11 §21.0)
     };
 
     @Override
@@ -40,7 +41,7 @@ public class FwCskySeed extends GhidraScript {
         Memory mem = currentProgram.getMemory();
         int seeded = 0, known = 0;
         for (long off : KNOWN) {
-            Address a = toAddr(off);
+            Address a = FwCskyMapRegions.addr(this, currentProgram, off);
             if (mem.contains(a)) {
                 disassemble(a);
                 if (getFunctionAt(a) == null) createFunction(a, null);
@@ -50,7 +51,7 @@ public class FwCskySeed extends GhidraScript {
         println("known anchors seeded: " + known);
 
         for (MemoryBlock blk : mem.getBlocks()) {
-            if (!blk.isInitialized()) continue;
+            if (!blk.isInitialized() || !blk.isExecute() && blk.getName().startsWith("sram")) continue;
             long start = blk.getStart().getOffset();
             long end = blk.getEnd().getOffset();
             byte[] buf = new byte[(int) (end - start + 1)];

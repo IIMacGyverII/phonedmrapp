@@ -1,12 +1,15 @@
 # Headless Ghidra import of DMR003.UV4T.V022-ORIGINAL.bin as C-SKY v2 (FW1).
+# Since 2026-10-23 the default is the HR-C7000 layout (grok-deep-dive/11 §21.0): file at
+# 0x0301A000, then FwCskyMapRegions.java splits off IRAM (0x10000, from +0x39408) and SRAM
+# (0x18000800, from +0x322E0) and adds the peripheral blocks.
 # Needs the community C-SKY processor module installed under
 # <Ghidra>\Ghidra\Extensions\C-SKY (taligentx/ghidra_csky_WinnerMicro v0.2,
 # extension.properties pinned to the installed Ghidra version).
 # Does not patch or flash. Requires JDK 21 and Ghidra 12.1.3.
 param(
-    [string]$BaseAddr = "0x00000000",
+    [string]$BaseAddr = "0x0301A000",   # HR-C7000 flash (XIP) base; "0x00000000" = the old flat import
     [string]$Processor = "CSKY_V2:LE:32:default",
-    [string]$ProjectName = "DMR003_UV4T_V022_csky",
+    [string]$ProjectName = "DMR003_UV4T_V022_c7000",
     [string]$GhidraHome = "C:\Users\Joshua\tools\ghidra_12.1.3_PUBLIC",
     [string]$JavaHome = "C:\Users\Joshua\tools\jdk-21.0.12.1+1"
 )
@@ -43,6 +46,7 @@ $args = @(
     "-loader", "BinaryLoader",
     "-loader-baseAddr", $BaseAddr,
     "-scriptPath", $ScriptDir,
+    "-preScript", "FwCskyMapRegions.java",
     "-preScript", "FwCskySeed.java",
     "-postScript", "FwCskyImportSymbols.java",
     "-postScript", "FwCskyStats.java",
