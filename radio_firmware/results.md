@@ -376,3 +376,60 @@ The phone daemon plays PCM out on I2S1. The module path this image programs is t
 **The bottom octave is outside software reach.** The stub runs, so the C7000 FM band-pass, pre-emphasis and limiter are not the cut. Register `0x58`, through the DMR value `0xBCFD`, is not the cut. The phone route this app uses names no high-pass, and the module codec's ADC high-pass and wind-noise filter stay at their off reset. What remains is the analog coupling between the phone's I2S playback and the codec ADC input. §16's fallback stands, and it is not implemented here: run-time pre-shaping and a receive equalizer, on the UVm6 curve (flat from 300 Hz to 3.5 kHz). No image meets the §6 acceptance. No voice clip was saved. Receive was not compared.
 
 The factory image is back in flash and `0x34` reads `DMR003.UV4T.V022`. SignalDeck owns the radio. The active channel is **36, NOAA WX4, 162.425 MHz**, power low, in the Weather zone. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched.
+
+# UVm10 — codec ADC gain (2026-10-23, 17:33–17:44)
+
+Same rules. HackRF receive only. Phone at **467.625 MHz, low power**. The version field is four characters, so the flash tag is `Vm10` and `0x34` reads `DMR003.Vm10.V022`. The bench name stays UVm10. `0x34` before the first load was `DMR003.UV4T.V022`. Each transmission below was on `DMR003.Vm10.V022`, confirmed by `0x34` before that transmission. The −12 dBFS tone is a second load of the same file: after the probe, the log buffer had wrapped past the version line, the check raised `no 0x34 answer`, and the factory image was loaded back and verified (`0x34` `DMR003.UV4T.V022` at 17:37:05, same pushed MD5) before `Vm10` was loaded again. The final factory load is 17:44:13. `PATCH14_BACKUP.bin` was not touched.
+
+## `FCR_ADC` is never stored
+
+`FCR_ADC` is codec base `0x160009C0` + `0x17`, which is the same address as `0x16000900` + `0xD7` (`0x160009D7`). The factory image has no little-endian literal of either `0x160009D7` or `0x16000017`. The only literals of `0x160009C0` are at `+0x6844` and `+0x6AC0`. They are loaded by `+0x67DC` (`lrw r8`) and `+0x6980` (`lrw r9`) as the end compare of a halfword copy that starts at `0x16000980` and steps by 2. The copy stops before `0x160009C0`; the highest address it writes is `0x160009BE`. Both pointers are then reloaded from the stack, and nothing is stored through them. No 32-bit `st.b` uses displacement `0x17` or `0xD7`. The 16-bit `st.b` sites at displacement `0x17` use other bases; the only registers that ever hold `0x160009C0` are `r8` and `r9`, and both are clobbered before any store. Codec stores from base `0x16000900` use offsets `0xC8`, `0xC9`, `0xCB`, `0xCC`, `0xCD`, `0xCF`, `0xD2`, `0xD3`, `0xDF`, `0xE3` and `0xE5` only. The init's gain stores are `0xDF`, `0xE3` and `0xE5`. PTT (`+0x3ECC0`) and its unkey restore do not write `FCR_ADC` or `GCR_ADCL`. `adc_hpf` and the wind-noise filter stay at the guide reset, which is off. The wind-noise filter (mode 3 = 235 Hz) is not on.
+
+## What the image changes
+
+A stub-only store of `GCR_ADCL` at the UVm8 hook does not survive. The `0x23` success path is straight from `+0x9CF6` (`bsr 0x7A30`, the stub site) through a second `+0x9DA6` (`bsr 0x7A30`) to `+0x9DB8` (`bsr 0x61F4`). `0x61F4` rewrites `GCR_ADCL` after both applies. The guide step is 1 dB per count of `gidl` (bits 5:0), with a 0 dB floor. Codec init writes `0x8B` (11 dB) and is left unchanged, because `0x61F4` overwrites it on this path. `0x61F4(0)` stores `0x88` (8 dB), then stores `0x89` (9 dB) when RAM `0x38b5c+3` is 1. The same `0x23` path sets that byte to 1 before the copy into `0x38b5c`, so the factory air numbers were taken at 9 dB. Six counts under `0x89` is `0x83` (3 dB), half the amplitude (`10^(-6/20) ≈ 0.50`). Six counts under the init's `0x8B` would be `0x85`, only 4 dB under the live value, and `0x61F4` would overwrite it.
+
+| Site | Factory | This image | Byte stored |
+|---|---|---|---|
+| `+0x61FE` (`r0 != 0`) | `subi` 117 | `subi` 123 | `0x8B` → `0x85` (11 dB → 5 dB) |
+| `+0x620C` (first store, `r0 == 0`) | `subi` 120 | `subi` 126 | `0x88` → `0x82` (8 dB → 2 dB) |
+| `+0x6228` (byte == 1) | `subi` 119 | `subi` 125 | `0x89` → `0x83` (9 dB → 3 dB) |
+| `+0x6238` (0 dB floor) | `subi` 128 | unchanged | `0x80` |
+| `+0x6540` (codec init) | `subi` 117 | unchanged | `0x8B` |
+
+The analog success path is the `0x89` → `0x83` row. The other two branches are lowered by the same six counts so the result does not depend on the flag being exactly 1. The floor cannot go lower and is not patched. The stub (`stubs/c7000_fm_adcgain.S`, 48 bytes at `+0x5B000`) does the redirected register `0x3A` write, the same `FM_BANDWIDTH` `0x0F` and `FM_DEV_COEF` `0x000F1010` stores as UVm8, and then stores `GCR_ADCL` = `0x83`. It does not write register `0x58`. The five factory `0x8405` immediates stay. UVm7 already showed those C7000 stores alone leave a −12 dBFS 1 kHz tone at 1829 Hz against the factory 1827 Hz, so they are not what would move these tones. `lrgid` stays 1. `+0xAAE8` also copies a byte into `GCR_ADCL`, from a jump-table struct after a `cmpnei r3, 104` (frame sync `0x68`). That store is not on the DIAG VFO path that was traced, and PTT does not write `GCR_ADCL`. The value on the air after a `0x23` tune is the one `0x61F4` left.
+
+| Image | What it changes | `0x34` | File MD5 | Loaded |
+|---|---|---|---|---|
+| UVm10, probe | tag `Vm10` + stub + the three `0x61F4` immediates | `DMR003.Vm10.V022` | `bf8a842d3497b9e520f350c9af258a15` | 17:33:59 |
+| Factory between the two tones | `DMR003.UV4T.V022-ORIGINAL.bin` | `DMR003.UV4T.V022` | `4426035392262ca54583c230c9e268e0` | 17:37:05 |
+| UVm10, −12 dBFS | the same built file, loaded again | `DMR003.Vm10.V022` | `bf8a842d3497b9e520f350c9af258a15` | 17:41:16 |
+| Factory again | `DMR003.UV4T.V022-ORIGINAL.bin` | `DMR003.UV4T.V022` | `4426035392262ca54583c230c9e268e0` | 17:44:13 |
+
+Host MD5 of the built file matches the MD5 the loader printed after both pushes. sha256 is `17fe8d7f18a2e918bea3904795d6c172cfabddad4b8cca2c7a6b4d9318c35059`. The file is 378620 bytes.
+
+Both kept captures are LNA 24 / VGA 38. Clip fraction is 0. Carrier offset is +832 Hz on the probe and +833 Hz on the −12 dBFS tone. No step predicted past the ±5 kHz stop, and none measured past it. The hottest aligned deviation transmitted was 1740 Hz.
+
+## The tones
+
+| Stimulus | Factory | UVm10 | UVm10 / factory |
+|---|---|---|---|
+| −36 dBFS, 1 kHz (amplitude 519) | 115 Hz | **109 Hz** | 0.95 |
+| −36 dBFS, 3.5 kHz (amplitude 519) | 250 Hz | **237 Hz** | 0.95 |
+| −12 dBFS, 1 kHz (amplitude 8231) | 1827 Hz | **1740 Hz** | 0.95 |
+
+3.5 kHz over 1 kHz is +6.7 dB (237 / 109). The factory probe's 250 / 115 is the same ratio, written as +6.8 dB in the earlier table. Pre-emphasis is still on. Half the factory deviation would have been about 57 Hz, 125 Hz and 914 Hz. Each tone is about 0.5 dB down, which is the run-to-run spread (UVm9's 1 kHz probe was 106 Hz). Probe capture: magnitude 35.6, SNR 48.5 dB, keyed about 4.65 s, lag 1.32 s. The −12 dBFS capture: magnitude 22.4, SNR 44.8 dB, keyed about 3.82 s, lag 1.37 s.
+
+**The codec ADC gain is not in the radiated path.** The branch this `0x23` takes was lowered from `0x89` to `0x83`. The unchanged 0 dB floor is the other branch, so this is not a canary that could not drop. `FCR_ADC` staying at reset agrees with the scan. It does not, by itself, place the cut below 250 Hz.
+
+## Where the PCM goes, and the next image
+
+The user guide (Document 2, §7.2.2.1) gives analog FM two sources. The codec-ADC source is `0x11000080[0]` = 0, `0x11000100[7]` = 1, PTT in `0x11000560`, and `AICR_ADC` (`0x160009C9`) master, ADC on, parallel PCM. This image writes `AICR_ADC` = `0xC0`, which is that setup, and the stream is supposed to reach the FM modulator with no CPU copy. The TX-RAM source is `0x11000080[0]` = 1, into the ping-pong at `0x16000030`–`0x1600042F`. `sel_i2s` (bit 2 of `0x11000080`) is the baseband-test I2S enable. The codec init forces the ADC interface to parallel. Nothing in the DIAG VFO path was shown filling TX RAM from the phone. The phone plays PCM out on I2S1. UVm10 lowered the gain on the codec ADC and the air did not follow, so the source the guide selects is not what the HackRF hears.
+
+The gain the radiated audio has followed is the AT1846S. UVm8 removed the pre-emphasis by writing `0x58` from the stub. `set_tx_gain_reg44` (`+0x8E0C`) writes the `0x2A` body into register `0x44` bits 11:8 and forces the low byte to `0xFF`. The FM branch of `at1846_tune` writes `0x44` = `0x0AD1`, so those bits are `0xA`. The OEM labels for that field are 4 dB per count at body 0–5 (0/4/8/12/16/20 dB). `0xA` is outside that labeled list. SignalDeck sends `setMic(4)` only in the boot handshake, not on a DIAG VFO tune, so after this tune the last `0x44` writer on the traced path is `0x0AD1`.
+
+The next image is not built and was not loaded. Lower that nibble by two counts (`0xA` → `0x8`, 8 dB if the labeled step still applies that far up) at the FM-tune store of `0x44`, and apply the same two counts inside `set_tx_gain_reg44`, so a later `0x2A` cannot put the old gain back. Same −36 dBFS probe and the same −12 dBFS 1 kHz tone. A drop of about half means the audio enters the AT1846S microphone gain. No drop means it does not. Do not also flip `tx_voice_source` to RAM in that image. `GCR_DACL` is the DAC playback gain, for receive and sidetone, not this transmit source.
+
+No sweep, M17, POCSAG or voice was sent. §6 is not met. Pre-shaping and a receive equalizer are not implemented. UVm6 stays the candidate curve for a mode that fits 300 Hz–3.5 kHz.
+
+The factory image is back in flash and `0x34` reads `DMR003.UV4T.V022` (17:44:13). The pushed factory MD5 is `4426035392262ca54583c230c9e268e0`. SignalDeck owns the radio. The active channel is **36, NOAA WX4, 162.425 MHz**, power low, in the Weather zone. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched.

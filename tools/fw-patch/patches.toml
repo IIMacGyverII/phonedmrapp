@@ -151,6 +151,37 @@ sites = [
   { offset = 0x5B000, original = "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", replacement = "d0147de20fb167100f3240b36610471040b3583001eac5847de204b190140000000500110405001110100f00", note = "stub (stubs/c7000_fm_proof.S): redirected write, C7000 stores, then 0x58=0x84C5" },
 ]
 
+# Same redirect and tail as the other C7000 stubs, so the four are mutually exclusive.
+# No 0x58 immediate. The stub also stores GCR_ADCL = 0x83, and the three subi
+# immediates in 0x61F4 are lowered by 6 counts so that store is what survives:
+# the analog 0x23 path calls 0x61F4(0) after +0x3074 and rewrites GCR_ADCL.
+# 0 - 117/120/119 = 0x8B/0x88/0x89 (11/8/9 dB); 0 - 123/126/125 = 0x85/0x82/0x83
+# (5/2/3 dB). The 0 dB floor (subi 128 at +0x6238) cannot go lower and is not patched.
+# The byte 0x61F4 leaves on this path is 0x89 when 0x38b5c+3 is 1, which the same
+# 0x23 success path stores before the copy. 0x83 is 6 dB under that, half the amplitude.
+# 6 dB under the init value 0x8B would be 0x85, only 4 dB under 0x89, and 0x61F4
+# would overwrite it. Bench only, and not combined with a 0x58 patch.
+[patches.c7000-fm-adcgain]
+why = """UVm10. The UVm8 stub without the register 0x58 write, plus GCR_ADCL lowered
+by 6 dB from the value the analog 0x23 path actually leaves. Codec init writes
+0x8B (11 dB) at +0x6544. 0x61F4 then rewrites the same byte: 0x8B if called with
+r0 != 0, else 0x88 and then 0x89 when RAM 0x38b5c+3 is 1, or 0x80 when that byte
+is 0. The 0x23 success path calls 0x61F4(0) after both applies, and it sets that
+byte to 1, so the factory air numbers were taken at 9 dB, not at the init's 11 dB.
+This patch changes those three subi immediates by 6 counts (0x8B/0x88/0x89 become
+0x85/0x82/0x83) and the stub stores 0x83 as well. The 0 dB floor is unchanged.
+The five factory 0x8405 immediates stay. A drop of about half on the probe and on
+the -12 dBFS 1 kHz tone means the codec ADC gain is in the transmit path. Bench only."""
+measured_by = "UVm10: the -36 dBFS 1 kHz / 3.5 kHz probe and one 1 kHz tone at -12 dBFS"
+status = "experimental"
+sites = [
+  { offset = 0x3074, original = "80e2d670", replacement = "02e0c6bf", note = "at1846_tune FM branch: bsr 0xFD011220 -> bsr stub 0x5B000" },
+  { offset = 0x5B000, original = "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", replacement = "d0147de20fb167100f3240b36610471040b3671000327c2a43dce50090140000000500110405001110100f0000090016", note = "stub (stubs/c7000_fm_adcgain.S): redirected write, C7000 stores, GCR_ADCL = 0x83" },
+  { offset = 0x61FE, original = "742b", replacement = "7a2b", note = "0x61F4 r0!=0: subi r3, 117 -> 123 (GCR_ADCL 0x8B -> 0x85, 11 dB -> 5 dB)" },
+  { offset = 0x620C, original = "772b", replacement = "7d2b", note = "0x61F4 r0==0 first store: subi r3, 120 -> 126 (0x88 -> 0x82, 8 dB -> 2 dB)" },
+  { offset = 0x6228, original = "762b", replacement = "7c2b", note = "0x61F4 byte==1: subi r3, 119 -> 125 (0x89 -> 0x83, 9 dB -> 3 dB)" },
+]
+
 # Same five sites as the other 0x58 variants. 0xBCFD is the DMR immediate already at
 # +0x2E94 (opcode halfword at +0x2E92 stays). Bits 11-13 are the part UVm6 did not set.
 [patches.fm-flat-58bcfd]
