@@ -26,7 +26,8 @@ public class FwCskyExportSymbols extends GhidraScript {
         while (it.hasNext()) {
             Symbol s = it.next();
             if (s.getSource() != SourceType.USER_DEFINED || s.isExternal()) continue;
-            long off = s.getAddress().getOffset();
+            long off = fileOffset(s.getAddress().getOffset());
+            if (off < 0) continue;
             Function fn = getFunctionAt(s.getAddress());
             String kind = (fn != null && fn.getName().equals(s.getName())) ? "fn" : "label";
             String c = currentProgram.getListing().getComment(CodeUnit.PLATE_COMMENT, s.getAddress());
@@ -37,6 +38,14 @@ public class FwCskyExportSymbols extends GhidraScript {
             for (String r : rows.values()) w.print(r + "\n");
         }
         println("FwCskyExportSymbols: " + rows.size() + " rows -> " + out);
+    }
+
+    /** Address -> file offset for the HR-C7000 layout (11 §21.0); identity for a flat import. */
+    private long fileOffset(long a) {
+        if (currentProgram.getMemory().getBlock("iram") == null) return a;
+        if (a >= 0x0301A000L && a < 0x0301A000L + 0x39408L) return a - 0x0301A000L;
+        if (a >= 0x10000L && a < 0x10000L + 0x21AF4L) return a - 0x10000L + 0x39408L;
+        return -1; // RAM/peripheral labels have no file offset
     }
 
     private static String quote(String s) {

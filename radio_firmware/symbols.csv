@@ -2,15 +2,15 @@ offset,kind,name,comment
 0x0018A4,fn,delay_ms,r0 = milliseconds; called between AT1846S writes (ch. 11 §21)
 0x0018E8,fn,lock,mutex take before shared state (ch. 11 §13.1)
 0x001924,fn,unlock,mutex release (ch. 11 §13.1)
-0x001BF8,fn,create_tasks,ten OSTaskCreate calls via external 0xFCFF8F88 (ch. 11 §13.2)
-0x002B14,fn,at1846_apply_cal_table,writes 23 AT1846S registers (addresses at 0x18000808..0x1800081F) from RAM table 0x03050608 + 46*r0; r0 = 0/1 (ch. 11 §21)
+0x001BF8,fn,create_tasks,"ten OSTaskCreate calls (IRAM +0x3C390) (ch. 11 §13.2, §21.0)"
+0x002B14,fn,at1846_apply_bw_profile,"writes 23 AT1846S registers: list in SRAM 0x18000808 (file +0x322E8), values from flash 0x03050608 + 46*r0 (file +0x36608); r0 = 0 12.5 kHz / 1 25 kHz bandwidth profile, not calibration (ch. 11 §21.2)"
 0x002B4C,fn,at1846_read_rssi,"reads AT1846S reg 0x1B, returns bits 15:8 (ch. 11 §21)"
 0x002BAC,fn,at1846_init,"AT1846S cold init: soft reset, clock, AGC page-1 table, calibration (ch. 11 §21)"
-0x002DD8,fn,at1846_tune,"per-channel apply: spur reg 0x05 by frequency, 0x29/0x2A frequency, DMR branch (0x58=0xBCFD) or FM branch at 0x2FF2 (0x58=0x8405) (ch. 11 §21)"
-0x002E92,label,at1846_dmr_filters_bcfd,"movi r1,0xBCFD (imm16 LE at +2) for reg 0x58 in the DMR branch: emphasis, voice LPF and RX CTC HPF bypassed, voice-HPF field 01 (ch. 11 §21)"
-0x003052,label,at1846_fm_filters_8405,"movi r1,0x8405 (imm16 LE at +2) for reg 0x58 in the FM branch: pre/de-emphasis and voice LPF on, voice-HPF field 01 (ch. 11 §21)"
+0x002DD8,fn,at1846_tune,"per-channel apply: spur reg 0x05 by frequency, 0x29/0x2A frequency, DMR branch (0x58=0xBCFD, filters bypassed) or FM branch at 0x2FF2 (0x58=0x8405, filters on) (ch. 11 §21)"
+0x002E92,label,at1846_dmr_filters_bcfd,"movi r1,0xBCFD (imm16 LE at +2) for reg 0x58 in the DMR branch: voice HPF (bit 6), emphasis (bit 7), voice LPF, CTCSS filters bypassed (ch. 11 §21.3)"
+0x003052,label,at1846_fm_filters_8405,"movi r1,0x8405 (imm16 LE at +2) for reg 0x58 in the FM branch: voice HPF, emphasis, voice LPF, CTCSS filters all on (ch. 11 §21.3)"
 0x0030A4,fn,at1846_set_squelch,writes reg 0x49 (squelch close) from two level bytes (ch. 11 §21)
-0x0032E4,fn,at1846_set_ctcss_dcs,"CTCSS/DCS set-up: regs 0x4A-0x4E, 0x3A, 0x59, 0x58 (0x8404/0x8405, bit 3 cleared at 0x3332) (ch. 11 §21)"
+0x0032E4,fn,at1846_set_ctcss_dcs,"CTCSS/DCS set-up: regs 0x4A-0x4E, 0x3A, 0x59, 0x58 (0x8404/0x8405, bit 3 = CTCSS HPF enabled at 0x3332) (ch. 11 §21)"
 0x005EF4,fn,uart_put,MMIO UART byte output 0x1409xxxx (ch. 11 §10.2)
 0x0079C0,fn,rf_state_0_1,role not read; called with 0/1 around AT1846S reg 0x30 changes at 0xB00C/0xB048 (ch. 11 §21)
 0x007A30,fn,apply_analog_config,memcpy 0xB0 + MMIO 0x1100xxxx (ch. 11 §11.6)
@@ -31,7 +31,7 @@ offset,kind,name,comment
 0x009E3C,fn,cmd24_query_digital,reply 163 B from 0x38E4C (ch. 11 §14.2)
 0x009E4C,fn,cmd25_query_analog,reply 19 B from 0x38C70 (ch. 11 §14.2)
 0x009E5C,fn,cmd39_query_mix,reply 169 B from 0x38AB0 (ch. 11 §14.2)
-0x00A7E8,fn,cmd34_version_reply,"copies 17 B from RAM 0x03052464 (pool word at 0xA9E8; filled outside the image) and replies (ch. 11 §21)"
+0x00A7E8,fn,cmd34_version_reply,"copies 17 B from 0x03052464 = flash 0x0301A000 + 0x38464, the image version string (pool word at 0xA9E8) and replies (ch. 11 §21.4)"
 0x00A808,fn,cmd2b_caller_info,9-byte caller-info reply (ch. 11 §20)
 0x00AA3C,fn,phone_dispatch,"validate frame, switch(cmd-0x22) via RAM table 0x03052240 (ch. 11 §14.2)"
 0x00B00C,fn,at1846_rx_off,clears reg 0x30 bits 5/6 then bit 2 (ch. 11 §21)
@@ -39,7 +39,7 @@ offset,kind,name,comment
 0x0304E8,fn,memcpy,"dst r0, src r1, len r2 (ch. 11 §11.6)"
 0x030568,fn,memset,(ch. 11 §13.2)
 0x0366B2,label,ctcss_table,"50 x LE16 centihertz, 67.00-254.10 Hz (ch. 11 §18)"
-0x038464,label,version_string,"DMR003.UV4T.V022, NUL-terminated (ch. 07, ch. 19 B2)"
-0xFCFF8F88,ext,ext_OSTaskCreate,"external region, 58 callers (ch. 11 §13.2)"
-0xFD011220,ext,ext_at1846_write,"external: AT1846S register write, r0 = register, r1 = 16-bit value (ch. 11 §21)"
-0xFD01125C,ext,ext_at1846_read,"external: AT1846S register read, r0 = register, returns value (ch. 11 §21)"
+0x038464,label,version_string,"DMR003.UV4T.V022, NUL-terminated; read by 0x34 at flash 0x03052464 (ch. 11 §21.4)"
+0x03C390,fn,OSTaskCreate,"IRAM 0x12F88 (flat call target 0xFCFF8F88, 58 callers) (ch. 11 §13.2, §21.0)"
+0x054628,fn,at1846_i2c_write,"IRAM 0x2B220 (flat call target 0xFD011220): I2C to 0xE2 (7-bit 0x71), [reg, hi, lo] (ch. 11 §21.1)"
+0x054664,fn,at1846_i2c_read,IRAM 0x2B25C (flat call target 0xFD01125C): read reg r0 (ch. 11 §21.1)

@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """Build a modified radio-module image from the factory image and named patches.
 
-  python tools/fw-patch/build.py --tag UVm1 version-from-image [fm-flat-58 ...]
+  python tools/fw-patch/build.py --tag UVm1                 # tag only: version string, nothing else
+  python tools/fw-patch/build.py --tag UVm3 fm-flat-58      # tag + named patches
 
 Writes radio_firmware/build/DMR003.<tag>.V022.bin and a .sha256 next to it. Refuses to
 write anything if the factory image is not the expected one, if any site's original bytes
-do not match, or if two patches touch the same byte. The image size never changes.
+do not match, or if two patches touch the same byte. The image size never changes. The tag
+(the "UV4T" field of the version string, which 0x34 reports) is always set, so every built
+image identifies itself.
 Plan: docs/deep-dive/19-firmware-modification-plan.md (C1). Host only, nothing is sent.
 """
 import argparse
@@ -71,8 +74,6 @@ def tag_site(cfg, data, tag):
 def build(names, tag, cfg=None):
     cfg = cfg or load()
     data = factory_bytes(cfg)
-    if "version-from-image" not in names:
-        raise SystemExit("every image carries version-from-image, so 0x34 can tell it apart")
     sites = check_sites(cfg, data, names)
     img = bytearray(data)
     for off, repl, _ in sites:
@@ -87,7 +88,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--tag", required=True, help="4-character image tag, replaces UV4T in the version string")
     ap.add_argument("--out", default=str(REPO / "radio_firmware" / "build"))
-    ap.add_argument("patches", nargs="+")
+    ap.add_argument("patches", nargs="*")
     a = ap.parse_args()
     img, sites = build(a.patches, a.tag)
     version = img[0x38464:0x38474].decode()

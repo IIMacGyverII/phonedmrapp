@@ -604,6 +604,8 @@ A straight-line sequence of ten blocks, each: `memset(stack, 0, 1536)` via `bsr 
 
 ### 13.3 Memory map — what the listing says and does not say
 
+> **Superseded by §21.0 (2026-10-23):** the image has HR-C7000 copy descriptors at `+0xC4`; flash code runs at `0x0301A000`, and the "external" targets are IRAM code inside this file (`+0x39408…`). The table below is kept as history.
+
 | Evidence | Reading |
 |---|---|
 | `lrw` pools → in-file string offsets (`rxvoice` @ `+0x3659C`) | this image is addressed at **0** |
@@ -871,39 +873,71 @@ Three functions were read far enough to confirm the behaviour measured on air. T
 
 ---
 
-## 21. The RF IC is an AT1846S; its register programming is in this image (2026-10-23, read-only, FW11 part 1)
+## 21. The RF IC is an AT1846S; its register programming is in this image (2026-10-23, read-only, FW11 part 1; corrected the same day after ch. 19 §11–§12)
 
-Source: `radio_firmware/fw1_csky_objdump.txt`; every access is listed by `python scripts/fw_at1846_regmap.py [--reg 0x58]`. Names are in `radio_firmware/symbols.csv` (applied to the Ghidra project by `FwCskyImportSymbols.java`). Nothing was loaded or transmitted.
+Source: `radio_firmware/fw1_csky_objdump.txt` (a flat listing at base 0); every access is listed by `python scripts/fw_at1846_regmap.py [--reg 0x58]`. Names are in `radio_firmware/symbols.csv` (applied to the Ghidra project by `FwCskyImportSymbols.java`). Nothing was loaded or transmitted.
+
+> **Correction (ch. 19 §12).** The first version of this section used the wrong `0x58` bit layout (the OpenRTX web register table), placed the AT1846S routines in an "external region", called the bandwidth profile a calibration table, and said `0x34` reads resident RAM. All four are fixed below.
+
+### 21.0 Memory map (supersedes §13.3)
+
+The image is laid out for the **HR-C7000** SoC: a C-SKY CK803S with an integrated DMR/FM modem, vocoder and 8 kHz codec, running from SPI NOR flash (XIP). It is the same layout as the sibling module firmware `DMR006.U4A.V076` documented in M17-Project/AtomXL-reverse-engineering (`atomxl-re-docs/dmr-firmware-notes.md`). Copy descriptors `(dst, dst_end, src)` at `+0xC4`:
+
+| Region | Runs at | From file |
+|---|---|---|
+| Flash code + constants (XIP) | `0x0301A000 + offset` | `+0x0` … `+0x39407` |
+| SRAM (initialised, incl. tables) | `0x18000800 … 0x18004403` | `+0x322E0` (flash `0x0304C2E0`) |
+| IRAM (RTOS, drivers, AT1846S I/O) | `0x00010000 … 0x00031AF3` | `+0x39408` (flash `0x03053408`); IRAM .bss follows up to `0x50000` |
+
+The flat listing therefore shows calls from flash code into IRAM as far targets `0xFCFF…`/`0xFD01…` (true target = listed target + `0x0301A000`). 14 of the 22 targets with ≥ 10 callers land exactly on a `push` prologue in the IRAM part of the file, and string pool words vote for `0x0301A000` (`PttTask`, the Idle task and the version string are found as `0x0301A000 + offset`, none as base-0 offsets). RAM addresses such as `0x38C70`/`0x38E4C`/`0x38908` used by the handlers are IRAM .bss, not file content.
 
 ### 21.1 Identification
 
-Two of the external calls from §12/§13.3 are a register interface: **`0xFD011220` = write(reg `r0`, 16-bit value `r1`)** (196 call sites) and **`0xFD01125C` = read(reg `r0`)** (28 sites, value in `r0`). `+0x2BAC` (`at1846_init`) writes, in order: `0x30=0x0001` (soft reset), `0x30=0x0004`, `0x04=0x0FD0`, `0x0A`, `0x1F=0x1001`, `0x31`, `0x33=0x44A5`, `0x34`, `0x0F`, `0x13`, `0x41`–`0x44`, `0x3A`, `0x59=0x0B90`, `0x47=0x7F2F`, `0x4F=0x2C62`, `0x53=0x0094`, `0x54`–`0x58`, `0x5A`, `0x63`, the `0x30=0x40A4 → 0x40A6 → 0x4006` calibration with 100 ms waits, then the page-1 AGC table behind `0x7F=1` (`0x06…0x12`) — the **Auctus AT1846S** start-up sequence, register for register and mostly value for value, as in OpenGD77's and DMRtastic's AT1846S drivers (GD-77 family). The frequency goes to `0x29`/`0x2A`, the band to `0x0F`, and register `0x05` gets one of three spur values chosen by comparing the frequency with fixed points (455.0, 466.0, 489.1 MHz…). This answers the "RF IC identity" open item of ch. 19 §1 (evidence: the code; no chip marking was read).
+The AT1846S is on I²C: **write = IRAM `0x2B220`, file `+0x54628`** (flat call target `0xFD011220`, 196 call sites; it sends `[reg, value_hi, value_lo]` to device byte `0xE2` = 7-bit **`0x71`**, the address AtomXL reports) and **read = IRAM `0x2B25C`, file `+0x54664`** (flat `0xFD01125C`, 28 sites). `+0x2BAC` (`at1846_init`) writes, in order: `0x30=0x0001` (soft reset), `0x30=0x0004`, `0x04=0x0FD0`, `0x0A`, `0x1F=0x1001`, `0x31`, `0x33=0x44A5`, `0x34`, `0x0F`, `0x13`, `0x41`–`0x44`, `0x3A`, `0x59=0x0B90`, `0x47=0x7F2F`, `0x4F=0x2C62`, `0x53=0x0094`, `0x54`–`0x58`, `0x5A`, `0x63`, the `0x30=0x40A4 → 0x40A6 → 0x4006` calibration with 100 ms waits, then the page-1 AGC table behind `0x7F=1` (`0x06…0x12`). That is the **Auctus AT1846S** start-up sequence, register for register and mostly value for value, as in OpenGD77's and DMRtastic's AT1846S drivers. The frequency goes to `0x29`/`0x2A`, the band to `0x0F`, and register `0x05` gets one of three spur values chosen by comparing the frequency with fixed points (455.0, 466.0, 489.1 MHz…).
 
 ### 21.2 Named functions
 
 | Offset | Name | What it writes |
 |---|---|---|
-| `+0x2B14` | `at1846_apply_cal_table` | 23 registers whose addresses are a byte list at `0x18000808…0x1800081F` (a non-RAM region, likely memory-mapped flash) with values from RAM `0x03050608 + 46·bw` — the per-unit calibration |
+| `+0x2B14` | `at1846_apply_bw_profile` | 23 AT1846S registers. The register list is in SRAM at `0x18000808…0x1800081F` (file `+0x322E8`: `15 32 3A 3C 3F 48 60 62 65 66 7F 06…0F 12 7F`). The values are 46 B per bandwidth from flash `0x03050608 + 46·r0` (file `+0x36608`: `0x1100, 0x4495, 0x00C3, 0x0407, 0x28D0…`). That is the standard AT1846S 12.5 kHz profile (r0 = 0) or 25 kHz profile (r0 = 1), the same table as DMRtastic's `at1846s_bw_12k5_regs` — **not per-unit calibration** |
 | `+0x2BAC` | `at1846_init` | cold init (§21.1) |
-| `+0x2DD8` | `at1846_tune` | per channel: spur `0x05`, frequency, then a **DMR branch** (`0x30=0x4006/0x4026` 12.5 kHz, `0x43=0x00BB`, `0x44=0x0AD1`, **`0x58=0xBCFD`**, AGC/squelch set) or an **FM branch** at `+0x2FF2` (`0x42=0x1052`, `0x43=0x0100`, `0x30=0x4006/0x4026` or `0x7006/0x7026` for 25 kHz, cal table, **`0x58=0x8405`**, `0x33`, `0x44=0x0AD1`, `0x3A=0x40C3`) |
+| `+0x2DD8` | `at1846_tune` | per channel: spur `0x05`, frequency, then a **DMR branch** (`0x30=0x4006/0x4026` 12.5 kHz, `0x43=0x00BB`, `0x44=0x0AD1`, **`0x58=0xBCFD`**, AGC/squelch set) or an **FM branch** at `+0x2FF2` (`0x42=0x1052`, `0x43=0x0100`, `0x30=0x4006/0x4026` or `0x7006/0x7026` for 25 kHz, bandwidth profile, **`0x58=0x8405`**, `0x33`, `0x44=0x0AD1`, `0x3A=0x40C3`) |
 | `+0x30A4` | `at1846_set_squelch` | `0x49` from two level bytes |
-| `+0x32E4` | `at1846_set_ctcss_dcs` | `0x4A–0x4E`, `0x3A`, `0x59` (`0x09A9`/`0x0C90`/`0x0910`), `0x58` (`0x8404` with a tone, `0x8405` without; `+0x3332` read-modify-writes `0x58 & 0xFFF7`) |
+| `+0x32E4` | `at1846_set_ctcss_dcs` | `0x4A–0x4E`, `0x3A`, `0x59` (`0x09A9`/`0x0C90`/`0x0910`), `0x58` (`0x8404` with a tone, `0x8405` without; `+0x3332` read-modify-writes `0x58 & 0xFFF7`, which clears bit 3 = enables the CTCSS high-pass) |
 | `+0x8E0C` | `set_tx_gain_reg44` | the 1-byte command of §14.2's `+0xAAD8` case: body byte → `0x44` bits 11:8, low byte forced `0xFF`. `0x44[11:8]` is the TX (mic) gain field, so this is most likely `0x2A SET_GAIN_MIC` |
 | `+0xB00C` / `+0xB048` | `at1846_rx_off` / `at1846_rx_on` | `0x30` bits 5/6 cleared, bit 2; `0x30` bits 2 then 5 set |
-| `+0xA7E8` | `cmd34_version_reply` | not an RF function: answers `0x34` with **17 bytes copied from RAM `0x03052464`**, which nothing in the image writes (§21.4) |
+| `+0xA7E8` | `cmd34_version_reply` | not an RF function: answers `0x34` with 17 bytes copied from `0x03052464` = the image's own version string (§21.4) |
 
-### 21.3 Register `0x58` — the analog filter switch (H1 of ch. 19 §3 A4)
+### 21.3 Register `0x58` — the AT1846S audio filter switch (H1 of ch. 19 §3 A4)
 
-Field layout (OpenRTX AT1846S register table): bits 9:7 RX CTC/DCS high-pass bandwidth, 6 RX CTC/DCS high-pass bypass, 5:4 voice low-pass bypass (11 = bypass), **3 pre/de-emphasis bypass**, 2 CTC/DCS low-pass bypass, **1:0 voice high-pass bypass (11 = bypass)**.
+Bit layout from OpenRTX's AT1846S driver (`platform/drivers/baseband/AT1846S_GDx.cpp`, `setOpMode`). OpenGD77's comments ("enable … de-emphasis / pre-emphasis / high and low pass filters" for `0xBC05`, "disable all filters in DMR mode" for `0xBCFD`) fit it, and so does this firmware's own CTCSS code (tone on/off toggles bit 0, the CTCSS read-modify-write clears bit 3). The openrtx.github.io register table gives a different layout and is wrong here.
 
-| Value | Where | emph bypass | voice HPF | voice LPF | Reading |
-|---|---|---|---|---|---|
-| `0x8405` | init, FM tune, CTCSS set-up without tone (5 sites) | 0 (emphasis **on**) | `01` | on | the analog voice path we measured |
-| `0x8404` | CTCSS set-up with tone (3 sites) | 0 | `00` (fully on) | on | tone rejected in the voice path |
-| `0xBCFD` | DMR tune (1 site) | 1 | `01` (same as analog) | bypassed | the DMR path: emphasis and voice low-pass off; **the voice high-pass field is the same `01` as on analog** (review 2026-10-23, ch. 19 §11) |
+| Bit | Function |
+|---|---|
+| 0 | CTCSS low-pass bandwidth to 250 Hz |
+| 2 | set in every value written here; undocumented |
+| 3 / 4 | bypass CTCSS high-pass / low-pass |
+| 5 | bypass voice low-pass |
+| **6** | **bypass voice high-pass** |
+| **7** | **bypass pre/de-emphasis** |
+| 11 / 12 / 13 | bypass VOX high-pass / VOX low-pass / RSSI low-pass |
 
-So the analog transmit and receive emphasis and the voice high-pass are **chip settings written from this image as 16-bit immediates** (`movi r1, imm16`, immediate at the instruction + 2). The ~250 Hz cut and the pre-emphasis measured in the M17/POCSAG deep dives match `0x8405`; a value with bit 3 set and bits 1:0 = `11` (`0x840F`) should lift both on transmit and receive. Not yet tested on the radio. What the register cannot explain yet: the **compression before the modulator** and the **±4.5 kHz limit** (candidates: `0x59`/`0x43`/`0x41`, or DSP on the phone's PCM in the module's own CPU before it reaches the AT1846S microphone input — the H2 part of ch. 19). The register map was first read as suggesting a second route (ch. 19 D, "H4"): feed the phone's PCM to the DMR modulator, assumed DC-coupled. **Review 2026-10-23 (ch. 19 §11): that reading does not hold.** `0xBCFD` keeps the voice high-pass field at `01`, exactly as `0x8405` does, so the DMR setting does not bypass the high-pass; and if `01` already means "partly bypassed", the measured −60 dB transmit cut below 250 Hz is not explained by this register alone (a coupling capacitor before the AT1846S microphone input, or processing in the module CPU, remain candidates). DMR also transmits in 30 ms TDMA bursts, so a continuous M17/POCSAG signal has to be an ordinary FM transmission: H4 reduces to "FM with the DMR branch's filter and deviation settings", which is the `fm-flat-58` line of work, not a separate path.
+| Value | Where | Voice HPF | Emphasis | Voice LPF | CTCSS filters | Reading |
+|---|---|---|---|---|---|---|
+| `0x8405` | init, FM tune, CTCSS set-up without tone (5 sites) | on | on | on | on, 250 Hz | the analog path we measured |
+| `0x8404` | CTCSS set-up with tone (3 sites) | on | on | on | on, other bandwidth | analog with a tone |
+| `0xBCFD` | DMR tune (1 site, `+0x2E92`) | bypassed | bypassed | bypassed | bypassed | the DMR path |
 
-### 21.4 The version string the radio reports is not read from the image
+So on analog the AT1846S applies its voice high-pass and pre/de-emphasis on transmit and receive. They are **16-bit immediates in this image** (`movi r1, imm16`, immediate at the instruction + 2), and the register has no TX/RX split. Bypassing both while keeping the voice low-pass is **`0x84C5`** (`tools/fw-patch` `fm-flat-58`). Not yet tested on the radio.
 
-`0x34` is answered by `+0xA7E8` from RAM `0x03052464` (pool word at `+0xA9E8`). No instruction in the image addresses that buffer or the image's own string at `+0x38464` (no literal, no pool entry). The buffer is filled by the resident code. So editing only the string at `+0x38464` would **not** show in `0x34`. The marker patch (`tools/fw-patch`, `version-from-image`) therefore also redirects that pool word to `0x00038464`. That works because the image runs at address 0 in RAM: the handlers already read and write live data inside the image range (`0x38C70`, `0x38E4C`, `0x38908`). With the redirect, `0x34` reports exactly the loaded image's string. A load that silently failed still answers with the factory string. This matters: the 2026-03 "five successful loads" (ch. 07 §3) were judged only from patches that later turned out to do nothing (ch. 18 §4), so **no image load has ever been proven**. The version round trip (ch. 19 B2/FW14) is the first test that can prove one.
+The AT1846S is not the only candidate for the measured −60 dB cut below ~250 Hz, the compression and the ±4.5 kHz limit. The HR-C7000 has its own FM audio chain: `FM_BANDWIDTH 0x11000500` (reset `0x5F`, band-pass bit 6 and emphasis bit 4 on) and `FM_DEV_COEF 0x11000504` (TX limiter `tr_sig_lim`, reset `0x0F`), per the AtomXL notes. This image writes neither one: there is no literal, and no access through a `movih 0x1100`-built base; the modem registers it does touch are `0x100`, `0x104`, `0x400`, `0x408`, `0x50C`, `0x510`, `0x51C`, `0x560`, `0x568`. If transmit audio passes through both chips, two cascaded high-passes fit a −60 dB stop-band better than one, and the C7000 limiter is the first candidate for the compression. A flat-FM bench test therefore changes both (`fm-flat-58` + `c7000-fm-flat`, measured separately and together). Where FM transmit audio enters (the C7000 FM chain into the AT1846S microphone input, or the C7000's two-point modulator) is still unread: see the `WORK_MODE` writers at `+0x179C8…` and `+0x17D54…`.
+
+DMR is not a separate route for M17/POCSAG (ch. 19 §11–§12): the C7000's vocoder and modem build the DMR 4FSK themselves (TDMA 30 ms bursts), so the phone's PCM never reaches the modulator in DMR mode.
+
+### 21.4 The version string the radio reports is the image's own
+
+`0x34` is answered by `+0xA7E8`, which copies 17 bytes from `0x03052464` (pool word at `+0xA9E8`) and replies through `+0x90B0`. **`0x03052464 = 0x0301A000 + 0x38464`**: the XIP flash address of the image's own string `DMR003.UV4T.V022\0` at file `+0x38464`. Changing that string (same length, the `UV4T` field) is therefore enough for `0x34` to identify a loaded image. No code patch is needed.
+
+Two consequences:
+- **No image load has been proven.** The 2026-03 "five successful loads" (ch. 07 §3) were judged by patches that did nothing (ch. 18 §4). The version round trip (ch. 19 B2/FW14) is the first test that can prove one.
+- **"RAM-only" is in doubt.** The version reply reads a flash address, so a loaded image that answers with its own string is running from flash. "RAM-only, reverts on power-cycle" may be wrong. Recovery is analysed in ch. 19 §13.

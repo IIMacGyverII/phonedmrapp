@@ -45,7 +45,7 @@ public class FwCskyStats extends GhidraScript {
         listing(0x794CL, 24, "type->cmd mapper (0xE2804Fxx veneer)");
 
         // Count functions calling the empty-frame ACK: 11 §11.1 says 57 callers.
-        Function ack = getFunctionAt(toAddr(0x8E7CL));
+        Function ack = getFunctionAt(FwCskyMapRegions.addr(this, currentProgram, 0x8E7CL));
         if (ack != null) {
             println("callers of ACK +0x8E7C: " + ack.getCallingFunctions(monitor).size());
         }
@@ -53,7 +53,7 @@ public class FwCskyStats extends GhidraScript {
     }
 
     private void xrefs(long off, String label) {
-        Address a = toAddr(off);
+        Address a = FwCskyMapRegions.addr(this, currentProgram, off);
         Reference[] refs = getReferencesTo(a);
         println(String.format("xrefs -> %06X (%s): %d", off, label, refs.length));
         int n = 0;
@@ -65,7 +65,7 @@ public class FwCskyStats extends GhidraScript {
     }
 
     private void fnAt(long off, String label) {
-        Address a = toAddr(off);
+        Address a = FwCskyMapRegions.addr(this, currentProgram, off);
         Function f = getFunctionContaining(a);
         Instruction i = getInstructionAt(a);
         println(String.format("site %06X (%s): fn=%s instr=%s", off, label,
@@ -76,8 +76,8 @@ public class FwCskyStats extends GhidraScript {
     private void listing(long off, int count, String label) {
         println("");
         println("---- " + label + " @ " + String.format("%06X", off));
-        Instruction i = getInstructionAt(toAddr(off));
-        if (i == null) { i = getInstructionAfter(toAddr(off)); }
+        Instruction i = getInstructionAt(FwCskyMapRegions.addr(this, currentProgram, off));
+        if (i == null) { i = getInstructionAfter(FwCskyMapRegions.addr(this, currentProgram, off)); }
         int n = 0;
         while (i != null && n++ < count) {
             println("  " + i.getAddress() + "  " + i.toString());

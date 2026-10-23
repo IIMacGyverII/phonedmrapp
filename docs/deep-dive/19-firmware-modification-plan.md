@@ -187,6 +187,15 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 - **FW16:** `tools/fw-patch/` — `patches.toml` (factory MD5 pinned; `version-from-image` ready; `fm-flat-58` experimental: `0x58 = 0x840F` on the five no-tone sites + the `+0x333A` mask made a no-op), `build.py --tag`, `check.py`, `test_patches.py` (5 tests pass). Built and disassembly-checked: `DMR003.UVm1.V022` (marker only) and `DMR003.UVm2.V022` (marker + flat FM). Output in `radio_firmware/build/` (gitignored).
 - **Next, on the device (owner's go-ahead; not during an ISS pass):** FW14 with `UVm1` — through the stock app's `DMRDEBUG.bin` path (ch. 07 §6, SignalDeck stopped) or SignalDeck's own loader once FW13 exists. Then `UVm2` against the factory baseline (FW17 measurements (1), (3), (5)).
 
+**2026-10-23 (later) — review follow-ups (§12) done; recovery settled (§13).**
+
+- `11` §21 corrected: §21.0 memory map (HR-C7000, XIP `0x0301A000`, IRAM from `+0x39408`, SRAM from `+0x322E0`; §13.3 marked superseded), the `0x58` bit layout from the OpenRTX driver (bit 6 voice HPF, bit 7 emphasis; `0x8405` all on, `0xBCFD` all bypassed), `0x34` reads the image's own string, and `+0x2B14` is the 12.5/25 kHz bandwidth profile (`at1846_apply_bw_profile`), not calibration. `symbols.csv` updated to match: the `ext` rows are replaced by the IRAM functions `at1846_i2c_write` `+0x54628`, `at1846_i2c_read` `+0x54664` and `OSTaskCreate` `+0x3C390`.
+- `tools/fw-patch`: `version-from-image` dropped; a tag-only build is the marker. `fm-flat-58` is now `0x84C5` on the five no-tone sites (mask site dropped). New `c7000-fm-flat` (experimental): `+0x3074` `bsr` redirected to a 32-byte stub at `+0x5B000` (`stubs/c7000_fm_flat.S`) that does the original AT1846S write, then `FM_BANDWIDTH 0x11000500 = 0x0F` (band-pass and pre-emphasis off) and `FM_DEV_COEF 0x11000504` = pool word `+0x5B01C` (reset `0x000F1010` as built; `tr_sig_lim` = bits 23:16 for a bench series). 8 host tests pass, including "tag-only differs from factory only in the version string" (2 bytes) and the stub's branch targets.
+- The zero tail is **6,144 B from `+0x5AEFC`** (right after the IRAM copy), not 1,788 B as §1 said.
+- `radio_firmware/build/`: the b8ee26df images moved to `superseded/` (`*.SUPERSEDED-bin`, README: do not load). `DMR003.UVm1.V022.bin` rebuilt tag-only (sha256 `f2390a04…484f5c`).
+- Ghidra re-imported as three regions (§13.4).
+- §13: the YModem receiver is the flash bootloader below `0x0301A000`, not in the image; loads go to flash and very likely **persist**; recovery after a bad load is possible. FW14 cleared to run with the tag-only image.
+
 ---
 
 ## 11. Review of the 2026-10-23 findings (FW8/FW11/FW16, commit `b8ee26df`)
@@ -318,3 +327,54 @@ The test design follows from this: a flat-FM bench run needs **both** `0x58` (bi
 3. Replace the `fm-flat-58` value and drop its mask site.
 4. Add a C7000 `FM_BANDWIDTH` write as a separate experimental patch.
 5. Re-import the image into Ghidra as three regions (flash `0x0301A000`, IRAM `0x10000` from `+0x39408`, SRAM `0x18000800` from `+0x322E0`), as AtomXL's `MapDmrMemory.java` does, before naming more functions.
+
+---
+
+## 13. Recovery before any load: where the loader lives and where it writes (2026-10-23, read-only)
+
+**Question.** The version reply reads a flash address (`11` §21.4), so a loaded image may be written to flash and survive a power-cycle. If so, is re-loading the factory image always possible after a bad load?
+
+### 13.1 The YModem receiver is not in the application image
+
+| Check (file `DMR003.UV4T.V022-ORIGINAL.bin`) | Result |
+|---|---|
+| CRC-16/CCITT lookup table (first 8 entries, LE16/BE16/LE32) | absent |
+| Strings `Download`, `Upload`, `IAP`, `flash`, `YMODEM`, `Image`, `Waiting`, `boot`, `update`, `erase` | absent (only `abort` inside the newlib errno table) |
+| The application's only UART receive loop (`+0x7C48`, ch. 11 §14.1) | accepts frames starting `0x68` only; `0x20`/`0x0F` are discarded, `0x21` goes to the second family, everything else to the dispatcher. No `'1'` hello handling, no `SOH`/`STX`/`EOT` |
+| Anything sending `'C'` (`0x43`) | none: the `movi r?, 67` sites are AT1846S register `0x43` writes (`+0x2C26`, `+0x2E3A`, `+0x302A`, IRAM `+0x547EC`/`+0x548FC`) |
+| The one `0x1021` constant (`+0x2D76A`) | a bitwise CRC inside a protocol routine (selected by a flag next to `0x1020`), not a loader |
+
+The sibling HR-C7000 firmware (M17-Project/AtomXL-reverse-engineering, `atomxl-re-docs/firmware-update.md`) has the same picture. A **bootloader occupies the first `0x1A000` of the module's SPI flash**, outside the application image. It runs an ST AN2557-style IAP menu, is entered by **holding PTT during power-up**, and takes `'1'` → `'C'` → YModem-1K. Our stock app does exactly that knock: `dmr009` power off 50 ms, PTT down 50 ms, power on, wait 1000 ms, PTT up; then the `"1"` hello and YModem (ch. 07 §2). So the receiver is the flash bootloader, and it runs before any application code. The HR-C7000's mask ROM (CPU boots from `bootrom`, user guide p. 58) and UART0 "boot upgrade" pins (pins T9/P10) are a further fallback, but their protocol is undocumented and they need hardware access.
+
+### 13.2 Where the blocks go: flash at `0x0301A000`, so a load persists
+
+- The image is linked to run **XIP at `0x0301A000`**. The copy descriptors at `+0xC4` name absolute flash sources (`0x0304C2E0`, `0x03053408`), the version reply reads `0x03052464`, and the three-region Ghidra import resolves string cross-references that a flat import cannot (§13.4).
+- The HR-C7000 has no RAM that could hold the image there. IRAM is `0x10000…0x50000` (256 KB) and the image is 370 KB; `0x03000000` is the SPI flash window (user guide §4.5.3).
+- So the bootloader must program the image into **SPI flash at `0x0301A000`** (= flash `0x03000000 + 0x1A000`, directly above itself), or the module would not run it. The image ends at `0x030766FC`. The transfer never covers `0x03000000…0x03019FFF`.
+- **Consequence: a loaded image very likely persists across power-cycles and phone reboots.** The ch. 07 §3 belief "RAM-only, reverts on power-cycle" rested on patches that did nothing (ch. 18 §4), so it was never evidence. It also means **the module may still be running whatever was last loaded in 2026-03** (the PATCH-series images carried the same `V022` string). FW14 settles both points, and the factory reload at its end normalises the module.
+
+### 13.3 Write-protect and verify
+
+- **Image verification:** none that we know of. The app sends per-block CRC-16 and the size in block 0, but no MD5 (ch. 07 §1.5). The image has no checksum field that we know of, and AtomXL found none either. The bootloader may check more; that is unknown. Whether the bootloader validates before jumping to the application is unknown; it does not affect recovery.
+- **Bootloader protection:** unknown whether its flash sectors are write-protected. The transfer does not address them either way: an AN2557-style IAP erases and writes from its fixed application address up, and every factory update image is linked for `0x0301A000`, so a loader that wrote anywhere else would brick every unit it updated.
+
+### 13.4 Ghidra three-region import (done)
+
+`scripts/fw1_ghidra_csky.ps1` now imports the file at `0x0301A000`. The new pre-script `FwCskyMapRegions.java` reads the `+0xC4` descriptors, cuts the IRAM part off the flash block and maps it at `0x10000` with .bss to `0x50000`. It maps SRAM at `0x18000800` (plus `0x18000000…`), and adds uninitialised `modem` `0x11000000`, `modem_buffer` `0x16000000` and `apb` `0x14000000` blocks. Seed, import, stats and export translate file offsets (`symbols.csv` stays in file offsets).
+
+| | Flat base 0 (old) | Three regions (new) |
+|---|---|---|
+| Functions / instructions | 1,058 / 83,090 | **1,213 / 114,099** |
+| xrefs to the version string | 0 | 2 (`cmd34_version_reply` + its pool) |
+| xrefs to `PttTask` / Idle task / `encrypt` | 0 / 0 / 0 | 2 / 2 / 2 |
+| `symbols.csv` applied / exported | 36 fn + 4 labels (+3 external skipped) / 40 | 40 fn + 4 labels / 44 |
+
+Project `radio_firmware/ghidra_project_fw0/DMR003_UV4T_V022_c7000` (gitignored). The flat project is kept for comparison.
+
+### 13.5 Verdict: re-loading the factory image is possible after a bad load
+
+The receiver is independent of the loaded image: it lives in a flash region the transfer never writes, and it runs on the PTT-held power-up before the application. An application that crashes, hangs or never answers therefore cannot block a re-load. The same applies to an interrupted transfer that leaves the application half-written: the knock still reaches the bootloader, and the factory image can be sent again. The stock app holds the factory image as its asset, and our copy is `radio_firmware/DMR003.UV4T.V022-ORIGINAL.bin`.
+
+What would break this: a bootloader that erases its own sectors, or a dead `dmr009` power/PTT GPIO path. Neither is plausible for a loader that every factory update goes through. Also not covered: hardware damage, which a load can't cause. The remaining unknowns (bootloader write protection, image validation) don't change the verdict.
+
+**Recovery is therefore treated as safe for FW14 with the tag-only image.** That image differs from the factory one in two bytes of the version string (`4T` → `m1` at `+0x3846D`).

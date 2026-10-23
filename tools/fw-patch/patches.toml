@@ -1,49 +1,61 @@
-# Named patches for the radio-module firmware DMR003.UV4T.V022 (C-SKY V2, link base 0).
-# Plan: docs/deep-dive/19-firmware-modification-plan.md (C1). Sites: radio_firmware/symbols.csv,
+# Named patches for the radio-module firmware DMR003.UV4T.V022 (HR-C7000, C-SKY CK803S).
+# Plan: docs/deep-dive/19-firmware-modification-plan.md (C1, §12-§13). Sites: radio_firmware/symbols.csv,
 # docs/grok-deep-dive/11-firmware-fw0-results.md §21.
 #
-# Every site lists the factory bytes; build.py refuses to write an image if any of them
-# does not match, so a patch can never land on the wrong bytes. Offsets are file offsets.
-# Scope rule (ch. 19): transmit audio processing and operator settings only. Band limits,
-# power and RF-regulatory checks are never patched.
+# Offsets are FILE offsets. Memory map (ch. 11 §21.0): flash code runs XIP at 0x0301A000 + offset,
+# IRAM 0x10000.. is copied from file +0x39408, SRAM 0x18000800.. from +0x322E0. The zero tail
+# +0x5AEFC..+0x5C6FB (6144 B, after the IRAM copy) is plain XIP flash, free for added code.
+#
+# Every site lists the factory bytes; build.py refuses to write an image if any of them does not
+# match, so a patch can never land on the wrong bytes. Scope rule (ch. 19): transmit audio
+# processing and operator settings only. Band limits, power and RF-regulatory checks are never
+# patched.
 
 [factory]
 file = "radio_firmware/DMR003.UV4T.V022-ORIGINAL.bin"
 size = 378620
 md5 = "4426035392262ca54583c230c9e268e0"
 
-# The image tag replaces the "UV4T" field of the version string, so every built image
-# answers 0x34 with its own name while the OEM/SignalDeck parsers (third field = V022)
-# see the factory version number. Applied by build.py --tag, always together with
-# version-from-image.
+# The image tag replaces the "UV4T" field of the version string at +0x38464. 0x34 is answered by
+# +0xA7E8 from 0x03052464 = 0x0301A000 + 0x38464, i.e. this very string (ch. 11 §21.4), so the tag
+# alone identifies a loaded image. The OEM/SignalDeck parsers read the third field (V022) and are
+# unaffected. A tag-only build (no patches) is the functionally unchanged marker image.
 [tag]
 offset = 0x3846B
 original = "UV4T"
 length = 4
 
-[patches.version-from-image]
-why = """The 0x34 handler (+0xA7E8) copies 17 bytes from RAM 0x03052464, which nothing in the
-image writes (filled by the resident code). Point its literal-pool word at the image's own
-version string (+0x38464) so 0x34 reports what this image says. Zero RF effect."""
-measured_by = "0x34 reply equals the built tag; factory string after module power-cycle"
-status = "ready"
-sites = [
-  { offset = 0xA9E8, original = "64240503", replacement = "64840300", note = "lrw pool of +0xA7EE: 0x03052464 -> 0x00038464" },
-]
-
 [patches.fm-flat-58]
-why = """AT1846S register 0x58 on analog channels is 0x8405: pre/de-emphasis on, voice
-high-pass field 01. Write 0x840F instead (emphasis bypass, voice high-pass bypass 11) on the
-no-tone paths, and keep the CTCSS path's read-modify-write from clearing bit 3 again.
-Experimental: affects every analog channel, transmit and receive. Bench comparison only: it removes de-emphasis on receive and
-pre-emphasis on transmit for normal voice too; the product must be a run-time digital-audio mode (ch. 19 §6, §11)."""
+why = """AT1846S register 0x58 on analog channels is 0x8405: voice high-pass, voice low-pass,
+pre/de-emphasis and CTCSS filters all on (OpenRTX driver bit layout, ch. 11 §21.3). Write 0x84C5
+instead: bit 6 bypasses the voice high-pass, bit 7 pre/de-emphasis; voice low-pass kept. Applied
+on the five no-tone sites. Bench comparison only: 0x58 acts on transmit AND receive, so it also
+removes de-emphasis on receive and pre-emphasis on transmit for normal voice; the product must be
+a run-time digital-audio mode (ch. 19 §6, §11)."""
 measured_by = "C2 (1) TX response 50 Hz-3.5 kHz, (3) M17 /90, (4) POCSAG, (5) voice ear-check"
 status = "experimental"
 sites = [
-  { offset = 0x2C90, original = "0584", replacement = "0f84", note = "at1846_init reg 0x58" },
-  { offset = 0x3054, original = "0584", replacement = "0f84", note = "at1846_tune FM branch reg 0x58" },
-  { offset = 0x344E, original = "0584", replacement = "0f84", note = "at1846_set_ctcss_dcs no-tone reg 0x58" },
-  { offset = 0x34F2, original = "0584", replacement = "0f84", note = "at1846_set_ctcss_dcs no-tone reg 0x58" },
-  { offset = 0x3640, original = "0584", replacement = "0f84", note = "at1846_set_ctcss_dcs no-tone reg 0x58" },
-  { offset = 0x333A, original = "f7ff", replacement = "ffff", note = "RMW mask on reg 0x58 (clears bit 3) -> no-op" },
+  { offset = 0x2C90, original = "0584", replacement = "c584", note = "at1846_init reg 0x58" },
+  { offset = 0x3054, original = "0584", replacement = "c584", note = "at1846_tune FM branch reg 0x58" },
+  { offset = 0x344E, original = "0584", replacement = "c584", note = "at1846_set_ctcss_dcs no-tone reg 0x58" },
+  { offset = 0x34F2, original = "0584", replacement = "c584", note = "at1846_set_ctcss_dcs no-tone reg 0x58" },
+  { offset = 0x3640, original = "0584", replacement = "c584", note = "at1846_set_ctcss_dcs no-tone reg 0x58" },
+]
+
+[patches.c7000-fm-flat]
+why = """The HR-C7000's own FM audio chain is never configured by this image, so it runs at reset:
+FM_BANDWIDTH 0x11000500 = 0x5F (fmbpfon band-pass ON, fmpreemphasison ON) and FM_DEV_COEF
+0x11000504 = 0x000F1010 (tr_sig_lim TX limiter 0x0F). HR-C7000 user guide 11.2.2.2-11.2.2.3.
+The FM branch of at1846_tune ends with an AT1846S write at +0x3074; that call is redirected to a
+stub in the zero tail (+0x5B000, source stubs/c7000_fm_flat.S) which does the same write, then
+sets FM_BANDWIDTH = 0x0F (band-pass and pre-emphasis off, bandwidth bits as reset) and
+FM_DEV_COEF = the value in the stub's last pool word (+0x5B01C; as built: the reset value
+0x000F1010, so the limiter is unchanged until a bench series edits tr_sig_lim, bits 23:16).
+Experimental, bench only: affects every analog channel's FM chain (and whether FM transmit
+audio passes through the C7000 at all is still unread, ch. 19 §12.2)."""
+measured_by = "C2 (1) TX response 50 Hz-3.5 kHz, (2) deviation vs level, alone and with fm-flat-58"
+status = "experimental"
+sites = [
+  { offset = 0x3074, original = "80e2d670", replacement = "02e0c6bf", note = "at1846_tune FM branch: bsr 0xFD011220 -> bsr stub 0x5B000" },
+  { offset = 0x5B000, original = "0000000000000000000000000000000000000000000000000000000000000000", replacement = "d0147de20fb164100f3240b36310441040b39014000500110405001110100f00", note = "stub (stubs/c7000_fm_flat.S, as -mcpu=ck803, ld -Ttext=0x5B000)" },
 ]
