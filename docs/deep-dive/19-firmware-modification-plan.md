@@ -202,6 +202,14 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 **First proven load; loads persist in flash; restore = load the factory image.** No transmission. Bench helpers: `tools/fw-patch/bench/`.
 
+**2026-10-23 (14:33–15:17) — FW17 baseline and FW18 flat-FM images measured on the air.** HackRF receive only, phone at 467.625 MHz low power. Factory first (already `DMR003.UV4T.V022`), then UVm2 (`fm-flat-58` only), UVm3 (`c7000-fm-flat` only), UVm4 (both), each confirmed by `0x34` before the measurement. Factory loaded back at 15:17:01 and `0x34` read `DMR003.UV4T.V022`. Full tables: `radio_firmware/results.md`.
+
+**No image meets the §6 acceptance.** The pre-emphasis is the AT1846S `0x58` bit 7: UVm2 and UVm4 bring 300 Hz–3 kHz to within about ±2 dB of 1 kHz, and 3.5 kHz is still −2.6 dB (UVm2) and −4.0 dB (UVm4). The cut below about 250 Hz is still there on every image, including both patches together (50–200 Hz about −40 dB or lower). UVm3 matches the factory curve, so the HR-C7000 `FM_BANDWIDTH` / `FM_DEV_COEF` stub does not change the audio the HackRF hears, and adding it on top of `0x58` (UVm4) matches UVm2 alone. Mid-band gain is unchanged (0.20–0.22 Hz per PCM count at 1 kHz).
+
+Plain M17, one 90-frame transmission each, no equalizer: **0 exact / 90** on every image, spec polarity and inverted. UVm2 and UVm4 were the standard ±2.4 kHz scaling (measured p99.5 3397 and 3411 Hz). POCSAG 1200 and 512 baud: **0 / 3 pages** on every image, both polarities. UVm2 and UVm4 were the standard ±4.5 kHz scaling (measured p99.5 about 3.0–3.4 kHz; bit errors 23–31%). The limiter was still linear at −6 dBFS (about 3.1–3.3 kHz); 0 dBFS predicted over ±5 kHz and was not sent, so the ceiling was not re-measured. Voice demods are in `radio_firmware/results/`; the lows are gone (under 1% of the power below 250 Hz) and they were not listened to. Receive harshness was not compared.
+
+What is still limiting is that high-pass. It is outside both sites these images patch. The next reading is where FM transmit audio actually enters (§12.2). The product remains a run-time digital-audio mode; these images are bench-only. End state: factory image verified, SignalDeck owns the radio, Weather zone channel 36 (NOAA WX4), no `DMRDEBUG.bin`.
+
 ---
 
 ## 11. Review of the 2026-10-23 findings (FW8/FW11/FW16, commit `b8ee26df`)
