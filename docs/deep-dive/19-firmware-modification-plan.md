@@ -218,6 +218,16 @@ The no-tone VFO `0x23` does run `at1846_set_ctcss_dcs`. `apply_analog_config` ca
 
 UVm7 is the C7000 stub with `tr_sig_lim` lowered from `0x0F` to `0x02`, and no `0x58` patch. One 1 kHz tone at −12 dBFS measured **1829 Hz**, against 1827 Hz on the factory image. The lowered limiter did not move this tone. `+0x3074` is on the flash FM tune and that tune runs on this `0x23`; the null means the new limiter value did not affect this stimulus. End state: factory image verified, SignalDeck owns the radio, Weather zone channel 36 (NOAA WX4, active), no `DMRDEBUG.bin`.
 
+**2026-10-23 (16:41–16:50) — UVm8 stub self-proof and UVm9 (`0xBCFD`).** HackRF receive only, 467.625 MHz, low power. `0x34` was `DMR003.UV4T.V022` before the first load. Each image was confirmed by `0x34` before it was measured. Factory loaded back at 16:50:43 (`DMR003.UV4T.V022`). Tables: `radio_firmware/results.md`.
+
+UVm8 keeps the C7000 FM writes and, in the stub only, writes AT1846S `0x58` = `0x84C5`. The five factory `0x8405` immediates stay. The −36 dBFS probe is 1 kHz **111.5 Hz** and 3.5 kHz **70.5 Hz**, **−4.0 dB**, against the factory probe's +6.8 dB. Pre-emphasis is gone, so the stub runs on the keyed path. UVm3 and UVm7 are real results: the C7000 `FM_BANDWIDTH` / `FM_DEV_COEF` writes, including the limiter canary, are not what the HackRF hears. Bits 6 and 7 survived the `0xFFF7` read-modify-write, which UVm8 does not patch.
+
+UVm9 is `0x58` = `0xBCFD` at the five analog sites plus `ctcss-hpf-keep`. The DMR site is left as it is. Against UVm6 this adds bits 11–13. Probe: 1 kHz 106 Hz, 3.5 kHz 100 Hz (−0.5 dB). At −30 / −24 / −18 dBFS, 300 Hz is 166 / 354 / 708 Hz and 50–200 Hz stays on the floor (best −40.9 dB at −30). The low end did not open, so the sweep, M17 and POCSAG were not sent. Register `0x58` is exhausted for this cut.
+
+The phone check was read-only. `tinymix` is not installed, and no mixer control was written. tinyserver, which receives SignalDeck's PCM, names I2S route controls (`I2S1_CH1 DL8_CH1`, `UL2` ↔ `I2S2`) and `DAC DEM MUTE`. None is a high-pass. In the module, FM setup (`+0x3ECC0`) and boot codec init (`+0x647C`) enable the codec ADC (`AICR_ADC` = `0xC0`). `FCR_ADC` (`0x160009D7`, `adc_hpf` and the wind-noise filter, reset off, mode 3 = 235 Hz) has no literal and no byte store. The phone plays PCM out on I2S1; the image's FM source is the codec ADC.
+
+**The bottom octave is outside software reach.** It is not a firmware register this image can set, and it is not a high-pass control on the phone route this app uses. What remains is the analog coupling between that I2S playback and the codec ADC input. §16's fallback stands and is not implemented: run-time pre-shaping and a receive equalizer on the UVm6 curve (flat from 300 Hz to 3.5 kHz). End state: factory image verified, SignalDeck owns the radio, Weather zone channel 36 (NOAA WX4, 162.425 MHz, low power, active), no `DMRDEBUG.bin`.
+
 ---
 
 ## 11. Review of the 2026-10-23 findings (FW8/FW11/FW16, commit `b8ee26df`)
@@ -308,7 +318,7 @@ DMR offers no separate route.
 - So in DMR the phone's PCM goes to the vocoder, and the C7000 itself builds the 4FSK symbols and drives the modulator. The audio never reaches the modulator directly.
 - §11's other arguments also hold: TDMA 30 ms bursts, and different deviation and pulse shape (M17 ±2.4 kHz, DMR ±1.944 kHz, POCSAG ±4.5 kHz 2-FSK).
 - §11's argument 1 (the DMR value keeps the high-pass) falls with A. It isn't needed for the conclusion.
-- Still unread: where FM TX audio enters. It is either the C7000 FM chain into the AT1846S microphone input or the C7000's two-point modulator. Next to read: `+0x179C8…+0x17AB0` and `+0x17D54…`, the `WORK_MODE` writers.
+- Where FM TX audio enters, read 2026-10-23 (the §10 entry at 16:41): the FM setup at `+0x3ECC0` and the boot codec init at `+0x647C` enable the codec ADC. `FCR_ADC` (`0x160009D7`) is never stored, so its high-pass and wind-noise filter stay at the off reset. The `WORK_MODE` writers at `+0x179C8` and `+0x17D54` select `0x22` / `0x6A` / `0x6E` from struct `0x34808` and are not the PTT key. UVm8 shows the C7000 `FM_BANDWIDTH` stub does run, and it is not this cut.
 
 ### 12.3 Point 3, other explanations for the −60 dB cut below 250 Hz: yes, the review misses one
 
