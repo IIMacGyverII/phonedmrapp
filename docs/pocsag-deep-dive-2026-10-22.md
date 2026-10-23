@@ -2,8 +2,8 @@
 
 Follow-up to the 2026-10-20 measurement ("not decodable from this radio's audio", 6–24 % bit errors). Bench: owner's
 Armor on a VFO at 467.625 MHz (wide), HackRF at about 5 ft (receive tests), phone transmitting at low power (transmit
-tests), SignalDeck bench commands `rxclip` (raw receive audio), `rxvol`, `txwav`. Analysis scripts stayed in the
-session scratchpad (`pocsag2/`, `pocsagtx/`). Third-party sample recordings provided by the owner were used for
+tests), SignalDeck bench commands `rxclip` (raw receive audio), `rxvol`, `txwav`. All scripts, trained
+equalizers and our bench recordings are kept in `tools/pocsag-research/` (README: how to repeat it on another device). Third-party sample recordings provided by the owner were used for
 decoder checks only and are not kept in any repository.
 
 ## Receive: decodable, with conditions
@@ -33,7 +33,8 @@ Conditions found:
 
 What a usable receiver would still need: multi-condition training (several deviations and transmitter filters) and
 adaptation during reception using the codewords the error correction confirms; it would work best on transmitters at
-reduced deviation. Promising but not finished; no SignalDeck feature yet.
+reduced deviation. Promising but not finished; no SignalDeck feature yet. **Another phone or module may do better** (a flatter
+audio path or no limiter): the tools are kept for that.
 
 ## Transmit: not feasible for real pagers
 
