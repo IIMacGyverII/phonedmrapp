@@ -1,1 +1,2 @@
 profiles/profiles.json* -text
+tools/fw-patch/bench/*.sh text eol=lf

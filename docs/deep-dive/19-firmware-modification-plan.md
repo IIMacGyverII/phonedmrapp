@@ -7,7 +7,7 @@
 **Scope and rules (fixed, not up for re-planning).**
 
 - Modifications target the **transmit audio processing** (high-pass, pre-emphasis, compression, deviation limiting) and operator-side settings (time-out timer). **The band limits (136–174 / 400–480 MHz), transmit power settings and any RF-regulatory protection stay untouched and are out of scope.** Transmitting is the operator's responsibility under their licence; every bench transmission stays on 467.625 MHz at low power into the HackRF, as for every previous bench.
-- **RAM-load only** until persistence is understood. A power-cycle restores the factory image. No flash erase/write command is ever sent on a hunch.
+- **RAM-load only** until persistence is understood. A power-cycle restores the factory image. No flash erase/write command is ever sent on a hunch. *(Superseded by §14, 2026-10-23: loads are written to flash by the module bootloader and persist; restore = load the factory image. The rule that stays: only the documented YModem update path is used, never a raw flash command.)*
 - Nothing from the decompiled stock app or the firmware is copied into SignalDeck (public repo); SignalDeck gets a loader written from the protocol description in ch. 07 and a verifier, nothing more.
 - Every firmware change is one named patch with the original bytes recorded, applied by a script, and verified by a measurable on-air result before it is kept.
 
@@ -89,7 +89,7 @@ SignalDeck owns the UART now, so the stock app's updater cannot be used while Si
 4. After END: wait for the boot banner, query `0x34`, compare with the **version string embedded in the image being loaded** (read from the file at `+0x38464`), re-apply the channel, restart audio.
 5. Report every step in the history; keep a full log file for the device report.
 
-Safety in the UI: Device → **Firmware (experimental)**: shows "Factory firmware DMR003.UV4T.V022" or "Modified firmware <name> loaded at <time>"; **Load…** picks a file from `Download/DMR/Firmware/`, refuses any file not exactly 378,620 B or without a `DMR003.UV4T.` version string, shows the warning (RAM-only, reverts on power-cycle, your licence), requires a second confirmation; **Restore factory** = module power-cycle (the loader's own restart) + version check. Nothing loads automatically unless the user has turned on **Reload at start-up** for a named image, and that setting is shown on the intercom as a chip.
+Safety in the UI: Device → **Firmware (experimental)**: shows "Factory firmware DMR003.UV4T.V022" or "Modified firmware <name> loaded at <time>"; **Load…** picks a file from `Download/DMR/Firmware/`, refuses any file not exactly 378,620 B or without a `DMR003.UV4T.` version string, shows the warning (stays in the radio until restored — §14 — and your licence), requires a second confirmation; **Restore factory** = load the factory image + version check (a power-cycle does not restore, §14). Nothing loads automatically unless the user has turned on **Reload at start-up** for a named image, and that setting is shown on the intercom as a chip.
 
 ### B2. Version string as the ground truth
 Every modified image carries its own version string, e.g. `DMR003.UV4T.V022m03` (same length rules as the factory one; the field is NUL-terminated inside a fixed slot, to be confirmed in A6). `0x34` then tells the app, the web page and the device report which firmware is running — after a load, after a module restart (the watchdog), after a phone reboot. Loss is detected the moment the version query answers with the factory string: history line, notification, and the Reload offer.
@@ -155,8 +155,8 @@ Acceptance (per C2): flat response within ±2 dB, limiter at the set deviation �
 | **FW11** ◐ | RF IC identified (✅ AT1846S); register writes mapped (✅); transmit chain described (compression/limiter open) (A4) | L | some | FW9 |
 | **FW12** | Loader end-of-transfer + boot path read; the first image words decoded (A6) | M | no | FW8 |
 | **FW13** | SignalDeck `FirmwareLoader` + Device → Firmware page + version-marker verification + reload-at-start-up (B1, B2) | L | yes | — |
-| **FW14** | Version-string round trip (load, verify, power-cycle, verify) — the first proof (B2) | S | yes | FW13 |
-| **FW15** | Persistence research, read-only (B3) | M | yes | FW14 |
+| **FW14** ✅ | Version-string round trip (load, verify, power-cycle, verify) — the first proof (B2). Done 2026-10-23 through the stock updater (§14): load proven, persists across power-cycle and reboot | S | yes | — |
+| **FW15** ✅ | Persistence research (B3): answered by FW14 + §13, loads persist in SPI flash, restore = factory load | M | yes | FW14 |
 | **FW16** ✅ | `tools/fw-patch` build/check + host test (C1) | S | no | — |
 | **FW17** | `bench/fwtest.sh` + the standard TX measurements, factory baseline recorded (C2) | M | yes | FW13, FW16 |
 | **FW18** | Digital-audio transmit mode patch (D) measured to acceptance | L | yes | FW11, FW17 |
@@ -195,6 +195,12 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 - `radio_firmware/build/`: the b8ee26df images moved to `superseded/` (`*.SUPERSEDED-bin`, README: do not load). `DMR003.UVm1.V022.bin` rebuilt tag-only (sha256 `f2390a04…484f5c`).
 - Ghidra re-imported as three regions (§13.4).
 - §13: the YModem receiver is the flash bootloader below `0x0301A000`, not in the image; loads go to flash and very likely **persist**; recovery after a bad load is possible. FW14 cleared to run with the tag-only image.
+
+**2026-10-23 (13:37–13:53) — FW14 done on the Armor (§14).** Tag-only `DMR003.UVm1.V022` loaded through the stock updater, then read back via `0x34`:
+- `UVm1` after a module power-cycle, after DIAG `restartmodule`, and after a full phone reboot.
+- The factory image loaded back, which restored `DMR003.UV4T.V022`.
+
+**First proven load; loads persist in flash; restore = load the factory image.** No transmission. Bench helpers: `tools/fw-patch/bench/`.
 
 ---
 
@@ -378,3 +384,46 @@ The receiver is independent of the loaded image: it lives in a flash region the 
 What would break this: a bootloader that erases its own sectors, or a dead `dmr009` power/PTT GPIO path. Neither is plausible for a loader that every factory update goes through. Also not covered: hardware damage, which a load can't cause. The remaining unknowns (bootloader write protection, image validation) don't change the verdict.
 
 **Recovery is therefore treated as safe for FW14 with the tag-only image.** That image differs from the factory one in two bytes of the version string (`4T` → `m1` at `+0x3846D`).
+
+---
+
+## 14. FW14 — the version-string round trip on the device (2026-10-23, Armor 26 Ultra; no transmission)
+
+**Image:** `DMR003.UVm1.V022.bin`, tag-only: it differs from the factory image in 2 bytes of the version string (`+0x3846D`; sha256 `f2390a04…484f5c`, MD5 `47ac14ce…805c6f`). **Path:** SignalDeck → Device → Hand back; `adb push` to `/sdcard/DMR/DMRDEBUG.bin`; stock app started with `am start -n com.pri.prizeinterphone/.InterPhoneHomeActivity`. Its `YModemManager` starts the transfer by itself when the file exists. The file was deleted right after `onSuccess`. SignalDeck → Take over, then the version is read from SignalDeck's start-up `0x34` (`RadioService: module …`). Helpers: `tools/fw-patch/bench/fwload_stock.sh` + `ui.sh`.
+
+> The action-only start (`am start -a prize.intent.action.update.dmr.firmware`) opens a chooser on this phone, because the old rebuilt app `com.macgyver.dmr` also claims the action. Use the explicit stock component as above.
+
+| Time (CDT) | Step | `0x34` answer |
+|---|---|---|
+| 13:37 | Baseline (SignalDeck, DIAG `restartmodule`) | `DMR003.UV4T.V022` |
+| 13:38–13:40:40 | UVm1 load, 2 min 5 s, `onSuccess`; dialog "Update successfully" | — |
+| 13:41:58 | Take over (SignalDeck power-cycles the module first, 13:41:54) | **`DMR003.UVm1.V022`** |
+| 13:42:09 | DIAG `restartmodule` (module power off/on) | **`DMR003.UVm1.V022`** |
+| 13:42–13:44:42 | Factory image loaded (`onSuccess`) | — |
+| 13:45:09 | Take over | `DMR003.UV4T.V022` |
+| 13:47:44 | UVm1 loaded again (`onSuccess`) | `DMR003.UVm1.V022` (13:48:04) |
+| 13:48 | **Phone reboot** (`adb reboot` over USB, owner's go-ahead) | — |
+| 13:49:30 | SignalDeck start after boot (module power on) | **`DMR003.UVm1.V022`** |
+| 13:52:01 | Factory image loaded (`onSuccess`) | — |
+| 13:52:21 | Take over | **`DMR003.UV4T.V022`** |
+
+**Results.**
+1. **First proven image load.** The radio answers with the loaded image's own string. The stock path works with any image the same size as the factory one, and the module ran normally on the tagged image (boot message, channel set-up, receive).
+2. **Loads persist.** The tagged image survived two module power-cycles and a full phone reboot. **The "RAM-only, reverts on power-cycle" belief (ch. 07 §3) is wrong**: the bootloader writes the image to SPI flash (§13.2). A patch stays in the radio until another image is loaded.
+3. **Restore works:** loading the factory image brings back `DMR003.UV4T.V022`, tested twice. Four loads in total, all `onSuccess` first time.
+4. Corollary: the 2026-03 PATCH-series loads also persisted. Whatever was in the module before today (the `V022` string can't tell them apart) has now been replaced by the byte-exact factory image (MD5 `44260353…9e268e0` pushed and loaded at 13:52).
+
+**State left:**
+- SignalDeck owns the radio, and the stock app is disabled, as at the start.
+- Weather zone, channel 36 (NOAA WX4).
+- ISS SSTV mode running: the intercom shows "next pass 03:16". The "Following the ISS again" log line wasn't captured, because the test's `logcat -c` calls cleared it.
+- No `DMRDEBUG.bin` on the phone (`PATCH14_BACKUP.bin` from 2026-03 is still there, untouched).
+- Wi-Fi adb re-enabled after the reboot (`adb tcpip 5555`).
+
+Nothing was transmitted, and no image with a functional change was loaded.
+
+**What this changes in the plan.**
+- **B3 (persistence research) is answered** without any flash probing: loads persist; there is no separate "make permanent" step; restore = load the factory image.
+- **B1/E:** "Reload at start-up" isn't needed. A loaded modification stays until the user restores, so SignalDeck's firmware page must show the running image (via `0x34`) and always offer **Restore factory** as a real load, not a power-cycle.
+- **C2:** `fwtest.sh` must end with a factory load, not a power-cycle.
+- **Every patched image changes the radio until it is replaced.** Keep the tag-in-version-string rule, so `0x34` always tells what is in the flash.

@@ -292,6 +292,8 @@ sequenceDiagram
 
 ## 3. Does the firmware persist?
 
+> **Settled 2026-10-23 (ch. 19 §13–§14): yes, it persists.** A tag-only image (`DMR003.UVm1.V022`) loaded through the stock updater was still reported by `0x34` after two module power-cycles and a full phone reboot; loading the factory image restored `DMR003.UV4T.V022`. The module is an HR-C7000 whose bootloader (first `0x1A000` of SPI flash, entered by the PTT-held power-up knock) programs the image into flash at `0x0301A000`. The "reverts on power-cycle" observations below were made with patches that did nothing (ch. 18 §4), so they never showed a revert. Kept as history.
+
 **Observed behaviour: no — it reverts on radio power-cycle.** Confidence in the *behaviour* is
 **high** (repeated empirical logs); confidence in the *"loaded to RAM, not flash"* explanation is
 **medium** (inference, never directly confirmed).
