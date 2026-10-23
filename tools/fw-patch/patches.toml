@@ -1,0 +1,48 @@
+# Named patches for the radio-module firmware DMR003.UV4T.V022 (C-SKY V2, link base 0).
+# Plan: docs/deep-dive/19-firmware-modification-plan.md (C1). Sites: radio_firmware/symbols.csv,
+# docs/grok-deep-dive/11-firmware-fw0-results.md §21.
+#
+# Every site lists the factory bytes; build.py refuses to write an image if any of them
+# does not match, so a patch can never land on the wrong bytes. Offsets are file offsets.
+# Scope rule (ch. 19): transmit audio processing and operator settings only. Band limits,
+# power and RF-regulatory checks are never patched.
+
+[factory]
+file = "radio_firmware/DMR003.UV4T.V022-ORIGINAL.bin"
+size = 378620
+md5 = "4426035392262ca54583c230c9e268e0"
+
+# The image tag replaces the "UV4T" field of the version string, so every built image
+# answers 0x34 with its own name while the OEM/SignalDeck parsers (third field = V022)
+# see the factory version number. Applied by build.py --tag, always together with
+# version-from-image.
+[tag]
+offset = 0x3846B
+original = "UV4T"
+length = 4
+
+[patches.version-from-image]
+why = """The 0x34 handler (+0xA7E8) copies 17 bytes from RAM 0x03052464, which nothing in the
+image writes (filled by the resident code). Point its literal-pool word at the image's own
+version string (+0x38464) so 0x34 reports what this image says. Zero RF effect."""
+measured_by = "0x34 reply equals the built tag; factory string after module power-cycle"
+status = "ready"
+sites = [
+  { offset = 0xA9E8, original = "64240503", replacement = "64840300", note = "lrw pool of +0xA7EE: 0x03052464 -> 0x00038464" },
+]
+
+[patches.fm-flat-58]
+why = """AT1846S register 0x58 on analog channels is 0x8405: pre/de-emphasis on, voice
+high-pass field 01. Write 0x840F instead (emphasis bypass, voice high-pass bypass 11) on the
+no-tone paths, and keep the CTCSS path's read-modify-write from clearing bit 3 again.
+Experimental: affects every analog channel, transmit and receive."""
+measured_by = "C2 (1) TX response 50 Hz-3.5 kHz, (3) M17 /90, (4) POCSAG, (5) voice ear-check"
+status = "experimental"
+sites = [
+  { offset = 0x2C90, original = "0584", replacement = "0f84", note = "at1846_init reg 0x58" },
+  { offset = 0x3054, original = "0584", replacement = "0f84", note = "at1846_tune FM branch reg 0x58" },
+  { offset = 0x344E, original = "0584", replacement = "0f84", note = "at1846_set_ctcss_dcs no-tone reg 0x58" },
+  { offset = 0x34F2, original = "0584", replacement = "0f84", note = "at1846_set_ctcss_dcs no-tone reg 0x58" },
+  { offset = 0x3640, original = "0584", replacement = "0f84", note = "at1846_set_ctcss_dcs no-tone reg 0x58" },
+  { offset = 0x333A, original = "f7ff", replacement = "ffff", note = "RMW mask on reg 0x58 (clears bit 3) -> no-op" },
+]

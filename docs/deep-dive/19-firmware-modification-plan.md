@@ -31,7 +31,7 @@ What the earlier chapters established, with the source to read for detail:
 | Tooling | `csky-elfabiv2-objdump`, Ghidra 12.1.3 + C-SKY module, `scripts/fw1_ghidra_csky.ps1`, `radio_firmware/ghidra_scripts/FwCskySeed.java`/`FwCskyStats.java`, `scripts/fw1_ctcss_table.py` | `11` §12, memory `csky-disassemblers-installed` |
 | Dead ends to not repeat | 14 ARM-Thumb patches at an unverified base (all addresses `0x0800xxxx` are void); `cmd_handler.c` / `firmware_decompiled.c` are wrong-architecture output; `PATCH14.bin` does nothing and is no longer shipped | `18` §4, `07` §5 |
 
-**What is missing, in one sentence:** the external code region, the RF IC identity and its register programming, the transmit set-up path (`0x26` and friends), the loader's end-of-transfer behaviour, and a loader/verifier of our own.
+**What is missing, in one sentence:** the external code region, the transmit set-up path (`0x26` and friends), the loader's end-of-transfer behaviour, and a loader/verifier of our own. (The RF IC identity and its register programming were settled on 2026-10-23: an **AT1846S**, see §10 and `11` §21.)
 
 ---
 
@@ -50,7 +50,7 @@ Phases A, B and C run in parallel; D needs A (where the filters are) and C (how 
 
 Goal: a named map of everything the transmit path touches, plus the memory map, written into the Ghidra project **and** exported to the repo so names survive.
 
-### A1. Symbol persistence (first, small)
+### A1. Symbol persistence (first, small) — ✅ 2026-10-23
 - Add `radio_firmware/ghidra_scripts/FwCskyExportSymbols.java` (post-script) that writes every user-named function/label to `radio_firmware/symbols.csv` (`offset,name,comment`), and `FwCskyImportSymbols.java` (pre-script) that re-applies them. Commit the CSV. Today the names live only in the gitignored project.
 - Seed the CSV with everything already named in `11` §10–§20 (checksum, reply builder, RX task, dispatcher, the 35 case stubs, unpack functions, readback, 0x2B builder, CTCSS table, task creator).
 
@@ -61,7 +61,7 @@ Goal: a named map of everything the transmit path touches, plus the memory map, 
 ### A3. The 0x21 family and the "events"
 - Decode the 35 sub-commands of `+0x8BE4` and the emitted `68 21 <sub> <01|FF>` frames. They may carry PTT/RX start-stop events, calibration or **debug/memory access**. A memory-read sub-command would be the key to A5. Capture the live `0x21` traffic with SignalDeck's UART log during key-up, channel change and the YModem knock.
 
-### A4. The transmit path (the heart of the plan)
+### A4. The transmit path (the heart of the plan) — RF IC ✅ AT1846S, H1 confirmed for emphasis and voice high-pass (`11` §21); compression/limiter still open
 Hypotheses, to be settled by reading, not guessing:
 - **H1 — the filters are in the RF IC, set by registers.** The module's analog chain (pre-emphasis, ~300 Hz high-pass, 3 kHz low-pass, compander, deviation limiter) matches what single-chip FM transceivers (AT1846S/RDA1846-class) implement in hardware, each switchable by register bits. The external call pair `0xFD01125C`/`0xFD011220` with argument `68` (`11` §14.2) looks like a register read-modify-write; the "volume/squelch/mic" 1-byte commands go through it. **Test:** find the register initialisation tables in the image (runs of 16-bit register/value pairs, written in a loop through that pair), map them against the AT1846S register description, and look for the TX-filter/pre-emphasis/compander/deviation fields. If this holds, the change is a **table edit**, no code patch.
 - **H2 — the filters are firmware DSP on the PCM before the modulator.** Then the transmit audio task is in this image (or partly external): look for FIR/IIR loops (multiply-accumulate on 16-bit samples, coefficient pools), the ±4.5 kHz clamp as a saturating compare, and the PCM source. Tracing from `0x26 LAUNCH` and from the audio-in interrupt will find it.
@@ -109,7 +109,7 @@ Its module may share the firmware family. Use it for the loader bring-up **only 
 
 ## 5. Phase C — a good, simple test loop
 
-### C1. Patch definition and build (host, no device)
+### C1. Patch definition and build (host, no device) — ✅ 2026-10-23
 `tools/fw-patch/` (phonedmrapp, public): `patches.toml` listing named patches — `offset`, `original` bytes, `replacement` bytes, `why`, `measured_by`; `build.py` applies a chosen set to `ORIGINAL.bin`, verifies every `original` matches before writing, sets the version string marker, writes `DMR003.UV4T.V022m<N>.bin` plus a `.sha256`; `check.py` diffs two images and prints the named patches. A host unit test asserts every patch's `original` bytes are present in the factory image (a patch that no longer matches fails the build).
 
 ### C2. Load and measure (device)
@@ -149,15 +149,15 @@ Acceptance (per C2): flat response within ±2 dB, limiter at the set deviation �
 
 | # | Item | Effort | Device | Depends |
 |---|---|---|---|---|
-| **FW8** | Symbol export/import scripts + `symbols.csv` seeded from `11` §10–§20 (A1) | S | no | — |
+| **FW8** ✅ | Symbol export/import scripts + `symbols.csv` seeded from `11` §10–§20 (A1) | S | no | — |
 | **FW9** | Name the 35 dispatcher cases; TX-side commands first (A2) | M | some | FW8 |
 | **FW10** | 0x21 family decoded; live capture of its frames (A3) | M | yes | FW8 |
-| **FW11** | RF IC identified; register tables found and mapped; transmit chain described (A4) | L | some | FW9 |
+| **FW11** ◐ | RF IC identified (✅ AT1846S); register writes mapped (✅); transmit chain described (compression/limiter open) (A4) | L | some | FW9 |
 | **FW12** | Loader end-of-transfer + boot path read; the first image words decoded (A6) | M | no | FW8 |
 | **FW13** | SignalDeck `FirmwareLoader` + Device → Firmware page + version-marker verification + reload-at-start-up (B1, B2) | L | yes | — |
 | **FW14** | Version-string round trip (load, verify, power-cycle, verify) — the first proof (B2) | S | yes | FW13 |
 | **FW15** | Persistence research, read-only (B3) | M | yes | FW14 |
-| **FW16** | `tools/fw-patch` build/check + host test (C1) | S | no | — |
+| **FW16** ✅ | `tools/fw-patch` build/check + host test (C1) | S | no | — |
 | **FW17** | `bench/fwtest.sh` + the standard TX measurements, factory baseline recorded (C2) | M | yes | FW13, FW16 |
 | **FW18** | Digital-audio transmit mode patch (D) measured to acceptance | L | yes | FW11, FW17 |
 | **FW19** | TOT ceiling patch (D) | S | yes | FW9, FW17 |
@@ -174,3 +174,15 @@ Acceptance (per C2): flat response within ±2 dB, limiter at the set deviation �
 4. **FW16/FW17** so that the first real patch is measured, not eyeballed.
 
 Things not to do: no flash writes; no edits to band limits or power; no patch built on the old `0x0800xxxx` addresses; no bench transmission off 467.625 MHz low power; no loader test during an ISS pass.
+
+---
+
+## 10. Progress log
+
+**2026-10-23 — FW8, FW16 done; FW11 largely done on the host.**
+
+- **FW8:** `radio_firmware/symbols.csv` (`offset,kind,name,comment`, 44 rows, 3 external) plus `FwCskyImportSymbols.java` / `FwCskyExportSymbols.java`, wired into `scripts/fw1_ghidra_csky.ps1` (import after analysis, export last to the gitignored `symbols.export.csv`). Headless run: 36 functions + 4 labels applied, 40 exported back, exit 0.
+- **FW11 (A4):** the RF IC is an **AT1846S**. `0xFD011220`/`0xFD01125C` are its register write/read; `+0x2BAC` is the AT1846S init sequence. Register `0x58` (the audio filter switch) is `0x8405` on analog (pre/de-emphasis on, voice high-pass active) and `0xBCFD` on DMR (filters bypassed). **H1 holds for emphasis and the sub-audio cut**: they are 16-bit immediates in this image. Still open: whether the compression and the ±4.5 kHz limit come from the AT1846S (`0x59`/`0x43`/`0x41`) or from DSP in the module's CPU (H2). New option **H4**: the DMR path does not use the voice filters at all, so routing the phone's PCM to the DMR modulator would be DC-coupled. Tool: `scripts/fw_at1846_regmap.py`. Details: `11` §21.
+- **B2 correction:** `0x34` is answered from RAM `0x03052464`, which the resident code fills, **not** from the string at `+0x38464`. A string edit alone would never show. The marker patch `version-from-image` redirects the handler's pool word (`+0xA9E8`) to the image's string. The tag replaces the `UV4T` field (`DMR003.UVm1.V022`) so the OEM and SignalDeck version parsers still see `V022`. Corollary: **no image load has ever been proven** (the 2026-03 loads were judged by patches that did nothing). FW14 is the first real proof.
+- **FW16:** `tools/fw-patch/` — `patches.toml` (factory MD5 pinned; `version-from-image` ready; `fm-flat-58` experimental: `0x58 = 0x840F` on the five no-tone sites + the `+0x333A` mask made a no-op), `build.py --tag`, `check.py`, `test_patches.py` (5 tests pass). Built and disassembly-checked: `DMR003.UVm1.V022` (marker only) and `DMR003.UVm2.V022` (marker + flat FM). Output in `radio_firmware/build/` (gitignored).
+- **Next, on the device (owner's go-ahead; not during an ISS pass):** FW14 with `UVm1` — through the stock app's `DMRDEBUG.bin` path (ch. 07 §6, SignalDeck stopped) or SignalDeck's own loader once FW13 exists. Then `UVm2` against the factory baseline (FW17 measurements (1), (3), (5)).

@@ -44,7 +44,9 @@ $args = @(
     "-loader-baseAddr", $BaseAddr,
     "-scriptPath", $ScriptDir,
     "-preScript", "FwCskySeed.java",
+    "-postScript", "FwCskyImportSymbols.java",
     "-postScript", "FwCskyStats.java",
+    "-postScript", "FwCskyExportSymbols.java",
     "-analysisTimeoutPerFile", "2400",
     "-max-cpu", "4",
     "-log", $Log
