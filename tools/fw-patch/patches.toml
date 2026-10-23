@@ -42,6 +42,58 @@ sites = [
   { offset = 0x3640, original = "0584", replacement = "c584", note = "at1846_set_ctcss_dcs no-tone reg 0x58" },
 ]
 
+# Same five sites as fm-flat-58, so the three 0x58 variants are mutually exclusive.
+# 0x84DD = 0x84C5 plus bits 3 and 4 (CTCSS high-pass and low-pass bypass).
+[patches.fm-flat-58dd]
+why = """UVm2 left the CTCSS filters on. Bits 3 and 4 of AT1846S 0x58 bypass the CTCSS
+high-pass and low-pass (OpenRTX layout, ch. 11 §21.3). 0x84DD is 0x84C5 with those two
+bits set, at the same five immediates. The no-tone path of at1846_set_ctcss_dcs then
+read-modify-writes 0x58 with mask 0xFFF7, which clears bit 3, so this patch is loaded
+with ctcss-hpf-keep. Bench only: 0x58 still acts on receive as well as transmit."""
+measured_by = "UVm5: TX response 50 Hz-3.5 kHz at three levels near the cut, M17 /90, POCSAG"
+status = "experimental"
+sites = [
+  { offset = 0x2C90, original = "0584", replacement = "dd84", note = "at1846_init reg 0x58 = 0x84DD" },
+  { offset = 0x3054, original = "0584", replacement = "dd84", note = "at1846_tune FM branch reg 0x58 = 0x84DD" },
+  { offset = 0x344E, original = "0584", replacement = "dd84", note = "at1846_set_ctcss_dcs reg 0x58 = 0x84DD" },
+  { offset = 0x34F2, original = "0584", replacement = "dd84", note = "at1846_set_ctcss_dcs reg 0x58 = 0x84DD" },
+  { offset = 0x3640, original = "0584", replacement = "dd84", note = "at1846_set_ctcss_dcs reg 0x58 = 0x84DD" },
+]
+
+# 0x84FD = 0x84DD plus bit 5 (voice low-pass bypass). Exclusive with the other 0x58 variants.
+[patches.fm-flat-58fd]
+why = """0x84FD adds bit 5 (voice low-pass bypass) on top of 0x84DD. That is the low byte
+of the DMR programming value 0xBCFD, and it is the candidate for the 3.5 kHz roll-off left
+by UVm2. Same five immediates. Loaded with ctcss-hpf-keep so the no-tone read-modify-write
+does not clear bit 3 afterwards. Bench only."""
+measured_by = "UVm6: TX response 50 Hz-3.5 kHz at three levels near the cut, M17 /90, POCSAG"
+status = "experimental"
+sites = [
+  { offset = 0x2C90, original = "0584", replacement = "fd84", note = "at1846_init reg 0x58 = 0x84FD" },
+  { offset = 0x3054, original = "0584", replacement = "fd84", note = "at1846_tune FM branch reg 0x58 = 0x84FD" },
+  { offset = 0x344E, original = "0584", replacement = "fd84", note = "at1846_set_ctcss_dcs reg 0x58 = 0x84FD" },
+  { offset = 0x34F2, original = "0584", replacement = "fd84", note = "at1846_set_ctcss_dcs reg 0x58 = 0x84FD" },
+  { offset = 0x3640, original = "0584", replacement = "fd84", note = "at1846_set_ctcss_dcs reg 0x58 = 0x84FD" },
+]
+
+# Does not overlap the five 0x58 immediates or the C7000 stub. The no-tone path of
+# at1846_set_ctcss_dcs (file +0x3338) is movi r3, 0xFFF7; and r1, r0, r3; then a write of
+# register 0x58. On a VFO 0x23 with rxType 0 that runs after the FM tune's 0x58 immediate
+# and clears bit 3. 0xFFFF makes the write-back store the register unchanged.
+[patches.ctcss-hpf-keep]
+why = """Neutralise the no-tone read-modify-write in at1846_set_ctcss_dcs. The instruction
+at file +0x3338 is movi r3, 65527 (0xFFF7); the following and/write clears bit 3 of
+register 0x58 (CTCSS high-pass bypass) and leaves bit 4. On a no-tone analog 0x23 this
+runs after the FM tune wrote 0x58, so a patched bit 3 would not stick. The immediate
+halfword at +0x333A is changed from 0xFFF7 to 0xFFFF; the opcode halfword stays. The
+write then stores 0x58 unchanged. A bench image with the CTCSS filters bypassed has no
+CTCSS tone to protect."""
+measured_by = "Loaded with UVm5 and UVm6; the 50-200 Hz rows are the check that bit 3 stuck"
+status = "experimental"
+sites = [
+  { offset = 0x333A, original = "f7ff", replacement = "ffff", note = "movi r3 immediate: 0xFFF7 -> 0xFFFF (keep every bit of reg 0x58)" },
+]
+
 [patches.c7000-fm-flat]
 why = """The HR-C7000's own FM audio chain is never configured by this image, so it runs at reset:
 FM_BANDWIDTH 0x11000500 = 0x5F (fmbpfon band-pass ON, fmpreemphasison ON) and FM_DEV_COEF
@@ -58,4 +110,23 @@ status = "experimental"
 sites = [
   { offset = 0x3074, original = "80e2d670", replacement = "02e0c6bf", note = "at1846_tune FM branch: bsr 0xFD011220 -> bsr stub 0x5B000" },
   { offset = 0x5B000, original = "0000000000000000000000000000000000000000000000000000000000000000", replacement = "d0147de20fb164100f3240b36310441040b39014000500110405001110100f00", note = "stub (stubs/c7000_fm_flat.S, as -mcpu=ck803, ld -Ttext=0x5B000)" },
+]
+
+# Same redirect and stub as c7000-fm-flat, so the two are mutually exclusive. Only the last
+# pool word differs: tr_sig_lim (bits 23:16) is 0x02 instead of the reset 0x0F. UVm3 left
+# the limiter at 0x0F and matched factory through -6 dBFS, so 0x0F was not clipping a
+# -12 dBFS 1 kHz tone (~1800 Hz). 0x02 puts the ceiling well under that if the word scales
+# the deviation. A drop against the factory 1827 Hz means the stub ran.
+[patches.c7000-fm-canary]
+why = """Same stub as c7000-fm-flat, with FM_DEV_COEF tr_sig_lim lowered from 0x0F to 0x02
+(pool word at +0x5B01C = 0x00021010). UVm3 used the reset limiter and matched the factory
+curve, which does not say whether the stub ran. A 1 kHz tone at -12 dBFS was 1827 Hz on
+the factory image. If this image drops that deviation, the stub is on the keyed path and
+the C7000 FM limiter is in the transmit chain. If it does not drop, the lowered limiter
+did not affect this stimulus. Bench only, and not combined with a 0x58 patch."""
+measured_by = "UVm7: one 1 kHz tone at -12 dBFS, compared with the factory 1827 Hz"
+status = "experimental"
+sites = [
+  { offset = 0x3074, original = "80e2d670", replacement = "02e0c6bf", note = "at1846_tune FM branch: bsr 0xFD011220 -> bsr stub 0x5B000" },
+  { offset = 0x5B000, original = "0000000000000000000000000000000000000000000000000000000000000000", replacement = "d0147de20fb164100f3240b36310441040b39014000500110405001110100200", note = "same stub, tr_sig_lim 0x02 (0x00021010)" },
 ]

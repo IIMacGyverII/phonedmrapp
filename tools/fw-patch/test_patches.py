@@ -40,7 +40,9 @@ class PatchTest(unittest.TestCase):
                 build.check_sites(self.cfg, self.fac, [name])
 
     def test_all_patches_together(self):
-        names = list(self.cfg["patches"])
+        # The 0x58 variants share five immediates, and the two C7000 stubs share the
+        # redirect plus the tail. One from each group, plus the shared mask patch.
+        names = ["fm-flat-58dd", "c7000-fm-flat", "ctcss-hpf-keep"]
         img, sites = build.build(names, "UVt0", self.cfg)
         self.assertEqual(len(img), len(self.fac))
         allowed = set()
@@ -51,6 +53,17 @@ class PatchTest(unittest.TestCase):
         changed = {i for i, (x, y) in enumerate(zip(self.fac, img)) if x != y}
         self.assertTrue(changed <= allowed, sorted(changed - allowed))
         self.assertEqual(img[VERSION_AT:VERSION_AT + 17], b"DMR003.UVt0.V022\x00")
+
+    def test_exclusive_variants_refuse_to_stack(self):
+        pairs = [
+            ["fm-flat-58", "fm-flat-58dd"],
+            ["fm-flat-58", "fm-flat-58fd"],
+            ["fm-flat-58dd", "fm-flat-58fd"],
+            ["c7000-fm-flat", "c7000-fm-canary"],
+        ]
+        for names in pairs:
+            with self.subTest(names=names), self.assertRaises(SystemExit):
+                build.build(names, "UVt0", self.cfg)
 
     def test_tag_only_differs_only_in_version_string(self):
         img, sites = build.build([], "UVm1", self.cfg)
@@ -72,6 +85,35 @@ class PatchTest(unittest.TestCase):
             self.assertEqual(v, 0x84C5)
             self.assertTrue(v & 0x40 and v & 0x80, "voice HPF (bit 6) and emphasis (bit 7) bypassed")
 
+    def _assert_reg58(self, names, value, bits_on, bits_off):
+        img, _ = build.build(names, "UVt0", self.cfg)
+        key = names[0]
+        for s in self.cfg["patches"][key]["sites"]:
+            v = int.from_bytes(img[s["offset"]:s["offset"] + 2], "little")
+            self.assertEqual(v, value)
+            for b in bits_on:
+                self.assertTrue(v & (1 << b), f"bit {b} set in 0x{v:04X}")
+            for b in bits_off:
+                self.assertFalse(v & (1 << b), f"bit {b} clear in 0x{v:04X}")
+        # The mask patch is the other functional change, and it is only those two bytes.
+        self.assertEqual(img[0x3338:0x333C], bytes.fromhex("03eaffff"))
+        self.assertEqual(int.from_bytes(img[0x333A:0x333C], "little"), 0xFFFF)
+
+    def test_fm_flat_58dd_with_mask(self):
+        # bits 3, 4 CTCSS HPF/LPF; 6 voice HPF; 7 emphasis. Bit 5 (voice LPF) stays off.
+        self._assert_reg58(["fm-flat-58dd", "ctcss-hpf-keep"], 0x84DD, (3, 4, 6, 7), (5,))
+
+    def test_fm_flat_58fd_with_mask(self):
+        self._assert_reg58(["fm-flat-58fd", "ctcss-hpf-keep"], 0x84FD, (3, 4, 5, 6, 7), ())
+
+    def test_ctcss_hpf_keep_alone(self):
+        img, sites = build.build(["ctcss-hpf-keep"], "UVt0", self.cfg)
+        self.assertEqual(len(sites), 1)
+        self.assertEqual(sites[0][0], 0x333A)
+        self.assertEqual(img[0x3338:0x333A], bytes.fromhex("03ea"))  # movi r3 opcode halfword
+        self.assertEqual(img[0x333A:0x333C], bytes.fromhex("ffff"))
+        self.assertEqual(self.fac[0x3338:0x333C], bytes.fromhex("03eaf7ff"))
+
     def test_c7000_stub_branches(self):
         img, _ = build.build(["c7000-fm-flat"], "UVt0", self.cfg)
         self.assertEqual(bsr32_target(self.fac, 0x3074), 0xFD011220)   # factory: AT1846S write
@@ -79,7 +121,23 @@ class PatchTest(unittest.TestCase):
         self.assertEqual(bsr32_target(img, 0x5B002), 0xFD011220)       # stub performs the write
         pool = [int.from_bytes(img[0x5B014 + 4 * k:0x5B018 + 4 * k], "little") for k in range(3)]
         self.assertEqual(pool, [0x11000500, 0x11000504, 0x000F1010])
+        self.assertEqual((pool[2] >> 16) & 0xFF, 0x0F)
         self.assertTrue(all(b == 0 for b in self.fac[0x5AEFC:]), "zero tail")
+
+    def test_c7000_canary_lowers_limiter_only(self):
+        img, _ = build.build(["c7000-fm-canary"], "UVt0", self.cfg)
+        flat, _ = build.build(["c7000-fm-flat"], "UVt0", self.cfg)
+        self.assertEqual(bsr32_target(img, 0x3074), 0x5B000)
+        self.assertEqual(bsr32_target(img, 0x5B002), 0xFD011220)
+        pool = [int.from_bytes(img[0x5B014 + 4 * k:0x5B018 + 4 * k], "little") for k in range(3)]
+        self.assertEqual(pool, [0x11000500, 0x11000504, 0x00021010])
+        lim = (pool[2] >> 16) & 0xFF
+        self.assertEqual(lim, 0x02)
+        self.assertLess(lim, 0x0F)
+        # The two stubs differ only in that limiter byte.
+        differ = [i for i, (a, b) in enumerate(zip(flat, img)) if a != b]
+        self.assertEqual(differ, [0x5B01E])
+        self.assertEqual(img[0x5B01C:0x5B020], bytes.fromhex("10100200"))
 
     def test_refuses_bad_tag(self):
         for tag in ("UV4T", "UV4", "UV-1"):
