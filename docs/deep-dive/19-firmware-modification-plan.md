@@ -182,7 +182,32 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 **2026-10-23 — FW8, FW16 done; FW11 largely done on the host.**
 
 - **FW8:** `radio_firmware/symbols.csv` (`offset,kind,name,comment`, 44 rows, 3 external) plus `FwCskyImportSymbols.java` / `FwCskyExportSymbols.java`, wired into `scripts/fw1_ghidra_csky.ps1` (import after analysis, export last to the gitignored `symbols.export.csv`). Headless run: 36 functions + 4 labels applied, 40 exported back, exit 0.
-- **FW11 (A4):** the RF IC is an **AT1846S**. `0xFD011220`/`0xFD01125C` are its register write/read; `+0x2BAC` is the AT1846S init sequence. Register `0x58` (the audio filter switch) is `0x8405` on analog (pre/de-emphasis on, voice high-pass active) and `0xBCFD` on DMR (filters bypassed). **H1 holds for emphasis and the sub-audio cut**: they are 16-bit immediates in this image. Still open: whether the compression and the ±4.5 kHz limit come from the AT1846S (`0x59`/`0x43`/`0x41`) or from DSP in the module's CPU (H2). New option **H4**: the DMR path does not use the voice filters at all, so routing the phone's PCM to the DMR modulator would be DC-coupled. Tool: `scripts/fw_at1846_regmap.py`. Details: `11` §21.
+- **FW11 (A4):** the RF IC is an **AT1846S**. `0xFD011220`/`0xFD01125C` are its register write/read; `+0x2BAC` is the AT1846S init sequence. Register `0x58` (the audio filter switch) is `0x8405` on analog (pre/de-emphasis on, voice high-pass active) and `0xBCFD` on DMR (emphasis and voice low-pass bypassed; the voice high-pass field is `01` on both, see §11). **H1 holds for emphasis and the sub-audio cut**: they are 16-bit immediates in this image. Still open: whether the compression and the ±4.5 kHz limit come from the AT1846S (`0x59`/`0x43`/`0x41`) or from DSP in the module's CPU (H2). An option **H4** (route the phone's PCM to the DMR modulator) was raised; the review in §11 folds it into the flat-FM work. Tool: `scripts/fw_at1846_regmap.py`. Details: `11` §21.
 - **B2 correction:** `0x34` is answered from RAM `0x03052464`, which the resident code fills, **not** from the string at `+0x38464`. A string edit alone would never show. The marker patch `version-from-image` redirects the handler's pool word (`+0xA9E8`) to the image's string. The tag replaces the `UV4T` field (`DMR003.UVm1.V022`) so the OEM and SignalDeck version parsers still see `V022`. Corollary: **no image load has ever been proven** (the 2026-03 loads were judged by patches that did nothing). FW14 is the first real proof.
 - **FW16:** `tools/fw-patch/` — `patches.toml` (factory MD5 pinned; `version-from-image` ready; `fm-flat-58` experimental: `0x58 = 0x840F` on the five no-tone sites + the `+0x333A` mask made a no-op), `build.py --tag`, `check.py`, `test_patches.py` (5 tests pass). Built and disassembly-checked: `DMR003.UVm1.V022` (marker only) and `DMR003.UVm2.V022` (marker + flat FM). Output in `radio_firmware/build/` (gitignored).
 - **Next, on the device (owner's go-ahead; not during an ISS pass):** FW14 with `UVm1` — through the stock app's `DMRDEBUG.bin` path (ch. 07 §6, SignalDeck stopped) or SignalDeck's own loader once FW13 exists. Then `UVm2` against the factory baseline (FW17 measurements (1), (3), (5)).
+
+---
+
+## 11. Review of the 2026-10-23 findings (FW8/FW11/FW16, commit `b8ee26df`)
+
+Reviewed the same day; the register values were re-checked with `python scripts/fw_at1846_regmap.py --reg 0x58` (identical to `11` §21.3).
+
+**Holds up.**
+- **AT1846S identification:** the `+0x2BAC` start-up sequence matches the known AT1846S init register for register, and the 196/28-site external calls are its register write/read.
+- **Register `0x58` values:** `0x8405` at the five analog no-tone sites, `0x8404` with a CTCSS tone, `0xBCFD` at the one DMR site, all 16-bit immediates in the image, so they are editable.
+- **The `0x34` correction is the most important result:** the version reply comes from resident RAM, not from the image string. So no image load has ever been proven, and FW14 with the `version-from-image` marker is the right first device test.
+
+**H4 (the DMR path) does not stand as a separate route.**
+1. **The high-pass is not bypassed in DMR mode.** `0xBCFD` has the voice high-pass field `01`, the same as `0x8405`. DMR mode bypasses emphasis and the voice low-pass, not the high-pass. If `01` already means "partly bypassed", the measured −60 dB transmit cut below ~250 Hz comes from something else: a coupling capacitor in front of the AT1846S microphone input (hardware, not fixable by registers) or processing in the module CPU (H2). The `fm-flat-58` result is therefore less certain than §10 implied; it is still the right experiment.
+2. **DMR is TDMA.** The module sends DMR as 30 ms bursts, also in simplex. M17 and POCSAG need a continuous carrier, so any "DMR path" transmission would be an ordinary FM transmission with DMR-like register settings, which is the flat-FM line of work.
+3. **The deciding question is unanswered: where does transmit audio enter the module, and what generates the DMR 4FSK?** If a DMR baseband chip builds the symbols from vocoder frames, the phone's PCM never reaches the modulator in DMR mode and there is no path to borrow. Tracing the TX PCM source in the image (from `0x26` LAUNCH and the audio-in interrupt) settles it; this joins FW11.
+4. **The waveforms differ.** M17 and DMR share 4800 symbols/s 4FSK, but M17 uses ±2400 Hz outer deviation (DMR ±1944 Hz) and a different pulse shape; POCSAG is 2-level FSK at ±4.5 kHz. Even a raw symbol interface would not produce standard M17 or POCSAG without deviation and filter changes.
+
+**Kept from H4:** the DMR branch's other settings, notably `0x43` (`0x00BB` on DMR vs `0x0100` on FM), are candidates for the digital-mode FM configuration's deviation, next to `0x59`/`0x41`.
+
+**Other notes.**
+- **`fm-flat-58` changes normal voice too.** `0x58` governs transmit and receive, so at all five analog sites it removes de-emphasis on receive (harsh received audio) and pre-emphasis on transmit (dull transmitted voice). That is fine for a bench comparison; the product must be a run-time digital-audio mode (§6). The patch entry now says so.
+- **Still unexplained:** the compression before the modulator and the ±4.5 kHz limit. They, not the emphasis, are what break POCSAG at full deviation, so they need the same register-or-DSP analysis.
+- **Next steps unchanged:** UVm1 (marker only) first, then UVm2 (marker + flat FM) against a measured factory baseline, on 467.625 MHz at low power, never during an ISS pass, with the owner's go-ahead.
+

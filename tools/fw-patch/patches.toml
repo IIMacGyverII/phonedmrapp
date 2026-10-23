@@ -35,7 +35,8 @@ sites = [
 why = """AT1846S register 0x58 on analog channels is 0x8405: pre/de-emphasis on, voice
 high-pass field 01. Write 0x840F instead (emphasis bypass, voice high-pass bypass 11) on the
 no-tone paths, and keep the CTCSS path's read-modify-write from clearing bit 3 again.
-Experimental: affects every analog channel, transmit and receive."""
+Experimental: affects every analog channel, transmit and receive. Bench comparison only: it removes de-emphasis on receive and
+pre-emphasis on transmit for normal voice too; the product must be a run-time digital-audio mode (ch. 19 §6, §11)."""
 measured_by = "C2 (1) TX response 50 Hz-3.5 kHz, (3) M17 /90, (4) POCSAG, (5) voice ear-check"
 status = "experimental"
 sites = [
