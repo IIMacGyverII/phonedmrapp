@@ -300,7 +300,7 @@ If Test 1 still shows 16777215 after Patch 12, it means:
 ## Acknowledgments
 
 **Grok (xAI)**: Key insight to decode ?? instruction at 0x08018F28 → CBZ discovery  
-**SuperGrok (Buffalo, MN)**: 7 hours of deep firmware analysis, pattern identification  
+**SuperGrok**: 7 hours of deep firmware analysis, pattern identification  
 **DMR Community**: Reference to similar bugs in TYT/Retevis firmwares  
 **arm_disasm.py**: Automated tool that enabled systematic location analysis
 
@@ -319,5 +319,5 @@ Either way, **this is the most informed patch yet**, based on complete understan
 **Status**: Ready for deployment and testing.
 
 **Date**: February 28, 2026, 10:50 PM CST  
-**Location**: Buffalo, Minnesota  
+**Location**: (not recorded)  
 **Determination**: Option 2 is NOT an option. 🚀

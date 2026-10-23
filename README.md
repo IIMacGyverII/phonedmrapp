@@ -884,7 +884,7 @@ The radio hardware has a unique quirk that affects squelch control:
 
 **Display Examples**:
 ```
-Echo, Minnesota (↘SE 96.7mi (155.6km))
+Echo, Colorado (↘SE 96.7mi (155.6km))
 320m (1050ft) 📍
 
 Chicago Rptr (↗NE 5.2km)
