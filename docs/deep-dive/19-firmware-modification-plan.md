@@ -518,3 +518,20 @@ If the CTCSS routine runs on a no-tone VFO tune, its `& 0xFFF7` re-enables the h
 2. **That `FCR_ADC` is never written.** The search covered the literal and offset `0xD7` from `0x16000900`. The codec init addresses its registers from base `0x160009C0` (`+0x09` `AICR_ADC`, `+0x1F`, `+0x23`, `+0x25` gains), so the store to look for is a byte store at offset **`0x17`** from that base. Check it before relying on "reset = off".
 
 **Product view, whatever the result.** A −40 dB hole cannot be pre-shaped away: earlier work found POCSAG needed 13–20× more drive than the input accepts. So standard M17 and POCSAG TX to ordinary radios depends on the bottom octave being software-reachable. If the ADC canary says hardware, close the TX side of this track. Keep UVm6 (flat 300 Hz–3.5 kHz) as a candidate run-time mode for digital modes that fit that band (AFSK, FT8, SSTV and SignalDeck-to-SignalDeck links). On receive the M17/POCSAG equalizers already work.
+
+## 18. Review of UVm10 (2026-10-23, commit `2dfc7804`)
+
+**Settled:**
+- The canary was built properly: `0x61F4` overwrites `GCR_ADCL`, the live branch was found and lowered, and the floor branch was ruled out. The air stayed within 0.5 dB, so **the codec ADC is not in the transmit path.**
+- `FCR_ADC` is never stored.
+
+**A different reading of where the audio goes.** The phone sends PCM on I2S1 (digital), and the audio does reach the AT1846S (UVm2 and UVm8 changed it through `0x58`). The AT1846S microphone input is analog, so a DAC sits between the two. On this module the obvious DAC is the **HR-C7000 codec's own DAC**, the very converter §10 set aside as "receive/sidetone". A symmetric layout fits everything measured:
+- **TX:** phone I2S → C7000 codec DAC → AT1846S microphone input.
+- **RX:** AT1846S audio out → C7000 codec ADC → I2S → phone.
+
+It also explains why receive loses the same octave (the M17 deep dive: −25…−37 dB below 250 Hz): there would be one coupling point, or one DAC/ADC filter setting, per direction.
+
+**So the `0x44` image proposed in §10 adds little.** `0x58` already proves the audio passes through the AT1846S. The informative tests are on the DAC side:
+1. **TX DAC canary (UVm11):** lower `GCR_DACL` (codec base + `0x1F`, written by the codec init; find any later rewriter, as with `0x61F4`) by 6 dB. Same two stimuli. If the air halves, the C7000 DAC feeds the transmitter.
+2. **A DAC high-pass:** if the canary drops, read the codec's DAC-side filter and control registers in the user guide (the `FCR_DAC` counterpart of `FCR_ADC`, a DAC DC-block or de-pop high-pass) and where the image writes them. A software-set DAC filter would be the last firmware candidate for the cut. If there is none, the cut is the analog coupling between that DAC and the AT1846S microphone pin: hardware.
+3. **Receive cross-check without transmitting:** UVm10's lowered `GCR_ADCL` should make received audio about 6 dB quieter if the ADC is the RX path. SignalDeck `rxclip` on open-squelch noise (sq 0, quiet channel), factory against UVm10. No RF needed.
