@@ -40,8 +40,9 @@ class PatchTest(unittest.TestCase):
                 build.check_sites(self.cfg, self.fac, [name])
 
     def test_all_patches_together(self):
-        # The 0x58 variants share five immediates, and the two C7000 stubs share the
+        # The 0x58 variants share five immediates, and the C7000 stubs share the
         # redirect plus the tail. One from each group, plus the shared mask patch.
+        # c7000-fm-adcgain is exclusive with the other stubs and is not in this set.
         names = ["fm-flat-58dd", "c7000-fm-flat", "ctcss-hpf-keep"]
         img, sites = build.build(names, "UVt0", self.cfg)
         self.assertEqual(len(img), len(self.fac))
@@ -65,6 +66,9 @@ class PatchTest(unittest.TestCase):
             ["c7000-fm-flat", "c7000-fm-canary"],
             ["c7000-fm-flat", "c7000-fm-proof"],
             ["c7000-fm-canary", "c7000-fm-proof"],
+            ["c7000-fm-flat", "c7000-fm-adcgain"],
+            ["c7000-fm-canary", "c7000-fm-adcgain"],
+            ["c7000-fm-proof", "c7000-fm-adcgain"],
         ]
         for names in pairs:
             with self.subTest(names=names), self.assertRaises(SystemExit):
@@ -170,6 +174,32 @@ class PatchTest(unittest.TestCase):
         self.assertEqual((pool[2] >> 16) & 0xFF, 0x0F)
         for off in (0x2C90, 0x3054, 0x344E, 0x34F2, 0x3640):
             self.assertEqual(img[off:off + 2], self.fac[off:off + 2])
+            self.assertEqual(img[off:off + 2], bytes.fromhex("0584"))
+
+    def test_c7000_adcgain_lowers_live_gcr_adcl_by_6db(self):
+        img, _ = build.build(["c7000-fm-adcgain"], "UVt0", self.cfg)
+        self.assertEqual(bsr32_target(img, 0x3074), 0x5B000)
+        self.assertEqual(bsr32_target(img, 0x5B002), 0xFD011220)
+        # The byte after the redirected write is the C7000 stores, not a second
+        # AT1846S write. 0x84C5 is not in the stub.
+        self.assertNotIn(bytes.fromhex("c584"), img[0x5B000:0x5B030])
+        self.assertEqual(int.from_bytes(img[0x5B016:0x5B018], "little"), 0x2A7C)  # subi r2, 125
+        self.assertEqual((-125) & 0xFF, 0x83)
+        self.assertEqual(img[0x5B018:0x5B01C], bytes.fromhex("43dce500"))  # st.b r2, (r3, 0xe5)
+        pool = [int.from_bytes(img[0x5B020 + 4 * k:0x5B024 + 4 * k], "little") for k in range(4)]
+        self.assertEqual(pool, [0x11000500, 0x11000504, 0x000F1010, 0x16000900])
+        # 0x61F4's three gains, each 6 counts lower. The 0 dB floor stays.
+        self.assertEqual(int.from_bytes(img[0x61FE:0x6200], "little"), 0x2B7A)  # 123 -> 0x85
+        self.assertEqual(int.from_bytes(img[0x620C:0x620E], "little"), 0x2B7D)  # 126 -> 0x82
+        self.assertEqual(int.from_bytes(img[0x6228:0x622A], "little"), 0x2B7C)  # 125 -> 0x83
+        self.assertEqual(img[0x6238:0x623A], self.fac[0x6238:0x623A])
+        self.assertEqual(int.from_bytes(self.fac[0x6238:0x623A], "little"), 0x2B7F)
+        self.assertEqual((-123) & 0xFF, 0x85)
+        self.assertEqual((-126) & 0xFF, 0x82)
+        self.assertEqual((-125) & 0xFF, 0x83)
+        # Init's 0x8B store and the five factory 0x8405 immediates stay.
+        self.assertEqual(img[0x6540:0x6542], self.fac[0x6540:0x6542])
+        for off in (0x2C90, 0x3054, 0x344E, 0x34F2, 0x3640):
             self.assertEqual(img[off:off + 2], bytes.fromhex("0584"))
 
     def test_refuses_bad_tag(self):
