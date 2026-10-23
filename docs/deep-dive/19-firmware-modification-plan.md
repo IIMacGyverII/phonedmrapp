@@ -492,3 +492,17 @@ If the CTCSS routine runs on a no-tone VFO tune, its `& 0xFFF7` re-enables the h
 3. **Where transmit audio enters the module** (§12.2, still unread): digital into the HR-C7000 (then its ADC/audio front end, independent of `FM_BANDWIDTH`) or analog into the AT1846S microphone pin. If it is analog with a coupling capacitor, the cut is hardware.
 
 **Next:** the stub self-proof image, the `0xBCFD` image, and the read-only codec survey. If all three come back negative, the bottom octave is outside software reach. The fallback is then the run-time pre-shaping and receive-equalizer route (the M17/POCSAG deep dives), now on a flat 300 Hz–3.5 kHz path (UVm6) instead of the factory one.
+
+## 17. Review of UVm8–UVm9 (2026-10-23, commit `25c0a4cd`)
+
+**Settled:**
+- **The stub runs on the keyed path.** UVm8 removed the pre-emphasis from inside it. So UVm3 and UVm7 are real negatives: the HR-C7000 `FM_BANDWIDTH` and `FM_DEV_COEF` writes do not shape what is transmitted.
+- **Register `0x58` is exhausted.** The DMR value `0xBCFD` on analog leaves 50–200 Hz at about −40 dB.
+
+**Not yet shown: "outside software reach."** That conclusion rests on two inferences that no measurement backs:
+1. **That transmit audio passes through the HR-C7000 codec ADC at all.** The image programs the ADC as the FM source, but the phone plays the PCM out on **I2S1, a digital bus**. If I2S1 reaches the module digitally, the ADC (and any capacitor in front of it) is not in the path, and the cut is a digital stage, which is software. Nothing in the run tells these apart. A positive control does, in the stub style of UVm8: **lower the codec ADC gain** (`GCR_ADCL`, codec base `0x160009C0` + `0x25`) by about 6 dB.
+   - If the 1 kHz probe drops from about 111 Hz to about 55 Hz, the ADC is in the path. With `adc_hpf` at reset, the cut is then before the ADC: analog coupling, which is hardware. The conclusion holds.
+   - If it does not drop, the audio enters some other way. The next reading is the C7000's PCM/I2S input path and its filters.
+2. **That `FCR_ADC` is never written.** The search covered the literal and offset `0xD7` from `0x16000900`. The codec init addresses its registers from base `0x160009C0` (`+0x09` `AICR_ADC`, `+0x1F`, `+0x23`, `+0x25` gains), so the store to look for is a byte store at offset **`0x17`** from that base. Check it before relying on "reset = off".
+
+**Product view, whatever the result.** A −40 dB hole cannot be pre-shaped away: earlier work found POCSAG needed 13–20× more drive than the input accepts. So standard M17 and POCSAG TX to ordinary radios depends on the bottom octave being software-reachable. If the ADC canary says hardware, close the TX side of this track. Keep UVm6 (flat 300 Hz–3.5 kHz) as a candidate run-time mode for digital modes that fit that band (AFSK, FT8, SSTV and SignalDeck-to-SignalDeck links). On receive the M17/POCSAG equalizers already work.
