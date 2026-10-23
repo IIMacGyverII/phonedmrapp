@@ -195,3 +195,119 @@ What the curves do say:
 - Receive was not compared. Register `0x58` also changes receive, and these images were not left loaded to listen. Weather channel 36 was at the noise floor, and the HackRF was not used to transmit.
 
 The factory image is back in flash and `0x34` reads `DMR003.UV4T.V022`. SignalDeck owns the radio. The active channel is **36, NOAA WX4, 162.425 MHz**, in the Weather zone. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched. These four images are bench comparisons. The product path is still a run-time digital-audio mode, not one of these files.
+
+# UVm5 / UVm6 / UVm7 — CTCSS bits and the C7000 canary (2026-10-23, 16:06–16:21)
+
+Same rules as the run above. HackRF receive only. Phone at **467.625 MHz, low power**. `0x34` at 16:06:48, before the first load, was `DMR003.UV4T.V022`. Each later image was loaded with `fwload_stock.sh`, and `0x34` was read before any transmission on that image. The factory file was loaded back at the end. `0x34` at 16:21:10 was `DMR003.UV4T.V022`. The pushed factory MD5 is `4426035392262ca54583c230c9e268e0`.
+
+The host reading before these images: a no-tone analog `0x23` does run `at1846_set_ctcss_dcs`. `apply_analog_config` calls the flash FM tune (the `0x58` immediate at `+0x3054`, then the branch at `+0x3074`) and then, because the analog struct's first byte is 0, the IRAM tune. That tune is the only caller of `at1846_set_ctcss_dcs`. The diag VFO sends `rxType` 0, so the function takes the read-modify-write at `+0x3332`: it reads register `0x58`, masks with `0xFFF7`, and writes it back. That clears bit 3 after the patched immediate. UVm5 and UVm6 change the immediate halfword at `+0x333A` from `0xFFF7` to `0xFFFF`. The opcode halfword is unchanged. The write-back then stores `0x58` as it was.
+
+| Image | What it changes | `0x34` | File MD5 | Loaded |
+|---|---|---|---|---|
+| UVm5 | tag + `0x58` = `0x84DD` at the five sites + mask `0xFFFF` at `+0x333A` | `DMR003.UVm5.V022` | `1723fa40729deb7d945cdcf5363bf99f` | 16:09:29 |
+| UVm6 | tag + `0x58` = `0x84FD` at the five sites + the same mask | `DMR003.UVm6.V022` | `3f22fcc98cf280512439aab9c646b97a` | 16:13:50 |
+| UVm7 | tag + C7000 stub, `tr_sig_lim` `0x02` (`FM_DEV_COEF` `0x00021010`). No `0x58` change | `DMR003.UVm7.V022` | `d5c2dde1b66262a9485d726b9193f085` | 16:18:12 |
+| Factory again | `DMR003.UV4T.V022-ORIGINAL.bin` | `DMR003.UV4T.V022` | `4426035392262ca54583c230c9e268e0` | 16:21:10 |
+
+`0x84DD` is UVm2's `0x84C5` plus bits 3 and 4 (CTCSS high-pass and low-pass bypass). `0x84FD` also sets bit 5 (voice low-pass bypass). The DMR immediate `0xBCFD` was not patched. Host MD5 of each built file matches the MD5 the loader printed after the push.
+
+HackRF gain was LNA 24 / VGA 32 for all three images, taken from the previous run and not changed: the probe magnitude was 12–15 and nothing clipped. Carrier offset on the kept captures was +801 to +837 Hz. No step predicted past the stop, and none measured past it. The hottest aligned deviation transmitted was 3397 Hz (UVm5 M17).
+
+The −30 dBFS sweep is the shape table (amplitude 1036). The 50/100/200/300 Hz rows were then repeated at −24 dBFS (amplitude 2067) and −18 dBFS (amplitude 4125). Neither image was flat down to 50 Hz, so the −3 dBFS limiter step, the two extra M17 transmissions and the voice clip were not sent.
+
+## UVm5 — `0x84DD` and the mask kept
+
+Probe, −36 dBFS: 1 kHz **110 Hz** (0.213 Hz per PCM count), 3.5 kHz **70 Hz** (−3.9 dB). Same shape as UVm2.
+
+Frequency response at **−30 dBFS**, deviation and level relative to the 1 kHz tone:
+
+| Tone | Deviation | vs 1 kHz |
+|---:|---:|---:|
+| 50 Hz | 0 Hz | — |
+| 100 Hz | 2 Hz | −40 dB |
+| 150 Hz | 0 Hz | — |
+| 200 Hz | 2 Hz | −43 dB |
+| 300 Hz | 186 Hz | −1.6 dB |
+| 500 Hz | 220 Hz | −0.1 dB |
+| 1000 Hz | 223 Hz | 0 dB |
+| 2000 Hz | 227 Hz | +0.2 dB |
+| 3000 Hz | 213 Hz | −0.4 dB |
+| 3500 Hz | 140 Hz | −4.0 dB |
+
+300 Hz to 3 kHz is within ±2 dB of 1 kHz. 3.5 kHz is −4.0 dB, as on UVm4. 50–200 Hz is still absent.
+
+The same four low tones at the two higher levels. 300 Hz tracks the level (186 Hz at −30, then 362 and 733; linear would be about 372 and 744). 50, 100 and 200 Hz do not rise off the floor.
+
+| Level | 50 Hz | 100 Hz | 200 Hz | 300 Hz |
+|---:|---:|---:|---:|---:|
+| −30 dBFS | 0 Hz | 2 Hz | 2 Hz | 186 Hz |
+| −24 dBFS | 1 Hz | 3 Hz | 3 Hz | 362 Hz |
+| −18 dBFS | 2 Hz | 6 Hz | 7 Hz | 733 Hz |
+
+M17 at the standard scaling (10841 / file peak 15772). p95 2926 Hz, p99.5 **3397 Hz**, regression outer 49 Hz. Plain **0 exact / 90**, no frame found. Inverted **0 exact / 90**, one candidate, link-setup not accepted. Under 80 exact, so the two repeats were not sent.
+
+POCSAG at the standard ±4.5 kHz scaling (20326 PCM counts).
+
+| Baud | p99.5 | Plain bit errors | Inverted bit errors | Pages |
+|---:|---:|---:|---:|---|
+| 1200 | 3394 Hz | 1728 / 3904 | 1022 / 3904 | 0 / 3 |
+| 512 | 3040 Hz | 1283 / 3904 | 1339 / 3904 | 0 / 3 |
+
+## UVm6 — `0x84FD` and the mask kept
+
+Probe, −36 dBFS: 1 kHz **115 Hz** (0.221 Hz per PCM count), 3.5 kHz **101 Hz** (−1.1 dB). The 3.5 kHz tone is no longer down 4 dB.
+
+Frequency response at **−30 dBFS**:
+
+| Tone | Deviation | vs 1 kHz |
+|---:|---:|---:|
+| 50 Hz | 0 Hz | — |
+| 100 Hz | 2 Hz | −42 dB |
+| 150 Hz | 0 Hz | — |
+| 200 Hz | 2 Hz | −42 dB |
+| 300 Hz | 181 Hz | −1.6 dB |
+| 500 Hz | 215 Hz | −0.1 dB |
+| 1000 Hz | 217 Hz | 0 dB |
+| 2000 Hz | 218 Hz | 0.0 dB |
+| 3000 Hz | 206 Hz | −0.4 dB |
+| 3500 Hz | 193 Hz | −1.0 dB |
+
+300 Hz through 3.5 kHz is within ±2 dB of 1 kHz. That is the voice low-pass bit. The bottom octave is unchanged.
+
+| Level | 50 Hz | 100 Hz | 200 Hz | 300 Hz |
+|---:|---:|---:|---:|---:|
+| −30 dBFS | 0 Hz | 2 Hz | 2 Hz | 181 Hz |
+| −24 dBFS | 1 Hz | 3 Hz | 4 Hz | 378 Hz |
+| −18 dBFS | 2 Hz | 6 Hz | 8 Hz | 757 Hz |
+
+300 Hz again tracks the level (181 Hz, then 378 and 757; linear would be about 362 and 724). At −18 dBFS, 200 Hz is 8 Hz beside a 757 Hz tone one octave up.
+
+M17 at the standard scaling (10841 / file peak 15772). p95 2974 Hz, p99.5 **3069 Hz**, regression outer 4 Hz. Plain **0 exact / 90**. Inverted **0 exact / 90**, one candidate, link-setup not accepted. Not repeated.
+
+POCSAG at the standard ±4.5 kHz scaling (20326 PCM counts).
+
+| Baud | p99.5 | Plain bit errors | Inverted bit errors | Pages |
+|---:|---:|---:|---:|---|
+| 1200 | 3093 Hz | 1153 / 3904 | 1068 / 3904 | 0 / 3 |
+| 512 | 3098 Hz | 1192 / 3904 | 980 / 3904 | 0 / 3 |
+
+## UVm7 — limiter canary
+
+Not combined with a `0x58` patch. One transmission: 1 kHz at −12 dBFS. Deviation **1829 Hz** (offset +821 Hz, magnitude 24, no clipping). The factory image at this level was 1827 Hz, and UVm3 (the same stub with `tr_sig_lim` left at `0x0F`) was 1876 Hz. The drop the canary was built to produce is not there.
+
+`+0x3074` is on the flash FM branch, and that tune runs on this `0x23` before the CTCSS call. A lower `tr_sig_lim` in the stub's pool word did not change this tone. The stub's limiter write is not what set the deviation of this stimulus.
+
+## What this adds to §6
+
+| Check | UVm5 | UVm6 | UVm7 |
+|---|---|---|---|
+| Flat ±2 dB down to 50 Hz | no | no | not swept |
+| 300 Hz–3.5 kHz within ±2 dB | no (3.5 kHz is −4.0 dB) | yes | — |
+| Limiter at −3 dBFS | not sent (low end closed) | not sent | canary only, see above |
+| M17 plain, exact frames | 0 / 90 | 0 / 90 | not sent |
+| POCSAG pages, both bauds | 0 / 3 | 0 / 3 | not sent |
+| Factory image after restore | — | — | yes |
+
+**The cut below 250 Hz is not explained.** Bits 3 and 4 of register `0x58` were set, and the read-modify-write that would have cleared bit 3 was neutralized in the image that was measured. 50–200 Hz stayed closed at three levels, so it is not a weak-tone artifact and it is not the CTCSS high-pass those bits control. Bit 5, the voice low-pass bypass, does account for the 3.5 kHz roll-off left by UVm2: UVm6 is within ±2 dB from 300 Hz to 3.5 kHz. It does not open the bottom octave. The C7000 limiter canary did not move a −12 dBFS 1 kHz tone (1829 Hz against the factory 1827 Hz). No image meets the §6 acceptance. No voice clip was saved, because neither UVm5 nor UVm6 was flat to 50 Hz. Receive was not compared.
+
+The factory image is back in flash and `0x34` reads `DMR003.UV4T.V022`. SignalDeck owns the radio. The active channel is **36, NOAA WX4, 162.425 MHz**, power low, in the Weather zone. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched.
