@@ -211,3 +211,110 @@ Reviewed the same day; the register values were re-checked with `python scripts/
 - **Still unexplained:** the compression before the modulator and the ±4.5 kHz limit. They, not the emphasis, are what break POCSAG at full deviation, so they need the same register-or-DSP analysis.
 - **Next steps unchanged:** UVm1 (marker only) first, then UVm2 (marker + flat FM) against a measured factory baseline, on 467.625 MHz at low power, never during an ISS pass, with the owner's go-ahead.
 
+
+---
+
+## 12. Reply to the review (2026-10-23, read-only: nothing loaded, transmitted or patched)
+
+Two facts change the picture, so they come first.
+
+**A. The `0x58` bit layout used by both `b8ee26df` and §11 is wrong.** It came from the OpenRTX *web* register table (`openrtx.github.io/at1846_registers.md`). OpenRTX's *driver* (`platform/drivers/baseband/AT1846S_GDx.cpp`, `setOpMode`) documents a different layout:
+
+| Bit | Function (OpenRTX driver comments) |
+|---|---|
+| 0 | CTCSS LPF bandwidth to 250 Hz |
+| 3 | bypass CTCSS HPF |
+| 4 | bypass CTCSS LPF |
+| 5 | bypass voice LPF |
+| 6 | bypass voice HPF |
+| 7 | bypass pre/de-emphasis |
+| 11 / 12 / 13 | bypass VOX HPF / VOX LPF / RSSI LPF |
+
+Everything we can check agrees with the driver layout:
+- OpenGD77 comments `0xBC05` as "enable … de-emphasis / pre-emphasis / high and low pass filters" and `0xBCFD` as "disable all filters in DMR mode"; the two differ in exactly bits 3–7.
+- The HG-UV98 reconstruction (`agamez/hg-uv98-firmware`, `rf.c`) labels `0x840D` "250 Hz CTCSS path".
+- Our own firmware: the CTCSS function toggles **bit 0** (tone `0x8404` / no tone `0x8405`), and its read-modify-write at `+0x3332…+0x3342` clears **bit 3** (enable CTCSS HPF). Both are CTCSS bits, which fits the driver layout and makes no sense under the web table.
+
+Decoded with the driver layout:
+- `0x8405` (analog, 5 sites): bit 0 = 1, bits 3–7 = 0. **Voice HPF, voice LPF, emphasis and both CTCSS filters are all enabled.**
+- `0xBCFD` (DMR, `+0x2E92`): bits 3–7 = 1. **Voice HPF, voice LPF, emphasis and both CTCSS filters are all bypassed.**
+- Bits 1:0 are not a high-pass field. Bit 1 is 0 in every value written. Bit 2 is set in all of them, and neither source documents it.
+
+**B. The memory map in `11` §13.3/§21 is wrong; the "external region" is in our file.** The image has the HR-C7000 header used by the sibling module documented in M17-Project/AtomXL-reverse-engineering (`DMR006.U4A.V076`, `atomxl-re-docs/dmr-firmware-notes.md`): the same `68…10` frames and `switch(cmd−0x22)`, an AT1846S, and HR-C7000 = C-SKY CK803S with an integrated DMR/FM modem, vocoder and codec, running XIP from SPI NOR.
+
+The copy descriptors at `+0xC4` are `(dst, dst_end, src)`:
+- `(0x18000800, 0x18004404, 0x0304C2E0)`: SRAM, from file `+0x322E0`
+- `(0x00010000, 0x00031AF4, 0x03053408)`: IRAM, from file `+0x39408`
+
+The main code runs at `0x0301A000 + file offset`. Our "external" `bsr` targets are an artefact of mapping the file flat: target + `0x0301A000` = an IRAM address.
+
+The evidence:
+- 14 of the 22 targets with ≥10 callers land exactly on a `push` prologue.
+- `0xFD011220` → IRAM `0x2B220` = file `+0x54628`. It is an I²C write to device byte `0xE2` (7-bit `0x71`, the AT1846S address AtomXL reports) of `[reg, hi, lo]`.
+- `0xFD01125C` → `+0x54664` (read). `0xFCFF8F88` (`OSTaskCreate`) → `+0x3C390`.
+- String pointers vote for this base: `0x0301A000 + off` finds pool words for `PttTask`, the Idle task and the version string; base 0 finds none of them.
+
+### 12.1 Point 1, the high-pass claim: disagree with both versions
+
+`python scripts/fw_at1846_regmap.py --reg 0x58` gives the same values as `11` §21.3 (`0x8405` ×5 at `+0x2C90`/`+0x3054`/`+0x344E`/`+0x34F2`/`+0x3640`, `0x8404` ×3, `0xBCFD` ×1). What changes is the decoding:
+- **`0xBCFD` does bypass the voice high-pass (bit 6).** §11's "the DMR setting keeps the voice high-pass" does not hold.
+- **No direction is "already bypassed" on analog:** `0x8405` enables every audio filter, so the AT1846S voice HPF is active on analog TX and RX.
+- Neither layout gives a per-direction (TX vs RX) bit: emphasis is one "pre/de" bit, and the filters have no direction split.
+
+**Consequence for `tools/fw-patch` (reported, not changed):**
+- `fm-flat-58` writes `0x840F`. That sets bits 1–3: CTCSS-HPF bypass plus an undocumented bit 1. It **touches neither the voice HPF (bit 6) nor emphasis (bit 7)**, so a bench run would measure nothing useful.
+- The `+0x333A` mask change only stops the CTCSS function re-enabling the CTCSS HPF.
+- A meaningful candidate is `0x84C5` (bits 6 + 7: voice HPF and emphasis bypassed, voice LPF kept), or `0x84E5` with the voice LPF also bypassed.
+
+### 12.2 Point 2, H4 / the DMR path: agree, with the code evidence
+
+DMR offers no separate route.
+- The SoC is an HR-C7000, which has its own vocoder and DMR modem (AtomXL notes). Our image drives that modem block at `0x1100xxxx`:
+  - `WORK_MODE 0x11000100` is set to `0x22`/`0x6A`/`0x6E` at `+0x179C8`/`+0x17A44`/`+0x17A60` (addresses built with `movih 0x1100; bseti 8`, which is why no literal shows up).
+  - `0x11000400`/`0x11000408` are written at `+0x8188…+0x87A0` and `+0x179DA…`.
+  - `RF_MODE 0x11000104` is set to `0x10E0` (bits 6:5 = 11, two-point modulation in AtomXL's reading) by the save/set/restore routine at `+0x3ECC4…+0x3EEB0`.
+  - The 8 kHz codec register `0x160009C0`/`0x160009D2` is accessed at `+0x6844`, `+0x6AC0` and `+0x3ED08`.
+- So in DMR the phone's PCM goes to the vocoder, and the C7000 itself builds the 4FSK symbols and drives the modulator. The audio never reaches the modulator directly.
+- §11's other arguments also hold: TDMA 30 ms bursts, and different deviation and pulse shape (M17 ±2.4 kHz, DMR ±1.944 kHz, POCSAG ±4.5 kHz 2-FSK).
+- §11's argument 1 (the DMR value keeps the high-pass) falls with A. It isn't needed for the conclusion.
+- Still unread: where FM TX audio enters. It is either the C7000 FM chain into the AT1846S microphone input or the C7000's two-point modulator. Next to read: `+0x179C8…+0x17AB0` and `+0x17D54…`, the `WORK_MODE` writers.
+
+### 12.3 Point 3, other explanations for the −60 dB cut below 250 Hz: yes, the review misses one
+
+**The HR-C7000 has its own FM audio chain.** AtomXL documents two of its registers:
+- `FM_BANDWIDTH 0x11000500`, reset value `0x5F`: band-pass (bit 6) and emphasis (bit 4) **on**.
+- `FM_DEV_COEF 0x11000504`: the TX limiter `tr_sig_lim`, reset `0x0F`.
+
+AtomXL's firmware never writes either one. **Ours doesn't either:**
+- No literal pool word `0x11000500`/`0x11000504`.
+- No built-base access. The `movih 0x1100` scan finds only `0x100`, `0x400`, `0x408`, `0x50C`, `0x510`, `0x51C` and `0x568`; the only other `0x110005xx` literal is `0x11000560`.
+
+So both chips may filter the transmit audio:
+- the AT1846S voice HPF and pre-emphasis, enabled by `0x8405`;
+- the C7000 band-pass and emphasis, at reset;
+- plus the C7000 limiter.
+
+If both filters are in the path, two cascaded high-passes would explain a −60 dB stop-band better than one. The C7000 limiter is also the first candidate for the measured compression and the ±4.5 kHz limit.
+
+A coupling capacitor before the AT1846S mic input remains possible but untestable from the listing.
+
+The test design follows from this: a flat-FM bench run needs **both** `0x58` (bits 6/7) **and** a write to `0x11000500` (band-pass/emphasis off), with the limiter at `0x11000504` as the next variable. Otherwise a null result can't be attributed to either chip.
+
+### 12.4 Point 4, factual and citation errors
+
+| Where | Error | Correct |
+|---|---|---|
+| `11` §21.3 table and both wordings; §10; §11 H4 point 1; `patches.toml` `fm-flat-58`; `symbols.csv` comments at `+0x2E92`/`+0x3052` | Web-table bit layout (voice HPF = bits 1:0, emphasis = bit 3) | Driver layout (A): voice HPF bit 6, emphasis bit 7; `0x8405` all on, `0xBCFD` all bypassed |
+| `11` §21.4, §10 "B2 correction", §11 "most important result", `patches.toml` `version-from-image` (status `ready`) | `0x03052464` called resident RAM; redirect to `0x00038464` | `0x03052464 = 0x0301A000 + 0x38464` is the **XIP address of the image's own string**. The original handler already reports the image string, so the tag edit alone is the marker. `0x00038464` lies in IRAM .bss (initialised IRAM ends at `0x332F4`), so the patch would make `0x34` reply with RAM contents. **Don't load `UVm1`/`UVm2` as built.** "No load proven" stays true for the ch. 18 reason (the 2026-03 loads were judged by patches that did nothing) |
+| `11` §13.3, §21.1–§21.2, `symbols.csv` `ext_*` rows, ch. 19 A5 | Kernel/AT1846S routines "not in the file" | They are in the IRAM part (B): write `+0x54628`, read `+0x54664`, `OSTaskCreate` `+0x3C390`. A5 mostly dissolves |
+| `11` §21.2 `at1846_apply_cal_table`, `symbols.csv` | "per-unit calibration", "`0x18000808` likely memory-mapped flash" | `0x18000808` is SRAM (copied from file `+0x322E8`: registers `15 32 3A 3C 3F 48 60 62 65 66 7F 06…0F 12 7F`). The values come from flash `0x03050608` = file `+0x36608` (`0x1100, 0x4495, 0x00C3, 0x0407, 0x28D0…`): the stock AT1846S 12.5 kHz bandwidth profile (`r0 = 1`: the 25 kHz one), not calibration |
+| `11` §21.4 | "the image runs at address 0; handlers read live data inside the image range (`0x38C70`, `0x38E4C`, `0x38908`)" | Those are IRAM .bss addresses that happen to fall in the file's numeric range. The channel images are still in RAM (`11` §14.2 stands), but this is no evidence for base 0 |
+
+**Correct in §11:** the AT1846S identification; the `0x58` *values* and their sites; `0x43` = `0x00BB` (DMR, `+0x2E3C`) vs `0x0100` (FM, `+0x302E`); the DMR, M17 and POCSAG deviation numbers; and the conclusion that `fm-flat-58` must stay bench-only because `0x58` acts on TX and RX together.
+
+**Suggested next steps** (the owner's call; nothing changed here):
+1. Correct `11` §13.3/§21 and `symbols.csv`.
+2. Drop `version-from-image` and keep the tag edit.
+3. Replace the `fm-flat-58` value and drop its mask site.
+4. Add a C7000 `FM_BANDWIDTH` write as a separate experimental patch.
+5. Re-import the image into Ghidra as three regions (flash `0x0301A000`, IRAM `0x10000` from `+0x39408`, SRAM `0x18000800` from `+0x322E0`), as AtomXL's `MapDmrMemory.java` does, before naming more functions.
