@@ -46,7 +46,7 @@ adb shell rm /sdcard/DMR/DMRDEBUG.bin
 
 ### Safety Notes
 
-- ✅ **Firmware loads to module RAM** - Changes are not permanent until power cycle
+- ⚠️ **Loaded firmware is written to the module's SPI flash and persists** across power-cycles and phone reboots (proven 2026-10-23, `docs/deep-dive/19-firmware-modification-plan.md` §14). Restore = load `DMR003.UV4T.V022-ORIGINAL.bin` the same way. Build test images with `tools/fw-patch` so the version string (`0x34`) identifies them
 - ✅ **Fully reversible** - Remove DMRDEBUG.bin to restore factory firmware
 - ✅ **No hardware risk** - App won't flash corrupted firmware (size/checksum validated)
 - ⚠️ **Check both locations**: App checks `/sdcard/DMRDEBUG.bin` AND `/sdcard/DMR/DMRDEBUG.bin`
