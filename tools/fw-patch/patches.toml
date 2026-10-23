@@ -130,3 +130,43 @@ sites = [
   { offset = 0x3074, original = "80e2d670", replacement = "02e0c6bf", note = "at1846_tune FM branch: bsr 0xFD011220 -> bsr stub 0x5B000" },
   { offset = 0x5B000, original = "0000000000000000000000000000000000000000000000000000000000000000", replacement = "d0147de20fb164100f3240b36310441040b39014000500110405001110100200", note = "same stub, tr_sig_lim 0x02 (0x00021010)" },
 ]
+
+# Same redirect as the other C7000 stubs, and a longer body at the same address, so the
+# three are mutually exclusive. The five 0x8405 immediates are not touched: the only
+# 0x84C5 write is the second at1846_write inside the stub, after the redirected 0x3A write
+# and the C7000 stores. A bench that still shows the factory pre-emphasis boost means this
+# redirect is not on the path that holds.
+[patches.c7000-fm-proof]
+why = """UVm3 and UVm7 changed nothing the HackRF could hear, which does not say whether
+the stub at +0x5B000 ran. This image keeps the C7000 FM_BANDWIDTH / FM_DEV_COEF writes and
+adds a second AT1846S write, register 0x58 = 0x84C5, after the redirected register 0x3A
+write. The factory 0x8405 immediates stay. UVm2 showed that 0x84C5 removes the pre-emphasis
+boost, and the no-tone read-modify-write (0x58 & 0xFFF7) keeps bits 6 and 7, so the boost
+disappearing means the stub ran on the keyed path. Bench only, and not combined with a
+0x58 immediate patch."""
+measured_by = "UVm8: the -36 dBFS 1 kHz / 3.5 kHz probe only"
+status = "experimental"
+sites = [
+  { offset = 0x3074, original = "80e2d670", replacement = "02e0c6bf", note = "at1846_tune FM branch: bsr 0xFD011220 -> bsr stub 0x5B000" },
+  { offset = 0x5B000, original = "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", replacement = "d0147de20fb167100f3240b36610471040b3583001eac5847de204b190140000000500110405001110100f00", note = "stub (stubs/c7000_fm_proof.S): redirected write, C7000 stores, then 0x58=0x84C5" },
+]
+
+# Same five sites as the other 0x58 variants. 0xBCFD is the DMR immediate already at
+# +0x2E94 (opcode halfword at +0x2E92 stays). Bits 11-13 are the part UVm6 did not set.
+[patches.fm-flat-58bcfd]
+why = """The exact DMR programming value of AT1846S register 0x58, 0xBCFD, at the five
+analog no-tone immediates. Against 0x84FD (UVm6) the new bits are 11, 12 and 13: VOX
+high-pass bypass, VOX low-pass bypass and RSSI low-pass bypass (OpenRTX driver layout,
+ch. 19 §12). The DMR site at +0x2E94 is already 0xBCFD and is not written again. Loaded
+with ctcss-hpf-keep. The read-modify-write at +0x320C masks with 0x8FFF, but that is
+register 0x3A (movi r0, 58), not register 0x58, so it does not clear bits 12-13 of this
+value. Bench only."""
+measured_by = "UVm9: 50/100/200/300 Hz at -30/-24/-18 dBFS and the 1 kHz / 3.5 kHz probe"
+status = "experimental"
+sites = [
+  { offset = 0x2C90, original = "0584", replacement = "fdbc", note = "at1846_init reg 0x58 = 0xBCFD" },
+  { offset = 0x3054, original = "0584", replacement = "fdbc", note = "at1846_tune FM branch reg 0x58 = 0xBCFD" },
+  { offset = 0x344E, original = "0584", replacement = "fdbc", note = "at1846_set_ctcss_dcs reg 0x58 = 0xBCFD" },
+  { offset = 0x34F2, original = "0584", replacement = "fdbc", note = "at1846_set_ctcss_dcs reg 0x58 = 0xBCFD" },
+  { offset = 0x3640, original = "0584", replacement = "fdbc", note = "at1846_set_ctcss_dcs reg 0x58 = 0xBCFD" },
+]

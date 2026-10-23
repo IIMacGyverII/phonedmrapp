@@ -58,8 +58,13 @@ class PatchTest(unittest.TestCase):
         pairs = [
             ["fm-flat-58", "fm-flat-58dd"],
             ["fm-flat-58", "fm-flat-58fd"],
+            ["fm-flat-58", "fm-flat-58bcfd"],
             ["fm-flat-58dd", "fm-flat-58fd"],
+            ["fm-flat-58dd", "fm-flat-58bcfd"],
+            ["fm-flat-58fd", "fm-flat-58bcfd"],
             ["c7000-fm-flat", "c7000-fm-canary"],
+            ["c7000-fm-flat", "c7000-fm-proof"],
+            ["c7000-fm-canary", "c7000-fm-proof"],
         ]
         for names in pairs:
             with self.subTest(names=names), self.assertRaises(SystemExit):
@@ -106,6 +111,20 @@ class PatchTest(unittest.TestCase):
     def test_fm_flat_58fd_with_mask(self):
         self._assert_reg58(["fm-flat-58fd", "ctcss-hpf-keep"], 0x84FD, (3, 4, 5, 6, 7), ())
 
+    def test_fm_flat_58bcfd_matches_dmr_immediate(self):
+        # The DMR tune already writes 0xBCFD. Its value halfword is at +0x2E94
+        # (the opcode halfword 0xEA01 is at +0x2E92). The analog sites take that
+        # same halfword. Bits 11-13 are the part 0x84FD does not set.
+        dmr = int.from_bytes(self.fac[0x2E94:0x2E96], "little")
+        self.assertEqual(dmr, 0xBCFD)
+        self._assert_reg58(["fm-flat-58bcfd", "ctcss-hpf-keep"], dmr, (3, 4, 5, 6, 7, 11, 12, 13), ())
+        img, _ = build.build(["fm-flat-58bcfd", "ctcss-hpf-keep"], "UVt0", self.cfg)
+        self.assertEqual(img[0x2E90:0x2E98], self.fac[0x2E90:0x2E98])
+        # +0x320C is movi r0, 58 (register 0x3A) and +0x3214 is movi r2, 0x8FFF.
+        # That mask is not applied to register 0x58, and this patch does not touch it.
+        self.assertEqual(img[0x320C:0x3224], self.fac[0x320C:0x3224])
+        self.assertEqual(int.from_bytes(self.fac[0x3216:0x3218], "little"), 0x8FFF)
+
     def test_ctcss_hpf_keep_alone(self):
         img, sites = build.build(["ctcss-hpf-keep"], "UVt0", self.cfg)
         self.assertEqual(len(sites), 1)
@@ -138,6 +157,20 @@ class PatchTest(unittest.TestCase):
         differ = [i for i, (a, b) in enumerate(zip(flat, img)) if a != b]
         self.assertEqual(differ, [0x5B01E])
         self.assertEqual(img[0x5B01C:0x5B020], bytes.fromhex("10100200"))
+
+    def test_c7000_proof_writes_reg58_from_the_stub(self):
+        img, _ = build.build(["c7000-fm-proof"], "UVt0", self.cfg)
+        self.assertEqual(bsr32_target(img, 0x3074), 0x5B000)
+        self.assertEqual(bsr32_target(img, 0x5B002), 0xFD011220)   # redirected 0x3A write
+        self.assertEqual(bsr32_target(img, 0x5B018), 0xFD011220)   # the proof write
+        self.assertEqual(int.from_bytes(img[0x5B016:0x5B018], "little"), 0x84C5)
+        self.assertEqual(img[0x5B012:0x5B014], bytes.fromhex("5830"))  # movi r0, 88
+        pool = [int.from_bytes(img[0x5B020 + 4 * k:0x5B024 + 4 * k], "little") for k in range(3)]
+        self.assertEqual(pool, [0x11000500, 0x11000504, 0x000F1010])
+        self.assertEqual((pool[2] >> 16) & 0xFF, 0x0F)
+        for off in (0x2C90, 0x3054, 0x344E, 0x34F2, 0x3640):
+            self.assertEqual(img[off:off + 2], self.fac[off:off + 2])
+            self.assertEqual(img[off:off + 2], bytes.fromhex("0584"))
 
     def test_refuses_bad_tag(self):
         for tag in ("UV4T", "UV4", "UV-1"):
