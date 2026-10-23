@@ -467,3 +467,18 @@ If the CTCSS routine runs on a no-tone VFO tune, its `& 0xFFF7` re-enables the h
 - The voice clips were not listened to, and receive was not compared. Both checks belong to the image that passes the response test, not to every one.
 
 **Conclusion.** FW18 is not finished. The cut below 250 Hz has one cheap untested candidate left in the same register, so this run does not yet show that the cut is hardware. Next on the bench: UVm5, then UVm6, with the same measurements (1), (3) and (4), and the C7000 canary as a separate image.
+
+## 16. Review of UVm5–UVm7 (2026-10-23, commit `47df3bf4`)
+
+**My §15 hypothesis was wrong.** The CTCSS high-pass (`0x58` bits 3/4) is not the cut. The test was a fair one: the no-tone read-modify-write was found and neutralised, and 50–200 Hz stayed closed at three levels while 300 Hz scaled linearly. Bit 5 explains the 3.5 kHz roll-off, so **UVm6 (`0x84FD` + `ctcss-hpf-keep`) is flat within ±2 dB from 300 Hz to 3.5 kHz**: the best transmit curve so far, short only of the bottom octave.
+
+**Both C7000 results are still unproven.** UVm7's null has the same two readings as UVm3: the stub doesn't run, or `FM_DEV_COEF` isn't in this signal's path. Neither run proves the stub executes. Let the stub show it ran by itself: in the stub, write `0x58 = 0x84C5`, leave the factory `0x8405` immediates in place, and keep the C7000 writes.
+- **If the pre-emphasis disappears,** the stub runs on the keyed path. UVm3 then shows that the C7000 FM band-pass and pre-emphasis are not in the transmit chain, and UVm7 shows the same for its limiter.
+- **If it doesn't disappear,** the redirect at `+0x3074` is not the write that holds.
+
+**What is left for the cut below 250 Hz:**
+1. **The rest of `0x58`.** The DMR value's upper byte (`0xBC`, bits 11–13: VOX high-pass, VOX low-pass, RSSI low-pass) has not been tried on analog. Writing the exact DMR value `0xBCFD` at the five sites + `ctcss-hpf-keep` is one image, and it exhausts this register.
+2. **The phone side, before the module.** Every transmit test feeds PCM through PrizeTinyService into the phone's audio codec. A codec uplink/downlink high-pass, or an AC-coupled analog line to the module's microphone input, would cut exactly this octave, and no module image can change that. This is read-only to check: the codec's mixer controls (`tinymix` as root, list only) for HPF / DC-block switches on the route TinyService uses, and the stock app's or tinyserver's audio route.
+3. **Where transmit audio enters the module** (§12.2, still unread): digital into the HR-C7000 (then its ADC/audio front end, independent of `FM_BANDWIDTH`) or analog into the AT1846S microphone pin. If it is analog with a coupling capacitor, the cut is hardware.
+
+**Next:** the stub self-proof image, the `0xBCFD` image, and the read-only codec survey. If all three come back negative, the bottom octave is outside software reach. The fallback is then the run-time pre-shaping and receive-equalizer route (the M17/POCSAG deep dives), now on a flat 300 Hz–3.5 kHz path (UVm6) instead of the factory one.
