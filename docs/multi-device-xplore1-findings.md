@@ -209,3 +209,9 @@ Applied in SignalDeck (2026-10-22, Xplore profile revision 2): channel writes at
 - **Symptom (beta.16):** after an update the module answered RSSI (0x32) at once but no 0x23/0x2F/0x30/0x34 for about four minutes, then answered them all in one burst and went quiet again: MON came on minutes late, the 60 s check heard nothing, CTCSS settings never took effect. No boot banner: the power line reads back empty on this phone, so "power on" never restarted a module that was already on.
 - **Fix (beta.17):** the start-up handshake waits 3 s for the 0x34 answer and otherwise really restarts the module (power, pwd and PTT lines off, 1 s, normal power-up; QuickChat does the same with a 5 s watchdog), and a runtime watchdog restarts it when a watched command waits 6 s while RSSI still answers.
 - **Result (tester, beta.17):** the handshake found the module silent, restarted it, the boot banner (`开机初始化完成`) arrived for the first time, and the second radio test passed: reception, MON and CTCSS 100 Hz all work; commands answered in 8–113 ms.
+
+## beta.18 report (2026-10-24, folder sent by hand)
+
+- SignalDeck held both ports (`/dev/ttyS0` 57600 control, `/dev/ttyS1` 230400 audio) as `untrusted_app`; no SELinux denials; QuickChat stopped.
+- **Device tree `/intercom`** (`compatible = "chamsion,intercom"`, detect IRQ `intercom_detect_gpio_int`): its `pinctrl-names` decode to `default`, `intercom_dmr_oe_en_low/high`, `intercom_dmr_pwd_en_low/high`, `intercom_dmr_vdd_en_low/high`, … (cut at 160 bytes; 11 pin states in all). So the kernel driver switches an output-enable, the PD line and the supply; userspace only sees `intercom_{power,pwd,ptt}_control` (all read back empty) and a new `intercom_factory_test` (0). SignalDeck already drives those nodes; nothing to add.
+- The report itself had gaps (no summary, the pin names as hex cells, a logcat section full of window noise, SELinux "unknown"): fixed in SignalDeck `157f7330`, not yet on a phone.
