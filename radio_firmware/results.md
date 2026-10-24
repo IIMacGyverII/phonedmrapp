@@ -687,3 +687,45 @@ The analog `0x23` unpack sets struct byte 0 to 0 (`+0x9A56`) and stores body byt
 ## End state
 
 Factory image restored over R301. YModem `onSuccess` at 23:02:14.530. The first version query still printed `0x29050000` at 23:02:25.205 while the previous image was powered, then one restart (23:02:26.595, power cycle 23:02:27.621). Banner `开机初始化完成` at 23:02:30.787. `0x34` at 23:02:31.098 is `DMR003.UV4T.V022` (body `44 4D 52 30 30 33 2E 55 56 34 54 2E 56 30 32 32 00`). Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. The takeover wrote analog `0x23` for 162.425 MHz, band 1, power low, squelch 5 (body `A8 68 AE 09 A8 68 AE 09 01 00 05 …`), acked `RX cmd=0x23 rw=0 sr=0` at 23:02:31.175. Voice: Channel 36, NOAA WX4. SignalDeck owns the radio: the stock app is paused and the UART is open. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched. No HackRF capture and no key-up. The ES8311 debug node was not written. §6 is not met.
+
+# R3a2 — gated TX-RAM square; the host key still radiates the codec tone (2026-10-23, 23:28–23:42)
+
+HackRF receive only, 467.385 MHz center, 2.4 MS/s, LNA 24, VGA 38. Phone transmissions were the factory boot cycle, the R3a2 boot, and one 3 s low-power key on the 467.625 VFO. Nineteen patch tests pass.
+
+## Factory boot, receive only
+
+The flash image was `DMR003.UV4T.V022`. VFO 467.625 / 467.625 FM, low power, at 23:28:33.859 (`0x23` body `28 64 DF 1B … 01 00 02`, acked `sr=0`). DIAG `restartmodule` at 23:28:39.407. Power cycle 23:28:40.474. Banner `开机初始化完成` at 23:28:43.631. `0x34` at 23:28:43.943 is `DMR003.UV4T.V022`. The same 467.625 `0x23` was written again at 23:28:43.987 and acked at 23:28:44.011.
+
+The capture is 24.0 s (115200000 bytes) and starts 1.5 s before the restart. Power is the mean square of the int8 IQ, so a carrier anywhere in 466.185–468.585 MHz would raise it. The pre-restart median is 6.80. The hottest 100 ms bin is +0.11 dB, at 14.2 s. No bin reaches +3 dB. Clip fraction 0. The hottest half-second's spectrum fills ±24 kHz. The factory boot cycle does not radiate at 467.625. The self-test runs before the post-boot `0x23`, and that window is inside the capture.
+
+## The flag and the image
+
+Cmd `0x26` is index 4 of the jump table at file `+0x38240` (XIP `0x03052240`). The thunk at `+0xABCA` branches to the handler at `+0x9264`. Launch 1 enters at `+0x92B2` (factory `17 6c 57 6c`). Launch 2 enters at `+0x929C` (factory `83 ea a2 00`). Both then call `+0xE9C`, which posts an event, and ack through `+0x8E7C`. The handler does not branch to key-up.
+
+The flag word is IRAM `.bss` `0x4DAAC`. Boot zeroes `0x31AF4`–`0x4DAB0`. The factory image has no little-endian literal of `0x4DAAC`. The highest referenced word below the BSS end is `0x4DAA8`.
+
+`DMR003.R3a2.V022.bin`, 378620 bytes, sha256 `74a47c45e4e52a65fbdc5b3e07d9ceefe41f6b5f53be9961a178735e07e28f64`, file and pushed MD5 `fd8e6b19d0672b808dd1e162856bf26c`. The hook at `+0x3EDFC` stays `82 e1 06 fb 00 30` (runtime `bsr` from IRAM `0x159F4` to XIP `0x03075000`). The stub at `+0x5B000` is 124 bytes. With the flag zero it does the factory PTT store (`lrw r3, 0x11000560; movi r2, 1; st.w; jmp r15`) and returns before any TX-RAM store. With the flag set it sets `0x11000080[0]`, clears `FM_BANDWIDTH` bits 4 and 6, fills +256 / −256, then stores PTT. `+0x92B2` is `bsr` to `set_flag` (`+0x5B04C`), which stores 1 and then `movi r0, 1; movi r1, 1`. `+0x929C` is `bsr` to `clear_flag` (`+0x5B058`), which stores 0 and reloads `r3` with `0x38874`. One flag. The second, `0x23`-since-boot, flag was not added.
+
+## R3a2 boot
+
+YModem `onSuccess` at 23:35:33.629. Take-over at 23:35:42.114 found the module already powered. The version query printed `0x29050000` at 23:35:42.939 and 23:35:44.988, then one restart (23:35:45.136, power cycle 23:35:46.162). Banner `开机初始化完成` at 23:35:49.317. `0x34` body `44 4D 52 30 30 33 2E 52 33 61 32 2E 56 30 32 32 00`, `module DMR003.R3a2.V022` at 23:35:49.627. The takeover then wrote channel 36, 162.425 MHz, band 1, power 0, squelch 5 (body `A8 68 AE 09 … 01 00 05`), acked at 23:35:49.704. Voice: Channel 36, NOAA WX4. The VFO did not survive the stock app's ownership.
+
+The HackRF file covers 162.8 s from 23:33:10, through that boot. Floor 6.82, hottest bin +0.13 dB, clip 0, no bin at +3 dB. Same noise as the factory boot. Nothing radiated at 467.625 beyond the factory baseline.
+
+## The 3 s key
+
+VFO 467.625 again at 23:37:15.869, low power, the same `0x23` body as the factory tune. DIAG `testtone` 3000 ms at 23:37:20.665. `0x26` launch 1 at 23:37:20.713, acked `sr=0` at 23:37:20.718. `0x36` body `03` (SEND_START) at 23:37:20.724. `played 24000 samples` at 23:37:24.120. Launch 2 at 23:37:24.121, acked, then `0x36` body `04` (SEND_STOP) at 23:37:24.453.
+
+Carrier 3.77 s, SNR 37.6 dB, clip 0, crystal offset +848 Hz. Over the steady 2.97 s the deviation is a sine at 999.5 Hz. Its rms is 1.47 kHz, so the sine amplitude is about ±2.1 kHz. The 99th percentile of `|deviation|` on the whole keyed window is 2.8 kHz. The 15.625 Hz square fundamental is 0.2 Hz, and the 0–100 Hz band is a few hertz. The air is the phone's 1 kHz codec tone. A was not raised. The ±5 kHz stop was not reached.
+
+The host key is real: the MCU acknowledged launch and sent SEND_START. The modulator still radiated the codec waveform, so the gated FM key-up stub did not supply the modulation. The only static caller of key-up remains `+0x3D710` inside `+0x3D688`. `+0xE9C` posts an event and does not branch there.
+
+## Proposed next image, not built
+
+Program the DMR modulator around the same square. Two-point `RF_MODE`. AT1846S `0x58` = `0xBCFD`. The `0x30` sequence the DMR tune writes: common path `0x4006` then `0x4046`, then the DMR branch `0x4006` then `0x4026`, so the register is left at `0x4026`, and the bandwidth profile is called with `r0` = 0 (12.5 kHz). That is the DMR branch. The FM pair `0x7006` / `0x7026` stays unused. No bit-4 image. R4 was not built. §6 is not met.
+
+This radio's narrow-band DMR outer symbol, 12.5 kHz with `0x30` left at `0x4026`, is ±3.3 kHz, about 1.7× the standard ±1944 Hz. The BTECH 6X2 still decodes it. Noted on the DMR route in `radio_firmware/HANDOFF.md`.
+
+## End state
+
+Factory image restored over R3a2. YModem `onSuccess` at 23:41:58.545. The first version query printed `0x29050000` at 23:42:07.929, then one restart (23:42:10.404, power cycle 23:42:11.429). Banner `开机初始化完成` at 23:42:14.584. `0x34` at 23:42:14.894 is `DMR003.UV4T.V022` (body `44 4D 52 30 30 33 2E 55 56 34 54 2E 56 30 32 32 00`). Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. The takeover wrote analog `0x23` for 162.425 MHz, band 1, power 0, squelch 5 (body `A8 68 AE 09 … 01 00 05`), acked `RX cmd=0x23 rw=0 sr=0` at 23:42:14.968. Voice: Channel 36, NOAA WX4. SignalDeck owns the radio. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched. The ES8311 debug node was not written. §6 is not met.

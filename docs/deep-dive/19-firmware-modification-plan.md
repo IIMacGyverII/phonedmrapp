@@ -298,6 +298,18 @@ The R1 bench row stored `band` = 1. The DMR branch of `at1846_tune` (struct byte
 
 End state: factory image, YModem `onSuccess` 23:02:14.530, banner at 23:02:30.787, `0x34` = `DMR003.UV4T.V022` at 23:02:31.098, factory MD5 `4426035392262ca54583c230c9e268e0`. The module acked channel 36 (162.425 MHz, band 1, squelch 5, low power, `RX cmd=0x23 rw=0 sr=0`) and the app announced NOAA WX4. SignalDeck owns the radio. No `DMRDEBUG.bin`. `PATCH14_BACKUP.bin` was not touched. The ES8311 debug node was not written. §6 is not met.
 
+**2026-10-23 (23:28–23:42) — R3a2 boots, and a host key still radiates the codec tone.** HackRF receive only, 467.625 MHz, low power. Tables: `radio_firmware/results.md`.
+
+The factory boot, with the VFO already on 467.625, does not radiate there. DIAG `restartmodule` at 23:28:39.407, power cycle 23:28:40.474, banner 23:28:43.631, `0x34` `DMR003.UV4T.V022` at 23:28:43.943, then the same `0x23` again. A 24 s capture (LNA 24, VGA 38) has its hottest 100 ms bin +0.11 dB over the pre-restart floor, clip 0, and no bin at +3 dB. The power is the whole 2.4 MHz window.
+
+Cmd `0x26` is handled at file `+0x9264` (table `+0x38240`, thunk `+0xABCA`). Launch 1 is `+0x92B2`, launch 2 is `+0x929C`. The flag is the unreferenced `.bss` word `0x4DAAC`. `R3a2` keeps the IRAM-to-XIP hook `82e106fb0030`. The stub does the factory PTT store when the flag is zero, and the TX-RAM square only when it is set. Launch 1 sets the word; launch 2 clears it and reloads `r3` with `0x38874`. sha256 `74a47c45e4e52a65fbdc5b3e07d9ceefe41f6b5f53be9961a178735e07e28f64`. Nineteen tests pass. YModem `onSuccess` 23:35:33.629. Banner 23:35:49.317. `0x34` `DMR003.R3a2.V022` at 23:35:49.627. The 162.8 s capture of that boot peaks at +0.13 dB, clip 0. Nothing at 467.625 beyond the factory boot. After the banner the takeover programmed channel 36.
+
+One 3 s key on the 467.625 VFO, low power: `0x26` launch 1 acked, `0x36` body `03`, 24000 samples, launch 2, `0x36` body `04`. The deviation is a 999.5 Hz sine, rms 1.47 kHz, amplitude about ±2.1 kHz, clip 0. The 15.625 Hz fundamental is 0.2 Hz. The air is the phone's codec tone. A was not raised. The stub did not supply the modulation. The only static caller of key-up is still `+0x3D710`.
+
+The next image is not built. It would put the DMR modulator around the same square: two-point `RF_MODE`, AT1846S `0x58` = `0xBCFD`, and the DMR `0x30` sequence (common path `0x4006` then `0x4046`, then the DMR branch `0x4006` then `0x4026`, left at `0x4026`, profile `r0` = 0). The FM pair `0x7006` / `0x7026` stays unused. This radio's 12.5 kHz DMR outer symbol, `0x30` left at `0x4026`, is ±3.3 kHz, about 1.7× ±1944 Hz, and the BTECH 6X2 still decodes it. That scale is now in `radio_firmware/HANDOFF.md` on the DMR route. §6 is not met.
+
+End state: factory image, YModem `onSuccess` 23:41:58.545, banner 23:42:14.584, `0x34` = `DMR003.UV4T.V022` at 23:42:14.894, factory MD5 `4426035392262ca54583c230c9e268e0`. The module acked channel 36 (162.425 MHz, band 1, squelch 5, low power) and the app announced NOAA WX4. SignalDeck owns the radio. No `DMRDEBUG.bin`. The ES8311 debug node was not written.
+
 ---
 
 ## 11. Review of the 2026-10-23 findings (FW8/FW11/FW16, commit `b8ee26df`)
