@@ -2055,3 +2055,32 @@ The plain sweep tracks the chirp: expected 747, 1241, 1735, 2228 and 2623 Hz com
 ## End state
 
 100 Hz is not within 6 dB of 1 kHz in any variant. R-C closes on that measurement. The receive side stays the audio-path equaliser. RC30 stays loaded. VFO 467.625 / 467.625 FM at 15:38:49.337, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. The phone was not keyed.
+
+# R-C step 4 — 128 ms lines, tag RC40 (2026-10-24, 15:53 load, 16:01–16:06 measurement)
+
+Op 5 holds `WORK_MODE` `0x80` across four `FM_ADDR_SW` changes and copies the half that value names, with `ld.b`, into `0x4A400`. Four replies return the 2048 bytes. Variants are the RC30 set. The phone was not keyed. HackRF FM was 467.625 MHz, 2 MS/s, deviation 2.5 kHz, TX VGA 20, amp off. Each tone was captured three times. The level is a Goertzel line at that frequency over the 1024 samples, and the table is the median of the three against the median 1 kHz line.
+
+`DMR003.RC40.V022.bin`, 378620 bytes. sha256 `f129a0c37bd22d672c5398bfdb273c702a586e7e14fce248120498003c3c89d4`. Pushed MD5 `cbbf0e1a95960b3c5e3f1d17c06f875c` at the 15:55:39.888 load. The HackRF was absent for that boot, so the module was power-cycled again for the capture below. Adb was `192.168.1.125:5555`.
+
+## Boot and quiet reads
+
+Banner `开机初始化完成` at 16:01:03.522. `0x34` at 16:01:03.835 is `DMR003.RC40.V022`. Boot peak 0.08 dB, no run at +10 dB. VFO 467.625 / 467.625 FM at 16:01:30.554. A quiet op 5 on each variant returned four frames. Idle rms is 9–34. The `xx 00 00 00` groups are 0 or 1 per half. Receive peaks are 0.03–0.07 dB. The halves alternate, so each reply is the next completed half.
+
+## Lines
+
+| Variant | 300 Hz | 100 Hz | 50 Hz | Largest half-boundary step |
+| --- | --- | --- | --- | --- |
+| 0, plain | +11.1 dB | −42.1 dB | −46.1 dB | 2.3× |
+| 2, `FM_BANDWIDTH` bits 4 and 6 clear | −4.4 dB | −22.4 dB | −24.0 dB | 97× on one 300 Hz capture |
+| 3, AT1846S `0x58` = `0xBCFD` | +11.3 dB | −19.3 dB | −22.8 dB | 5.8× |
+| 4, both | −2.3 dB | +0.3 dB | −0.3 dB | 8.3× |
+
+The three 100 Hz lines on variant 4 are 7465, 8526 and 8878, against 1 kHz lines 7707, 8275 and 8499. The half-boundary step on those captures is at most 7.8 times the median sample-to-sample step. It does not move the line. Variant 2's 300 Hz readings are 8000, 5441 and 4733, and one of them has a step 97 times the median, so that row is the rough one. Its 100 Hz readings are 680, 616 and 725.
+
+## The state that passes
+
+100 Hz is within 6 dB of 1 kHz only on variant 4. During that capture the module has `WORK_MODE` `0x11000100` = `0x80`, `FM_BANDWIDTH` `0x11000500` with bits 4 and 6 clear, and AT1846S register `0x58` = `0xBCFD`. The reply then restores `WORK_MODE` and `FM_BANDWIDTH` and writes `0x58` back to `0x8405`. Either change alone leaves 100 Hz at −19 dB or −22 dB.
+
+## End state
+
+R-C and R-B close on this measurement. The receive design stays the audio-path equaliser. RC40 stays loaded. VFO 467.625 / 467.625 FM at 16:06:43.569, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. The phone was not keyed.

@@ -5,15 +5,16 @@
  * in bits 7:6 (01 = +3, 00 = +1, 10 = -1, 11 = -3). 2 reads the fill, the
  * underrun count and the last error. 3 resets the ring. 4 renders: the next
  * two bytes are a sample count N, 1..256, and the reply body is 2N bytes in
- * TX-RAM order, taken from the scratch at 0x4AC00. 5 returns both FM
- * receive halves, each as 256 big-endian int16 copied with ld.b. The next
- * byte is 0, 2, 3 or 4. Every variant stores WORK_MODE 0x80 and restores
- * it. 2 and 4 also clear FM_BANDWIDTH bits 6 and 4 for the capture. 3 and
- * 4 also store AT1846S 0x58 as 0xBCFD and write 0x8405 back. Each reply
- * carries one half, FM_SQL, the half index and the switch. The frame is
- * built at 0x4AE00, not on the stack. Op 5 does not write PTT. Anything
- * else, including 1, is refused. Nothing in this command keys. A clear
- * cursor at 0x4DAAC does nothing, including at boot.
+ * TX-RAM order, taken from the scratch at 0x4AC00. 5 captures four
+ * consecutive FM receive halves. The next byte is 0, 2, 3 or 4. Every
+ * variant stores WORK_MODE 0x80 and holds it across the four halves. 2
+ * and 4 also clear FM_BANDWIDTH bits 6 and 4. 3 and 4 also store AT1846S
+ * 0x58 as 0xBCFD and write 0x8405 back. Each change of FM_ADDR_SW copies
+ * the half that value names, with ld.b, into 0x4A400. Four replies then
+ * return those 2048 bytes. The frame is built at 0x4AE00, not on the
+ * stack. Op 5 does not write PTT. Anything else, including 1, is refused.
+ * Nothing in this command keys. A clear cursor at 0x4DAAC does nothing,
+ * including at boot.
  *
  * The ring is 2048 signed bytes at 0x4A400. 0x4A3E4 is the write count,
  * 0x4A3E8 the next symbol base, 0x4A3EC the phase, 0x4A3F0 the underrun
@@ -247,14 +248,15 @@ store40:
 	movi	r1, 48381
 	.short	0xE000, 0x0B22
 .Lno58:
-	movi	r6, 1
-	lsli	r6, 22
+	movi	r6, 0
 	movi	r4, 0
-	movi	r3, 0
+.Lround:
+	movi	r3, 1
+	lsli	r3, 22
 .Lspin:
-	cmpnei	r6, 0
+	cmpnei	r3, 0
 	bf	.Lto
-	subi	r6, 1
+	subi	r3, 1
 	lrw	r0, 0x1100056c
 	ld.w	r0, (r0, 0)
 	andi	r0, r0, 3
@@ -265,61 +267,53 @@ store40:
 	cmpnei	r0, 2
 	bt	.Lspin
 .Lleg:
+	cmpnei	r4, 0
+	bt	.Lhave
+	mov	r4, r0
+	br	.Lspin
+.Lhave:
 	mov	r1, r4
 	subu	r1, r0
 	cmpnei	r1, 0
 	bf	.Lspin
 	mov	r4, r0
-	addi	r3, 1
-	cmpnei	r3, 2
-	bt	.Lspin
-	st.b	r4, (r14, 13)
-	lrw	r4, 0x11000508
-	ld.w	r5, (r4, 0)
-	st.w	r5, (r14, 8)
+	cmpnei	r4, 1
+	bt	.Lrxhi
 	lrw	r1, 0x160004e0
-	lrw	r6, 0x4ae00
-	addi	r6, 8
-	movi	r3, 1
-	lsli	r3, 9
-.Lcl:
-	ld.b	r0, (r1, 0)
-	st.b	r0, (r6, 0)
-	addi	r1, 1
-	addi	r6, 1
-	subi	r3, 1
-	cmpnei	r3, 0
-	bt	.Lcl
+	movi	r2, 0
+	br	.Lput
+.Lrxhi:
 	lrw	r1, 0x160006e0
-	lrw	r6, 0x4ac00
-	movi	r3, 1
-	lsli	r3, 9
-.Lch:
-	ld.b	r0, (r1, 0)
-	st.b	r0, (r6, 0)
-	addi	r1, 1
-	addi	r6, 1
-	subi	r3, 1
-	cmpnei	r3, 0
-	bt	.Lch
-	bsr	.Lrest
-	movi	r5, 0
-	bsr	.Lsendh
-	lrw	r1, 0x4ac00
-	lrw	r0, 0x4ae00
+	movi	r2, 1
+.Lput:
+	mov	r0, r14
 	addi	r0, 8
+	addu	r0, r6
+	st.b	r2, (r0, 0)
+	lrw	r0, 0x4a400
+	mov	r2, r6
+	lsli	r2, 9
+	addu	r0, r2
 	movi	r3, 1
 	lsli	r3, 9
-.Lfh:
+.Lrxbyte:
 	ld.b	r2, (r1, 0)
 	st.b	r2, (r0, 0)
 	addi	r1, 1
 	addi	r0, 1
 	subi	r3, 1
 	cmpnei	r3, 0
-	bt	.Lfh
-	movi	r5, 1
+	bt	.Lrxbyte
+	addi	r6, 1
+	cmpnei	r6, 4
+	bt	.Lround
+	bsr	.Lrest
+	movi	r5, 0
+.Louts:
 	bsr	.Lsendh
+	addi	r5, 1
+	cmpnei	r5, 4
+	bt	.Louts
 	addi	r14, 16
 	addi	r14, 4
 	pop	r4-r7, r15
@@ -376,29 +370,41 @@ store40:
 	st.b	r2, (r4, 5)
 	movi	r2, 2
 	st.b	r2, (r4, 6)
-	movi	r2, 6
+	movi	r2, 2
 	st.b	r2, (r4, 7)
-	ld.w	r2, (r14, 8)
+	lrw	r1, 0x4a400
+	mov	r0, r5
+	lsli	r0, 9
+	addu	r1, r0
 	mov	r0, r4
 	addi	r0, 8
 	movi	r3, 1
 	lsli	r3, 9
-	addu	r0, r3
-	st.w	r2, (r0, 0)
-	st.b	r5, (r0, 4)
-	ld.b	r2, (r14, 13)
-	st.b	r2, (r0, 5)
+.Lsb:
+	ld.b	r2, (r1, 0)
+	st.b	r2, (r0, 0)
+	addi	r1, 1
+	addi	r0, 1
+	subi	r3, 1
+	cmpnei	r3, 0
+	bt	.Lsb
+	st.b	r5, (r0, 0)
+	mov	r1, r14
+	addi	r1, 8
+	addu	r1, r5
+	ld.b	r2, (r1, 0)
+	st.b	r2, (r0, 1)
 	movi	r2, 16
-	st.b	r2, (r0, 6)
+	st.b	r2, (r0, 2)
 	movi	r0, 1
 	lsli	r0, 9
-	addi	r0, 15
+	addi	r0, 11
 	mov	r1, r4
 	.short	0xE000, 0x8E5C
 	mov	r0, r4
 	movi	r1, 1
 	lsli	r1, 9
-	addi	r1, 15
+	addi	r1, 11
 	.short	0xE000, 0x7DE8
 	lrw	r4, 0x4a3f8
 	ld.w	r15, (r4, 0)
