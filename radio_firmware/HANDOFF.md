@@ -71,6 +71,27 @@ R3a2, from ch. 19 §23 (Claude Code's review of R3-0):
    - Raise A in 6 dB steps, under the ±5 kHz stop.
 5. **Docs:** add the ±3.3 kHz narrow DMR outer deviation (1.7× the standard) to the DMR notes.
 
+## Goal and route list (owner, 2026-10-23: "discover every possible way we can get M17 to work")
+
+Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Claude Code then picks the next step, and may reorder the routes from the results. A route is closed only by a measurement or a firm reading, written up in `results.md`.
+
+**Transmit (the hard part: the FM audio path cuts below ~250 Hz, phone-side analog, ch. 19 §19)**
+- **T1: TX RAM through the C7000 FM modulator** (R3a2 now, then R4: a UART symbol command `0x3D`, with the RRC shaper in firmware). This is the main line.
+- **T2: the C7000 DMR modem as a raw 4FSK source.**
+  - `WORK_MODE` `0x22` is "physical layer" (guide Table 27): read whether it transmits raw symbols, continuously or only in bursts, and from where (TX RAM / registers).
+  - Read the symbol map and filter controls: `RF_MODE[7]` gives two deviation maps; is there an RRC roll-off or filter-bypass setting? M17 needs ±2400 Hz outer and RRC α = 0.5; DMR uses ±1944 Hz and α = 0.2. The measured air scale is 1.7× the map.
+  - If the modem can hold PTT continuously and take symbols from RAM, M17 could be generated with no shaper of our own.
+- **T3: the AT1846S itself.** Does it have a direct/DC modulation input or a TX test-tone generator with arbitrary data (registers `0x3A`, `0x30`, `0x41`–`0x44`, the tone generator `0x35`/`0x36`)? Read only.
+- **T4: a hybrid.** Only if T1–T3 all fail: what plain-M17 decode rate a standard receiver gets from the UVm6 path with the best pre-shaping (measured, not assumed). This is the fallback number.
+
+**Receive (works today with the calibrated DFE; these aim at plain or simpler decoding)**
+- **R-A: C7000 DMR demodulator symbols.** In DMR receive, the C7000 slices 4FSK itself. Read whether raw symbols or a demodulator output can be read (RX RAM, registers) and passed over the UART. That would bypass the ES8311 high-pass on receive.
+- **R-B: the ES8311 ADC high-pass** (receive side, phone kernel). Reading registers with count 0 is a read, but it is still a write to a debug node, so ask the owner first (`STATUS: OWNER`).
+
+**Vocoder and protocol (SignalDeck side, later):** Codec 2 3200 already encodes (DIAG `m17 --es enc`). Full M17 voice TX needs the frames (LSF, stream frames, CRC, Golay, convolutional code, puncturing, interleaving and randomising), written from the M17 spec. libm17 is GPL-2.0-only: never port it.
+
+**Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
+
 ## Last report
 
 (none yet under this protocol; previous results: `radio_firmware/results.md`, R3-0)
