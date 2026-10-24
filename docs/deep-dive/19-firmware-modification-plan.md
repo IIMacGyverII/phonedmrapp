@@ -574,3 +574,25 @@ For the transmit cut, close the firmware track here.
 - **Its registers can't be read without writing.** The driver exposes `es8311_debug/es8311` (root, rw). Reading it returns one register (`0x0000=0x0080`); other registers are chosen by writing to the node, which was not done. There is no regmap debugfs.
 - **What to check (ES8311 datasheet).** The ADC has a digital DC-removal high-pass with programmable coefficients (the `ADC_HPF` / `HPFS` fields, around registers `0x1B`/`0x1C`). That is on the **receive** direction (module → phone), so it is a candidate for part of the receive loss below 250 Hz. On the **transmit** direction (phone → ES8311 DAC → module), check whether the datasheet lists any DAC-side high-pass. If there is none, the transmit cut is the analog coupling to the AT1846S: hardware.
 - **Who changes it.** Any ES8311 change is a phone-kernel audio setting, outside the module firmware, so it is the owner's decision. Reading registers through `es8311_debug` needs its write format (select-only versus write) worked out from the driver first. Never guess it.
+
+## 20. Chasing every remaining route (owner, 2026-10-23: "chase every chance we have")
+
+**Checked on the phone the same evening (read-only, nothing transmitted, nothing written to any audio setting).**
+- **The ES8311 is on both links.** The kernel strings say `es8311 find, i2s1 codec dai_link` and `… i2s2 codec dai_link`.
+- **It exposes no high-pass control.** Its ALSA controls (kernel strings) are `DAC SDP MUTE` / `ROUTE` / `SRC MUX`, `DAC DSM MUTE`, `DAC DEM MUTE`, `DAC OFFSET`, `DAC RAMP RATE`, `MIC PGA GAIN`, `ADC SCALE`, `ADC RAMP RATE`, `ADC INVERTED`, `ADC SDP MUTE` / `ROUTE`, `ADC FS MODE`, `ADC DATA TO DAC TEST MODE`, the `ALC …` and `DRC …` set, and `ADC/DAC RAM CLR`. The ES8311's DC-removal high-pass sits on the ADC (receive) side and is register-only. Nothing on the DAC (transmit) side looks like a high-pass. **The transmit cut is therefore most likely the analog coupling between the ES8311 output and the module's microphone input**: hardware.
+- **`/dev/ttyS1` on the Armor carries no audio.** The Xplore 1 module streams PCM on a second UART at 230400. On the Armor, `ttyS1` (SELinux `mt6825muxd_device`) took the speed setting, but with monitor on and receive audio flowing (RMS 5405 through TinyService), it received **0 bytes** in 6 s (`/proc/tty/driver`: rx 0, no framing errors). That path is not wired, or not enabled, on this module.
+
+**The route that avoids the analog line entirely: let the HR-C7000 make the modulation.** DMR transmits correctly from this radio, and DMR's 4FSK needs a usable low end. The C7000 builds that signal itself and drives the modulator, with no phone audio involved. The user guide (Document 2, §7.2.2.1) gives analog FM a second source, **TX RAM** (`0x11000080[0]` = 1, ping-pong at `0x16000030`–`0x1600042F`). If FM from TX RAM leaves through the same modulator path as DMR, then a firmware patch could:
+1. take M17 or POCSAG **symbols** over the control UART (M17 is 9600 bit/s and POCSAG 1200 bit/s, both well inside 57600 baud, so no PCM transfer is needed);
+2. shape them in the module (RRC for M17, NRZ/Gaussian for POCSAG);
+3. write the samples to TX RAM.
+
+That bypasses the ES8311, the coupling capacitor and the AT1846S microphone path.
+
+Steps, cheapest first:
+- **R1 (no firmware change): is the DMR modulation path DC-capable?** Transmit DMR at low power on 467.625 MHz (a bench digital channel, CC1, TS1, a test talkgroup) and capture it with the HackRF. FM-demodulate it and check, inside each 27.5 ms burst, that the 4FSK outer levels stay flat (no droop between sync and payload), and how much spectrum sits below 250 Hz. Flat levels mean the C7000 modulator path passes the low end.
+- **R2 (host reading): how analog FM reaches the RF in each mode.** `WORK_MODE` / `RF_MODE` (two-point modulation) in DMR mode against FM mode; what TX RAM FM needs (the source bit, the ping-pong refill interrupt, sample format and rate, and the deviation scaling); and which AT1846S registers DMR mode changes so that it accepts the C7000 modulation (`0x30`, `0x43`/`0x44`, `0x58` = `0xBCFD`).
+- **R3 (first image): FM from TX RAM with a fixed pattern.** A stub selects the TX RAM source on FM and fills the ping-pong with a slow square wave at a deliberately small amplitude. Measure whether a 15–60 Hz fundamental comes out with flat tops. Raise the amplitude only once the scale is known (±5 kHz stop as always).
+- **R4: a symbol-stream command.** A new UART command (an unused command byte) carries M17/POCSAG symbols; firmware shapes them into TX RAM under PTT. SignalDeck gets a matching sender. Measure against §6 (plain M17 decode 85/90, POCSAG 100 %).
+
+**Receive side, optional.** Reading or writing ES8311 registers needs the `es8311_debug` write format, from `es8311_store` in the kernel. The symbols are hidden (`kptr_restrict`), and changing that is a security setting, so it stays off. Recover the symbol table offline from the boot image's kernel instead, then disassemble `es8311_store`. Any ES8311 write is the owner's decision. Receive M17/POCSAG already works with the equalizers.
