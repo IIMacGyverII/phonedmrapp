@@ -1097,3 +1097,53 @@ The tone is 2261 Hz, 6% under the M17 outer deviation of ±2.4 kHz. The steady p
 ## End state
 
 Factory image restored over R3b0. YModem `onSuccess` at 02:32:06.360. Banner `开机初始化完成` at 02:32:18.323. `0x34` at 02:32:18.633 is `DMR003.UV4T.V022`, on the first poll. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. VFO 467.625 / 467.625 FM at 02:32:20.450, low power. SignalDeck owns the radio. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched. The ES8311 debug node was not written.
+
+# R4a — an RRC 4FSK pattern at peak count 5120, tag R4a0 (2026-10-24, 02:48–03:01)
+
+HackRF receive only, 467.385 MHz center, 2.4 MS/s, LNA 24, VGA 38. One boot and one 3 s silence key, both at 467.625 MHz, low power. Twenty-eight patch tests pass. The peak was not raised. No M17 frame was sent. The version field holds four characters, so the image tag is `R4a0`.
+
+## The image
+
+`c7000-txram-dmr-rrc`, tag `R4a0`, `DMR003.R4a0.V022.bin`, 378620 bytes. sha256 `9271b363eeda6e6ad6625007e98bd25795eb05c1f3e22c23bac1fc6951fac653`. File and pushed MD5 `049ff4ed685179c3392a5931b9ca5e9b`.
+
+Same host-key path as the sine. The stub is 180 bytes at `+0x5B000`, and `on_unkey` is at `+0x5B080`. The fill is 512 little-endian halfwords at `+0x5C000` (XIP `0x03076000`). `+0x3074` and `+0x3EDFC` are factory. Bit 4 stays clear. The measured sine images still build.
+
+The samples are one root-raised-cosine, α = 0.5, at 4800 symbols/s and 8 kHz. The symbol sequence, repeated, is +3, +1, −1, −3, +3, −1. Six symbols are ten samples. 306 symbols fill 510 samples, and samples 510 and 511 repeat samples 0 and 1, so the wrap has one extra pair. The signed immediates of that ten-sample period are 19, 12, 2, −2, −12, −20, 7, 20, −7, 1. The aired counts are those immediates times 256. The peak is ±5120. The period repeats 51 times, then the first two samples.
+
+## Boot
+
+VFO 467.625 / 467.625 FM at 02:48:52.099, low power. HackRF probe 9600000 bytes at 02:48:51. Boot capture from 02:48:57, 180.0 s, floor power 6.81. YModem `onSuccess` at 02:51:06.463. Banner `开机初始化完成` at 02:51:20.359. `0x34` at 02:51:20.671 is `DMR003.R4a0.V022`, on the first poll. Hottest 100 ms bin +0.18 dB, at 177 s, clip 0, nothing at +6 dB. That bin is spread across ±24 kHz, so it is the noise floor. The stub does not run at boot.
+
+## The silence key
+
+VFO 467.625 again at 02:52:16.522. `txwav` of 3 s of zeros. `0x26` launch 1 at 02:52:22.179, acked `sr=0` at 02:52:22.184. `TX bench wav (3000 ms)`. `0x36` body `03` at 02:52:22.190. `played 24000 samples` at 02:52:25.578. Launch 2 at 02:52:25.579, acked `sr=0` at 02:52:25.585. `0x36` body `04` at 02:52:25.911.
+
+Carrier 3.44 s, SNR 39.5 dB, clip 0. The median of the keyed deviation is +908 Hz. The VFO log still reads 467.625. Steady window, dropping the first 1.0 s and the last 0.3 s:
+
+| Line | Amplitude |
+|---|---|
+| 15.625 Hz | 11.0 Hz |
+| 31.25 Hz | 15.0 Hz |
+| 250 Hz | 12.0 Hz |
+| 500 Hz | 15.5 Hz |
+| 1000 Hz | 17.1 Hz |
+| 2000 Hz | 21.6 Hz |
+| 3000 Hz | 12.2 Hz |
+
+The 1 kHz line is 17 Hz. The 15.625 Hz line is 11 Hz. The other preset lines from 47 Hz through 3 kHz are 10–22 Hz. The raw steady rms is 1516 Hz.
+
+Steady p99 is 2774 Hz (`steady_p99 2773.72`). The first 100 ms is a key-up click, p99 23098 Hz (`click_p99 23098.4`). The steady window is the stimulus, and it stayed under ±2.8 kHz. `STOP False`. 2774 / 5120 = 0.54 Hz per count on the steady p99.
+
+The capture log's half-second fit does not lock (`r2` −0.005, `follows_pattern` false). That fit held one alignment across 0.5 s. The extra pair at the end of the buffer walks the phase: 510 of every 512 samples advance the ten-sample pattern, so the long-term rate is 8000 × (510 / 512) / 10 = 796.875 Hz. On the first 0.25 s of the steady window the autocorrelation is 0.96 at a lag of 60 samples, 0.926 at 120, and 0.894 at 180. That lag is 800 Hz, ten stored samples at 8 kHz. Over the whole steady window the 796.875 Hz line is 1152 Hz, the 1593.75 Hz line is 867 Hz, and the 2390.625 Hz line is 649 Hz. The 800.0 Hz line is 1 Hz.
+
+Ten-millisecond stretches, eight periods stepped every 50 ms, 43 of them: a linear interpolation of the ten stored counts fits at median r² 0.96, and 36 of the 43 reach 0.95. The gain on those stretches is −0.54 Hz per count. A positive gain on the same shape reaches median r² 0.14, and none reach 0.95. A time-reversed copy reaches median r² 0.75, and none reach 0.95. A zero-order hold of the ten levels reaches median r² 0.84, and none reach 0.95. The air follows the stored shape with the sign flipped, as one continuous wave.
+
+## What this does not yet say
+
+The steady p99 is 2774 Hz, near the M17 outer deviation of ±2.4 kHz, and the sign on the air is the opposite of the stored count. Four held symbol levels are absent at this sample rate. No M17 frame was sent. Command `0x3D` is not in this image. §6 is not met.
+
+## End state
+
+The first factory restore failed. YModem `onFailed, reason=Received CAN` at 02:53:09.509, loader exit 1. The pushed factory MD5 was `4426035392262ca54583c230c9e268e0`. Further waits at 02:54:41 and 02:56:16 returned no `0x34`. `/sdcard/DMR/DMRDEBUG.bin` was already absent.
+
+The second restore succeeded. It started at 02:57:40. YModem `onSuccess` at 02:59:49.055. The first version poll was empty. The loader's second start of SignalDeck printed `0x34` at 03:00:58.517, `DMR003.UV4T.V022`. The tool log for this restore has no banner line. VFO 467.625 / 467.625 FM at 03:00:59.876, low power. SignalDeck owns the radio. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched. The ES8311 debug node was not written.
