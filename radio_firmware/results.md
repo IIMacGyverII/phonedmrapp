@@ -2124,3 +2124,94 @@ File `+0x5DEC`, called from the boot list at `+0xD9E`, programs the DesignWare U
 ## End state
 
 RD10 stays loaded. VFO 467.625 / 467.625 FM at 17:20:44, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. The phone was not keyed. R-C stays open. The phone path is flat after one AT1846S write, and that write does not survive a channel write. A runtime UART switch to 230400 is as close as the link that already works. The eight M17 captures did not plain-decode.
+
+# R-E — held phone path, capture integrity, op 6 fixes (2026-10-24, 17:41–18:02)
+
+The pass on the phone path is not met. RD10 stayed loaded for the receive measurements. RE10 is the op 6 fix and is the image left in the module. The phone was not keyed. HackRF transmit was FM at 467.625 MHz, VGA 20, amplitude off, finite files, a dummy burst first. Wi-Fi adb `192.168.1.125:5555` only. No `DMRDEBUG.bin` (ls rc 1) at the end.
+
+## Phone path, variant 3, on RD10
+
+Op 6 variant 3 applied with `sr=0` at 17:41:16.759, before the carrier. Each `rxclip` is 8 kHz mono, taken before the app squelch. The module itself holds that PCM at a peak of about 5 counts until its squelch opens. On these clips that mute lasts 1.09–1.24 s, and the tone is only in the tail. The runner's 0.8 s window sat in the mute, so its printed lines (100 Hz 653, then 0.1) are that silence. The loud tail is the measurement. A clean held 100 Hz from R-D is line 7303 and rms 5166.
+
+| Clip | Onset of audio | 100 Hz or 1 kHz line, last 0.4 s |
+|---|---|---|
+| 100 Hz, hold just applied | 1.09 s | 7291 |
+| 1 kHz, still held | 1.13 s | 6222 |
+| 100 Hz, after three M17 loops | 1.21 s | 6334 (tail rms 5162) |
+| 100 Hz, after a VFO write, hold not re-sent | the clip never reaches the held level | 387 |
+| 100 Hz, hold applied again | 1.16 s | 7258 |
+
+The hold survives the squelch opening: after three M17 carriers the tail rms matches R-D's held 100 Hz. The VFO write clears it (387 counts, −25.5 dB against 7291), and applying variant 3 again restores it. SignalDeck's sequence while a raw-discriminator decoder is on is: op 6 variant 3 action 1, and the same command again after every channel or VFO write. A variant-3 restore is a separate clear, measured on RE10 below.
+
+The M17 loop is a link setup plus stream frames 0 and 1 (`N0CALL` to `@ALL`, payloads 16 zero bytes then bytes 0–15), ±2.4 kHz, no preamble and no end frame. Three 3 s clips, then one clip after the hold was restored. Plain `m17.py`, both polarities, no equaliser, scored on the loud part. A scale sweep from 0.25 to 0.70 did not change the decisions.
+
+| Recording | Best sync | Link-setup CRC | Source | Destination | Frames | Golay 0 | Frame numbers |
+|---|---|---|---|---|---|---|---|
+| held 0, as captured | 0.957 | no | — | — | 2 | 0 | 15311, 20760 |
+| held 0, inverted | 0.957 | no | 8M07.HMMC | EHHLLZ- D | 0 | 0 | — |
+| held 1, inverted | 0.943 | no | OIVHXT9J | a broken `@ALL` | 28 | 0 | 0, 1, 0, 1, … |
+| held 1, as captured | 0.943 | no | not N0CALL | not @ALL | 14 | 0 | 40893 repeated |
+| held 2, inverted | 0.950 | no | OIVHXT9J | a broken `@ALL` | 29 | 0 | 1, 0, 1, 0, … |
+| held 2, as captured | 0.950 | no | not N0CALL | not @ALL | 15 | 0 | 40893 repeated |
+| plain control, either polarity | 0.889 | no | not N0CALL | not @ALL | 0 or 1 | 0 | one frame 49914 |
+
+LICH Golay sums on the locked 0/1 frames stay between 7 and 15. Inverted is the polarity that produces frame numbers 0 and 1. The plain-state control does not lock. Pass was CRC true and every stream frame at Golay 0, on all three. It is not met.
+
+## Receive RAM, variant 4, on RD10
+
+Every raw capture is a six-part `rxram.bin` copied to `C:\Users\Joshua\AppData\Local\Temp\fw1718\re\`. Names: `re_1k_0.bin` through `re_1k_4.bin`, `re_310_0.bin` through `re_310_2.bin`, `re_m17ram_0.bin` through `re_m17ram_2.bin`. Each reply is 514 bytes, `sr=0`, sequence 0 through 5. Half ids alternate, starting on whichever half was live: `1,0,1,0,1,0` or `0,1,0,1,0,1`. No capture repeats or skips an id.
+
+1 kHz, deviation 2.5 kHz. The line is the tone amplitude. A pure sine would have rms = line / √2.
+
+| Capture | Halves | Line | Rms | Peak Hz |
+|---|---|---|---|---|
+| re_1k_0 | 1,0,1,0,1,0 | 7699 | 6898 | 999.99 |
+| re_1k_1 | 0,1,0,1,0,1 | 7409 | 6902 | 1000.00 |
+| re_1k_2 | 0,1,0,1,0,1 | 7934 | 6897 | 1000.00 |
+| re_1k_3 | 1,0,1,0,1,0 | 7610 | 6889 | 999.99 |
+| re_1k_4 | 1,0,1,0,1,0 | 8821 | 6942 | 1000.00 |
+
+The peak is inside 1000.0 ± 0.5 Hz on every capture, so this receive sample rate is 8 kHz at that resolution. The lines sit with RC40's 7707–8499, not with the one RD10 capture that read 4795. At 1 kHz a half is exactly 32 cycles, so a continuous recording has no phase step at a boundary. Halves 1 through 5 step by 0.0–0.3 degrees. Half 0 is off by 57–133 degrees in four captures and by 0.5 degrees in `re_1k_4`, which is also the capture with the highest line. The extra energy (rms above line / √2) is in that first half.
+
+310 Hz is 9.92 cycles per half, a phase step of −28.8 degrees when the recording is continuous. The fitted phase does that on every boundary of all three captures. The largest sample step is inside the first half, at index 18, 170 and 241, sizes 10850, 23190 and 23118, against a median step of 981–1262. None of those indexes is 255, 511, 767, 1023 or 1279. Residual rms of one 1536-sample fit, halves 0 through 5: `re_310_0` 7526, 2534, 2137, 2122, 2416, 2473; `re_310_1` 14017, 3653, 2959, 2726, 2803, 2795; `re_310_2` 16098, 4792, 3858, 3425, 3222, 3133. The first half carries the step. The later halves are one tone.
+
+`uart_status_sender` at file `+0x7BC0` is the status task. It copies one byte onto its stack and calls `+0x9120`. That function copies the caller's body into its own stack frame (`+0x304E8` is a memcpy) and `uart_send`s the copy. Op 5 does not use `+0x9120`. It calls `uart_send` (`+0x7DE8`) on the in-place frame. `uart_put` (`+0x5EF4`) stores each byte to the data register before it takes the next one, and it returns only after the length is written. The next half's header cannot change a frame that has already gone out. The replies were not rebuilt at `0x4AE00`.
+
+The M17 loop, three captures, same symbols as the phone test. The slicer fits a gain, then compares to the known 576 symbols. Distance is in 8 kHz samples to the nearest 256-sample boundary. Bins are 24 symbols wide across one 192-symbol frame.
+
+| Capture | Errors | Rate | Sync | Errors within 8 samples of a boundary | Median distance | Errors per 24 symbols |
+|---|---|---|---|---|---|---|
+| re_m17ram_0 | 184/576 | 0.319 | 0.996 | 10 | 63 | 21, 34, 20, 19, 21, 24, 20, 25 |
+| re_m17ram_1 | 380/576 | 0.660 | 0.963 | 17 | 70 | 46, 47, 57, 51, 42, 40, 50, 47 |
+| re_m17ram_2 | 123/576 | 0.214 | 0.916 | 9 | 56 | 16, 27, 13, 9, 14, 16, 10, 18 |
+
+The errors do not gather at the half boundaries and they do not rise toward the end of the frame. `re_m17ram_1` is a poor gain fit (0.64 against about 3.1 on the other two). The in-place headers and the sample rate are not what leaves the symbols wrong. What remains is the shape of this receive path. The same miss is on the phone path above, which does not go through these replies.
+
+## Op 6 fixes, tag RE10
+
+Saves moved off `0x4A3F8` and `0x4A3FC`. `0x4A3F0` is the underrun count and `0x4A3F4` is the last error, so those words were not used. The factory image has no immediate in `0x4B000`–`0x4B077`. WORK_MODE is saved at `0x4B000`, the bandwidth word at `0x4B004`, and `0x4B008` holds `0x484F4C44` while a hold is applied. Op 5 compares that word before it touches a register and returns `sr=1` when it matches. `0x4A3F8` remains op 5's return-address scratch and the first reply header. Variant 3 restore writes `0x8405` and clears the flag. It does not write WORK_MODE back. Variant 4 restore writes both saved words, then `0x8405`.
+
+Sha256 `53bf713cc19e718fee286a6f83b0812ca9e78bf92c91990ed946bb1bc3b1091c`. Pushed MD5 `5c8c2c86c1e756dc9750596ca8083af3`. The command-slot word is `fc4e0703` at file `0x382B8`. YModem `onSuccess` at 18:00:21.251. `0x34` `DMR003.RE10.V022` at 18:00:35.934. The retained log kept the `0x34` line and not the banner sentence. Boot peak 0.20 dB, no sample above 10 dB.
+
+Hold variant 3 returned `sr=0`. The following op 5 (mode 4, four halves) logged `rxram bytes=0 sr=1`. The HackRF receive over that command peaked at 0.03 dB. A 100 Hz tone then read 7299 on the last 0.4 s, the held level, with the squelch already open from the dummy burst. Variant 3 restore returned `sr=0`, and the next 100 Hz line was 387. A VFO write after that left it at 387. The restore alone is the plain path. SignalDeck can clear the hold with that restore, and it still has to send the hold again after a channel write, because `at1846_tune` writes `0x8405` on its own.
+
+## Writers of AT1846S 0x58
+
+The I²C write is file `+0x54628`. These are the sites that pass register `0x58`, from the C-SKY listing. Callers of `at1846_tune` and of the CTCSS setter were not followed past the function, so this is not a claim that squelch or power-save never reach them.
+
+| File offset | Value | When |
+|---|---|---|
+| `+0x2C92` | `0x8405` | `at1846_init`, the `0x54`–`0x58` run, before the calibration waits |
+| `+0x2E96` | `0xBCFD` | DMR arm of `at1846_tune` |
+| `+0x3056` | `0x8405` | FM 12.5 kHz arm of `at1846_tune`. This is the write a VFO change uses, and the one that cleared the hold in R-D |
+| `+0x3342` | read, then `& 0xFFF7` | `at1846_set_ctcss_dcs` when the mode byte is 0. Clears bit 3 of whatever was in `0x58` |
+| `+0x33BC` | `0x8404` | same setter, mode 1, tone code below 17 |
+| `+0x3450` | `0x8405` | same setter, mode 1, code 17 or above |
+| `+0x34F4` | `0x8405` | second tone setter, no-tone arm |
+| `+0x35C6` | `0x8404` | that setter, tone present |
+| `+0x35D6` | `0x8404` | that setter, the other tone-present arm |
+| `+0x3642` | `0x8405` | that setter, code 17 or above |
+
+No `0x58` write in the slices sits on the UART, squelch, or PTT path by itself. The writes live in init, tune, and the CTCSS/DCS setter. A channel write is the proven clear. The setter also replaces `0x58`, so SignalDeck re-applies the hold after a channel write and after any CTCSS or DCS programming, not only after a VFO write.
+
+RE10 stays loaded. VFO 467.625 / 467.625 FM at 18:02:46.734. The phone was not keyed.

@@ -17,9 +17,12 @@
  * after the 512 bytes. Those three bytes are saved and restored. Six
  * halves end at 0x4B000. Op 6 applies variant 3 or 4 and leaves it, or
  * restores it. Its body is three bytes: op, variant, action 1 apply or
- * 0 restore. It saves WORK_MODE at 0x4A3F8 and, for variant 4, the
- * bandwidth word at 0x4A3FC. Do not run op 5 while op 6 is held: op 5's
- * restore and the first reply header both use 0x4A3F8. Op 5 and op 6 do
+ * 0 restore. It saves WORK_MODE at 0x4B000 and, for variant 4, the
+ * bandwidth word at 0x4B004. A hold flag at 0x4B008 is 0x484F4C44 while
+ * held. Op 5 sees that flag and returns sr=1 without writing a register.
+ * Variant 3 restore writes AT1846S 0x58 as 0x8405 only. Variant 4 restore
+ * writes the saved WORK_MODE and bandwidth, then 0x8405. 0x4A3F8 stays
+ * op 5's return scratch and the first reply header. Op 5 and op 6 do
  * not write PTT. Anything else is refused. Nothing in this command keys.
  * A clear cursor at 0x4DAAC does nothing, including at boot.
  *
@@ -235,6 +238,11 @@ store40:
 	cmpnei	r1, 4
 	bt	.Lbad
 .Lvok:
+	lrw	r4, 0x4b008
+	ld.w	r5, (r4, 0)
+	lrw	r4, 0x484f4c44
+	cmpne	r5, r4
+	bf	.Lbad
 	subi	r14, 24
 	st.b	r1, (r14, 15)
 	st.b	r0, (r14, 14)
@@ -453,24 +461,27 @@ store40:
 	ld.b	r3, (r7, 10)
 	cmpnei	r3, 0
 	bt	.Lapply
-	lrw	r4, 0x4a3f8
+	cmpnei	r1, 4
+	bt	.Lrest3
+	lrw	r4, 0x4b000
 	ld.w	r5, (r4, 0)
 	lrw	r4, 0x11000100
 	st.w	r5, (r4, 0)
-	cmpnei	r1, 4
-	bt	.Lno4
-	lrw	r4, 0x4a3fc
+	lrw	r4, 0x4b004
 	ld.w	r5, (r4, 0)
 	lrw	r4, 0x11000500
 	st.w	r5, (r4, 0)
 	br	.Lr58b
-.Lno4:
+.Lrest3:
 	cmpnei	r1, 3
-	bt	.Lack
+	bt	.Lbad
 .Lr58b:
 	movi	r0, 88
 	movi	r1, 33797
 	.short	0xE000, 0x0B22
+	lrw	r4, 0x4b008
+	movi	r5, 0
+	st.w	r5, (r4, 0)
 	br	.Lack
 .Lapply:
 	cmpnei	r3, 1
@@ -484,7 +495,7 @@ store40:
 .Lapdo:
 	lrw	r4, 0x11000100
 	ld.w	r5, (r4, 0)
-	lrw	r0, 0x4a3f8
+	lrw	r0, 0x4b000
 	st.w	r5, (r0, 0)
 	movi	r5, 128
 	st.w	r5, (r4, 0)
@@ -492,7 +503,7 @@ store40:
 	bt	.Lonly58
 	lrw	r4, 0x11000500
 	ld.w	r5, (r4, 0)
-	lrw	r0, 0x4a3fc
+	lrw	r0, 0x4b004
 	st.w	r5, (r0, 0)
 	bclri	r5, 4
 	bclri	r5, 6
@@ -501,6 +512,9 @@ store40:
 	movi	r0, 88
 	movi	r1, 48381
 	.short	0xE000, 0x0B22
+	lrw	r4, 0x4b008
+	lrw	r5, 0x484f4c44
+	st.w	r5, (r4, 0)
 .Lack:
 	ld.w	r7, (r14, 0)
 	ld.b	r0, (r7, 1)
