@@ -685,3 +685,23 @@ The ±7.3 kHz figure was a measurement artefact. Open question: ±3.3 kHz is abo
 - **R3-0 (no RF needed, boot only):** change one harmless IRAM-copied byte, for example a character in a log string inside the copied range, with no code change. If it doesn't boot, the IRAM block is checked. Find the check value, recompute it in `build.py`, and confirm with a second image that boots.
 - **R3a1:** the same stub with the `bsr` computed from the IRAM PC to `0x03075000` (plus any check value). Then the R3 measurement as planned.
 - If IRAM can't be patched at all, move the hook into flash code. Use a flash-resident caller on the key-up path, or re-set `tx_voice_source` from a flash routine that runs after key-up. Leave the IRAM code untouched.
+
+## 23. Review of R3-0 (2026-10-23, commit `6e09cd51`)
+
+**Settled.**
+- **IRAM can be patched.** The copy records at `+0xC4` are plain (destination, end, source), the loop is a word copy, and nothing checks the whole block. R301, one padding byte, booted and reported its tag.
+- R300's failure was a changed `TICK` compare, not a check.
+- R3a0's six hook bytes run **before** the banner. So the FM key-up path executes during boot (key, then unkey through `+0x3D688`), probably the module's own TX/RX start-up cycle.
+- The R1 channel took the 12.5 kHz DMR branch (`0x30` = `0x4026` last). So ±3.3 kHz is this radio's real narrow-band DMR outer deviation, about 1.7× the standard ±1944 Hz. Note it in the DMR docs (other radios still decode it on air: the BTECH 6X2). It is not part of this track.
+
+**Not loading R3a1 was right.** As built, the stub would select TX RAM, fill a square and set PTT **during every module boot**, before SignalDeck sends any `0x23`, on whatever frequency the module comes up on. The last channel was 162.425 MHz, a NOAA weather frequency, where we must never transmit. **Rule from now on:** any stub on the key-up path must be **gated on a host-requested transmission** and must do nothing at boot.
+
+**How to gate it:**
+- **Preferred: a flag set by the host's PTT command.** Patch the flash-resident handler of the UART key command (`0x26` LAUNCH / SEND_START; find it in the command dispatch) to set a word in unused IRAM .bss. The memory map gives the .bss range: the boot loop zeroes `0x31AF4`–`0x4DAB0`; pick a word nothing references. The key-up stub then acts only when that word is set, and the unkey path clears it. At boot the word is zero, so boot behaves as factory.
+- **Belt and braces:** also require that the module has had a `0x23` since boot (a second flag set in the `0x23` handler), and that the stub's TX-RAM part runs only while both flags are set. The PTT store itself stays the factory behaviour.
+- **One-time factory check (receive only, factory image):** with the HackRF on 467.625 MHz, tune the VFO there, then run DIAG `restartmodule` and record. This shows whether the factory boot cycle radiates at all, and for how long. If it does, that is stock behaviour, but it tells us what a boot on another frequency would do.
+
+**Next.**
+1. The factory boot-radiation check.
+2. Find the `0x26` key handler and a free .bss word, then build **R3a2** (gated stub + flag setter + flag clear on unkey). Host tests: boot path with flags zero leaves the factory PTT behaviour, and decoded branch targets in runtime addresses.
+3. Before loading, tune 467.625 MHz so any unexpected key lands on the bench frequency. Load, check banner and tag, then the R3 measurement (A = 256, 3 s key, tops flat / drooping / bare carrier, 6 dB steps under the ±5 kHz stop).
