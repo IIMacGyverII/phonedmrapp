@@ -215,3 +215,35 @@ Then the stream end and stack step as written. The route list: R-C stays open wi
 5. **Host (SignalDeck, parallel):** the "data receive" state (op 6 variant 3 on/off, re-applied after every channel, VFO and tone write; gated on the `0x34` tag), and the held-path front end in the M17 receiver: hold → matched filter → sync → the fixed taps → the existing frame decoder; the per-phone DFE stays for the plain path. Taps from step 1.
 
 Then the stream end and stack step as written.
+
+## Review of R-F (2026-10-24, commit `5a890be5`)
+
+**Verdict: R-F passes under the right measure, and the measure I wrote was the wrong one. "Golay 0" means zero raw bit errors in the 96 LICH bits of a frame; a receiver's job is a correct payload, which is what SignalDeck's test counts ("exact stream payloads"). Rescored by payload-exact frames, every independent clip that the research decoder locked on decodes 100 %: 75/75 and 75/75 at ±2.4 kHz and −87 dBm, 73/73, 77/77 and 18/18 at −93 dBm, 76/76, 74/74, 74/74 and 76/76, 73/73, 73/73 at ±1.9 kHz, and 75/77 on the one −98.5 dBm clip that locked. Grok's `payload_ok` only counted Golay-0 rows, so its table understated what it had.** The 18 "misses" on the first clip had LICH sums 1, 1, 1 … 2, 3, 4: corrected codewords, correct payloads.
+
+**The taps are a fixed filter, not a memorised loop.** Retrained on a random-payload clip (76 frames, other callsigns) the 41 taps come out the same as from the R-E loop (centre 0.968 against 0.987, every other tap within 0.02), and the retrained set scores the other clips identically. Same taps at ±1.9 kHz and ±2.4 kHz, at −87 and −93 dBm.
+
+**What did fail was acquisition, in the research decoder.** `m17.py` takes the first sync above 0.85 on the *unequalised* signal and walks the 192-symbol cadence from there; on the held path the raw sync scores are 0.92–0.95 and the 1.6 s ±3 lead throws false syncs at 0.86–0.88, so three clips never got onto the stream (`m17_d2400_v20_1` among them) and the −99 dBm clips did not pass the threshold at all. **Equalise first, then sync**: the same T-spaced taps applied at every sample phase (spacing one symbol) before the sync search, threshold 0.95. Then all 18 clips lock at sync 0.98–1.00 with a valid link-setup CRC, including all six at −98.5/−99.5 dBm:
+
+| Condition (3 clips each) | Payload-exact frames, equalise-first |
+|---|---|
+| ±2.4 kHz, −87 dBm | 74/75, 72/73, 75/75 |
+| ±2.4 kHz, −93 dBm | 74/74, 18/18 (short clip), 76/77 |
+| ±2.4 kHz, −99 dBm | 72/74, 72/75, 71/77 |
+| ±1.9 kHz, −87 dBm | 75/76, 74/74, 74/74 |
+| ±1.9 kHz, −93 dBm | 76/76, 73/74, 72/73 |
+| ±1.9 kHz, −98.5 dBm | 71/74, 74/77, 71/74 |
+
+So the held path decodes M17 at about 95 % of frames at −99 dBm and 98–100 % at −87 to −93 dBm, on independent data, with one fixed filter in front of the plain decoder. (The plain-path DFE receiver was characterised at −94 dBm.) Scripts: `tools/m17-research/heldpath_rf_score.py` (payload-exact scoring, retraining on random data, equalise-first acquisition) against the saved `rf/` clips.
+
+**The dip is the ES8311.** Phone 500 Hz −9.6 dB, receive RAM −0.2 dB; the RAM is within 0.3 dB from 400 to 800 Hz. So the phone-side codec, not the AT1846S, shapes the held path: the taps are a property of the phone model (its kernel audio configuration), the same on every Armor 26 Ultra, and other phone models get their own table from one calibration recording. A kernel setting on the ES8311 might remove the dip altogether (R-B territory, the owner decides); it is not needed. The receive RAM is the flatter signal and stays route 2; its half 0 is still copied live (fix in the next image that goes on, and then one more symbol map on halves 1–5).
+
+**POCSAG.** 1200 bps DAPNET-style page through the held path: plain 0.24 bit errors per codeword, behind the M17 taps 0.039, which BCH(31,21) clears. The POCSAG study's "not a feature yet" was the AC-coupled plain path; a DAPNET receiver on the held path is practical now, with its own tap set trained on POCSAG later.
+
+**Receive design, final.** Op 6 variant 3 held while a data decoder runs (re-applied after every channel, VFO and tone write), SignalDeck's existing 8 kHz audio path, a **fixed 41-tap linear equaliser per phone model applied before acquisition**, sync threshold raised, then the existing frame decoder. The per-phone DFE stays for phones without the firmware image. Bench receive work is done; the firmware line goes back to transmit.
+
+**R-G next.**
+1. **Firmware (Grok): stream end and stack**, as written below, with the op 5 half-0 fix in the same image (copy from the second `FM_ADDR_SW` change). Render first, then the one 90-frame key.
+2. **Host (SignalDeck, whenever the bench waits):** (a) the "data receive" state: op 6 variant 3 on when an M17, POCSAG or other raw-discriminator decoder starts, re-sent after every channel, VFO and tone write, restore (action 0) when it stops; only offered when `0x34` reports a stub tag; (b) the held-path M17 front end: fixed taps from an asset per profile (the Armor's 41 from `rf/taps.json`), applied to the symbol-rate-spaced samples before the sync search, threshold 0.95, then the existing frame decoder and Codec 2; the DFE path untouched for the plain state; (c) a host test over the 18 saved R-F clips: link-setup CRC on all 18 and payload-exact ≥ 95 % on each (≥ 98 % at −87/−93 dBm); (d) one device run: HackRF M17 at −87 dBm, the M17 page shows the callsigns and the frame count, with the hold on; then the plain state as control.
+3. **Later, host:** POCSAG/DAPNET decoder on the held path (plain slicer + BCH behind a POCSAG-trained tap set), backlog item.
+
+Then FW19 and the rest of the list as written.
