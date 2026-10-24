@@ -44,9 +44,16 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
-**R4t is measured.** Tag `R4t0` stays loaded. Do not key it again for the same stream. The independent decoder still waits on the Ubuntu box (`plan-independent-m17-check.md`).
+**R4t passed review** (`reviews.md`, "Review of R4t"): ch. 19 §6 M17 transmit acceptance met with our decoder (50/50, then 90/90 × 3 at Golay 0, p99 2792–2895 Hz). Tag `R4t0` stays loaded. Do not key it again for the same stream. The independent decoder still waits on the Ubuntu box (`plan-independent-m17-check.md`). **Render first, key second** is the rule for every waveform-path change from now on. Until the UART task's stack size is read or the op 4 reply moves off the stack, keep renders at or under 128 samples.
 
 **R-C step 2** (approved, owner 2026-10-24). One receive-only image. Op 5: save `WORK_MODE`, write `0x80`, wait two halves, copy the half `FM_ADDR_SW` is not pointing at into the `0x4AC00` scratch, restore `WORK_MODE`, return the samples over `0x40`. No PTT anywhere in it. If `0x80` returns nothing, the second try is `0x16A`. HackRF tones, lowest gain that gives a level, inside the cage: 1 kHz, then 100 Hz, then the sweep. The phone stays on 467.625 and does not key. Pass: the 1 kHz line stands out of the noise in the returned samples; the 100 Hz tone and the sweep say whether the low end is there. Write it in `results.md` under R-C step 2. R-C step 1 is accepted as read.
+
+**After R-C step 2, in this order** (host-side items may start whenever the bench waits):
+1. **Stream end and stack.** Op 1 gets a "last" flag; when the ring drains after a last chunk the wake drops PTT itself through the R4k path (`drop_ptt`, then status byte 4), so the host does not time the unkey and the status read shows only real underruns. Move the op 4 reply into a second scratch at `0x4AE00` (or read the UART task's stack size in `create_tasks` `+0x1BF8` and cap N). Render, then one 90-frame key to confirm nothing moved.
+2. **FW19, the time-out ceiling.** Find the `0x3B` handler's `min(tot, 30)` clamp; raise the ceiling to 120 s. SignalDeck's watchdog stays the real limit. Prove with one 45 s stream (repeated frames or BERT) at low power, then let the module cool; pass is a carrier of 45 s with the stream decoding throughout and `SEND_STOP` at the host's unkey.
+3. **SignalDeck M17 transmit stack** (host work): Codec2 3200 encode (exists) → link setup and stream frames (LICH, convolutional code, puncturing, interleaver, randomizer, CRC) ported from our own `tools/m17-research/m17.py` with its test vectors, never from libm17 → symbols → the `0x40` stream with the last flag → an M17 PTT on the M17 screen, enabled only when `0x34` reports a tag with the symbol engine; in-app help updated in the same change. Voice check: our decoder on the HackRF capture plus Codec2 decode, listened to.
+4. **Generic waveform engines** (coefficient table + symbol rate + level map op, and a tone engine) so POCSAG, FT8, CW and RTTY cost a table each. Design the op-code space for it now; build after 2 and 3.
+5. Phase E: the opt-in loader page, help topic and tag gating.
 
 Rules: the standing approval above (owner, 2026-10-24: anything in the cage that cannot damage the equipment); T4 closed; `0x3D` untouched; R4l0 never reloaded.
 
