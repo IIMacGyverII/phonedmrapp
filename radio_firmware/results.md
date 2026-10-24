@@ -1500,3 +1500,31 @@ No image was built. §6 is not met. `0x3D` still waits. The ES8311 debug node wa
 ## End state
 
 The radio was not touched. End state remains the R4b restore: factory image, `0x34` `DMR003.UV4T.V022` at 04:43:03.271, VFO 467.625 / 467.625 FM at 04:43:05.143, low power, no `DMRDEBUG.bin`.
+
+# R4c — the TX-RAM poll returns before the carrier, tag R4c0 (2026-10-24, 05:19–05:27)
+
+HackRF receive only, 467.385 MHz center, 2.4 MS/s, LNA 24, VGA 38. One boot and one 3 s silence key, both at 467.625 MHz, low power. Thirty patch tests passed before the load. The ES8311 debug node was not written.
+
+The stub is `c7000-txram-m17-stream` at file `+0x5B000` (348 bytes). `on_unkey` is at `+0x5B128`. The four `0x26` sites are the only calls. The stub copies the first 512 samples into both TX-RAM halves, sets the same FM words R4b sets, stores PTT = 1, then polls `FM_ADDR_SW` (`0x1100056C`). The first value of 1 or 2 is recorded and not written. Each later change copies 256 samples into the half the register names (1 = low, `0x16000030`; otherwise high, `0x16000230`). When the table runs out it writes two zero halves and returns. It does not store the interrupt mask, and it does not branch to `+0x18A70`. No `+0x3074`, no `+0x3EDFC`, bit 4 stays clear.
+
+The table is file `+0x5B400` through the end of the image, 2430 samples, 1458 symbols. One hundred eight symbols of `+3`, `-3` preamble, one link-setup frame, six zero-payload stream frames (frame numbers 0, 1, 2, 3, 4, and `0x8005`), and six zero tail symbols. Source and destination are the research modem's bench callsign. Samples are 16-bit, high byte at the low address. Each stored count is `-round(Hz / 0.54)`, the same sign flip as R4b, so a positive symbol aims at a positive deviation. The peak count is 6451. The aimed peak is 3483.5 Hz. At 0.55 Hz per count the linear prediction is 3548.1 Hz. The host decoder accepts the link setup and those six frame numbers. The gap `+0x5B15C`–`+0x5B400` is still factory zeros and is not part of the patch.
+
+`DMR003.R4c0.V022.bin`, 378620 bytes. sha256 `e36364b6ad57a37252a393ddfa120a8ca19e4d1ede1902888ac00860f57730f4`. File and pushed MD5 `5f3e5f1f11d585514d472f4bacd0f3ae`.
+
+## Boot
+
+VFO 467.625 / 467.625 FM at 05:19:48.178, low power. HackRF probe 9600000 bytes. Boot capture from 05:19:53, 240.0 s, floor power 6.81. YModem `onSuccess` at 05:22:02.240. Banner `开机初始化完成` at 05:22:14.407. `0x34` at 05:22:14.718 is `DMR003.R4c0.V022`. Hottest 100 ms bin +0.12 dB, at 20.7 s, clip 0, nothing at +6 dB. That bin is spread across the capture bandwidth, so it is the noise floor. The stub does not run at boot.
+
+## Silence key
+
+VFO confirmed again at 05:24:17.557. The key capture started at 05:24:23. `txwav` silence, 3000 ms, at 05:24:23.124. `0x26` launch 1 at 05:24:23.199, ack at 05:24:23.557, `0x36` body `03` at 05:24:23.564. The ack was held 358 ms. `SEND_START` followed the ack by 7 ms. R4b's same launch acked in 5 ms (`04:40:30.006` to `04:40:30.011`) and `SEND_START` was 6 ms after that ack. Unkey launch 2 at 05:24:26.619, ack at 05:24:26.625 (6 ms), `0x36` body `04` at 05:24:26.952. The carrier is up for 3.11 s. SNR 38.7 dB, clip 0, carrier offset +1049 Hz.
+
+The steady window, from 1.0 s after key-up to 0.3 s before release, is 1.812 s. RMS 145 Hz. Steady p99 371 Hz. The 100 ms slice at key-up has p99 23084 Hz, and the slice at 3.0 s has p99 22210 Hz. Both are the key clicks and sit outside the steady window. The stop stays clear. The 1 kHz line is 0.4 Hz and the 3 kHz line is 2 Hz. Every 100 ms slice from 0.1 s through 2.9 s has p99 between 328 Hz and 444 Hz. The burst from 0.15 s to 0.70 s after key-up has p99 346 Hz.
+
+The 64 ms autocorrelation of the keyed audio is 0.021, so the prefilled 512 samples are not looping. The aimed-waveform fit over the keyed span is r² 0.0, polarity +1, lag 99 samples, shape gain 0.05. The plain decoder reported frame number 44226 on the keyed span and 24181 after the click. Both link-setup CRCs are false, and neither callsign matches. Those hits are noise.
+
+The 358 ms hold is about the length of the table (2430 samples is 304 ms) plus two zero halves (64 ms). The poll walked the table, wrote the zeros, and returned. The `0x26` handler emits `SEND_START` only after that return, so the modulator started on the zero tail. The carrier is shorter than R4b's 3.46 s, not longer by the hold, so the radio was not radiating while the poll ran. The first 512 samples never reached the air. The peak was not raised. Staying inside `on_key` until the table ends cannot overlap the carrier.
+
+## End state
+
+Factory image restored. YModem `onSuccess` 05:26:50.089. `0x34` `DMR003.UV4T.V022` at 05:27:02.250. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. The loader's channel write was followed by the VFO tune: 467.625 / 467.625 FM at 05:27:04.069, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met: the carrier was unmodulated, and the acceptance is 85 of 90 frames across three transmissions. `0x3D` still waits. The ES8311 debug node was not written.
