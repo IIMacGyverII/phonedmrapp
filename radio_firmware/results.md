@@ -1361,3 +1361,42 @@ The CPU in this image has no discriminator-sample buffer and no host symbol FIFO
 ## End state
 
 The radio was not touched. End state remains the R4a restore: factory image, `0x34` `DMR003.UV4T.V022` at 03:00:58.517, VFO 467.625 / 467.625 FM at 03:00:59.876, low power, no `DMRDEBUG.bin`.
+
+# T2 — `RF_MODE` and filter controls (2026-10-24)
+
+No image was loaded. Nothing was keyed. The factory image was disassembled with no `-M`. The question was what `RF_MODE` bit 7 selects in this image, and whether an RRC roll-off or a filter bypass is stored anywhere.
+
+## What this image stores
+
+The only full-word immediate store of `RF_MODE` (`0x11000104`) is in the FM key-up `+0x3ECC0`. At `+0x3EDD6` the code does `movi r3, 135; lsli r3, 5` and at `+0x3EDDA` stores that word. `135 << 5` is `0x10E0`. The bits set in that word are 12, 7, 6, and 5. Bits 6:5 are 11, which is two-point mode. Bit 10 is clear, so the built-in 40 Hz square stays off. Bit 9 is clear, which Document 2 calls the 1.65 V ramp start. Bit 12 is set. Document 2 and the sibling notes do not name bit 12, and this reading does not name it either.
+
+The same function saves the previous `RF_MODE` word to SRAM `0x32520` at `+0x3ECCC` and the restore at `+0x3EE74` writes that saved word back. In the same key-up, `+0x3EDE4` stores `WORK_MODE` (`0x11000100`) = `0x80`. Document 2 calls `WORK_MODE` bit 7 the modulator mode: 0 is DMR digital and 1 is FM analog. That is a different register from `RF_MODE` bit 7.
+
+An earlier paragraph of this file reads bit 7 of this same `0x10E0` as clear. The store above sets it. That earlier paragraph is left as written.
+
+Document 2 (Connect Systems HR-C7000, two-point modulation) maps the four symbol codes by `RF_MODE[7]`, which it names `rf_transiq_mode`:
+
+| Bit 7 | +3 | +1 | −1 | −3 |
+|---|---|---|---|---|
+| 0 | +1944 Hz | +648 Hz | −648 Hz | −1944 Hz |
+| 1 | −1944 Hz | −648 Hz | +648 Hz | +1944 Hz |
+
+The two rows are the same magnitudes with the sign reversed. The guide lists the bit's reset as 1, and this store writes 1, so +3 maps to −1944 Hz. The guide's physical-layer TX example is `0x60` (bits 6 and 5 only). This image stores `0x10E0`, which is that example with bits 12 and 7 also set. It does not store `0x60`. M17's ±2400 Hz outer deviation is not a value on either row.
+
+The `0x22` paths still write neither `RF_MODE` nor `FM_BANDWIDTH`, as the first T2 section says. Channel setup does not store `RF_MODE`. The measured narrow-band DMR outer of about ±3.3 kHz, with AT1846S `0x30` left at `0x4026`, is the earlier air result. It is not this `0x10E0`.
+
+## Filter and RRC
+
+No `lrw` in the factory disassembly names `FM_BANDWIDTH` (`0x11000500`) or `FM_DEV_COEF` (`0x11000504`). A walk that tracked `movi`, `movih`, `lsli`, `rotli`, `addi`, `bseti`, `bclri`, and `lrw` also never built either address. The same walk did build other `0x110005xx` addresses, including `0x11000560`, so the miss is not a skipped encoding of the `0x1100` base. Both registers therefore stay at reset. `FM_BANDWIDTH` reset `0x5F` leaves the FM band-pass (bit 6) and FM pre-emphasis (bit 4) on. `fm_dev_coef_t` stays `0x10`. Those bits are the FM audio chain. They are not an RRC roll-off.
+
+UVm3 and UVm7 wrote both registers from the keyed-path stub, and UVm8 showed that the stub runs. The HackRF curve did not follow the writes. The pre-emphasis the air does follow is AT1846S `0x58` bit 7. No RRC coefficient register is stored in this image. The sibling notes name none. The α = 0.5 pattern that was on the air was the R4a host PCM fill, and that capture was inverted.
+
+`0x11000560` is saved with `RF_MODE` at `+0x3ECEE` (SRAM `0x3252C`), stored as 1 at `+0x3EE00`, and restored at `+0x3EE9C`. That word is PTT. It is not a filter.
+
+## What this does not yet say
+
+The symbol map in this image is the inverted ±1944 / ±648 Hz table. There is no stored setting that selects ±2400 Hz, and there is no stored RRC coefficient. A host shaper on the TX-RAM path is still the way an α = 0.5 waveform has been put on the air. Whether the modem can take symbols from a RAM buffer of its own is the next reading. No image was built. R-B was not started. T4 stays closed. `0x3D` still waits. §6 is not met.
+
+## End state
+
+The radio was not touched. End state remains the R4a restore: factory image, `0x34` `DMR003.UV4T.V022` at 03:00:58.517, VFO 467.625 / 467.625 FM at 03:00:59.876, low power, no `DMRDEBUG.bin`.
