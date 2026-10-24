@@ -1309,3 +1309,55 @@ No stored value of this set enables `direct_reg`, an on-chip tone, or GPIO `code
 ## End state
 
 The radio was not touched. End state remains the R4a restore: factory image, `0x34` `DMR003.UV4T.V022` at 03:00:58.517, VFO 467.625 / 467.625 FM at 03:00:59.876, low power, no `DMRDEBUG.bin`.
+
+# R-A — C7000 receive symbols, read only (2026-10-24)
+
+No image was loaded. Nothing was keyed. The factory image was disassembled with no `-M`. The question was whether this image reads sliced 4FSK symbols or discriminator samples from modem RAM and can put them on the UART.
+
+## What the CPU reads
+
+`+0x2A4C` copies `r2` bytes from `r0 + 0x160004B0` into `r1`. A length of 0 returns at once. There are 26 direct calls. Every `r0` is a `movi`. No call walks the window.
+
+| `r0` | Length | Calls | Source |
+|---|---|---|---|
+| 0 | 12 | 10 | `0x160004B0`–`0x160004BB` |
+| 0 | 9 | 5 | `0x160004B0`–`0x160004B8` |
+| 0 | 12, 18, or 24 | `+0x1E1CA` | starts at `0x160004B0`; 24 bytes end at `0x160004C7` |
+| 43 | 5 | `+0x25B6C` | `0x160004DB`–`0x160004DF` |
+| 48 | 36 | `+0x27E78` only | `0x160004E0`–`0x16000503` |
+| 54 | 27 | `+0x25648`, `+0x258C6` | `0x160004E6`–`0x16000500` |
+| 57 | 27 | `+0x25698`, `+0x25916` | `0x160004E9` |
+| 102 | 27 | `+0x2560A`, `+0x258A4` | `0x16000516` |
+| 105 | 27 | `+0x25676`, `+0x258F4` | `0x16000519` |
+
+The 12-byte, 9-byte, and 5-byte copies end before `0x160004E0`. At `+0x1E1CA` (function `+0x1E0F8`) the length is a stack byte: an incoming byte of 7, 8, or 10 selects 12, 18, or 24, and the same arms store the halfwords 240, 511, and 271 at `0x4D0F0+0x1FA`. 511 is 2^9−1. The copy still starts at `0x160004B0`, and the function then calls `+0x14EC`.
+
+The 36-byte copy is the only one that starts at `0x160004E0`. It is inside `+0x27E50`. That function stores the caller's pointer, loads the word at `0x11000390`, copies 36 bytes, and returns the low 2 bits of that word. The two callers are `+0xAD7C` and `+0xAE2A`, both in `+0xAD64`, and the pointer is `0x3246C+56` (`0x324A4`). When the return equals 1, `+0xAF74` clears the byte at `(r4, 0x6A)` and joins the compare that already has the copied bytes. It does not copy the window again.
+
+`+0xAD64` is the BER scorer. It reads `0x3CE6F`, the pattern select T2 already named (0 = Hongrui, 1 = O.153). Both arms call `+0x27E50`, XOR the copied bytes against a ROM pattern, and count set bits into the word at `(r4, 0x5C)`. The compare runs while the index is not 33, so 33 bytes, 264 bits. The patterns sit at file `+0x38488` and file `+0x384AC`, just after the version string, and they are not text. When the first arm's call count is divisible by 100, or the second arm's count passes 119, the function converts the error count and calls `family21_emit` (`+0x7E94`) with `r3` = 34 and a 6-byte body: the bytes 1 and 2, then two halfwords. `family21_emit` builds `68 21` and stores `r3` at byte 2. The 33 payload bytes stay on the MCU.
+
+The scorer has one caller, `+0xC0D4`, in the task that starts at `+0xC084`. That task pends flag object `0x37744` with mask 15. Value 8 clears the flag and calls the scorer. Values 1, 2, and 4 update status bytes at `0x38908` and `0x34808+0x2B` and do not call `+0x2A4C`. The task is created at `+0xC2D0` by `OSTaskCreate`, function pointer `0x03026084`, and that pointer occurs once, at file `0xC358`. Command `0x3F` does not call the scorer. It selects the pattern, which T2 already read. The post that raises flag value 8 was not traced.
+
+The 27-byte copies are an odd length, so they are not 16-bit samples. The image does not name the record. The sites at `+0x256xx` choose the source from byte 2 of `0x34808` (the same byte-2==4 test T2 used for `WORK_MODE`) and from a byte at `(r8−7)`. The destination is `0x4D3AD + (byte at 0x4D318+0xB) * 27`. `+0x2B778` then copies those 27 bytes into a second SRAM pair at `0x4D49E + n*27` and toggles the index byte. One later site passes that slot to IRAM `0xFD014BEC` when byte `0x12` of `0x34808` is 2 or 3. `reply_build`, `uart_send`, and `family21_emit` are not called with `0x4D3AD` or `0x4D49E`.
+
+`+0x2A18` is the other direction. It writes `r2` bytes from the caller's pointer into modem RAM at `r0 + 0x16000000`. It has 23 calls. The call at `+0x2AAB2` uses `r0` = 48 and length 27, so the destination is `0x16000030`. That writes a record into the modem. It does not read receive samples.
+
+No `lrw` names `0x160004E0` or `0x160008DF`. Nothing copies the rest of that 1024-byte range. The other `0x1600` literals are single bytes or control words. `0x16000232` and `0x16000233` are one load each, inside `+0x3EEEC`; the only caller, `+0x3EFF2`, folds the word into an LCG and returns one byte. `0x160009C9` and the neighbouring codec bytes are single-byte control stores in the snapshot at `+0x3ECC0`. The copies at `+0x2A78` and `+0x2AB4` have no `bsr`.
+
+The modem loads that were opened are single words. `0x11000390` is load-only, and the BER function returns its low 2 bits. `0x1100041C` contributes one bit at `+0x182EC`. `0x11000394` is split into two status bytes at `+0x27CFC`. `0x11000398` is two loads and was not followed past the load. `0x11000104` is one load and two stores of a control word. None of these is a drained sample FIFO.
+
+## What reaches the UART
+
+The score is the UART output of the 36-byte snapshot. `MessageDispatcher` registers command 63 and does not register command `0x21`. Chapter 01 routes on the command byte alone, so the score has no OEM handler.
+
+`+0xBFE8` and `+0xC010` would copy 27 bytes into ping-pong slots at `0x38C10` and `0x388B4`. `+0xC040` would loop on `reply_build(14, 0, 0x388EB, 27)`. The factory image has no XIP pointer to any of the three, and the disassembly has no `bsr` to them. The dispatcher does not register command 14.
+
+The replies this dispatcher already handles are the ones already named: `0x24` (163 bytes from `0x38E4C`), `0x25` (19 bytes from `0x38C70`), `0x2B` (the 9-byte caller record), `0x39` (169 bytes from `0x38AB0`), and `0x34` (the version string). `0x3F` selects the BER pattern. None of those bodies is the modem window.
+
+## What this does not yet say
+
+The CPU in this image has no discriminator-sample buffer and no host symbol FIFO. The multi-byte read that starts at `0x160004E0` is the BER scorer's 36-byte snapshot, and its UART output is a 6-byte score on command `0x21`. The 27-byte record stays unnamed in SRAM. A new SignalDeck sender was not added. An existing command does not return sliced M17 symbols. `0x3D` still waits. R-B was not started. T4 stays closed. §6 is not met.
+
+## End state
+
+The radio was not touched. End state remains the R4a restore: factory image, `0x34` `DMR003.UV4T.V022` at 03:00:58.517, VFO 467.625 / 467.625 FM at 03:00:59.876, low power, no `DMRDEBUG.bin`.

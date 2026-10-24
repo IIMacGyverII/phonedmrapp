@@ -52,13 +52,19 @@ The radio may **stay on 467.625 MHz, low power**: there is no need to return to 
 
 ## Current task
 
-R-A, read only. No image, no key, no SignalDeck edit, no write to the ES8311 node.
+T2 filter controls, read only. No image, no key, no SignalDeck edit, no write to the ES8311 node.
 
-In DMR receive the C7000 slices 4FSK itself. Read whether raw symbols, or a demodulator output, can be read from RX RAM or a modem register and passed over the UART. That would bypass the ES8311 high-pass on receive. The sibling notes say no documented register exposes the 38.4 kHz receive samples to the CPU. Do not re-derive that sentence; check this image.
+Read `RF_MODE` bit 7 and whether this image has an RRC roll-off or a filter-bypass setting. The `0x22` path writes neither `RF_MODE` nor `FM_BANDWIDTH`. Leave that sentence, and leave the older "bit 7 is clear" sentence in the first T2 section and in its §10 paragraph. Say what this image stores, in a new section.
 
-1. In the factory image, find any RAM buffer, modem register, or UART reply that carries sliced 4FSK symbols or the discriminator samples during DMR receive.
-2. Say whether a command the OEM app already sends can read that output, or whether a read would need a new SignalDeck sender. Do not add that sender.
-3. Write the reading in `results.md` and one §10 paragraph. If a buffer stays unnamed, say so. Do not build an image. Do not start R-B. Do not open T4. `0x3D` still waits.
+Check these sites. They are a start, not the conclusion:
+
+- A literal `0x11000500` (`FM_BANDWIDTH`) and `0x11000504` (`FM_DEV_COEF`) did not appear in the earlier `0x1100xxxx` `lrw` scan.
+- `0x11000560` is stored as 1 at `+0x3EDFE` and is saved and restored with `RF_MODE`.
+- `0x11000104` (`RF_MODE`) is one load and two stores. `+0x3ECCC` saves the word to SRAM `0x32520`. `+0x3EDDA` stores `movi r3, 135; lsli r3, 5`, which is `0x10E0` (bits 12, 7, 6, and 5 set). `+0x3EE74` restores the saved word.
+
+M17 needs ±2400 Hz outer and RRC α = 0.5. DMR uses ±1944 Hz and α = 0.2. This radio's narrow-band DMR outer symbol is ±3.3 kHz, with AT1846S `0x30` left at `0x4026`.
+
+Write the reading in `results.md` and one §10 paragraph. Do not build an image. Do not start R-B. Do not open T4. `0x3D` still waits.
 
 ## Goal and route list (owner, 2026-10-23: "discover every possible way we can get M17 to work")
 
@@ -74,7 +80,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 - **T4: a hybrid.** Only if T1–T3 all fail: what plain-M17 decode rate a standard receiver gets from the UVm6 path with the best pre-shaping (measured, not assumed). This is the fallback number.
 
 **Receive (works today with the calibrated DFE; these aim at plain or simpler decoding)**
-- **R-A: C7000 DMR demodulator symbols.** In DMR receive, the C7000 slices 4FSK itself. Read whether raw symbols or a demodulator output can be read (RX RAM, registers) and passed over the UART. That would bypass the ES8311 high-pass on receive.
+- **R-A: C7000 DMR demodulator symbols.** Read 2026-10-24. The only multi-byte read that starts at `0x160004E0` is the BER scorer's 36-byte snapshot (`+0x27E50`, called from `+0xAD64`). Thirty-three bytes are compared on the MCU. The UART output is a 6-byte score on command `0x21` subcommand 34, and the OEM dispatcher does not register `0x21`. The 27-byte records stay unnamed at `0x4D3AD`. No host symbol FIFO and no discriminator-sample buffer. No image.
 - **R-B: the ES8311 ADC high-pass** (receive side, phone kernel). Reading registers with count 0 is a read, but it is still a write to a debug node, so ask the owner first (`STATUS: OWNER`).
 
 **Vocoder and protocol (SignalDeck side, later):** Codec 2 3200 already encodes (DIAG `m17 --es enc`). Full M17 voice TX needs the frames (LSF, stream frames, CRC, Golay, convolutional code, puncturing, interleaving and randomising), written from the M17 spec. libm17 is GPL-2.0-only: never port it.
@@ -83,7 +89,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-T3 was read only. Nothing was keyed. The AT1846S stores of `0x3A`, `0x30`, `0x41`–`0x44` are FM setup scalars. `direct_reg` (register 30h bit 10) stays clear, `3aH[14:12]` is nothing or microphone, and `0x35`/`0x36` are never written. No host-symbol path and no on-chip tone path. No image. The radio is still the R4a factory restore: `0x34` `DMR003.UV4T.V022`, VFO 467.625, no `DMRDEBUG.bin`. §6 is not met.
+R-A was read only. Nothing was keyed. The only multi-byte read from `0x160004E0` is the BER scorer's 36-byte snapshot; 33 bytes are compared on the MCU, and the UART output is a 6-byte `0x21` score the OEM dispatcher does not handle. The 27-byte records stay unnamed in SRAM. No host symbol FIFO. The radio was not touched: factory `DMR003.UV4T.V022`, VFO 467.625, no `DMRDEBUG.bin`. §6 is not met.
 
 ## Owner question
 
