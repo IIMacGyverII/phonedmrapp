@@ -270,6 +270,10 @@ TX RAM is `0x16000030`–`0x1600042F`: two halves of 512 bytes, 256 samples of 1
 
 End state: factory image, `0x34` = `DMR003.UV4T.V022`. SignalDeck owns the radio. Channel 36 is NOAA WX4, 162.425 MHz, squelch 5, power low, active. The temporary digital row is gone. The screen showed 162.425 MHz. Zone 4, `zoneLast_4` 36. `PATCH14_BACKUP.bin` was not touched. No `DMRDEBUG.bin`.
 
+**2026-10-23 — `es8311_store`, read from the boot image, nothing written.** `boot_a` is 67108864 bytes. The gzip kernel is at offset 2048 and decompresses to a 4.19.191 aarch64 Image (`Linux version 4.19.191`, built 2024-12-11). Kallsyms has 58046 symbols. `kptr_restrict` was not changed, and nothing was written to `es8311_debug`.
+
+The file `/sys/bus/i2c/devices/7-0018/es8311_debug/es8311` is mode `0664`. Its attribute group is named `es8311_debug`, the attribute is named `es8311`, show is `es8311_show` (`ffffff8008e18ee8`) and store is `es8311_store` (`ffffff8008e18f6c`). A read calls `es8311_show`, which reads codec register 0 through `snd_soc_component_read` and returns `es8311_show(): get 0x0000=0x%04x`. A write parses one hexadecimal integer with `simple_strtol` (base 16). Bits 7:0 are a value, bits 15:8 are the start register, and bits 23:16 are a count. When the count is 0, it reads the low byte's worth of registers from the start register (a low byte of 0 still reads one) and prints each line to the kernel log. Otherwise it writes that same value byte to that many consecutive registers through `snd_soc_component_write`, and prints those lines to the kernel log. The store returns the number of bytes it was given. The printks do not come back through the sysfs file. Any write of this node remains the owner's decision.
+
 ---
 
 ## 11. Review of the 2026-10-23 findings (FW8/FW11/FW16, commit `b8ee26df`)
