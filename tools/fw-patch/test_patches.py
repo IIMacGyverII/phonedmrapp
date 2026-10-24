@@ -287,9 +287,13 @@ class PatchTest(unittest.TestCase):
             pairs.append([other, "c7000-cmd40-host"])
             pairs.append([other, "c7000-cmd40-m17"])
             pairs.append([other, "c7000-cmd40-swap"])
+            pairs.append([other, "c7000-cmd40-m17swap"])
         pairs.append(["c7000-cmd40-host", "c7000-cmd40-m17"])
         pairs.append(["c7000-cmd40-host", "c7000-cmd40-swap"])
         pairs.append(["c7000-cmd40-m17", "c7000-cmd40-swap"])
+        pairs.append(["c7000-cmd40-host", "c7000-cmd40-m17swap"])
+        pairs.append(["c7000-cmd40-m17", "c7000-cmd40-m17swap"])
+        pairs.append(["c7000-cmd40-swap", "c7000-cmd40-m17swap"])
         for names in pairs:
             with self.subTest(names=names), self.assertRaises(SystemExit):
                 build.build(names, "UVt0", self.cfg)
@@ -1747,6 +1751,25 @@ class PatchTest(unittest.TestCase):
         self.assertEqual(img[0x18A70:0x18A80], self.fac[0x18A70:0x18A80])
         self.assertEqual(img[0xAAFE:0xAB0E], self.fac[0xAAFE:0xAB0E])
         self.assertEqual(img[0x38464:0x38474], b"DMR003.R4q0.V022")
+
+    def test_cmd40_m17swap_stores_pieces_high_byte_first(self):
+        # R4r. Same piece store as R4p. The sample loop swaps before st.h.
+        img, _ = build.build(["c7000-cmd40-m17swap"], "R4r0", self.cfg)
+        self.assertEqual(len(img), len(self.fac))
+        self.assertEqual(img[0x5AF5C:0x5AF60], bytes.fromhex("20876187"))
+        self.assertEqual(img[0x5AF8A:0x5AF8C], bytes.fromhex("20ac"))
+        self.assertEqual(bsr32_target(img, 0x5AFDA), 0x8E5C)
+        self.assertEqual(bsr32_target(img, 0x5AFE2), 0x7DE8)
+        for at in (0x5B0D2, 0x5B18E, 0x5B1A2):
+            self.assertEqual(bsr32_target(img, at), 0xE9C)
+        for at in (0x5B12A, 0x5B134, 0x5B13E, 0x5B1BA, 0x5B1C4):
+            self.assertEqual(bsr32_runtime(img, at), 0x2B220)
+        self.assertEqual(img[0x18A70:0x18A80], self.fac[0x18A70:0x18A80])
+        self.assertEqual(img[0xAAFE:0xAB0E], self.fac[0xAAFE:0xAB0E])
+        blob = img[0x5AEFC:0x5B1E0]
+        self.assertIn(bytes.fromhex("00a40400"), blob)
+        self.assertNotIn(bytes.fromhex("00a80400"), blob)
+        self.assertEqual(img[0x38464:0x38474], b"DMR003.R4r0.V022")
 
     def test_refuses_bad_tag(self):
         for tag in ("UV4T", "UV4", "UV-1"):
