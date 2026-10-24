@@ -33,6 +33,7 @@ Rules that are not optional: any stub on the key-up path acts only on a host-req
 | `HANDOFF.md` | mailbox between the AIs: status line, standing approval, current task, route list |
 | `results.md` | the bench record, one section per image, newest last |
 | `reviews.md` | reviews of bench runs (earlier ones are ch. 19 §11–§23) |
+| `plan-independent-m17-check.md` | plan for checking the M17 transmit route against software we did not write (`m17-cxx-demod`, SDRangel) and later a real M17 radio |
 | `symbols.csv` | named file offsets (`fn` / `label`); import/export to Ghidra with `ghidra_scripts/FwCskyImportSymbols.java` / `FwCskyExportSymbols.java` |
 | `fw1_csky_objdump.txt` | the C-SKY listing (`csky-elfabiv2-objdump`), regenerable with `scripts/fw1_ghidra_csky.ps1` |
 | `ghidra_scripts/FwCsky*.java` | Ghidra C-SKY helpers (seed, stats, region map, symbols) |
