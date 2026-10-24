@@ -105,6 +105,15 @@ class PatchTest(unittest.TestCase):
             ["c7000-txram-dmr", "c7000-txram-dmr-a2048"],
             ["c7000-txram-dmr-a512", "c7000-txram-dmr-a2048"],
             ["c7000-txram-dmr-a1024", "c7000-txram-dmr-a2048"],
+            ["c7000-fm-flat", "c7000-txram-dmr-a4096"],
+            ["c7000-fm-canary", "c7000-txram-dmr-a4096"],
+            ["c7000-fm-proof", "c7000-txram-dmr-a4096"],
+            ["c7000-fm-adcgain", "c7000-txram-dmr-a4096"],
+            ["c7000-txram-square", "c7000-txram-dmr-a4096"],
+            ["c7000-txram-dmr", "c7000-txram-dmr-a4096"],
+            ["c7000-txram-dmr-a512", "c7000-txram-dmr-a4096"],
+            ["c7000-txram-dmr-a1024", "c7000-txram-dmr-a4096"],
+            ["c7000-txram-dmr-a2048", "c7000-txram-dmr-a4096"],
         ]
         for names in pairs:
             with self.subTest(names=names), self.assertRaises(SystemExit):
@@ -486,6 +495,19 @@ class PatchTest(unittest.TestCase):
         self.assertEqual(loud[0x3074:0x3078], self.fac[0x3074:0x3078])
         self.assertEqual(loud[0x3EDFC:0x3EE02], self.fac[0x3EDFC:0x3EE02])
         self.assertEqual(loud[0x38464:0x38474], b"DMR003.R3a6.V022")
+
+    def test_txram_dmr_a4096_changes_only_the_two_fill_immediates(self):
+        # R3a7. One more 6 dB step. The measured R3a6 bytes stay buildable.
+        prev, _ = build.build(["c7000-txram-dmr-a2048"], "R3a6", self.cfg)
+        loud, _ = build.build(["c7000-txram-dmr-a4096"], "R3a7", self.cfg)
+        diff = [i for i, (a, b) in enumerate(zip(prev, loud)) if a != b]
+        self.assertEqual(diff, [0x3846E, 0x5B028, 0x5B038])
+        self.assertEqual(int.from_bytes(loud[0x5B028:0x5B02A], "little"), 0x3110)
+        self.assertEqual(int.from_bytes(loud[0x5B038:0x5B03A], "little"), 0x31F0)
+        self.assertNotIn((0x3AA4).to_bytes(2, "little"), loud[0x5B000:0x5B0BC])
+        self.assertEqual(loud[0x3074:0x3078], self.fac[0x3074:0x3078])
+        self.assertEqual(loud[0x3EDFC:0x3EE02], self.fac[0x3EDFC:0x3EE02])
+        self.assertEqual(loud[0x38464:0x38474], b"DMR003.R3a7.V022")
 
     def test_iram_padbyte_changes_the_halfword_after_keyup_returns(self):
         # R3-0. No log string lives in the IRAM copy. The byte after key-up's

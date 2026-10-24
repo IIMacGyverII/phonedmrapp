@@ -930,3 +930,44 @@ The deviation is still growing at A = 2048, and it stayed under the ±5 kHz stop
 ## End state
 
 Factory image restored over R3a6. YModem `onSuccess` at 01:39:32.773. Banner `开机初始化完成` at 01:39:45.065. `0x34` at 01:39:45.383 is `DMR003.UV4T.V022`. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. VFO 467.625 / 467.625 FM at 01:39:47.195, low power. SignalDeck owns the radio. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched. The ES8311 debug node was not written. The first version poll returned the tag; the second-start path in the loader was not needed.
+
+# R3a7 — A = 4096, still under the stop (2026-10-24, 01:43–01:49)
+
+HackRF receive only, 467.385 MHz center, 2.4 MS/s, LNA 24, VGA 38. One boot and one 3 s silence key, both at 467.625 MHz, low power. Twenty-four patch tests pass. A was not raised again in this image.
+
+## The image
+
+`c7000-txram-dmr-a4096`, tag `R3a7`, `DMR003.R3a7.V022.bin`, 378620 bytes. sha256 `50f8e78986a4efafd288b8d61811e289055ed1aba570278e14e2c6347a2c1354`. File and pushed MD5 `1b0da45c4510840aa7ac58e9b6cbd601`.
+
+Against the R3a6 image the file differs at three bytes: the tag's last character (`+0x3846E`, `6` → `7`), the +2048 immediate (`+0x5B028`, `0x3108` → `0x3110`, big-endian +4096), and the −2048 immediate (`+0x5B038`, `0x31F8` → `0x31F0`, big-endian −4096). The four `0x26` call sites, the AT1846S writes, `+0x3074` and `+0x3EDFC` are the R3a6 bytes. Bit 4 stays clear.
+
+## Boot
+
+VFO 467.625 / 467.625 FM at 01:43:17.556, low power. HackRF from 01:43:22, 180.0 s, floor power 6.79. YModem `onSuccess` at 01:45:31.701. Banner `开机初始化完成` at 01:45:43.796. `0x34` at 01:45:44.107 is `DMR003.R3a7.V022`. Hottest 100 ms bin +0.13 dB, at 97 s, clip 0, nothing at +6 dB. The reboot is inside the file. The stub does not run at boot.
+
+## The silence key
+
+VFO 467.625 again at 01:46:41.879. `txwav` of the same 3 s of zeros. `0x26` launch 1 at 01:46:47.552, acked `sr=0`. `TX bench wav (3000 ms)`. `0x36` body `03` at 01:46:47.563. `played 24000 samples` at 01:46:50.958. Launch 2 at 01:46:50.959. `0x36` body `04` at 01:46:51.288.
+
+Carrier 3.45 s, SNR 39.3 dB, clip 0. The median of the keyed deviation is −331 Hz. The earlier silence keys read +1024, +953 and +479 Hz as that same median, while the VFO log kept reading 467.625. Steady window, dropping the first 1.0 s and the last 0.3 s. The 40 Hz figure is the same FFT cutoff:
+
+| Harmonic | A = 2048 | A = 4096 |
+|---|---|---|
+| 15.625 Hz | 1213 Hz | 2227 Hz |
+| 31.25 Hz | 3.2 Hz | 2.3 Hz |
+| 46.875 Hz | 383 Hz | 808 Hz |
+| 62.5 Hz | 2.7 Hz | 2.7 Hz |
+| 78.125 Hz | 214 Hz | 490 Hz |
+| 1000 Hz | 0.3 Hz | 0.5 Hz |
+
+A 40 Hz low-pass of that window has rms 2266 Hz and median absolute value 1462 Hz. At A = 2048 the same low-pass was 967 Hz and 741 Hz. The rms rose by 2.34. The median rose by 1.97. 2266 / 4096 = 0.55 Hz per count, against 0.47 at A = 2048. 1462 / 4096 = 0.36 Hz per count, the same as A = 2048. The 1 kHz line is 0.5 Hz.
+
+Raw `|deviation|` p99 is 3700 Hz, against 1729 Hz at A = 2048. The edges rose by 2.14. The first 100 ms is a key-up click, p99 22990 Hz. The steady window is the stimulus, and it stayed under ±4 kHz.
+
+## What this does not yet say
+
+A = 4096 is the largest square that was transmitted. Another doubling, A = 8192, would put the steady p99 near 8 kHz if this step's ratio repeated, past the ±5 kHz stop, so that image was not built. ±2.4 kHz as a clean M17 outer deviation is not what this square is: the fundamental is 2227 Hz and the edges are 3700 Hz. The next image is a 1 kHz sine in the same TX RAM, peak count 2048, the peak already measured as a square at p99 1729 Hz. M17 samples are not in this image. §6 is not met.
+
+## End state
+
+Factory image restored over R3a7. YModem `onSuccess` at 01:49:07.225. Banner `开机初始化完成` at 01:49:19.335. `0x34` at 01:49:19.648 is `DMR003.UV4T.V022`. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. VFO 467.625 / 467.625 FM at 01:49:21.452, low power. SignalDeck owns the radio. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched. The ES8311 debug node was not written. The first version poll returned the tag; the second-start path in the loader was not needed.
