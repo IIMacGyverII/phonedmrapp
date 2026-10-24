@@ -1912,3 +1912,39 @@ The link-setup sync at 70 ms scores 0.998. Aimed at that sync, the CRC passes, a
 ## End state
 
 R4r0 stays loaded. VFO 467.625 / 467.625 FM at 12:51:21.985, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met. The byte swap puts this body on the R4b scale, and the stream frames decode.
+
+# R4s — symbols over command 0x40, RRC in the wake, tag R4s0 (2026-10-24, 13:36–14:06)
+
+The host tests passed before the load. The integer RRC matches the float waveform at r² 1.0, max absolute error 2 counts. The image carries those coefficient bytes and the dibit table `01 03 ff fd`. The task entry `+0x18A70` and the `0x3D` thunk are factory. The ES8311 debug node was not written. HackRF receive only, 467.385 MHz center, 2.4 MS/s. The boot capture used LNA 24 and VGA 38. The key used LNA 16 and VGA 16.
+
+`c7000-cmd40-sym`. Command `0x40` byte 0 is an op-code. Op 1 appends symbols, four per byte, MSB dibit first. Op 2 returns the ring fill, the underrun count, and the last error. Op 3 clears the five control words. Op 0 and any other op answer `sr=1`: the 2048-symbol ring at `0x4A400` is the only safe RAM, so this image does not also store samples. An empty ring leaves the stock key. An underrun emits a zero sample, counts it, and does not advance the read pointer. The wake fills each 256-sample half with the 5-phase RRC at the table-generator scale. It does not key. Boot does nothing.
+
+The outer-symbol scale stays `HZ_PER_COUNT` 0.54 and `OUTER_SCALE` 1. A long +3 is already at the 6451 count cap, so a factor of 1.07 would clip at the same cap. The research decoder now keeps a CRC-valid link setup unless the new sync also passes CRC and scores at least as high. Re-run on the kept R4r capture, slice 0.02–0.40 s: the link-setup flag is true, both callsigns match, and the three frames are Golay 0.
+
+`DMR003.R4s0.V022.bin`, 378620 bytes. sha256 `2c8866bcf1a8696d8f0383cc86c11a674b56d764f2b171581d52922d969dd70f`. Pushed MD5 `3361b58af15aa9f81cfa6c9ca06a08d1`.
+
+## Boot
+
+VFO 467.625 / 467.625 FM at 14:03:07.583, low power, before the load. YModem `onSuccess` at 14:05:19.716. Banner `开机初始化完成` at 14:05:32.761. `0x34` at 14:05:33.072 is `DMR003.R4s0.V022`. The boot record has floor 0.00 dB, peak 0.08 dB, and no run at +10 dB.
+
+## One key
+
+The symbol file is 2475 bytes: preamble, one link setup, and 50 stream frames. `sym ready fill=1536` at 14:05:58.184. `sym done bytes=2475` at 14:06:00.827. The status read at 14:06:06.873 is `fill=0 underrun=19340 err=0 sr=0`. The carrier is up for 4.53 s. SNR 58.0 dB. Offset +1007 Hz. Clip fraction 0.
+
+The key-up click, 0–40 ms, has p99 22045 Hz and is not a stop. From 60 ms through 2000 ms the p99 is 3660–4109 Hz. From 2200 ms the p99 is about 80 Hz. No slice from 60 ms on is at or over 5 kHz. The peak was not raised. There was no second key and no 90-frame run.
+
+The plain decoder accepts no link setup and no stream frame. A sync search on the same capture finds one link-setup score of 0.928 at 0.856 s and one stream score of 0.939 at 1.106 s, and the frame tracker loses the next sync. The fit of that capture to the integer RRC model, best lag, is r = −0.34. The 2.06 s of symbols did go out: the modulated interval matches that length, and the underrun count is the rest of the 4 s key after the ring runs dry.
+
+## End state
+
+R4s0 stays loaded. VFO 467.625 / 467.625 FM at 14:06:08.335, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met.
+
+# R-C step 1 — FM receive RAM, reading only (2026-10-24)
+
+No image was built for this reading. Nothing was keyed for it. The factory objdump was read.
+
+Analog receive does not set `WORK_MODE` bit 7. The channel setup stores `0x22`, `0x6A`, or `0x6E`, and none of those has bit 7. Bit 7 (`0x80`) is stored by the FM key-up at `+0x3EDE4` and by the in-key side path at `+0x18B3E`, and the unkey at `+0x3EE86` writes the saved word back. The function at `+0x19470` stores `0x16A` or `0x16B`, which also leave bit 7 clear. Its two callers are `+0x62A8` and `+0x6380`, and each calls it only when the helper at `+0x2404` returns nonzero.
+
+`SYS_INTERP_MASK` bit 14 is clear in the normal setup stores `0x1187F` (`+0x179AA`) and `0x1007F` (`+0x17A96` and `+0x17E3E`), and in the BER stores `0x1800` and `0x800`. It is set by the `0x1E07F` store at `+0x18292` when byte 1 of `0x34808` is nonzero, and by both arms of `+0x19470`. The FM key-up stores 0 into the mask and the unkey restores the saved value.
+
+The only literals in `0x160004B0`–`0x160008DF` are `0x160004B0` and `0x160004B1`, both in the copy helper at `+0x2A4C`. That is the same helper R-A read. The 36-byte BER snapshot remains the only copy that starts at `0x160004E0`. No other reader of the FM audio halves was found.
