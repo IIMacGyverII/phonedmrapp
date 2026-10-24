@@ -11,7 +11,9 @@
  * movi r1, 2 and movi r1, 254. R3a5 is patch c7000-txram-dmr-a1024:
  * movi r1, 4 and movi r1, 252. R3a6 is patch c7000-txram-dmr-a2048:
  * movi r1, 8 and movi r1, 248. R3a7 is patch c7000-txram-dmr-a4096:
- * movi r1, 16 and movi r1, 240. This file stays the image that was measured.
+ * movi r1, 16 and movi r1, 240. R3a8 is a separate stub,
+ * c7000_txram_dmr_sine.S: a 1 kHz sine at the same peak count as the
+ * A = 2048 square. This file stays the image that was measured.
  * The stub programs the DMR modulator (RF_MODE 0x10E0, WORK_MODE 0x80,
  * AT1846S 0x30 = 0x4006 then 0x4026, 0x58 = 0xBCFD) and stores PTT = 1.
  * on_unkey calls 0xe9c, then PTT = 0, clears the TX-RAM bit, and puts the
