@@ -52,11 +52,13 @@ The radio may **stay on 467.625 MHz, low power**: there is no need to return to 
 
 ## Current task
 
-T2, still read only. No image, no key, no SignalDeck edit. The `0x22` stores are written up: they do not fill a symbol buffer. What is missing is the meaning of bytes 3 and 4 of the struct at `0x34808`.
+T3, read only. No image, no key, no SignalDeck edit, no write to the ES8311 node.
 
-1. Find who stores those two bytes, and what a normal digital channel leaves there. The literal `0x34808` occurs 141 times. The digital unpack at `+0x9310` was not shown copying the 163-byte channel into that struct.
-2. If a normal channel leaves byte 3 or byte 4 nonzero, say whether any function after the `0x22` store fills a symbol FIFO. If both bytes are zero on a normal channel, say that the `0x6A` / `0x6E` path is the one in use and look there for a symbol buffer.
-3. Write the reading in `results.md` and one §10 paragraph. If the bytes stay unnamed, say so and stop. Do not build a `0x22` image.
+The AT1846S is already identified. Its register write is `0xFD011220`, its read is `0xFD01125C`, and the init sequence is `+0x2BAC`. Register `0x58` is `0x8405` on analog and `0xBCFD` on DMR. DMR leaves `0x30` at `0x4026`. Do not re-derive those.
+
+1. In the factory image, list every store of AT1846S registers `0x3A`, `0x30`, `0x41`, `0x42`, `0x43`, `0x44`, `0x35` and `0x36`. For each, give the file offset, the value written, and the function it sits in. `scripts/fw_at1846_regmap.py` is the existing map.
+2. Say whether any stored value is a direct or DC modulation mode, or a test-tone path that can take arbitrary data instead of a fixed tone. Use a public AT1846S register description and cite it.
+3. Write the reading in `results.md` and one §10 paragraph. If a register stays unnamed, say so. Do not build an image.
 
 ## Goal and route list (owner, 2026-10-23: "discover every possible way we can get M17 to work")
 
@@ -65,7 +67,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Transmit (the hard part: the FM audio path cuts below ~250 Hz, phone-side analog, ch. 19 §19)**
 - **T1: TX RAM through the C7000 FM modulator.** R3a3 through R3a7 put a square on the air through the DMR modulator. Silence leaves the square and drops the codec tone. Through A = 1024 the flat-top median tracked about 0.41 Hz per count. At A = 4096 the 40 Hz low-pass rms was 2266 Hz (0.55 Hz per count), the median was 1462 Hz, and the steady p99 was 3700 Hz. Another doubling of the square is predicted past the ±5 kHz stop, so A = 8192 is not an image. R3a8 put a 1 kHz sine at peak count 2048 on the air: the 1 kHz line was 923 Hz, the 15.625 Hz line was 3 Hz, the 3 kHz line was 27 Hz, and the steady p99 was 1217 Hz. R3a9 put the same sine at peak count 4096 on the air: the 1 kHz line was 1923 Hz, the 15.625 Hz line was 3 Hz, the 3 kHz line was 26 Hz, and the steady p99 was 2186 Hz. R3a10 (tag `R3b0`; the version field is four characters) put the same sine at peak count 5120 on the air: the 1 kHz line was 2261 Hz, the 15.625 Hz line was 3 Hz, the 3 kHz line was 14 Hz, and the steady p99 was 2674 Hz. The tone is 6% under ±2.4 kHz and the steady p99 is 11% over it. The sine scale compressed (1.18× for a 1.25× peak). R4a (tag `R4a0`) put a fixed RRC α = 0.5 pattern on the same path, every sample at or below count 5120. Steady p99 2774 Hz. The stored 10-sample shape is inverted on the air, −0.54 Hz per count, median r² 0.96 on 10 ms stretches. The 1 kHz line is 17 Hz. Four held symbol levels are absent. The long-term line is 796.875 Hz because the last two samples repeat the first two. The UART command `0x3D` is the next item on this line. It needs a SignalDeck sender, which is outside the standing approval, so it waits. This is the main line.
 - **T2: the C7000 DMR modem as a raw 4FSK source.**
-  - `WORK_MODE` `0x22` is "physical layer" (guide Table 27). Read 2026-10-24: the stores at `+0x179C8` and `+0x17D54` write `0x22` when byte 3 or byte 4 of `0x34808` is nonzero, then return. They write `0x1100039c`, `0x11000400` and `0x11000408`. They do not fill a symbol buffer. When both bytes are zero the first copy stores `0x6A` or `0x6E` and still does not fill one. Bytes 3 and 4 are unnamed, so it is unread whether a normal channel takes this path. No `0x22` image was built.
+  - `WORK_MODE` `0x22` is the built-in BER test. Read 2026-10-24: byte 3 of `0x34808` is 1 only when flag `0x324D7` is 1. Command `0x3F` sets that flag for the Hongrui pattern and for O.153 (strings at file `+0x38444` and `+0x38454`); the OEM BER screen sends O.153, and both values store the flag as 1. Byte 4 stays 0. The flag==2 arm is in the image and unused by the writers that name the flag. A normal channel leaves both bytes 0, and the first setup stores `0x6A` or `0x6E`. The helpers at `+0x18218`, `+0x186BC`, `+0x28904` and `+0x19438` write modem control words and status bytes. They fill no symbol buffer. No `0x22` image was built.
   - Read the symbol map and filter controls: `RF_MODE[7]` gives two deviation maps; is there an RRC roll-off or filter-bypass setting? The `0x22` path writes neither `RF_MODE` nor `FM_BANDWIDTH`. The sibling notes name no RRC register. M17 needs ±2400 Hz outer and RRC α = 0.5; DMR uses ±1944 Hz and α = 0.2. This radio's narrow-band (12.5 kHz) DMR outer symbol is ±3.3 kHz, with AT1846S `0x30` left at `0x4026`. That is about 1.7× the standard ±1944 Hz, and the BTECH 6X2 still decodes it.
   - If the modem can hold PTT continuously and take symbols from RAM, M17 could be generated with no shaper of our own. That buffer is not shown.
 - **T3: the AT1846S itself.** Does it have a direct/DC modulation input or a TX test-tone generator with arbitrary data (registers `0x3A`, `0x30`, `0x41`–`0x44`, the tone generator `0x35`/`0x36`)? Read only.
@@ -81,7 +83,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-T2 was read, not keyed. The stores at `+0x179C8` and `+0x17D54` write `WORK_MODE` = `0x22` when byte 3 or byte 4 of `0x34808` is nonzero. They set `0x1100039c`, `0x11000400` and `0x11000408`, then return. No symbol buffer is filled, and neither `RF_MODE` nor `FM_BANDWIDTH` is written. Bytes 3 and 4 are unnamed, so T2 is not closed. No `0x22` image was built. The radio is still the R4a factory restore: `0x34` `DMR003.UV4T.V022`, VFO 467.625, no `DMRDEBUG.bin`. §6 is not met.
+T2 naming was read only. Nothing was keyed. Byte 3 of `0x34808` is the BER-test select: command `0x3F` sets flag `0x324D7` to 1, and the initializer copies that into byte 3. Byte 4 stays 0. A normal channel leaves both bytes 0 and takes `WORK_MODE` `0x6A` or `0x6E`. Neither path fills a symbol buffer. No `0x22` image. The radio is still the R4a factory restore: `0x34` `DMR003.UV4T.V022`, VFO 467.625, no `DMRDEBUG.bin`. §6 is not met.
 
 ## Owner question
 
