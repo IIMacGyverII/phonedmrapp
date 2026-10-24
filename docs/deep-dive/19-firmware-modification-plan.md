@@ -346,6 +346,18 @@ Three amplitudes now agree at about 0.41 Hz per count on the flat top. ±2.4 kHz
 
 End state: factory image. YModem `onSuccess` 01:28:47.284. Banner 01:28:59.080. `0x34` `DMR003.UV4T.V022` at 01:28:59.395. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. VFO 467.625 / 467.625 FM at 01:29:01.242, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. The ES8311 debug node was not written.
 
+**2026-10-24 (01:33–01:39) — R3a6, the rms grows and the flat top lags.** HackRF receive only, 467.625 MHz, low power. Tables: `radio_firmware/results.md`.
+
+`c7000-txram-dmr-a2048` is the R3a5 stub with two immediates changed: `movi r1, 8` (+2048) and `movi r1, 248` (−2048). sha256 `57e712c0ab97f438aded0a733f1502f4120a55b8b3b0ed49c30ff704bf3118df`, MD5 `1b9c2c4f8f0b5a9f2320f4cf3bcec479`. Twenty-three tests pass. The built file differs from R3a5 at those two bytes and at the tag.
+
+Boot capture 180 s from 01:33:47, VFO already on 467.625. YModem `onSuccess` 01:35:56.936. Banner 01:36:10.932. `0x34` `DMR003.R3a6.V022` at 01:36:11.242. Hottest bin +0.11 dB, clip 0.
+
+One 3 s silence key. `0x26` launch 1 at 01:37:13.013, `0x36` body `03`, 24000 samples, launch 2 at 01:37:16.438, `0x36` body `04` at 01:37:16.768. Carrier 3.47 s, SNR 39.2 dB, clip 0. Median of the keyed deviation +479 Hz; the VFO log still reads 467.625. Fundamental 1213 Hz. Third harmonic 383 Hz, fifth 214 Hz. A 40 Hz low-pass has rms 967 Hz and median absolute deviation 741 Hz, against 438 Hz and 422 Hz at A = 1024. The rms rose by 2.21 (0.47 Hz per count). The median rose by 1.75 (0.36 Hz per count), so the flat top is a smaller part of the cycle. The 1 kHz line is 0.3 Hz. Steady p99 1729 Hz, double the 846 Hz at A = 1024. The key-up click is again about 23 kHz and is not the stimulus. A was not raised again.
+
+The deviation is still growing, and the steady window stayed under ±2 kHz. ±2.4 kHz is not measured. The next image is A = 4096. If these ratios repeat, the low-pass rms would be about 2.1 kHz and the steady p99 about 3.5 kHz. §6 is not met.
+
+End state: factory image. YModem `onSuccess` 01:39:32.773. Banner 01:39:45.065. `0x34` `DMR003.UV4T.V022` at 01:39:45.383. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. VFO 467.625 / 467.625 FM at 01:39:47.195, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. The ES8311 debug node was not written.
+
 End state: factory image. The tone-key restore's first `0x34` poll was empty after `onSuccess` 00:48:48.703; a later start of SignalDeck printed the banner at 00:51:13.856 and `DMR003.UV4T.V022` at 00:51:14.167. The silence-key restore did the same: `onSuccess` 01:01:45.469, no version on the first poll, banner 01:02:57.784 and `0x34` `DMR003.UV4T.V022` at 01:02:58.095 after a second start. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. VFO 467.625 / 467.625 FM at 01:02:58.648, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. The ES8311 debug node was not written.
 
 ---
