@@ -618,3 +618,28 @@ Steps, cheapest first:
 - **R4: a symbol-stream command.** A new UART command (an unused command byte) carries M17/POCSAG symbols; firmware shapes them into TX RAM under PTT. SignalDeck gets a matching sender. Measure against §6 (plain M17 decode 85/90, POCSAG 100 %).
 
 **Receive side, optional.** Reading or writing ES8311 registers needs the `es8311_debug` write format, from `es8311_store` in the kernel. The symbols are hidden (`kptr_restrict`), and changing that is a security setting, so it stays off. Recover the symbol table offline from the boot image's kernel instead, then disassemble `es8311_store`. Any ES8311 write is the owner's decision. Receive M17/POCSAG already works with the equalizers.
+
+## 21. Review of R1, R2, R4 and the `es8311_store` reading (2026-10-23, commits `7262c739`, `d56fdb84`)
+
+**R1 is the first positive result of this track.** The DMR modulator path carries the low end:
+- **7.2 %** of the burst's 0–4 kHz power sits below 250 Hz. A random-symbol RRC 4FSK at 4800 sym/s puts about 8–9 % there. The FM path measured under 1 %.
+- A held outer symbol keeps its level across the burst (ratio 0.981).
+
+So the C7000-made modulation does not go through the coupling that cuts FM audio. That is the condition for the TX-RAM route.
+
+**The ±7.3 kHz rail needs a second look before anyone acts on it.** The DMR outer symbol should be ±1944 Hz, and the BTECH 6X2 decoded this radio on air. 3.8× too much deviation would put a ~20 kHz-wide signal in a 12.5 kHz channel. Either the radio's DMR really is over-deviated (then worth knowing, and worth reporting), or the symbol-centre reading is off (timing, or the transitions leaking into the window). Check it two independent ways from the same capture:
+- **Occupied bandwidth straight from the IQ:** the 99 % power bandwidth of the burst. About 8–9 kHz means ±1944; about 18–20 kHz means ±7 kHz.
+- **The symbol histogram:** the 4FSK levels should show as four peaks, with inner/outer = 1/3.
+
+**The stop rule was applied to the wrong thing.** The ±5 kHz stop is for **our** stimuli: it guards against over-driving a patched path. R1's figure is the factory DMR modulation, a measurement, not something we sent, and R3's deviation does not follow from it. R3 sets its own deviation through the PCM amplitude. That rule wording was mine and was ambiguous. **R3 should go ahead**, starting at a very small PCM amplitude (the guide gives no Hz per count) and raising it in 6 dB steps, with the stop on the measured R3 deviation.
+
+**R2 adds what the R3 stub needs:**
+- The FM key-up at `+0x3EDF8` clears `tx_voice_source`, so the stub must set it **after** that store.
+- The ping-pong is 2 × 256 samples, big-endian. Nothing in the image refills it, so a static fill repeats: low half `+A`, high half `−A` gives a **15.6 Hz square wave** (64 ms period).
+- Clear `FM_BANDWIDTH` bit 4 (pre-emphasis) and bit 6 (band-pass) in the same stub. UVm8 showed that stub path runs.
+- Flat tops on the HackRF mean the TX-RAM route is DC-capable. A drooping square (an exponential decay towards zero) gives the corner frequency of whatever high-pass is left.
+- If nothing radiates beyond a bare carrier, the C7000 FM output is not what drives the RF in analog mode. In that case, the next step is the DMR-mode modulation registers (two-point `RF_MODE` with the AT1846S set to `0xBCFD`).
+
+**R4 design: sound.** The rate budget (27 % of the line) and the shaper size fit. Build it only after R3.
+
+**`es8311_store`:** a write with count 0 is a **register read**: the value goes to the kernel log, and nothing is written to the codec. That is safe to use for reading the ADC high-pass registers (`0x1B`/`0x1C`) for the receive side, but it is still a write to a debug node, so the owner decides. Never use a non-zero count without the owner's approval: that path writes the codec.
