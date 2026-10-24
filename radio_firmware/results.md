@@ -1400,3 +1400,45 @@ The symbol map in this image is the inverted ±1944 / ±648 Hz table. There is n
 ## End state
 
 The radio was not touched. End state remains the R4a restore: factory image, `0x34` `DMR003.UV4T.V022` at 03:00:58.517, VFO 467.625 / 467.625 FM at 03:00:59.876, low power, no `DMRDEBUG.bin`.
+
+# T2 — symbol buffer, read only (2026-10-24)
+
+No image was loaded. Nothing was keyed. The factory image was disassembled with no `-M`. The question was whether the modem can hold PTT and take 4FSK symbols from a RAM buffer the host could fill.
+
+## The copy
+
+`+0x2A18` writes `r2` bytes from the caller's pointer (`r1`) into modem RAM at `r0 + 0x16000000`. The base is `movi r12, 176; lsli r12, 21`. A length of 0 returns. There are 23 direct calls. Every `r0` and every length is a `movi`. No call walks a window, and no call sits in a loop that repeats the copy.
+
+| Calls | `r0` | Length | Destination | Source |
+|---|---|---|---|---|
+| `+0x8148` | 0 | 36 | `0x16000000` | stack, `r14+336`, on the arm where `(r5, 0x19)` is 4 |
+| `+0x8152` | 36 | 36 | `0x16000024` | the same stack buffer |
+| `+0x83E2`, `+0x85F4`, `+0x8774` | 0 | 36 | `0x16000000` | the same stack slot, filled with `0x5F` for 36 bytes first |
+| `+0x83EC`, `+0x85FE`, `+0x877E` | 36 | 36 | `0x16000024` | that `0x5F` fill |
+| `+0x2A64A`, `+0x2AEC4`, `+0x2B5FC` | 0 | 24 | `0x16000000` | the pointer at `(r8−4)`, plus 5 |
+| `+0x2A7F4`, `+0x2A8AC`, `+0x2A9D0`, `+0x2A9FA` | 0 | 9 | `0x16000000` | `0x4D43E + slot*12` |
+| `+0x2A83A` | 0 | 9 | `0x16000000` | `0x4D486 + slot*12` |
+| `+0x2A9AE` | 0 | 9 | `0x16000000` | `0x4D435` |
+| `+0x2AD0C`, `+0x2AD46` | 41 | 4 | `0x16000029` | `0x4D411` |
+| `+0x2AD66` | 41 | 2 | `0x16000029` | two zero bytes on the stack |
+| `+0x2AAB2`, `+0x2ABAE`, `+0x2ADB0` | 48 | 27 | `0x16000030` | `0x4D49E + n*27` |
+
+The slot in the 9-byte rows is the byte at `(r8−36)`. The index `n` in the 27-byte rows is the byte at `0x4D404+0xA`, and the address math is that byte times 27. `+0x2AD0C` runs when byte `0x12` of `0x34808` is 1. `+0x2AD46` runs when that byte is 2 or 3. `+0x2AD66` runs otherwise and writes the two zeros. `+0x2ABAE` copies the 27-byte record on every path; the call of IRAM `0xFD014BEC` just above it runs only for byte `0x12` equal to 2 or 3, which R-A already read.
+
+The longest copy is 36 bytes. A 256-sample PCM half is 512 bytes. None of these lengths is 256, 512, or 1024.
+
+## What lands in the TX window
+
+TX RAM is `0x16000030`–`0x1600042F`. The 27-byte copies are the only calls whose destination is that address. They write the unnamed record R-A already placed at `0x4D49E`, one record, then return. They do not stream symbols.
+
+The 36-byte copy at offset 36 covers `0x16000024`–`0x16000047`, so its last 24 bytes sit in the TX window. Three of those copies are the byte `0x5F`. That is a fixed record, not a waveform. An earlier paragraph says this image has no store into that RAM. These copies do write its first 24 bytes, and the 27-byte record writes the next 27. The paragraph is left as written. The rest of the 1024-byte window has no store in this list.
+
+No `lrw` names `0x16000030` or `FM_ADDR_SW` (`0x1100056C`). The only literal of PTT (`0x11000560`) is the FM key-up: saved at `+0x3ECEE`, stored as 1 at `+0x3EE00`, restored at `+0x3EE9C`. The word at `+0x3EE30` is the linear dump decoding a pool slot. Nothing branches back to the store of 1, and none of the 23 copies touches that register.
+
+## What this does not yet say
+
+The CPU writes short fixed records into the modem. It does not fill a symbol FIFO, and it does not hold PTT while a buffer drains. A host shaper on the TX-RAM path is still the transmit path that has put a waveform on the air. `0x3D` still waits on a SignalDeck sender. T4 stays closed. R-B was not started. §6 is not met.
+
+## End state
+
+The radio was not touched. End state remains the R4a restore: factory image, `0x34` `DMR003.UV4T.V022` at 03:00:58.517, VFO 467.625 / 467.625 FM at 03:00:59.876, low power, no `DMRDEBUG.bin`.
