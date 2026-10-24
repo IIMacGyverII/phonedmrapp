@@ -47,7 +47,8 @@ class PatchTest(unittest.TestCase):
     def test_all_patches_together(self):
         # The 0x58 variants share five immediates, and the C7000 stubs share the
         # redirect plus the tail. One from each group, plus the shared mask patch.
-        # c7000-fm-adcgain is exclusive with the other stubs and is not in this set.
+        # c7000-fm-adcgain, c7000-txram-square and c7000-txram-dmr share the tail
+        # with the other stubs and are not in this set.
         names = ["fm-flat-58dd", "c7000-fm-flat", "ctcss-hpf-keep"]
         img, sites = build.build(names, "UVt0", self.cfg)
         self.assertEqual(len(img), len(self.fac))
@@ -78,6 +79,11 @@ class PatchTest(unittest.TestCase):
             ["c7000-fm-canary", "c7000-txram-square"],
             ["c7000-fm-proof", "c7000-txram-square"],
             ["c7000-fm-adcgain", "c7000-txram-square"],
+            ["c7000-fm-flat", "c7000-txram-dmr"],
+            ["c7000-fm-canary", "c7000-txram-dmr"],
+            ["c7000-fm-proof", "c7000-txram-dmr"],
+            ["c7000-fm-adcgain", "c7000-txram-dmr"],
+            ["c7000-txram-square", "c7000-txram-dmr"],
         ]
         for names in pairs:
             with self.subTest(names=names), self.assertRaises(SystemExit):
@@ -326,6 +332,100 @@ class PatchTest(unittest.TestCase):
         self.assertEqual(img[0x3EE16:0x3EE18], self.fac[0x3EE16:0x3EE18])
         for off in (0x2C90, 0x3054, 0x344E, 0x34F2, 0x3640):
             self.assertEqual(img[off:off + 2], bytes.fromhex("0584"))
+
+    def test_txram_dmr_arms_the_square_from_the_host_key(self):
+        img, _ = build.build(["c7000-txram-dmr"], "R3a3", self.cfg)
+        xip = 0x0301A000
+
+        def hw(off):
+            return int.from_bytes(img[off:off + 2], "little")
+
+        def word(off):
+            return int.from_bytes(img[off:off + 4], "little")
+
+        def bt_file(off):
+            raw = hw(off)
+            self.assertEqual(raw & 0xFC00, 0x0800, "not a 16-bit bt")
+            imm = raw & 0x3FF
+            if imm & 0x200:
+                imm -= 0x400
+            return off + (imm << 1)
+
+        # Both launch=1 sites call on_key. Both launch=2 sites call on_unkey.
+        # File-offset displacement is the XIP displacement (the base cancels).
+        for site in (0x92C8, 0x92E0):
+            self.assertEqual(bsr32_target(self.fac, site), 0xE9C)
+            self.assertEqual(bsr32_target(img, site), 0x5B000)
+            self.assertEqual((site + xip + bsr32_disp(img, site)) & 0xFFFFFFFF, xip + 0x5B000)
+        for site in (0x92AA, 0x92FA):
+            self.assertEqual(bsr32_target(self.fac, site), 0xE9C)
+            self.assertEqual(bsr32_target(img, site), 0x5B088)
+            self.assertEqual((site + xip + bsr32_disp(img, site)) & 0xFFFFFFFF, xip + 0x5B088)
+        # The instruction after each replaced bsr is the factory one. R3a2's
+        # sites and the other 0xe9c caller stay factory.
+        for off in (0x92CC, 0x92E4, 0x92AE, 0x92FE, 0x92B2, 0x929C, 0x9364):
+            self.assertEqual(img[off:off + 4], self.fac[off:off + 4])
+
+        # on_key: save the handler's r4-r8, post the event, then the DMR path.
+        self.assertEqual(hw(0x5B000), 0x14D5)  # push r4-r8, r15
+        self.assertEqual(bsr32_target(img, 0x5B002), 0xE9C)
+        self.assertEqual((0x5B002 + xip + bsr32_disp(img, 0x5B002)) & 0xFFFFFFFF, xip + 0xE9C)
+        self.assertEqual(hw(0x5B008), 0x3387)  # movi r3, 135
+        self.assertEqual(hw(0x5B00A), 0x4365)  # lsli r3, 5 -> 0x10E0
+        self.assertEqual(hw(0x5B010), 0x3280)  # movi r2, 128 -> WORK_MODE 0x80
+        self.assertEqual(hw(0x5B018), 0x3AA0)  # bseti r2, 0
+        self.assertEqual(hw(0x5B020), 0x3A84)  # bclri r2, 4
+        self.assertEqual(hw(0x5B022), 0x3A86)  # bclri r2, 6
+        self.assertNotIn((0x3AA4).to_bytes(2, "little"), img[0x5B000:0x5B0BC])
+        self.assertEqual(hw(0x5B028), 0x3101)  # movi r1, 1 -> +256
+        self.assertEqual(hw(0x5B038), 0x31FF)  # movi r1, 255 -> -256
+        self.assertEqual(img[0x5B02A:0x5B02E], bytes.fromhex("02ea0001"))
+        self.assertEqual(img[0x5B03A:0x5B03E], bytes.fromhex("02ea0001"))
+        self.assertEqual(hw(0x5B02E), 0xAB20)  # st.h
+        self.assertEqual(hw(0x5B03E), 0xAB20)
+        self.assertEqual(bt_file(0x5B036), 0x5B02E)
+        self.assertEqual(bt_file(0x5B046), 0x5B03E)
+        # 0x30 = 0x4006, then 0x4026, then 0x58 = 0xBCFD, each via the IRAM write.
+        self.assertEqual(hw(0x5B048), 0x3030)
+        self.assertEqual(word(0x5B04A), 0x4006EA01)
+        self.assertEqual(bsr32_target(img, 0x5B04E), 0xFD011220)
+        self.assertEqual((0x5B04E + xip + bsr32_disp(img, 0x5B04E)) & 0xFFFFFFFF, 0x2B220)
+        self.assertEqual(word(0x5B054), 0x4026EA01)
+        self.assertEqual(bsr32_target(img, 0x5B058), 0xFD011220)
+        self.assertEqual((0x5B058 + xip + bsr32_disp(img, 0x5B058)) & 0xFFFFFFFF, 0x2B220)
+        self.assertEqual(hw(0x5B05C), 0x3058)  # movi r0, 88
+        self.assertEqual(word(0x5B05E), 0xBCFDEA01)
+        self.assertEqual(bsr32_target(img, 0x5B062), 0xFD011220)
+        self.assertEqual((0x5B062 + xip + bsr32_disp(img, 0x5B062)) & 0xFFFFFFFF, 0x2B220)
+        self.assertEqual(hw(0x5B068), 0x3201)  # movi r2, 1
+        self.assertEqual(hw(0x5B06A), 0xB340)  # st.w PTT, after the fills and the writes
+        self.assertEqual(hw(0x5B06C), 0x1495)  # pop r4-r8, r15, before the pool
+        pool = [word(0x5B070 + 4 * k) for k in range(6)]
+        self.assertEqual(pool, [0x11000104, 0x11000100, 0x11000080, 0x11000500, 0x16000030, 0x11000560])
+
+        # on_unkey restores PTT, the TX-RAM bit, and the wide-FM AT1846S pair.
+        self.assertEqual(hw(0x5B088), 0x14D5)
+        self.assertEqual(bsr32_target(img, 0x5B08A), 0xE9C)
+        self.assertEqual(hw(0x5B090), 0x3200)  # movi r2, 0
+        self.assertEqual(hw(0x5B092), 0xB340)
+        self.assertEqual(hw(0x5B098), 0x3A80)  # bclri r2, 0
+        self.assertEqual(hw(0x5B09C), 0x3058)
+        self.assertEqual(word(0x5B09E), 0x8405EA01)
+        self.assertEqual(bsr32_target(img, 0x5B0A2), 0xFD011220)
+        self.assertEqual((0x5B0A2 + xip + bsr32_disp(img, 0x5B0A2)) & 0xFFFFFFFF, 0x2B220)
+        self.assertEqual(word(0x5B0A8), 0x7026EA01)
+        self.assertEqual(bsr32_target(img, 0x5B0AC), 0xFD011220)
+        self.assertEqual((0x5B0AC + xip + bsr32_disp(img, 0x5B0AC)) & 0xFFFFFFFF, 0x2B220)
+        self.assertEqual(hw(0x5B0B0), 0x1495)
+        self.assertEqual([word(0x5B0B4), word(0x5B0B8)], [0x11000560, 0x11000080])
+
+        # Not the tune redirect, the key-up hook, the pad byte, or a 0x58 immediate.
+        self.assertEqual(img[0x3074:0x3078], self.fac[0x3074:0x3078])
+        self.assertEqual(img[0x3EDFC:0x3EE02], self.fac[0x3EDFC:0x3EE02])
+        self.assertEqual(img[0x3EE16:0x3EE18], self.fac[0x3EE16:0x3EE18])
+        for off in (0x2C90, 0x3054, 0x344E, 0x34F2, 0x3640, 0x2E94):
+            self.assertEqual(img[off:off + 2], self.fac[off:off + 2])
+        self.assertEqual(img[0x38464:0x38474], b"DMR003.R3a3.V022")
 
     def test_iram_padbyte_changes_the_halfword_after_keyup_returns(self):
         # R3-0. No log string lives in the IRAM copy. The byte after key-up's

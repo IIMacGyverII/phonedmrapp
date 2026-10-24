@@ -4,6 +4,8 @@ STATUS: REVIEW
 
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
+**Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
+
 ## Protocol
 
 - **`STATUS: BENCH`**: Grok Build's turn. Do the task under "Current task", within the standing rules below.
@@ -50,33 +52,19 @@ The radio may **stay on 467.625 MHz, low power**: there is no need to return to 
 
 ## Current task
 
-R3a2, from ch. 19 §23 (Claude Code's review of R3-0):
+R3a4. Same DMR-modulator stub as R3a3 (`c7000-txram-dmr`), with the square amplitude raised one 6 dB step, A = 512. The big-endian halfword for +512 is `movi r1, 2`; for −512 it is `movi r1, 254`. Nothing else in the stub changes. Do not patch `+0x3074` or `+0x3EDFC`. Bit 4 of `0x11000080` stays clear.
 
-1. **Factory boot-radiation check** (factory image, receive only):
-   - Tune the VFO to 467.625 MHz.
-   - Start a HackRF capture there.
-   - Run DIAG `restartmodule` and record through the boot.
-   - Report whether the factory boot cycle radiates at all: duration, level, any modulation.
-2. **Host:**
-   - Find the flash-resident handler of the UART key command (`0x26` / SEND_START) in the command dispatch, and the unkey path.
-   - Find a word in IRAM .bss (`0x31AF4`–`0x4DAB0`) that nothing references.
-3. **R3a2:**
-   - The key handler sets the flag word; the unkey path clears it.
-   - The key-up stub (branch from IRAM PC `0x159F4` to XIP `0x03075000`, as in R3a1) does its TX-RAM setup, fill and filter clears only while the flag is set. Otherwise it does exactly the factory PTT store.
-   - Host tests: with the flag zero, the stub reduces to the factory behaviour; every branch target is checked in runtime addresses.
-4. **Load and measure:**
-   - Tune the VFO to 467.625 before loading, and keep the HackRF recording on 467.625 through the load and the first boot.
-   - Check the banner and the tag, and that nothing radiated at boot beyond the factory behaviour from step 1.
-   - Then the R3 measurement: A = 256, a 3 s key; report whether the square's tops are flat, drooping or a bare carrier.
-   - Raise A in 6 dB steps, under the ±5 kHz stop.
-5. **Docs:** add the ±3.3 kHz narrow DMR outer deviation (1.7× the standard) to the DMR notes.
+1. Host-check the image: the four `0x26` sites still call `on_key` / `on_unkey`, and the fill halfwords are 512 / −512.
+2. Tune the VFO to 467.625 before the load. Record the HackRF through the load and the first boot. Do not key if that boot radiates (peak ≥ 6 dB, or 0.2 s at +10 dB). Confirm the banner and the `0x34` tag.
+3. One 3 s silence key (`txwav` of zeros), low power. Report the 15.625 Hz fundamental, the flat-top deviation, and the steady-window p99. The ±5 kHz stop applies to that steady window. The key-up click is a transient and is not a stop.
+4. Restore the factory image. Leave the VFO on 467.625, low power. Do not raise A again in this image. Do not send M17 samples until this step says the deviation scaled and stayed under the stop.
 
 ## Goal and route list (owner, 2026-10-23: "discover every possible way we can get M17 to work")
 
-Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Claude Code then picks the next step, and may reorder the routes from the results. A route is closed only by a measurement or a firm reading, written up in `results.md`.
+Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). The next step is the next open item on this list. A route is closed only by a measurement or a firm reading, written up in `results.md`.
 
 **Transmit (the hard part: the FM audio path cuts below ~250 Hz, phone-side analog, ch. 19 §19)**
-- **T1: TX RAM through the C7000 FM modulator** (R3a2 now, then R4: a UART symbol command `0x3D`, with the RRC shaper in firmware). This is the main line.
+- **T1: TX RAM through the C7000 FM modulator.** R3a3 puts an A = 256 square on the air through the DMR modulator; a silence key leaves the square and drops the codec tone. R3a4 is the 6 dB step. R4, a UART symbol command `0x3D` with the RRC shaper, waits until the deviation scale is measured and still under the stop. This is the main line.
 - **T2: the C7000 DMR modem as a raw 4FSK source.**
   - `WORK_MODE` `0x22` is "physical layer" (guide Table 27): read whether it transmits raw symbols, continuously or only in bursts, and from where (TX RAM / registers).
   - Read the symbol map and filter controls: `RF_MODE[7]` gives two deviation maps; is there an RRC roll-off or filter-bypass setting? M17 needs ±2400 Hz outer and RRC α = 0.5; DMR uses ±1944 Hz and α = 0.2. This radio's narrow-band (12.5 kHz) DMR outer symbol is ±3.3 kHz, with AT1846S `0x30` left at `0x4026`. That is about 1.7× the standard ±1944 Hz, and the BTECH 6X2 still decodes it.
@@ -94,7 +82,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Cl
 
 ## Last report
 
-R3a2 is done. Factory boot and the R3a2 boot are both silent at 467.625 MHz (hottest bin +0.11 dB and +0.13 dB, clip 0). The image bannered as `DMR003.R3a2.V022` (sha256 `74a47c45e4e52a65fbdc5b3e07d9ceefe41f6b5f53be9961a178735e07e28f64`). One 3 s low-power key was the phone's 999.5 Hz codec tone at about ±2.1 kHz (the 15.6 Hz fundamental measured 0.2 Hz). A was not raised. The DMR-modulator image (two-point `RF_MODE`, `0x58` = `0xBCFD`, `0x30` left at `0x4026`) was proposed and not built. Factory image restored: banner 23:42:14.584, `0x34` `DMR003.UV4T.V022`, channel 36 NOAA WX4, no `DMRDEBUG.bin`. §6 is not met.
+R3a3 is done. Boot of `DMR003.R3a3.V022` was silent (143.5 s, peak +0.11 dB, clip 0; sha256 `667cfd127d3b403192066da8e67c3633905875a7370a56a4fc379f861d43ea40`). A 3 s codec-tone key radiated the 999.9 Hz sine at ±2.4 kHz and the TX-RAM square together (15.625 Hz fundamental 133 Hz). A 3 s silence key kept the square (fundamental 129 Hz, tops about ±104 Hz, 0.40 Hz per count) and the 1 kHz line was 1.2 Hz. A was not raised. The steady window stayed under ±5 kHz. Factory restored: `0x34` at 01:02:58.095 is `DMR003.UV4T.V022`, VFO 467.625, no `DMRDEBUG.bin`. §6 is not met.
 
 ## Owner question
 
