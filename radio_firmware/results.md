@@ -1013,3 +1013,45 @@ The waveform is a sine, and it is not yet near the M17 outer deviation of ±2.4 
 ## End state
 
 Factory image restored over R3a8. YModem `onSuccess` at 02:08:09.502. Banner `开机初始化完成` at 02:08:21.899. `0x34` at 02:08:22.214 is `DMR003.UV4T.V022`. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. VFO 467.625 / 467.625 FM at 02:08:24.024, low power. SignalDeck owns the radio. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched. The ES8311 debug node was not written. The first version poll returned the tag; the second-start path in the loader was not needed.
+
+# R3a9 — a 1 kHz sine at peak count 4096 (2026-10-24, 02:12–02:19)
+
+HackRF receive only, 467.385 MHz center, 2.4 MS/s, LNA 24, VGA 38. One boot and one 3 s silence key, both at 467.625 MHz, low power. Twenty-six patch tests pass. The peak was not raised. No M17 samples were sent.
+
+## The image
+
+`c7000-txram-dmr-sine1k-p4096`, tag `R3a9`, `DMR003.R3a9.V022.bin`, 378620 bytes. sha256 `ebe8144f22e9eb3c7ad9956ac6911b0356592927cfeec1937adb767f8fc28013`. File and pushed MD5 `ccab6930545b0d35fa38279e7e48bd72`.
+
+Same eight-sample cycle as R3a8, with the peak immediate doubled. The `movi r1` immediates are 0, 11, 16, 11, 0, 245, 240, 245. The aired samples are 0, +2816, +4096, +2816, 0, −2816, −4096, −2816. The built file differs from R3a8 at the tag byte and at those six immediate bytes. `on_unkey` stays at `+0x5B0A0`. `+0x3074` and `+0x3EDFC` are factory. Bit 4 stays clear. The measured R3a8 sine still builds.
+
+## Boot
+
+VFO 467.625 / 467.625 FM at 02:12:48.342, low power. HackRF running at 02:12:53, 180.0 s, floor power 6.78. YModem `onSuccess` at 02:15:02.396. The first version poll returned `0x29050000` and no `0x34`. The loader started SignalDeck again. Banner `开机初始化完成` at 02:16:12.953. `0x34` at 02:16:13.265 is `DMR003.R3a9.V022`. Hottest 100 ms bin +0.12 dB, at 170 s, clip 0, nothing at +6 dB. The reboot is inside the file. The stub does not run at boot.
+
+## The silence key
+
+VFO 467.625 again at 02:16:33.616. `txwav` of 3 s of zeros. `0x26` launch 1 at 02:16:39.276, acked `sr=0` at 02:16:39.280. `TX bench wav (3000 ms)`. `0x36` body `03` at 02:16:39.286. `played 24000 samples` at 02:16:42.675. Launch 2 at 02:16:42.677, acked `sr=0`. `0x36` body `04` at 02:16:43.009.
+
+Carrier 3.45 s, SNR 39.0 dB, clip 0. The median of the keyed deviation is +1047 Hz. The VFO log still reads 467.625. Steady window, dropping the first 1.0 s and the last 0.3 s:
+
+| Line | Amplitude |
+|---|---|
+| 15.625 Hz | 2.8 Hz |
+| 31.25 Hz | 3.8 Hz |
+| 250 Hz | 0.7 Hz |
+| 500 Hz | 1.2 Hz |
+| 1000 Hz | 1923 Hz |
+| 2000 Hz | 11.9 Hz |
+| 3000 Hz | 26.0 Hz |
+
+The 15.625 Hz line is 3 Hz, as it was at peak count 2048. The 1 kHz line is 1923 Hz, 2.08× the 923 Hz at half the peak, so the tone tracked the doubling. The 3 kHz line is 26 Hz, the same size it was at peak count 2048 (26.5 Hz), so it did not grow with the tone. The 2 kHz line rose from 3.5 Hz to 11.9 Hz and is still under 1% of the tone. The raw steady rms is 1383 Hz.
+
+Steady p99 is 2186 Hz, 1.80× the 1217 Hz at peak count 2048. The first 100 ms is a key-up click, p99 23279 Hz. The steady window is the stimulus, and it stayed under ±2.2 kHz. 1923 / 4096 = 0.47 Hz per count on the tone. 2186 / 4096 = 0.53 Hz per count on the steady p99.
+
+## What this does not yet say
+
+The waveform is a sine, and the tone is not yet at the M17 outer deviation of ±2.4 kHz. The steady p99 is 2186 Hz. One more step, peak immediate 20 (peak count 5120), scales the measured tone to about 2400 Hz and the steady p99 to about 2700 Hz. Both sit under the ±5 kHz stop. That is the next image. The peak was not raised in this one. M17 samples were not sent. §6 is not met.
+
+## End state
+
+Factory image restored over R3a9. YModem `onSuccess` at 02:18:59.822. Banner `开机初始化完成` at 02:19:11.565. `0x34` at 02:19:11.875 is `DMR003.UV4T.V022`, on the first poll. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. VFO 467.625 / 467.625 FM at 02:19:13.726, low power. SignalDeck owns the radio. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched. The ES8311 debug node was not written.

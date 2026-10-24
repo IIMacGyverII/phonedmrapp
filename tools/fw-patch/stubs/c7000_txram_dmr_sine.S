@@ -10,8 +10,10 @@
  * immediates are 0, 6, 8, 6, 0, 250, 248, 250. The TX RAM reads each
  * stored halfword big-endian, so those are 0, +1536, +2048, +1536, 0,
  * -1536, -2048, -1536. Peak count is 2048, the same peak as the A=2048
- * square. Nothing larger is stored. This file stays the image that was
- * measured.
+ * square. Nothing larger is stored. R3a9 is patch
+ * c7000-txram-dmr-sine1k-p4096: the same bytes with sample immediates
+ * 0, 11, 16, 11, 0, 245, 240, 245. Measured 2026-10-24: 1 kHz line
+ * 1923 Hz, steady p99 2186 Hz. This file stays the peak-2048 image.
  *
  * push r4-r8, r15. r0-r3 only after the event post. The bsr encodings
  * are raw halfwords: gas emits a relocation for `bsr 0xFD011220` and ld
