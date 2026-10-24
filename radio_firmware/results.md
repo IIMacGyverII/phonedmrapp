@@ -1680,3 +1680,29 @@ A decode of 0.04–1.20 s accepts the link setup (sync 0.999) and 27 stream fram
 ## End state
 
 Factory image restored. YModem `onSuccess` 07:41:59.048. `0x34` `DMR003.UV4T.V022` at 07:42:11.962. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. The loader's channel write was followed by the VFO tune: 467.625 / 467.625 FM at 07:42:13.659, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met: one transmission produced the link setup and a loop of six frames whose payloads are the bytes 0 through 15, and the acceptance is 85 of 90 frames across three transmissions. `0x3D` still waits. The ES8311 debug node was not written.
+
+# R4i — one end frame after the loop, tag R4i0 (2026-10-24, 08:46–08:54)
+
+HackRF receive only, 467.385 MHz center, 2.4 MS/s, LNA 24, VGA 38. One boot and one 3 s silence key, both at 467.625 MHz, low power. Thirty-six patch tests passed before the load. The ES8311 debug node was not written.
+
+The image keeps the R4h loop and adds one end frame. The loop table is still file `+0x5B400`, 2430 samples, frames 0–5, peak count 6451. The end frame is the 320-sample continuation of that waveform, file `+0x5B170`, 640 bytes, peak count 6337. It is not in the loop. `on_key` is unchanged. `on_unkey` leaves the cursor and mask bit 15 alone, sets bit 31 of the cursor, and waits in `play_eot` at file `+0x5AF78` until the cursor is 0 or 1200 ticks pass. The wake's copy entry branches to `wake_half` at file `+0x5AEFC`. While bit 31 is clear the half is the R4h loop. While it is set, sample 2420 switches to the end frame. The stub stays 368 bytes. The task entry `+0x18A70` is unchanged. No `+0x3074`, no `+0x3EDFC`, bit 4 stays clear.
+
+`DMR003.R4i0.V022.bin`, 378620 bytes. sha256 `0680c84e5b3f52883e2899b07deb7897370293bbeae64a809f4bfec22ba73fa2`. File and pushed MD5 `3c43a3422b0f36795240f5579d84fb68`.
+
+## Boot
+
+VFO 467.625 / 467.625 FM at 08:46:50.073, low power. HackRF probe 9600000 bytes. Boot capture from 08:46:55, 240.0 s, floor power 6.80. YModem `onSuccess` at 08:49:04.009. Banner `开机初始化完成` at 08:49:17.067. `0x34` at 08:49:17.378 is `DMR003.R4i0.V022`. Hottest 100 ms bin +0.13 dB, at 209.9 s, clip 0, nothing at +6 dB. That bin is spread across the capture bandwidth (peak +20574 Hz, occupied bandwidth −24000..23998 Hz), so it is the noise floor. The stub does not run at boot.
+
+## Silence key
+
+VFO confirmed again at 08:51:22.335. `txwav` silence, 3000 ms, at 08:51:27.957. `0x26` launch 1 ack at 08:51:27.962, 5 ms after that log. `0x36` body `03` at 08:51:27.968, 6 ms after the ack. Unkey launch 2 at 08:51:31.361. Its ack is at 08:51:32.228, 867 ms later, which is the full 1200-tick wait in `play_eot`. `0x36` body `04` at 08:51:32.239, 11 ms after that ack. The carrier is up for 4.30 s. SNR 30.3 dB, clip 0, carrier offset +1129 Hz.
+
+The steady window, from 1.0 s after key-up to 0.3 s before release, is 3.004 s. RMS 1725 Hz. Steady p99 3257 Hz. The 100 ms slice at key-up has p99 23024 Hz. That is the key click and sits outside the steady window. The stop stays clear. Every 100 ms slice from 0.1 s through 4.1 s stays at the stream deviation: p99 2898–3635 Hz, and the slice at 4.2 s is the unkey click, p99 22803 Hz. The highest stream slice is 3635 Hz, at 2.5 s. The lowest is 2898 Hz, at 3.8 s. In the steady window the 1 kHz line is 228 Hz and the 3 kHz line is 57 Hz. The 500 Hz line is 464 Hz and the 2 kHz line is 158 Hz. The 250 Hz line is 208 Hz. The 15.625 Hz line is 4 Hz.
+
+The 240 ms autocorrelation of the audio from 1.0 s is 0.940. The burst from 0.15 s to 0.70 s after key-up has p99 3107 Hz. The aimed-waveform fit on 0.04–1.20 s, lag search ±30 ms, matches the looped table at r² 0.864, polarity +1, lag −17.6 ms, gain 0.83.
+
+A decode of 0.04–1.20 s accepts the link setup (sync 0.999) and 27 stream frames. The link-setup CRC is true. Both callsigns match the research modem's bench callsign. Every 16-byte payload is the bytes 0 through 15. Golay error is 0 on every frame. The frame numbers are 0, 1, 2, 3, 4, and 5, four times, then 0, 1, and 2. There is no `0x8005`. The stream syncs that follow the link setup score 0.994–1.0. A decode of the steady window accepts 61 stream frames at Golay error 0, the same payload bytes, frame numbers only in that same set, and then one more frame, number 0, with Golay error 7. The two windows overlap from 1.0 s to 1.20 s, so the counts are not added. Half-second windows stepped across the key find the same loop through 3.29 s and no frame `0x8005` anywhere. From 3.54 s onward those windows accept nothing, while the carrier through 4.1 s is still at the stream deviation. The handler had not returned, so the wake could not keep filling: the halves already queued played out, and the last half kept the deviation up until the timeout dropped PTT. The peak was not raised. The end frame was stored and was not on the air as a decoded frame.
+
+## End state
+
+Factory image restored by this runner, which was already in flight when the owner said a test image may stay loaded. YModem `onSuccess` 08:53:58.933. `0x34` `DMR003.UV4T.V022` at 08:54:12.828. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. The loader's channel write was followed by the VFO tune: 467.625 / 467.625 FM at 08:54:14.595, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met. `0x3D` still waits. The ES8311 debug node was not written. The next image sets the end bit and returns from `on_unkey`, so the reply at file `+0x9294` goes out and the wake keeps running. The wake drops PTT when the cursor reaches 0.
