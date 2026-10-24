@@ -322,6 +322,18 @@ Third load, same bytes, for a silence key. `onSuccess` 00:59:04.301. Banner 00:5
 
 A = 512 is the next image, one 6 dB step, still a silence key. M17 samples wait until that step shows the deviation scaled and still under ±5 kHz. §6 is not met.
 
+**2026-10-24 (01:10–01:16) — R3a4 doubles the square.** HackRF receive only, 467.625 MHz, low power. Tables: `radio_firmware/results.md`.
+
+`c7000-txram-dmr-a512` is the R3a3 stub with two immediates changed: `movi r1, 2` (+512) and `movi r1, 254` (−512). sha256 `244cd6b25bb834930df88d57a60bdb4cffc0a49283e6a26e8cde6c30fde755f7`, MD5 `531b07ea6e6781622373894a77d39965`. Twenty-one tests pass. The built file differs from R3a3 at those two bytes and at the tag.
+
+Boot capture 180 s from 01:10:16, VFO already on 467.625. YModem `onSuccess` 01:12:27.557. Banner 01:12:41.438. `0x34` `DMR003.R3a4.V022` at 01:12:41.749. Hottest bin +0.14 dB, clip 0.
+
+One 3 s silence key. `0x26` launch 1 at 01:13:43.338, `0x36` body `03`, 24000 samples, launch 2 at 01:13:46.751, `0x36` body `04` at 01:13:47.077. Carrier 3.46 s, SNR 39.6 dB, clip 0, offset +1024 Hz. Fundamental 284 Hz (2.20× the A = 256 fundamental of 129 Hz). Third harmonic 101 Hz, fifth 55 Hz. A 40 Hz low-pass has rms 212 Hz and median absolute deviation 211 Hz, against 104 Hz and 103 Hz at A = 256. The tops doubled. The 1 kHz line is 0.6 Hz. Steady p99 578 Hz, against 469 Hz at A = 256: the edges did not double. The key-up click is again about 23 kHz and is not the stimulus. A was not raised again.
+
+The slope on the tops is 0.41 Hz per count at both amplitudes. ±2.4 kHz would be about 5900 counts if that slope holds, which is inside the ±5 kHz stop and is not yet measured. The next image is A = 1024. §6 is not met.
+
+End state: factory image. YModem `onSuccess` 01:16:03.289. Banner 01:16:16.520. `0x34` `DMR003.UV4T.V022` at 01:16:16.831. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. VFO 467.625 / 467.625 FM at 01:16:18.712, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. The ES8311 debug node was not written.
+
 End state: factory image. The tone-key restore's first `0x34` poll was empty after `onSuccess` 00:48:48.703; a later start of SignalDeck printed the banner at 00:51:13.856 and `DMR003.UV4T.V022` at 00:51:14.167. The silence-key restore did the same: `onSuccess` 01:01:45.469, no version on the first poll, banner 01:02:57.784 and `0x34` `DMR003.UV4T.V022` at 01:02:58.095 after a second start. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. VFO 467.625 / 467.625 FM at 01:02:58.648, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. The ES8311 debug node was not written.
 
 ---

@@ -7,7 +7,9 @@
  * on the key-up path and does not run at module boot.
  *
  * on_key calls 0xe9c with the handler's r0/r1, then selects TX RAM, fills the
- * A = 256 square, programs the DMR modulator (RF_MODE 0x10E0, WORK_MODE 0x80,
+ * A = 256 square. R3a4 is patch c7000-txram-dmr-a512: the same bytes with
+ * movi r1, 2 and movi r1, 254, so this file stays the image that was measured.
+ * The stub programs the DMR modulator (RF_MODE 0x10E0, WORK_MODE 0x80,
  * AT1846S 0x30 = 0x4006 then 0x4026, 0x58 = 0xBCFD) and stores PTT = 1.
  * on_unkey calls 0xe9c, then PTT = 0, clears the TX-RAM bit, and puts the
  * wide-FM pair back (0x58 = 0x8405, 0x30 = 0x7026). The factory reload is the

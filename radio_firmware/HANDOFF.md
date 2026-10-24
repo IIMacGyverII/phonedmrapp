@@ -52,19 +52,19 @@ The radio may **stay on 467.625 MHz, low power**: there is no need to return to 
 
 ## Current task
 
-R3a4. Same DMR-modulator stub as R3a3 (`c7000-txram-dmr`), with the square amplitude raised one 6 dB step, A = 512. The big-endian halfword for +512 is `movi r1, 2`; for −512 it is `movi r1, 254`. Nothing else in the stub changes. Do not patch `+0x3074` or `+0x3EDFC`. Bit 4 of `0x11000080` stays clear.
+R3a5. Same DMR-modulator stub, one more 6 dB step, A = 1024. The big-endian halfword for +1024 is `movi r1, 4`; for −1024 it is `movi r1, 252`. Nothing else in the stub changes. Keep it a separate patch so `c7000-txram-dmr` and `c7000-txram-dmr-a512` still build the measured images. Do not patch `+0x3074` or `+0x3EDFC`. Bit 4 of `0x11000080` stays clear.
 
-1. Host-check the image: the four `0x26` sites still call `on_key` / `on_unkey`, and the fill halfwords are 512 / −512.
+1. Host-check: the image differs from R3a4 only in the two fill immediates and the tag.
 2. Tune the VFO to 467.625 before the load. Record the HackRF through the load and the first boot. Do not key if that boot radiates (peak ≥ 6 dB, or 0.2 s at +10 dB). Confirm the banner and the `0x34` tag.
-3. One 3 s silence key (`txwav` of zeros), low power. Report the 15.625 Hz fundamental, the flat-top deviation, and the steady-window p99. The ±5 kHz stop applies to that steady window. The key-up click is a transient and is not a stop.
-4. Restore the factory image. Leave the VFO on 467.625, low power. Do not raise A again in this image. Do not send M17 samples until this step says the deviation scaled and stayed under the stop.
+3. One 3 s silence key (`txwav` of zeros), low power. Report the 15.625 Hz fundamental, the flat-top deviation, and the steady-window p99. Predicted tops are about ±420 Hz if the 0.41 Hz/count slope holds. The ±5 kHz stop applies to that steady window. The key-up click is not a stop.
+4. Restore the factory image. Leave the VFO on 467.625, low power. Do not raise A again in this image. M17 samples wait until this step also scales and stays under the stop.
 
 ## Goal and route list (owner, 2026-10-23: "discover every possible way we can get M17 to work")
 
 Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). The next step is the next open item on this list. A route is closed only by a measurement or a firm reading, written up in `results.md`.
 
 **Transmit (the hard part: the FM audio path cuts below ~250 Hz, phone-side analog, ch. 19 §19)**
-- **T1: TX RAM through the C7000 FM modulator.** R3a3 puts an A = 256 square on the air through the DMR modulator; a silence key leaves the square and drops the codec tone. R3a4 is the 6 dB step. R4, a UART symbol command `0x3D` with the RRC shaper, waits until the deviation scale is measured and still under the stop. This is the main line.
+- **T1: TX RAM through the C7000 FM modulator.** R3a3 and R3a4 put the square on the air through the DMR modulator. Silence leaves the square and drops the codec tone. The tops scaled from ±104 Hz at A = 256 to ±212 Hz at A = 512 (about 0.41 Hz per count). R3a5 is A = 1024. R4, a UART symbol command `0x3D` with the RRC shaper, waits until that slope still holds under the ±5 kHz stop. This is the main line.
 - **T2: the C7000 DMR modem as a raw 4FSK source.**
   - `WORK_MODE` `0x22` is "physical layer" (guide Table 27): read whether it transmits raw symbols, continuously or only in bursts, and from where (TX RAM / registers).
   - Read the symbol map and filter controls: `RF_MODE[7]` gives two deviation maps; is there an RRC roll-off or filter-bypass setting? M17 needs ±2400 Hz outer and RRC α = 0.5; DMR uses ±1944 Hz and α = 0.2. This radio's narrow-band (12.5 kHz) DMR outer symbol is ±3.3 kHz, with AT1846S `0x30` left at `0x4026`. That is about 1.7× the standard ±1944 Hz, and the BTECH 6X2 still decodes it.
@@ -82,7 +82,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-R3a3 is done. Boot of `DMR003.R3a3.V022` was silent (143.5 s, peak +0.11 dB, clip 0; sha256 `667cfd127d3b403192066da8e67c3633905875a7370a56a4fc379f861d43ea40`). A 3 s codec-tone key radiated the 999.9 Hz sine at ±2.4 kHz and the TX-RAM square together (15.625 Hz fundamental 133 Hz). A 3 s silence key kept the square (fundamental 129 Hz, tops about ±104 Hz, 0.40 Hz per count) and the 1 kHz line was 1.2 Hz. A was not raised. The steady window stayed under ±5 kHz. Factory restored: `0x34` at 01:02:58.095 is `DMR003.UV4T.V022`, VFO 467.625, no `DMRDEBUG.bin`. §6 is not met.
+R3a4 is done. Boot of `DMR003.R3a4.V022` was silent (180 s, peak +0.14 dB, clip 0; sha256 `244cd6b25bb834930df88d57a60bdb4cffc0a49283e6a26e8cde6c30fde755f7`). One 3 s silence key: 15.625 Hz fundamental 284 Hz, 2.20× the A = 256 fundamental, and the 40 Hz low-pass tops went from 104 Hz to 212 Hz. The 1 kHz line was 0.6 Hz. Steady p99 578 Hz. A was not raised again. Factory restored: banner 01:16:16.520, `0x34` 01:16:16.831 `DMR003.UV4T.V022`, VFO 467.625, no `DMRDEBUG.bin`. §6 is not met.
 
 ## Owner question
 
