@@ -575,3 +575,58 @@ In the module the command would set `WORK_MODE` = `0x80`, `tx_voice_source` = 1,
 ## End state
 
 Factory image, `0x34` = `DMR003.UV4T.V022` at 19:47:36 and again at 19:50:37 and 19:50:49. No new image was loaded. SignalDeck owns the radio. Channel 36 is NOAA WX4, 162.425 MHz, squelch 5, power low, active. The temporary digital row is gone. The screen showed 162.425 MHz and did not show 467.625. Zone 4, `zoneLast_4` 36. `PATCH14_BACKUP.bin` was not touched. `/sdcard/DMR/DMRDEBUG.bin` is absent.
+
+# R1b — factory DMR outer symbols are ±3.3 kHz; the R3 image does not boot (2026-10-23, 20:51–21:09)
+
+No new transmission. R1b uses the 19:47 capture only (one 8 s file, tune 467.385 MHz, the signal 240 kHz above the tune, 2.4e6 samples/s, LNA 24 / VGA 38, clip fraction 0). HackRF was not started. The ±5 kHz stop applies to the deviation of a test image. It was not reached: the R3 image never keyed.
+
+## R1b — occupied bandwidth and the four symbol levels
+
+The outer-symbol median in the section above (+7346 / −7049 Hz) came from locking the symbol phase to the samples' own quartiles. This capture's discriminator has a heavy tail (the raw burst window's 99.5 percentile is 23132 Hz, the ramps and the symbol transitions), and that lock sat on the tail. The same pass already had a symbol-centre |deviation| median of 3179 Hz.
+
+Re-measured on the same IQ, 46 bursts, period 59.99 ms.
+
+The 99 % occupied bandwidth of a burst, after a 20 kHz low-pass (bin 39.0625 Hz, 46 spectra): **10546.875 Hz**. The edges are −4414 Hz and +6133 Hz. The midpoint of the edges is the carrier, **+859 Hz**, the same crystal offset as the other captures that day. A ±7.3 kHz 4FSK would occupy about 18–20 kHz, so 10.55 kHz rejects that rail. The bandwidth alone does not separate the guide's ±1944 Hz map from a somewhat wider constellation. The histogram does.
+
+Symbol centres, at the phase with the smallest within-cluster rms, recentred on the midpoint of the two outer cluster means. The power centroid sits 371 Hz above that midpoint, so it is not used as the carrier.
+
+| Symbol | Centre |
+|---|---|
+| −3 | **−3344.7 Hz** |
+| −1 | **−1068.9 Hz** |
+| +1 | **+1219.2 Hz** |
+| +3 | **+3344.7 Hz** |
+
+Counts 1070 / 1644 / 2395 / 1288. Within-cluster rms 403 Hz. Inner mean 1144 Hz, outer 3345 Hz, inner/outer **0.342** (4FSK's 1/3). These four means sit 1052 Hz rms from the guide's ±1944 / ±648 Hz map, and 2977 Hz rms from ±7346 / ±2449 Hz. The early, middle and late thirds of the outer symbols are 3340 / 3361 / 3322 Hz, late/early **0.995**.
+
+Forty symbol phases were tried. The open-eye phases (12.08, 12.50 and 12.92 samples) read an outer of 3338–3345 Hz. The best is phase 12.5, rms 403 Hz, the same four counts. The transition phase (4.58 samples) reads a lower outer, 2676 Hz. ±3.3 kHz is the open eye.
+
+The 9 kHz demodulator that produced the ±7.3 kHz figure, run on this same IQ with the cluster method, reads outer ±3172 Hz, inner ±1046 Hz, ratio 0.330, 99 % bandwidth 10312.5 Hz, edge midpoint +844 Hz. A wide boxcar with no low-pass reads outer ±3311 Hz, ratio 0.342, bandwidth 10507.8 Hz. The ±7.3 kHz number is the tail method. These spectra do not contain it.
+
+**The factory DMR outer symbol is about ±3.3 kHz, about 1.7 times the guide's ±1944 Hz map** (`RF_MODE[7]` = 0). The inner symbols are −1069 Hz and +1219 Hz. The guide table stays the nominal map. This pass does not say why the air scale is 1.7 times that map. On the wide IF, the share of 0–4 kHz power below 250 Hz is **0.177** (wide boxcar 0.178, 9 kHz path 0.172). The 0.072 figure above was the spiked trace. Both are far above the FM path's under 1 %. The DMR modulator still passes the low end, and a held outer symbol is still flat (0.995 on these levels).
+
+## R3 — built, loaded twice, no boot banner
+
+`c7000-txram-square`, tag `R3a0`, version string `DMR003.R3a0.V022`. MD5 `442c5cad026a361009da79e1034c7a3e`, sha256 `14390583de8f641acd7f54dc108191c268fb2d653d9044e46650b45bd810ef4a`. Against the factory image the file differs at the tag (`+0x3846B`, four bytes), the six-byte hook (`+0x3EDFC`), and the 76-byte stub at `+0x5B000`. Zeros inside the stub match the factory tail, so a raw byte diff splits the stub into short ranges. The image is 378620 bytes. `build.py` does not add a checksum.
+
+The hook replaces the PTT store at `+0x3EDFC` (`6b10013240b3`) with `bsr +0x5B000` and `movi r0, 0` (`00e002e10030`). The clear of `tx_voice_source` at `+0x3EDF8` is unchanged, and so is `movi r0, 50` at `+0x3EE02`. The `bsr` uses the same high-halfword-first encoding as the factory `bsr` at `+0x3D710` (`00e0d80a` targets `+0x3ECC0`). `00e002e1` targets `+0x5B000`.
+
+The stub sets `0x11000080[0]` and leaves bit 4 clear. Document 2 §7.2.2.1.2 names bit 0 as the TX-RAM source and does not mention `ahb_wr_voice_en`. It clears `FM_BANDWIDTH` bits 4 and 6 in place, fills `0x16000030` with +256 for 256 samples and −256 for the next 256 (16-bit big-endian, stored halfwords `0x0001` and `0x00FF`), stores PTT = 1, and returns. Nothing in this image refills the ping-pong, so the 64 ms pattern would repeat as a 15.625 Hz square. A = 256 counts. The patch test (`test_txram_square_fills_after_the_voice_source_clear`) checks the hook target, both fills, the bit clears, and that the stub does not set bit 4.
+
+Loaded twice, the same bytes. YModem `onSuccess` at 20:51:28 and at 21:02:22. Both times the loader printed an empty `0x34` line and exited 0. An empty line is not a version. The tag check is the logcat line `module DMR003.…`. Logcat shows the version query, then the ten ASCII bytes `0x29050000`, then two power cycles, each logged as no boot banner. A DIAG `restartmodule` after the first load power-cycled again and also found no banner. The module did not answer `0x34` or the channel write. Nothing was keyed. The square was not measured, and A was not raised.
+
+Those ten bytes are not a literal in the image. They are what `%#x` prints for the value `0x29050000`. The only `%#x` formats in the factory image are the SDMMC lines at file `+0x36A94` (`CMD req:SDMMC_RINTSTS=%#x,SDMMC_STATUS = %#x,timeout=0x%x`) and the SCR line at `+0x36D02`. The printer at `+0x4DE4` loads the `+0x36A94` string, calls the print, then `movi r0, 41` / `pop r15`. The print runs when bits of the status word are set, or when the counter in r3 is above 65535, and then it returns. The captured chunk is one field of that line. The rest of the line was not in the log, so which field it is stays unknown. It is not an image checksum. The same ten bytes appeared on both R3 loads (the second at 21:02:36.635 and 21:02:38.720).
+
+The banner string was not patched. Early init prints `开机初始化完成` from file `+0x3653C` by the call at `+0xE2A`. The factory image, loaded by the same script between the two R3 loads and again after the second, prints that banner (20:59:23 and 21:09:08) and answers `0x34` with `DMR003.UV4T.V022`. On the final takeover the first version query still saw one `0x29050000` (21:09:02), while the previous image was powered (`module already powered`). The power cycle after that printed the banner. The R3 power cycles did not.
+
+UVm8 wrote a stub at the same `+0x5B000`, changed two bytes of the version tag, and changed four bytes at `+0x3074`. That image printed the banner. A tail write and a tag change do not, by themselves, stop the boot print. R3's remaining difference is the six bytes at `+0x3EDFC`.
+
+Those six bytes are a normal `bsr`, and no direct call reaches them from boot. The only `bsr` of the FM key-up entry `+0x3ECC0` is at `+0x3D710`. Nothing `bsr`s `+0x3D688`, `+0x3D710` or `+0x3D5D8`. Boot at `+0xDA6` calls `+0x3D68`, a different function. That removes the account in which boot calls key-up and the stub then faults on `0x16000030`. It does not say why the banner is missing. The cause stays open. A third load of this same image was not started.
+
+## The bare-carrier follow-up was not reached
+
+A bare carrier, or the phone's 1 kHz codec tone, would have been the air result that points at the DMR-mode modulation registers: two-point `RF_MODE`, AT1846S `0x58` = `0xBCFD`, and the `0x30` values the DMR tune writes (`0x4006` / `0x4046` / `0x4026`). R2 already lists those stores. There is no air result, so that image was not proposed as a next build and was not built. R4 was not built. §6 is not met. No pre-shaping and no receive equalizer.
+
+## End state
+
+Factory image restored after the second R3 load. YModem `onSuccess` at 21:08:52. Banner `开机初始化完成` at 21:09:08.473. `0x34` at 21:09:08.783 is `DMR003.UV4T.V022`. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. The takeover wrote analog `0x23` for 162.425 MHz, bandwidth wide, power low, squelch 5 (body `A8 68 AE 09 A8 68 AE 09 01 00 05 …`), and the module acked it (`RX cmd=0x23 rw=0 sr=0` at 21:09:08.858). The app announced channel 36, NOAA WX4. SignalDeck owns the radio: the stock app is paused and the UART is open. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched. No HackRF capture and no key-up in this pass. The ES8311 debug node was not written.

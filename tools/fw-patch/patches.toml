@@ -222,3 +222,23 @@ sites = [
   { offset = 0x34F2, original = "0584", replacement = "fdbc", note = "at1846_set_ctcss_dcs reg 0x58 = 0xBCFD" },
   { offset = 0x3640, original = "0584", replacement = "fdbc", note = "at1846_set_ctcss_dcs reg 0x58 = 0xBCFD" },
 ]
+
+# R3. Not the +0x3074 redirect: the other C7000 stubs share that site and the tail, so this
+# one is exclusive with all of them. The hook is the PTT store inside FM key-up, after the
+# tx_voice_source clear. A = 256 (big-endian halfwords 0x0001 and 0x00FF). A later amplitude
+# is a new image, not an edit of these bytes.
+[patches.c7000-txram-square]
+why = """R3. At FM key-up, after the clear of 0x11000080 bit 0 at +0x3EDF8, take the TX-RAM
+path the guide's section 7.2.2.1.2 describes and hold a 15.625 Hz square on it. The six
+bytes at +0x3EDFC (the PTT store) become a bsr to the tail plus movi r0, 0. The stub sets
+bit 0 only — that section does not mention ahb_wr_voice_en — clears FM_BANDWIDTH bits 4
+and 6, fills 0x16000030 with +256 for 256 samples and -256 for the next 256 (16-bit
+big-endian), then stores PTT = 1 and returns to the 50 ms delay at +0x3EE02. Nothing in
+this image refills the ping-pong, so the fill repeats. Bench only, and not combined with
+a 0x58 patch or with any other stub at +0x5B000."""
+measured_by = "R3: one 3 s key on the 467.625 VFO, low power, HackRF receive"
+status = "experimental"
+sites = [
+  { offset = 0x3EDFC, original = "6b10013240b3", replacement = "00e002e10030", note = "FM key-up PTT store -> bsr stub + movi r0, 0; delay at +0x3EE02 is unchanged" },
+  { offset = 0x5B000, original = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", replacement = "6f104093a03a40b36e104093843a863a40b36d10013102ea000120ab0123002a403afc0bff3102ea000120ab0123002a403afc0b6510013240b33c7880000011000500113000001660050011", note = "stub (stubs/c7000_txram_square.S, as -mcpu=ck803, ld -Ttext=0x5B000): bit 0, clear FM bits 4 and 6, square A=256, then PTT" },
+]
