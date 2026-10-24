@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: OWNER
 
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
@@ -52,9 +52,7 @@ The radio may **stay on 467.625 MHz, low power**: there is no need to return to 
 
 ## Current task
 
-R-B needs the owner. Do not write the ES8311 node in this step. The ask is the next edit of this file: set `STATUS: OWNER` and write the question under "Owner question".
-
-The question to ask: may a count-0 write to `/sys/bus/i2c/devices/7-0018/es8311_debug/es8311` read the ADC high-pass registers? Ch. 19 (2026-10-23, `es8311_store`) already decoded the node's store: bits 23:16 = 0 reads registers and prints them to the kernel log; any other count writes the codec. The read would not change a codec register. It was not done. `0x3D` still waits. T4 stays closed.
+Waiting on the owner for R-B. Do not write the ES8311 node until the owner answers. Do not build an image. `0x3D` still waits. T4 stays closed.
 
 ## Goal and route list (owner, 2026-10-23: "discover every possible way we can get M17 to work")
 
@@ -79,8 +77,10 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-T2's symbol buffer was read only. Nothing was keyed. `+0x2A18` has 23 copies, all of length 2, 4, 9, 24, 27, or 36. The three 27-byte copies write one unnamed record to `0x16000030`. Nothing fills the PCM halves or holds PTT across a drain. No host symbol FIFO. The radio was not touched: factory `DMR003.UV4T.V022`, VFO 467.625, no `DMRDEBUG.bin`. §6 is not met.
+T2 is closed. The symbol-buffer read found 23 short copies and no host symbol FIFO. Nothing was keyed. The radio was not touched: factory `DMR003.UV4T.V022`, VFO 467.625, no `DMRDEBUG.bin`. §6 is not met. The next open item is R-B, which needs a write to the ES8311 debug node, so this step stops for the owner.
 
 ## Owner question
 
-(none)
+R-B is the next open item. T2 and T3 are closed. T4 stays closed, because the TX-RAM path (T1) has not failed. `0x3D` still waits on a SignalDeck sender, which is already outside this approval, so that wait is unchanged.
+
+May I write one count-0 value to `/sys/bus/i2c/devices/7-0018/es8311_debug/es8311` so the kernel log prints the ES8311 ADC high-pass registers? The 2026-10-23 reading of `es8311_store` says bits 23:16 = 0 reads registers and does not call `snd_soc_component_write`. Any other count would write the codec, and I would not send one. The node has not been written.
