@@ -21,11 +21,15 @@ Two code families exist outside this repo: the Mobilinkd family (`m17-cxx-demod`
 | WSL is **not installed** here (`wsl --status`); `m17-cxx-demod` also offers a Windows build (VS 2019 + conda-forge codec2/boost/gtest, `win_build.bat`) | Environment choice below, owner action needed for WSL |
 | HackRF tools live at `C:\Users\Joshua\tools\hackrf\` (not on PATH); captures are kept under `/tmp/fw1718/caps/*.iq` as int8 IQ at 2.4 MS/s with the signal 240 kHz above centre; the research modem already knows the BERT sync word (`SYNC_BER = 0xDF55`) but has no BERT frame generator | Phase 2 needs a converter and a BERT generator, both small |
 
-## 3. Environment: pick one, in this order
+## 3. Environment: decided 2026-10-24
 
-- **A. WSL2 + Ubuntu (recommended).** One admin command (`wsl --install -d Ubuntu`), a **PC** restart (the phone is not touched), then `apt install build-essential cmake git libcodec2-dev libboost-program-options-dev libgtest-dev` and build `m17-cxx-demod` (minutes). Gives `m17-demod`, `m17-mod`, and later SDRangel from the Ubuntu package or the release `.deb` with WSLg for the GUI. The HackRF can be attached to WSL with `usbipd-win` when a live SDRangel view is wanted; the capture path can also stay on Windows and only the decode run in WSL (`wsl m17-demod` reads stdin across the boundary). **Owner action:** run the install command as administrator and restart the PC.
+**The owner will set up an Ubuntu box inside the Faraday cage with the HackRF on it, when it is time** (two computers are already in the cage). That host is the reference environment for every phase: native USB for the HackRF, `m17-cxx-demod` from apt packages, SDRangel with its M17 plugins, `sdrangelsrv` driven over the LAN through the REST API. Grok Build and Claude Code work it over key-based ssh (no password prompts; the udev rule for the HackRF and sudo for the one apt install prepared by the owner). Until the box exists, the bench stays as it is (HackRF on Windows, captures by `hackrf_transfer`), the kept captures wait, and the firmware work (R4s) goes on; the options below are fallbacks only if the box is delayed.
+
+Fallbacks, in this order:
+
+- **A. WSL2 + Ubuntu.** One admin command (`wsl --install -d Ubuntu`), a **PC** restart (the phone is not touched), then `apt install build-essential cmake git libcodec2-dev libboost-program-options-dev libgtest-dev` and build `m17-cxx-demod` (minutes). Gives `m17-demod`, `m17-mod`, and later SDRangel from the Ubuntu package or the release `.deb` with WSLg for the GUI. The HackRF can be attached to WSL with `usbipd-win` when a live SDRangel view is wanted; the capture path can also stay on Windows and only the decode run in WSL (`wsl m17-demod` reads stdin across the boundary). **Owner action:** run the install command as administrator and restart the PC.
 - **B. Native Windows build of `m17-cxx-demod`** via conda-forge if WSL is not wanted. Visual Studio 18 is installed; the upstream recipe names VS 2019 and may need small fixes. No SDRangel M17 this way.
-- **C. A Linux machine or Raspberry Pi with the HackRF**, if one exists. Same software, no WSL.
+- **C. Any other Linux machine** reached over ssh, for the file-only phases 1 and 2.
 - **D. Not suitable:** SDRangel on Windows (no M17 plugin). SDR++'s M17 decoder module on Windows is a visual check only (no API, no text output) and is left as a nice-to-have.
 
 ## 4. Phases
@@ -78,6 +82,6 @@ What to send: the SignalDeck APK, the firmware image with its tag and SHA-256, t
 
 ## 7. Owner actions
 
-1. Decide the environment (A recommended). For A: run `wsl --install -d Ubuntu` as administrator and restart the PC once.
+1. Set up the Ubuntu box in the cage with the HackRF (decided 2026-10-24, "when it is time"): key-based ssh for the Windows account the AIs run under, the HackRF udev rule, `hackrf` tools installed; tell the AIs the host name and user.
 2. Later: one bench session present for the Phase 4 HackRF transmit tests.
 3. Phase 5 when ready: the friend's radio and frequency.
