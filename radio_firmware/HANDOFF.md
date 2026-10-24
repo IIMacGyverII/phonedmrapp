@@ -52,18 +52,9 @@ The radio may **stay on 467.625 MHz, low power**: there is no need to return to 
 
 ## Current task
 
-T2 symbol buffer, read only. No image, no key, no SignalDeck edit, no write to the ES8311 node.
+R-B needs the owner. Do not write the ES8311 node in this step. The ask is the next edit of this file: set `STATUS: OWNER` and write the question under "Owner question".
 
-The question: can the C7000 modem hold PTT and take 4FSK symbols from a RAM buffer the host could fill, so M17 would not need a host shaper.
-
-Known starting points. They are a start, not the conclusion:
-
-- `+0x2A18` writes `r2` bytes from the caller's pointer into modem RAM at `r0 + 0x16000000`. It has 23 calls. The call at `+0x2AAB2` uses `r0` = 48 and length 27, so the destination is `0x16000030`.
-- Ch. 19: TX RAM is `0x16000030`–`0x1600042F` (two halves, 256 samples of 16-bit PCM each). The 27-byte DMR voice payload starts at the same `0x16000030`.
-- R-A already says that `+0x2AAB2` write is a 27-byte record into the modem. Do not reopen R-A. Say whether any caller of `+0x2A18`, or any other store, fills a symbol FIFO or the PCM halves with host symbols.
-- PTT is `0x11000560` = 1 inside the FM key-up (`+0x3EE00`), restored on the way out. Whether a DMR transmission holds that bit while a buffer drains is unread.
-
-Write the reading in `results.md` and one §10 paragraph. Do not build an image. Do not start R-B. Do not open T4. `0x3D` still waits.
+The question to ask: may a count-0 write to `/sys/bus/i2c/devices/7-0018/es8311_debug/es8311` read the ADC high-pass registers? Ch. 19 (2026-10-23, `es8311_store`) already decoded the node's store: bits 23:16 = 0 reads registers and prints them to the kernel log; any other count writes the codec. The read would not change a codec register. It was not done. `0x3D` still waits. T4 stays closed.
 
 ## Goal and route list (owner, 2026-10-23: "discover every possible way we can get M17 to work")
 
@@ -74,7 +65,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 - **T2: the C7000 DMR modem as a raw 4FSK source.**
   - `WORK_MODE` `0x22` is the built-in BER test. Read 2026-10-24: byte 3 of `0x34808` is 1 only when flag `0x324D7` is 1. Command `0x3F` sets that flag for the Hongrui pattern and for O.153 (strings at file `+0x38444` and `+0x38454`); the OEM BER screen sends O.153, and both values store the flag as 1. Byte 4 stays 0. The flag==2 arm is in the image and unused by the writers that name the flag. A normal channel leaves both bytes 0, and the first setup stores `0x6A` or `0x6E`. The helpers at `+0x18218`, `+0x186BC`, `+0x28904` and `+0x19438` write modem control words and status bytes. They fill no symbol buffer. No `0x22` image was built.
   - `RF_MODE` bit 7 and the filter controls, read 2026-10-24. The only full-word immediate store is the FM key-up at `+0x3EDDA`: `movi r3, 135; lsli r3, 5` = `0x10E0` (bits 12, 7, 6, and 5 set). Bits 6:5 are two-point. Bit 7 set is Document 2's sign inversion of the same ±1944/±648 Hz map, so +3 maps to −1944 Hz. ±2400 Hz is not on that map. Bit 12 is set and unnamed. `FM_BANDWIDTH` and `FM_DEV_COEF` are never stored, so they stay at reset. No RRC coefficient is written. The α = 0.5 that was on the air was the R4a host fill. The `0x22` path still writes neither `RF_MODE` nor `FM_BANDWIDTH`. No image.
-  - If the modem can hold PTT continuously and take symbols from RAM, M17 could be generated with no shaper of our own. That buffer is not shown.
+  - Symbol buffer, read 2026-10-24. `+0x2A18` is 23 constant-length copies into modem RAM. The lengths are 2, 4, 9, 24, 27, and 36. The three 27-byte copies land at `0x16000030` and write `0x4D49E + n*27` once. Nothing fills a 256-sample half, and nothing holds PTT while a buffer drains. The only store of PTT = 1 is the FM key-up. No host symbol FIFO. No image.
 - **T3: the AT1846S itself.** Read 2026-10-24. The asked registers are FM setup scalars. Programming Guide 1.4 register 30h bit 10 (`direct_reg`, "1=enable direct_reg", no further definition) is clear in every immediate, and no read-modify-write sets it. Guide section 5 `3aH[14:12]` is 000 (Tx nothing) or 100 (microphone) in every stored value, including both bandwidth-profile rows. The OpenRTX web table puts the voice source on `0x3C[15:14]`; the stores are `0x0407` and the 25 kHz profile's `0x1930`, both with bits 15:14 = 00 (microphone). `0x35` and `0x36` are never written. `0x41`, `0x42`, `0x43` and `0x44` are single gain, threshold, or deviation words. No host-symbol path. No image.
 - **T4: a hybrid.** Only if T1–T3 all fail: what plain-M17 decode rate a standard receiver gets from the UVm6 path with the best pre-shaping (measured, not assumed). This is the fallback number.
 
@@ -88,7 +79,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-T2 filter controls were read only. Nothing was keyed. The FM key-up stores `RF_MODE` = `0x10E0` (bits 12, 7, 6, and 5). Bit 7 set is Document 2's sign flip of the ±1944/±648 Hz map, so +3 maps to −1944 Hz. `FM_BANDWIDTH` and `FM_DEV_COEF` are never stored, and no RRC coefficient is written. The radio was not touched: factory `DMR003.UV4T.V022`, VFO 467.625, no `DMRDEBUG.bin`. §6 is not met.
+T2's symbol buffer was read only. Nothing was keyed. `+0x2A18` has 23 copies, all of length 2, 4, 9, 24, 27, or 36. The three 27-byte copies write one unnamed record to `0x16000030`. Nothing fills the PCM halves or holds PTT across a drain. No host symbol FIFO. The radio was not touched: factory `DMR003.UV4T.V022`, VFO 467.625, no `DMRDEBUG.bin`. §6 is not met.
 
 ## Owner question
 
