@@ -134,3 +134,30 @@ Secondary reading from the same pages: `0x1100_0508[15:0]` is the C7000's own SQ
 3. Pass, as before: 100 Hz within 6 dB of 1 kHz in some variant. Then R-C and R-B close together, with the measurement, and the receive design stays the audio-path equaliser. If variant 4 passes, say exactly which register state did it.
 
 **What the receive RAM is good for even if R-C closes.** It is the demodulated, de-emphasised, 16-bit signal inside the module, before the ES8311 and the phone's audio latency, readable by the MCU. CTCSS, DCS and DTMF detection are already hardware flags in the same block (`FM_DECODE_FLAG1/2`), and `FM_SQL` is a finer noise reading than the AT1846S RSSI. Those are small features for later, not part of this track.
+
+## Review of R-C step 4, RC40 (2026-10-24, commit `28f43a6a`)
+
+**Verdict: R-C is a positive result, not a closure. The report's own table says the receive mirror exists, and its end-state sentence ("the receive design stays the audio-path equaliser") contradicts it. Correct that: with the variant-4 register state the module's receive RAM holds a flat demodulated baseband, 50 Hz to 1 kHz within ±0.3 dB.** My task wording invited the misreading ("close together … if variant 4 passes, name the state"); the pass rule was explicit, and variant 4 passed.
+
+**The measurement.** Lines over 128 ms, three captures each, medians against 1 kHz:
+- Plain: 300 Hz +11.1 dB (de-emphasis), 100 Hz −42.1 dB, 50 Hz −46.1 dB.
+- C7000 bypass alone (`FM_BANDWIDTH` bits 4 and 6 clear): 100 Hz −22.4 dB.
+- AT1846S bypass alone (`0x58` = `0xBCFD`): 100 Hz −19.3 dB.
+- **Both: 300 Hz −2.3 dB, 100 Hz +0.3 dB, 50 Hz −0.3 dB.** The three 100 Hz lines (7465, 8526, 8878) sit on the three 1 kHz lines (7707, 8275, 8499). The half-boundary steps on those captures are small and do not move the line.
+
+**What it means physically.** Two filters sit in series on receive, each about 20 dB down at 100 Hz: the AT1846S voice filtering on the audio it hands to the C7000, and the C7000's own FM band-pass and de-emphasis. The phone's audio path (−25 to −37 dB below 250 Hz in the M17 study) is the AT1846S filter plus whatever the ES8311 adds; the ES8311 is therefore a second-order contributor at most, and R-B closes. Transmit used the same three writes (`WORK_MODE` `0x80`, the two `FM_BANDWIDTH` bits, `0xBCFD`) to get a DC-capable path; receive needs the same trio. Symmetric, and the trio is already proven safe in every T1 image.
+
+**Two consequences, one immediate and one that needs a design.**
+
+1. *The phone's own audio path improves with one register write.* The AT1846S filter alone is about 20 dB of the audio-path cut. Writing `0x58` = `0xBCFD` while receiving an analog channel should lift the phone-side audio from about −30 dB to about −10 dB at 100 Hz, which helps every decoder SignalDeck already runs on that path (POCSAG, M17 with the equaliser, DCS). It changes what the user hears (no de-emphasis, no voice filtering), so it is a "data receive" state that SignalDeck sets only while a decoder is active and clears after; the factory `at1846_tune` rewrites `0x8405` on every channel write, so the state must be re-applied after a retune (or the FM branch patched to read a flag). This needs no new RAM path and no streaming. **Measure it first (R-D below).**
+2. *The receive RAM path for plain demodulation.* The flat baseband is in the module at 8 kHz, 16-bit; raw samples are 128 kbit/s, which the 57600 baud line cannot carry. Two designs:
+   - **Runtime UART speed switch to 230400.** The module boots at 57600 (stock app untouched); a `0x40` op switches the module's divisor and SignalDeck reopens the port at the new rate; recovery from a failed switch is the module power-cycle SignalDeck already does. The phone side can do it: the profile carries the control-port baud and the Xplore 1 profile already opens a UART at 230400. At 230400 the raw 16-bit stream fits with margin, and every decoder then runs on the phone with the flat signal: M17 plain, POCSAG plain, FT8, SSTV, anything. Reading task first: find the UART divisor write (base `0x14090000`, the init near `uart_put` `+0x5EF4`) and confirm the clock allows 230400 exactly.
+   - **Fallback, MCU-side symbol slicer** for M17 only (timing recovery at 5 samples per 3 symbols, sync search, symbols at 9.6 kbit/s to the phone), the mirror of the TX engine. More firmware, one mode at a time. Only if the speed switch is not possible.
+   I recommend the speed switch; it turns the module into a general flat-baseband receiver.
+
+**R-D, next on the bench (receive only, no key, HackRF tones as before):**
+1. **Audio-path check.** With the phone receiving normally (SignalDeck audio on, `rxclip` recording), write the variant-4 state through op 5's register path but *without* copying RAM, hold it for the capture, and run the 20 Hz–3.8 kHz sweep plus the 100 Hz and 1 kHz tones through the phone's audio path; then the same with only `0x58` = `0xBCFD`. Report the phone-path response relative to 1 kHz for plain, `0xBCFD`-only and full variant 4. This tells SignalDeck what one register write buys today.
+2. **Upper end and a real frame.** The sweep to 3.8 kHz on variant 4 through RX RAM (the low end is flat; M17 needs the top to about 3.6 kHz too). Then a looped short M17 transmission from the HackRF (link setup plus two frames, 120 ms, repeating; the sounding files from the M17 study) captured as six consecutive halves (192 ms, the `0x4A400`–`0x4AFB8` region R4p used) in the variant-4 state, repeated until a capture holds a whole link setup; plain decode with `m17.py`, **no equaliser**. Pass: link-setup CRC and at least one stream frame at Golay 0 from the raw RX RAM samples.
+3. **Reading, no bench:** the UART divisor init and whether 230400 is reachable; SignalDeck's serial open path with a non-default baud on the Armor (the JNI takes the rate from the profile).
+
+R-C's status in the route list changes from "closes" to **"open: the receive mirror exists (RC40); streaming design pending"**. R-B closes.
