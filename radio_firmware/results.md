@@ -1734,3 +1734,5 @@ A sync search of the whole carrier, keeping local peaks above 0.95, finds one fr
 ## End state
 
 R4j0 stays loaded. The factory image was not written. VFO 467.625 / 467.625 FM at 09:25:49.264, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met. `0x3D` still waits. The ES8311 debug node was not written. The module cleared the carrier without sending `SEND_STOP`. The next step is to read where `0x36` body `04` is produced, and to build an image only if that status is a call the wake can make after `drop_ptt` without holding the `0x26` handler.
+
+The owner asked for the factory image after this report. It was loaded over R4j0. Banner `开机初始化完成` at 09:45:33.282. `0x34` `DMR003.UV4T.V022` at 09:45:33.593. VFO 467.625 / 467.625 FM at 09:45:35.253, low power. No `DMRDEBUG.bin`. Nothing was keyed.
