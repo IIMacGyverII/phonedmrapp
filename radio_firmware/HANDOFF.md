@@ -1,7 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
-
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -54,17 +53,15 @@ The radio may **stay on 467.625 MHz, low power**: there is no need to return to 
 
 ## Current task
 
-**Fix the byte order, then repeat the sine.** R4p0 was already on the air before this review was read: two silence keys, peak counts 6451 and 4096, both near 4500 Hz for about 160 ms, and the plain decoder did not accept a link setup. Do not send that body again. The review in `radio_firmware/reviews.md` (2026-10-24) names the defect: TX RAM reads each halfword big-endian, and the `cmd40` handler stored the host's little-endian samples with `ld.h`/`st.h`. TX RAM reads each halfword big-endian (see `c7000_txram_dmr_sine.S` and `m17_stream_table.py` `table_bytes()`), but the `cmd40` handler in `c7000_cmd40_host.S` / `c7000_cmd40_m17.S` copies the host's little-endian int16 with `ld.h`/`st.h` and no swap. That is why R4o's 1 kHz sine at peak 2048 read 3070–4183 Hz on the 1 kHz line and p99 4495 Hz, against 923 Hz / p99 1217 Hz for the same peak in R3a8: the air carried swapped values up to ±22523, and the ±6451 clamp ran before the swap.
+**R4q and R4r passed review** (`radio_firmware/reviews.md`, 2026-10-24, "Review of R4p, R4q and R4r"). R4r0 may stay loaded. Do not send the R4p/R4r body again just to repeat it.
 
-Steps, in order:
-1. Swap in the handler (assemble the halfword high-low before the clamp, clamp the signed value, store swapped). Add a host test in `test_patches.py` that runs a known body through the store path and checks the TX-RAM byte order (high byte at the low address). Keep everything else in the handler as it is.
-2. Load the fixed host-sample image (new tag) and repeat the R4o sine exactly: `cmdsine` 2048, 64 samples, 1000 Hz, one 3 s silence key, 467.625 MHz low power, HackRF receive only. Pass: the 1 kHz line within ±15 % of 923 Hz and the p99 within ±15 % of 1217 Hz. Fail: stop, report, do not send any M17 body.
-3. Only after that pass: the R4p M17 body test as planned (pieces of at most 398 samples, one host key, peak at or below 6451, plain decode of the capture).
-4. No bench time: run a third-party M17 decoder (m17-cxx-demod, or SDR++/SDRangel) on the kept R4k capture and report its frame count next to ours. If the capture was not kept, do it on the step 3 capture.
+Three items, in this order; the first two need no bench time and can run while the third is built:
 
-Standing rules unchanged: the handler does nothing at boot and never keys by itself; 467.625 MHz, low power, HackRF receive only; T4 stays closed; do not write the ES8311 node; do not replace `0x3D`; do not reload R4l0. Route-list addition for R4q onward: the end design is symbols over `0x40` into an MCU ring buffer with the RRC (5 samples per 3 symbols, three-phase) in the wake, not samples; samples stay a bench proof only.
+1. **Research decoder fix.** In `tools/m17-research/m17.py`, a CRC-valid link setup must never be replaced by a later sync that fails CRC or scores lower (R4r: a 0.675 sync at 230 ms overwrote the valid one at 70 ms, so the runner's flag read false). Re-run the runner on `r4r0_key.iq` and confirm the flag is true. Decide the outer-symbol scale (R4r measured 2233 Hz for ±2400): keep, or ×1.07 in the table generator; write the choice there.
+2. **Step 4, independent decoder, on the kept capture `/tmp/fw1718/caps/r4r0_key.iq`** (int8 IQ, 2.4 MS/s, signal +240 kHz): SDR++ nightly with its M17 decoder module and a file source (convert the capture to 16-bit IQ WAV), or `m17-cxx-demod` if it builds here. Report its link-setup and frame count next to ours. If neither tool runs on this machine within reasonable effort, say so in the report and move on; it is not a blocker for item 3.
+3. **R4s: symbols over `0x40`, RRC in the module.** Spec in the review: op-code byte 0 (`00` samples as today, `01` append symbols packed four per byte MSB-first, `02` status read-back with fill and underrun count, `03` reset); 2048-symbol ring at `0x4A400`; the wake fills each 256-sample half through a 5-phase polyphase RRC (α 0.5, ±4 symbols, Q15, fractional phase carried across halves, same sign and scale as the table generator); underrun emits zeros and counts, never keys or stops by itself; empty ring on a host key = stock key; boot does nothing. Host tests: bit-exact Python model of the filter vs `m17.py` float waveform (r² ≥ 0.99) and the coefficient bytes in the image. SignalDeck: a bench DIAG that streams a symbol file in real time, one frame per body, pacing on the returned fill. Bench: one key, 2 s stream (link setup + 50 frames), 467.625 MHz low power, HackRF receive only. Pass: link setup and ≥ 45/50 frames at Golay 0, zero underruns in the read-back, p99 within the R4r band (2.8–3.1 kHz). Then the §6 run: three transmissions of 90 frames.
 
-Step 2 passed on tag `R4q0`. Step 3 passed on tag `R4r0`: one host key, p99 2817–3086 Hz, link-setup CRC at 70 ms, frames 0, 1, and the end frame, Golay error 0. The next action is step 4, the third-party decoder on the kept R4k capture. No second key of this body.
+Standing rules unchanged: stubs do nothing at boot and never key by themselves; ±5 kHz stop on the measured deviation, and **a bin at or over 5 kHz is a stop to be reported as one** (R4p reached 5050 Hz and was not written up as a stop); 467.625 MHz, low power, HackRF receive only; T4 closed; no ES8311 write; `0x3D` untouched; R4l0 never reloaded. **`git pull --rebase` before every load**, not only before every push. R-C step 1 (reading only) may run whenever the bench is idle.
 
 ## Goal and route list (owner, 2026-10-23: "discover every possible way we can get M17 to work")
 
