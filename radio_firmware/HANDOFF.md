@@ -52,13 +52,13 @@ The radio may **stay on 467.625 MHz, low power**: there is no need to return to 
 
 ## Current task
 
-T3, read only. No image, no key, no SignalDeck edit, no write to the ES8311 node.
+R-A, read only. No image, no key, no SignalDeck edit, no write to the ES8311 node.
 
-The AT1846S is already identified. Its register write is `0xFD011220`, its read is `0xFD01125C`, and the init sequence is `+0x2BAC`. Register `0x58` is `0x8405` on analog and `0xBCFD` on DMR. DMR leaves `0x30` at `0x4026`. Do not re-derive those.
+In DMR receive the C7000 slices 4FSK itself. Read whether raw symbols, or a demodulator output, can be read from RX RAM or a modem register and passed over the UART. That would bypass the ES8311 high-pass on receive. The sibling notes say no documented register exposes the 38.4 kHz receive samples to the CPU. Do not re-derive that sentence; check this image.
 
-1. In the factory image, list every store of AT1846S registers `0x3A`, `0x30`, `0x41`, `0x42`, `0x43`, `0x44`, `0x35` and `0x36`. For each, give the file offset, the value written, and the function it sits in. `scripts/fw_at1846_regmap.py` is the existing map.
-2. Say whether any stored value is a direct or DC modulation mode, or a test-tone path that can take arbitrary data instead of a fixed tone. Use a public AT1846S register description and cite it.
-3. Write the reading in `results.md` and one §10 paragraph. If a register stays unnamed, say so. Do not build an image.
+1. In the factory image, find any RAM buffer, modem register, or UART reply that carries sliced 4FSK symbols or the discriminator samples during DMR receive.
+2. Say whether a command the OEM app already sends can read that output, or whether a read would need a new SignalDeck sender. Do not add that sender.
+3. Write the reading in `results.md` and one §10 paragraph. If a buffer stays unnamed, say so. Do not build an image. Do not start R-B. Do not open T4. `0x3D` still waits.
 
 ## Goal and route list (owner, 2026-10-23: "discover every possible way we can get M17 to work")
 
@@ -70,7 +70,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
   - `WORK_MODE` `0x22` is the built-in BER test. Read 2026-10-24: byte 3 of `0x34808` is 1 only when flag `0x324D7` is 1. Command `0x3F` sets that flag for the Hongrui pattern and for O.153 (strings at file `+0x38444` and `+0x38454`); the OEM BER screen sends O.153, and both values store the flag as 1. Byte 4 stays 0. The flag==2 arm is in the image and unused by the writers that name the flag. A normal channel leaves both bytes 0, and the first setup stores `0x6A` or `0x6E`. The helpers at `+0x18218`, `+0x186BC`, `+0x28904` and `+0x19438` write modem control words and status bytes. They fill no symbol buffer. No `0x22` image was built.
   - Read the symbol map and filter controls: `RF_MODE[7]` gives two deviation maps; is there an RRC roll-off or filter-bypass setting? The `0x22` path writes neither `RF_MODE` nor `FM_BANDWIDTH`. The sibling notes name no RRC register. M17 needs ±2400 Hz outer and RRC α = 0.5; DMR uses ±1944 Hz and α = 0.2. This radio's narrow-band (12.5 kHz) DMR outer symbol is ±3.3 kHz, with AT1846S `0x30` left at `0x4026`. That is about 1.7× the standard ±1944 Hz, and the BTECH 6X2 still decodes it.
   - If the modem can hold PTT continuously and take symbols from RAM, M17 could be generated with no shaper of our own. That buffer is not shown.
-- **T3: the AT1846S itself.** Does it have a direct/DC modulation input or a TX test-tone generator with arbitrary data (registers `0x3A`, `0x30`, `0x41`–`0x44`, the tone generator `0x35`/`0x36`)? Read only.
+- **T3: the AT1846S itself.** Read 2026-10-24. The asked registers are FM setup scalars. Programming Guide 1.4 register 30h bit 10 (`direct_reg`, "1=enable direct_reg", no further definition) is clear in every immediate, and no read-modify-write sets it. Guide section 5 `3aH[14:12]` is 000 (Tx nothing) or 100 (microphone) in every stored value, including both bandwidth-profile rows. The OpenRTX web table puts the voice source on `0x3C[15:14]`; the stores are `0x0407` and the 25 kHz profile's `0x1930`, both with bits 15:14 = 00 (microphone). `0x35` and `0x36` are never written. `0x41`, `0x42`, `0x43` and `0x44` are single gain, threshold, or deviation words. No host-symbol path. No image.
 - **T4: a hybrid.** Only if T1–T3 all fail: what plain-M17 decode rate a standard receiver gets from the UVm6 path with the best pre-shaping (measured, not assumed). This is the fallback number.
 
 **Receive (works today with the calibrated DFE; these aim at plain or simpler decoding)**
@@ -83,7 +83,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-T2 naming was read only. Nothing was keyed. Byte 3 of `0x34808` is the BER-test select: command `0x3F` sets flag `0x324D7` to 1, and the initializer copies that into byte 3. Byte 4 stays 0. A normal channel leaves both bytes 0 and takes `WORK_MODE` `0x6A` or `0x6E`. Neither path fills a symbol buffer. No `0x22` image. The radio is still the R4a factory restore: `0x34` `DMR003.UV4T.V022`, VFO 467.625, no `DMRDEBUG.bin`. §6 is not met.
+T3 was read only. Nothing was keyed. The AT1846S stores of `0x3A`, `0x30`, `0x41`–`0x44` are FM setup scalars. `direct_reg` (register 30h bit 10) stays clear, `3aH[14:12]` is nothing or microphone, and `0x35`/`0x36` are never written. No host-symbol path and no on-chip tone path. No image. The radio is still the R4a factory restore: `0x34` `DMR003.UV4T.V022`, VFO 467.625, no `DMRDEBUG.bin`. §6 is not met.
 
 ## Owner question
 

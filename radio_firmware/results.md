@@ -1205,3 +1205,107 @@ A modem FIFO the CPU never touches is still unnamed. T2 is closed on the reading
 ## End state
 
 The radio was not touched. End state remains the R4a restore: factory image, `0x34` `DMR003.UV4T.V022` at 03:00:58.517, VFO 467.625 / 467.625 FM at 03:00:59.876, low power, no `DMRDEBUG.bin`.
+
+# T3 — AT1846S registers `0x3A`, `0x30`, `0x41`–`0x44`, `0x35` and `0x36` (2026-10-24)
+
+No image was loaded. Nothing was keyed. `scripts/fw_at1846_regmap.py` was run on a fresh factory disassembly (no `-M`), not on the script's default listing. Every `bsr 0xFD011220` in that listing was checked. One write does not build `r0` with `movi`: the bandwidth profile at `+0x2B30`. Every other write does. Registers `0x35` and `0x36` have no write and no read.
+
+The two public descriptions disagree, and both are cited. The OpenRTX web table is https://github.com/OpenRTX/openrtx.github.io/blob/master/at1846_registers.md. The Auctus text is AT1846S/AT1846SD Programming Guide 1.4, https://www.opengd77.com/downloads/datasheets/AT1846S/AT1846S-ProgrammingGuide-1.4.pdf. Ch. 11 already reads `0x30` = `0x0001` as that guide's soft reset, and it already calls `0x44` bits 11:8 the TX mic gain. Those readings are kept. §11 is not rewritten.
+
+## The stores
+
+`at1846_apply_bw_profile` (`+0x2B14`) is the indirect writer. The loop at `+0x2B2C` loads the register number from SRAM `0x18000808` (file `+0x322E8`) and the halfword from flash `0x03050608` (file `+0x36608`, 46 bytes per row) and writes at `+0x2B30`. Of the asked registers the list contains only `0x3A`. `0x3C` is not on the asked list. It is included because the OpenRTX table puts the voice source there.
+
+| Row | `0x3A` | `0x3C` |
+|---|---|---|
+| 12.5 kHz | `0x00C3` | `0x0407` |
+| 25 kHz | `0x04C3` | `0x1930` |
+
+`at1846_init` (`+0x2BAC`):
+
+| Offset | Register | Value |
+|---|---|---|
+| `+0x02BB2` | `0x30` | `0x0001` |
+| `+0x02BC0` | `0x30` | `0x0004` |
+| `+0x02C18` | `0x41` | `0x470F` |
+| `+0x02C22` | `0x42` | `0x1036` |
+| `+0x02C2A` | `0x43` | `0x00BB` |
+| `+0x02C34` | `0x44` | `0x07F7` |
+| `+0x02C3C` | `0x3A` | `0x00C3` |
+| `+0x02CB0` | `0x30` | `0x40A4` |
+| `+0x02CC0` | `0x30` | `0x40A6` |
+| `+0x02CD0` | `0x30` | `0x4006` |
+| `+0x02D04` | `0x3A` | `0x00C3` |
+| `+0x02D0E` | `0x3C` | `0x0407` |
+
+`at1846_tune` (`+0x2DD8`):
+
+| Offset | Register | Value |
+|---|---|---|
+| `+0x02DF2` | `0x30` | `0x4006` |
+| `+0x02E26` | `0x30` | `0x4046` |
+| `+0x02E34` | `0x42` | `0x1036` |
+| `+0x02E3C` | `0x43` | `0x00BB` |
+| `+0x02E78` | `0x30` | `0x4006` |
+| `+0x02E82` | `0x30` | `0x4026` |
+| `+0x02E8C` | `0x44` | `0x0AD1` |
+| `+0x02EA8` | `0x3A` | `0x00C9` |
+| `+0x02ECE` | `0x3A` | `0x00C3` |
+| `+0x02ED8` | `0x3C` | `0x0407` |
+| `+0x02FEA` | `0x30` | `0x4046` |
+| `+0x03024` | `0x42` | `0x1052` |
+| `+0x0302E` | `0x43` | `0x0100` |
+| `+0x0303C` | `0x30` | `0x4006` |
+| `+0x03046` | `0x30` | `0x4026` |
+| `+0x0306A` | `0x44` | `0x0AD1` |
+| `+0x03074` | `0x3A` | `0x40C3` |
+| `+0x03082` | `0x30` | `0x7006` |
+| `+0x0308C` | `0x30` | `0x7026` |
+
+The function at `+0x3190` writes one `0x30` and returns. `+0x031B0` = `0x40A6`, `+0x031C2` = `0x4026`, `+0x031D0` = `0x70A6`, `+0x031DE` = `0x7026`.
+
+The function at `+0x31E4` runs these only when byte 0 of its copied struct is 0. `+0x0320E` reads `0x3A` and `+0x03222` writes that halfword ANDed with `0x8FFF`, after saving the original at `(r7, 2)`. `+0x03234` reads `0x30` and `+0x03240` sets bit 11. `+0x03250` writes `0x30` = `0x4006`. `+0x03258` writes the saved `0x3A` halfword back.
+
+`at1846_set_ctcss_dcs` (`+0x32E4`) writes `0x3A` = `0x40C9` at `+0x03324`, `0x40CC` at `+0x033A2`, `0x40D1` at `+0x033E4`, and `0x40CA` at `+0x0343A`.
+
+The function at `+0x346C` writes `0x41` = `0x4730` at `+0x034A0`.
+
+The function at `+0x61A8` writes `0x44` at `+0x061CE`. The value is one byte from the table at file `+0x36EE4` (XIP `0x03050EE4`), indexed by the byte at `0x38C70+0x10`, ORed with `0x0700`.
+
+`set_tx_gain_reg44` (`+0x8E0C`) reads `0x44` at `+0x08E12` and writes it at `+0x08E26`: bits 11:8 replaced by the caller byte, low byte forced to `0xFF`.
+
+The function at `+0xA108` reads `0x44` at `+0x0A10E` and writes it at `+0x0A130`: bits 11:8 replaced by a halfword from the table at file `+0x383E4` (XIP `0x030523E4`), low byte forced to `0xFF`.
+
+The function at `+0xA150` reads `0x41` at `+0x0A156` and writes it at `+0x0A164`: bits 6:0 replaced by the caller byte.
+
+The function at `+0xA16C` writes `0x44` = `0x0FFF` at `+0x0A266` and `0x41` = `0x4705` at `+0x0A270`.
+
+`at1846_rx_off` (`+0xB00C`) reads `0x30` and writes it back with bits 6 and 5 clear (`+0x0B024`, AND `0xFF9F`), then with bit 2 clear (`+0x0B038`, AND `0xFFFB`). `at1846_rx_on` (`+0xB048`) sets bit 2 (`+0x0B058`), waits 10 ms, and sets bit 5 (`+0x0B070`).
+
+`0x42` and `0x43` are the immediates above. Neither is read back. `0x35` and `0x36` have no `bsr` to the register write or the register read. The six `movi r0, 53` / `movi r0, 54` sites in the whole dump are `+0x7BE6`, `+0x7C1A`, `+0x25642`, `+0x258C0` (argument 54 to `bsr 0x9120` or `bsr 0x2A4C`) and `+0x4075A`, `+0x407E8` (byte 53 stored into a frame). They are not chip selects.
+
+## What the values select
+
+Programming Guide register 30h bit 10 is `direct_reg`: "1=enable direct_reg, 0=disable direct_reg". The guide gives no further definition. The same page uses "direct reg" for register 03h bit 12, which overrides `tx_adc_reset`, and for register 04h bit 7, which overrides `dsp_resetn`. The wording is an override of another control bit. It is not described as a modulation input. Bit 10 is clear in every immediate: `0x0001`, `0x0004`, `0x40A4`, `0x40A6`, `0x4006`, `0x4046`, `0x4026`, `0x7006`, `0x7026`, `0x70A6`. The read-modify-writes set bit 11, clear bits 6 and 5, clear bit 2, set bit 2, or set bit 5. None sets bit 10.
+
+The guide's other `0x30` names match the immediates. Bit 0 is `soft_reset` (`0x0001`). Bit 2 is `pdn_reg` (`0x0004`, chip power). Bit 14 is `xtal_mode`. Bits 13 and 12 are the 25 kHz / 12.5 kHz selects, so `0x40xx` is 12.5 kHz and `0x70xx` is 25 kHz. Bit 6 is `tx_on` (`0x4046`). Bit 5 is `rx_on` (`0x4026`, `0x7026`). The OpenRTX web table packs channel mode into bits 13:12 and does not name bits 14, 10, or 0. Both sources agree on bits 13:12 and on bits 6, 5, and 2. The DMR leave-at `0x4026` and the FM wide pair are the ones already in ch. 19. The wide pair was not used as a test state.
+
+Voice source, both definitions. Guide section 5: `3aH[14:12]` `voice_sel` is 000 = Tx nothing, 001 = tone1, 010 = tone2, 011 = both tones, 100 = microphone, other = reserved. Every stored `0x3A` is 000 or 100. `0x00C3`, `0x00C9`, and the 25 kHz profile's `0x04C3` are 000. `0x40C3`, `0x40C9`, `0x40CC`, `0x40D1`, and `0x40CA` are 100. The `+0x31E4` AND with `0x8FFF` clears bits 14:12 (000) and the later write puts the saved halfword back. The OpenRTX table does not document `0x3A`. It puts voice selection on `0x3C` bits 15:14: 00 = microphone, 01 = inner sine (tone2), 10 = GPIO1 `code_in`, 11 = nothing. Every `0x3C` store is `0x0407` or the 25 kHz profile's `0x1930`. Both have bits 15:14 = 00. The inner sine is not selected and GPIO `code_in` is not selected. `code_in` would be a 1-bit pin input. The other bits of `0x0407` and of `0x1930` stay unnamed: the guide's register introduction does not list `0x3C`, and the OpenRTX table names only bits 15:14.
+
+`0x35` and `0x36` are the tone frequencies (OpenRTX: freq_kHz × 2^12; the guide's DTMF section uses frequency(Hz) × 10). Nothing writes them. Guide registers `0x79` and `0x7A` (`dtmf_en`, `single_tone`) were not on the asked list and were not scanned. The voice-select field is never left on a tone, so that scan was not needed to close the tone path.
+
+`0x41` keeps the high byte at `0x47` and changes bits 6:0 (15, 48, 5, or the caller byte). Guide section 11 and register 41h call bits 6:0 `voice_gain_tx`, default `0x4006`. The OpenRTX table calls the whole register the VOX open threshold. The guide's VOX thresholds are register `0x64`, not `0x41`. Either reading of `0x41` is one scalar.
+
+`0x42` is only `0x1036` and `0x1052`. The OpenRTX table calls the whole register the VOX close threshold. The programming guide does not list `0x42`. The values are constants.
+
+`0x43` is `0x00BB` and `0x0100`, the pair already in §11. The OpenRTX table calls bits 12:6 the voice-plus-CTCSS deviation and bits 5:0 the CTCSS-only deviation. Guide section 11 puts those two deviation fields on register `0x59` and does not list `0x43`. Either reading is one constant.
+
+`0x44` is `0x07F7`, `0x0AD1`, `0x0FFF`, or one table byte / caller byte placed in bits 11:8 or in the low byte and ORed with `0x0700` or `0x00FF`. Guide register 44h calls bits 11:8 `gain_tx`, bits 7:4 the DAC gain, and bits 3:0 the digital volume. The image writes bits 11:8, which is the field ch. 11 already uses. The OpenRTX table documents only bits 7:0, as RX volume. Each write is one gain word.
+
+## What this does not yet say
+
+No stored value of this set enables `direct_reg`, an on-chip tone, or GPIO `code_in`. The datasheet's analog baseband pins were not traced on this module, and no asked register is programmed as a sample input. T3 closes the AT1846S register route as a host-symbol path. No image was built. §6 is not met. `0x3D` still waits, and T1 stays the main line. T4 stays closed: T1 has not failed. Whether a baseband pin is wired is unread.
+
+## End state
+
+The radio was not touched. End state remains the R4a restore: factory image, `0x34` `DMR003.UV4T.V022` at 03:00:58.517, VFO 467.625 / 467.625 FM at 03:00:59.876, low power, no `DMRDEBUG.bin`.
