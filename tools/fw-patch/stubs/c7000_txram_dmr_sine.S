@@ -13,7 +13,11 @@
  * square. Nothing larger is stored. R3a9 is patch
  * c7000-txram-dmr-sine1k-p4096: the same bytes with sample immediates
  * 0, 11, 16, 11, 0, 245, 240, 245. Measured 2026-10-24: 1 kHz line
- * 1923 Hz, steady p99 2186 Hz. This file stays the peak-2048 image.
+ * 1923 Hz, steady p99 2186 Hz. R3a10 is patch
+ * c7000-txram-dmr-sine1k-p5120. The version field is four characters,
+ * so its tag is R3b0. Immediates 0, 14, 20, 14, 0, 242, 236, 242.
+ * Measured 2026-10-24: 1 kHz line 2261 Hz, steady p99 2674 Hz.
+ * This file stays the peak-2048 image.
  *
  * push r4-r8, r15. r0-r3 only after the event post. The bsr encodings
  * are raw halfwords: gas emits a relocation for `bsr 0xFD011220` and ld
