@@ -229,8 +229,10 @@ sites = [
 # is a new image, not an edit of these bytes.
 [patches.c7000-txram-square]
 why = """R3. At FM key-up, after the clear of 0x11000080 bit 0 at +0x3EDF8, take the TX-RAM
-path the guide's section 7.2.2.1.2 describes and hold a 15.625 Hz square on it. The six
-bytes at +0x3EDFC (the PTT store) become a bsr to the tail plus movi r0, 0. The stub sets
+path the guide's section 7.2.2.1.2 describes and hold a 15.625 Hz square on it. Key-up
+runs from IRAM (file +0x3EDFC is PC 0x159F4). The six bytes there become a bsr to the
+stub's XIP address 0x03075000 plus movi r0, 0. The stub stays at file +0x5B000, which
+is not copied. The stub sets
 bit 0 only — that section does not mention ahb_wr_voice_en — clears FM_BANDWIDTH bits 4
 and 6, fills 0x16000030 with +256 for 256 samples and -256 for the next 256 (16-bit
 big-endian), then stores PTT = 1 and returns to the 50 ms delay at +0x3EE02. Nothing in
@@ -239,6 +241,23 @@ a 0x58 patch or with any other stub at +0x5B000."""
 measured_by = "R3: one 3 s key on the 467.625 VFO, low power, HackRF receive"
 status = "experimental"
 sites = [
-  { offset = 0x3EDFC, original = "6b10013240b3", replacement = "00e002e10030", note = "FM key-up PTT store -> bsr stub + movi r0, 0; delay at +0x3EE02 is unchanged" },
+  { offset = 0x3EDFC, original = "6b10013240b3", replacement = "82e106fb0030", note = "bsr from IRAM PC 0x159F4 to XIP 0x03075000, plus movi r0, 0; delay at +0x3EE02 is unchanged" },
   { offset = 0x5B000, original = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", replacement = "6f104093a03a40b36e104093843a863a40b36d10013102ea000120ab0123002a403afc0bff3102ea000120ab0123002a403afc0b6510013240b33c7880000011000500113000001660050011", note = "stub (stubs/c7000_txram_square.S, as -mcpu=ck803, ld -Ttext=0x5B000): bit 0, clear FM bits 4 and 6, square A=256, then PTT" },
+]
+
+# R3-0. The IRAM copy (file +0x39408..+0x5AEFC) has no log string. The ASCII names in it
+# (TMSG TRES TSUS QUEU FLAG TSIG SEMA TICK NONE) are uC/OS-III type words: the boot path
+# compares or stores them, so changing one is not a harmless test. Tag R300 changed TICK
+# at +0x3ACEB and the module did not banner. This patch changes the alignment halfword
+# after FM key-up's jmp r15 (+0x3EE14) and before the literal pool at +0x3EE18. Nothing
+# loads +0x3EE16. Not stacked with the key-up hook.
+[patches.c7000-iram-padbyte]
+why = """R3-0. One padding byte at +0x3EE16 (00 -> 58) inside the IRAM copy, after the
+key-up function returns and before its pool. No instruction and no compared immediate.
+The tag is the only other difference from the factory image. Boot test: banner and 0x34,
+no transmission. A banner means the copied block has no whole-image check."""
+measured_by = "R3-0: load, read the boot banner and the 0x34 tag, do not key"
+status = "experimental"
+sites = [
+  { offset = 0x3EE16, original = "00", replacement = "58", note = "padding after FM key-up jmp r15, before the pool at +0x3EE18" },
 ]
