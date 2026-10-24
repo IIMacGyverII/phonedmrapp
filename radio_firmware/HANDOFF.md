@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
@@ -79,7 +79,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Cl
 - **T1: TX RAM through the C7000 FM modulator** (R3a2 now, then R4: a UART symbol command `0x3D`, with the RRC shaper in firmware). This is the main line.
 - **T2: the C7000 DMR modem as a raw 4FSK source.**
   - `WORK_MODE` `0x22` is "physical layer" (guide Table 27): read whether it transmits raw symbols, continuously or only in bursts, and from where (TX RAM / registers).
-  - Read the symbol map and filter controls: `RF_MODE[7]` gives two deviation maps; is there an RRC roll-off or filter-bypass setting? M17 needs ±2400 Hz outer and RRC α = 0.5; DMR uses ±1944 Hz and α = 0.2. The measured air scale is 1.7× the map.
+  - Read the symbol map and filter controls: `RF_MODE[7]` gives two deviation maps; is there an RRC roll-off or filter-bypass setting? M17 needs ±2400 Hz outer and RRC α = 0.5; DMR uses ±1944 Hz and α = 0.2. This radio's narrow-band (12.5 kHz) DMR outer symbol is ±3.3 kHz, with AT1846S `0x30` left at `0x4026`. That is about 1.7× the standard ±1944 Hz, and the BTECH 6X2 still decodes it.
   - If the modem can hold PTT continuously and take symbols from RAM, M17 could be generated with no shaper of our own.
 - **T3: the AT1846S itself.** Does it have a direct/DC modulation input or a TX test-tone generator with arbitrary data (registers `0x3A`, `0x30`, `0x41`–`0x44`, the tone generator `0x35`/`0x36`)? Read only.
 - **T4: a hybrid.** Only if T1–T3 all fail: what plain-M17 decode rate a standard receiver gets from the UVm6 path with the best pre-shaping (measured, not assumed). This is the fallback number.
@@ -94,7 +94,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Cl
 
 ## Last report
 
-(none yet under this protocol; previous results: `radio_firmware/results.md`, R3-0)
+R3a2 is done. Factory boot and the R3a2 boot are both silent at 467.625 MHz (hottest bin +0.11 dB and +0.13 dB, clip 0). The image bannered as `DMR003.R3a2.V022` (sha256 `74a47c45e4e52a65fbdc5b3e07d9ceefe41f6b5f53be9961a178735e07e28f64`). One 3 s low-power key was the phone's 999.5 Hz codec tone at about ±2.1 kHz (the 15.6 Hz fundamental measured 0.2 Hz). A was not raised. The DMR-modulator image (two-point `RF_MODE`, `0x58` = `0xBCFD`, `0x30` left at `0x4026`) was proposed and not built. Factory image restored: banner 23:42:14.584, `0x34` `DMR003.UV4T.V022`, channel 36 NOAA WX4, no `DMRDEBUG.bin`. §6 is not met.
 
 ## Owner question
 

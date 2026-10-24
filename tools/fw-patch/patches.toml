@@ -223,26 +223,32 @@ sites = [
   { offset = 0x3640, original = "0584", replacement = "fdbc", note = "at1846_set_ctcss_dcs reg 0x58 = 0xBCFD" },
 ]
 
-# R3. Not the +0x3074 redirect: the other C7000 stubs share that site and the tail, so this
-# one is exclusive with all of them. The hook is the PTT store inside FM key-up, after the
-# tx_voice_source clear. A = 256 (big-endian halfwords 0x0001 and 0x00FF). A later amplitude
-# is a new image, not an edit of these bytes.
+# R3a2. Not the +0x3074 redirect: the other C7000 stubs share that site and the tail, so
+# this one is exclusive with all of them. The hook is the PTT store inside FM key-up.
+# The stub is gated on IRAM .bss 0x4DAAC, set by the 0x26 launch=1 path and cleared by
+# launch=2. Boot does not send 0x26, so a boot key-up does the factory PTT store.
+# A = 256 (big-endian halfwords 0x0001 and 0x00FF). A later amplitude is a new image.
 [patches.c7000-txram-square]
-why = """R3. At FM key-up, after the clear of 0x11000080 bit 0 at +0x3EDF8, take the TX-RAM
-path the guide's section 7.2.2.1.2 describes and hold a 15.625 Hz square on it. Key-up
-runs from IRAM (file +0x3EDFC is PC 0x159F4). The six bytes there become a bsr to the
-stub's XIP address 0x03075000 plus movi r0, 0. The stub stays at file +0x5B000, which
-is not copied. The stub sets
-bit 0 only — that section does not mention ahb_wr_voice_en — clears FM_BANDWIDTH bits 4
-and 6, fills 0x16000030 with +256 for 256 samples and -256 for the next 256 (16-bit
-big-endian), then stores PTT = 1 and returns to the 50 ms delay at +0x3EE02. Nothing in
-this image refills the ping-pong, so the fill repeats. Bench only, and not combined with
-a 0x58 patch or with any other stub at +0x5B000."""
-measured_by = "R3: one 3 s key on the 467.625 VFO, low power, HackRF receive"
+why = """R3a2. At FM key-up, after the clear of 0x11000080 bit 0 at +0x3EDF8, branch to the
+stub at XIP 0x03075000. Key-up runs from IRAM (file +0x3EDFC is PC 0x159F4). The six
+bytes there are the same bsr as R3a1 plus movi r0, 0. The stub stays at file +0x5B000,
+which is not copied. It loads IRAM .bss 0x4DAAC (boot zeroes 0x31AF4..0x4DAB0; the
+factory image does not reference this word). Flag zero does the factory PTT store
+(lrw r3, 0x11000560; movi r2, 1; st.w) and returns. Flag nonzero sets bit 0 only —
+section 7.2.2.1.2 does not mention ahb_wr_voice_en — clears FM_BANDWIDTH bits 4 and 6,
+fills 0x16000030 with +256 for 256 samples and -256 for the next 256 (16-bit
+big-endian), then stores PTT = 1 and returns to the 50 ms delay at +0x3EE02. The
+0x26 handler at +0x9264 sets the word on launch = 1 (bsr over the two movs at +0x92B2)
+and clears it on launch = 2 (bsr over the lrw at +0x929C). Both of those sites are
+flash-resident, so the bsr displacement is the file-offset one. Bench only, and not
+combined with a 0x58 patch, the IRAM pad byte, or any other stub at +0x5B000."""
+measured_by = "R3a2: one 3 s key on the 467.625 VFO, low power, HackRF receive, after a factory boot-radiation check"
 status = "experimental"
 sites = [
   { offset = 0x3EDFC, original = "6b10013240b3", replacement = "82e106fb0030", note = "bsr from IRAM PC 0x159F4 to XIP 0x03075000, plus movi r0, 0; delay at +0x3EE02 is unchanged" },
-  { offset = 0x5B000, original = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", replacement = "6f104093a03a40b36e104093843a863a40b36d10013102ea000120ab0123002a403afc0bff3102ea000120ab0123002a403afc0b6510013240b33c7880000011000500113000001660050011", note = "stub (stubs/c7000_txram_square.S, as -mcpu=ck803, ld -Ttext=0x5B000): bit 0, clear FM bits 4 and 6, square A=256, then PTT" },
+  { offset = 0x92B2, original = "176c576c", replacement = "02e0cd8e", note = "0x26 launch=1: bsr set_flag at XIP 0x0307504C (was mov r0, r5; mov r1, r5, and r5 is 1)" },
+  { offset = 0x929C, original = "83eaa200", replacement = "02e0de8e", note = "0x26 launch=2: bsr clear_flag at XIP 0x03075058 (was lrw r3, 0x38874; the helper reloads r3)" },
+  { offset = 0x5B000, original = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", replacement = "79104093403a05087810013240b33c7877104093a03a40b376104093843a863a40b37510013102ea000120ab0123002a403afc0bff3102ea000120ab0123002a403afc0b6910013240b33c786610013240b3013001313c784310003360b267103c780000acda04006005001180000011000500113000001674880300", note = "stub (stubs/c7000_txram_square.S, as -mcpu=ck803, ld.bfd -Ttext=0x5B000): gate, factory PTT, TX-RAM square, set_flag, clear_flag" },
 ]
 
 # R3-0. The IRAM copy (file +0x39408..+0x5AEFC) has no log string. The ASCII names in it

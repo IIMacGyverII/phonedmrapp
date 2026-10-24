@@ -255,10 +255,20 @@ class PatchTest(unittest.TestCase):
         self.assertEqual(img[0x3EE02:0x3EE04], bytes.fromhex("3230"))  # movi r0, 50, the delay
         self.assertEqual(self.fac[0x3EE02:0x3EE04], bytes.fromhex("3230"))
 
+        xip = 0x0301A000
+        flag = 0x4DAAC
+        # Boot zeroes this word and the factory image never names it. Not 0x31AF4.
+        self.assertTrue(0x31AF4 < flag < 0x4DAB0)
+        self.assertEqual(flag & 3, 0)
+        self.assertEqual(self.fac.find(flag.to_bytes(4, "little")), -1)
+        # The 0x26 sites are flash-resident (below the IRAM copy).
+        self.assertLess(0x929C, 0x39408)
+        self.assertLess(0x92B2, 0x39408)
+
         def hw(off):
             return int.from_bytes(img[off:off + 2], "little")
 
-        def bt_target(off):
+        def bt_file(off):
             word = hw(off)
             self.assertEqual(word & 0xFC00, 0x0800, "not a 16-bit bt")
             imm = word & 0x3FF
@@ -266,24 +276,54 @@ class PatchTest(unittest.TestCase):
                 imm -= 0x400
             return off + (imm << 1)
 
-        self.assertEqual(hw(0x5B004), 0x3AA0)  # bseti r2, 0
-        self.assertEqual(hw(0x5B00C), 0x3A84)  # bclri r2, 4
-        self.assertEqual(hw(0x5B00E), 0x3A86)  # bclri r2, 6
-        self.assertNotIn((0x3AA4).to_bytes(2, "little"), img[0x5B000:0x5B04C])  # not bseti r2, 4
-        self.assertEqual(hw(0x5B014), 0x3101)  # movi r1, 1 -> bytes 01 00 = +256
-        self.assertEqual(hw(0x5B024), 0x31FF)  # movi r1, 255 -> bytes FF 00 = -256
-        self.assertEqual(img[0x5B016:0x5B01A], bytes.fromhex("02ea0001"))  # movi r2, 256
-        self.assertEqual(img[0x5B026:0x5B02A], bytes.fromhex("02ea0001"))
-        self.assertEqual(hw(0x5B01A), 0xAB20)  # st.h r1, (r3, 0)
-        self.assertEqual(bt_target(0x5B022), 0x5B01A)  # 256 trips, low half
-        self.assertEqual(bt_target(0x5B032), 0x5B02A)  # 256 trips, high half
-        self.assertEqual(hw(0x5B036), 0x3201)  # movi r2, 1
-        self.assertEqual(hw(0x5B038), 0xB340)  # st.w PTT, after both fills
-        self.assertEqual(hw(0x5B03A), 0x783C)  # jmp r15
-        pool = [int.from_bytes(img[0x5B03C + 4 * k:0x5B040 + 4 * k], "little") for k in range(4)]
-        self.assertEqual(pool, [0x11000080, 0x11000500, 0x16000030, 0x11000560])
-        # Not the tune-time redirect, and the factory 0x58 immediates stay.
+        def rt(file_pc, file_tgt):
+            """Runtime target of a PC-relative branch. Stub and 0x26 handler both run at XIP."""
+            disp = file_tgt - file_pc
+            return (file_pc + xip + disp) & 0xFFFFFFFF
+
+        # Flag zero falls through into the factory PTT store and returns.
+        # Layout is c7000_txram_square.S linked at file 0x5B000.
+        self.assertEqual(bt_file(0x5B006), 0x5B010)
+        self.assertEqual(rt(0x5B006, 0x5B010), xip + 0x5B010)
+        self.assertEqual(hw(0x5B00A), 0x3201)  # movi r2, 1
+        self.assertEqual(hw(0x5B00C), 0xB340)  # st.w
+        self.assertEqual(hw(0x5B00E), 0x783C)  # jmp r15, before any TX-RAM store
+        # Taken path is the square. Bit 4 is not set.
+        self.assertEqual(hw(0x5B014), 0x3AA0)  # bseti r2, 0
+        self.assertEqual(hw(0x5B01C), 0x3A84)  # bclri r2, 4
+        self.assertEqual(hw(0x5B01E), 0x3A86)  # bclri r2, 6
+        self.assertNotIn((0x3AA4).to_bytes(2, "little"), img[0x5B000:0x5B04C])
+        self.assertEqual(hw(0x5B024), 0x3101)  # movi r1, 1 -> +256
+        self.assertEqual(hw(0x5B034), 0x31FF)  # movi r1, 255 -> -256
+        self.assertEqual(img[0x5B026:0x5B02A], bytes.fromhex("02ea0001"))  # movi r2, 256
+        self.assertEqual(img[0x5B036:0x5B03A], bytes.fromhex("02ea0001"))
+        self.assertEqual(hw(0x5B02A), 0xAB20)  # st.h r1, (r3, 0)
+        self.assertEqual(bt_file(0x5B032), 0x5B02A)
+        self.assertEqual(rt(0x5B032, 0x5B02A), xip + 0x5B02A)
+        self.assertEqual(bt_file(0x5B042), 0x5B03A)
+        self.assertEqual(rt(0x5B042, 0x5B03A), xip + 0x5B03A)
+        self.assertEqual(hw(0x5B046), 0x3201)  # movi r2, 1
+        self.assertEqual(hw(0x5B048), 0xB340)  # st.w PTT, after both fills
+        self.assertEqual(hw(0x5B04A), 0x783C)  # jmp r15
+        # set_flag / clear_flag, reached from the 0x26 handler.
+        self.assertEqual((0x92B2 + xip + bsr32_disp(img, 0x92B2)) & 0xFFFFFFFF, xip + 0x5B04C)
+        self.assertEqual((0x929C + xip + bsr32_disp(img, 0x929C)) & 0xFFFFFFFF, xip + 0x5B058)
+        self.assertEqual(hw(0x5B04E), 0x3201)  # movi r2, 1
+        self.assertEqual(hw(0x5B050), 0xB340)  # st.w flag
+        self.assertEqual(hw(0x5B052), 0x3001)  # movi r0, 1
+        self.assertEqual(hw(0x5B054), 0x3101)  # movi r1, 1
+        self.assertEqual(hw(0x5B056), 0x783C)
+        self.assertEqual(hw(0x5B05A), 0x3300)  # movi r3, 0
+        self.assertEqual(hw(0x5B05C), 0xB260)  # st.w r3, (r2, 0)
+        self.assertEqual(hw(0x5B060), 0x783C)
+        # The instruction after each handler patch is the factory one.
+        self.assertEqual(img[0x92B6:0x92BA], self.fac[0x92B6:0x92BA])
+        self.assertEqual(img[0x92A0:0x92A2], self.fac[0x92A0:0x92A2])
+        pool = [int.from_bytes(img[0x5B064 + 4 * k:0x5B068 + 4 * k], "little") for k in range(6)]
+        self.assertEqual(pool, [flag, 0x11000560, 0x11000080, 0x11000500, 0x16000030, 0x38874])
+        # Not the tune-time redirect, the pad byte, or a 0x58 immediate.
         self.assertEqual(img[0x3074:0x3078], self.fac[0x3074:0x3078])
+        self.assertEqual(img[0x3EE16:0x3EE18], self.fac[0x3EE16:0x3EE18])
         for off in (0x2C90, 0x3054, 0x344E, 0x34F2, 0x3640):
             self.assertEqual(img[off:off + 2], bytes.fromhex("0584"))
 
