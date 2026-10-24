@@ -272,6 +272,72 @@ def table_bytes_lich5(pcm=None):
     return bytes(out)
 
 
+# R4i. One stream frame, frame number 5 with the end bit set. Not part of
+# the loop. The 320 samples are the tail of one deviation that already
+# contains frames 0-5 with the end bit clear, so the filter state continues
+# frame 5. Same sign and the same cap as counts_lich5(). Not scaled up.
+# A 6-symbol zero tail is filtered and then dropped: the 16 spare bytes
+# after the stored frame are not samples.
+EOT_SAMPLES = 320
+EOT_FN = 5 | 0x8000
+
+
+def symbols_eot1():
+    lsf_b = m17.lsf_bytes(BENCH_CALL, BENCH_CALL)
+    syms = np.array(m17.encode_stream(lsf_b, EOT_FN, PAY16, 5), float)
+    if len(syms) != 192:
+        raise RuntimeError("got %d symbols, expected 192" % len(syms))
+    return syms
+
+
+def waveform_hz_eot1():
+    """320 Hz samples that continue frame 5. Not an independently filtered frame."""
+    pre = np.array([3.0, -3.0] * (PREAMBLE // 2))
+    lsf_b = m17.lsf_bytes(BENCH_CALL, BENCH_CALL)
+    lsf = np.array(m17.encode_lsf(lsf_b), float)
+    frames = []
+    for i in range(LICH5_STREAM):
+        frames.extend(m17.encode_stream(lsf_b, i, PAY16, i))
+    frames.extend(m17.encode_stream(lsf_b, EOT_FN, PAY16, 5))
+    syms = np.concatenate([pre, lsf, np.array(frames, float), np.zeros(TAIL)])
+    y = m17.deviation(syms, FS)
+    expect = len(syms) * FS // m17.SYM_RATE
+    if len(y) != expect:
+        raise RuntimeError("got %d samples, expected %d" % (len(y), expect))
+    eot = y[LICH5_TAIL:LICH5_TAIL + EOT_SAMPLES]
+    if len(eot) != EOT_SAMPLES:
+        raise RuntimeError("end frame is %d samples" % len(eot))
+    return eot
+
+
+def counts_eot1():
+    """Same sign and the same cap as counts_lich5(). Not scaled up."""
+    y = waveform_hz_eot1()
+    body = np.rint(-y / HZ_PER_COUNT).astype(np.int32)
+    peak = int(np.max(np.abs(body)))
+    if peak > PEAK_CAP:
+        body = np.rint(body.astype(float) * (PEAK_CAP / peak)).astype(np.int32)
+    if np.max(np.abs(body)) > PEAK_CAP:
+        raise RuntimeError("peak %d still over the cap" % int(np.max(np.abs(body))))
+    if np.max(np.abs(body)) > 32767:
+        raise RuntimeError("sample does not fit in 16 bits")
+    if len(body) != EOT_SAMPLES:
+        raise RuntimeError("count buffer is %d" % len(body))
+    return body
+
+
+def table_bytes_eot1(pcm=None):
+    pcm = counts_eot1() if pcm is None else pcm
+    out = bytearray()
+    for s in pcm:
+        u = int(s) & 0xFFFF
+        out.append((u >> 8) & 0xFF)
+        out.append(u & 0xFF)
+    if len(out) != EOT_SAMPLES * 2:
+        raise RuntimeError("table is %d bytes" % len(out))
+    return bytes(out)
+
+
 def main():
     pcm = counts()
     y = waveform_hz()
