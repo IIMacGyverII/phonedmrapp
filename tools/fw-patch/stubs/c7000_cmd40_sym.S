@@ -5,9 +5,14 @@
  * in bits 7:6 (01 = +3, 00 = +1, 10 = -1, 11 = -3). 2 reads the fill, the
  * underrun count and the last error. 3 resets the ring. 4 renders: the next
  * two bytes are a sample count N, 1..256, and the reply body is 2N bytes in
- * TX-RAM order, taken from the scratch at 0x4AC00. Anything else, including
- * 0, is refused. Nothing here keys. A clear cursor at 0x4DAAC does nothing,
- * including at boot.
+ * TX-RAM order, taken from the scratch at 0x4AC00. 5 returns one FM receive
+ * half. The next byte is 0 to store WORK_MODE 0x80, or 1 to store 0x16A.
+ * It saves that word, waits until FM_ADDR_SW has taken two values, copies
+ * the half that register is not pointing at into 0x4AC00, restores the word,
+ * and replies with the 512 bytes. The reply frame is built at 0x4AE00, not
+ * on the stack. Op 5 does not write PTT. Anything else, including 0, is
+ * refused. Nothing in this command keys. A clear cursor at 0x4DAAC does
+ * nothing, including at boot.
  *
  * The ring is 2048 signed bytes at 0x4A400. 0x4A3E4 is the write count,
  * 0x4A3E8 the next symbol base, 0x4A3EC the phase, 0x4A3F0 the underrun
@@ -116,7 +121,7 @@ store40:
 	br	.Lreply2s
 .Lmaybe4:
 	cmpnei	r3, 4
-	bt	.Lbad
+	bt	.Lmaybe5
 	cmpnei	r2, 3
 	bt	.Lbad
 	ld.b	r1, (r7, 9)
@@ -185,6 +190,116 @@ store40:
 	addi	r1, 9
 	.short	0xE000, 0x7DE8
 	addu	r14, r5
+	addi	r14, 4
+	pop	r4-r7, r15
+.Lmaybe5:
+	cmpnei	r3, 5
+	bt	.Lbad
+	cmpnei	r2, 2
+	bt	.Lbad
+	ld.b	r1, (r7, 9)
+	cmpnei	r1, 0
+	bt	.Lm16a
+	movi	r0, 128
+	br	.Lwm
+.Lm16a:
+	cmpnei	r1, 1
+	bt	.Lbad
+	movi	r0, 181
+	lsli	r0, 1
+.Lwm:
+	lrw	r4, 0x11000100
+	ld.w	r5, (r4, 0)
+	st.w	r0, (r4, 0)
+	movi	r6, 1
+	lsli	r6, 22
+	movi	r4, 0
+	movi	r3, 0
+.Lspin:
+	cmpnei	r6, 0
+	bf	.Lto
+	subi	r6, 1
+	lrw	r0, 0x1100056c
+	ld.w	r0, (r0, 0)
+	andi	r0, r0, 3
+	cmpnei	r0, 1
+	bt	.Ln1
+	br	.Lleg
+.Ln1:
+	cmpnei	r0, 2
+	bt	.Lspin
+.Lleg:
+	mov	r1, r4
+	subu	r1, r0
+	cmpnei	r1, 0
+	bf	.Lspin
+	mov	r4, r0
+	addi	r3, 1
+	cmpnei	r3, 2
+	bt	.Lspin
+	cmpnei	r4, 1
+	bt	.Llow
+	lrw	r1, 0x160006e0
+	br	.Lcpy
+.Llow:
+	lrw	r1, 0x160004e0
+.Lcpy:
+	lrw	r6, 0x4ac00
+	movi	r3, 128
+.Lcw:
+	ld.w	r0, (r1, 0)
+	st.w	r0, (r6, 0)
+	addi	r1, 4
+	addi	r6, 4
+	subi	r3, 1
+	cmpnei	r3, 0
+	bt	.Lcw
+	br	.Lback
+.Lto:
+	lrw	r4, 0x11000100
+	st.w	r5, (r4, 0)
+	br	.Lbad
+.Lback:
+	lrw	r4, 0x11000100
+	st.w	r5, (r4, 0)
+	lrw	r4, 0x4ae00
+	movi	r2, 104
+	st.b	r2, (r4, 0)
+	ld.b	r2, (r7, 1)
+	st.b	r2, (r4, 1)
+	movi	r2, 0
+	st.b	r2, (r4, 2)
+	st.b	r2, (r4, 3)
+	st.b	r2, (r4, 4)
+	st.b	r2, (r4, 5)
+	movi	r2, 2
+	st.b	r2, (r4, 6)
+	movi	r2, 0
+	st.b	r2, (r4, 7)
+	lrw	r1, 0x4ac00
+	mov	r0, r4
+	addi	r0, 8
+	movi	r3, 128
+.Lfc:
+	ld.w	r2, (r1, 0)
+	st.w	r2, (r0, 0)
+	addi	r1, 4
+	addi	r0, 4
+	subi	r3, 1
+	cmpnei	r3, 0
+	bt	.Lfc
+	movi	r2, 16
+	st.b	r2, (r0, 0)
+	movi	r0, 1
+	lsli	r0, 9
+	addi	r0, 9
+	mov	r1, r4
+	.short	0xE000, 0x8E5C
+	mov	r0, r4
+	movi	r1, 1
+	lsli	r1, 9
+	addi	r1, 9
+	.short	0xE000, 0x7DE8
 	addi	r14, 4
 	pop	r4-r7, r15
 .Lbad:

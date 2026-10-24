@@ -1982,3 +1982,45 @@ Each link-setup CRC passes and both callsigns match. The 90 good frames are Gola
 ## End state
 
 R4t0 stays loaded. VFO 467.625 / 467.625 FM at 14:43:44.020, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. The independent decoder is still waiting on the Ubuntu box.
+
+# R-C step 2 — one FM receive half, tag RC20 (2026-10-24, 15:07–15:11)
+
+Op 5 saves `WORK_MODE` (`0x11000100`), stores `0x80` when the second body byte is 0 or `0x16A` when it is 1, and waits until `FM_ADDR_SW` (`0x1100056C`, bits 1:0) has taken two values or the spin of `1<<22` ends. It then copies the half that register is not pointing at (1 copies `0x160006E0`, 2 copies `0x160004E0`) into `0x4AC00`, restores `WORK_MODE`, and returns the 512 bytes. The reply frame is built at `0x4AE00`, not on the stack. The path does not write PTT (`0x11000560`). A timeout restores the word and returns sr=1. The phone was not keyed. HackRF transmit used 467.625 MHz, 2 MS/s, deviation 2.5 kHz, amp off, and a dummy burst before each tone. The ES8311 debug node was not written.
+
+`DMR003.RC20.V022.bin`, 378620 bytes. sha256 `ad941d8a46b64aabbb57ee441698a85991559b1770ed7ee939e595890c7c40ef`. Pushed MD5 `af523ecaa81540c36387c1d5900abce4`.
+
+## Boot and a quiet op 5
+
+VFO 467.625 / 467.625 FM at 15:07:27.282, low power, before the load. YModem `onSuccess` at 15:09:36.314. Banner `开机初始化完成` at 15:09:50.664. `0x34` at 15:09:50.975 is `DMR003.RC20.V022`. The boot record has floor 0.00 dB, peak 0.07 dB, and no run at +10 dB. VFO again at 15:10:10.999. One op 5, mode 0, with the HackRF only receiving: `rxram bytes=512 sr=0 mode=0` at 15:10:16.657. That capture's peak is 0.09 dB. The command does not make the phone radiate.
+
+## What the 512 bytes are
+
+Each half is 512 bytes, and the bytes come back as `HH 00 00 00` repeated. 128 of the int16 slots hold the audio in the high byte. The low byte of those slots is 0, and the 128 slots between them are 0. Dropping the zero slots leaves 128 samples. A 1 kHz tone lands on 1 kHz when those 128 samples are read at 4 kHz, which is one half (32 ms) with a zero int16 between audio samples. The idle half is a constant high byte `0xFF`.
+
+## HackRF tones, mode 0 (`0x80`)
+
+`0x16A` was not sent. The 1 kHz line is the peak of the 128 audio samples from TX VGA 6 up. VGA 0 is a different peak. RSSI is the module's `0x32` byte, `dBm = -(120 - raw/2)`.
+
+| TX VGA | RSSI raw | dBm | Audio rms | Peak | dB over median |
+| --- | --- | --- | --- | --- | --- |
+| 0 | 0x21 | −103.5 | 11310 | 375 Hz | 22 |
+| 6 | 0x26 | −101 | 6724 | 1000 Hz | 37 |
+| 12 | 0x2A | −99 | 7086 | 1000 Hz | 44 |
+| 20 | 0x34 | −94 | 6874 | 1000 Hz | 48 |
+
+A 100 Hz tone at VGA 20 (RSSI raw `0x33`, −94.5 dBm) has audio rms 335 and a peak at 406 Hz, 7 dB over the median. It does not stand out. The sweep, 40 Hz to 3200 Hz over 16 s, VGA 20:
+
+| t | Expected | Peak | dB | Audio rms |
+| --- | --- | --- | --- | --- |
+| 1.2 s | 293 Hz | 312 Hz | 10 | 318 |
+| 3.5 s | 747 Hz | 719 Hz | 49 | 9750 |
+| 6.0 s | 1241 Hz | 1219 Hz | 46 | 5159 |
+| 8.5 s | 1735 Hz | 1688 Hz | 39 | 3162 |
+| 11.0 s | 2228 Hz | 1812 Hz | 37 | 2196 |
+| 13.0 s | 2623 Hz | 1406 Hz | 33 | 1710 |
+
+The line is weak near 300 Hz and full from about 720 Hz through 1700 Hz. Above 2 kHz it folds (2228 Hz appears near 1812 Hz, and 2623 Hz near 1406 Hz), which is the 4 kHz sample rate of the audio slots. The low end of this receive RAM is not there.
+
+## End state
+
+RC20 stays loaded. VFO 467.625 / 467.625 FM at 15:11:19.770, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. The phone was not keyed.
