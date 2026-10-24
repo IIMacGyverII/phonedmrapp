@@ -182,6 +182,27 @@ sites = [
   { offset = 0x6228, original = "762b", replacement = "7c2b", note = "0x61F4 byte==1: subi r3, 119 -> 125 (0x89 -> 0x83, 9 dB -> 3 dB)" },
 ]
 
+# The ten low bytes of the GCR_DACL table at file +0x36ED0 (XIP 0x03050ED0). godl is not a
+# linear count (guide 6.5.2.25): bit 5 clear is 0..-31 dB, bit 5 set is +1..+32 dB with the
+# code counting backwards. Each slot below is 6 dB under the factory byte, and bit 7 (lrgod)
+# stays set. Boot (+0xE1A, byte offset 6), 0x61A8 (+0x61EC, index<<1) and the uncalled leaf
+# (+0xAE2) all load this table and OR 0x80, which does not change these bytes. The init
+# immediate 0xAB at +0x653C is overwritten by both and is not patched. No stub: +0x3074 runs
+# before 0x61A8 on the analog path. Not combined with a 0x58 patch.
+[patches.c7000-fm-dacgain]
+why = """UVm11. Lower the live GCR_DACL (codec base 0x160009C0 + 0x1F) by 6 dB at every
+writer on the analog path. The four stores are the init immediate (0xAB, +21 dB, overwritten
+before any 0x23), boot (+0xE1A, table slot 3 = 0xBC = +4 dB), 0x61A8 (+0x61EC, table[index<<1]
+when the copied channel byte 0 is 1; the analog 0x23 success path calls it at +0x9DB2 and the
+volume command at +0xA5BC), and a leaf at +0xAD0 with no call site. PTT (+0x3ECC0) does not
+store GCR_DACL, so whichever table byte boot or 0x61A8 left is what is keyed. FCR_DAC (+0x14)
+is the sample rate only and is never stored; the guide has no DAC high-pass. Bench only."""
+measured_by = "UVm11: the -36 dBFS 1 kHz / 3.5 kHz probe and one 1 kHz tone at -12 dBFS"
+status = "experimental"
+sites = [
+  { offset = 0x36ED0, original = "800088008200bc00b700b400b000ae00aa00a800", replacement = "86008e0088008200bd00ba00b600b400b000ae00", note = "GCR_DACL slots 0-9, each 6 dB down (0/-8/-2/+4/+9/+12/+16/+18/+22/+24 dB -> -6/-14/-8/-2/+3/+6/+10/+12/+16/+18 dB)" },
+]
+
 # Same five sites as the other 0x58 variants. 0xBCFD is the DMR immediate already at
 # +0x2E94 (opcode halfword at +0x2E92 stays). Bits 11-13 are the part UVm6 did not set.
 [patches.fm-flat-58bcfd]

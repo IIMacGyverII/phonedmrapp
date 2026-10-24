@@ -240,6 +240,18 @@ It did not halve. The −36 dBFS probe is 1 kHz **109 Hz** and 3.5 kHz **237 Hz*
 
 The next image, not built and not loaded: lower that nibble by two counts (`0xA` → `0x8`, 8 dB if the labeled step still applies) at the FM-tune store, and apply the same two counts in `set_tx_gain_reg44`, so a later `0x2A` cannot put the old gain back. Same two stimuli. A drop of about half means the audio enters the AT1846S microphone gain. No drop means it does not. §6 is not met. Pre-shaping and a receive equalizer are not implemented. UVm6 stays the candidate curve for modes that fit 300 Hz–3.5 kHz. End state: factory image verified, SignalDeck owns the radio, Weather zone channel 36 (NOAA WX4, 162.425 MHz, low power, active), no `DMRDEBUG.bin`.
 
+**2026-10-23 (18:28–19:18) — UVm11, the DAC-gain canary, and the receive cross-check.** HackRF receive only, 467.625 MHz, low power. The flash tag is `Vm11` and `0x34` reads `DMR003.Vm11.V022`. `0x34` was read before each transmission. The factory image was loaded back at 18:31:56, and again after the receive clips (19:15:37). The final `0x34`, at 19:18:07, is `DMR003.UV4T.V022`. Tables: `radio_firmware/results.md`.
+
+`GCR_DACL` is codec base `0x160009C0` + `0x1F`. `godl` is not a linear count: bit 5 clear is 0 to −31 dB, and bit 5 set is +1 to +32 dB with the code counting backwards. The live byte is one of ten table slots at file `+0x36ED0`. The init immediate `0xAB` (+21 dB) does not survive. The leaf at `+0xAD0` has no caller. PTT does not store the register. A stub at `+0x3074` runs before `0x61A8` and would be overwritten, so the image lowers all ten slots by 6 dB and uses no stub. `FCR_DAC` is the sample rate only, the image never stores it, and the guide has no DAC high-pass, DC-block, or de-pop bit. `GCR_MIXDACL` and `CR_DAC_AGC` are never stored. `dac_agc_en` stays 0.
+
+The air did not follow the 6 dB. The −36 dBFS probe is 1 kHz **111.9 Hz** and 3.5 kHz **249.7 Hz** (+7.0 dB), against the factory probe's 115 Hz and 250 Hz. The −12 dBFS 1 kHz tone is **1733 Hz**, against 1827 Hz. The ratios are 0.973, 0.999 and 0.949. Half would have been about 57 Hz, 125 Hz and 914 Hz. Pre-emphasis is still on.
+
+**The codec DAC gain is not in the radiated path.** The phone's audio still reaches the AT1846S: UVm8 removed the pre-emphasis through register `0x58`. That path does not include `GCR_DACL`, and UVm10 already showed it does not include `GCR_ADCL`. When byte 0 of the copied channel struct is not 1, `0x61A8` writes AT1846S register `0x44` from the table at `0x03050EE4` and leaves the boot `GCR_DACL` byte alone. That `0x44` image was not built. `0x58` already places the audio in the AT1846S. The other sources the guide names are the codec-ADC FM path, which UVm10 measured, and TX RAM (`0x11000080[0]` = 1) or a converter this DAC register does not control. No follow-up image was loaded.
+
+The receive check transmitted nothing and used no HackRF. Ten seconds of open-squelch audio on 467.625 MHz, squelch 0, with the transmit frequency left at 162.425 MHz: UVm10 is −15.55 dBFS and the factory image is −15.61 dBFS, a difference of **+0.06 dB**. About 6 dB quieter on UVm10 would have meant the codec ADC is the receive path. The clips are noise on both images (zero fraction 0.0001, spectral peak about 12 times the median). **The codec ADC gain is not in the receive path.**
+
+§6 is not met. Pre-shaping and a receive equalizer are not implemented. UVm6 stays the candidate curve for modes that fit 300 Hz–3.5 kHz. End state: factory image verified, SignalDeck owns the radio, Weather zone channel 36 (NOAA WX4, 162.425 MHz, squelch 5, low power, active), no `DMRDEBUG.bin`.
+
 ---
 
 ## 11. Review of the 2026-10-23 findings (FW8/FW11/FW16, commit `b8ee26df`)
