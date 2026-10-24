@@ -262,6 +262,19 @@ class PatchTest(unittest.TestCase):
         pairs.append(["c7000-txram-m17-eot1", "c7000-cmd40-echo"])
         pairs.append(["c7000-txram-m17-eot2", "c7000-cmd40-echo"])
         pairs.append(["c7000-txram-m17-eot3", "c7000-cmd40-echo"])
+        for other in (
+            "c7000-cmd40-ack", "c7000-cmd40-ack2", "c7000-cmd40-echo",
+            "c7000-fm-adcgain", "c7000-fm-canary", "c7000-fm-flat", "c7000-fm-proof",
+            "c7000-txram-dmr", "c7000-txram-dmr-a1024", "c7000-txram-dmr-a2048",
+            "c7000-txram-dmr-a4096", "c7000-txram-dmr-a512", "c7000-txram-dmr-rrc",
+            "c7000-txram-dmr-sine1k", "c7000-txram-dmr-sine1k-p4096",
+            "c7000-txram-dmr-sine1k-p5120", "c7000-txram-square",
+            "c7000-txram-m17-lsf", "c7000-txram-m17-stream", "c7000-txram-m17-wake",
+            "c7000-txram-m17-loop", "c7000-txram-m17-loop5", "c7000-txram-m17-pay16",
+            "c7000-txram-m17-lich5", "c7000-txram-m17-eot1", "c7000-txram-m17-eot2",
+            "c7000-txram-m17-eot3",
+        ):
+            pairs.append([other, "c7000-cmd40-host"])
         for names in pairs:
             with self.subTest(names=names), self.assertRaises(SystemExit):
                 build.build(names, "UVt0", self.cfg)
@@ -1661,6 +1674,25 @@ class PatchTest(unittest.TestCase):
         self.assertEqual(img[0xAAFE:0xAB0E], self.fac[0xAAFE:0xAB0E])
         self.assertEqual(img[0x5AF3A:0x5B000], self.fac[0x5AF3A:0x5B000])
         self.assertEqual(img[0x38464:0x38474], b"DMR003.R4n0.V022")
+
+    def test_cmd40_host_stores_samples_and_arms_the_wake(self):
+        # R4o. 0x40 stores samples. The wake plays them only after a host key.
+        img, _ = build.build(["c7000-cmd40-host"], "R4o0", self.cfg)
+        xip = 0x0301A000
+        self.assertEqual(len(img), len(self.fac))
+        self.assertEqual(int.from_bytes(img[0x382B8:0x382BC], "little"), xip + 0x5AEFC)
+        self.assertEqual(img[0x5AEFC:0x5AF04], bytes.fromhex("136c00e003009514"))
+        self.assertEqual(bsr32_target(img, 0x5AF8C), 0x8E5C)
+        self.assertEqual(bsr32_target(img, 0x5AF94), 0x7DE8)
+        for at in (0x5B082, 0x5B13A, 0x5B14E):
+            self.assertEqual(bsr32_target(img, at), 0xE9C)
+        for at in (0x5B0D6, 0x5B0E0, 0x5B0EA, 0x5B166, 0x5B170):
+            self.assertEqual(bsr32_runtime(img, at), 0x2B220)
+        self.assertEqual(img[0x18A70:0x18A80], self.fac[0x18A70:0x18A80])
+        self.assertEqual(img[0x35F64:0x35FE4], self.fac[0x35F64:0x35FE4])
+        self.assertEqual(img[0xAAFE:0xAB0E], self.fac[0xAAFE:0xAB0E])
+        self.assertIn(b"\xac\xda\x04\x00", img[0x5AEFC:0x5B18C])
+        self.assertEqual(img[0x38464:0x38474], b"DMR003.R4o0.V022")
 
     def test_refuses_bad_tag(self):
         for tag in ("UV4T", "UV4", "UV-1"):
