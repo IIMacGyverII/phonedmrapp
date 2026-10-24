@@ -165,6 +165,10 @@ class PatchTest(unittest.TestCase):
         partners = [p[0] for p in pairs if p[1] == "c7000-txram-dmr-rrc"]
         pairs.extend([[left, "c7000-txram-m17-lsf"] for left in partners])
         pairs.append(["c7000-txram-dmr-rrc", "c7000-txram-m17-lsf"])
+        # R4c overlaps those call sites, the stub, and the whole zero tail.
+        pairs.extend([[left, "c7000-txram-m17-stream"] for left in partners])
+        pairs.append(["c7000-txram-dmr-rrc", "c7000-txram-m17-stream"])
+        pairs.append(["c7000-txram-m17-lsf", "c7000-txram-m17-stream"])
         for names in pairs:
             with self.subTest(names=names), self.assertRaises(SystemExit):
                 build.build(names, "UVt0", self.cfg)
@@ -812,6 +816,70 @@ class PatchTest(unittest.TestCase):
         got = m17.decode_transmission(air, 8000, verbose=False)
         self.assertIsNotNone(got["lsf"])
         self.assertTrue(got["lsf"][2])
+
+    def test_txram_m17_stream_polls_the_half_select(self):
+        # R4c. One LSF and six stream frames in the zero tail. Tag R4c0.
+        # The stub polls FM_ADDR_SW and does not enable the refill interrupt.
+        import m17_stream_table
+        import m17
+
+        img, _ = build.build(["c7000-txram-m17-stream"], "R4c0", self.cfg)
+        xip = 0x0301A000
+        self.assertEqual(len(img), len(self.fac))
+
+        def hw(off):
+            return int.from_bytes(img[off:off + 2], "little")
+
+        def word(off):
+            return int.from_bytes(img[off:off + 4], "little")
+
+        for site in (0x92C8, 0x92E0):
+            self.assertEqual(bsr32_target(self.fac, site), 0xE9C)
+            self.assertEqual(bsr32_target(img, site), 0x5B000)
+        for site in (0x92AA, 0x92FA):
+            self.assertEqual(bsr32_target(self.fac, site), 0xE9C)
+            self.assertEqual(bsr32_target(img, site), 0x5B128)
+        self.assertEqual(bsr32_target(img, 0x5B002), 0xE9C)
+        self.assertEqual(bsr32_target(img, 0x5B12A), 0xE9C)
+        self.assertEqual(bsr32_target(img, 0x5B074), 0x541F8)
+        for at in (0x5B042, 0x5B04C, 0x5B056, 0x5B142, 0x5B14C):
+            self.assertEqual(bsr32_target(img, at), 0xFD011220)
+            self.assertEqual((at + xip + bsr32_disp(img, at)) & 0xFFFFFFFF, 0x2B220)
+
+        self.assertEqual(hw(0x5B000), 0x14D6)
+        self.assertEqual(hw(0x5B128), 0x14D5)
+        self.assertEqual(word(0x5B114), 0x03075400)
+        self.assertEqual(word(0x5B11C), 0x030766FC)
+        self.assertEqual(word(0x5B120), 0x1100056C)
+        self.assertNotIn((0x1100039C).to_bytes(4, "little"), img[0x5B000:0x5B15C])
+        for at in range(0x5B000, 0x5B159, 2):
+            hi = int.from_bytes(img[at:at + 2], "little")
+            if hi >> 10 != 0b111000:
+                continue
+            self.assertNotIn(bsr32_target(img, at), (0x18A70, 0x03032A70))
+
+        pcm = m17_stream_table.counts()
+        pred = m17_stream_table.prediction(pcm)
+        self.assertEqual(pred["peak_count"], 6451)
+        self.assertLess(pred["stop_hz"], 5000)
+        self.assertLess(int(pcm[0]), 0)
+        self.assertEqual(img[0x5B400:0x5C6FC], m17_stream_table.table_bytes(pcm))
+        self.assertEqual(img[0x5B15C:0x5B400], self.fac[0x5B15C:0x5B400])
+        self.assertEqual(img[0x3074:0x3078], self.fac[0x3074:0x3078])
+        self.assertEqual(img[0x3EDFC:0x3EE02], self.fac[0x3EDFC:0x3EE02])
+        self.assertEqual(img[0x38464:0x38474], b"DMR003.R4c0.V022")
+        air = -m17_stream_table.HZ_PER_COUNT * pcm.astype(float)
+        got = m17.decode_transmission(air, 8000, verbose=False)
+        self.assertIsNotNone(got["lsf"])
+        self.assertTrue(got["lsf"][2])
+        self.assertEqual([f[0] for f in got["frames"]], [0, 1, 2, 3, 4, 0x8005])
+
+        allowed = set(range(0x3846B, 0x3846F))
+        for off, n in ((0x92C8, 4), (0x92E0, 4), (0x92AA, 4), (0x92FA, 4),
+                       (0x5B000, 348), (0x5B400, 4860)):
+            allowed.update(range(off, off + n))
+        changed = {i for i, (a, b) in enumerate(zip(self.fac, img)) if a != b}
+        self.assertTrue(changed <= allowed, sorted(changed - allowed)[:12])
 
     def test_iram_padbyte_changes_the_halfword_after_keyup_returns(self):
         # R3-0. No log string lives in the IRAM copy. The byte after key-up's
