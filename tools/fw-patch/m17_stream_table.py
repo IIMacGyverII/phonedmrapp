@@ -18,7 +18,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "m17-research"))
 import m17  # noqa: E402
 
 FS = 8000
+# Outer-symbol scale, decided 2026-10-24 from the R4r air measurement.
+# A stored long +3 is 2400/0.54 = 4444 counts. R4r's matched-filter gain on
+# that body was 2233 Hz against the standard 2400 Hz, about 7% low, and the
+# waveform was already at PEAK_CAP, so multiplying the counts by 1.07 would
+# clip at the same 6451 and would not raise the air level. The stream decoded
+# (sync 0.998, link-setup CRC, Golay 0). Keep 0.54 and do not scale up.
 HZ_PER_COUNT = 0.54
+OUTER_SCALE = 1.0
 STOP_SLOPE = 0.55
 PEAK_CAP = 6451
 PREAMBLE = 108

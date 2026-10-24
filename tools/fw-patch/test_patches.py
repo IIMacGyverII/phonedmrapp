@@ -288,12 +288,17 @@ class PatchTest(unittest.TestCase):
             pairs.append([other, "c7000-cmd40-m17"])
             pairs.append([other, "c7000-cmd40-swap"])
             pairs.append([other, "c7000-cmd40-m17swap"])
+            pairs.append([other, "c7000-cmd40-sym"])
         pairs.append(["c7000-cmd40-host", "c7000-cmd40-m17"])
         pairs.append(["c7000-cmd40-host", "c7000-cmd40-swap"])
         pairs.append(["c7000-cmd40-m17", "c7000-cmd40-swap"])
         pairs.append(["c7000-cmd40-host", "c7000-cmd40-m17swap"])
         pairs.append(["c7000-cmd40-m17", "c7000-cmd40-m17swap"])
         pairs.append(["c7000-cmd40-swap", "c7000-cmd40-m17swap"])
+        pairs.append(["c7000-cmd40-host", "c7000-cmd40-sym"])
+        pairs.append(["c7000-cmd40-m17", "c7000-cmd40-sym"])
+        pairs.append(["c7000-cmd40-swap", "c7000-cmd40-sym"])
+        pairs.append(["c7000-cmd40-m17swap", "c7000-cmd40-sym"])
         for names in pairs:
             with self.subTest(names=names), self.assertRaises(SystemExit):
                 build.build(names, "UVt0", self.cfg)
@@ -1734,6 +1739,25 @@ class PatchTest(unittest.TestCase):
         self.assertNotIn(bytes.fromhex("00a80400"), blob)
         self.assertEqual(img[0x38464:0x38474], b"DMR003.R4p0.V022")
 
+    def test_outer_scale_stays_one_and_the_rrc_matches(self):
+        import m17_stream_table as tab
+        import m17
+        import m17_rrc
+        self.assertEqual(tab.OUTER_SCALE, 1.0)
+        self.assertEqual(tab.HZ_PER_COUNT, 0.54)
+        pre = [3, -3] * 54
+        lsf_b = m17.lsf_bytes(tab.BENCH_CALL, tab.BENCH_CALL)
+        syms = pre + m17.encode_lsf(lsf_b)
+        for i in range(3):
+            fn = i | (0x8000 if i == 2 else 0)
+            syms += m17.encode_stream(lsf_b, fn, bytes(range(16)), i % 6)
+        r2, err = m17_rrc.match(syms)
+        self.assertGreaterEqual(r2, 0.99)
+        self.assertLessEqual(err, 4)
+        import numpy as np
+        unc = int(np.max(np.abs(np.rint(-m17_rrc.float_hz(syms) / tab.HZ_PER_COUNT))))
+        self.assertGreater(unc, tab.PEAK_CAP - 1)
+
     def test_txram_bytes_put_the_high_byte_first(self):
         self.assertEqual(txram_bytes(2048), bytes.fromhex("0800"))
         self.assertEqual(txram_bytes(1448), bytes.fromhex("05a8"))
@@ -1770,6 +1794,17 @@ class PatchTest(unittest.TestCase):
         self.assertIn(bytes.fromhex("00a40400"), blob)
         self.assertNotIn(bytes.fromhex("00a80400"), blob)
         self.assertEqual(img[0x38464:0x38474], b"DMR003.R4r0.V022")
+
+    def test_cmd40_sym_carries_the_rrc_and_the_ring(self):
+        import m17_rrc
+        img, _ = build.build(["c7000-cmd40-sym"], "R4s0", self.cfg)
+        self.assertEqual(len(img), len(self.fac))
+        self.assertIn(m17_rrc.coeff_bytes()[:90], img[0x5AEFC:0x5B320])
+        self.assertIn(bytes.fromhex("0103fffd"), img[0x5AEFC:0x5B320])
+        self.assertEqual(img[0x18A70:0x18A80], self.fac[0x18A70:0x18A80])
+        self.assertEqual(img[0xAAFE:0xAB0E], self.fac[0xAAFE:0xAB0E])
+        self.assertEqual(img[0x38464:0x38474], b"DMR003.R4s0.V022")
+        self.assertEqual(m17_rrc.pack_symbols([3, 1, -1, -3]), bytes([0x4B]))
 
     def test_refuses_bad_tag(self):
         for tag in ("UV4T", "UV4", "UV-1"):

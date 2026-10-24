@@ -237,6 +237,7 @@ def decode_transmission(dev, fs, verbose=True):
     y, sps = demod(dev, fs)
     frames = find_frames(y, sps)
     res = {'lsf': None, 'frames': []}
+    held_score = -1.0
     for start, kind, score, j in frames:
         sy = y[j:j + 8 * sps:sps]                                   # sync symbols at the found timing: level and offset
         ref = SYNC_SYMS[kind]
@@ -244,8 +245,16 @@ def decode_transmission(dev, fs, verbose=True):
         pay = (y[start:start + 184 * sps:sps] - off) / g
         if len(pay) < 184: break
         if kind == 'lsf':
-            b, ok = decode_lsf(pay); res['lsf'] = (decode_callsign(b[6:12]), decode_callsign(b[0:6]), ok)
-            if verbose: print('LSF at %.3f s  src %s dst %s  CRC %s' % (j / (sps * SYM_RATE), res['lsf'][0], res['lsf'][1], 'ok' if ok else 'BAD'))
+            b, ok = decode_lsf(pay)
+            new = (decode_callsign(b[6:12]), decode_callsign(b[0:6]), ok)
+            # A later weak or failed sync must not replace a CRC-valid link setup.
+            old = res['lsf']
+            if old is not None and old[2] and (not ok or score < held_score):
+                if verbose: print('LSF at %.3f s ignored (score %.3f)' % (j / (sps * SYM_RATE), score))
+            else:
+                res['lsf'] = new
+                held_score = score
+                if verbose: print('LSF at %.3f s  src %s dst %s  CRC %s' % (j / (sps * SYM_RATE), new[0], new[1], 'ok' if ok else 'BAD'))
         else:
             fn, p, lich, lerr = decode_stream(pay); res['frames'].append((fn, p, lerr))
     return res
