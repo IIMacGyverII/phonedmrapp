@@ -27,10 +27,12 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 
 **Extended by the bench, 2026-10-24:** the owner said to set the approvals needed to make M17 transmit work and to continue. A free command slot may be hooked, and SignalDeck may send that command from a bench DIAG. The hook must do nothing at boot and must not key by itself. Still only 467.625 MHz, low power, HackRF receive only.
 
+**Extended by the owner, 2026-10-24 (R-C step 2):** HackRF transmissions **inside the cage, on 467.625 MHz only, at minimum gain**, of a 1 kHz FM tone, a 100 Hz FM tone and the 20 Hz–3.8 kHz sweep from the M17 study, each a few seconds, while a receive-only probe image copies RX RAM to the host. The phone does not key during these. HackRF rules that still apply: never from the outdoor antenna, a dummy burst first (the first transmission after a pause is often silent), never background a `-R` transfer, check nothing else holds the device.
+
 **Never:**
 - any other transmit frequency;
 - high power;
-- any HackRF transmission;
+- any HackRF transmission other than the R-C step 2 tones above;
 - a write to the ES8311 debug node;
 - `adb uninstall`;
 - rebooting the phone;
@@ -61,7 +63,7 @@ The radio may **stay on 467.625 MHz, low power**: there is no need to return to 
 3. On a bit-exact render: one key with the 50-frame stream. Make the DIAG unkey about 100 ms after the ring empties so the status read shows underruns during the stream only. Pass: link setup and ≥ 45 of 50 frames at Golay 0 from our decoder, zero underruns during the stream, p99 2.8–3.1 kHz, no slice at or over 5 kHz.
 4. On a pass: the §6 run, three keys of 90 frames each, same pass per key. Report ours; the independent decoder joins when the Ubuntu box in the cage exists (`plan-independent-m17-check.md`).
 
-**R-C step 2 waits for the owner** (see "Owner question"): the probe needs a HackRF signal in the cage. Do not build or load it until the answer is in this file. R-C step 1 is accepted as read.
+**R-C step 2 is approved (owner, 2026-10-24)** and runs after R4t step 3 or whenever the transmit work is waiting on the host: one receive-only probe image (op 5: save `WORK_MODE`, write `0x80`, wait two halves, copy the half `FM_ADDR_SW` is not pointing at into the `0x4AC00` scratch, restore `WORK_MODE`, return the samples over `0x40`; no PTT anywhere in it; `0x16A` as the second try if `0x80` gives nothing). HackRF tones per the extended approval above: 1 kHz, then 100 Hz, then the sweep, phone tuned to 467.625 and not keying. Pass: the 1 kHz line stands out of the noise in the returned samples; the 100 Hz tone and the sweep say whether the low end is there. Write the result in `results.md` under R-C step 2. R-C step 1 is accepted as read.
 
 Standing rules unchanged: stubs do nothing at boot and never key by themselves; ±5 kHz stop on the measured deviation, a bin at or over 5 kHz is a stop to be reported as one; 467.625 MHz, low power, HackRF receive only; T4 closed; no ES8311 write; `0x3D` untouched; R4l0 never reloaded; `git pull --rebase` before every load.
 
@@ -93,6 +95,4 @@ R4s, tag `R4s0`, streamed 50 frames from command `0x40`. Boot peak 0.08 dB. `0x3
 
 ## Owner question
 
-**R-C step 2 (the C7000 FM receive RAM probe) needs a signal on 467.625 MHz inside the cage, and the only source there is the HackRF.** Requested, for the owner to approve or refuse: HackRF transmissions at minimum gain inside the cage, on 467.625 MHz only, of (a) a 1 kHz FM tone, (b) a 100 Hz FM tone, (c) the 20 Hz–3.8 kHz sweep from the M17 study, each a few seconds, while a receive-only probe image copies one RX RAM half to the host. The phone does not key during these. Everything else in the standing approval stays as it is. Until answered: step 2 is not built, R4t proceeds.
-
-R-B (the ES8311 register read) is still unanswered and still not approved.
+R-C step 2 HackRF tones: **approved by the owner 2026-10-24** (see the standing approval). R-B (the ES8311 register read) is still unanswered and still not approved.
