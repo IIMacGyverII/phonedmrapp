@@ -1884,3 +1884,31 @@ The key-up click, 0–40 ms, has p99 22760 Hz and is not a stop. The 60 ms slice
 ## End state
 
 R4q0 stays loaded. VFO 467.625 / 467.625 FM at 12:42:53.391, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met. The byte swap puts this sine on the R3a8 scale. The R4p waveform has not been sent again.
+
+# R4r — the same M17 body, stored in TX-RAM byte order, tag R4r0 (2026-10-24, 12:48–12:51)
+
+Forty-six patch tests passed before the load. The ES8311 debug node was not written. HackRF receive only, 467.385 MHz center, 2.4 MS/s. The boot capture used LNA 24 and VGA 38. The key used LNA 16 and VGA 16.
+
+`c7000-cmd40-m17swap`. The piece store is the R4p handler. The sample loop is the R4q swap: the signed value is clamped to ±6451, then the high byte is stored at the low address. The copy into TX RAM is still `ld.h`/`st.h`. The buffer is RAM `0x4A400`, 1500 samples. It does not set PTT. A clear cursor at `0x4DAAC` makes the wake return. The task entry `+0x18A70` is not patched. Command `0x3D` is unchanged.
+
+The waveform is the R4p body: 108 preamble symbols, one link setup, three stream frames, and 6 symbols of tail. 1470 samples. The peak count is 6451. The linear prediction is 3548 Hz. The last stream frame has the end bit set.
+
+`DMR003.R4r0.V022.bin`, 378620 bytes. sha256 `8ce6cd45f9872dbc525d77dbaf912a40b499498aacd1bc18563954bd6348d2d2`. Pushed MD5 `c4b9fec38491a7ceb7cf8e75a22c2272`.
+
+## Boot
+
+VFO 467.625 / 467.625 FM at 12:48:15.695, low power, before the load. YModem `onSuccess` at 12:50:27.733. Banner `开机初始化完成` at 12:50:41.448. `0x34` at 12:50:41.759 is `DMR003.R4r0.V022`. The boot record has floor 0.00 dB, peak 0.05 dB, and no run at +10 dB. The loader wrote channel 36, and the VFO was put back at 12:51:02.226 before the store.
+
+## Store, then one key
+
+Four commands, none of them a key. Count 398 at 12:51:06.439, body `[8E 01]`. Count 796 at 12:51:08.151, body `[1C 03]`. Count 1194 at 12:51:09.827, body `[AA 04]`. Count 1470 at 12:51:11.452, body `[BE 05]`.
+
+One 3 s silence key. Launch 1 at 12:51:13.970. Its ack is at 12:51:13.976, 6 ms later. `SEND_START` is at 12:51:13.981. Unkey at 12:51:17.382. Its ack is at 12:51:17.387, 5 ms later. `SEND_STOP` is at 12:51:17.714, 327 ms after that ack. The carrier is up for 3.51 s. SNR 57.1 dB. Offset +980 Hz. The IQ clip fraction is 0.
+
+The key-up click, 0–40 ms, has p99 22827 Hz and is not a stop. From 60 ms through 220 ms the p99 is 2817–3086 Hz. From 240 ms the p99 is 91 Hz. The peak was not raised. There was no second key.
+
+The link-setup sync at 70 ms scores 0.998. Aimed at that sync, the CRC passes, and both callsigns match the research modem's bench callsign. The symbol gain there is about 2233 Hz. Three stream frames follow, scores 0.999: frame 0, frame 1, and frame 2 with the end bit set. Each has Golay error 0 and payload bytes 0 through 15. The plain decoder's returned link-setup flag stays false, because a later sync at 230 ms, score 0.675, overwrites that slot. The frame at 70 ms passed.
+
+## End state
+
+R4r0 stays loaded. VFO 467.625 / 467.625 FM at 12:51:21.985, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met. The byte swap puts this body on the R4b scale, and the stream frames decode.
