@@ -521,3 +521,57 @@ UVm10 minus factory is **+0.06 dB**. A codec ADC on the receive path would have 
 No sweep, M17, POCSAG or voice was sent. §6 is not met. Pre-shaping and a receive equalizer are not implemented. UVm6 stays the candidate curve for a mode that fits 300 Hz–3.5 kHz.
 
 The factory image is back in flash and `0x34` reads `DMR003.UV4T.V022` (19:18:07). The pushed factory MD5 is `4426035392262ca54583c230c9e268e0`. SignalDeck owns the radio. The active channel is **36, NOAA WX4, 162.425 MHz**, squelch 5, power low, receive-only flag off, in the Weather zone. The screen shows 162.425 MHz. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched. `stay_on_while_plugged_in` is 0.
+
+# R1–R3 — DMR modulator flatness, TX RAM not loaded (2026-10-23, 19:47–19:50)
+
+No firmware was built or loaded. HackRF receive only. One transmission, at **467.625 MHz, low power**, on a temporary digital channel (CC1, timeslot 1, talkgroup 9999, no contact row). `0x34` was `DMR003.UV4T.V022` at 19:47:36, before the key-up. The DIAG test tone was 2000 ms. The capture is one 8 s file, LNA 24 / VGA 38, clip fraction 0, magnitude 31.9, SNR 51.0 dB, carrier offset +864 Hz, keyed 2.83 s. The bench row was then deleted. The newest `RadioService` version line is still `DMR003.UV4T.V022` (19:50:49).
+
+## R1 — the DMR 4FSK rails
+
+The envelope repeats every **60.00 ms** (correlation 0.894) with a **26.1 ms** burst, 47 bursts. That is one slot of a direct-mode transmission. Symbol centers are 4800 per second, and the first and last 1 ms of each burst are left out of the level measurement so the power ramp is not counted as deviation.
+
+| Quantity | Value |
+|---|---|
+| Outer-symbol median | **+7346 Hz / −7049 Hz** |
+| Early / middle / late third of the burst | 7252 / 7111 / 7168 Hz |
+| Early-to-late ratio | **0.981** |
+| Share of 0–4 kHz power that is below 250 Hz | **0.072** |
+| 99.5 percentile of the raw burst window | 23132 Hz |
+
+The three thirds stay within 2% of each other, so a held outer symbol does not sag from the start of the burst to the end. The 23 kHz figure is the ramp and the symbol transitions. The same pass with the ramps included, splitting each burst into the 54 / 24 / 54 symbol shoulders around the sync, gave +7572 / −7440 Hz and a pre/sync/post ratio of 0.956. Both readings say the rails are flat.
+
+The guide's ±1944 / ±648 Hz table (Document 2, two-point modulation, `RF_MODE[7]` = 0) is the baseband symbol map. The air outer rail is about 3.8 times that map. The demodulator is the same one that read about 1800 Hz on a −12 dBFS 1 kHz tone earlier the same day, and the +864 Hz offset matches that day's crystal offset, so the ±7.3 kHz rail is the radiated deviation.
+
+**The DMR modulator path holds a level across a burst.** The outer rail is above the ±5 kHz stop, so nothing further was transmitted.
+
+## R2 — how DMR and FM drive the RF
+
+Document 2 and the factory image, re-read this session. `scripts/fw_at1846_regmap.py` for `0x30`, `0x43`, `0x44` and `0x58` matches ch. 11 §21.2.
+
+`at1846_tune` (`+0x2DD8`) writes `0x30` = `0x4046` and then splits. The DMR side writes `0x43` = `0x00BB`, `0x44` = `0x0AD1`, `0x30` = `0x4006` / `0x4026`, and `0x58` = `0xBCFD` (`+0x2E92`). The FM side (`+0x2FF2`) writes `0x43` = `0x0100`, the same `0x44` = `0x0AD1`, `0x30` = `0x4006` / `0x4026` or `0x7006` / `0x7026` on the 25 kHz path, and `0x58` = `0x8405` (`+0x3052`). `0xBCFD` is the setting that bypasses the AT1846S voice filters. `0x8405` leaves them on. `at1846_rx_on` / `at1846_rx_off` only change `0x30` bits 2, 5 and 6.
+
+On the C7000, channel setup writes `WORK_MODE` (`0x11000100`) as `0x22` (physical layer), `0x6A` (layer-2 direct), `0x6E` (layer-2 repeater) or `0x73` (layer-3 direct). Those are the guide's Table 27 values (page 92). FM key-up (`+0x3ECC0`) saves `RF_MODE`, `WORK_MODE` and `0x11000080`, then stores `RF_MODE` = `0x10E0` (bits 6:5 = 11, two-point; bit 7 = 0, so +3 maps to +1944 Hz in the guide's table; bit 10 = 0, so the built-in 40 Hz square stays off), `WORK_MODE` = `0x80`, and PTT (`0x11000560`) = 1. The only full-word immediate store of `RF_MODE` found is that `0x10E0`.
+
+`0x11000080[0]` is `tx_voice_source` (guide page 97 and §7.2.2.1). 0 is the codec or the vocoder. 1 is MCU RAM, the layer-2 base-station source. Three copies (`+0x1788E` / `+0x17914`, `+0x17CB6` / `+0x17D24`, `+0x19682` / `+0x1969A`) set bit 0 when byte `0x12` of the struct at `0x34808` is 2 or 3, or when the flag at `0x4D404+0xF8` is nonzero, and clear it when the byte is neither and the flag is 0. The copy at `+0x195DA` / `+0x195F2` runs only while that flag is 1, then sets the bit for byte 2 or 3 and clears it otherwise. FM key-up then clears bit 0 at `+0x3EDF8`. A handheld analog transmission is forced onto the codec source. Bit 4 of the same register is `ahb_wr_voice_en`; the image has a set leaf at `+0x3E0A8` and a clear leaf at `+0x3E080`. Bit 3 is the sidetone enable and is only toggled during init. Bit 7 is the ringtone path (`+0x6BC4` / `+0x6C0C`).
+
+TX RAM for FM is `0x16000030`–`0x1600042F`, two halves of 512 bytes, 256 samples of 16-bit PCM, 32 ms at 8 kHz (Document 2 §7.2.2.1.2 and page 340). The low address of each sample is the high byte. `FM_ADDR_SW` (`0x1100056C`, bits 1:0, read-only) is 1 for the low half and 2 for the high half. `FM_TX_INTERP` is the FM transmit data interrupt, level-triggered, cleared by writing 1 to the matching `SYS_INTERP_CLEAR` bit (pages 94 and 339). The image has no literal and no built address of `0x1100056C`, and no store into `0x16000030`–`0x1600042F`. The only CPU touch of that RAM is `+0x3EEEC`, which reads one sample from each half (`0x16000032`/`33` and `0x16000232`/`33`, high byte first) and returns them. The `SYS_INTERP` handler at `+0x18A70` copies `0x11000398` into `0x110003A0` until the status reads 0. It does not fill the voice buffer. `FM_BANDWIDTH` (`0x11000500`) and `FM_DEV_COEF` (`0x11000504`) are never stored, so FM pre-emphasis (`fmpreemphasison`, bit 4) and the FM band-pass (bit 6) stay at the reset default, on, and `fm_dev_coef_t` stays `0x10`. The guide gives no Hz per PCM count.
+
+The 27-byte DMR voice payload also starts at `0x16000030`. Vocoder frames are `0x16000960`–`0x1600097A`. Those are not the 512-byte FM ping-pong.
+
+## R3 — not built
+
+R1's rails are flat, and the outer deviation is above 5 kHz. The ±5 kHz stop ends the experiment before a TX-RAM image. No square-wave stub was assembled or loaded. A later image, if one is authorized, would still have to start at a small PCM amplitude, and it would have to clear `FM_BANDWIDTH` bit 4: that pre-emphasis is on at reset, this image never writes it, and it is a different path from the DMR modulator R1 measured.
+
+## R4 — design only, not built
+
+A new UART command would carry symbols. The OEM command table leaves `0x3D` and `0x3E` undefined (deep dive 01). The proposal is `0x3D`, after a check that the firmware's own compare does not already use it. The frame stays the existing one (`68 | cmd | rw | sr | cksum | len | body | 10`) at 57600 baud.
+
+Body: one kind byte (1 = M17 dibits, 2 = POCSAG bits), one count, then the packed symbols. One ping-pong half is 32 ms, 256 samples at 8 kHz. M17 at 4800 symbols/s is 154 dibits in that half, 39 bytes packed 4 dibits per byte, 41 bytes with the header. The frame is 50 bytes. At one frame per half that is about 1600 bytes/s, about 27% of a 5760 byte/s line. POCSAG at 1200 bit/s is one 32-bit codeword, 4 bytes plus the 2-byte header, well under the line rate.
+
+In the module the command would set `WORK_MODE` = `0x80`, `tx_voice_source` = 1, `ahb_wr_voice_en` = 1 and PTT, shape the symbols into the half `FM_ADDR_SW` names, and clear `fmpreemphasison` so the shaper is what radiates. M17 needs a root-raised-cosine onto 8 kHz (5/3 samples per symbol). POCSAG needs a Gaussian onto 8 kHz (20/3 samples per bit). The coefficient tables are under 200 bytes each and the shaper code is a few hundred bytes, on the order of the FM stubs already used, inside the existing 378620-byte image. Deviation starts from a small PCM amplitude: `fm_dev_coef_t` is `0x10` at reset, and the guide publishes no Hz per count. The DMR air rail shows the guide's ±1944 Hz map is not the on-air scale. The stub must not write the 27-byte vocoder payload into the same base address as the PCM half.
+
+§6 (plain M17 85/90, POCSAG 100%) is the measurement bar if that command is ever built. It was not built, and §6 is not met.
+
+## End state
+
+Factory image, `0x34` = `DMR003.UV4T.V022` at 19:47:36 and again at 19:50:37 and 19:50:49. No new image was loaded. SignalDeck owns the radio. Channel 36 is NOAA WX4, 162.425 MHz, squelch 5, power low, active. The temporary digital row is gone. The screen showed 162.425 MHz and did not show 467.625. Zone 4, `zoneLast_4` 36. `PATCH14_BACKUP.bin` was not touched. `/sdcard/DMR/DMRDEBUG.bin` is absent.
