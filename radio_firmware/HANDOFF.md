@@ -53,15 +53,17 @@ The radio may **stay on 467.625 MHz, low power**: there is no need to return to 
 
 ## Current task
 
-**R4s did not pass.** Tag `R4s0` stays loaded. Do not run the 90-frame set. Do not send the R4p/R4r body again.
+**R4s reviewed** (`radio_firmware/reviews.md`, "Review of R4s and R-C step 1"). The streaming machinery is right; the filter reads its taps with `ld.h`, which zero-extends on C-SKY V2, so every negative coefficient enters the multiply as `T + 65536` and nearly every sample lands on the clamp. That is the pinned deviation (p99 3.66–4.11 kHz), the r = −0.34 and the non-decode. R4s0 may stay loaded; do not key it again.
 
-The 2 s symbol stream played for its full length (p99 3660–4109 Hz from 60 ms through 2000 ms, no slice from 60 ms at or over 5 kHz) and the plain decoder accepted nothing. The fit to the integer RRC model is r = −0.34. One sync scores 0.939 and the tracker loses the next one. The underrun count 19340 is the tail of the 4 s key after the symbols, not a hole in the stream.
+**R4t, in this order:**
+1. In `one_sample`, load the tap sign-extended (`ld.hs`, or `ld.h` + `sexth`). Add the encoding check for that load to the R4s image test.
+2. Add **op 4, render**: run `one_sample` N ≤ 256 times from the current ring into a 512-byte scratch at `0x4AC00` and return the samples over `0x40` in TX-RAM order. No key, no PTT, nothing written outside the scratch and the ring words. Host procedure: op 3 reset, op 1 with a known 64-symbol pattern (include long +3 and −3 runs and the preamble alternation), op 4, un-swap, compare bit-exact with `m17_rrc.integer_counts` on the same symbols. Load the image, run that first. **A mismatch is a stop for this image: fix on the host, reload, no key.**
+3. On a bit-exact render: one key with the 50-frame stream. Make the DIAG unkey about 100 ms after the ring empties so the status read shows underruns during the stream only. Pass: link setup and ≥ 45 of 50 frames at Golay 0 from our decoder, zero underruns during the stream, p99 2.8–3.1 kHz, no slice at or over 5 kHz.
+4. On a pass: the §6 run, three keys of 90 frames each, same pass per key. Report ours; the independent decoder joins when the Ubuntu box in the cage exists (`plan-independent-m17-check.md`).
 
-Next, on the host, before another key: find why the samples that reach TX RAM are not that integer model. The host model matches the float waveform at r² 1.0, and the image carries those coefficients. The air does not. SDR++ 1.3.2 on this machine has an M17 module and no unattended frame log; the independent check in `radio_firmware/plan-independent-m17-check.md` is still open and is not a blocker.
+**R-C step 2 waits for the owner** (see "Owner question"): the probe needs a HackRF signal in the cage. Do not build or load it until the answer is in this file. R-C step 1 is accepted as read.
 
-R-C step 1 is read and written in `results.md`. Step 2 stays unbuilt. No ES8311 write.
-
-Standing rules unchanged: stubs do nothing at boot and never key by themselves; ±5 kHz stop on the measured deviation, and **a bin at or over 5 kHz is a stop to be reported as one** (R4p reached 5050 Hz and was not written up as a stop); 467.625 MHz, low power, HackRF receive only; T4 closed; no ES8311 write; `0x3D` untouched; R4l0 never reloaded. **`git pull --rebase` before every load**, not only before every push. R-C step 1 (reading only) may run whenever the bench is idle.
+Standing rules unchanged: stubs do nothing at boot and never key by themselves; ±5 kHz stop on the measured deviation, a bin at or over 5 kHz is a stop to be reported as one; 467.625 MHz, low power, HackRF receive only; T4 closed; no ES8311 write; `0x3D` untouched; R4l0 never reloaded; `git pull --rebase` before every load.
 
 ## Goal and route list (owner, 2026-10-23: "discover every possible way we can get M17 to work")
 
@@ -91,6 +93,6 @@ R4s, tag `R4s0`, streamed 50 frames from command `0x40`. Boot peak 0.08 dB. `0x3
 
 ## Owner question
 
-R-B is still unanswered. Transmit work continued on the instruction to keep going on M17 transmit. This question is not approved. T4 stays closed, because the TX-RAM path (T1) has not failed. `0x3D` still waits on a SignalDeck sender, which is already outside this approval, so that wait is unchanged.
+**R-C step 2 (the C7000 FM receive RAM probe) needs a signal on 467.625 MHz inside the cage, and the only source there is the HackRF.** Requested, for the owner to approve or refuse: HackRF transmissions at minimum gain inside the cage, on 467.625 MHz only, of (a) a 1 kHz FM tone, (b) a 100 Hz FM tone, (c) the 20 Hz–3.8 kHz sweep from the M17 study, each a few seconds, while a receive-only probe image copies one RX RAM half to the host. The phone does not key during these. Everything else in the standing approval stays as it is. Until answered: step 2 is not built, R4t proceeds.
 
-May I write one count-0 value to `/sys/bus/i2c/devices/7-0018/es8311_debug/es8311` so the kernel log prints the ES8311 ADC high-pass registers? The 2026-10-23 reading of `es8311_store` says bits 23:16 = 0 reads registers and does not call `snd_soc_component_write`. Any other count would write the codec, and I would not send one. The node has not been written.
+R-B (the ES8311 register read) is still unanswered and still not approved.
