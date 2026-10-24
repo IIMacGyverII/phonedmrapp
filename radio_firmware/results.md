@@ -1808,3 +1808,27 @@ DIAG `cmdbyte` twice. `TX cmd=0x40 rw=1 sr=1 len=1 [01]` at 11:49:16.920, frame 
 ## End state
 
 R4n0 stays loaded. VFO 467.625 / 467.625 FM at 11:49:20.082, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met. The handler reads one body byte. It does not store samples and it does not key. Do not reload R4l0.
+
+# R4o — command 0x40 stores a sine and the wake plays it, tag R4o0 (2026-10-24, 12:02–12:05)
+
+Forty-two patch tests passed before the load. The ES8311 debug node was not written. HackRF receive only, 467.385 MHz center, 2.4 MS/s, LNA 24, VGA 38.
+
+`c7000-cmd40-host`. The handler at file `+0x5AEFC` copies a body of little-endian int16 samples into RAM `0x4A800`, clamps each one to ±6451, and stores the count at `0x4A7F0`. It clears the cursor at `0x4DAAC` and does not set PTT. A clear cursor makes the wake return without writing TX RAM. A host key with a zero count is the stock key. A non-zero count fills both TX halves from that buffer, then the wake writes zero halves. The task entry `+0x18A70` is not patched. Command `0x3D` is unchanged.
+
+`DMR003.R4o0.V022.bin`, 378620 bytes. sha256 `2b37af7a4fad24e2d3873cacc88d532842d3081dc2be8c7ab8a07f4b1bbfb291`. Pushed MD5 `4696ab091f2f280bea6798b4f340584c`.
+
+## Boot
+
+VFO 467.625 / 467.625 FM at 12:02:18.444, low power, before the load. YModem `onSuccess` at 12:04:30.609. `0x34` at 12:04:43.863 is `DMR003.R4o0.V022`. The runner required the boot banner and did not restore. The HackRF record of that boot has floor 0.00 dB, peak 0.28 dB, and no run at +10 dB.
+
+## Store, then one key
+
+DIAG `cmdsine` at amplitude 2048, 64 samples, 1000 Hz. `TX cmd=0x40` length 128 at 12:05:08.368. The body begins `00 00 A8 05 00 08`, which is 0, 1448, 2048. `RX cmd=0x40 rw=0 sr=0 len=2 [40 00]` at 12:05:08.396, the count 64. That command did not key.
+
+One 3 s silence key. Launch 1 at 12:05:11.521. Its ack is at 12:05:11.527, 6 ms later. `SEND_START` is at 12:05:11.532. Unkey at 12:05:14.911. Its ack is at 12:05:14.916, 5 ms later. `SEND_STOP` is at 12:05:15.239, 323 ms after that ack. The carrier is up for 3.49 s. SNR 61.4 dB. Offset +992 Hz. The IQ clip fraction is 0.42.
+
+The key-up click, 0–40 ms, has p99 20711–22329 Hz and is not a stop. The tone window, 60–100 ms, has p99 4446–4495 Hz and a 1 kHz line of 3070–4183 Hz. That is under 5 kHz. From 120 ms on, p99 is about 100 Hz, so the wake's zero halves took over. The peak was not raised. There was no second key.
+
+## End state
+
+R4o0 stays loaded. VFO 467.625 / 467.625 FM at 12:05:19.439, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met. A host sine went out. A full M17 frame does not fit in one 799-byte body.
