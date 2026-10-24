@@ -52,17 +52,16 @@ The radio may **stay on 467.625 MHz, low power**: there is no need to return to 
 
 ## Current task
 
-T2 filter controls, read only. No image, no key, no SignalDeck edit, no write to the ES8311 node.
+T2 symbol buffer, read only. No image, no key, no SignalDeck edit, no write to the ES8311 node.
 
-Read `RF_MODE` bit 7 and whether this image has an RRC roll-off or a filter-bypass setting. The `0x22` path writes neither `RF_MODE` nor `FM_BANDWIDTH`. Leave that sentence, and leave the older "bit 7 is clear" sentence in the first T2 section and in its §10 paragraph. Say what this image stores, in a new section.
+The question: can the C7000 modem hold PTT and take 4FSK symbols from a RAM buffer the host could fill, so M17 would not need a host shaper.
 
-Check these sites. They are a start, not the conclusion:
+Known starting points. They are a start, not the conclusion:
 
-- A literal `0x11000500` (`FM_BANDWIDTH`) and `0x11000504` (`FM_DEV_COEF`) did not appear in the earlier `0x1100xxxx` `lrw` scan.
-- `0x11000560` is stored as 1 at `+0x3EDFE` and is saved and restored with `RF_MODE`.
-- `0x11000104` (`RF_MODE`) is one load and two stores. `+0x3ECCC` saves the word to SRAM `0x32520`. `+0x3EDDA` stores `movi r3, 135; lsli r3, 5`, which is `0x10E0` (bits 12, 7, 6, and 5 set). `+0x3EE74` restores the saved word.
-
-M17 needs ±2400 Hz outer and RRC α = 0.5. DMR uses ±1944 Hz and α = 0.2. This radio's narrow-band DMR outer symbol is ±3.3 kHz, with AT1846S `0x30` left at `0x4026`.
+- `+0x2A18` writes `r2` bytes from the caller's pointer into modem RAM at `r0 + 0x16000000`. It has 23 calls. The call at `+0x2AAB2` uses `r0` = 48 and length 27, so the destination is `0x16000030`.
+- Ch. 19: TX RAM is `0x16000030`–`0x1600042F` (two halves, 256 samples of 16-bit PCM each). The 27-byte DMR voice payload starts at the same `0x16000030`.
+- R-A already says that `+0x2AAB2` write is a 27-byte record into the modem. Do not reopen R-A. Say whether any caller of `+0x2A18`, or any other store, fills a symbol FIFO or the PCM halves with host symbols.
+- PTT is `0x11000560` = 1 inside the FM key-up (`+0x3EE00`), restored on the way out. Whether a DMR transmission holds that bit while a buffer drains is unread.
 
 Write the reading in `results.md` and one §10 paragraph. Do not build an image. Do not start R-B. Do not open T4. `0x3D` still waits.
 
@@ -74,7 +73,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 - **T1: TX RAM through the C7000 FM modulator.** R3a3 through R3a7 put a square on the air through the DMR modulator. Silence leaves the square and drops the codec tone. Through A = 1024 the flat-top median tracked about 0.41 Hz per count. At A = 4096 the 40 Hz low-pass rms was 2266 Hz (0.55 Hz per count), the median was 1462 Hz, and the steady p99 was 3700 Hz. Another doubling of the square is predicted past the ±5 kHz stop, so A = 8192 is not an image. R3a8 put a 1 kHz sine at peak count 2048 on the air: the 1 kHz line was 923 Hz, the 15.625 Hz line was 3 Hz, the 3 kHz line was 27 Hz, and the steady p99 was 1217 Hz. R3a9 put the same sine at peak count 4096 on the air: the 1 kHz line was 1923 Hz, the 15.625 Hz line was 3 Hz, the 3 kHz line was 26 Hz, and the steady p99 was 2186 Hz. R3a10 (tag `R3b0`; the version field is four characters) put the same sine at peak count 5120 on the air: the 1 kHz line was 2261 Hz, the 15.625 Hz line was 3 Hz, the 3 kHz line was 14 Hz, and the steady p99 was 2674 Hz. The tone is 6% under ±2.4 kHz and the steady p99 is 11% over it. The sine scale compressed (1.18× for a 1.25× peak). R4a (tag `R4a0`) put a fixed RRC α = 0.5 pattern on the same path, every sample at or below count 5120. Steady p99 2774 Hz. The stored 10-sample shape is inverted on the air, −0.54 Hz per count, median r² 0.96 on 10 ms stretches. The 1 kHz line is 17 Hz. Four held symbol levels are absent. The long-term line is 796.875 Hz because the last two samples repeat the first two. The UART command `0x3D` is the next item on this line. It needs a SignalDeck sender, which is outside the standing approval, so it waits. This is the main line.
 - **T2: the C7000 DMR modem as a raw 4FSK source.**
   - `WORK_MODE` `0x22` is the built-in BER test. Read 2026-10-24: byte 3 of `0x34808` is 1 only when flag `0x324D7` is 1. Command `0x3F` sets that flag for the Hongrui pattern and for O.153 (strings at file `+0x38444` and `+0x38454`); the OEM BER screen sends O.153, and both values store the flag as 1. Byte 4 stays 0. The flag==2 arm is in the image and unused by the writers that name the flag. A normal channel leaves both bytes 0, and the first setup stores `0x6A` or `0x6E`. The helpers at `+0x18218`, `+0x186BC`, `+0x28904` and `+0x19438` write modem control words and status bytes. They fill no symbol buffer. No `0x22` image was built.
-  - Read the symbol map and filter controls: `RF_MODE[7]` gives two deviation maps; is there an RRC roll-off or filter-bypass setting? The `0x22` path writes neither `RF_MODE` nor `FM_BANDWIDTH`. The sibling notes name no RRC register. M17 needs ±2400 Hz outer and RRC α = 0.5; DMR uses ±1944 Hz and α = 0.2. This radio's narrow-band (12.5 kHz) DMR outer symbol is ±3.3 kHz, with AT1846S `0x30` left at `0x4026`. That is about 1.7× the standard ±1944 Hz, and the BTECH 6X2 still decodes it.
+  - `RF_MODE` bit 7 and the filter controls, read 2026-10-24. The only full-word immediate store is the FM key-up at `+0x3EDDA`: `movi r3, 135; lsli r3, 5` = `0x10E0` (bits 12, 7, 6, and 5 set). Bits 6:5 are two-point. Bit 7 set is Document 2's sign inversion of the same ±1944/±648 Hz map, so +3 maps to −1944 Hz. ±2400 Hz is not on that map. Bit 12 is set and unnamed. `FM_BANDWIDTH` and `FM_DEV_COEF` are never stored, so they stay at reset. No RRC coefficient is written. The α = 0.5 that was on the air was the R4a host fill. The `0x22` path still writes neither `RF_MODE` nor `FM_BANDWIDTH`. No image.
   - If the modem can hold PTT continuously and take symbols from RAM, M17 could be generated with no shaper of our own. That buffer is not shown.
 - **T3: the AT1846S itself.** Read 2026-10-24. The asked registers are FM setup scalars. Programming Guide 1.4 register 30h bit 10 (`direct_reg`, "1=enable direct_reg", no further definition) is clear in every immediate, and no read-modify-write sets it. Guide section 5 `3aH[14:12]` is 000 (Tx nothing) or 100 (microphone) in every stored value, including both bandwidth-profile rows. The OpenRTX web table puts the voice source on `0x3C[15:14]`; the stores are `0x0407` and the 25 kHz profile's `0x1930`, both with bits 15:14 = 00 (microphone). `0x35` and `0x36` are never written. `0x41`, `0x42`, `0x43` and `0x44` are single gain, threshold, or deviation words. No host-symbol path. No image.
 - **T4: a hybrid.** Only if T1–T3 all fail: what plain-M17 decode rate a standard receiver gets from the UVm6 path with the best pre-shaping (measured, not assumed). This is the fallback number.
@@ -89,7 +88,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-R-A was read only. Nothing was keyed. The only multi-byte read from `0x160004E0` is the BER scorer's 36-byte snapshot; 33 bytes are compared on the MCU, and the UART output is a 6-byte `0x21` score the OEM dispatcher does not handle. The 27-byte records stay unnamed in SRAM. No host symbol FIFO. The radio was not touched: factory `DMR003.UV4T.V022`, VFO 467.625, no `DMRDEBUG.bin`. §6 is not met.
+T2 filter controls were read only. Nothing was keyed. The FM key-up stores `RF_MODE` = `0x10E0` (bits 12, 7, 6, and 5). Bit 7 set is Document 2's sign flip of the ±1944/±648 Hz map, so +3 maps to −1944 Hz. `FM_BANDWIDTH` and `FM_DEV_COEF` are never stored, and no RRC coefficient is written. The radio was not touched: factory `DMR003.UV4T.V022`, VFO 467.625, no `DMRDEBUG.bin`. §6 is not met.
 
 ## Owner question
 
