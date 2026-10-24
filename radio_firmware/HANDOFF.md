@@ -52,19 +52,19 @@ The radio may **stay on 467.625 MHz, low power**: there is no need to return to 
 
 ## Current task
 
-R3a8. Same DMR-modulator setup, but the TX RAM fill is a 1 kHz sine instead of the square. Eight samples, one cycle at the 8 kHz TX-RAM rate, repeated across the 512 halfwords. The peak sample is the same immediate as the A = 2048 square (`movi` value 8, big-endian ±2048). The 45-degree samples are immediate 6 and 250 (big-endian ±1536). The eight immediates, in order, are 0, 6, 8, 6, 0, 250, 248, 250. Nothing else in the stub changes. Keep it a separate patch so the measured square images still build. Do not patch `+0x3074` or `+0x3EDFC`. Bit 4 of `0x11000080` stays clear. Do not build A = 8192: the R3a7 steady p99 was 3700 Hz, and another doubling is predicted past ±5 kHz.
+R3a9. Same 1 kHz sine as R3a8, one step louder. Peak count 4096, which is `movi` value 16. Round each sample the same way R3a8 did: `round(16 * sin(k * 45°))` for k = 0..7, and encode a negative sample as `256 + n`. The eight immediates, in order, are 0, 11, 16, 11, 0, 245, 240, 245. The aired samples are 0, +2816, +4096, +2816, 0, −2816, −4096, −2816. Nothing else in the stub changes. Keep it a separate patch so the measured R3a8 image still builds. Do not patch `+0x3074` or `+0x3EDFC`. Bit 4 of `0x11000080` stays clear. Do not build a peak above 16 in this image. A linear double of the R3a8 result predicts a 1 kHz line near 1850 Hz and a steady p99 near 2400 Hz.
 
-1. Host-check: the largest |sample| immediate is 8, there is no immediate above 8, bit 4 is clear, and `+0x3074` and `+0x3EDFC` are factory.
+1. Host-check: the largest |sample| is 16, there is no sample immediate above 16, bit 4 is clear, and `+0x3074` and `+0x3EDFC` are factory.
 2. Tune the VFO to 467.625 before the load. Record the HackRF through the load and the first boot. Do not key if that boot radiates (peak ≥ 6 dB, or 0.2 s at +10 dB). Confirm the banner and the `0x34` tag.
-3. One 3 s silence key (`txwav` of zeros), low power. Report the 1 kHz line, the 15.625 Hz line, and the steady-window p99. The ±5 kHz stop applies to that steady window. The key-up click is not a stop. If the steady window reaches ±5 kHz, restore the factory image and set `STATUS: OWNER`.
-4. Restore the factory image. Leave the VFO on 467.625, low power. Do not raise the peak. Do not send M17 samples.
+3. One 3 s silence key (`txwav` of zeros), low power. Report the 1 kHz line, the 15.625 Hz line, the 3 kHz line, and the steady-window p99. The ±5 kHz stop applies to that steady window. The key-up click is not a stop. If the steady window reaches ±5 kHz, restore the factory image and set `STATUS: OWNER`.
+4. Restore the factory image. Leave the VFO on 467.625, low power. Do not raise the peak again. Do not send M17 samples.
 
 ## Goal and route list (owner, 2026-10-23: "discover every possible way we can get M17 to work")
 
 Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). The next step is the next open item on this list. A route is closed only by a measurement or a firm reading, written up in `results.md`.
 
 **Transmit (the hard part: the FM audio path cuts below ~250 Hz, phone-side analog, ch. 19 §19)**
-- **T1: TX RAM through the C7000 FM modulator.** R3a3 through R3a7 put a square on the air through the DMR modulator. Silence leaves the square and drops the codec tone. Through A = 1024 the flat-top median tracked about 0.41 Hz per count. At A = 4096 the 40 Hz low-pass rms was 2266 Hz (0.55 Hz per count), the median was 1462 Hz, and the steady p99 was 3700 Hz. Another doubling is predicted past the ±5 kHz stop, so A = 8192 is not an image. R3a8 is a 1 kHz sine at peak count 2048. R4, a UART symbol command `0x3D` with the RRC shaper, waits until a smooth waveform near the M17 outer deviation is measured under the ±5 kHz stop. This is the main line.
+- **T1: TX RAM through the C7000 FM modulator.** R3a3 through R3a7 put a square on the air through the DMR modulator. Silence leaves the square and drops the codec tone. Through A = 1024 the flat-top median tracked about 0.41 Hz per count. At A = 4096 the 40 Hz low-pass rms was 2266 Hz (0.55 Hz per count), the median was 1462 Hz, and the steady p99 was 3700 Hz. Another doubling of the square is predicted past the ±5 kHz stop, so A = 8192 is not an image. R3a8 put a 1 kHz sine at peak count 2048 on the air: the 1 kHz line was 923 Hz, the 15.625 Hz line was 3 Hz, the 3 kHz line was 27 Hz, and the steady p99 was 1217 Hz. R3a9 is that sine at peak count 4096. A linear double predicts a tone near 1850 Hz and a steady p99 near 2400 Hz. R4, a UART symbol command `0x3D` with the RRC shaper, waits until a smooth waveform near the M17 outer deviation is measured under the ±5 kHz stop. This is the main line.
 - **T2: the C7000 DMR modem as a raw 4FSK source.**
   - `WORK_MODE` `0x22` is "physical layer" (guide Table 27): read whether it transmits raw symbols, continuously or only in bursts, and from where (TX RAM / registers).
   - Read the symbol map and filter controls: `RF_MODE[7]` gives two deviation maps; is there an RRC roll-off or filter-bypass setting? M17 needs ±2400 Hz outer and RRC α = 0.5; DMR uses ±1944 Hz and α = 0.2. This radio's narrow-band (12.5 kHz) DMR outer symbol is ±3.3 kHz, with AT1846S `0x30` left at `0x4026`. That is about 1.7× the standard ±1944 Hz, and the BTECH 6X2 still decodes it.
@@ -82,7 +82,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-R3a7 is done. Boot of `DMR003.R3a7.V022` was silent (180 s, peak +0.13 dB, clip 0; sha256 `50f8e78986a4efafd288b8d61811e289055ed1aba570278e14e2c6347a2c1354`). One 3 s silence key: fundamental 2227 Hz. The 40 Hz low-pass rms went from 967 Hz to 2266 Hz; the median went from 741 Hz to 1462 Hz. The 1 kHz line was 0.5 Hz. Steady p99 3700 Hz. A = 8192 was not built. Factory restored: banner 01:49:19.335, `0x34` 01:49:19.648 `DMR003.UV4T.V022`, VFO 467.625, no `DMRDEBUG.bin`. §6 is not met.
+R3a8 is done. Boot of `DMR003.R3a8.V022` was silent (180 s, peak +0.11 dB, clip 0; sha256 `8436ac95064e9643f034dfdc867dacccdb283752bf705c858f180187c2928147`). One 3 s silence key: the 1 kHz line was 923 Hz, the 15.625 Hz line was 3 Hz, and the 3 kHz line was 27 Hz. Steady p99 1217 Hz. The peak was not raised. Factory restored: banner 02:08:21.899, `0x34` 02:08:22.214 `DMR003.UV4T.V022`, VFO 467.625, no `DMRDEBUG.bin`. §6 is not met.
 
 ## Owner question
 

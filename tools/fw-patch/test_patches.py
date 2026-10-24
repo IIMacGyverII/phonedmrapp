@@ -114,6 +114,16 @@ class PatchTest(unittest.TestCase):
             ["c7000-txram-dmr-a512", "c7000-txram-dmr-a4096"],
             ["c7000-txram-dmr-a1024", "c7000-txram-dmr-a4096"],
             ["c7000-txram-dmr-a2048", "c7000-txram-dmr-a4096"],
+            ["c7000-fm-flat", "c7000-txram-dmr-sine1k"],
+            ["c7000-fm-canary", "c7000-txram-dmr-sine1k"],
+            ["c7000-fm-proof", "c7000-txram-dmr-sine1k"],
+            ["c7000-fm-adcgain", "c7000-txram-dmr-sine1k"],
+            ["c7000-txram-square", "c7000-txram-dmr-sine1k"],
+            ["c7000-txram-dmr", "c7000-txram-dmr-sine1k"],
+            ["c7000-txram-dmr-a512", "c7000-txram-dmr-sine1k"],
+            ["c7000-txram-dmr-a1024", "c7000-txram-dmr-sine1k"],
+            ["c7000-txram-dmr-a2048", "c7000-txram-dmr-sine1k"],
+            ["c7000-txram-dmr-a4096", "c7000-txram-dmr-sine1k"],
         ]
         for names in pairs:
             with self.subTest(names=names), self.assertRaises(SystemExit):
@@ -508,6 +518,106 @@ class PatchTest(unittest.TestCase):
         self.assertEqual(loud[0x3074:0x3078], self.fac[0x3074:0x3078])
         self.assertEqual(loud[0x3EDFC:0x3EE02], self.fac[0x3EDFC:0x3EE02])
         self.assertEqual(loud[0x38464:0x38474], b"DMR003.R3a7.V022")
+
+    def test_txram_dmr_sine_is_one_kilohertz_at_peak_2048(self):
+        # R3a8. Eight samples, one cycle, repeated. Peak immediate is 8.
+        img, _ = build.build(["c7000-txram-dmr-sine1k"], "R3a8", self.cfg)
+        xip = 0x0301A000
+
+        def hw(off):
+            return int.from_bytes(img[off:off + 2], "little")
+
+        def word(off):
+            return int.from_bytes(img[off:off + 4], "little")
+
+        def bt_file(off):
+            raw = hw(off)
+            self.assertEqual(raw & 0xFC00, 0x0800, "not a 16-bit bt")
+            imm = raw & 0x3FF
+            if imm & 0x200:
+                imm -= 0x400
+            return off + (imm << 1)
+
+        for site in (0x92C8, 0x92E0):
+            self.assertEqual(bsr32_target(self.fac, site), 0xE9C)
+            self.assertEqual(bsr32_target(img, site), 0x5B000)
+        for site in (0x92AA, 0x92FA):
+            self.assertEqual(bsr32_target(self.fac, site), 0xE9C)
+            self.assertEqual(bsr32_target(img, site), 0x5B0A0)
+        for off in (0x92CC, 0x92E4, 0x92AE, 0x92FE, 0x92B2, 0x929C, 0x9364):
+            self.assertEqual(img[off:off + 4], self.fac[off:off + 4])
+
+        self.assertEqual(hw(0x5B000), 0x14D5)
+        self.assertEqual(bsr32_target(img, 0x5B002), 0xE9C)
+        self.assertEqual((0x5B002 + xip + bsr32_disp(img, 0x5B002)) & 0xFFFFFFFF, xip + 0xE9C)
+        self.assertEqual(hw(0x5B008), 0x3387)
+        self.assertEqual(hw(0x5B00A), 0x4365)
+        self.assertEqual(hw(0x5B010), 0x3280)
+        self.assertEqual(hw(0x5B018), 0x3AA0)
+        self.assertEqual(hw(0x5B020), 0x3A84)
+        self.assertEqual(hw(0x5B022), 0x3A86)
+        self.assertNotIn((0x3AA4).to_bytes(2, "little"), img[0x5B000:0x5B0D4])
+        self.assertEqual(hw(0x5B028), 0x3240)  # movi r2, 64, the repeat count
+        samples = []
+        off = 0x5B02A
+        for _ in range(8):
+            raw = hw(off)
+            self.assertEqual(raw & 0xFF00, 0x3100)
+            samples.append(raw & 0xFF)
+            self.assertEqual(hw(off + 2), 0xAB20)  # st.h r1, (r3, 0)
+            self.assertEqual(hw(off + 4), 0x2301)  # addi r3, 2
+            off += 6
+        self.assertEqual(samples, [0, 6, 8, 6, 0, 250, 248, 250])
+        signed = [v - 256 if v >= 128 else v for v in samples]
+        self.assertEqual(max(abs(v) for v in signed), 8)
+        self.assertNotIn(16, samples)
+        self.assertNotIn(32, samples)
+        movi_r1 = []
+        for at in range(0x5B000, 0x5B0D4, 2):
+            raw = hw(at)
+            if raw & 0xFF00 == 0x3100:
+                movi_r1.append(raw & 0xFF)
+        self.assertEqual(movi_r1, samples)
+        self.assertEqual(bt_file(0x5B05E), 0x5B02A)
+        self.assertEqual(hw(0x5B060), 0x3030)
+        self.assertEqual(word(0x5B062), 0x4006EA01)
+        self.assertEqual(bsr32_target(img, 0x5B066), 0xFD011220)
+        self.assertEqual((0x5B066 + xip + bsr32_disp(img, 0x5B066)) & 0xFFFFFFFF, 0x2B220)
+        self.assertEqual(word(0x5B06C), 0x4026EA01)
+        self.assertEqual(bsr32_target(img, 0x5B070), 0xFD011220)
+        self.assertEqual((0x5B070 + xip + bsr32_disp(img, 0x5B070)) & 0xFFFFFFFF, 0x2B220)
+        self.assertEqual(hw(0x5B074), 0x3058)
+        self.assertEqual(word(0x5B076), 0xBCFDEA01)
+        self.assertEqual(bsr32_target(img, 0x5B07A), 0xFD011220)
+        self.assertEqual((0x5B07A + xip + bsr32_disp(img, 0x5B07A)) & 0xFFFFFFFF, 0x2B220)
+        self.assertEqual(hw(0x5B080), 0x3201)
+        self.assertEqual(hw(0x5B082), 0xB340)
+        self.assertEqual(hw(0x5B084), 0x1495)
+        pool = [word(0x5B088 + 4 * k) for k in range(6)]
+        self.assertEqual(pool, [0x11000104, 0x11000100, 0x11000080, 0x11000500, 0x16000030, 0x11000560])
+
+        self.assertEqual(hw(0x5B0A0), 0x14D5)
+        self.assertEqual(bsr32_target(img, 0x5B0A2), 0xE9C)
+        self.assertEqual(hw(0x5B0A8), 0x3200)
+        self.assertEqual(hw(0x5B0AA), 0xB340)
+        self.assertEqual(hw(0x5B0B0), 0x3A80)
+        self.assertEqual(hw(0x5B0B4), 0x3058)
+        self.assertEqual(word(0x5B0B6), 0x8405EA01)
+        self.assertEqual(bsr32_target(img, 0x5B0BA), 0xFD011220)
+        self.assertEqual((0x5B0BA + xip + bsr32_disp(img, 0x5B0BA)) & 0xFFFFFFFF, 0x2B220)
+        self.assertEqual(word(0x5B0C0), 0x7026EA01)
+        self.assertEqual(bsr32_target(img, 0x5B0C4), 0xFD011220)
+        self.assertEqual((0x5B0C4 + xip + bsr32_disp(img, 0x5B0C4)) & 0xFFFFFFFF, 0x2B220)
+        self.assertEqual(hw(0x5B0C8), 0x1495)
+        self.assertEqual([word(0x5B0CC), word(0x5B0D0)], [0x11000560, 0x11000080])
+
+        self.assertEqual(img[0x3074:0x3078], self.fac[0x3074:0x3078])
+        self.assertEqual(img[0x3EDFC:0x3EE02], self.fac[0x3EDFC:0x3EE02])
+        self.assertEqual(img[0x3EE16:0x3EE18], self.fac[0x3EE16:0x3EE18])
+        self.assertEqual(img[0x5B0D4:0x5B100], self.fac[0x5B0D4:0x5B100])
+        for off in (0x2C90, 0x3054, 0x344E, 0x34F2, 0x3640, 0x2E94):
+            self.assertEqual(img[off:off + 2], self.fac[off:off + 2])
+        self.assertEqual(img[0x38464:0x38474], b"DMR003.R3a8.V022")
 
     def test_iram_padbyte_changes_the_halfword_after_keyup_returns(self):
         # R3-0. No log string lives in the IRAM copy. The byte after key-up's
