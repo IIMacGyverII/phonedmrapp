@@ -2215,3 +2215,60 @@ The I²C write is file `+0x54628`. These are the sites that pass register `0x58`
 No `0x58` write in the slices sits on the UART, squelch, or PTT path by itself. The writes live in init, tune, and the CTCSS/DCS setter. A channel write is the proven clear. The setter also replaces `0x58`, so SignalDeck re-applies the hold after a channel write and after any CTCSS or DCS programming, not only after a VFO write.
 
 RE10 stays loaded. VFO 467.625 / 467.625 FM at 18:02:46.734. The phone was not keyed.
+
+# R-F — independent equaliser, the dip, POCSAG (2026-10-24, 18:29–18:31)
+
+The pass is not met. Tag `RE10` was already loaded (`0x34` `DMR003.RE10.V022` at 18:29:05). No new image. The phone was not keyed. HackRF FM at 467.625 MHz, amplitude off, finite files, a dummy burst first, Wi-Fi adb `192.168.1.125:5555` only. No `DMRDEBUG.bin`.
+
+The taps are the ±20-symbol filter trained on `re_phone_m17_1.wav` (the R-E loop, `N0CALL` to `@ALL`, frames 0 and 1). A sync-only decode of that clip and of `re_phone_m17_2.wav` is LSF CRC 12/12 and 13/13, Golay 0 24/24 and 25/25. The air clips below do not use that loop.
+
+## Independent M17
+
+Each transmission is a 1.6 s `+3/−3` lead, then a preamble, a link setup, 80 stream frames with random 16-byte payloads, and an EOT. Callsigns are not `N0CALL`. Three recordings per deviation and VGA. The clip is 4.5 s at 8 kHz. Decode uses the fixed taps and the eight sync symbols for the gain. `0x32` is one reading during the clip: dBm = −(120 − raw/2).
+
+| Deviation | VGA | RSSI | Link-setup CRC | Golay 0 |
+|---|---|---|---|---|
+| ±2.4 kHz | 20 | raw 66, −87.0 dBm | yes, K6M17 → W9LAB | 57/75 |
+| ±2.4 kHz | 20 | raw 67, −86.5 | no | 0/1 |
+| ±2.4 kHz | 20 | raw 65, −87.5 | yes, W1RF → N2EQ | 46/75 |
+| ±2.4 kHz | 10 | raw 54, −93.0 | yes | 46/73 |
+| ±2.4 kHz | 10 | raw 54, −93.0 | yes | 12/18 |
+| ±2.4 kHz | 10 | raw 56, −92.0 | yes | 57/77 |
+| ±2.4 kHz | 0 | raw 41, −99.5 | no | 0/0 |
+| ±2.4 kHz | 0 | raw 43, −98.5 | no | 0/0 |
+| ±2.4 kHz | 0 | raw 43, −98.5 | no | 0/1 |
+| ±1.9 kHz | 20 | raw 66, −87.0 | yes | 59/76 |
+| ±1.9 kHz | 20 | raw 65, −87.5 | yes | 56/74 |
+| ±1.9 kHz | 20 | raw 65, −87.5 | yes | 49/74 |
+| ±1.9 kHz | 10 | raw 53, −93.5 | yes | 46/76 |
+| ±1.9 kHz | 10 | raw 53, −93.5 | yes | 47/73 |
+| ±1.9 kHz | 10 | raw 53, −93.5 | yes | 51/73 |
+| ±1.9 kHz | 0 | raw 43, −98.5 | no | 0/1 |
+| ±1.9 kHz | 0 | raw 43, −98.5 | yes | 6/77 |
+| ±1.9 kHz | 0 | raw 43, −98.5 | no | 0/0 |
+
+Every Golay 0 frame has the payload that was sent. On the first ±2.4 kHz / VGA 20 clip the frames found are 0 through 74, each once. The 18 misses have LICH Golay sums 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 5 and 8. The third VGA 20 clip is the same shape (rms 5717). The second has the same rms (5733) and a best link-setup correlation of 0.924, and the walker does not stay on the stream. The pass was a CRC on every ±2.4 kHz / VGA 20 recording and at least 99 % of stream frames at Golay 0. The best locked recording is 57/75.
+
+Clips: `C:\Users\Joshua\AppData\Local\Temp\fw1718\rf\m17_d2400_v20_0.wav` through `m17_d1900_v0_2.wav`, named `m17_d<deviation>_v<vga>_<0-2>.wav`.
+
+## Where the dip is
+
+Held phone path, variant 3, last 0.4 s of each tone, against the 1 kHz line of 6346. Receive RAM is op 5 mode 4 (the variant-4 register state for the length of the copy), six halves, the first half dropped.
+
+| Hz | Phone | RAM, halves 1–5 |
+|---|---|---|
+| 400 | −5.8 dB | −0.10 dB |
+| 500 | −9.6 dB | −0.23 dB |
+| 600 | −6.7 dB | −0.03 dB |
+| 700 | −3.7 dB | −0.04 dB |
+| 800 | −1.9 dB | +0.08 dB |
+
+The phone recording has the dip. The receive RAM stays within 0.3 dB of 1 kHz from 400 Hz to 800 Hz, so the dip is the ES8311.
+
+## POCSAG
+
+One 1200 baud transmission, deviation ±3500 Hz, RIC 1234567, function 3, text `RF HELD PATH`, four copies, VGA 20, RSSI raw 66 (−87.0 dBm). Plain slicing of the 8 kHz clip: 38 bit errors in 4993 bits, 7 of 156 codewords nonzero, mean 0.24 errors per codeword. The same audio through the M17 matched filter and the 41 taps, sliced at 1200 baud: 6 bit errors in 4987 bits, 3 of 155 codewords nonzero, mean 0.039. Clip: `C:\Users\Joshua\AppData\Local\Temp\fw1718\rf\pocsag.wav`.
+
+## Not in this image
+
+Op 5 still copies the live half first. RE10 was not replaced. The host equaliser was not wired into SignalDeck: the independent recordings miss the pass. Hold was restored (`sr=0`). VFO 467.625 / 467.625 FM at 18:31:55. RE10 stays loaded.
