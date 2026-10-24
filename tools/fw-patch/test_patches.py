@@ -135,6 +135,18 @@ class PatchTest(unittest.TestCase):
             ["c7000-txram-dmr-a2048", "c7000-txram-dmr-sine1k-p4096"],
             ["c7000-txram-dmr-a4096", "c7000-txram-dmr-sine1k-p4096"],
             ["c7000-txram-dmr-sine1k", "c7000-txram-dmr-sine1k-p4096"],
+            ["c7000-fm-flat", "c7000-txram-dmr-sine1k-p5120"],
+            ["c7000-fm-canary", "c7000-txram-dmr-sine1k-p5120"],
+            ["c7000-fm-proof", "c7000-txram-dmr-sine1k-p5120"],
+            ["c7000-fm-adcgain", "c7000-txram-dmr-sine1k-p5120"],
+            ["c7000-txram-square", "c7000-txram-dmr-sine1k-p5120"],
+            ["c7000-txram-dmr", "c7000-txram-dmr-sine1k-p5120"],
+            ["c7000-txram-dmr-a512", "c7000-txram-dmr-sine1k-p5120"],
+            ["c7000-txram-dmr-a1024", "c7000-txram-dmr-sine1k-p5120"],
+            ["c7000-txram-dmr-a2048", "c7000-txram-dmr-sine1k-p5120"],
+            ["c7000-txram-dmr-a4096", "c7000-txram-dmr-sine1k-p5120"],
+            ["c7000-txram-dmr-sine1k", "c7000-txram-dmr-sine1k-p5120"],
+            ["c7000-txram-dmr-sine1k-p4096", "c7000-txram-dmr-sine1k-p5120"],
         ]
         for names in pairs:
             with self.subTest(names=names), self.assertRaises(SystemExit):
@@ -651,6 +663,29 @@ class PatchTest(unittest.TestCase):
         self.assertEqual(bsr32_target(loud, 0x92C8), 0x5B000)
         self.assertEqual(bsr32_target(loud, 0x92AA), 0x5B0A0)
         self.assertEqual(loud[0x38464:0x38474], b"DMR003.R3a9.V022")
+
+    def test_txram_dmr_sine_p5120_changes_only_the_sample_immediates(self):
+        # R3a10. One step from the measured 4096-count sine toward a 2400 Hz
+        # tone. The version field is 4 characters, so the tag is R3b0.
+        prev, _ = build.build(["c7000-txram-dmr-sine1k-p4096"], "R3a9", self.cfg)
+        loud, _ = build.build(["c7000-txram-dmr-sine1k-p5120"], "R3b0", self.cfg)
+        diff = [i for i, (a, b) in enumerate(zip(prev, loud)) if a != b]
+        self.assertEqual(diff, [0x3846D, 0x3846E, 0x5B030, 0x5B036, 0x5B03C, 0x5B048, 0x5B04E, 0x5B054])
+        samples = []
+        for off in (0x5B02A, 0x5B030, 0x5B036, 0x5B03C, 0x5B042, 0x5B048, 0x5B04E, 0x5B054):
+            raw = int.from_bytes(loud[off:off + 2], "little")
+            self.assertEqual(raw & 0xFF00, 0x3100)
+            samples.append(raw & 0xFF)
+        self.assertEqual(samples, [0, 14, 20, 14, 0, 242, 236, 242])
+        signed = [v - 256 if v >= 128 else v for v in samples]
+        self.assertEqual(max(abs(v) for v in signed), 20)
+        self.assertNotIn(32, samples)
+        self.assertNotIn((0x3AA4).to_bytes(2, "little"), loud[0x5B000:0x5B0D4])
+        self.assertEqual(loud[0x3074:0x3078], self.fac[0x3074:0x3078])
+        self.assertEqual(loud[0x3EDFC:0x3EE02], self.fac[0x3EDFC:0x3EE02])
+        self.assertEqual(bsr32_target(loud, 0x92C8), 0x5B000)
+        self.assertEqual(bsr32_target(loud, 0x92AA), 0x5B0A0)
+        self.assertEqual(loud[0x38464:0x38474], b"DMR003.R3b0.V022")
 
     def test_iram_padbyte_changes_the_halfword_after_keyup_returns(self):
         # R3-0. No log string lives in the IRAM copy. The byte after key-up's
