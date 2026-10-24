@@ -16,8 +16,8 @@ import build  # noqa: E402
 VERSION_AT = 0x38464
 
 
-def bsr32_target(img, at):
-    """Decode a C-SKY V2 32-bit bsr stored as two LE halfwords (high halfword first)."""
+def bsr32_disp(img, at):
+    """Signed byte displacement of a C-SKY V2 32-bit bsr (high halfword stored first)."""
     hi = int.from_bytes(img[at:at + 2], "little")
     lo = int.from_bytes(img[at + 2:at + 4], "little")
     word = (hi << 16) | lo
@@ -25,7 +25,12 @@ def bsr32_target(img, at):
     off = (word & 0x3FFFFFF) << 1
     if off & (1 << 26):
         off -= 1 << 27
-    return (at + off) & 0xFFFFFFFF
+    return off
+
+
+def bsr32_target(img, at):
+    """Decode a bsr as if `at` were the runtime PC. File offsets match XIP code only."""
+    return (at + bsr32_disp(img, at)) & 0xFFFFFFFF
 
 
 class PatchTest(unittest.TestCase):
@@ -241,7 +246,11 @@ class PatchTest(unittest.TestCase):
         # +0x3EDF8 is bclri r2, 0 / st.w (the clear). The patch starts at the next instruction.
         self.assertEqual(self.fac[0x3EDF8:0x3EDFC], bytes.fromhex("803a40b3"))
         self.assertEqual(img[0x3EDF8:0x3EDFC], self.fac[0x3EDF8:0x3EDFC])
-        self.assertEqual(bsr32_target(img, 0x3EDFC), 0x5B000)
+        # The hooked bytes execute at IRAM 0x159F4, not at the file offset.
+        self.assertEqual(img[0x3EDFC:0x3EE02], bytes.fromhex("82e106fb0030"))
+        disp = bsr32_disp(img, 0x3EDFC)
+        self.assertEqual((0x159F4 + disp) & 0xFFFFFFFF, 0x03075000)
+        self.assertNotEqual(bsr32_target(img, 0x3EDFC), 0x5B000)
         self.assertEqual(img[0x3EE00:0x3EE02], bytes.fromhex("0030"))  # pad, movi r0, 0
         self.assertEqual(img[0x3EE02:0x3EE04], bytes.fromhex("3230"))  # movi r0, 50, the delay
         self.assertEqual(self.fac[0x3EE02:0x3EE04], bytes.fromhex("3230"))
@@ -277,6 +286,22 @@ class PatchTest(unittest.TestCase):
         self.assertEqual(img[0x3074:0x3078], self.fac[0x3074:0x3078])
         for off in (0x2C90, 0x3054, 0x344E, 0x34F2, 0x3640):
             self.assertEqual(img[off:off + 2], bytes.fromhex("0584"))
+
+    def test_iram_padbyte_changes_the_halfword_after_keyup_returns(self):
+        # R3-0. No log string lives in the IRAM copy. The byte after key-up's
+        # jmp r15 is alignment padding; the pool starts at the next word.
+        off = 0x3EE16
+        self.assertTrue(0x39408 <= off < 0x5AEFC)
+        self.assertEqual(self.fac[0x3EE14:0x3EE1C], bytes.fromhex("3c78000004010011"))
+        self.assertEqual(self.fac[0x3ACCC:0x3ACEC], b"TMSGTRESTSUSQUEUFLAGTSIGSEMATICK")
+        img, _ = build.build(["c7000-iram-padbyte"], "R301", self.cfg)
+        self.assertEqual(img[off], 0x58)
+        self.assertEqual(img[0x3EE14:0x3EE1C], bytes.fromhex("3c78580004010011"))
+        self.assertEqual(img[0x3ACCC:0x3ACEC], self.fac[0x3ACCC:0x3ACEC])
+        self.assertEqual(img[0x3EDFC:0x3EE02], self.fac[0x3EDFC:0x3EE02])
+        diff = [i for i, (a, b) in enumerate(zip(self.fac, img)) if a != b]
+        self.assertEqual(diff, [0x3846B, 0x3846C, 0x3846D, 0x3846E, off])
+        self.assertEqual(img[0x38464:0x38474], b"DMR003.R301.V022")
 
     def test_refuses_bad_tag(self):
         for tag in ("UV4T", "UV4", "UV-1"):

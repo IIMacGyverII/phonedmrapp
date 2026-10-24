@@ -630,3 +630,60 @@ A bare carrier, or the phone's 1 kHz codec tone, would have been the air result 
 ## End state
 
 Factory image restored after the second R3 load. YModem `onSuccess` at 21:08:52. Banner `开机初始化完成` at 21:09:08.473. `0x34` at 21:09:08.783 is `DMR003.UV4T.V022`. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. The takeover wrote analog `0x23` for 162.425 MHz, bandwidth wide, power low, squelch 5 (body `A8 68 AE 09 A8 68 AE 09 01 00 05 …`), and the module acked it (`RX cmd=0x23 rw=0 sr=0` at 21:09:08.858). The app announced channel 36, NOAA WX4. SignalDeck owns the radio: the stock app is paused and the UART is open. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched. No HackRF capture and no key-up in this pass. The ES8311 debug node was not written.
+
+# R3-0 / R3a1 — the IRAM copy, the runtime branch, and the R1 bandwidth (2026-10-23, 22:35–23:02)
+
+No transmission. HackRF was not started. The ±5 kHz stop was not reached: R3a1 was not loaded, and nothing keyed.
+
+## The copy at boot
+
+Reset is file offset 0. The literals from `+0xC4` are three-word copy records, destination, end, source:
+
+| Copy | Destination | End | Source |
+|---|---|---|---|
+| SRAM | `0x18000800` | `0x18004404` | `0x0304C2E0` (file `+0x322E0`) |
+| IRAM | `0x00010000` | `0x00031AF4` | `0x03053408` (file `+0x39408`) |
+
+The IRAM length is `0x21AF4` bytes (137972). There is no separate length field and no checksum field. The loop is `ld.w` / `st.w` / add 4 until the destination reaches the end (`+0x46`–`+0x5A`). BSS is then filled with zero from `0x31AF4` to `0x0004DAB0` (`+0x5C`–`+0x72`). The next instruction, the `bsr` at file `+0x74` (`e2808720`), has runtime target IRAM `0x0002AEB4`, which is file `+0x542BC`. That function's `bsr` at `+0x5431A` creates a task with entry `0x0301AD5C` (file `+0xD5C`). The banner string stays at file `+0x3653C`.
+
+The copied block's sum32 is `0xA23B52E7`, its xor is `0xC3293F1F`, its zlib crc32 is `0x388809B7`, and its byte sum is `0x00D1692C`. None of those values occurs as a little-endian word outside the block. An unaligned search found no word equal to key-up's IRAM address `0x158B8` or its XIP address `0x03058CC0`, the hook's IRAM address `0x159F4` or its XIP address `0x03058DFC`, or `+0x3D688` as a file offset, as IRAM `0x14280`, or as XIP `0x03057688`.
+
+Later `lrw`s of the literal `0x31AF4` load the first word of that zeroed BSS and compare it with 100. They do not walk the copied image.
+
+## R300 — the TICK byte, no banner
+
+The copied range contains no log string. The readable ASCII names in it are the uC/OS-III type words `TMSG TRES TSUS QUEU FLAG TSIG SEMA TICK` at file `+0x3ACCC`, and `NONE` stored into OS objects at `+0x3AE30`. The function at `+0x3ABC4` compares a struct word with those eight constants. The `TICK` compare is the `lrw` at `+0x3AC42`.
+
+`DMR003.R300.V022.bin`, 378620 bytes, sha256 `dfe1cf30cf7f5f10e76ba12259101dd6fda8ee26006a2f166fa3692dda4f7e58`, pushed MD5 `0274598c4c93707fa3a90d6a018961e6`. It changed one byte of that `TICK` immediate, `+0x3ACEB` `0x4B` → `0x4A`, plus the version tag. YModem `onSuccess` at 22:37:37.274. The loader printed an empty `0x34` line and exited 0. After take-over: 22:37:50.260 module already powered, 22:37:53.281 version query failed (1 of 2), power cycle 22:37:54.305, 22:38:09.628 version query failed (2 of 2), power cycle 22:38:10.651. No banner. Nothing keyed.
+
+A whole-block check would have rejected R301 as well. `build.py` does not recompute a checksum. The `TICK` site is no longer a patch in the tree.
+
+## R301 — one padding byte, banner and tag
+
+`c7000-iram-padbyte`, tag `R301`, version `DMR003.R301.V022`. sha256 `5c4ef9621f5c542db8bf6ca249fc791cce88f49881e2e930ce326a0969373356`, pushed MD5 `0a834f7cf3bf48d1f63d0c4dec0e25a5`. The only non-tag difference is `+0x3EE16` `00` → `58`. Factory bytes there are `3c 78 00 00 04 01 00 11`: `jmp r15` at `+0x3EE14`, then this halfword, then the pool word `0x11000104` at `+0x3EE18`. Nothing in the disassembly references `+0x3EE16`. The byte is inside the copied range. The type words and the key-up hook bytes stay factory. `test_iram_padbyte_changes_the_halfword_after_keyup_returns` checks that diff.
+
+YModem `onSuccess` at 22:50:10.989. The first version query still saw `0x29050000` at 22:50:25.078 and restarted the module once (22:50:26.865, power cycle 22:50:27.889). After that cycle: banner `开机初始化完成` at 22:50:31.055, `0x34` body `44 4D 52 30 30 33 2E 52 33 30 31 2E 56 30 32 32 00`, `module DMR003.R301.V022` at 22:50:31.365. Analog `0x23` for 162.425 MHz, band 1, power 0, squelch 5, acked `RX cmd=0x23 rw=0 sr=0` at 22:50:31.438. Voice: Channel 36, NOAA WX4. A one-byte change of copied data boots. The R3a0 failure is the six hook bytes, or the branch they encode.
+
+## R3a1 — runtime `bsr`, built, not loaded
+
+`c7000-txram-square` now encodes the hook from the runtime PC. File `+0x3EDFC` executes at IRAM `0x159F4`. The stub remains at file `+0x5B000`, XIP `0x03075000`, outside the copy. Displacement `0x03075000 − 0x159F4 = 0x0305F60C`. The six bytes are `82 e1 06 fb 00 30`: `bsr` to `0x03075000`, then `movi r0, 0`. The file-offset decode of those same bytes is `0x03098308`, which is why the test adds the displacement to `0x159F4` and checks the result is `0x03075000`. The clear at `+0x3EDF8` and `movi r0, 50` at `+0x3EE02` stay. The 76-byte stub is unchanged: bit 0 only, clear `FM_BANDWIDTH` bits 4 and 6, +256 / −256, then PTT = 1. Nineteen patch tests pass. The image is `DMR003.R3a1.V022.bin`, 378620 bytes, sha256 `7404d19b001eccb08867da97e8524a80788bdbed6763b71b9a8b8b81ab48c690`, file MD5 `aee09d8a0f911245aafd58bca702f5e5`. It was not pushed.
+
+`+0x3D688` is inside the copy. After three null checks it calls `+0x3F15C`, `+0x3F518`, key-up at `+0x3ECC0` (`+0x3D710`), then later unkey at `+0x3EE6C` (`+0x3D73C`). No instruction `bsr`s `+0x3D688`. The boot call at `+0xDA6` is `bsr +0x3D68`. UVm8 wrote this same tail and a version tag and booted. R301 wrote `+0x3EE16` and booted. R3a0's remaining difference, the six hook bytes, is what stopped the banner, so those bytes execute before the banner.
+
+The `bsr` returns to `+0x3EE02`. The stub has already stored PTT = 1. `+0x3D688` then reaches unkey, which clears PTT. A boot of R3a1 would key and then unkey before SignalDeck sends `0x23`. The module's last successful program, on R301, was channel 36 at 162.425 MHz, low power. This request did not confirm a transmission. R3a1 stayed in `radio_firmware/build/`. The A = 256 capture was not started, and A was not raised.
+
+R301 shows the copied block can differ from the factory bytes and still banner. The flash-resident hook was not designed as a replacement and was not built.
+
+## The R1 digital channel was the 12.5 kHz path
+
+The temporary digital row stored `band` = 1 (the column the exporter calls 25 kHz). `at1846_tune` (`+0x2DD8`) reads struct byte 0 into `r4` and byte 1 into `r5`.
+
+The common path writes `0x30` = `0x4006` at `+0x2DE4` and `0x30` = `0x4046` at `+0x2E22`, then splits on `r4` at `+0x2E2A`. The DMR branch (`r4` == 1) writes `0x42` = `0x1036`, `0x43` = `0x00BB`, and calls `at1846_apply_bw_profile` (`+0x2B14`) with `r0` = 0. That is the 12.5 kHz table (46 bytes per bandwidth from file `+0x36608`; `r0` = 1 is 25 kHz). It then overwrites `r5` at `+0x2E5E`, writes `0x30` = `0x4006` at `+0x2E74` and `0x30` = `0x4026` at `+0x2E7E`, then `0x44` = `0x0AD1` and `0x58` = `0xBCFD`. `0x4026` is the last `0x30` write on this branch. Byte 1 is not consulted after `+0x2E5E`.
+
+The FM branch (`+0x2FF2`) writes `0x58` = `0x8405`. When byte 1 == 1 it writes `0x30` = `0x7006` then `0x30` = `0x7026` and calls the profile with `r0` = 1. Otherwise it writes `0x4006` then `0x4026` and calls the profile with `r0` = 0.
+
+The analog `0x23` unpack sets struct byte 0 to 0 (`+0x9A56`) and stores body byte 8, the band byte, in struct byte 1 (`+0x9A7A`, `+0x9C72`). R1's capture is 4FSK, so that transmission took the DMR branch. The stored `band` = 1 did not select `0x7026`. The measurement is the 12.5 kHz DMR programming, with `0x30` left at `0x4026`. The outer symbol of ±3.3 kHz against the guide's ±1944 Hz is the radio's own DMR scale. A later 12.5 kHz re-check would be this same path. No retransmission was made.
+
+## End state
+
+Factory image restored over R301. YModem `onSuccess` at 23:02:14.530. The first version query still printed `0x29050000` at 23:02:25.205 while the previous image was powered, then one restart (23:02:26.595, power cycle 23:02:27.621). Banner `开机初始化完成` at 23:02:30.787. `0x34` at 23:02:31.098 is `DMR003.UV4T.V022` (body `44 4D 52 30 30 33 2E 55 56 34 54 2E 56 30 32 32 00`). Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. The takeover wrote analog `0x23` for 162.425 MHz, band 1, power low, squelch 5 (body `A8 68 AE 09 A8 68 AE 09 01 00 05 …`), acked `RX cmd=0x23 rw=0 sr=0` at 23:02:31.175. Voice: Channel 36, NOAA WX4. SignalDeck owns the radio: the stock app is paused and the UART is open. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched. No HackRF capture and no key-up. The ES8311 debug node was not written. §6 is not met.
