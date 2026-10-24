@@ -135,6 +135,8 @@ Design, depending on A4's outcome:
 
 Acceptance (per C2): flat response within ±2 dB, limiter at the set deviation ±10 %, ≥ 85/90 M17 frames decoded by the plain decoder across three transmissions, POCSAG 100 % at 512 and 1200 bd, voice unchanged with the flag off, factory image unchanged after restore.
 
+**Status 2026-10-24:** the M17 part is met by the TX-RAM route (T1 in `radio_firmware/HANDOFF.md`), not by a change to the audio chain: symbols streamed over UART command `0x40` into a ring, RRC shaped in the module, played through the HR-C7000 DMR modulator from TX RAM; R4t decoded 90/90 frames at Golay error 0 on each of three transmissions with our decoder, steady p99 2.79–2.90 kHz, boot silent (`radio_firmware/results.md`, `reviews.md`). The flat-response and limiter items do not apply to this route (the audio chain is bypassed, the phone-side analog cut cannot be opened, §19). Open: an independent decoder (`plan-independent-m17-check.md`), POCSAG through the same engine, the time-out ceiling, receive (R-C).
+
 ---
 
 ## 7. Phase E — shipping it (opt-in only)
@@ -159,7 +161,7 @@ Acceptance (per C2): flat response within ±2 dB, limiter at the set deviation �
 | **FW15** ✅ | Persistence research (B3): answered by FW14 + §13, loads persist in SPI flash, restore = factory load | M | yes | FW14 |
 | **FW16** ✅ | `tools/fw-patch` build/check + host test (C1) | S | no | — |
 | **FW17** | `bench/fwtest.sh` + the standard TX measurements, factory baseline recorded (C2) | M | yes | FW13, FW16 |
-| **FW18** | Digital-audio transmit mode patch (D) measured to acceptance | L | yes | FW11, FW17 |
+| **FW18** ◐ | Digital-audio transmit mode patch (D) measured to acceptance — **M17 met 2026-10-24 via the TX-RAM symbol engine (R4t, own decoder)**; POCSAG and the independent decoder open | L | yes | FW11, FW17 |
 | **FW19** | TOT ceiling patch (D) | S | yes | FW9, FW17 |
 | **FW20** | Receive-side flat mode (D) | M | yes | FW18 |
 | **FW21** | Opt-in shipping, help, SignalDeck gating on the marker (E) | M | yes | FW18 |
