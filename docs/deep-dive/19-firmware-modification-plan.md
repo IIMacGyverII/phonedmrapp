@@ -310,6 +310,20 @@ The next image is not built. It would put the DMR modulator around the same squa
 
 End state: factory image, YModem `onSuccess` 23:41:58.545, banner 23:42:14.584, `0x34` = `DMR003.UV4T.V022` at 23:42:14.894, factory MD5 `4426035392262ca54583c230c9e268e0`. The module acked channel 36 (162.425 MHz, band 1, squelch 5, low power) and the app announced NOAA WX4. SignalDeck owns the radio. No `DMRDEBUG.bin`. The ES8311 debug node was not written.
 
+**2026-10-24 (00:36–01:03) — R3a3 puts the TX-RAM square on the air. Silence leaves the square and drops the codec tone.** HackRF receive only, 467.625 MHz, low power. Tables: `radio_firmware/results.md`.
+
+`c7000-txram-dmr`, tag `R3a3`, sha256 `667cfd127d3b403192066da8e67c3633905875a7370a56a4fc379f861d43ea40`, MD5 `e247b7b428e3635e71ef2a3f65ee9670`. The four `bsr 0xe9c` sites in the flash `0x26` handler call `on_key` / `on_unkey` at file `+0x5B000`. `on_key` sets two-point `RF_MODE` `0x10E0`, `WORK_MODE` `0x80`, TX-RAM bit 0, clears `FM_BANDWIDTH` bits 4 and 6, fills +256/−256, writes AT1846S `0x30` = `0x4006` then `0x4026` and `0x58` = `0xBCFD`, and stores PTT. Bit 4 stays clear. `+0x3074` and `+0x3EDFC` stay factory. Twenty tests pass.
+
+Boot capture 143.5 s from 00:36:50, VFO already on 467.625. YModem `onSuccess` 00:39:00.214. `0x34` `DMR003.R3a3.V022` at 00:39:12.867. Hottest bin +0.11 dB, clip 0. The stub does not run at boot. The capture that followed that boot was empty because the HackRF had just been closed; nothing was measured from it. Factory restored (`onSuccess` 00:41:43.451, `0x34` 00:41:56.109).
+
+Second load, same bytes. `onSuccess` 00:46:07.979. `0x34` 00:46:21.386. One 3 s `testtone`: `0x26` launch 1 at 00:46:28.923, `0x36` body `03`, 24000 samples, launch 2, `0x36` body `04`. Carrier 3.45 s, SNR 39.8 dB, clip 0, offset +1028 Hz. Steady window (drop the first 1.0 s): 999.9 Hz sine, amplitude 2399 Hz, rms 1738 Hz, p99 2727 Hz, and the square under it (15.625 Hz fundamental 133 Hz, 3rd 50 Hz, 5th 32 Hz). At 0.1 s the tone is absent (1 kHz line 0.7 Hz) and the square is already there. The first 100 ms is a key-up click, p99 22974 Hz. That click is not the stimulus. A was not raised.
+
+Third load, same bytes, for a silence key. `onSuccess` 00:59:04.301. Banner 00:59:17.881. `0x34` 00:59:18.196. `txwav` of 3 s of zeros: `0x26` launch 1 at 00:59:25.658, `0x36` body `03`, `played 24000 samples`, launch 2, `0x36` body `04` at 00:59:29.395. Carrier 3.44 s, SNR 39.6 dB, clip 0, offset +1022 Hz. Fundamental 129 Hz, 3rd 47 Hz, 5th 30 Hz, evens about 3 Hz. A 40 Hz low-pass of the steady window has rms 104 Hz and median absolute deviation 103 Hz, so the tops are about ±104 Hz, 0.40 Hz per count. The 1 kHz line is 1.2 Hz. Raw p99 469 Hz is the square's edges. From 0.1 s on, the 1 kHz line stays under 5 Hz. The codec path added the sine on the tone key. It does not create the square.
+
+A = 512 is the next image, one 6 dB step, still a silence key. M17 samples wait until that step shows the deviation scaled and still under ±5 kHz. §6 is not met.
+
+End state: factory image. The tone-key restore's first `0x34` poll was empty after `onSuccess` 00:48:48.703; a later start of SignalDeck printed the banner at 00:51:13.856 and `DMR003.UV4T.V022` at 00:51:14.167. The silence-key restore did the same: `onSuccess` 01:01:45.469, no version on the first poll, banner 01:02:57.784 and `0x34` `DMR003.UV4T.V022` at 01:02:58.095 after a second start. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. VFO 467.625 / 467.625 FM at 01:02:58.648, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. The ES8311 debug node was not written.
+
 ---
 
 ## 11. Review of the 2026-10-23 findings (FW8/FW11/FW16, commit `b8ee26df`)

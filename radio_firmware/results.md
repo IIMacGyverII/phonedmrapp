@@ -729,3 +729,77 @@ This radio's narrow-band DMR outer symbol, 12.5 kHz with `0x30` left at `0x4026`
 ## End state
 
 Factory image restored over R3a2. YModem `onSuccess` at 23:41:58.545. The first version query printed `0x29050000` at 23:42:07.929, then one restart (23:42:10.404, power cycle 23:42:11.429). Banner `开机初始化完成` at 23:42:14.584. `0x34` at 23:42:14.894 is `DMR003.UV4T.V022` (body `44 4D 52 30 30 33 2E 55 56 34 54 2E 56 30 32 32 00`). Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. The takeover wrote analog `0x23` for 162.425 MHz, band 1, power 0, squelch 5 (body `A8 68 AE 09 … 01 00 05`), acked `RX cmd=0x23 rw=0 sr=0` at 23:42:14.968. Voice: Channel 36, NOAA WX4. SignalDeck owns the radio. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched. The ES8311 debug node was not written. §6 is not met.
+
+# R3a3 — the TX-RAM square is on the air; silence drops the codec tone (2026-10-24, 00:36–01:03)
+
+HackRF receive only, 467.385 MHz center, 2.4 MS/s, LNA 24, VGA 38. Phone transmissions were two loads of one image, one 3 s codec tone, and one 3 s silence, all on the 467.625 VFO at low power. Twenty patch tests pass. A was not raised.
+
+## The image
+
+`c7000-txram-dmr`, tag `R3a3`, `DMR003.R3a3.V022.bin`, 378620 bytes. sha256 `667cfd127d3b403192066da8e67c3633905875a7370a56a4fc379f861d43ea40`. File and pushed MD5 `e247b7b428e3635e71ef2a3f65ee9670`.
+
+R3a2 hooked FM key-up. A host `0x26` never calls that function, so the flag stayed clear and the air was the codec tone. This image leaves `+0x3EDFC` and `+0x3074` factory. It replaces the four `bsr 0xe9c` sites inside the flash `0x26` handler:
+
+| Site | Was | Now |
+|---|---|---|
+| `+0x92C8` launch 1, byte `0x38874` == 0 | `bsr 0xe9c` | `bsr on_key` |
+| `+0x92E0` launch 1, byte `0x38874` != 0 | `bsr 0xe9c` | `bsr on_key` |
+| `+0x92AA` launch 2, r7 == 0 | `bsr 0xe9c` | `bsr on_unkey` |
+| `+0x92FA` launch 2, r7 != 0 | `bsr 0xe9c` | `bsr on_unkey` |
+
+`on_key` is at file `+0x5B000` (XIP `0x03075000`), 188 bytes through `+0x5B0BB`. It posts the same event (`bsr 0xe9c` with the handler's r0/r1), stores `RF_MODE` `0x11000104` = `0x10E0` and `WORK_MODE` `0x11000100` = `0x80`, sets `0x11000080` bit 0, clears `FM_BANDWIDTH` `0x11000500` bits 4 and 6, fills `0x16000030` with +256 for 256 samples and −256 for the next 256, writes AT1846S `0x30` = `0x4006` then `0x4026` and `0x58` = `0xBCFD`, and stores PTT = 1. Bit 4 stays clear: the stub contains no `3aa4`. `on_unkey` posts the event, stores PTT = 0, clears bit 0, and writes `0x58` = `0x8405` and `0x30` = `0x7026`. The five factory `0x8405` sites and the DMR site at `+0x2E94` are unchanged. The boot self-test does not send `0x26`.
+
+## Boot
+
+VFO 467.625 / 467.625 FM at 00:36:47.278, low power. HackRF from 00:36:50, 143.47 s, floor power 6.82. YModem `onSuccess` at 00:39:00.214. `0x34` at 00:39:12.867 is `DMR003.R3a3.V022`. Hottest 100 ms bin +0.11 dB, no bin at +6 dB, clip 0. The reboot is inside the file and does not spike. The stub is not on the boot path.
+
+The key capture started immediately after that HackRF was closed and wrote 0 bytes. It is not a measurement. Factory restored over that load: `onSuccess` 00:41:43.451, `0x34` `DMR003.UV4T.V022` at 00:41:56.109, VFO 467.625 at 00:41:58.119.
+
+## The tone key
+
+Second load, same bytes. `onSuccess` 00:46:07.979. `0x34` `DMR003.R3a3.V022` at 00:46:21.386. VFO 467.625 at 00:46:23.272. DIAG `testtone` 3000 ms. `0x26` launch 1 at 00:46:28.923, acked `sr=0` at 00:46:28.929. `0x36` body `03` at 00:46:28.935. `played 24000 samples` at 00:46:32.328. Launch 2 at 00:46:32.330. `0x36` body `04` at 00:46:32.664.
+
+Carrier 3.45 s, SNR 39.8 dB, clip 0, offset +1028 Hz. The steady window drops the first 1.0 s and the last 0.3 s (2.15 s). It is a 999.92 Hz sine of amplitude 2399 Hz, rms 1738 Hz, p99 2727 Hz. Harmonics at 2 kHz and 3 kHz are 0.5 Hz and 0.2 Hz. Under the sine, the square is present:
+
+| Harmonic | Amplitude |
+|---|---|
+| 15.625 Hz | 133 Hz |
+| 31.25 Hz | 2.5 Hz |
+| 46.875 Hz | 50 Hz |
+| 62.5 Hz | 3.1 Hz |
+| 78.125 Hz | 32 Hz |
+
+Noise from 5–40 Hz, excluding the fundamental, has median 0.23 Hz.
+
+The square leads the codec. At t = 0.0 s (100 ms) the p99 is 22974 Hz and the 1 kHz line is 51 Hz: that is the key-up click. At t = 0.1 s the click is gone (p99 445 Hz, rms 183 Hz), the 1 kHz line is 0.7 Hz, and the 15.625 Hz line is 148 Hz. From t = 0.2 s the sine is up. The click is not the stimulus. The steady p99 of 2727 Hz is the sine. A was not raised.
+
+## The silence key
+
+Third load, same bytes. The host file was 3.000 s of zeros, 8 kHz mono 16-bit, 48044 bytes, installed as `tx_silence.wav`. `onSuccess` 00:59:04.301. Banner `开机初始化完成` at 00:59:17.881. `0x34` at 00:59:18.196 is `DMR003.R3a3.V022`. VFO 467.625 at 00:59:20.012. `txwav` at 00:59:25. `0x26` launch 1 at 00:59:25.658, acked `sr=0`. `TX bench wav (3000 ms)`. `0x36` body `03` at 00:59:25.670. `played 24000 samples` at 00:59:29.053. Launch 2 at 00:59:29.055. `0x36` body `04` at 00:59:29.395.
+
+Carrier 3.44 s, SNR 39.6 dB, clip 0, offset +1022 Hz. Same steady window:
+
+| Harmonic | Amplitude |
+|---|---|
+| 15.625 Hz | 129 Hz |
+| 31.25 Hz | 3.7 Hz |
+| 46.875 Hz | 47 Hz |
+| 62.5 Hz | 2.9 Hz |
+| 78.125 Hz | 30 Hz |
+| 1000 Hz | 1.2 Hz |
+| 2000 Hz | 0.4 Hz |
+| 3000 Hz | 0.6 Hz |
+
+A 40 Hz low-pass of that window has rms 104 Hz and median absolute value 103 Hz. The fundamental 129 Hz is `4A/π` for a square of amplitude 101 Hz. The tops are about ±104 Hz. At A = 256 that is 0.40 Hz per count. Raw `|deviation|` is p50 133 Hz, p90 306 Hz, p99 469 Hz: the upper percentiles are the edges of the square, not a second tone. From t = 0.1 s through the end of the carrier the 1 kHz line stays under 5 Hz and the 15.625 Hz line stays near 150 Hz. The first 100 ms is again a click (p99 23502 Hz).
+
+The two keys use the same square. The codec sine is added only when the host sends it. Zeros do not radiate a tone, and they do not remove the square.
+
+## What this does not yet say
+
+The scale is one point. A count of about 6000 would be ±2.4 kHz if the 0.40 Hz/count slope holds, which is inside the ±5 kHz stop, and it is not measured. The edge p99 at this amplitude is 4.6 times the tops. A smooth waveform will not have those edges. The next image is the same stub at A = 512, one 6 dB step, another silence key. M17 samples are not in this image. §6 is not met.
+
+## End state
+
+Factory image restored over the silence key. YModem `onSuccess` at 01:01:45.469. The first takeover printed no `module DMR` line. A second start of SignalDeck printed banner `开机初始化完成` at 01:02:57.784 and `0x34` `DMR003.UV4T.V022` at 01:02:58.095. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. VFO 467.625 / 467.625 FM at 01:02:58.648, low power. SignalDeck owns the radio. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched. The ES8311 debug node was not written.
+
+The tone-key restore had already done the same thing earlier. `onSuccess` at 00:48:48.703, empty `0x34` poll, then a later start of SignalDeck: banner 00:51:13.856, `0x34` `DMR003.UV4T.V022` at 00:51:14.167. The loader now starts SignalDeck a second time when that first poll is empty. The radio was factory before the silence load.

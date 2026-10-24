@@ -4,9 +4,12 @@
 # ui.sh tap "label"     -> taps first node whose text or content-desc equals/contains label
 export MSYS_NO_PATHCONV=1
 A="$LOCALAPPDATA/Android/Sdk/platform-tools/adb.exe"; D="-s ${DEV:-192.168.1.125:5555}"
-"$A" $D shell uiautomator dump /sdcard/ui_fw.xml >/dev/null 2>&1
+rm -f "$TEMP/ui_fw.xml"
+"$A" $D shell uiautomator dump /sdcard/ui_fw.xml >"$TEMP/ui_dump_err.txt" 2>&1 || true
+if ! "$A" $D shell ls /sdcard/ui_fw.xml >/dev/null 2>&1; then echo "uiautomator dump failed"; cat "$TEMP/ui_dump_err.txt"; exit 1; fi
 "$A" $D pull /sdcard/ui_fw.xml "$TEMP/ui_fw.xml" >/dev/null 2>&1
-"$A" $D shell rm /sdcard/ui_fw.xml
+"$A" $D shell rm -f /sdcard/ui_fw.xml >/dev/null 2>&1 || true
+if [ ! -s "$TEMP/ui_fw.xml" ]; then echo "uiautomator pull failed"; exit 1; fi
 python - "$TEMP/ui_fw.xml" "$1" "$2" <<'PY'
 import sys,re,subprocess,os
 x=open(sys.argv[1],encoding='utf-8').read()
