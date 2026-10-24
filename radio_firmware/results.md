@@ -1173,3 +1173,35 @@ The CPU path that selects `0x22` does not take symbols from a buffer it fills. T
 ## End state
 
 The radio was not touched. End state remains the R4a restore: factory image, `0x34` `DMR003.UV4T.V022` at 03:00:58.517, VFO 467.625 / 467.625 FM at 03:00:59.876, low power, no `DMRDEBUG.bin`.
+
+# T2 — bytes 3 and 4 of `0x34808` (2026-10-24)
+
+No image was loaded. Nothing was keyed. The factory image and the OEM BER sender were read.
+
+## The two bytes
+
+The only stores that cover byte 3 or byte 4 are in the initializer at `+0x11E0`. It loads the base `0x34808` at `+0x120A`. A walk of the 602 real `lrw`s of that address, across 141 pool slots, found six stores and no others. The pointer is written to the stack at `+0x0B308` and is not saved as a global.
+
+RAM flag `0x324D7` selects the pair. `r3` is 0 before the compare. Flag 1 takes `+0x13E4`: byte 3 = 1, byte 4 = 0. Flag 2 takes `+0x13F2`: byte 3 = 0, byte 4 = 1. Any other value falls through `+0x124A` and writes both bytes 0.
+
+Both channel setups call the initializer before they read the struct. `+0x176FC` and `+0x17B62` are `bsr 0x11E0`. Boot zeroes IRAM from `0x31AF4` through `0x4DAB0`, and `0x324D7` sits in that range, so the flag starts at 0.
+
+## Who sets the flag
+
+The address has five `lrw`s. The one at `+0x1236` is the initializer's read. None of the five stores the value 2, so the byte-4 arm is present and unused by these writers. A copy that never names the address is still unnamed.
+
+Command `0x3F` is the OEM BER test (`TEST_BIT_ERROR_RATE`, literal 63). Its thunk is `+0xAAEE` (dispatcher table at file `+0x38240`, index 29). The handler at `+0x8FA8` reads the first body byte. Value 1 stores the flag as 1, stores `0x3CE6F` as 0, and passes the string at file `+0x38444`, `宏睿误码率测试`. Value 2 does `movi r3, 1` before the store, so the flag is 1 again, stores `0x3CE6F` as 1, and passes file `+0x38454`, `o.153误码率测试`. Both strings sit immediately before `DMR003.UV4T.V022` at file `+0x38464`. The OEM screen `FragmentLocalTestBiteErrorRateActivity` sends body byte 2 on open. Either value makes the next channel setup write byte 3 = 1 and byte 4 = 0, and that setup then stores `WORK_MODE` `0x22`. The modem generates the pattern. The CPU still fills no symbol buffer on that path.
+
+`+0x7EF0` is the other writer. It stores 1 only when its `r2` is 0 and byte 8 of its argument is 1, and it clears the flag when `r2` is 0 and that byte is some other value. The `0x21` handler at `+0x8BE4` calls it. Sub-command 34 (table `0x030520D8`, stub `+0x8C5C`) passes `r2` from the return of `+0x8A44`. The other site, `+0x8C34`, stores 0 at argument byte 8 and then calls. The phone app has no `0x21` sender. This writer was not followed past those two sites.
+
+## The normal path
+
+With the flag at 0 the initializer writes byte 3 = 0 and byte 4 = 0. The first setup then stores `WORK_MODE` `0x6A` when byte 2 is 4, and `0x6E` otherwise. After that store it calls `+0x18218`. That function reads byte 5, zeros three bytes at `0x4D404+0xF9` when byte 5 is 1, and calls `+0x186BC` and `+0x28904`. `+0x186BC` zeros the record at `0x4C7BC`, calls `+0x1AE8` with 3080, and returns. `+0x28904` zeros the record at `0x4D318`, clears 27 bytes at `0x4D3AD` and at `0x4D3C8`, calls `+0x1B76C` (one byte at `0x4C7E8+2`), and returns. `+0x18218` then writes bits in `0x11000404` and `0x11000408`. When byte 1 is nonzero it sets bit 8 of `WORK_MODE` and stores `0x1100039C` = `0x1E07F`. It calls `+0x18068`, prints `close slot.` from file `+0x38A6C`, and returns. When byte 2 is 4 the setup also calls `+0x19438`, which sets bit 4 of `0x11000400`, stores `0x1100040C` = `0x20000000`, sets bit 1 of `0x11000404`, and returns. None of these functions writes a symbol buffer.
+
+## What this does not yet say
+
+A modem FIFO the CPU never touches is still unnamed. T2 is closed on the reading above: `0x22` is the built-in BER test, and the path a normal channel takes fills no symbol buffer either. No `0x22` image was built. §6 is not met.
+
+## End state
+
+The radio was not touched. End state remains the R4a restore: factory image, `0x34` `DMR003.UV4T.V022` at 03:00:58.517, VFO 467.625 / 467.625 FM at 03:00:59.876, low power, no `DMRDEBUG.bin`.
