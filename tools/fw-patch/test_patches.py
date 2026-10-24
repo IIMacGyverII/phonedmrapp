@@ -174,6 +174,12 @@ class PatchTest(unittest.TestCase):
         pairs.append(["c7000-txram-dmr-rrc", "c7000-txram-m17-wake"])
         pairs.append(["c7000-txram-m17-lsf", "c7000-txram-m17-wake"])
         pairs.append(["c7000-txram-m17-stream", "c7000-txram-m17-wake"])
+        # R4e uses the same windows as R4d. The cursor wraps instead of ending.
+        pairs.extend([[left, "c7000-txram-m17-loop"] for left in partners])
+        pairs.append(["c7000-txram-dmr-rrc", "c7000-txram-m17-loop"])
+        pairs.append(["c7000-txram-m17-lsf", "c7000-txram-m17-loop"])
+        pairs.append(["c7000-txram-m17-stream", "c7000-txram-m17-loop"])
+        pairs.append(["c7000-txram-m17-wake", "c7000-txram-m17-loop"])
         for names in pairs:
             with self.subTest(names=names), self.assertRaises(SystemExit):
                 build.build(names, "UVt0", self.cfg)
@@ -950,6 +956,94 @@ class PatchTest(unittest.TestCase):
         for off, n in (
             (0x92C8, 4), (0x92E0, 4), (0x92AA, 4), (0x92FA, 4),
             (0x18B5C, 4), (0x18B68, 4), (0x5B000, 432), (0x5B400, 4860),
+        ):
+            allowed.update(range(off, off + n))
+        changed = {i for i, (a, b) in enumerate(zip(self.fac, img)) if a != b}
+        self.assertTrue(changed <= allowed, sorted(changed - allowed)[:12])
+
+    def test_txram_m17_loop_wraps_the_stream_until_unkey(self):
+        # R4e. Same gates as R4d. The cursor wraps at the tail instead of ending.
+        # Tag R4e0. The task entry itself is not patched.
+        import m17_stream_table
+        import m17
+
+        img, _ = build.build(["c7000-txram-m17-loop"], "R4e0", self.cfg)
+        xip = 0x0301A000
+        stub_end = 0x5B170
+        self.assertEqual(len(img), len(self.fac))
+        self.assertEqual(bsr32_target(self.fac, 0x18B5C), 0x18B70)
+        self.assertEqual(bsr32_target(self.fac, 0x18B68), 0x3D20)
+        for site in (0x92C8, 0x92E0):
+            self.assertEqual(bsr32_target(self.fac, site), 0xE9C)
+            self.assertEqual(bsr32_target(img, site), 0x5B090)
+        for site in (0x92AA, 0x92FA):
+            self.assertEqual(bsr32_target(self.fac, site), 0xE9C)
+            self.assertEqual(bsr32_target(img, site), 0x5B128)
+        self.assertEqual(bsr32_target(img, 0x18B5C), 0x5B000)
+        self.assertEqual(bsr32_target(img, 0x18B68), 0x5B006)
+        self.assertEqual(int.from_bytes(img[0x5B000:0x5B002], "little"), 0x14D4)
+        self.assertEqual(int.from_bytes(img[0x5B006:0x5B008], "little"), 0x14D4)
+        self.assertEqual(int.from_bytes(img[0x5B090:0x5B092], "little"), 0x14D4)
+        self.assertEqual(int.from_bytes(img[0x5B128:0x5B12A], "little"), 0x14D4)
+        stub = img[0x5B000:stub_end]
+        bsrs = []
+        for at in range(0x5B000, stub_end - 3, 2):
+            hi = int.from_bytes(img[at:at + 2], "little")
+            if hi >> 10 != 0b111000:
+                continue
+            bsrs.append(bsr32_target(img, at))
+            if bsr32_target(img, at) == 0xFD011220:
+                self.assertEqual((at + xip + bsr32_disp(img, at)) & 0xFFFFFFFF, 0x2B220)
+        self.assertEqual(sorted(set(bsrs)), [0xE9C, 0xFD011220])
+        self.assertEqual(bsrs.count(0xE9C), 2)
+        self.assertEqual(bsrs.count(0xFD011220), 5)
+        for addr, n in (
+            (0x4DAAC, 3), (0x1100039C, 2), (0x03032B70, 1),
+            (0x03075800, 1), (0x030766E8, 1), (0x030757E8, 1),
+            (0x03075400, 1), (0x1100056C, 1),
+        ):
+            self.assertEqual(stub.count(addr.to_bytes(4, "little")), n, hex(addr))
+        self.assertEqual(stub.count((0x030766FC).to_bytes(4, "little")), 0)
+        self.assertNotIn((0x03032A70).to_bytes(4, "little"), stub)
+        self.assertNotIn(bytes.fromhex("00e0f841"), stub)
+        self.assertEqual(stub.count((0x3AAF).to_bytes(2, "little")), 1)
+        self.assertEqual(stub.count((0x3A8F).to_bytes(2, "little")), 1)
+        self.assertEqual(img[0x1F30:0x1F34], self.fac[0x1F30:0x1F34])
+        self.assertEqual(img[0x18A70:0x18A78], self.fac[0x18A70:0x18A78])
+        pcm = m17_stream_table.counts()
+        pred = m17_stream_table.prediction(pcm)
+        self.assertEqual(pred["peak_count"], 6451)
+        self.assertLess(pred["stop_hz"], 5000)
+        self.assertLess(int(pcm[0]), 0)
+        self.assertEqual(img[0x5B400:0x5C6FC], m17_stream_table.table_bytes(pcm))
+        self.assertEqual(img[stub_end:0x5B400], self.fac[stub_end:0x5B400])
+        self.assertEqual(img[0x3074:0x3078], self.fac[0x3074:0x3078])
+        self.assertEqual(img[0x3EDFC:0x3EE02], self.fac[0x3EDFC:0x3EE02])
+        self.assertEqual(img[0x38464:0x38474], b"DMR003.R4e0.V022")
+        # Prefill 0..511, then 256-sample halves. At index 2420 wrap to 500.
+        indexes = list(range(512))
+        cursor = 512
+        while len(indexes) < 16000:
+            if cursor >= 2420:
+                cursor = 500
+            self.assertLess(cursor, 2420)
+            indexes.append(cursor)
+            cursor += 1
+        self.assertNotIn(2420, indexes)
+        self.assertGreaterEqual(indexes.count(500), 2)
+        played = pcm[indexes]
+        air = -m17_stream_table.HZ_PER_COUNT * played.astype(float)
+        got = m17.decode_transmission(air, 8000, verbose=False)
+        self.assertIsNotNone(got["lsf"])
+        self.assertTrue(got["lsf"][2])
+        fns = [f[0] for f in got["frames"]]
+        self.assertGreaterEqual(len(fns), 20)
+        self.assertTrue(set(fns) <= {0, 1, 2, 3, 4, 0x8005})
+        self.assertTrue(all(f[1] == bytes(16) and f[2] == 0 for f in got["frames"]))
+        allowed = set(range(0x3846B, 0x3846F))
+        for off, n in (
+            (0x92C8, 4), (0x92E0, 4), (0x92AA, 4), (0x92FA, 4),
+            (0x18B5C, 4), (0x18B68, 4), (0x5B000, 368), (0x5B400, 4860),
         ):
             allowed.update(range(off, off + n))
         changed = {i for i, (a, b) in enumerate(zip(self.fac, img)) if a != b}

@@ -1560,3 +1560,33 @@ The aimed waveform over 0.04–0.36 s, lag search ±30 ms, matches at r² 0.877,
 ## End state
 
 Factory image restored. YModem `onSuccess` 06:15:08.254. `0x34` `DMR003.UV4T.V022` at 06:15:20.787. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. The loader's channel write was followed by the VFO tune: 467.625 / 467.625 FM at 06:15:22.616, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met: one transmission produced one link-setup frame and six stream frames, and the acceptance is 85 of 90 frames across three transmissions. `0x3D` still waits. The ES8311 debug node was not written.
+
+# R4e — the wake refill loops the M17 stream until unkey, tag R4e0 (2026-10-24, 06:36–06:44)
+
+HackRF receive only, 467.385 MHz center, 2.4 MS/s, LNA 24, VGA 38. One boot and one 3 s silence key, both at 467.625 MHz, low power. Thirty-two patch tests passed before the load. The ES8311 debug node was not written.
+
+The stub is `c7000-txram-m17-loop` at file `+0x5B000` (368 bytes). `on_key` is at `+0x5B090` and `on_unkey` is at `+0x5B128`. The four `0x26` sites are the only key-up calls. `on_key` copies the first 512 samples into both TX-RAM halves, sets the same FM words R4b sets, stores PTT = 1, writes the next-sample cursor at IRAM `0x4DAAC`, sets mask bit 15 of `0x1100039C`, and returns. The cursor is 0 at boot, so a wake copies nothing until that store. `on_unkey` clears the cursor and bit 15 before the factory unkey.
+
+The image hooks the same two per-wake calls as R4d. File `+0x18B5C` goes to `on_wake_disp`, which returns into the dispatcher at `0x03032B70`. File `+0x18B68` goes to `on_wake_skip`, which returns to the caller. The task entry `+0x18A70` is unchanged, and so is the task-creation pool at `+0x1F30`. A wake copies 256 samples only when the cursor is set, bit 15 of the saved word at `0x4C7E0` is set, bit 0 of `0x11000080` is set, and `FM_ADDR_SW` (`0x1100056C`) is 1 or 2. Value 1 writes the low half (`0x16000030`). Value 2 writes the high half (`0x16000230`). While that half is filling, a cursor at or past sample 2420 (`0x030766E8`, the six-symbol tail) is set back to sample 500 (`0x030757E8`, the first stream frame) and the same half continues. There is no zero half and no sentinel cursor. No `+0x3074`, no `+0x3EDFC`, bit 4 stays clear.
+
+The table is the R4d table: file `+0x5B400` through the end of the image, 2430 samples, 1458 symbols, 303.75 ms. One hundred eight symbols of `+3`, `-3` preamble, one link-setup frame, six zero-payload stream frames (frame numbers 0, 1, 2, 3, 4, and `0x8005`), and six zero tail symbols. Source and destination are the research modem's bench callsign. Each stored count is `-round(Hz / 0.54)`. The peak count is 6451. The aimed peak is 3483.5 Hz. At 0.55 Hz per count the linear prediction is 3548.1 Hz. The gap `+0x5B170`–`+0x5B400` is still factory zeros and is not part of the patch. The prefill takes samples 0–511 and leaves the cursor at sample 512. Later loops replay samples 500–2419. Sample 2420 is never read.
+
+`DMR003.R4e0.V022.bin`, 378620 bytes. sha256 `956f8d6d5a62845505a07f872c129327109f5f7860842095411db340f86926cd`. File and pushed MD5 `a842958f3b37594727d547c380222b51`.
+
+## Boot
+
+VFO 467.625 / 467.625 FM at 06:36:41.974, low power. HackRF probe 9600000 bytes. Boot capture from 06:36:47, 240.0 s, floor power 6.82. YModem `onSuccess` at 06:38:55.629. Banner `开机初始化完成` at 06:39:07.687. `0x34` at 06:39:08.007 is `DMR003.R4e0.V022`. Hottest 100 ms bin +0.11 dB, at 203.4 s, clip 0, nothing at +6 dB. That bin is spread across the capture bandwidth (peak −16828 Hz, occupied bandwidth −24000..23998 Hz), so it is the noise floor. The stub does not run at boot.
+
+## Silence key
+
+VFO confirmed again at 06:41:11.171. `txwav` silence, 3000 ms, at 06:41:16.825. `0x26` launch 1 ack at 06:41:16.829, 4 ms after that log. `0x36` body `03` at 06:41:16.835, 6 ms after the ack. R4c held this same ack for 358 ms. Here `on_key` returned at the R4b and R4d rate, and the carrier was up for the key. Unkey launch 2 at 06:41:20.233, ack at 06:41:20.238 (5 ms), `0x36` body `04` at 06:41:20.566. The carrier is up for 3.45 s. SNR 39.3 dB, clip 0, carrier offset +1383 Hz.
+
+The steady window, from 1.0 s after key-up to 0.3 s before release, is 2.154 s. RMS 1614 Hz. Steady p99 3075 Hz. That window is the looped stream, not a zero tail. The 100 ms slice at key-up has p99 22987 Hz. That is the key click and sits outside the steady window. The stop stays clear. Every 100 ms slice from 0.1 s through 3.3 s stays modulated: p99 2959–3168 Hz, rms 1593–1635 Hz. The highest of those is 3168 Hz, at 2.5 s. The lowest is 2959 Hz, at 2.6 s. There is no drop to the R4d tail. In the steady window the 1 kHz line is 150 Hz and the 3 kHz line is 33 Hz. The 500 Hz line is 262 Hz and the 2 kHz line is 316 Hz. Those lines are the stream, not a sine.
+
+The 240 ms autocorrelation of the keyed audio is 0.993, so the six stream frames are repeating. The burst from 0.15 s to 0.70 s after key-up has p99 3071 Hz. The aimed-waveform fit on 0.04–1.20 s, lag search ±30 ms, matches the looped table at r² 0.888, polarity +1, lag −17.4 ms, gain 0.83.
+
+A decode of 0.04–1.20 s accepts the link setup (sync 0.989) and 27 stream frames. The link-setup CRC is true. Both callsigns match the research modem's bench callsign. The 16-byte payloads are zeros. Golay error is 0 on every frame. The frame numbers are 0, 1, 2, 3, 4, and `0x8005` (32773), four times, then 0, 1, 2. A decode of the steady window, from 1.0 s, has no link setup in it, which is expected, and accepts 53 stream frames at Golay error 0, payloads zero, frame numbers only in that same set. The two windows overlap from 1.0 s to 1.20 s, so the counts are not added. Fifty-three frames in 2.15 s is the 40 ms spacing held for the whole key. The end-of-transmission frame repeats every loop. The decoder used here does not stop on that bit. A real receiver might. The peak was not raised. The next image loops frames 0–4 only, at this peak and these gates.
+
+## End state
+
+Factory image restored. YModem `onSuccess` 06:43:44.407. `0x34` `DMR003.UV4T.V022` at 06:43:56.776. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. The loader's channel write was followed by the VFO tune: 467.625 / 467.625 FM at 06:43:58.625, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met: one transmission produced the link setup and a loop of six frames, and the acceptance is 85 of 90 frames across three transmissions. `0x3D` still waits. The ES8311 debug node was not written.
