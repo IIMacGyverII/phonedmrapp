@@ -26,6 +26,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 - HackRF **receive only**.
 - Loading test images built by `tools/fw-patch` and restoring the factory image.
 
+**Extended by the bench, 2026-10-24:** the owner said to set the approvals needed to make M17 transmit work and to continue. A free command slot may be hooked, and SignalDeck may send that command from a bench DIAG. The hook must do nothing at boot and must not key by itself. Still only 467.625 MHz, low power, HackRF receive only.
+
 **Never:**
 - any other transmit frequency;
 - high power;
@@ -52,7 +54,7 @@ The radio may **stay on 467.625 MHz, low power**: there is no need to return to 
 
 ## Current task
 
-T1's fixed stream is complete on this path. R4k (tag `R4k0`) is done. Do not reload it. `drop_ptt` posts status byte 4 through file `+0x7E08`. `SEND_STOP` arrived 312 ms after the unkey ack. One frame `0x8005` at 3.686 s, score 0.999, Golay error 0, payload bytes 0 through 15. Steady p99 2922 Hz. R4k0 stays loaded. VFO 467.625 at 10:49:54.172. Do not build another image of the same waveform. Do not add a lead-in. Do not raise the peak. `0x3D` still waits on a SignalDeck sender, which is outside this approval. T4 stays closed because T1 has not failed. §6 is not met by one transmission. The PIC slot for `+0x54BB0` is still not a stored pointer. Do not write the ES8311 node. Restore the factory image for a stop, a bad banner or tag, boot radiation, or when the owner asks.
+T1's fixed stream is complete. Do not rebuild it. Command `0x3D` is already a real firmware handler (table index `cmd - 0x22`, file `+0xAAFE`). Do not replace it. Command `0x40` is an empty `pop`. R4l (tag `R4l0`) pointed that slot at a thunk in the zeros at `+0x35F64`. Those zeros are the tail of a data table. YModem `onSuccess` at 11:21:50.172, then no `0x34`. Factory restored: `0x34` `DMR003.UV4T.V022` at 11:27:03.083, VFO 467.625 at 11:27:05.024. Do not reload R4l0. The next image needs a hole that is not a table. SignalDeck DIAG `cmdbyte` can send one command. It does not key. T4 stays closed. Do not write the ES8311 node. §6 is not met.
 
 ## Goal and route list (owner, 2026-10-23: "discover every possible way we can get M17 to work")
 
@@ -77,7 +79,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-R4k, tag `R4k0`, one 3 s silence key at 467.625 MHz, low power. The unkey ack returned in 5 ms. `SEND_STOP` followed 312 ms later. One frame `0x8005` at 3.686 s, score 0.999, Golay error 0, payload bytes 0 through 15. Steady p99 2922 Hz. From 0.04 s, 27 stream frames, Golay error 0; from 1.0 s, 61. R4k0 stays loaded. VFO 467.625 at 10:49:54.172. §6 is not met.
+R4l, tag `R4l0`, was loaded and did not answer `0x34` after YModem `onSuccess` at 11:21:50.172. The thunk sat in a data table at `+0x35F64`. Factory restored: `0x34` `DMR003.UV4T.V022` at 11:27:03.083, VFO 467.625 at 11:27:05.024. Nothing was keyed. Do not reload R4l0. §6 is not met.
 
 ## Owner question
 

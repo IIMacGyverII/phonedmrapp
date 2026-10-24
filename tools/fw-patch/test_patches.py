@@ -1615,6 +1615,18 @@ class PatchTest(unittest.TestCase):
         self.assertEqual(diff, [0x3846B, 0x3846C, 0x3846D, 0x3846E, off])
         self.assertEqual(img[0x38464:0x38474], b"DMR003.R301.V022")
 
+    def test_cmd40_ack_replaces_the_empty_slot(self):
+        # Command 0x40's table slot was an empty pop. The thunk acks and does not key.
+        img, _ = build.build(["c7000-cmd40-ack"], "R4l0", self.cfg)
+        self.assertEqual(len(img), len(self.fac))
+        self.assertEqual(int.from_bytes(img[0x382B8:0x382BC], "little"), 0x0304FF64)
+        self.assertEqual(img[0x35F64:0x35F6C], bytes.fromhex("136c00e003009514"))
+        self.assertEqual(bsr32_target(img, 0x35F72), 0x8E7C)
+        self.assertEqual(img[0x35F76:0x35F78], bytes.fromhex("9014"))
+        self.assertEqual(img[0xAAFE:0xAB0E], self.fac[0xAAFE:0xAB0E])
+        self.assertEqual(img[0x5AEFC:0x5B000], self.fac[0x5AEFC:0x5B000])
+        self.assertEqual(img[0x38464:0x38474], b"DMR003.R4l0.V022")
+
     def test_refuses_bad_tag(self):
         for tag in ("UV4T", "UV4", "UV-1"):
             with self.subTest(tag=tag), self.assertRaises(SystemExit):
