@@ -2024,3 +2024,34 @@ The line is weak near 300 Hz and full from about 720 Hz through 1700 Hz. Above 2
 ## End state
 
 RC20 stays loaded. VFO 467.625 / 467.625 FM at 15:11:19.770, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. The phone was not keyed.
+
+# R-C step 3 — both halves, byte copy, tag RC30 (2026-10-24, 15:32–15:38)
+
+The RC20 copy was `ld.w` on byte-wide RAM, so those 512 bytes were the high byte of every second sample. Op 5 now copies each half with `ld.b` × 512 and sends two replies. Each body is 512 sample bytes, the `FM_SQL` word, the half index and the final switch value. Every variant stores `WORK_MODE` `0x80` and restores it. Variant 2 also clears `FM_BANDWIDTH` (`0x11000500`) bits 6 and 4 for the capture. Variant 3 writes AT1846S `0x58` = `0xBCFD` and writes `0x8405` back. Variant 4 does both. A timeout restores the same words. The phone was not keyed. HackRF transmit was 467.625 MHz, 2 MS/s, deviation 2.5 kHz, TX VGA 20, amp off, with a dummy burst before each variant.
+
+`DMR003.RC30.V022.bin`, 378620 bytes. sha256 `6b0d873bc5526d24495d801f86f2b800b6cc62a2ac71c7ca495411c863a58ade`. Pushed MD5 `ae80df7dbbfe2051ea0ecd37baedb980`.
+
+## Boot and the quiet read
+
+VFO 467.625 / 467.625 FM at 15:32:16.209, low power, before the load. YModem `onSuccess` at 15:34:28.467. Banner `开机初始化完成` at 15:34:42.050. `0x34` at 15:34:42.361 is `DMR003.RC30.V022`. Boot peak 0.10 dB. The quiet variant 0 reply at 15:35:08.263 is two bodies of 518 bytes, sr=0. Each half is 256 int16. The `xx 00 00 00` groups are 0 and 3 of 128. Idle means are −8 and −9, rms 17 and 5. Receive peak 0.06 dB. The other three variants are the same kind of idle (rms 4–59) and their receive peaks are 0.03–0.05 dB. `FM_SQL` on a quiet half is 4.
+
+Both halves carry the same tone when a tone is present. A 1 kHz capture has no seam on either half. The switch byte is 1 or 2 from call to call. The finished half and the half the register names are both live audio.
+
+## Tones
+
+Levels are the rms of one half relative to that variant's 1 kHz rms. The half is the one with the stronger 1 kHz rms. 300 Hz falls in the 312.5 Hz bin.
+
+| Variant | 1 kHz rms | 300 Hz | 100 Hz | 50 Hz |
+| --- | --- | --- | --- | --- |
+| 0, plain | 6881 | +11.1 dB | −32.2 dB | −30.2 dB |
+| 2, band-pass bits clear | 7643 | +9.2 dB | −31.5 dB | −31.0 dB |
+| 3, `0x58` = `0xBCFD` | 6877 | +11.1 dB | −29.0 dB | −34.9 dB |
+| 4, both | 6889 | +11.0 dB | −17.6 dB | −4.0 dB |
+
+Variant 2's other half does peak at 94 Hz, 29 dB over its own median, and that rms is still −22 dB against its 1 kHz. Variant 4's −17.6 dB and −4.0 dB rows are the halves that also show a seam, so those rms figures are not a clean tone. No variant puts a 100 Hz line within 6 dB of its 1 kHz line.
+
+The plain sweep tracks the chirp: expected 747, 1241, 1735, 2228 and 2623 Hz come back as 750, 1219, 1719, 2219 and 2594 Hz. The 293 Hz point does not. There is no fold above 2 kHz. The RC20 fold was the word read.
+
+## End state
+
+100 Hz is not within 6 dB of 1 kHz in any variant. R-C closes on that measurement. The receive side stays the audio-path equaliser. RC30 stays loaded. VFO 467.625 / 467.625 FM at 15:38:49.337, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. The phone was not keyed.

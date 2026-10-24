@@ -5,14 +5,15 @@
  * in bits 7:6 (01 = +3, 00 = +1, 10 = -1, 11 = -3). 2 reads the fill, the
  * underrun count and the last error. 3 resets the ring. 4 renders: the next
  * two bytes are a sample count N, 1..256, and the reply body is 2N bytes in
- * TX-RAM order, taken from the scratch at 0x4AC00. 5 returns one FM receive
- * half. The next byte is 0 to store WORK_MODE 0x80, or 1 to store 0x16A.
- * It saves that word, waits until FM_ADDR_SW has taken two values, copies
- * the half that register is not pointing at into 0x4AC00, restores the word,
- * and replies with the 512 bytes. The reply frame is built at 0x4AE00, not
- * on the stack. Op 5 does not write PTT. Anything else, including 0, is
- * refused. Nothing in this command keys. A clear cursor at 0x4DAAC does
- * nothing, including at boot.
+ * TX-RAM order, taken from the scratch at 0x4AC00. 5 returns both FM
+ * receive halves, each as 256 big-endian int16 copied with ld.b. The next
+ * byte is 0, 2, 3 or 4. Every variant stores WORK_MODE 0x80 and restores
+ * it. 2 and 4 also clear FM_BANDWIDTH bits 6 and 4 for the capture. 3 and
+ * 4 also store AT1846S 0x58 as 0xBCFD and write 0x8405 back. Each reply
+ * carries one half, FM_SQL, the half index and the switch. The frame is
+ * built at 0x4AE00, not on the stack. Op 5 does not write PTT. Anything
+ * else, including 1, is refused. Nothing in this command keys. A clear
+ * cursor at 0x4DAAC does nothing, including at boot.
  *
  * The ring is 2048 signed bytes at 0x4A400. 0x4A3E4 is the write count,
  * 0x4A3E8 the next symbol base, 0x4A3EC the phase, 0x4A3F0 the underrun
@@ -199,18 +200,53 @@ store40:
 	bt	.Lbad
 	ld.b	r1, (r7, 9)
 	cmpnei	r1, 0
-	bt	.Lm16a
-	movi	r0, 128
-	br	.Lwm
-.Lm16a:
-	cmpnei	r1, 1
+	bt	.Lv2
+	br	.Lvok
+.Lv2:
+	cmpnei	r1, 2
+	bt	.Lv3
+	br	.Lvok
+.Lv3:
+	cmpnei	r1, 3
+	bt	.Lv4
+	br	.Lvok
+.Lv4:
+	cmpnei	r1, 4
 	bt	.Lbad
-	movi	r0, 181
-	lsli	r0, 1
-.Lwm:
+.Lvok:
+	subi	r14, 16
+	st.b	r1, (r14, 12)
 	lrw	r4, 0x11000100
 	ld.w	r5, (r4, 0)
+	st.w	r5, (r14, 0)
+	movi	r0, 128
 	st.w	r0, (r4, 0)
+	cmpnei	r1, 2
+	bt	.Lnb2
+	br	.Lbw
+.Lnb2:
+	cmpnei	r1, 4
+	bt	.Lnobw
+.Lbw:
+	lrw	r4, 0x11000500
+	ld.w	r5, (r4, 0)
+	st.w	r5, (r14, 4)
+	bclri	r5, 4
+	bclri	r5, 6
+	st.w	r5, (r4, 0)
+.Lnobw:
+	ld.b	r1, (r14, 12)
+	cmpnei	r1, 3
+	bt	.Ln58a
+	br	.Lw58
+.Ln58a:
+	cmpnei	r1, 4
+	bt	.Lno58
+.Lw58:
+	movi	r0, 88
+	movi	r1, 48381
+	.short	0xE000, 0x0B22
+.Lno58:
 	movi	r6, 1
 	lsli	r6, 22
 	movi	r4, 0
@@ -237,34 +273,100 @@ store40:
 	addi	r3, 1
 	cmpnei	r3, 2
 	bt	.Lspin
-	cmpnei	r4, 1
-	bt	.Llow
-	lrw	r1, 0x160006e0
-	br	.Lcpy
-.Llow:
+	st.b	r4, (r14, 13)
+	lrw	r4, 0x11000508
+	ld.w	r5, (r4, 0)
+	st.w	r5, (r14, 8)
 	lrw	r1, 0x160004e0
-.Lcpy:
-	lrw	r6, 0x4ac00
-	movi	r3, 128
-.Lcw:
-	ld.w	r0, (r1, 0)
-	st.w	r0, (r6, 0)
-	addi	r1, 4
-	addi	r6, 4
+	lrw	r6, 0x4ae00
+	addi	r6, 8
+	movi	r3, 1
+	lsli	r3, 9
+.Lcl:
+	ld.b	r0, (r1, 0)
+	st.b	r0, (r6, 0)
+	addi	r1, 1
+	addi	r6, 1
 	subi	r3, 1
 	cmpnei	r3, 0
-	bt	.Lcw
-	br	.Lback
+	bt	.Lcl
+	lrw	r1, 0x160006e0
+	lrw	r6, 0x4ac00
+	movi	r3, 1
+	lsli	r3, 9
+.Lch:
+	ld.b	r0, (r1, 0)
+	st.b	r0, (r6, 0)
+	addi	r1, 1
+	addi	r6, 1
+	subi	r3, 1
+	cmpnei	r3, 0
+	bt	.Lch
+	bsr	.Lrest
+	movi	r5, 0
+	bsr	.Lsendh
+	lrw	r1, 0x4ac00
+	lrw	r0, 0x4ae00
+	addi	r0, 8
+	movi	r3, 1
+	lsli	r3, 9
+.Lfh:
+	ld.b	r2, (r1, 0)
+	st.b	r2, (r0, 0)
+	addi	r1, 1
+	addi	r0, 1
+	subi	r3, 1
+	cmpnei	r3, 0
+	bt	.Lfh
+	movi	r5, 1
+	bsr	.Lsendh
+	addi	r14, 16
+	addi	r14, 4
+	pop	r4-r7, r15
 .Lto:
-	lrw	r4, 0x11000100
-	st.w	r5, (r4, 0)
+	bsr	.Lrest
+	addi	r14, 16
 	br	.Lbad
-.Lback:
+.Lrest:
+	lrw	r4, 0x4a3f8
+	st.w	r15, (r4, 0)
 	lrw	r4, 0x11000100
+	ld.w	r5, (r14, 0)
 	st.w	r5, (r4, 0)
+	ld.b	r1, (r14, 12)
+	cmpnei	r1, 2
+	bt	.Lrb2
+	br	.Lrbw
+.Lrb2:
+	cmpnei	r1, 4
+	bt	.Lnrbw
+.Lrbw:
+	lrw	r4, 0x11000500
+	ld.w	r5, (r14, 4)
+	st.w	r5, (r4, 0)
+.Lnrbw:
+	ld.b	r1, (r14, 12)
+	cmpnei	r1, 3
+	bt	.Lrs3
+	br	.Lrs58
+.Lrs3:
+	cmpnei	r1, 4
+	bt	.Lrxdone
+.Lrs58:
+	movi	r0, 88
+	movi	r1, 33797
+	.short	0xE000, 0x0B22
+.Lrxdone:
+	lrw	r4, 0x4a3f8
+	ld.w	r15, (r4, 0)
+	jmp	r15
+.Lsendh:
+	lrw	r4, 0x4a3f8
+	st.w	r15, (r4, 0)
 	lrw	r4, 0x4ae00
 	movi	r2, 104
 	st.b	r2, (r4, 0)
+	ld.w	r7, (r14, 16)
 	ld.b	r2, (r7, 1)
 	st.b	r2, (r4, 1)
 	movi	r2, 0
@@ -274,34 +376,33 @@ store40:
 	st.b	r2, (r4, 5)
 	movi	r2, 2
 	st.b	r2, (r4, 6)
-	movi	r2, 0
+	movi	r2, 6
 	st.b	r2, (r4, 7)
-	lrw	r1, 0x4ac00
+	ld.w	r2, (r14, 8)
 	mov	r0, r4
 	addi	r0, 8
-	movi	r3, 128
-.Lfc:
-	ld.w	r2, (r1, 0)
+	movi	r3, 1
+	lsli	r3, 9
+	addu	r0, r3
 	st.w	r2, (r0, 0)
-	addi	r1, 4
-	addi	r0, 4
-	subi	r3, 1
-	cmpnei	r3, 0
-	bt	.Lfc
+	st.b	r5, (r0, 4)
+	ld.b	r2, (r14, 13)
+	st.b	r2, (r0, 5)
 	movi	r2, 16
-	st.b	r2, (r0, 0)
+	st.b	r2, (r0, 6)
 	movi	r0, 1
 	lsli	r0, 9
-	addi	r0, 9
+	addi	r0, 15
 	mov	r1, r4
 	.short	0xE000, 0x8E5C
 	mov	r0, r4
 	movi	r1, 1
 	lsli	r1, 9
-	addi	r1, 9
+	addi	r1, 15
 	.short	0xE000, 0x7DE8
-	addi	r14, 4
-	pop	r4-r7, r15
+	lrw	r4, 0x4a3f8
+	ld.w	r15, (r4, 0)
+	jmp	r15
 .Lbad:
 	ld.w	r7, (r14, 0)
 	ld.b	r0, (r7, 1)

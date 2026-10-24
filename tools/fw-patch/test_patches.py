@@ -1799,7 +1799,7 @@ class PatchTest(unittest.TestCase):
         import m17_rrc
         img, _ = build.build(["c7000-cmd40-sym"], "R4t0", self.cfg)
         self.assertEqual(len(img), len(self.fac))
-        blob = img[0x5AEFC:0x5B600]
+        blob = img[0x5AEFC:0x5C200]
         self.assertIn(m17_rrc.coeff_bytes()[:90], blob)
         self.assertIn(bytes.fromhex("0103fffd"), blob)
         # ld.hs r0, (r4, 0) then mult r1, r0. ld.h would zero-extend the tap.
