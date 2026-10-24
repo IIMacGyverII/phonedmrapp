@@ -653,3 +653,21 @@ So the C7000-made modulation does not go through the coupling that cuts FM audio
 **R4 design: sound.** The rate budget (27 % of the line) and the shaper size fit. Build it only after R3.
 
 **`es8311_store`:** a write with count 0 is a **register read**: the value goes to the kernel log, and nothing is written to the codec. That is safe to use for reading the ADC high-pass registers (`0x1B`/`0x1C`) for the receive side, but it is still a write to a debug node, so the owner decides. Never use a non-zero count without the owner's approval: that path writes the codec.
+
+## 22. Review of R1b and the R3 boot failure (2026-10-23, commit `096d797c`)
+
+**R1b is settled and keeps the route alive.**
+- The factory DMR outer symbol is **±3.3 kHz**: 99 % bandwidth 10.5 kHz, four clusters, inner/outer 0.342.
+- **17.7 %** of the power is below 250 Hz (the FM path: under 1 %).
+- Held symbols are flat (0.995).
+
+The ±7.3 kHz figure was a measurement artefact. Open question: ±3.3 kHz is about 1.7× the DMR standard's ±1944 Hz. Check whether the bench digital channel was programmed as 25 kHz (wide). The AT1846S DMR tune writes `0x30` = `0x4026` against `0x4006` for 12.5 kHz. If it was, re-check on a 12.5 kHz DMR channel, since SignalDeck's DMR channels should never go out wide. If it wasn't, the radio over-deviates DMR, which is worth knowing but is no part of this track.
+
+**R3 most likely failed because its hook sits in code that runs from IRAM.** The memory map (`11` §21.0, ch. 19 §14) copies file `+0x39408`–`+0x5AEFC` to IRAM `0x00010000`–`0x00031AF4` at boot. The FM key-up `+0x3ECC0`, and the hook at `+0x3EDFC`, are inside that copy and execute at IRAM `0x159F4`. The zero tail at `+0x5AEFC` and the stub at `+0x5B000` are **not** copied and exist only in XIP flash, at `0x03075000`. Every earlier patch was outside the copied block: flash code `+0x3074`, `+0x3332`, `+0x61F4`, data `+0x36ED0`, the tag at `+0x3846B`. So R3 is the first image that changes IRAM-copied bytes, and two things follow:
+1. **The `bsr` was encoded as a file-offset distance** (`+0x1C204`). From IRAM `0x159F4` that lands at `0x31BF8`, in IRAM .bss past the initialised end `0x31AF4`. The correct target is the stub's XIP address `0x03075000`, a displacement of `0x0305F60C`. That fits the 32-bit `bsr` range (±64 MB), but it must be computed from the runtime PC.
+2. **The missing banner points to a check before the banner.** A wrong branch would only fault at key-up, yet the module never reached the banner. So early boot probably verifies the IRAM copy (a checksum or CRC in the copy descriptors at `+0xC4`, or a check in the start-up copy loop), or a pointer table calls the key-up code early. Read the copy descriptors and the start-up copy loop for any verification field.
+
+**Next, in this order:**
+- **R3-0 (no RF needed, boot only):** change one harmless IRAM-copied byte, for example a character in a log string inside the copied range, with no code change. If it doesn't boot, the IRAM block is checked. Find the check value, recompute it in `build.py`, and confirm with a second image that boots.
+- **R3a1:** the same stub with the `bsr` computed from the IRAM PC to `0x03075000` (plus any check value). Then the R3 measurement as planned.
+- If IRAM can't be patched at all, move the hook into flash code. Use a flash-resident caller on the key-up path, or re-set `tx_voice_source` from a flash routine that runs after key-up. Leave the IRAM code untouched.
