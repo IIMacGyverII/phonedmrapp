@@ -16,42 +16,31 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 - **`STATUS: OWNER`**: someone needs the owner (a decision, or anything outside the standing approval). Write the question under "Owner question", push, and stop until the owner answers.
 - **Stop and set `STATUS: OWNER`, without guessing,** if anything is unclear, a stop condition triggers, or a step would need something outside the standing approval.
 
-## Standing approval (owner, 2026-10-23, until the owner says otherwise)
+## Standing approval (owner, 2026-10-24, until the owner says otherwise)
 
-**Bench setup:** the phone and the HackRF are next to each other **inside the Faraday cage** and stay there. The bench setup does **not** need to be re-confirmed before each run.
+**Principle (owner, 2026-10-24): the whole bench is inside the Faraday cage. Anything Grok needs to do is allowed, as long as it does not risk damaging the equipment.** The earlier per-item allowances (467.625 MHz only, low power only, HackRF receive only, the R-C tone list) were regulatory precautions and are superseded by this principle. What remains are equipment-protection rules, scope rules the owner set earlier, and the measurement discipline. `STATUS: OWNER` is for a step that could damage hardware, destroy data or configuration irrecoverably, or that lies outside the scope rules; nothing else needs to wait.
 
-**Allowed without asking:**
-- Phone transmissions on **467.625 MHz, low power only**, keyed by SignalDeck DIAG.
-- HackRF **receive only**.
-- Loading test images built by `tools/fw-patch` and restoring the factory image.
+**Bench setup:** the phone and the HackRF are next to each other inside the cage and stay there. No per-run confirmation.
 
-**Extended by the bench, 2026-10-24:** the owner said to set the approvals needed to make M17 transmit work and to continue. A free command slot may be hooked, and SignalDeck may send that command from a bench DIAG. The hook must do nothing at boot and must not key by itself. Still only 467.625 MHz, low power, HackRF receive only.
+**Equipment-protection rules (these are the limits):**
+- **HackRF receive front end.** Its input must stay well under its damage level. The phone keyed at close range already drives the IQ into clipping at low power and LNA 24 (R4k/R4o: clip fraction 0.3–0.4). High power at close range is allowed only with a documented margin: an attenuator in line, or distance, or the gains at minimum with the capture's clip fraction near 0; say in the report which. Never key the phone while the HackRF is transmitting next to it.
+- **HackRF transmit.** Allowed on any frequency inside the cage, at the lowest gain that gives the needed level. Never from the outdoor antenna. Housekeeping that protects the device and the bench: a dummy burst first (the first transmission after a pause is often silent), never a backgrounded `-R` capture, check nothing else holds the device, power-cycle it if a transfer is stuck.
+- **Module firmware.** Only the documented YModem path; never a raw flash command. Every image carries its tag; the factory restore path is proven (ch. 19 §14) and is the recovery for a bad load. Stubs on the key-up path act only on a host-requested transmission and do nothing at module boot (ch. 19 §23).
+- **Phone and codec.** ES8311 register **reads** (count 0 on the debug node) are allowed. ES8311 **writes** only for a register whose effect and reset path are understood and written down first, never anything that drives the speaker or amplifier outside its ratings. No `adb uninstall` (it destroys the app data and the Magisk grant). A phone reboot is a last resort for recovery, reported when done, with adb confirmed back afterwards.
+- **Heat.** The firmware ends every key at 30 s; do not stack long high-power keys back to back.
 
-**Extended by the owner, 2026-10-24 (R-C step 2):** HackRF transmissions **inside the cage, on 467.625 MHz only, at minimum gain**, of a 1 kHz FM tone, a 100 Hz FM tone and the 20 Hz–3.8 kHz sweep from the M17 study, each a few seconds, while a receive-only probe image copies RX RAM to the host. The phone does not key during these. HackRF rules that still apply: never from the outdoor antenna, a dummy burst first (the first transmission after a pause is often silent), never background a `-R` transfer, check nothing else holds the device.
+**Scope rules (the owner's, not safety; lifting them is the owner's call):** no band-limit or power patches (ch. 19 scope).
 
-**Never:**
-- any other transmit frequency;
-- high power;
-- any HackRF transmission other than the R-C step 2 tones above;
-- a write to the ES8311 debug node;
-- `adb uninstall`;
-- rebooting the phone;
-- band-limit or power patches.
+**Measurement discipline (unchanged):** tune first; check the banner and the `0x34` tag after every load; the ±5 kHz deviation rule on what we transmit, and a bin at or over it is reported as a stop (a test that needs more, such as ±4.5 kHz POCSAG with margin, says so in its task line first); boot capture on every image; `git pull --rebase` before every load.
 
-Any of these needs `STATUS: OWNER`.
-
-**Every test image:**
-- **Gate stubs on the key-up path.** Any stub on the FM key-up path must act only on a host-requested transmission and do nothing at module boot (ch. 19 §23).
-- **Tune first.** Tune the VFO to 467.625 MHz before a load.
-- **Check after loading:** the banner, and the tag via `0x34`.
-- **Stop rule:** ±5 kHz on the deviation of what we transmit.
+**Defaults for comparability:** 467.625 MHz and low power stay the default bench settings so numbers compare across images; other frequencies and powers are allowed when a test needs them (VHF needs `band=1`), and the report says what was used.
 
 **End state after a run:**
 - SignalDeck owns the radio;
 - no `DMRDEBUG.bin`;
 - the test image may stay loaded. Owner, 2026-10-24: do not flash the factory image after every test. Load the next test image over the one already in the module. Flash the factory image (`0x34` `DMR003.UV4T.V022`) when there is a reason: a stop, a bad banner or tag, an unknown image, boot radiation, or leaving a known-good radio at the end of a session.
 
-The radio may **stay on 467.625 MHz, low power**: there is no need to return to the NOAA channel.
+The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
 
@@ -63,9 +52,9 @@ The radio may **stay on 467.625 MHz, low power**: there is no need to return to 
 3. On a bit-exact render: one key with the 50-frame stream. Make the DIAG unkey about 100 ms after the ring empties so the status read shows underruns during the stream only. Pass: link setup and ≥ 45 of 50 frames at Golay 0 from our decoder, zero underruns during the stream, p99 2.8–3.1 kHz, no slice at or over 5 kHz.
 4. On a pass: the §6 run, three keys of 90 frames each, same pass per key. Report ours; the independent decoder joins when the Ubuntu box in the cage exists (`plan-independent-m17-check.md`).
 
-**R-C step 2 is approved (owner, 2026-10-24)** and runs after R4t step 3 or whenever the transmit work is waiting on the host: one receive-only probe image (op 5: save `WORK_MODE`, write `0x80`, wait two halves, copy the half `FM_ADDR_SW` is not pointing at into the `0x4AC00` scratch, restore `WORK_MODE`, return the samples over `0x40`; no PTT anywhere in it; `0x16A` as the second try if `0x80` gives nothing). HackRF tones per the extended approval above: 1 kHz, then 100 Hz, then the sweep, phone tuned to 467.625 and not keying. Pass: the 1 kHz line stands out of the noise in the returned samples; the 100 Hz tone and the sweep say whether the low end is there. Write the result in `results.md` under R-C step 2. R-C step 1 is accepted as read.
+**R-C step 2 is approved (owner, 2026-10-24)** and runs after R4t step 3 or whenever the transmit work is waiting on the host: one receive-only probe image (op 5: save `WORK_MODE`, write `0x80`, wait two halves, copy the half `FM_ADDR_SW` is not pointing at into the `0x4AC00` scratch, restore `WORK_MODE`, return the samples over `0x40`; no PTT anywhere in it; `0x16A` as the second try if `0x80` gives nothing). HackRF tones (allowed under the standing approval): 1 kHz, then 100 Hz, then the sweep, phone tuned to 467.625 and not keying. Pass: the 1 kHz line stands out of the noise in the returned samples; the 100 Hz tone and the sweep say whether the low end is there. Write the result in `results.md` under R-C step 2. R-C step 1 is accepted as read.
 
-Standing rules unchanged: stubs do nothing at boot and never key by themselves; ±5 kHz stop on the measured deviation, a bin at or over 5 kHz is a stop to be reported as one; 467.625 MHz, low power, HackRF receive only; T4 closed; no ES8311 write; `0x3D` untouched; R4l0 never reloaded; `git pull --rebase` before every load.
+Rules: the standing approval above (owner, 2026-10-24: anything in the cage that cannot damage the equipment); T4 closed; `0x3D` untouched; R4l0 never reloaded.
 
 ## Goal and route list (owner, 2026-10-23: "discover every possible way we can get M17 to work")
 
@@ -95,4 +84,4 @@ R4s, tag `R4s0`, streamed 50 frames from command `0x40`. Boot peak 0.08 dB. `0x3
 
 ## Owner question
 
-R-C step 2 HackRF tones: **approved by the owner 2026-10-24** (see the standing approval). R-B (the ES8311 register read) is still unanswered and still not approved.
+None open. R-C step 2 tones and R-B (ES8311 register reads) are covered by the standing approval of 2026-10-24.
