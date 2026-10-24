@@ -1758,3 +1758,13 @@ The 240 ms autocorrelation from 1.0 s is 0.995. The aimed-waveform fit on 0.04�
 ## End state
 
 R4k0 stays loaded. VFO 467.625 / 467.625 FM at 10:49:54.172, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met. `0x3D` still waits. The ES8311 debug node was not written. The transmit-stop status now follows the end frame.
+
+# R4l — command 0x40 in a data table, no version reply (2026-10-24, 11:19–11:27)
+
+The dispatch table is at file `+0x38240`. The index is `cmd - 0x22`. An index of 105 or more returns. Command `0x3D` is index 27 and already has a handler at file `+0xAAFE`. It was not changed. Command `0x40` was an empty `pop r4-r8, r15` at file `+0xAA54`.
+
+`c7000-cmd40-ack`, tag `R4l0`. The table word at `+0x382B8` pointed at a 20-byte thunk at `+0x35F64`. The thunk moves the frame into `r0`, calls file `+0x8E7C` with `r1 = 0`, and pops the dispatcher's frame. Thirty-nine patch tests passed before the load. sha256 `83fb392796b969c79dc9ace160e7aea7fa6e2fe7d161a0c1b7ab61d05c374565`.
+
+VFO 467.625 at 11:19:37.714. YModem `onSuccess` at 11:21:50.172. The loader started SignalDeck again and the `0x34` line was empty. The bytes at `+0x35F64` are 128 zeros after a run of `0x01` bytes. Nothing in the image holds their address, and they are still the tail of that table. The image was not left loaded.
+
+Factory restored. YModem `onSuccess` at 11:26:49.784. `0x34` `DMR003.UV4T.V022` at 11:27:03.083. VFO 467.625 / 467.625 FM at 11:27:05.024, low power. No `DMRDEBUG.bin`. Nothing was keyed. The ES8311 debug node was not written. §6 is not met. Do not reload R4l0.
