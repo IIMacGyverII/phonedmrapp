@@ -69,6 +69,10 @@ class PatchTest(unittest.TestCase):
             ["c7000-fm-flat", "c7000-fm-adcgain"],
             ["c7000-fm-canary", "c7000-fm-adcgain"],
             ["c7000-fm-proof", "c7000-fm-adcgain"],
+            ["c7000-fm-flat", "c7000-txram-square"],
+            ["c7000-fm-canary", "c7000-txram-square"],
+            ["c7000-fm-proof", "c7000-txram-square"],
+            ["c7000-fm-adcgain", "c7000-txram-square"],
         ]
         for names in pairs:
             with self.subTest(names=names), self.assertRaises(SystemExit):
@@ -231,6 +235,48 @@ class PatchTest(unittest.TestCase):
         for off in (0x2C90, 0x3054, 0x344E, 0x34F2, 0x3640):
             self.assertEqual(img[off:off + 2], bytes.fromhex("0584"))
         self.assertEqual(img[0x38464:0x38474], b"DMR003.UVt0.V022")
+
+    def test_txram_square_fills_after_the_voice_source_clear(self):
+        img, _ = build.build(["c7000-txram-square"], "UVt0", self.cfg)
+        # +0x3EDF8 is bclri r2, 0 / st.w (the clear). The patch starts at the next instruction.
+        self.assertEqual(self.fac[0x3EDF8:0x3EDFC], bytes.fromhex("803a40b3"))
+        self.assertEqual(img[0x3EDF8:0x3EDFC], self.fac[0x3EDF8:0x3EDFC])
+        self.assertEqual(bsr32_target(img, 0x3EDFC), 0x5B000)
+        self.assertEqual(img[0x3EE00:0x3EE02], bytes.fromhex("0030"))  # pad, movi r0, 0
+        self.assertEqual(img[0x3EE02:0x3EE04], bytes.fromhex("3230"))  # movi r0, 50, the delay
+        self.assertEqual(self.fac[0x3EE02:0x3EE04], bytes.fromhex("3230"))
+
+        def hw(off):
+            return int.from_bytes(img[off:off + 2], "little")
+
+        def bt_target(off):
+            word = hw(off)
+            self.assertEqual(word & 0xFC00, 0x0800, "not a 16-bit bt")
+            imm = word & 0x3FF
+            if imm & 0x200:
+                imm -= 0x400
+            return off + (imm << 1)
+
+        self.assertEqual(hw(0x5B004), 0x3AA0)  # bseti r2, 0
+        self.assertEqual(hw(0x5B00C), 0x3A84)  # bclri r2, 4
+        self.assertEqual(hw(0x5B00E), 0x3A86)  # bclri r2, 6
+        self.assertNotIn((0x3AA4).to_bytes(2, "little"), img[0x5B000:0x5B04C])  # not bseti r2, 4
+        self.assertEqual(hw(0x5B014), 0x3101)  # movi r1, 1 -> bytes 01 00 = +256
+        self.assertEqual(hw(0x5B024), 0x31FF)  # movi r1, 255 -> bytes FF 00 = -256
+        self.assertEqual(img[0x5B016:0x5B01A], bytes.fromhex("02ea0001"))  # movi r2, 256
+        self.assertEqual(img[0x5B026:0x5B02A], bytes.fromhex("02ea0001"))
+        self.assertEqual(hw(0x5B01A), 0xAB20)  # st.h r1, (r3, 0)
+        self.assertEqual(bt_target(0x5B022), 0x5B01A)  # 256 trips, low half
+        self.assertEqual(bt_target(0x5B032), 0x5B02A)  # 256 trips, high half
+        self.assertEqual(hw(0x5B036), 0x3201)  # movi r2, 1
+        self.assertEqual(hw(0x5B038), 0xB340)  # st.w PTT, after both fills
+        self.assertEqual(hw(0x5B03A), 0x783C)  # jmp r15
+        pool = [int.from_bytes(img[0x5B03C + 4 * k:0x5B040 + 4 * k], "little") for k in range(4)]
+        self.assertEqual(pool, [0x11000080, 0x11000500, 0x16000030, 0x11000560])
+        # Not the tune-time redirect, and the factory 0x58 immediates stay.
+        self.assertEqual(img[0x3074:0x3078], self.fac[0x3074:0x3078])
+        for off in (0x2C90, 0x3054, 0x344E, 0x34F2, 0x3640):
+            self.assertEqual(img[off:off + 2], bytes.fromhex("0584"))
 
     def test_refuses_bad_tag(self):
         for tag in ("UV4T", "UV4", "UV-1"):
