@@ -1768,3 +1768,23 @@ The dispatch table is at file `+0x38240`. The index is `cmd - 0x22`. An index of
 VFO 467.625 at 11:19:37.714. YModem `onSuccess` at 11:21:50.172. The loader started SignalDeck again and the `0x34` line was empty. The bytes at `+0x35F64` are 128 zeros after a run of `0x01` bytes. Nothing in the image holds their address, and they are still the tail of that table. The image was not left loaded.
 
 Factory restored. YModem `onSuccess` at 11:26:49.784. `0x34` `DMR003.UV4T.V022` at 11:27:03.083. VFO 467.625 / 467.625 FM at 11:27:05.024, low power. No `DMRDEBUG.bin`. Nothing was keyed. The ES8311 debug node was not written. §6 is not met. Do not reload R4l0.
+
+# R4m — command 0x40 acks from the unused gap, tag R4m0 (2026-10-24, 11:32–11:35)
+
+No HackRF capture. Nothing was keyed. Forty patch tests passed before the load. The ES8311 debug node was not written.
+
+`c7000-cmd40-ack2`. The same 20-byte thunk as R4l, linked at file `+0x5AEFC` instead of the data table at `+0x35F64`. The dispatch word at `+0x382B8` is runtime `0x03074EFC`. The thunk moves the frame into `r0`, calls file `+0x8E7C` with `r1 = 0`, and pops the dispatcher's frame. Command `0x3D` at `+0xAAFE` is unchanged. The bytes at `+0x35F64` stay factory.
+
+`DMR003.R4m0.V022.bin`, 378620 bytes. sha256 `673884b2ce0d77bc0f2e089775b1f127a742b5bae982b2f95d3a85fc9fec92a8`. Pushed MD5 `42827eae2e777c0d1f0aa031ecf2b3cd`.
+
+## Load
+
+VFO 467.625 / 467.625 FM at 11:32:56.669, low power, before the load. YModem `onSuccess` at 11:35:09.348. The first `0x34` at 11:35:14.363 had no answer, and the loader power-cycled the module. Banner `开机初始化完成` at 11:35:21.611. `0x34` at 11:35:21.922 is `DMR003.R4m0.V022`. The loader then wrote channel 36 (162.425 MHz, low power, `RX cmd=0x23 rw=0 sr=0` at 11:35:21.995). The VFO was put back: 467.625 / 467.625 FM at 11:35:23.839, low power, acked at 11:35:23.860.
+
+## Command
+
+DIAG `cmdbyte` with body byte 1. `TX cmd=0x40 rw=1 sr=1 len=1 [01]` at 11:35:27.838, frame `68 40 01 01 95 AD 00 01 01 10`. `RX cmd=0x40 rw=0 sr=0 len=0` at 11:35:27.844, 6 ms later. The log has no `0x26` and no `0x36`.
+
+## End state
+
+R4m0 stays loaded. VFO 467.625 / 467.625 FM at 11:35:29.955, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met. The slot answers. It does not yet carry samples. Do not reload R4l0.

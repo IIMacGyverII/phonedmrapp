@@ -706,6 +706,16 @@ sites = [
   { offset = 0x35F64, original = "0000000000000000000000000000000000000000", replacement = "136c00e003009514d01401800031fee385979014", note = "0x40 ack thunk (stubs/c7000_cmd40_ack.S)" },
 ]
 
+# R4m. Command 0x40 acks from the unused gap. It does not key.
+[patches.c7000-cmd40-ack2]
+why = """Command 0x40 is an empty return. The slot now jumps to a 20-byte thunk at +0x5AEFC, the unused gap ahead of the TX-RAM stub, not the data table at +0x35F64. The thunk acks through file +0x8E7C and does not key. Nothing at boot sends 0x40. 0x3D is not changed."""
+measured_by = "R4m, tag R4m0: banner at 11:35:21.611; 0x34 DMR003.R4m0.V022 at 11:35:21.922. One command 0x40, body byte 1, ack sr=0 empty body in 6 ms (TX 11:35:27.838, RX 11:35:27.844). Nothing keyed. No HackRF capture. Image left loaded. VFO 467.625 at 11:35:29.955."
+status = "experimental"
+sites = [
+  { offset = 0x382B8, original = "544a0203", replacement = "fc4e0703", note = "command 0x40 table slot: thunk at +0x5AEFC (was the empty pop)" },
+  { offset = 0x5AEFC, original = "0000000000000000000000000000000000000000", replacement = "136c00e003009514d01401800031fde3b96f9014", note = "0x40 ack thunk (stubs/c7000_cmd40_ack2.S)" },
+]
+
 # R3-0. The IRAM copy (file +0x39408..+0x5AEFC) has no log string. The ASCII names in it
 # (TMSG TRES TSUS QUEU FLAG TSIG SEMA TICK NONE) are uC/OS-III type words: the boot path
 # compares or stores them, so changing one is not a harmless test. Tag R300 changed TICK
