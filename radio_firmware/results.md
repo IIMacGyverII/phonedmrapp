@@ -1147,3 +1147,29 @@ The steady p99 is 2774 Hz, near the M17 outer deviation of ±2.4 kHz, and the si
 The first factory restore failed. YModem `onFailed, reason=Received CAN` at 02:53:09.509, loader exit 1. The pushed factory MD5 was `4426035392262ca54583c230c9e268e0`. Further waits at 02:54:41 and 02:56:16 returned no `0x34`. `/sdcard/DMR/DMRDEBUG.bin` was already absent.
 
 The second restore succeeded. It started at 02:57:40. YModem `onSuccess` at 02:59:49.055. The first version poll was empty. The loader's second start of SignalDeck printed `0x34` at 03:00:58.517, `DMR003.UV4T.V022`. The tool log for this restore has no banner line. VFO 467.625 / 467.625 FM at 03:00:59.876, low power. SignalDeck owns the radio. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched. The ES8311 debug node was not written.
+
+# T2 — `WORK_MODE` 0x22, read only (2026-10-24)
+
+No image was loaded. Nothing was keyed. The factory image was disassembled at the two sites already named in ch. 19, `+0x179C8` and `+0x17D54`. The sibling notes in M17-Project/AtomXL-reverse-engineering (`atomxl-re-docs/dmr-firmware-notes.md`) were read for a raw-symbol register. They do not name one.
+
+## What the image stores
+
+Both sites build `WORK_MODE` the same way: `movih r3, 0x1100`, then `bseti r3, 8`, which is `0x11000100`. Each stores 34 (`0x22`) when byte 3 of the RAM struct at `0x34808` is nonzero, and each begins the same store when byte 4 is nonzero.
+
+On the byte-3 path the first copy (`+0x179C8`) also stores `0x1100039c` = `0x1800`, `0x11000400` = `0x40`, and `0x11000408` = `0x41`, then returns. The second copy (`+0x17D54`) stores `0x1100039c` = `0x800` and the same `0x40` / `0x41`. The first copy's byte-4 path stores `WORK_MODE` = `0x22`, `0x11000400` = `0x82`, and `0x11000408` = 1, then returns. Neither path writes a sample buffer, a symbol FIFO, or `RF_MODE`.
+
+When byte 3 and byte 4 are both zero, the first copy continues. If byte 2 is 4 it stores `WORK_MODE` = `0x6A`. Otherwise it stores `0x6E`. That fall-through writes `0x11000384` from byte `0xA` and does not write a symbol buffer either.
+
+`0x34808` occurs as a literal 141 times. Bytes 3 and 4 are not named. The 163-byte digital unpack at `+0x9310` was not shown copying the channel into this struct. A normal digital channel's value for those two bytes is unread.
+
+## Filter controls
+
+The `0x22` paths do not write `FM_BANDWIDTH` (`0x11000500`) or `RF_MODE` (`0x11000104`). The only full-word `RF_MODE` store previously found is the FM key-up's `0x10E0`, whose bit 7 is clear. The sibling notes call bit 7 of `WORK_MODE` the FM-mode bit, call `FM_BANDWIDTH` the FM band-pass and emphasis (never written, reset `0x5F`), and call `RF_MODE` bits 31 and 29 an undocumented physical-layer receive test. They also say no documented register exposes the 38.4 kHz receive samples to the CPU. No RRC coefficient register is written on this path.
+
+## What this does not yet say
+
+The CPU path that selects `0x22` does not take symbols from a buffer it fills. That does not show a modem FIFO the hardware might read on its own. Bytes 3 and 4 of `0x34808` are still unnamed, so it is unread whether a normal channel even takes the `0x22` path. T2 is not closed. A `0x22` image was not built. §6 is not met.
+
+## End state
+
+The radio was not touched. End state remains the R4a restore: factory image, `0x34` `DMR003.UV4T.V022` at 03:00:58.517, VFO 467.625 / 467.625 FM at 03:00:59.876, low power, no `DMRDEBUG.bin`.
