@@ -202,6 +202,36 @@ class PatchTest(unittest.TestCase):
         for off in (0x2C90, 0x3054, 0x344E, 0x34F2, 0x3640):
             self.assertEqual(img[off:off + 2], bytes.fromhex("0584"))
 
+    def test_c7000_dacgain_lowers_every_table_slot_by_6db(self):
+        # Guide 6.5.2.25: godl bit 5 clear is 0..-31 dB; bit 5 set counts backwards, +1..+32 dB.
+        def db(byte):
+            godl = byte & 0x3F
+            return (32 - (godl & 0x1F)) if godl & 0x20 else -godl
+
+        img, _ = build.build(["c7000-fm-dacgain"], "UVt0", self.cfg)
+        fac = self.fac[0x36ED0:0x36EE4]
+        new = img[0x36ED0:0x36EE4]
+        self.assertEqual(fac.hex(), "800088008200bc00b700b400b000ae00aa00a800")
+        self.assertEqual(new.hex(), "86008e0088008200bd00ba00b600b400b000ae00")
+        for i in range(10):
+            a, b = fac[2 * i], new[2 * i]
+            self.assertEqual(fac[2 * i + 1], 0)
+            self.assertEqual(new[2 * i + 1], 0)
+            self.assertTrue(a & 0x80 and b & 0x80, "lrgod stays set")
+            self.assertEqual(db(b), db(a) - 6, "slot %d 0x%02X -> 0x%02X" % (i, a, b))
+        # The three loaders still OR 0x80 and store offset 0xDF. Init's 0xAB is not the live value.
+        for off in (0xADE, 0xE16, 0x61E8):
+            self.assertEqual(img[off:off + 2], bytes.fromhex("8874"))  # zextb r2
+        self.assertEqual(img[0x6538:0x653A], bytes.fromhex("542b"))  # subi r3, 85
+        # No stub, and the ADC-gain sites and the factory 0x58 immediates stay.
+        self.assertEqual(img[0x3074:0x3078], self.fac[0x3074:0x3078])
+        self.assertEqual(img[0x5B000:0x5B030], self.fac[0x5B000:0x5B030])
+        for off in (0x61FE, 0x620C, 0x6228, 0x6238):
+            self.assertEqual(img[off:off + 2], self.fac[off:off + 2])
+        for off in (0x2C90, 0x3054, 0x344E, 0x34F2, 0x3640):
+            self.assertEqual(img[off:off + 2], bytes.fromhex("0584"))
+        self.assertEqual(img[0x38464:0x38474], b"DMR003.UVt0.V022")
+
     def test_refuses_bad_tag(self):
         for tag in ("UV4T", "UV4", "UV-1"):
             with self.subTest(tag=tag), self.assertRaises(SystemExit):

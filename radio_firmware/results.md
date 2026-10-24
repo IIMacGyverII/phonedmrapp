@@ -433,3 +433,91 @@ The next image is not built and was not loaded. Lower that nibble by two counts 
 No sweep, M17, POCSAG or voice was sent. §6 is not met. Pre-shaping and a receive equalizer are not implemented. UVm6 stays the candidate curve for a mode that fits 300 Hz–3.5 kHz.
 
 The factory image is back in flash and `0x34` reads `DMR003.UV4T.V022` (17:44:13). The pushed factory MD5 is `4426035392262ca54583c230c9e268e0`. SignalDeck owns the radio. The active channel is **36, NOAA WX4, 162.425 MHz**, power low, in the Weather zone. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched.
+
+# UVm11 — codec DAC gain (2026-10-23, 18:28–19:18)
+
+Same rules. HackRF receive only for the two transmissions. Phone at **467.625 MHz, low power**. The version field is four characters, so the flash tag is `Vm11` and `0x34` reads `DMR003.Vm11.V022`. The bench name stays UVm11. `0x34` was `DMR003.Vm11.V022` immediately before each transmission (18:28:41 and 18:28:55). The factory image was loaded back at 18:31:56. The receive check, with no HackRF and no transmission, reloaded the UVm10 file and then the factory image. The final `0x34` is `DMR003.UV4T.V022` at 19:18:07. `PATCH14_BACKUP.bin` was not touched.
+
+## Where `GCR_DACL` is written
+
+`GCR_DACL` is codec base `0x160009C0` + `0x1F`, the same address as `0x16000900` + `0xDF`. Guide §6.5.2.25: bit 7 is `lrgod`, and `godl` (bits 5:0) is not a linear count. Bit 5 clear is 0 to −31 dB. Bit 5 set is +1 to +32 dB, with the low five bits counting backwards (`32 − (godl & 0x1F)`). Subtracting 6 from a byte in that upper half raises the gain, so the replacement bytes below were computed from the dB value.
+
+Every live value comes from the ten halfword slots at file `+0x36ED0` (XIP `0x03050ED0`). The low byte is the gain and the high byte is 0. The four stores of firmware offset `0xDF` are:
+
+| Store | What it writes | On the keyed path |
+|---|---|---|
+| init `+0x653C` | immediate `0xAB` (+21 dB) | overwritten by the init's own call to `0x61A8`, then again by boot |
+| boot `+0xE1A` | table slot 3 (byte offset 6) | yes, until a later codec-branch `0x61A8` |
+| `0x61A8` at `+0x61EC` | `table[index << 1]`, only when the copied struct's byte 0 is 1 | the analog `0x23` success path calls it at `+0x9DB2`; the volume command calls it at `+0xA5BC` |
+| leaf `+0xAE2` | the same table | no call site |
+
+PTT (`+0x3ECC0`) and unkey (`+0x3EE6C`) do not store `GCR_DACL`. A stub at `+0x3074` runs before `0x61A8` on the analog path, so it would be overwritten. This image uses no stub and does not touch `+0x3074` or `+0x5B000`.
+
+`FCR_DAC` is firmware offset `0xD4` (guide `+0x14`). Its only field is `dac_freq` (bits 3:0; `0000` = 8 kHz). The guide has no DAC high-pass, DC-block, or de-pop bit, and the image never stores `FCR_DAC`. It also never stores `GCR_MIXDACL` (offset `0xE7`) or `CR_DAC_AGC` (offset `0xEB`). `CR_DAC_AGC` stays at reset, so `dac_agc_en` is 0. AGC did not put the 6 dB back.
+
+## What the image changes
+
+Each of the ten low bytes is 6 dB under the factory byte. `lrgod` stays set. Slot 3 wraps `0xBC` (+4 dB) to `0x82` (−2 dB).
+
+| Slot | Factory | dB | This image | dB |
+|---|---|---|---|---|
+| 0 | `0x80` | 0 | `0x86` | −6 |
+| 1 | `0x88` | −8 | `0x8E` | −14 |
+| 2 | `0x82` | −2 | `0x88` | −8 |
+| 3 | `0xBC` | +4 | `0x82` | −2 |
+| 4 | `0xB7` | +9 | `0xBD` | +3 |
+| 5 | `0xB4` | +12 | `0xBA` | +6 |
+| 6 | `0xB0` | +16 | `0xB6` | +10 |
+| 7 | `0xAE` | +18 | `0xB4` | +12 |
+| 8 | `0xAA` | +22 | `0xB0` | +16 |
+| 9 | `0xA8` | +24 | `0xAE` | +18 |
+
+Boot leaves slot 3. A `0x23` that takes the codec branch of `0x61A8` before any volume command leaves slot 0. After the volume command (this app's analog setup uses index 8) it leaves slot 8. Each of those is 6 dB down, so the air result does not depend on which slot was live. The init immediate `0xAB` is not patched. The three `zextb r2` sites stay. The five factory `0x8405` immediates stay. The UVm10 ADC-gain sites stay. This image is not combined with a `0x58` patch.
+
+| Image | What it changes | `0x34` | File MD5 | Loaded |
+|---|---|---|---|---|
+| UVm11, both tones | tag `Vm11` + the ten `GCR_DACL` slots | `DMR003.Vm11.V022` | `9d1e9668d740bffdb492634ea573f131` | 18:28:40 |
+| Factory after the tones | `DMR003.UV4T.V022-ORIGINAL.bin` | `DMR003.UV4T.V022` | `4426035392262ca54583c230c9e268e0` | 18:31:56 |
+| UVm10, receive clip | the UVm10 file again; no transmission | `DMR003.Vm10.V022` | `bf8a842d3497b9e520f350c9af258a15` | 19:12:27 |
+| Factory, receive clip | `DMR003.UV4T.V022-ORIGINAL.bin` | `DMR003.UV4T.V022` | `4426035392262ca54583c230c9e268e0` | 19:15:37 |
+
+Host MD5 of the built UVm11 file matches the MD5 the loader printed. sha256 is `dbbf43d38982928549c9880c121997ce83a7da4488a587806037fd4ecc392f6d`. The file is 378620 bytes.
+
+Both transmissions are LNA 24 / VGA 38. Clip fraction is 0. Carrier offset is +830 Hz on the probe and +820 Hz on the −12 dBFS tone. No step predicted past the ±5 kHz stop, and none measured past it. The hottest aligned deviation transmitted was 1733 Hz.
+
+## The tones
+
+| Stimulus | Factory | UVm11 | UVm11 / factory |
+|---|---|---|---|
+| −36 dBFS, 1 kHz (amplitude 519) | 115 Hz | **111.9 Hz** | 0.973 |
+| −36 dBFS, 3.5 kHz (amplitude 519) | 250 Hz | **249.7 Hz** | 0.999 |
+| −12 dBFS, 1 kHz (amplitude 8231) | 1827 Hz | **1733 Hz** | 0.949 |
+
+3.5 kHz over 1 kHz is +6.98 dB (249.7 / 111.9). Pre-emphasis is still on. Half the factory deviation would have been about 57 Hz, 125 Hz and 914 Hz. Probe capture: magnitude 45.4, SNR 51.3 dB, keyed 4.65 s, lag 1.00 s. The −12 dBFS capture: magnitude 41.2, SNR 49.8 dB, keyed 3.81 s, lag 1.42 s, p99 1883 Hz.
+
+**The codec DAC playback gain is not in the radiated path.** The ratios sit in the same run-to-run spread as UVm10 (about 0.95). `GCR_MIXDACL` is not the reason: the image never stores it. AGC is not the reason: `dac_agc_en` stays 0.
+
+## What can still carry the phone's audio into the AT1846S
+
+UVm8 still stands. Writing register `0x58` from the stub removes the pre-emphasis, so the audio does go through the AT1846S. UVm11 shows that path does not include `GCR_DACL`. UVm10 already showed it does not include `GCR_ADCL`. There is no DAC filter bit to clear: `FCR_DAC` is the sample rate only, and it is never stored.
+
+Three candidates remain. None of them was built or loaded.
+
+1. The other branch of `0x61A8`. Byte 0 of the copied channel struct selects it. When that byte is not 1, `0x61A8` writes AT1846S register `0x44` from the table at XIP `0x03050EE4` (file `+0x36EE4`, the halfwords immediately after the DAC table) and leaves the boot `GCR_DACL` byte in place. The `0x44` image was skipped. `0x58` already places the audio in the AT1846S.
+2. The guide's codec-ADC FM source (`0x11000080[0]` = 0). UVm10 lowered that gain and the radiated deviation stayed at 0.95 of the factory tones.
+3. TX RAM (`0x11000080[0]` = 1), or a converter that this DAC register does not control.
+
+## Receive check
+
+No HackRF and no transmission. Channel 36 was parked on 467.625 MHz with hardware squelch 0. Its transmit frequency stayed 162.425 MHz, so the app still treated the row as receive-only. Each clip is 10.0 s of 8 kHz mono, 80000 samples, taken from the audio the module delivered and before the app squelch. `0x34` was read before each clip.
+
+| Image | RMS | dBFS | Zero fraction | Peak / median |
+|---|---|---|---|---|
+| UVm10 (`GCR_ADCL` 6 dB down) | 5470 | **−15.55** | 0.0001 | 11.4 |
+| Factory | 5431 | **−15.61** | 0.0001 | 12.6 |
+
+UVm10 minus factory is **+0.06 dB**. A codec ADC on the receive path would have put UVm10 about 6 dB quieter. Both clips have essentially no digital zeros, and the spectral peak is only about 12 times the median, so this is the open-squelch noise floor on both images. **The codec ADC gain is not in the receive path.**
+
+No sweep, M17, POCSAG or voice was sent. §6 is not met. Pre-shaping and a receive equalizer are not implemented. UVm6 stays the candidate curve for a mode that fits 300 Hz–3.5 kHz.
+
+The factory image is back in flash and `0x34` reads `DMR003.UV4T.V022` (19:18:07). The pushed factory MD5 is `4426035392262ca54583c230c9e268e0`. SignalDeck owns the radio. The active channel is **36, NOAA WX4, 162.425 MHz**, squelch 5, power low, receive-only flag off, in the Weather zone. The screen shows 162.425 MHz. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched. `stay_on_while_plugged_in` is 0.
