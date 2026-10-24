@@ -1797,13 +1797,17 @@ class PatchTest(unittest.TestCase):
 
     def test_cmd40_sym_carries_the_rrc_and_the_ring(self):
         import m17_rrc
-        img, _ = build.build(["c7000-cmd40-sym"], "R4s0", self.cfg)
+        img, _ = build.build(["c7000-cmd40-sym"], "R4t0", self.cfg)
         self.assertEqual(len(img), len(self.fac))
-        self.assertIn(m17_rrc.coeff_bytes()[:90], img[0x5AEFC:0x5B320])
-        self.assertIn(bytes.fromhex("0103fffd"), img[0x5AEFC:0x5B320])
+        blob = img[0x5AEFC:0x5B600]
+        self.assertIn(m17_rrc.coeff_bytes()[:90], blob)
+        self.assertIn(bytes.fromhex("0103fffd"), blob)
+        # ld.hs r0, (r4, 0) then mult r1, r0. ld.h would zero-extend the tap.
+        self.assertIn(bytes.fromhex("04d80050407c"), blob)
+        self.assertNotIn(bytes.fromhex("008c407c"), blob)
         self.assertEqual(img[0x18A70:0x18A80], self.fac[0x18A70:0x18A80])
         self.assertEqual(img[0xAAFE:0xAB0E], self.fac[0xAAFE:0xAB0E])
-        self.assertEqual(img[0x38464:0x38474], b"DMR003.R4s0.V022")
+        self.assertEqual(img[0x38464:0x38474], b"DMR003.R4t0.V022")
         self.assertEqual(m17_rrc.pack_symbols([3, 1, -1, -3]), bytes([0x4B]))
 
     def test_refuses_bad_tag(self):

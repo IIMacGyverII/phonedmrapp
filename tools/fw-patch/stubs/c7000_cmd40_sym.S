@@ -3,9 +3,11 @@
  *
  * Body byte 0 is the op code. 1 appends symbols, four per byte, the first
  * in bits 7:6 (01 = +3, 00 = +1, 10 = -1, 11 = -3). 2 reads the fill, the
- * underrun count and the last error. 3 resets the ring. Anything else,
- * including 0, is refused: the ring owns the only free RAM. Nothing here
- * keys. A clear cursor at 0x4DAAC does nothing, including at boot.
+ * underrun count and the last error. 3 resets the ring. 4 renders: the next
+ * two bytes are a sample count N, 1..256, and the reply body is 2N bytes in
+ * TX-RAM order, taken from the scratch at 0x4AC00. Anything else, including
+ * 0, is refused. Nothing here keys. A clear cursor at 0x4DAAC does nothing,
+ * including at boot.
  *
  * The ring is 2048 signed bytes at 0x4A400. 0x4A3E4 is the write count,
  * 0x4A3E8 the next symbol base, 0x4A3EC the phase, 0x4A3F0 the underrun
@@ -57,7 +59,7 @@ store40:
 	br	.Lstatus
 .Lnot2:
 	cmpnei	r3, 1
-	bt	.Lbad
+	bt	.Lmaybe4
 	subi	r2, 1
 	mov	r3, r2
 	lsli	r3, 2
@@ -112,6 +114,79 @@ store40:
 	st.w	r1, (r4, 0)
 	movi	r5, 1
 	br	.Lreply2s
+.Lmaybe4:
+	cmpnei	r3, 4
+	bt	.Lbad
+	cmpnei	r2, 3
+	bt	.Lbad
+	ld.b	r1, (r7, 9)
+	ld.b	r3, (r7, 10)
+	lsli	r3, 8
+	or	r1, r3
+	cmpnei	r1, 0
+	bf	.Lbad
+	movi	r3, 1
+	lsli	r3, 8
+	cmphs	r3, r1
+	bf	.Lbad
+	lrw	r6, 0x4ac00
+	mov	r5, r1
+.Lrloop:
+	cmpnei	r5, 0
+	bf	.Lrdone
+	bsr	one_sample
+	st.h	r0, (r6, 0)
+	addi	r6, 2
+	subi	r5, 1
+	br	.Lrloop
+.Lrdone:
+	lrw	r1, 0x4ac00
+	subu	r6, r1
+	mov	r5, r6
+	addi	r5, 19
+	bclri	r5, 0
+	bclri	r5, 1
+	subu	r14, r5
+	mov	r4, r14
+	movi	r2, 104
+	st.b	r2, (r4, 0)
+	ld.b	r2, (r7, 1)
+	st.b	r2, (r4, 1)
+	movi	r2, 0
+	st.b	r2, (r4, 2)
+	st.b	r2, (r4, 3)
+	st.b	r2, (r4, 4)
+	st.b	r2, (r4, 5)
+	lsri	r2, r6, 8
+	st.b	r2, (r4, 6)
+	st.b	r6, (r4, 7)
+	lrw	r1, 0x4ac00
+	mov	r3, r6
+	mov	r0, r4
+	addi	r0, 8
+.Lrcopy:
+	cmpnei	r3, 0
+	bf	.Lrcopied
+	ld.b	r2, (r1, 0)
+	st.b	r2, (r0, 0)
+	addi	r1, 1
+	addi	r0, 1
+	subi	r3, 1
+	br	.Lrcopy
+.Lrcopied:
+	movi	r2, 16
+	st.b	r2, (r0, 0)
+	mov	r0, r6
+	addi	r0, 9
+	mov	r1, r4
+	.short	0xE000, 0x8E5C
+	mov	r0, r4
+	mov	r1, r6
+	addi	r1, 9
+	.short	0xE000, 0x7DE8
+	addu	r14, r5
+	addi	r14, 4
+	pop	r4-r7, r15
 .Lbad:
 	ld.w	r7, (r14, 0)
 	ld.b	r0, (r7, 1)
@@ -270,7 +345,7 @@ one_sample:
 .Lz:
 	movi	r1, 0
 .Ls:
-	ld.h	r0, (r4, 0)
+	ld.hs	r0, (r4, 0)
 	mult	r1, r0
 	addu	r2, r1
 	addi	r4, 2
