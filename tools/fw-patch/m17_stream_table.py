@@ -212,6 +212,66 @@ def table_bytes_pay16(pcm=None):
     return bytes(out)
 
 
+# R4h. Same payload as R4g, plus frame 5 with the end bit clear.
+# The wrap moves to sample 2420. Scale down only if the peak exceeds 6451.
+LICH5_STREAM = 6
+LICH5_SAMPLES = 2430
+LICH5_TAIL = 2420
+
+
+def symbols_lich5():
+    pre = np.array([3.0, -3.0] * (PREAMBLE // 2))
+    lsf_b = m17.lsf_bytes(BENCH_CALL, BENCH_CALL)
+    lsf = np.array(m17.encode_lsf(lsf_b), float)
+    frames = []
+    for i in range(LICH5_STREAM):
+        frames.extend(m17.encode_stream(lsf_b, i, PAY16, i % 6))
+    syms = np.concatenate([pre, lsf, np.array(frames, float), np.zeros(TAIL)])
+    expect = PREAMBLE + 192 * (1 + LICH5_STREAM) + TAIL
+    if len(syms) != expect:
+        raise RuntimeError("got %d symbols, expected %d" % (len(syms), expect))
+    if len(syms) % 3:
+        raise RuntimeError("symbol count must be a multiple of 3")
+    return syms
+
+
+def waveform_hz_lich5():
+    syms = symbols_lich5()
+    y = m17.deviation(syms, FS)
+    expect = len(syms) * FS // m17.SYM_RATE
+    if len(y) != expect or len(y) != LICH5_SAMPLES:
+        raise RuntimeError("got %d samples, expected %d" % (len(y), LICH5_SAMPLES))
+    return y
+
+
+def counts_lich5():
+    """Same sign and the same cap as counts_pay16(). Not scaled up."""
+    y = waveform_hz_lich5()
+    body = np.rint(-y / HZ_PER_COUNT).astype(np.int32)
+    peak = int(np.max(np.abs(body)))
+    if peak > PEAK_CAP:
+        body = np.rint(body.astype(float) * (PEAK_CAP / peak)).astype(np.int32)
+    if np.max(np.abs(body)) > PEAK_CAP:
+        raise RuntimeError("peak %d still over the cap" % int(np.max(np.abs(body))))
+    if np.max(np.abs(body)) > 32767:
+        raise RuntimeError("sample does not fit in 16 bits")
+    if len(body) != LICH5_SAMPLES:
+        raise RuntimeError("count buffer is %d" % len(body))
+    return body
+
+
+def table_bytes_lich5(pcm=None):
+    pcm = counts_lich5() if pcm is None else pcm
+    out = bytearray()
+    for s in pcm:
+        u = int(s) & 0xFFFF
+        out.append((u >> 8) & 0xFF)
+        out.append(u & 0xFF)
+    if len(out) != LICH5_SAMPLES * 2:
+        raise RuntimeError("table is %d bytes" % len(out))
+    return bytes(out)
+
+
 def main():
     pcm = counts()
     y = waveform_hz()
