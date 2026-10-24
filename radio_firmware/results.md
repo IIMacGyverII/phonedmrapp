@@ -844,3 +844,46 @@ Two amplitudes agree on 0.41 Hz per count at the tops. ±2.4 kHz, the M17 outer 
 ## End state
 
 Factory image restored over R3a4. YModem `onSuccess` at 01:16:03.289. Banner `开机初始化完成` at 01:16:16.520. `0x34` at 01:16:16.831 is `DMR003.UV4T.V022`. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. VFO 467.625 / 467.625 FM at 01:16:18.712, low power. SignalDeck owns the radio. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched. The ES8311 debug node was not written. The first version poll returned the tag; the second-start path in the loader was not needed.
+
+# R3a5 — A = 1024 doubles the square again (2026-10-24, 01:22–01:29)
+
+HackRF receive only, 467.385 MHz center, 2.4 MS/s, LNA 24, VGA 38. One boot and one 3 s silence key, both at 467.625 MHz, low power. Twenty-two patch tests pass. A was not raised again in this image.
+
+## The image
+
+`c7000-txram-dmr-a1024`, tag `R3a5`, `DMR003.R3a5.V022.bin`, 378620 bytes. sha256 `07a76c84abce64ff159fb233499a4090bf52365288dce78b4f46d839f8b07ca5`. File and pushed MD5 `9b30d2e935e49c4c07608edcfde7bf92`.
+
+Against the R3a4 image the file differs at three bytes: the tag's last character (`+0x3846E`, `4` → `5`), the +512 immediate (`+0x5B028`, `0x3102` → `0x3104`, big-endian +1024), and the −512 immediate (`+0x5B038`, `0x31FE` → `0x31FC`, big-endian −1024). The four `0x26` call sites, the AT1846S writes, `+0x3074` and `+0x3EDFC` are the R3a4 bytes. Bit 4 stays clear.
+
+## Boot
+
+VFO 467.625 / 467.625 FM at 01:22:56.888, low power. HackRF from 01:23:01, 180.0 s, floor power 6.82. YModem `onSuccess` at 01:25:11.158. Banner `开机初始化完成` at 01:25:25.191. `0x34` at 01:25:25.512 is `DMR003.R3a5.V022`. Hottest 100 ms bin +0.12 dB, at 165 s, clip 0, nothing at +6 dB. The reboot is inside the file. The stub does not run at boot.
+
+## The silence key
+
+VFO 467.625 again at 01:26:21.519. `txwav` of the same 3 s of zeros. `0x26` launch 1 at 01:26:27.156, acked `sr=0`. `TX bench wav (3000 ms)`. `0x36` body `03` at 01:26:27.167. `played 24000 samples` at 01:26:30.558. Launch 2 at 01:26:30.560. `0x36` body `04` at 01:26:30.887.
+
+Carrier 3.45 s, SNR 39.3 dB, clip 0, offset +953 Hz. Steady window, dropping the first 1.0 s and the last 0.3 s. The 40 Hz figure is an FFT cutoff at 40 Hz, the same one that reads 212 Hz and 211 Hz on the R3a4 capture:
+
+| Harmonic | A = 512 | A = 1024 |
+|---|---|---|
+| 15.625 Hz | 284 Hz | 537 Hz |
+| 31.25 Hz | 2.6 Hz | 2.4 Hz |
+| 46.875 Hz | 101 Hz | 193 Hz |
+| 62.5 Hz | 3.4 Hz | 3.4 Hz |
+| 78.125 Hz | 55 Hz | 122 Hz |
+| 1000 Hz | 0.6 Hz | 0.3 Hz |
+
+A 40 Hz low-pass of that window has rms 438 Hz and median absolute value 422 Hz. At A = 512 the same low-pass was 212 Hz and 211 Hz. The median doubled (422 / 211 = 2.00). The rms rose by 2.06. 422 / 1024 = 0.41 Hz per count, and 438 / 1024 = 0.43. The two earlier medians were 0.41 Hz per count as well.
+
+The fundamental, 537 Hz, is `4A/π` for a square of amplitude 422 Hz. The A = 512 fundamental (284 Hz) sat above `4A/π` of its own plateau (269 Hz). This one sits on the plateau. The odd harmonics rose with the square. The evens stayed at a few hertz. The 1 kHz line is 0.3 Hz.
+
+Raw `|deviation|` p99 is 846 Hz, against 578 Hz at A = 512. The edges rose and still did not double. The first 100 ms is a key-up click, p99 23077 Hz. The steady window is the stimulus, and it stayed under ±1 kHz.
+
+## What this does not yet say
+
+Three amplitudes agree on about 0.41 Hz per count at the flat top, from ±104 Hz to ±422 Hz. ±2.4 kHz, the M17 outer deviation, would be about 5900 counts if the slope keeps. That count has not been transmitted. The edge p99 is still rising (469, 578, 846 Hz), so a jump to 5900 counts is not the next image. The next image is A = 2048, one more 6 dB step, another silence key. Predicted median tops are about ±840 Hz. M17 samples are not in this image. §6 is not met.
+
+## End state
+
+Factory image restored over R3a5. YModem `onSuccess` at 01:28:47.284. Banner `开机初始化完成` at 01:28:59.080. `0x34` at 01:28:59.395 is `DMR003.UV4T.V022`. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. VFO 467.625 / 467.625 FM at 01:29:01.242, low power. SignalDeck owns the radio. `/sdcard/DMR/DMRDEBUG.bin` is absent. `PATCH14_BACKUP.bin` was not touched. The ES8311 debug node was not written. The first version poll returned the tag; the second-start path in the loader was not needed.
