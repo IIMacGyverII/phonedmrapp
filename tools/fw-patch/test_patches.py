@@ -161,6 +161,10 @@ class PatchTest(unittest.TestCase):
             ["c7000-txram-dmr-sine1k-p4096", "c7000-txram-dmr-rrc"],
             ["c7000-txram-dmr-sine1k-p5120", "c7000-txram-dmr-rrc"],
         ]
+        # R4b uses the same call sites, stub and table window as R4a.
+        partners = [p[0] for p in pairs if p[1] == "c7000-txram-dmr-rrc"]
+        pairs.extend([[left, "c7000-txram-m17-lsf"] for left in partners])
+        pairs.append(["c7000-txram-dmr-rrc", "c7000-txram-m17-lsf"])
         for names in pairs:
             with self.subTest(names=names), self.assertRaises(SystemExit):
                 build.build(names, "UVt0", self.cfg)
@@ -765,6 +769,49 @@ class PatchTest(unittest.TestCase):
         for off in (0x2C90, 0x3054, 0x344E, 0x34F2, 0x3640, 0x2E94):
             self.assertEqual(img[off:off + 2], self.fac[off:off + 2])
         self.assertEqual(img[0x38464:0x38474], b"DMR003.R4a0.V022")
+
+    def test_txram_m17_lsf_is_one_link_setup_frame(self):
+        # R4b. One LSF in the 512-sample loop. Tag R4b0. Same stub as R4a.
+        import numpy as np
+
+        import m17_lsf_table
+        import m17
+
+        img, _ = build.build(["c7000-txram-m17-lsf"], "R4b0", self.cfg)
+        prev, _ = build.build(["c7000-txram-dmr-rrc"], "R4a0", self.cfg)
+        pcm = m17_lsf_table.counts()
+        pred = m17_lsf_table.prediction(pcm)
+        self.assertLess(pred["stop_hz"], 5000)
+        self.assertGreater(pred["peak_count"], 4000)
+        self.assertLess(int(pcm[0]), 0)
+        self.assertEqual(int(pcm[510]), 0)
+        self.assertEqual(int(pcm[511]), 0)
+        self.assertEqual(img[0x5C000:0x5C400], m17_lsf_table.table_bytes(pcm))
+        back = []
+        raw = img[0x5C000:0x5C400]
+        for i in range(0, 1024, 2):
+            v = (raw[i] << 8) | raw[i + 1]
+            if v >= 32768:
+                v -= 65536
+            back.append(v)
+        self.assertEqual(back, [int(s) for s in pcm])
+        self.assertEqual(img[0x5B000:0x5B0B4], prev[0x5B000:0x5B0B4])
+        for off in (0x92C8, 0x92E0, 0x92AA, 0x92FA):
+            self.assertEqual(img[off:off + 4], prev[off:off + 4])
+        self.assertNotEqual(img[0x5C000:0x5C400], prev[0x5C000:0x5C400])
+        self.assertEqual(bsr32_target(img, 0x92C8), 0x5B000)
+        self.assertEqual(bsr32_target(img, 0x92E0), 0x5B000)
+        self.assertEqual(bsr32_target(img, 0x92AA), 0x5B080)
+        self.assertEqual(bsr32_target(img, 0x92FA), 0x5B080)
+        self.assertEqual(img[0x3074:0x3078], self.fac[0x3074:0x3078])
+        self.assertEqual(img[0x3EDFC:0x3EE02], self.fac[0x3EDFC:0x3EE02])
+        self.assertEqual(img[0x5B0B4:0x5C000], self.fac[0x5B0B4:0x5C000])
+        self.assertEqual(img[0x5C400:0x5C6FC], self.fac[0x5C400:0x5C6FC])
+        self.assertEqual(img[0x38464:0x38474], b"DMR003.R4b0.V022")
+        air = np.tile(-m17_lsf_table.HZ_PER_COUNT * pcm.astype(float), 4)
+        got = m17.decode_transmission(air, 8000, verbose=False)
+        self.assertIsNotNone(got["lsf"])
+        self.assertTrue(got["lsf"][2])
 
     def test_iram_padbyte_changes_the_halfword_after_keyup_returns(self):
         # R3-0. No log string lives in the IRAM copy. The byte after key-up's

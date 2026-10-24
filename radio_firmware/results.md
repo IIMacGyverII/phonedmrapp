@@ -1442,3 +1442,27 @@ The CPU writes short fixed records into the modem. It does not fill a symbol FIF
 ## End state
 
 The radio was not touched. End state remains the R4a restore: factory image, `0x34` `DMR003.UV4T.V022` at 03:00:58.517, VFO 467.625 / 467.625 FM at 03:00:59.876, low power, no `DMRDEBUG.bin`.
+
+# R4b — one M17 link-setup frame in the TX-RAM loop, tag R4b0 (2026-10-24, 04:35–04:43)
+
+HackRF receive only, 467.385 MHz center, 2.4 MS/s, LNA 24, VGA 38. One boot and one 3 s silence key, both at 467.625 MHz, low power. Twenty-nine patch tests pass. The ES8311 debug node was not written.
+
+The fill is 512 halfwords at file `+0x5C000`. One hundred eight symbols of the `0x77` preamble (`+3`, `-3`), the 192-symbol link-setup frame, and six zero symbols of filter tail occupy 510 samples. The last two samples are zero. Source and destination are the research modem's bench callsign. Samples are 16-bit, high byte at the low address. Each stored count is `-round(Hz / 0.54)`, the sign flip from the R4a air result, so a positive symbol aims at a positive deviation and a long run of `+3` aims at `+2400` Hz. The preamble overshoot sets the peak count at 6451. At 0.55 Hz per count the linear prediction is 3548 Hz. The stub bytes, the two key call sites, and the two unkey call sites are the R4a stub. `on_unkey` is still at `+0x5B080`. No `+0x3074`, no `+0x3EDFC`, bit 4 stays clear. The buffer loops every 64 ms, so the air carries one frame per loop.
+
+`c7000-txram-m17-lsf`, tag `R4b0`, `DMR003.R4b0.V022.bin`, 378620 bytes. sha256 `a115ac083e138d48deb07c2b98b8767c5ed1c5ab1f5ead38723aaad2c183492d`. File and pushed MD5 `c5c6aaf369cbcaec83c175b5a8fa4645`.
+
+## Boot
+
+VFO 467.625 / 467.625 FM at 04:35:54.063, low power. HackRF probe 9600000 bytes at 04:35:53. Boot capture from 04:35:59, 240.0 s, floor power 6.78. YModem `onSuccess` at 04:38:08.861. Banner `开机初始化完成` at 04:38:20.762. `0x34` at 04:38:21.072 is `DMR003.R4b0.V022`, on the first poll. Hottest 100 ms bin +0.15 dB, at 174.2 s, clip 0, nothing at +6 dB. That bin is spread across ±24 kHz, so it is the noise floor. The stub does not run at boot.
+
+## Silence key
+
+VFO confirmed again at 04:40:24.374. The key capture started at 04:40:29. `txwav` silence, 3000 ms, at 04:40:30.007. `0x36` body `03` at 04:40:30.017, `0x26` launch 2 at 04:40:33.419, `0x36` body `04` at 04:40:33.749. The carrier is up for 3.46 s. SNR 38.7 dB, clip 0, carrier offset +1026 Hz.
+
+The steady window, from 1.0 s after key-up to 0.3 s before release, is 2.158 s. RMS 1785 Hz. Steady p99 3148 Hz. The key-up click p99 is 23164 Hz and is outside that window. The stop stays clear. The 1 kHz line is 260 Hz and the 3 kHz line is 19 Hz.
+
+Over 2.816 s of the same capture the aired deviation follows the aimed waveform at r² 0.807, polarity +1, gain 0.793. The same alignment against the stored counts is −0.43 Hz per count. The sign flip landed positive deviation on a positive symbol, and the level is about four fifths of the `+2400` Hz aim. The plain matched-filter decoder, the same one that checks the specification vectors, accepted the link-setup frame on 43 of 43 loops in that window. Best sync score 0.999. It reported no stream frame after the link setup. The loop period is 64 ms, and a stream frame wants the next sync 40 ms later, which this buffer does not hold.
+
+## End state
+
+Factory image restored. YModem `onSuccess` 04:42:51.014. Banner `开机初始化完成` at 04:43:02.951. `0x34` `DMR003.UV4T.V022` at 04:43:03.271. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. The loader's channel write was followed by the VFO tune: 467.625 / 467.625 FM at 04:43:05.143, low power, `RX cmd=0x23 rw=0 sr=0`. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met: one looping link-setup frame passed, and the acceptance is 85 of 90 frames across three transmissions. `0x3D` still waits. The ES8311 debug node was not written.
