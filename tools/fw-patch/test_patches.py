@@ -240,6 +240,18 @@ class PatchTest(unittest.TestCase):
         pairs.append(["c7000-txram-m17-pay16", "c7000-txram-m17-eot2"])
         pairs.append(["c7000-txram-m17-lich5", "c7000-txram-m17-eot2"])
         pairs.append(["c7000-txram-m17-eot1", "c7000-txram-m17-eot2"])
+        # R4k uses the same windows. drop_ptt also posts the stop status.
+        pairs.extend([[left, "c7000-txram-m17-eot3"] for left in partners])
+        pairs.append(["c7000-txram-dmr-rrc", "c7000-txram-m17-eot3"])
+        pairs.append(["c7000-txram-m17-lsf", "c7000-txram-m17-eot3"])
+        pairs.append(["c7000-txram-m17-stream", "c7000-txram-m17-eot3"])
+        pairs.append(["c7000-txram-m17-wake", "c7000-txram-m17-eot3"])
+        pairs.append(["c7000-txram-m17-loop", "c7000-txram-m17-eot3"])
+        pairs.append(["c7000-txram-m17-loop5", "c7000-txram-m17-eot3"])
+        pairs.append(["c7000-txram-m17-pay16", "c7000-txram-m17-eot3"])
+        pairs.append(["c7000-txram-m17-lich5", "c7000-txram-m17-eot3"])
+        pairs.append(["c7000-txram-m17-eot1", "c7000-txram-m17-eot3"])
+        pairs.append(["c7000-txram-m17-eot2", "c7000-txram-m17-eot3"])
         for names in pairs:
             with self.subTest(names=names), self.assertRaises(SystemExit):
                 build.build(names, "UVt0", self.cfg)
@@ -1527,6 +1539,56 @@ class PatchTest(unittest.TestCase):
         self.assertTrue(set(fns[:-1]) <= {0, 1, 2, 3, 4, 5})
         self.assertGreaterEqual(len(fns), 8)
         self.assertTrue(all(f[1] == bytes(range(16)) and f[2] == 0 for f in got["frames"]))
+        allowed = set(range(0x3846B, 0x3846F))
+        for off, n in (
+            (0x92C8, 4), (0x92E0, 4), (0x92AA, 4), (0x92FA, 4),
+            (0x18B5C, 4), (0x18B68, 4),
+            (0x5AEFC, 260), (0x5B000, 368), (0x5B170, 640), (0x5B400, 4860),
+        ):
+            allowed.update(range(off, off + n))
+        changed = {i for i, (a, b) in enumerate(zip(self.fac, img)) if a != b}
+        self.assertTrue(changed <= allowed, sorted(changed - allowed)[:12])
+
+    def test_txram_m17_eot3_posts_the_stop_status(self):
+        # R4k. Same image as R4j. drop_ptt posts status byte 4. Tag R4k0.
+        import m17_stream_table
+
+        img, _ = build.build(["c7000-txram-m17-eot3"], "R4k0", self.cfg)
+        prev, _ = build.build(["c7000-txram-m17-eot2"], "R4j0", self.cfg)
+        self.assertEqual(len(img), len(self.fac))
+        for site in (0x92C8, 0x92E0):
+            self.assertEqual(bsr32_target(img, site), 0x5B090)
+        for site in (0x92AA, 0x92FA):
+            self.assertEqual(bsr32_target(img, site), 0x5B128)
+        self.assertEqual(bsr32_target(img, 0x18B5C), 0x5B000)
+        self.assertEqual(bsr32_target(img, 0x18B68), 0x5B006)
+        self.assertEqual(img[0x5B000:0x5B170], prev[0x5B000:0x5B170])
+        self.assertEqual(img[0x5B170:0x5B400], prev[0x5B170:0x5B400])
+        self.assertEqual(img[0x5B400:], prev[0x5B400:])
+        self.assertEqual(img[0x1F30:0x1F34], self.fac[0x1F30:0x1F34])
+        self.assertEqual(img[0x18A70:0x18A78], self.fac[0x18A70:0x18A78])
+        self.assertEqual(img[0x39408:0x5AEFC], self.fac[0x39408:0x5AEFC])
+        self.assertEqual(br16_target(img, 0x5AF98), 0x5B05E)
+        found = False
+        off = 0x5AF9A
+        while off + 4 <= 0x5B000:
+            hi = int.from_bytes(img[off:off + 2], "little")
+            if hi >> 10 == 0b111000:
+                if bsr32_target(img, off) == 0x7E08:
+                    self.assertEqual(int.from_bytes(img[off - 2:off], "little"), 0x3004)
+                    found = True
+                self.assertNotEqual(bsr32_target(img, off), 0xE9C)
+                off += 4
+            else:
+                off += 2
+        self.assertTrue(found)
+        self.assertEqual(img[0x38464:0x38474], b"DMR003.R4k0.V022")
+        loop = m17_stream_table.prediction(m17_stream_table.counts_lich5())
+        end = m17_stream_table.prediction(m17_stream_table.counts_eot1())
+        self.assertEqual(loop["peak_count"], 6451)
+        self.assertEqual(end["peak_count"], 6337)
+        self.assertLess(loop["stop_hz"], 5000)
+        self.assertLess(end["stop_hz"], 5000)
         allowed = set(range(0x3846B, 0x3846F))
         for off, n in (
             (0x92C8, 4), (0x92E0, 4), (0x92AA, 4), (0x92FA, 4),
