@@ -5,16 +5,23 @@
  * in bits 7:6 (01 = +3, 00 = +1, 10 = -1, 11 = -3). 2 reads the fill, the
  * underrun count and the last error. 3 resets the ring. 4 renders: the next
  * two bytes are a sample count N, 1..256, and the reply body is 2N bytes in
- * TX-RAM order, taken from the scratch at 0x4AC00. 5 captures four
- * consecutive FM receive halves. The next byte is 0, 2, 3 or 4. Every
- * variant stores WORK_MODE 0x80 and holds it across the four halves. 2
+ * TX-RAM order, taken from the scratch at 0x4AC00. 5 captures four or six
+ * FM receive halves. A 2-byte body forces four; a 3-byte body carries the
+ * count in byte 2 and accepts only 4 or 6. The next byte is 0, 2, 3 or 4.
+ * Every variant stores WORK_MODE 0x80 and holds it across the halves. 2
  * and 4 also clear FM_BANDWIDTH bits 6 and 4. 3 and 4 also store AT1846S
- * 0x58 as 0xBCFD and write 0x8405 back. Each change of FM_ADDR_SW copies
- * the half that value names, with ld.b, into 0x4A400. Four replies then
- * return those 2048 bytes. The frame is built at 0x4AE00, not on the
- * stack. Op 5 does not write PTT. Anything else, including 1, is refused.
- * Nothing in this command keys. A clear cursor at 0x4DAAC does nothing,
- * including at boot.
+ * 0x58 as 0xBCFD and write 0x8405 back before the replies. Each change of
+ * FM_ADDR_SW copies the half that value names, with ld.b, into 0x4A400
+ * plus 512 times the index. Each reply is built in place: an 8-byte header
+ * at the sample start minus 8, and the sequence, half id and tail just
+ * after the 512 bytes. Those three bytes are saved and restored. Six
+ * halves end at 0x4B000. Op 6 applies variant 3 or 4 and leaves it, or
+ * restores it. Its body is three bytes: op, variant, action 1 apply or
+ * 0 restore. It saves WORK_MODE at 0x4A3F8 and, for variant 4, the
+ * bandwidth word at 0x4A3FC. Do not run op 5 while op 6 is held: op 5's
+ * restore and the first reply header both use 0x4A3F8. Op 5 and op 6 do
+ * not write PTT. Anything else is refused. Nothing in this command keys.
+ * A clear cursor at 0x4DAAC does nothing, including at boot.
  *
  * The ring is 2048 signed bytes at 0x4A400. 0x4A3E4 is the write count,
  * 0x4A3E8 the next symbol base, 0x4A3EC the phase, 0x4A3F0 the underrun
@@ -196,9 +203,22 @@ store40:
 	pop	r4-r7, r15
 .Lmaybe5:
 	cmpnei	r3, 5
-	bt	.Lbad
+	bt	.Lmaybe6
 	cmpnei	r2, 2
+	bt	.Llen3
+	movi	r0, 4
+	br	.Lgotn
+.Llen3:
+	cmpnei	r2, 3
 	bt	.Lbad
+	ld.b	r0, (r7, 10)
+	cmpnei	r0, 4
+	bt	.Ln6
+	br	.Lgotn
+.Ln6:
+	cmpnei	r0, 6
+	bt	.Lbad
+.Lgotn:
 	ld.b	r1, (r7, 9)
 	cmpnei	r1, 0
 	bt	.Lv2
@@ -215,8 +235,9 @@ store40:
 	cmpnei	r1, 4
 	bt	.Lbad
 .Lvok:
-	subi	r14, 16
-	st.b	r1, (r14, 12)
+	subi	r14, 24
+	st.b	r1, (r14, 15)
+	st.b	r0, (r14, 14)
 	lrw	r4, 0x11000100
 	ld.w	r5, (r4, 0)
 	st.w	r5, (r14, 0)
@@ -236,7 +257,7 @@ store40:
 	bclri	r5, 6
 	st.w	r5, (r4, 0)
 .Lnobw:
-	ld.b	r1, (r14, 12)
+	ld.b	r1, (r14, 15)
 	cmpnei	r1, 3
 	bt	.Ln58a
 	br	.Lw58
@@ -305,21 +326,27 @@ store40:
 	cmpnei	r3, 0
 	bt	.Lrxbyte
 	addi	r6, 1
-	cmpnei	r6, 4
+	ld.b	r0, (r14, 14)
+	mov	r1, r6
+	subu	r1, r0
+	cmpnei	r1, 0
 	bt	.Lround
 	bsr	.Lrest
 	movi	r5, 0
 .Louts:
 	bsr	.Lsendh
 	addi	r5, 1
-	cmpnei	r5, 4
+	ld.b	r0, (r14, 14)
+	mov	r1, r5
+	subu	r1, r0
+	cmpnei	r1, 0
 	bt	.Louts
-	addi	r14, 16
+	addi	r14, 24
 	addi	r14, 4
 	pop	r4-r7, r15
 .Lto:
 	bsr	.Lrest
-	addi	r14, 16
+	addi	r14, 24
 	br	.Lbad
 .Lrest:
 	lrw	r4, 0x4a3f8
@@ -327,7 +354,7 @@ store40:
 	lrw	r4, 0x11000100
 	ld.w	r5, (r14, 0)
 	st.w	r5, (r4, 0)
-	ld.b	r1, (r14, 12)
+	ld.b	r1, (r14, 15)
 	cmpnei	r1, 2
 	bt	.Lrb2
 	br	.Lrbw
@@ -339,7 +366,7 @@ store40:
 	ld.w	r5, (r14, 4)
 	st.w	r5, (r4, 0)
 .Lnrbw:
-	ld.b	r1, (r14, 12)
+	ld.b	r1, (r14, 15)
 	cmpnei	r1, 3
 	bt	.Lrs3
 	br	.Lrs58
@@ -355,13 +382,17 @@ store40:
 	ld.w	r15, (r4, 0)
 	jmp	r15
 .Lsendh:
-	lrw	r4, 0x4a3f8
-	st.w	r15, (r4, 0)
-	lrw	r4, 0x4ae00
+	mov	r7, r15
+	lrw	r1, 0x4a400
+	mov	r0, r5
+	lsli	r0, 9
+	addu	r1, r0
+	mov	r4, r1
+	subi	r4, 8
 	movi	r2, 104
 	st.b	r2, (r4, 0)
-	ld.w	r7, (r14, 16)
-	ld.b	r2, (r7, 1)
+	ld.w	r0, (r14, 24)
+	ld.b	r2, (r0, 1)
 	st.b	r2, (r4, 1)
 	movi	r2, 0
 	st.b	r2, (r4, 2)
@@ -370,29 +401,22 @@ store40:
 	st.b	r2, (r4, 5)
 	movi	r2, 2
 	st.b	r2, (r4, 6)
-	movi	r2, 2
 	st.b	r2, (r4, 7)
-	lrw	r1, 0x4a400
-	mov	r0, r5
-	lsli	r0, 9
-	addu	r1, r0
-	mov	r0, r4
-	addi	r0, 8
+	mov	r0, r1
 	movi	r3, 1
 	lsli	r3, 9
-.Lsb:
-	ld.b	r2, (r1, 0)
-	st.b	r2, (r0, 0)
-	addi	r1, 1
-	addi	r0, 1
-	subi	r3, 1
-	cmpnei	r3, 0
-	bt	.Lsb
+	addu	r0, r3
+	ld.b	r6, (r0, 0)
+	st.b	r6, (r14, 16)
+	ld.b	r6, (r0, 1)
+	st.b	r6, (r14, 17)
+	ld.b	r6, (r0, 2)
+	st.b	r6, (r14, 18)
 	st.b	r5, (r0, 0)
-	mov	r1, r14
-	addi	r1, 8
-	addu	r1, r5
-	ld.b	r2, (r1, 0)
+	mov	r6, r14
+	addi	r6, 8
+	addu	r6, r5
+	ld.b	r2, (r6, 0)
 	st.b	r2, (r0, 1)
 	movi	r2, 16
 	st.b	r2, (r0, 2)
@@ -406,9 +430,84 @@ store40:
 	lsli	r1, 9
 	addi	r1, 11
 	.short	0xE000, 0x7DE8
+	lrw	r1, 0x4a400
+	mov	r0, r5
+	lsli	r0, 9
+	addu	r1, r0
+	movi	r3, 1
+	lsli	r3, 9
+	addu	r1, r3
+	ld.b	r2, (r14, 16)
+	st.b	r2, (r1, 0)
+	ld.b	r2, (r14, 17)
+	st.b	r2, (r1, 1)
+	ld.b	r2, (r14, 18)
+	st.b	r2, (r1, 2)
+	jmp	r7
+.Lmaybe6:
+	cmpnei	r3, 6
+	bt	.Lbad
+	cmpnei	r2, 3
+	bt	.Lbad
+	ld.b	r1, (r7, 9)
+	ld.b	r3, (r7, 10)
+	cmpnei	r3, 0
+	bt	.Lapply
 	lrw	r4, 0x4a3f8
-	ld.w	r15, (r4, 0)
-	jmp	r15
+	ld.w	r5, (r4, 0)
+	lrw	r4, 0x11000100
+	st.w	r5, (r4, 0)
+	cmpnei	r1, 4
+	bt	.Lno4
+	lrw	r4, 0x4a3fc
+	ld.w	r5, (r4, 0)
+	lrw	r4, 0x11000500
+	st.w	r5, (r4, 0)
+	br	.Lr58b
+.Lno4:
+	cmpnei	r1, 3
+	bt	.Lack
+.Lr58b:
+	movi	r0, 88
+	movi	r1, 33797
+	.short	0xE000, 0x0B22
+	br	.Lack
+.Lapply:
+	cmpnei	r3, 1
+	bt	.Lbad
+	cmpnei	r1, 3
+	bt	.Lap4
+	br	.Lapdo
+.Lap4:
+	cmpnei	r1, 4
+	bt	.Lbad
+.Lapdo:
+	lrw	r4, 0x11000100
+	ld.w	r5, (r4, 0)
+	lrw	r0, 0x4a3f8
+	st.w	r5, (r0, 0)
+	movi	r5, 128
+	st.w	r5, (r4, 0)
+	cmpnei	r1, 4
+	bt	.Lonly58
+	lrw	r4, 0x11000500
+	ld.w	r5, (r4, 0)
+	lrw	r0, 0x4a3fc
+	st.w	r5, (r0, 0)
+	bclri	r5, 4
+	bclri	r5, 6
+	st.w	r5, (r4, 0)
+.Lonly58:
+	movi	r0, 88
+	movi	r1, 48381
+	.short	0xE000, 0x0B22
+.Lack:
+	ld.w	r7, (r14, 0)
+	ld.b	r0, (r7, 1)
+	movi	r1, 0
+	.short	0xE000, 0x8E7C
+	addi	r14, 4
+	pop	r4-r7, r15
 .Lbad:
 	ld.w	r7, (r14, 0)
 	ld.b	r0, (r7, 1)

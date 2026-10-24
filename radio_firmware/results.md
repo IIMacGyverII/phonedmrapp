@@ -2084,3 +2084,43 @@ The three 100 Hz lines on variant 4 are 7465, 8526 and 8878, against 1 kHz lines
 ## End state
 
 R-C and R-B close on this measurement. The receive design stays the audio-path equaliser. RC40 stays loaded. VFO 467.625 / 467.625 FM at 16:06:43.569, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. The phone was not keyed.
+
+# R-D — phone path, receive-RAM top end, UART clock (2026-10-24, 17:13–17:20)
+
+Tag `RD10`. Sha256 `6550e55256600b2b6880b9609bce919900cb8dd16c19aff67edf8ba03d970527`. Pushed MD5 `65d92fa2c85b516934211f70fc21ee14`. Command `0x40` op 5 returns four or six FM receive halves. Op 6 applies variant 3 or 4 and leaves it until a restore. Neither op writes PTT. The phone was not keyed. HackRF transmit was FM at 467.625 MHz, VGA 20, amplitude off, deviation 2.5 kHz, finite files, a dummy burst first. Wi-Fi adb `192.168.1.125:5555` only.
+
+## Load and boot
+
+YModem `onSuccess` at 17:15:07.427. `0x34` `DMR003.RD10.V022` at 17:15:21.429. The HackRF receive that covered the load peaked at 0.15 dB, with no sample above 10 dB. The retained log kept the `0x34` line and not the banner sentence. Quiet op 5, mode 0 and mode 4, four replies of 514 bytes, `sr=0`, idle rms 9 and 43, receive peaks 0.04 dB. Six halves, mode 4, idle, peak 0.02 dB.
+
+## Phone path
+
+8 kHz mono, before the app squelch. Line level against the 1 kHz tone in the same state.
+
+| Hz | Plain | `0x58` = `0xBCFD` | Variant 4 |
+|---|---|---|---|
+| 50 | −27.6 dB | −0.6 dB | −0.6 dB |
+| 100 | −24.5 dB | +1.2 dB | +1.2 dB |
+| 300 | +5.7 dB | −1.6 dB | −1.6 dB |
+| 1000 | 0 | 0 | 0 |
+| 2000 | −4.0 dB | +1.8 dB | +1.8 dB |
+| 3500 | −12.1 dB | +1.7 dB | +1.7 dB |
+| 3800 | −17.0 dB | +1.7 dB | +1.7 dB |
+
+`WORK_MODE` `0x80` does not mute the phone. Variant 4 matches the single `0x58` write within 0.1 dB, so what the phone hears is the AT1846S voice filter. A VFO write to 467.625 MHz, without re-applying the hold, puts 100 Hz back to −24.5 dB in both states. `at1846_tune` rewrites `0x8405`.
+
+## Receive RAM, variant 4
+
+Four halves, line against the 1 kHz line of 4795 counts. 2 kHz +4.7 dB, 3 kHz +2.6 dB, 3.5 kHz +4.7 dB, 3.8 kHz +2.2 dB. The top of the band is present.
+
+## M17 from those samples
+
+A loop of one link setup and two stream frames, ±2.4 kHz, captured as six halves (192 ms) eight times. Plain `m17.py`, no equaliser, scale 0.521 Hz per count from the 1 kHz line, and the inverted polarity. Sync locked. As captured, the frame number was often 1. No capture had a link-setup CRC. Golay errors on the stream frames were 8 to 14. The pass was not met.
+
+## UART clock, read only
+
+File `+0x5DEC`, called from the boot list at `+0xD9E`, programs the DesignWare UART at `0x14090000`. The divisor is `(*0x32F90 >> 4) / 57600`, written to DLL and DLH with DLAB. No fractional divisor register is written. The word at `0x32F90` is one of three constants from `+0x5432C`: 6 MHz when the first argument is not 1, 48 MHz when the first is 1 and the second is not, and 42 MHz when both are 1. Integer division gives 62500 Hz (+8.5%), 57692 Hz (+0.160%) and 58333 Hz (+1.27%). The working 57600 link fits the 48 MHz value. The same clock and a divisor for 230400 lands on 13 and 230769 Hz, +0.160%, the same fraction, not an integer. SignalDeck's Armor control port is `/dev/ttyS0` at 57600. `RadioEngine.open` passes the profile baud to `VendorSerial.openPort`. The Xplore 1 profile already opens `/dev/ttyS1` at 230400 through that JNI.
+
+## End state
+
+RD10 stays loaded. VFO 467.625 / 467.625 FM at 17:20:44, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. The phone was not keyed. R-C stays open. The phone path is flat after one AT1846S write, and that write does not survive a channel write. A runtime UART switch to 230400 is as close as the link that already works. The eight M17 captures did not plain-decode.

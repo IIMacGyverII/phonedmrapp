@@ -22,9 +22,16 @@ echo "pushed md5 $("$A" $D shell md5sum /sdcard/DMR/DMRDEBUG.bin | cut -d' ' -f1
 "$A" $D shell "am force-stop com.pri.prizeinterphone; logcat -c; am start -n com.pri.prizeinterphone/.InterPhoneHomeActivity" >"$TEMP/fwload_start.txt" 2>&1 || true
 if grep -q "does not exist" "$TEMP/fwload_start.txt"; then echo "stock activity did not start"; cat "$TEMP/fwload_start.txt"; "$A" $D shell "rm -f /sdcard/DMR/DMRDEBUG.bin"; exit 1; fi
 R=""
-for i in $(seq 1 100); do R=$("$A" $D shell "logcat -d -s YModemManager:D" | grep -E "onSuccess|onFail|rror" | head -1 || true); [ -n "$R" ] && break; sleep 2; done
+YM="$TEMP/fwload_ymodem.txt"
+: > "$YM"
+for i in $(seq 1 100); do
+  "$A" $D shell "logcat -d -s YModemManager:D" > "$YM" 2>&1 || true
+  R=$(grep -a -E "onSuccess|onFail|rror" "$YM" | head -1 || true)
+  [ -n "$R" ] && break
+  sleep 2
+done
 "$A" $D shell "rm -f /sdcard/DMR/DMRDEBUG.bin"
-echo "updater: ${R:-TIMEOUT}"; echo "$R" | grep -q onSuccess || exit 1
+echo "updater: ${R:-TIMEOUT}"; echo "$R" | grep -a -q onSuccess || { echo "ymodem log:"; tail -c 2000 "$YM"; exit 1; }
 sleep 2
 "$A" $D shell "am force-stop com.pri.prizeinterphone; logcat -c; am start -n com.macdmr.radio/.MainActivity" >/dev/null 2>&1 || true
 # After a key the first takeover often sees 0x29050000, restarts the module, and
