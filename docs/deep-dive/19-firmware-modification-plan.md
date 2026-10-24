@@ -547,3 +547,24 @@ It also explains why receive loses the same octave (the M17 deep dive: −25…�
 1. **TX DAC canary (UVm11):** lower `GCR_DACL` (codec base + `0x1F`, written by the codec init; find any later rewriter, as with `0x61F4`) by 6 dB. Same two stimuli. If the air halves, the C7000 DAC feeds the transmitter.
 2. **A DAC high-pass:** if the canary drops, read the codec's DAC-side filter and control registers in the user guide (the `FCR_DAC` counterpart of `FCR_ADC`, a DAC DC-block or de-pop high-pass) and where the image writes them. A software-set DAC filter would be the last firmware candidate for the cut. If there is none, the cut is the analog coupling between that DAC and the AT1846S microphone pin: hardware.
 3. **Receive cross-check without transmitting:** UVm10's lowered `GCR_ADCL` should make received audio about 6 dB quieter if the ADC is the RX path. SignalDeck `rxclip` on open-squelch noise (sq 0, quiet channel), factory against UVm10. No RF needed.
+
+## 19. Review of UVm11 and the receive check (2026-10-23, commit `6f8c0904`)
+
+**Settled.** The HR-C7000 codec is in **neither** audio path:
+- **Transmit:** its DAC gain (UVm11, all ten table slots, with no later rewriter) and its ADC gain (UVm10) leave the air within 0.5 dB.
+- **Receive:** its ADC gain leaves open-squelch receive within 0.06 dB.
+
+The audio does pass through the AT1846S (UVm2/UVm8). My §18 reading (phone I2S → C7000 DAC → AT1846S) is therefore wrong as well.
+
+**What fits instead.** The converters are on the **phone side**. tinyserver plays transmit PCM out on I2S1 (`I2S1_CH1 DL8_CH1`) and takes receive audio in from I2S2 (`UL2_CH1 I2S2_CH1`). Some DAC/ADC outside the module's own codec (an external codec chip, or the MT6359 through those I2S links) turns them into analog lines to and from the AT1846S microphone and audio pins. Any coupling capacitor, or a converter's own high-pass, sits there. That fits the matching low-frequency loss on both directions: about −40 dB TX, −25…−37 dB RX.
+
+**Consequence: module firmware cannot open the bottom octave.** Every module-side control that could have shaped it has now been ruled out by measurement:
+- AT1846S `0x58`, all bits;
+- the C7000 FM band-pass, pre-emphasis and limiter;
+- the C7000 codec ADC and DAC.
+
+For the transmit cut, close the firmware track here.
+
+**One read-only check is left, on the phone, no transmission:** identify the converter on I2S1/I2S2. Look at the I²C device names (`/sys/bus/i2c/devices/*/name`), `/proc/asound/cards`, the kernel log lines about codec probes, and the vendor audio XML or route files that name I2S1/I2S2. If it is a codec chip with a programmable high-pass (many have a DC-blocking HPF, typically 3–200 Hz), that is the last software candidate, at the phone's kernel or ALSA level and outside this module's firmware. Changing it would be a system audio setting, so the owner decides. If it is plain coupling capacitors, the octave is hardware.
+
+**What the firmware work still gives the product.** UVm6 (`0x84FD` + `ctcss-hpf-keep`) is flat from 300 Hz to 3.5 kHz on transmit. The digital modes SignalDeck already ships (AFSK, FT8, SSTV, DTMF, SAME) work on the factory path. A run-time flat mode would gain them margin, not new capability, and it needs a firmware command to switch `0x58` per transmission, because the register also sets receive de-emphasis. Standard M17/POCSAG TX to ordinary radios stays infeasible on this phone. RX for both already works with the equalizers.
