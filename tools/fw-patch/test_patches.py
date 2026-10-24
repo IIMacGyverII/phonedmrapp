@@ -257,6 +257,11 @@ class PatchTest(unittest.TestCase):
         pairs.append(["c7000-txram-m17-eot1", "c7000-cmd40-ack2"])
         pairs.append(["c7000-txram-m17-eot2", "c7000-cmd40-ack2"])
         pairs.append(["c7000-txram-m17-eot3", "c7000-cmd40-ack2"])
+        pairs.append(["c7000-cmd40-ack", "c7000-cmd40-echo"])
+        pairs.append(["c7000-cmd40-ack2", "c7000-cmd40-echo"])
+        pairs.append(["c7000-txram-m17-eot1", "c7000-cmd40-echo"])
+        pairs.append(["c7000-txram-m17-eot2", "c7000-cmd40-echo"])
+        pairs.append(["c7000-txram-m17-eot3", "c7000-cmd40-echo"])
         for names in pairs:
             with self.subTest(names=names), self.assertRaises(SystemExit):
                 build.build(names, "UVt0", self.cfg)
@@ -1642,6 +1647,20 @@ class PatchTest(unittest.TestCase):
         self.assertEqual(img[0x35F64:0x35FE4], self.fac[0x35F64:0x35FE4])
         self.assertEqual(img[0xAAFE:0xAB0E], self.fac[0xAAFE:0xAB0E])
         self.assertEqual(img[0x38464:0x38474], b"DMR003.R4m0.V022")
+
+    def test_cmd40_echo_reads_the_body_byte(self):
+        # R4n. The handler at +0x5AEFC replies with the byte at frame offset 8.
+        img, _ = build.build(["c7000-cmd40-echo"], "R4n0", self.cfg)
+        self.assertEqual(len(img), len(self.fac))
+        self.assertEqual(int.from_bytes(img[0x382B8:0x382BC], "little"), 0x03074EFC)
+        self.assertEqual(img[0x5AEFC:0x5AF04], bytes.fromhex("136c00e003009514"))
+        self.assertEqual(bsr32_target(img, 0x5AF2A), 0x8E5C)
+        self.assertEqual(bsr32_target(img, 0x5AF32), 0x7DE8)
+        self.assertEqual(img[0x5AF38:0x5AF3A], bytes.fromhex("9114"))
+        self.assertEqual(img[0x35F64:0x35FE4], self.fac[0x35F64:0x35FE4])
+        self.assertEqual(img[0xAAFE:0xAB0E], self.fac[0xAAFE:0xAB0E])
+        self.assertEqual(img[0x5AF3A:0x5B000], self.fac[0x5AF3A:0x5B000])
+        self.assertEqual(img[0x38464:0x38474], b"DMR003.R4n0.V022")
 
     def test_refuses_bad_tag(self):
         for tag in ("UV4T", "UV4", "UV-1"):

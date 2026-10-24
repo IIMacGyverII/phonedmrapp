@@ -1788,3 +1788,23 @@ DIAG `cmdbyte` with body byte 1. `TX cmd=0x40 rw=1 sr=1 len=1 [01]` at 11:35:27.
 ## End state
 
 R4m0 stays loaded. VFO 467.625 / 467.625 FM at 11:35:29.955, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met. The slot answers. It does not yet carry samples. Do not reload R4l0.
+
+# R4n — command 0x40 echoes its first body byte, tag R4n0 (2026-10-24, 11:46–11:49)
+
+No HackRF capture. Nothing was keyed. Forty-one patch tests passed before the load. The ES8311 debug node was not written.
+
+`c7000-cmd40-echo`. A 62-byte handler at file `+0x5AEFC`. The dispatch word at `+0x382B8` is runtime `0x03074EFC`. The handler reads the byte at frame offset 8, builds a 10-byte reply on the stack, checksums it through file `+0x8E5C`, and sends it through file `+0x7DE8`. It does not key. Command `0x3D` at `+0xAAFE` is unchanged. The bytes at `+0x35F64` stay factory.
+
+`DMR003.R4n0.V022.bin`, 378620 bytes. sha256 `2faa75635478890e689f8685ed8e8d8ec87ddb17baba1b50fe9a7aeb36b0bbc7`. Pushed MD5 `872bb00b2974d0aa4b40a36b6eb37022`.
+
+## Load
+
+VFO 467.625 / 467.625 FM at 11:46:07.739, low power, before the load. YModem `onSuccess` at 11:48:20.093. The first `0x34` at 11:48:26.017 had no answer, and the loader power-cycled the module. Banner `开机初始化完成` at 11:48:33.212. `0x34` at 11:48:33.523 is `DMR003.R4n0.V022`. The loader then wrote channel 36 (162.425 MHz, low power, `RX cmd=0x23 rw=0 sr=0` at 11:48:33.592). The VFO was put back: 467.625 / 467.625 FM at 11:48:35.181, low power, acked at 11:48:35.203.
+
+## Command
+
+DIAG `cmdbyte` twice. `TX cmd=0x40 rw=1 sr=1 len=1 [01]` at 11:49:16.920, frame `68 40 01 01 95 AD 00 01 01 10`. `RX cmd=0x40 rw=0 sr=0 len=1 [01]` at 11:49:16.925, 5 ms later. `TX cmd=0x40 rw=1 sr=1 len=1 [5A]` at 11:49:18.480, frame `68 40 01 01 3C AD 00 01 5A 10`. `RX cmd=0x40 rw=0 sr=0 len=1 [5A]` at 11:49:18.486, 6 ms later. The log has no `0x26` and no `0x36`.
+
+## End state
+
+R4n0 stays loaded. VFO 467.625 / 467.625 FM at 11:49:20.082, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met. The handler reads one body byte. It does not store samples and it does not key. Do not reload R4l0.
