@@ -1860,3 +1860,27 @@ The second key, peak count 4096, starts at 12:30:13.989. The ack is at 12:30:13.
 ## End state
 
 R4p0 stays loaded. VFO 467.625 / 467.625 FM at 12:30:21.974, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met. The buffer plays for the length of the samples and then goes quiet. The plain decoder does not accept the frame.
+
+# R4q — command 0x40 stores the sine in TX-RAM byte order, tag R4q0 (2026-10-24, 12:39–12:42)
+
+Forty-five patch tests passed before the load. The new ones check that a known sample is stored with its high byte at the low address, and that the built image's store loop loads both body bytes and stores with `st.h`. The ES8311 debug node was not written. HackRF receive only, 467.385 MHz center, 2.4 MS/s. The boot capture used LNA 24 and VGA 38. The key used LNA 16 and VGA 16.
+
+`c7000-cmd40-swap`. The handler is the R4o handler with one change in the store loop. The host still sends little-endian int16. The loop builds the signed sample, clamps it to ±6451, and stores the high byte at the low address. TX RAM reads that order. The copy into the modulator is still `ld.h`/`st.h`, so it keeps the bytes the store wrote. The buffer is RAM `0x4A800`. The count is `0x4A7F0`. A clear cursor at `0x4DAAC` makes the wake return. The handler does not set PTT. The task entry `+0x18A70` is not patched. Command `0x3D` is unchanged.
+
+`DMR003.R4q0.V022.bin`, 378620 bytes. sha256 `26730d4b611ae14807c5c99396f6ffeed6c59d210005c1b52847daa06f598a66`. Pushed MD5 `6f174fb60d5c2ce92b58e2adcf06f51d`.
+
+## Boot
+
+VFO 467.625 / 467.625 FM at 12:39:51.727, low power, before the load. YModem `onSuccess` at 12:42:03.985. Banner `开机初始化完成` at 12:42:17.294. `0x34` at 12:42:17.604 is `DMR003.R4q0.V022`. The boot record has floor 0.00 dB, peak 0.06 dB, and no run at +10 dB. The loader wrote channel 36, and the VFO was put back at 12:42:38.238 before the sine.
+
+## Store, then one key
+
+DIAG `cmdsine` at amplitude 2048, 64 samples, 1000 Hz. `TX cmd=0x40` length 128 at 12:42:42.328. The body begins `00 00 A8 05 00 08`, which is 0, 1448, 2048, little-endian. `RX cmd=0x40 rw=0 sr=0 len=2 [40 00]` at 12:42:42.355, the count 64. That command did not key.
+
+One 3 s silence key. Launch 1 at 12:42:45.459. Its ack is at 12:42:45.465, 6 ms later. `SEND_START` is at 12:42:45.471. Unkey at 12:42:48.875. Its ack is at 12:42:48.881, 6 ms later. `SEND_STOP` is at 12:42:49.200, 319 ms after that ack. The carrier is up for 3.51 s. SNR 49.8 dB. Offset +978 Hz. The IQ clip fraction is 0.
+
+The key-up click, 0–40 ms, has p99 22760 Hz and is not a stop. The 60 ms slice has a 1 kHz line of 970 Hz and p99 1106 Hz. The 80 ms slice, the strongest 1 kHz line whose p99 stays under 8 kHz, has a line of 972 Hz and p99 1040 Hz. Both sit inside 15 percent of the R3a8 numbers, a 923 Hz line and p99 1217 Hz. From 120 ms on, the line is about 3 Hz and p99 is about 100 Hz, so the wake's zero halves took over. The peak was not raised. There was no second key, and no M17 body was sent.
+
+## End state
+
+R4q0 stays loaded. VFO 467.625 / 467.625 FM at 12:42:53.391, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met. The byte swap puts this sine on the R3a8 scale. The R4p waveform has not been sent again.

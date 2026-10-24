@@ -28,6 +28,16 @@ def bsr32_disp(img, at):
     return off
 
 
+def txram_bytes(sample):
+    """Bytes TX RAM should see: high byte at the low address, clamped to ±6451."""
+    if sample > 6451:
+        sample = 6451
+    if sample < -6451:
+        sample = -6451
+    sample &= 0xFFFF
+    return bytes([(sample >> 8) & 0xFF, sample & 0xFF])
+
+
 def bsr32_target(img, at):
     """Decode a bsr as if `at` were the runtime PC. File offsets match XIP code only."""
     return (at + bsr32_disp(img, at)) & 0xFFFFFFFF
@@ -276,7 +286,10 @@ class PatchTest(unittest.TestCase):
         ):
             pairs.append([other, "c7000-cmd40-host"])
             pairs.append([other, "c7000-cmd40-m17"])
+            pairs.append([other, "c7000-cmd40-swap"])
         pairs.append(["c7000-cmd40-host", "c7000-cmd40-m17"])
+        pairs.append(["c7000-cmd40-host", "c7000-cmd40-swap"])
+        pairs.append(["c7000-cmd40-m17", "c7000-cmd40-swap"])
         for names in pairs:
             with self.subTest(names=names), self.assertRaises(SystemExit):
                 build.build(names, "UVt0", self.cfg)
@@ -1716,6 +1729,24 @@ class PatchTest(unittest.TestCase):
         self.assertIn(bytes.fromhex("00a40400"), blob)
         self.assertNotIn(bytes.fromhex("00a80400"), blob)
         self.assertEqual(img[0x38464:0x38474], b"DMR003.R4p0.V022")
+
+    def test_txram_bytes_put_the_high_byte_first(self):
+        self.assertEqual(txram_bytes(2048), bytes.fromhex("0800"))
+        self.assertEqual(txram_bytes(1448), bytes.fromhex("05a8"))
+        self.assertEqual(txram_bytes(-1448), bytes.fromhex("fa58"))
+        self.assertEqual(txram_bytes(0), bytes.fromhex("0000"))
+        self.assertEqual(txram_bytes(6452), bytes.fromhex("1933"))
+        self.assertEqual(txram_bytes(-7000), bytes.fromhex("e6cd"))
+
+    def test_cmd40_swap_stores_the_high_byte_first(self):
+        # R4q. The store loop loads the two little-endian body bytes, not ld.h.
+        img, _ = build.build(["c7000-cmd40-swap"], "R4q0", self.cfg)
+        self.assertEqual(len(img), len(self.fac))
+        self.assertEqual(img[0x5AF2E:0x5AF32], bytes.fromhex("20876187"))
+        self.assertEqual(img[0x5AF5C:0x5AF5E], bytes.fromhex("20ac"))
+        self.assertEqual(img[0x18A70:0x18A80], self.fac[0x18A70:0x18A80])
+        self.assertEqual(img[0xAAFE:0xAB0E], self.fac[0xAAFE:0xAB0E])
+        self.assertEqual(img[0x38464:0x38474], b"DMR003.R4q0.V022")
 
     def test_refuses_bad_tag(self):
         for tag in ("UV4T", "UV4", "UV-1"):
