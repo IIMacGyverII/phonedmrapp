@@ -275,6 +275,8 @@ class PatchTest(unittest.TestCase):
             "c7000-txram-m17-eot3",
         ):
             pairs.append([other, "c7000-cmd40-host"])
+            pairs.append([other, "c7000-cmd40-m17"])
+        pairs.append(["c7000-cmd40-host", "c7000-cmd40-m17"])
         for names in pairs:
             with self.subTest(names=names), self.assertRaises(SystemExit):
                 build.build(names, "UVt0", self.cfg)
@@ -1693,6 +1695,27 @@ class PatchTest(unittest.TestCase):
         self.assertEqual(img[0xAAFE:0xAB0E], self.fac[0xAAFE:0xAB0E])
         self.assertIn(b"\xac\xda\x04\x00", img[0x5AEFC:0x5B18C])
         self.assertEqual(img[0x38464:0x38474], b"DMR003.R4o0.V022")
+
+    def test_cmd40_m17_stores_a_waveform_in_pieces(self):
+        # R4p. 0x40 stores samples at 0x4A400. The wake plays them after a host key.
+        img, _ = build.build(["c7000-cmd40-m17"], "R4p0", self.cfg)
+        xip = 0x0301A000
+        self.assertEqual(len(img), len(self.fac))
+        self.assertEqual(int.from_bytes(img[0x382B8:0x382BC], "little"), xip + 0x5AEFC)
+        self.assertEqual(img[0x5AEFC:0x5AF04], bytes.fromhex("136c00e003009514"))
+        self.assertEqual(bsr32_target(img, 0x5AFC2), 0x8E5C)
+        self.assertEqual(bsr32_target(img, 0x5AFCA), 0x7DE8)
+        for at in (0x5B0BA, 0x5B176, 0x5B18A):
+            self.assertEqual(bsr32_target(img, at), 0xE9C)
+        for at in (0x5B112, 0x5B11C, 0x5B126, 0x5B1A2, 0x5B1AC):
+            self.assertEqual(bsr32_runtime(img, at), 0x2B220)
+        self.assertEqual(img[0x18A70:0x18A80], self.fac[0x18A70:0x18A80])
+        self.assertEqual(img[0x35F64:0x35FE4], self.fac[0x35F64:0x35FE4])
+        self.assertEqual(img[0xAAFE:0xAB0E], self.fac[0xAAFE:0xAB0E])
+        blob = img[0x5AEFC:0x5B1C8]
+        self.assertIn(bytes.fromhex("00a40400"), blob)
+        self.assertNotIn(bytes.fromhex("00a80400"), blob)
+        self.assertEqual(img[0x38464:0x38474], b"DMR003.R4p0.V022")
 
     def test_refuses_bad_tag(self):
         for tag in ("UV4T", "UV4", "UV-1"):
