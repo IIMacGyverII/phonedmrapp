@@ -9,6 +9,7 @@ Scripts and our own bench recordings from the M17 deep dive on the Ulefone Armor
 | `sounding.py`, `sounding2.py` | receive soundings for the HackRF (2 MS/s int8 FM IQ): a 20 Hz – 3.8 kHz chirp and M17 at 100/60/40 %; four independent M17 transmissions (seeds 1–4, 100/100/80/100 %) |
 | `analyze.py` | aligns a received sounding with what was sent; receive-path response; plain M17 decode |
 | `eq.py`, `eqdecode.py`, `eq2.py` | DFE studies: genie and decision-fed symbol error rates; train on one transmission, decode others (timing tracking per frame, full M17 decode) |
+| `heldpath_eq.py` | 2026-10-24, the held receive path (AT1846S `0x58` = `0xBCFD` via firmware op 6): fits a ±20-symbol linear equaliser on one `rxclip` of the R-D/R-E M17 loop and decodes others (R-E clips: 19 % symbol errors → 0, LSF CRC 13/13, Golay 0 25/25); shows the path is linear, see `radio_firmware/reviews.md` "Review of R-E" |
 | `txan.py`, `txdfe.py`, `txpre_an.py` | transmit side: HackRF capture → FM discriminator → transmit-path response, plain decode, DFE fit; pre-compensated attempt |
 | `recordings-armor26/` | `rx_sounding1.wav`, `rx_sounding2.wav` (the phone's raw receive audio, DIAG `rxclip`, with the `*_parts.json` timing of what was sent); `tx_m17snd.wav` / `tx_m17pre.wav` (the 8 kHz audio the phone transmitted, DIAG `txwav`) with their `.json`; `tx_capture_m17snd_dev48.npy` (the HackRF-demodulated deviation of the first transmit test, 48 kHz, aligned); `tx_response.npy` (transmit response, Hz of deviation per PCM unit vs frequency) |
 
