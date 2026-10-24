@@ -1736,3 +1736,25 @@ A sync search of the whole carrier, keeping local peaks above 0.95, finds one fr
 R4j0 stays loaded. The factory image was not written. VFO 467.625 / 467.625 FM at 09:25:49.264, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met. `0x3D` still waits. The ES8311 debug node was not written. The module cleared the carrier without sending `SEND_STOP`. The next step is to read where `0x36` body `04` is produced, and to build an image only if that status is a call the wake can make after `drop_ptt` without holding the `0x26` handler.
 
 The owner asked for the factory image after this report. It was loaded over R4j0. Banner `开机初始化完成` at 09:45:33.282. `0x34` `DMR003.UV4T.V022` at 09:45:33.593. VFO 467.625 / 467.625 FM at 09:45:35.253, low power. No `DMRDEBUG.bin`. Nothing was keyed.
+
+# R4k — the wake posts the transmit-stop status, tag R4k0 (2026-10-24, 10:44–10:50)
+
+HackRF receive only, 467.385 MHz center, 2.4 MS/s, LNA 24, VGA 38. One boot and one 3 s silence key, both at 467.625 MHz, low power. Thirty-eight patch tests passed before the load. The ES8311 debug node was not written. The factory image was not reloaded after the key.
+
+The image is R4j plus one call. `drop_ptt` still clears PTT, the voice bit, and mask bit 15, and restores the two AT1846S words. It then posts status byte 4 through file `+0x7E08`. That function stores the byte at RAM `0x38EF2`, sets bit 0 of `0x38EF0`, and wakes the sender at file `+0x7BC0`. The sender emits command `0x36` with that one body byte. The call does not enter `0xE9C` and it does not key the radio. The loop, the end frame, and the peak counts are unchanged. The stub stays 368 bytes.
+
+`DMR003.R4k0.V022.bin`, 378620 bytes. sha256 `c71ee7d89973048408e58112b1abe72d89ec18b0b0f86ec72356b6b445c02745`. MD5 `c1dbd0e7dba8954d4b91e3251ab0bf9e`.
+
+## Boot
+
+VFO 467.625 / 467.625 FM at 10:44:58.494, low power. YModem `onSuccess` at 10:47:12.569. Banner `开机初始化完成` at 10:47:25.489. `0x34` at 10:47:25.800 is `DMR003.R4k0.V022`. Hottest 100 ms bin +0.16 dB, clip 0, nothing at +6 dB. The stub does not run at boot.
+
+## Silence key
+
+VFO confirmed again at 10:49:28.998. `txwav` silence, 3000 ms, at 10:49:34.625. `0x26` launch 1 ack at 10:49:34.630, 5 ms later. `0x36` body `03` at 10:49:34.636, 6 ms after the ack. Unkey launch 2 at 10:49:38.027. Its ack is at 10:49:38.032, 5 ms later. `0x36` body `04` is at 10:49:38.344, 312 ms after that ack. The carrier is up for 3.76 s. SNR 56.9 dB. The IQ clip fraction is 0.31. Carrier offset +1011 Hz. Steady p99 2922 Hz. The key-up click p99 is 23040 Hz and the drop click at 3.70 s is 23160 Hz. Neither is a stop. The 100 ms slices of the stream stay at that deviation, and the 50 ms slices from 2.80 s through 3.65 s are 2913–3088 Hz.
+
+The 240 ms autocorrelation from 1.0 s is 0.995. The aimed-waveform fit on 0.04–1.20 s is r² 0.891, polarity +1, lag −17.0 ms, gain 0.83. A decode of 0.04–1.20 s accepts the link setup and 27 stream frames, Golay error 0, payload bytes 0 through 15, frame numbers 0 through 5. A decode from 1.0 s accepts 61 such frames, Golay error 0. The two windows overlap, so the counts are not added. The runner's last-0.8 s window locked a sync at score 0.955-class false hit and reported frames 59690 and 26279. A sync search of the whole carrier finds one frame `0x8005` at 3.686 s, score 0.999, Golay error 0, the same payload bytes, after frame 5 at 3.646 s. The end frame is not in the loop. The peak was not raised.
+
+## End state
+
+R4k0 stays loaded. VFO 467.625 / 467.625 FM at 10:49:54.172, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met. `0x3D` still waits. The ES8311 debug node was not written. The transmit-stop status now follows the end frame.
