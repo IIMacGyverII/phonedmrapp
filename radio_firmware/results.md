@@ -1466,3 +1466,37 @@ Over 2.816 s of the same capture the aired deviation follows the aimed waveform 
 ## End state
 
 Factory image restored. YModem `onSuccess` 04:42:51.014. Banner `开机初始化完成` at 04:43:02.951. `0x34` `DMR003.UV4T.V022` at 04:43:03.271. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. The loader's channel write was followed by the VFO tune: 467.625 / 467.625 FM at 04:43:05.143, low power, `RX cmd=0x23 rw=0 sr=0`. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met: one looping link-setup frame passed, and the acceptance is 85 of 90 frames across three transmissions. `0x3D` still waits. The ES8311 debug node was not written.
+
+# FM refill interrupt — bit 15, no refill in this image (2026-10-24)
+
+No image was loaded. Nothing was keyed. The factory objdump (no `-M`) and Document 2 were read. The radio was left as the R4b restore left it.
+
+## The bit
+
+Document 2 §4.6.5.9, `SYS_INTERP_LIST` at `0x11000398`. Bit 15 is `fm_tx_interp`, the analog transmit data interrupt. Bit 14 is `fm_rx_interp`. Bit 13 is `fm_sig_rx_interp`. `SYS_INTERP_MASK` at `0x1100039C` uses the same bit numbers. On each of those mask bits, 0 blocks the interrupt and 1 lets it through. The register default in the guide is 1.
+
+This image does not leave bit 15 open. The store at `+0x179A2` writes `0x1187F` (bits 0–6, 11, 12, and 16). The normal-path store at `+0x17A8E` writes `0x1007F` (bits 0–6 and 16). Both leave bit 15 clear, so the interrupt is blocked. The path that runs when byte 1 of `0x34808` is nonzero stores `0x1E07F`, and that value does set bits 13, 14, and 15. The OEM FM key-up at `+0x3EDCE` then stores 0, which blocks every sub-interrupt, and the unkey at `+0x3EE9E` writes the saved mask back. The `0x26` stub used by R4a and R4b does not touch this register.
+
+`FM_ADDR_SW` (`0x1100056C`, bits 1:0) is still absent as a literal. The guide says 1 means the CPU reads or writes the low half and 2 means the high half. That status is the ping-pong pointer. It is not the interrupt bit.
+
+## The task that would have to refill
+
+File `+0x1C92` passes `0x03032A70` as a task entry. That is file `+0x18A70`. The task pends semaphore `0x38848`. The post helper at `+0x3B670` accepts that object only when its first word is `0x414D4553`. Each wake ORs `SYS_INTERP_LIST` into a stack word, writes that word to `SYS_INTERP_CLEAR` (`0x110003A0`) until the list reads 0, and saves it at `0x4C7E0`.
+
+The dispatcher at `+0x18B70` calls a handler for bits 0, 1, 2, 3, 4, 5, 6, 11, 12, and 16. Bit 15 is not in that list. Nothing in the dispatcher stores into `0x16000030`. The only use of bit 15 is the side path at `+0x18B28`: when byte 1 of `0x34808` is nonzero and the saved word has bit 13 or bit 15 (`0xA000`), it stores `WORK_MODE` `0x80`, ANDs the mask with `0xFFFEFF80` (bit 15 stays set if it was set), and stores 1 at byte 0 of `0x34808`. Byte 0 then sends later wakes to `+0x3D20`, which is `jmp r15`. A hook placed only on `+0x18B70` would run once and then miss the rest of the key.
+
+The poster of `0x38848` is `+0x54BB0`. Its two neighbors, `+0x54B6C` and `+0x54B8C`, post the other two top-level lines and set a bit in `INTERP_CLEAR` (`0x110003B0`). No `bsr` and no 4-byte literal names `+0x54BB0`, so the PIC slot that enters it is not a stored pointer in this image.
+
+## What a host-key stub can do
+
+A refill does not need that PIC slot. The `0x26` key stub already runs only on a host launch. After the 512-sample fill and `PTT = 1`, it can poll `FM_ADDR_SW` and, each time the value changes, copy the next 256 samples into the half the register names. The OEM key-up already calls `+0x541F8` between its own waits (counts 10, 50, and 100). The same helper can space the polls, so the stub does not spin. If the register never changes, the two halves keep the first 512 samples and the air stays the R4b loop.
+
+The file is zeros from `+0x5AEFC` through the end, 6144 bytes. The stub occupies the start of that run. The rest can hold a table longer than 512 samples. The count scale stays the R4b scale: peak stored count at or below 6451, which measured steady p99 3148 Hz. A longer table at that scale does not cross the ±5 kHz stop on the linear prediction that passed for R4b.
+
+The service task is the wrong place for the first refill image. It runs on every wake, including ordinary DMR interrupts. A bad hook there would sit on the live path at boot. The poll stays inside the gated `0x26` stub and does nothing until a host launch.
+
+No image was built. §6 is not met. `0x3D` still waits. The ES8311 debug node was not written.
+
+## End state
+
+The radio was not touched. End state remains the R4b restore: factory image, `0x34` `DMR003.UV4T.V022` at 04:43:03.271, VFO 467.625 / 467.625 FM at 04:43:05.143, low power, no `DMRDEBUG.bin`.
