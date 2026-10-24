@@ -406,6 +406,18 @@ The tone is 6% under ±2.4 kHz and the steady p99 is 11% over it. The sine is sm
 
 End state: factory image. YModem `onSuccess` 02:32:06.360. Banner 02:32:18.323. `0x34` `DMR003.UV4T.V022` at 02:32:18.633, on the first poll. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. VFO 467.625 / 467.625 FM at 02:32:20.450, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. The ES8311 debug node was not written.
 
+**2026-10-24 (02:48–03:01) — R4a, a fixed RRC 4FSK pattern at peak count 5120. Tag `R4a0`.** HackRF receive only, 467.625 MHz, low power. Tables: `radio_firmware/results.md`.
+
+`c7000-txram-dmr-rrc` keeps the sine's host-key path. The stub is 180 bytes at `+0x5B000` (`on_unkey` at `+0x5B080`) and the fill is 512 halfwords at `+0x5C000`. sha256 `9271b363eeda6e6ad6625007e98bd25795eb05c1f3e22c23bac1fc6951fac653`, MD5 `049ff4ed685179c3392a5931b9ca5e9b`. Twenty-eight tests pass. No `+0x3074`, no `+0x3EDFC`, bit 4 clear. The symbols, repeated, are +3, +1, −1, −3, +3, −1, shaped with RRC α = 0.5 at 4800 symbols/s and 8 kHz. The ten-sample period's signed immediates are 19, 12, 2, −2, −12, −20, 7, 20, −7, 1, so the aired peak is ±5120. Samples 510 and 511 repeat samples 0 and 1.
+
+Boot capture 180 s from 02:48:57, VFO already on 467.625. YModem `onSuccess` 02:51:06.463. Banner 02:51:20.359. `0x34` `DMR003.R4a0.V022` at 02:51:20.671, on the first poll. Hottest bin +0.18 dB, clip 0. That bin is spread across ±24 kHz.
+
+One 3 s silence key. `0x26` launch 1 at 02:52:22.179, `0x36` body `03`, 24000 samples, launch 2 at 02:52:25.579, `0x36` body `04` at 02:52:25.911. Carrier 3.44 s, SNR 39.5 dB, clip 0. Median of the keyed deviation +908 Hz; the VFO log still reads 467.625. The 1 kHz line is 17 Hz. The 15.625 Hz line is 11 Hz. Steady p99 2774 Hz. The key-up click is again about 23 kHz and is the edge, and the steady window stayed under the ±5 kHz stop. The peak was not raised.
+
+The half-second alignment in the capture log does not lock. The extra pair walks the phase, and the long-term line is 796.875 Hz (1152 Hz), with the 800.0 Hz bin at 1 Hz. On the first 0.25 s the autocorrelation is 0.96 at a lag of 60 samples. Ten-millisecond stretches follow the stored shape inverted: median r² 0.96, 36 of 43 at or above 0.95, gain −0.54 Hz per count. A positive gain reaches median r² 0.14. A zero-order hold of the ten levels reaches median r² 0.84, and no stretch reaches 0.95, so four held levels are absent. §6 is not met.
+
+End state: factory image, on the second restore. The first YModem ended `Received CAN` at 02:53:09.509 and the next two waits returned no `0x34`. The second load's `onSuccess` was 02:59:49.055. `0x34` `DMR003.UV4T.V022` at 03:00:58.517, after the loader's second SignalDeck start. The tool log has no banner line for this restore. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. VFO 467.625 / 467.625 FM at 03:00:59.876, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. The ES8311 debug node was not written.
+
 End state: factory image. The tone-key restore's first `0x34` poll was empty after `onSuccess` 00:48:48.703; a later start of SignalDeck printed the banner at 00:51:13.856 and `DMR003.UV4T.V022` at 00:51:14.167. The silence-key restore did the same: `onSuccess` 01:01:45.469, no version on the first poll, banner 01:02:57.784 and `0x34` `DMR003.UV4T.V022` at 01:02:58.095 after a second start. Pushed factory MD5 `4426035392262ca54583c230c9e268e0`. VFO 467.625 / 467.625 FM at 01:02:58.648, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. The ES8311 debug node was not written.
 
 ---

@@ -147,6 +147,19 @@ class PatchTest(unittest.TestCase):
             ["c7000-txram-dmr-a4096", "c7000-txram-dmr-sine1k-p5120"],
             ["c7000-txram-dmr-sine1k", "c7000-txram-dmr-sine1k-p5120"],
             ["c7000-txram-dmr-sine1k-p4096", "c7000-txram-dmr-sine1k-p5120"],
+            ["c7000-fm-flat", "c7000-txram-dmr-rrc"],
+            ["c7000-fm-canary", "c7000-txram-dmr-rrc"],
+            ["c7000-fm-proof", "c7000-txram-dmr-rrc"],
+            ["c7000-fm-adcgain", "c7000-txram-dmr-rrc"],
+            ["c7000-txram-square", "c7000-txram-dmr-rrc"],
+            ["c7000-txram-dmr", "c7000-txram-dmr-rrc"],
+            ["c7000-txram-dmr-a512", "c7000-txram-dmr-rrc"],
+            ["c7000-txram-dmr-a1024", "c7000-txram-dmr-rrc"],
+            ["c7000-txram-dmr-a2048", "c7000-txram-dmr-rrc"],
+            ["c7000-txram-dmr-a4096", "c7000-txram-dmr-rrc"],
+            ["c7000-txram-dmr-sine1k", "c7000-txram-dmr-rrc"],
+            ["c7000-txram-dmr-sine1k-p4096", "c7000-txram-dmr-rrc"],
+            ["c7000-txram-dmr-sine1k-p5120", "c7000-txram-dmr-rrc"],
         ]
         for names in pairs:
             with self.subTest(names=names), self.assertRaises(SystemExit):
@@ -686,6 +699,72 @@ class PatchTest(unittest.TestCase):
         self.assertEqual(bsr32_target(loud, 0x92C8), 0x5B000)
         self.assertEqual(bsr32_target(loud, 0x92AA), 0x5B0A0)
         self.assertEqual(loud[0x38464:0x38474], b"DMR003.R3b0.V022")
+
+    def test_txram_dmr_rrc_is_a_capped_4fsk_table(self):
+        # R4a. Fixed RRC pattern, peak count 5120. Tag R4a0. on_unkey at +0x5B080.
+        img, _ = build.build(["c7000-txram-dmr-rrc"], "R4a0", self.cfg)
+        xip = 0x0301A000
+
+        def hw(off):
+            return int.from_bytes(img[off:off + 2], "little")
+
+        def word(off):
+            return int.from_bytes(img[off:off + 4], "little")
+
+        def bt_file(off):
+            raw = hw(off)
+            self.assertEqual(raw & 0xFC00, 0x0800, "not a 16-bit bt")
+            imm = raw & 0x3FF
+            if imm & 0x200:
+                imm -= 0x400
+            return off + (imm << 1)
+
+        for site in (0x92C8, 0x92E0):
+            self.assertEqual(bsr32_target(self.fac, site), 0xE9C)
+            self.assertEqual(bsr32_target(img, site), 0x5B000)
+        for site in (0x92AA, 0x92FA):
+            self.assertEqual(bsr32_target(self.fac, site), 0xE9C)
+            self.assertEqual(bsr32_target(img, site), 0x5B080)
+        self.assertEqual(bsr32_target(img, 0x5B002), 0xE9C)
+        self.assertEqual(bsr32_target(img, 0x5B082), 0xE9C)
+        for at in (0x5B042, 0x5B04C, 0x5B056, 0x5B09A, 0x5B0A4):
+            self.assertEqual(bsr32_target(img, at), 0xFD011220)
+            self.assertEqual((at + xip + bsr32_disp(img, at)) & 0xFFFFFFFF, 0x2B220)
+
+        self.assertEqual(hw(0x5B000), 0x14D5)
+        self.assertEqual(hw(0x5B018), 0x3AA0)
+        self.assertEqual(word(0x5B02A), 0x0200EA02)  # movi r2, 512, stored little-endian
+        self.assertEqual(hw(0x5B02E), 0x8C20)  # ld.h r1, (r4, 0)
+        self.assertEqual(hw(0x5B030), 0xAB20)  # st.h r1, (r3, 0)
+        self.assertEqual(bt_file(0x5B03A), 0x5B02E)
+        self.assertEqual(hw(0x5B060), 0x1495)
+        self.assertEqual(word(0x5B078), 0x03076000)
+        self.assertEqual(hw(0x5B080), 0x14D5)
+        self.assertEqual([word(0x5B0AC), word(0x5B0B0)], [0x11000560, 0x11000080])
+        self.assertNotIn((0x3AA4).to_bytes(2, "little"), img[0x5B000:0x5B0B4])
+
+        # 51 copies of the 10-sample period, then the first two samples again.
+        period = [19, 12, 2, 254, 244, 236, 7, 20, 249, 1]
+        imms = [hw(0x5C000 + 2 * i) for i in range(512)]
+        self.assertEqual(imms, period * 51 + period[:2])
+        signed = [v - 256 if v >= 128 else v for v in imms]
+        self.assertEqual(max(abs(v) for v in signed), 20)
+        self.assertEqual(max(abs(v) for v in signed) * 256, 5120)
+
+        allowed = set(range(0x3846B, 0x3846F))
+        for off, n in ((0x92C8, 4), (0x92E0, 4), (0x92AA, 4), (0x92FA, 4),
+                       (0x5B000, 180), (0x5C000, 1024)):
+            allowed.update(range(off, off + n))
+        changed = {i for i, (a, b) in enumerate(zip(self.fac, img)) if a != b}
+        self.assertTrue(changed <= allowed, sorted(changed - allowed)[:12])
+        self.assertEqual(img[0x3074:0x3078], self.fac[0x3074:0x3078])
+        self.assertEqual(img[0x3EDFC:0x3EE02], self.fac[0x3EDFC:0x3EE02])
+        self.assertEqual(img[0x3EE16:0x3EE18], self.fac[0x3EE16:0x3EE18])
+        self.assertEqual(img[0x5B0B4:0x5C000], self.fac[0x5B0B4:0x5C000])
+        self.assertEqual(img[0x5C400:0x5C6FC], self.fac[0x5C400:0x5C6FC])
+        for off in (0x2C90, 0x3054, 0x344E, 0x34F2, 0x3640, 0x2E94):
+            self.assertEqual(img[off:off + 2], self.fac[off:off + 2])
+        self.assertEqual(img[0x38464:0x38474], b"DMR003.R4a0.V022")
 
     def test_iram_padbyte_changes_the_halfword_after_keyup_returns(self):
         # R3-0. No log string lives in the IRAM copy. The byte after key-up's
