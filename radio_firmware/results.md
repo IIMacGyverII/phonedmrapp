@@ -1832,3 +1832,31 @@ The key-up click, 0–40 ms, has p99 20711–22329 Hz and is not a stop. The ton
 ## End state
 
 R4o0 stays loaded. VFO 467.625 / 467.625 FM at 12:05:19.439, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met. A host sine went out. A full M17 frame does not fit in one 799-byte body.
+
+# R4p — command 0x40 stores an M17 waveform in pieces, tag R4p0 (2026-10-24, 12:22–12:30)
+
+Forty-three patch tests passed before the load. The ES8311 debug node was not written. HackRF receive only, 467.385 MHz center, 2.4 MS/s. The boot capture used LNA 24 and VGA 38. Both keys used LNA 16 and VGA 16.
+
+`c7000-cmd40-m17`. The body is a little-endian sample offset and then little-endian int16 samples, at most 398 samples in one frame. They are clamped to ±6451 and written at RAM `0x4A400`. Offset 0 replaces the count at `0x4A3E4`. A later piece extends it. The handler does not set PTT. A clear cursor at `0x4DAAC` makes the wake return. A host key copies the buffer once, and the wake continues it, then writes zero halves. The task entry `+0x18A70` is not patched. Command `0x3D` is unchanged.
+
+The waveform is 108 preamble symbols, one link setup, three stream frames, and 6 symbols of tail: 1470 samples. The peak count is 6451. The linear prediction is 3548 Hz. The first 500 samples are the same counts as the canned table. A second copy was scaled to peak count 4096, prediction 2253 Hz.
+
+`DMR003.R4p0.V022.bin`, 378620 bytes. sha256 `70a4ce04766dc37b089036b4aeb976d9afcd626c845722ecc23d788d27e85685`. Pushed MD5 `9f6efe57be112105d952a616ee536b2f`.
+
+## Boot
+
+VFO 467.625 / 467.625 FM at 12:22:45.267, low power, before the load. YModem `onSuccess` at 12:24:57.394. `0x34` at 12:25:11.041 is `DMR003.R4p0.V022`. The runner required the boot banner and did not restore. The boot record peaks at 0.42 dB and has no run at +10 dB.
+
+## Store
+
+Four commands, none of them a key. Count 398 at 12:25:36.208, body `[8E 01]`. Count 796 at 12:25:37.878, body `[1C 03]`. Count 1194 at 12:25:39.572, body `[AA 04]`. Count 1470 at 12:25:41.181, body `[BE 05]`.
+
+## Keys
+
+The first key, peak count 6451, starts at 12:25:43.738. The ack is at 12:25:43.745, 7 ms later. `SEND_START` is at 12:25:43.750. The unkey ack is at 12:25:47.151, 6 ms after the unkey command. `SEND_STOP` is at 12:25:47.477, 326 ms later. The carrier is up for 3.50 s. SNR 55.2 dB. Offset +992 Hz. Clip fraction 0. The click, 0–40 ms, has p99 about 22 kHz and is not a stop. From 60 ms through 220 ms the p99 is 4404–5050 Hz. One 20 ms bin reaches 5050 Hz. From 240 ms the p99 is about 95 Hz. The plain decoder does not accept a link setup. The aimed-wave fit on that capture is r² 0.31 at a lag of 48 ms. The first 200 samples reach r² 0.52.
+
+The second key, peak count 4096, starts at 12:30:13.989. The ack is at 12:30:13.995, 6 ms later. `SEND_START` is at 12:30:14.000. The unkey ack is at 12:30:17.407, 5 ms after the unkey command. `SEND_STOP` is at 12:30:17.727, 320 ms later. SNR 56.8 dB. Offset +986 Hz. Clip fraction 0. From 60 ms through 220 ms the p99 is 4490–4801 Hz. From 240 ms the p99 is about 90 Hz. The plain decoder does not accept a link setup. Lowering the peak count did not lower that air reading. The peak was not raised. There is no third key.
+
+## End state
+
+R4p0 stays loaded. VFO 467.625 / 467.625 FM at 12:30:21.974, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. §6 is not met. The buffer plays for the length of the samples and then goes quiet. The plain decoder does not accept the frame.
