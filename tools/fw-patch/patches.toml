@@ -716,6 +716,16 @@ sites = [
   { offset = 0x5AEFC, original = "0000000000000000000000000000000000000000", replacement = "136c00e003009514d01401800031fde3b96f9014", note = "0x40 ack thunk (stubs/c7000_cmd40_ack2.S)" },
 ]
 
+# R4n. Command 0x40 echoes its first body byte. It does not key.
+[patches.c7000-cmd40-echo]
+why = """Command 0x40 is an empty return. The slot jumps to a 62-byte handler at +0x5AEFC. The handler reads the byte at frame offset 8, builds a 10-byte reply, and sends it through file +0x7DE8. It does not key. Nothing at boot sends 0x40. 0x3D is not changed."""
+measured_by = "R4n, tag R4n0: banner at 11:48:33.212; 0x34 DMR003.R4n0.V022 at 11:48:33.523. Body 01 echoed at 11:49:16.925 and body 5A echoed at 11:49:18.486, both sr=0 len=1. Nothing keyed. No HackRF capture. Image left loaded. VFO 467.625 at 11:49:20.082."
+status = "experimental"
+sites = [
+  { offset = 0x382B8, original = "544a0203", replacement = "fc4e0703", note = "command 0x40 table slot: echo at +0x5AEFC (was the empty pop)" },
+  { offset = 0x5AEFC, original = "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", replacement = "136c00e003009514d1146180488024143b6d683120a461a4003122a423a426a4013127a448a4103129a4536c0a30fde3996f136c0a31fde35b6704149114", note = "0x40 echo (stubs/c7000_cmd40_echo.S)" },
+]
+
 # R3-0. The IRAM copy (file +0x39408..+0x5AEFC) has no log string. The ASCII names in it
 # (TMSG TRES TSUS QUEU FLAG TSIG SEMA TICK NONE) are uC/OS-III type words: the boot path
 # compares or stores them, so changing one is not a harmless test. Tag R300 changed TICK
