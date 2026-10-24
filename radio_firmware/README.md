@@ -29,6 +29,7 @@ Rules that are not optional: any stub on the key-up path acts only on a host-req
 | File | What |
 |---|---|
 | `DMR003.UV4T.V022-ORIGINAL.bin` | factory image; the restore file |
+| `HR_C7000_user_guide.pdf` | the SoC user guide (Chinese, v2.7, 412 pp.), the "Document 2" the bench notes cite; copy of https://github.com/M17-Project/AtomXL-reverse-engineering/blob/main/docs/HR_C7000_user_guide.pdf (sha256 `d60f652e114d5103…`). FM chapter §7.2 (p. 270), FM registers §11 (p. 331), TX/RX RAM map §11.4 (p. 340), interrupts pp. 93–100. Text extraction needs a CJK-aware tool (PyMuPDF); `pdftotext` drops the Chinese |
 | `HANDOFF.md` | mailbox between the AIs: status line, standing approval, current task, route list |
 | `results.md` | the bench record, one section per image, newest last |
 | `reviews.md` | reviews of bench runs (earlier ones are ch. 19 §11–§23) |
