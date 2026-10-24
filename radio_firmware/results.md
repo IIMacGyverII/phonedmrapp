@@ -1948,3 +1948,37 @@ Analog receive does not set `WORK_MODE` bit 7. The channel setup stores `0x22`, 
 `SYS_INTERP_MASK` bit 14 is clear in the normal setup stores `0x1187F` (`+0x179AA`) and `0x1007F` (`+0x17A96` and `+0x17E3E`), and in the BER stores `0x1800` and `0x800`. It is set by the `0x1E07F` store at `+0x18292` when byte 1 of `0x34808` is nonzero, and by both arms of `+0x19470`. The FM key-up stores 0 into the mask and the unkey restores the saved value.
 
 The only literals in `0x160004B0`–`0x160008DF` are `0x160004B0` and `0x160004B1`, both in the copy helper at `+0x2A4C`. That is the same helper R-A read. The 36-byte BER snapshot remains the only copy that starts at `0x160004E0`. No other reader of the FM audio halves was found.
+
+# R4t — sign-extended taps, tag R4t0 (2026-10-24, 14:37–14:43)
+
+The coefficient load in `one_sample` is `ld.hs`. `ld.h` zero-extends on this core, and that was the R4s clamp. Op 4 renders up to 256 samples into `0x4AC00` and returns them. It does not key. The image test checks the `ld.hs` encoding `04 d8 00 50` followed by the multiply. The ES8311 debug node was not written. HackRF receive only, 467.385 MHz center, 2.4 MS/s. The boot capture used LNA 24 and VGA 38. The keys used LNA 16 and VGA 16.
+
+`DMR003.R4t0.V022.bin`, 378620 bytes. sha256 `c571018f704cc8aa4faa023a56efaf70f3b267d9a1d1befc34b924880be8e1b9`. Pushed MD5 `78053778b0d23cadc07262458fbf19a5`.
+
+## Boot
+
+VFO 467.625 / 467.625 FM at 14:37:27.808, low power, before the load. YModem `onSuccess` at 14:39:39.917. Banner `开机初始化完成` at 14:39:53.631. `0x34` at 14:39:53.952 is `DMR003.R4t0.V022`. The boot record has floor 0.00 dB, peak 0.06 dB, and no run at +10 dB.
+
+## Render, no key
+
+64 symbols: eight +3, eight −3, then 48 symbols of +3/−3. Op 3, op 1, op 4 for 106 samples. The returned samples, un-swapped, match `integer_counts` on those symbols: 106 of 106, no mismatch. VFO 467.625 / 467.625 FM at 14:40:19.125. Nothing was keyed for the render.
+
+## Keys
+
+One 50-frame stream, then three 90-frame streams. Low power, 467.625 MHz. Each status read is `underrun=5004`. That count is the same on the 2.06 s stream and the 3.66 s stream, and it matches the carrier tail after the symbols (about 0.63 s). The stream itself did not run dry.
+
+The 50-frame key: `sym ready` at 14:41:55.373, `sym done bytes=2475` at 14:41:58.051, status at 14:42:02.071. Carrier 2.72 s, SNR 57.4 dB, offset +1020 Hz, clip 0. The click, 0–40 ms, has p99 22487 Hz and is not a stop. From 60 ms through the stream the p99 is 2788–3082 Hz. No slice from 60 ms on is at or over 5 kHz. The link-setup CRC passes and both callsigns match. A window through 2.45 s accepts 50 stream frames at Golay error 0 with payload bytes 0 through 15. Two later syncs are not those frames.
+
+The three 90-frame keys, each `sym done bytes=4395`, status underrun 5004, clip 0:
+
+| Key | Ready | Status | Carrier | SNR | Offset | p99 min | p99 max | Good frames |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | 14:43:04.078 | 14:43:12.733 | 4.32 s | 58.0 dB | +1021 Hz | 2733 Hz | 3110 Hz | 90 |
+| 1 | 14:43:18.916 | 14:43:27.578 | 4.33 s | 57.4 dB | +1017 Hz | 2741 Hz | 3093 Hz | 90 |
+| 2 | 14:43:33.713 | 14:43:42.365 | 4.33 s | 57.4 dB | +1014 Hz | 2753 Hz | 3094 Hz | 90 |
+
+Each link-setup CRC passes and both callsigns match. The 90 good frames are Golay error 0 with payload bytes 0 through 15. The printed slices from 80 ms through 3600 ms sit between 2792 Hz and 2895 Hz. The 60 ms slice is 3093–3110 Hz, the shoulder of the click. The lowest 20 ms slice in the set is the minimum in the table. No slice from 60 ms on is at or over 5 kHz. The peak was not raised.
+
+## End state
+
+R4t0 stays loaded. VFO 467.625 / 467.625 FM at 14:43:44.020, low power. SignalDeck owns the radio. No `DMRDEBUG.bin`. The independent decoder is still waiting on the Ubuntu box.
