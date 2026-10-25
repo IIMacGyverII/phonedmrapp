@@ -2383,6 +2383,6 @@ The bench tone was 1.5 s of 1 kHz at amplitude 8000. `m17 voice key [callsign]` 
 
 Carrier 1.63 s, SNR 66.7 dB, whole-file clip 0, offset +850 Hz. Body peak 83 of 127, body clip 0. Steady body p99 3206 Hz. No body slice from 80 ms to 400 ms before the drop is at or over 5 kHz.
 
-Our decoder: link setup `[callsign]` → `@ALL`, CRC ok. Frames 0–35, all 36 payload-exact against the bytes the phone logged. Frame 36 and the end frame were not locked. One false sync at the drop had Golay error 15. Codec 2 decode of the 36 frames (72 Codec 2 frames, 1.44 s) has rms 663 and a peak at 1003 Hz, 1.0×10^5 above the median of 200–3000 Hz.
+Our decoder: link setup [callsign] → `@ALL`, CRC ok. Frames 0–35, all 36 payload-exact against the bytes the phone logged. Frame 36 and the end frame were not locked. One false sync at the drop had Golay error 15. Codec 2 decode of the 36 frames (72 Codec 2 frames, 1.44 s) has rms 663 and a peak at 1003 Hz, 1.0×10^5 above the median of 200–3000 Hz.
 
 `mtktsAP` 45.9 °C before the key and 45.6 °C after. Battery zone 37.3 °C. VFO 467.625 / 467.625 FM, low power, at 23:21:17. No `DMRDEBUG.bin`. FW19 stays loaded.
