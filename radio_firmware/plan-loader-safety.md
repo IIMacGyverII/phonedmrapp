@@ -64,6 +64,47 @@ bench image can always be dumped, so the port automation can read exactly what i
 Atom XL's first bench image, once its loader is captured, dumps its flash the same way. It cannot recover a stock
 module's original: that is what the identity checks and the vendor copy are for.
 
+## Possession and protection of the stock firmware (owner, 2026-10-25)
+
+SignalDeck **holds** the stock image for the user's module and **protects** it. Three sources, in this order, all
+hash-checked against the known-image table: (1) the updater asset in the stock APK installed on the phone; (2)
+SignalDeck's own copy in app-private storage (`files/firmware/factory-<version>-<sha8>.bin`), written the first time
+a supported module is seen and mirrored to `Download/DMR/Firmware/` so the user can see and copy it; (3) the
+signed firmware catalogue (below), from which the factory image itself can be downloaded again. Rules: the
+private copy is verified at every app start and before every load, re-derived from (1) or (3) when missing or
+corrupt, never offered for deletion in the app, and kept across app updates (it does not survive an uninstall,
+which is what (2)'s Download mirror and (3) are for). A non-factory image is never flashed unless a hash-verified
+factory image for that module's version string is present on the phone first.
+
+## Flashing a downloaded copy (owner, 2026-10-25)
+
+A **signed firmware catalogue**, published like the profile list (same offline key and `serial` discipline,
+verifier shared with `ProfileRegistry`): one row per image with its version string, the base vendor image it was
+built from, SHA-256, size, download URL (a GitHub release asset), and a one-line statement of what it changes. The
+factory image is a row of its own, so a user whose stock app is gone can download it. SignalDeck downloads, checks
+the hash and the signature, stores the file beside the private factory copy, and only then offers it; a row is
+offered only when its base matches the module's version string (in recovery, the phone model and the stock APK's
+asset). Once the files are present nothing needs the network. **Recovery mode:** a module that does not answer
+`0x34` but answers the update handshake may be flashed with the factory image only, from the catalogue or the
+private copy, after an explicit warning; that is the "user had to download a new copy" case.
+
+## The loader itself
+
+Today every load, bench and factory restore alike, runs through the stock app's updater: SignalDeck releases the
+UART, the stock app is enabled, the image is placed at `/sdcard/DMR/DMRDEBUG.bin`, the stock app is launched, its
+YModem log is watched for `onSuccess`, the file is removed and SignalDeck takes the radio back
+(`tools/fw-patch/bench/fwload_stock.sh`). SignalDeck has no loader of its own. Two paths, both needed:
+
+- **Path A, the stock updater driven by SignalDeck** (with root, exactly the bench sequence, with the log watched
+  from inside the app). Proven, quick to build, and the right first implementation of the page. It depends on
+  the stock app being installed.
+- **Path B, SignalDeck's own YModem sender** over the UART it already owns, written from the YModem standard and
+  the handshake observed on the wire, not from the decompiled OEM code. Required so that a factory restore never
+  depends on the stock app. Reading task for the bench, before Path B is built: how the module enters update
+  mode (a command, or a boot-time handshake), the packet size and timeouts it accepts, and what it answers on
+  success and failure; proven by loading a bench image and then the factory image through Path B and reading the
+  tag after each.
+
 ## What the page never does
 
 Load an image without a table row; load onto a module whose three identities disagree; load without the backup
