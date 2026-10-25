@@ -2,10 +2,12 @@
  * Linked at +0x5AEFC.
  *
  * Body byte 0 is the op code. 1 appends symbols, four per byte, the first
- * in bits 7:6 (01 = +3, 00 = +1, 10 = -1, 11 = -3). 2 reads the fill, the
+ * in bits 7:6 (01 = +3, 00 = +1, 10 = -1, 11 = -3). 7 is the same append
+ * and arms the last flag at 0x4B00C. 2 reads the fill, the
  * underrun count and the last error. 3 resets the ring. 4 renders: the next
- * two bytes are a sample count N, 1..256, and the reply body is 2N bytes in
- * TX-RAM order, taken from the scratch at 0x4AC00. 5 captures four or six
+ * two bytes are a sample count N, 1..240, and the reply body is 2N bytes in
+ * TX-RAM order, taken from the scratch at 0x4AC00. The reply frame is built
+ * at 0x4AE00. 5 captures four or six
  * FM receive halves. A 2-byte body forces four; a 3-byte body carries the
  * count in byte 2 and accepts only 4 or 6. The next byte is 0, 2, 3 or 4.
  * Every variant stores WORK_MODE 0x80 and holds it across the halves. 2
@@ -68,6 +70,8 @@ store40:
 	st.w	r1, (r4, 8)
 	st.w	r1, (r4, 12)
 	st.w	r1, (r4, 16)
+	lrw	r4, 0x4b00c
+	st.w	r1, (r4, 0)
 	movi	r6, 0
 	br	.Lreply2
 .Lnot3:
@@ -76,7 +80,18 @@ store40:
 	br	.Lstatus
 .Lnot2:
 	cmpnei	r3, 1
+	bt	.Lnot1
+	lrw	r4, 0x4b00c
+	movi	r1, 0
+	st.w	r1, (r4, 0)
+	br	.Lappend
+.Lnot1:
+	cmpnei	r3, 7
 	bt	.Lmaybe4
+	lrw	r4, 0x4b00c
+	movi	r1, 1
+	st.w	r1, (r4, 0)
+.Lappend:
 	subi	r2, 1
 	mov	r3, r2
 	lsli	r3, 2
@@ -129,6 +144,9 @@ store40:
 	lrw	r4, 0x4a3f4
 	movi	r1, 1
 	st.w	r1, (r4, 0)
+	lrw	r4, 0x4b00c
+	movi	r1, 0
+	st.w	r1, (r4, 0)
 	movi	r5, 1
 	br	.Lreply2s
 .Lmaybe4:
@@ -142,8 +160,7 @@ store40:
 	or	r1, r3
 	cmpnei	r1, 0
 	bf	.Lbad
-	movi	r3, 1
-	lsli	r3, 8
+	movi	r3, 240
 	cmphs	r3, r1
 	bf	.Lbad
 	lrw	r6, 0x4ac00
@@ -159,12 +176,7 @@ store40:
 .Lrdone:
 	lrw	r1, 0x4ac00
 	subu	r6, r1
-	mov	r5, r6
-	addi	r5, 19
-	bclri	r5, 0
-	bclri	r5, 1
-	subu	r14, r5
-	mov	r4, r14
+	lrw	r4, 0x4ae00
 	movi	r2, 104
 	st.b	r2, (r4, 0)
 	ld.b	r2, (r7, 1)
@@ -201,7 +213,6 @@ store40:
 	mov	r1, r6
 	addi	r1, 9
 	.short	0xE000, 0x7DE8
-	addu	r14, r5
 	addi	r14, 4
 	pop	r4-r7, r15
 .Lmaybe5:
@@ -279,6 +290,8 @@ store40:
 .Lno58:
 	movi	r6, 0
 	movi	r4, 0
+	movi	r1, 0
+	st.b	r1, (r14, 13)
 .Lround:
 	movi	r3, 1
 	lsli	r3, 22
@@ -306,6 +319,13 @@ store40:
 	cmpnei	r1, 0
 	bf	.Lspin
 	mov	r4, r0
+	ld.b	r1, (r14, 13)
+	cmpnei	r1, 0
+	bt	.Ldocopy
+	movi	r1, 1
+	st.b	r1, (r14, 13)
+	br	.Lspin
+.Ldocopy:
 	cmpnei	r4, 1
 	bt	.Lrxhi
 	lrw	r1, 0x160004e0
@@ -779,6 +799,28 @@ wake_body:
 	bsr	emit_n
 	ld.w	r3, (r14, 0)
 	addi	r14, 4
+	lrw	r4, 0x4b00c
+	ld.w	r2, (r4, 0)
+	cmpnei	r2, 0
+	bf	wake_done
+	lrw	r4, 0x4a3e4
+	ld.w	r2, (r4, 0)
+	ld.w	r1, (r4, 4)
+	cmphs	r1, r2
+	bf	wake_done
+	ld.w	r1, (r4, 8)
+	cmpnei	r1, 0
+	bt	wake_done
+	lrw	r4, 0x4daac
+	movi	r2, 0
+	st.w	r2, (r4, 0)
+	lrw	r4, 0x4b00c
+	st.w	r2, (r4, 0)
+	subi	r14, 4
+	st.w	r3, (r14, 0)
+	bsr	drop_ptt
+	ld.w	r3, (r14, 0)
+	addi	r14, 4
 wake_done:
 	cmpnei	r3, 0
 	bt	.Ldisp
@@ -874,6 +916,29 @@ host_unkey:
 	movi	r0, 48
 	movi	r1, 28710
 	.short	0xE000, 0x0B22
+	pop	r4-r7, r15
+
+drop_ptt:
+	push	r4-r7, r15
+	lrw	r3, 0x11000560
+	movi	r2, 0
+	st.w	r2, (r3, 0)
+	lrw	r3, 0x11000080
+	ld.w	r2, (r3, 0)
+	bclri	r2, 0
+	st.w	r2, (r3, 0)
+	movi	r0, 88
+	movi	r1, 33797
+	.short	0xE000, 0x0B22
+	movi	r0, 48
+	movi	r1, 28710
+	.short	0xE000, 0x0B22
+	lrw	r3, 0x1100039c
+	ld.w	r2, (r3, 0)
+	bclri	r2, 15
+	st.w	r2, (r3, 0)
+	movi	r0, 4
+	.short	0xE000, 0x7E08
 	pop	r4-r7, r15
 	.align	2
 	.literals

@@ -2272,3 +2272,28 @@ One 1200 baud transmission, deviation ±3500 Hz, RIC 1234567, function 3, text `
 ## Not in this image
 
 Op 5 still copies the live half first. RE10 was not replaced. The host equaliser was not wired into SignalDeck: the independent recordings miss the pass. Hold was restored (`sr=0`). VFO 467.625 / 467.625 FM at 18:31:55. RE10 stays loaded.
+
+
+# R-G firmware — stream end, render reply, live half (2026-10-24, 19:01–19:04)
+
+Tag `RG10`. Sha256 `4550a6eb8108f1ed83f396d34b24b6af7a59db521487a0fa2b08e6c47caa6784`. Pushed MD5 `4a9545d5bda949e46ef4c890c58a8449`. The command-slot word is `fc4e0703` at file `0x382B8`. Loaded over RE10. Wi-Fi adb `192.168.1.125:5555` only.
+
+Op 1 is unchanged. Op 7 appends the same way and stores 1 at `0x4B00C`. When that word is set, the read index has caught the write count, and the RRC phase is 0, the wake clears the cursor and calls `drop_ptt`: PTT off, voice bit clear, AT1846S `0x58` = `0x8405`, `0x30` = `0x7026`, mask bit 15 clear, then status byte 4 through file `+0x7E08`. Op 4 accepts at most 240 samples and builds the reply at `0x4AE00`. Op 5 waits through one `FM_ADDR_SW` change and copies from the next one. Nothing in the command keys at boot.
+
+## Load
+
+YModem `onSuccess` at 19:01:55.805. `0x34` `DMR003.RG10.V022` at 19:02:08.580. The retained log kept the `0x34` line and not the banner sentence. Boot peak 0.10 dB, no sample above 10 dB.
+
+## Render, no key
+
+64 samples from a short symbol block. The reply was `render bytes=128 sr=0` at 19:03:57.107. The frame was not built on the stack.
+
+## Receive half
+
+HackRF 1 kHz at 467.625 MHz, VGA 20, deviation 2.5 kHz, op 5 mode 4, six halves. Half ids `1,0,1,0,1,0`. Phase step of a 1 kHz tone across each boundary, in degrees: −0.09, +0.08, +0.02, −0.13, −0.06. The first boundary is included. The line over all six halves is 9221. Capture `C:\Users\Joshua\AppData\Local\Temp\fw1718\rg10\ram1k.bin`.
+
+## One 90-frame key
+
+Low power, 467.625 MHz. The host streamed with op 1 and held PTT for the silence wav, so op 7 was not the path and `drop_ptt` did not run. Underrun 4748 is that tail. Link-setup CRC passes, both callsigns match, 90 payload-exact frames, and one further frame at the tail. Steady p99 from 80 ms through 3600 ms is 2794–2913 Hz. The 60 ms slice is 3134 Hz. The click, 0–40 ms, is about 23 kHz and is not a stop. No modulated slice is at or over 5 kHz. HackRF LNA 16, VGA 16, clip fraction 0.
+
+No `DMRDEBUG.bin`. VFO 467.625 / 467.625 FM at 19:04:17. RG10 stays loaded. The SignalDeck data-receive state and the held-path front end are not in this change.
