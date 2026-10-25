@@ -503,3 +503,18 @@ Also: the receive thread swallows every exception (`catch (Throwable ignored)`),
 6. The host side (a "Calibrate receive" action on the Device page that plays, records, fits the 41 taps and shows the response before and after) waits for this result; the shipped per-model taps stay the default and the fallback.
 
 **Carries.** The read-back of `CR_DAC`/`AICR_DAC` after the 3 s should confirm the stub left them as the boot init had them. The repeater-ID and tone generators of the AT1846S were rightly ruled out (sub-audible, and the CTCSS table tops at 254.1 Hz).
+
+## Review of FW23, opcode 13 idle playback (2026-10-25, `f4e3ac4b`)
+
+**Verdict: the measurement is sound and complete for what it tried; the conclusion (c) is one variant early.** Two playbacks, acked without a key (HackRF peaks 0.085 and 0.056 dB, nothing on the air), and the phone heard nothing: digital silence with the squelch closed, the receiver's own noise at −27 dBFS with it open, no 1 kHz line in either. So writing the vocoder buffer while the radio sits idle on an **analog** channel does not reach the ES8311. That much is settled.
+
+**Why (c) is not yet final.** The reading (`61f32f19`) established that the phone hears DMR voice through the codec DAC lineout, and that on an analog channel the phone hears the AT1846S audio pin. Both reach one microphone input, so something on the board or in the firmware selects or sums them, and the reading did not find the register that does it. FW23 was run on an analog channel, where whatever selects the AT1846S pin is in force. The idle playback therefore has not been tried in the state where the lineout is known to be heard. Two variants close the question:
+
+1. **The same op on a DMR channel** (any colour code and slot, no signal): the mode the phone is in when it hears DMR voice. Squelch as the DMR channel leaves it. If the 1 kHz line and the chirp appear, the leg is found and the calibration measures it in DMR mode (the AT1846S held path is still the flat part by R-D, so the equaliser design holds); go to decision (a)/(b) with the numbers.
+2. **Analog channel plus the gates the reading named:** `STANDBY_LO` `0x11000088[31]` cleared for the 3 s, the DAC interface on (`0x160009C8[4]` = 0), and the FM-demod-to-DAC route left as it is (`0x11000080[0]`, `0x11000100[7]` read and logged, not changed, since changing them would mix the demod into the lineout). Put every bit back after the 3 s and log the read-backs.
+
+If both are silent too, **(c) is final** and item 7's design becomes training on a real reception, where the known source is the MMDVM hotspot when it arrives (item 5): an M17 BERT or a fixed-payload stream from the hotspot is a known waveform through the whole over-the-air path, which is a better calibration signal than any idle playback. Until then the shipped per-model taps stay.
+
+**Carries from the pass list:** the 1125-frame stream was not re-run on FW23 and the boot capture was missed; both are owed before FW23 (or FW24 with the variants) is used for anything else, since every image re-proves ops 0–7. The squelch was put back; the stock app untouched; end state recorded.
+
+**Next:** FW23 variants 1 and 2 above (no new image needed for variant 1; variant 2 is a small addition to the stub or a second opcode argument), with the same recording and analysis, the 1125-frame re-run and a boot capture on whichever image ends up loaded, then the (a)/(b)/(c) decision with numbers. Then route-list item 6 (M17 as a channel type; the contacts branch it depends on is merged, SignalDeck `8e304b0d`).

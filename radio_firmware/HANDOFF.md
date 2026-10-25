@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -45,7 +45,7 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
-**Now (set 16:58, 2026-10-25): FW23 = FW22 + opcode 13, the idle DAC playback, per the review's six-point pass list** (host patch test first; no RF proven by capture; the 13-frequency response and group delay of the recording; the (a)/(b)/(c) decision with numbers; the 1125-frame stream and the receiver re-checked; end state). **Done:** route-list item 7's reading (`61f32f19`), reviewed. The earlier text of this task for the record: route-list item 7, the reading task (one session, no phone): which converter drives the phone's ES8311 input in receive, whether the AT1846S audio output and the HR-C7000 DAC enter the codec on the same input, and the register or RAM path that lets our firmware play a known signal out of that converter while the radio is idle and not keyed; write it up in `results.md` with addresses, the evidence (disassembly and the register tables) and the proposed `0x40` op, then set STATUS: REVIEW. No image is built in this step. Item 6 (M17 as a channel type) follows once the contacts branch is merged.
+**Now (set 17:35, 2026-10-25): FW23 variants per the review (1: opcode 13 on a DMR channel; 2: on analog with `STANDBY_LO` `0x11000088[31]` cleared and `0x160009C8[4]` = 0 for the 3 s, the demod-to-DAC bits read and logged, all put back), the recording and analysis as before, the 1125-frame re-run and a boot capture on the image that stays loaded, then the (a)/(b)/(c) decision with numbers; then route-list item 6.** **Done:** FW23 as built (`f4e3ac4b`), reviewed. For the record, the earlier task text: FW23 = FW22 + opcode 13, the idle DAC playback, per the review's six-point pass list (host patch test first; no RF proven by capture; the 13-frequency response and group delay of the recording; the (a)/(b)/(c) decision with numbers; the 1125-frame stream and the receiver re-checked; end state). **Done:** route-list item 7's reading (`61f32f19`), reviewed. The earlier text of this task for the record: route-list item 7, the reading task (one session, no phone): which converter drives the phone's ES8311 input in receive, whether the AT1846S audio output and the HR-C7000 DAC enter the codec on the same input, and the register or RAM path that lets our firmware play a known signal out of that converter while the radio is idle and not keyed; write it up in `results.md` with addresses, the evidence (disassembly and the register tables) and the proposed `0x40` op, then set STATUS: REVIEW. No image is built in this step. Item 6 (M17 as a channel type) follows once the contacts branch is merged.
 
 **Phone lease ended 17:12: the phone is Grok's again.** The module is on the factory image, SignalDeck (the contacts branch build, release) owns the radio, the stock app is paused, the radio sits on channel 2 (467.625 FM), the bench contact and backup are deleted.
 
@@ -145,6 +145,8 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 ## Last report
 
 
+
+**Reviewed 17:35 (`reviews.md`, "Review of FW23, opcode 13 idle playback"): the measurement is sound; (c) is one variant early. Next: the same op on a DMR channel (variant 1, no new image), then on analog with `STANDBY_LO` cleared and the DAC interface on for the 3 s (variant 2), each with the recording and the 13-frequency analysis; the 1125-frame re-run and a boot capture on the image that stays loaded; then the (a)/(b)/(c) decision with numbers. If both variants are silent, (c) is final and the calibration trains on a real reception (the hotspot's M17 stream as the known source when it arrives).**
 FW23 opcode 13 is loaded (`DMR003.FW23.V022`, sha256 `d880d6e5…c3132a`). It acked `sr=0` in about 4 s and did not key. HackRF peak 0.085 dB with squelch closed and 0.056 dB with squelch open, clip 0. The phone recording was digital silence with squelch closed and open-squelch noise at −27 dBFS with no 1 kHz line. **Decision (c):** writing `0x180000A0` while idle does not reach the ES8311. Item 7 falls back to training on a real reception. The 1125-frame stream was not re-run. Boot capture was missed. Squelch was returned to body 2.
 
 ## Owner question
