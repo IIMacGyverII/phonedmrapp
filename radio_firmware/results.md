@@ -2297,3 +2297,19 @@ HackRF 1 kHz at 467.625 MHz, VGA 20, deviation 2.5 kHz, op 5 mode 4, six halves.
 Low power, 467.625 MHz. The host streamed with op 1 and held PTT for the silence wav, so op 7 was not the path and `drop_ptt` did not run. Underrun 4748 is that tail. Link-setup CRC passes, both callsigns match, 90 payload-exact frames, and one further frame at the tail. Steady p99 from 80 ms through 3600 ms is 2794–2913 Hz. The 60 ms slice is 3134 Hz. The click, 0–40 ms, is about 23 kHz and is not a stop. No modulated slice is at or over 5 kHz. HackRF LNA 16, VGA 16, clip fraction 0.
 
 No `DMRDEBUG.bin`. VFO 467.625 / 467.625 FM at 19:04:17. RG10 stays loaded. The SignalDeck data-receive state and the held-path front end are not in this change.
+
+# R-G host — data-receive hold and the fixed taps (2026-10-24, 19:26–19:30)
+
+No new image. RG10 stayed loaded. Wi-Fi adb `192.168.1.125:5555` only. The phone was not keyed.
+
+SignalDeck sends op 6 variant 3 when M17 starts and `0x34` is a stub tag (`DMR003.XXXX.V022` other than `UV4T`), and sends it again after a channel, VFO or tone write. Stopping M17 sends action 0. The Armor's 41 taps are applied to the matched-filter audio before the sync search, threshold 0.95. The calibrated decision-feedback equalizer remains the plain state.
+
+## Host clips
+
+`HeldPathTest` on the 18 saved R-F clips reproduces the research decoder's stream count and payload-exact count on every clip. Link-setup CRC passes on all 18, with the callsigns that were sent. One −99 dBm clip, `m17_d2400_v0_2`, is 71 of 77. `m17_d2400_v10_1` locks 18 frames, all exact. The other −87 and −93 dBm clips are 98.6 to 100 percent of the frames they lock.
+
+## Device
+
+HackRF transmit, VGA 20, ±2.4 kHz, 467.625 MHz, 30 stream frames. The hold returned `data hold action=1 sr=0`. During the transmission the `0x32` body was `0x41`, −87.5 dBm. The M17 list showed `K6M17 → W9LAB`, 13 frames, 12 clean, and two shorter entries with no callsigns. A second transmission, `W1RF → N2EQ`, with the hold released and the calibrated equalizer selected, did not appear under those callsigns; the list added another `K6M17 → W9LAB`, 12 frames. Raw `0x41` again.
+
+VFO 467.625 / 467.625 FM. M17 was stopped. No `DMRDEBUG.bin`. RG10 stays loaded.

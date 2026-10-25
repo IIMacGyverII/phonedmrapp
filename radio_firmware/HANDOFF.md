@@ -58,7 +58,9 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 **R-G firmware is reported** (`results.md`, tag `RG10`). A 64-sample render returned `sr=0` from `0x4AE00`. The first receive half is in phase with the rest (steps within 0.13 degrees). One 90-frame low-power key: steady p99 2794–2913 Hz, 90 payload-exact frames. Op 7 and `drop_ptt` are in the image; this key still used op 1, so the self-unkey was not the path taken. RG10 stays loaded.
 
-**R-G host (SignalDeck), next:** (a) the data-receive state: op 6 variant 3 on when an M17 or other raw-discriminator decoder starts, re-sent after every channel, VFO and tone write, action 0 when it stops, offered only when `0x34` reports a stub tag; (b) the held-path M17 front end: the Armor's 41 taps from `rf/taps.json`, applied before the sync search at symbol spacing, threshold 0.95, then the existing frame decoder and Codec 2; the DFE path stays for the plain state; (c) a host test over the 18 saved R-F clips: link-setup CRC on all 18, payload-exact at least 95 percent on each and at least 98 percent at −87/−93 dBm; (d) one device run: HackRF M17 at −87 dBm with the hold on, the M17 page shows the callsigns and the frame count, then the plain state as control.
+**R-G host is reported.** SignalDeck sends op 6 variant 3 when M17 starts on a stub tag, and again after a channel, VFO or tone write. The Armor's 41 taps run before the sync search. `HeldPathTest` matches the research decoder on all 18 clips (one −99 dBm clip is 71/77; `m17_d2400_v10_1` locks 18 frames, all exact). On the phone, HackRF at raw `0x41` (−87.5 dBm) put `K6M17 → W9LAB`, 13 frames, on the M17 list. The plain-state control did not show the second transmission. RG10 stays loaded.
+
+**Next: FW19**, the time-out ceiling below.
 
 
 **After that, in this order** (host-side items may start whenever the bench waits):
@@ -93,7 +95,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-R-G, tag RG10. Boot peak 0.10 dB. `0x34` at 19:02:08.580. Render 128 bytes `sr=0`. 1 kHz phase steps within 0.13 degrees, including the first half. One 90-frame key, steady p99 2794–2913 Hz, 90 payload-exact frames. The phone key was low power. RG10 stays loaded. VFO 467.625 at 19:04:17.
+R-G host. The voice-filter hold went out (`sr=0`) and the M17 list showed `K6M17 → W9LAB`, 13 frames, at raw `0x41` (−87.5 dBm). The 18 saved clips match the research decoder. The plain-state control did not show its callsigns. RG10 stays loaded. VFO 467.625.
 
 ## Owner question
 
