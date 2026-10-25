@@ -158,3 +158,25 @@ own sender is the smaller and the more useful piece; Path A is the fallback. The
 the table hashes are the only guard. Recovery after an interrupted transfer is a pass criterion, proven on the
 bench before the page ships. Pass lists for both steps are in `reviews.md`, "Review of the Phase E reading sessions".
 
+## The page itself (owner, 2026-10-25): professional, themed, informative
+
+The loader page is a first-class SignalDeck screen, not a utility dialog. It uses the app's own theme (the Neo
+palette, the one dark dialog theme, drawn controls, no stock Android widgets) and reads as part of the app. It
+shows the user what is happening at every moment:
+
+- **Before:** the installed image (tag, what it enables), the chosen image (name, what it changes, size, hash
+  status, where it came from), the backup's status (present, verified, path), and the pre-flight list with each
+  check ticking green or stopping red with a reason.
+- **During:** an elegant, detailed progress bar with named phases laid along it (preparing, entering update mode,
+  handshake, transfer, finishing, restarting the module, verifying), the current phase highlighted; under it the
+  live figures: blocks sent of total, bytes, rate, elapsed and remaining time, retries; and an expandable log of
+  the handshake and status events with timestamps, the same text that goes into the report.
+- **After:** the result in one line (new tag read back, verification sample matched, or what failed and what the
+  page did about it, such as the automatic factory restore), with the full log kept in the history and the device
+  report.
+- **Recovery mode** uses the same page with its own heading and warning, so a user in trouble sees the same
+  controls they already know.
+- The help topic shows the page's screenshots and explains each phase in plain words.
+
+Built once, used for every image on every phone the app supports.
+

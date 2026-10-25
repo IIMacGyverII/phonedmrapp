@@ -85,3 +85,28 @@ What to send: the SignalDeck APK, the firmware image with its tag and SHA-256, t
 1. Set up the Ubuntu box in the cage with the HackRF (decided 2026-10-24, "when it is time"): key-based ssh for the Windows account the AIs run under, the HackRF udev rule, `hackrf` tools installed; tell the AIs the host name and user.
 2. Later: one bench session present for the Phase 4 HackRF transmit tests.
 3. Phase 5 when ready: the friend's radio and frequency.
+
+## Update 2026-10-25: a duplex MMDVM hotspot is on order
+
+The owner ordered an AURSINC "Upgraded MMDVM Duplex Hotspot" (Raspberry Pi Zero 2 W, Wi-Fi, Pi-Star/WPSD; the
+listing names C4FM/YSF, POCSAG, NXDN, D-Star, P25 and DMR). A duplex hat of this kind is an ADF7021 MMDVM_HS
+board, which with current hat firmware and WPSD also runs **M17**. In the cage it becomes the independent station
+the Ubuntu box was meant to be, for everything but raw IQ work:
+
+- **M17 transmit check (the open item):** the hotspot in M17 mode on the bench frequency; SignalDeck's Hold to talk
+  on a bench image; the hotspot's MMDVMHost log shows the received source callsign, destination and BER. Pass = our
+  callsign and `@ALL` logged with low BER over a 10 s key, three times.
+- **M17 receive check:** the hotspot transmits M17 (a reflector echo or a second client) and SignalDeck's live
+  receiver lists it once with the right callsigns and ≥ 95 % frames.
+- **POCSAG receive check:** the hotspot's DAPNET/POCSAG transmitter pages a test RIC; SignalDeck's held-path POCSAG
+  decoder prints the page. This is the independent pager transmitter the FW21 review asked for in the other direction.
+- **DMR:** the radio against a real MMDVM DMR hotspot (simplex and the duplex pair), the first check of our DMR
+  engine against something that is not the stock app.
+- **Not covered:** raw IQ capture, HackRF scripting and the ±5 kHz deviation checks stay on the bench PC.
+
+Setup when it arrives (Grok, one session, no bench keys until the last step): image WPSD, join the cage Wi-Fi, ssh
+on; update the hat firmware to a build with M17; set the frequencies to the bench pair inside the cage (any frequency
+is allowed in the cage, owner 2026-10-24; the hotspot's own range limits apply); power through a fixed USB supply;
+record the hat firmware version, MMDVMHost version and the modes enabled in `results.md`. Bench callsign in the
+hotspot, never the owner's, since its logs are quoted in reports.
+
