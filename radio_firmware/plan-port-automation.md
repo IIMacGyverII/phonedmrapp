@@ -68,7 +68,7 @@ boot capture, restore), `rc20_run.py` (tones, RSSI, HackRF TX), `rd10_run.py` (h
   (the Atom XL has `updateDmr` inside a HAL; the first job there is capturing how the stock app uses it and
   proving the factory restore, with the factory image saved before anything else).
 
-### 5. Bench regression — `tools/fw-bench/` (to be distilled from the snapshot)
+### 5. Bench regression — `tools/fw-bench/runner/bench.py` (first cut 2026-10-25; acceptance = reproducing the Armor numbers, not yet run)
 - One runner, one results table per image, one JSON per test, pass/fail against the written criteria:
   1. tone-table response, plain and held (R-D/R-E method), against the per-image reference;
   2. the 90-frame M17 key through TX RAM, captured and scored payload-exact (R4t criteria);
