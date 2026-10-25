@@ -121,7 +121,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-Item 3 design corrected, nothing loaded. The clock is rational (M17 3/5; POCSAG 8/125, 3/20, 3/10). The pulse is polyphase, with a hold mode for the pager. Tones are eighths of a hertz, continuous phase, with an amplitude, queued 64 deep. Op 11 ends when the queue drains. FW20 stays loaded. Next is FW21, render first.
+Item 3 design corrected, nothing loaded. The clock is rational (M17 3/5; POCSAG 8/125, 3/20, 3/10). The pulse is polyphase, with a hold mode for the pager. Tones are eighths of a hertz, continuous phase, with an amplitude, queued 64 deep. Op 11 ends when the queue drains. Op 3 leaves the built-in M17 pulse whether or not an op 9 was sent. FW20 stays loaded. Next is FW21, render first.
 
 ## Owner question
 
