@@ -42,19 +42,68 @@ The same MCU envelope as the Atom XL: `7E 96 69 | route | cmd | rw | len (2, BE)
 - Module firmware update path in the app: newest `*.bin` in `/sdcard/intercom/dmr/`, else (when enabled)
   `/system/data/dmr/`; MCU images in `/system/data/mcu/`. A module image there would show which chip it is.
 
+## The owner's Magisk module (read 2026-10-25)
+
+The owner sent the Magisk module (v2.2.2) that installs the intercom app on their ROM. It stays private, like the APK.
+It contains:
+
+- `service.sh` starts `/system/bin/extmodule` at boot. It also starts two shell loops that run `getevent` on
+  `/dev/input/event1`, look for scancode `00f9`, and send `android.intent.action.PTT.down`/`up` with
+  `-p com.agold.intercom`. That broadcast goes only to the stock app, which is why no PTT reached SignalDeck.
+  Thirty seconds after boot, `service.sh` sets `settings secure usb_audio_automatic_routing_disabled 1`.
+- `extmodule` (aarch64, 69 KB) works like this:
+  - It opens `/dev/ttyACM0` for commands and `/dev/stmcu` to read the call-in state.
+  - It drives the sysfs files in `/sys/bus/platform/drivers/mcu/`: `mcu_power`, `rstmcu`, `handle_ptt` and `usb_path`.
+  - It powers the audio codec on and off with `echo 1` / `echo 2 > /dev/ttyTTCMD`.
+  - It moves audio through the ALSA devices `/dev/snd/pcmC1D0c` and `pcmC1D0p`, using its own small tinyalsa.
+  - Its control commands are 1 start, 2 stop, 3 PTT start, 4 PTT stop, 7 MCU start, 10 DMR firmware update. The app
+    confirms those six. From the order of the daemon's strings, 5/6 are most likely USB on/off, 8 MCU stop and 9 MCU
+    update.
+- `extcmdtest` is a small tool that sets the same four sysfs files (`-p` power, `-r` reset, `-h` PTT, `-u` USB path).
+- `auto_update` and `dfu-util` reflash the phone-side MCU. The script holds the MCU in reset with `extcmdtest -u1 -r1
+  -p1`, then runs `dfu-util -d 0483:df11 -a 0 -s 0x08000000`. **So the phone-side MCU is an STM32** (ST's DFU boot loader,
+  flash at `0x08000000`).
+- `/system/data/mcu/` holds six STM32 images, dated 2017-09-19 to 2018-12-21. The newest, `20181221151755`, is the
+  build date the MCU reported. These are images for the phone-side MCU only; **there is no DMR module image**, so the
+  module's chip is still unknown.
+- The newest MCU image enumerates as USB `0483:5730`. Its strings include "Agold Audio Class", "AUDIO Interface" and
+  "Agold_WX". **The MCU is a composite USB device: a CDC-ACM serial port (`ttyACM0`) plus a USB Audio Class sound card
+  (card 1).** That card carries the radio audio, which is why `service.sh` turns off Android's automatic USB audio
+  routing: without it, Android would send phone audio to the radio. The Atom XL's HAL very likely uses the same
+  device.
+- DMR module update (`extmodule`): stop the module, hold PTT, enter update mode, start the module, then send the newest
+  file in `/storage/self/primary/intercom/dmr/` with YModem. This is the same scheme as the Armor 26's `dmr009` knock
+  with PTT held, so the 3WT's module may be from the same HR-C7000 family. That is a guess until a module image or a
+  version reply in the `DMR00x` format turns up.
+- A key layout, `Vendor_2454_Product_6500_Version_0010.kl` (the MediaTek keypad, `mtk-kpd`), maps scancode 249
+  (`0xf9`, PTT) to `PROG_RED` (keycode 183) and 250 to `PROG_GREEN` (184), under an "agold add" comment. If the GSI
+  loads that file, PTT reaches apps as key 183. The report saw no key event, so either the overlay is not loaded or the
+  key goes only to `getevent`.
+- The module also ships the WebRTC noise-suppression, AGC, AEC and VAD libraries the app uses.
+
+What SignalDeck would need on this phone (not started):
+
+1. Talk to `extmodule` on 9980/9985 with the 12-byte prefix (the smallest step, since it keeps the owner's module), or
+   stop it and open `ttyACM0`, the four sysfs files and USB audio card 1 itself.
+2. The legacy command set inside the `7E 96 69` envelope.
+3. PTT: key 183 if the layout is loaded, otherwise a root `getevent` reader for scancode `0xf9`. The stock broadcast
+   names its package, so SignalDeck cannot share it.
+
 ## Frequency range
 
 - The decompiled build (the owner's modified one) accepts 100 MHz up to 470 MHz (480 MHz with the DMR09 module). Whether the module itself tunes below 136 MHz is unknown: the Armor 26's module rejects anything outside
   136–174 / 400–480 MHz and stays on the old frequency (`0x23` → `sr=1`). On this module the reply byte of `0x35`/`0x36`
   after a write below 136 MHz would tell.
+- The owner gets the most consistent airband reception around **133.85 MHz**. That only works if this module accepts
+  and tunes 133.85 MHz, so its range does reach below 136 MHz. If the receiver is an AT1846S (unconfirmed), 133.85
+  sits just below that chip's specified 134 MHz VHF edge.
 - Airband (108–137 MHz) is AM; this receiver is an FM discriminator, so AM is only heard by accident (a strong carrier
   slightly off-frequency gives some slope detection). 136.000–136.975 MHz is airband too and inside the usual VHF range,
   which may explain the rare receptions. A real AM path would need the receiver chip's AM mode, if it has one.
 
 ## To ask the 3WT owner
 
-- The Magisk module (for `extmodule`, its libraries and any `/system/data/mcu` or `/system/data/dmr` images): it is
-  what owns the radio on this ROM and what SignalDeck would have to replace or talk to. Keep it private.
+- ~~The Magisk module~~ (received 2026-10-25, read above; no DMR module image in it).
 - Whether `/sdcard/intercom/dmr/` or `/system/data/dmr/` holds a `.bin` on the phone.
 - For the frequency question: the app's log line after saving a channel below 136 MHz (`parseCmd strCmd:7E 96 69 01 35 …`
   or `… 36 …`); body `00` = accepted, anything else = refused.
