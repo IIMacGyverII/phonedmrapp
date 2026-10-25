@@ -2446,3 +2446,17 @@ After the first drop, 10 s later, a 1750-frame stream with the end bit and one E
 ### End state
 
 `0x34` `DMR003.FW20.V022` at 02:14:05. `0x32` raw 31, 30 and 32 (−104.5 to −104.0 dBm). VFO 467.625 / 467.625 FM, low power, power byte 0, at 02:12:59. No `DMRDEBUG.bin`. SignalDeck owns the radio. FW20 stays loaded.
+
+## Spoken microphone check on FW20 (2026-10-25, 02:43)
+
+FW20 stayed loaded (`0x34` `DMR003.FW20.V022`). Low power, 467.625 MHz, power byte 0. HackRF receive LNA 16 / VGA 16. This is the microphone path, not the tone extra. The hold was 10 s. A spoken clip played on the handset alarm stream during the hold, so the microphone had speech. An earlier hold with nothing playing decoded as silence (Codec 2 peak 49 of 32767) and is not this check.
+
+Carrier 10.30 s (1.35 s to 11.65 s of the file). Steady body p99 2947 Hz. No steady slice at or over 5 kHz. 247 of 247 frames, numbers 0 through 246, the last with the end bit set. Link-setup CRC ok. The eight-symbol EOT pattern scores 0.978.
+
+`m17 mic` at 02:43:42.336. Key at 02:43:42.731. Status byte 3 at 02:43:42.743. Op 7 at 02:43:52.438 (247 frames). Status byte 4 at 02:43:52.977. The host unkey (`0x26` body 2, `sym unkey`) at 02:43:52.990, 13 ms after that status byte. Status byte 4 again at 02:43:53.301, the stock unkey, 0.32 s after the drop. No other status byte between them.
+
+Codec 2 decode of those 247 frames is 9.88 s, 8 kHz, peak 15873 of 32767, rms about 1287. A Windows dictation pass on that wav returned a short phrase and did not recover the scripted sentence. The audio is speech, not silence. Battery 37.3 °C and `mtktsAP` 45.4 °C before the key. No heat stop.
+
+### End state
+
+`0x34` `DMR003.FW20.V022`. `0x32` raw 30 and 31. VFO 467.625 / 467.625 FM, low power. No `DMRDEBUG.bin`. SignalDeck owns the radio. FW20 stays loaded.
