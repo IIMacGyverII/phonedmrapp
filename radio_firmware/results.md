@@ -2621,3 +2621,33 @@ The per-block pause was measured with DIAG `fwload --ei pause` of `Download/DMR/
 ### End state
 
 Installed tag `DMR003.FW22.V022`. Factory backup still verified. Stock app paused. SignalDeck owns the radio. No `DMRDEBUG.bin`. The unlisted-images switch is the next sub-step.
+
+# Phase E — Allow unlisted images (2026-10-25, 16:09–16:31)
+
+SignalDeck `9e58dbbf`. Wi-Fi adb `192.168.1.125:5555` only. The release build was installed with `adb install -r` after the wrong-tag drill and before the backup-absent check. `fwload_stock.sh` was not used. No HackRF capture: this step does not key. The bench file was a copy of the factory image, 378620 bytes, with the 16-byte version string at `0x38464` set to `DMR003.UNL1.V022`. sha256 `28950e2123f225778e83b2e8336d6db318952250c13605da3a86d7e3d85b587e`. It was placed at `Download/DMR/Firmware/UNL1.bin` and removed at the end. It is not a catalogue image and it is not in AndroidRadio_Firmware_Project.
+
+### Switch off, then a refusal
+
+At 16:09 the Advanced button read `Allow unlisted images · off`. Selecting `DMR003.UNL1.V022` and confirming Load returned in 12.4 s: `That file is not a known module image`. No transfer started.
+
+### Load after the hash is typed
+
+The switch was confirmed twice (`Allow unlisted images? (1 of 2)`, then `Your decision (2 of 2)`). The first eight characters `28950e21` were typed. At 16:12:05 the module reported `DMR003.UNL1.V022` and RadioService logged `unlisted image 28950e2123f225778e83b2e8336d6db318952250c13605da3a86d7e3d85b587e`. The preference `firmware` / `unlisted` was `false` after that load. The page at 16:21 still showed `Allow unlisted images · off`, installed `DMR003.UV4T.V022` (the factory image had been put back before that screenshot), and the factory backup `Verified · stock app`.
+
+### Wrong tag restores the factory image
+
+The module was on the factory image. DIAG `fwunlistedbad` at 16:16 passed every pre-flight check (module `DMR003.UV4T.V022`, idle, stock app paused, battery 90% on battery, hash `28950e2123f2`, factory backup from the stock app). The transfer read back `ok(DMR003.UNL1.V022)` in 137 s at 16:18:33. The drill then treated the tag as `DMR003.NOPE.V022` and restored the factory image: `ok(DMR003.UV4T.V022)` in 138 s at 16:20:51. The finished line was `Restored the factory image (DMR003.UV4T.V022) because the tag did not match`.
+
+### No factory backup, switch on
+
+The private factory copy and the Download factory files were moved aside, and `pm uninstall --user 0 com.pri.prizeinterphone` returned Success. The switch was turned on, `28950e21` was typed, and Load was confirmed. The page (`unlisted-no-backup.png`, 16:23) showed the switch still on, the bar still on Prepare, Factory backup in red (`Missing or it does not match`), and This phone in red (`Load the factory backup onto this phone before any other image`). The result line was `Missing or it does not match`. Logcat had no knock and no transfer. `cmd package install-existing` put the stock app back, which re-enables it, and `pm disable-user --user 0` paused it again. The page then showed installed `DMR003.UV4T.V022`, factory backup `Verified · stock app`, and the stock app paused (`unlisted-restored.png`). A refusal does not clear the switch, so it was turned off again. The preference read `false` at the end.
+
+### Help
+
+Device → Help & how-to, search `unlisted`, opens Device · Radio firmware (`unlisted-help-search.png`, `unlisted-help-sentence.png`, 16:30–16:31). The section says the switch is off until it is confirmed twice, the file comes from Download/DMR/Firmware, the first eight characters of the hash are typed, the factory backup has to be on the phone, the catalogue and the project do not cover the file, the switch turns off after the load, a version string that does not match restores the factory image, and Restore factory still loads that image when the backup is verified even if the module is reporting the unlisted version.
+
+Host `ImageTableTest` passed, including the case that a verified factory backup may restore the factory image when the running tag is not in the table, and that any other image is still refused on that tag.
+
+### End state
+
+Installed tag `DMR003.UV4T.V022`. Factory backup verified from the stock app. Stock app paused (`pm list packages -d` lists `com.pri.prizeinterphone`). Allow unlisted images is off. `UNL1.bin` is not in Download/DMR/Firmware. SignalDeck owns the radio. Battery 89–90%. No `DMRDEBUG.bin`. Next is route-list item 7 (the receive self-calibration reading) and item 6 once the contact callsign work it depends on is in. FW21 and FW22 stay unlisted in the public catalogue until their builds are reproducible. Only stock and released images go in AndroidRadio_Firmware_Project.
