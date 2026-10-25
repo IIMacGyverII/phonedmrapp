@@ -2,13 +2,14 @@
 # checks the same integer formula the stub uses, and that the built image carries
 # the tag and does not add a PTT store in the new function.
 import pathlib
+import subprocess
 import unittest
 
 import fw23_build
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-IMAGE = ROOT / "radio_firmware" / "build" / "DMR003.FW23.V022.bin"
+IMAGE = ROOT / "radio_firmware" / "build" / "DMR003.FW24.V022.bin"
 
 
 class Fw23Test(unittest.TestCase):
@@ -30,15 +31,28 @@ class Fw23Test(unittest.TestCase):
         self.assertLessEqual(max(fw23_build.freq_hz(n) for n in range(1600, 24000)), 3799)
 
     def test_image_tag_and_the_new_function_does_not_name_ptt(self):
+        fw23_build.main()
         img = IMAGE.read_bytes()
         self.assertEqual(len(img), 378620)
-        self.assertEqual(img[0x38464:0x38474], b"DMR003.FW23.V022")
-        # The play function's literal pool holds the codec and the irq flag, not PTT.
-        self.assertIn((0x110003B0).to_bytes(4, "little"), img)
-        self.assertIn((0x180000A0).to_bytes(4, "little"), img)
-        # PTT exists in the inherited key path. It must not sit in the new tail.
-        tail = img[0x5BC7E:0x5C070]
-        self.assertNotIn((0x11000560).to_bytes(4, "little"), tail)
+        self.assertEqual(img[0x38464:0x38474], b"DMR003.FW24.V022")
+        ext = img[0x5B794:0x5C6FC]
+        for addr in (0x110003B0, 0x180000A0, 0x11000080, 0x11000100, 0x11000088):
+            self.assertIn(addr.to_bytes(4, "little"), ext)
+        # PTT exists in the inherited key path. It must not sit in the extension.
+        self.assertNotIn((0x11000560).to_bytes(4, "little"), ext)
+        dump = subprocess.check_output(
+            [r"C:\Users\Joshua\tools\csky-elfabiv2\bin\csky-elfabiv2-objdump.exe", "-d",
+             r"C:\Users\Joshua\AppData\Local\Temp\fw1718\fw21\ext.elf"],
+            text=True, errors="replace")
+        play = dump.split("<fw23_play>:", 1)[1].split("<fw21_clamp>:", 1)[0]
+        self.assertIn("bclri", play)
+        insns = [ln for ln in play.splitlines() if "\t" in ln]
+        for addr in ("11000080", "11000100"):
+            hits = [i for i, ln in enumerate(insns) if addr in ln.lower() and "lrw" in ln]
+            self.assertGreaterEqual(len(hits), 1)
+            for i in hits:
+                self.assertIn("ld.w", insns[i + 1])
+                self.assertNotIn("st.", insns[i + 1])
 
 
 if __name__ == "__main__":

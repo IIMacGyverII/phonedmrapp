@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-25 — FW24, opcode 13 does not reach the phone.** The DMR-channel playback was digital silence (−88 dBFS). The analog playback with `STANDBY_LO` bit 31 already clear was open-squelch noise at −13.7 dBFS and no chirp. Decision (c) is final: the calibration trains on a real reception. The 1125-frame stream on the image that stayed loaded was 1125/1125. Tables: `radio_firmware/results.md`.
+
 **2026-10-23 — FW8, FW16 done; FW11 largely done on the host.**
 
 - **FW8:** `radio_firmware/symbols.csv` (`offset,kind,name,comment`, 44 rows, 3 external) plus `FwCskyImportSymbols.java` / `FwCskyExportSymbols.java`, wired into `scripts/fw1_ghidra_csky.ps1` (import after analysis, export last to the gitignored `symbols.export.csv`). Headless run: 36 functions + 4 labels applied, 40 exported back, exit 0.

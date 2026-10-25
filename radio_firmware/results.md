@@ -2705,3 +2705,45 @@ The open-squelch recording is receiver noise at one level before, during and aft
 ### End state
 
 `0x34` `DMR003.FW23.V022`. No `DMRDEBUG.bin`. SignalDeck owns the radio. Stock app was paused at the start of the step and was not changed. VFO was not moved. The 1125-frame check and a HackRF tone through the phone path were not run.
+
+# FW24 — opcode 13 on a DMR channel, then with the speaker gate (2026-10-25, 17:36–18:13)
+
+The review asked for the same playback on a DMR channel, then on analog with `STANDBY_LO` bit 31 cleared and the DAC interface on. Host `test_fw23`: 3 tests. The image that stays loaded is `DMR003.FW24.V022`, sha256 `0afc3d80f90f2bbdb39ffe9a8a45afdb14fb6f1169ba62629fa7bf4d4216b2fc`, 378620 bytes. Opcode 13 with a one-byte body is the FW23 playback. A second body byte of 1 is the gate. The reply is 24 bytes: `0x11000080` and `0x11000100` at the end of the 3 s, `STANDBY_LO` before and after, and the three codec bytes before and after. The top byte of the last word is a flag: bit 0 the first demod register changed, bit 1 the second, bit 2 the speaker-gate word did not read back. Those two demod registers are only loaded.
+
+An earlier FW24 build (sha256 `43d664c3414da94e6c363ea88cd77b28db2a69f4bad45ebd1bc29c242a5d6426`) read the frame pointer after the push, so the length check saw the stack and took the old path. It acked `len=0`. Its boot peak was 0.075 dB. It was replaced and is not the measurement.
+
+### Variant 1 — DMR channel, FW23, no new image
+
+Channel 4, 467.700 MHz, colour code 15, low power, squelch left as the channel had it. Opcode 13 sent at 17:36:30, acked `sr=0` `len=0` at 17:36:34.995. No `0x26` and no `0x36`. HackRF 467.700 MHz, 2.4 MS/s, LNA 24, VGA 38, 20 s: peak 0.10 dB, clip 0.
+
+The phone clip is digital silence for all 8 s. Peak sample ±6, −88 dBFS. The 1 kHz bin sits at the noise median. There is no chirp.
+
+### Variant 2 — analog, speaker gate
+
+`fwload ok(DMR003.FW24.V022)` at 17:55:59. The HackRF capture started when the transfer reached block 350 of 370, before the restart. Boot peak 0.080 dB, clip 0, nothing at or above 10 dB. Channel 2, 467.625 MHz analog, low power. Squelch opened with `0x30` body 0, acked `sr=0`. Body `0D 01` sent at 17:56:55, acked at 17:56:58 (`sr=0`, `len=24`):
+
+| Word | Value |
+|---|---|
+| `0x11000080` | `0x00000002` (bit 0 set), unchanged |
+| `0x11000100` | `0x000000EE` (bit 7 set), unchanged |
+| `STANDBY_LO` before | `0x00000002` (bit 31 already clear) |
+| `STANDBY_LO` after | `0x00000001` (bit 31 still clear; bit 0 did not hold) |
+| codec before / after | `AICR` `0xC0`, `CR_DAC` `0x20`, mute `0x0C`, both times |
+
+The flag byte is `0x04`, only the speaker-gate mismatch. Bit 31 was already clear, and `AICR` bit 4 was already clear, so the 3 s did not have to open either one. HackRF 467.385 MHz, LNA 24, VGA 38: peak 0.07 dB, clip 0. No `0x26` and no `0x36`.
+
+The phone clip is −13.7 dBFS for all 8 s, before the command, during the 3 s, and after. The peak stays near 320 Hz. The 1 kHz bin stays at the noise median. There is no chirp. This is louder than the FW23 open-squelch noise (−27 dBFS) and it is not the sweep.
+
+A power-cycle (`restartmodule` at 18:00, boot peak 0.080 dB) and the stream below did not leave the speaker-gate word at `0x1`. The same op at 18:13, squelch closed, still read `0x2` at the start and `0x1` at the end, and `0x11000100` was then `0x80` (bit 7 still set, unchanged across that op). Bit 0 of `0x11000088` does not hold a write, and it is back by the next command. Bit 31 stayed clear.
+
+**Decision (c), final.** Neither variant put the 1 kHz line or the chirp into the phone audio. Opcode 13 is the wrong leg. Item 7 trains on a real reception.
+
+### Unchanged behaviour
+
+The first 1125-frame stream, HackRF LNA 16 / VGA 16, clipped (body peak 181 of 127, clip fraction 1, the 2969 Hz figure is not used). After the 10 minute cool-down the same stream at LNA 8 / VGA 8: keyed 45.30 s, p99 3004 Hz, body peak 14, clip 0. Decode 1125 of 1125, the last frame is 1124 with the end bit, EOT score 0.999. Battery 37.4 to 38.0 °C, `mtktsAP` 45.0 to 50.8 °C, `mtktsbtsmdpa` 42.9 to 47.9 °C. No heat stop.
+
+Receiver, phone not keyed. Idle `0x32` raw 23 (−108.5 dBm). The gain-0 HackRF carrier moved it to raw 43 (−98.5 dBm). The earlier pair on an idle radio was raw 31 to raw 47. A 1 kHz FM tone, ±2.5 kHz, HackRF VGA 20, dummy burst first: the phone clip is silence until the squelch opens, then −11.0 dBFS with a 1 kHz line of 12990 for 3.5 s. The held-path line on that same stimulus was about 6200. The path is open.
+
+### End state
+
+`0x34` `DMR003.FW24.V022`. Channel 2, 467.625 MHz analog, low power, squelch body 2. No `DMRDEBUG.bin`. SignalDeck owns the radio. The stock app was not changed. The web server was turned off. Boot peak 0.080 dB on the load and on the restart.
