@@ -117,3 +117,36 @@ Search the stock image for any path that returns memory contents over the UART: 
 read side, `0x21` subcommands, the `0x3D` handler, the debug-packet path. If one exists, a pre-load dump of a
 stock module becomes possible and the backup becomes the module's own bytes, not the vendor's copy; the finding
 either way goes into this file.
+
+## Reading session (2026-10-25) — update handshake and stock read-back
+
+No new image was loaded. FW22 stayed in the module. The handshake is the one every bench load already completes;
+the stock image was read from the repository, not re-probed with a forbidden command.
+
+**How the module enters update mode.** There is no UART "enter bootloader" command. `YModemManager.startUpdateFirmware`
+releases the packet reader and writer, then `ReadFileUtils.setDmrUpdateCondition` knocks the GPIOs:
+`/sys/devices/platform/dmr009/pwd` down, 50 ms, `/sys/devices/platform/dmr009/ptt` down, 50 ms, pwd up, 1000 ms,
+ptt up (`ReadFileUtils.java` 120–141). The sender then writes the one byte `0x31` (`"1"`, `YModemUtil.getYModelData`)
+and waits. The module answers `C` (`0x43`). The phone sends a 128-byte SOH block 0 (name, NUL, decimal size; no MD5,
+because `YModemManager` never sets `checkMd5`). The module answers `ACK` then `C`. Data blocks are STX, 1024 bytes,
+sequence and complement, CRC-16-CCITT. A short tail is SOH. Each block waits at most 15 s and is retried at most 6
+times; `NAK` resends, `CAN` aborts. After the last block the phone sends `EOT` (`0x04`) and then a 128-byte end
+block. Success is one `ACK`. The `MD5_OK` / `MD5_ERR` strings in `handleEnd` never run, because `onReceiveData`
+ignores any reply longer than 2 bytes. The phone is the YModem sender only. Nothing in this path asks the module
+for a block.
+
+**Stock read-back.** Nothing in the stock image returns flash.
+
+- Commands `0x24` and `0x25` return the last digital channel (163 bytes at `0x38E4C`) and the last analog channel
+  (19 bytes at `0x38C70`). That is the programmed channel, not the firmware (`docs/grok-deep-dive/11-firmware-fw0-results.md` §14.2).
+- Command `0x21` is a second family (`family21_dispatch` at file `+0x8BE4`, 35 entries, jump table in RAM
+  `0x030520D8`). The module emits short `68 21` frames (subcommands 1–4, 16–20, and 34). Subcommand 34 is a 6-byte
+  BER score. The OEM app drops the family. It is not a dump.
+- Command `0x3D` has a real handler (`cmd3d_handler` at file `+0xAAFE`). The app never sends it, and it is not
+  replaced. Nothing in the handler's known callers copies a flash range into a reply. It was not probed on the air.
+- The YModem path has no read or verify side.
+
+A stock module therefore still cannot be dumped before the first load. The backup remains the vendor asset from
+that phone. After our own image is in, opcode 12 (FW22) is the dump; a full pass is 378,620 bytes and took 971 s
+at 57600 baud, so the loader page does that in the background, or checks the tag plus a sample and offers the full
+read.
