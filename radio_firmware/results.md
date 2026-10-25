@@ -2747,3 +2747,19 @@ Receiver, phone not keyed. Idle `0x32` raw 23 (−108.5 dBm). The gain-0 HackRF 
 ### End state
 
 `0x34` `DMR003.FW24.V022`. Channel 2, 467.625 MHz analog, low power, squelch body 2. No `DMRDEBUG.bin`. SignalDeck owns the radio. The stock app was not changed. The web server was turned off. Boot peak 0.080 dB on the load and on the restart.
+
+# PR 5 SSTV pass, partial (2026-10-25, 18:16–18:48)
+
+SignalDeck PR 5 (`claude/host-items`, `dedb63da`) was built and installed with `adb install -r` over the beta.19 already on the phone. Same version name `1.0.0-beta.19`, versionCode 118. The radio stayed on `DMR003.FW24.V022`, channel 2, 467.625 MHz analog, low power. Pictures went out through `sendSstv` (the PKT SSTV button's call) via the web API, which is that same method. HackRF receive, LNA 8, VGA 8.
+
+Robot 36 at 18:19. The previous 45 s stream had ended at 18:12 with `mtktsAP` still 5 °C above its pre-key value, so this key started inside the 10 minute cool-down. It ran 39.5 s, steady p99 2040 Hz, clip 0. History: `Sent SSTV Robot 36`, then `Long transmission 39 s (SSTV Robot 36); AP zone 52.7 °C, last long key 38 s, 0 min ago, zone before it 50.7 °C`. SignalDeck's Robot 36 decoder (`RecordingDecoder.sstv`) on the demodulated 8 kHz recording: one picture, 219 of 240 lines, noise 1.9, not marked complete. The six horizontal bands are the red, green, blue, yellow, black and white bars that were sent.
+
+A Martin M1 request immediately after was refused, and it did not key. The reply was: `Cooling down after the last 38 s transmission: the phone's radio zone is still 3.6 °C above where it was (54.3 °C now). Long pictures wait until it is within 1 °C; a short mode can go now.` That sentence is the API error. It is not a history row. `sendSstv` returns the guard text before `transmitPcm`, and only `transmitPcm` writes the history line.
+
+Martin M1 was allowed at 18:37 (the zone was 51.8 °C, 0.2 °C above the 51.6 °C it had stored). It ran 117.8 s, steady p99 2029 Hz, clip 0. History: `Sent SSTV Martin M1`, then `Long transmission 117 s (SSTV Martin M1); AP zone 62.0 °C, last long key 117 s, 0 min ago, zone before it 51.6 °C`. The reading after the key was battery 43.9 °C, `mtktsAP` 63.2 °C, `mtktsbtsmdpa` 60.9 °C. The 60 °C stop was crossed. The key was not polled while it ran, so it was not cut short. The host VIS detector reads code 44, Martin M1, at 0.5 s into the demodulated recording. The line renderer then dies in this unit-test classpath (`Bitmap.createBitmap` returns null), so there is no picture file for Martin M1.
+
+Robot 24 was not sent. After Martin M1 the battery was 43.9–44.2 °C and the AP zone was still above 52 °C. A short key on top of that is too close to the battery stop.
+
+### End state
+
+PR 5's release build is the installed SignalDeck. `0x34` `DMR003.FW24.V022`. Channel 2, 467.625 MHz analog, low power. No `DMRDEBUG.bin`. The web server was left on for the sends. No further key until the battery is down and `mtktsAP` is back under 60 °C, which it was (52.7 °C at 18:48) while the battery was still 43.9 °C.
