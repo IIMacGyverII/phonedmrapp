@@ -45,7 +45,7 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
-**Now (set 16:45, 2026-10-25): route-list item 7, the reading task** (one session, no phone): which converter drives the phone's ES8311 input in receive, whether the AT1846S audio output and the HR-C7000 DAC enter the codec on the same input, and the register or RAM path that lets our firmware play a known signal out of that converter while the radio is idle and not keyed; write it up in `results.md` with addresses, the evidence (disassembly and the register tables) and the proposed `0x40` op, then set STATUS: REVIEW. No image is built in this step. Item 6 (M17 as a channel type) follows once the contacts branch is merged.
+**Now (set 16:58, 2026-10-25): FW23 = FW22 + opcode 13, the idle DAC playback, per the review's six-point pass list** (host patch test first; no RF proven by capture; the 13-frequency response and group delay of the recording; the (a)/(b)/(c) decision with numbers; the 1125-frame stream and the receiver re-checked; end state). **Done:** route-list item 7's reading (`61f32f19`), reviewed. The earlier text of this task for the record: route-list item 7, the reading task (one session, no phone): which converter drives the phone's ES8311 input in receive, whether the AT1846S audio output and the HR-C7000 DAC enter the codec on the same input, and the register or RAM path that lets our firmware play a known signal out of that converter while the radio is idle and not keyed; write it up in `results.md` with addresses, the evidence (disassembly and the register tables) and the proposed `0x40` op, then set STATUS: REVIEW. No image is built in this step. Item 6 (M17 as a channel type) follows once the contacts branch is merged.
 
 **Phone lease (16:45): the phone is Claude's for the contacts device check** until this line is removed (target within the hour); Grok does not install, load or key on it meanwhile. The module is on the factory image, the stock app paused.
 
@@ -144,6 +144,8 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
+
+**Reviewed 16:58 (`reviews.md`, "Review of the item 7 reading"): the reading is sound; opcode 13 is the next bench step with the decision gate (a)/(b)/(c) and the pass list in the review; a curve that is only the ES8311's dip is result (b), not a failure, because the held AT1846S path is flat by R-D.**
 Item 7's reading is in `results.md`. No image, phone not used. Analog receive at the phone is the AT1846S audio pin (`0x58` at `+0x3052` / `+0x2E92`): R-D follows that register and not `FM_BANDWIDTH`, and UVm10's `GCR_ADCL` change was +0.06 dB. DMR voice leaves only through the codec DAC lineout (PCM `0x180000A0`, irq 27) and is heard on the same ES8311 (I2S2), so both converters share that input and they are not the same signal. The idle unkeyed sweep is proposed `0x40` opcode 13, refilling that PCM slot for 3 s with PTT left at 0. The AT1846S has no arbitrary-waveform output; if the bench recording is not the held-path curve, opcode 13 is the wrong leg and the fallback is training on a real reception. The phone stays leased.
 
 ## Owner question
