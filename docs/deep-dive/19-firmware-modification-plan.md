@@ -202,6 +202,8 @@ The 2050-byte symbol stub is full: it ends at file `+0x5B6FE`, and the time-out 
 
 What each mode costs the host, and nothing more: POCSAG is op 8 (two levels, its samples per symbol), op 9 (its pulse), then ops 1 and 7. CW, RTTY, and FT8 are ops 10 and 11. M17 keeps sending ops 1, 3, and 7 and never sends 8–11.
 
+**Review (2026-10-25, `radio_firmware/reviews.md`, "Review of the item 3 design"): to change before the build.** The TX RAM runs at 8 kHz and the M17 wake advances 3/5 symbol per sample, so op 8's clock is a rational advance (numerator/denominator, exact accumulator; POCSAG 512/1200/2400 = 8/125, 3/20, 3/10), not an integer samples per symbol; op 9 is a polyphase table (P phases by T odd taps, phase = floor(fraction × P)) and op 8 shaping 0 = hold for the pager path; tone frequency is uint16 in eighths of a hertz with continuous phase and an int16 amplitude (TX RAM counts) at the head of each op 10/11 body; a tone queue of at least 64 pairs with op 2 reporting the pairs remaining, op 11 arming the end when it drains. Pass criteria for the image (FW21) are in the review.
+
 ## 9. First steps (this week)
 
 1. **FW8** (an afternoon, no device): symbols into the repo, so nothing found is lost again.
