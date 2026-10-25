@@ -2495,9 +2495,13 @@ The letters `HI`. Dit 60 ms, letter gap 180 ms, amplitude 4000. Op 11, so the mo
 
 Same shape as the FW20 stream. `0x34` was still `DMR003.FW21.V022`. Carrier 45.31 s. Body p99 2939 Hz (the frame judge's slices peak at 2959). Body peak 74, clip 0. 1125 of 1125 payload-exact. Last frame number 33892, which is 1124 with the end bit set. EOT score 1.0. Battery 36.8 to 36.9 °C. `mtktsAP` 43.0 to 44.3 °C. `mtktsbtsmdpa` 41.8 to 42.9 °C. No 10 s step was over 2 °C. No stop.
 
-### Not run
+### RTTY, 45.45 baud, 170 Hz shift
 
-RTTY and FT8 were not keyed. At 09:12:42 `mtktsAP` was 44.2 °C, 1.2 °C above its 43.0 °C reading before the long stream, so the next key waits.
+Mark 1000 Hz, space 1170 Hz, bit 22 ms, stop 33 ms. Letters shift, then `H` and `I`, with 800 ms of mark first. Amplitude 4000. Op 11. One symbol left in the ring so the key takes the TX-RAM path. The mark render matched 64 of 64 samples before the key. Key 09:17:13. Carrier 1.89 s. Body p99 2081 Hz, body peak 63, clip 0. SignalDeck's `Rtty` decoder on the 8 kHz clip: locked, mark 1000 Hz, text `HI`. Battery 36.9 to 37.0 °C. `mtktsAP` 43.3 to 43.7 °C.
+
+### FT8
+
+`CQ N0CALL FN20` packed by SignalDeck's `Ft8Message`. That packer unpacks it as `CQ N0CALL`. 79 tones of 160 ms at 1000 Hz plus 6.25 Hz steps, tone 0 first in the Costas block, 0.5 s of silence ahead of them. A render 18.75 Hz above 1 kHz matched 64 of 64 samples. The queue holds 64 pairs, so 60 went out before the key and the other 20 at 6 s, as op 11. Key 09:19:36. Carrier 13.35 s. Body p99 2101 Hz, body peak 73, clip 0. SignalDeck's `Ft8.decode` on the 8 kHz clip: `CQ N0CALL` at 1000 Hz, dt +0.4 s, about −8 dB. Battery 36.9 to 37.0 °C. `mtktsAP` 43.5 to 43.7 °C. `mtktsbtsmdpa` 42.1 to 42.3 °C. No stop.
 
 ### End state
 
