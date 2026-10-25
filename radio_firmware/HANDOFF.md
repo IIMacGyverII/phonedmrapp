@@ -27,9 +27,9 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 - **HackRF transmit.** Allowed on any frequency inside the cage, at the lowest gain that gives the needed level. Never from the outdoor antenna. Housekeeping that protects the device and the bench: a dummy burst first (the first transmission after a pause is often silent), never a backgrounded `-R` capture, check nothing else holds the device, power-cycle it if a transfer is stuck.
 - **Module firmware.** Only the documented YModem path; never a raw flash command. Every image carries its tag; the factory restore path is proven (ch. 19 §14) and is the recovery for a bad load. Stubs on the key-up path act only on a host-requested transmission and do nothing at module boot (ch. 19 §23).
 - **Phone and codec.** ES8311 register **reads** (count 0 on the debug node) are allowed. ES8311 **writes** only for a register whose effect and reset path are understood and written down first, never anything that drives the speaker or amplifier outside its ratings. No `adb uninstall` (it destroys the app data and the Magisk grant). A phone reboot is a last resort for recovery, reported when done, with adb confirmed back afterwards.
-- **Heat.** The firmware ends every key at 30 s; do not stack long high-power keys back to back.
+- **Heat.** The factory firmware ends every key at 30 s; FW19 raises that ceiling to 120 s. Do not stack long high-power keys back to back; a key longer than 30 s is low power, one at a time, then let the module cool.
 
-**Scope rules (the owner's, not safety; lifting them is the owner's call):** no band-limit or power patches (ch. 19 scope).
+**Scope rules (the owner's, not safety; lifting them is the owner's call):** no band-limit or power patches (ch. 19 scope). **The time-out ceiling of 120 s (FW19) is approved by the owner (2026-10-24): raise the `0x3B` clamp to 120 s, not off; SignalDeck's watchdog stays the real limit.**
 
 **Measurement discipline (unchanged):** tune first; check the banner and the `0x34` tag after every load; the ±5 kHz deviation rule on what we transmit, and a bin at or over it is reported as a stop (a test that needs more, such as ±4.5 kHz POCSAG with margin, says so in its task line first); boot capture on every image; `git pull --rebase` before every load.
 
