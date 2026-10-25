@@ -107,6 +107,8 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 **Vocoder and protocol (SignalDeck side, later):** Codec 2 3200 already encodes (DIAG `m17 --es enc`). Full M17 voice TX needs the frames (LSF, stream frames, CRC, Golay, convolutional code, puncturing, interleaving and randomising), written from the M17 spec. libm17 is GPL-2.0-only: never port it.
 
+**Next phone (owner, 2026-10-24; not a current task, changes nothing in the order above):** the port to the next phone and its automation are planned in `plan-port-automation.md`; the Armor bench scripts are snapshotted in `tools/fw-bench/armor-2026-10-snapshot/`, and `tools/fw-port/find_symbols.py` finds an image's anchors. Pick pieces of it up only when the route list above is done or the bench waits with nothing else queued.
+
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
