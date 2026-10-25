@@ -168,6 +168,40 @@ Acceptance (per C2): flat response within ±2 dB, limiter at the set deviation �
 
 ---
 
+## Item 3 — generic waveform opcode space (design, 2026-10-25)
+
+Not built. Command `0x40` already uses body byte 0 as the opcode. The symbol stub rejects opcode 0 with `sr=1` and does not key. The assigned opcodes, read from `c7000_cmd40_sym.S`, are:
+
+| Opcode | What it does | Keys? |
+|---|---|---|
+| 0 | Rejected, `sr=1` | no |
+| 1 | Append packed symbols, clear the end flag | no |
+| 2 | Ring status | no |
+| 3 | Reset the ring | no |
+| 4 | Render at most 240 samples, no PTT | no |
+| 5 | Receive-RAM capture | no |
+| 6 | Hold or release the voice filter (variants 3 and 4) | no |
+| 7 | Append packed symbols and arm the end | no |
+| 8 and above | Rejected, `sr=1` | no |
+
+Opcodes 1 and 7 pack four 2-bit symbols per byte. The wake's pulse, the four levels, and the samples per symbol are the M17 ones. FW20's drop (eight more halves, `drop_ptt`, the stock unkey, then the timer clear) stays the only end. Nothing in this design changes ops 0–7, `0x3D`, band limits, or power.
+
+Opcodes 8–11 are the generic engines. Each one answers `sr=1` and does not touch PTT when the body is the wrong length. None of them keys, and none of them runs at boot.
+
+**Op 8, waveform.** One short body: samples per symbol (1–16), number of levels (2 or 4), then that many little-endian int16 amplitudes in the same TX-RAM counts the M17 path already uses, clamped to the existing sample cap. Levels the host does not send stay 0. The packing stays four 2-bit values per byte, so a 2-level mode (POCSAG) uses symbol values 0 and 1 only. The symbol clock is the wake's existing clock. The first image measures the resulting baud; this design does not assume a sample rate.
+
+**Op 9, coefficients.** One body: an odd tap count from 1 to 31, then that many little-endian int16 taps. An even count or a count outside that range is `sr=1` and changes nothing. The taps replace the pulse until the next op 3.
+
+**Op 10, tones, more following. Op 11, tones, then the FW20 end.** Up to eight pairs per body. Each pair is a little-endian int16 frequency in hertz (0 is silence, 1–3000 otherwise) and a little-endian int16 duration in milliseconds (1–10000). Op 11 is op 10 plus the same end flag op 7 sets, so the drop, the stock unkey, and the timer clear are unchanged. CW, RTTY, and FT8 are lists of these pairs. A 0 Hz pair is the gap in CW.
+
+**Op 3 also restores the M17 waveform.** Samples per symbol, the four M17 levels, the built-in pulse, and an empty tone list. A POCSAG or tone transmission cannot leak into the next M17 stream. The host still keys with `0x26` and still sends the unkey after the first status byte 4.
+
+The state sits at `0x4B014` through `0x4B074`. The factory image names `0x4B078` in that neighbourhood and does not name `0x4B014`–`0x4B074`. The words already used are `0x4B000` (saved work mode), `0x4B004` (saved bandwidth), `0x4B008` (hold flag), `0x4B00C` (end flag), and `0x4B010` (FW20 countdown). The build checks those bytes are still unused before it writes.
+
+The 2050-byte symbol stub is full: it ends at file `+0x5B6FE`, and the time-out stub starts at `+0x5B700`. Ops 8–11 are not added inside it. The unknown-opcode reply (the block that answers `sr=1`) gains one branch: opcode 8 or above goes to an extension placed after the FW20 gate, which ends at file `+0x5B794`. The free zeros run from there to `+0x5C6FC`. An opcode the extension does not implement still answers `sr=1`.
+
+What each mode costs the host, and nothing more: POCSAG is op 8 (two levels, its samples per symbol), op 9 (its pulse), then ops 1 and 7. CW, RTTY, and FT8 are ops 10 and 11. M17 keeps sending ops 1, 3, and 7 and never sends 8–11.
+
 ## 9. First steps (this week)
 
 1. **FW8** (an afternoon, no device): symbols into the repo, so nothing found is lost again.
@@ -513,6 +547,8 @@ End state: factory image. The tone-key restore's first `0x34` poll was empty aft
 **2026-10-25 (02:03–02:14) — FW20, the op-7 drop.** Tag `DMR003.FW20.V022`, sha256 `31ecdd30…87296`. Boot peak 0.06 dB. Low power, 467.625. Eight TX-RAM halves after the drain, then `drop_ptt`, then the stock unkey at `+0xE9C`, then the timer bits and the count. One 1125-frame stream: carrier 45.30 s, 1125 of 1125, end bit set, EOT score 0.999, body p99 3041 Hz, body peak 106. A second status byte 4 follows 0.33 s later. No timer status inside the next 130 s. The gain-0 carrier reads raw 47, the same as the idle radio, and the squelch opens (status 1 at 2.60 s). A query at 0.15 s still saw raw 6, before that unkey returned. A 1750-frame stream keyed 10 s after the drop runs 70.35 s and is not cut at the first key's +120 s. Steady p99 3018–3074 Hz. An image that cleared the bits before the unkey kept `0x32` at raw 6 until a VFO write; it was replaced. FW20 stays loaded. VFO 467.625, low power.
 
 **2026-10-25 (02:43) — spoken microphone check on FW20.** Ten seconds on the microphone path, low power, 467.625. 247 of 247 frames, the last with the end bit, EOT score 0.978, body p99 2947 Hz. The host unkey is 13 ms after the first status byte 4; the stock unkey sends status byte 4 at 0.32 s. Codec 2 output is 9.88 s of speech. FW20 stays loaded.
+
+**2026-10-25 — item 3, opcode space only.** Ops 0–7 stay as they are. Ops 8 and 9 set the samples per symbol, the level map, and the pulse. Ops 10 and 11 queue tones, and op 11 uses FW20's end. Op 3 restores the M17 waveform. Nothing new keys. Not built. See the item 3 section.
 
 **2026-10-24 (23:47) — FW19 high-power 45 s stream, stopped on the heat rule.** Same 1125-frame file, power byte 1, HackRF LNA 0 / VGA 0. Op 7 at 44.72 s, status byte 4 at 45.03 s. Carrier 45.05 s, clip 0, peak 13 of 127, body p99 3131 Hz. Battery 39.2 to 39.5 °C. `mtktsAP` 48.7 to 51.4 °C, and +1.03 °C in the last 10 s, which is the written stop. The unkey went out 1.3 s after status byte 4. The 120 s key and the 40 s tone were not run. The heat rule is not rewritten. FW19 stays loaded. VFO 467.625, low power.
 
