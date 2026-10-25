@@ -2530,3 +2530,35 @@ Same stream as FW21. Carrier 45.31 s. Body p99 2953 Hz (the frame judge's slices
 ### End state
 
 `0x34` `DMR003.FW22.V022`. VFO 467.625 / 467.625 FM, low power, power byte 0. No `DMRDEBUG.bin`. SignalDeck owns the radio. FW22 stays loaded. Not keyed.
+
+# Phase E step 1 — SignalDeck YModem sender (2026-10-25, 13:12–13:33)
+
+Wi-Fi adb `192.168.1.125:5555` only. SignalDeck `4fc1989d`. The five loads below used DIAG `fwload` only. `fwload_stock.sh` was used once, before those loads, to put FW22 back after an earlier sender was cancelled at block 5. That cancel was the intercom page writing command `0x32` onto the port during the transfer. The sender now holds ordinary commands, including the signal poll and the module watchdog, until the load finishes. Host `YModemSenderTest` passed before the device runs.
+
+Image files: FW22 sha256 `38f900a0df169c0101f9e6183fe8ec8d2e9cdca74169f034f5571b04aa988d6a`, phone md5 `a78a39979b1705e68c1e730e5c3a7c54`. Factory md5 `4426035392262ca54583c230c9e268e0`. Both are 378620 bytes, 370 data blocks.
+
+Every successful load: the first knock got `C` in 203 or 204 ms. The header was acknowledged about 11.4 s later. Each data block was acknowledged in 288–292 ms. The sender waits 300 ms and drains the port before each data block. From the prompt `C` to the tag was about 248 s.
+
+### (a) FW22 over itself
+
+`fwload ok(DMR003.FW22.V022)` at 13:16:59. Prompt `C` at 13:12:51.539. Opcode 12 of the first 4096 bytes matched the file (240-byte reads, then 16). Boot capture, HackRF LNA 24 / VGA 38, started before the knock: peak 0.09 dB.
+
+### (b) Factory image
+
+`fwload ok(DMR003.UV4T.V022)` at 13:22:03. VFO 467.625 / 467.625 FM, power byte 0. One `testtone --ez lift --ei ms 10000`. Before the key, battery 36.1 °C and `mtktsAP` 49.0 °C. Carrier 10.76 s. Body p99 2790 Hz. The audio peak is 1000 Hz. No slice at or over 5 kHz. No stop.
+
+### (c) FW22 again
+
+`fwload ok(DMR003.FW22.V022)` at 13:26:49. Boot capture, same gains: peak 0.08 dB.
+
+### (d) Abort, then a full load
+
+`fwload --ez abort50` closed the port after block 185 of 370 at 13:29:03. The next `fwload` of FW22 knocked once, got `C` in 204 ms (13:29:08), and finished `fwload ok(DMR003.FW22.V022)` at 13:33:15.
+
+### (e) Boots
+
+The captures in (a) and (c) stayed under 0.1 dB. Nothing was at the 10 dB stop.
+
+### End state
+
+`0x34` `DMR003.FW22.V022`. VFO 467.625 / 467.625 FM, low power. No `DMRDEBUG.bin`. SignalDeck owns the radio. FW22 stays loaded.
