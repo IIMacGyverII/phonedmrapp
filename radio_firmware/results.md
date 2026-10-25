@@ -2562,3 +2562,45 @@ The captures in (a) and (c) stayed under 0.1 dB. Nothing was at the 10 dB stop.
 ### End state
 
 `0x34` `DMR003.FW22.V022`. VFO 467.625 / 467.625 FM, low power. No `DMRDEBUG.bin`. SignalDeck owns the radio. FW22 stays loaded.
+
+# Phase E step 2 — firmware page pass (2026-10-25, 14:20–15:10)
+
+Wi-Fi adb `192.168.1.125:5555` only. SignalDeck `16ff14bc`, the release build already on the phone. Every load below was started from the Module firmware page (image button, Load, confirm Load), except the wrong-tag drill, which is DIAG `fwbadtag` because the page button for that drill was removed. `fwload_stock.sh` was not used. HackRF receive only, 467.385 MHz, 2.4 MS/s, LNA 24, VGA 38. Battery stayed 95–99% and 37.1–37.6 °C, on battery, which passes the above-60% rule. `mtktsAP` stayed at or under 44.7 °C and `mtktsbtsmdpa` at or under 43.0 °C. No heat stop.
+
+Screenshots: `C:\Users\Joshua\AppData\Local\Temp\fw1718\shots\`.
+
+### (a) FW22 over itself
+
+Pre-flight all green, installed tag `DMR003.FW22.V022`, image hash `38f900a0df16`, factory backup "stock app". Confirm asked for `DMR003.FW22.V022`. The bar showed Erasing with "10 s left in this phase", Prepare, Update and Hello already lit (`a-erasing.png`, 14:20). Transfer then showed `45 / 370 blocks`, 46,080 bytes, 1129 B/s, 0:40 elapsed, 3:11 left, 0 retries (`a-transfer.png`). Result at 14:25:03, 258.9 s: `DMR003.FW22.V022 · flash sample matched`. Boot capture `page_boot_a`: peak 0.09 dB, clip 0, no run at or above 10 dB. During this load `dumpsys notification --noredact` had `android.text` "Radio busy, loading firmware".
+
+### (b) Factory image
+
+Chosen hash `90e361fda108`. Block 370 was on screen at about 240 s. The page result, read once the screen was idle, was `DMR003.UV4T.V022` (14:32:43). The factory row does not append the flash-sample line.
+
+### (c) FW22 again
+
+Same page path. Result at 14:37:39, 259.0 s: `DMR003.FW22.V022 · flash sample matched`. Boot capture `page_boot_c`: peak 0.09 dB, clip 0, no run at or above 10 dB.
+
+### (d) Stop near halfway, then a full load
+
+The first Stop tap used a point recorded before the confirm card closed (872, 1549). The Stop label was at 911, 2129, so that load ran through and is not the abort proof. The retry tapped the Stop label at block 175. Result at 14:47:51, 127.3 s: `aborted(stopped after block 179)`. The following full load from the page finished at 14:52:42, 254.2 s: `DMR003.FW22.V022 · flash sample matched`. On the wrong-tag drill that followed, data-block acks were 289–290 ms.
+
+### Altered file hash
+
+`FW22.bin` in `Download/DMR/Firmware/` had one byte flipped. The page's pre-flight turned two lines red: Image hash "The file does not match the known image", and This phone with the same sentence (`altered-preflight.png` was captured; the on-screen checks are also in the log at 14:53:36). Load returned in 17.9 s: `That image is not in Download/DMR/Firmware`. The good file was copied back. Its sha256 is again `38f900a0df169c0101f9e6183fe8ec8d2e9cdca74169f034f5571b04aa988d6a`.
+
+### Stock app removed, no verified copy
+
+`pm uninstall --user 0 com.pri.prizeinterphone` returned Success, and `pm path` was empty. The private factory file and the Download factory copies were moved aside. FW22.bin stayed. The page (`stock-removed-preflight.png`, 15:02) showed the factory backup "Not verified yet. The stock app's copy could not be read." and two red lines: Factory backup "Missing or it does not match", and This phone "The stock app is gone and there is no verified factory copy on this phone". The other checks stayed green, including the FW22 hash. `cmd package install-existing com.pri.prizeinterphone` put the package back (`package:/system/priv-app/PriInterPhone/PriInterPhone.apk`). That re-enabled the stock app, so SignalDeck was started again and the stock app was paused with `pm disable-user --user 0`, the same command SignalDeck uses when it takes the radio. The page then showed the backup "Verified · stock app", installed `DMR003.UV4T.V022`, and all seven checks green (`stock-restored-preflight.png`, 15:07).
+
+### Wrong-tag drill
+
+DIAG `fwbadtag` loaded FW22 (block 370/370) and then the factory image (block 370/370). At 15:02:12, 504 s from the start: `fwbadtag done Restored the factory image (DMR003.UV4T.V022) because the tag did not match`. The page after that showed the factory tag installed.
+
+### Help, read against the page
+
+Device → Help, search `twelve`, opens Device · Radio firmware (`help2-search.png`, `help-topic-1.png`, `help-topic-2.png`, 15:09–15:10). The section matches the page this pass used. It names the seven pre-flight checks, the bar Prepare / Update / Hello / Erasing / Transfer / Finish / Restart / Verify, Erasing filling over about twelve seconds, Transfer filling as each block is accepted, and the figures under the bar. Load (a) showed Erasing with about 10 s left in that phase, then Transfer counts, bytes, rate, elapsed, time left and retries. It says that while a load runs the intercom, SignalDeck Web and Android Auto say the radio is busy loading firmware and Talk does nothing; the notification during load (a) carried that sentence. It says a tag that does not match restores the factory image, which is what `fwbadtag` did. It says a different stock-app version is only a warning when the file matches; this phone's stock app stayed the recorded version, so that line did not appear. It says an image stays until another one is loaded, including after a reboot, and that the page does not change bands or power.
+
+### End state
+
+Installed tag `DMR003.UV4T.V022`, the factory image the wrong-tag drill restored. Factory backup verified from the stock app. Stock app paused. SignalDeck owns the radio. Battery 95%. No `DMRDEBUG.bin`. The signed catalogue was not built in this pass.
