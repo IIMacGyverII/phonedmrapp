@@ -78,7 +78,7 @@ factory image for that module's version string is present on the phone first.
 
 ## Flashing a downloaded copy (owner, 2026-10-25)
 
-A **signed firmware catalogue**, published like the profile list (same offline key and `serial` discipline,
+A **signed firmware catalogue**, published in the firmware repository https://github.com/IIMacGyverII/AndroidRadio_Firmware_Project (`catalog/firmware.json` + `.sig`, built by its `scripts/build_catalog.py` from one `manifest.json` per image, signed by `scripts/sign_catalog.py`; fetch URL `https://raw.githubusercontent.com/IIMacGyverII/AndroidRadio_Firmware_Project/main/catalog/firmware.json`; image URLs inside it point at the raw files under `firmware/<device>/<tag>/`), published like the profile list (same offline key and `serial` discipline,
 verifier shared with `ProfileRegistry`): one row per image with its version string, the base vendor image it was
 built from, SHA-256, size, download URL (a GitHub release asset), and a one-line statement of what it changes. The
 factory image is a row of its own, so a user whose stock app is gone can download it. SignalDeck downloads, checks
