@@ -164,7 +164,8 @@ Acceptance (per C2): flat response within ±2 dB, limiter at the set deviation �
 | **FW18** ◐ | Digital-audio transmit mode patch (D) measured to acceptance — **M17 met 2026-10-24 via the TX-RAM symbol engine (R4t, own decoder)**; POCSAG and the independent decoder open | L | yes | FW11, FW17 |
 | **FW19** ✅ | TOT ceiling patch (D). Measured 2026-10-24: no `min(tot, 30)`; stub ceiling 120 s; a 45.12 s low-power stream self-unkeys. High-power 45 s and 120 s keys not run (battery still +0.5 °C after 12 min) | S | yes | FW9, FW17 |
 | **FW20** ✅ | The op 7 drop: eight TX RAM halves after the drain, `drop_ptt`, the stock unkey while the TX bits are still set, then the time-out state cleared. Measured 2026-10-25: 1125/1125 with the EOT, no stale timer, receiver back, a second stream not cut. (The receive-side flat mode this row first held is met by op 6 variant 3, RD10.) | S | yes | FW19 |
-| **FW21** | Opt-in shipping, help, SignalDeck gating on the marker (E) | M | yes | FW18 |
+| **FW21** ✅ | Generic waveform engines, ops 8–11 (item 3). Measured 2026-10-25: renders exact; POCSAG 1200, MCW, RTTY 45.45 and FT8 decoded; op 3 then 90/90 M17; 1125/1125 unchanged. (Phase E's shipping and gating need no image of their own; the gating exists.) | M | yes | FW20 |
+| **FW22** | `on_key` arms the TX RAM path for a non-empty tone queue; flash read op (`plan-loader-safety.md`) | S | yes | FW21 |
 
 ---
 
