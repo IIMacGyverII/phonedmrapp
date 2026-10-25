@@ -2688,3 +2688,20 @@ Nothing in the AT1846S programming this image uses will play an arbitrary 50 Hz�
 Proposed `0x40` opcode **13** (12 is FW22's flash read). It does not set PTT (`0x11000560` stays 0) and does not write AT1846S `0x30`. It keeps the DAC up the way `+0x647C` does (`0x160009C8` = `0xC0`, `0x160009CD` bits 4 and 7 clear, `0x160009D2` bits 0 and 1 clear). The host sends 8 kHz 16-bit PCM, at most the ±3-symbol level used on the air. The stub refills `0x180000A0`–`0x1800013F` on irq 27 for 3 s, the same slot the vocoder uses, and does not run the vocoder. Squelch stays closed so the AT1846S pin is quiet if the chip mutes it; the op does not retune and does not key. SignalDeck records I2S2 as it does for a normal reception.
 
 The bench then compares that recording with the held-path tone table (R-D/R-E). Agreement within 1 dB and 0.2 symbols from 100 Hz to 3.5 kHz would mean the lineout and the AT1846S pin really are one input and the AT1846S contribution was quiet. A curve that is only the ES8311's 500 Hz dip, or silence, means the DAC is not the analog leg the equalizer is fitting, and opcode 13 cannot replace an over-the-air calibration. The fallback in the route list stands for that case: train on a real M17 reception. No image is loaded until that reading is accepted.
+
+# FW23 — opcode 13 idle playback (2026-10-25, 17:14–17:22)
+
+FW23 is FW22 plus opcode 13. The 3 s waveform is synthesized in the module: 200 ms at 1 kHz, then a linear chirp from 50 Hz to 3799 Hz, peak about ±8192, written 80 samples at a time to `0x180000A0` with a 10 ms wait and irq 27 cleared (`0x110003B0` bit 5). The stub sets the DAC the way boot does and does not store PTT or AT1846S `0x30`. Host `test_fw23` : 3 tests, the 1 kHz cycle is 8 samples and the chirp ends at 3799 Hz. Image sha256 `d880d6e52583838280939aaaab3dcac39e4aa4614ac1550716699adac6c3132a`, 378620 bytes. Loaded with DIAG `fwload --ei pause 0`. `fwload ok(DMR003.FW23.V022)` at 17:19:03. The boot capture was missed: the watcher did not see the verify line before the restart at 17:18:56.
+
+Two playbacks, each acked `RX cmd=0x40 rw=0 sr=0 len=0` about 4 s after the command. No `0x26` and no `0x36`. HackRF receive only, 467.385 MHz, 2.4 MS/s, LNA 24, VGA 38, 20 s.
+
+| Run | Squelch | HackRF peak | Clip | Phone recording |
+|---|---|---|---|---|
+| 17:19:44 | closed (the channel's) | 0.085 dB | 0 | peak sample ±6, −88 dBFS, no tone |
+| 17:21:38 | opened with command `0x30` body 0, acked `sr=0` | 0.056 dB | 0 | −27 dBFS the whole 8 s, peak frequency wandering, no 1 kHz line |
+
+The open-squelch recording is receiver noise at one level before, during and after the 3 s. The buffer write is not reaching the phone. **Decision (c):** opcode 13, as built, is the wrong leg. Item 7 falls back to training on a real reception. The 1125-frame stream was not re-run: ops 0–7 were not edited, and the playback result was already (c). Squelch was put back to body 2 afterwards.
+
+### End state
+
+`0x34` `DMR003.FW23.V022`. No `DMRDEBUG.bin`. SignalDeck owns the radio. Stock app was paused at the start of the step and was not changed. VFO was not moved. The 1125-frame check and a HackRF tone through the phone path were not run.

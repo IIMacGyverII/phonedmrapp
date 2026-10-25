@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -145,8 +145,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 ## Last report
 
 
-**Reviewed 16:58 (`reviews.md`, "Review of the item 7 reading"): the reading is sound; opcode 13 is the next bench step with the decision gate (a)/(b)/(c) and the pass list in the review; a curve that is only the ES8311's dip is result (b), not a failure, because the held AT1846S path is flat by R-D.**
-Item 7's reading is in `results.md`. No image, phone not used. Analog receive at the phone is the AT1846S audio pin (`0x58` at `+0x3052` / `+0x2E92`): R-D follows that register and not `FM_BANDWIDTH`, and UVm10's `GCR_ADCL` change was +0.06 dB. DMR voice leaves only through the codec DAC lineout (PCM `0x180000A0`, irq 27) and is heard on the same ES8311 (I2S2), so both converters share that input and they are not the same signal. The idle unkeyed sweep is proposed `0x40` opcode 13, refilling that PCM slot for 3 s with PTT left at 0. The AT1846S has no arbitrary-waveform output; if the bench recording is not the held-path curve, opcode 13 is the wrong leg and the fallback is training on a real reception. The phone stays leased.
+FW23 opcode 13 is loaded (`DMR003.FW23.V022`, sha256 `d880d6e5…c3132a`). It acked `sr=0` in about 4 s and did not key. HackRF peak 0.085 dB with squelch closed and 0.056 dB with squelch open, clip 0. The phone recording was digital silence with squelch closed and open-squelch noise at −27 dBFS with no 1 kHz line. **Decision (c):** writing `0x180000A0` while idle does not reach the ES8311. Item 7 falls back to training on a real reception. The 1125-frame stream was not re-run. Boot capture was missed. Squelch was returned to body 2.
 
 ## Owner question
 
