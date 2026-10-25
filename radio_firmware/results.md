@@ -2506,3 +2506,27 @@ Mark 1000 Hz, space 1170 Hz, bit 22 ms, stop 33 ms. Letters shift, then `H` and 
 ### End state
 
 `0x34` `DMR003.FW21.V022`. VFO 467.625 / 467.625 FM, low power, power byte 0. No `DMRDEBUG.bin`. SignalDeck owns the radio. FW21 stays loaded. Not keyed.
+
+## FW22 — tone-queue key and flash read (2026-10-25, 09:39–09:59)
+
+Low power, 467.625 MHz, power byte 0. HackRF receive LNA 16 / VGA 16 for the keys, LNA 24 / VGA 38 for the boot. Image sha256 `38f900a0df169c0101f9e6183fe8ec8d2e9cdca74169f034f5571b04aa988d6a`, phone md5 `a78a39979b1705e68c1e730e5c3a7c54`. YModem `onSuccess` at 09:39:20.931. `0x34` `DMR003.FW22.V022` at 09:39:34.861 and again at 09:57:37. Boot peak 0.09 dB.
+
+`on_key` arms the TX-RAM path when the symbol ring has symbols, or when the mode word is the tone magic and the queue count or the samples still to play are not zero. The mode word is required so a leftover RAM value cannot divert an analog key. Opcode 12 takes a little-endian file offset and a length of 1 to 240 and replies with those bytes of the image. The frame pointer is read before the handler pushes, because the push moves the stack.
+
+An earlier image, sha256 `8bbd61fa4bbe31cae2d18ec44e93c654e371dbeaaf43cf94c1c745dd9d6ea708`, played the empty-ring tone and then answered opcode 12 with `sr=1`. The read loaded the frame pointer after the push. It was replaced.
+
+### Empty ring, 700 Hz
+
+Op 3, then op 11: 400 ms at 700 Hz, amplitude 4000, then 200 ms of silence. No symbol was written. Key 09:57:25. Carrier 0.80 s. Body p99 2060 Hz. The audio peak is 700 Hz.
+
+### Flash read
+
+Opcode 12, 240 bytes at a time, 1578 reads. All 378620 bytes matched the file that was loaded, in 971 s. The first reply was the tag `DMR003.FW22.V022`.
+
+### 1125-frame stream
+
+Same stream as FW21. Carrier 45.31 s. Body p99 2953 Hz (the frame judge's slices peak at 3020). Body peak 64, clip 0. 1125 of 1125 payload-exact. Last frame number 33892, which is 1124 with the end bit set. EOT score 1.0. Battery 38.3 to 38.4 °C. `mtktsAP` 47.1 to 47.5 °C. `mtktsbtsmdpa` 45.8 to 46.1 °C. The zones were already warm from the read-back. No 10 s step was over 2 °C. No stop.
+
+### End state
+
+`0x34` `DMR003.FW22.V022`. VFO 467.625 / 467.625 FM, low power, power byte 0. No `DMRDEBUG.bin`. SignalDeck owns the radio. FW22 stays loaded. Not keyed.
