@@ -134,7 +134,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-Phase E step 1 passed (`results.md`, 2026-10-25 13:33). SignalDeck `4fc1989d` loaded FW22 over itself (tag and a 4 KiB opcode 12 sample), the factory image (tag and a 10.76 s low-power tone, p99 2790 Hz, peak 1000 Hz), FW22 again, then an abort after block 185 and a full load whose first knock got `C` in 204 ms. Boot peaks 0.09 dB and 0.08 dB. Prompt `C` in 203–204 ms, data-block ACK 288–292 ms, about 248 s from the prompt to the tag. FW22 stays loaded. Next is the loader page.
+Phase E step 1 passed (`results.md`, 2026-10-25 13:33). SignalDeck `4fc1989d` loaded FW22 over itself (tag and a 4 KiB opcode 12 sample), the factory image (tag and a 10.76 s low-power tone, p99 2790 Hz, peak 1000 Hz), FW22 again, then an abort after block 185 and a full load whose first knock got `C` in 204 ms. Boot peaks 0.09 dB and 0.08 dB. Prompt `C` in 203–204 ms, data-block ACK 288–292 ms, about 248 s from the prompt to the tag. FW22 stays loaded. The loader page is in SignalDeck `4225768a` and opened on the phone with a green pre-flight and a verified factory backup. The five loads from the page, the wrong-tag restore, and the help screenshots are not done.
 
 ## Owner question
 
