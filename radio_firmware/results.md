@@ -2372,3 +2372,17 @@ Low 30 s carrier: 31.79 s, SNR 69.3 dB, body p99 112 Hz, HackRF LNA 16 / VGA 16,
 ## End state
 
 `0x34` `DMR003.FW19.V022` at 22:47:06. VFO 467.625 / 467.625 FM, low power. No `DMRDEBUG.bin`. SignalDeck owns the radio. The bench `eot` extra is the SignalDeck `cmdsym` change committed with this report.
+
+## M17 voice (2026-10-24, 23:21)
+
+No new image. FW19 stayed loaded (`0x34` `DMR003.FW19.V022` at 23:20:59). Wi-Fi adb `192.168.1.125:5555` only. One low-power key, 467.625 MHz. HackRF receive, LNA 16 / VGA 16, finite `-n`, 8 s. The product path ends on op 7, so this key had no extra carrier pad.
+
+SignalDeck Hold-to-talk encodes Codec 2 3200, builds the link setup and stream frames from the M17 specification (the same vectors as `tools/m17-research/m17.py`), and streams symbols on `0x40`. It keys with `0x26` body 1 after eight chunks, because the ring does not drain until the transmitter is up. The last frame carries the end bit. The last chunk is op 7. After status byte 4 it sends `0x26` body 2, so the module timer does not keep running. The boot handshake sends `setTot(120)`.
+
+The bench tone was 1.5 s of 1 kHz at amplitude 8000. `m17 voice key [callsign]` at 23:21:06.130 (`0x26` body 1). Status byte 3 at 23:21:06.143. Last chunk op 7 at 23:21:07.361, 38 Codec 2 payloads logged (frames 0–36 and frame 37 with the end bit). Status byte 4 at 23:21:07.674, 1.54 s after the key. The unkey (`0x26` body 2) followed at 23:21:07.689. A second status byte 4 at 23:21:08.019 is that unkey, not the 120 s timer.
+
+Carrier 1.63 s, SNR 66.7 dB, whole-file clip 0, offset +850 Hz. Body peak 83 of 127, body clip 0. Steady body p99 3206 Hz. No body slice from 80 ms to 400 ms before the drop is at or over 5 kHz.
+
+Our decoder: link setup `[callsign]` → `@ALL`, CRC ok. Frames 0–35, all 36 payload-exact against the bytes the phone logged. Frame 36 and the end frame were not locked. One false sync at the drop had Golay error 15. Codec 2 decode of the 36 frames (72 Codec 2 frames, 1.44 s) has rms 663 and a peak at 1003 Hz, 1.0×10^5 above the median of 200–3000 Hz.
+
+`mtktsAP` 45.9 °C before the key and 45.6 °C after. Battery zone 37.3 °C. VFO 467.625 / 467.625 FM, low power, at 23:21:17. No `DMRDEBUG.bin`. FW19 stays loaded.

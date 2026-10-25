@@ -73,9 +73,9 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 **FW20 (firmware, small, after item 2):** `drop_ptt` clears what the `0x26` body-1 path clears (the TX bits of the state byte at `0x38908`, the count at `0x38C64+2..5`), so the timer stops with the carrier. Pass: no status byte within 130 s of the drop, and a second stream keyed 10 s after the first drop runs its full length.
 
-**Host (SignalDeck), in the next commit that touches the engine:** `bootHandshake` sends `setTot(120)`, never 0; the symbol-stream sender sends `0x26` off after the module's status 4 until FW20 is loaded, and never leaves PTT keyed without the watchdog or a module ceiling; the voice watchdog stays 28 s; the `txPcmOneShot` limit becomes per mode, but the long SSTV modes (Robot 36, Martin M1/M2, Scottie S1/S2, PD90, all ≤ 114 s) are enabled only after the high-power heat table from item 1 is in, never above 120 s; the three help sentences saying the radio ends a transmission after 30 seconds say what is true (SignalDeck ends a voice transmission after 28 s; the radio's own limit is 120 s). CHANGELOG and help in the same commit.
+**Host (SignalDeck), done with the M17 voice commit:** `bootHandshake` sends `setTot(120)`, never 0. The symbol-stream sender and the M17 sender send `0x26` off after the module's status 4 until FW20 is loaded. The voice watchdog stays 28 s. The `txPcmOneShot` limit is still 28.5 s; the long SSTV modes stay off until the high-power heat table from item 1 is in. Help that said the radio ends a voice transmission after 30 seconds now says SignalDeck ends it after 28 s and the radio's own limit is 120 s.
 
-**Next on the route list: item 2, the SignalDeck M17 transmit stack** (in progress). R-I stays "whenever the bench waits."
+**Item 2 is done** (voice check 2026-10-24 23:21, `results.md`). **Next: the owed FW19 bench, one session** — high power 45 s, cool down, then the 130 s ceiling run; the timer after op 7; the 40 s plain FM key — then FW20. R-I stays "whenever the bench waits."
 
 **R-I host (SignalDeck, whenever the bench waits).** Live receiver: incremental decoding (chain state kept across passes, only new frames decoded, emission by position, consumed audio dropped with the `KEEP` margin while the call is open, no 20 s cap); take a frame only when `start + (183 + L + 4) * SPS < y.length`; coast on the 192-symbol cadence for up to three frames before "signal lost"; skip chains without an identity while a call is open. Test: poll every third 64 ms block, assert payload-exact counts against `expected.json`, add a 6 s clip with a complete padded 30-frame transmission (end = "last frame") and a 25 s clip of 600 frames. Device (hold on, −87 dBm, 1.6 s lead, 0.5 s carrier pad): three 30-frame transmissions, pass = one listing each, right callsigns, ≥ 29/30; one 1200-frame transmission (48 s), pass = one listing, right callsigns, ≥ 1140 frames; the plain control once with the pad. CHANGELOG and help in the same commit.
 
@@ -111,7 +111,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-FW19, tag `DMR003.FW19.V022`. The `0x3B` handler stores the byte; the stub writes 120 for 0 or above 120. Two 45.12 s low-power streams, op 7, status byte 4, body under 3 kHz. High power 30.0 s at HackRF LNA 0 / VGA 0, clip 0, battery +0.6 °C and still +0.5 °C after 12 min, so the 45 s and 120 s high-power keys were not run. The `0x58` hold is gone after an unkey. FW19 stays loaded. VFO 467.625, low power.
+SignalDeck M17 voice on FW19, low power, 467.625 MHz. A 1.5 s 1 kHz tone: carrier 1.63 s, SNR 66.7 dB, clip 0, body p99 3206 Hz. Link setup [callsign] to @ALL, CRC ok, frames 0–35 payload-exact, Codec 2 decode peaks at 1003 Hz. Status byte 4 at 1.54 s, then the unkey. FW19 stays loaded. VFO 467.625, low power. Next is the owed high-power bench.
 
 ## Owner question
 
