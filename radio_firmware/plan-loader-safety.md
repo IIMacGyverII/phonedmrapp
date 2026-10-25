@@ -180,3 +180,22 @@ shows the user what is happening at every moment:
 
 Built once, used for every image on every phone the app supports.
 
+## Unlisted images: the user's own firmware (owner, 2026-10-25)
+
+Users who modify the firmware themselves may load it, but it is deliberately not easy and never the default:
+
+- **A switch under the firmware page's Advanced section, off by default**, "Allow unlisted images". Turning it on
+  shows a warning (the image is not from the catalogue, cannot be verified after loading beyond its tag, is not
+  covered by the project, and the responsibility for what the radio transmits is the operator's) and needs **two
+  confirmations**, like an advisory override. The switch turns itself off after each load.
+- **What stays in force with the switch on:** the file comes only from `Download/DMR/Firmware/`; its size must equal
+  the base image's (378,620 B on the Armor) and it must carry a version string at the tag offset; the page shows
+  its SHA-256 and that string, and the user **types the first eight characters of the hash** to confirm the file;
+  the verified factory backup must be on the phone; the module and stock app must match a known device (identity
+  three ways, the catalogue's `variants`); the full pre-flight runs; the tag is read back after the load and a
+  module that does not answer, or answers a tag other than the one the file carried, gets the factory image back
+  automatically; the history line says "unlisted image" with the hash; the busy state applies as for any load.
+- **What the switch cannot do:** load onto a phone whose identity is unknown, load without a factory backup, skip
+  the post-load check, or enter recovery mode with anything but the factory image.
+- **Help** explains the switch in plain words, including that the catalogue and this project do not cover what it loads.
+
