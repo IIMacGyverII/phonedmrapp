@@ -2386,3 +2386,15 @@ Carrier 1.63 s, SNR 66.7 dB, whole-file clip 0, offset +850 Hz. Body peak 83 of 
 Our decoder: link setup [callsign] → `@ALL`, CRC ok. Frames 0–35, all 36 payload-exact against the bytes the phone logged. Frame 36 and the end frame were not locked. One false sync at the drop had Golay error 15. Codec 2 decode of the 36 frames (72 Codec 2 frames, 1.44 s) has rms 663 and a peak at 1003 Hz, 1.0×10^5 above the median of 200–3000 Hz.
 
 `mtktsAP` 45.9 °C before the key and 45.6 °C after. Battery zone 37.3 °C. VFO 467.625 / 467.625 FM, low power, at 23:21:17. No `DMRDEBUG.bin`. FW19 stays loaded.
+
+## High power 45 s (2026-10-24, 23:47)
+
+Same 1125-frame file as the low-power streams. FW19 stayed loaded (`0x34` `DMR003.FW19.V022` at 23:47:03). Wi-Fi adb `192.168.1.125:5555` only. VFO 467.625 MHz, power byte 1. HackRF receive, LNA 0 / VGA 0, finite `-n`. The host keyed and did not send the unkey until the heat stop.
+
+`sym key` at 23:47:10.289 (`0x26` body 1). Status byte 3 at 23:47:10.301. Last chunk op 7 at 23:47:55.011. `sym nounkey` at 23:47:55.028. Status byte 4 at 23:47:55.320, 45.03 s after the key. The heat stop sent `0x26` body 2 at 23:47:56.661, 1.3 s after that status byte, so the timer-after-op-7 watch was not run.
+
+The capture is 47.3 s because the stop closed it. Level gate (carrier magnitude about 8, quiet about 2.5): carrier 45.05 s, from 0.85 s to 45.9 s of the file. Whole-file clip 0, peak 13 of 127, body peak 12. Steady body p99 3131 Hz. No body slice from 80 ms to 400 ms before the drop is at or over 5 kHz. At this gain the carrier is about 10 dB over the quiet floor, so a threshold of 20 times the 10th-percentile power does not see it when the carrier fills the file.
+
+Battery (`dumpsys`, tenths) 39.2 °C before the key and 39.5 °C at the last sample, 40.1 °C when read after the capture was measured. `mtktsAP` 48.7 °C before, 51.4 °C at 23:47:54 (+2.7), and 50.8 °C on that later read. `mtktsbtsmdpa` 46.1 to 48.6 (+2.6). `mtktsbtsnrpa` 46.7 to 49.5 (+2.8). From 23:47:44 to 23:47:54, `mtktsAP` rose 1.03 °C. That is the written stop (more than 1 °C inside 10 s). Battery stayed under 45 °C. Neither watched zone reached 60 °C.
+
+The 120 s stream and the 40 s tone were not run. The heat rule is not rewritten. VFO returned to 467.625 MHz, low power (power byte 0). No `DMRDEBUG.bin`. FW19 stays loaded.

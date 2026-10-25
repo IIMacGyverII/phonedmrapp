@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: OWNER
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -75,7 +75,7 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 **Host (SignalDeck), done with the M17 voice commit:** `bootHandshake` sends `setTot(120)`, never 0. The symbol-stream sender and the M17 sender send `0x26` off after the module's status 4 until FW20 is loaded. The voice watchdog stays 28 s. The `txPcmOneShot` limit is still 28.5 s; the long SSTV modes stay off until the high-power heat table from item 1 is in. Help that said the radio ends a voice transmission after 30 seconds now says SignalDeck ends it after 28 s and the radio's own limit is 120 s.
 
-**Item 2 is done** (voice check 2026-10-24 23:21, `results.md`). **Next: the owed FW19 bench, one session** — high power 45 s, cool down, then the 130 s ceiling run; the timer after op 7; the 40 s plain FM key — then FW20. R-I stays "whenever the bench waits."
+**Item 2 is done** (voice check 2026-10-24 23:21, `results.md`). **The owed high-power 45 s stream ran and the heat stop fired** (`results.md`, High power 45 s). The 120 s key, the timer watch, and the 40 s tone were not run. Do not start them until the owner answers the question below. R-I stays "whenever the bench waits."
 
 **Item 2 reviewed** (`reviews.md`, "Review of item 2"): **passes.** `M17Test` re-run 4 of 4; encoder from our own research encoder; Hold to talk gated on a bench tag, analog only, 28 s cap, unkey in `finally`; link setup CRC ok and frames 0–35 payload-exact on FW19; the time-out items are in. **Open:** (1) **the end of every transmission is cut**: frame 36 and the EOT were missing, as the 45 s stream missed its last frame; op 7's `drop_ptt` fires at ring drain while the shaping filter and the TX RAM halves still hold ~2 frames. **FW20 gets a second part:** delay the drop until the last symbol has left the modulator (count TX RAM half interrupts after the drain, measured), pass = the end-bit frame and the EOT decoded ("last frame"), 1125 of 1125 on the long stream, no status byte for 130 s after the drop, a second stream 10 s later full length. Until FW20 is loaded `m17VoiceRun` appends two EOT frames (384 symbols) after the real one. (2) The host test compares 24 + 16 symbols: compare whole frames (link setup, one stream frame per LICH index, the end-bit frame, the EOT) from `m17.py` vectors in a resource. (3) **No callsigns in the public repository:** the voice check's callsign was replaced by "[callsign]" here; set a bench callsign (`DMRTST-7` as before) in APRS settings before a key, or give `m17 --ei tx` a `--es call` defaulting to `N0CALL`. **Voice check still owed with FW20's bench:** one spoken 10 s microphone key, decoded end to end, listened to, ending "last frame". Order unchanged: the owed FW19 bench, then FW20 (both parts), then item 3; the host pad and test in the next SignalDeck commit.
 
@@ -115,8 +115,12 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-SignalDeck M17 voice on FW19, low power, 467.625 MHz. A 1.5 s 1 kHz tone: carrier 1.63 s, SNR 66.7 dB, clip 0, body p99 3206 Hz. Link setup [callsign] to @ALL, CRC ok, frames 0–35 payload-exact, Codec 2 decode peaks at 1003 Hz. Status byte 4 at 1.54 s, then the unkey. FW19 stays loaded. VFO 467.625, low power. Next is the owed high-power bench.
+High-power 45 s stream on FW19, 467.625 MHz, HackRF LNA 0 / VGA 0. Op 7 and status byte 4 at 45.03 s. Carrier 45.05 s, clip 0, peak 13 of 127, body p99 3131 Hz. `mtktsAP` 48.7 to 51.4 °C, +1.03 °C in the last 10 s, so the key was stopped. The unkey went out 1.3 s later. The 120 s key was not run. FW19 stays loaded. VFO 467.625, low power.
 
 ## Owner question
 
-None open. R-C step 2 tones and R-B (ES8311 register reads) are covered by the standing approval of 2026-10-24.
+The high-power 45 s stream finished (status byte 4 at 45.03 s, body p99 3131 Hz, clip 0, peak 13 of 127 at HackRF LNA 0 / VGA 0). In that last 10 s `mtktsAP` rose 1.03 °C (48.7 °C before the key, 51.4 °C at the end). That is the written stop, so the unkey was sent 1.3 s after the drop. The timer watch, the 120 s ceiling key, and the 40 s tone were not run.
+
+The rise was still speeding up at the end (about half a degree every 5 s). A 120 s key would trip the same stop well before 120 s. Battery was 39.5 °C at the end and 40.1 °C shortly after. Neither limit of 45 °C or 60 °C was close.
+
+Should the ceiling run go ahead with only the battery-45 °C and zone-60 °C stops, or does the 1 °C in 10 s stop stay in force?
