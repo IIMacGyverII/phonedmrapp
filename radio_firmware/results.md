@@ -2604,3 +2604,20 @@ Device → Help, search `twelve`, opens Device · Radio firmware (`help2-search.
 ### End state
 
 Installed tag `DMR003.UV4T.V022`, the factory image the wrong-tag drill restored. Factory backup verified from the stock app. Stock app paused. SignalDeck owns the radio. Battery 95%. No `DMRDEBUG.bin`. The signed catalogue was not built in this pass.
+
+# Phase E catalogue and the block pause (2026-10-25, 15:29–15:45)
+
+SignalDeck `7b3ded47` fetches the signed catalogue with the profile-list key. On the phone, DIAG `fwcatalog` returned `Firmware catalogue 3 loaded: 1 image` at 15:29:35. That image is the factory row. Host `FirmwareCatalogTest` verified the published file, rejected a bad signature, and rejected an older serial. Download factory image is on the page when the backup is not verified. The backup on this phone was already verified, so the button stayed hidden.
+
+The per-block pause was measured with DIAG `fwload --ei pause` of `Download/DMR/Firmware/FW22.bin`, three loads at 0 ms and three at 50 ms. Every load returned `ok(DMR003.FW22.V022)`.
+
+| Pause | Times |
+|---|---|
+| 0 ms | 147.9 s, 147.8 s, 147.6 s |
+| 50 ms | 160.1 s, 160.3 s, 160.0 s |
+
+0 ms is the smallest pause that passed. The page now waits 0 ms and estimates the remaining time from the measured block time. The module was left on `DMR003.FW22.V022`.
+
+### End state
+
+Installed tag `DMR003.FW22.V022`. Factory backup still verified. Stock app paused. SignalDeck owns the radio. No `DMRDEBUG.bin`. The unlisted-images switch is the next sub-step.
