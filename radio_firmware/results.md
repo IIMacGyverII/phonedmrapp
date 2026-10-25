@@ -2331,3 +2331,44 @@ HackRF transmit, VGA 20, ±2.4 kHz, 467.625 MHz, 30 stream frames, each with a 1
 No listing without callsigns. The third count is 27, one under the 28 bar. The hold was then released (`action=0 sr=0`) and M17 started again on the calibrated equalizer. One more transmission with the same lead listed `W1RF → N2EQ`, 27 frames, 20 clean. The three held listings were still on the list and were not repeated as the new line.
 
 VFO 467.625 / 467.625 FM at 20:41:11. M17 was stopped. No `DMRDEBUG.bin`. RG10 stays loaded.
+
+# FW19 — the 0x3B ceiling (2026-10-24, 21:43–22:47)
+
+Tag `FW19`. Sha256 `555b0128f62116a28496c8e8e3ef8d4277b4fa81d6420a23b4d033102070e52a`. Pushed MD5 `975f16ec0dbe2093f46f046e7b64a082`. Loaded over RG10. The RG10 symbol stub is in the same image. Wi-Fi adb `192.168.1.125:5555` only. HackRF receive only, `-f 467385000 -s 2400000`, finite `-n`.
+
+The `0x3B` handler at file `+0xA308` stores the body byte. When the byte is 0 it clears the enable flag and does not clear the byte. There is no `min(tot, 30)` instruction. The timer at file `+0x1D8` counts 100 wakes per stored unit, and a unit is one second. The stub at file `+0x5B700` (24 bytes, called from the thunk at `+0xAB18`) writes 120 when the byte is 0 or above 120, then calls `+0xA308`. Values 1–120 pass through. `0x3D` and the `0x40` slot are unchanged. Boot peak 0.17 dB, no sample above 10 dB. YModem `onSuccess` at 21:43:41.610. `0x34` `DMR003.FW19.V022` at 21:43:54, 21:45:31, 22:08:09, 22:26:33 and 22:47:06.
+
+## The 45 s stream
+
+1125 stream frames, preamble, one link setup, payload bytes 0–15, no end bit. The host keyed with `engine.ptt(true)` after eight chunks and did not send the unkey. The last chunk was op 7.
+
+First key, low power, HackRF LNA 16 / VGA 16. `sym key` at 21:45:38.009, `sym last op 7` at 21:46:22.720, `sym done` 54075 bytes at 21:46:22.767. Carrier 45.12 s, SNR 68.3 dB, clip 0, offset +1145 Hz. Whole capture: 1124 frames, 1123 payload-exact. A 2 s window at 20–22 s was 49/49. The 1–3 s window locked 2 frames and the 42–44.5 s window locked 3, none payload-exact; those windows missed sync. Status byte 4 (`SEND_STOP`) at 21:46:23.041. The host sent `0x26` body 1 only. Steady body p99 peaked at 2977 Hz. Slices at or over 5 kHz start at 45.06 s and are the drop click (p99 about 22 kHz), which is not a stop. The carrier ends about 60 ms after that click starts.
+
+Second key, the same stream, with the temperature log. Carrier 45.12 s, SNR 67.1 dB, clip 0, body p99 2996 Hz, no body slice at or over 5 kHz. `sym key` at 22:13:11.068, `sym last op 7` at 22:13:55.777, status byte 4 at 22:13:56.099. The frame count was not repeated. A second status byte 4 arrived at 22:15:11 with no new key command.
+
+## 0x58 after PTT
+
+Hold on (mode 3, action 1), then a 1 s silence `txwav`, which unkeys, then 1 s of 100 Hz and 1 s of 1 kHz at −24 dBFS. Carrier 3.11 s, clip 0. The 100 Hz line was 0.12 against the 1 kHz line at 426 (ratio 0.00028, about −71 dB). p99 was 71 Hz on the 100 Hz window and 465 Hz on the 1 kHz window. The hold does not survive the unkey.
+
+## Heat
+
+Battery is `dumpsys battery` temperature in tenths of °C. Zone values below are the rise from that key's before-sample, in °C. `mtktspa` samples of exactly 25.0 °C are dropped. The CPU zone is listed and was not used as a stop: it swung 6.2 °C, then 4.2 °C, during the idle minute. `tzimgs*` and `mtktscharger` read −127 °C.
+
+| Zone | Low 30 s during | Low 30 s after | Low 45 s during | Low 45 s after | High 30 s during | High 30 s after |
+|---|---:|---:|---:|---:|---:|---:|
+| Battery | +0.1 | +0.2 | +0.1 | +0.5 | +0.3 | +0.6 |
+| `mtktsAP` | +0.6 | +1.1 | +0.9 | +3.2 | +1.6 | +3.4 |
+| `mtktsbtsmdpa` | +0.4 | +1.0 | +0.7 | +3.1 | +1.2 | +3.3 |
+| `mtktsbtsnrpa` | +0.4 | +1.0 | +0.9 | +3.3 | +1.3 | +3.4 |
+| `mtktspmic` | +0.2 | +0.2 | +0.6 | +2.4 | +0.6 | +2.5 |
+| `mtktswmt` | 0 | 0 | 0 | +2.0 | 0 | +4.0 |
+| `mtktspa` (valid) | 0 | +1 | +1 | +4 | — | 55 at the start of the cool-down |
+| `mtktscpu` (not a stop) | +1.7 | +2.1 | +8.4 | +9.7 | +1.3 | +2.9 |
+
+The battery is the reading that stays up. It started the low-power pair at 37.4 °C and was 38.2 °C six minutes after the 45 s stream. It started the high-power key at 38.1 °C, reached 38.7 °C, and was 38.6 °C twelve minutes later and again at the check after that. The AP and BTS zones rise during the key and for a few minutes after. A 45 s low-power stream and a 30 s high-power carrier leave them about +3.3 °C. A 30 s low-power carrier leaves them about +1 °C. The battery did not pass 39 °C. No stop-eligible zone rose more than 1 °C inside 10 s during a completed key. One early 30 s attempt was unkeyed at 7 s because a 1.0 °C `mtktspa` step was treated as the stop; a 1.0 °C step is not more than 1 °C, and that key is not the baseline.
+
+Low 30 s carrier: 31.79 s, SNR 69.3 dB, body p99 112 Hz, HackRF LNA 16 / VGA 16, whole-file clip fraction 0.000051, body peak 115 of 127. High 30 s carrier: 31.74 s, SNR 46.0 dB, body p99 199 Hz, LNA 0 / VGA 0, clip 0, body peak 13 of 127. A 2.6 s high-power probe at the same gain was clip 0, peak 14, body p99 105 Hz. The channel write for high power had body byte 1 at the power field. The 45 s and 120 s high-power keys were not run.
+
+## End state
+
+`0x34` `DMR003.FW19.V022` at 22:47:06. VFO 467.625 / 467.625 FM, low power. No `DMRDEBUG.bin`. SignalDeck owns the radio. The bench `eot` extra is the SignalDeck `cmdsym` change committed with this report.
