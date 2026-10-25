@@ -2313,3 +2313,21 @@ SignalDeck sends op 6 variant 3 when M17 starts and `0x34` is a stub tag (`DMR00
 HackRF transmit, VGA 20, ±2.4 kHz, 467.625 MHz, 30 stream frames. The hold returned `data hold action=1 sr=0`. During the transmission the `0x32` body was `0x41`, −87.5 dBm. The M17 list showed `K6M17 → W9LAB`, 13 frames, 12 clean, and two shorter entries with no callsigns. A second transmission, `W1RF → N2EQ`, with the hold released and the calibrated equalizer selected, did not appear under those callsigns; the list added another `K6M17 → W9LAB`, 12 frames. Raw `0x41` again.
 
 VFO 467.625 / 467.625 FM. M17 was stopped. No `DMRDEBUG.bin`. RG10 stays loaded.
+
+# R-H host — the live receiver (2026-10-24, 20:40–20:41)
+
+No new image. RG10 stayed loaded (`0x34` `DMR003.RG10.V022` at 20:40:41). Wi-Fi adb `192.168.1.125:5555` only. The phone was not keyed. SignalDeck `943e4ec2` was installed with `adb install -r`.
+
+The live receiver searches every sync chain, skips PCM the module is still muting, and opens a contact only from a link-setup CRC or six LICH chunks. It keeps the buffered audio until that call ends, then drops it. Releasing the app's own PTT schedules the voice-filter hold again. `HeldPathTest` feeds each of the 18 saved clips, with 3 s of that clip's muted head in front, in 64 ms blocks, and decodes once while the clip is still arriving: one contact, the callsigns that were sent, and the reference stream-frame count on every clip, including 18 on `m17_d2400_v10_1`. The batch decoder's exact counts are unchanged.
+
+## Device
+
+HackRF transmit, VGA 20, ±2.4 kHz, 467.625 MHz, 30 stream frames, each with a 1.6 s +3/−3 lead. The hold returned `data hold action=1 sr=0`. During each transmission the `0x32` body was `0x43`, −86.5 dBm. The M17 list, and nothing else:
+
+- `K6M17 → W9LAB`, 28 frames, 25 clean
+- `W5RF → N6EQ`, 28 frames, 25 clean
+- `N5TST → K6DEC`, 27 frames, 23 clean
+
+No listing without callsigns. The third count is 27, one under the 28 bar. The hold was then released (`action=0 sr=0`) and M17 started again on the calibrated equalizer. One more transmission with the same lead listed `W1RF → N2EQ`, 27 frames, 20 clean. The three held listings were still on the list and were not repeated as the new line.
+
+VFO 467.625 / 467.625 FM at 20:41:11. M17 was stopped. No `DMRDEBUG.bin`. RG10 stays loaded.
