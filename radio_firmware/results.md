@@ -2460,3 +2460,45 @@ Codec 2 decode of those 247 frames is 9.88 s, 8 kHz, peak 15873 of 32767, rms ab
 ### End state
 
 `0x34` `DMR003.FW20.V022`. `0x32` raw 30 and 31. VFO 467.625 / 467.625 FM, low power. No `DMRDEBUG.bin`. SignalDeck owns the radio. FW20 stays loaded.
+
+## FW21 — generic waveform engines (2026-10-25, 08:57–09:12)
+
+Low power, 467.625 MHz, power byte 0. HackRF receive LNA 16 / VGA 16 for every key, LNA 24 / VGA 38 for the boot capture. Magnitude gate: a 10 ms block whose mean absolute value is above 8. Body p99 drops the first and last 50 ms. Image sha256 `f726056aa3e62db4399d45ee6cf5df4e29756083761c1651ce734d4c08d477ed`, phone md5 `cd252c1086e01c581867bec96e8a5184`. YModem `onSuccess` at 08:57:04.819. `0x34` `DMR003.FW21.V022` at 08:57:18.877, and again at 09:10:30 before the long stream. Boot peak 0.08 dB. It does not key at boot.
+
+The sine table is in flash. A load of its link address (`0x5BC64`) never returns; the stock image addresses its own flash as `0x0301A000` plus the file offset, and this image does the same (`0x03075C64`). The sample is sign-extended (`ld.hs`). The phase remainder and the frequency are uint16 and are zero-extended (`ld.h`); sign-extending them walks the phase off once the remainder passes 32767. An earlier image (sha256 `2392c912f78ccd8092109490d66647391a4ad306c281a8731d3998d106471043`) hung the `0x40` handler on a tone render. It was replaced. It is not the one left loaded.
+
+`on_key` enters the TX-RAM path only when the symbol ring is not empty. A tone queue with an empty ring keys the stock analog carrier and does not play the queue (measured: no 700 Hz line, body p99 633 Hz). One dummy symbol after op 11 arms the TX-RAM path. The tone engine then ignores that symbol.
+
+### Renders, no key
+
+Hold, op 8, shaping 0, advance 3/20, levels ±4000. Op 4 of 128 samples returned `sr=0`, 19 sign changes, runs of 7. The 1 kHz queue (8000 eighths, amplitude 4000) returned 32 of 32 samples: 2828, 3999, 2828, 0, −2829, −4000, −2829, 0, and the same eight again. Op 3 and then 32 samples were all zero. A 700 Hz queue (5600 eighths, amplitude 4000) returned 64 of 64 samples, first 2056, 3527, 3989, 3270, 1530, −587, −2538, −3798.
+
+### POCSAG 1200
+
+One batch, RIC 1234567, function 3, text `HI`, then 0.5 s of zero-count samples. Our decoder, both polarities. `multimon-ng` is not installed.
+
+±7600 counts, the lower amplitude, aimed at ±3.5 kHz. Key 09:03:26. Carrier 2.73 s. Body p99 4061 Hz, body peak 61 of 127, clip 0. 16 of 16 codewords, page `HI`.
+
+±8400 counts, scaled from that p99 toward ±4.5 kHz. Key 09:04:16. Carrier 2.80 s. Body p99 4138 Hz, body peak 72, clip 0. 16 of 16 codewords, page `HI`. The air compressed: 1.105 times the count moved the p99 by 1.019. It did not reach 4.5 kHz and it did not reach 5 kHz. No third, hotter key.
+
+Battery 36.7 °C. `mtktsAP` 42.9 to 43.7 °C. `mtktsbtsmdpa` 41.7 to 42.0 °C.
+
+### MCW, 700 Hz, 20 words per minute
+
+The letters `HI`. Dit 60 ms, letter gap 180 ms, amplitude 4000. Op 11, so the module dropped the carrier. A leading 150 ms of silence covers the half filled at key-up. Key 09:07:38. Carrier 1.34 s. Body p99 2021 Hz, body peak 57, clip 0. The 700 Hz envelope, with tone blips shorter than a dit removed, is off 200 ms, then 60/60 four times, off 180, 60/60 twice, off 450. That is `HI`.
+
+### M17 after op 3
+
+`cmdsym` sends op 3 before the symbols. Ninety stream frames, the last with the end bit, one EOT frame, last chunk op 7. Carrier 3.91 s. Body p99 2905 Hz, body peak 58, clip 0. 90 of 90 payload-exact. Last frame number 32857, which is 89 with the end bit set. EOT score 1.0.
+
+### The 1125-frame stream
+
+Same shape as the FW20 stream. `0x34` was still `DMR003.FW21.V022`. Carrier 45.31 s. Body p99 2939 Hz (the frame judge's slices peak at 2959). Body peak 74, clip 0. 1125 of 1125 payload-exact. Last frame number 33892, which is 1124 with the end bit set. EOT score 1.0. Battery 36.8 to 36.9 °C. `mtktsAP` 43.0 to 44.3 °C. `mtktsbtsmdpa` 41.8 to 42.9 °C. No 10 s step was over 2 °C. No stop.
+
+### Not run
+
+RTTY and FT8 were not keyed. At 09:12:42 `mtktsAP` was 44.2 °C, 1.2 °C above its 43.0 °C reading before the long stream, so the next key waits.
+
+### End state
+
+`0x34` `DMR003.FW21.V022`. VFO 467.625 / 467.625 FM, low power, power byte 0. No `DMRDEBUG.bin`. SignalDeck owns the radio. FW21 stays loaded. Not keyed.

@@ -202,7 +202,7 @@ The 2050-byte symbol stub is full: it ends at file `+0x5B6FE`, and the time-out 
 
 What each mode costs the host, and nothing more: POCSAG is op 8 (two levels, its advance, shaping 0) and then ops 1 and 7. A shaped pager adds op 9. CW, RTTY, and FT8 are ops 10 and 11. M17 keeps sending ops 1, 3, and 7 and never sends 8–11.
 
-Corrected 2026-10-25 from the review of this design (`reviews.md`). The image is FW21. It is not built yet. Render first (op 4) for both engines, then the low-power keys in that review: POCSAG 1200 at ±3.5 kHz and then ±4.5 kHz, MCW 700 Hz at 20 wpm, RTTY 45.45 baud with a 170 Hz shift, one FT8 message, op 3 then 90/90 M17, and one unchanged 1125-frame op 7 stream. The ±5 kHz stop stays in force.
+Corrected 2026-10-25 from the review of this design (`reviews.md`). The image is FW21, sha256 `f726056aa3e62db4399d45ee6cf5df4e29756083761c1651ce734d4c08d477ed`, loaded 2026-10-25. The sine table is addressed at `0x0301A000` plus its file offset, and the phase remainder is zero-extended. Renders match: hold at 3/20, a 1 kHz sine 32 of 32, a 700 Hz sine 64 of 64, and op 3 then zeros. On the air, low power, 467.625 MHz (`results.md`): POCSAG 1200 `HI` at body p99 4061 Hz (±7600 counts) and 4138 Hz (±8400; the air compressed and did not reach 4.5 kHz or 5 kHz); MCW 700 Hz at 20 wpm decoded `HI`; op 3 then 90 of 90 M17; the 1125-frame op 7 stream 1125 of 1125 with the end bit and the EOT. A tone key has to leave one symbol in the ring, because `on_key` takes the TX-RAM path only then. RTTY and FT8 are not keyed yet. The ±5 kHz stop stays in force.
 
 ## 9. First steps (this week)
 
