@@ -2397,4 +2397,28 @@ The capture is 47.3 s because the stop closed it. Level gate (carrier magnitude 
 
 Battery (`dumpsys`, tenths) 39.2 °C before the key and 39.5 °C at the last sample, 40.1 °C when read after the capture was measured. `mtktsAP` 48.7 °C before, 51.4 °C at 23:47:54 (+2.7), and 50.8 °C on that later read. `mtktsbtsmdpa` 46.1 to 48.6 (+2.6). `mtktsbtsnrpa` 46.7 to 49.5 (+2.8). From 23:47:44 to 23:47:54, `mtktsAP` rose 1.03 °C. That is the written stop (more than 1 °C inside 10 s). Battery stayed under 45 °C. Neither watched zone reached 60 °C.
 
-The 120 s stream and the 40 s tone were not run. The heat rule is not rewritten. VFO returned to 467.625 MHz, low power (power byte 0). No `DMRDEBUG.bin`. FW19 stays loaded.
+The 120 s stream and the 40 s tone were not run in this pass. The heat rule is not rewritten here. VFO returned to 467.625 MHz, low power (power byte 0). No `DMRDEBUG.bin`. FW19 stays loaded.
+
+## High power 120 s, the 40 s tone, and the op-7 timer (2026-10-25, 00:01–00:27)
+
+FW19 stayed loaded (`0x34` `DMR003.FW19.V022` at 23:59:29). Wi-Fi adb `192.168.1.125:5555` only. The 1 °C in 10 s stop was retired. Stops for these keys: battery above 45 °C, `mtktsAP` or `mtktsbtsmdpa` above 60 °C, or more than 2 °C inside 10 s. The ceiling key started with `mtktsAP` at 47.9 °C, within 1 °C of 48.7 °C. HackRF receive used a finite `-n`. At LNA 0 / VGA 0 the carrier is only about 10 dB over the quiet floor, so the carrier bounds are a magnitude gate, not 20 times the 10th-percentile power.
+
+### Ceiling
+
+3250 stream frames, no end bit, power byte 1, HackRF LNA 0 / VGA 0. `sym key` at 23:59:38.666 (`0x26` body 1). Status byte 3 at 23:59:38.678. Status byte 4 at 00:01:38.996, 120.33 s after the key. No status byte 6. Carrier 120.35 s (0.90 s to 121.25 s of the file). Clip 0, peak 11 of 127, body peak 11. Steady body p99 3241 Hz. No body slice from 80 ms to 400 ms before the drop is at or over 5 kHz. The host sent the unkey only after the three-minute log.
+
+`mtktsAP` 47.9 °C before the key, 59.2 °C at the highest sample (about 15 s after the carrier ended), 54.6 °C three minutes later. `mtktsbtsmdpa` 46.3 to 56.8 during the key and 57.1 at its highest just after. `mtktsbtsnrpa` 46.9 to 57.7. Battery 40.2 °C before, 41.4 °C at the end of the key samples, 41.9 °C three minutes later. No stop fired. `mtktsAP` was back within 1 °C of 47.9 °C at about 17 minutes.
+
+### 40 s FM tone
+
+Low power, power byte 0, after that cool-down. HackRF LNA 16 / VGA 16. The bench tone was 40000 ms (`TX 1 kHz test tone 40000 ms`). `0x26` body 1 at 00:22:45.812, status byte 3 at 00:22:45.825, `0x26` body 2 at 00:23:26.213 (40.40 s), status byte 4 at 00:23:26.539 (40.73 s). Carrier 40.75 s. The module did not end it at 30 s. Body p99 2887 Hz. Body peak 102 of 127. The whole-file peak of 127 and the clip fraction 1.1e-6 are the key-up click. `mtktsAP` 49.0 to 50.0 °C. Battery stayed 41.5 °C.
+
+### Timer after op 7
+
+Low power, the same 1125-frame file, last chunk op 7, no unkey until the watch ended. HackRF LNA 16 / VGA 16. `sym key` at 00:24:34.923. Status byte 3 at 00:24:34.935. Op 7 at 00:25:19.638. `sym nounkey` at 00:25:19.655. Status byte 4 at 00:25:19.954, 45.03 s after the key. Carrier 45.05 s, clip 0, body peak 104 of 127, body p99 3040 Hz. The whole-file peak of 121 is the click. The next status byte was 4 again at 00:26:35.260, 120.34 s after the key. No status byte 6, and no status byte 1.
+
+Sixty seconds after the drop, a HackRF carrier at TX VGA 0 (a dummy burst, then 3 s, finite `-n`) left the phone's `0x32` at raw 6 then raw 5, about −117 dBm. The same gain-0 carrier, tried a minute later with the radio idle and unkeyed, moved `0x32` from raw 31 (−104.5 dBm) to raw 47 (−96.5 dBm). During the flagged window the floor was about 12 dB quieter and the weak carrier did not show. No stronger HackRF transmission was used.
+
+### End state
+
+VFO 467.625 / 467.625 FM, low power, power byte 0, at 00:27:01. No `DMRDEBUG.bin`. SignalDeck owns the radio. FW19 stays loaded. The heat rule in `HANDOFF.md` now uses these rises: a 120 s high-power key waits until `mtktsAP` is back within 1 °C of its pre-key value, and the stops are battery 45 °C, the two zones at 60 °C, and more than 2 °C inside 10 s.
