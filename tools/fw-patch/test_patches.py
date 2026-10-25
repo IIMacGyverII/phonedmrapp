@@ -299,6 +299,12 @@ class PatchTest(unittest.TestCase):
         pairs.append(["c7000-cmd40-m17", "c7000-cmd40-sym"])
         pairs.append(["c7000-cmd40-swap", "c7000-cmd40-sym"])
         pairs.append(["c7000-cmd40-m17swap", "c7000-cmd40-sym"])
+        # FW20 replaces the symbol stub. It stacks with c7000-tot-120 and not with the stub it replaces.
+        pairs.append(["c7000-cmd40-sym", "c7000-fw20-drop"])
+        pairs.append(["c7000-cmd40-host", "c7000-fw20-drop"])
+        pairs.append(["c7000-cmd40-m17", "c7000-fw20-drop"])
+        pairs.append(["c7000-cmd40-swap", "c7000-fw20-drop"])
+        pairs.append(["c7000-cmd40-m17swap", "c7000-fw20-drop"])
         for names in pairs:
             with self.subTest(names=names), self.assertRaises(SystemExit):
                 build.build(names, "UVt0", self.cfg)

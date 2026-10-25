@@ -2422,3 +2422,27 @@ Sixty seconds after the drop, a HackRF carrier at TX VGA 0 (a dummy burst, then 
 ### End state
 
 VFO 467.625 / 467.625 FM, low power, power byte 0, at 00:27:01. No `DMRDEBUG.bin`. SignalDeck owns the radio. FW19 stays loaded. The heat rule in `HANDOFF.md` now uses these rises: a 120 s high-power key waits until `mtktsAP` is back within 1 °C of its pre-key value, and the stops are battery 45 °C, the two zones at 60 °C, and more than 2 °C inside 10 s.
+
+## FW20 — the op-7 drop waits, then the stock unkey (2026-10-25, 02:03–02:14)
+
+Low power, 467.625 MHz, power byte 0. HackRF receive LNA 16 / VGA 16. The carrier fills that capture, so the bounds are a magnitude gate (block mean absolute value above 8; the quiet floor is about 1.5 and the carrier about 60), not 20 times the 10th-percentile power. Image sha256 `31ecdd307e1ce33bee588b3abe41ed60793e38d8416da3395a9b305308d28796`, phone md5 `1b47fbe9f83c97da67bb4352c7d2df76`. YModem `onSuccess` at 02:06:03.479. `0x34` `DMR003.FW20.V022` at 02:06:17.049. Boot peak 0.06 dB. It does not key at boot.
+
+The op-7 drain counts eight more TX-RAM half interrupts, calls `drop_ptt` while the timer's TX bits are still set, calls the stock unkey at file `+0xE9C` with the same `r0`/`r1` choice command `0x26` uses, and only then clears bits 0 and 2 of `0x38908` and the count at `0x38C64+2..5`. An earlier image cleared those bits first. On that image a 1125-frame stream was also 1125 of 1125 with the end bit and an EOT score of 1.0, and no timer status arrived inside 130 s, but `0x32` stayed at raw 6 (−117.0 dBm) through a gain-0 carrier and through a later `0x26` body 2. A VFO rewrite brought it back to raw 29–32. That image was replaced. It is not the one left loaded.
+
+### One 1125-frame stream
+
+1125 stream frames, the last with the end bit, then one EOT frame. Last chunk op 7. The host did not unkey. `sym key` at 02:07:29.858. Status byte 3 at 02:07:29.868. Op 7 at 02:08:14.609. Status byte 4 at 02:08:15.175 (45.32 s) and again at 02:08:15.502 (0.33 s later, the stock unkey). Carrier 45.30 s. Body p99 3041 Hz, body peak 106 of 127, body clip 0. No body slice at or over 5 kHz. 1125 of 1125 frames payload-exact. The last frame number is 1124 with the end bit set. The eight-symbol EOT pattern after it scores 0.999. The decode window starts 50 ms into the carrier, so the link-setup CRC is not in that window.
+
+From 02:08:15.502 until 02:10:25 there is no further status byte 4 or 6. The key-on + 120 s mark (02:09:30) is inside that window and is empty. Battery 38.7 °C. `mtktsAP` 45.1 to 46.1 °C. No heat stop.
+
+### Receive after the drop
+
+Before the key, idle `0x32` was raw 31 (−104.5 dBm). The same gain-0 HackRF carrier (dummy lead of 0.25 s, then the carrier, TX VGA 0, finite `-n`) moved it to raw 47 (−96.5 dBm). A query 0.15 s after the first status byte 4 still read raw 6: that query went out before the stock unkey had returned. The same carrier, read at 2.88 s, was raw 47 again. The squelch opened at 02:08:17.777 (status byte 1, 2.60 s after the first status byte 4) and closed at 02:08:20.292 (status byte 2). No stronger HackRF transmission was used. The phone was not keyed while the HackRF transmitted.
+
+### Second stream
+
+After the first drop, 10 s later, a 1750-frame stream with the end bit and one EOT frame. First key 02:10:33.422, status byte 4 at 02:11:18.739 (45.32 s) and at 02:11:19.063. Second key 02:11:29.324, op 7 at 02:12:39.094, status byte 4 at 02:12:39.638 (70.30 s). A stale 120 s timer from the first key would have fired at 02:12:33, about 64 s into the second key. It did not. Magnitude gate: first carrier 45.35 s, second carrier 70.35 s, gap 10.5 s. Steady p99 3018 Hz on the first and 3074 Hz and 3032 Hz on the second. Those slices peak at 104–105 of 127, clip 0. One 50 ms block on the first carrier reaches 127; that is the key click. Battery 38.6 to 38.8 °C. `mtktsAP` 45.7 to 49.0 °C. `mtktsbtsmdpa` 44.9 to 47.7 °C. No stop.
+
+### End state
+
+`0x34` `DMR003.FW20.V022` at 02:14:05. `0x32` raw 31, 30 and 32 (−104.5 to −104.0 dBm). VFO 467.625 / 467.625 FM, low power, power byte 0, at 02:12:59. No `DMRDEBUG.bin`. SignalDeck owns the radio. FW20 stays loaded.
