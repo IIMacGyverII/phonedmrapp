@@ -150,3 +150,11 @@ A stock module therefore still cannot be dumped before the first load. The backu
 that phone. After our own image is in, opcode 12 (FW22) is the dump; a full pass is 378,620 bytes and took 971 s
 at 57600 baud, so the loader page does that in the background, or checks the tag plus a sample and offers the full
 read.
+
+## Decision after the reading session (review, 2026-10-25)
+
+Path B first: the knock and the handshake are fully known and SignalDeck already owns the GPIO and the UART, so its
+own sender is the smaller and the more useful piece; Path A is the fallback. The bootloader verifies nothing, so
+the table hashes are the only guard. Recovery after an interrupted transfer is a pass criterion, proven on the
+bench before the page ships. Pass lists for both steps are in `reviews.md`, "Review of the Phase E reading sessions".
+
