@@ -2651,3 +2651,40 @@ Host `ImageTableTest` passed, including the case that a verified factory backup 
 ### End state
 
 Installed tag `DMR003.UV4T.V022`. Factory backup verified from the stock app. Stock app paused (`pm list packages -d` lists `com.pri.prizeinterphone`). Allow unlisted images is off. `UNL1.bin` is not in Download/DMR/Firmware. SignalDeck owns the radio. Battery 89–90%. No `DMRDEBUG.bin`. Next is route-list item 7 (the receive self-calibration reading) and item 6 once the contact callsign work it depends on is in. FW21 and FW22 stay unlisted in the public catalogue until their builds are reproducible. Only stock and released images go in AndroidRadio_Firmware_Project.
+
+# Item 7 reading — what drives the phone's receive input (2026-10-25)
+
+No image was built. The phone was not used: it is leased for the contacts check. The question is which converter's analog output reaches the phone's ES8311 input while the radio is receiving, whether the AT1846S audio pin and the HR-C7000 DAC share that input, and which register or RAM a later `0x40` op can play a known waveform into without keying.
+
+## The phone side
+
+The converter into the phone is the Everest ES8311 at I²C `7-0018`. tinyserver takes receive audio from I2S2 (`UL2_CH1` ↔ `I2S2_CH1`) at 8 kHz (`es8311_pcm_hw_params`, MCLK 1.024 MHz). Transmit PCM leaves on I2S1. The speaker amplifier `aw883xx` is a different path. Chapter 19 §19–§20. So "the ES8311 input" is the codec's analog microphone pin. There is one such input on this link.
+
+## Analog receive is the AT1846S audio pin
+
+Three measurements already separate that pin from the HR-C7000's own converters:
+
+- AT1846S register `0x58` is in the phone's receive audio. The FM tune writes `0x8405` at file `+0x3052` (voice high-pass, emphasis, voice low-pass and the CTCSS filter all on) and the DMR tune writes `0xBCFD` at `+0x2E92` (those filters bypassed). `at1846_tune` is `+0x2DD8`. R-D: op 6 variant 3 (`0x58` = `0xBCFD` alone) flattens the phone path (100 Hz +1.2 dB against 1 kHz). Variant 4 adds the C7000 `FM_BANDWIDTH` bypass and is the same curve. The C7000 FM filters are not in the phone path. The whole analog cut the phone hears is the AT1846S.
+- The HR-C7000 codec ADC is not in that path. UVm10 lowered `GCR_ADCL` (codec base `0x16000900` + `0xE5`, which is `0x160009C0` + `0x25`). Open-squelch receive on 467.625 MHz was −15.55 dBFS against −15.61 dBFS on the factory image, **+0.06 dB**. A 6 dB drop would have meant the codec ADC sat between the AT1846S and the phone.
+- The same codec's DAC gain is not in the radiated transmit path (UVm11, all ten `GCR_DACL` slots). That result does not by itself say where the DAC's lineout goes on receive.
+
+## What the user guide says the DAC plays
+
+Document 2, chapter 6 and §7. The codec DAC output is two single-ended lineouts of one PWM (`DO_LO_PWM`, `CR_DAC` bit 0 `dac_zero_n` at `0x160009CD[0]`: 0 = pin active, 1 = clamped). Both of these playback sources are specified to feed that DAC, and no CPU copy is required for the analog one:
+
+- Analog FM receive (§7.2.2.2, page 271): the modem FM demod goes to the codec DAC when `0x11000080[0]` = 0, `0x11000100[7]` = 1, and the DAC interface is on (`0x160009C8[4]` = 0, master, parallel PCM). The same demod is what RX RAM saves at `0x160004E0`–`0x160008DF` (§7.2.2.3.2). RX RAM includes `FM_BANDWIDTH`. The phone audio does not. So the phone is not listening to this DAC feed.
+- DMR receive (§7.1.2.2, page 270): vocoder PCM, 160 bytes / 10 ms, sits at `0x180000A0`–`0x18000140`. The codec reads it over AHB and raises irq 27. The CPU refills the buffer and clears the flag with `0x110003B0` bit 5. That is the only documented way decoded DMR voice leaves the chip. The phone does play DMR voice, and the only ADC into the phone is the ES8311, so this lineout reaches that same microphone input.
+
+The boot codec init at file `+0x647C` (one caller, `+0xDE4`) already turns that playback path on. From base `0x16000900` it stores `AICR_ADC` (`+0xC9`) = `0xC0`, `AICR_DAC` (`+0xC8`) = `0xC0` (24-bit, master, parallel, and bit 4 clear so `SB_AICR_DAC` is active), `GCR_DACL` (`+0xDF`) = `0xAB`, `GCR_ADCL` (`+0xE5`) = `0x8B`, and it clears `CR_DAC` (`+0xCD`) bits 4 and 7 (`SB_DAC` active, soft mute off) and the same two bits of `CR_ADC` (`+0xCF`). The guide's speaker gate, separate from the AT1846S pin, is `STANDBY_LO` at `0x11000088[31]` (page 249). No register in this image was found that selects the AT1846S pin or the lineout as the ES8311's source. They meet off-chip.
+
+## Both sources, one ES8311 input
+
+Analog receive at the phone is the AT1846S audio pin, after `0x58`, and not the modem demod that fills RX RAM. DMR voice can leave only through the codec DAC lineout, and it is heard on the phone, so that lineout reaches the same ES8311 input. The two converters share the input. They are not the same signal: a sweep played from the DAC does not pass through `0x58`, and a tone received over the air does not pass through `GCR_DACL`.
+
+## The idle playback path, and the op
+
+Nothing in the AT1846S programming this image uses will play an arbitrary 50 Hz–3.8 kHz waveform out of the audio pin without RF. The CTCSS generator (`at1846_set_ctcss_dcs` at `+0x32E4`, the 50-entry table at `+0x366B2`, 67.0–254.1 Hz) is sub-audible and is not that sweep. The codec DAC buffer is the path that can.
+
+Proposed `0x40` opcode **13** (12 is FW22's flash read). It does not set PTT (`0x11000560` stays 0) and does not write AT1846S `0x30`. It keeps the DAC up the way `+0x647C` does (`0x160009C8` = `0xC0`, `0x160009CD` bits 4 and 7 clear, `0x160009D2` bits 0 and 1 clear). The host sends 8 kHz 16-bit PCM, at most the ±3-symbol level used on the air. The stub refills `0x180000A0`–`0x1800013F` on irq 27 for 3 s, the same slot the vocoder uses, and does not run the vocoder. Squelch stays closed so the AT1846S pin is quiet if the chip mutes it; the op does not retune and does not key. SignalDeck records I2S2 as it does for a normal reception.
+
+The bench then compares that recording with the held-path tone table (R-D/R-E). Agreement within 1 dB and 0.2 symbols from 100 Hz to 3.5 kHz would mean the lineout and the AT1846S pin really are one input and the AT1846S contribution was quiet. A curve that is only the ES8311's 500 Hz dip, or silence, means the DAC is not the analog leg the equalizer is fitting, and opcode 13 cannot replace an over-the-air calibration. The fallback in the route list stands for that case: train on a real M17 reception. No image is loaded until that reading is accepted.
