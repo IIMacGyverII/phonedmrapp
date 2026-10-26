@@ -1,0 +1,151 @@
+{
+ "image": "IMAGE",
+ "size": 378620,
+ "xip_base": "0x301a000",
+ "version": {
+  "string": "DMR003.UV4T.V022",
+  "offset": 230500
+ },
+ "thunks": {
+  "runs": [
+   {
+    "start": "0xab0e",
+    "count": 6
+   },
+   {
+    "start": "0xab52",
+    "count": 20
+   }
+  ],
+  "count": 26
+ },
+ "tot": {
+  "timer_candidates": [
+   {
+    "idiom": "0x208",
+    "struct": "0x38c64"
+   }
+  ]
+ },
+ "identified": {
+  "0x3B set_tot": [
+   "0xa308",
+   "0xa280"
+  ],
+  "0x34 version": [
+   "0xa7e8"
+  ]
+ },
+ "entries": [
+  {
+   "entry": "0xab0e",
+   "handler": "0xa334"
+  },
+  {
+   "entry": "0xab16",
+   "handler": "0xa308"
+  },
+  {
+   "entry": "0xab1e",
+   "handler": "0xa280"
+  },
+  {
+   "entry": "0xab26",
+   "handler": "0x9e5c"
+  },
+  {
+   "entry": "0xab2e",
+   "handler": "0x8ea8"
+  },
+  {
+   "entry": "0xab36",
+   "handler": "0x8eb4"
+  },
+  {
+   "entry": "0xab52",
+   "handler": "0x8f18"
+  },
+  {
+   "entry": "0xab5a",
+   "handler": "0xa7e8"
+  },
+  {
+   "entry": "0xab62",
+   "handler": "0xa6c4"
+  },
+  {
+   "entry": "0xab6a",
+   "handler": "0xa6a8"
+  },
+  {
+   "entry": "0xab72",
+   "handler": "0xa678"
+  },
+  {
+   "entry": "0xab7a",
+   "handler": "0xa634"
+  },
+  {
+   "entry": "0xab82",
+   "handler": "0xa5cc"
+  },
+  {
+   "entry": "0xab8a",
+   "handler": "0xa598"
+  },
+  {
+   "entry": "0xab92",
+   "handler": "0xa53c"
+  },
+  {
+   "entry": "0xab9a",
+   "handler": "0xa364"
+  },
+  {
+   "entry": "0xaba2",
+   "handler": "0xa808"
+  },
+  {
+   "entry": "0xabaa",
+   "handler": "0xa1dc"
+  },
+  {
+   "entry": "0xabb2",
+   "handler": "0x9fb8"
+  },
+  {
+   "entry": "0xabba",
+   "handler": "0x9e6c"
+  },
+  {
+   "entry": "0xabc2",
+   "handler": "0x9e24"
+  },
+  {
+   "entry": "0xabca",
+   "handler": "0x9264"
+  },
+  {
+   "entry": "0xabd2",
+   "handler": "0x9e4c"
+  },
+  {
+   "entry": "0xabda",
+   "handler": "0x9e3c"
+  },
+  {
+   "entry": "0xabe2",
+   "handler": "0x99b4"
+  },
+  {
+   "entry": "0xabea",
+   "handler": "0x9310"
+  }
+ ],
+ "free": [
+  {
+   "offset": "0x5aefc",
+   "length": 6144
+  }
+ ]
+}

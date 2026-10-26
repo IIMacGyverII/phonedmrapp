@@ -1,0 +1,45 @@
+{
+ "image": "IMAGE",
+ "size": 378620,
+ "xip_base": "0x301a000",
+ "version": {
+  "string": "DMR003.UV4T.V022",
+  "offset": 230500
+ },
+ "thunks": {
+  "runs": [
+   {
+    "start": "0xab0e",
+    "count": 6
+   },
+   {
+    "start": "0xab52",
+    "count": 20
+   }
+  ],
+  "count": 26
+ },
+ "tot": {
+  "timer_candidates": [
+   {
+    "idiom": "0x208",
+    "struct": "0x38c64"
+   }
+  ]
+ },
+ "identified": {
+  "0x3B set_tot": [
+   "0xa308",
+   "0xa280"
+  ],
+  "0x34 version": [
+   "0xa7e8"
+  ]
+ },
+ "free": [
+  {
+   "offset": "0x5aefc",
+   "length": 6144
+  }
+ ]
+}

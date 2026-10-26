@@ -113,6 +113,24 @@ published in AndroidRadio_Firmware_Project as a research copy (owner, 2026-10-26
   thunk pattern from the Armor does not carry over as it is. That is firmware-side work (Grok), noted here only.
 - **It is not the version the phone runs.** The device report's `0x34` reply is `DMR006.U4A.V082`; this file is V076,
   the copy the stock app keeps for its updater. A V082 copy would have to come from a newer stock app or ROM.
+- **Command dispatch on V076 (read 2026-10-26, C-SKY objdump; `tools/fw-port/find_symbols.py --switch`, tests in
+  `tools/fw-port/test_find_symbols.py`).** The same idiom as the Armor's: the command byte (frame byte 1) goes
+  through `subi r3, 34; cmphsi r3, 103; lrw r2, 0x0304D274; ldr.w r3, (r2, r3 << 2); jmp r3` at `+0xA028`–`+0xA038`,
+  a jump table at file `+0x33274` with 103 cases for commands 0x22–0x88 (Armor: `+0x38240`, 105 cases, to 0x8A); the
+  unknown-command case is `+0x9FE0`. Each case is an 8-byte thunk `mov r0, r4; bsr handler; pop r4-r5, r15`
+  (Armor: `pop r4-r8, r15`, the only reason the old finder saw nothing); 24 of them in three runs at `+0xA048`,
+  `+0xA094`, `+0xA0FA`.
+  - **0x3B (set time-out):** case `+0xA058` → handler `+0x9A5C`, which loads the timer struct `0x38AF8` (lrw at
+    `+0x9A66`, `+0x9A7A`). Armor: case `+0xAB16` → `+0xA308`.
+  - **0x34 (version):** case `+0xA09C` → handler `+0x9F18`, which loads the version string address `0x0304D410`
+    (lrw at `+0x9F1E`, file `+0x33410`). Armor: `+0xA7E8` (`symbols.csv` `cmd34_version_reply`).
+  - **Commands with a handler:** 0x24–0x2B, 0x2D–0x35, 0x37–0x3C and 0x88 (0x22, 0x23, 0x2C and 0x36 are inline
+    cases). The Armor's 0x3D–0x3F and 0x46 fall to the unknown-command case on V076 and 0x89–0x8A are past its table, so V076 has no `0x3F` BER-pattern
+    command and no `0x46`.
+  - **Not for loading:** V076 is the updater copy, not what the module runs (V082). Nothing from this reading may be
+    built for or loaded on an Atom XL until V082 is obtained and diffed (loader contract,
+    `radio_firmware/plan-loader-safety.md`). Offsets and facts may be published; the image is not redistributed
+    beyond AndroidRadio_Firmware_Project.
 - **The MCU images are ARM Cortex-M** (initial stack `0x20002D58`, reset vectors in `0x0800xxxx`: an STM32-class part
   with ~11 KiB RAM). The names are build timestamps, 2019-09-04 to 2020-10-16; they are the USB bridge that presents
   `/dev/ttyACM0` and wraps the Armor command set in the `7E 96 69` envelope, not the radio itself.
