@@ -3035,3 +3035,7 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 ## Receive-RAM stream design (2026-10-26, 08:20)
 
 `radio_firmware/plan-rx-ram-stream.md`. No image and no phone. Op 6 mode 5 holds the AT1846S bypass and `WORK_MODE` `0x80` together, with its own marker so op 5 can read. Op 16 switches 57600 ↔ 230400, ack at the old rate, 30 s host-silence fallback, boot stays 57600, and the loader is NAKed at 230400. Op 17 pushes each half with a 16-bit sequence; a frame is 22.8 ms of the 32 ms half, leaving 9.2 ms for a status push. FW27 waits for the review. The phone is unchanged.
+
+## FW27 stub size (2026-10-26)
+
+No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.

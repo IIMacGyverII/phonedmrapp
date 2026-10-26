@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -166,7 +166,14 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-**Receive-RAM stream design, 08:20.** `plan-rx-ram-stream.md`. Mode 5 holds the bypass and `WORK_MODE` `0x80` together. Op 16 switches to 230400 and falls back to 57600 after 30 s of host silence; the loader is NAKed at 230400. Op 17 pushes sequenced halves, 22.8 ms of each 32 ms half. No image and no phone. FW26, channel 2, monitor off, USB.
+**Stuck — FW27 half-copy does not fit, and there is no second free region.**
+
+The control stub assembles (gate, mode 5, restore, rate, divisor) in 324 bytes at `0x5C54C`, so 108 bytes of the 432-byte tail remain. The half-copy, with the marker check, the `FM_ADDR_SW` 1-or-2 check, the frame kept below `0x4B000`, and the checksum before the send, assembles to 164 bytes.
+
+- Step: FW27 build, linking the half-copy loop.
+- Tried: (1) control stub linked at `0x5C54C`, ends `0x5C690`, 108 bytes left through `0x5C6FB`. (2) half-copy assembled alone at `0x5C690`: 164 bytes, 56 over the tail once both are packed (488 against 432). Safety checks were not removed. (3) whole-image scan for another hole of 40 bytes or more: only `0x35F64` (128 bytes), already `data_table_tail` in `symbols.csv`, and R4l did not boot with code there. One 8-byte pad at `0x5B718`.
+- State: module still `DMR003.FW26.V022`, channel 2, 467.625 MHz, not keyed. Phone: SignalDeck owns the radio, monitor off, USB. HackRF idle. No FW27 image loaded.
+- Question: the half-copy needs 164 bytes and the tail has 108 left. May the file grow past `0x5C6FC`, or is there a region already cleared for this?
 
 ## Owner question
 
