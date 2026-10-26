@@ -100,7 +100,39 @@ Pairs of (clean speech, what the radio's receiver delivers). Two radios in the c
 3. Latency and battery: a 10-minute receive with the toggle on and off, CPU and temperature logged.
 4. Ship only if the listening test prefers it and the budget holds.
 
-## 4. Risks and limits
+## 4. How general the result is (owner question, 2026-10-26)
+
+What the model learns is a stack of three things, and they travel differently:
+
+1. **The vocoder.** AMBE+2 is the same codec in every DMR radio, so its artefacts are the same in kind everywhere.
+   Encoders differ a little between implementations (the HR-C7000 in our radios, DVSI chips in Motorola, Hytera,
+   Anytone and the hotspots' far ends), and on a repeater or network call the bits were made by the far radio's
+   encoder, not ours. Expect this part to transfer well, with a small loss on encoders it never saw.
+2. **The receiving phone's audio path.** The ES8311 converter, the tiny service and the module's filters are in
+   every training pair. This part is specific to the phone model. Inside SignalDeck that is acceptable, because the
+   model runs on the same family it was trained on; other models (Xplore 1, Atom XL, Armor 3WT) get their own data
+   run with the same loop, or a table of models like the M17 equaliser taps.
+3. **Everything the far end adds:** the speaker's microphone, room and background noise, and bit errors on the
+   air. The corpus is clean read speech, so this is the part the plan must add on purpose.
+
+So the software is general (PCM in, PCM out, any DMR audio source), the vocoder knowledge mostly carries, and the
+audio-path knowledge is per phone model. To make the model as universal as the data allows:
+
+- **Augment the transmit side:** mix noise and room responses into the clean clip before it is injected, at random
+  levels, so the model sees vocoded noisy speech. Decide the target explicitly: the un-vocoded noisy clip (the model
+  removes vocoder artefacts only) is the safe default; the clean clip (the model also denoises) is a second
+  experiment, judged by listening.
+- **Augment the receive side:** random gain, mild EQ tilt and resampling jitter on the recorded pair, so the model
+  does not lock onto one converter's exact response. This is what lets one model serve nearby phone models.
+- **Weak-signal pairs** (phase 1 step 7) cover bit-error artefacts.
+- **A second encoder in the data** is the one thing only hardware can give. The second phone is the same family,
+  so it adds a second receive path but not a second encoder. If a borrowed DVSI-based radio (any DMR handheld) is
+  ever on the bench, a few hours of pairs from it is the cheapest way to widen the encoder coverage.
+- **Judge on real traffic, never train on it:** the final listening test uses a few minutes of on-air DMR from
+  other radios and from a repeater, through the phone, raw against enhanced. That is the generality test. Recorded
+  on-air traffic stays out of the training set (consent and privacy).
+
+## 5. Risks and limits
 - The model learns this radio family's vocoder and audio path (ES8311, the FM audio filters). That is intended;
   other phone models get their own data runs later, the same loop.
 - Speaker and language coverage of the corpus limit generalisation; use a varied corpus and hold out speakers.
@@ -108,7 +140,7 @@ Pairs of (clean speech, what the radio's receiver delivers). Two radios in the c
 - Training on the CUDA cards removes the ROCm risk; the 7900 XTX stays on preparation and evaluation.
 - No training on the owner's voice or on recorded on-air traffic (consent and privacy); corpus only.
 
-## 5. Order and ownership
+## 6. Order and ownership
 Host work is Claude's; the bench loop runs under a phone lease like any other bench task. Starts after the
 hotspot rows (item 5), the receive-RAM stream (R-C) and the promiscuous checks (item 10). Phase 0 can be done
 any idle hour since it touches nothing on the bench.
