@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -154,7 +154,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-**Item 7 design, 22:05.** Receive self-calibration is `radio_firmware/plan-rx-selfcal.md`: fit the 41 held-path taps on frames the decoder accepted, keep them only after a second transmission, shipped table for the first lock, decision-feedback receiver as the fallback. No image and no key. The level table it follows is in the previous commit: 4600 / 6500 / 7000, worst slice 4493 Hz, PR 10 at `ab606d64`, channel 2, module FW25, HackRF idle.
+**Item 7 bench, 22:42.** PR https://github.com/IIMacGyverII/SignalDeck/pull/12 (`87a6a503`). A call at −90 dBm fitted 31 frames. The second call, at −99 dBm, locked on those taps but scored 18 clean frames against 19 for the shipped table, so the fit was not kept. A third at −102 dBm had 9 usable frames. Host test: synthetic channel 30 of 30. End: channel 2, that build installed, shipped taps still in use, module FW25, HackRF idle.
 
 ## Owner question
 

@@ -2894,3 +2894,19 @@ Channel 2, 467.625 MHz FM. The `ab606d64` build is installed (21:57:57). Module 
 # Item 7 design — receive self-calibration (2026-10-25, 22:05)
 
 No image and no key. The design is `radio_firmware/plan-rx-selfcal.md`. The equaliser is the held path's 41 taps, fitted after a call from the frames the decoder already accepted, re-encoded to the symbols that were sent. The shipped per-model table gets the first lock. The decision-feedback receiver stays the fallback on stock firmware and on a phone with no table. A fit replaces the live taps only after a second, independent transmission decodes at least as well. The file is per profile in the app's files, with a reset. The M17 page line says which set is in use. The bench pass is two transmissions after this review.
+
+# Item 7 bench (2026-10-25, 22:42)
+
+SignalDeck PR https://github.com/IIMacGyverII/SignalDeck/pull/12, branch `grok/rx-selfcal`, `87a6a503`. `HeldFitTest` passed (synthetic channel 30 of 30 payload-exact, the 5 percent guard, the 20-frame minimum, the second-call rule). Release installed with `adb install -r` at 22:41. Module stayed `DMR003.FW25.V022`. Channel 56, held path, shipped Armor taps at the start. HackRF at 467.625 MHz, amp off, 40-frame files except the third which is 30. Nothing was keyed by the phone.
+
+| Call | VGA | Meter | Heard | Usable frames | Calibration line after |
+|---|---|---|---|---|---|
+| N0CALL, 40 frames | 20 | −90 dBm | 40 frames, 39 clean | 31 | fit waiting for a second call (31 frames at −90 dBm) |
+| N0CALL, 40 frames | 10 | −99 dBm | 40 frames, 31 clean | — | fit not kept (18 clean vs 19, locked) |
+| N0CALL, 30 frames | 5 | −102 dBm | 30 frames, 20 clean | 9 | shipped taps, 9 usable frames |
+
+The second call was 9 dB weaker than the fit and the pending taps locked on its recording, but they decoded 18 clean frames against 19 for the shipped taps, so the fit was not kept. The third call did not start a new fit (9 frames, under 20). The shipped table is still what the receiver uses. The phone was put back on channel 2.
+
+## End state
+
+Channel 2, 467.625 MHz FM. The `87a6a503` build is installed. Module `DMR003.FW25.V022`. HackRF idle. The shipped taps are still the ones in use.

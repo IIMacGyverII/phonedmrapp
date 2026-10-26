@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-25 — Item 7 bench.** A 40-frame call at −90 dBm made a 31-frame fit. A second call at −99 dBm locked on the new taps but scored 18 clean frames against 19 for the shipped table, so the fit was not kept. PR 12, `87a6a503`. Tables: `radio_firmware/results.md`.
+
 **2026-10-25 — Item 7 design.** Receive self-calibration fits the held-path taps on a decoded M17 call and keeps them only after a second transmission. No image. `radio_firmware/plan-rx-selfcal.md`.
 
 **2026-10-25 — Item 8 levels.** Counts 4600 / 6500 / 7000. Worst half-second 4230 Hz at 512, 4493 Hz on the three-address 1200 page, 4417 Hz at 2400. The 2400 page is 16 of 16 with one idle word after the batch. `mtktsAP` 47.1 to 47.7 °C. Tables: `radio_firmware/results.md`.

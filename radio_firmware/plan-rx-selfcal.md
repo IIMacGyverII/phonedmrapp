@@ -8,11 +8,11 @@ The held-path front end already in the app: 41 taps, 20 symbols each side of the
 
 ## Where the known symbols come from
 
-A frame the phone has already decoded is re-encoded with SignalDeck's own M17 encoder. The link setup is used only when its CRC is good. A stream frame is used only when its Golay decode is clean, so the 16-byte payload that was recovered is the payload that was sent. Those bytes go back through the link-setup or stream-frame builder and become the 192 symbols that were on the air. A damaged frame is not a target. The station can be anyone: the hotspot in the cage, a HackRF transmission, or another phone. The fit does not need the text of the call, only the frames the decoder accepted.
+A frame the phone has already decoded is re-encoded with SignalDeck's own M17 encoder. The link setup is used only when its CRC is good. A stream frame is used only when its Golay decode is clean, so the 16-byte payload that was recovered is the payload that was sent. Those bytes go back through the stream-frame builder and become the 192 symbols that were on the air. A clean Golay decode can still be a mis-correction, so the frame is a target only when those re-encoded symbols disagree with the receiver's sliced symbols on at most 5 percent of the 192 (9 symbols). Fewer than 20 accepted frames does not produce a fit: 41 taps need the 3840 rows that 20 frames give. A damaged frame is not a target. The station can be anyone: the hotspot in the cage, a HackRF transmission, or another phone.
 
 ## How the audio is lined up
 
-The sync position is the one the receiver already found for that frame. Around it, the same 20 symbols of context the fitter in `heldpath_eq.py` uses. Gain and offset come from the known symbols of that call, then one least-squares solve over every accepted frame of the call produces the 41 taps. The solve runs after the call ends, not on the audio thread.
+The sync position is the one the receiver already found for that frame. As each accepted frame is kept, the raw matched-filter samples are saved with 20 symbols of context on each side (232 samples). The live receiver drops audio it has already handed on, so the fitter cannot go back to the microphone buffer. The saved windows are discarded when the call ends without a fit. Gain and offset come from the known symbols, then one least-squares solve produces the 41 taps. The solve runs after the call ends, not on the audio thread.
 
 ## First lock
 
@@ -20,11 +20,11 @@ A phone that has never fitted taps starts from the shipped per-model table (`ass
 
 ## When a fit is kept
 
-One clean call is not enough to replace the taps the receiver is using. The new vector is stored as pending. It replaces the live taps only when a later transmission, one that was not part of the fit, decodes at least as many payload-exact frames with the pending taps as with the taps already in use. Until that second call, the receiver does not change. The bench pass, after this review, is two independent transmissions: fit on the first, score the second before and after. No firmware image is part of that pass.
+One clean call is not enough to replace the taps the receiver is using. The new vector is stored as pending. The second call is scored by running both tap sets on the same recording of that call. The pending set has to lock the sync search by itself, and it has to come out with at least as many clean frames as the taps already in use. A fit made on a strong call is eligible only when that second call is at least 6 dB weaker, or from another station, so one loud station does not become the phone's calibration. The accepted file records the frame count, the date, and the meter reading of both calls. Until a second call passes, the receiver does not change.
 
 ## Where it is stored
 
-One file per device profile, `files/m17/held_<profileId>.txt`, in the app's own files. It overrides the asset of the same name. A reset deletes the file and the pending vector, and the receiver goes back to the asset, or to the decision-feedback receiver when there is no asset. The file stays across an update. It is not written into a codeplug export.
+One file per device profile, `files/m17/held_<profileId>.txt`, in the app's own files, with the frame count, the date and the two meter readings in `held_<profileId>.note`. It overrides the asset of the same name. A reset deletes both files and the pending vector, and the receiver goes back to the asset, or to the decision-feedback receiver when there is no asset. The file stays across an update. It is not written into a codeplug export.
 
 ## What the user sees
 
