@@ -3040,6 +3040,43 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## FW27 carrier offset and deviation (2026-10-26, 16:53)
+
+Image `e552549c…b2dc`. 1 kHz tone, HackRF VGA 20, phone not keyed. The stream was period 8. DC is the mean of the steady second after the first half-second of each transmission. Amplitude is the Hann-windowed 1 kHz peak of that same second.
+
+Carrier offset, deviation held at 2.5 kHz. The HackRF centre moved around 467.625 MHz. The steady mean stays near +7 counts from −1000 Hz to +1000 Hz. It does not draw a line against offset, so this stream has no counts-per-hertz scale for a carrier error. Each transmission opens with a transient of about +800 to +1300 counts that is gone within half a second, at both ends of the offset list.
+
+| Offset Hz | DC | 1 kHz amplitude |
+|---:|---:|---:|
+| −1000 | +8.0 | 5716 |
+| −500 | +7.3 | 5835 |
+| −200 | +4.0 | 5086 |
+| 0 | +6.3 | 5993 |
+| +200 | +7.8 | 6024 |
+| +500 | +7.9 | 6024 |
+| +1000 | +6.3 | 6003 |
+
+Deviation, centre on 467.625. A straight line through the 0.5 kHz point is 5548 counts per kHz. The measured amplitude is already below that line at 1.0 kHz and is flat from 2.4 kHz to 4.0 kHz, at about 6030.
+
+| Deviation kHz | Amplitude | Line through 0.5 kHz |
+|---:|---:|---:|
+| 0.5 | 2774 | 2774 |
+| 1.0 | 4377 | 5548 |
+| 1.5 | 5445 | 8322 |
+| 2.0 | 5888 | 11096 |
+| 2.4 | 5980 | 13315 |
+| 3.0 | 6017 | 16644 |
+| 3.5 | 6034 | 19418 |
+| 4.0 | 6032 | 22192 |
+
+The 2.0 kHz step was repeated in a second capture and read 5886.
+
+The two plain-stream captures and a channel-56 recording of the same 30-frame file are in `tools/m17-research/captures/fw27-stream/`. The 15:55 channel-56 pass was a listing, so `channel56.s16` is a new recording of that file with the hold at `action=1 sr=0` (16:51).
+
+The stop frame the bench sends is the same bytes SignalDeck logs: `68 40 01 01 75 BC 00 02 11 00 10`. At 15:23 that frame, sent by `raw40` four seconds into a running stream, was acked `sr=0` six milliseconds later. Nothing waits for a gap after the last half. The same bytes from `ramstream` off were acked at 16:50 (`sr=0`, then `0x34` at 57600 and mode 5 off `sr=0`) and unanswered at 16:27 and 16:53.
+
+End state: `DMR003.FW27.V022`, channel 2, 467.625 MHz, not transmitting. `0x34` answers. HackRF idle.
+
 ## FW27 stream response, eye, and the miss recount (2026-10-26, 16:37)
 
 Image `e552549c…b2dc`. HackRF at 467.625 MHz, VGA 20, 2.5 kHz deviation, 4 s per tone. The phone did not key. Amplitudes are the Hann-windowed FFT peak of a steady half-second, and the decibel column is relative to the 1000 Hz tone in that same capture.

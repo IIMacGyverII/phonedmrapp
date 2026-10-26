@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (16:53) — Carrier offset does not move the stream mean, and deviation flattens by 2.4 kHz.** A ±1000 Hz move of the HackRF centre leaves the steady mean near +7 counts. A 1 kHz tone's amplitude leaves the straight line by 1 kHz of deviation and sits at about 6030 counts from 2.4 kHz to 4.0 kHz. The two stream captures and a channel-56 recording are in `tools/m17-research/captures/fw27-stream/`. The stop frame is `68 40 01 01 75 BC 00 02 11 00 10`, sent with no wait after the last half. Tables: `radio_firmware/results.md`.
+
 **2026-10-26 (16:37) — The stream is flat, and the audio path is not.** From 100 to 3500 Hz the stream stays within 0.5 dB. Channel 56, hold on, is 9.6 dB down at 500 Hz and rises toward 2.5 kHz. Idle stream DC is +5 and rms is 55. The symbol eye is centred near ±1 and ±3 with a wide +3 cloud. A 41-tap fit did not train: the frames do not match the transmitted symbols closely enough. Sequence-only misses on the 13.3 s and 50.5 s runs are 0. Tables: `radio_firmware/results.md`.
 
 **2026-10-26 (16:13) — The stream clock is 8000 Hz, and the 1.5 s hole is gone.** A 1 kHz tone already on the air reads as 1000.00 Hz, so 31.250 halves/s, with 0 identical halves. The miss counter added 18 in 13.3 s and 47 in 50.5 s; the amplitude stays flat from the first half. The plain stream listed 30 frames, 46 percent clean. Channel 56 with mode 5 off listed 30 frames, 96 percent clean, at −87 dBm. Runner `all` passed: tone 10.539 s at p99 2532 Hz, stream 1125/1125. Tables: `radio_firmware/results.md`.
