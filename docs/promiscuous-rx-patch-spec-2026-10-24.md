@@ -12,6 +12,19 @@ offset`), verified against `radio_firmware/fw1_csky_objdump.txt` on 2026-10-24.
 > stream** (the other agent, `symbols.csv` slot `+0x382B8`) — do not reuse it.
 > Band limits / TX power / RF-regulatory stay out of scope.
 
+> **Review 2026-10-25 (Claude, owner decision: build now, bench with the hotspot).** Approved as written with five
+> amendments: (1) **the toggle is a new op on command `0x40`** (the bench command with sub-ops 1–14, NAKed by stock
+> firmware): one byte, 0 off / 1 on, readable back; neither the `groups[0]` sentinel nor a new `phone_dispatch` slot
+> is used (§0 stays as the record of why). (2) **Measure the free stub space first:** `zero_tail` was 1,788 B before
+> the M17 and generic-engine stubs; if FW25 left too little, find and record a second free region before cutting
+> anything. (3) **Build on the FW25 lineage as FW26** with its tag, so one image carries everything; the flag off
+> must be byte-identical behaviour. (4) **SignalDeck's `0x2B` parser accepts 9 or 11 bytes** and shows the received
+> CC and slot on the caller line, Last heard and history only while the mode is on; the toggle lives beside MON on
+> digital channels, with help and changelog. (5) **The A/B rows wait for the hotspot** (the replay library is empty;
+> the hotspot is the controllable transmitter the capture matrix needs): the stubs, the patch set, the SignalDeck
+> side and a dry run of the A/B script against a synthetic 11-byte reply are built and host-checked now. Patch C
+> stays deferred. Band limits, power and transmit remain out of scope.
+
 Technique throughout: small **stubs in the free tail space** (`zero_tail`, XIP
 `0x03074EFC`, 1,788 B, where the R4m+ M17 stubs already link — coordinate the
 offset so we don't overlap them) with a **handful of call sites redirected** to
