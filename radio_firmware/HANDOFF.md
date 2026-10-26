@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -199,6 +199,21 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 A 300 Hz tone follows the same deviation curve as the 1 kHz tone: both leave the straight line by 1 kHz and sit near 6000 counts from 2.4 kHz up. FM_BANDWIDTH bit 1 is the 12.5/25 kHz receive select, reset to 25 kHz. The curves say the ceiling is not that filter, so variant 6 was not loaded.
 End state: DMR003.FW27.V022, channel 2, 467.625 MHz, not transmitting, 0x34 answers. HackRF idle.
+
+## Stuck
+
+Placing op 6 variant 6 (`[6, 6, v]`, read `0x11000504`, replace bits 15:8, write back, refuse unless the mode-5 marker `0x5354524D` is at `0x4B008`).
+
+The built image `e552549c…b2dc` (no new image loaded):
+
+- `WRAP_END` is `0x5C6EC`. The tail `0x5C6EC`–`0x5C6FB` is 16 bytes. The read-modify-write with the mode-5 check, the mask `0xFFFF00FF`, and the ack or reject jumps is about 40 instruction bytes plus four literals.
+- The low hole ends at `0x5BE5C`. The pool starts at `0x5BE60`. Spare is 4 bytes.
+- The high piece ends at `0x5C098`, on the opcode-14 boundary.
+- The block at `0x5C590` (`regsend`) is live. The half send at file `0x5C032` branches to it. It is not a hole.
+
+Module `DMR003.FW27.V022`, channel 2, 467.625 MHz, not transmitting. HackRF idle. Nothing new was loaded.
+
+One question: may variant 6 shorten `regsend`'s register trailer (the `WORK_MODE` / `FM_BANDWIDTH` bytes after the samples), or is there another range below `0x5C6FC` you want used?
 
 ## Owner question
 
