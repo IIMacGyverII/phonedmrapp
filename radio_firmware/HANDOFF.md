@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -189,6 +189,15 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+The sandwich is in. FW26 keys and radiates; FW27's key gets no answer and the capture stays at the floor, 21 dB below FW26. The stub's RAM does not overlap the tone queue. FW26 is loaded. Nothing is keyed.
+
+**Stuck — the FW27 key is not acknowledged, and the capture is the floor.**
+
+- Step: the 13:55 order. RAM map and loads first, no key. Neither found a collision, so the sandwich: FW26 tone, load FW27, tone, load FW26, tone. HackRF was not power-cycled.
+- Tried: (1) Stub stores are `0x4B000`/`0x4B004`/`0x4B008` (mode 5 only), `0x4B360`–`0x4B363` (return address, stream only), `0x4B368`/`0x4B36C` (rate flag and the 30 s count, written when the flag is set), `0x4B372`–`0x4B37F` (period, slot, switch, UART index, saved returns), and `0x4B380`–`0x4B38B` (rate-switch record). The tone queue is `0x4B260` plus 64 words, ending at `0x4B35F`. The promiscuous flag is `0x4B364`. The factory name is `0x4B398`. The idle pend does not write the timer. (2) No aligned word outside `0x5BCA4`–`0x5C098` points into that body, file address or XIP. (3) 13:55:37 FW26: `0x26` down acked in 4 ms, status 3 at 13:55:37.842, status 4 at 13:55:48.611. Capture RMS −17.4 dBFS, peak 0.1 s bin −15.0, p99 2726 Hz, line 2570 Hz, SNR 58.6 dB. 13:58:31.944 FW27: `0x26` down sent, `0x26` up at 13:58:42.378, no ack, no status 3, no status 4. Capture RMS −38.3 dBFS, peak bin −38.3, the same on every 0.1 s, p99 22377 Hz, line 26 Hz, SNR 0.5 dB. 14:01:26 FW26 again: status 3 and 4, RMS −14.1 dBFS, p99 2530 Hz, line 2427 Hz, SNR 62.2 dB. FW27 boots were silent (peak 0.043 dB).
+- State: module `DMR003.FW26.V022`, channel 2, 467.625 MHz, power byte 1, monitor off, VFO off, not transmitting. Phone: SignalDeck running, USB, battery 38.7 °C before the keys, `mtktsAP` 45.9 °C. HackRF idle.
+- Question: the host let the key go 10.4 s later and the module never sent status 3. The capture is flat and 21 dB under the FW26 carrier. Which of those two is the next measurement, the missing `0x26` answer or another read of the capture?
 
 FW26's tone test passes at the old numbers: carrier 10.537 s, p99 2533 Hz, 1 kHz line 2430 Hz, SNR 61 dB. FW27's tone capture was SNR 0.4 dB with no line. The byte diff does not show the tone path executing the stub. FW26 stays loaded. Nothing is keyed.
 

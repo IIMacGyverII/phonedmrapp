@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (14:01) — FW27 does not answer the key.** Same HackRF, no power cycle. FW26: status 3 and 4, RMS −17.4 dBFS, line 2570 Hz. FW27: `0x26` sent and released 10.4 s later, no ack, no status 3 or 4, RMS −38.3 dBFS flat. FW26 again: line 2427 Hz, RMS −14.1 dBFS. The stub's RAM is in the gap after the tone queue. Tables: `radio_firmware/results.md`.
+
 **2026-10-26 (13:28) — FW26's tone is the old number. FW27's capture is not a carrier.** FW26: p99 2533 Hz, line 2430 Hz, SNR 61 dB. FW27: SNR 0.4 dB, line 25 Hz. The stub overwrites opcode 13's playback, and that playback's only callers are the dispatcher the image skips. Tables: `radio_firmware/results.md`.
 
 **2026-10-26 (13:02) — Storing `WORK_MODE` re-arms the capture.** A store every 1, 2, 4 and 8 halves keeps the 1 kHz line in every residue class (median about 11990). Period 8 is the one the host asks for. A 45 s stream at that period reported 0 misses and ran 52 s. The regression tone stopped the runner at p99 22389 Hz. Tables: `radio_firmware/results.md`.

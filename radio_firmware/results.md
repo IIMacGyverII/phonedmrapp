@@ -3040,6 +3040,20 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## Tone sandwich, FW26 / FW27 / FW26 (2026-10-26, 14:01)
+
+No RAM overlap. The tone queue occupies `0x4B260`–`0x4B35F`. FW27's stores are the mode-5 saves at `0x4B000`/`0x4B004`/`0x4B008`, then `0x4B360`–`0x4B38B` in the gap before the factory name at `0x4B398`. The promiscuous flag at `0x4B364` is not in those stores. The 30 s count is written only while the rate flag is set. No word outside `0x5BCA4`–`0x5C098` points into that body.
+
+HackRF was not power-cycled. Low power, 467.625 MHz, 10 s tone.
+
+| Run | Tag | Key | Status 3 | Status 4 | RMS | p99 | 1 kHz line | SNR |
+|---|---|---|---|---|---:|---:|---:|---:|
+| 13:55:37 | FW26 | acked in 4 ms | 13:55:37.842 | 13:55:48.611 | −17.4 dBFS | 2726 Hz | 2570 Hz | 58.6 dB |
+| 13:58:31 | FW27 | sent, no ack; unkey 13:58:42.378 | none | none | −38.3 dBFS, flat | 22377 Hz | 26 Hz | 0.5 dB |
+| 14:01:26 | FW26 | acked | yes | yes | −14.1 dBFS | 2530 Hz | 2427 Hz | 62.2 dB |
+
+FW27's boot before that tone peaked at 0.043 dB. End state: `DMR003.FW26.V022`, channel 2, VFO off, not transmitting.
+
 ## FW26 tone after the FW27 capture (2026-10-26, 13:28)
 
 FW27 sha256 `9ea5365c…ded5` against FW26 sha256 `71949d24…a34e`. Changed ranges: `0x7C56` (4), tag `0x3846E` (1), `0x5B2A8` (4), `0x5B2C8` (4), `0x5B7E0` (2), `0x5B816` (4), stub `0x5BCA4`–`0x5C060`, tail `0x5C54C`–`0x5C6EB`. The stub passes `0x5BF84` and overwrites the opcode 13 playback through `0x5C096`. Callers of that body are `0x5B82C` and `0x5B83C`, both in the opcode 13 dispatcher, which `0x5B816` skips. `test_fw27.py` allows the whole span because `RECLAIM_END` is opcode 14 at `0x5C098`.
