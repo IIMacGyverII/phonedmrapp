@@ -2843,3 +2843,28 @@ Export `20261025_210240` (the build before `1cad336b`) wrote 39 fields against a
 ## End state
 
 Channel 2 (467.625 MHz FM). This build is installed (21:07:37). Module `DMR003.FW25.V022`. HackRF idle. Nothing keyed at the end. No factory image loaded.
+
+# Item 8 device pass — POCSAG page (2026-10-25, 21:35)
+
+SignalDeck PR https://github.com/IIMacGyverII/SignalDeck/pull/10, branch `grok/pocsag-page`, rebased onto `main` `1cad336b`, tip `8fd25662`. `PocsagTest` passed. Release installed with `adb install -r` at 21:35:13 (versionCode 118, no uninstall). Module stayed `DMR003.FW25.V022`. Battery 39.6 °C through the keys. The AP zone read did not return. HackRF receive, LNA 8, VGA 8, clip fraction 0. `multimon-ng` is not on this PC. The independent decoder is `tools/pocsag-research/pocsag.py`. Pages were sent with the bench text already signed, so the station record was not put on the air. RICs are 1000001, 1000002, 1000003 and 1000008.
+
+A positive TX-RAM count deviates low on this radio. The first build put a 0 bit on the positive count, and `pocsag.py` decoded it only at polarity −1. `8fd25662` swaps the two levels, so a 0 bit is the negative count and comes out as a positive deviation. The confirming page below decoded at polarity +1.
+
+Channel 2 is high power, so every page tuned a low-power wide VFO, waited 3.5 s, keyed, and returned. The history line is written on the channel that was left.
+
+| Page | When | Carrier | Body p99 | Worst 0.5 s slice | Stop | Research decoder | `Pocsag.decode` |
+|---|---|---|---|---|---|---|---|
+| 1200, one RIC | 21:31 | 2.271 s | 4122 Hz | 4589 Hz | no | polarity −1, 16/16, RIC 1000001 function 3, `N0CALL: HI` | same page |
+| 1200, three RICs | 21:31 | 3.200 s | 4115 Hz | 5086 Hz | yes, one slice | polarity −1, 48/48, frames 1, 2 and 3, each `N0CALL: ABC` | the same three pages |
+| 512, one RIC | 21:32 | 2.625 s | 4094 Hz | 6281 Hz | yes, two slices | polarity −1, 16/16, `N0CALL: LO` | same page |
+| 2400, one RIC | 21:32 | 0.510 s | 4835 Hz | no full half-second | no | polarity −1, phase 5 samples, 12 of 15 codewords, page `N0CALL: HI`, three tail words bad | the page, the bad words skipped |
+| 467.550 MHz, 1200 | 21:32 | 2.270 s | 4229 Hz | 4648 Hz | no | polarity −1, 16/16, RIC 1000008, `N0CALL: MOVE` | same page |
+| 1200, one RIC, swapped levels | 21:35 | 2.27 s | 4123 Hz | 4654 Hz | no | polarity +1, 16/16, `N0CALL: HI` | same page |
+
+The 1200-baud page itself is 1120 bits, 0.933 s. The carrier is about 1.3 s longer: the symbol ring fills before the key, and the drop follows the last symbol. At 21:32:44, during the 467.550 page, status showed 467.550 MHz on channel number 0. Afterwards the radio was back on channel 2 at 467.625 MHz. The confirming page wrote `21:35:34 Page sent to 1 RIC at 1200 baud` into channel 2's history.
+
+The 512-baud slices at 6281 Hz and 5691 Hz, and one slice of the three-RIC page at 5086 Hz, are over the 5 kHz line. The 99th percentile of each whole carrier stays near 4.1 kHz because the quiet tail is in that window. The level was not changed. Those two transmissions are the stop.
+
+## End state
+
+Channel 2, 467.625 MHz FM. The `8fd25662` build is installed (21:35:13). Module `DMR003.FW25.V022`. HackRF idle. Nothing left keyed.

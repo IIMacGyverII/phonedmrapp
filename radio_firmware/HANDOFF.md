@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -153,7 +153,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-**Item 6 device pass, 21:14.** PR 9 is `1cad336b` (CAN in bits 10:7, squelch held open, backup row the same width as the header). Web Talk key 10.367 s, body p99 2883.7 Hz, link-setup CRC, type `0x0385`, 249/249 Golay 0, EOT. Receive at −95 dBm listed 30/30; at −100 dBm the live count was 26/30. The −97 dBm clips are 30/30 payload-exact. Backup restore kept type, CAN, destination, band 1 and squelch 0. End: channel 2, that build installed 21:07, module FW25, HackRF idle.
+**Item 8 device pass, 21:35.** PR 10 is `8fd25662` on current main. A 0 bit is now the negative count; the confirming 1200-baud page decoded at polarity +1, 16 of 16, body p99 4123 Hz, and channel 2's history says the page was sent. Three RICs, 512 and 2400 baud, and a 467.550 MHz page that returned to channel 2, all decoded. The 512-baud slices reached 6281 Hz and one three-RIC slice 5086 Hz. End: channel 2, that build installed 21:35, module FW25, HackRF idle.
 
 ## Owner question
 
