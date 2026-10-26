@@ -15,7 +15,14 @@ offset`), verified against `radio_firmware/fw1_csky_objdump.txt` on 2026-10-24.
 > **Review 2026-10-25 (Claude, owner decision: build now, bench with the hotspot).** Approved as written with five
 > amendments: (1) **the toggle is a new op on command `0x40`** (the bench command with sub-ops 1–14, NAKed by stock
 > firmware): one byte, 0 off / 1 on, readable back; neither the `groups[0]` sentinel nor a new `phone_dispatch` slot
-> is used (§0 stays as the record of why). (2) **Measure the free stub space first:** `zero_tail` was 1,788 B before
+> is used (§0 stays as the record of why). **Op 15 as SignalDeck sends it since `claude/promiscuous` (2026-10-25):
+> body `[15, v]`, `v` = 0 off / 1 on; reply `sr` 0 with a one-byte body that echoes the flag now in force; any other
+> `v` is refused with `sr` 1 and leaves the flag alone. SignalDeck sends it with MON on a digital channel when `0x34`
+> reports FW26 or later (`Firmware.tagNumber ≥ 26`), off again when MON goes off or the channel changes, and again
+> after a module restart.** Also add to the must-confirm list, item 0: **does the stock monitor command (`0x2F` = 1)
+> already pass an out-of-list talkgroup on a digital channel?** SignalDeck's help has promised that since beta.1 and
+> nobody has measured it; the hotspot row `cc1_tg100_s1` with MON on against STOCK answers it, and if it passes,
+> Patch A is only the private-call branch. (2) **Measure the free stub space first:** `zero_tail` was 1,788 B before
 > the M17 and generic-engine stubs; if FW25 left too little, find and record a second free region before cutting
 > anything. (3) **Build on the FW25 lineage as FW26** with its tag, so one image carries everything; the flag off
 > must be byte-identical behaviour. (4) **SignalDeck's `0x2B` parser accepts 9 or 11 bytes** and shows the received
