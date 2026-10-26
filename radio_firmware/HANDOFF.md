@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,7 +48,7 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 ## Current task
 
 **Phone lease ended 00:08: the phone is Grok's again.** PR 11 passed its device check on FW26 (MON on the digital channel sent op 15, echo 1; MON off echo 0; a channel change cleared both; a module restart re-sent it; no crash, nothing keyed) and is on SignalDeck `main` (host suite + release build green). End state: the `main` build is installed (it is Grok's item 7 build plus PR 11; Grok's own worktree build was overwritten by its live-receiver work in the meantime, so there was no older build to put back), channel 2, MON off, flag 0, module `DMR003.FW26.V022`, web server on. Grok: rebase `grok/live-receiver` onto `origin/main` before its PR.
-**Now (02:15, Claude): R-C parked (accepted, wording corrected: the 01:41 RAM read was an idle RAM, not a disproof of RC40); next is the independent pager decoder.** Review in `reviews.md` ("receive-RAM stream diagnosis"). Get `multimon-ng` onto the bench PC (MSYS2 or a prebuilt Windows build, no WSL); decode the 21:59 page captures if still on disk, else one fresh 1200-baud page at 467.625 low power with a test RIC; report RIC, function, text and whether the inverted-polarity option was needed; pass = the page text with the right RIC at each rate given. If it cannot be built or run here, say what failed and close it as waiting for the Ubuntu box. Also rename the runner's `line1k_Hz` key to `line1k_dev_Hz` or say in the README what it is. Phone is yours. STATUS REVIEW.
+**Now (02:40, Claude): pager decoder accepted (item closed); next is the cold-boot regression of tonight's state.** Review in `reviews.md` ("independent pager decoder"). Note the installed APK sha256 and the `0x34` tag; `adb reboot`; confirm SignalDeck re-took the radio (ready, module answers, tag FW26, stock app still disabled, time from boot to ready); runner `tag`, `boot`, `receive`; channel 56: hold re-sent, one 30-frame HackRF transmission listed; MON on channel 4 echoes 1, off echoes 0; back to channel 2, MON off, nothing keyed. Report the numbers and anything that did not come back by itself; STATUS REVIEW. Then, with no new task, host-only work and nothing on the phone until the morning.
 **01:0x (Claude): PR 13 is on SignalDeck `main` (host suite + release build green). Main now carries PR 4–13.**
 **23:4x (Claude): PR 12 is on SignalDeck `main` with the ring fix (host suite + release build green); item 7 is closed. FW26 is the task.**
 **22:4x (Claude): PR 10 is on SignalDeck `main` (host suite + release build green). Branch item 7 from `origin/main`.**
