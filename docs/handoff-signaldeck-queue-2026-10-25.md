@@ -175,3 +175,9 @@ with no tester IDs. On the owner's Armor, the report must not change except for 
   (planner's `MAX_NAME` moved there), web reads `nameMax` from `/api/channel`, counters in both editors, `fitName` on
   save, help section Channels → Channel names. Release build OK, host tests 289 / 0 failed (new `ChannelNameTest`).
   Owed: phone editor and web editor checks on the device.
+- 2026-10-25 20:20, item 4: branch `claude/report-gaps`, **draft PR #8**. `190e0ffb` commits the W6 plan unchanged.
+  `a3868046` is the **privacy row**: `AgoldFrames` blanks the own ID, call number and key of logged Agold channel
+  frames, and the bodies of texts and caller info (`##`, with their checksums). It also adds the stock app's module
+  answers to the summary. Checked on the host over both Agold tester reports (outside the repo): 3 lines blanked in each,
+  and 6 module answers with the version. That commit can be cherry-picked alone. Host tests 293 / 0 failed. The other
+  rows follow on the same branch.
