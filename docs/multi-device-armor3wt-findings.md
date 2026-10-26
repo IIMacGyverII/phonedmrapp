@@ -112,5 +112,13 @@ What SignalDeck would need on this phone (not started):
     intercom APK's `assets`/`res/raw`); (2) SignalDeck's Radio firmware files list on the phone (folders + stock APK);
     (3) a stock-app update that ships one; (4) reading the module itself only if its firmware has a read command (the
     Armor 26 stock image has none) or over the module's SWD pads (hardware, not for a tester).
+  - 2026-10-26, route (1) done: Ulefone's stock ROM `2020111910_s62v71c2k_gq_wteea` (MT6771; owner download, kept
+    private) has **no DMR module image**. `system.img` holds `/system/data/mcu/` (the same six images, same hashes) and no
+    `/system/data/dmr/`; `system/app/Intercom/Intercom.apk` carries only sounds; `vendor.img` only the `agolddaemon` HAL.
+    `extmodule` (69,104 bytes) reads the update file only from `/storage/self/primary/intercom/dmr/`; its DMR path is
+    stop, PTT, enter update mode, then `Ymodem_Transmit` (send only). `update_dmr_firmware_read` is the thread that reads
+    the module's replies during an update, not a flash read. So the image exists only in the module and with Ulefone;
+    on stock firmware no command reads it back (as on the Armor 26). Remaining routes: ask Ulefone support for the
+    module update file, or a phone whose `/sdcard/intercom/dmr/` was ever given one.
 - For the frequency question: the app's log line after saving a channel below 136 MHz (`parseCmd strCmd:7E 96 69 01 35 …`
   or `… 36 …`); body `00` = accepted, anything else = refused.
