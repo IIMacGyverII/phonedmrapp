@@ -3040,6 +3040,31 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## FW27 capture re-arm (2026-10-26, 13:02)
+
+Image sha256 `9ea5365ca31e0aada446127290a460a128b89206a943cbda53129b52c4f9ded5`, 378620 bytes, tag `DMR003.FW27.V022`. Loaded 12:52:41. Boot peak 0.043 dB, nothing above +10 dB, clip fraction 0. A later regression boot was peak 0.059 dB, clip 0. Channel 2, 467.625 MHz, power byte 1, monitor off, not keyed, except the regression tone below. HackRF transmit 467.625 MHz, 2 MS/s, VGA 20, amp off, 2.5 kHz deviation. The tone file's magnitude is constant. Goertzel is the 1000 Hz bin at 8000 Hz.
+
+The stream stores `WORK_MODE` `0x80` with the same `movi` / `st.w` as op 5 at file `0x5B096`, remembers `FM_ADDR_SW`, and copies on the next flip. The copy is still switch 1 → `0x160004E0`. The start body is `[17, 1, period]` with period 1, 2, 4 or 8. Op 5's reply is still 514 bytes: samples 0..511, sequence at 512, half id at 513.
+
+Each 10 s capture has a quiet run of about 48 halves (1.5 s) a few halves after the line appears, then the line returns through the rest of the tone. It is in every period, and the transmitted file has no matching dip.
+
+| Period | Halves in the file | Host at stop | Loud span | Loud halves in the span | Quiet run | Residue median 1 kHz amplitude |
+|---:|---:|---|---|---:|---|---|
+| 1 | 361 | 337 halves, 10.8 s, 84 missed | 37..333 | 248 of 297 | 45..92 | even 11990, odd 11986 |
+| 2 | 364 | 339 halves, 10.8 s, 83 missed | 40..335 | 248 of 296 | 46..93 | 11986, 11984 |
+| 4 | 362 | 336 halves, 10.8 s, 83 missed | 37..334 | 250 of 298 | 44..91 | 12005, 11983, 11984, 11984 |
+| 8 | 422 | 394 halves, 12.6 s, 20 missed | 37..391 | 297 of 355 | 49..101 | 11988, 11986, 11986, 11991, 11986, 11986, 11988, 11988 |
+
+A store every half does not drop the alternate half. Every residue class at period 8 is the line. The host's miss count on the 10 s runs did not remove audio time: the saved halves still arrive one per 32 ms. The 45 s run below counted 0.
+
+45 s, period 8, same tone. The host reported 1631 halves, 52.2 s, 0 missed. The file has 1663 halves. All eight residue medians are 11988 or 11989. The stream was still sending after the 30 s fallback window.
+
+The stop frame is consumed and not executed. `[16, 0]` then did not change the baud: the version read at 57600 failed and mode 5 off got no answer. `restartmodule` brought `DMR003.FW27.V022` back each time. Channel 2 was applied again.
+
+Regression `bench.py --arm all`. Boot passed, peak 0.059 dB. The tone step stopped the run: carrier 16.0 s, clip 0, p99 22389 Hz, the 1 kHz slice 25 Hz. Stream, receive and heat were not run. The VFO was turned off afterwards.
+
+End state: channel 2, 467.625 MHz, monitor off, not transmitting, VFO off, UART back at 57600 after the last restart, HackRF idle. The host on the phone asks for period 8.
+
 ## FW27 op 16 versus op 17 (2026-10-26, 12:30)
 
 (A) and (B) used the image whose copy matches live op 5, sha256 `1d83e5bf9b6685e191b5084cc92ec04a9ccb3cdbf424960f7ff69444688bc489`. The register frame used sha256 `ab7a809d83521d64bbffd2a42c10e983d7de90a74452ee80e9525197aa0f4d20`, 378620 bytes, loaded 12:24:37 (`fwload ok`), boot peak 0.055 dB, nothing above +10 dB, clip fraction 0. Channel 2, 467.625 MHz, power byte 1, monitor off, not keyed. HackRF transmit 467.625 MHz, 2 MS/s, VGA 20, amp off, 2.5 kHz deviation, dummy burst first. Goertzel is the 1000 Hz bin at 8000 Hz.

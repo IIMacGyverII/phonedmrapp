@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -185,6 +185,8 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+Storing `WORK_MODE` `0x80` before the flip puts the 1 kHz line in the stream. A store every 8 halves keeps every residue class (median about 11990). A 45 s stream at that period reported 0 misses and lasted 52.2 s. The regression tone stopped the runner at p99 22389 Hz, so stream, receive and heat were not run. End state: `DMR003.FW27.V022`, channel 2, 467.625 MHz, monitor off, VFO off, not transmitting, HackRF idle.
 
 Op 16 leaves the 1 kHz line in place. Op 17's first half is noise while `WORK_MODE` is `0x80` and `FM_BANDWIDTH` is `0x0F`. The send was not moved into the main loop. End state: `DMR003.FW27.V022`, channel 2, mode 5 off, UART 57600, not keyed, HackRF idle.
 

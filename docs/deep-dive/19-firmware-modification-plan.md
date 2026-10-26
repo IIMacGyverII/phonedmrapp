@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (13:02) — Storing `WORK_MODE` re-arms the capture.** A store every 1, 2, 4 and 8 halves keeps the 1 kHz line in every residue class (median about 11990). Period 8 is the one the host asks for. A 45 s stream at that period reported 0 misses and ran 52 s. The regression tone stopped the runner at p99 22389 Hz. Tables: `radio_firmware/results.md`.
+
 **2026-10-26 (12:30) — Op 16 keeps the line. The stream's first half is noise with mode 5 still set.** After op 16 at 230400, op 5's two halves are 1 kHz amplitude 23510 and 23529. Mode 5 then op 17 at 57600 saved no samples during the tone. On image `ab7a809d…4d20` the first stream frame carries `WORK_MODE` `0x80`, `FM_BANDWIDTH` `0x0F`, and 0 at `0x3A81C`, and half 0 is amplitude 396. The send was not moved. Tables: `radio_firmware/results.md`.
 
 **2026-10-26 (12:05) — The saved stream has no 1 kHz line in half 0.** Goertzel amplitude at 1000 Hz on the 11:49 capture: half 0 is 286 (rms 3096), half 1 is 583, half 32 is 292. The strongest half in the file is 867. The predicted rise-and-decay is not there, so the send was not moved into the main loop. Tables: `radio_firmware/results.md`.
