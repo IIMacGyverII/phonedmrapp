@@ -237,7 +237,8 @@ if __name__ == "__main__":
     _, _, _, ok56, lsf_bytes = score(-ref56, "equalise-first, sign -", taps)
     if not ok56:
         _, _, _, ok56, lsf_bytes = score(ref56, "equalise-first, sign +", taps)
-    for name in ("stream-1552.s16", "stream-1636.s16"):
+    names = sys.argv[2:] if len(sys.argv) > 2 else ["stream-1552.s16", "stream-1636.s16"]
+    for name in names:
         raw = loud(load(name))
         print(name + ":")
         for sign, lab in ((1.0, "+"), (-1.0, "-")):
