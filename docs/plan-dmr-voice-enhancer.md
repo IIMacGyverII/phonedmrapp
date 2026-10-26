@@ -66,17 +66,13 @@ Pairs of (clean speech, what the radio's receiver delivers). Two radios in the c
 3. Receive: radio B records the decoded PCM (the REC path). Alignment by cross-correlating the chirp; trim; store
    the pair with the clip id. Reject pairs whose chirp is not found or whose length is off.
 4. Repeat on an analog narrow-FM channel for the FM set (same clips, same loop).
-   **Who has to run SignalDeck (owner question, 2026-10-26):** only the receiver, and it should be the Armor,
-   because the model learns the receiving phone's audio path and the Armor is where the model will run. The
-   module firmware is not involved: DMR voice runs on the stock image. The transmitter needs neither SignalDeck
-   nor a supported phone; it only has to encode the clip and key up. Preferred transmitter: **the BTECH 6X2 with
-   a wired audio input** (line-level clip through an attenuating cable into its accessory jack, PTT keyed through
-   the jack by a relay or a USB-serial line): a clean electrical injection at full speed, and a DVSI AMBE+2
-   encoder, which is the second encoder the generality section asks for and a second Armor could not provide.
-   Second choice: the hotspot parrot below with one Armor. The unsupported phones on order are not useful here
-   (stock apps transmit only from the microphone and expose no raw receive audio); a second supported phone is
-   only needed later for a per-model receive table.
-
+   **Owner decision (2026-10-26): two phones running SignalDeck**, both driven over adb (clip upload, keying,
+   recording download), both on their **stock module firmware**: DMR voice needs nothing from the bench images,
+   and SignalDeck's inject path and raw receive recording work on stock. The second phone is one of the models
+   arriving this week; it is first made compatible (device profile, checks, tests), and this project starts once
+   it is ready. The receiver of the pairs is the phone the model will run on (the Armor first; a second receive
+   path from the other model later gives a per-model table). Optional later: the BTECH 6X2 with a wired audio input
+   as a transmitter, for a second (DVSI) encoder in the data.
    **Hotspot variant (owner question, 2026-10-26):** the MMDVM hotspot has no vocoder, so it can be neither end of
    a pair (it moves AMBE frames between RF and the network and never makes PCM). It can be the middle: radio A
    transmits the clip, the hotspot echoes it back through a parrot (BrandMeister TG 9990, or a local echo if the
@@ -163,7 +159,8 @@ audio-path knowledge is per phone model. To make the model as universal as the d
 
 ## 6. Order and ownership
 Host work is Claude's; the bench loop runs under a phone lease like any other bench task. Starts after the
-hotspot rows (item 5), the receive-RAM stream (R-C) and the promiscuous checks (item 10). Phase 0 can be done
+hotspot rows (item 5), the receive-RAM stream (R-C), the promiscuous checks (item 10) and the second phone's
+compatibility work. Phase 0 can be done
 any idle hour since it touches nothing on the bench.
 
 ## Phase 0 results
