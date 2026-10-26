@@ -91,6 +91,31 @@ Which device the HAL moves this PCM over (a second USB interface, an ALSA device
 - No USB device list (`/sys/bus/usb/devices/*/{idVendor,idProduct,product,interface}`) and no vendor HAL binaries or
   `lshal` output; for this phone the HAL `@1.0-service` binary and `lshal | grep agui` are what is missing.
 
+## Firmware files from the phone (2026-10-26)
+
+The owner sent the phone's `/vendor/data` radio folders (private, `temp/Atom_XL_firmware.zip`; the images are the
+phone maker's and stay out of every repository). The two device reports inside are the 2026-10-24 ones already here.
+
+| File | Size | SHA-256 | What it is |
+|---|---|---|---|
+| `vendor/data/DMR/dmr/DMR006.U4A.V076.bin` | 358 100 | `4f5f287b…4d40fe` | DMR module image, version string `DMR006.U4A.V076` at `+0x33410` |
+| `vendor/data/mcu/20190904034623.bin` | 54 465 | `c431f3b9…ba57aa` | USB bridge MCU |
+| `vendor/data/mcu/20200423161457.bin` | 54 443 | `e95e0126…30ba7a` | USB bridge MCU |
+| `vendor/data/mcu/20200508134341.bin` | 54 552 | `4eaea392…7c1d42` | USB bridge MCU |
+| `vendor/data/mcu/20200812110328.bin` | 54 725 | `3b4090ee…de0aa7` | USB bridge MCU |
+| `vendor/data/mcu/20201016161541.bin` | 55 011 | `76063054…d60abb` | USB bridge MCU |
+
+- **The module image is the same family as the Armor's.** Its first 64 bytes are identical to
+  `DMR003.UV4T.V022`'s (C-SKY V2 start-up code), and `tools/fw-port/find_symbols.py` (run read-only) puts it on the
+  same XIP base `0x0301A000`. It finds the time-out timer idiom (struct at `0x38AF8`, Armor `0x38C64`) and the same
+  ~6 KiB zero run near the end (`+0x55ED2`), but **no command dispatch thunks and no identified handlers**, so the
+  thunk pattern from the Armor does not carry over as it is. That is firmware-side work (Grok), noted here only.
+- **It is not the version the phone runs.** The device report's `0x34` reply is `DMR006.U4A.V082`; this file is V076,
+  the copy the stock app keeps for its updater. A V082 copy would have to come from a newer stock app or ROM.
+- **The MCU images are ARM Cortex-M** (initial stack `0x20002D58`, reset vectors in `0x0800xxxx`: an STM32-class part
+  with ~11 KiB RAM). The names are build timestamps, 2019-09-04 to 2020-10-16; they are the USB bridge that presents
+  `/dev/ttyACM0` and wraps the Armor command set in the `7E 96 69` envelope, not the radio itself.
+
 ## To ask the Atom XL owner
 
 - `/vendor/bin/hw/vendor.mediatek.hardware.aguiextmodule@1.0-service` and the libraries it loads (for the PCM path),
