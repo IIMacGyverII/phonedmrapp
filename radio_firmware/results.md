@@ -3000,3 +3000,11 @@ The runner's tone JSON key is now `line1k_dev_Hz`. It is the deviation of the 1 
 ## End state
 
 The phone was not used. Channel 2, module `DMR003.FW26.V022`, HackRF idle, the same end state as the 01:19 runner. Nothing was keyed.
+
+## Cold-boot regression (2026-10-26, 02:42) — stopped at adb
+
+Before the reboot, at 02:42:15: installed APK sha256 `c54cf9ad6c0290985e98ce7eec14102cfc1bc7d80a8d73014f51e54fca86c088` (`1.0.0-beta.19`), `0x34` `DMR003.FW26.V022`, link ready, channel 2 at 467.625 MHz, monitor off, not transmitting, stock app disabled.
+
+`adb reboot` dropped the session within a second. From 02:43 through 02:50, `adb connect 192.168.1.125:5555` was refused (Windows error 10061). The address answered ping. `adb devices` stayed empty, `adb mdns services` listed nothing, and no USB device appeared. The runner's tag, boot and receive tests, the channel 56 listing, and the channel 4 MON check were not run. The HackRF was not started. Nothing was keyed.
+
+The same wait also rebuilt FW21 and FW22 on the host. Both match the images that were loaded: FW21 `f726056aa3e62db4399d45ee6cf5df4e29756083761c1651ce734d4c08d477ed`, FW22 `38f900a0df169c0101f9e6183fe8ec8d2e9cdca74169f034f5571b04aa988d6a`. The assembly is in `tools/fw-patch/stubs/`, and `test_repro.py` passed (5 tests) along with `test_patches.py` (48). No image was loaded.

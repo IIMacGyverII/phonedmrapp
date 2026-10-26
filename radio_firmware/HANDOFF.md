@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -157,7 +157,18 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-**Independent pager decoder, 02:23.** multimon-ng 1.6.2 decoded the saved pages: RIC 1000001, function 3, `N0CALL: LO` at 512 baud and `N0CALL: HI` at 1200 and 2400; the three-RIC page is `N0CALL: ABC` on 1000001, 1000002 and 1000003. Auto polarity locked normal; `-P inverted` printed no address. The phone was not keyed. The runner's tone key is now `line1k_dev_Hz`. Channel 2, FW26, HackRF idle.
+**Stuck — cold-boot regression, waiting for the phone to reappear on adb.**
+
+Step: cold-boot regression, sub-step 2 (`adb reboot`, then confirm SignalDeck re-took the radio). Sub-step 1 was done before the reboot.
+
+Last three tries:
+1. 02:42:15 `adb -s 192.168.1.125:5555 reboot`. Before it: APK sha256 `c54cf9ad6c0290985e98ce7eec14102cfc1bc7d80a8d73014f51e54fca86c088`, `0x34` `DMR003.FW26.V022`, link ready, channel 2 at 467.625 MHz, monitor off, not transmitting, stock app disabled, SignalDeck `1.0.0-beta.19`. adb dropped within 1 s.
+2. 02:43–02:46 `adb connect 192.168.1.125:5555`: connection refused (Windows 10061). State went from offline to device not found. The IP answered ping (TTL 64).
+3. 02:47:58 and 02:50:42, the same connect: still 10061. `adb devices` empty. `adb mdns services` empty. No USB device.
+
+Module before the reboot: tag `DMR003.FW26.V022`, channel 2, 467.625 MHz, low power, not keyed. After the reboot the tag cannot be read. Phone: SignalDeck was running and the stock app was disabled; battery and zones are not readable without adb; whether SignalDeck re-took the radio is unknown. HackRF idle, never started. Nothing was keyed.
+
+Question: wireless debugging on port 5555 did not come back, and there is no USB device to run `adb tcpip 5555`. Keep waiting on 5555, or is the cable the next step?
 
 ## Owner question
 
