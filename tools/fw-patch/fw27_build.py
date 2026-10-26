@@ -648,9 +648,12 @@ def build():
     img[BASE:end] = code
     tramp, tramp_end = link_tramp()
     img[TRAMP:tramp_end] = tramp
-    # Op 6 admits variants 3 and 4 only. These two compares are the reject.
-    img[0x52C8:0x52CC] = fw23_build.encode_bsr(0x52C8, TRAMP)
-    img[0x52A8:0x52AC] = fw23_build.encode_bsr(0x52A8, TRAMP + REST_OFF)
+    # The live op 6 handler is at file 0x5B240 (XIP 0x03075240). Apply rejects
+    # at 0x5B2C8 (cmpnei r1, 4; bt 0x5B308). Restore rejects at 0x5B2A8
+    # (cmpnei r1, 3; bt 0x5B308) after variant 4 has already taken its own body.
+    # File 0x52C8 is a different function; patching it does not admit variant 5.
+    img[0x5B2C8:0x5B2CC] = fw23_build.encode_bsr(0x5B2C8, TRAMP)
+    img[0x5B2A8:0x5B2AC] = fw23_build.encode_bsr(0x5B2A8, TRAMP + REST_OFF)
     dest = ROOT / "radio_firmware" / "build" / "DMR003.FW27.V022.bin"
     dest.write_bytes(img)
     import hashlib

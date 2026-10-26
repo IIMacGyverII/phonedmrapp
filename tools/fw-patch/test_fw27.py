@@ -41,8 +41,8 @@ class Fw27Test(unittest.TestCase):
             range(0x7C56, 0x7C5A),
             range(0x5B816, 0x5B81A),
             range(fw27_build.BASE, end),
-            range(0x52A8, 0x52AC),
-            range(0x52C8, 0x52CC),
+            range(0x5B2A8, 0x5B2AC),
+            range(0x5B2C8, 0x5B2CC),
             range(fw27_build.TRAMP, fw27_build.TRAMP_END),
         ]
         for i, (a, b) in enumerate(zip(self.old, self.new)):
@@ -68,8 +68,12 @@ class Fw27Test(unittest.TestCase):
         self.assertEqual(inner, 0x2B0C + XIP)
         reject = fw26_target(self.new, 0x5B816)
         self.assertEqual(reject, 0x5B876)
-        self.assertEqual(fw26_target(self.new, 0x52C8), fw27_build.TRAMP)
-        self.assertEqual(fw26_target(self.new, 0x52A8), fw27_build.TRAMP + fw27_build.REST_OFF)
+        self.assertEqual(self.old[0x5B2C8:0x5B2CC], bytes.fromhex("44391f08"))
+        self.assertEqual(self.old[0x5B2A8:0x5B2AC], bytes.fromhex("43392f08"))
+        self.assertEqual(fw26_target(self.new, 0x5B2C8), fw27_build.TRAMP)
+        self.assertEqual(fw26_target(self.new, 0x5B2A8), fw27_build.TRAMP + fw27_build.REST_OFF)
+        self.assertEqual(self.old[0x52A8:0x52AC], self.new[0x52A8:0x52AC])
+        self.assertEqual(self.old[0x52C8:0x52CC], self.new[0x52C8:0x52CC])
 
 
 def fw26_target(img, off, xip=False):
