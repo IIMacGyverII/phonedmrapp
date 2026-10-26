@@ -3040,6 +3040,16 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## FW27 stop path and the stream rate (2026-10-26, 15:25)
+
+Literal guard, host only. `tools/fw-patch/literal_guard.py` reads objdump's `lrw` lines. A load counts when the next instruction reads that register and the pool word is not zero, and the `04 00` sine-table pattern is not a load. FW22→FW23, FW23→FW24, FW24→FW25, FW25→FW26 and the shipped FW27 against FW26 have no such load. Painting `0x5BE60`–`0x5BEE0` on FW26 reports the key helper at `0x5BBE2` loading `0x5BEA0`.
+
+Stop path on image `e552549c…b2dc` (the shipped image plus an ack at the end of the stream loop). Boot peak 0.079 dB, clip 0. The stream was up at 230400. `[17, 0]` acked `sr=0` at 15:23:43.936. `0x34` at 230400 answered at 15:23:44.614, tag `DMR003.FW27.V022`. `[16, 0]` acked `sr=0` at 15:23:45.513. After the port reopened, `0x34` at 57600 answered at 15:23:45.524, and `[6, 5, 0]` acked `sr=0` at 15:23:45.573. No restart.
+
+A 1 kHz HackRF tone, 8 s, VGA 20, while the stream ran (the phone did not key). The saved audio is 10.432 s, 326 halves, 0 identical consecutive halves. Read as 8 kHz the tone is 987.25 Hz, so the capture clock is 8103 Hz and the half rate is 31.65 per second, against 31.25 from 8000/256. The file's half rms stays about 5500 from the first half; it does not show the earlier 1.5 s quiet run. The 45 s run and (c) were not repeated on this image.
+
+End state: `DMR003.FW27.V022`, channel 2, 467.625 MHz, not transmitting. `0x34` answers. HackRF idle.
+
 ## FW27 keys again (2026-10-26, 14:46)
 
 The old image (`9ea5365c…ded5`) hung inside the key, on a warm boot and after SRAM was lost. Opcode 14 cannot read `0x4B360` (it accepts only `0x18000000`–`0x1800FFFF`), so those words were not observed. The `0x34` after `0x26` down did not answer either time.

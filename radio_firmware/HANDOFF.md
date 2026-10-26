@@ -195,10 +195,10 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-FW27 hung because the stub overwrote the key helper's literal pool at 0x5BE60. The stub is split around that pool (sha256 152358b0…b4ad).
-0x26 down acked in 10 ms with status 3, and up acked with status 4.
-Runner all passed: tone carrier 10.565 s, p99 2541 Hz, line 2439 Hz, stream 1125/1125, boot silent.
-End state: DMR003.FW27.V022, channel 2, 467.625 MHz, monitor off, VFO off, not transmitting. HackRF idle.
+Literal guard is in: shipped FW23–FW27 do not cover an outside lrw; painting 0x5BE60 reports 0x5BBE2. Image e552549c…b2dc acks the frame that ends the stream.
+Stop path, 15:23: [17,0] sr=0, 0x34 at 230400, [16,0] sr=0, 0x34 at 57600, [6,5,0] sr=0. No restart.
+A 1 kHz tone in the stream is 987.25 Hz if read as 8 kHz, so 8103 Hz and 31.65 halves/s, 0 identical halves. The 45 s quiet run and (c) are not done.
+End state: DMR003.FW27.V022, channel 2, 467.625 MHz, not transmitting, 0x34 answers. HackRF idle.
 
 ## Owner question
 

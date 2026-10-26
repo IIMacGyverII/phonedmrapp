@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (15:25) — Stop path acks, and the stream clock is 8103 Hz.** A host guard flags an `lrw` whose literal a patch overwrites; the shipped FW23–FW27 images are clean, and painting the key pool is not. The stream loop now acks the frame that ends it. `[17, 0]` acked, `0x34` answered at 230400, `[16, 0]` acked, `0x34` answered at 57600, `[6, 5, 0]` acked. A 1 kHz tone in the stream reads as 987.25 Hz at an 8 kHz assumption (31.65 halves/s), with 0 identical consecutive halves. The 45 s quiet run and (c) are not repeated yet. Tables: `radio_firmware/results.md`.
+
 **2026-10-26 (14:46) — FW27 keys. The literal pool was the hang.** `0x5BBE2` loads from `0x5BE60`, and the old stub overwrote that pool, so `0x26` never returned. The stub is split around the pool (sha256 `152358b0…b4ad`). Down acked in 10 ms with status 3; up acked with status 4. Runner `all` passed, including a 10.565 s tone at p99 2541 Hz and 1125/1125 frames. A floor capture now says NO CARRIER. Tables: `radio_firmware/results.md`.
 
 **2026-10-26 (14:01) — FW27 does not answer the key.** Same HackRF, no power cycle. FW26: status 3 and 4, RMS −17.4 dBFS, line 2570 Hz. FW27: `0x26` sent and released 10.4 s later, no ack, no status 3 or 4, RMS −38.3 dBFS flat. FW26 again: line 2427 Hz, RMS −14.1 dBFS. The stub's RAM is in the gap after the tone queue. Tables: `radio_firmware/results.md`.

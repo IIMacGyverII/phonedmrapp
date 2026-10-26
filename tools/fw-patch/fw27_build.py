@@ -175,7 +175,7 @@ fw27_flow:
 	lrw	r0, 0x4b374
 	st.h	r4, (r0, 0)
 	/* Body byte 2 is the store period (1, 2, 4 or 8). Default 1. */
-	.short	0xE000, 0x0100
+	.short	0xE000, 0x11E0
 .Lspin:
 	movi	r0, 1
 	.short	0xE000, 0x18A4
@@ -220,6 +220,9 @@ fw27_flow:
 	st.w	r4, (r3, 0)
 	br	.Lnosw
 .Lend:
+	/* Ack the frame that ended the loop, still at 230400, then return
+	 * so the host's following rate command is dispatched normally. */
+	bsr	.Lack
 	lrw	r3, 0x4b378
 	ld.w	r15, (r3, 0)
 	jmp	r15
@@ -233,7 +236,7 @@ fw27_flow:
 	jmp	r15
 .Lnosw:
 	/* Store WORK_MODE, then the next flip, then the copy. In the wrap. */
-	.short	0xE000, 0x0200
+	.short	0xE000, 0x12E0
 	br	.Lspin
 .Lstop:
 	cmpnei	r4, 0
@@ -896,8 +899,8 @@ def build():
         found = hits[0]
         img[found:found + 4] = fw23_build.encode_bsr(found, target)
 
-    patch_token("00e00001", period_at)
-    patch_token("00e00002", half_at)
+    patch_token("00e0e011", period_at)
+    patch_token("00e0e012", half_at)
     patch_token("00e05bb1", send_at, WRAP, wrap_end)
     print("period", hex(period_at), "half", hex(half_at), "send", hex(send_at))
     # The live op 6 handler is at file 0x5B240 (XIP 0x03075240). Apply rejects
