@@ -72,6 +72,11 @@ class Fw27Test(unittest.TestCase):
         self.assertEqual(self.old[0x5B2A8:0x5B2AC], bytes.fromhex("43392f08"))
         self.assertEqual(fw26_target(self.new, 0x5B2C8), fw27_build.TRAMP)
         self.assertEqual(fw26_target(self.new, 0x5B2A8), fw27_build.TRAMP + fw27_build.REST_OFF)
+        # The trampoline's own calls must land inside the stub, not at 0x5CD6.
+        self.assertEqual(fw27_build.MODE5_AT, 0x5BCD6)
+        self.assertEqual(fw27_build.REST_AT, 0x5BD42)
+        self.assertEqual(fw26_target(self.new, 0x5C55A), fw27_build.MODE5_AT)
+        self.assertEqual(fw26_target(self.new, 0x5C570), fw27_build.REST_AT)
         self.assertEqual(self.old[0x52A8:0x52AC], self.new[0x52A8:0x52AC])
         self.assertEqual(self.old[0x52C8:0x52CC], self.new[0x52C8:0x52CC])
 

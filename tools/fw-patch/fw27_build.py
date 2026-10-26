@@ -551,8 +551,10 @@ def patch_calls(code):
 TRAMP = 0x5C54C
 TRAMP_END = TRAMP
 REST_OFF = 0
-MODE5_AT = 0x5CD6
-REST_AT = 0x5D42
+# Filled in by build() from the stub's own branches. The earlier constants
+# 0x5CD6 and 0x5D42 dropped the 0xB000 of the real file addresses.
+MODE5_AT = 0
+REST_AT = 0
 TRAMP_ASM = r"""
 	.text
 	.global	apply5
@@ -585,6 +587,21 @@ rest5:
 	.align	2
 	.literals
 """
+
+
+def mode_targets(code):
+    """File address of .Lmode5 and .Lrest, from the stub's own branches.
+
+    The gate's first bsr is .Lmode5. The bsr 0x5A bytes into that function
+    is .Lrest. Both are inside the stub, so a file-to-file branch reaches
+    them when the code runs at its XIP address.
+    """
+    mode5 = fw26_build.decode_bsr(BASE + 0xA, bytes(code[0xA:0xE]))
+    rest_at = mode5 + 0x5A
+    rest = fw26_build.decode_bsr(rest_at, bytes(code[rest_at - BASE:rest_at - BASE + 4]))
+    if not (BASE < mode5 < RECLAIM_END and BASE < rest < RECLAIM_END):
+        raise SystemExit("mode5 %X rest %X are outside the stub" % (mode5, rest))
+    return mode5, rest
 
 
 def link_tramp():
@@ -646,6 +663,8 @@ def build():
     # Opcode 13 falls into its body at 0x5B816. Send it to the sr=1 return.
     img[0x5B816:0x5B81A] = fw23_build.encode_bsr(0x5B816, 0x5B876)
     img[BASE:end] = code
+    global MODE5_AT, REST_AT
+    MODE5_AT, REST_AT = mode_targets(code)
     tramp, tramp_end = link_tramp()
     img[TRAMP:tramp_end] = tramp
     # The live op 6 handler is at file 0x5B240 (XIP 0x03075240). Apply rejects
