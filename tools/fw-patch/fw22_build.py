@@ -814,10 +814,19 @@ sine:
 """
 
 
+def require_committed_source(name):
+    """The file in stubs/ is the source the pinned image was built from."""
+    text = asm_source().replace("\r\n", "\n")
+    disk = (HERE / "stubs" / name).read_text(encoding="utf-8").replace("\r\n", "\n")
+    if disk != text:
+        raise SystemExit(name + " does not match asm_source()")
+    return text
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     src = OUT / "fw21_ext.S"
-    src.write_text(asm_source(), encoding="utf-8")
+    src.write_text(require_committed_source("fw22_ext.S"), encoding="utf-8", newline="\n")
     subprocess.check_call([str(AS), "-mcpu=ck803", "-o", str(OUT / "ext.o"), str(src)])
     subprocess.check_call([str(LD), "-Ttext=0x%X" % BASE, "-o", str(OUT / "ext.elf"), str(OUT / "ext.o")])
     code, addr = text_of((OUT / "ext.elf").read_bytes())
