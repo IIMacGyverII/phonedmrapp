@@ -1,0 +1,27 @@
+# What to record first. One row = one clip. Configure the SOURCE to match, key it
+# for the whole capture window, name the clip in column 1.
+#   source: BTECH = handheld (single slot, full CC/ID/TG control)
+#           HOTSPOT = AURSINC duplex (real 2-slot aligned stream; needs TS1+TS2 traffic)
+# proves: which promiscuous layer this clip exercises.
+name,source,cc,slot,src_id,dst_tg,calltype,proves
+cc1_tg9_s1,BTECH,1,1,<yourID>,9,group,baseline: in-list TG on channel CC -> must pass on stock
+cc1_tg100_s1,BTECH,1,1,<yourID>,100,group,TG filter: TG NOT in groups[] -> stock drops / promisc passes
+cc2_tg9_s1,BTECH,2,1,<yourID>,9,group,CC filter: wrong CC same TG -> stock drops / promisc(cc_opt) passes
+cc1_priv_self,BTECH,1,1,<yourID>,<radioID>,private,sanity: private to own ID always passes
+cc1_priv_other,BTECH,1,1,<yourID>,<otherID>,private,ID filter: private to a DIFFERENT id -> stock drops / promisc passes
+hs_cc1_ts1,HOTSPOT,1,1,<netID>,<tgA>,group,slot baseline: traffic on TS1
+hs_cc1_ts2,HOTSPOT,1,2,<netID>,<tgB>,group,slot filter: traffic on TS2 while channel = TS1 -> dual-slot test
+# --- other modes (same harness: capture once, replay against any firmware) ---
+# set DMR_FREQ to match; put the hotspot in the matching MMDVM mode.
+m17_438_a,HOTSPOT,-,-,<M17SRC>,<M17DST>,m17,M17 RX: independent source for SignalDeck 41-tap EQ + firmware RX route
+m17_438_b,HOTSPOT,-,-,<M17SRC2>,<M17DST2>,m17,M17 RX: second independent clip (different callsign/payload)
+pocsag_dapnet_2k5,HOTSPOT,-,-,-,<RIC>,pocsag,POCSAG RX at ~2.5 kHz dev: DFE+BCH shape generalisation
+pocsag_dapnet_4k5,HOTSPOT,-,-,-,<RIC>,pocsag,POCSAG RX at 4.5 kHz dev: limiter-compression question (deep dive)
+# --- digital-voice family RX research (held-path + equaliser, like M17) -------
+# question: does the AT1846S 0x58=0xBCFD flat-RX path (+ per-model EQ) open these
+# the way it opened M17? capture once from the hotspot, decode offline with dsd-fme
+# (metadata/IDs realistic; AMBE/IMBE voice needs the proprietary vocoder).
+ysf_438_dn,HOTSPOT,-,-,<src>,-,ysf,YSF/C4FM (Fusion) DN mode: 4FSK cousin of DMR/M17
+p25_438_p1,HOTSPOT,-,-,<src>,<tg>,p25,P25 Phase 1 (C4FM): 4-level FSK
+nxdn_438,HOTSPOT,-,-,<src>,-,nxdn,NXDN 4FSK (2.5/1.25 kHz)
+dstar_438,HOTSPOT,-,-,<mycall>,-,dstar,D-STAR GMSK 4.8 kbps (different modulation)
