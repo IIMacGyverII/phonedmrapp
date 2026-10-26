@@ -3040,6 +3040,58 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## FW27 stream response, eye, and the miss recount (2026-10-26, 16:37)
+
+Image `e552549c…b2dc`. HackRF at 467.625 MHz, VGA 20, 2.5 kHz deviation, 4 s per tone. The phone did not key. Amplitudes are the Hann-windowed FFT peak of a steady half-second, and the decibel column is relative to the 1000 Hz tone in that same capture.
+
+The stream, period 8, no carrier for the 3 s before the first tone: DC +5 counts, rms 55. A tone sits at rms about 8600 to 9000, so the idle stream is 44 dB down. Across 100 to 3500 Hz the stream amplitude stays within 0.5 dB of the 1000 Hz tone.
+
+| Hz | Stream | dB | Channel 56 | dB |
+|---:|---:|---:|---:|---:|
+| 100 | 5724 | −0.4 | 3640 | +1.2 |
+| 200 | 5756 | −0.4 | 3433 | +0.7 |
+| 300 | 5857 | −0.2 | 2631 | −1.6 |
+| 500 | 5860 | −0.2 | 1052 | −9.6 |
+| 700 | 5801 | −0.3 | 2066 | −3.7 |
+| 1000 | 5994 | 0 | 3173 | 0 |
+| 1500 | 5980 | 0.0 | 3729 | +1.4 |
+| 2000 | 5844 | −0.2 | 3912 | +1.8 |
+| 2500 | 5672 | −0.5 | 3933 | +1.9 |
+| 3000 | 5682 | −0.5 | 3904 | +1.8 |
+| 3500 | 5770 | −0.3 | 3857 | +1.7 |
+
+Channel 56 had the hold at `action=1 sr=0` for that clip. An earlier clip whose hold did not ack drew the same curve, including the 9.6 dB dip at 500 Hz. The stream does not have that dip.
+
+The saved plain-stream body (halves 213..258 of the 15:52 capture), after sync normalisation, 5704 symbols:
+
+| Level | Count | Mean | Std |
+|---:|---:|---:|---:|
+| −3 | 2376 | −3.00 | 0.43 |
+| −1 | 571 | −1.27 | 0.56 |
+| +1 | 1025 | +1.07 | 0.53 |
+| +3 | 1732 | +3.37 | 0.76 |
+
+`heldpath_eq.py --taps 20` on wavs cut from a later stream capture found no frame that matched its training pattern, so it wrote no taps. On the 15:52 body the transmitted frames correlate at 0.89 for one frame and about 0.43 for the rest, which is not a training set. A second copy of the same 30-frame file, captured at 16:36, decoded to 30 frames and 3 payload-exact, and the link-setup CRC failed. The 15:52 body remains 30 frames and 4 payload-exact. Channel 56's listing of that file is still 30 frames, 96 percent clean.
+
+The 13.3 s stop counted 415 halves. At 31.25 per second that interval holds 416. The 50.5 s stop counted 1579 halves, and 50.5 s holds 1578. A skipped sequence would have made the count short. Counted by the sequence byte alone the misses are 0, and the 18 and the 47 are the half-id rule. The saved files are the samples only, so there is no per-gap list.
+
+`ramstream` off at 16:27, process 13933:
+
+```
+16:27:10.842 TX cmd=0x40 rw=1 sr=1 len=2 [11 00]  <68 40 01 01 75 BC 00 02 11 00 10>
+16:27:11.843 ram stream stop: no answer
+16:27:11.845 TX cmd=0x40 rw=1 sr=1 len=2 [10 00]  <68 40 01 01 76 BC 00 02 10 00 10>
+16:27:11.858 ram stream rate 57600: sr=0
+16:27:11.861 UART /dev/ttyS0 open @ 57600 (stock serial library)
+16:27:11.866 TX cmd=0x34 rw=1 sr=1 len=1 [01]  <68 34 01 01 95 B9 00 01 01 10>
+16:27:14.892 ram stream: no version at 57600 after the switch back
+16:27:15.895 ram stream mode 5 off: no answer
+```
+
+`adb logcat -b crash -d` was empty. `/data/tombstones` has nothing from today. Process 20936 was still logging the first heat key at 16:02:09 and was gone by 16:03:23. No app change.
+
+End state: `DMR003.FW27.V022`, channel 2, 467.625 MHz, not transmitting. `0x34` answers. HackRF idle.
+
 ## FW27 stream clock, the quiet run, and the 30-frame compare (2026-10-26, 16:13)
 
 Image `e552549c…b2dc`, tag `DMR003.FW27.V022`. Channel 2 at 467.625 MHz except the channel-56 pass. The phone did not key during any HackRF transmission. VGA 20, 2 MS/s, 2.5 kHz deviation for the tone. Period 8.

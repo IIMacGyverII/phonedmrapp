@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (16:37) — The stream is flat, and the audio path is not.** From 100 to 3500 Hz the stream stays within 0.5 dB. Channel 56, hold on, is 9.6 dB down at 500 Hz and rises toward 2.5 kHz. Idle stream DC is +5 and rms is 55. The symbol eye is centred near ±1 and ±3 with a wide +3 cloud. A 41-tap fit did not train: the frames do not match the transmitted symbols closely enough. Sequence-only misses on the 13.3 s and 50.5 s runs are 0. Tables: `radio_firmware/results.md`.
+
 **2026-10-26 (16:13) — The stream clock is 8000 Hz, and the 1.5 s hole is gone.** A 1 kHz tone already on the air reads as 1000.00 Hz, so 31.250 halves/s, with 0 identical halves. The miss counter added 18 in 13.3 s and 47 in 50.5 s; the amplitude stays flat from the first half. The plain stream listed 30 frames, 46 percent clean. Channel 56 with mode 5 off listed 30 frames, 96 percent clean, at −87 dBm. Runner `all` passed: tone 10.539 s at p99 2532 Hz, stream 1125/1125. Tables: `radio_firmware/results.md`.
 
 **2026-10-26 (15:25) — Stop path acks, and the stream clock is 8103 Hz.** A host guard flags an `lrw` whose literal a patch overwrites; the shipped FW23–FW27 images are clean, and painting the key pool is not. The stream loop now acks the frame that ends it. `[17, 0]` acked, `0x34` answered at 230400, `[16, 0]` acked, `0x34` answered at 57600, `[6, 5, 0]` acked. A 1 kHz tone in the stream reads as 987.25 Hz at an 8 kHz assumption (31.65 halves/s), with 0 identical consecutive halves. The 45 s quiet run and (c) are not repeated yet. Tables: `radio_firmware/results.md`.
