@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -152,7 +152,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-**Item 6 host part, 20:20.** SignalDeck PR https://github.com/IIMacGyverII/SignalDeck/pull/9 (`grok/m17-channel`, `3a7ccb49` rebased onto `28517806`, plus `58c30c69` so the web editor keeps type 2). Host suite green, including `M17ChannelTest`. No device pass: the radio was not keyed and the HackRF was not used. The PR's release APK was installed with `adb install -r` at 20:18 (versionCode 118); `0x34` was still `DMR003.FW25.V022` at 20:18:43 and the channel was not changed. Device pass waits.
+**Item 6 device pass, 21:14.** PR 9 is `1cad336b` (CAN in bits 10:7, squelch held open, backup row the same width as the header). Web Talk key 10.367 s, body p99 2883.7 Hz, link-setup CRC, type `0x0385`, 249/249 Golay 0, EOT. Receive at −95 dBm listed 30/30; at −100 dBm the live count was 26/30. The −97 dBm clips are 30/30 payload-exact. Backup restore kept type, CAN, destination, band 1 and squelch 0. End: channel 2, that build installed 21:07, module FW25, HackRF idle.
 
 ## Owner question
 

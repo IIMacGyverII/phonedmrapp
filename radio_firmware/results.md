@@ -2804,3 +2804,42 @@ Receiver, phone not keyed, back on channel 2. Idle `0x32` raw 21 (−109.5 dBm).
 Host only. SignalDeck branch `grok/m17-channel`, pull request https://github.com/IIMacGyverII/SignalDeck/pull/9. Commit `3a7ccb49` is the channel type rebased onto `origin/main` `28517806`. Commit `58c30c69` keeps type 2, the destination and the channel access number in the web save, and shows those fields in the web editor. `testReleaseUnitTest --offline` passed, including `M17ChannelTest` (destination cleaning, the CAN in the voice type word, the backup type cell, and the web save).
 
 The release APK of that branch was installed with `adb install -r` at 20:18 (versionCode 118, no uninstall). The app logged `module DMR003.FW25.V022` at 20:18:43. No channel was written after that install. No transmission. The HackRF was not started. The device pass (create the channel, a reception on the intercom, a 10 s key, the web intercom) has not been run.
+
+# Item 6 device pass (2026-10-25, 21:14)
+
+SignalDeck PR https://github.com/IIMacGyverII/SignalDeck/pull/9, branch `grok/m17-channel`, tip `1cad336b`. The review fixes (CAN in TYPE bits 10:7, squelch held open, decoded voice only) are `3a69f373`. `1cad336b` fixes the backup row. Release installed with `adb install -r` at 21:07:37 (versionCode 118, versionName 1.0.0-beta.19, no uninstall). Module stayed `DMR003.FW25.V022`. `M17ChannelTest` passed on the host before that install.
+
+## Channel
+
+Channel 56, name Bench M17, type 2, 467.625 MHz both ways, power 0, colour code 7, destination the bench callsign, squelch 0, band 1. Selecting it at 20:47:53 wrote `0x23` body `28 64 DF 1B 28 64 DF 1B 01 00 00 00 00 00 00 02 08 02 02`: both frequencies 467625000, wide (`01`), low power (`00`), squelch `00`. The voice-filter hold followed, `data hold action=1 sr=0`. After the 21:07 install, selecting it again left `/api/m17` running with the fixed-tap calibration (the module holding the voice filter open). The idle intercom line for that channel is the destination and CAN 7.
+
+## Receive
+
+HackRF at 467.625 MHz, amp off, 2 MS/s, scale 80. A dummy burst first. The first files were time-compressed into one second (the interpolator’s source axis was a fraction of the buffer, not seconds) and the phone did not list them. The corrected file has a 1.6 s unmodulated lead, 30 stream frames, CAN 7 (type `0x0385`), bench callsign to bench callsign, and a 0.5 s carrier tail. Checked on the host before it was sent: lead p99 0 Hz, body p99 3165 Hz.
+
+| When | VGA | Meter during the symbols | Intercom |
+|---|---|---|---|
+| 21:10:41 | 10 | −97 dBm | 30 frames, 30 clean, both ends the bench callsign |
+| 21:10:50 | 8 | −97 dBm | 20 frames, 19 clean, both ends the bench callsign |
+| 21:13:56 | 16 | −95 dBm | 30 frames, 30 clean, both ends the bench callsign |
+| 21:14:03 | 5 | −100 dBm | 26 frames, 26 clean, both ends the bench callsign |
+
+A carrier sweep the same minutes read VGA 5 at −100, VGA 8 at −98, VGA 10 at −96, VGA 11 at −94, VGA 16 at −95, VGA 22 at −87. Several other steps read the noise floor because the sample missed the carrier. The asked −93 and −99 were not the readings; the modulated passes landed at −95 and −100.
+
+The two −97 clips, scored with the app’s own `HeldPath.decode` and the Armor taps, skipping the first second of open-squelch hiss: link-setup CRC, type `0x0385`, destination and source the bench callsign, 30 of 30 payload-exact, end bit set. The same clips from sample 0 lock a false sync in the hiss and decode nothing. The live count at VGA 8 (20) and at −100 dBm (26 of 30, 87 %) is below the 95 % bar. The −95 dBm pass is 30 of 30 on the intercom; that one was not clip-scored.
+
+## Transmit
+
+One 10 s web intercom key (`/api/ptt`) on channel 56, capture `item6_talk.iq` closed 20:54:36 (16 s, 2.4 MS/s, tuner 467.385 MHz, LNA 8, VGA 8). Carrier 10.367 s, clip fraction 0, SNR 44.7 dB, offset 1105.2 Hz, body p99 2883.7 Hz, slice p99 max 3169.5 Hz, no 5 kHz stop. Battery 40.2 °C before and after; the AP zones were not in that sensor read. The log counted 249 voice frames and a last op 7. Decoded from the keyed slice, positive polarity: link-setup CRC, type `0x0385`, destination the bench callsign, 249 of 249 stream frames at Golay 0, frame numbers 0–248 with no gaps, the end bit on 248, EOT-pattern correlation 1.000 eight milliseconds after the last frame. The source is the station record and is not written here. The on-screen round key was not pressed; it calls the same `RadioService.ptt` method, which calls `m17Voice` for an M17 channel.
+
+Stock firmware was not loaded. `txInhibited()` is true for an M17 channel when `0x34` is not a stub tag, and the history line in that case is the receive-only warning. FW25’s tag is a stub tag, so after the version query `txInhibited` was false and the key was sent. A “TX blocked on a receive-only channel” line from before that query is not the stock-firmware path.
+
+## Backup
+
+Export `20261025_210240` (the build before `1cad336b`) wrote 39 fields against a 40-column header. The M17 tone cells were one comma short, so the power cell landed in Squelch and the destination landed in SoftSQLevel. Restore kept type 2, band 1, CAN 7 and squelch 0, set the destination to everyone, and set power to 1.
+
+`1cad336b` adds the missing comma. `m17ToneCells` plus the power cell is 11 columns, which `M17ChannelTest` checks. Export `20261025_210824` after the 21:07 install: 40 fields, type M17, bandwidth 25, colour code 7, squelch Disabled, power P1, destination the bench callsign. Restore read back type 2, band 1, CAN 7, squelch 0, destination the bench callsign, power 0.
+
+## End state
+
+Channel 2 (467.625 MHz FM). This build is installed (21:07:37). Module `DMR003.FW25.V022`. HackRF idle. Nothing keyed at the end. No factory image loaded.

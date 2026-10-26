@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-25 — Item 6 device pass.** M17 channel 56 on FW25: wide FM, squelch 0, hold accepted. One 10 s web Talk key, body p99 2883.7 Hz, link-setup CRC, type `0x0385`, 249/249 Golay 0, end bit and EOT. Receive at −95 dBm listed 30/30; at −100 dBm the live count was 26/30. Two −97 dBm clips are 30/30 payload-exact on the held-path decoder. Backup restore keeps type, CAN, destination, band 1 and squelch 0 after the row-width fix (`1cad336b`). Channel 2, that build installed. Tables: `radio_firmware/results.md`.
+
 **2026-10-25 — FW25, the vocoder buffer is not what the phone hears in FM.** A 500 Hz then 2 kHz square at ±8192 was written at `0x180000A0` and was still there afterwards. Irq 27's flag stayed 0 (count 0). The phone clip stayed near 320 Hz at −15.7 dBFS. The flag word is not another buffer address. Decision (c) is final. The 1125-frame stream was 1125/1125. Tables: `radio_firmware/results.md`.
 
 **2026-10-25 — FW24, opcode 13 does not reach the phone.** The DMR-channel playback was digital silence (−88 dBFS). The analog playback with `STANDBY_LO` bit 31 already clear was open-squelch noise at −13.7 dBFS and no chirp. The review then asked for FW25 before calling (c) final. The 1125-frame stream on the image that stayed loaded was 1125/1125. Tables: `radio_firmware/results.md`.
