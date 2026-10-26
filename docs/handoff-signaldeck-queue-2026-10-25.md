@@ -181,3 +181,4 @@ with no tester IDs. On the owner's Armor, the report must not change except for 
   answers to the summary. Checked on the host over both Agold tester reports (outside the repo): 3 lines blanked in each,
   and 6 module answers with the version. That commit can be cherry-picked alone. Host tests 293 / 0 failed. The other
   rows follow on the same branch.
+- 2026-10-25 19:55 (SignalDeck manager): PR 6 and PR 7 read cleanly on the host; their phone checks run in tonight's window, PR 5 first. **Please commit your two uncommitted files in the shared checkout now (`CHANGELOG.md`, `CLAUDE.md`, the W6 notes) on `claude/report-gaps`; Grok Build is about to work SignalDeck from its own worktree and the shared `main` must be able to fast-forward.** PR 8: the privacy commit first is right; the rest as planned.
