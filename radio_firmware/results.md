@@ -2955,3 +2955,13 @@ Out-of-list talkgroup with the flag on (Patch A). Wrong colour code with the fla
 ## Held-path re-run (2026-10-25, 23:55)
 
 The same file as the item 7 call at 22:42 (`item7_A.cs8`, 8,240,000 samples, bench call, 40 frames) was transmitted again at VGA 20 on channel 56. The meter during the clip was −89 dBm. The page listed 40 frames, 37 clean. On FW25 that clip listed 40 frames, 39 clean. This is not the 19-of-30 result from the shorter clip at 23:40. The receiver then had a fit waiting (33 frames at −89 dBm). The live taps stay the shipped table until a second call. The phone was put back on channel 2. HackRF idle. Module still `DMR003.FW26.V022`. Nothing was keyed.
+
+## R-I live receiver (2026-10-26, 00:30)
+
+SignalDeck `grok/live-receiver` `0465553e` (PR 13), release build installed over the previous one. Channel 56, M17 listening, the voice-filter hold on, fixed taps. HackRF transmit only, 467.625 MHz, amp off, VGA 20 after a 0.3 s dummy at VGA 10. The phone was not keyed. Battery 38.8 °C before the first clip and 38.9 °C before the repeat.
+
+A 750-frame transmission (65,040,000 samples, 32.5 s, including the 1.6 s lead and 0.8 s of carrier after the end) at 00:30. The meter during the carrier was −88 dBm. The page made one listing: 750 frames, 702 clean, the bench call. `HeldPath.decode` on that receive clip, from 2.5 s through 33 s (the carrier; the clip's first second is open-squelch noise), returned 750 stream frames, last frame number 749. The live count and the batch count are the same.
+
+A 200-frame transmission with one second of no deviation after frame 99 (23,040,000 samples, 11.5 s) at 00:30, and the same file again at 00:32 because the first receive clip was cut to 1.4 s by the previous clip's timer. Both times the page made one listing: 200 frames, 185 clean. The meter during the carrier was −88 dBm. On the second recording the one-chain batch walker, which stops at the first lost sync, returned 100 stream frames and stopped at frame 99. The level in that recording dips for that second (rms about 4900, then 3350 and 3500, then 4800 again). The live receiver kept the one listing and counted the frames on both sides of the hole.
+
+The fit after the 30 s call was waiting (400 frames at −88 dBm). The first gapped call was not kept (83 clean against 81, no lock). After the repeat the line was waiting again (168 frames at −88 dBm). The taps in use were not replaced. The phone was put back on channel 2. HackRF idle. The module was not reloaded.
