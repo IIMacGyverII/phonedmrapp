@@ -22,28 +22,33 @@ rows, the receive-RAM stream and the promiscuous checks are done.
 
 ## 2. Compute: what GPU we need
 
-**None to buy.** This machine has an AMD Radeon RX 7900 XTX (24 GB), a Ryzen 9 9950X3D and 64 GB RAM.
+**None to buy.** Three cards are available (owner, 2026-10-26), in the order to use them:
 
-- The models in scope (FARGAN-class synthesizers, DeepFilterNet-class enhancers, 1–10 M parameters, trained on
-  tens of hours of speech) train on one consumer GPU in hours to a few days. 24 GB of VRAM is more than enough;
-  12 GB would have been.
-- AMD ships official PyTorch wheels for Windows on this card (ROCm 7.2 line, gfx1100 supported, PyTorch 2.9).
-  No WSL and no Linux boot needed, which matches the owner's no-WSL rule.
-- Risk: the ROCm Windows stack is newer than CUDA. Some training scripts assume CUDA-only ops. Phase 0 is a
-  one-hour smoke test (install the AMD wheel, train a toy network, measure a conv/GRU step time) before any data
-  collection. Fallback if the stack fights us: rent an NVIDIA box for the training runs (RTX 4090 / A5000 class
-  at well under a dollar an hour; a whole project is tens of hours), keep data collection and evaluation here.
-- Phone inference is not GPU work: the Armor's CPU runs models of this size in real time (the Opus/FARGAN C
-  inference path is written for exactly that; DeepFilterNet runs on phones).
+1. **NVIDIA RTX PRO 6000 Blackwell (96 GB).** The training machine. CUDA, so every training script and the
+   Opus/FARGAN tooling run as written, no stack risk; 96 GB lets us train the wide (16 kHz) and adversarial
+   variants with large batches and keep several experiments resident. Models in scope (FARGAN-class synthesizers,
+   DeepFilterNet-class enhancers, 1–10 M parameters, tens of hours of speech) train on it in hours.
+2. **RTX 4090 laptop (16 GB, CUDA).** Enough for every model in this plan on its own; the fallback or a second
+   experiment lane while the big card runs the main one.
+3. **Radeon RX 7900 XTX (24 GB) in this bench PC.** Usable through AMD's official PyTorch-on-Windows wheels
+   (ROCm 7.2 line, gfx1100), but the ROCm Windows stack is younger than CUDA and some scripts assume CUDA-only
+   ops. Keep it for data preparation, evaluation and inference export, not for the training runs.
+
+Where the data and the runs live: data collection happens on this bench PC (it owns the radios and adb); the
+dataset is synced to the training machine (tens of GB at most); checkpoints and the exported C weights come back
+here for the phone build. If the Blackwell card is in another machine, training runs over SSH like the cage box.
+
+Phone inference is not GPU work: the Armor's CPU runs models of this size in real time (the Opus/FARGAN C
+inference path is written for exactly that; DeepFilterNet runs on phones).
 
 ## 3. Phases
 
 ### Phase 0: compute check (host only, one hour)
-1. Install AMD's PyTorch-on-Windows wheel for ROCm 7.2.x; confirm `torch.cuda.is_available()` (ROCm presents as
-   CUDA) and the device name.
+1. On the RTX PRO 6000 machine: a current PyTorch CUDA build; confirm the device name and memory.
 2. Train a toy 1-D conv + GRU model on random data for 100 steps; record step time at batch 32 × 1 s of 16 kHz
-   audio. Anything under ~100 ms a step is fine.
-3. Write the numbers and the wheel version at the bottom of this file.
+   audio. Anything under ~100 ms a step is fine (it will be far under on this card).
+3. Confirm the path for moving the dataset there and the checkpoints back (SSH/rsync or a shared folder).
+4. Write the numbers and the PyTorch version at the bottom of this file.
 
 ### Phase 1: data collection (bench, automated, needs the second phone)
 Pairs of (clean speech, what the radio's receiver delivers). Two radios in the cage, both on SignalDeck.
@@ -94,7 +99,7 @@ Pairs of (clean speech, what the radio's receiver delivers). Two radios in the c
   other phone models get their own data runs later, the same loop.
 - Speaker and language coverage of the corpus limit generalisation; use a varied corpus and hold out speakers.
 - Bit errors at weak signal produce artefacts the clean-vocoded set does not cover; phase 1 step 7 addresses it.
-- ROCm on Windows may stall a specific training script; the rental fallback is cheap.
+- Training on the CUDA cards removes the ROCm risk; the 7900 XTX stays on preparation and evaluation.
 - No training on the owner's voice or on recorded on-air traffic (consent and privacy); corpus only.
 
 ## 5. Order and ownership
