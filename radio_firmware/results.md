@@ -3046,6 +3046,8 @@ Image sha256 `72737f824be61f30f4c58a24602b0a002fa4e4ffddaf07efa20e2da99ca7fcff`,
 
 Bench (a), channel 2, not keyed. `[16, 1]` ack `sr=0` at 57600 at 10:32:21.062. At 230400, `0x34` answered `DMR003.FW27.V022` (10:32:21.235). No host frame until 10:32:56.290. `0x34` at 57600 answered the same tag. `[16, 1]` again, `sr=0`, and `0x34` at 230400 answered. The update knock then returned `00 00`, not `C`. Power cycle at 10:32:58, `0x34` true, tag unchanged. The sequence byte stays the slot, 0 through 5: the existing send uses that byte as the buffer slot, so a free-running 0..255 counter is not free. HackRF was not started.
 
+Section 4 (b) did not start. At 10:36:11 `[6, 5, 1]` returned `sr=1` with an empty body in 4 ms, and the stream log never opened. At 10:38:11 `[6, 4, 1]` returned `sr=0`. At 10:38:12 `[6, 5, 0]` returned `sr=1` in 5 ms. Mode 4 was turned off at 10:40:48 (`sr=0`). M17 receive is off. The HackRF did not transmit.
+
 ## FW27 loaded, rate switch silent (2026-10-26, 10:06)
 
 Image `DMR003.FW27.V022`, 378620 bytes, sha256 `400c7cc84edbaecde2f3c9d24bc479c00f64c4ff6d29d3e213ba041db010fd70`. YModem `fwload ok` at 10:04:03, 137788 ms. `0x34` after the load and again after a power cycle: `DMR003.FW27.V022`. The file length is unchanged. Opcode 13 branches to the `sr=1` return. Opcodes 12 and 14 are the FW26 bytes. The free tail from `0x5C54C` is still zero. The stub is 736 bytes at `0x5BCA4`, ending `0x5BF84`.

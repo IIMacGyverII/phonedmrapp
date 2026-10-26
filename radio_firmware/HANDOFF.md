@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -166,7 +166,14 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-Bench (a) passes on `DMR003.FW27.V022` (sha256 `72737f82…7fcff`). `[16, 1]` acked at 57600, `0x34` answered that tag at 230400, and again at 57600 after 35 s with no host frame. The knock at 230400 returned `00 00`, not `C`. The sequence byte stays 0..5, because that byte is also the buffer slot. End state: channel 2, monitor off, not keyed, tag unchanged, HackRF idle.
+Bench (a) passed (`20b9b38a`). Section 4 (b) did not start: mode 5 is rejected.
+
+**Stuck — op 6 mode 5 returns sr=1.**
+
+- Step: section 4 (b), start the stream. Mode 5, then op 16, then op 17.
+- Tried: (1) `[6, 5, 1]` at 10:36:11, reply `sr=1` len 0 in 4 ms. The stream did not start. (2) `[6, 4, 1]` at 10:38:11, `sr=0` (the old handler). (3) `[6, 5, 0]` at 10:38:12, `sr=1` len 0 in 5 ms. Mode 4 was then turned off (`sr=0`). M17 receive is off. The stream is not running.
+- State: module `DMR003.FW27.V022`, channel 2, 467.625 MHz, not keyed, monitor off, UART at 57600. Phone: SignalDeck running, USB. HackRF idle, it did not transmit.
+- Question: the handler reads the action at frame offset 10 and takes the reject path for both 0 and 1. Mode 4 with the same three-byte body is accepted by the old handler. Is the action byte somewhere else, or is the reject the AT1846 write failing?
 
 ## Owner question
 
