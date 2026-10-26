@@ -157,6 +157,15 @@ fw27_gate:
 	ld.w	r1, (r3, 0xc)
 	bclri	r1, 7
 	st.w	r1, (r3, 0xc)
+	movi	r1, 0
+	st.w	r1, (r3, 0x4)
+	ld.w	r1, (r3, 0xc)
+	ori	r1, r1, 3
+	st.w	r1, (r3, 0xc)
+	movi	r1, 103
+	st.w	r1, (r3, 0x8)
+	movi	r1, 5
+	st.w	r1, (r3, 0x4)
 	jmp	r15
 
 .Lrate:
@@ -165,6 +174,8 @@ fw27_gate:
 	cmpnei	r4, 0
 	bt	.Lr1
 	bsr	.Lack
+	movi	r0, 20
+	.short	0xE000, 0x18A4
 	.short	0xE000, 0x5DEC
 	movi	r5, 0
 	br	.Lflag
@@ -172,6 +183,8 @@ fw27_gate:
 	cmpnei	r4, 1
 	bt	.Lbad
 	bsr	.Lack
+	movi	r0, 20
+	.short	0xE000, 0x18A4
 	bsr	.Ldiv
 	movi	r5, 1
 .Lflag:
