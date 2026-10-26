@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (11:25) — FW27 stream is not the 1 kHz line.** Mode 5 returns `sr=0`. A 10 s tone produced 346 halves in 11.1 s with 1 missed and rms 3099, and the samples are not a sine (lag-1 correlation 0.21). The speaker is silent while mode 5 is on. With mode 5 off the same tone is rms 7142, peak 1129 Hz. Section 4 (c) and (d) were not run. Tables: `radio_firmware/results.md`.
+
 **2026-10-26 (10:40) — FW27 mode 5 is rejected.** `[6, 5, 1]` and `[6, 5, 0]` return `sr=1` in about 5 ms. `[6, 4, 1]` returns `sr=0`. The 1 kHz stream was not started. Mode 4 was turned back off. Tables: `radio_firmware/results.md`.
 
 **2026-10-26 (10:32) — FW27 bench (a) passes.** The divisor write waits until the UART is idle and checks DLAB with a read-back. `0x34` answered `DMR003.FW27.V022` at 230400, again at 57600 after 35 s of silence, and the knock at 230400 was not accepted (`00 00`). Tag after the power cycle is unchanged. The sequence byte stays 0..5. Tables: `radio_firmware/results.md`.

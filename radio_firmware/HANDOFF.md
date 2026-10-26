@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -166,14 +166,14 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-Bench (a) passed (`20b9b38a`). Section 4 (b) did not start: mode 5 is rejected.
+Mode 5 is accepted. The 10 s stream runs at the half rate and the slot counts, but the samples are not the 1 kHz line. The speaker is silent while mode 5 is on. Section 4 (c) and (d) were not run.
 
-**Stuck — op 6 mode 5 returns sr=1.**
+**Stuck — the stream is not the 1 kHz line.**
 
-- Step: section 4 (b), start the stream. Mode 5, then op 16, then op 17.
-- Tried: (1) `[6, 5, 1]` at 10:36:11, reply `sr=1` len 0 in 4 ms. The stream did not start. (2) `[6, 4, 1]` at 10:38:11, `sr=0` (the old handler). (3) `[6, 5, 0]` at 10:38:12, `sr=1` len 0 in 5 ms. Mode 4 was then turned off (`sr=0`). M17 receive is off. The stream is not running.
-- State: module `DMR003.FW27.V022`, channel 2, 467.625 MHz, not keyed, monitor off, UART at 57600. Phone: SignalDeck running, USB. HackRF idle, it did not transmit.
-- Question: the handler reads the action at frame offset 10 and takes the reject path for both 0 and 1. Mode 4 with the same three-byte body is accepted by the old handler. Is the action byte somewhere else, or is the reject the AT1846 write failing?
+- Step: section 4 (b), the 10 s HackRF tone at 467.625 MHz, VGA 20, amp off, 2.5 kHz deviation. Mode 5, op 16, op 17.
+- Tried: (1) The live op 6 compares are at file `0x5B2C8` and `0x5B2A8`. After that image, `[6, 7, 1]` is `sr=1` and `[6, 5, 1]` / `[6, 5, 0]` / `[6, 4, 1]` / `[6, 4, 0]` are `sr=0` (11:20:44–11:20:47). (2) sendh clobbers r5, so every half carried sequence 0 (317 halves, 1580 missed). Storing the next slot first: 333 halves, 1 missed, samples still uncorrelated. (3) Copy the half `FM_ADDR_SW` is not pointing at, as op 5 does (`1` → `0x160006E0`, `2` → `0x160004E0`). 11:25:29: 346 halves (11.1 s), 1 missed, rms 3099, lag-1 correlation 0.21, no line. The phone clip during that stream is silent (rms 1). With mode 5 off, the same tone on the speaker is rms 7142, peak 1129 Hz.
+- State: module `DMR003.FW27.V022`, sha256 `2b0d249c24809de0a0a87b5e641f3c917f7758ed807d928760b18e1fbe6a52be`, channel 2, 467.625 MHz, power byte 1, not keyed, monitor off, mode 5 off, UART 57600. Boot of this image peaked at 0.073 dB. Phone: SignalDeck running, USB. HackRF idle.
+- Question: the half rate and the slot are right, and the samples are not the line op 5 saw in this register state. Should the next image return the first half's raw bytes plus the `WORK_MODE`, `FM_BANDWIDTH` and `FM_ADDR_SW` it copied under, or should the copy wait for part of the 32 ms so the half is stable?
 
 ## Owner question
 

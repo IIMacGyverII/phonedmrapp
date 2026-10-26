@@ -3040,6 +3040,16 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## FW27 stream, section 4 (b) (2026-10-26, 11:25)
+
+Image sha256 `2b0d249c24809de0a0a87b5e641f3c917f7758ed807d928760b18e1fbe6a52be`, 378620 bytes. Loaded 11:25:00, `fwload ok`, tag `DMR003.FW27.V022`. Boot capture peak 0.073 dB, nothing above +10 dB, clip fraction 0. Channel 2, 467.625 MHz, power byte 1, monitor off, not keyed.
+
+The op 6 handler at file `0x5B240` rejects variant 5 before the FW27 gate. The compares at `0x5B2C8` (apply) and `0x5B2A8` (restore) branch to a trampoline at `0x5C54C`. Variant 5 calls the existing mode-5 apply at `0x5BCD6` and the restore at `0x5BD42`. Variants 3 and 4 return to the old bodies. At 11:20:44–11:20:47: `[6, 7, 1]` `sr=1`; `[6, 5, 1]`, `[6, 5, 0]`, `[6, 4, 1]` and `[6, 4, 0]` all `sr=0`. Mode 4 and mode 5 were left off.
+
+Op 5's reply, which op 17 sends, is unchanged: body length 514, big-endian samples at 0..511, sequence at 512 (the slot, 0..5), half id at 513 (0 = `0x160004E0`, 1 = `0x160006E0`). sendh clobbers r5, so a counter updated after the call stayed 0 and every half carried sequence 0 (317 halves, 1580 missed). The next slot is stored before the call. The half sent is the one `FM_ADDR_SW` is not pointing at (`1` copies `0x160006E0`, `2` copies `0x160004E0`).
+
+The 10 s tone, HackRF 467.625 MHz, VGA 20, amp off, deviation 2.5 kHz, dummy burst first. 11:25:29: 346 halves (11.1 s), 1 missed, 88576 samples, rms 3099. One half in the middle has lag-1 correlation 0.21. There is no 1 kHz line. The phone clip recorded during the stream is silent (rms 1). With mode 5 off, the same tone on the speaker path is rms 7142, peak 1129 Hz. Stop `[17, 0]` does not ack. The following rate command also got no answer, the version read at 57600 failed, and `[6, 5, 0]` then returned `sr=0`. The 45 s stream, section 4 (c) and (d) were not run.
+
 ## FW27 rate switch, bench (a) (2026-10-26, 10:32)
 
 Image sha256 `72737f824be61f30f4c58a24602b0a002fa4e4ffddaf07efa20e2da99ca7fcff`, 378620 bytes, stub 1008 bytes ending `0x5C094`. Loaded 10:32:13, `fwload ok`, tag `DMR003.FW27.V022`. Op 16 waits until USR bit 0 is clear and LSR bit 6 is set, sets DLAB only after a read-back, writes the divisor from the boot clock word at `0x32F90` (shifted right 4, divided by 57600 or by 230400), clears DLAB with a read-back, and restores the IER it read first. The same path is the 57600 fallback. 230400 is four times 57600, so its quotient is the boot divisor divided by 4.
