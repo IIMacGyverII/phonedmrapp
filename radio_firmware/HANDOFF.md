@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -157,7 +157,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-**Bench runner, 01:19.** `all` on `DMR003.FW26.V022` passed boot (0.07 dB, silent), a 10.5 s tone (p99 2551 Hz), the stream 1125/1125 (p99 2908 Hz), the 1 kHz receive line, and a 45 s key with no heat stop. A separate 30 s key raised `mtktsAP` 1.0 °C. Five runner defects fixed first. Channel 2, FW26 not reloaded, HackRF idle.
+**Receive RAM, 01:41.** A 1 kHz tone at −89 dBm is 1000.00 Hz on the phone audio (rms 5971) and is not in the FM RAM (op 5 rms about 10; opcode 14 cannot read that address). At 57600 a half takes 89 ms for 32 ms of audio. Route closed on this image; no new stub. Channel 2, hold restored, FW26, HackRF idle.
 
 ## Owner question
 

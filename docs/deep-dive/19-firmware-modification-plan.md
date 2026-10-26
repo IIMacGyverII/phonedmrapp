@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (01:41) — Receive-RAM stream closed on FW26.** A 1 kHz tone at −89 dBm is 1000.00 Hz on the phone audio and is absent from op 5's RAM (rms about 10). Opcode 14 cannot read `0x160004E0`. At 57600 a half takes 89 ms and covers 32 ms, so a continuous dump would drop most halves. No new stub. Tables: `radio_firmware/results.md`.
+
 **2026-10-26 (01:19) — Bench runner accepted on FW26.** `bench.py all` passed boot, tone, the 1125-frame stream, receive and heat. A 30 s low-power key raised `mtktsAP` 1.0 °C. Tables: `tools/fw-bench/results/DMR003.FW26.V022/` and `radio_firmware/results.md`.
 
 **2026-10-26 (00:30) — R-I live receiver.** A 30 s HackRF transmission was one listing of 750 frames, the same count `HeldPath.decode` got on that recording. A transmission with a one-second gap was one listing of 200 frames. SignalDeck PR 13, `0465553e`. Tables: `radio_firmware/results.md`.
