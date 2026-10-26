@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (17:12) — A 300 Hz tone hits the same deviation ceiling.** The 0.5–4.0 kHz sweep with a 300 Hz tone matches the 1 kHz-tone curve: both are 1.58 times the 0.5 kHz amplitude by 1.0 kHz, and both sit near 6000 counts from 2.4 kHz up. `FM_BANDWIDTH` bit 1 is the 12.5/25 kHz receive select, reset to 25 kHz. The curves say the ceiling is not that filter, and the stub cannot hold the read-modify-write, so variant 6 was not loaded. Tables: `radio_firmware/results.md`.
+
 **2026-10-26 (17:05) — At 1 kHz deviation the stream is flat, and 40 percent deviation decodes 21 of 30.** The 100 Hz–3.5 kHz sweep at 1.0 kHz deviation stays within 0.2 dB to 2.5 kHz. Channel 56 still dips 9.6 dB at 500 Hz. The 30-frame file scores 21, 8, 4 and 3 payload-exact frames at 40, 60, 80 and 100 percent deviation. The receive coefficient is `FM_DEV_COEF` bits 15:8, reset `0x10`; the same word holds the transmit limiter, and the stub has no room for a read-modify-write, so variant 6 was not loaded. Tables: `radio_firmware/results.md`.
 
 **2026-10-26 (16:53) — Carrier offset does not move the stream mean, and deviation flattens by 2.4 kHz.** A ±1000 Hz move of the HackRF centre leaves the steady mean near +7 counts. A 1 kHz tone's amplitude leaves the straight line by 1 kHz of deviation and sits at about 6030 counts from 2.4 kHz to 4.0 kHz. The two stream captures and a channel-56 recording are in `tools/m17-research/captures/fw27-stream/`. The stop frame is `68 40 01 01 75 BC 00 02 11 00 10`, sent with no wait after the last half. Tables: `radio_firmware/results.md`.

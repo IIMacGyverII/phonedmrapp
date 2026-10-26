@@ -197,7 +197,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-At 1 kHz deviation the stream stays within 0.2 dB from 100 Hz to 2.5 kHz; channel 56 is still −9.6 dB at 500 Hz. The 30-frame file scores 21, 8, 4 and 3 payload-exact frames at 40, 60, 80 and 100 percent deviation. Receive scale is FM_DEV_COEF bits 15:8, reset 0x10; the word also holds the transmit limiter, and the stub cannot hold a read-modify-write, so variant 6 was not loaded.
+A 300 Hz tone follows the same deviation curve as the 1 kHz tone: both leave the straight line by 1 kHz and sit near 6000 counts from 2.4 kHz up. FM_BANDWIDTH bit 1 is the 12.5/25 kHz receive select, reset to 25 kHz. The curves say the ceiling is not that filter, so variant 6 was not loaded.
 End state: DMR003.FW27.V022, channel 2, 467.625 MHz, not transmitting, 0x34 answers. HackRF idle.
 
 ## Owner question

@@ -3040,6 +3040,27 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## FW27 deviation sweep with a 300 Hz tone (2026-10-26, 17:12)
+
+Image `e552549c…b2dc`. The same deviation steps as the 1 kHz-tone sweep, now with a 300 Hz tone, HackRF VGA 20, centre 467.625 MHz, phone not keyed. Amplitude is the Hann-windowed peak of a steady half-second. The 1 kHz-tone column is the earlier sweep.
+
+| Deviation kHz | 300 Hz tone | 1 kHz tone |
+|---:|---:|---:|
+| 0.5 | 2805 | 2774 |
+| 1.0 | 4439 | 4377 |
+| 1.5 | 5543 | 5445 |
+| 2.0 | 5801 | 5888 |
+| 2.4 | 5852 | 5980 |
+| 3.0 | 5888 | 6017 |
+| 3.5 | 5994 | 6034 |
+| 4.0 | 5970 | 6032 |
+
+The two curves match. A straight line through the 0.5 kHz point is about 5610 counts per kHz, which would be about 13 500 at 2.4 kHz. Both tones are already at 1.58 times the 0.5 kHz amplitude by 1.0 kHz, and both sit near 6000 counts from 2.4 kHz up. A channel filter that passed 300 Hz and cut 1 kHz would have kept the 300 Hz curve straighter. It did not.
+
+`FM_BANDWIDTH` at `0x11000500`, hardware reset. Bit 1 `fmbandwidth_r` reset 1 is the receive bandwidth, 0 for 12.5 kHz and 1 for 25 kHz. Bit 0 is the CTCSS receive bandwidth. Bits 2, 3 and 4 are transmit (adjacent-channel filter, transmit bandwidth, pre-emphasis). A receive-only change is bit 1. The stub still has 4 bytes free, which is not a read-modify-write, and the two curves already say the ceiling is not that filter, so op 6 variant 6 was not built.
+
+End state: `DMR003.FW27.V022`, channel 2, 467.625 MHz, not transmitting. `0x34` answers. HackRF idle.
+
 ## FW27 sweep at 1 kHz deviation, and the reduced-deviation file (2026-10-26, 17:05)
 
 Image `e552549c…b2dc`. HackRF VGA 20, 467.625 MHz, phone not keyed. The 1 kHz-deviation sweep uses the same tones as the 2.5 kHz sweep. Amplitude is the Hann-windowed peak of a steady half-second. Decibels are relative to 1000 Hz in that capture. The stream's no-carrier second is DC +4.1, rms 54.
