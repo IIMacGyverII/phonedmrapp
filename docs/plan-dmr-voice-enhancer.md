@@ -24,11 +24,13 @@ rows, the receive-RAM stream and the promiscuous checks are done.
 
 **None to buy.** Three cards are available (owner, 2026-10-26), in the order to use them:
 
-1. **NVIDIA RTX PRO 6000 Blackwell (96 GB).** The training machine. CUDA, so every training script and the
-   Opus/FARGAN tooling run as written, no stack risk; 96 GB lets us train the wide (16 kHz) and adversarial
+1. **NVIDIA RTX PRO 6000 Blackwell (96 GB), in a separate Windows box.** The training machine. CUDA on Windows
+   is a first-class PyTorch target, so it stays on Windows (owner prefers it; Ubuntu not needed). Every training
+   script and the Opus/FARGAN tooling run as written, no stack risk; 96 GB lets us train the wide (16 kHz) and adversarial
    variants with large batches and keep several experiments resident. Models in scope (FARGAN-class synthesizers,
    DeepFilterNet-class enhancers, 1–10 M parameters, tens of hours of speech) train on it in hours.
-2. **RTX 4090 laptop (16 GB, CUDA).** Enough for every model in this plan on its own; the fallback or a second
+2. **RTX 4090 laptop (16 GB, CUDA), boots Ubuntu.** Enough for every model in this plan on its own, and the
+   natural place for any Linux-only tooling; the fallback or a second
    experiment lane while the big card runs the main one.
 3. **Radeon RX 7900 XTX (24 GB) in this bench PC.** Usable through AMD's official PyTorch-on-Windows wheels
    (ROCm 7.2 line, gfx1100), but the ROCm Windows stack is younger than CUDA and some scripts assume CUDA-only
@@ -52,9 +54,13 @@ inference path is written for exactly that; DeepFilterNet runs on phones).
 
 ### Phase 1: data collection (bench, automated, needs the second phone)
 Pairs of (clean speech, what the radio's receiver delivers). Two radios in the cage, both on SignalDeck.
-1. Corpus: a free, licensed read-speech corpus with varied speakers (LibriSpeech or VCTK; no owner recordings in
-   the training set, nothing identifiable). Pre-process to 8 kHz for the transmit side; keep the 16 kHz original
-   as the wide target.
+1. Corpus: real recorded speech, not synthesized. Free, licensed corpora with many real speakers: LibriSpeech
+   (~1000 h, ~2400 speakers, CC BY 4.0), VCTK (110 speakers, several accents, CC BY 4.0), Common Voice (CC0, many
+   accents and microphones). We only pass 10–20 h of it through the radios (the bench runs at real time), chosen
+   to spread speakers, sexes and accents. No text-to-speech for the training set: TTS output is too clean and too
+   regular in prosody and would teach the model a few synthetic voices instead of real speech; at most it is an
+   augmentation later. No owner recordings, nothing identifiable. Pre-process to 8 kHz for the transmit side; keep
+   the 16 kHz original as the wide target.
 2. Transmit: radio A injects the clean 8 kHz clip into its transmit path on a DMR simplex channel at low power
    (the inject path SignalDeck already has for test tones and SSTV), led by a sync chirp and a silence gap.
 3. Receive: radio B records the decoded PCM (the REC path). Alignment by cross-correlating the chirp; trim; store
