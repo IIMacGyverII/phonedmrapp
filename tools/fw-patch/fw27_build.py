@@ -5,7 +5,9 @@
 # copy a half itself: it calls op 5's send at file 0x5B1B4, which checksums
 # and sends the 514-byte body. The 512-byte move is the same ld.b loop,
 # inlined only because that loop falls into op 5's half counter and does
-# not return.
+# not return. Before a group of halves it stores WORK_MODE 0x80 the way
+# op 5 does at file 0x5B096, then waits for the next FM_ADDR_SW flip.
+# The start body's third byte is the group length: 1, 2, 4 or 8.
 #
 # Op 5 reply body, unchanged, and what a stream frame is:
 #   body[0..511]  512 big-endian sample bytes, first sample at body[0]
@@ -47,6 +49,7 @@ ASM = r"""
 	.text
 	.global	fw27_gate
 	.global	fw27_pend
+	.global	fw27_send
 fw27_gate:
 	cmpnei	r3, 6
 	bt	.Lnot6
@@ -341,7 +344,7 @@ fw27_gate:
 
 /* One half, then back. r5 is the slot. r2 is the half id.
  * The frame pointer is at (r14, 0) on entry. sendh reads it at (r14, 24). */
-.Lsend:
+fw27_send:
 	lrw	r3, 0x4b37c
 	st.w	r15, (r3, 0)
 	lrw	r0, 0x4a400
@@ -391,6 +394,8 @@ fw27_gate:
 	movi	r4, 0
 	lrw	r0, 0x4b374
 	st.h	r4, (r0, 0)
+	/* Body byte 2 is the store period (1, 2, 4 or 8). Default 1. */
+	.short	0xE000, 0x0100
 .Lspin:
 	movi	r0, 1
 	.short	0xE000, 0x18A4
@@ -447,35 +452,8 @@ fw27_gate:
 	ld.w	r15, (r3, 0)
 	jmp	r15
 .Lnosw:
-	lrw	r0, 0x1100056c
-	ld.w	r0, (r0, 0)
-	andi	r0, r0, 3
-	lrw	r1, 0x4b375
-	ld.b	r3, (r1, 0)
-	cmpne	r0, r3
-	bf	.Lspin
-	/* Same source as op 5 at 0x5B110: switch 1 is 0x160004E0. */
-	cmpnei	r0, 1
-	bt	.Lid
-	movi	r2, 0
-	br	.Lok
-.Lid:
-	cmpnei	r0, 2
-	bt	.Lspin
-	movi	r2, 1
-.Lok:
-	st.b	r0, (r1, 0)
-	/* sendh clobbers r1 and r5. Store the next slot before the call. */
-	lrw	r1, 0x4b374
-	ld.b	r5, (r1, 0)
-	mov	r4, r5
-	addi	r4, 1
-	cmpnei	r4, 6
-	bt	.Lsv
-	movi	r4, 0
-.Lsv:
-	st.b	r4, (r1, 0)
-	bsr	.Lsend
+	/* Store WORK_MODE, then the next flip, then the copy. In the wrap. */
+	.short	0xE000, 0x0200
 	br	.Lspin
 .Lstop:
 	cmpnei	r4, 0
@@ -688,6 +666,103 @@ regsend:
 	addi	r1, 23
 	.short	0xE000, 0xE87D
 	jmp	r7
+
+	.global	period_init
+	.global	halfstep
+/* r7 is the command frame. Body length at bytes 6..7. Body[2] at byte 10
+ * is the store period. 1, 2, 4 and 8 are accepted. Anything else is 1.
+ * The countdown at 0x4B373 starts at 0 so the first pass stores. */
+period_init:
+	movi	r4, 1
+	ld.b	r0, (r7, 6)
+	cmpnei	r0, 0
+	bt	.Pset
+	ld.b	r0, (r7, 7)
+	cmphsi	r0, 3
+	bf	.Pset
+	ld.b	r0, (r7, 10)
+	cmpnei	r0, 2
+	bt	.P4
+	movi	r4, 2
+	br	.Pset
+.P4:
+	cmpnei	r0, 4
+	bt	.P8
+	movi	r4, 4
+	br	.Pset
+.P8:
+	cmpnei	r0, 8
+	bt	.Pset
+	movi	r4, 8
+.Pset:
+	lrw	r0, 0x4b372
+	st.b	r4, (r0, 0)
+	movi	r4, 0
+	st.b	r4, (r0, 1)
+	jmp	r15
+
+/* One pass of the stream loop. No push: r14 is the frame pointer fw27_send
+ * reads. Countdown 0 stores WORK_MODE 0x80, the same movi/st.w as op 5 at
+ * 0x5B096, and remembers the pointer so the copy waits for the next flip.
+ * Switch 1 copies 0x160004E0. The next slot is stored before the send. */
+halfstep:
+	lrw	r3, 0x4b360
+	st.w	r15, (r3, 0)
+	lrw	r3, 0x4b373
+	ld.b	r4, (r3, 0)
+	cmpnei	r4, 0
+	bt	.Hwait
+	lrw	r6, 0x11000100
+	movi	r0, 128
+	st.w	r0, (r6, 0)
+	lrw	r6, 0x4b372
+	ld.b	r0, (r6, 0)
+	st.b	r0, (r3, 0)
+	lrw	r6, 0x1100056c
+	ld.w	r0, (r6, 0)
+	andi	r0, r0, 3
+	lrw	r1, 0x4b375
+	st.b	r0, (r1, 0)
+	br	.Hret
+.Hwait:
+	lrw	r6, 0x1100056c
+	ld.w	r0, (r6, 0)
+	andi	r0, r0, 3
+	lrw	r1, 0x4b375
+	ld.b	r3, (r1, 0)
+	cmpne	r0, r3
+	bf	.Hret
+	cmpnei	r0, 1
+	bt	.Hid
+	movi	r2, 0
+	br	.Hok
+.Hid:
+	cmpnei	r0, 2
+	bt	.Hret
+	movi	r2, 1
+.Hok:
+	st.b	r0, (r1, 0)
+	lrw	r3, 0x4b373
+	ld.b	r4, (r3, 0)
+	cmpnei	r4, 0
+	bf	.Hslot
+	subi	r4, 1
+	st.b	r4, (r3, 0)
+.Hslot:
+	lrw	r1, 0x4b374
+	ld.b	r5, (r1, 0)
+	mov	r4, r5
+	addi	r4, 1
+	cmpnei	r4, 6
+	bt	.Hsv
+	movi	r4, 0
+.Hsv:
+	st.b	r4, (r1, 0)
+	.short	0xE000, 0xB15B
+.Hret:
+	lrw	r3, 0x4b360
+	ld.w	r15, (r3, 0)
+	jmp	r15
 	.align	2
 	.literals
 """
@@ -759,12 +834,17 @@ def build():
         raise SystemExit("stub mentions PTT")
     names = subprocess.check_output([str(NM), str(OUT / "fw27.elf")], text=True)
     pend_at = None
+    send_at = None
     for line in names.splitlines():
         parts = line.split()
-        if len(parts) >= 3 and parts[2] == "fw27_pend":
+        if len(parts) < 3:
+            continue
+        if parts[2] == "fw27_pend":
             pend_at = int(parts[0], 16)
-    if pend_at is None:
-        raise SystemExit("no fw27_pend")
+        elif parts[2] == "fw27_send":
+            send_at = int(parts[0], 16)
+    if pend_at is None or send_at is None:
+        raise SystemExit("no fw27_pend or fw27_send")
     fw26 = (ROOT / "radio_firmware" / "build" / "DMR003.FW26.V022.bin").read_bytes()
     img = bytearray(fw26)
     img[0x38464:0x38474] = b"DMR003.FW27.V022"
@@ -784,6 +864,30 @@ def build():
     for off in range(BASE, end - 3):
         if fw26_build.decode_bsr(off, bytes(img[off:off + 4])) == SENDH:
             img[off:off + 4] = fw23_build.encode_bsr(off, WRAP)
+    wnames = subprocess.check_output([str(NM), str(OUT / "fw27_wrap.elf")], text=True)
+    period_at = half_at = None
+    for line in wnames.splitlines():
+        parts = line.split()
+        if len(parts) < 3:
+            continue
+        if parts[2] == "period_init":
+            period_at = int(parts[0], 16)
+        elif parts[2] == "halfstep":
+            half_at = int(parts[0], 16)
+    if period_at is None or half_at is None:
+        raise SystemExit("wrap is missing period_init or halfstep")
+
+    def patch_token(token, target, start, stop):
+        raw = bytes.fromhex(token)
+        found = img.find(raw, start, stop)
+        if found < 0 or img.find(raw, found + 1, stop) >= 0:
+            raise SystemExit("token %s at %s" % (token, found))
+        img[found:found + 4] = fw23_build.encode_bsr(found, target)
+
+    patch_token("00e00001", period_at, BASE, end)
+    patch_token("00e00002", half_at, BASE, end)
+    patch_token("00e05bb1", send_at, WRAP, wrap_end)
+    print("period", hex(period_at), "half", hex(half_at), "send", hex(send_at))
     # The live op 6 handler is at file 0x5B240 (XIP 0x03075240). Apply rejects
     # at 0x5B2C8 (cmpnei r1, 4; bt 0x5B308). Restore rejects at 0x5B2A8
     # (cmpnei r1, 3; bt 0x5B308) after variant 4 has already taken its own body.
