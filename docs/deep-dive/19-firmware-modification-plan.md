@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (08:20) — Receive-RAM stream design.** `radio_firmware/plan-rx-ram-stream.md`: op 6 mode 5 holds the bypass and `WORK_MODE` `0x80` together, op 16 switches the UART with a 30 s fallback to 57600, and op 17 pushes sequenced halves. No image and no phone. FW27 waits for the review.
+
 **2026-10-26 (06:10) — Hotspot arrival runbook.** The setup session is written in `radio_firmware/plan-independent-m17-check.md`: the M17 community fork of WPSD, the phone's own channel frequencies, the five independent checks, the promiscuous rows with must-confirm 0 first, and the second-station self-cal. No phone and no key.
 
 **2026-10-26 (05:50) — Cold-boot regression resumed over USB.** Starting SignalDeck took the radio in 7.2 s (FW26, stock app disabled). The runner's boot was silent (peak 0.108 dB) and its receive clip carried the 1 kHz line. Channel 56 listed one 30-frame call, 27 clean. MON on channel 4 echoed flag 1, then 0. With Own-the-radio-at-boot on, a second reboot brought SignalDeck up by itself at 47.9 s; the setting was turned off again. Tables: `radio_firmware/results.md`.

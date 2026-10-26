@@ -3031,3 +3031,7 @@ The boot setting was turned back off. End state 05:50: channel 2 at 467.625 MHz,
 ## Hotspot arrival runbook (2026-10-26, 06:10)
 
 Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day runbook". No phone, no key, no image loaded. The image to flash is the M17 community fork, because upstream WPSD dropped M17 in July 2025. Frequencies follow the phone's channels (2 and 56 on 467.625, channel 4 on 467.700), read again on the day. Must-confirm 0 is the stock image with MON on and an out-of-list talkgroup, before any FW26 flag row. The phone was left as the cold-boot end state.
+
+## Receive-RAM stream design (2026-10-26, 08:20)
+
+`radio_firmware/plan-rx-ram-stream.md`. No image and no phone. Op 6 mode 5 holds the AT1846S bypass and `WORK_MODE` `0x80` together, with its own marker so op 5 can read. Op 16 switches 57600 ↔ 230400, ack at the old rate, 30 s host-silence fallback, boot stays 57600, and the loader is NAKed at 230400. Op 17 pushes each half with a 16-bit sequence; a frame is 22.8 ms of the 32 ms half, leaving 9.2 ms for a status push. FW27 waits for the review. The phone is unchanged.

@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -164,7 +164,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-**Hotspot arrival runbook, 06:10.** Written in `plan-independent-m17-check.md`. The image is the M17 community fork, not current upstream WPSD. Frequencies follow channels 2, 56, and 4. Must-confirm 0 is first. No phone and no key. The phone is unchanged: SignalDeck, FW26, channel 2, monitor off, USB adb.
+**Receive-RAM stream design, 08:20.** `plan-rx-ram-stream.md`. Mode 5 holds the bypass and `WORK_MODE` `0x80` together. Op 16 switches to 230400 and falls back to 57600 after 30 s of host silence; the loader is NAKed at 230400. Op 17 pushes sequenced halves, 22.8 ms of each 32 ms half. No image and no phone. FW26, channel 2, monitor off, USB.
 
 ## Owner question
 
