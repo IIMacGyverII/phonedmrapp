@@ -155,7 +155,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-**FW26 is loaded, 23:41.** Tag `DMR003.FW26.V022`, sha256 `71949d24…a34e`. Op 15 echoes the flag, and `0x2B` is 9 bytes off and 11 on. Boot peak 0.056 dB. Regression: 1 kHz p99 3626 Hz, M17 40/40 p99 2873 Hz, one page p99 3761 Hz, held-path receive 19 frames. Flag left off. The hotspot A/B rows (out-of-list TG, wrong CC, stock `0x2F`) are open. PR 12's 21-second ring is `fcdf3698`.
+**FW26 re-run, 23:55.** The same 40-frame clip as 22:42, VGA 20, listed 40 frames, 37 clean, at −89 dBm (FW25 listed 40 and 39). Not the 19-of-30 result. A fit is waiting; the shipped taps stay in use. Channel 2, module `DMR003.FW26.V022`, HackRF idle. Phone is free for the PR 11 window.
 
 ## Owner question
 

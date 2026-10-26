@@ -2951,3 +2951,7 @@ Held-path receive, HackRF transmit, VGA 20, amp off, 30 frames of the bench call
 ## Open for the hotspot
 
 Out-of-list talkgroup with the flag on (Patch A). Wrong colour code with the flag on, and whether stock already passes it (Patch B). Whether stock monitor `0x2F` already passes an out-of-list talkgroup. Slot is still deferred (Patch C). The `0x2B` colour-code and slot values themselves need a real DMR carrier; this bench only checked the length.
+
+## Held-path re-run (2026-10-25, 23:55)
+
+The same file as the item 7 call at 22:42 (`item7_A.cs8`, 8,240,000 samples, bench call, 40 frames) was transmitted again at VGA 20 on channel 56. The meter during the clip was −89 dBm. The page listed 40 frames, 37 clean. On FW25 that clip listed 40 frames, 39 clean. This is not the 19-of-30 result from the shorter clip at 23:40. The receiver then had a fit waiting (33 frames at −89 dBm). The live taps stay the shipped table until a second call. The phone was put back on channel 2. HackRF idle. Module still `DMR003.FW26.V022`. Nothing was keyed.

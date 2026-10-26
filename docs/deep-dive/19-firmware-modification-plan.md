@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-25 (23:55) — FW26 held-path re-run.** The 22:42 40-frame clip at VGA 20 listed 40 frames, 37 clean, at −89 dBm. On FW25 that clip listed 40 and 39. Not the 19-of-30 result. Tables: `radio_firmware/results.md`.
+
 **2026-10-25 (23:35–23:41) — FW26, promiscuous receive, flag off until a command.** Tag `DMR003.FW26.V022`, sha256 `71949d24…a34e`. Built on the FW25 image. Free tail after FW25 is 664 bytes from `0x5C464`; the four stubs use 232. Boot peak 0.056 dB. Op 15 `[15, 1]` echoes 1 and the `0x2B` body grows from 9 bytes to 11; `[15, 2]` is `sr` 1 and the length stays; `[15, 0]` echoes 0 and the body is 9 again. `0x1832e` extracts bit 22 and bits 21:20, not colour code or slot, so the appended bytes use the spec masks (bits 7:4 and bit 19). One 1 kHz key, body p99 3626 Hz, peak 1000.1 Hz. One 40-frame M17 key, 40/40, p99 2873 Hz. One 1200-baud page, p99 3761 Hz. Held-path receive listed 19 frames, 84 percent clean. The hotspot A/B rows are still open. Tables: `radio_firmware/results.md`.
 
 **2026-10-25 — Item 7 bench.** A 40-frame call at −90 dBm made a 31-frame fit. A second call at −99 dBm locked on the new taps but scored 18 clean frames against 19 for the shipped table, so the fit was not kept. PR 12, `87a6a503`. Tables: `radio_firmware/results.md`.
