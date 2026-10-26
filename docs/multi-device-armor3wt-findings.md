@@ -105,5 +105,12 @@ What SignalDeck would need on this phone (not started):
 
 - ~~The Magisk module~~ (received 2026-10-25, read above; no DMR module image in it).
 - Whether `/sdcard/intercom/dmr/` or `/system/data/dmr/` holds a `.bin` on the phone.
+  - 2026-10-26: the owner's `/system/data/mcu/` copy (six files) is byte-identical to the Magisk module's six MCU images
+    (SHA-256 `8317def5…`, `4f1d9168…`, `256f28d8…`, `c74dad8d…`, `3458ae05…`, `1a782434…`); no DMR module image found on the
+    phone yet. Files kept private, outside the repo.
+  - Ways to the DMR image, best first: (1) Ulefone's stock ROM for the 3WT (`system.img`: `/system/data/dmr/`, and the
+    intercom APK's `assets`/`res/raw`); (2) SignalDeck's Radio firmware files list on the phone (folders + stock APK);
+    (3) a stock-app update that ships one; (4) reading the module itself only if its firmware has a read command (the
+    Armor 26 stock image has none) or over the module's SWD pads (hardware, not for a tester).
 - For the frequency question: the app's log line after saving a channel below 136 MHz (`parseCmd strCmd:7E 96 69 01 35 …`
   or `… 36 …`); body `00` = accepted, anything else = refused.
