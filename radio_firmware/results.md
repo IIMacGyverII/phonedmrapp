@@ -3040,6 +3040,35 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## FW27 keys again (2026-10-26, 14:46)
+
+The old image (`9ea5365c…ded5`) hung inside the key, on a warm boot and after SRAM was lost. Opcode 14 cannot read `0x4B360` (it accepts only `0x18000000`–`0x1800FFFF`), so those words were not observed. The `0x34` after `0x26` down did not answer either time.
+
+| | 0x34 | op 14 of `0x4B360` | 0x26 down | 0x34 within 1 s | 0x26 up | 0x34 |
+|---|---|---|---|---|---|---|
+| 14:15, warm boot of `9ea5365c` | TX 14:15:50.309, RX 14:15:50.318 `sr=0` | not sent (the body file was not readable) | TX 14:15:50.984, no RX, no status 3 | TX 14:15:51.055, no RX | TX 14:15:51.951, no RX | no RX |
+| 14:17, `dmr009` low for 10 s, then boot | TX 14:17:15.685, RX 14:17:15.694 `sr=0` | TX 14:17:14.393, RX 14:17:14.399 `sr=1` len 0 | TX 14:17:16.363, no RX, no status 3 | TX 14:17:16.455, no RX | TX 14:17:17.327, no RX | no RX |
+
+`0x7C56` is the UART receive loop's pend. `0x34` gets through it before the key, so that hook is not the hang. The key path is `0x9264` → `0x5B580` → `0x5BBE2`, and `0x5BBE2` loads its literals from `0x5BE60`–`0x5BEDC`. The old stub wrote opcodes over that pool (`0x5BEA0` is `0x0004A3E4` on FW26). No site-by-site reload: the pool names the site. The 13:58 tone log acked the channel write `0x23` and never sent `0x25`, `0x3B`, or a `0x40` tone setup.
+
+The stub is now two pieces around that pool. Low is `0x5BCA4`–`0x5BE58` (the gate, mode 5, and the stream handler). High is `0x5BEE0`–`0x5C098` (the divisor, the rate switch, the half send, and the pend hook). `0x5BE60`–`0x5BEE0` is the FW26 bytes. Opcode 16 rate 2 takes the reject path; the register dump that used to answer it was removed so the stub would fit. Image sha256 `152358b005e5a239f09ffa5fa4e7be67f780431e5d1f68e536c102a47d94b4ad`, 378620 bytes. Loaded 14:35:38. Boot peak 0.141 dB, nothing above +10 dB, clip 0.
+
+Low-power VFO at 467.625 MHz, then one key. `0x34` at 14:36:14.323 answered at 14:36:14.331. `0x26` down at 14:36:14.993 acked at 14:36:15.003 (`sr=0`), status 3 at 14:36:15.009. The `0x34` at 14:36:15.118 answered at 14:36:15.126. `0x26` up at 14:36:16.031 acked at 14:36:16.037, status 4 at 14:36:16.358. The following `0x34` answered. The radio was not left keyed.
+
+Runner on that image, low power, 467.625 MHz:
+
+| Test | Result |
+|---|---|
+| boot | PASS silent, peak 0.068 dB, clip 0, tag still FW27 |
+| tone | PASS, carrier 10.565 s, clip 0, p99 2541.0 Hz, 1 kHz line 2439.5 Hz, hottest half-second 4015.2 Hz |
+| stream | PASS 1125/1125, carrier 45.41 s, p99 2901.3 Hz, clip 0, end bit set |
+| receive | PASS, clip −19.2 dBFS, 1 kHz line 1.5 times the noise |
+| heat | PASS, 45 s low power, `mtktsAP` 46.991 → 47.804 → 47.399 °C, battery 38.9 → 39.1 °C, no stop |
+
+A floor capture now reports NO CARRIER. The 13:58 FW27 file, which the old detector called a 16 s carrier, is carrier 0. The 13:55 FW26 file is still carrier 10.86 s, SNR 58.6 dB. The stop path, the half rate, the quiet hole, and (c) were not re-run.
+
+End state: `DMR003.FW27.V022`, channel 2, 467.625 MHz, power byte 1, monitor off, VFO off, not transmitting. HackRF idle.
+
 ## Tone sandwich, FW26 / FW27 / FW26 (2026-10-26, 14:01)
 
 No RAM overlap. The tone queue occupies `0x4B260`–`0x4B35F`. FW27's stores are the mode-5 saves at `0x4B000`/`0x4B004`/`0x4B008`, then `0x4B360`–`0x4B38B` in the gap before the factory name at `0x4B398`. The promiscuous flag at `0x4B364` is not in those stores. The 30 s count is written only while the rate flag is set. No word outside `0x5BCA4`–`0x5C098` points into that body.

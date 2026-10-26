@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -195,50 +195,10 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-The sandwich is in. FW26 keys and radiates; FW27's key gets no answer and the capture stays at the floor, 21 dB below FW26. The stub's RAM does not overlap the tone queue. FW26 is loaded. Nothing is keyed.
-
-**Stuck — the FW27 key is not acknowledged, and the capture is the floor.**
-
-- Step: the 13:55 order. RAM map and loads first, no key. Neither found a collision, so the sandwich: FW26 tone, load FW27, tone, load FW26, tone. HackRF was not power-cycled.
-- Tried: (1) Stub stores are `0x4B000`/`0x4B004`/`0x4B008` (mode 5 only), `0x4B360`–`0x4B363` (return address, stream only), `0x4B368`/`0x4B36C` (rate flag and the 30 s count, written when the flag is set), `0x4B372`–`0x4B37F` (period, slot, switch, UART index, saved returns), and `0x4B380`–`0x4B38B` (rate-switch record). The tone queue is `0x4B260` plus 64 words, ending at `0x4B35F`. The promiscuous flag is `0x4B364`. The factory name is `0x4B398`. The idle pend does not write the timer. (2) No aligned word outside `0x5BCA4`–`0x5C098` points into that body, file address or XIP. (3) 13:55:37 FW26: `0x26` down acked in 4 ms, status 3 at 13:55:37.842, status 4 at 13:55:48.611. Capture RMS −17.4 dBFS, peak 0.1 s bin −15.0, p99 2726 Hz, line 2570 Hz, SNR 58.6 dB. 13:58:31.944 FW27: `0x26` down sent, `0x26` up at 13:58:42.378, no ack, no status 3, no status 4. Capture RMS −38.3 dBFS, peak bin −38.3, the same on every 0.1 s, p99 22377 Hz, line 26 Hz, SNR 0.5 dB. 14:01:26 FW26 again: status 3 and 4, RMS −14.1 dBFS, p99 2530 Hz, line 2427 Hz, SNR 62.2 dB. FW27 boots were silent (peak 0.043 dB).
-- State: module `DMR003.FW26.V022`, channel 2, 467.625 MHz, power byte 1, monitor off, VFO off, not transmitting. Phone: SignalDeck running, USB, battery 38.7 °C before the keys, `mtktsAP` 45.9 °C. HackRF idle.
-- Question: the host let the key go 10.4 s later and the module never sent status 3. The capture is flat and 21 dB under the FW26 carrier. Which of those two is the next measurement, the missing `0x26` answer or another read of the capture?
-
-FW26's tone test passes at the old numbers: carrier 10.537 s, p99 2533 Hz, 1 kHz line 2430 Hz, SNR 61 dB. FW27's tone capture was SNR 0.4 dB with no line. The byte diff does not show the tone path executing the stub. FW26 stays loaded. Nothing is keyed.
-
-**Stuck — item 1: the diff does not explain the FW27 tone capture.**
-
-- Step: the transmit regression, item 1 of the 13:25 task. Diff FW27 against FW26, then the runner's `tone` on FW26. No key on FW27.
-- Tried: (1) 52 changed ranges. The planned sites are `0x7C56`, the tag byte, `0x5B2A8`, `0x5B2C8`, `0x5B7E0`, `0x5B816`, the stub `0x5BCA4`–`0x5C060`, and the tail from `0x5C54C`. The stub runs through `0x5C060`, past `0x5BF84`, and overwrites the opcode 13 playback through its `pop` at `0x5C096`. The only real branches into that body are `0x5B82C` → `0x5BF24` and `0x5B83C` → `0x5BCA4`, both inside the opcode 13 dispatcher. `0x5B816` is the four-byte branch that skips that dispatcher. The tests allow every byte from `0x5BCA4` to the stub end because `RECLAIM_END` is opcode 14 at `0x5C098`. (2) FW26 loaded 13:27:43, boot peak 0.067 dB, clip 0. `tone` at 13:28:21: PASS, carrier 10.537 s, clip 0, p99 2533.2 Hz, line 2430.3 Hz, slice max 4013.7 Hz, SNR 61.1 dB. (3) The FW27 capture (`20261026-130314-tone.json`) is SNR 0.4 dB, p99 22388.8 Hz, line 25.4 Hz, carrier 16.0 s, which is the whole window. No identical consecutive stream halves in the saved files. The 1 kHz peak sits at 999.96–999.98 Hz. The 10 s files each have one quiet run about 1.7–3.0 s after the first half. The 45 s file's quiet run is halves 66–226, 2.11–7.26 s after the first half.
-- State: module `DMR003.FW26.V022`, channel 2, 467.625 MHz, power byte 1, monitor off, VFO off, not transmitting. Phone: SignalDeck running, USB. HackRF idle. FW27 is not loaded.
-- Question: FW26 radiates the 1 kHz line and FW27's capture does not, and nothing on the tone path calls the overwritten playback. Should the next key be another FW27 `tone` with the PTT log beside it, or is the missing carrier enough to move the stub before any further FW27 key?
-
-Storing `WORK_MODE` `0x80` before the flip puts the 1 kHz line in the stream. A store every 8 halves keeps every residue class (median about 11990). A 45 s stream at that period reported 0 misses and lasted 52.2 s. The regression tone stopped the runner at p99 22389 Hz, so stream, receive and heat were not run. End state: `DMR003.FW27.V022`, channel 2, 467.625 MHz, monitor off, VFO off, not transmitting, HackRF idle.
-
-Op 16 leaves the 1 kHz line in place. Op 17's first half is noise while `WORK_MODE` is `0x80` and `FM_BANDWIDTH` is `0x0F`. The send was not moved into the main loop. End state: `DMR003.FW27.V022`, channel 2, mode 5 off, UART 57600, not keyed, HackRF idle.
-
-**Stuck — (B) names op 17, and the register trailer says mode 5 was still applied.**
-
-- Step: the 12:10 split. (A) mode 5 then op 17 at 57600, no op 16, 10 s tone. (B) mode 5, op 16 to 230400, plain op 5 at 230400, no op 17. Then the three words on the first stream frame.
-- Tried: (1) 12:14:51, (B), image `1d83e5bf…c489`. Two halves, both half id 0, sequence 0 then 2, rms 17075 and 17079, lag-1 0.66, 1 kHz amplitude 23510 and 23529. Bend restored the tag and mode 5 off, `sr=0`. (2) 12:17:29, (A) during the tone: start `sr=0`, saved PCM 0 bytes, keepalive no answer, stop no answer, and the 57600 rate command acked `sr=0` 7 ms later (12:17:42.814 then 12:17:42.821). A quiet run at 12:16 saved 19968 bytes with no tone. (3) 12:24:59, image `ab7a809d…4d20` (loaded 12:24:37, boot peak 0.055 dB, clip 0). First stream frame: sequence 0, half id 1, `WORK_MODE` `0x80`, `FM_BANDWIDTH` `0x0F`, word at `0x3A81C` = 0. Half 0 rms 3088, lag-1 0.32, 1 kHz amplitude 396. Halves 1 and 8 are 3209/308 and 3189/494. PCM 129536 bytes. `hold mode=5 action=0` at 12:25:48 returned missing. `0x34` at 12:29:07 answered `DMR003.FW27.V022` in 9 ms. Bend at 12:30:36: rate `sr=0`, version true, mode 5 `sr=0`.
-- State: module `DMR003.FW27.V022`, sha256 `ab7a809d83521d64bbffd2a42c10e983d7de90a74452ee80e9525197aa0f4d20`, 378620 bytes, channel 2, 467.625 MHz, power byte 1, monitor off, mode 5 off, UART 57600, not keyed. Phone: SignalDeck pid 14653, stock app disabled, USB, battery 38.7 °C, `mtktsAP` 46.0 °C. HackRF idle.
-- Question: the noisy half still has `WORK_MODE` `0x80` and `FM_BANDWIDTH` `0x0F`, and the word at `0x3A81C` is 0. Op 5 rewrites `WORK_MODE` immediately before the copy that shows the line. Should the stream rewrite that word the same way, immediately before each copy, or is `0x3A81C` the wrong mirror for AT1846S `0x58`?
-
-The 11:49 stream has no 1 kHz line in any half, including half 0. The predicted decay is not in the capture, so the main-loop move was not built. The phone was not used for this step.
-
-**Stuck — step 1 does not show a line that dies.**
-
-- Step: prove the handler-starvation hypothesis from the 11:49:48 capture (344 halves reported, 336 saved). Goertzel at 1000 Hz, 8 kHz, per half.
-- Tried: (1) Half 0: amplitude 286, rms 3096, lag-1 0.24. Half 1: 583, 3028, 0.21. Half 2: 164, 3242, 0.17. Half 4: 642, 3141, 0.21. Half 8: 190, 3056, 0.14. Half 16: 260, 3243, 0.18. Half 32: 292, 3094, 0.16. (2) Every 8th half through 320 stays near rms 3000. The strongest bin in the file is 867, at half 88. (3) There is no half whose 1 kHz amplitude is near the op 5 line (rms 8957, lag-1 0.57, peak 1000 Hz). The line is absent from the start, not present and then gone.
-- State: unchanged since 11:50. Module `DMR003.FW27.V022`, sha256 `1d83e5bf9b6685e191b5084cc92ec04a9ccb3cdbf424960f7ff69444688bc489`, channel 2, 467.625 MHz, power byte 1, not keyed, monitor off, mode 5 off, UART 57600. Phone: SignalDeck running, USB. HackRF idle. No new image.
-- Question: half 0 is already the noise floor, so the capture does not show the predicted decay. Should the raw stream-frame versus op 5-frame comparison be the next measurement, or is a dropout faster than one half still enough to move the send into the main loop?
-
-**Stuck — op 5 has the line and the stream does not.**
-
-- Step: the 11:45 splitting measurement, then the copy. Mode 5 held, UART at 57600, 10 s 1 kHz tone, op 5 mode 0 in the middle. No op 16 and no op 17 for that dump.
-- Tried: (1) 11:41:58, op 5 returned two 514-byte halves, both `sr=0`, sequence 0 then 2, both half id 0. rms 8957, lag-1 0.57, peak 1000.0 Hz. (2) The live copy at file `0x5B110` uses `0x160004E0` when `FM_ADDR_SW` is 1. The stream had those addresses swapped. Matching them and reloading did not change the stream: 11:49:48, 344 halves (11.0 s), 2 missed, rms 3147, lag-1 0.16, peak 281 Hz. (3) The two loops are both `ld.b` of 512 bytes into `0x4A400 + slot*512`. Op 5's copy is inline and falls into its slot counter, so it has no return to call.
-- State: module `DMR003.FW27.V022`, sha256 `1d83e5bf9b6685e191b5084cc92ec04a9ccb3cdbf424960f7ff69444688bc489`, channel 2, 467.625 MHz, power byte 1, not keyed, monitor off, mode 5 off (`sr=0` at 11:50:17), UART 57600. Boot peak 0.154 dB. Phone: SignalDeck running, USB. HackRF idle.
-- Question: op 5's inline copy is the line and the stream's copy of those same addresses is not. May the stream branch into `0x5B110` if a return is patched onto the end of that copy, or is the next measurement a raw dump of one stream frame next to an op 5 frame from the same second?
+FW27 hung because the stub overwrote the key helper's literal pool at 0x5BE60. The stub is split around that pool (sha256 152358b0…b4ad).
+0x26 down acked in 10 ms with status 3, and up acked with status 4.
+Runner all passed: tone carrier 10.565 s, p99 2541 Hz, line 2439 Hz, stream 1125/1125, boot silent.
+End state: DMR003.FW27.V022, channel 2, 467.625 MHz, monitor off, VFO off, not transmitting. HackRF idle.
 
 ## Owner question
 

@@ -33,6 +33,11 @@ OUT = Path(r"C:\Users\Joshua\AppData\Local\Temp\fw1718\fw27")
 # Opcode 13's playback (fw23_play through the byte before opcode 14).
 # Opcode 12 ends at 0x5BCA2. Opcode 14 starts at 0x5C098.
 BASE = 0x5BCA4
+# The FM key path's helper at 0x5BBE2 loads its literals from 0x5BE60.
+# That pool stays. The stub is split around it.
+POOL = 0x5BE60
+POOL_END = 0x5BEE0
+HIGH = 0x5BEE0
 RECLAIM_END = 0x5C098
 FILE_END = 0x5C6FC
 XIP = 0x0301A000
@@ -46,7 +51,7 @@ AT1846 = 0x2B220
 MARK = 0x5354524D
 
 ASM = r"""
-	.text
+	.section .text.low,"ax"
 	.global	fw27_gate
 	.global	fw27_pend
 	.global	fw27_send
@@ -150,9 +155,105 @@ fw27_gate:
 	.short	0xE000, 0x0B22
 	pop	r15
 
+/* The stream handler sits in front of the low pool. Its literals merge
+ * with the gate's, and the key path's pool at 0x5BE60 stays intact. */
+	.global	fw27_flow
+fw27_flow:
+.Lflow:
+	lrw	r3, 0x4b378
+	st.w	r15, (r3, 0)
+	ld.b	r4, (r7, 9)
+	cmpnei	r4, 1
+	bt	.Lstop
+	lrw	r4, 0x4b008
+	ld.w	r5, (r4, 0)
+	lrw	r0, 0x5354524d
+	cmpne	r5, r0
+	bt	.Lbad
+	bsr	.Lack
+	movi	r4, 0
+	lrw	r0, 0x4b374
+	st.h	r4, (r0, 0)
+	/* Body byte 2 is the store period (1, 2, 4 or 8). Default 1. */
+	.short	0xE000, 0x0100
+.Lspin:
+	movi	r0, 1
+	.short	0xE000, 0x18A4
+	lrw	r3, 0x4b36c
+	ld.w	r4, (r3, 0)
+	cmpnei	r4, 0
+	bf	.Lfall
+	subi	r4, 1
+	st.w	r4, (r3, 0)
+	movih	r3, 5129
+	ld.w	r0, (r3, 0x7c)
+	andi	r0, r0, 8
+	cmpnei	r0, 0
+	bf	.Lnosw
+	ld.w	r0, (r3, 0)
+	andi	r0, r0, 255
+	lrw	r1, 0x4ae00
+	lrw	r3, 0x4b376
+	ld.b	r4, (r3, 0)
+	cmpnei	r4, 0
+	bt	.Lputb
+	cmpnei	r0, 104
+	bt	.Lnosw
+.Lputb:
+	addu	r1, r4
+	st.b	r0, (r1, 0)
+	addi	r4, 1
+	st.b	r4, (r3, 0)
+	cmpnei	r4, 11
+	bt	.Lnosw
+	movi	r4, 0
+	st.b	r4, (r3, 0)
+	lrw	r1, 0x4ae00
+	ld.b	r0, (r1, 8)
+	cmpnei	r0, 17
+	bt	.Lend
+	ld.b	r0, (r1, 9)
+	cmpnei	r0, 2
+	bt	.Lend
+	lrw	r3, 0x4b36c
+	lrw	r4, 30000
+	st.w	r4, (r3, 0)
+	br	.Lnosw
+.Lend:
+	lrw	r3, 0x4b378
+	ld.w	r15, (r3, 0)
+	jmp	r15
+.Lfall:
+	bsr	.L576
+	movi	r4, 0
+	lrw	r3, 0x4b368
+	st.w	r4, (r3, 0)
+	lrw	r3, 0x4b378
+	ld.w	r15, (r3, 0)
+	jmp	r15
+.Lnosw:
+	/* Store WORK_MODE, then the next flip, then the copy. In the wrap. */
+	.short	0xE000, 0x0200
+	br	.Lspin
+.Lstop:
+	cmpnei	r4, 0
+	bt	.Lka
+	br	.Lack
+.Lka:
+	cmpnei	r4, 2
+	bt	.Lbad
+	lrw	r4, 0x4b36c
+	lrw	r5, 30000
+	st.w	r5, (r4, 0)
+	br	.Lack
+	.literals
+
+	.section .text.high,"ax"
 /* r2 = divisor. Waits until the UART is idle, sets DLAB only after a
  * read-back, then restores the IER captured before the LCR write.
  * r0 = 0 when the new divisor is in force. Records at 0x4B380. */
+	.global	fw27_div
+fw27_div:
 .Ldiv:
 	movih	r3, 5129
 	ld.w	r1, (r3, 0x4)
@@ -279,10 +380,6 @@ fw27_gate:
 	movi	r5, 0
 	br	.Lflag
 .Lr2:
-	cmpnei	r4, 2
-	bt	.Lpopbad
-	bsr	.Lrep
-	pop	r15
 .Lpopbad:
 	pop	r15
 	mov	r15, r6
@@ -293,47 +390,6 @@ fw27_gate:
 	lrw	r4, 0x4b36c
 	lrw	r5, 30000
 	st.w	r5, (r4, 0)
-	pop	r15
-.Lrep:
-	push	r15
-	lrw	r4, 0x4ae00
-	movi	r1, 104
-	st.b	r1, (r4, 0)
-	ld.b	r1, (r7, 1)
-	st.b	r1, (r4, 1)
-	movi	r1, 0
-	st.b	r1, (r4, 2)
-	st.b	r1, (r4, 3)
-	st.b	r1, (r4, 4)
-	st.b	r1, (r4, 5)
-	st.b	r1, (r4, 6)
-	movi	r1, 8
-	st.b	r1, (r4, 7)
-	lrw	r3, 0x4b380
-	ld.w	r1, (r3, 0)
-	st.b	r1, (r4, 8)
-	ld.w	r1, (r3, 4)
-	st.b	r1, (r4, 9)
-	ld.w	r1, (r3, 8)
-	st.b	r1, (r4, 10)
-	ld.w	r1, (r3, 12)
-	st.b	r1, (r4, 11)
-	ld.w	r1, (r3, 16)
-	st.b	r1, (r4, 12)
-	ld.w	r1, (r3, 24)
-	st.b	r1, (r4, 13)
-	ld.w	r1, (r3, 20)
-	st.b	r1, (r4, 14)
-	lsri	r1, r1, 8
-	st.b	r1, (r4, 15)
-	movi	r1, 16
-	st.b	r1, (r4, 16)
-	mov	r0, r4
-	movi	r1, 17
-	.short	0xE000, 0x8E5C
-	mov	r0, r4
-	movi	r1, 17
-	.short	0xE000, 0x7DE8
 	pop	r15
 .Lack:
 	push	r15
@@ -379,94 +435,6 @@ fw27_send:
 	ld.w	r15, (r3, 0)
 	jmp	r15
 
-.Lflow:
-	lrw	r3, 0x4b378
-	st.w	r15, (r3, 0)
-	ld.b	r4, (r7, 9)
-	cmpnei	r4, 1
-	bt	.Lstop
-	lrw	r4, 0x4b008
-	ld.w	r5, (r4, 0)
-	lrw	r0, 0x5354524d
-	cmpne	r5, r0
-	bt	.Lbad
-	bsr	.Lack
-	movi	r4, 0
-	lrw	r0, 0x4b374
-	st.h	r4, (r0, 0)
-	/* Body byte 2 is the store period (1, 2, 4 or 8). Default 1. */
-	.short	0xE000, 0x0100
-.Lspin:
-	movi	r0, 1
-	.short	0xE000, 0x18A4
-	lrw	r3, 0x4b36c
-	ld.w	r4, (r3, 0)
-	cmpnei	r4, 0
-	bf	.Lfall
-	subi	r4, 1
-	st.w	r4, (r3, 0)
-	movih	r3, 5129
-	ld.w	r0, (r3, 0x7c)
-	andi	r0, r0, 8
-	cmpnei	r0, 0
-	bf	.Lnosw
-	ld.w	r0, (r3, 0)
-	andi	r0, r0, 255
-	lrw	r1, 0x4ae00
-	lrw	r3, 0x4b376
-	ld.b	r4, (r3, 0)
-	cmpnei	r4, 0
-	bt	.Lputb
-	cmpnei	r0, 104
-	bt	.Lnosw
-.Lputb:
-	addu	r1, r4
-	st.b	r0, (r1, 0)
-	addi	r4, 1
-	st.b	r4, (r3, 0)
-	cmpnei	r4, 11
-	bt	.Lnosw
-	movi	r4, 0
-	st.b	r4, (r3, 0)
-	lrw	r1, 0x4ae00
-	ld.b	r0, (r1, 8)
-	cmpnei	r0, 17
-	bt	.Lend
-	ld.b	r0, (r1, 9)
-	cmpnei	r0, 2
-	bt	.Lend
-	lrw	r3, 0x4b36c
-	lrw	r4, 30000
-	st.w	r4, (r3, 0)
-	br	.Lnosw
-.Lend:
-	lrw	r3, 0x4b378
-	ld.w	r15, (r3, 0)
-	jmp	r15
-.Lfall:
-	bsr	.L576
-	movi	r4, 0
-	lrw	r3, 0x4b368
-	st.w	r4, (r3, 0)
-	lrw	r3, 0x4b378
-	ld.w	r15, (r3, 0)
-	jmp	r15
-.Lnosw:
-	/* Store WORK_MODE, then the next flip, then the copy. In the wrap. */
-	.short	0xE000, 0x0200
-	br	.Lspin
-.Lstop:
-	cmpnei	r4, 0
-	bt	.Lka
-	br	.Lack
-.Lka:
-	cmpnei	r4, 2
-	bt	.Lbad
-	lrw	r4, 0x4b36c
-	lrw	r5, 30000
-	st.w	r5, (r4, 0)
-	br	.Lack
-
 /* Replaces the UART pend while 230400 is armed, so a silent host still
  * falls back. r2 stays 0 (wait) until the flag is set. */
 fw27_pend:
@@ -503,31 +471,27 @@ fw27_pend:
 """
 
 
-def patch_calls(code):
+def patch_calls(code, base):
     jobs = (
         (bytes.fromhex("00e05b1b"), SENDH, False),
         (bytes.fromhex("00e07c8e"), 0x8E7C, False),
-        (bytes.fromhex("00e05c8e"), 0x8E5C, False),
-        (bytes.fromhex("00e0e87d"), 0x7DE8, False),
         # File 0x2B0C is the flash pend (XIP 0x0301CB0C). It is not IRAM 0x2B0C.
         (bytes.fromhex("00e00c2b"), PEND, False),
         (bytes.fromhex("00e0220b"), AT1846, True),
         (bytes.fromhex("00e0a418"), 0x18A4, False),
     )
+    found_tokens = set()
     for token, target, iram in jobs:
         at = 0
-        n = 0
         while True:
             found = code.find(token, at)
             if found < 0:
                 break
-            pc = (BASE + found) + (XIP if iram else 0)
+            pc = (base + found) + (XIP if iram else 0)
             code[found:found + 4] = fw23_build.encode_bsr(pc, target)
-            n += 1
+            found_tokens.add(token)
             at = found + 4
-        if n == 0:
-            raise SystemExit("missing call " + token.hex())
-    return code
+    return code, found_tokens
 
 
 TRAMP = 0x5C54C
@@ -816,21 +780,57 @@ def link_tramp():
     return code, end
 
 
+def elf_section(blob, name):
+    e_shoff = struct.unpack_from("<I", blob, 32)[0]
+    e_shentsize = struct.unpack_from("<H", blob, 46)[0]
+    e_shnum = struct.unpack_from("<H", blob, 48)[0]
+    e_shstrndx = struct.unpack_from("<H", blob, 50)[0]
+    shstr = e_shoff + e_shstrndx * e_shentsize
+    shstr_off = struct.unpack_from("<I", blob, shstr + 16)[0]
+    for i in range(e_shnum):
+        off = e_shoff + i * e_shentsize
+        name_off = struct.unpack_from("<I", blob, off)[0]
+        got = blob[shstr_off + name_off:blob.find(b"\x00", shstr_off + name_off)]
+        if got == name:
+            addr = struct.unpack_from("<I", blob, off + 12)[0]
+            size = struct.unpack_from("<I", blob, off + 20)[0]
+            data_off = struct.unpack_from("<I", blob, off + 16)[0]
+            return bytearray(blob[data_off:data_off + size]), addr
+    raise SystemExit("no section " + name.decode())
+
+
 def build():
     OUT.mkdir(parents=True, exist_ok=True)
     src = OUT / "fw27.S"
     src.write_text(ASM, encoding="utf-8", newline="\n")
     subprocess.check_call([str(AS), "-mcpu=ck803", "-o", str(OUT / "fw27.o"), str(src)])
-    subprocess.check_call([str(LD), "-Ttext=0x%X" % BASE, "-o", str(OUT / "fw27.elf"), str(OUT / "fw27.o")])
-    code, addr = fw23_build.text_of((OUT / "fw27.elf").read_bytes())
-    if addr != BASE:
-        raise SystemExit("linked at %X" % addr)
-    code = patch_calls(code)
-    end = BASE + len(code)
-    if end > RECLAIM_END:
-        raise SystemExit("stub %d bytes ends at %X, opcode 14 starts at %X" % (
-            len(code), end, RECLAIM_END))
-    if struct.pack("<I", 0x11000560) in code:
+    ld = OUT / "fw27.ld"
+    ld.write_text(
+        "SECTIONS {\n"
+        "  .text.low 0x%X : { *(.text.low) }\n"
+        "  .text.high 0x%X : { *(.text.high) }\n"
+        "}\n" % (BASE, HIGH),
+        encoding="utf-8", newline="\n")
+    subprocess.check_call([str(LD), "-T", str(ld), "-o", str(OUT / "fw27.elf"), str(OUT / "fw27.o")])
+    elf = (OUT / "fw27.elf").read_bytes()
+    low, low_at = elf_section(elf, b".text.low")
+    high, high_at = elf_section(elf, b".text.high")
+    if low_at != BASE or high_at != HIGH:
+        raise SystemExit("linked low %X high %X" % (low_at, high_at))
+    seen = set()
+    low, seen_low = patch_calls(low, BASE)
+    high, seen_high = patch_calls(high, HIGH)
+    seen |= seen_low
+    seen |= seen_high
+    for token in (bytes.fromhex("00e07c8e"), bytes.fromhex("00e00c2b"), bytes.fromhex("00e0220b")):
+        if token not in seen:
+            raise SystemExit("missing call " + token.hex())
+    low_end = BASE + len(low)
+    high_end = HIGH + len(high)
+    if low_end > POOL or high_end > RECLAIM_END:
+        raise SystemExit("stub low ends %X (pool %X), high ends %X (opcode 14 %X)" % (
+            low_end, POOL, high_end, RECLAIM_END))
+    if struct.pack("<I", 0x11000560) in low or struct.pack("<I", 0x11000560) in high:
         raise SystemExit("stub mentions PTT")
     names = subprocess.check_output([str(NM), str(OUT / "fw27.elf")], text=True)
     pend_at = None
@@ -852,18 +852,20 @@ def build():
     img[PEND_SITE:PEND_SITE + 4] = fw23_build.encode_bsr(PEND_SITE + XIP, pend_at + XIP)
     # Opcode 13 falls into its body at 0x5B816. Send it to the sr=1 return.
     img[0x5B816:0x5B81A] = fw23_build.encode_bsr(0x5B816, 0x5B876)
-    img[BASE:end] = code
+    img[BASE:low_end] = low
+    img[HIGH:high_end] = high
     global MODE5_AT, REST_AT
-    MODE5_AT, REST_AT = mode_targets(code)
+    MODE5_AT, REST_AT = mode_targets(low)
     tramp, tramp_end = link_tramp()
     img[TRAMP:tramp_end] = tramp
     wrap, wrap_end = link_wrap()
     img[WRAP:wrap_end] = wrap
     global WRAP_END
     WRAP_END = wrap_end
-    for off in range(BASE, end - 3):
-        if fw26_build.decode_bsr(off, bytes(img[off:off + 4])) == SENDH:
-            img[off:off + 4] = fw23_build.encode_bsr(off, WRAP)
+    for start, stop in ((BASE, low_end), (HIGH, high_end)):
+        for off in range(start, stop - 3):
+            if fw26_build.decode_bsr(off, bytes(img[off:off + 4])) == SENDH:
+                img[off:off + 4] = fw23_build.encode_bsr(off, WRAP)
     wnames = subprocess.check_output([str(NM), str(OUT / "fw27_wrap.elf")], text=True)
     period_at = half_at = None
     for line in wnames.splitlines():
@@ -877,15 +879,25 @@ def build():
     if period_at is None or half_at is None:
         raise SystemExit("wrap is missing period_init or halfstep")
 
-    def patch_token(token, target, start, stop):
+    def patch_token(token, target, start=None, stop=None):
         raw = bytes.fromhex(token)
-        found = img.find(raw, start, stop)
-        if found < 0 or img.find(raw, found + 1, stop) >= 0:
-            raise SystemExit("token %s at %s" % (token, found))
+        hits = []
+        spans = ((start, stop),) if start is not None else ((BASE, low_end), (HIGH, high_end))
+        for start, stop in spans:
+            at = start
+            while True:
+                found = img.find(raw, at, stop)
+                if found < 0:
+                    break
+                hits.append(found)
+                at = found + 1
+        if len(hits) != 1:
+            raise SystemExit("token %s hits %s" % (token, [hex(h) for h in hits]))
+        found = hits[0]
         img[found:found + 4] = fw23_build.encode_bsr(found, target)
 
-    patch_token("00e00001", period_at, BASE, end)
-    patch_token("00e00002", half_at, BASE, end)
+    patch_token("00e00001", period_at)
+    patch_token("00e00002", half_at)
     patch_token("00e05bb1", send_at, WRAP, wrap_end)
     print("period", hex(period_at), "half", hex(half_at), "send", hex(send_at))
     # The live op 6 handler is at file 0x5B240 (XIP 0x03075240). Apply rejects
@@ -897,11 +909,13 @@ def build():
     dest = ROOT / "radio_firmware" / "build" / "DMR003.FW27.V022.bin"
     dest.write_bytes(img)
     import hashlib
-    global STUB_END, PEND_AT, TRAMP_END
-    STUB_END = end
+    global STUB_END, STUB_LO_END, STUB_HI_END, PEND_AT, TRAMP_END
+    STUB_END = high_end
+    STUB_LO_END = low_end
+    STUB_HI_END = high_end
     PEND_AT = pend_at
     TRAMP_END = tramp_end
-    print("stub", len(code), "end", hex(end), "reclaim left", RECLAIM_END - end)
+    print("stub low", hex(BASE), hex(low_end), "high", hex(HIGH), hex(high_end))
     print("tramp", hex(TRAMP), hex(tramp_end))
     print("pend", hex(pend_at))
     print(dest)

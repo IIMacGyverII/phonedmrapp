@@ -17,6 +17,17 @@ def demod(cfg, iq_path):
     z = iq[0::2].astype(np.float32) + 1j * iq[1::2].astype(np.float32)
     clip = float(np.mean(np.abs(iq) >= 126))
     del iq
+    # A floor-only capture is within 6 dB of its quietest second. Report that
+    # as no carrier; the old path called the whole file keyed.
+    sec = int(fs)
+    nsec = len(z) // sec
+    if nsec >= 1:
+        quiet = min(float(np.sqrt(np.mean(np.abs(z[i * sec:(i + 1) * sec]) ** 2))) for i in range(nsec))
+        whole = float(np.sqrt(np.mean(np.abs(z) ** 2)))
+    else:
+        whole = float(np.sqrt(np.mean(np.abs(z) ** 2)))
+        quiet = whole
+    no_carrier = quiet <= 0 or whole <= quiet * (10 ** (6.0 / 20.0))
     out = []
     for s0 in range(0, len(z) - dec, fs):
         seg = z[s0:s0 + fs]
@@ -34,14 +45,16 @@ def demod(cfg, iq_path):
     mins = [float(np.median(pw[i:i + win])) for i in range(0, max(1, len(pw) - win + 1), win)]
     floor = min(mins) if mins else float(np.percentile(pw, 10))
     on = pw > max(floor * 20, 1e-6)
-    if on.any():
-        i0 = int(np.argmax(on)); i1 = int(len(on) - np.argmax(on[::-1]))
+    if no_carrier or not on.any():
+        i0, i1 = 0, 0
     else:
-        i0, i1 = 0, len(dev)
+        i0 = int(np.argmax(on)); i1 = int(len(on) - np.argmax(on[::-1]))
     snr = 10 * np.log10((np.median(pw[i0:i1]) + 1e-12) / (floor + 1e-12)) if i1 > i0 else 0.0
     offset = float(np.median(dev[i0:i1])) if i1 > i0 + 100 else float("nan")
     dev = dev - (0 if np.isnan(offset) else offset)
-    info = {"clip_frac": clip, "snr_db": float(snr), "offset_hz": offset, "keyed_s": (i1 - i0) / fa, "i0": i0, "i1": i1, "fs": fa}
+    info = {"clip_frac": clip, "snr_db": float(snr), "offset_hz": offset,
+            "keyed_s": 0.0 if i1 <= i0 else (i1 - i0) / fa,
+            "i0": i0, "i1": i1, "fs": fa, "no_carrier": bool(no_carrier)}
     return dev, info
 
 
@@ -55,6 +68,10 @@ def key_report(cfg, iq_path, tone_hz=1000.0):
     dev, info = demod(cfg, iq_path)
     fs = info["fs"]; i0, i1 = info["i0"], info["i1"]
     rep = {"carrier_s": round(info["keyed_s"], 3), "clip": round(info["clip_frac"], 6), "snr_db": round(info["snr_db"], 1), "offset_hz": round(info["offset_hz"], 1) if not np.isnan(info["offset_hz"]) else None}
+    if info.get("no_carrier"):
+        rep["NO_CARRIER"] = True
+        rep["body"] = None
+        return rep
     a = i0 + int(0.05 * fs); b = i1 - int(0.05 * fs)
     if b - a < int(0.2 * fs):
         rep["body"] = None

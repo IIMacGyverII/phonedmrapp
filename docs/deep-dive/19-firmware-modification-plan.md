@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (14:46) — FW27 keys. The literal pool was the hang.** `0x5BBE2` loads from `0x5BE60`, and the old stub overwrote that pool, so `0x26` never returned. The stub is split around the pool (sha256 `152358b0…b4ad`). Down acked in 10 ms with status 3; up acked with status 4. Runner `all` passed, including a 10.565 s tone at p99 2541 Hz and 1125/1125 frames. A floor capture now says NO CARRIER. Tables: `radio_firmware/results.md`.
+
 **2026-10-26 (14:01) — FW27 does not answer the key.** Same HackRF, no power cycle. FW26: status 3 and 4, RMS −17.4 dBFS, line 2570 Hz. FW27: `0x26` sent and released 10.4 s later, no ack, no status 3 or 4, RMS −38.3 dBFS flat. FW26 again: line 2427 Hz, RMS −14.1 dBFS. The stub's RAM is in the gap after the tone queue. Tables: `radio_firmware/results.md`.
 
 **2026-10-26 (13:28) — FW26's tone is the old number. FW27's capture is not a carrier.** FW26: p99 2533 Hz, line 2430 Hz, SNR 61 dB. FW27: SNR 0.4 dB, line 25 Hz. The stub overwrites opcode 13's playback, and that playback's only callers are the dispatcher the image skips. Tables: `radio_firmware/results.md`.

@@ -54,7 +54,10 @@ def tone(cfg, phone, ms=10000, power=0):
     rep = fm.key_report(cfg, path, 1000.0)
     body = rep.get("body")
     ok = body is not None and not body["STOP"] and abs(rep["carrier_s"] - ms / 1000.0) < 1.5 and body["tone_line_hz"] > 0.5 * body["p99_hz"]
-    verdict = "PASS" if ok else ("STOP deviation" if body and body["STOP"] else "FAIL")
+    if rep.get("NO_CARRIER"):
+        verdict = "NO CARRIER"
+    else:
+        verdict = "PASS" if ok else ("STOP deviation" if body and body["STOP"] else "FAIL")
     nums = {"carrier_s": rep["carrier_s"], "clip": rep["clip"]}
     if body:
         nums.update({"p99_Hz": body["p99_hz"], "line1k_dev_Hz": body["tone_line_hz"], "slice_max_Hz": body["slice_p99_max_hz"]})

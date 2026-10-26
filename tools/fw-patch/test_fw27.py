@@ -34,13 +34,13 @@ class Fw27Test(unittest.TestCase):
         self.assertNotIn(struct.pack("<I", 0x11000560), self.new[fw27_build.BASE:fw27_build.STUB_END])
 
     def test_only_the_named_sites_move(self):
-        end = fw27_build.STUB_END
         allowed = [
             range(0x38464, 0x38474),
             range(0x5B7DE, 0x5B7E2),
             range(0x7C56, 0x7C5A),
             range(0x5B816, 0x5B81A),
-            range(fw27_build.BASE, end),
+            range(fw27_build.BASE, fw27_build.STUB_LO_END),
+            range(fw27_build.HIGH, fw27_build.STUB_HI_END),
             range(0x5B2A8, 0x5B2AC),
             range(0x5B2C8, 0x5B2CC),
             range(fw27_build.TRAMP, fw27_build.TRAMP_END),
@@ -55,6 +55,8 @@ class Fw27Test(unittest.TestCase):
 
     def test_opcode_12_and_14_and_the_tail_stay(self):
         self.assertEqual(self.old[0x5BC0A:0x5BCA4], self.new[0x5BC0A:0x5BCA4])
+        # The key path's helper loads these literals. The stub is split around them.
+        self.assertEqual(self.old[0x5BE60:0x5BEE0], self.new[0x5BE60:0x5BEE0])
         self.assertEqual(self.old[0x5C098:0x5C464], self.new[0x5C098:0x5C464])
         self.assertEqual(self.new[fw27_build.WRAP_END:0x5C6FC], bytes(0x5C6FC - fw27_build.WRAP_END))
 
