@@ -2890,3 +2890,7 @@ The table that ships is 4600, 6500, 7000. The loudest half-second in that table 
 ## End state
 
 Channel 2, 467.625 MHz FM. The `ab606d64` build is installed (21:57:57). Module `DMR003.FW25.V022`. HackRF idle. Nothing left keyed.
+
+# Item 7 design — receive self-calibration (2026-10-25, 22:05)
+
+No image and no key. The design is `radio_firmware/plan-rx-selfcal.md`. The equaliser is the held path's 41 taps, fitted after a call from the frames the decoder already accepted, re-encoded to the symbols that were sent. The shipped per-model table gets the first lock. The decision-feedback receiver stays the fallback on stock firmware and on a phone with no table. A fit replaces the live taps only after a second, independent transmission decodes at least as well. The file is per profile in the app's files, with a reset. The M17 page line says which set is in use. The bench pass is two transmissions after this review.

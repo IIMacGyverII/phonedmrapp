@@ -153,7 +153,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-**Item 8 levels, 21:59.** PR 10 is `ab606d64`. The table is 4600 at 512 baud, 6500 at 1200, 7000 at 2400. Worst half-second 4230 / 4493 / 4417 Hz, all under 4.5 kHz, polarity +1, pages exact. The 2400 page is 16 of 16 with one idle word after the batch. `mtktsAP` read 47.1 to 47.7 °C once the zone command was quoted. End: channel 2, that build installed 21:57, module FW25, HackRF idle.
+**Item 7 design, 22:05.** Receive self-calibration is `radio_firmware/plan-rx-selfcal.md`: fit the 41 held-path taps on frames the decoder accepted, keep them only after a second transmission, shipped table for the first lock, decision-feedback receiver as the fallback. No image and no key. The level table it follows is in the previous commit: 4600 / 6500 / 7000, worst slice 4493 Hz, PR 10 at `ab606d64`, channel 2, module FW25, HackRF idle.
 
 ## Owner question
 
