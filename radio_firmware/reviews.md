@@ -534,3 +534,17 @@ If both are silent too, **(c) is final** and item 7's design becomes training on
 **Carries.** The `STANDBY_LO` bit 0 that "did not hold" is a read-only or self-clearing bit by the look of it, not a gate; leave it. The clipped first 1125 capture (LNA 16 / VGA 16) was rightly discarded and re-run at LNA 8 / VGA 8. The web server was turned off during the step; turn it back on at the end state if it was on before.
 
 **Next:** FW25 as above; then route-list item 6 (M17 as a channel type; contacts merged in SignalDeck `8e304b0d`), then the two short bench pass items for SignalDeck PR #5 (the long SSTV pair and the 40 s M17 call).
+
+## Review of the PR 5 SSTV pass, partial (2026-10-25, `results.md` "PR 5 SSTV pass, partial", 18:16–18:48)
+
+**Verdict: the long modes transmit for their full length through the audio path and the cool-down guard refuses as designed; the pass is not complete, and it found two gaps in the guard that are fixed on the branch before the re-run.** Robot 36 ran 39.5 s (p99 2040 Hz, clip 0) and SignalDeck's own decoder drew 219 of 240 lines of the colour bars from the demodulated recording; the history carried the long-transmission line with the zone state. A Martin M1 asked for right after was refused with the guard's text (3.6 °C above the stored value), and did not key. The Martin M1 allowed at 18:37 ran 117.8 s (p99 2029 Hz, clip 0) and its VIS reads 44.
+
+**Gap 1, fixed:** the refusal was only the sender's reply; the history line the contract asked for was never written, because `sendSstv` returned before `transmitPcm`. Now the sender writes "⏳ Martin M1 not sent: …" itself.
+
+**Gap 2, fixed, and the one that matters:** that Martin M1 started with the AP zone at 51.6 °C (0.2 °C over the stored pre-key value, so the cool-down let it through) and ended at 62.0–63.2 °C with the battery at 43.9 °C: past the 60 °C stop the bench applies, and the app had nothing watching during the key. Two additions on the branch: a long transmission does not start while the AP zone is already at 50 °C or the battery at 42 °C (a long key adds about 11 °C and 2 °C on the bench), and an in-key watchdog reads the zone and the battery every 5 s and ends the playback at its next block at the bench stops (zone over 60 °C, battery over 45 °C, a 2 °C climb in 10 s), with a history line that says why. Every audio backend gained the mid-playback stop for it. `ThermalGuardTest` covers the rules with the bench's readings.
+
+**The Martin M1 decode.** The host-side renderer cannot run in the unit-test classpath (no `Bitmap`). The decode route that works is the phone's own: play the demodulated 8 kHz recording into SignalDeck with DIAG `inject` while the SSTV page runs in Any mode; the phone decodes Martin M1 from the VIS and saves the picture to Download/DMR/SSTV. That is the pass for the long modes other than Robot 36.
+
+**Robot 24 and the re-run.** Rightly not sent on a 44 °C battery. The re-run, when the phone is cool (battery under 42 °C, AP zone under 50 °C, which the new gate enforces): the PR 5 build with these fixes, one Martin M1 with the demodulated recording injected and decoded on the phone, then a Robot 24 straight after it (a short mode goes during a cool-down), then the second long picture refused with both the reply and the history line. If the watchdog ever ends a key early during this, the history line is the result, not a failure.
+
+**PR 5 stays open** until that re-run; the rest of it (R-I, the tone path, the M17 marker, the FT8 finding, the catalogue match) is host-verified and unchanged.
