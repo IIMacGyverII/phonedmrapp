@@ -28,7 +28,11 @@ def demod(cfg, iq_path):
     zd = np.convolve(zd, k, "same")
     dev = np.angle(zd[1:] * np.conj(zd[:-1])) * fa / (2 * np.pi)
     pw = np.convolve(np.abs(zd) ** 2, np.ones(4800) / 4800, "same")
-    floor = np.percentile(pw, 10)
+    # The noise floor: the quietest one-second window, not a percentile of the whole capture. A capture that is
+    # mostly carrier (a 118 s picture in a 128 s capture) puts the carrier itself at the 10th percentile.
+    win = fa
+    mins = [float(np.median(pw[i:i + win])) for i in range(0, max(1, len(pw) - win + 1), win)]
+    floor = min(mins) if mins else float(np.percentile(pw, 10))
     on = pw > max(floor * 20, 1e-6)
     if on.any():
         i0 = int(np.argmax(on)); i1 = int(len(on) - np.argmax(on[::-1]))
