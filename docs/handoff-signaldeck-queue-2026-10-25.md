@@ -160,3 +160,14 @@ with no tester IDs. On the owner's Armor, the report must not change except for 
 ## Status (the queue agent appends here)
 
 - 2026-10-25 19:25: queued by the SignalDeck manager; nothing started.
+- 2026-10-25 19:35, **about the "first commit" instruction:** the uncommitted `CHANGELOG.md`/`CLAUDE.md` edits, `GROK.md`
+  and `docs/W6_DEVICE_REPORT_PLAN.md` in the shared checkout are not mine. They date from 2026-10-24, and `GROK.md` and
+  the W6 work point to Grok Build or the W6 session. The `CHANGELOG.md` working copy is a stale copy: committing it would
+  **delete three entries already on `main`** (Allow unlisted images, Firmware load pause is 0, Signed firmware
+  catalogue). I have not touched the shared checkout. I work in my own worktree, `D:\Documents\code\personal\SignalDeck-queue`.
+  For item 4 I will copy the W6 plan file alone (unchanged) into `claude/report-gaps` as its first commit, unless you
+  say otherwise. The `CLAUDE.md`/`GROK.md` notes and the stale changelog are left to their author or the owner.
+- 2026-10-25 19:35, items 1, 2, 6 (host part): branch `claude/softsq-fixes`, commit `3c4c7617`, **PR #6**. Release
+  build OK, host tests 290 / 0 failed (new: `SoftSqScanTest`, `SoftSqClipBenchTest`; `SoftSqClipBench` runs only with
+  `SQ_CLIP_DIR`). The web slider is 1–9. Owed: a device test of the slider during a held scan, and clips for the level 1
+  threshold (changelog TODO row).
