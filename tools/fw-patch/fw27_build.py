@@ -1,6 +1,7 @@
 # Build DMR003.FW27.V022 from the FW26 image. The file does not grow.
 #
-# The new code links at 0x5C54C, the zero tail after FW26. Op 17 does not
+# The stub links at 0x5BCA4, in the reclaimed opcode 13 playback. The
+# variant-5 trampoline links at 0x5C54C. Op 17 does not
 # copy a half itself: it calls op 5's send at file 0x5B1B4, which checksums
 # and sends the 514-byte body. The 512-byte move is the same ld.b loop,
 # inlined only because that loop falls into op 5's half counter and does
@@ -547,6 +548,72 @@ def patch_calls(code):
     return code
 
 
+TRAMP = 0x5C54C
+TRAMP_END = TRAMP
+REST_OFF = 0
+MODE5_AT = 0x5CD6
+REST_AT = 0x5D42
+TRAMP_ASM = r"""
+	.text
+	.global	apply5
+	.global	rest5
+apply5:
+	cmpnei	r1, 4
+	bt	.Ln4
+	lrw	r12, 0x030752cc
+	jmp	r12
+.Ln4:
+	cmpnei	r1, 5
+	bt	.Lrej
+	.short	0xE000, 0xCD5C
+	addi	r14, 4
+	pop	r4-r7, r15
+rest5:
+	cmpnei	r1, 3
+	bt	.Ln3
+	lrw	r12, 0x030752ac
+	jmp	r12
+.Ln3:
+	cmpnei	r1, 5
+	bt	.Lrej
+	.short	0xE000, 0xD25C
+	lrw	r12, 0x030752fa
+	jmp	r12
+.Lrej:
+	lrw	r12, 0x03075308
+	jmp	r12
+	.align	2
+	.literals
+"""
+
+
+def link_tramp():
+    global REST_OFF
+    src = OUT / "fw27_tramp.S"
+    src.write_text(TRAMP_ASM, encoding="utf-8", newline="\n")
+    subprocess.check_call([str(AS), "-mcpu=ck803", "-o", str(OUT / "fw27_tramp.o"), str(src)])
+    subprocess.check_call([str(LD), "-Ttext=0x%X" % TRAMP, "-o", str(OUT / "fw27_tramp.elf"), str(OUT / "fw27_tramp.o")])
+    code, addr = fw23_build.text_of((OUT / "fw27_tramp.elf").read_bytes())
+    if addr != TRAMP:
+        raise SystemExit("tramp linked at %X" % addr)
+    names = subprocess.check_output([str(NM), str(OUT / "fw27_tramp.elf")], text=True)
+    for line in names.splitlines():
+        parts = line.split()
+        if len(parts) >= 3 and parts[2] == "rest5":
+            REST_OFF = int(parts[0], 16) - TRAMP
+    if REST_OFF <= 0:
+        raise SystemExit("no rest5")
+    for token, target in ((bytes.fromhex("00e05ccd"), MODE5_AT), (bytes.fromhex("00e05cd2"), REST_AT)):
+        found = code.find(token)
+        if found < 0:
+            raise SystemExit("missing tramp call " + token.hex())
+        code[found:found + 4] = fw23_build.encode_bsr(TRAMP + found, target)
+    end = TRAMP + len(code)
+    if end > 0x5C6FC:
+        raise SystemExit("tramp ends at %X" % end)
+    return code, end
+
+
 def build():
     OUT.mkdir(parents=True, exist_ok=True)
     src = OUT / "fw27.S"
@@ -579,13 +646,20 @@ def build():
     # Opcode 13 falls into its body at 0x5B816. Send it to the sr=1 return.
     img[0x5B816:0x5B81A] = fw23_build.encode_bsr(0x5B816, 0x5B876)
     img[BASE:end] = code
+    tramp, tramp_end = link_tramp()
+    img[TRAMP:tramp_end] = tramp
+    # Op 6 admits variants 3 and 4 only. These two compares are the reject.
+    img[0x52C8:0x52CC] = fw23_build.encode_bsr(0x52C8, TRAMP)
+    img[0x52A8:0x52AC] = fw23_build.encode_bsr(0x52A8, TRAMP + REST_OFF)
     dest = ROOT / "radio_firmware" / "build" / "DMR003.FW27.V022.bin"
     dest.write_bytes(img)
     import hashlib
-    global STUB_END, PEND_AT
+    global STUB_END, PEND_AT, TRAMP_END
     STUB_END = end
     PEND_AT = pend_at
+    TRAMP_END = tramp_end
     print("stub", len(code), "end", hex(end), "reclaim left", RECLAIM_END - end)
+    print("tramp", hex(TRAMP), hex(tramp_end))
     print("pend", hex(pend_at))
     print(dest)
     print(hashlib.sha256(img).hexdigest())

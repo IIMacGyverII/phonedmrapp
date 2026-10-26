@@ -41,6 +41,9 @@ class Fw27Test(unittest.TestCase):
             range(0x7C56, 0x7C5A),
             range(0x5B816, 0x5B81A),
             range(fw27_build.BASE, end),
+            range(0x52A8, 0x52AC),
+            range(0x52C8, 0x52CC),
+            range(fw27_build.TRAMP, fw27_build.TRAMP_END),
         ]
         for i, (a, b) in enumerate(zip(self.old, self.new)):
             if a == b:
@@ -52,7 +55,7 @@ class Fw27Test(unittest.TestCase):
     def test_opcode_12_and_14_and_the_tail_stay(self):
         self.assertEqual(self.old[0x5BC0A:0x5BCA4], self.new[0x5BC0A:0x5BCA4])
         self.assertEqual(self.old[0x5C098:0x5C464], self.new[0x5C098:0x5C464])
-        self.assertEqual(self.new[0x5C54C:0x5C6FC], bytes(0x5C6FC - 0x5C54C))
+        self.assertEqual(self.new[fw27_build.TRAMP_END:0x5C6FC], bytes(0x5C6FC - fw27_build.TRAMP_END))
 
     def test_branches(self):
         gate = fw26_target(self.new, 0x5B7DE)
@@ -65,6 +68,8 @@ class Fw27Test(unittest.TestCase):
         self.assertEqual(inner, 0x2B0C + XIP)
         reject = fw26_target(self.new, 0x5B816)
         self.assertEqual(reject, 0x5B876)
+        self.assertEqual(fw26_target(self.new, 0x52C8), fw27_build.TRAMP)
+        self.assertEqual(fw26_target(self.new, 0x52A8), fw27_build.TRAMP + fw27_build.REST_OFF)
 
 
 def fw26_target(img, off, xip=False):

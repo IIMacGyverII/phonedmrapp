@@ -58,7 +58,7 @@ offset,kind,name,comment
 0x03D688,fn,fm_unkey_path,"unkey path that follows the boot-time key-up (ch. 19 §23)"
 0x05AEFC,label,zero_tail,"1,788 B of zero padding in the factory image, XIP 0x03074EFC, not IRAM-copied: where R4m+ stubs link (ch. 19 §1, §22). Occupied after FW25"
 0x05C464,label,fw25_free_tail,"DMR003.FW25.V022 length 0x5C6FC; extension ends at 0x5C464; 664 B free through 0x5C6FB. FW26 links here (232 B, end 0x5C54C)"
-0x05C54C,label,fw26_tail_remain,"432 B zero through 0x5C6FB after FW26. Left unused by FW27"
+0x05C54C,label,fw27_apply5,"op 6 variant trampoline. Compares at 0x52C8 (apply) and 0x52A8 (restore) branch here. Variant 4 returns to 0x030752CC and variant 3 to 0x030752AC. Variant 5 calls mode 5 at file 0x5CD6 and the restore at 0x5D42. rest5 is at 0x5C562. Ends 0x5C590; bytes after that through 0x5C6FB stay zero"
 0x05BCA4,label,fw27_stub,"opcode 13 playback reclaimed: fw23_play started here and opcode 14 starts at 0x5C098. FW27 links here (1008 B, end 0x5C094). Opcode 12 ends at 0x5BCA2 and is kept"
 0x05C00E,label,fw27_pend,"replaces the UART pend bsr at 0x7C56. Flag 0 calls the flash pend at file 0x2B0C. Flag 1 asks for a short wait and counts down 0x4B36C"
 0x05B816,label,fw27_op13_reject,"opcode 13 branches to the sr=1 return at 0x5B876. The playback is not called"
