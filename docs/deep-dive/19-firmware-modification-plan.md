@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (12:30) — Op 16 keeps the line. The stream's first half is noise with mode 5 still set.** After op 16 at 230400, op 5's two halves are 1 kHz amplitude 23510 and 23529. Mode 5 then op 17 at 57600 saved no samples during the tone. On image `ab7a809d…4d20` the first stream frame carries `WORK_MODE` `0x80`, `FM_BANDWIDTH` `0x0F`, and 0 at `0x3A81C`, and half 0 is amplitude 396. The send was not moved. Tables: `radio_firmware/results.md`.
+
 **2026-10-26 (12:05) — The saved stream has no 1 kHz line in half 0.** Goertzel amplitude at 1000 Hz on the 11:49 capture: half 0 is 286 (rms 3096), half 1 is 583, half 32 is 292. The strongest half in the file is 867. The predicted rise-and-decay is not there, so the send was not moved into the main loop. Tables: `radio_firmware/results.md`.
 
 **2026-10-26 (11:50) — Op 5 has the line, the stream does not.** With mode 5 held and the UART at 57600, op 5 mode 0 during a 1 kHz tone returned halves at rms 8957, lag-1 0.57, peak 1000 Hz. The stream, after its copy was pointed at the same half op 5 uses (`FM_ADDR_SW` 1 → `0x160004E0`), was rms 3147, lag-1 0.16, peak 281 Hz, 344 halves, 2 missed. Tables: `radio_firmware/results.md`.

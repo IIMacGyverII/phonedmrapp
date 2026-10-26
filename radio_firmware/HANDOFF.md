@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -180,6 +180,15 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+Op 16 leaves the 1 kHz line in place. Op 17's first half is noise while `WORK_MODE` is `0x80` and `FM_BANDWIDTH` is `0x0F`. The send was not moved into the main loop. End state: `DMR003.FW27.V022`, channel 2, mode 5 off, UART 57600, not keyed, HackRF idle.
+
+**Stuck — (B) names op 17, and the register trailer says mode 5 was still applied.**
+
+- Step: the 12:10 split. (A) mode 5 then op 17 at 57600, no op 16, 10 s tone. (B) mode 5, op 16 to 230400, plain op 5 at 230400, no op 17. Then the three words on the first stream frame.
+- Tried: (1) 12:14:51, (B), image `1d83e5bf…c489`. Two halves, both half id 0, sequence 0 then 2, rms 17075 and 17079, lag-1 0.66, 1 kHz amplitude 23510 and 23529. Bend restored the tag and mode 5 off, `sr=0`. (2) 12:17:29, (A) during the tone: start `sr=0`, saved PCM 0 bytes, keepalive no answer, stop no answer, and the 57600 rate command acked `sr=0` 7 ms later (12:17:42.814 then 12:17:42.821). A quiet run at 12:16 saved 19968 bytes with no tone. (3) 12:24:59, image `ab7a809d…4d20` (loaded 12:24:37, boot peak 0.055 dB, clip 0). First stream frame: sequence 0, half id 1, `WORK_MODE` `0x80`, `FM_BANDWIDTH` `0x0F`, word at `0x3A81C` = 0. Half 0 rms 3088, lag-1 0.32, 1 kHz amplitude 396. Halves 1 and 8 are 3209/308 and 3189/494. PCM 129536 bytes. `hold mode=5 action=0` at 12:25:48 returned missing. `0x34` at 12:29:07 answered `DMR003.FW27.V022` in 9 ms. Bend at 12:30:36: rate `sr=0`, version true, mode 5 `sr=0`.
+- State: module `DMR003.FW27.V022`, sha256 `ab7a809d83521d64bbffd2a42c10e983d7de90a74452ee80e9525197aa0f4d20`, 378620 bytes, channel 2, 467.625 MHz, power byte 1, monitor off, mode 5 off, UART 57600, not keyed. Phone: SignalDeck pid 14653, stock app disabled, USB, battery 38.7 °C, `mtktsAP` 46.0 °C. HackRF idle.
+- Question: the noisy half still has `WORK_MODE` `0x80` and `FM_BANDWIDTH` `0x0F`, and the word at `0x3A81C` is 0. Op 5 rewrites `WORK_MODE` immediately before the copy that shows the line. Should the stream rewrite that word the same way, immediately before each copy, or is `0x3A81C` the wrong mirror for AT1846S `0x58`?
 
 The 11:49 stream has no 1 kHz line in any half, including half 0. The predicted decay is not in the capture, so the main-loop move was not built. The phone was not used for this step.
 

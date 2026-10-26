@@ -3040,6 +3040,24 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## FW27 op 16 versus op 17 (2026-10-26, 12:30)
+
+(A) and (B) used the image whose copy matches live op 5, sha256 `1d83e5bf9b6685e191b5084cc92ec04a9ccb3cdbf424960f7ff69444688bc489`. The register frame used sha256 `ab7a809d83521d64bbffd2a42c10e983d7de90a74452ee80e9525197aa0f4d20`, 378620 bytes, loaded 12:24:37 (`fwload ok`), boot peak 0.055 dB, nothing above +10 dB, clip fraction 0. Channel 2, 467.625 MHz, power byte 1, monitor off, not keyed. HackRF transmit 467.625 MHz, 2 MS/s, VGA 20, amp off, 2.5 kHz deviation, dummy burst first. Goertzel is the 1000 Hz bin at 8000 Hz.
+
+(B) at 12:14:51: mode 5, op 16 to 230400, then op 5 mode 0, no op 17, during an 8 s tone. Two 514-byte halves. Both half id 0, sequence 0 then 2. rms 17075 and 17079, lag-1 0.66, 1 kHz amplitude 23510 and 23529. Bend at 12:14:49 restored `DMR003.FW27.V022` and mode 5 off, `sr=0`.
+
+(A) at 12:17:29: mode 5, then op 17, UART left at 57600, during a 10 s tone. Start `sr=0`. The saved PCM was 0 bytes. At 12:17:39 the keepalive logged no answer. At 12:17:42.814 the stop logged no answer, and at 12:17:42.821 the return to 57600 logged `sr=0`. Mode 5 off at 12:17:42.878, `sr=0`. A quiet run of the same path at 12:16, with the HackRF idle, saved 19968 bytes. That file has no tone to score.
+
+Register frame at 12:24:59, the normal stream (mode 5, op 16, op 17 at 230400) during a 6 s tone. The stream body is 526 bytes on this image: 512 sample bytes, sequence, half id, then `WORK_MODE`, `FM_BANDWIDTH`, and the word at `0x3A81C`, each little-endian. Op 5's reply is still 514 bytes (samples 0..511, sequence at 512, half id at 513). The first frame's trailer is sequence 0, half id 1, `WORK_MODE` `0x00000080`, `FM_BANDWIDTH` `0x0000000F`, and `0x3A81C` = 0. PCM 129536 bytes, 253 halves.
+
+| Half | 1 kHz amplitude | rms | lag-1 |
+|---:|---:|---:|---:|
+| 0 | 396 | 3088 | 0.32 |
+| 1 | 308 | 3209 | 0.12 |
+| 8 | 494 | 3189 | 0.16 |
+
+`hold mode=5 action=0` at 12:25:48 returned missing. `0x34` at 12:29:07 answered `DMR003.FW27.V022` in 9 ms. Bend at 12:30:36: rate `sr=0`, version handshake true, mode 5 `sr=0`. No `restartmodule`. Battery 38.7 °C, `mtktsAP` 46.0 °C. Stock app disabled. HackRF idle. Section 4 (b) with the line in the stream, (c), the 45 s keepalive, and (d) were not run.
+
 ## FW27 stream halves, 1 kHz Goertzel (2026-10-26, 12:05)
 
 The 11:49:48 capture, `C:\Users\Joshua\AppData\Local\Temp\fw1718\fw27line\ramstream.pcm`, 172032 bytes, 336 halves of 256 samples. The log said 344 halves. Goertzel at 1000 Hz assuming 8000 Hz, amplitude of one bin. No new image and the phone was not used.
