@@ -145,28 +145,112 @@ fw27_gate:
 	.short	0xE000, 0x0B22
 	pop	r15
 
+/* r2 = divisor. Waits until the UART is idle, sets DLAB only after a
+ * read-back, then restores the IER captured before the LCR write.
+ * r0 = 0 when the new divisor is in force. Records at 0x4B380. */
 .Ldiv:
 	movih	r3, 5129
+	ld.w	r1, (r3, 0x4)
+	lrw	r0, 0x4b380
+	st.w	r1, (r0, 0)
+	ld.w	r1, (r3, 0x7c)
+	st.w	r1, (r0, 4)
+	ld.w	r1, (r3, 0xc)
+	st.w	r1, (r0, 8)
+	movi	r4, 250
+	lsli	r4, r4, 8
+.Lbusy:
+	ld.w	r1, (r3, 0x7c)
+	andi	r1, r1, 1
+	cmpnei	r1, 0
+	bf	.Ltemt
+	subi	r4, 1
+	cmpnei	r4, 0
+	bt	.Lbusy
+	br	.Ldlab
+.Ltemt:
+	ld.w	r1, (r3, 0x14)
+	andi	r1, r1, 64
+	cmpnei	r1, 0
+	bt	.Ldlab
+	subi	r4, 1
+	cmpnei	r4, 0
+	bt	.Lbusy
+.Ldlab:
+	ld.w	r1, (r3, 0x7c)
+	st.w	r1, (r0, 4)
+	movi	r4, 32
+.Ltry:
 	ld.w	r1, (r3, 0xc)
 	bseti	r1, 7
 	st.w	r1, (r3, 0xc)
-	movi	r1, 13
+	ld.w	r1, (r3, 0xc)
+	st.w	r1, (r0, 12)
+	andi	r1, r1, 128
+	cmpnei	r1, 0
+	bt	.Ldll
+	subi	r4, 1
+	cmpnei	r4, 0
+	bt	.Ltry
+	movi	r1, 1
+	st.w	r1, (r0, 24)
+	jmp	r15
+.Ldll:
+	andi	r1, r2, 255
 	st.w	r1, (r3, 0)
-	movi	r1, 0
+	lsri	r1, r2, 8
+	andi	r1, r1, 255
 	st.w	r1, (r3, 0x4)
+	st.w	r2, (r0, 20)
+	movi	r4, 32
+.Lclr:
 	ld.w	r1, (r3, 0xc)
 	bclri	r1, 7
 	st.w	r1, (r3, 0xc)
-	movi	r1, 0
-	st.w	r1, (r3, 0x4)
+	ld.w	r1, (r3, 0xc)
+	st.w	r1, (r0, 16)
+	andi	r1, r1, 128
+	cmpnei	r1, 0
+	bf	.Ltail
+	subi	r4, 1
+	cmpnei	r4, 0
+	bt	.Lclr
+	movi	r1, 1
+	st.w	r1, (r0, 24)
+	jmp	r15
+.Ltail:
 	ld.w	r1, (r3, 0xc)
 	ori	r1, r1, 3
 	st.w	r1, (r3, 0xc)
 	movi	r1, 103
 	st.w	r1, (r3, 0x8)
-	movi	r1, 5
+	ld.w	r1, (r0, 0)
 	st.w	r1, (r3, 0x4)
+	movi	r1, 0
+	st.w	r1, (r0, 24)
 	jmp	r15
+
+.Lclk:
+	lrw	r2, 0x32f90
+	ld.w	r0, (r2, 0)
+	lsri	r0, r0, 4
+	jmp	r15
+.L576:
+	push	r15
+	bsr	.Lclk
+	movi	r2, 225
+	lsli	r2, r2, 8
+	divu	r2, r0, r2
+	bsr	.Ldiv
+	pop	r15
+.L230:
+	push	r15
+	bsr	.Lclk
+	movi	r2, 225
+	lsli	r2, r2, 10
+	divu	r2, r0, r2
+	bsr	.Ldiv
+	pop	r15
 
 .Lrate:
 	push	r15
@@ -174,25 +258,77 @@ fw27_gate:
 	cmpnei	r4, 0
 	bt	.Lr1
 	bsr	.Lack
-	movi	r0, 20
-	.short	0xE000, 0x18A4
-	.short	0xE000, 0x5DEC
+	bsr	.L576
 	movi	r5, 0
 	br	.Lflag
 .Lr1:
 	cmpnei	r4, 1
-	bt	.Lbad
+	bt	.Lr2
 	bsr	.Lack
-	movi	r0, 20
-	.short	0xE000, 0x18A4
-	bsr	.Ldiv
+	bsr	.L230
+	cmpnei	r0, 0
+	bt	.Lkeep
 	movi	r5, 1
+	br	.Lflag
+.Lkeep:
+	movi	r5, 0
+	br	.Lflag
+.Lr2:
+	cmpnei	r4, 2
+	bt	.Lpopbad
+	bsr	.Lrep
+	pop	r15
+.Lpopbad:
+	pop	r15
+	mov	r15, r6
+	jmp	r15
 .Lflag:
 	lrw	r4, 0x4b368
 	st.w	r5, (r4, 0)
 	lrw	r4, 0x4b36c
 	lrw	r5, 30000
 	st.w	r5, (r4, 0)
+	pop	r15
+.Lrep:
+	push	r15
+	lrw	r4, 0x4ae00
+	movi	r1, 104
+	st.b	r1, (r4, 0)
+	ld.b	r1, (r7, 1)
+	st.b	r1, (r4, 1)
+	movi	r1, 0
+	st.b	r1, (r4, 2)
+	st.b	r1, (r4, 3)
+	st.b	r1, (r4, 4)
+	st.b	r1, (r4, 5)
+	st.b	r1, (r4, 6)
+	movi	r1, 8
+	st.b	r1, (r4, 7)
+	lrw	r3, 0x4b380
+	ld.w	r1, (r3, 0)
+	st.b	r1, (r4, 8)
+	ld.w	r1, (r3, 4)
+	st.b	r1, (r4, 9)
+	ld.w	r1, (r3, 8)
+	st.b	r1, (r4, 10)
+	ld.w	r1, (r3, 12)
+	st.b	r1, (r4, 11)
+	ld.w	r1, (r3, 16)
+	st.b	r1, (r4, 12)
+	ld.w	r1, (r3, 24)
+	st.b	r1, (r4, 13)
+	ld.w	r1, (r3, 20)
+	st.b	r1, (r4, 14)
+	lsri	r1, r1, 8
+	st.b	r1, (r4, 15)
+	movi	r1, 16
+	st.b	r1, (r4, 16)
+	mov	r0, r4
+	movi	r1, 17
+	.short	0xE000, 0x8E5C
+	mov	r0, r4
+	movi	r1, 17
+	.short	0xE000, 0x7DE8
 	pop	r15
 .Lack:
 	push	r15
@@ -301,7 +437,7 @@ fw27_gate:
 	ld.w	r15, (r3, 0)
 	jmp	r15
 .Lfall:
-	.short	0xE000, 0x5DEC
+	bsr	.L576
 	movi	r4, 0
 	lrw	r3, 0x4b368
 	st.w	r4, (r3, 0)
@@ -373,7 +509,7 @@ fw27_pend:
 	st.w	r4, (r3, 0)
 	cmpnei	r4, 0
 	bt	.Lret
-	.short	0xE000, 0x5DEC
+	bsr	.L576
 	movi	r4, 0
 	lrw	r3, 0x4b368
 	st.w	r4, (r3, 0)
@@ -387,8 +523,9 @@ fw27_pend:
 def patch_calls(code):
     jobs = (
         (bytes.fromhex("00e05b1b"), SENDH, False),
-        (bytes.fromhex("00e0ec5d"), UART57600, False),
         (bytes.fromhex("00e07c8e"), 0x8E7C, False),
+        (bytes.fromhex("00e05c8e"), 0x8E5C, False),
+        (bytes.fromhex("00e0e87d"), 0x7DE8, False),
         # File 0x2B0C is the flash pend (XIP 0x0301CB0C). It is not IRAM 0x2B0C.
         (bytes.fromhex("00e00c2b"), PEND, False),
         (bytes.fromhex("00e0220b"), AT1846, True),
