@@ -66,6 +66,17 @@ Pairs of (clean speech, what the radio's receiver delivers). Two radios in the c
 3. Receive: radio B records the decoded PCM (the REC path). Alignment by cross-correlating the chirp; trim; store
    the pair with the clip id. Reject pairs whose chirp is not found or whose length is off.
 4. Repeat on an analog narrow-FM channel for the FM set (same clips, same loop).
+   **Who has to run SignalDeck (owner question, 2026-10-26):** only the receiver, and it should be the Armor,
+   because the model learns the receiving phone's audio path and the Armor is where the model will run. The
+   module firmware is not involved: DMR voice runs on the stock image. The transmitter needs neither SignalDeck
+   nor a supported phone; it only has to encode the clip and key up. Preferred transmitter: **the BTECH 6X2 with
+   a wired audio input** (line-level clip through an attenuating cable into its accessory jack, PTT keyed through
+   the jack by a relay or a USB-serial line): a clean electrical injection at full speed, and a DVSI AMBE+2
+   encoder, which is the second encoder the generality section asks for and a second Armor could not provide.
+   Second choice: the hotspot parrot below with one Armor. The unsupported phones on order are not useful here
+   (stock apps transmit only from the microphone and expose no raw receive audio); a second supported phone is
+   only needed later for a per-model receive table.
+
    **Hotspot variant (owner question, 2026-10-26):** the MMDVM hotspot has no vocoder, so it can be neither end of
    a pair (it moves AMBE frames between RF and the network and never makes PCM). It can be the middle: radio A
    transmits the clip, the hotspot echoes it back through a parrot (BrandMeister TG 9990, or a local echo if the
