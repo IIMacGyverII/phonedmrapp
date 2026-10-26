@@ -60,7 +60,7 @@ offset,kind,name,comment
 0x05C464,label,fw25_free_tail,"DMR003.FW25.V022 length 0x5C6FC; extension ends at 0x5C464; 664 B free through 0x5C6FB. FW26 links here (232 B, end 0x5C54C)"
 0x05C54C,label,fw26_tail_remain,"432 B zero through 0x5C6FB after FW26. Left unused by FW27"
 0x05BCA4,label,fw27_stub,"opcode 13 playback reclaimed: fw23_play started here and opcode 14 starts at 0x5C098. FW27 links here (736 B, end 0x5BF84). Opcode 12 ends at 0x5BCA2 and is kept"
-0x05BF06,label,fw27_pend,"replaces the UART pend bsr at 0x7C56. Flag 0 calls the flash pend at file 0x2B0C. Flag 1 asks for a short wait and counts down 0x4B36C"
+0x05BF08,label,fw27_pend,"replaces the UART pend bsr at 0x7C56. Flag 0 calls the flash pend at file 0x2B0C. Flag 1 asks for a short wait and counts down 0x4B36C"
 0x05B816,label,fw27_op13_reject,"opcode 13 branches to the sr=1 return at 0x5B876. The playback is not called"
 0x05B1B4,label,op5_sendh,"op 5's copy-and-send. Reply body: sample bytes at 0..511, sequence byte at 512 (slot 0..5), half id at 513 (0 = RAM 0x160004E0, 1 = 0x160006E0)"
 0x05C464,fn,fw26_gate,"cmd 0x40 op 15. Replaces cmphsi r3,15 / bt .Lpass at 0x5B7DE. Body [15, v], v 0 or 1; reply is one byte, the flag now in force. Any other v returns sr 1 and leaves the flag"

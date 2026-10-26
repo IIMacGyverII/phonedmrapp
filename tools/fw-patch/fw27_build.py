@@ -195,10 +195,11 @@ fw27_gate:
 	st.w	r5, (r4, 0)
 	pop	r15
 .Lack:
+	push	r15
 	ld.b	r0, (r7, 1)
 	movi	r1, 0
 	.short	0xE000, 0x8E7C
-	jmp	r15
+	pop	r15
 
 /* One half, then back. r5 is the slot. r2 is the half id.
  * The frame pointer is at (r14, 0) on entry. sendh reads it at (r14, 24). */
