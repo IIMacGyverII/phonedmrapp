@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (02:23) — Independent pager decoder.** multimon-ng 1.6.2 on the bench PC decoded the saved 512, 1200 and 2400 pages: RIC 1000001, function 3, and the three-RIC page on 1000001, 1000002 and 1000003. Inverted polarity was not needed. The phone was not keyed. The runner's tone JSON key is `line1k_dev_Hz`. Tables: `radio_firmware/results.md`.
+
 **2026-10-26 (01:41) — Receive-RAM stream closed on FW26.** A 1 kHz tone at −89 dBm is 1000.00 Hz on the phone audio and is absent from op 5's RAM (rms about 10). Opcode 14 cannot read `0x160004E0`. At 57600 a half takes 89 ms and covers 32 ms, so a continuous dump would drop most halves. No new stub. Tables: `radio_firmware/results.md`.
 
 **2026-10-26 (01:19) — Bench runner accepted on FW26.** `bench.py all` passed boot, tone, the 1125-frame stream, receive and heat. A 30 s low-power key raised `mtktsAP` 1.0 °C. Tables: `tools/fw-bench/results/DMR003.FW26.V022/` and `radio_firmware/results.md`.

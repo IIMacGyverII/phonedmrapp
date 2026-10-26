@@ -57,7 +57,7 @@ def tone(cfg, phone, ms=10000, power=0):
     verdict = "PASS" if ok else ("STOP deviation" if body and body["STOP"] else "FAIL")
     nums = {"carrier_s": rep["carrier_s"], "clip": rep["clip"]}
     if body:
-        nums.update({"p99_Hz": body["p99_hz"], "line1k_Hz": body["tone_line_hz"], "slice_max_Hz": body["slice_p99_max_hz"]})
+        nums.update({"p99_Hz": body["p99_hz"], "line1k_dev_Hz": body["tone_line_hz"], "slice_max_Hz": body["slice_p99_max_hz"]})
     return {"verdict": verdict, "numbers": _numbers(nums), "key": rep}
 
 

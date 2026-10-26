@@ -10,7 +10,7 @@ Acceptance is the `all` run, after the fixes below. Every test passed. JSON and 
 |---|---|---|
 | tag | yes | `DMR003.FW26.V022` |
 | boot | yes | peak 0.048 dB and 0.07 dB, no run over 10 dB (the bar is under 0.1 dB) |
-| tone | yes | 10.5 s carrier, body p99 2.54–2.55 kHz, 1 kHz line, hottest half-second 4.03–4.04 kHz |
+| tone | yes | 10.5 s carrier, body p99 2.54–2.55 kHz, 1 kHz line (`line1k_dev_Hz` is that line's deviation, not its frequency), hottest half-second 4.03–4.04 kHz |
 | stream | yes | 1125/1125 payload-exact, end bit, carrier 45.41 s, p99 2903 and 2908 Hz, clip 0 |
 | heat | yes | 30 s low power: AP +1.0 °C, battery +0.2 °C. 45 s low power: AP +1.2 °C, battery +0.3 °C. No stop |
 | receive | yes | the phone clip carries the 1 kHz line (−19.1 dBFS) |

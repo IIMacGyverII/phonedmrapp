@@ -2981,3 +2981,22 @@ Opcode 14 reads only `0x18000000`–`0x1800FFFF`. A 160-byte read at `0x180000A0
 Op 5 still answers. Four halves, 514 bytes each, sequence 0, 1, 2, 3 and half ids 1, 0, 1, 0: this short dump did not skip a block. As big-endian samples the four halves sit near a small offset (means 114, 96, 68, 54) with rms 10, 6, 14 and 6. There is no 1 kHz line. Op 5 with mode 4 returns `sr=1` and no bytes. Applying op 6 mode 4 and restoring it both return `sr=0`; a mode-0 dump while that hold was on did not produce a file.
 
 The running UART is 57600. One 514-byte half takes about 89 ms on the wire and covers 32 ms of 8 kHz audio, so a continuous dump at this rate would keep about 36 % of the halves and drop the rest. A 230400 line (the divisor reading is 230769 Hz, +0.160 %) would carry the same half in 22 ms, inside the 32 ms it represents. FW26 does not switch the UART, and opcode 14 cannot see the FM RAM. **Decision: close the RAM stream on this image.** The phone audio path is the one that carries the signal. A stream would be a new stub. None was built. Hold mode 4 was restored. Channel 2. HackRF idle.
+
+## Independent pager decoder (2026-10-26, 02:23)
+
+multimon-ng 1.6.2, source commit `b5f7d71`, built on this PC with MSYS2 MinGW gcc 16.2.0. No WSL. The CMake MinGW generator wrote a makefile with no compile rules, so the sources were compiled directly (`-DONLY_RAW -DNO_X11 -DNO_SDL3 -DWIN32_AUDIO -DWINDOWS`). The executable stays outside the repository. The phone was not keyed and the HackRF was not started: the 21:57–21:59 demodulated wavs were still on disk. Each was resampled from 48 kHz mono to 22050 Hz signed 16-bit, which is the rate the POCSAG demodulators ask for. There is no `item8_F2400.wav`; the 2400-baud file is `item8_L2400.wav` from 21:57:20, the level-table page.
+
+| File | Written | Demodulator | RIC | Function | Text multimon-ng printed |
+|---|---|---|---|---|---|
+| `item8_F512.wav` | 21:58:25 | POCSAG512 | 1000001 | 3 | `N0CALL: LO` |
+| `item8_F1200.wav` | 21:58:44 | POCSAG1200 | 1000001 | 3 | `N0CALL: HI` |
+| `item8_F3.wav` | 21:59:05 | POCSAG1200 | 1000001, 1000002, 1000003 | 3 | `N0CALL: ABC` on each |
+| `item8_L2400.wav` | 21:57:20 | POCSAG2400 | 1000001 | 3 | `N0CALL: HI` |
+
+`-P auto` at verbosity 3. The inverted-sync line (printed only when the inverted sync word matches) did not appear. On the 1200-baud page, `-P normal` printed the same RIC, function and text, and `-P inverted` printed no address. The inverted option was not needed. The one-RIC pages also show a trailing null after the text; the three-RIC page does not. The BCH counters run over the whole file, including the lead-in, so they are not a bit-error rate for the page. The pass is the printed address and text.
+
+The runner's tone JSON key is now `line1k_dev_Hz`. It is the deviation of the 1 kHz line, not the line's frequency. The two tone records already committed under `tools/fw-bench/results/DMR003.FW26.V022/` still say `line1k_Hz`; those files are the record of the runs that wrote them.
+
+## End state
+
+The phone was not used. Channel 2, module `DMR003.FW26.V022`, HackRF idle, the same end state as the 01:19 runner. Nothing was keyed.

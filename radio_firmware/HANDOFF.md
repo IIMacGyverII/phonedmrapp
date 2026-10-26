@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -157,7 +157,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-**Receive RAM, 01:41.** A 1 kHz tone at −89 dBm is 1000.00 Hz on the phone audio (rms 5971) and is not in the FM RAM (op 5 rms about 10; opcode 14 cannot read that address). At 57600 a half takes 89 ms for 32 ms of audio. Route closed on this image; no new stub. Channel 2, hold restored, FW26, HackRF idle.
+**Independent pager decoder, 02:23.** multimon-ng 1.6.2 decoded the saved pages: RIC 1000001, function 3, `N0CALL: LO` at 512 baud and `N0CALL: HI` at 1200 and 2400; the three-RIC page is `N0CALL: ABC` on 1000001, 1000002 and 1000003. Auto polarity locked normal; `-P inverted` printed no address. The phone was not keyed. The runner's tone key is now `line1k_dev_Hz`. Channel 2, FW26, HackRF idle.
 
 ## Owner question
 
