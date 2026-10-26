@@ -12,8 +12,8 @@
 #   body[512]     sequence, one byte, the slot 0..5 (the send buffer ends
 #                 at 0x4B000, so a wider counter would walk off it)
 #   body[513]     half id, 0 = RAM 0x160004E0, 1 = RAM 0x160006E0.
-#                 The half sent is the one FM_ADDR_SW is not pointing at
-#                 (1 sends 0x160006E0, 2 sends 0x160004E0), the same as op 5.
+#                 Same choice as the live op 5 copy at file 0x5B110:
+#                 FM_ADDR_SW 1 copies 0x160004E0, 2 copies 0x160006E0.
 # The 8-byte header in front of the body has length 514. A 0x10 tail follows.
 import struct
 import subprocess
@@ -454,14 +454,15 @@ fw27_gate:
 	ld.b	r3, (r1, 0)
 	cmpne	r0, r3
 	bf	.Lspin
+	/* Same source as op 5 at 0x5B110: switch 1 is 0x160004E0. */
 	cmpnei	r0, 1
 	bt	.Lid
-	movi	r2, 1
+	movi	r2, 0
 	br	.Lok
 .Lid:
 	cmpnei	r0, 2
 	bt	.Lspin
-	movi	r2, 0
+	movi	r2, 1
 .Lok:
 	st.b	r0, (r1, 0)
 	/* sendh clobbers r1 and r5. Store the next slot before the call. */
