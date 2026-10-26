@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (10:06) — FW27 loaded, UART rate switch is silent.** Tag `DMR003.FW27.V022`, sha256 `400c7cc8…fd70`, 378620 bytes, opcode 13 retired, opcodes 12 and 14 kept. Op 5's reply is 514 bytes: samples 0..511, sequence 512 (wraps at 6), half id 513. Op 16 rate 1 acks at 57600, then neither 230400 nor a 35 s fallback answers. Power cycle restores the tag. Section 4 not run. Phone not keyed.
+
 **2026-10-26 — FW27 stub does not fit.** Control stub 324 bytes, 108 left in the 432-byte tail; the half-copy with its checks is 164 bytes. `0x35F64` is not free. No image loaded.
 
 **2026-10-26 (08:20) — Receive-RAM stream design.** `radio_firmware/plan-rx-ram-stream.md`: op 6 mode 5 holds the bypass and `WORK_MODE` `0x80` together, op 16 switches the UART with a 30 s fallback to 57600, and op 17 pushes sequenced halves. No image and no phone. FW27 waits for the review.

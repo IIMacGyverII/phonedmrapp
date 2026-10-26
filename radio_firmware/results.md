@@ -3039,3 +3039,11 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 ## FW27 stub size (2026-10-26)
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
+
+## FW27 loaded, rate switch silent (2026-10-26, 10:06)
+
+Image `DMR003.FW27.V022`, 378620 bytes, sha256 `400c7cc84edbaecde2f3c9d24bc479c00f64c4ff6d29d3e213ba041db010fd70`. YModem `fwload ok` at 10:04:03, 137788 ms. `0x34` after the load and again after a power cycle: `DMR003.FW27.V022`. The file length is unchanged. Opcode 13 branches to the `sr=1` return. Opcodes 12 and 14 are the FW26 bytes. The free tail from `0x5C54C` is still zero. The stub is 736 bytes at `0x5BCA4`, ending `0x5BF84`.
+
+Op 17 calls op 5's existing send (`0x5B1B4`). That reply body is 514 bytes, not a new 516-byte opcode-17 body. Samples are big-endian at body 0..511. Body 512 is the sequence byte and is also the slot, so it runs 0, 1, 2, 3, 4, 5, 0. Body 513 is the half id (0 = RAM `0x160004E0`, 1 = RAM `0x160006E0`). The host should wrap at 6. An empty ack does not carry the rate byte. A frame seen during the stream that is not `[17, 2]` ends the stream and is not executed afterwards. Mode 5 is not cleared by a channel write; the host sends `[6, 5, 0]`.
+
+Op 16 `[16, 1]` at 57600: `sr=0` at 10:04:09, 10:04:52 and 10:05:22. The host then opened 230400. A `0x34` frame, sent after the module's 20 ms post-ack delay, produced 0 bytes in 1.2 s. Three seconds at 230400 produced no version reply. From 10:05:25 to 10:06:00 the host sent nothing. `0x34` at 57600 still failed, and a second `[16, 1]` got no answer. The update knock at 230400 returned `00 00 FC`, not `C`. Power cycle at 10:06:11, banner, `0x34` true, tag unchanged. Channel 2, 467.625 MHz, not keyed, monitor off, RSSI −110. HackRF was not started. Section 4 (b), (c) and (d) were not run.
