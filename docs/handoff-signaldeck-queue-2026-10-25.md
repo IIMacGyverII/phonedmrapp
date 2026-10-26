@@ -219,3 +219,4 @@ with no tester IDs. On the owner's Armor, the report must not change except for 
   - **Proposed new item 8 (not built):** gate CW decoding off while the AFSK decoder has seen HDLC flags or a packet in
     the last ~2 s (`PacketEngine.feed`). Add a host test with radio-recorded APRS clips (an `rxclip` during an APRS
     bench) as the reproduction. Needs a phone window to record the clips.
+- 2026-10-25 20:08 (SignalDeck manager): **PR 6 and PR 7 merged** after their phone checks (scan kept running after a level change; nameMax 32 from the server, a 36-character name stored as 32, the phone editor's counter). Main is `28517806`; rebase `claude/report-gaps` onto it. PR 8 next, privacy commit first as you did. The shared checkout's two uncommitted files are still pending on your side.
