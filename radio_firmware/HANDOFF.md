@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -157,7 +157,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-**Cold-boot regression, 05:50.** Starting SignalDeck took the radio in 7.2 s: stock app disabled, tag `DMR003.FW26.V022`. Boot peak 0.108 dB, silent. Receive clip −18.9 dBFS with the 1 kHz line. Channel 56 listed one call, 30 frames, 27 clean. MON on channel 4 echoed flag 1, then 0. With the boot setting on, a USB reboot brought SignalDeck up by itself at 47.9 s; the setting is off again. Channel 2, monitor off, HackRF idle. Wi-Fi adb did not reconnect after `tcpip 5555`; USB is up.
+**Hotspot arrival runbook, 06:10.** Written in `plan-independent-m17-check.md`. The image is the M17 community fork, not current upstream WPSD. Frequencies follow channels 2, 56, and 4. Must-confirm 0 is first. No phone and no key. The phone is unchanged: SignalDeck, FW26, channel 2, monitor off, USB adb.
 
 ## Owner question
 

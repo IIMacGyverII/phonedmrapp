@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (06:10) — Hotspot arrival runbook.** The setup session is written in `radio_firmware/plan-independent-m17-check.md`: the M17 community fork of WPSD, the phone's own channel frequencies, the five independent checks, the promiscuous rows with must-confirm 0 first, and the second-station self-cal. No phone and no key.
+
 **2026-10-26 (05:50) — Cold-boot regression resumed over USB.** Starting SignalDeck took the radio in 7.2 s (FW26, stock app disabled). The runner's boot was silent (peak 0.108 dB) and its receive clip carried the 1 kHz line. Channel 56 listed one 30-frame call, 27 clean. MON on channel 4 echoed flag 1, then 0. With Own-the-radio-at-boot on, a second reboot brought SignalDeck up by itself at 47.9 s; the setting was turned off again. Tables: `radio_firmware/results.md`.
 
 **2026-10-26 (02:50) — Cold boot stopped at adb.** The phone rebooted at 02:42 with tag `DMR003.FW26.V022` and the installed APK sha256 `c54cf9ad…c088`. Eight minutes later port 5555 still refused the connection, with no USB device and no mDNS adb service. The rest of the regression was not run. Tables: `radio_firmware/results.md`.

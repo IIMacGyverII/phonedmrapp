@@ -90,7 +90,7 @@ What to send: the SignalDeck APK, the firmware image with its tag and SHA-256, t
 
 The owner ordered an AURSINC "Upgraded MMDVM Duplex Hotspot" (Raspberry Pi Zero 2 W, Wi-Fi, Pi-Star/WPSD; the
 listing names C4FM/YSF, POCSAG, NXDN, D-Star, P25 and DMR). A duplex hat of this kind is an ADF7021 MMDVM_HS
-board, which with current hat firmware and WPSD also runs **M17**. In the cage it becomes the independent station
+board. Upstream WPSD no longer includes M17; the community fork does, and the runbook below starts from that image. In the cage it becomes the independent station
 the Ubuntu box was meant to be, for everything but raw IQ work:
 
 - **M17 transmit check (the open item):** the hotspot in M17 mode on the bench frequency; SignalDeck's Hold to talk
@@ -109,4 +109,120 @@ on; update the hat firmware to a build with M17; set the frequencies to the benc
 is allowed in the cage, owner 2026-10-24; the hotspot's own range limits apply); power through a fixed USB supply;
 record the hat firmware version, MMDVMHost version and the modes enabled in `results.md`. Bench callsign in the
 hotspot, never the owner's, since its logs are quoted in reports.
+
+The image is not current upstream WPSD. The M17 wiki (2026-02-02) records that M17 was removed from MMDVM and from
+upstream WPSD in July 2025. The image that still has it is the M17 community fork. The arrival-day steps are below.
+
+## Arrival-day runbook
+
+Host notes only. Nothing here is done until the hotspot is on the bench. No phone and no key while this section
+is being written. As of 2026-10-26 05:50 the phone is on USB adb; Wi-Fi adb timed out after the second reboot.
+Use whichever serial answers. Do not put a Wi-Fi password, a DAPNET key, or the owner's callsign or DMR ID in
+this file or in a report.
+
+### 1. First boot
+
+1. Flash the M17 community fork of WPSD (the June 2025 line that still contains M17), not the current upstream
+   image. In Raspberry Pi Imager's OS customization, set the cage Wi-Fi and the country. Do not set a new user.
+   Leave SSH available. Do not write the Wi-Fi password into the repo.
+2. Power the board from its own USB supply. It must not be powered from the phone.
+3. If it does not join the cage Wi-Fi, it opens an access point named `wpsd`. Join that, open the dashboard,
+   and point it at the cage Wi-Fi from there. Set the hostname to `bench-hotspot` and change the `pi-star`
+   password in the dashboard. Do not copy the password into a log.
+4. SSH in as `pi-star`. Confirm the image before any mode work:
+
+```bash
+grep -n "^\[M17\]" /etc/mmdvmhost
+grep -n "Enable=" /etc/mmdvmhost
+```
+
+   If there is no `[M17]` section, this is the upstream image. Stop. M17 checks cannot start on it. DMR and
+   POCSAG would still run, and that is not enough for this session.
+5. On the dashboard's modem page, flash the hat firmware entry that matches the silkscreen. Do not guess a
+   ZUMspot command for a different board. After the reboot, the MMDVMHost log (the file the dashboard links,
+   usually `/var/log/pi-star/MMDVM-*.log`) must list M17 among the modem protocols. Record the hat firmware
+   version, the MMDVMHost version, and that protocol list. If M17 is missing from the list, stop.
+6. Identity, in the dashboard, not in this file: callsign `N0CALL`. Read the phone's DMR ID from SignalDeck's
+   Device tab and give the hotspot a different bench ID. Write both numbers only in the session log.
+7. Frequencies follow the phone's channels, read first and not assumed:
+
+```text
+adb forward tcp:18080 tcp:8080
+```
+
+   Then `GET /api/channel?number=2`, `56`, and `4` (login with the pin that is already on the phone; do not
+   print it). This morning channel 2 and channel 56 receive 467.625 MHz and channel 4 receives 467.700 MHz.
+   Read each transmit frequency too.
+   - M17 and the held-path page use channel 56. If its transmit equals its receive, the hotspot is simplex
+     on that frequency even though the hat is duplex.
+   - DMR uses channel 4. Hotspot transmit = the phone's receive. Hotspot receive = the phone's transmit.
+     Use 467.625/467.650 only when a phone channel already has that split.
+8. Colour code and slot, for the capture matrix (`tools/dmr-replay/capture-matrix.csv`): CC 1 and slot 1 are
+   the baseline. Slot 2 is the row `hs_cc1_ts2`. CC 2 is the row `cc2_tg9_s1`. Read channel 4's colour code,
+   slot, and RX group list before the first DMR transmission. The out-of-list row needs one talkgroup that is
+   in that list and one that is not. If channel 4 is not that shape, pick or make a channel that is, and put
+   the radio back afterwards.
+
+### 2. Independent checks, in this order
+
+Each phone transmission is low power, waits at least 3.5 s after a channel change, stays under 28 s, and stops
+on the heat rule (battery over 45 °C, `mtktsAP` or `mtktsbtsmdpa` over 60 °C, or more than 2 °C in 10 s).
+The hotspot's own supply is not the phone.
+
+| Check | Do | Proves | Pass |
+|---|---|---|---|
+| M17, phone to hotspot | Channel 56 (the select turns the live receiver and the voice-filter hold on). `POST /api/ptt` `{"down":true}` for about 10 s, then `{"down":false}`. Three times. | A real M17 modem decodes our voice frames | MMDVMHost log: source `N0CALL`, the channel's destination, BER recorded, three times |
+| M17, hotspot to phone | The hotspot transmits M17. A reflector or a second client is that transmission. If the image has no local way to send M17, and the owner has not approved a reflector, write that down and do not invent one | Our live receiver decodes a modem we did not write | `GET /api/m17`: one listing, the hotspot's callsign, at least 95 percent of its frames clean |
+| POCSAG, hotspot to phone | Channel 56 still holding the voice filter. Send one page to RIC `1000001`, function 3, a one-line bench text. Use the dashboard's local POCSAG send if it has one. If the only path wants a DAPNET auth key, stop; do not create an account and do not write a key down. Two sends if the modem level can be changed: one nearer 2.5 kHz deviation and one nearer 4.5 kHz, the deviation measured afterwards with the HackRF, because the dashboard sets a level and not a deviation | The held-path decoder against a pager transmitter | SignalDeck shows RIC `1000001`, function 3, and the text. Record the HackRF deviation of each send |
+| DMR, phone to hotspot | Channel 4, colour code and slot as read above, a talkgroup the hotspot is listening to. One short key | Our DMR transmit against MMDVM | The log shows the phone's DMR ID, the talkgroup, the slot, and a BER |
+| DMR, hotspot to phone | The hotspot transmits on channel 4's receive frequency (its duplex retransmission, or a network echo the owner has approved) | Our DMR receive against MMDVM | The phone's history shows that call on channel 4 |
+
+### 3. Promiscuous rows
+
+Must-confirm 0 comes before any FW26 flag row. It is the stock image, MON on, and the out-of-list talkgroup
+(`cc1_tg100_s1` in the capture matrix). `POST /api/monitor` `{"on":true}` sends the stock monitor command.
+If the phone passes that talkgroup, the stock monitor already admits an out-of-list group and the flag's group
+gate is only the private-call half. Record the history line and the `0x2B` log either way.
+
+Then each hotspot row of the matrix, one configuration at a time. Set the hotspot to that row's colour code,
+slot, talkgroup, and call type. For each row:
+
+1. Factory image loaded through SignalDeck's own loader (not `fwload_stock.sh`). `0x34` reads `DMR003.UV4T.V022`. MON on. One transmission. Score: audio or silence, and the `0x2B` body.
+2. FW26 loaded back. `0x34` reads `DMR003.FW26.V022`. MON off, so the flag is off. The same hotspot settings, one transmission. Score the same way. The body is 9 bytes and has no colour code or slot.
+3. MON on. The log line is `promiscuous on: sr=0 flag=1`. The same transmission again. The history line shows colour code and slot, and the `0x2B` body is 11 bytes. Those two displayed values match the hotspot. Then MON off (`flag=0`) before the next row.
+
+The rows and what they decide:
+
+| Row | Hotspot | Stock, MON on | FW26, flag off | FW26, flag on |
+|---|---|---|---|---|
+| `cc1_tg9_s1` | CC 1, slot 1, an in-list talkgroup | passes (baseline) | passes | passes, CC 1 slot 1 on the 11-byte body |
+| `cc1_tg100_s1` | CC 1, slot 1, a talkgroup not in the list | must-confirm 0 | drops | passes |
+| `cc2_tg9_s1` | CC 2, slot 1, the in-list talkgroup | drops if the channel is CC 1 | drops | passes, displayed CC 2 |
+| `cc1_priv_self` | CC 1, private call to the phone's own ID | passes | passes | passes |
+| `cc1_priv_other` | CC 1, private call to the bench ID, not the phone's | drops | drops | passes |
+| `hs_cc1_ts1` | CC 1, slot 1 | slot baseline | slot baseline | displayed slot 1 |
+| `hs_cc1_ts2` | CC 1, slot 2, channel still slot 1 | the other slot | the other slot | displayed slot 2 |
+
+Load FW26 again at the end of the table. Do not leave the factory image in the module.
+
+### 4. Self-calibration, the second station
+
+Channel 56, FW26, the hold on. The shipped Armor taps are the "before".
+
+One clean call of at least 20 frames is the fit, stored as pending, not yet the taps in use. The other station
+makes the second call, at least 6 dB weaker or plainly a different transmitter: the hotspot for the fit and a
+HackRF transmission for the score, or the reverse. The pending taps have to lock on their own, and they have to
+yield at least as many clean frames as the taps already in use, on that same recording. Until that is true the
+receiver does not change. Record both meter readings and both frame counts.
+
+### 5. End state, and what is written down
+
+Hotspot on its own supply, not transmitting. Phone: SignalDeck owns the radio, `DMR003.FW26.V022`, channel 2,
+monitor off, `ownAtBoot` left as it was found. HackRF idle.
+
+`results.md` gets one section: the image name and the proof that `[M17]` was present; hat firmware version,
+MMDVMHost version, protocol list; the frequency pair and the channel it matches; the five independent checks
+with BER or frame counts; must-confirm 0 as pass or drop; each promiscuous row's three scores and the displayed
+colour code and slot; the self-cal before and after counts and the two meter readings; the end state. No
+callsign other than `N0CALL`, no DMR ID, no auth key, no place.
 

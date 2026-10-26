@@ -3027,3 +3027,7 @@ The owner reconnected USB. At 05:40 the stock app was enabled and SignalDeck was
 `ownAtBoot` was then turned on and the phone was rebooted from USB at 05:48:09. USB adb returned in 24 s. The app's process appeared by itself at uptime 43 s, and the radio was ready at uptime 47.9 s: link ready, stock app still disabled, tag `DMR003.FW26.V022`, channel 2. Nothing on the host started the app. `adb -s 5006AF1020002922 tcpip 5555` answered `restarting in TCP mode port: 5555`. A following `adb connect 192.168.1.125:5555` timed out (Windows 10060); USB stayed up.
 
 The boot setting was turned back off. End state 05:50: channel 2 at 467.625 MHz, monitor off, not transmitting, stock app disabled, SignalDeck owning the radio, `ownAtBoot` false, module `DMR003.FW26.V022`. HackRF idle. Nothing was keyed.
+
+## Hotspot arrival runbook (2026-10-26, 06:10)
+
+Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day runbook". No phone, no key, no image loaded. The image to flash is the M17 community fork, because upstream WPSD dropped M17 in July 2025. Frequencies follow the phone's channels (2 and 56 on 467.625, channel 4 on 467.700), read again on the day. Must-confirm 0 is the stock image with MON on and an out-of-list talkgroup, before any FW26 flag row. The phone was left as the cold-boot end state.
