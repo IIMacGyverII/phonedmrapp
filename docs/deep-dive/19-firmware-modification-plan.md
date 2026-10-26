@@ -218,7 +218,9 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
-**2026-10-25 — FW24, opcode 13 does not reach the phone.** The DMR-channel playback was digital silence (−88 dBFS). The analog playback with `STANDBY_LO` bit 31 already clear was open-squelch noise at −13.7 dBFS and no chirp. Decision (c) is final: the calibration trains on a real reception. The 1125-frame stream on the image that stayed loaded was 1125/1125. Tables: `radio_firmware/results.md`.
+**2026-10-25 — FW25, the vocoder buffer is not what the phone hears in FM.** A 500 Hz then 2 kHz square at ±8192 was written at `0x180000A0` and was still there afterwards. Irq 27's flag stayed 0 (count 0). The phone clip stayed near 320 Hz at −15.7 dBFS. The flag word is not another buffer address. Decision (c) is final. The 1125-frame stream was 1125/1125. Tables: `radio_firmware/results.md`.
+
+**2026-10-25 — FW24, opcode 13 does not reach the phone.** The DMR-channel playback was digital silence (−88 dBFS). The analog playback with `STANDBY_LO` bit 31 already clear was open-squelch noise at −13.7 dBFS and no chirp. The review then asked for FW25 before calling (c) final. The 1125-frame stream on the image that stayed loaded was 1125/1125. Tables: `radio_firmware/results.md`.
 
 **2026-10-23 — FW8, FW16 done; FW11 largely done on the host.**
 

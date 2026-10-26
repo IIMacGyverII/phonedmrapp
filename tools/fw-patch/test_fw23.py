@@ -9,7 +9,7 @@ import fw23_build
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-IMAGE = ROOT / "radio_firmware" / "build" / "DMR003.FW24.V022.bin"
+IMAGE = ROOT / "radio_firmware" / "build" / "DMR003.FW25.V022.bin"
 
 
 class Fw23Test(unittest.TestCase):
@@ -30,11 +30,20 @@ class Fw23Test(unittest.TestCase):
         self.assertEqual(fw23_build.freq_hz(23999), 3799)
         self.assertLessEqual(max(fw23_build.freq_hz(n) for n in range(1600, 24000)), 3799)
 
+    def test_two_tone_is_a_square_at_the_symbol_level(self):
+        self.assertEqual([fw23_build.square_sample(n) for n in range(8)], [8192] * 8)
+        self.assertEqual([fw23_build.square_sample(n) for n in range(8, 16)], [-8192] * 8)
+        self.assertEqual(fw23_build.square_sample(16), 8192)
+        self.assertEqual(
+            [fw23_build.square_sample(12000 + n) for n in range(4)],
+            [8192, 8192, -8192, -8192])
+        self.assertEqual(fw23_build.square_sample(23999), -8192)
+
     def test_image_tag_and_the_new_function_does_not_name_ptt(self):
         fw23_build.main()
         img = IMAGE.read_bytes()
         self.assertEqual(len(img), 378620)
-        self.assertEqual(img[0x38464:0x38474], b"DMR003.FW24.V022")
+        self.assertEqual(img[0x38464:0x38474], b"DMR003.FW25.V022")
         ext = img[0x5B794:0x5C6FC]
         for addr in (0x110003B0, 0x180000A0, 0x11000080, 0x11000100, 0x11000088):
             self.assertIn(addr.to_bytes(4, "little"), ext)

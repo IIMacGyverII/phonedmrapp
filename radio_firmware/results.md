@@ -2763,3 +2763,38 @@ Robot 24 was not sent. After Martin M1 the battery was 43.9–44.2 °C and the A
 ### End state
 
 PR 5's release build is the installed SignalDeck. `0x34` `DMR003.FW24.V022`. Channel 2, 467.625 MHz analog, low power. No `DMRDEBUG.bin`. The web server was left on for the sends. No further key until the battery is down and `mtktsAP` is back under 60 °C, which it was (52.7 °C at 18:48) while the battery was still 43.9 °C.
+
+# FW25 — two-tone into the vocoder buffer (2026-10-25, 19:32–19:43)
+
+The review of FW24 said the −13.7 dBFS stationary tone meant the lineout was heard and the samples at `0x180000A0` were not what the DAC played. FW25 adds two things to that image. Opcode 13 with a second body byte of 2 writes a square at ±8192: 1.5 s at 500 Hz (8 samples high, 8 low), then 1.5 s at 2 kHz (2 high, 2 low). It sets the DAC the way boot does and does not touch `STANDBY_LO` or PTT. The 24-byte reply is the irq-27 count, the flag word `0x110003B0` at the start, at sample 12000 and at the end, and four halfwords (the buffer before the first write, the square value at sample 12000, the last value written, the buffer after). Opcode 14 reads 1..240 bytes from `0x18000000`..`0x1800FFFF`, the same shape as opcode 12. Host `test_fw23`: 4 tests. Image sha256 `f0759b7d3bce21471f82957cc488553b81dbf8bc01aeb6861a7832bec08c116a`, 378620 bytes. The extension is 3280 bytes and ends at `0x5C464`.
+
+`fwload ok(DMR003.FW25.V022)` at 19:35:49. The HackRF capture started at block 350 of 370 (19:35:31), before the restart. Banner `开机初始化完成` at 19:35:41. Boot peak 0.074 dB, clip 0, nothing at or above 10 dB. `0x34` body is `DMR003.FW25.V022`.
+
+The playback was on the low-power VFO at 467.625 MHz (band 1, power byte 0, squelch opened with `0x30` body 0, acked `sr=0`). Opcode 14 read 160 bytes at `0x180000A0` before the tone: the first samples were −1, 0, −1, −1. Body `0D 02` was sent at 19:37:44. `raw40` returned none at 800 ms, and the module's own reply arrived at 19:37:47 (`sr=0`, `len=24`):
+
+| Word | Value |
+|---|---|
+| irq-27 count | 0 |
+| `0x110003B0` at the start | `0x00000000` |
+| `0x110003B0` at sample 12000 | `0x00000000` |
+| `0x110003B0` at the end | `0x00000000` |
+| buffer halfword before | `0xFFFF` (−1) |
+| square at sample 12000 | `0x2000` (+8192) |
+| last value written | `0xE000` (−8192) |
+| buffer halfword after | `0x2000` (+8192) |
+
+Opcode 14 read the same 160 bytes at 19:37:49, about 2 s after the reply. The first eight samples are +8192, +8192, −8192, −8192, and that pair repeats: the 2 kHz square is sitting in the buffer. HackRF 467.385 MHz, LNA 24, VGA 38, 16 s: peak 0.065 dB, clip 0. No `0x26`. A status byte 2 arrived only when the squelch was closed afterwards.
+
+The phone clip is 10 s at 8 kHz. Every 0.5 s window from 0 s through 9 s is −15.5 to −16.0 dBFS. The spectral peak stays near 320 Hz (300–344 Hz, one window at 748 Hz after the tone). The 500 Hz line and the 2 kHz line stay in the noise of that tone. The square that is in the buffer does not come out of the speaker.
+
+The irq-27 count is 0 and the flag word stays 0, so the codec is not consuming this buffer while the modem is in FM. The flag word is not an address. The guide names `0x180000A0` as the buffer the codec reads, and that is the buffer the square was written into. There is no second source register in the read-back, so nothing was written on a guess. **Decision (c) is final.** Item 7 trains on a real reception. The chirp comparison was not run: the two tones did not move the sound.
+
+### Unchanged behaviour
+
+The 1125-frame stream was keyed on the same low-power VFO, because channel 2's own row programs power byte 1. HackRF LNA 8 / VGA 8. Keyed 45.41 s, steady p99 3026 Hz, IQ peak 5, clip 0. Decode 1125 of 1125, last frame 1124 with the end bit (33892), EOT score 0.999. Battery 39.1 to 39.2 °C, `mtktsAP` 45.5 to 47.3 °C, `mtktsbtsmdpa` 44.2 to 45.6 °C. No heat stop. The VFO was turned off at 19:41:59.
+
+Receiver, phone not keyed, back on channel 2. Idle `0x32` raw 21 (−109.5 dBm). The gain-0 HackRF carrier moved it to raw 35 (−102.5 dBm). A 1 kHz FM tone, ±2.5 kHz, HackRF VGA 20, dummy burst first: the clip is silence until the squelch opens, then −11.1 dBFS with a 1 kHz line of about 12940 for 3.5 s. The path is open.
+
+### End state
+
+`0x34` `DMR003.FW25.V022`. Channel 2, 467.625 MHz analog. That row programs power byte 1 and squelch 5; the hardware squelch was then set to body 2. No `DMRDEBUG.bin`. SignalDeck owns the radio. The stock app was not changed. The web server was turned off. Boot peak 0.074 dB.

@@ -1,9 +1,12 @@
-# Build DMR003.FW24.V022. FW23's opcode 13, plus one argument.
-# Body length 1 is the idle playback already measured (tag FW23).
-# Body length 2 with byte 1 clears STANDBY_LO bit 31 and AICR_DAC bit 4 for
-# the 3 s, unmutes the DAC the same way, reads the two demod-to-DAC registers
-# without writing them, and puts every changed bit back. The reply body is
-# the read-back. PTT is never stored and AT1846S register 0x30 is never written.
+# Build DMR003.FW25.V022. FW24's opcode 13, plus a two-tone and a RAM window.
+# Opcode 13, body length 1: the idle chirp (tag FW23).
+# Opcode 13, body length 2, byte 1: the speaker-gate read-back (tag FW24).
+# Opcode 13, body length 2, byte 2: 1.5 s of 500 Hz then 1.5 s of 2 kHz,
+# both a square at ±8192, written at 0x180000A0. The reply is the irq-27
+# count and the half flag before, at the boundary and after. It does not
+# touch STANDBY_LO and it does not key.
+# Opcode 14: a RAM window in 0x18000000..0x1800FFFF, length 1..240, the
+# same shape as opcode 12. PTT is never stored.
 import math
 import struct
 import subprocess
@@ -33,6 +36,12 @@ def freq_hz(n):
     if n < 1600:
         return 1000
     return 50 + (n - 1600) * 3750 // 22400
+
+
+def square_sample(n):
+    """Opcode 13 body byte 2. 500 Hz (8 high, 8 low) until sample 12000, then 2 kHz (2 high, 2 low)."""
+    bit = (n >> 3) & 1 if n < 12000 else (n >> 1) & 1
+    return -8192 if bit else 8192
 
 
 def sweep_sample(n, phase):
@@ -128,14 +137,14 @@ fw21_fill:
 	pop	r15
 
 /* Unknown opcode, called in place of the sr=1 prologue. r15 returns to
- * movi r1, 1. Ops 8-13 are handled here and do not return. */
+ * movi r1, 1. Ops 8-14 are handled here and do not return. */
 fw21_ops:
 	mov	r6, r15
 	ld.w	r7, (r14, 0)
 	ld.b	r3, (r7, 8)
 	cmphsi	r3, 8
 	bf	.Lpass
-	cmphsi	r3, 14
+	cmphsi	r3, 15
 	bt	.Lpass
 	cmpnei	r3, 8
 	bt	.Ln8
@@ -162,12 +171,39 @@ fw21_ops:
 	pop	r4-r7, r15
 .Ln12:
 	cmpnei	r3, 13
-	bt	.Ln10
+	bt	.Ln14
+	ld.b	r0, (r7, 6)
+	ld.b	r1, (r7, 7)
+	lsli	r0, r0, 8
+	or	r0, r1
+	cmpnei	r0, 2
+	bt	.Lplay23
+	ld.b	r0, (r7, 9)
+	cmpnei	r0, 2
+	bt	.Lplay23
+	lrw	r4, 0x4b070
+	st.w	r6, (r4, 0)
+	bsr	fw25_play
+	cmpnei	r0, 2
+	bt	.Ldone
+	addi	r14, 4
+	pop	r4-r7, r15
+.Lplay23:
 	lrw	r4, 0x4b070
 	st.w	r6, (r4, 0)
 	bsr	fw23_play
 	cmpnei	r0, 2
 	bt	.Ldone
+	addi	r14, 4
+	pop	r4-r7, r15
+.Ln14:
+	cmpnei	r3, 14
+	bt	.Ln10
+	lrw	r4, 0x4b070
+	st.w	r6, (r4, 0)
+	bsr	fw25_ram
+	cmpnei	r0, 0
+	bt	.Lbadop
 	addi	r14, 4
 	pop	r4-r7, r15
 .Ln10:
@@ -963,6 +999,251 @@ fw23_play:
 	movi	r0, 1
 	pop	r15
 
+/* Opcode 13, second body byte 2. 1.5 s of a 500 Hz square, then 1.5 s of a
+ * 2 kHz square, both at ±8192. Does not touch STANDBY_LO and does not key.
+ * Counts polls on which irq-27 flag bit 5 of 0x110003B0 was already set.
+ * Reply is 24 bytes. Returns 2. */
+fw25_play:
+	lrw	r4, 0x4b068
+	st.w	r7, (r4, 0)
+	push	r15
+	lrw	r4, 0x16000900
+	movi	r3, 192
+	st.b	r3, (r4, 0xc8)
+	ld.b	r3, (r4, 0xcd)
+	andi	r3, r3, 111
+	st.b	r3, (r4, 0xcd)
+	ld.b	r3, (r4, 0xd2)
+	andi	r3, r3, 252
+	st.b	r3, (r4, 0xd2)
+	lrw	r4, 0x110003b0
+	ld.w	r2, (r4, 0)
+	lrw	r4, 0x4b058
+	st.w	r2, (r4, 0)
+	lrw	r4, 0x180000a0
+	ld.hs	r2, (r4, 0)
+	lrw	r4, 0x4b074
+	st.h	r2, (r4, 0)
+	lrw	r4, 0x4b054
+	movi	r3, 0
+	st.w	r3, (r4, 0)
+	lrw	r4, 0x4b060
+	st.w	r3, (r4, 0)
+	st.w	r3, (r4, 4)
+.L25:
+	lrw	r4, 0x4b060
+	ld.w	r6, (r4, 0)
+	lrw	r3, 24000
+	cmphs	r6, r3
+	bt	.L25done
+	mov	r0, r6
+	lrw	r1, 12000
+	cmphs	r0, r1
+	bt	.L2k
+	lsri	r0, r0, 3
+	br	.Lbit
+.L2k:
+	lsri	r0, r0, 1
+.Lbit:
+	andi	r0, r0, 1
+	movi	r5, 32
+	lsli	r5, r5, 8
+	cmpnei	r0, 0
+	bf	.Lpos
+	movi	r0, 0
+	subu	r0, r5
+	mov	r5, r0
+.Lpos:
+	lrw	r1, 12000
+	cmpne	r6, r1
+	bt	.Lnmid
+	lrw	r4, 0x4b074
+	st.h	r5, (r4, 2)
+	lrw	r4, 0x110003b0
+	ld.w	r2, (r4, 0)
+	lrw	r4, 0x4b05c
+	st.w	r2, (r4, 0)
+.Lnmid:
+	lrw	r4, 0x4b078
+	st.h	r5, (r4, 0)
+	lrw	r4, 0x4b060
+	ld.w	r2, (r4, 4)
+	lsli	r3, r2, 1
+	lrw	r1, 0x180000a0
+	addu	r1, r3
+	st.h	r5, (r1, 0)
+	addi	r2, 1
+	st.w	r2, (r4, 4)
+	addi	r6, 1
+	st.w	r6, (r4, 0)
+	cmpnei	r2, 80
+	bt	.L25
+	movi	r3, 0
+	st.w	r3, (r4, 4)
+	movi	r0, 10
+	.short	0xE000, 0x18A4
+	lrw	r3, 0x110003b0
+	ld.w	r2, (r3, 0)
+	mov	r0, r2
+	lsri	r0, r0, 5
+	andi	r0, r0, 1
+	cmpnei	r0, 0
+	bf	.Lnocount
+	lrw	r4, 0x4b054
+	ld.w	r0, (r4, 0)
+	addi	r0, 1
+	st.w	r0, (r4, 0)
+.Lnocount:
+	bseti	r2, 5
+	st.w	r2, (r3, 0)
+	br	.L25
+.L25done:
+	lrw	r4, 0x110003b0
+	ld.w	r2, (r4, 0)
+	lrw	r4, 0x4b06c
+	st.w	r2, (r4, 0)
+	lrw	r4, 0x180000a0
+	ld.hs	r2, (r4, 0)
+	lrw	r4, 0x4b078
+	st.h	r2, (r4, 2)
+	lrw	r4, 0x4ae08
+	lrw	r5, 0x4b054
+	ld.w	r2, (r5, 0)
+	st.w	r2, (r4, 0)
+	lrw	r5, 0x4b058
+	ld.w	r2, (r5, 0)
+	st.w	r2, (r4, 4)
+	lrw	r5, 0x4b05c
+	ld.w	r2, (r5, 0)
+	st.w	r2, (r4, 8)
+	lrw	r5, 0x4b06c
+	ld.w	r2, (r5, 0)
+	st.w	r2, (r4, 12)
+	lrw	r5, 0x4b074
+	ld.h	r2, (r5, 0)
+	st.h	r2, (r4, 16)
+	ld.h	r2, (r5, 2)
+	st.h	r2, (r4, 18)
+	lrw	r5, 0x4b078
+	ld.h	r2, (r5, 0)
+	st.h	r2, (r4, 20)
+	ld.h	r2, (r5, 2)
+	st.h	r2, (r4, 22)
+	lrw	r4, 0x4ae00
+	movi	r1, 104
+	st.b	r1, (r4, 0)
+	lrw	r5, 0x4b068
+	ld.w	r7, (r5, 0)
+	ld.b	r1, (r7, 1)
+	st.b	r1, (r4, 1)
+	movi	r1, 0
+	st.b	r1, (r4, 2)
+	st.b	r1, (r4, 3)
+	st.b	r1, (r4, 4)
+	st.b	r1, (r4, 5)
+	st.b	r1, (r4, 6)
+	movi	r6, 24
+	st.b	r6, (r4, 7)
+	mov	r0, r4
+	addi	r0, 8
+	addu	r0, r6
+	movi	r1, 16
+	st.b	r1, (r0, 0)
+	mov	r0, r6
+	addi	r0, 9
+	mov	r1, r4
+	.short	0xE000, 0x8E5C
+	mov	r0, r4
+	mov	r1, r6
+	addi	r1, 9
+	.short	0xE000, 0x7DE8
+	movi	r0, 2
+	pop	r15
+
+/* Opcode 14. Body: opcode, uint32 address, uint16 length, both little-endian.
+ * Address must sit in 0x18000000..0x1800FFFF and length is 1..240. The reply
+ * body is those RAM bytes. Sends the frame itself. */
+fw25_ram:
+	ld.w	r7, (r14, 0)
+	push	r15
+	ld.b	r0, (r7, 6)
+	ld.b	r1, (r7, 7)
+	lsli	r0, r0, 8
+	or	r0, r1
+	cmpnei	r0, 7
+	bt	.Lramno
+	ld.b	r0, (r7, 9)
+	ld.b	r1, (r7, 10)
+	lsli	r1, r1, 8
+	or	r0, r1
+	ld.b	r1, (r7, 11)
+	lsli	r1, r1, 16
+	or	r0, r1
+	ld.b	r1, (r7, 12)
+	lsli	r1, r1, 24
+	or	r0, r1
+	ld.b	r2, (r7, 13)
+	ld.b	r3, (r7, 14)
+	lsli	r3, r3, 8
+	or	r2, r3
+	cmpnei	r2, 0
+	bf	.Lramno
+	movi	r3, 240
+	cmphs	r3, r2
+	bf	.Lramno
+	lrw	r1, 0x18000000
+	cmphs	r0, r1
+	bf	.Lramno
+	lrw	r1, 0x18010000
+	cmphs	r0, r1
+	bt	.Lramno
+	subu	r1, r0
+	cmphs	r1, r2
+	bf	.Lramno
+	mov	r6, r2
+	lrw	r4, 0x4ae08
+.Lramcp:
+	cmpnei	r2, 0
+	bf	.Lramhd
+	ld.b	r1, (r0, 0)
+	st.b	r1, (r4, 0)
+	addi	r0, 1
+	addi	r4, 1
+	subi	r2, 1
+	br	.Lramcp
+.Lramhd:
+	lrw	r4, 0x4ae00
+	movi	r1, 104
+	st.b	r1, (r4, 0)
+	ld.b	r1, (r7, 1)
+	st.b	r1, (r4, 1)
+	movi	r1, 0
+	st.b	r1, (r4, 2)
+	st.b	r1, (r4, 3)
+	st.b	r1, (r4, 4)
+	st.b	r1, (r4, 5)
+	lsri	r1, r6, 8
+	st.b	r1, (r4, 6)
+	st.b	r6, (r4, 7)
+	mov	r0, r4
+	addi	r0, 8
+	addu	r0, r6
+	movi	r1, 16
+	st.b	r1, (r0, 0)
+	mov	r0, r6
+	addi	r0, 9
+	mov	r1, r4
+	.short	0xE000, 0x8E5C
+	mov	r0, r4
+	mov	r1, r6
+	addi	r1, 9
+	.short	0xE000, 0x7DE8
+	movi	r0, 0
+	pop	r15
+.Lramno:
+	movi	r0, 1
+	pop	r15
+
 fw21_clamp:
 	lrw	r1, 10000
 	cmplt	r1, r0
@@ -1092,9 +1373,9 @@ def main():
     for label, token, target, expect in (
         ("sample", bytes.fromhex("00e008b4"), ONE, 1),
         ("ack", bytes.fromhex("00e07c8e"), ACK, 1),
-        ("cksum", bytes.fromhex("00e05c8e"), 0x8E5C, 2),
-        ("uart", bytes.fromhex("00e0e87d"), 0x7DE8, 2),
-        ("delay", bytes.fromhex("00e0a418"), 0x18A4, 1),
+        ("cksum", bytes.fromhex("00e05c8e"), 0x8E5C, 4),
+        ("uart", bytes.fromhex("00e0e87d"), 0x7DE8, 4),
+        ("delay", bytes.fromhex("00e0a418"), 0x18A4, 2),
     ):
         at = 0
         n = 0
@@ -1125,7 +1406,7 @@ def main():
     if BASE + len(code) > 0x5C6FC:
         raise SystemExit("extension overflows %X" % (BASE + len(code)))
     print("extension", len(code), "end", hex(BASE + len(code)))
-    img, _ = build.build(["c7000-fw20-drop", "c7000-tot-120"], "FW24")
+    img, _ = build.build(["c7000-fw20-drop", "c7000-tot-120"], "FW25")
     img = bytearray(img)
     hooks = {
         0x5AF1E: bytes.fromhex("8c010031"),
@@ -1150,7 +1431,7 @@ def main():
     if bytes(img[gate_at:gate_at + 4]) != bytes.fromhex("020c9414"):
         raise SystemExit("on_key gate is %s" % bytes(img[gate_at:gate_at + 4]).hex())
     img[gate_at:gate_at + 4] = encode_bsr(gate_at, sym["fw22_gate"])
-    if img[0x38464:0x38474] != b"DMR003.FW24.V022":
+    if img[0x38464:0x38474] != b"DMR003.FW25.V022":
         raise SystemExit("tag " + img[0x38464:0x38474].decode())
     play = sym["fw23_play"] - BASE
     play_end = sym["fw21_clamp"] - BASE
@@ -1159,7 +1440,7 @@ def main():
         raise SystemExit("opcode 13 mentions PTT")
     if struct.pack("<I", 0x11000560) in bytes(code):
         raise SystemExit("extension mentions PTT")
-    dest = HERE.parent.parent / "radio_firmware" / "build" / "DMR003.FW24.V022.bin"
+    dest = HERE.parent.parent / "radio_firmware" / "build" / "DMR003.FW25.V022.bin"
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_bytes(img)
     import hashlib
