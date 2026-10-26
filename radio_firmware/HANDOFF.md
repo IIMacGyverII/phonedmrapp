@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -197,7 +197,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-Carrier offset of ±1000 Hz leaves the stream's steady mean near +7 counts. Deviation leaves the straight line by 1 kHz and is flat at about 6030 counts from 2.4 to 4.0 kHz. The two stream captures and a channel-56 recording of the same file are in tools/m17-research/captures/fw27-stream/. The stop frame is 68 40 01 01 75 BC 00 02 11 00 10, with no wait after the last half.
+At 1 kHz deviation the stream stays within 0.2 dB from 100 Hz to 2.5 kHz; channel 56 is still −9.6 dB at 500 Hz. The 30-frame file scores 21, 8, 4 and 3 payload-exact frames at 40, 60, 80 and 100 percent deviation. Receive scale is FM_DEV_COEF bits 15:8, reset 0x10; the word also holds the transmit limiter, and the stub cannot hold a read-modify-write, so variant 6 was not loaded.
 End state: DMR003.FW27.V022, channel 2, 467.625 MHz, not transmitting, 0x34 answers. HackRF idle.
 
 ## Owner question

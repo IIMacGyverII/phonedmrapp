@@ -3040,6 +3040,32 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## FW27 sweep at 1 kHz deviation, and the reduced-deviation file (2026-10-26, 17:05)
+
+Image `e552549c…b2dc`. HackRF VGA 20, 467.625 MHz, phone not keyed. The 1 kHz-deviation sweep uses the same tones as the 2.5 kHz sweep. Amplitude is the Hann-windowed peak of a steady half-second. Decibels are relative to 1000 Hz in that capture. The stream's no-carrier second is DC +4.1, rms 54.
+
+At 1.0 kHz deviation the stream is below the 6030-count ceiling (the 1000 Hz tone reads 4378) and stays within 0.2 dB from 100 Hz to 2.5 kHz. It is 0.5 dB down at 3 kHz and 1.3 dB down at 3.5 kHz. Channel 56, hold `action=1 sr=0`, still has the 9.6 dB dip at 500 Hz.
+
+| Hz | Stream | dB | Channel 56 | dB |
+|---:|---:|---:|---:|---:|
+| 100 | 4437 | +0.1 | 1454 | +1.2 |
+| 200 | 4447 | +0.1 | 1372 | +0.7 |
+| 300 | 4448 | +0.1 | 1052 | −1.6 |
+| 500 | 4422 | +0.1 | 420 | −9.6 |
+| 700 | 4398 | 0.0 | 821 | −3.8 |
+| 1000 | 4378 | 0 | 1267 | 0 |
+| 1500 | 4405 | +0.1 | 1510 | +1.5 |
+| 2000 | 4373 | 0.0 | 1575 | +1.9 |
+| 2500 | 4317 | −0.1 | 1580 | +1.9 |
+| 3000 | 4132 | −0.5 | 1576 | +1.9 |
+| 3500 | 3775 | −1.3 | 1568 | +1.8 |
+
+The same 30-frame file through the plain stream, deviation scaled from the ±2.4 kHz original. Host decode of each body: 30 frames every time, link-setup CRC failed, and the host Golay count (`lerr` ≤ 2) was 0 at every step. Payload-exact frames: 21 at 40 percent, 8 at 60, 4 at 80, 3 at 100. The four bodies are `stream-dev40.s16` through `stream-dev100.s16` in `tools/m17-research/captures/fw27-stream/`.
+
+Guide, `radio_firmware/HR_C7000_user_guide.pdf`. §7.2.2.3.2 (printed p. 271) is the analog receive recording into RX RAM. The receive scale is in the FM map, §11.2.2.3 `FM_DEV_COEF` at `0x11000504`, hardware reset. Bits 15:8 `fm_dev_coef_r` reset `0x10` are the receive deviation coefficient. Bits 23:16 `tr_sig_lim` reset `0x0f` and bits 7:0 `fm_dev_coef_t` reset `0x10` are the transmit limiter and the transmit coefficient. `DEV_LIMITER` at `0x11000118`, reset `0xff00`, is transmit only. `PHASE_OUT` at `0x11000128` is a read-only AF phase range. A whole-word write of `FM_DEV_COEF` would change the transmitter. A write of bits 15:8 alone is the receive scale. The stub has 4 bytes free, which is not a read-modify-write of that word, so op 6 variant 6 was not built and nothing new was loaded.
+
+End state: `DMR003.FW27.V022`, channel 2, 467.625 MHz, not transmitting. `0x34` answers. HackRF idle.
+
 ## FW27 carrier offset and deviation (2026-10-26, 16:53)
 
 Image `e552549c…b2dc`. 1 kHz tone, HackRF VGA 20, phone not keyed. The stream was period 8. DC is the mean of the steady second after the first half-second of each transmission. Amplitude is the Hann-windowed 1 kHz peak of that same second.

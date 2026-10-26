@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (17:05) — At 1 kHz deviation the stream is flat, and 40 percent deviation decodes 21 of 30.** The 100 Hz–3.5 kHz sweep at 1.0 kHz deviation stays within 0.2 dB to 2.5 kHz. Channel 56 still dips 9.6 dB at 500 Hz. The 30-frame file scores 21, 8, 4 and 3 payload-exact frames at 40, 60, 80 and 100 percent deviation. The receive coefficient is `FM_DEV_COEF` bits 15:8, reset `0x10`; the same word holds the transmit limiter, and the stub has no room for a read-modify-write, so variant 6 was not loaded. Tables: `radio_firmware/results.md`.
+
 **2026-10-26 (16:53) — Carrier offset does not move the stream mean, and deviation flattens by 2.4 kHz.** A ±1000 Hz move of the HackRF centre leaves the steady mean near +7 counts. A 1 kHz tone's amplitude leaves the straight line by 1 kHz of deviation and sits at about 6030 counts from 2.4 kHz to 4.0 kHz. The two stream captures and a channel-56 recording are in `tools/m17-research/captures/fw27-stream/`. The stop frame is `68 40 01 01 75 BC 00 02 11 00 10`, sent with no wait after the last half. Tables: `radio_firmware/results.md`.
 
 **2026-10-26 (16:37) — The stream is flat, and the audio path is not.** From 100 to 3500 Hz the stream stays within 0.5 dB. Channel 56, hold on, is 9.6 dB down at 500 Hz and rises toward 2.5 kHz. Idle stream DC is +5 and rms is 55. The symbol eye is centred near ±1 and ±3 with a wide +3 cloud. A 41-tap fit did not train: the frames do not match the transmitted symbols closely enough. Sequence-only misses on the 13.3 s and 50.5 s runs are 0. Tables: `radio_firmware/results.md`.
