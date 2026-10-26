@@ -120,5 +120,9 @@ What SignalDeck would need on this phone (not started):
     the module's replies during an update, not a flash read. So the image exists only in the module and with Ulefone;
     on stock firmware no command reads it back (as on the Armor 26). Remaining routes: ask Ulefone support for the
     module update file, or a phone whose `/sdcard/intercom/dmr/` was ever given one.
+  - 2026-10-26, the 2019 stock ROM `2019101717_s62v71c2k_gq_wteea` (owner download, kept private): the same. No module
+    version string in any partition image, `/system/data/` holds only `mcu/` (the same six images), `Intercom.apk` (a
+    different build) carries only sounds and looks for updates in `/sdcard/intercom/dmr/` (`getLastestDmrFirware`),
+    `extmodule` is byte-identical to the 2020 build's. Two stock ROMs a year apart: the module image was never in the ROM.
 - For the frequency question: the app's log line after saving a channel below 136 MHz (`parseCmd strCmd:7E 96 69 01 35 …`
   or `… 36 …`); body `00` = accepted, anything else = refused.
