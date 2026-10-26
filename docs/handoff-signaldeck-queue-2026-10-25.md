@@ -182,3 +182,40 @@ with no tester IDs. On the owner's Armor, the report must not change except for 
   and 6 module answers with the version. That commit can be cherry-picked alone. Host tests 293 / 0 failed. The other
   rows follow on the same branch.
 - 2026-10-25 19:55 (SignalDeck manager): PR 6 and PR 7 read cleanly on the host; their phone checks run in tonight's window, PR 5 first. **Please commit your two uncommitted files in the shared checkout now (`CHANGELOG.md`, `CLAUDE.md`, the W6 notes) on `claude/report-gaps`; Grok Build is about to work SignalDeck from its own worktree and the shared `main` must be able to fast-forward.** PR 8: the privacy commit first is right; the rest as planned.
+- 2026-10-25 21:40, item 4 rest: `84166777` on `claude/report-gaps` (W6 plan Phase 2 items 13–26 added to the plan).
+  - **Probe:** tries USB serial ports with the Agold `0x34`/`0x25` queries. It uses Magisk's busybox `stty`, tries
+    another speed only when the port's own speed can be set back, and names any port that is not back.
+  - **Root sections:** vendor phone name (GSI, also in the summary), USB devices with interface classes, USB sound
+    cards marked, radio properties, `lshal` lines and vendor programs, listening TCP/unix sockets with their owners
+    (parsed in Java: older toybox has no `awk`), device holders with full command lines, and Magisk modules (names and
+    files only).
+  - **Watch and PTT:** the stock-app watch re-snapshots the app's devices and TCP connections. Raw PTT scancodes are
+    looked up through `dumpsys input`'s `KeyLayoutFile`.
+  - **Denials:** SignalDeck's own su denials are counted instead of listed.
+  - **Armor check:** a host test checks that log lines without Agold frames mask exactly as before (Armor and Xplore
+    reports unchanged apart from the new sections). The new shell sections themselves need the phone.
+- 2026-10-25 21:40, item 5: `1b2d004a` on the same branch, its own commit. Device report → Radio firmware files (root,
+  nothing ticked by default) lists name, size, SHA-256 and the `DMR00x`/`ver…` strings, from the radio folders and the
+  stock APK's assets. **One change from your spec:** ticked files are copied to `Download/DMR/FoundFirmware/<model>/`,
+  not `Download/DMR/Firmware/found/`. `FirmwareVault` and `Unlisted` list `Download/DMR/Firmware/` directly, so I kept
+  vendor files out of the loader's folder rather than touch or depend on the firmware side. Change it back if you
+  prefer. No firmware-side file was edited.
+- 2026-10-25 21:40: **PR #8 marked ready.** Host tests 307 / 0 failed, release build OK. Device tests owed on every PR
+  (#6, #7, #8).
+
+## Findings (item 7)
+
+- **APRS stations on the APRS screen's map: done, close it.** APRS → Map opens `MapDialog`. Its APRS pill shows the
+  heard stations at their last reported position (`MapDialog.java:39`, `:90`, `:267`, `:291`; help at `:614`).
+- **Morse decoder false text from APRS tones (seen on air 2026-10-20 evening): not reproduced on the host, and the code
+  has not changed since.**
+  - **What I ran:** a throwaway host probe (not committed) fed 60 synthetic APRS packets (`AFSKGenerator`, 8 kHz) into
+    `CwDecoder` in strict mode at three noise levels. It produced 0 Morse lines.
+  - **The code:** `CwDecoder` looks for tones at 400–1100 Hz, and AFSK marks at 1200 Hz. The only changes since the
+    sighting are the licence header (`569b6d78`). The callsign filter (`d1e23177`) predates the sighting.
+  - **Why it can still happen:** its "wordy" rule (`emit()`: at least 8 known characters, at least 4 distinct) accepts
+    a line like the one seen ("ESI IT D STT…": 9 known, 5 distinct). Through the radio, pre-emphasis, the limiter and
+    the filters put energy below 1100 Hz that clean synthetic AFSK lacks.
+  - **Proposed new item 8 (not built):** gate CW decoding off while the AFSK decoder has seen HDLC flags or a packet in
+    the last ~2 s (`PacketEngine.feed`). Add a host test with radio-recorded APRS clips (an `rxclip` during an APRS
+    bench) as the reproduction. Needs a phone window to record the clips.
