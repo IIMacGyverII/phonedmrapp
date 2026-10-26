@@ -9,7 +9,7 @@
 # op 5 does at file 0x5B096, then waits for the next FM_ADDR_SW flip.
 # The start body's third byte is the group length: 1, 2, 4 or 8.
 #
-# Op 5 reply body, unchanged, and what a stream frame is:
+# Op 5 reply body, and what a stream frame is (the same frame, no trailer):
 #   body[0..511]  512 big-endian sample bytes, first sample at body[0]
 #   body[512]     sequence, one byte, the slot 0..5 (the send buffer ends
 #                 at 0x4B000, so a wider counter would walk off it)
@@ -17,6 +17,9 @@
 #                 Same choice as the live op 5 copy at file 0x5B110:
 #                 FM_ADDR_SW 1 copies 0x160004E0, 2 copies 0x160006E0.
 # The 8-byte header in front of the body has length 514. A 0x10 tail follows.
+# The three words that used to follow the half id (WORK_MODE, FM_BANDWIDTH,
+# the AT1846S 0x58 mirror) are not sent. Op 5's send saves and restores the
+# three bytes at the end of the slot, and the stream send does the same.
 import struct
 import subprocess
 from pathlib import Path
@@ -60,7 +63,12 @@ fw27_gate:
 	bt	.Lnot6
 	ld.b	r0, (r7, 9)
 	cmpnei	r0, 5
-	bt	.Lold
+	bf	.Ldo5
+	/* Action 6 is variant 6, in the wrap. Anything else is the stock handler.
+	 * br, not bsr: the stock path returns through the r15 this function was
+	 * entered with. */
+	.short	0xE800, 0x16E0
+.Ldo5:
 	bsr	.Lmode5
 	br	.Ldone
 .Lnot6:
@@ -78,7 +86,9 @@ fw27_gate:
 .Lold:
 	lrw	r12, 0x03076464
 	jmp	r12
+	.global	fw27_done
 .Ldone:
+fw27_done:
 	addi	r14, 4
 	pop	r4-r7, r15
 
@@ -124,6 +134,8 @@ fw27_gate:
 .Loff:
 	cmpnei	r1, 0
 	bt	.Lbad
+	/* Patched to fw27_coef, which writes fm_dev_coef_r back to 0x10 and then
+	 * calls .Lrest. The trampoline's own restore still calls .Lrest. */
 	bsr	.Lrest
 .Lak:
 	ld.b	r0, (r7, 1)
@@ -499,7 +511,9 @@ def patch_calls(code, base):
 
 TRAMP = 0x5C54C
 TRAMP_END = TRAMP
-WRAP = 0x5C590
+# Variant 6 is admitted by the trampoline, which needs 10 more bytes.
+# regsend therefore starts 10 bytes later than the FW26 tail slot.
+WRAP = 0x5C59C
 WRAP_END = WRAP
 REST_OFF = 0
 # Filled in by build() from the stub's own branches. The earlier constants
@@ -517,8 +531,14 @@ apply5:
 	jmp	r12
 .Ln4:
 	cmpnei	r1, 5
-	bt	.Lrej
+	bt	.Lmaybe6
 	.short	0xE000, 0xCD5C
+	br	.Lpop
+.Lmaybe6:
+	cmpnei	r1, 6
+	bt	.Lrej
+	.short	0xE000, 0x1C5B
+.Lpop:
 	addi	r14, 4
 	pop	r4-r7, r15
 rest5:
@@ -540,14 +560,25 @@ rest5:
 """
 
 
+def encode_br(at, target):
+    """32-bit br. The displacement is a signed 16-bit halfword count.
+
+    The 26-bit form used for bsr corrupts the opcode on a backward branch.
+    """
+    disp = (target - at) >> 1
+    if not -32768 <= disp <= 32767:
+        raise SystemExit("br from %X to %X is out of range" % (at, target))
+    return struct.pack("<HH", 0xE800, disp & 0xFFFF)
+
+
 def mode_targets(code):
     """File address of .Lmode5 and .Lrest, from the stub's own branches.
 
-    The gate's first bsr is .Lmode5. The bsr 0x5A bytes into that function
-    is .Lrest. Both are inside the stub, so a file-to-file branch reaches
-    them when the code runs at its XIP address.
+    The gate's bsr .Lmode5 sits at offset 0xE (a 4-byte br to variant 6
+    is at 0xA). The bsr 0x5A bytes into .Lmode5 is .Lrest. Both are inside
+    the stub, so a file-to-file branch reaches them at the XIP address.
     """
-    mode5 = fw26_build.decode_bsr(BASE + 0xA, bytes(code[0xA:0xE]))
+    mode5 = fw26_build.decode_bsr(BASE + 0xE, bytes(code[0xE:0x12]))
     rest_at = mode5 + 0x5A
     rest = fw26_build.decode_bsr(rest_at, bytes(code[rest_at - BASE:rest_at - BASE + 4]))
     if not (BASE < mode5 < RECLAIM_END and BASE < rest < RECLAIM_END):
@@ -558,9 +589,9 @@ def mode_targets(code):
 WRAP_ASM = r"""
 	.text
 	.global	regsend
-/* Same frame as op 5's send, plus WORK_MODE, FM_BANDWIDTH and the
- * AT1846S 0x58 mirror at body bytes 514..525. r5 is the slot. The half
- * id is on the stack where sendh reads it. */
+/* Op 5's send, exactly: 514-byte body, 0x10 at the next byte, then the
+ * three bytes at the end of the slot are put back. r5 is the slot. The
+ * half id is on the stack where sendh reads it. */
 regsend:
 	mov	r7, r15
 	lrw	r1, 0x4a400
@@ -581,57 +612,48 @@ regsend:
 	st.b	r2, (r4, 5)
 	movi	r2, 2
 	st.b	r2, (r4, 6)
-	movi	r2, 14
 	st.b	r2, (r4, 7)
 	mov	r0, r1
 	movi	r3, 1
 	lsli	r3, 9
 	addu	r0, r3
+	ld.b	r6, (r0, 0)
+	st.b	r6, (r14, 0x10)
+	ld.b	r6, (r0, 1)
+	st.b	r6, (r14, 0x11)
+	ld.b	r6, (r0, 2)
+	st.b	r6, (r14, 0x12)
+	st.b	r5, (r0, 0)
 	mov	r6, r14
 	addi	r6, 8
 	addu	r6, r5
 	ld.b	r2, (r6, 0)
-	st.b	r5, (r0, 0)
 	st.b	r2, (r0, 1)
-	lrw	r6, 0x11000100
-	ld.w	r2, (r6, 0)
-	st.b	r2, (r0, 2)
-	lsri	r3, r2, 8
-	st.b	r3, (r0, 3)
-	lsri	r3, r2, 16
-	st.b	r3, (r0, 4)
-	lsri	r3, r2, 24
-	st.b	r3, (r0, 5)
-	lrw	r6, 0x11000500
-	ld.w	r2, (r6, 0)
-	st.b	r2, (r0, 6)
-	lsri	r3, r2, 8
-	st.b	r3, (r0, 7)
-	lsri	r3, r2, 16
-	st.b	r3, (r0, 8)
-	lsri	r3, r2, 24
-	st.b	r3, (r0, 9)
-	lrw	r6, 0x3a81c
-	ld.w	r2, (r6, 0)
-	st.b	r2, (r0, 10)
-	lsri	r3, r2, 8
-	st.b	r3, (r0, 11)
-	lsri	r3, r2, 16
-	st.b	r3, (r0, 12)
-	lsri	r3, r2, 24
-	st.b	r3, (r0, 13)
 	movi	r2, 16
-	st.b	r2, (r0, 14)
-	movi	r0, 2
-	lsli	r0, 8
-	addi	r0, 23
+	st.b	r2, (r0, 2)
+	movi	r0, 1
+	lsli	r0, 9
+	addi	r0, 11
 	mov	r1, r4
 	.short	0xE000, 0x5C8E
 	mov	r0, r4
-	movi	r1, 2
-	lsli	r1, 8
-	addi	r1, 23
+	movi	r1, 1
+	lsli	r1, 9
+	addi	r1, 11
 	.short	0xE000, 0xE87D
+	lrw	r1, 0x4a400
+	mov	r0, r5
+	lsli	r0, 9
+	addu	r1, r0
+	movi	r3, 1
+	lsli	r3, 9
+	addu	r1, r3
+	ld.b	r2, (r14, 0x10)
+	st.b	r2, (r1, 0)
+	ld.b	r2, (r14, 0x11)
+	st.b	r2, (r1, 1)
+	ld.b	r2, (r14, 0x12)
+	st.b	r2, (r1, 2)
 	jmp	r7
 
 	.global	period_init
@@ -735,6 +757,75 @@ halfstep:
 """
 
 
+# Variant 6 lives in the retired opcode-13 body. The branch at 0x5B816
+# skips 0x5B81A..0x5B875, and nothing outside that range loads from it.
+# The code is 4-aligned at 0x5B81C. Its literals sit at POOL_AT, still
+# below 0x5C6FC, because a 16-bit lrw cannot reach that far and the hole
+# cannot hold the constants as well as the code.
+V6_AT = 0x5B81C
+POOL_AT = 0x5C6E0
+V6_ASM = r"""
+	.text
+/* [6, 6, v]. r0 is the action. Refused unless the mode-5 marker is set.
+ * Bits 15:8 of FM_DEV_COEF become v. The other bytes stay. The word just
+ * written is mirrored at 0x180000A0 for an opcode-14 read. */
+	.global	fw27_var6
+fw27_var6:
+	cmpnei	r1, 6
+	bt	.Vstock
+	lrw	r4, 0x4b008
+	ld.w	r5, (r4, 0)
+	lrw	r0, 0x5354524d
+	cmpne	r5, r0
+	bt	.Vrej
+	ld.b	r1, (r7, 10)
+	bsr	fw27_rmw
+	push	r15
+	ld.b	r0, (r7, 1)
+	movi	r1, 0
+	.short	0xE000, 0x7C8E
+	pop	r15
+	jmp	r15
+	jmp	r15
+.Vrej:
+	mov	r15, r6
+	jmp	r15
+.Vstock:
+	.short	0xE800, 0x64E0
+
+/* r1 = new bits 15:8. The stored word comes back in r5. */
+	.global	fw27_rmw
+fw27_rmw:
+	lrw	r4, 0x11000504
+	ld.w	r5, (r4, 0)
+	lrw	r0, 0xffff00ff
+	and	r5, r0
+	lsli	r1, 8
+	or	r5, r1
+	st.w	r5, (r4, 0)
+	lrw	r4, 0x180000a0
+	st.w	r5, (r4, 0)
+	jmp	r15
+
+/* [6, 5, 0] comes here instead of .Lrest. Writes 0x10, then .Lrest. */
+	.global	fw27_coef
+fw27_coef:
+	push	r15
+	movi	r1, 16
+	bsr	fw27_rmw
+	.short	0xE000, 0x42E0
+	pop	r15
+	jmp	r15
+	.global	fw27_v6_code_end
+fw27_v6_code_end:
+	.space	3696
+	.align	2
+	.global	fw27_v6_pool
+fw27_v6_pool:
+	.literals
+"""
+
+
 def link_wrap():
     src = OUT / "fw27_wrap.S"
     src.write_text(WRAP_ASM, encoding="utf-8", newline="\n")
@@ -754,6 +845,41 @@ def link_wrap():
     if end > FILE_END:
         raise SystemExit("wrap ends at %X" % end)
     return code, end
+
+
+def link_v6():
+    src = OUT / "fw27_v6.S"
+    src.write_text(V6_ASM, encoding="utf-8", newline="\n")
+    subprocess.check_call([str(AS), "-mcpu=ck803", "-o", str(OUT / "fw27_v6.o"), str(src)])
+    subprocess.check_call([str(LD), "-Ttext=0x%X" % V6_AT, "-o", str(OUT / "fw27_v6.elf"), str(OUT / "fw27_v6.o")])
+    code, addr = fw23_build.text_of((OUT / "fw27_v6.elf").read_bytes())
+    if addr != V6_AT:
+        raise SystemExit("variant 6 linked at %X" % addr)
+    names = subprocess.check_output([str(NM), str(OUT / "fw27_v6.elf")], text=True)
+    code_end = pool_at = None
+    for line in names.splitlines():
+        parts = line.split()
+        if len(parts) < 3:
+            continue
+        if parts[2] == "fw27_v6_code_end":
+            code_end = int(parts[0], 16)
+        elif parts[2] == "fw27_v6_pool":
+            pool_at = int(parts[0], 16)
+    if code_end is None or pool_at is None:
+        raise SystemExit("variant 6 code %s pool %s" % (hex(code_end or 0), hex(pool_at or 0)))
+    if code_end > 0x5B876:
+        raise SystemExit("variant 6 code ends at %X, past the opcode-13 hole" % code_end)
+    if not (0x5C590 <= pool_at < FILE_END):
+        raise SystemExit("variant 6 pool %X is outside the tail" % pool_at)
+    token = bytes.fromhex("00e08e7c")
+    found = code.find(token)
+    if found < 0 or found >= code_end - V6_AT:
+        raise SystemExit("variant 6 ack token missing")
+    code[found:found + 4] = fw23_build.encode_bsr(V6_AT + found, 0x8E7C)
+    pool_off = pool_at - V6_AT
+    if pool_off + 4 > len(code):
+        raise SystemExit("variant 6 pool is not in the image")
+    return code[:code_end - V6_AT], code[pool_off:], pool_at
 
 
 def link_tramp():
@@ -778,8 +904,8 @@ def link_tramp():
             raise SystemExit("missing tramp call " + token.hex())
         code[found:found + 4] = fw23_build.encode_bsr(TRAMP + found, target)
     end = TRAMP + len(code)
-    if end > 0x5C6FC:
-        raise SystemExit("tramp ends at %X" % end)
+    if end > WRAP:
+        raise SystemExit("tramp ends at %X, wrap starts at %X" % (end, WRAP))
     return code, end
 
 
@@ -838,6 +964,7 @@ def build():
     names = subprocess.check_output([str(NM), str(OUT / "fw27.elf")], text=True)
     pend_at = None
     send_at = None
+    done_at = None
     for line in names.splitlines():
         parts = line.split()
         if len(parts) < 3:
@@ -846,8 +973,10 @@ def build():
             pend_at = int(parts[0], 16)
         elif parts[2] == "fw27_send":
             send_at = int(parts[0], 16)
-    if pend_at is None or send_at is None:
-        raise SystemExit("no fw27_pend or fw27_send")
+        elif parts[2] == "fw27_done":
+            done_at = int(parts[0], 16)
+    if pend_at is None or send_at is None or done_at is None:
+        raise SystemExit("no fw27_pend, fw27_send or fw27_done")
     fw26 = (ROOT / "radio_firmware" / "build" / "DMR003.FW26.V022.bin").read_bytes()
     img = bytearray(fw26)
     img[0x38464:0x38474] = b"DMR003.FW27.V022"
@@ -879,8 +1008,23 @@ def build():
             period_at = int(parts[0], 16)
         elif parts[2] == "halfstep":
             half_at = int(parts[0], 16)
-    if period_at is None or half_at is None:
-        raise SystemExit("wrap is missing period_init or halfstep")
+    v6, v6_pool, pool_at = link_v6()
+    if pool_at < wrap_end:
+        raise SystemExit("variant 6 pool %X overlaps the wrap ending %X" % (pool_at, wrap_end))
+    img[V6_AT:V6_AT + len(v6)] = v6
+    img[pool_at:pool_at + len(v6_pool)] = v6_pool
+    v6names = subprocess.check_output([str(NM), str(OUT / "fw27_v6.elf")], text=True)
+    var6_at = coef_at = None
+    for line in v6names.splitlines():
+        parts = line.split()
+        if len(parts) < 3:
+            continue
+        if parts[2] == "fw27_var6":
+            var6_at = int(parts[0], 16)
+        elif parts[2] == "fw27_coef":
+            coef_at = int(parts[0], 16)
+    if None in (period_at, half_at, var6_at, coef_at):
+        raise SystemExit("missing period, half, var6 or coef")
 
     def patch_token(token, target, start=None, stop=None):
         raw = bytes.fromhex(token)
@@ -902,12 +1046,45 @@ def build():
     patch_token("00e0e011", period_at)
     patch_token("00e0e012", half_at)
     patch_token("00e05bb1", send_at, WRAP, wrap_end)
+    br_at = img.find(bytes.fromhex("00e8e016"), BASE, low_end)
+    if br_at < 0:
+        raise SystemExit("no variant-6 branch")
+    img[br_at:br_at + 4] = encode_br(br_at, var6_at)
+    rest_site = MODE5_AT + 0x5A
+    if fw26_build.decode_bsr(rest_site, bytes(img[rest_site:rest_site + 4])) != REST_AT:
+        raise SystemExit("mode-5 off call is not .Lrest")
+    img[rest_site:rest_site + 4] = fw23_build.encode_bsr(rest_site, coef_at)
+    coef_tok = img.find(bytes.fromhex("00e0e042"), V6_AT, V6_AT + len(v6))
+    if coef_tok < 0:
+        raise SystemExit("no coef restore call")
+    img[coef_tok:coef_tok + 4] = fw23_build.encode_bsr(coef_tok, REST_AT)
+    stock_br = img.find(bytes.fromhex("00e8e064"), V6_AT, V6_AT + len(v6))
+    var6_tok = img.find(bytes.fromhex("00e05b1c"), TRAMP, tramp_end)
+    if stock_br < 0 or var6_tok < 0:
+        raise SystemExit("variant 6 branches missing")
+    img[stock_br:stock_br + 4] = encode_br(stock_br, 0x5C464)
+    img[var6_tok:var6_tok + 4] = fw23_build.encode_bsr(var6_tok, var6_at)
+    global VAR6_AT, VAR6_END, COEF_AT, DONE_AT, POOL_AT, POOL_END
+    VAR6_AT = var6_at
+    VAR6_END = V6_AT + len(v6)
+    COEF_AT = coef_at
+    DONE_AT = done_at
+    POOL_AT = pool_at
+    POOL_END = POOL_AT + len(v6_pool)
+    if POOL_END > FILE_END:
+        raise SystemExit("variant 6 pool ends at %X" % POOL_END)
     print("period", hex(period_at), "half", hex(half_at), "send", hex(send_at))
+    print("var6", hex(var6_at), hex(VAR6_END), "coef", hex(coef_at), "done", hex(done_at))
+    print("pool", hex(POOL_AT), hex(POOL_END), "wrap_end", hex(wrap_end))
     # The live op 6 handler is at file 0x5B240 (XIP 0x03075240). Apply rejects
     # at 0x5B2C8 (cmpnei r1, 4; bt 0x5B308). Restore rejects at 0x5B2A8
     # (cmpnei r1, 3; bt 0x5B308) after variant 4 has already taken its own body.
     # File 0x52C8 is a different function; patching it does not admit variant 5.
     img[0x5B2C8:0x5B2CC] = fw23_build.encode_bsr(0x5B2C8, TRAMP)
+    # A value other than 1 used to leave this handler (cmpnei r3, 1; bt 0x5B308).
+    # Variant 6's v is not 1. Send that case through the trampoline; anything
+    # it does not recognise still ends at 0x5B308.
+    img[0x5B2C0:0x5B2C2] = bytes.fromhex("0408")
     img[0x5B2A8:0x5B2AC] = fw23_build.encode_bsr(0x5B2A8, TRAMP + REST_OFF)
     dest = ROOT / "radio_firmware" / "build" / "DMR003.FW27.V022.bin"
     dest.write_bytes(img)

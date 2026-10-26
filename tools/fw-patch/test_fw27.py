@@ -39,9 +39,12 @@ class Fw27Test(unittest.TestCase):
             range(0x5B7DE, 0x5B7E2),
             range(0x7C56, 0x7C5A),
             range(0x5B816, 0x5B81A),
+            range(fw27_build.V6_AT, fw27_build.VAR6_END),
+            range(fw27_build.POOL_AT, fw27_build.POOL_END),
             range(fw27_build.BASE, fw27_build.STUB_LO_END),
             range(fw27_build.HIGH, fw27_build.STUB_HI_END),
             range(0x5B2A8, 0x5B2AC),
+            range(0x5B2C0, 0x5B2C2),
             range(0x5B2C8, 0x5B2CC),
             range(fw27_build.TRAMP, fw27_build.TRAMP_END),
             range(fw27_build.WRAP, fw27_build.WRAP_END),
@@ -58,7 +61,12 @@ class Fw27Test(unittest.TestCase):
         # The key path's helper loads these literals. The stub is split around them.
         self.assertEqual(self.old[0x5BE60:0x5BEE0], self.new[0x5BE60:0x5BEE0])
         self.assertEqual(self.old[0x5C098:0x5C464], self.new[0x5C098:0x5C464])
-        self.assertEqual(self.new[fw27_build.WRAP_END:0x5C6FC], bytes(0x5C6FC - fw27_build.WRAP_END))
+        self.assertEqual(self.new[fw27_build.WRAP_END:fw27_build.POOL_AT],
+                         self.old[fw27_build.WRAP_END:fw27_build.POOL_AT])
+        self.assertEqual(self.new[fw27_build.POOL_END:0x5C6FC],
+                         bytes(0x5C6FC - fw27_build.POOL_END))
+        self.assertEqual(self.old[0x5B81A:fw27_build.V6_AT], self.new[0x5B81A:fw27_build.V6_AT])
+        self.assertEqual(self.new[fw27_build.VAR6_END:0x5B876], self.old[fw27_build.VAR6_END:0x5B876])
 
     def test_branches(self):
         gate = fw26_target(self.new, 0x5B7DE)
@@ -76,10 +84,18 @@ class Fw27Test(unittest.TestCase):
         self.assertEqual(fw26_target(self.new, 0x5B2C8), fw27_build.TRAMP)
         self.assertEqual(fw26_target(self.new, 0x5B2A8), fw27_build.TRAMP + fw27_build.REST_OFF)
         # The trampoline's own calls must land inside the stub, not at 0x5CD6.
-        self.assertEqual(fw27_build.MODE5_AT, 0x5BCD6)
-        self.assertEqual(fw27_build.REST_AT, 0x5BD42)
+        self.assertEqual(fw27_build.MODE5_AT, 0x5BCDA)
+        self.assertEqual(fw27_build.REST_AT, 0x5BD46)
         self.assertEqual(fw26_target(self.new, 0x5C55A), fw27_build.MODE5_AT)
-        self.assertEqual(fw26_target(self.new, 0x5C570), fw27_build.REST_AT)
+        self.assertEqual(fw26_target(self.new, 0x5C57A), fw27_build.REST_AT)
+        self.assertEqual(fw26_target(self.new, 0x5C564), fw27_build.VAR6_AT)
+        gate_br = fw27_build.BASE + 0xA
+        disp = struct.unpack_from("<h", self.new, gate_br + 2)[0]
+        self.assertEqual(self.new[gate_br:gate_br + 2], bytes.fromhex("00e8"))
+        self.assertEqual(gate_br + (disp << 1), fw27_build.VAR6_AT)
+        self.assertIn(struct.pack("<I", 0x11000504), self.new[fw27_build.POOL_AT:fw27_build.POOL_END])
+        self.assertNotIn(struct.pack("<I", 0x11000500), self.new[fw27_build.WRAP:fw27_build.POOL_END])
+        self.assertNotIn(struct.pack("<I", 0x3A81C), self.new[fw27_build.WRAP:fw27_build.POOL_END])
         self.assertEqual(self.old[0x52A8:0x52AC], self.new[0x52A8:0x52AC])
         self.assertEqual(self.old[0x52C8:0x52CC], self.new[0x52C8:0x52CC])
 

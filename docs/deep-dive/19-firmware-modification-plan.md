@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (18:24) — Variant 6 is loaded and does not answer.** The stream trailer is gone (514-byte op 5 body). The opcode-6 handler sends a value other than 0 or 1 to the general dispatcher; that branch now enters the trampoline. `[6, 5, 1]` acks. `[6, 6, 0x08]` gets no reply within 800 ms, and `restartmodule` recovers. No sweep. `HANDOFF.md` is `STATUS: STUCK`.
+
 **2026-10-26 (17:20) — Variant 6 does not fit.** The tail after `WRAP_END` `0x5C6EC` is 16 bytes. The low spare is 4 bytes and the high piece ends on opcode 14. `regsend` at `0x5C590` is called from `0x5C032`. No image loaded. `HANDOFF.md` is `STATUS: STUCK`.
 
 **2026-10-26 (17:12) — A 300 Hz tone hits the same deviation ceiling.** The 0.5–4.0 kHz sweep with a 300 Hz tone matches the 1 kHz-tone curve: both are 1.58 times the 0.5 kHz amplitude by 1.0 kHz, and both sit near 6000 counts from 2.4 kHz up. `FM_BANDWIDTH` bit 1 is the 12.5/25 kHz receive select, reset to 25 kHz. The curves say the ceiling is not that filter, and the stub cannot hold the read-modify-write, so variant 6 was not loaded. Tables: `radio_firmware/results.md`.

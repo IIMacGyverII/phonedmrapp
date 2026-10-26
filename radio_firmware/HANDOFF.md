@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -197,23 +197,20 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-A 300 Hz tone follows the same deviation curve as the 1 kHz tone: both leave the straight line by 1 kHz and sit near 6000 counts from 2.4 kHz up. FM_BANDWIDTH bit 1 is the 12.5/25 kHz receive select, reset to 25 kHz. The curves say the ceiling is not that filter, so variant 6 was not loaded.
-End state: DMR003.FW27.V022, channel 2, 467.625 MHz, not transmitting, 0x34 answers. HackRF idle.
+Variant 6 is in the loaded image and does not answer. `[6, 5, 1]` still returns `sr=0`. `[6, 6, 0x08]` is transmitted and no reply arrives within 800 ms. `restartmodule` brings `0x34` back.
+End state: `DMR003.FW27.V022` sha `b207ea72…9848`, channel 2, 467.625 MHz, not transmitting. HackRF idle. Boot peak 0.11 dB.
 
 ## Stuck
 
-Placing op 6 variant 6 (`[6, 6, v]`, read `0x11000504`, replace bits 15:8, write back, refuse unless the mode-5 marker `0x5354524D` is at `0x4B008`).
+Building op 6 variant 6 and running the deviation sweep.
 
-The built image `e552549c…b2dc` (no new image loaded):
+The trailer is gone: a stream half is op 5's 514-byte body. The read-modify-write sits in the retired opcode-13 hole (`0x5B81C`–`0x5B876`); its literals are at `0x5C6E8`. Host tests pass. Three loads, each with a quiet boot.
 
-- `WRAP_END` is `0x5C6EC`. The tail `0x5C6EC`–`0x5C6FB` is 16 bytes. The read-modify-write with the mode-5 check, the mask `0xFFFF00FF`, and the ack or reject jumps is about 40 instruction bytes plus four literals.
-- The low hole ends at `0x5BE5C`. The pool starts at `0x5BE60`. Spare is 4 bytes.
-- The high piece ends at `0x5C098`, on the opcode-14 boundary.
-- The block at `0x5C590` (`regsend`) is live. The half send at file `0x5C032` branches to it. It is not a hole.
+What the handler actually does, from the stock bytes at `0x5B240`: the value byte is loaded into `r3`, and any value other than 0 or 1 leaves for the general dispatcher at `0x5B308`. `[6, 5, 1]` is the value-1 path and still acks. `[6, 6, 0x08]` was that exit. I pointed the exit at the trampoline, which calls variant 6 when the variant byte is 6.
 
-Module `DMR003.FW27.V022`, channel 2, 467.625 MHz, not transmitting. HackRF idle. Nothing new was loaded.
+After that image (`b207ea72…9848`, loaded 18:23, boot peak 0.11 dB): the frame `68 40 … 06 06 08` goes out at 18:24:05 and nothing comes back. The same command on the previous image returned `sr=1` at once, so the new path is entered and does not finish. `restartmodule` then `0x34` answers `DMR003.FW27.V022`. Channel 2, 467.625 MHz, not transmitting. HackRF idle.
 
-One question: may variant 6 shorten `regsend`'s register trailer (the `WORK_MODE` / `FM_BANDWIDTH` bytes after the samples), or is there another range below `0x5C6FC` you want used?
+One question: may the next image ack before it touches `0x11000504`, so a missing ack means variant 6 was not entered and an ack means the register write is what stalls?
 
 ## Owner question
 

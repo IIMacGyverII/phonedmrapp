@@ -3040,6 +3040,10 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## FW27 variant 6 does not answer (2026-10-26, 18:24)
+
+Image `b207ea72cf3b908ce82a53f80f7b223805ad62f8627c536f64c0534f74239848`. The register trailer is no longer sent; a stream half is op 5's 514-byte body. Variant 6 lives in the opcode-13 hole and is reached from the opcode-6 handler, which used to leave any value other than 0 or 1. `[6, 5, 1]` returns `sr=0`. `[6, 6, 0x08]` is transmitted and no reply arrives within 800 ms. `restartmodule` recovers `0x34`. No deviation sweep was run. Boot peak 0.11 dB. Channel 2, 467.625 MHz, not transmitting.
+
 ## FW27 variant 6 does not fit (2026-10-26, 17:20)
 
 No new image. On `e552549c…b2dc`, `WRAP_END` is `0x5C6EC` and the tail through `0x5C6FB` is 16 bytes. The low hole ends at `0x5BE5C` with 4 bytes before the literal pool. The high piece ends at `0x5C098`. `regsend` at `0x5C590` is the live half send: file `0x5C032` branches to it. A read-modify-write of `0x11000504` with the mode-5 check does not fit in 16 bytes. Nothing was loaded. Details in the Stuck block of `HANDOFF.md`.
