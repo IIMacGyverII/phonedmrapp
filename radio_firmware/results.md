@@ -3040,6 +3040,14 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## FW26 tone after the FW27 capture (2026-10-26, 13:28)
+
+FW27 sha256 `9ea5365c…ded5` against FW26 sha256 `71949d24…a34e`. Changed ranges: `0x7C56` (4), tag `0x3846E` (1), `0x5B2A8` (4), `0x5B2C8` (4), `0x5B7E0` (2), `0x5B816` (4), stub `0x5BCA4`–`0x5C060`, tail `0x5C54C`–`0x5C6EB`. The stub passes `0x5BF84` and overwrites the opcode 13 playback through `0x5C096`. Callers of that body are `0x5B82C` and `0x5B83C`, both in the opcode 13 dispatcher, which `0x5B816` skips. `test_fw27.py` allows the whole span because `RECLAIM_END` is opcode 14 at `0x5C098`.
+
+FW26 loaded 13:27:43. Boot peak 0.067 dB, clip 0. Runner `tone`: carrier 10.537 s, clip 0, p99 2533.2 Hz, 1 kHz line 2430.3 Hz, hottest half-second 4013.7 Hz, SNR 61.1 dB. The FW27 tone file is SNR 0.4 dB, p99 22388.8 Hz, line 25.4 Hz, carrier marked 16.0 s.
+
+Stream files already saved, no new key. No two consecutive halves are identical. Interpolated 1 kHz peak: p1 999.98 Hz, p2 999.98, p4 999.97, the 45 s file 999.96 Hz. Quiet runs from the first saved half: the 10 s files about 1.7–3.0 s; the 45 s file halves 66–226, 2.11–7.26 s. End state: `DMR003.FW26.V022`, channel 2, VFO off, not transmitting.
+
 ## FW27 capture re-arm (2026-10-26, 13:02)
 
 Image sha256 `9ea5365ca31e0aada446127290a460a128b89206a943cbda53129b52c4f9ded5`, 378620 bytes, tag `DMR003.FW27.V022`. Loaded 12:52:41. Boot peak 0.043 dB, nothing above +10 dB, clip fraction 0. A later regression boot was peak 0.059 dB, clip 0. Channel 2, 467.625 MHz, power byte 1, monitor off, not keyed, except the regression tone below. HackRF transmit 467.625 MHz, 2 MS/s, VGA 20, amp off, 2.5 kHz deviation. The tone file's magnitude is constant. Goertzel is the 1000 Hz bin at 8000 Hz.

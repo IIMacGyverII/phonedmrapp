@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -185,6 +185,15 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+FW26's tone test passes at the old numbers: carrier 10.537 s, p99 2533 Hz, 1 kHz line 2430 Hz, SNR 61 dB. FW27's tone capture was SNR 0.4 dB with no line. The byte diff does not show the tone path executing the stub. FW26 stays loaded. Nothing is keyed.
+
+**Stuck — item 1: the diff does not explain the FW27 tone capture.**
+
+- Step: the transmit regression, item 1 of the 13:25 task. Diff FW27 against FW26, then the runner's `tone` on FW26. No key on FW27.
+- Tried: (1) 52 changed ranges. The planned sites are `0x7C56`, the tag byte, `0x5B2A8`, `0x5B2C8`, `0x5B7E0`, `0x5B816`, the stub `0x5BCA4`–`0x5C060`, and the tail from `0x5C54C`. The stub runs through `0x5C060`, past `0x5BF84`, and overwrites the opcode 13 playback through its `pop` at `0x5C096`. The only real branches into that body are `0x5B82C` → `0x5BF24` and `0x5B83C` → `0x5BCA4`, both inside the opcode 13 dispatcher. `0x5B816` is the four-byte branch that skips that dispatcher. The tests allow every byte from `0x5BCA4` to the stub end because `RECLAIM_END` is opcode 14 at `0x5C098`. (2) FW26 loaded 13:27:43, boot peak 0.067 dB, clip 0. `tone` at 13:28:21: PASS, carrier 10.537 s, clip 0, p99 2533.2 Hz, line 2430.3 Hz, slice max 4013.7 Hz, SNR 61.1 dB. (3) The FW27 capture (`20261026-130314-tone.json`) is SNR 0.4 dB, p99 22388.8 Hz, line 25.4 Hz, carrier 16.0 s, which is the whole window. No identical consecutive stream halves in the saved files. The 1 kHz peak sits at 999.96–999.98 Hz. The 10 s files each have one quiet run about 1.7–3.0 s after the first half. The 45 s file's quiet run is halves 66–226, 2.11–7.26 s after the first half.
+- State: module `DMR003.FW26.V022`, channel 2, 467.625 MHz, power byte 1, monitor off, VFO off, not transmitting. Phone: SignalDeck running, USB. HackRF idle. FW27 is not loaded.
+- Question: FW26 radiates the 1 kHz line and FW27's capture does not, and nothing on the tone path calls the overwritten playback. Should the next key be another FW27 `tone` with the PTT log beside it, or is the missing carrier enough to move the stub before any further FW27 key?
 
 Storing `WORK_MODE` `0x80` before the flip puts the 1 kHz line in the stream. A store every 8 halves keeps every residue class (median about 11990). A 45 s stream at that period reported 0 misses and lasted 52.2 s. The regression tone stopped the runner at p99 22389 Hz, so stream, receive and heat were not run. End state: `DMR003.FW27.V022`, channel 2, 467.625 MHz, monitor off, VFO off, not transmitting, HackRF idle.
 
