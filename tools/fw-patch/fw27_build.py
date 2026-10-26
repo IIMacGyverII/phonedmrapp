@@ -375,7 +375,8 @@ def patch_calls(code):
         (bytes.fromhex("00e05b1b"), SENDH, False),
         (bytes.fromhex("00e0ec5d"), UART57600, False),
         (bytes.fromhex("00e07c8e"), 0x8E7C, False),
-        (bytes.fromhex("00e00c2b"), PEND, True),
+        # File 0x2B0C is the flash pend (XIP 0x0301CB0C). It is not IRAM 0x2B0C.
+        (bytes.fromhex("00e00c2b"), PEND, False),
         (bytes.fromhex("00e0220b"), AT1846, True),
         (bytes.fromhex("00e0a418"), 0x18A4, False),
     )

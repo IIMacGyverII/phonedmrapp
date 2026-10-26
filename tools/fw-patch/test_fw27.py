@@ -59,6 +59,10 @@ class Fw27Test(unittest.TestCase):
         self.assertEqual(gate, fw27_build.BASE)
         pend = fw26_target(self.new, 0x7C56, xip=True)
         self.assertEqual(pend, fw27_build.PEND_AT + XIP)
+        # The hook must call the flash pend. Address 0x2B0C is that function's
+        # file offset, not an IRAM entry.
+        inner = fw26_target(self.new, fw27_build.PEND_AT + 0xC, xip=True)
+        self.assertEqual(inner, 0x2B0C + XIP)
         reject = fw26_target(self.new, 0x5B816)
         self.assertEqual(reject, 0x5B876)
 
