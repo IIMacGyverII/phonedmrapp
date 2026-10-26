@@ -2798,3 +2798,9 @@ Receiver, phone not keyed, back on channel 2. Idle `0x32` raw 21 (−109.5 dBm).
 ### End state
 
 `0x34` `DMR003.FW25.V022`. Channel 2, 467.625 MHz analog. That row programs power byte 1 and squelch 5; the hardware squelch was then set to body 2. No `DMRDEBUG.bin`. SignalDeck owns the radio. The stock app was not changed. The web server was turned off. Boot peak 0.074 dB.
+
+# Item 6 host part — M17 as a channel type (2026-10-25, 20:20)
+
+Host only. SignalDeck branch `grok/m17-channel`, pull request https://github.com/IIMacGyverII/SignalDeck/pull/9. Commit `3a7ccb49` is the channel type rebased onto `origin/main` `28517806`. Commit `58c30c69` keeps type 2, the destination and the channel access number in the web save, and shows those fields in the web editor. `testReleaseUnitTest --offline` passed, including `M17ChannelTest` (destination cleaning, the CAN in the voice type word, the backup type cell, and the web save).
+
+The release APK of that branch was installed with `adb install -r` at 20:18 (versionCode 118, no uninstall). The app logged `module DMR003.FW25.V022` at 20:18:43. No channel was written after that install. No transmission. The HackRF was not started. The device pass (create the channel, a reception on the intercom, a 10 s key, the web intercom) has not been run.

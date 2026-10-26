@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -151,9 +151,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-
-**Reviewed 19:55 (`reviews.md`, "Review of FW25"): complete; (c) final. The square was read back in place and irq 27 never fired, so the codec does not consume the vocoder buffer in FM: no idle playback can be the calibration leg. Item 7 trains on a real reception with the hotspot's M17 stream as the known source when it arrives; opcodes 13/14 stay as bench reads. Next: route-list item 6, host part first, in a separate SignalDeck worktree.**
-FW25 (`DMR003.FW25.V022`, sha256 `f0759b7d…c116a`) wrote a 500 Hz then 2 kHz square at ±8192 into `0x180000A0`. The square was still in that buffer two seconds later, and irq 27's flag stayed 0 for the whole 3 s (count 0). The phone clip stayed at −15.7 dBFS with a stationary peak near 320 Hz. The flag word is 0, not another buffer address, so no register was rewritten on a guess. **Decision (c) is final.** Boot peak 0.074 dB. The 1125-frame stream was 1125/1125, end bit, EOT 0.999, p99 3026 Hz, IQ peak 5. The receiver moved from raw 21 to raw 35, and a 1 kHz tone read −11.1 dBFS. End state: channel 2, 467.625 FM, hardware squelch 2. The channel row programs power byte 1.
+**Item 6 host part, 20:20.** SignalDeck PR https://github.com/IIMacGyverII/SignalDeck/pull/9 (`grok/m17-channel`, `3a7ccb49` rebased onto `28517806`, plus `58c30c69` so the web editor keeps type 2). Host suite green, including `M17ChannelTest`. No device pass: the radio was not keyed and the HackRF was not used. The PR's release APK was installed with `adb install -r` at 20:18 (versionCode 118); `0x34` was still `DMR003.FW25.V022` at 20:18:43 and the channel was not changed. Device pass waits.
 
 ## Owner question
 
