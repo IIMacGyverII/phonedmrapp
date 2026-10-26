@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -175,7 +175,14 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-Op 5 during the tone, mode 5 held, is a 1000 Hz line. The stream, using that same half choice and the same byte copy, is not. Section 4 (c) and (d) were not run.
+The 11:49 stream has no 1 kHz line in any half, including half 0. The predicted decay is not in the capture, so the main-loop move was not built. The phone was not used for this step.
+
+**Stuck — step 1 does not show a line that dies.**
+
+- Step: prove the handler-starvation hypothesis from the 11:49:48 capture (344 halves reported, 336 saved). Goertzel at 1000 Hz, 8 kHz, per half.
+- Tried: (1) Half 0: amplitude 286, rms 3096, lag-1 0.24. Half 1: 583, 3028, 0.21. Half 2: 164, 3242, 0.17. Half 4: 642, 3141, 0.21. Half 8: 190, 3056, 0.14. Half 16: 260, 3243, 0.18. Half 32: 292, 3094, 0.16. (2) Every 8th half through 320 stays near rms 3000. The strongest bin in the file is 867, at half 88. (3) There is no half whose 1 kHz amplitude is near the op 5 line (rms 8957, lag-1 0.57, peak 1000 Hz). The line is absent from the start, not present and then gone.
+- State: unchanged since 11:50. Module `DMR003.FW27.V022`, sha256 `1d83e5bf9b6685e191b5084cc92ec04a9ccb3cdbf424960f7ff69444688bc489`, channel 2, 467.625 MHz, power byte 1, not keyed, monitor off, mode 5 off, UART 57600. Phone: SignalDeck running, USB. HackRF idle. No new image.
+- Question: half 0 is already the noise floor, so the capture does not show the predicted decay. Should the raw stream-frame versus op 5-frame comparison be the next measurement, or is a dropout faster than one half still enough to move the send into the main loop?
 
 **Stuck — op 5 has the line and the stream does not.**
 

@@ -3040,6 +3040,22 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## FW27 stream halves, 1 kHz Goertzel (2026-10-26, 12:05)
+
+The 11:49:48 capture, `C:\Users\Joshua\AppData\Local\Temp\fw1718\fw27line\ramstream.pcm`, 172032 bytes, 336 halves of 256 samples. The log said 344 halves. Goertzel at 1000 Hz assuming 8000 Hz, amplitude of one bin. No new image and the phone was not used.
+
+| Half | 1 kHz amplitude | rms | lag-1 |
+|---:|---:|---:|---:|
+| 0 | 286 | 3096 | 0.24 |
+| 1 | 583 | 3028 | 0.21 |
+| 2 | 164 | 3242 | 0.17 |
+| 4 | 642 | 3141 | 0.21 |
+| 8 | 190 | 3056 | 0.14 |
+| 16 | 260 | 3243 | 0.18 |
+| 32 | 292 | 3094 | 0.16 |
+
+Every 8th half from 0 through 320 stays near rms 3000. The largest 1 kHz bin in the file is 867, at half 88. Op 5's halves from 11:41, for comparison, were rms 8957, lag-1 0.57, peak 1000 Hz. The stream does not start as that line and then fall to the noise floor.
+
 ## FW27 op 5 versus the stream (2026-10-26, 11:50)
 
 Image sha256 `1d83e5bf9b6685e191b5084cc92ec04a9ccb3cdbf424960f7ff69444688bc489` for the stream retest. The op 5 dump was on the previous image (`2b0d249c…52be`), which has the same mode 5 registers and the opposite half choice. Channel 2, 467.625 MHz, not keyed. UART stayed at 57600. No op 16 and no op 17 during the dump.

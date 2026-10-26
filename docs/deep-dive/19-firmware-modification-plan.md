@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (12:05) — The saved stream has no 1 kHz line in half 0.** Goertzel amplitude at 1000 Hz on the 11:49 capture: half 0 is 286 (rms 3096), half 1 is 583, half 32 is 292. The strongest half in the file is 867. The predicted rise-and-decay is not there, so the send was not moved into the main loop. Tables: `radio_firmware/results.md`.
+
 **2026-10-26 (11:50) — Op 5 has the line, the stream does not.** With mode 5 held and the UART at 57600, op 5 mode 0 during a 1 kHz tone returned halves at rms 8957, lag-1 0.57, peak 1000 Hz. The stream, after its copy was pointed at the same half op 5 uses (`FM_ADDR_SW` 1 → `0x160004E0`), was rms 3147, lag-1 0.16, peak 281 Hz, 344 halves, 2 missed. Tables: `radio_firmware/results.md`.
 
 **2026-10-26 (11:25) — FW27 stream is not the 1 kHz line.** Mode 5 returns `sr=0`. A 10 s tone produced 346 halves in 11.1 s with 1 missed and rms 3099, and the samples are not a sine (lag-1 correlation 0.21). The speaker is silent while mode 5 is on. With mode 5 off the same tone is rms 7142, peak 1129 Hz. Section 4 (c) and (d) were not run. Tables: `radio_firmware/results.md`.
