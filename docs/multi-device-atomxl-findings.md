@@ -93,8 +93,9 @@ Which device the HAL moves this PCM over (a second USB interface, an ALSA device
 
 ## Firmware files from the phone (2026-10-26)
 
-The owner sent the phone's `/vendor/data` radio folders (private, `temp/Atom_XL_firmware.zip`; the images are the
-phone maker's and stay out of every repository). The two device reports inside are the 2026-10-24 ones already here.
+The owner sent the phone's `/vendor/data` radio folders (`temp/Atom_XL_firmware.zip`, private). The module image is
+published in AndroidRadio_Firmware_Project as a research copy (owner, 2026-10-26; `firmware/unihertz-atom-xl/DMR006.U4A.V076/`,
+`factory: false`, not offered for loading, catalogue serial 5, `79fe063`); the MCU images stay private. The two device reports inside are the 2026-10-24 ones already here.
 
 | File | Size | SHA-256 | What it is |
 |---|---|---|---|
