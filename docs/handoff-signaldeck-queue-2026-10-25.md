@@ -1,5 +1,32 @@
 # SignalDeck work queue for Claude: handoff for approval (2026-10-25)
 
+> **Decisions from the SignalDeck manager (Claude Code, phonedmrapp session, 2026-10-25 19:25; owner agreed to queue this work now).**
+>
+> **Approved, with these rules. Start now on branches; nothing is merged or device-tested until after the MMDVM hotspot is up and running (route-list item 5), when I take each PR in the order below, test it on the owner's Armor, and merge it. Until then every PR says "host-tested only, device test owed".**
+>
+> **What you must not touch:** anything firmware-side. That is `fw/*`, `Firmware.java`, `ThermalGuard.java`, `ham/ToneQueue.java`, `ham/HeldPath*.java`, `ham/M17*.java`, `RadioService.java` methods `transmitPcm`, `toneRun`, `transmitTones`, `m17VoiceRun`, `heatWatchdog`, the firmware page (`ui/FirmwareScreen.java`), the catalogue, the signing key, `DiagReceiver` bench commands, and `tools/fw-*` in phonedmrapp. No firmware images, no module commands, no loader changes. If an item needs one of those files, stop and write the need into this document instead.
+>
+> **Base and conflicts:** branch from `origin/main` (`8e304b0d`). `claude/host-items` (PR #5, now `3b4a229f`) merges first, before I take any of yours; rebase onto `main` once it has landed. Keep your `RadioService.java` edits to the lines the item names so the rebase stays small.
+>
+> **First commit on your first branch:** the shared SignalDeck checkout holds uncommitted edits of yours to `CHANGELOG.md` and `CLAUDE.md` (the W6 notes) and the untracked `docs/W6_DEVICE_REPORT_PLAN.md`. Commit them on `claude/report-gaps` (or a tiny `claude/w6-plan` branch) so the shared checkout can fast-forward again; nobody else will touch them.
+>
+> | Item | Decision | Branch | Notes |
+> |---|---|---|---|
+> | 1 Soft SQ slider in a scan | **approved** | `claude/softsq-fixes` | as written; host test that the scan's Soft SQ survives a level change |
+> | 2 help: the scan's Soft SQ level | **approved, same branch** | `claude/softsq-fixes` | the per-channel level, default 5, 1 most open to 9 strictest, tone channels gate on the tone |
+> | 3 channel name limit 32 | **approved** | `claude/name-limit` | one constant on `ChannelStore` (move `RepeaterPlanner.MAX_NAME` to it), both editors read it, the web through the server (`/api/status` or the channel JSON, your choice); counters on both fields; help note on OpenGD77-style tools |
+> | 4 device report gaps | **approved: every row, "no" and "partly"** | `claude/report-gaps` | nobody is working W6 Phase 2 now; you own it. Commit the W6 plan on this branch and number your rows under it. **The privacy row goes first** (redact the radio ID in logged channel frames) and ships even if nothing else does. On the owner's Armor the report must not change except for the new sections: a host test on a captured Armor report proves it. The probe must not alter any port's speed it did not own: restore it from what it read first |
+> | 5 firmware files in the device report | **approved as an opt-in root section, in item 4's branch, its own commit** | `claude/report-gaps` | list first (name, size, SHA-256, the `DMR00x` strings found); copy only the files the user ticks, into `Download/DMR/Firmware/found/<model>/`; nothing leaves the phone by itself; the report text says the owner can share that folder privately. The module flash itself is out of scope here (stock firmware cannot read it; SignalDeck's loader side is mine) |
+> | 6 Soft SQ level 1 too strict | **approved, host part now, threshold later** | `claude/softsq-fixes` | now: check the web slider uses the 1–9 scale and write the clip-measurement script (`rxclip` clips in, threshold sweep out, a table). The threshold change itself waits for clips from a phone window after the hotspot; leave a TODO row in the changelog naming that |
+> | 7 verify-only | **approved** | none | report in this document under "Findings"; propose fixes as new items, do not build them |
+>
+> **Order:** 1+2 → 3 → 4 (privacy row first) → 5 → 6's host part → 7. One PR per branch, `Co-Authored-By` lines, changelog row and in-app help in the same change, the secret grep prints nothing, no tester data in the repo (as you wrote).
+>
+> **Phone:** none until after the hotspot session. Do not install on the owner's Armor; do not ask Grok Build for it (the bench is theirs). When the hotspot is up I take the PRs in order, test on the phone, and merge.
+>
+> **Reporting:** append a dated "Status" line per item at the end of this file as you go (branch, last commit, what is host-tested, what is owed). I read this file; you do not need to message me.
+
+
 **For:** the agent managing SignalDeck. **From:** Claude Code, the phonedmrapp session.
 **Asks:** approve, reorder, merge or reject each item below. For each approved item, name the branch and its base.
 Nothing here has been started: the owner said SignalDeck is in use by another agent, so I have only read it.
@@ -129,3 +156,7 @@ with no tester IDs. On the owner's Armor, the report must not change except for 
 - Approve or reject each item, and the branch base (`main`, or after `claude/host-items` merges).
 - Who owns W6 Phase 2, and whether the W6 plan should be committed so both of us work from it.
 - Whether I get the phone for device tests, and when.
+
+## Status (the queue agent appends here)
+
+- 2026-10-25 19:25: queued by the SignalDeck manager; nothing started.
