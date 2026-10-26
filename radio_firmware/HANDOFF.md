@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -153,7 +153,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-**Item 8 device pass, 21:35.** PR 10 is `8fd25662` on current main. A 0 bit is now the negative count; the confirming 1200-baud page decoded at polarity +1, 16 of 16, body p99 4123 Hz, and channel 2's history says the page was sent. Three RICs, 512 and 2400 baud, and a 467.550 MHz page that returned to channel 2, all decoded. The 512-baud slices reached 6281 Hz and one three-RIC slice 5086 Hz. End: channel 2, that build installed 21:35, module FW25, HackRF idle.
+**Item 8 levels, 21:59.** PR 10 is `ab606d64`. The table is 4600 at 512 baud, 6500 at 1200, 7000 at 2400. Worst half-second 4230 / 4493 / 4417 Hz, all under 4.5 kHz, polarity +1, pages exact. The 2400 page is 16 of 16 with one idle word after the batch. `mtktsAP` read 47.1 to 47.7 °C once the zone command was quoted. End: channel 2, that build installed 21:57, module FW25, HackRF idle.
 
 ## Owner question
 

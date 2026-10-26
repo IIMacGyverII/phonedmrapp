@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-25 — Item 8 levels.** Counts 4600 / 6500 / 7000. Worst half-second 4230 Hz at 512, 4493 Hz on the three-address 1200 page, 4417 Hz at 2400. The 2400 page is 16 of 16 with one idle word after the batch. `mtktsAP` 47.1 to 47.7 °C. Tables: `radio_firmware/results.md`.
+
 **2026-10-25 — Item 8 device pass, POCSAG page.** A 0 bit is the negative count, because a positive count deviates low. Confirming 1200-baud page: polarity +1, 16 of 16, body p99 4123 Hz. Three RICs in one key, and 512 and 2400 baud, decoded. A page at 467.550 MHz returned to channel 2. The 512-baud slices reached 6281 Hz and one three-RIC slice 5086 Hz, over 5 kHz; the level was not changed. Tables: `radio_firmware/results.md`.
 
 **2026-10-25 — Item 6 device pass.** M17 channel 56 on FW25: wide FM, squelch 0, hold accepted. One 10 s web Talk key, body p99 2883.7 Hz, link-setup CRC, type `0x0385`, 249/249 Golay 0, end bit and EOT. Receive at −95 dBm listed 30/30; at −100 dBm the live count was 26/30. Two −97 dBm clips are 30/30 payload-exact on the held-path decoder. Backup restore keeps type, CAN, destination, band 1 and squelch 0 after the row-width fix (`1cad336b`). Channel 2, that build installed. Tables: `radio_firmware/results.md`.

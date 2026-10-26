@@ -2868,3 +2868,25 @@ The 512-baud slices at 6281 Hz and 5691 Hz, and one slice of the three-RIC page 
 ## End state
 
 Channel 2, 467.625 MHz FM. The `8fd25662` build is installed (21:35:13). Module `DMR003.FW25.V022`. HackRF idle. Nothing left keyed.
+
+# Item 8 level table (2026-10-25, 21:59)
+
+PR 10 tip `ab606d64`. `PocsagTest` pins 4600 / 6500 / 7000 and the idle word after the last batch. Installed `adb install -r` at 21:57:57. The first pass used the review's starting counts (512 → 5400, 1200 and 2400 → 7000). Two of those were still over 4.5 kHz, so those two counts came down and were measured again. Every page below decoded at polarity +1, function 3, text `N0CALL: …`, and the radio was back on channel 2 afterwards. HackRF LNA 8, VGA 8, clip 0.
+
+The empty zone read last time was the shell splitting `su -c` from its script. Quoted, the nodes answer: `mtktsAP` 47.1 °C before the first key of this set and 47.7 after the 512-baud page, `mtktsbtsmdpa` 45.3 to 45.7, battery 39.4 to 39.5 °C.
+
+| Baud | Counts | Page | Carrier | Body p99 | Worst 0.5 s | Codewords | Text |
+|---|---|---|---|---|---|---|---|
+| 512 | 5400 | one RIC | 2.62 s | 3345 Hz | 5199 Hz | 16/16 | `N0CALL: LO` |
+| 512 | 4600 | one RIC | 2.625 s | 2751 Hz | 4230 Hz | 16/16 | `N0CALL: LO` |
+| 1200 | 7000 | one RIC | 2.271 s | 4001 Hz | 4489 Hz | 16/16 | `N0CALL: HI` |
+| 1200 | 7000 | three RICs | 3.23 s | 3996 Hz | 4814 Hz | 48/48 | `N0CALL: ABC` on 1000001, 1000002, 1000003 |
+| 1200 | 6500 | one RIC | 2.271 s | 3864 Hz | 4346 Hz | 16/16 | `N0CALL: HI` |
+| 1200 | 6500 | three RICs | 3.227 s | 3864 Hz | 4493 Hz | 48/48 | `N0CALL: ABC` on each |
+| 2400 | 7000 | one RIC, with the idle pad | 1.79 s | 4119 Hz | 4417 Hz | 16/16 | `N0CALL: HI` |
+
+The table that ships is 4600, 6500, 7000. The loudest half-second in that table is 4493 Hz, on the three-address page. The 2400-baud page that was cut at 12 of 15 codewords is 16 of 16 with one idle codeword after the last batch. The carrier is still about two seconds: the ring fills before the key, then the page, then the tail.
+
+## End state
+
+Channel 2, 467.625 MHz FM. The `ab606d64` build is installed (21:57:57). Module `DMR003.FW25.V022`. HackRF idle. Nothing left keyed.
