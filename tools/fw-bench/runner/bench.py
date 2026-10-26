@@ -71,7 +71,19 @@ def main():
     if a.test == "tag":
         print(tag); return
     order = ["boot", "tone", "stream", "receive", "heat"] if a.test == "all" else [a.test]
+    pre_ap = None
     for t in order:
+        if t in ("tone", "stream", "heat") and pre_ap is not None:
+            # A shorter key waits until mtktsAP is back within 1 C of the previous key's start, or 10 minutes.
+            t0 = time.time()
+            while time.time() - t0 < 600:
+                cur = (ph.zones().get("zones") or {}).get("mtktsAP")
+                if cur is None or cur <= pre_ap + 1.0:
+                    break
+                cfg.say("cool mtktsAP %.2f (pre-key %.2f)" % (cur, pre_ap))
+                time.sleep(20)
+        if t in ("tone", "stream", "heat"):
+            pre_ap = (ph.zones().get("zones") or {}).get("mtktsAP")
         cfg.say("== %s" % t)
         try:
             if t == "boot": rec = tests.boot(cfg, ph)

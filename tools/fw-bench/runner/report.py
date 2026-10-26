@@ -14,7 +14,7 @@ ARMOR_REFERENCE = {
     "boot": "peak under 0.1 dB, no run at or over 10 dB (FW14 onward)",
     "tone": "10 s 1 kHz low power: carrier 10.8 s, body p99 about 2.8 kHz, 1 kHz line, no slice at 5 kHz",
     "stream": "1125 of 1125 payload-exact, end bit, EOT, carrier 45.3 s, p99 about 2.9-3.0 kHz, clip 0 (FW20+)",
-    "heat": "120 s high power: mtktsAP +11.3 C, back in about 17 min; battery +1.7 C; no stop",
+    "heat": "30 s low power: mtktsAP about +1 C, battery about +0.2 C; 45 s low power a small rise; no stop (battery 45 C, AP or modem-PA 60 C, +2 C in 10 s). The +11.3 C figure is the separate 120 s high-power key",
     "receive": "idle 0x32 about -108 dBm; a HackRF 1 kHz FM tone opens the squelch and shows a 1 kHz line in the clip",
 }
 

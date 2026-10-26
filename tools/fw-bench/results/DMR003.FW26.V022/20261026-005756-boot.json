@@ -1,0 +1,17 @@
+{
+ "verdict": "PASS silent",
+ "numbers": "peak_dB 0.048, above10_s 0.0, clip 0.0, tag_after DMR003.FW26.V022",
+ "boot": {
+  "floor_db": 0.0,
+  "peak_db": 0.048,
+  "peak_t_s": 2.3,
+  "above_10db_s": 0.0,
+  "clip": 0.0,
+  "runs": [],
+  "SILENT": true
+ },
+ "restart_at_s": 3.0,
+ "test": "boot",
+ "tag": "DMR003.FW26.V022",
+ "at": "2026-10-26T00:57:56"
+}

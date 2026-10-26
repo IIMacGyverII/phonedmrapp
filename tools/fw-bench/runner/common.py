@@ -33,7 +33,9 @@ DEFAULTS = {
 HEAT_BAT_STOP_C = 45.0
 HEAT_ZONE_STOP_C = 60.0
 HEAT_RISE_STOP_C = 2.0
-HEAT_ZONES = ("mtktsAP", "mtktsbtsmdpa", "mtktspa", "mtktsbattery")
+# mtktsAP and the modem-PA zone are the stop inputs. mtktsPA swings while the radio is idle, and a
+# sample of exactly 25.0 C is not a reading (HANDOFF.md). Battery comes from dumpsys, not a zone.
+HEAT_ZONES = ("mtktsAP", "mtktsbtsmdpa")
 
 
 class Config:

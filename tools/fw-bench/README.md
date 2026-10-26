@@ -2,7 +2,24 @@
 
 Plan: `radio_firmware/plan-port-automation.md` (stage 5).
 
-## The runner: `runner/bench.py` (first cut 2026-10-25, not yet run against the Armor)
+## The runner: `runner/bench.py` (accepted on the Armor 2026-10-26, image `DMR003.FW26.V022`)
+
+Acceptance is the `all` run, after the fixes below. Every test passed. JSON and `summary.md` are in `results/DMR003.FW26.V022/`.
+
+| Test | Accepted | Armor comparison |
+|---|---|---|
+| tag | yes | `DMR003.FW26.V022` |
+| boot | yes | peak 0.048 dB and 0.07 dB, no run over 10 dB (the bar is under 0.1 dB) |
+| tone | yes | 10.5 s carrier, body p99 2.54–2.55 kHz, 1 kHz line, hottest half-second 4.03–4.04 kHz |
+| stream | yes | 1125/1125 payload-exact, end bit, carrier 45.41 s, p99 2903 and 2908 Hz, clip 0 |
+| heat | yes | 30 s low power: AP +1.0 °C, battery +0.2 °C. 45 s low power: AP +1.2 °C, battery +0.3 °C. No stop |
+| receive | yes | the phone clip carries the 1 kHz line (−19.1 dBFS) |
+
+Defects found and fixed before `all`: the version string is not in the recent log once the signal poll is running, so the tag is read from SignalDeck's settings API; a 10 s test tone needs the lift flag or the app clamps it at 5 s; the receive clip is a WAV in the app cache, not a raw file in Download; the heat stop was watching `mtktsPA`, which is not a stop input; `all` now waits until `mtktsAP` is within 1 °C of the previous key, or 10 minutes.
+
+Not this runner, and not a failed test: a plain-versus-held tone table, M17 receive scored at two levels, and a 120 s time-out key. Those measurements stay in `radio_firmware/results.md`.
+
+## How to run it
 
 ```
 python runner/bench.py --serial <adb serial> tag        # the module's version string
@@ -22,8 +39,7 @@ demodulation and the key, slice and boot judges of the Armor scripts), `tests.py
 receive, each naming the snapshot script it distils), `report.py` (one JSON record per run under
 `<out>/results/<tag>/`, `summary.md` with the Armor reference next to every test). Nothing keys the radio or
 transmits without `--arm`; the Diagnostics flag must be on in SignalDeck; the HackRF must be off the outdoor
-antenna. **First use: run each test on the Armor and compare with `radio_firmware/results.md` before trusting it
-on another phone** (that comparison is the acceptance of the runner; it has not been done yet).
+antenna. The Armor acceptance is the table above (`DMR003.FW26.V022`, 2026-10-26). Trust it on another phone only after that phone's own run is compared with its hand measurements.
 
 `armor-2026-10-snapshot/` is a read-only copy (taken 2026-10-24) of the scripts the Armor firmware work ran from
 a temporary folder, so the knowledge in them cannot be lost. Grok Build keeps using its working copies; do not

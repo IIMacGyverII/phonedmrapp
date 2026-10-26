@@ -1,0 +1,7 @@
+{
+ "verdict": "PASS line",
+ "numbers": "clip_dBFS -19.1, line_rel 1.49, samples 80000",
+ "test": "receive",
+ "tag": "DMR003.FW26.V022",
+ "at": "2026-10-26T01:14:19"
+}

@@ -43,15 +43,52 @@ class Phone:
 
     # ---- the module ----
     def tag(self, wait_s=20):
-        """The module's version string as RadioService last logged it (the `0x34` reply), e.g. DMR003.FW22.V022."""
+        """The module's version string. Logcat only keeps the last few seconds once the signal poll is running,
+        so the web status is the reliable read. The pin is never logged."""
+        text = self.logcat(8)
+        m = re.findall(r"DMR003\.[A-Za-z0-9]{4}\.V0\d\d", text)
+        if m:
+            return m[-1]
+        web = self.tag_web()
+        if web:
+            return web
         t0 = time.time()
         while time.time() - t0 < wait_s:
-            text = self.logcat(600)
+            time.sleep(2)
+            text = self.logcat(8)
             m = re.findall(r"DMR003\.[A-Za-z0-9]{4}\.V0\d\d", text)
             if m:
                 return m[-1]
-            time.sleep(1)
         return ""
+
+    def tag_web(self):
+        """SignalDeck's settings API reports the last 0x34 text. Empty if the web server is off."""
+        import json
+        import urllib.request
+        rc, xml = self.adb("shell", "su -c cat /data/data/%s/shared_prefs/web.xml" % self.cfg.package, timeout=20)
+        i = xml.find('<string name="pin">')
+        if i < 0:
+            return ""
+        secret = xml[i + len('<string name="pin">'):xml.find("</string>", i)].strip()
+        if not secret:
+            return ""
+        self.adb("forward", "tcp:18080", "tcp:8080")
+        try:
+            req = urllib.request.Request("http://127.0.0.1:18080/api/login", data=json.dumps({"pin": secret}).encode(), method="POST")
+            req.add_header("Content-Type", "application/json")
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                cookie = (resp.headers.get("Set-Cookie") or "").split(";")[0]
+            del secret
+            req = urllib.request.Request("http://127.0.0.1:18080/api/settings")
+            if cookie:
+                req.add_header("Cookie", cookie)
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                doc = json.loads(resp.read().decode())
+        except Exception:
+            return ""
+        text = str(doc.get("firmware") or "")
+        m = re.search(r"DMR003\.[A-Za-z0-9]{4}\.V0\d\d", text)
+        return m.group(0) if m else ""
 
     def restart_module(self):
         return self.broadcast("restartmodule")
@@ -99,6 +136,17 @@ class Phone:
     def pull(self, remote, local):
         rc, out = self.adb("pull", remote, str(local), timeout=120)
         return rc == 0
+
+    def pull_app(self, remote, local):
+        """An app-private file: copy it to Download with root, pull that, and remove the copy."""
+        sd = "/sdcard/Download/" + Path(remote).name
+        rc, out = self.adb("shell", "su -c cp %s %s" % (remote, sd), timeout=60)
+        if rc != 0:
+            self.cfg.say("pull_app copy failed: " + out[-200:])
+            return False
+        ok = self.pull(sd, local)
+        self.adb("shell", "rm " + sd)
+        return ok and Path(local).exists()
 
     def uid(self):
         _, out = self.adb("shell", "dumpsys", "package", self.cfg.package)

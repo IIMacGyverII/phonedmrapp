@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (01:19) — Bench runner accepted on FW26.** `bench.py all` passed boot, tone, the 1125-frame stream, receive and heat. A 30 s low-power key raised `mtktsAP` 1.0 °C. Tables: `tools/fw-bench/results/DMR003.FW26.V022/` and `radio_firmware/results.md`.
+
 **2026-10-26 (00:30) — R-I live receiver.** A 30 s HackRF transmission was one listing of 750 frames, the same count `HeldPath.decode` got on that recording. A transmission with a one-second gap was one listing of 200 frames. SignalDeck PR 13, `0465553e`. Tables: `radio_firmware/results.md`.
 
 **2026-10-25 (23:55) — FW26 held-path re-run.** The 22:42 40-frame clip at VGA 20 listed 40 frames, 37 clean, at −89 dBm. On FW25 that clip listed 40 and 39. Not the 19-of-30 result. Tables: `radio_firmware/results.md`.

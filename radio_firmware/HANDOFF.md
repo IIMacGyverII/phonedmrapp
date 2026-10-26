@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -157,7 +157,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-**R-I bench, 00:30.** A 30 s transmission (750 frames, VGA 20, −88 dBm) was one listing of 750 frames; the batch decoder on the same recording also counted 750. A transmission with a one-second gap was one listing of 200 frames. SignalDeck PR 13 (`0465553e`). Channel 2, FW26 not reloaded, HackRF idle, phone not keyed.
+**Bench runner, 01:19.** `all` on `DMR003.FW26.V022` passed boot (0.07 dB, silent), a 10.5 s tone (p99 2551 Hz), the stream 1125/1125 (p99 2908 Hz), the 1 kHz receive line, and a 45 s key with no heat stop. A separate 30 s key raised `mtktsAP` 1.0 °C. Five runner defects fixed first. Channel 2, FW26 not reloaded, HackRF idle.
 
 ## Owner question
 

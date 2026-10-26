@@ -48,7 +48,8 @@ def tone(cfg, phone, ms=10000, power=0):
     phone.tune(cfg.freq_hz, power)
     cap = hackrf.Capture(cfg, "tone", ms / 1000.0 + 6, cfg.lna_key, cfg.vga_key)
     time.sleep(1.5)
-    phone.test_tone(ms)
+    # SignalDeck clamps a test tone at 5 s unless --ez lift is set (the bench tone is 10 s).
+    phone.test_tone(ms, lift=ms > 5000)
     path = cap.wait()
     rep = fm.key_report(cfg, path, 1000.0)
     body = rep.get("body")
@@ -151,15 +152,20 @@ def receive(cfg, phone, seconds=6.0, vga=20, fs=2_000_000, dev_hz=2500.0):
     blob, n = hackrf.fm_iq(fs, seconds, dev_hz, tone=1000.0)
     p = cfg.cap("rx_tone.cs8"); p.write_bytes(blob)
     name = "bench_rx_%d" % int(time.time())
-    phone.rx_clip(name, int(seconds * 1000) + 2000)
+    phone.rx_clip(name, int(seconds * 1000) + 4000)
     time.sleep(0.8)
     hackrf.transmit(cfg, p, n, fs, vga, seconds)
-    time.sleep(2.5)
-    local = cfg.cap(name + ".bin")
-    got = phone.pull("/sdcard/Download/DMR/%s.bin" % name, local) or phone.pull("/data/data/%s/cache/%s.bin" % (cfg.package, name), local)
+    time.sleep(seconds + 3)
+    local = cfg.cap(name + ".wav")
+    remote = "/data/data/%s/cache/rxclip_%s.wav" % (cfg.package, name)
+    got = phone.pull_app(remote, local)
     if not got or not local.exists():
         return {"verdict": "FAIL no clip pulled", "numbers": "clip %s not found" % name}
-    pcm = np.fromfile(str(local), dtype="<i2").astype(np.float64)
+    raw = np.fromfile(str(local), dtype="<i2")
+    # The clip is a WAV. Skip the header (the "data" marker, then the length).
+    blob = local.read_bytes()
+    at = blob.find(b"data")
+    pcm = np.frombuffer(blob[at + 8:], dtype="<i2").astype(np.float64) if at >= 0 else raw.astype(np.float64)
     if len(pcm) < 8000:
         return {"verdict": "FAIL clip short", "numbers": "%d samples" % len(pcm)}
     dbfs = 20 * np.log10(np.sqrt(np.mean(pcm ** 2)) / 32768 + 1e-12)

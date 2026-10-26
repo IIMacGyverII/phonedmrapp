@@ -1,0 +1,9 @@
+{
+ "verdict": "PASS 1125/1125",
+ "numbers": "frames 1125, good 1125, carrier_s 45.41, p99_Hz 2908.4, clip 0.0, end_bit True",
+ "lsf": true,
+ "last_fn": 33892,
+ "test": "stream",
+ "tag": "DMR003.FW26.V022",
+ "at": "2026-10-26T01:13:56"
+}
