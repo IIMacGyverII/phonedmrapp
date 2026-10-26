@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -166,14 +166,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-FW27 is loaded (`DMR003.FW27.V022`, sha256 `400c7cc84edbaecde2f3c9d24bc479c00f64c4ff6d29d3e213ba041db010fd70`, 378620 bytes). Op 17 reuses op 5's send. The reply body is 514 bytes: samples at 0..511, sequence at 512 (slot 0..5), half id at 513. Op 16 rate 1 is acked at 57600 and then the UART answers neither 230400 nor 57600. A power cycle brings `0x34` back. Section 4 was not run. Channel 2, monitor off, not keyed. HackRF idle.
-
-**Stuck — op 16 leaves the UART silent.**
-
-- Step: FW27 §4 (a), the 230400 round trip, after the image was on the bench.
-- Tried: (1) `10:04:09` op 16 `[16, 1]` ack `sr=0` at 57600, host opened 230400, a `0x34` frame got 0 bytes in 1.2 s. Reopen at 57600, no version reply. Power cycle, `0x34` true, tag unchanged. (2) `10:05:22` same ack, 3 s at 230400 with no version, then 35 s with no host frame (`10:05:25` to `10:06:00`). `0x34` at 57600 still failed. A second `[16, 1]` got no answer. (3) Update knock while the host was at 230400: bytes `00 00 FC`, not `C` (`43`). Power cycle at `10:06:11`, `0x34` true, tag `DMR003.FW27.V022`.
-- State: module `DMR003.FW27.V022`, channel 2, 467.625 MHz FM, power byte 1, not keyed, RSSI −110. Phone: SignalDeck running, link ready, monitor off, USB `5006AF1020002922`. HackRF idle.
-- Question: divisor 13 produces no bytes at 230400, and 35 s of silence does not restore 57600. Should op 16 compute the divisor the way boot does (the clock word divided by 230400), or should this image keep 57600 and drop the rate switch?
+Bench (a) passes on `DMR003.FW27.V022` (sha256 `72737f82…7fcff`). `[16, 1]` acked at 57600, `0x34` answered that tag at 230400, and again at 57600 after 35 s with no host frame. The knock at 230400 returned `00 00`, not `C`. The sequence byte stays 0..5, because that byte is also the buffer slot. End state: channel 2, monitor off, not keyed, tag unchanged, HackRF idle.
 
 ## Owner question
 

@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (10:32) — FW27 bench (a) passes.** The divisor write waits until the UART is idle and checks DLAB with a read-back. `0x34` answered `DMR003.FW27.V022` at 230400, again at 57600 after 35 s of silence, and the knock at 230400 was not accepted (`00 00`). Tag after the power cycle is unchanged. The sequence byte stays 0..5. Tables: `radio_firmware/results.md`.
+
 **2026-10-26 (10:06) — FW27 loaded, UART rate switch is silent.** Tag `DMR003.FW27.V022`, sha256 `400c7cc8…fd70`, 378620 bytes, opcode 13 retired, opcodes 12 and 14 kept. Op 5's reply is 514 bytes: samples 0..511, sequence 512 (wraps at 6), half id 513. Op 16 rate 1 acks at 57600, then neither 230400 nor a 35 s fallback answers. Power cycle restores the tag. Section 4 not run. Phone not keyed.
 
 **2026-10-26 — FW27 stub does not fit.** Control stub 324 bytes, 108 left in the 432-byte tail; the half-copy with its checks is 164 bytes. `0x35F64` is not free. No image loaded.

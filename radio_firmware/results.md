@@ -3040,6 +3040,12 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## FW27 rate switch, bench (a) (2026-10-26, 10:32)
+
+Image sha256 `72737f824be61f30f4c58a24602b0a002fa4e4ffddaf07efa20e2da99ca7fcff`, 378620 bytes, stub 1008 bytes ending `0x5C094`. Loaded 10:32:13, `fwload ok`, tag `DMR003.FW27.V022`. Op 16 waits until USR bit 0 is clear and LSR bit 6 is set, sets DLAB only after a read-back, writes the divisor from the boot clock word at `0x32F90` (shifted right 4, divided by 57600 or by 230400), clears DLAB with a read-back, and restores the IER it read first. The same path is the 57600 fallback. 230400 is four times 57600, so its quotient is the boot divisor divided by 4.
+
+Bench (a), channel 2, not keyed. `[16, 1]` ack `sr=0` at 57600 at 10:32:21.062. At 230400, `0x34` answered `DMR003.FW27.V022` (10:32:21.235). No host frame until 10:32:56.290. `0x34` at 57600 answered the same tag. `[16, 1]` again, `sr=0`, and `0x34` at 230400 answered. The update knock then returned `00 00`, not `C`. Power cycle at 10:32:58, `0x34` true, tag unchanged. The sequence byte stays the slot, 0 through 5: the existing send uses that byte as the buffer slot, so a free-running 0..255 counter is not free. HackRF was not started.
+
 ## FW27 loaded, rate switch silent (2026-10-26, 10:06)
 
 Image `DMR003.FW27.V022`, 378620 bytes, sha256 `400c7cc84edbaecde2f3c9d24bc479c00f64c4ff6d29d3e213ba041db010fd70`. YModem `fwload ok` at 10:04:03, 137788 ms. `0x34` after the load and again after a power cycle: `DMR003.FW27.V022`. The file length is unchanged. Opcode 13 branches to the `sr=1` return. Opcodes 12 and 14 are the FW26 bytes. The free tail from `0x5C54C` is still zero. The stub is 736 bytes at `0x5BCA4`, ending `0x5BF84`.
