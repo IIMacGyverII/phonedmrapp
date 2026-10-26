@@ -3008,3 +3008,22 @@ Before the reboot, at 02:42:15: installed APK sha256 `c54cf9ad6c0290985e98ce7eec
 `adb reboot` dropped the session within a second. From 02:43 through 02:50, `adb connect 192.168.1.125:5555` was refused (Windows error 10061). The address answered ping. `adb devices` stayed empty, `adb mdns services` listed nothing, and no USB device appeared. The runner's tag, boot and receive tests, the channel 56 listing, and the channel 4 MON check were not run. The HackRF was not started. Nothing was keyed.
 
 The same wait also rebuilt FW21 and FW22 on the host. Both match the images that were loaded: FW21 `f726056aa3e62db4399d45ee6cf5df4e29756083761c1651ce734d4c08d477ed`, FW22 `38f900a0df169c0101f9e6183fe8ec8d2e9cdca74169f034f5571b04aa988d6a`. The assembly is in `tools/fw-patch/stubs/`, and `test_repro.py` passed (5 tests) along with `test_patches.py` (48). No image was loaded.
+
+## Cold-boot regression, resumed (2026-10-26, 05:46)
+
+The owner reconnected USB. At 05:40 the stock app was enabled and SignalDeck was not running, because `ownAtBoot` is absent and the receiver's fallback re-enables the stock app. That part was already read. Wi-Fi adb was up again for this boot.
+
+`am start` at 05:46:44. The radio was ready 7.2 s later: link ready, stock app disabled, `0x34` `DMR003.FW26.V022`, channel 2 at 467.625 MHz, monitor off.
+
+| Step | Result |
+|---|---|
+| runner tag | `DMR003.FW26.V022` |
+| runner boot | PASS silent, peak 0.108 dB, no run over 10 dB, tag after the restart still FW26 |
+| runner receive | PASS, clip −18.9 dBFS, 1 kHz line 1.5 times the noise, 80000 samples |
+| channel 56 | live receiver on, "the module's voice filter is held open", one listing: 30 frames, 27 clean, both ends the bench callsign |
+| channel 4 MON | digital, 467.700 MHz. `promiscuous on: sr=0 flag=1`. Off: `sr=0 flag=0` |
+| channel 2 | monitor off, link ready, not transmitting |
+
+`ownAtBoot` was then turned on and the phone was rebooted from USB at 05:48:09. USB adb returned in 24 s. The app's process appeared by itself at uptime 43 s, and the radio was ready at uptime 47.9 s: link ready, stock app still disabled, tag `DMR003.FW26.V022`, channel 2. Nothing on the host started the app. `adb -s 5006AF1020002922 tcpip 5555` answered `restarting in TCP mode port: 5555`. A following `adb connect 192.168.1.125:5555` timed out (Windows 10060); USB stayed up.
+
+The boot setting was turned back off. End state 05:50: channel 2 at 467.625 MHz, monitor off, not transmitting, stock app disabled, SignalDeck owning the radio, `ownAtBoot` false, module `DMR003.FW26.V022`. HackRF idle. Nothing was keyed.
