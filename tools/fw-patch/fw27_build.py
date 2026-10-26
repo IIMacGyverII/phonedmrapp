@@ -463,15 +463,17 @@ fw27_gate:
 	movi	r2, 1
 .Lok:
 	st.b	r0, (r1, 0)
+	/* sendh clobbers r1 and r5. Store the next slot before the call. */
 	lrw	r1, 0x4b374
 	ld.b	r5, (r1, 0)
-	bsr	.Lsend
-	addi	r5, 1
-	cmpnei	r5, 6
+	mov	r4, r5
+	addi	r4, 1
+	cmpnei	r4, 6
 	bt	.Lsv
-	movi	r5, 0
+	movi	r4, 0
 .Lsv:
-	st.b	r5, (r1, 0)
+	st.b	r4, (r1, 0)
+	bsr	.Lsend
 	br	.Lspin
 .Lstop:
 	cmpnei	r4, 0
