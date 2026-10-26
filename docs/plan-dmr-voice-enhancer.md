@@ -66,6 +66,16 @@ Pairs of (clean speech, what the radio's receiver delivers). Two radios in the c
 3. Receive: radio B records the decoded PCM (the REC path). Alignment by cross-correlating the chirp; trim; store
    the pair with the clip id. Reject pairs whose chirp is not found or whose length is off.
 4. Repeat on an analog narrow-FM channel for the FM set (same clips, same loop).
+   **Hotspot variant (owner question, 2026-10-26):** the MMDVM hotspot has no vocoder, so it can be neither end of
+   a pair (it moves AMBE frames between RF and the network and never makes PCM). It can be the middle: radio A
+   transmits the clip, the hotspot echoes it back through a parrot (BrandMeister TG 9990, or a local echo if the
+   WPSD-M17 image has one; check on arrival), and the same radio A records the echo. One phone then does both the
+   encode and the decode, so the second phone is not required for data collection. Cost: the echo plays after the
+   key ends, so the loop runs at half speed (a 25 s clip takes about a minute). Needs the owner's DMR ID on the
+   hotspot and the corpus clips going out to the network, which is fine (nothing private in them). The encoder is
+   still ours, so this adds no encoder diversity; what the hotspot does add is real traffic from other radios
+   through the same receive path, which is exactly the evaluation set (listening only, never training).
+
 5. Runs at real time, so 10–20 h of material is 10–20 h of bench. Batches of 25 s keys with the cool-down
    guard between them (the heat rules from the FW19 bench apply: stop at 60 °C AP / 45 °C battery, low power).
    Overnight runs, the cage closed, the HackRF untouched.
