@@ -44,6 +44,7 @@ class Fw27Test(unittest.TestCase):
             range(0x5B2A8, 0x5B2AC),
             range(0x5B2C8, 0x5B2CC),
             range(fw27_build.TRAMP, fw27_build.TRAMP_END),
+            range(fw27_build.WRAP, fw27_build.WRAP_END),
         ]
         for i, (a, b) in enumerate(zip(self.old, self.new)):
             if a == b:
@@ -55,7 +56,7 @@ class Fw27Test(unittest.TestCase):
     def test_opcode_12_and_14_and_the_tail_stay(self):
         self.assertEqual(self.old[0x5BC0A:0x5BCA4], self.new[0x5BC0A:0x5BCA4])
         self.assertEqual(self.old[0x5C098:0x5C464], self.new[0x5C098:0x5C464])
-        self.assertEqual(self.new[fw27_build.TRAMP_END:0x5C6FC], bytes(0x5C6FC - fw27_build.TRAMP_END))
+        self.assertEqual(self.new[fw27_build.WRAP_END:0x5C6FC], bytes(0x5C6FC - fw27_build.WRAP_END))
 
     def test_branches(self):
         gate = fw26_target(self.new, 0x5B7DE)

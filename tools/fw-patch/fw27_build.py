@@ -554,6 +554,8 @@ def patch_calls(code):
 
 TRAMP = 0x5C54C
 TRAMP_END = TRAMP
+WRAP = 0x5C590
+WRAP_END = WRAP
 REST_OFF = 0
 # Filled in by build() from the stub's own branches. The earlier constants
 # 0x5CD6 and 0x5D42 dropped the 0xB000 of the real file addresses.
@@ -606,6 +608,110 @@ def mode_targets(code):
     if not (BASE < mode5 < RECLAIM_END and BASE < rest < RECLAIM_END):
         raise SystemExit("mode5 %X rest %X are outside the stub" % (mode5, rest))
     return mode5, rest
+
+
+WRAP_ASM = r"""
+	.text
+	.global	regsend
+/* Same frame as op 5's send, plus WORK_MODE, FM_BANDWIDTH and the
+ * AT1846S 0x58 mirror at body bytes 514..525. r5 is the slot. The half
+ * id is on the stack where sendh reads it. */
+regsend:
+	mov	r7, r15
+	lrw	r1, 0x4a400
+	mov	r0, r5
+	lsli	r0, 9
+	addu	r1, r0
+	mov	r4, r1
+	subi	r4, 8
+	movi	r2, 104
+	st.b	r2, (r4, 0)
+	ld.w	r0, (r14, 0x18)
+	ld.b	r2, (r0, 1)
+	st.b	r2, (r4, 1)
+	movi	r2, 0
+	st.b	r2, (r4, 2)
+	st.b	r2, (r4, 3)
+	st.b	r2, (r4, 4)
+	st.b	r2, (r4, 5)
+	movi	r2, 2
+	st.b	r2, (r4, 6)
+	movi	r2, 14
+	st.b	r2, (r4, 7)
+	mov	r0, r1
+	movi	r3, 1
+	lsli	r3, 9
+	addu	r0, r3
+	mov	r6, r14
+	addi	r6, 8
+	addu	r6, r5
+	ld.b	r2, (r6, 0)
+	st.b	r5, (r0, 0)
+	st.b	r2, (r0, 1)
+	lrw	r6, 0x11000100
+	ld.w	r2, (r6, 0)
+	st.b	r2, (r0, 2)
+	lsri	r3, r2, 8
+	st.b	r3, (r0, 3)
+	lsri	r3, r2, 16
+	st.b	r3, (r0, 4)
+	lsri	r3, r2, 24
+	st.b	r3, (r0, 5)
+	lrw	r6, 0x11000500
+	ld.w	r2, (r6, 0)
+	st.b	r2, (r0, 6)
+	lsri	r3, r2, 8
+	st.b	r3, (r0, 7)
+	lsri	r3, r2, 16
+	st.b	r3, (r0, 8)
+	lsri	r3, r2, 24
+	st.b	r3, (r0, 9)
+	lrw	r6, 0x3a81c
+	ld.w	r2, (r6, 0)
+	st.b	r2, (r0, 10)
+	lsri	r3, r2, 8
+	st.b	r3, (r0, 11)
+	lsri	r3, r2, 16
+	st.b	r3, (r0, 12)
+	lsri	r3, r2, 24
+	st.b	r3, (r0, 13)
+	movi	r2, 16
+	st.b	r2, (r0, 14)
+	movi	r0, 2
+	lsli	r0, 8
+	addi	r0, 23
+	mov	r1, r4
+	.short	0xE000, 0x5C8E
+	mov	r0, r4
+	movi	r1, 2
+	lsli	r1, 8
+	addi	r1, 23
+	.short	0xE000, 0xE87D
+	jmp	r7
+	.align	2
+	.literals
+"""
+
+
+def link_wrap():
+    src = OUT / "fw27_wrap.S"
+    src.write_text(WRAP_ASM, encoding="utf-8", newline="\n")
+    subprocess.check_call([str(AS), "-mcpu=ck803", "-o", str(OUT / "fw27_wrap.o"), str(src)])
+    subprocess.check_call([str(LD), "-Ttext=0x%X" % WRAP, "-o", str(OUT / "fw27_wrap.elf"), str(OUT / "fw27_wrap.o")])
+    code, addr = fw23_build.text_of((OUT / "fw27_wrap.elf").read_bytes())
+    if addr != WRAP:
+        raise SystemExit("wrap linked at %X" % addr)
+    for token, target in (
+            (bytes.fromhex("00e08e5c"), 0x8E5C),
+            (bytes.fromhex("00e07de8"), 0x7DE8)):
+        found = code.find(token)
+        if found < 0:
+            raise SystemExit("wrap missing " + token.hex())
+        code[found:found + 4] = fw23_build.encode_bsr(WRAP + found, target)
+    end = WRAP + len(code)
+    if end > FILE_END:
+        raise SystemExit("wrap ends at %X" % end)
+    return code, end
 
 
 def link_tramp():
@@ -671,6 +777,13 @@ def build():
     MODE5_AT, REST_AT = mode_targets(code)
     tramp, tramp_end = link_tramp()
     img[TRAMP:tramp_end] = tramp
+    wrap, wrap_end = link_wrap()
+    img[WRAP:wrap_end] = wrap
+    global WRAP_END
+    WRAP_END = wrap_end
+    for off in range(BASE, end - 3):
+        if fw26_build.decode_bsr(off, bytes(img[off:off + 4])) == SENDH:
+            img[off:off + 4] = fw23_build.encode_bsr(off, WRAP)
     # The live op 6 handler is at file 0x5B240 (XIP 0x03075240). Apply rejects
     # at 0x5B2C8 (cmpnei r1, 4; bt 0x5B308). Restore rejects at 0x5B2A8
     # (cmpnei r1, 3; bt 0x5B308) after variant 4 has already taken its own body.
