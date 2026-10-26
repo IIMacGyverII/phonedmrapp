@@ -2910,3 +2910,44 @@ The second call was 9 dB weaker than the fit and the pending taps locked on its 
 ## End state
 
 Channel 2, 467.625 MHz FM. The `87a6a503` build is installed. Module `DMR003.FW25.V022`. HackRF idle. The shipped taps are still the ones in use.
+
+# FW26 promiscuous receive (2026-10-25, 23:41)
+
+Image `DMR003.FW26.V022`, sha256 `71949d24910d214dd0a98be7d5da0dd87aeb6ce3b228ef27e7b3d3891357a34e`, 378620 bytes. Built by `tools/fw-patch/fw26_build.py` on the FW25 image (that file's sha256 `f0759b7d…c116a`). Host test `test_fw26.py`: five tests, the only byte differences from FW25 are the tag, the five redirected sites, and the tail.
+
+FW25's extension ends at file `0x5C464`. The free tail is 664 bytes, through `0x5C6FB`. The old 1,788-byte gap at `0x05AEFC` is already full. The four stubs use 232 bytes and end at `0x5C54C`. The flag byte is IRAM `0x4B364`, inside the region startup zeroes (`0x31AF4` to `0x4DAB0`), so it is 0 until op 15 writes it.
+
+`0x1832e` loads `RX_TYPE_INFO` and shifts it 22 then masks 1, and shifts it 20 then masks 3, into the sync accumulator at `0x4C7BC`. No load of that register extracts bits 7:4 or bit 19. Bits 3:2 are extracted at `0x2628E`, which matches the manual's sync-type field. The appended caller bytes therefore use the spec: colour code `(word >> 4) & 15`, slot `(word >> 19) & 1`.
+
+The first image tail-called `reply_build` with a `bsr` and then `jmp r15`. That pop already jumps to the return address, so the `jmp` spun on itself after the 11-byte reply. The module was restarted and the image was replaced. The tail call is now `jmp` to `0x030230B0`. The numbers below are that image.
+
+Load started 23:35:25, `fwload ok` and `0x34` `DMR003.FW26.V022` at 23:37:43 (138 s). Boot capture across the following restart: peak 0.056 dB, nothing at or above 10 dB, clip 0. `mtktsAP` 42.4 to 43.0 °C through the keys, `mtktsbtsmdpa` about 41.1 to 41.7, battery 36.9 to 37.0 °C. No heat stop.
+
+| Check | Time | Result |
+|---|---|---|
+| `0x2B` with the flag still 0 | 23:38:05 | `sr` 0, body length 9 |
+| op 15 `[15, 2]` | 23:38:07 | `sr` 1, body length 0; the next `0x2B` is still 9 |
+| op 15 `[15, 1]` | 23:38:12 | `sr` 0, body `[01]` |
+| `0x2B` with the flag on | 23:38:14 | `sr` 0, body length 11, both new bytes 0 (no DMR carrier; the length is the check) |
+| op 15 `[15, 2]` again | 23:38:16 | `sr` 1; the next `0x2B` is still 11 |
+| op 15 `[15, 0]` | 23:38:21 | `sr` 0, body `[00]`; the next `0x2B` is 9 |
+
+Regression, all at 467.625 MHz, low power, HackRF receive, clip 0. The 1 kHz key and the page used LNA 16 / VGA 16. The M17 key used LNA 8 / VGA 8.
+
+| Key | Time | Carrier | SNR | Body p99 | Worst 0.5 s | What decoded |
+|---|---|---|---|---|---|---|
+| 1 kHz tone, 2 s | 23:38:32 | 2.536 s | 64.7 dB | 3626 Hz | 3994 Hz | spectral peak 1000.1 Hz |
+| M17, 40 frames, bench call | 23:38:48 | 2.02 s | — | 2873 Hz | — | 40/40 payload-exact, end bit set |
+| 1200-baud page, one test RIC, `N0CALL: LO` | 23:38:59 | 2.272 s | 64.9 dB | 3761 Hz | 3801 Hz | not run through the bit decoder; the carrier length matches the earlier one-RIC page |
+
+None of those half-second slices reached 5 kHz.
+
+Held-path receive, HackRF transmit, VGA 20, amp off, 30 frames of the bench call. The hold answered `data hold action=1 sr=0`. During the carrier `0x32` raw was `0x40`, about −88 dBm; after it, raw `0x15`, about −109 dBm. History at 23:40:05: the bench call, 0.6 s, 19 frames, 84 percent clean. The phone was not keyed during that transmission.
+
+## End state
+
+23:41:16 `0x34` `DMR003.FW26.V022`. Op 15 `[15, 0]` echoed 0. `0x2B` body length 9. Channel returned with `vfooff` (the keys had been on the low-power VFO). `mtktsAP` 42.9 °C, battery 37.0 °C. HackRF idle. Nothing left keyed. The same SignalDeck build as the item 7 bench is still installed. SignalDeck's promiscuous control is PR 11; it was not rebuilt here.
+
+## Open for the hotspot
+
+Out-of-list talkgroup with the flag on (Patch A). Wrong colour code with the flag on, and whether stock already passes it (Patch B). Whether stock monitor `0x2F` already passes an out-of-list talkgroup. Slot is still deferred (Patch C). The `0x2B` colour-code and slot values themselves need a real DMR carrier; this bench only checked the length.

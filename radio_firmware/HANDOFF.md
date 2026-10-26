@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -155,7 +155,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-**Item 7 bench, 22:42.** PR https://github.com/IIMacGyverII/SignalDeck/pull/12 (`87a6a503`). A call at −90 dBm fitted 31 frames. The second call, at −99 dBm, locked on those taps but scored 18 clean frames against 19 for the shipped table, so the fit was not kept. A third at −102 dBm had 9 usable frames. Host test: synthetic channel 30 of 30. End: channel 2, that build installed, shipped taps still in use, module FW25, HackRF idle.
+**FW26 is loaded, 23:41.** Tag `DMR003.FW26.V022`, sha256 `71949d24…a34e`. Op 15 echoes the flag, and `0x2B` is 9 bytes off and 11 on. Boot peak 0.056 dB. Regression: 1 kHz p99 3626 Hz, M17 40/40 p99 2873 Hz, one page p99 3761 Hz, held-path receive 19 frames. Flag left off. The hotspot A/B rows (out-of-list TG, wrong CC, stock `0x2F`) are open. PR 12's 21-second ring is `fcdf3698`.
 
 ## Owner question
 
