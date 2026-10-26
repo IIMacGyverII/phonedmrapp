@@ -171,3 +171,7 @@ with no tester IDs. On the owner's Armor, the report must not change except for 
   build OK, host tests 290 / 0 failed (new: `SoftSqScanTest`, `SoftSqClipBenchTest`; `SoftSqClipBench` runs only with
   `SQ_CLIP_DIR`). The web slider is 1–9. Owed: a device test of the slider during a held scan, and clips for the level 1
   threshold (changelog TODO row).
+- 2026-10-25 19:50, item 3: branch `claude/name-limit`, commit `729f0c1e`, **PR #7**. `ChannelStore.NAME_MAX` = 32
+  (planner's `MAX_NAME` moved there), web reads `nameMax` from `/api/channel`, counters in both editors, `fitName` on
+  save, help section Channels → Channel names. Release build OK, host tests 289 / 0 failed (new `ChannelNameTest`).
+  Owed: phone editor and web editor checks on the device.
