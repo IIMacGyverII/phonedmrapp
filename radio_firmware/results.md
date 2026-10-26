@@ -3040,6 +3040,30 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## FW27 stream clock, the quiet run, and the 30-frame compare (2026-10-26, 16:13)
+
+Image `e552549c…b2dc`, tag `DMR003.FW27.V022`. Channel 2 at 467.625 MHz except the channel-56 pass. The phone did not key during any HackRF transmission. VGA 20, 2 MS/s, 2.5 kHz deviation for the tone. Period 8.
+
+The 1 kHz tone was on the air before the first half. A 4 s FFT (0.25 Hz bins) peaks at 1000.00 Hz, so the capture clock is 8000 Hz and the half rate is 31.250 per second. The 14 s file has 443 halves and the 52 s file has 1610. No two consecutive halves are identical. The 1 kHz amplitude is about 5970 from half 0 until the tone ends. The 15:25 file's 1 kHz bin stayed under about 1100, so its 987.25 Hz reading was the noise floor of that file.
+
+The host counts a miss from the sequence byte at body[512] (the slot, 0 through 5) and the half id at body[513]. A sequence that is not the next slot adds the forward gap modulo 6, and a repeated half id on the next slot adds 1. Op 5's send writes those two bytes. On this image: 415 halves (13.3 s), 18 missed; 1579 halves (50.5 s), 47 missed. An earlier run whose tone started after the stream reported 591 halves (18.9 s), 0 missed, and the M17 stream reported 341 halves (10.9 s), 0 missed. The tone amplitude stays flat and no halves repeat, so those misses are not a gap in the saved audio. The 83-on-10 s and 0-on-45 s figures were the previous image.
+
+There is no quiet hole after the start. The only run under a quarter of the tone amplitude is the tail after the HackRF stops: halves 403..442 (1.28 s) on the 14 s file, halves 1561..1609 (1.57 s) on the 52 s file. The 52 s stream was still sending at 50.5 s. Its first keepalive logged no answer, which is what action 2 does in the sniffer (the 30 s count is reset and no ack is sent). `ramstream` off on these runs still logged stop with no answer, rate `sr=0`, then no version at 57600; `restartmodule` brought `0x34` back. The explicit 15:23 sequence is unchanged.
+
+(c) One 30-frame transmission, 1.6 s unmodulated lead, 0.5 s tail. The plain stream (identity taps) listed 30 frames, 46 percent clean, which is the share whose LICH Golay errors are 2 or fewer. A host decode of the loud slice, halves 213..258, found 30 frames and 4 payload-exact, and the link-setup CRC failed. The same file again on channel 56 with mode 5 off: the hold answered `action=1 sr=0`, and the listing was 30 frames, 96 percent clean, at −87 dBm.
+
+Runner `all` on this image, low power. A first pass at 15:56 recorded NO CARRIER and the app process was gone afterwards. SignalDeck was started again. The 16:04 pass:
+
+| Test | Result |
+|---|---|
+| boot | PASS silent, peak 0.271 dB, clip 0, tag still FW27 |
+| tone | PASS, carrier 10.539 s, clip 0, p99 2531.5 Hz, 1 kHz line 2437.5 Hz, hottest half-second 4035.7 Hz |
+| stream | PASS 1125/1125, carrier 45.41 s, p99 2900.8 Hz, clip 0, end bit set |
+| receive | PASS, clip −19.1 dBFS, 1 kHz line 1.5 times the noise |
+| heat | PASS, 45 s low power, `mtktsAP` 46.861 → 47.602 → 47.196 °C, battery 39.1 → 39.3 °C, no stop |
+
+End state: `DMR003.FW27.V022`, channel 2, 467.625 MHz, VFO off, not transmitting. `0x34` answers. HackRF idle.
+
 ## FW27 stop path and the stream rate (2026-10-26, 15:25)
 
 Literal guard, host only. `tools/fw-patch/literal_guard.py` reads objdump's `lrw` lines. A load counts when the next instruction reads that register and the pool word is not zero, and the `04 00` sine-table pattern is not a load. FW22→FW23, FW23→FW24, FW24→FW25, FW25→FW26 and the shipped FW27 against FW26 have no such load. Painting `0x5BE60`–`0x5BEE0` on FW26 reports the key helper at `0x5BBE2` loading `0x5BEA0`.

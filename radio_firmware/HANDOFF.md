@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -197,10 +197,9 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-Literal guard is in: shipped FW23–FW27 do not cover an outside lrw; painting 0x5BE60 reports 0x5BBE2. Image e552549c…b2dc acks the frame that ends the stream.
-Stop path, 15:23: [17,0] sr=0, 0x34 at 230400, [16,0] sr=0, 0x34 at 57600, [6,5,0] sr=0. No restart.
-A 1 kHz tone in the stream is 987.25 Hz if read as 8 kHz, so 8103 Hz and 31.65 halves/s, 0 identical halves. The 45 s quiet run and (c) are not done.
-End state: DMR003.FW27.V022, channel 2, 467.625 MHz, not transmitting, 0x34 answers. HackRF idle.
+Stream clock is 8000 Hz: the 1 kHz tone reads as 1000.00 Hz, 31.25 halves/s, 0 identical halves. Misses were 18 in 13.3 s and 47 in 50.5 s; the amplitude is flat from the first half, so the 1.5 s hole is not there.
+Plain stream: 30 frames, 46 percent clean. Channel 56, mode 5 off: 30 frames, 96 percent clean, −87 dBm. Runner all passed (tone 10.539 s, p99 2532 Hz, stream 1125/1125).
+End state: DMR003.FW27.V022, channel 2, 467.625 MHz, VFO off, not transmitting, 0x34 answers. HackRF idle.
 
 ## Owner question
 
