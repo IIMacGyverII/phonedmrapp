@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -171,14 +171,14 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-Mode 5 is accepted. The 10 s stream runs at the half rate and the slot counts, but the samples are not the 1 kHz line. The speaker is silent while mode 5 is on. Section 4 (c) and (d) were not run.
+Op 5 during the tone, mode 5 held, is a 1000 Hz line. The stream, using that same half choice and the same byte copy, is not. Section 4 (c) and (d) were not run.
 
-**Stuck — the stream is not the 1 kHz line.**
+**Stuck — op 5 has the line and the stream does not.**
 
-- Step: section 4 (b), the 10 s HackRF tone at 467.625 MHz, VGA 20, amp off, 2.5 kHz deviation. Mode 5, op 16, op 17.
-- Tried: (1) The live op 6 compares are at file `0x5B2C8` and `0x5B2A8`. After that image, `[6, 7, 1]` is `sr=1` and `[6, 5, 1]` / `[6, 5, 0]` / `[6, 4, 1]` / `[6, 4, 0]` are `sr=0` (11:20:44–11:20:47). (2) sendh clobbers r5, so every half carried sequence 0 (317 halves, 1580 missed). Storing the next slot first: 333 halves, 1 missed, samples still uncorrelated. (3) Copy the half `FM_ADDR_SW` is not pointing at, as op 5 does (`1` → `0x160006E0`, `2` → `0x160004E0`). 11:25:29: 346 halves (11.1 s), 1 missed, rms 3099, lag-1 correlation 0.21, no line. The phone clip during that stream is silent (rms 1). With mode 5 off, the same tone on the speaker is rms 7142, peak 1129 Hz.
-- State: module `DMR003.FW27.V022`, sha256 `2b0d249c24809de0a0a87b5e641f3c917f7758ed807d928760b18e1fbe6a52be`, channel 2, 467.625 MHz, power byte 1, not keyed, monitor off, mode 5 off, UART 57600. Boot of this image peaked at 0.073 dB. Phone: SignalDeck running, USB. HackRF idle.
-- Question: the half rate and the slot are right, and the samples are not the line op 5 saw in this register state. Should the next image return the first half's raw bytes plus the `WORK_MODE`, `FM_BANDWIDTH` and `FM_ADDR_SW` it copied under, or should the copy wait for part of the 32 ms so the half is stable?
+- Step: the 11:45 splitting measurement, then the copy. Mode 5 held, UART at 57600, 10 s 1 kHz tone, op 5 mode 0 in the middle. No op 16 and no op 17 for that dump.
+- Tried: (1) 11:41:58, op 5 returned two 514-byte halves, both `sr=0`, sequence 0 then 2, both half id 0. rms 8957, lag-1 0.57, peak 1000.0 Hz. (2) The live copy at file `0x5B110` uses `0x160004E0` when `FM_ADDR_SW` is 1. The stream had those addresses swapped. Matching them and reloading did not change the stream: 11:49:48, 344 halves (11.0 s), 2 missed, rms 3147, lag-1 0.16, peak 281 Hz. (3) The two loops are both `ld.b` of 512 bytes into `0x4A400 + slot*512`. Op 5's copy is inline and falls into its slot counter, so it has no return to call.
+- State: module `DMR003.FW27.V022`, sha256 `1d83e5bf9b6685e191b5084cc92ec04a9ccb3cdbf424960f7ff69444688bc489`, channel 2, 467.625 MHz, power byte 1, not keyed, monitor off, mode 5 off (`sr=0` at 11:50:17), UART 57600. Boot peak 0.154 dB. Phone: SignalDeck running, USB. HackRF idle.
+- Question: op 5's inline copy is the line and the stream's copy of those same addresses is not. May the stream branch into `0x5B110` if a return is patched onto the end of that copy, or is the next measurement a raw dump of one stream frame next to an op 5 frame from the same second?
 
 ## Owner question
 

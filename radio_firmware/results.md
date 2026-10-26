@@ -3040,6 +3040,14 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## FW27 op 5 versus the stream (2026-10-26, 11:50)
+
+Image sha256 `1d83e5bf9b6685e191b5084cc92ec04a9ccb3cdbf424960f7ff69444688bc489` for the stream retest. The op 5 dump was on the previous image (`2b0d249c…52be`), which has the same mode 5 registers and the opposite half choice. Channel 2, 467.625 MHz, not keyed. UART stayed at 57600. No op 16 and no op 17 during the dump.
+
+Mode 5 on, `sr=0`. A 10 s 1 kHz HackRF tone, VGA 20, amp off, deviation 2.5 kHz. At about 3.5 s, op 5 mode 0. The log at 11:41:58 was `rxram bytes=514 sr=0+514 sr=0`. Both halves: sequence 0 then 2, half id 0, rms 8957 and 8955, lag-1 0.57, peak 1000.0 Hz. Mode 5 off afterwards, `sr=0`.
+
+The live op 5 copy at file `0x5B110` reads `0x160004E0` when `FM_ADDR_SW` is 1 and `0x160006E0` when it is 2, with `ld.b` of 512 bytes into `0x4A400 + slot*512`. The stream's loop is that same `ld.b` copy. It had the two addresses swapped. Matching `0x5B110` and loading `1d83e5bf…c489` (boot peak 0.154 dB) left the stream at 11:49:48 as 344 halves (11.0 s), 2 missed, rms 3147, lag-1 0.16, peak 281 Hz. Op 5's copy does not return; it falls into the slot counter. Section 4 (c) and (d) were not run. Mode 5 was turned off at 11:50:17, `sr=0`.
+
 ## FW27 stream, section 4 (b) (2026-10-26, 11:25)
 
 Image sha256 `2b0d249c24809de0a0a87b5e641f3c917f7758ed807d928760b18e1fbe6a52be`, 378620 bytes. Loaded 11:25:00, `fwload ok`, tag `DMR003.FW27.V022`. Boot capture peak 0.073 dB, nothing above +10 dB, clip fraction 0. Channel 2, 467.625 MHz, power byte 1, monitor off, not keyed.
