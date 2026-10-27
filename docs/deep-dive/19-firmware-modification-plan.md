@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-27 (11:57) — POCSAG tail on the air.** The padded file is 7,375,000 samples; the transfer sends 7,602,176. The new clip has a hole at bits 806–822 and full level again from bit 824. Texts are still short. Decoder unchanged. Details in `results.md`.
+
 **2026-10-27 (11:30) — POCSAG bit clock.** RESTORE B clip, before the tracker: 0, 0, 2, 2, 7, 10, 13 raw errors per word. After: 0, 0, 0, 0, 0, 0, 8. The last word still fails its check. Not aired. Details in `results.md`.
 
 **2026-10-27 (11:15) — POCSAG sync cadence and leaky restore.** Later batches in one transmission are read again (`three_rics_in_one_transmission` passes). A 100 ms leak empties the ALPHA clip; 250 ms does not recover the full RESTORE B text. Padded 512 baud on the air was 1 of 3 exact. Details in `results.md`.

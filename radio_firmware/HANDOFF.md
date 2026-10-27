@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -226,8 +226,8 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-The leak is out. On the RESTORE B clip the raw errors per word, before any clock correction, were 0, 0, 2, 2, 7, 10 and 13. Tracking each strong transition by an eighth of the way to the zero crossing makes that 0, 0, 0, 0, 0, 0 and 8. The last word's first half matches, including the final character's bits; its check field is still wrong, so the word fails and the text stays "RESTORE". The clips are not full text, so this was not put on the air.
-End state: channel 2, 467.625 MHz, pager receive off, not transmitting. HackRF idle. The phone was not used for this step.
+The padded IQ is 7,375,000 samples (3.6875 s) and the transfer now sends 7,602,176, rounded up to a 262144-sample buffer. HackRF ran 4.03 s. The new RESTORE B clip does not end at the last word: bits 768–805 stay loud, 806–822 fall to about 200, and from bit 824 the level is full again through the pad. The host reads "RESTORE" and "ALPHA ONUp", not the full texts, so 3/3 was not run. The decoder was not changed.
+End state: channel 2, 467.625 MHz, pager receive off, not transmitting. HackRF idle.
 
 ## Owner question
 

@@ -3040,6 +3040,14 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## POCSAG tail on the air (2026-10-27, 11:57)
+
+No decoder change. The padded 512 baud IQ (`--pad 0.5`, 1376 bits, 3.6875 s) is 14,750,000 bytes, 7,375,000 samples. `hackrf_transfer -n` is a sample count. The bench transfer now refuses a count shorter than the file and rounds up to a multiple of 262144, repeating the last IQ sample. This send was 7,602,176 samples (3.801 s). HackRF exited after 4.03 s with `streaming terminated (-1004)`.
+
+Re-recorded on channel 2 with the tracker build, phone not keyed. The new RESTORE B clip's modulation starts at 1.354 s. Mean absolute sample per bit, 512 baud, from that start: bits 768–805 stay in the thousands (about 5,000–15,000), bits 806–822 fall through 1,719, 1,075, 223, 167, and bit 824 is 14,639 again. The level stays high through bit 863. The hole is about 16 bits inside the last codeword, and the pad after it is on the air.
+
+Host decode of the new clips: ALPHA ONE came back as "ALPHA ONUp", RESTORE B as "RESTORE". The phone listed "ALPHA ONE" plus a stray character for the first clip and no page line for the second. 512 baud 3/3 was not run.
+
 ## POCSAG bit clock (2026-10-27, 11:30)
 
 No firmware change. The leak is out of the 512 baud restore: exact inverse, then the mean removed.
