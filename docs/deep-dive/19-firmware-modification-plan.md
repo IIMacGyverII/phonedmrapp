@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-27 (15:33) — FW29.** The three stale callers no longer enter the restored exit. `0x5B2BE` is FW26's value compare again, and `0x5C564` and `0x5BCAE` branch to the sr=1 tail. Runner `all` passes, one page is Hamming 0, and `[6,6,1]` answers `sr=1`. Op 17 start and stop answer, and no half was logged at 57600. The phone is back on FW26. Details in `results.md`.
+
 **2026-10-27 (14:56) — FW28.** Variant 6's bytes at `0x5B81A`–`0x5B875` are FW26's again, and the op 13 redirect at `0x5B816` stays. A branch into that range is reported on FW27 and not on FW28. Runner `all` passes, and one POCSAG page is Hamming 0. Op 17 start did not answer at 57600. Details in `results.md`.
 
 **2026-10-27 (14:03) — POCSAG part B on FW26.** The browser page and the browser M17 text both keyed on `DMR003.FW26.V022`. The page is RIC 1001, "FW26 PAGE", Hamming 0 on the flat deviation. The M17 text decodes from the start of its 0.45 s carrier. Op 8 answers on this image. Details in `results.md`.

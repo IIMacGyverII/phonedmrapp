@@ -12,6 +12,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import fw28_build  # noqa: E402
+import fw29_build  # noqa: E402
 import literal_guard  # noqa: E402
 
 ROOT = HERE.parent.parent / "radio_firmware" / "build"
@@ -67,6 +68,23 @@ class LiteralGuardTest(unittest.TestCase):
         self.assertEqual(hits, [], "FW28 covers %s" % (hits[:6],))
         spans, loads = literal_guard.covered_loads(base, new)
         self.assertEqual(loads, [])
+
+    def test_changed_range_catches_fw27_and_fw28_and_passes_fw29(self):
+        fw26 = (ROOT / "DMR003.FW26.V022.bin").read_bytes()
+        fw27 = (ROOT / "DMR003.FW27.V022.bin").read_bytes()
+        fw28_build.build()
+        fw28 = (ROOT / "DMR003.FW28.V022.bin").read_bytes()
+        fw29_build.build()
+        fw29 = (ROOT / "DMR003.FW29.V022.bin").read_bytes()
+        _, fw27_hits = literal_guard.changed_branches(fw26, fw27)
+        self.assertTrue({0x5B7EE, 0x5B7FC, 0x5B814} <= {pc for pc, _ in fw27_hits})
+        _, fw28_hits = literal_guard.changed_branches(fw27, fw28, fw29_build.RESTORED_EXIT)
+        self.assertTrue({0x5B2BE, 0x5BCAE, 0x5C564} <= {pc for pc, _ in fw28_hits})
+        _, fw29_hits = literal_guard.changed_branches(fw28, fw29, fw29_build.RESTORED_EXIT)
+        self.assertEqual(fw29_hits, [], "FW29 covers %s" % (fw29_hits[:6],))
+        self.assertEqual(fw29[0x5B2BE:0x5B2C2], fw26[0x5B2BE:0x5B2C2])
+        self.assertNotEqual(fw29[0x5C564:0x5C568], fw28[0x5C564:0x5C568])
+        self.assertNotEqual(fw29[0x5BCAE:0x5BCB2], fw28[0x5BCAE:0x5BCB2])
 
 
 if __name__ == "__main__":

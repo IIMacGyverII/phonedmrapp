@@ -161,6 +161,60 @@ def _one_instruction_hook(target, spans):
     return False
 
 
+def _real_branch(image, pc, length, mnem):
+    """A branch the CPU executes, not a pool halfword objdump calls a branch.
+
+    A 16-bit br/bt/bf has opcode byte 04/08/0c. A 32-bit br starts with
+    00 e8 and a 32-bit bsr with 00 e0. The variant-6 call at 0x5C564 is a
+    bsr whose first halfword is e3 ff; objdump still names a target inside
+    the image, and a 4-byte bsr/br/jmpi with an in-file target is kept.
+    """
+    if length == 2:
+        return pc + 1 < len(image) and image[pc + 1] in (0x04, 0x08, 0x0C)
+    if length != 4 or pc + 4 > len(image):
+        return False
+    if image[pc:pc + 2] in (b"\x00\xe0", b"\x00\xe8"):
+        return True
+    return mnem in ("br", "bsr", "jmpi")
+
+
+def changed_branches(old, new, allowed=()):
+    """Branches from outside a changed range into it, minus the build's list.
+
+    `allowed` is (pc, target) pairs the build wrote on purpose. A restore
+    is a change: FW28 put FW26's bytes back under FW27's callers, and those
+    callers are hits. A branch whose own bytes sit in the same span as its
+    target was rewritten with that range and is not a hit.
+    """
+    spans = written_ranges(old, new)
+    listed = set(allowed)
+    hits = []
+    for pc, length, mnem, rest in _disassemble(new):
+        if mnem not in _BRANCH:
+            continue
+        t = _TARGET.search(rest)
+        if not t:
+            continue
+        target = int(t.group(1), 16)
+        if target < 0 or target >= len(new):
+            continue
+        if not _real_branch(new, pc, length, mnem):
+            continue
+        home = None
+        for start, end in spans:
+            if start <= target < end:
+                home = (start, end)
+                break
+        if home is None:
+            continue
+        if _overlaps(pc, length, (home,)):
+            continue
+        if (pc, target) in listed:
+            continue
+        hits.append((pc, target))
+    return spans, hits
+
+
 def covered_branches(old, new):
     """Local branches from outside a written span that land inside one.
 

@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -242,8 +242,8 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-FW28 (`518345e8…abe3`, tag `DMR003.FW28.V022`). `0x5B81A`–`0x5B875` is FW26's again; the op 13 redirect at `0x5B816` stays. The branch-target check fails on FW27 and passes on FW28. The first load was cut off and is void. After a factory key (status 3 then 4 on channel 4), the second load's runner `all` passed: boot silent, tone p99 3140 Hz, stream 1125/1125, receive line 1.49, heat 45 s with no stop. One page, "FW28PAGE", Hamming 0. Op 16 and op 17 action 0 answered; op 17 start did not, and those two opcodes stayed silent until a restart, which came back as FW28.
-End state: channel 2, 467.625 MHz, pager receive off, monitor off, not transmitting. HackRF idle. Tag `DMR003.FW28.V022`.
+FW29 (`de10d5c5…657b`). `0x5B2BE` is FW26's value compare again, so value 1 still reaches the variant checks. `0x5C564` and `0x5BCAE` branch to the sr=1 tail at `0x5C584`. The changed-range guard reports the old callers on FW27 and FW28 and none on FW29. Runner `all` passed (tone p99 2503 Hz, stream 1125/1125, receive 1.50, heat 45 s). Page "FW29PAGE" Hamming 0. `[6,6,1]` answered `sr=1`. Op 17 start and stop answered `sr=0` twice; the host log showed no 514-byte half at 57600. The phone was loaded back to FW26.
+End state: channel 2, 467.625 MHz, pager receive off, monitor off, not transmitting. HackRF idle. Tag `DMR003.FW26.V022`.
 
 ## Owner question
 

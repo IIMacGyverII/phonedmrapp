@@ -3040,6 +3040,22 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## FW29 (2026-10-27, 15:33)
+
+FW29 is FW28 with the three stale callers moved off the restored exit. sha256 `de10d5c5961bf089f3b2ecc3875e5f3a759e965fb242759e48cfd454e8d7657b`, tag `DMR003.FW29.V022`.
+
+`0x5B2BE` is the op 6 handler's non-zero value path, not a variant-6-only branch. Variants 3, 4 and 5 with value 1 go through it and have to reach `0x5B2C2`, so those four bytes are FW26's compare again: value 1 falls through, any other value takes the stock reject at `0x5B308`. Variant 6 is refused at the trampoline. `0x5C564` and `0x5BCAE` are `br 0x5C584`, the trampoline's existing sr=1 tail (`jmp` to file `0x5B308`). The opcode gate is entered only for opcodes 8 and above, so variants 3 and 4 never reach `0x5BCAE`.
+
+`changed_branches` flags a branch from outside a changed range into it unless the build lists the pair. Against FW26 it reports `0x5B7EE`, `0x5B7FC` and `0x5B814` on FW27. Against FW27, with the seven stock dispatcher branches into the restored exit listed, it still reports `0x5B2BE`, `0x5BCAE` and `0x5C564` on FW28. Against FW28, with that list, FW29 has none.
+
+`fwload ok` at 15:12:01. Runner `all`, low power, 467.625 MHz. Boot silent, peak 0.057 dB, tag still FW29. Tone carrier 10.56 s, clip 0, p99 2503 Hz, loudest half-second 3991 Hz. Stream 1125 of 1125, carrier 45.41 s, p99 2877 Hz, clip 0, end bit set. Receive line 1.50 times the noise, clip −19.1 dBFS. Heat 45 s, battery 35.5 to 35.6 °C, `mtktsAP` 42.1 to 42.4 °C, no stop. The cool-down stayed near 42 °C and the key ran at the 10 minute cap.
+
+One page, RIC 1001, "FW29PAGE", 512 baud. Carrier 2.63 s, clip 0, p99 2663 Hz. The host codeword check on the flat deviation is Hamming 0.
+
+Mode 5 on and off both answered `sr=0`. Op 17 start `[17, 1, 8]` and stop `[17, 0]` each answered `sr=0` with an empty body, twice. In the 2.5 s after a start the host log had the ack and the signal polls, and no 514-byte half. `[6, 6, 1]` answered `sr=1`. The signal reading kept moving. This build does not reopen the UART at 230400, so the halves were not counted. The phone was then loaded back to `DMR003.FW26.V022` (`fwload ok` at 15:33:03).
+
+End state: channel 2, 467.625 MHz, pager receive off, monitor off, not transmitting. HackRF idle. Tag `DMR003.FW26.V022`.
+
 ## FW28 (2026-10-27, 14:56)
 
 FW28 is FW27 with `0x5B81A` through `0x5B875` copied back from FW26. The op 13 redirect at `0x5B816` is the FW27 branch. Variant 6 is dropped. The tag is `DMR003.FW28.V022`. sha256 `518345e89a752fa3932e02c0a33d297bae6a46c26dd754eb6aaf14ec0920abe3`. `literal_guard.py` now reports a 16-bit `br`/`bt`/`bf` from outside a written span that lands inside one. A one-instruction hook and a `bsr` that still names its old callee are not hits. The test finds `0x5B7EE`, `0x5B7FC` and `0x5B814` on FW27 and no hits on FW28. The literal check is clean on FW28 too.
