@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -208,8 +208,8 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-M17 SMS on `7126749f…b779`, no firmware change. The stream had gone silent; the factory image's channel-4 PTT showed status body 03 then 04 (18 dB), and after the reload runner `stream` passed 1125/1125, carrier 45.41 s, p99 2896 Hz, clip 0. Receive 9/9 (`A`, `hello`, `packet check 26`, three times each, `N0CALL` to `@ALL`). Transmit the same three texts once each, host CRC good, body p99 about 2840 Hz, clip 0. One both-ways exchange: the phone listed the HackRF `ping` and its `pong` decoded. The station callsign was the bench callsign only during those keys. SignalDeck branch `grok/m17-sms`.
-End state: `DMR003.FW27.V022` sha `7126749f…b779`, channel 2, 467.625 MHz, low power, not transmitting. Battery 38.6 °C, `mtktsAP` 45.7 °C. HackRF idle.
+Two-frame M17 text `two-frame-sms-0123456789ab` (26 bytes, counters 0 then 5) on `7126749f…b779`. Transmit 3/3, host CRC good, link setup `N0CALL` to `@ALL`, clip 0. Receive 3/3, the phone logged the same text. A failed packet CRC is not listed; the history line is "M17: frames lost" (host test: good "hi" delivered, flipped CRC notes once). Same branch, PR 24.
+End state: `DMR003.FW27.V022` sha `7126749f…b779`, channel 2, 467.625 MHz, low power, not transmitting. Battery 38.1 °C, `mtktsAP` 45.3 °C. HackRF idle.
 
 ## Owner question
 

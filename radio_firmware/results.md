@@ -3040,6 +3040,18 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## Two-frame M17 SMS (2026-10-26, 23:24)
+
+Text `two-frame-sms-0123456789ab`, 26 bytes. The SMS buffer is 30 bytes, so two frames: counter 0, then the last frame's valid-byte count 5. Image `7126749f…b779`, channel 2, 467.625 MHz, low power. The station callsign was the bench callsign only while the phone transmitted, and it was put back.
+
+Transmit, three times, HackRF LNA 8 / VGA 8, clip 0. The host decoder read each one payload-exact with the CRC good, counters 0 then 5, link setup `N0CALL` to `@ALL`. The link setup is 50 ms before the strongest slice; a window that starts on the slice itself still has the counters and the text.
+
+Receive, three times, HackRF on 467.625 MHz, amplifier off, VGA 20, a dummy burst first. The phone logged the same text from `N0CALL` to `@ALL`, 3/3.
+
+A packet whose CRC fails is not listed. The history line is "M17: frames lost". Host test: a good "hi" is delivered, and a copy with the CRC byte flipped notes frames lost once and delivers nothing.
+
+End state: `DMR003.FW27.V022` sha `7126749f…b779`, channel 2, 467.625 MHz, not transmitting. Battery 38.1 °C, `mtktsAP` 45.3 °C, `mtktsbtsmdpa` 43.9 °C. HackRF idle.
+
 ## M17 SMS, packet mode (2026-10-26, 23:10)
 
 No firmware change. Image `7126749f…b779`, tag `DMR003.FW27.V022`, channel 2 at 467.625 MHz, low power. The station callsign was the bench callsign only while the phone was transmitting these texts, and it was put back afterwards.
