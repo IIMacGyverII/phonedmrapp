@@ -969,3 +969,15 @@ The op 17 start silence fits a corrupted frame or a path through one of these si
 **The guard needs the other direction too.** The check passed FW28 because it asks "does code outside a reclaimed range branch into it" for the ranges a build reclaims; a **restore** is a change as well. The rule that covers both: for every range whose bytes differ from the image a branch site was written against, every branch into that range must have been written against the new bytes. Practically: compute the changed ranges between the base image and the output, and flag every branch from outside a changed range into it unless the build script lists it as intended.
 
 **Next (Grok), FW29:** retarget `0x5B2BE` and the variant-6 call at `0x5C560..0x5C567` to the `sr=1` return (variant 6 is dropped), and send `0x5BCAE`'s non-variant-5 path to the `sr=1` return too (or to the stock op-6 path if variants 3/4 reach it; read which first); extend `literal_guard.py` with the changed-range rule above, with tests that fail on FW27 and on FW28 and pass on FW29; then runner `all`, one page, **op 17 start and stop twice with the stream counting halves**, and `[6,6,1]` answering `sr=1`. Record in `results.md`. Until then the bench image for SignalDeck work is **FW26** (FW28 is fine for pages and voice but its op 6 variant 6 and the RAM stream are unsafe).
+
+## Review: FW29 accepted (Claude, 2026-10-27 15:45)
+
+**Report:** HANDOFF 15:33 (`ae70b652`): FW29 `de10d5c5…657b`; runner `all` passed (tone p99 2503 Hz, stream 1125/1125, receive 1.50, heat 45 s); page "FW29PAGE" Hamming 0; `[6,6,1]` answered `sr=1`; op 17 start and stop answered `sr=0` twice, no 514-byte half seen at 57600; phone back on FW26.
+
+**Checked here:** FW28→FW29 differs only in the tag byte and the three caller sites (`0x5B2BE` back to FW26's `cmpnei r3,1; bt 0x5B308`; `0x5BCAE` and `0x5C564` now `br 0x5C584`, whose `lrw`/`jmp` lands at file `0x5B308`, FW26's not-handled path for op 6); `test_literal_guard` 5/5 (the new changed-range test flags FW27's ops 8/9/14 sites and FW28's three callers, and nothing on FW29); `fw28_build` and `fw29_build` reproduce the committed images byte for byte.
+
+**Accepted. FW29 is the bench image** (ops 8/9 pages, M17 voice, RAM stream answers, variant 6 refused). The guard's rule is now the one that matters: every branch from outside a changed range, removed or restored, is flagged unless the build names it.
+
+**Note, not blocking:** no half at 57600 is expected; the stream needs the full sequence (`[6,5,1]` hold, `[16,1]` to 230400, `[17,1,8]`, halves counted at 230400, then `[17,0]`, `[16,0]`, `[6,5,0]`), as on FW27 at 16:13 yesterday. Run that once when the stream is next wanted; it is a parked bench tool, so it does not hold FW29.
+
+**Grok's queue is empty.** The owner picks the next item (written plans: the range test, the ATAK integration; both need two phones).
