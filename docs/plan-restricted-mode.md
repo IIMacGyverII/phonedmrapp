@@ -28,9 +28,13 @@ range test; app-side only, no firmware change.
   channel change to a hidden channel, a mode start or an editor save that the policy forbids, so the side PTT key,
   Android Auto, the widget, SignalDeck Web and the DIAG extras all meet the same rule. The screens then hide what the
   policy hides (removed from menus and tabs, not greyed), so the app looks like a smaller app, not a locked one.
-- **Lock and unlock:** a lock glyph in the header; tapping it asks for the PIN; unlock for a chosen time (5 min, 30
-  min, until restart) or to change the setup, then it re-locks by itself. The restricted state persists across app
-  and phone restarts and across "Own the radio at boot".
+- **One PIN, set when the mode is first turned on.** Turning the mode on asks the user to choose the PIN (entered
+  twice) and that PIN is then the only way to turn the mode off or to change what it restricts (owner, 2026-10-27).
+- **Turning off and editing are simple and always in the same place:** a lock glyph in the header of every screen
+  (and Device → Restricted mode). Tapping it asks for the PIN and shows three choices: **Turn off**, **Edit
+  restrictions** (the setup page, saved with the mode still on), or **Unlock for a while** (5 min, 30 min, until
+  restart) after which it re-locks by itself. The restricted state persists across app and phone restarts and across
+  "Own the radio at boot".
 - **PIN handling:** 4–8 digits, stored as a salted hash in the app's prefs, five wrong tries then a one-minute wait.
   Forgotten PIN: there is no back door in the app; the help says plainly that clearing the app's data (or root)
   removes it, which is what makes the feature voluntary rather than a control over someone else.
@@ -47,8 +51,8 @@ range test; app-side only, no firmware change.
 3. Screens: channel list, zone picker, intercom stepping and satellites, PKT sheet, tabs, Device page, Advanced,
    editors, Android Auto, the widget, SignalDeck Web (the page list and `/api/*` return only what the policy allows;
    the setup page itself is phone-only).
-4. Setup page: Device → Restricted mode: presets, the switch groups, the zone picker, the PIN, Turn on; the header
-   lock glyph and the unlock sheet.
+4. Setup page: Device → Restricted mode: presets, the switch groups, the zone picker, choose the PIN, Turn on; the
+   header lock glyph on every screen and its PIN sheet with Turn off / Edit restrictions / Unlock for a while.
 5. Help topic "Restricted mode" (what it does, what it cannot do, the forgotten-PIN answer), `CHANGELOG.md` row.
 
 ## 3. Bench
