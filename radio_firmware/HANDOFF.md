@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -210,8 +210,8 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-Two-frame M17 text `two-frame-sms-0123456789ab` (26 bytes, counters 0 then 5) on `7126749f…b779`. Transmit 3/3, host CRC good, link setup `N0CALL` to `@ALL`, clip 0. Receive 3/3, the phone logged the same text. A failed packet CRC is not listed; the history line is "M17: frames lost" (host test: good "hi" delivered, flipped CRC notes once). Same branch, PR 24.
-End state: `DMR003.FW27.V022` sha `7126749f…b779`, channel 2, 467.625 MHz, low power, not transmitting. Battery 38.1 °C, `mtktsAP` 45.3 °C. HackRF idle.
+POCSAG receive on `7126749f…b779`, held path, 2.5 kHz, channel 2. 1200 baud 3/3 and 2400 baud 3/3, RIC and text exact, corrected 0. 512 baud listed one of two texts and gave RIC 123617 instead of 1001. Hold off kept a 1200 baud text and changed the RIC to 16330. Branch `grok/pocsag-rx`. Pager receive was turned off at the end.
+End state: `DMR003.FW27.V022`, channel 2, 467.625 MHz, not transmitting. Battery 32.3 °C, `mtktsAP` 39.2 °C. HackRF idle.
 
 ## Owner question
 

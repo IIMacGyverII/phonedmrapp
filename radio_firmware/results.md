@@ -3040,6 +3040,18 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## POCSAG receive, held path (2026-10-27, 08:31)
+
+No firmware change. Image `7126749f…b779`, channel 2, 467.625 MHz. HackRF transmit on the channel, amplifier off, VGA 20, deviation 2.5 kHz. The phone was not keyed. Pager receive on, voice-filter hold on.
+
+| Rate | Sent | Heard | Result |
+|---|---|---|---|
+| 1200 | RIC 1002, three texts | 3/3 | RIC, text and baud exact, corrected 0 |
+| 2400 | RIC 1003, three texts | 3/3 | RIC, text and baud exact, corrected 0 |
+| 512 | RIC 1001, two texts | 1/2 | The one listing kept the text and baud and reported RIC 123617 |
+
+With the hold off, one 1200 baud page kept the text and reported RIC 16330.
+
 ## Two-frame M17 SMS (2026-10-26, 23:24)
 
 Text `two-frame-sms-0123456789ab`, 26 bytes. The SMS buffer is 30 bytes, so two frames: counter 0, then the last frame's valid-byte count 5. Image `7126749f…b779`, channel 2, 467.625 MHz, low power. The station callsign was the bench callsign only while the phone transmitted, and it was put back.
