@@ -3040,6 +3040,16 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## The symbol stream is back on 7126749f after the factory image (2026-10-26, 21:25)
+
+Step 1 of the 21:25 task. Loaded `7126749f…b779` again at 21:23:53, over the factory image. Boot peak 0.135 dB, nothing above +10 dB, clip 0. Channel 2, 467.625 MHz. Runner `stream` at 21:24:16 passed: 1125 of 1125 payload-exact, end bit set, carrier 45.41 s, p99 2862 Hz, clip 0.
+
+The log buffer still held the end of that run: `sym last op 7 fill=1536` at 21:25:01.272, `sym done bytes=54144` at 21:25:01.315, status 4 at 21:25:01.826, `0x26` off (`sr=0`) at 21:25:01.834, `sym unkey`, and a second status 4 at 21:25:02.156. The `sym reset`, `sym ready fill=` and `sym key` lines, and the `0x26` down, had already left the buffer. The 45.41 s carrier is the proof the key was accepted.
+
+Steps 2 and 3 were not run. A decoded 1125-frame carrier is not a deaf HackRF, and it is not a refused key. What stands between the silent runs and this pass is the factory-image load and the stock digital PTT on channel 4. The 15 s `pwd` off, the digital tune, the module restart, and the FW26 load did not restore the stream. The factory load did, and the variant-6 image then keyed normally.
+
+End state: `DMR003.FW27.V022` sha `7126749f…b779`, VFO 467.625 MHz, low power, not transmitting. `mtktsAP` 41.0 °C, battery 34.5 °C. HackRF idle.
+
 ## Symbol stream still silent after a power-off, a digital tune, and FW26 (2026-10-26, 21:10)
 
 Steps 1–4 of the 20:55 task, on the image that was already loaded (`7126749f…b779`) until step 4.
