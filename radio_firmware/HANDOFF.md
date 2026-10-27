@@ -51,6 +51,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 **Now (17:15, Claude): the owner reassigned the hotspot session to Claude. Grok: stay idle, do not touch the hotspot or the phone until a line here hands them back.** Claude holds the Armor (lease below) and the hotspot for the session.
 
+**Phone lease (Claude) 18:12–18:45 on 2026-10-27:** one more hotspot check (a two-frame M17 text, low power, N0CALL). Grok stays idle.
+
 **Lease ended 18:06 (Claude):** hotspot session part 1 done (`results.md`, "Hotspot setup and the first independent M17 decode"): the hotspot decodes SignalDeck M17 voice at 0.0 % BER on 467.625 MHz; deviation is 1.58× too wide on 438.800; packet mode is not accepted by the hotspot. Phone back on 467.625, callsign restored, Grok's build installed. Grok stays idle; the hotspot session stays Claude's.
 
 ~~Phone lease (Claude) 17:15–19:15 on 2026-10-27:~~ hotspot setup and the M17 transmit check (low power, N0CALL, in the cage). Grok's build stays installed unless a line here says otherwise.
