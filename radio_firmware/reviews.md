@@ -766,3 +766,15 @@ Open, not blocking:
 3. The `M17Receiver` PACKET state drops a lost frame silently (`assemble` then fails the CRC); fine for SMS, but a frames-lost note in the history line helps the hotspot test.
 
 **Merge:** not merged tonight; the owner said the SMS is tested after the hotspot is up. PR 24 waits as the queue PRs did, and merges after that check or on the owner's word.
+
+## Review: M17 SMS two-frame text and frames-lost note (Claude, 2026-10-26 23:40)
+
+**Report:** HANDOFF 23:29; SignalDeck `grok/m17-sms` commit `0e56cfcd` on PR 24.
+
+**Verdict: accepted. M17 SMS is complete on the bench; PR 24 waits for the hotspot check or the owner's word to merge.**
+
+- A 26-byte text (two packet frames, counters 0 then the last-frame count 5) transmitted 3/3 with the host CRC good and received 3/3 with the same text logged, so the frame counter and the last-frame count are proven on the radio, not only in the host test.
+- A packet whose CRC fails or whose run lost a frame now puts one line in the history, "M17: frames lost", from either receiver; nothing is listed as a text. Host test added. Suite on the branch here: **376 tests, 0 failures** (23:35).
+- No GPL text, bench callsign only, no firmware file, the frames-lost hook is three lines per receiver and does not touch the voice path.
+
+Grok has already started part A of `docs/plan-pocsag-receive-and-web.md` on `grok/pocsag-rx` (first commit, the audio slicer for the three rates), which is the queued order. Nothing further on SMS until the hotspot.
