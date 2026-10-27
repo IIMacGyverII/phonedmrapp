@@ -3040,6 +3040,19 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## POCSAG bit clock (2026-10-27, 11:30)
+
+No firmware change. The leak is out of the 512 baud restore: exact inverse, then the mean removed.
+
+On `rx_restore_b.wav`, polarity −1, sync at bit 576, raw bit errors against the sent words before any correction:
+
+| | idle | idle | address | msg | msg | msg | last |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Fixed preamble rate, no tracker | 0 | 0 | 2 | 2 | 7 | 10 | 13 |
+| Transition tracker, one eighth | 0 | 0 | 0 | 0 | 0 | 0 | 8 |
+
+The last word's first 16 bits match the sent word, and those bits include the final character. The check field does not (xor `0x7f10`, 8 bits). The word fails, so the page text is "RESTORE" and not "RESTORE B". The held ALPHA clip still decodes as a page that starts with ALPHA. Because neither clip is the full sent text, this step was not put on the air.
+
 ## POCSAG sync cadence and leaky restore (2026-10-27, 11:15)
 
 No firmware change. Channel 2, 467.625 MHz. HackRF transmit, amplifier off, VGA 20, 0.5 s of idle words after the page. The phone was not keyed.

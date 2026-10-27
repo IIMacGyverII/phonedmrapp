@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -224,8 +224,8 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-Three RICs in one transmission decode again: the next sync is taken 544 bits later, within two bit errors, even after a page has closed. The restore now leaks. A 100 ms leak empties the ALPHA clip; 250 ms keeps RIC 1001 and reads it as "ALPHA ONE" plus a stray character. The RESTORE B clip is "RESTORE ?`" at that leak, not the full text. On the air, padded 512 baud was exact only for "RESTORE A"; "RESTORE B" and "RESTORE C" still lost the last character.
-End state: channel 2, 467.625 MHz, pager receive off, not transmitting. HackRF idle.
+The leak is out. On the RESTORE B clip the raw errors per word, before any clock correction, were 0, 0, 2, 2, 7, 10 and 13. Tracking each strong transition by an eighth of the way to the zero crossing makes that 0, 0, 0, 0, 0, 0 and 8. The last word's first half matches, including the final character's bits; its check field is still wrong, so the word fails and the text stays "RESTORE". The clips are not full text, so this was not put on the air.
+End state: channel 2, 467.625 MHz, pager receive off, not transmitting. HackRF idle. The phone was not used for this step.
 
 ## Owner question
 
