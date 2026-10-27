@@ -3040,6 +3040,26 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## M17 SMS, packet mode (2026-10-26, 23:10)
+
+No firmware change. Image `7126749f…b779`, tag `DMR003.FW27.V022`, channel 2 at 467.625 MHz, low power. The station callsign was the bench callsign only while the phone was transmitting these texts, and it was put back afterwards.
+
+The voice stream had gone silent again after the receive run (`ERROR a cannot be empty` at 22:47). Factory image `90e361fd…8c10` loaded at 22:54:16 (boot peak 0.063, nothing above +10 dB). Channel 4, digital, 467.700 MHz, power 0, SignalDeck PTT for 3 s: `0x36` body `03` at 22:55:18.361, body `04` at 22:55:22.395, HackRF LNA 16 / VGA 16, centre 467.460 MHz, peak 18.0 dB over the quiet second. The bench image loaded again at 22:58:57 (boot peak 0.045). Runner `stream` at 22:59:28 passed: 1125/1125, carrier 45.41 s, p99 2896 Hz, clip 0, end bit set.
+
+Receive, before that recovery, HackRF transmit on the channel (467.625 MHz, amp off, VGA 20, 2 MS/s): 9/9 payload-exact, `N0CALL` to `@ALL`, texts `A`, `hello` and `packet check 26`, three times each, logged 22:43:53–22:44:31. An earlier pass 240 kHz low was 0/9 and is not counted.
+
+Transmit, after the stream pass, HackRF receive at the runner's offset, LNA 8 / VGA 8. Each text once. The host decoder needs the window to start at the strongest 50 ms: the key-up and the unkey are about 19 kHz wide, and the 4FSK body is p99 about 2840 Hz, clip 0.
+
+| Text | Bytes | CRC | Link setup | Body p99 |
+|---|---|---|---|---|
+| A | 1 | good | N0CALL → @ALL | 2845 Hz |
+| hello | 5 | good | N0CALL → @ALL | 2841 Hz |
+| packet check 26 | 15 | good | N0CALL → @ALL | 2827 Hz |
+
+One exchange both ways: the HackRF sent `ping` and the phone logged it from `N0CALL` to `@ALL`; the phone's reply `pong` decoded with the CRC good and the same link setup (window 50 ms before the strongest bin). The symbol file is 192 bytes, one packet frame. Carrier about 0.45 s.
+
+End state: `DMR003.FW27.V022` sha `7126749f…b779`, channel 2, 467.625 MHz, not transmitting. Battery 38.6 °C, `mtktsAP` 45.7 °C, `mtktsbtsmdpa` 44.2 °C. HackRF idle.
+
 ## The symbol stream is back on 7126749f after the factory image (2026-10-26, 21:25)
 
 Step 1 of the 21:25 task. Loaded `7126749f…b779` again at 21:23:53, over the factory image. Boot peak 0.135 dB, nothing above +10 dB, clip 0. Channel 2, 467.625 MHz. Runner `stream` at 21:24:16 passed: 1125 of 1125 payload-exact, end bit set, carrier 45.41 s, p99 2862 Hz, clip 0.

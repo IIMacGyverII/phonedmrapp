@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (23:10) — M17 SMS, app only.** On `7126749f…b779`, after a factory key (channel 4, status body 03 then 04) and a runner `stream` of 1125/1125 (p99 2896 Hz), the phone received 9/9 SMS from the HackRF and its own three texts decoded with the CRC good. Details in `results.md`.
+
 **2026-10-26 (21:25) — The symbol stream is back.** Reloading `7126749f…b779` after the factory image gave runner `stream` 1125/1125, carrier 45.41 s, p99 2862 Hz, clip 0. The 15 s power-off, the digital tune and the FW26 load had not done that. The log's tail is `sym done bytes=54144`, status 4, `0x26` off `sr=0`, `sym unkey`.
 
 **2026-10-26 (21:10) — The symbol stream still has no status 3.** A 15 s `dmr009` power-off, a digital tune through channel 4, and FW26 `71949d24…a34e` each left the runner `stream` with no carrier. The factory image's own PTT on channel 4 did radiate: status 3, then 4, HackRF ratio 3.38. `HANDOFF.md` is `STATUS: STUCK`.

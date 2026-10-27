@@ -4,24 +4,32 @@ Owner direction 2026-10-26: on the route list after M17 voice and the hotspot se
 2026-10-26/27, host work plus the HackRF bench), tested against an independent station when the hotspot is up. Everything
 is app-side; no firmware change is expected (the symbol engine and the audio-path receiver already carry M17 stream mode).
 
-## 1. What M17 packet mode is (verify every number against the current spec before coding)
+## 1. What M17 packet mode is
 
-Read `spec.m17project.org` (the M17 protocol specification, current revision) and write the exact field widths into
-§1 of this file before the first line of code. What the spec says, as far as the manager recalls it:
+Read from `https://spec.m17project.org/files/M17_spec.pdf` (the PDF served as the current specification on
+2026-10-26). Widths below are that document's, not the earlier recollection.
 
-- **One transmission** = preamble, the **link setup frame** (LSF) with the type field marking **packet mode**, then
-  one or more **packet frames**, then EOT. There is no LICH in packet mode: the LSF is sent once, in full, as the
-  stream mode's LSF frame is.
-- **LSF type field:** bit 0 packet/stream (0 = packet), bits 2:1 data type (data), bits 4:3 encryption (none), bits
-  10:7 CAN; the same 240-bit LSF with its CRC as voice uses, the same encoding (conv code, P1 puncturing).
-- **Packet frame:** 25 bytes of payload plus a 6-bit field; the field's top bit marks the last frame, the other
-  five carry the frame counter on inner frames and the number of payload bytes used on the last frame. 206 bits,
-  convolutionally encoded, punctured with **P3** to 368 bits, interleaved and randomised like a stream frame, with
-  the **packet sync word 0x75FF** in front (our `m17.py` already defines `SYNC_PKT`).
-- **Payload:** the first byte is the protocol: 0x00 raw, 0x01 AX.25, 0x02 APRS, 0x03 6LoWPAN, 0x04 IPv4, **0x05 SMS**,
-  0x06 Winlink; then the data; then a **CRC-16** over everything before it (the M17 CRC, polynomial 0x5935, init
-  0xFFFF, the one the LSF uses). SMS data is the text, null-terminated. Maximum about 800 bytes in 33 frames.
-- Destination: a callsign or `@ALL` (broadcast), as in voice; source the station callsign.
+- **One transmission** (table 2.14): preamble, one **link setup frame** (LSF sync `0x55F7` plus the 240-bit LSF),
+  then **1 to 33 packet frames** (packet sync `0x75FF` plus the frame), then the end-of-transmission marker.
+  Packet mode has no LICH. The LSF is sent once, in full.
+- **LSF** is the same 240 bits voice uses: destination 48, source 48, TYPE 16, META 112, CRC-16 16. CRC is
+  polynomial `0x5935`, init `0xFFFF`, stored big-endian, over the 28 bytes before it.
+- **Packet LSF TYPE** (table 3.14): only the packet/stream bit and the channel access number are defined. Every
+  other bit is reserved and is 0. The packet/stream bit is 0 for packet (1 is stream, the same bit voice sets).
+  The channel access number is the same four bits voice uses, TYPE bits 10:7, so the type word is `CAN << 7`.
+- **Packet frame** (tables 2.15–2.17): 200 bits (25 bytes) of the packet, then a **6-bit** metadata field.
+  206 type-1 bits. The metadata's first bit is end-of-frame. The other five are the frame number, 0–31, while
+  more data remains, and on the last frame they are the number of valid bytes in that frame, 1–25. The frame
+  counter starts at 0 and increments after each non-final frame.
+- **Coding:** 206 bits plus 4 flush bits, rate-1/2 K=5, 420 type-2 bits, punctured with
+  **P3 = [1, 1, 1, 1, 1, 1, 1, 0]** to 368 type-3 bits, then the same 368-bit interleaver and randomizer as a
+  stream frame. The sync word in front is `0x75FF`.
+- **Packet data** (section 3.3.2, table 3.15): a type byte (values 0–127 are one byte; the reserved names are
+  `0x00` raw, `0x01` AX.25, `0x02` APRS, `0x03` 6LoWPAN, `0x04` IPv4, **`0x05` SMS**, `0x06` Winlink), then the
+  payload. SMS is a null-terminated UTF-8 string. A CRC-16, the same polynomial, is computed over the type byte
+  and the payload, including the null, and appended big-endian. That whole buffer is split into 25-byte chunks.
+  One transmission carries at most 823 bytes of type-plus-payload, which is at most 33 frames.
+- Destination is a callsign or `@ALL`. Source is the station callsign. META is left at zero for an SMS.
 
 ## 2. What to build (SignalDeck, branch `grok/m17-sms`, one PR)
 

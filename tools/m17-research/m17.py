@@ -29,6 +29,8 @@ def crc16(data):
     return crc
 
 def callsign(s):
+    if s.upper() == '@ALL':
+        return (0xFFFFFFFFFFFF).to_bytes(6, 'big')
     v = 0
     for ch in reversed(s.upper()):
         v = v * 40 + (CHARS.index(ch) if ch in CHARS else 0)
@@ -96,6 +98,42 @@ def encode_stream(lsf, fn, payload16, lich_cnt):
     t2 = np.concatenate([np.array(enc, np.uint8), conv_encode(bytes_bits(fn.to_bytes(2, 'big') + bytes(payload16)), P2)])
     assert len(t2) == 368, len(t2)
     return frame_symbols(SYNC_STR, t2)
+
+def packet_bits(chunk, eof, counter):
+    raw = bytes(chunk).ljust(25, b'\x00')[:25]
+    bits = list(np.unpackbits(np.frombuffer(raw, np.uint8)))
+    meta = ((1 if eof else 0) << 5) | (counter & 31)
+    bits += [(meta >> (5 - i)) & 1 for i in range(6)]
+    return np.array(bits, np.uint8)
+
+def encode_packet_frame(chunk, eof, counter):
+    t2 = conv_encode(packet_bits(chunk, eof, counter), P3)
+    if len(t2) != 368: raise AssertionError(len(t2))
+    return frame_symbols(SYNC_PKT, t2)
+
+def sms_payload(text):
+    raw = b'\x05' + text.encode('utf-8') + b'\x00'
+    return raw + crc16(raw).to_bytes(2, 'big')
+
+def encode_packet_transmission(src, dst, data, can=0):
+    """Preamble, a packet-mode LSF, the packet frames, and the end marker."""
+    lsf = lsf_bytes(src, dst, (can & 15) << 7)
+    syms = [3, -3] * 96 + encode_lsf(lsf)
+    frame = 0; off = 0
+    while off < len(data) and frame < 33:
+        n = min(25, len(data) - off); last = off + n >= len(data)
+        syms += encode_packet_frame(data[off:off + n], last, n if last else frame)
+        off += n
+        if not last: frame += 1
+    syms += [3, 3, 3, 3, 3, 3, -3, 3] * 24
+    return np.array(syms, float), lsf
+
+def decode_packet_frame(sym):
+    bits, _m = viterbi(symbols_to_soft(sym), P3, 206)
+    chunk = np.packbits(bits[:200]).tobytes()
+    meta = 0
+    for b in bits[200:206]: meta = (meta << 1) | int(b)
+    return bool(meta & 32), meta & 31, chunk
 
 def transmission(src, dst, payloads, eot=True):
     """Preamble, LSF, stream frames (16-byte payloads, last one with the end bit), EOT: a symbol list."""
@@ -207,7 +245,7 @@ def sync_score(y, sps, kind, i):
     if len(v) < 8: return -1.0
     return float(np.dot(v, s) / (np.sqrt(np.dot(s, s) * np.dot(v, v)) + 1e-12))
 
-def find_frames(y, sps, first_kinds=('lsf', 'str'), thresh=0.9):
+def find_frames(y, sps, first_kinds=('lsf', 'str'), thresh=0.9, follow=('str', 'lsf')):
     """The first sync (best of LSF / stream above thresh), then every 192 symbols: re-acquire within +-sps/2 samples."""
     out = []; n = len(y)
     s_l = SYNC_SYMS['lsf']; s_s = SYNC_SYMS['str']
@@ -227,7 +265,7 @@ def find_frames(y, sps, first_kinds=('lsf', 'str'), thresh=0.9):
     while pos + 192 * sps <= n + 8 * sps:
         out.append((pos + 8 * sps, kind, sync_score(y, sps, kind, pos), pos))
         nxt = pos + 192 * sps
-        cands = [(sync_score(y, sps, k, nxt + d), nxt + d, k) for d in range(-(sps // 2), sps // 2 + 1) for k in ('str', 'lsf')]
+        cands = [(sync_score(y, sps, k, nxt + d), nxt + d, k) for d in range(-(sps // 2), sps // 2 + 1) for k in follow]
         sc, p2, k2 = max(cands)
         if sc < 0.6: break                                           # end of the transmission (EOT, or lost)
         pos, kind = p2, k2
@@ -257,4 +295,35 @@ def decode_transmission(dev, fs, verbose=True):
                 if verbose: print('LSF at %.3f s  src %s dst %s  CRC %s' % (j / (sps * SYM_RATE), new[0], new[1], 'ok' if ok else 'BAD'))
         else:
             fn, p, lich, lerr = decode_stream(pay); res['frames'].append((fn, p, lerr))
+    return res
+
+def decode_packet_transmission(dev, fs, verbose=False):
+    """A packet transmission: the link setup, the joined payload when the CRC checks, and the SMS text."""
+    y, sps = demod(dev, fs)
+    frames = find_frames(y, sps, first_kinds=('lsf', 'pkt'), follow=('pkt', 'lsf'))
+    res = {'lsf': None, 'frames': [], 'body': None, 'text': None, 'crc': False}
+    parts = []
+    for start, kind, score, j in frames:
+        sy = y[j:j + 8 * sps:sps]
+        ref = SYNC_SYMS[kind]
+        A = np.vstack([ref, np.ones(8)]).T
+        g, off = np.linalg.lstsq(A, sy, rcond=None)[0]
+        pay = (y[start:start + 184 * sps:sps] - off) / g
+        if len(pay) < 184: break
+        if kind == 'lsf':
+            b, ok = decode_lsf(pay)
+            res['lsf'] = (decode_callsign(b[6:12]), decode_callsign(b[0:6]), ok, int.from_bytes(b[12:14], 'big'))
+        elif kind == 'pkt':
+            eof, counter, chunk = decode_packet_frame(pay)
+            res['frames'].append((eof, counter, chunk))
+            parts.append(chunk[:counter if eof else 25])
+            if eof:
+                allb = b''.join(parts)
+                ok = len(allb) >= 3 and crc16(allb[:-2]) == int.from_bytes(allb[-2:], 'big')
+                res['crc'] = ok
+                if ok:
+                    res['body'] = allb[:-2]
+                    if allb[0] == 5:
+                        res['text'] = allb[1:-2].split(b'\x00', 1)[0].decode('utf-8', 'replace')
+                parts = []
     return res
