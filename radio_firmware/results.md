@@ -3040,6 +3040,33 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## FW27 variant 6 writes the receive coefficient (2026-10-26, 19:28)
+
+The five `lrw` instructions in the hole of `b207ea72…9848` are the 32-bit form (file bytes `84 ea` or `80 ea`). The pool address is `(PC & ~3) + 4 × imm`, and each one lands on its own word: `0x5B820` → `0x4B008`, `0x5B826` → `0x5354524D`, `0x5B84C` → `0x11000504`, `0x5B852` → `0xFFFF00FF`, `0x5B85E` → `0x180000A0`. A short `lrw` was not the hang. The value-not-1 exit was replaced with a branch to a filter in the hole: value 1 returns to `0x5B2C2`, any other variant goes to `0x5B308` with `r15` and the stack untouched, and variant 6 calls the body and then takes the value-1 epilogue.
+
+Three images, each with a quiet boot. **A** `d8a3aa19…3888` acks and touches nothing: `[6, 6, 0x08]` returned `sr=0 len=0`, and `[6, 5, 1]` still did. Boot peak 0.10 dB. **B** `4a0a34f8…8ffc` reads `0x11000504` and puts the word in the reply: `10 10 0f 00`, which is `0x000F1010` (limiter `0x0F`, receive `0x10`, transmit `0x10`). Boot peak 0.08 dB. A first **C** that mirrored the word at `0x180000A0` acked the write, and a byte read of that address through opcode 14 did not answer; `restartmodule` recovered `0x34`. The loaded **C** is `7126749f…b779`. Variant 6 is refused unless the mode-5 marker is set. It replaces bits 15:8, leaves the other bytes, and replies with the stored word through opcode 14's sender at `0x5C0F8`. `[6, 6, 0x08]` replied `10 08 0f 00`. `[6, 6, 0x04]` replied `10 04 0f 00`. `[6, 6, 0x10]` replied `10 10 0f 00`. Boot peak 0.10 dB on the load and 0.06 dB on the runner's restart.
+
+The 1 kHz tone, HackRF VGA 20, centre 467.625 MHz, phone not keyed. Amplitude is the same Hann `2/N` peak as the 16:53 table. A control at `0x10` and 1.0 kHz deviation read 4375, against that table's 4377. The byte is an inverse gain: at 0.5 kHz, `0x08` is twice `0x10` and `0x04` is four times.
+
+| Deviation kHz | `0x10` (16:53) | `0x08` | `0x04` |
+|---:|---:|---:|---:|
+| 0.5 | 2774 | 5541 | 11094 |
+| 1.0 | 4377 | 8763 | 16361 |
+| 1.5 | 5445 | 11030 | 18903 |
+| 2.0 | 5888 | 11824 | 20568 |
+| 2.4 | 5980 | 12026 | 20565 |
+| 3.0 | 6017 | 12114 | 20516 |
+| 3.5 | 6034 | 12142 | 20760 |
+| 4.0 | 6032 | 12127 | 20991 |
+
+Both new curves are on the ceiling by 2.4 kHz (about 12100 at `0x08`, about 20600 at `0x04`). A straight line through the 0.5 kHz point would be about 26600 and 53300 there. No value in this pair keeps 2.4 kHz linear, so the 30-frame decode was not run. A larger coefficient byte is the direction that lowers the gain.
+
+Channel 56, 1 kHz deviation, mode 5 off, the coefficient left at the value variant 6 wrote. 500 Hz reads 424 and 1000 Hz reads 1281 at `0x08`, and 424 and 1280 after writing `0x10`. The 17:05 clip at `0x10` was 420 and 1267. The phone path still has the 9.6 dB dip at 500 Hz, and it does not follow this coefficient. `[6, 5, 0]` acks and does not rewrite the coefficient. Writing `0x10` does, and a module restart returns the register to `0x000F1010`.
+
+Runner `all` on `7126749f…b779` passed. Boot peak 0.057 dB. Tone carrier 10.5 s, p99 2489 Hz, hottest half-second 3982 Hz, clip 0. Heat: 45 s low power, `mtktsAP` 39.4 to 40.1 °C, battery 31.9 to 32.1 °C. Stream 1125/1125, p99 2855 Hz. Receive clip −19.0 dBFS.
+
+End state: `DMR003.FW27.V022` sha `7126749f…b779`, channel 2, 467.625 MHz, not transmitting, coefficient `0x10`, mode 5 off. HackRF idle.
+
 ## FW27 variant 6 does not answer (2026-10-26, 18:24)
 
 Image `b207ea72cf3b908ce82a53f80f7b223805ad62f8627c536f64c0534f74239848`. The register trailer is no longer sent; a stream half is op 5's 514-byte body. Variant 6 lives in the opcode-13 hole and is reached from the opcode-6 handler, which used to leave any value other than 0 or 1. `[6, 5, 1]` returns `sr=0`. `[6, 6, 0x08]` is transmitted and no reply arrives within 800 ms. `restartmodule` recovers `0x34`. No deviation sweep was run. Boot peak 0.11 dB. Channel 2, 467.625 MHz, not transmitting.

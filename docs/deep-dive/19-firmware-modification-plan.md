@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (19:28) — Variant 6 writes bits 15:8 of `FM_DEV_COEF`.** The hole's `lrw`s in the image that hung were 32-bit and pointed at the right words. Image A acked without touching the register. Image B read `0x000F1010`. The loaded image `7126749f…b779` replies with the stored word. `0x08` doubles the 16:53 curve and `0x04` quadruples it at 0.5 kHz; both are on a ceiling by 2.4 kHz, so no 30-frame decode was run. Channel 56 is unchanged (500 Hz 424, 1000 Hz 1280, the same 9.6 dB dip). Runner `all` passed, boot peak 0.06 dB. A byte read of `0x180000A0` through opcode 14 stalls.
+
 **2026-10-26 (18:24) — Variant 6 is loaded and does not answer.** The stream trailer is gone (514-byte op 5 body). The opcode-6 handler sends a value other than 0 or 1 to the general dispatcher; that branch now enters the trampoline. `[6, 5, 1]` acks. `[6, 6, 0x08]` gets no reply within 800 ms, and `restartmodule` recovers. No sweep. `HANDOFF.md` is `STATUS: STUCK`.
 
 **2026-10-26 (17:20) — Variant 6 does not fit.** The tail after `WRAP_END` `0x5C6EC` is 16 bytes. The low spare is 4 bytes and the high piece ends on opcode 14. `regsend` at `0x5C590` is called from `0x5C032`. No image loaded. `HANDOFF.md` is `STATUS: STUCK`.
