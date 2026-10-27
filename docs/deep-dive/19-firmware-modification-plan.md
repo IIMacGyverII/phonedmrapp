@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-27 (09:00) — POCSAG parity and 512.** Even parity is checked after the BCH repair. 512 baud on the held path still returned RIC 123617. A signed page filed under the callsign and a bare page under the RIC. Stock receive is refused. Details in `results.md`.
+
 **2026-10-27 (08:31) — POCSAG receive.** Held path, 2.5 kHz: 1200 and 2400 baud 3/3 payload-exact. 512 baud listed one text with the wrong RIC. Hold off changed the RIC of a 1200 baud page. Details in `results.md`.
 
 **2026-10-26 (23:24) — Two-frame M17 SMS.** A 26-byte text, three times each way, on `7126749f…b779`: counters 0 then 5, CRC good, and the phone listed the HackRF copies 3/3. A failed packet CRC writes "M17: frames lost" and does not list the text. Details in `results.md`.

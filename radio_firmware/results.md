@@ -3040,6 +3040,19 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## POCSAG parity check and 512 baud (2026-10-27, 09:00)
+
+Held path, 2.5 kHz, channel 2, phone not keyed. An address word is corrected only in its 31 BCH bits, then the even-parity bit has to match or the word is unreadable. A page with a failed address is stored as RIC unreadable and keeps its text. Hear pages refuses to start when the module tag is not bench firmware. The 512 baud slicer sets its threshold to the average of each sync word.
+
+| Check | Result |
+|---|---|
+| 512, RIC 1001, three texts | Not 3/3. One listing was RIC 123617 with the text, and the same text was also stored as unreadable. Another text was missed. A third came back as RIC 123617 with a damaged text. |
+| Signed page, RIC 3003, text starting with the bench callsign | RIC 3003, thread `call:` the callsign |
+| Bare page, RIC 3004 | RIC 3004, thread `ric:3004`, text one character short, one bit repaired |
+| Monitor 467.625 and 467.650 | The radio stepped to both. The pages decoded during the step were not the two texts that were sent. |
+
+The contact-thread case was not shown: the temporary contact row did not get used, and the page filed under the RIC.
+
 ## POCSAG receive, held path (2026-10-27, 08:31)
 
 No firmware change. Image `7126749f…b779`, channel 2, 467.625 MHz. HackRF transmit on the channel, amplifier off, VGA 20, deviation 2.5 kHz. The phone was not keyed. Pager receive on, voice-filter hold on.
