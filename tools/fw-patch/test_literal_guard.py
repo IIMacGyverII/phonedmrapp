@@ -11,6 +11,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import fw28_build  # noqa: E402
 import literal_guard  # noqa: E402
 
 ROOT = HERE.parent.parent / "radio_firmware" / "build"
@@ -42,6 +43,30 @@ class LiteralGuardTest(unittest.TestCase):
         key = [pool for pc, pool in hits if pc == 0x5BBE2]
         self.assertEqual(key, [0x5BEA0])
         self.assertTrue(all(pool in POOL for pc, pool in hits if pc == 0x5BBE2))
+
+    def test_fw27_branch_lands_in_the_variant6_range(self):
+        base = (ROOT / "DMR003.FW26.V022.bin").read_bytes()
+        new = (ROOT / "DMR003.FW27.V022.bin").read_bytes()
+        spans, hits = literal_guard.covered_branches(base, new)
+        pcs = {pc for pc, target in hits}
+        self.assertIn(0x5B7EE, pcs)
+        self.assertIn(0x5B7FC, pcs)
+        self.assertIn(0x5B814, pcs)
+        self.assertTrue(spans)
+
+    def test_fw28_branch_targets_stay_outside_the_patch(self):
+        fw28_build.build()
+        base = (ROOT / "DMR003.FW26.V022.bin").read_bytes()
+        new = (ROOT / "DMR003.FW28.V022.bin").read_bytes()
+        self.assertEqual(new[0x38464:0x38474], b"DMR003.FW28.V022")
+        self.assertEqual(new[0x5B81A:0x5B876], base[0x5B81A:0x5B876])
+        fw27 = (ROOT / "DMR003.FW27.V022.bin").read_bytes()
+        self.assertEqual(new[0x5B816:0x5B81A], fw27[0x5B816:0x5B81A])
+        self.assertNotEqual(new[0x5B816:0x5B81A], base[0x5B816:0x5B81A])
+        spans, hits = literal_guard.covered_branches(base, new)
+        self.assertEqual(hits, [], "FW28 covers %s" % (hits[:6],))
+        spans, loads = literal_guard.covered_loads(base, new)
+        self.assertEqual(loads, [])
 
 
 if __name__ == "__main__":

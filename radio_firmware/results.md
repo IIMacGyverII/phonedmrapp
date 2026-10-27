@@ -3040,6 +3040,20 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## FW28 (2026-10-27, 14:56)
+
+FW28 is FW27 with `0x5B81A` through `0x5B875` copied back from FW26. The op 13 redirect at `0x5B816` is the FW27 branch. Variant 6 is dropped. The tag is `DMR003.FW28.V022`. sha256 `518345e89a752fa3932e02c0a33d297bae6a46c26dd754eb6aaf14ec0920abe3`. `literal_guard.py` now reports a 16-bit `br`/`bt`/`bf` from outside a written span that lands inside one. A one-instruction hook and a `bsr` that still names its old callee are not hits. The test finds `0x5B7EE`, `0x5B7FC` and `0x5B814` on FW27 and no hits on FW28. The literal check is clean on FW28 too.
+
+The first load was cut off. The runner waited 420 s without seeing the load line and then restarted the module, and a phone lease that started at 14:15 overlapped it. That pass is void: tag unread, tone no carrier, stream empty. Factory `DMR003.UV4T.V022` was loaded (`fwload ok` at 14:32:41) and keyed on channel 4: status 3, then status 4. FW28 was loaded again (`fwload ok` at 14:35:32).
+
+Runner `all` on that image, low power, 467.625 MHz. Boot silent, peak 0.104 dB, tag still FW28. Tone carrier 10.55 s, clip 0, p99 3140 Hz, the loudest half-second 4173 Hz. Stream 1125 of 1125, carrier 45.41 s, p99 2876 Hz, clip 0, end bit set. Receive line 1.49 times the noise, clip −19.0 dBFS. Heat 45 s, battery 34.6 to 34.8 °C, `mtktsAP` 41.1 to 41.5 °C, no stop. The cool-down before the heat key sat near 41 °C and did not return to 39 °C within 10 minutes, so the key ran at the cap.
+
+One page, RIC 1001, "FW28PAGE", 512 baud, signing off. `page key` and `sym unkey`. Offset capture, carrier 2.62 s, clip 0, p99 2679 Hz. The host codeword check on the flat deviation is Hamming 0.
+
+Op 16 action 0 and op 17 action 0 answered `sr=0` at 57600. Op 17 action 1 did not answer, and mode 5 did not answer. After that start, ops 16 and 17 stopped answering until a module restart. The restart came back with tag FW28, and the signal reading moved. This build has no host that reopens the UART at 230400, so the stream was not run at that rate.
+
+End state: channel 2, 467.625 MHz, pager receive off, monitor off, not transmitting. HackRF idle. Tag `DMR003.FW28.V022`.
+
 ## POCSAG part B on FW26 (2026-10-27, 14:03)
 
 The module was already `DMR003.FW26.V022` (`fwload ok` at 13:46:38). No new image. Low-power VFO at 467.625 MHz, wide. HackRF receive at 467.385 MHz, 2.4 MS/s, LNA 16, VGA 16, amplifier off. Battery 34.8 °C, `mtktsAP` 41.0 °C, `mtktsbtsmdpa` 39.6 °C before the keys.

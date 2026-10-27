@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -240,8 +240,8 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-Part B on FW26 (`fwload ok` 13:46:38, tag `DMR003.FW26.V022`). A 2 s low-power tone keyed (carrier 2.55 s, p99 3632 Hz, clip 0). The browser page, RIC 1001, "FW26 PAGE", 512 baud, keyed 2.63 s (p99 2659 Hz, clip 0). The host codeword check on the flat deviation is Hamming 0; `pocsag.py rx`'s 20 ms mean removal, for phone audio, turns the last word into 4 errors and prints "FW26 PAG". The browser M17 text "WEB M17" to @ALL keyed 0.45 s (p99 2977 Hz). It decodes from the start of the carrier, CRC good, bench callsign to @ALL. The strongest 50 ms bin is the last of a flat carrier, and 50 ms before that bin misses the link setup.
-End state: channel 2, 467.625 MHz, pager receive off, monitor off, not transmitting. HackRF idle. Battery 34.9 °C. Tag `DMR003.FW26.V022`.
+FW28 (`518345e8…abe3`, tag `DMR003.FW28.V022`). `0x5B81A`–`0x5B875` is FW26's again; the op 13 redirect at `0x5B816` stays. The branch-target check fails on FW27 and passes on FW28. The first load was cut off and is void. After a factory key (status 3 then 4 on channel 4), the second load's runner `all` passed: boot silent, tone p99 3140 Hz, stream 1125/1125, receive line 1.49, heat 45 s with no stop. One page, "FW28PAGE", Hamming 0. Op 16 and op 17 action 0 answered; op 17 start did not, and those two opcodes stayed silent until a restart, which came back as FW28.
+End state: channel 2, 467.625 MHz, pager receive off, monitor off, not transmitting. HackRF idle. Tag `DMR003.FW28.V022`.
 
 ## Owner question
 
