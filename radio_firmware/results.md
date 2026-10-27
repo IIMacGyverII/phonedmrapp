@@ -3040,6 +3040,12 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## POCSAG 512 baud threshold (2026-10-27, 09:26)
+
+One threshold per batch, the mean of the sync-word samples. No running mean across the bits. The generator's 512 baud file, resampled to 8 kHz, decodes as RIC 1001 with that threshold. A three-error address opens no page.
+
+On the held path at 2.5 kHz the same build still did not do 3/3. RIC 1001, text "ALPHA ONE", was listed as RIC 123617. "ALPHA TWO" and "ALPHA THREE" were not listed. Monitor mode stepped 467.625 and 467.650 MHz and listed no page during those two transmissions. The contact was not saved, so the page to RIC 1001 filed under `ric:1001`.
+
 ## POCSAG parity check and 512 baud (2026-10-27, 09:00)
 
 Held path, 2.5 kHz, channel 2, phone not keyed. An address word is corrected only in its 31 BCH bits, then the even-parity bit has to match or the word is unreadable. A page with a failed address is stored as RIC unreadable and keeps its text. Hear pages refuses to start when the module tag is not bench firmware. The 512 baud slicer sets its threshold to the average of each sync word.

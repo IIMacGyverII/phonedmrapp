@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-27 (09:26) — POCSAG 512 threshold.** One threshold per batch. The generator file at 8 kHz decodes as RIC 1001. On the air, 512 baud still returned RIC 123617. Details in `results.md`.
+
 **2026-10-27 (09:00) — POCSAG parity and 512.** Even parity is checked after the BCH repair. 512 baud on the held path still returned RIC 123617. A signed page filed under the callsign and a bare page under the RIC. Stock receive is refused. Details in `results.md`.
 
 **2026-10-27 (08:31) — POCSAG receive.** Held path, 2.5 kHz: 1200 and 2400 baud 3/3 payload-exact. 512 baud listed one text with the wrong RIC. Hold off changed the RIC of a 1200 baud page. Details in `results.md`.

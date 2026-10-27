@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -216,8 +216,8 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-Parity is checked after the BCH repair, and a failed address is stored as RIC unreadable. Stock firmware is refused for page receive; the DFE was not ported. The 512 baud threshold is re-centred on each sync word. On the held path at 2.5 kHz, before the 09:10 lease, 512 baud still returned RIC 123617 and was not 3/3. A signed page filed under the callsign and a bare page under its RIC. Monitor stepped 467.625 and 467.650; the pages during that step were not the two texts sent. The phone is Claude's from 09:10 to 10:10.
-End state at 09:00: `DMR003.FW27.V022`, channel 2, 467.625 MHz, pager receive off, not transmitting. HackRF idle.
+512 baud now holds one threshold per batch, the mean of the sync word, with no running mean. The generator's 512 file at 8 kHz decodes as RIC 1001. On the held path the air still returned RIC 123617 for "ALPHA ONE" and missed the next two. A failed address opens no page. Monitor stepped 467.625 and 467.650 and listed nothing for the two texts sent on those frequencies. The contact-thread save did not run. Stock receive stays refused.
+End state: channel 2, 467.625 MHz, pager receive off, not transmitting. HackRF idle.
 
 ## Owner question
 
