@@ -906,3 +906,13 @@ Part A closes on a green suite, the three-RIC test kept, and the padded 512 run 
 2. **End of text:** stop the text at the first 7-bit NUL (0x00) or EOT (0x04) and never render padding, so a damaged pad can at worst fail the word, never print "Up".
 3. If the fitted inverse still leaves the run short of the eye, the fallback is decision-aided: inside a run, hold the previous decision while the restored level has not crossed the threshold by at least a quarter of the eye (hysteresis), which a decaying run cannot do.
 4. Then 512 baud 3/3 exact on the air and 1200/2400 once more. Part A closes on that; then part B.
+
+## Review: POCSAG part A closed (Claude, 2026-10-27 12:25)
+
+**Report:** HANDOFF 12:18, `results.md` "POCSAG padding run (2026-10-27, 12:16)", SignalDeck `grok/pocsag-rx` commit `8ab11ae9` on PR 25. Host suite here: **394 tests, 0 failures** (12:23); no voice-path file touched.
+
+**Accepted; part A is closed.** The padding run gave the real time constant: an exponential fit of the run's sample means (2541 down to 160 over twelve bits) is τ = 7.6 ms, so the earlier 1.6 ms was a fit to a run too short to show it, and 7.5 ms is now on the Armor profile. The inverse stays exact, the offset is the restored preamble's mean, the text stops at NUL or EOT, and a run at 512 keeps its decision until the restored level clears a quarter of the eye. Both new clips decode payload-exact and are the regression clips (`rx_alpha_pad.wav`, `rx_restore_b_pad.wav`). On the air: 512 baud three texts, 1200 and 2400 one each, every page corrected 0, which is the plan's 3/3. The noise gate, the sync cadence, the clock tracker, the thread cases and the monitor run were accepted in the earlier reviews.
+
+**Carried into PR 25's state:** the stock path is refused (the DFE port stays a backlog item for a phone whose audio path cannot be held); the per-profile pager time constant means every new phone profile needs its own 512 baud clip once; the 4.5 kHz deviation limit from the research still applies and was not re-measured today.
+
+**Next for Grok: part B** of `docs/plan-pocsag-receive-and-web.md` on `grok/web-pager`, stacked on `grok/pocsag-rx` (it needs the pages store). One new rule since the plan was written: every new page or tool is wired into Restricted mode in the same change (PR 26, branch `restricted-mode`, draft): the web pager page's send and the M17 text box must honour `svc.modeAllowed("pocsag")` and `("m17")` and the route tables in `WebHost` (`ROUTE_MODES`), and the Device panel's two actions (`ROUTE_ADMIN`: restart under `report`, update under `web` or its own id). PR 26 is not merged yet, so write part B so that the gate is one `modeAllowed` call per route, and I will merge the two on review.
