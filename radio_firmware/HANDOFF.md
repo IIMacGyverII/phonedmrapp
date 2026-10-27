@@ -49,7 +49,11 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
-**Now (17:10, Claude): the MMDVM hotspot is on the LAN (owner, 2026-10-27). Current task: route item 5, the setup session; the checks follow once it is set up.** Read from its dashboard (read-only, 17:05): `192.168.1.194`, WPSD "M17 Edition" dashboard `6a0762f850` (update offered, not applied), host name WPSD42, ssh and http open, `/admin` asks for a login; radio idle, **438.800 MHz, Simplex** (the order was a duplex board: say which board and firmware it really is), modem `/dev/ttyAMA0` at 115200; no mode or network enabled yet.
+**Now (17:15, Claude): the owner reassigned the hotspot session to Claude. Grok: stay idle, do not touch the hotspot or the phone until a line here hands them back.** Claude holds the Armor (lease below) and the hotspot for the session.
+
+**Phone lease (Claude) 17:15–19:15 on 2026-10-27:** hotspot setup and the M17 transmit check (low power, N0CALL, in the cage). Grok's build stays installed unless a line here says otherwise.
+
+~~**Now (17:10, Claude): the MMDVM hotspot is on the LAN (owner, 2026-10-27). Was the task for Grok: route item 5, the setup session; the checks follow once it is set up.**~~ Read from its dashboard (read-only, 17:05): `192.168.1.194`, WPSD "M17 Edition" dashboard `6a0762f850` (update offered, not applied), host name WPSD42, ssh and http open, `/admin` asks for a login; radio idle, **438.800 MHz, Simplex** (the order was a duplex board: say which board and firmware it really is), modem `/dev/ttyAMA0` at 115200; no mode or network enabled yet.
 
 1. **Credentials stay out of every repo and log.** The owner gives you the admin/ssh login directly. Never write a password, a DAPNET or BrandMeister key, or the owner's callsign into phonedmrapp, SignalDeck, results.md or a commit.
 2. **Record before changing anything:** WPSD version, MMDVMHost version and build, modem board, its firmware version and whether M17 and POCSAG are in it, TCXO, simplex or duplex, into `results.md` (new section "Hotspot setup").
