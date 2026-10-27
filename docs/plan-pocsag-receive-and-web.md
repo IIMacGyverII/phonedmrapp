@@ -73,10 +73,14 @@ phone has that the browser does not (checked 2026-10-26 23:40 against `index.htm
    and the threads from part A's store, so the browser's Messages page is the same tab as the phone's.
 4. **SAME alerts heard** and the **WX monitor** state are on no browser page: a small "Alerts" panel on the Packet
    page from the existing alert store.
-5. **Device page**: none in the browser. The firmware loader stays on the phone (owner's safety contract: identity
-   three ways, a hand on the device); a read-only Device panel (module tag, profile, battery and AP temperatures,
-   "Own the radio at boot" state) is useful for the remote bench. Owner decides whether any switch is writable from
-   the browser; default read-only.
+5. **Device panel** (owner decision 2026-10-27 00:05): read-only state plus two writable actions, each behind a
+   confirmation on the page. Read-only: module firmware tag and whether it is the factory image, device profile and
+   revision, battery and processor temperatures, "Own the radio at boot" state, Wi-Fi ADB state, app version and
+   whether an update is listed. Writable: **Restart the radio module** (`/api/device/restart`, the same routine the
+   phone's Device page runs) and **Check for updates / Install** (`/api/device/update`, the existing updater; the
+   install runs on the phone with root as it does today). Phone only, never from the browser: the firmware loader
+   (safety contract: identity three ways, a hand on the device), "Own the radio at boot" and the stock-app enable (a
+   wrong flip strands the phone), and the Allow-unlisted-images switch.
 6. **Help**: `/api/help` serves `HelpView.topicsForWeb`; every new page needs its topic in `HelpView.TOPICS` so the
    browser help stays the phone's help.
 
