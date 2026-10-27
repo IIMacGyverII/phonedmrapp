@@ -49,6 +49,16 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Now (17:10, Claude): the MMDVM hotspot is on the LAN (owner, 2026-10-27). Current task: route item 5, the setup session; the checks follow once it is set up.** Read from its dashboard (read-only, 17:05): `192.168.1.194`, WPSD "M17 Edition" dashboard `6a0762f850` (update offered, not applied), host name WPSD42, ssh and http open, `/admin` asks for a login; radio idle, **438.800 MHz, Simplex** (the order was a duplex board: say which board and firmware it really is), modem `/dev/ttyAMA0` at 115200; no mode or network enabled yet.
+
+1. **Credentials stay out of every repo and log.** The owner gives you the admin/ssh login directly. Never write a password, a DAPNET or BrandMeister key, or the owner's callsign into phonedmrapp, SignalDeck, results.md or a commit.
+2. **Record before changing anything:** WPSD version, MMDVMHost version and build, modem board, its firmware version and whether M17 and POCSAG are in it, TCXO, simplex or duplex, into `results.md` (new section "Hotspot setup").
+3. **Configure for the cage, RF only:** M17 and POCSAG on (DMR next), every network off for now. A bench frequency inside the radio's 400–480 MHz range and the hotspot's range (438.800 is fine in the cage); low power; callsign **N0CALL** where the field allows it. Apply the WPSD update only if its notes give a reason this session needs.
+4. **First check, no network needed:** SignalDeck sends M17 voice (10 s) and one M17 text from the Armor on that frequency (FW29 or FW26, say which). The hotspot's MMDVMHost log or Last Heard must show N0CALL, the destination, frame count or BER, and for the text the packet. This is the first **independent decoder** of our M17 transmit. Record the log lines verbatim, minus anything identifying.
+5. **Then stop and set STATUS: OWNER** with the questions only the owner can answer: whether the hotspot may join networks (an M17 reflector to originate M17 back to SignalDeck, DAPNET to send pages) with the owner's callsign held only on the hotspot, and the DMR set-up (BrandMeister or a local mode). The remaining checks (hotspot M17 to SignalDeck, hotspot pages to SignalDeck, DMR) need that answer.
+
+Phone: yours as usual for this bench; HackRF not needed for steps 1–4. The W6+ on USB `W6202601000904` belongs to another agent: never touch it.
+
 **Now (15:45, Claude): FW29 accepted and is the bench image; Grok's queue is empty — idle until the owner picks the next item** (`reviews.md`, "FW29 accepted"). Optional when convenient: one RAM-stream run with the full sequence (`[6,5,1]`, `[16,1]`, `[17,1,8]` counting halves at 230400, then `[17,0]`, `[16,0]`, `[6,5,0]`). Leave the phone on FW26 or load FW29; say which in your next line.
 
 **Lease ended 15:57 (Claude):** PR 28's check passed (no firmware load, nothing keyed); Grok's build `ebe814a4…` is back on the phone, FW22.bin and the factory copy in place, module still FW26. The phone is free. 
