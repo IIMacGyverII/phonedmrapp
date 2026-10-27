@@ -3040,6 +3040,18 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## POCSAG part B on FW26 (2026-10-27, 14:03)
+
+The module was already `DMR003.FW26.V022` (`fwload ok` at 13:46:38). No new image. Low-power VFO at 467.625 MHz, wide. HackRF receive at 467.385 MHz, 2.4 MS/s, LNA 16, VGA 16, amplifier off. Battery 34.8 °C, `mtktsAP` 41.0 °C, `mtktsbtsmdpa` 39.6 °C before the keys.
+
+One 2 s 1 kHz tone. Carrier 2.55 s, clip 0, body p99 3632 Hz. Not a stop.
+
+The browser Pager page sent RIC 1001, "FW26 PAGE", 512 baud, signing off. The reply was "Sending to 1 RIC". The log has `page key` and `sym unkey`. Carrier 2.63 s, clip 0, body p99 2659 Hz. Not a stop. `pocsag.py rx` applies a 20 ms mean removal that the phone-audio clips need. On this flat capture that removal puts 4 errors in the last message word, and the printed text is "FW26 PAG". The idle words after that word are exact, so the carrier was not cut. The same slicer and the same codeword check, without that mean removal, are Hamming 0 on both leading idle words, the address, and all four message words. RIC 1001, function 3, text "FW26 PAGE".
+
+The browser then sent an M17 text, "WEB M17", to @ALL, with the station callsign set to the bench callsign for that key and put back afterwards. The reply was "Sending". Carrier 0.45 s, clip 0, body p99 2977 Hz. Not a stop. The carrier's 50 ms bins sit at the same level from 1.05 s through 1.30 s, so the strongest bin is the last of them. A window 50 ms before that bin does not hold the link setup. The window that starts where the carrier starts does: `decode_packet_transmission` reports the CRC good, the text matched, one frame, and a link setup from the bench callsign to @ALL with its CRC good.
+
+End state: channel 2, 467.625 MHz, pager receive off, monitor off, not transmitting. HackRF idle. Battery 34.9 °C. Tag `DMR003.FW26.V022`.
+
 ## POCSAG page send did not key (2026-10-27, 13:31)
 
 No firmware change. The phone-path send is DIAG `page`, which calls the same `sendPage` as the Pager screen. Pager receive was off and monitor was off. Channel 2, 467.625 MHz. RIC 1001, 512 baud, text PHONEPAGE, signing off.

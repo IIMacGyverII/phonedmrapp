@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -236,8 +236,8 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-The phone-path page (DIAG `page`, the same `sendPage` as the Pager screen) does not key either. Pager receive and monitor were off. Op 3 reset is answered. Op 8, the pager waveform, was sent eight times with no reply (`page: waveform not accepted`). The runner `stream` test on this FW27 image is 1125/1125, so the symbol engine is not stuck and the factory image was not loaded. A browser M17 text was on the air for 0.45 s; the host decoder found one frame and no link setup, so the text was not recovered. The browser page was not on the air.
-End state: channel 2, 467.625 MHz, pager receive off, monitor off, not transmitting. HackRF idle. Battery 35.1 °C.
+Part B on FW26 (`fwload ok` 13:46:38, tag `DMR003.FW26.V022`). A 2 s low-power tone keyed (carrier 2.55 s, p99 3632 Hz, clip 0). The browser page, RIC 1001, "FW26 PAGE", 512 baud, keyed 2.63 s (p99 2659 Hz, clip 0). The host codeword check on the flat deviation is Hamming 0; `pocsag.py rx`'s 20 ms mean removal, for phone audio, turns the last word into 4 errors and prints "FW26 PAG". The browser M17 text "WEB M17" to @ALL keyed 0.45 s (p99 2977 Hz). It decodes from the start of the carrier, CRC good, bench callsign to @ALL. The strongest 50 ms bin is the last of a flat carrier, and 50 ms before that bin misses the link setup.
+End state: channel 2, 467.625 MHz, pager receive off, monitor off, not transmitting. HackRF idle. Battery 34.9 °C. Tag `DMR003.FW26.V022`.
 
 ## Owner question
 

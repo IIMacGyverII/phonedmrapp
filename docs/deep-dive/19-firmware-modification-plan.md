@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-27 (14:03) — POCSAG part B on FW26.** The browser page and the browser M17 text both keyed on `DMR003.FW26.V022`. The page is RIC 1001, "FW26 PAGE", Hamming 0 on the flat deviation. The M17 text decodes from the start of its 0.45 s carrier. Op 8 answers on this image. Details in `results.md`.
+
 **2026-10-27 (13:31) — POCSAG page send did not key.** Phone-path and browser sends both stop after the waveform command. Op 3 is answered; op 8 is sent eight times with no reply. The symbol stream on the same FW27 image is 1125/1125, so the factory-key rule was not applied. An M17 text was on the air for 0.45 s and was not decoded. Details in `results.md`.
 
 **2026-10-27 (13:12) — POCSAG web pager.** Chrome opened the Pager page. A HackRF page was in the browser list after 1 s. The M17 text box listed its text. Monitor and the radio-module card answered. The browser's own page send was filed and was not heard by the HackRF (no page-key line; the channel is high power and narrow, so the send hops). Details in `results.md`.
