@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -198,8 +198,17 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-Variant 7 writes AT1846S `0x44` bits 7:4 (bits 11:8 stay `0xA`). Wi-Fi ADB sticks at `192.168.1.125:5555` after the panel is opened; USB is unplugged. Image `f8298581…3ef8` is loaded (an earlier image branched to the wrong address and was restarted). `0x81` matches the stock deviation curve and `0x41` doubles it, ceiling included, so 2.4 kHz stays near 0.46 of the straight line. Channel 56 drops 19.6 dB and 25.1 dB and keeps the 9.5 dB dip. The knee does not move. The route is closed on this phone. The symbol stream accepted `0x40` and sent status 4 with no carrier, twice; the tone path radiated (p99 2490 Hz).
-End state: `DMR003.FW27.V022` sha `f8298581…3ef8`, VFO 467.625 MHz, low power, mode 5 off, not transmitting. HackRF idle.
+**Stuck (20:50), bisect step 1.** The symbol stream is silent on the variant-6 image that scored 1125/1125 at 19:29. A channel write and a module restart did not restore it. A tone on the same image did radiate.
+
+1. Loaded `7126749f…b779` at 20:44:34 (`fwload ok`, boot peak 0.054 dB, clip 0). Runner `stream` at 20:44:54: `ERROR a cannot be empty`. The capture's loudest second was 1.87 times its quietest (5.4 dB), so there was no carrier. The log shows status byte 4 and `0x26` off `sr=0`, the same shape as the two failures on `f8298581…3ef8`.
+2. One channel write, `POST /api/channel/select` number 2, at 20:46 (channel 2, 467.625 MHz, power byte 1). Runner `stream` at 20:46:36 failed the same way.
+3. DIAG `restartmodule` at 20:47:49, `0x34` back as `DMR003.FW27.V022`. Runner `stream` at 20:48:15 failed the same way. Status byte 4 at 20:49:01, then `0x26` off `sr=0`.
+
+A runner `tone` at 20:49:35 on this image passed: carrier 10.85 s, clip 0, p99 2705 Hz. The radio radiates on the tone path. The symbol path does not, on both images.
+
+Module: `DMR003.FW27.V022`, sha `7126749f…b779`, VFO 467.625 MHz, low power, not keyed. Phone: SignalDeck running, stock app not in front, battery 33.4 °C, `mtktsAP` 41.4 °C, `mtktsbtsmdpa` 40.2 °C. HackRF idle.
+
+Question: the prescribed clears did not bring the symbol stream back, and the failure is not unique to the variant-7 bytes. What is the next move?
 
 ## Owner question
 

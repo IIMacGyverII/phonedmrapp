@@ -3040,6 +3040,18 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## FW27 symbol stream is silent on the variant-6 image too (2026-10-26, 20:50)
+
+Bisect step 1 of the 20:45 task. Rebuilt `7126749f…b779` from the variant-6 source and loaded it at 20:44:34. Boot peak 0.054 dB, clip 0, channel 2, 467.625 MHz, not transmitting. Runner `stream` at 20:44:54 returned `ERROR a cannot be empty`. The 53 s capture's per-second RMS ran from 2.16 to 4.05, a ratio of 1.87 (5.4 dB), so the file is no carrier. Status byte 4 and `0x26` off `sr=0` are in the log, as on `f8298581…3ef8`.
+
+A single channel write (`/api/channel/select` number 2) at 20:46 left channel 2 at power byte 1. The stream at 20:46:36 failed the same way. `restartmodule` at 20:47:49 brought `0x34` back, and the stream at 20:48:15 failed again (status 4 at 20:49:01, `0x26` off `sr=0`).
+
+Runner `tone` at 20:49:35 on the same image passed: carrier 10.85 s, clip 0, p99 2705 Hz, 1 kHz line 2640 Hz. The tone path radiates. The symbol path does not, on the image whose 19:29 stream was 1125/1125, and neither prescribed clear restored it.
+
+The two images differ in the opcode-13 hole, eight bytes at the mode-5 restore (`0x5BD68`), one byte in the low stub (`0x5BCB0`), one byte in the trampoline (`0x5C566`), and the tail pool. That diff is not the cause of this failure.
+
+End state: `DMR003.FW27.V022` sha `7126749f…b779`, VFO 467.625 MHz, low power, not transmitting. Battery 33.4 °C, `mtktsAP` 41.4 °C. HackRF idle.
+
 ## FW27 variant 7 lowers AT1846S register 0x44 (2026-10-26, 20:34)
 
 Wi-Fi ADB. `persist.adb.tcp.port` reads `5555` after the reboot with USB attached, and `adb connect 192.168.1.125:5555` succeeded without `adb tcpip` once the phone associated. Association waited until the Wi-Fi panel was opened. USB was unplugged after both transports had listed. Own-the-radio-at-boot is off, so SignalDeck was started after the reboot. This session's connect still answers, and the property still reads `5555`.
