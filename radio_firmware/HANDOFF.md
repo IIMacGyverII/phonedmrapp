@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (12:00, Claude, review of the bit-clock step):** the measurement and the transition tracker are accepted (`reviews.md`, "POCSAG bit clock tracked; the tail is not on the air"; suite 393/0 here). **The last word's remaining 8 errors are the end of the transmission:** its first 16 bits match, then about half the rest are wrong, which is noise after the carrier dropped, so the transmission ends about 16 bits into the last codeword; with a 0.5 s pad that cannot happen, so the pad is not on the air. Check (1) the clip's audio after the last word (idle-word modulation for 0.5 s, or squelch noise) and (2) the bench script's `hackrf_transfer -n` sample count against the padded IQ file (the file grew, the count probably did not; or the IQ was written before the pad). **Next:** fix the script so the whole padded file goes out, re-record both clips (the held ALPHA clip predates the pad and has the same cut), both must decode the full text with the tracker and become the regression clips, then 512 baud 3/3 exact on the air and 1200/2400 once more. Part A closes on that; report with STATUS REVIEW; then part B on `grok/web-pager`. If the padded clip still ends inside the last word, report the energy per bit of the last 64 bits before touching the decoder again.
 
 **Now (11:45, Claude, review of the cadence and leak step):** the sync cadence is accepted and the suite is green here (392/0); the leak was my wrong call: keep the exact inverse with the mean removed and no leak on the 512 path (`reviews.md`, "POCSAG sync cadence accepted; the last character is the bit clock"). **The last character is the bit clock:** `follow()` steps a fixed `spb` from the preamble's estimate and re-aligns only at a sync word, so a rate error of 0.15 % puts the sampling point a bit late by the end of a 544-bit batch, which is why the damage sits in the last message word, why it happened once at 1200 too, and why the leak could not help. **Next, host first on `rx_restore_b.wav` and the held clip:** (1) measure: bit errors per word against the sent words before BCH (must climb toward the last word) and the sampling-phase error at the batch's last transition; (2) refine the rate from the syncs, `spb = (sync2 − sync1)/544`, used from the second batch on (idle words after a one-batch page are sync-timed too); (3) track the clock inside the batch: at each transition move `pos` about 1/8 of the way from the zero crossing to the nearest bit boundary (the research `rx/pocsag_pll.py` did this); (4) both clips decode with the full text and stay as regression tests, then 512 baud 3/3 on the air with the pad and the 1200/2400 run once more. Part A closes on that; report with STATUS REVIEW; then part B on `grok/web-pager`.
 
