@@ -56,8 +56,10 @@ and tell the owner. Then build it on its own branch.
 
 ## 4. Hard rules
 
-- **Never read `flyscale_misc/af_en`, and never loop-`cat` a vendor sysfs directory.** Reading `af_en` panics the
-  kernel (found 2026-10-24). Read only node names the stock app or init.rc name, one read per step, logging a
+- **Never read any attribute of `/sys/devices/virtual/misc/flyscale_misc/`, and never loop-`cat` a vendor sysfs
+  directory.** Reading `af_en` panics the kernel (found 2026-10-24), and so does `dmr_pwd` on the replacement unit
+  (2026-10-27, `dmr_pwd_show → gpiod_get_value_cansleep`), although Phase 0 had read `dmr_pwd` safely on the first
+  unit: the `misc_flyscale` driver's show handlers touch unwired GPIOs, so list the names only. Read only node names the stock app or init.rc name, one read per step, logging a
   marker before each so a panic points at its cause.
 - **No bootloader or flashing work.** The phone is rooted and stays that way. Never `adb reboot bootloader`,
   `adb reboot autodloader`, `fastboot` anything, or write a partition. A dead W6 cost a unit already. A normal
