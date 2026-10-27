@@ -70,3 +70,4 @@ range test; app-side only, no firmware change.
   reported anywhere.
 - No regulation text in the app beyond the one sentence that the rules are the user's responsibility.
 - Help and changelog in the same PR; report through the handoff.
+- **Every new feature is wired in when it is added** (owner, 2026-10-27): a new page, mode, tool or transmit path gets an id in `Restriction.MODES` (or `ADMIN`), the guard at its service start, its PKT-sheet or Device-page hiding, its Web route in the route tables and a switch in the setup sheet, in the same change. The session checklists in both repositories carry this rule.
