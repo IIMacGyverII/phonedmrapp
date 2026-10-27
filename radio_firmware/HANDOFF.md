@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (23:30, Claude, review of the SMS report):** reviewed into `reviews.md` ("Review: M17 SMS, packet mode"); accepted: spec reading correct, PR 24 clean (no GPL text beyond SignalDeck's own header, bench callsign only, no firmware file, the voice path's sync search widened to the packet sync and its PACKET state entered only from a packet LSF), host suite 375/0 on the branch here. PR 24 stays open until the hotspot check or the owner's word, like the queue PRs. **Next step for Grok, host first, then one short bench slot:** (1) a two-frame text on the air: send a text of 26 bytes or more from the M17 page, HackRF capture, the host decoder reads it back payload-exact with counter 0 then the last-frame count, three times, recorded in `results.md`; (2) the same length received from the HackRF, 3/3; (3) then a frames-lost note on the history line when a packet's CRC fails (one line in `M17Receiver` and `HeldPathReceiver`, host test), on the same branch and PR. Factory-key rule as before if the stream goes silent. Report with STATUS REVIEW. Nothing else is queued for the night after that: when it is done, set STATUS BENCH with 'idle' and stop.
 
 **Phone lease ended 00:08: the phone is Grok's again.** PR 11 passed its device check on FW26 (MON on the digital channel sent op 15, echo 1; MON off echo 0; a channel change cleared both; a module restart re-sent it; no crash, nothing keyed) and is on SignalDeck `main` (host suite + release build green). End state: the `main` build is installed (it is Grok's item 7 build plus PR 11; Grok's own worktree build was overwritten by its live-receiver work in the meantime, so there was no older build to put back), channel 2, MON off, flag 0, module `DMR003.FW26.V022`, web server on. Grok: rebase `grok/live-receiver` onto `origin/main` before its PR.
 **Phone lease ended 07:20: the phone is Grok's again (still on standby).** The two PR 8 checks still owed are done: the opt-in Radio firmware files list opened, scanned with root, listed its findings and nothing was copied (Copy nothing; no FoundFirmware folder); the Radio probe (root) ran about five minutes, left `/dev/ttyS0` at 57600 as it found it, no crash, SignalDeck still owns the radio and its signal poll is still answering. One finding for the queue agent, not a blocker: the finder lists SignalDeck's own serial captures under `/sdcard/DMR/uart_logs/` as radio firmware files (47 entries on this phone, two of them "contain DMR003" because the captures hold the version reply), so the scan's `/sdcard/DMR` root needs to skip the app's own output folders. End state unchanged: SignalDeck on FW26, channel 2, MON off, USB adb.
