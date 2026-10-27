@@ -3040,6 +3040,26 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## POCSAG padding run (2026-10-27, 12:16)
+
+No firmware change. The dip at bits 806–822 of the padded RESTORE B clip is the 17 padding bits after the text. From bit 810 the sample means fall 2541, 2267, 1947, 1603, 1302, 1020, 798, 576, 446, 321, 221, 160. An exponential fit of that run is slope −131 s⁻¹, τ = 7.6 ms. The Armor profile now uses 7.5 ms.
+
+The inverse is still exact, with no leak. The offset removed is the mean of the restored preamble, not the mean of the whole clip. Alphanumeric text stops at the first NUL (0x00) or EOT (0x04). At 512 baud a run of the same bit keeps the previous decision until the restored sample is a quarter of the eye past the threshold. 1200 and 2400 are unchanged: held-path taps, no restore.
+
+Host, both new clips, `best` at 7.5 ms: RIC 1001, "ALPHA ONE" and "RESTORE B", corrected 0. Those clips are `rx_alpha_pad.wav` and `rx_restore_b_pad.wav`.
+
+Air, channel 2, 467.625 MHz, low-power channel, HackRF amplifier off, VGA 20, phone not keyed. Battery 34.0 °C at the start and at the end. Each page corrected 0:
+
+| Baud | RIC | Text |
+|---|---:|---|
+| 512 | 1001 | RESTORE A |
+| 512 | 1001 | RESTORE B |
+| 512 | 1001 | RESTORE C |
+| 1200 | 1002 | STILL 1200 |
+| 2400 | 1003 | STILL 2400 |
+
+Part A of the pager receive plan closes on that.
+
 ## POCSAG tail on the air (2026-10-27, 11:57)
 
 No decoder change. The padded 512 baud IQ (`--pad 0.5`, 1376 bits, 3.6875 s) is 14,750,000 bytes, 7,375,000 samples. `hackrf_transfer -n` is a sample count. The bench transfer now refuses a count shorter than the file and rounds up to a multiple of 262144, repeating the last IQ sample. This send was 7,602,176 samples (3.801 s). HackRF exited after 4.03 s with `streaming terminated (-1004)`.

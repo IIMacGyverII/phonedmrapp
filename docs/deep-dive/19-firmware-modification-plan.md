@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-27 (12:16) — POCSAG padding run.** The 17-bit pad fits τ = 7.6 ms. Restore uses 7.5 ms and the preamble mean. Text ends at NUL or EOT, and a 512 baud run holds its bit across a quarter of the eye. Host clips and the air check are payload-exact: three 512 baud texts and one each at 1200 and 2400, corrected 0. Part A closes. Details in `results.md`.
+
 **2026-10-27 (11:57) — POCSAG tail on the air.** The padded file is 7,375,000 samples; the transfer sends 7,602,176. The new clip has a hole at bits 806–822 and full level again from bit 824. Texts are still short. Decoder unchanged. Details in `results.md`.
 
 **2026-10-27 (11:30) — POCSAG bit clock.** RESTORE B clip, before the tracker: 0, 0, 2, 2, 7, 10, 13 raw errors per word. After: 0, 0, 0, 0, 0, 0, 8. The last word still fails its check. Not aired. Details in `results.md`.
