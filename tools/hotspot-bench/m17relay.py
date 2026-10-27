@@ -9,6 +9,7 @@ stream id, 28-byte link setup data, frame number, 16 bytes of Codec 2 3200, CRC-
 PC protocol on TCP port 8080 (already open in the WPSD firewall), one client at a time. Every message is 1 type byte, 4-byte big-endian length, payload:
   client -> relay  'T' JSON {"src": "N0CALL", "dst": "@ALL"} then 'P' s16le 8 kHz mono PCM chunks, then 'E' (send it)
                    'R' JSON {"parrot": true|false}
+                   'S' stop: ends a transmission in progress with an end frame
   relay -> client  'H' JSON {"event": "start"|"end"|"sent"|"info", ...}  'A' s16le 8 kHz mono PCM of what was heard
 No internet and no reflector are involved. Written for the SignalDeck bench.
 """
@@ -46,7 +47,7 @@ def call_dec(b):
 class Relay:
     def __init__(self):
         self.udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); self.udp.bind(("127.0.0.1", 17010))
-        self.client = None; self.lock = threading.Lock(); self.parrot = False; self.sending = False
+        self.client = None; self.lock = threading.Lock(); self.parrot = False; self.sending = False; self.abort = False
         self.rx = None   # current RF transmission: dict with dec process, packets, ids
         threading.Thread(target=self.udp_loop, daemon=True).start()
 
@@ -119,19 +120,22 @@ class Relay:
         if n == 0: self.event(event="info", text="nothing to send"); return
         sid = os.urandom(2)
         lsd = call_enc(dst) + call_enc(src) + bytes.fromhex("0005") + bytes(14)
-        self.sending = True
+        self.sending = True; self.abort = False; stopped = False
         try:
             t0 = time.time()
             for i in range(n):
+                if self.abort:
+                    n = i + 1; stopped = True
                 fn = i | (0x8000 if i == n - 1 else 0)
                 body = b"M17 " + sid + lsd + fn.to_bytes(2, "big") + enc[i * 16:(i + 1) * 16]
                 pkt = body + crc16(body).to_bytes(2, "big")
                 w = t0 + i * 0.04 - time.time()
                 if w > 0: time.sleep(w)
                 self.udp.sendto(pkt, MMDVM)
+                if stopped: break
         finally:
-            time.sleep(0.3); self.sending = False
-        self.event(event="sent", src=src, dst=dst, frames=n, seconds=round(n * 0.04, 2))
+            time.sleep(0.3); self.sending = False; self.abort = False
+        self.event(event="sent", src=src, dst=dst, frames=n, seconds=round(n * 0.04, 2), stopped=stopped)
 
     def serve(self, port=8080):
         srv = socket.socket(); srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1); srv.bind(("0.0.0.0", port)); srv.listen(1)
@@ -159,6 +163,8 @@ class Relay:
                 elif kind == b"E":
                     src = (hdr.get("src") or "N0CALL"); dst = (hdr.get("dst") or "@ALL")
                     threading.Thread(target=self.transmit, args=(bytes(pcm), src, dst), daemon=True).start(); pcm = bytearray()
+                elif kind == b"S":
+                    if self.sending: self.abort = True
                 elif kind == b"R":
                     self.parrot = bool(json.loads(data or b"{}").get("parrot")); self.event(event="info", text="parrot %s" % ("on" if self.parrot else "off"))
         except (EOFError, OSError):

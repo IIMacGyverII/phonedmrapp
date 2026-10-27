@@ -42,6 +42,8 @@ class Link:
 
     def parrot(self, on): self.msg(b"R", json.dumps({"parrot": bool(on)}).encode())
 
+    def stop(self): self.msg(b"S")
+
     def loop(self):
         def rd(n):
             b = b""
@@ -96,7 +98,7 @@ def gui(a):
     import tkinter as tk
     from tkinter import filedialog, ttk
     root = tk.Tk(); root.title("M17 Hotspot Bench"); root.geometry("620x460")
-    q = queue.Queue(); st = {"link": None, "player": None, "heard": bytearray(), "last": bytearray()}
+    q = queue.Queue(); st = {"link": None, "player": None, "heard": bytearray(), "last": bytearray(), "mute": False}
     top = ttk.Frame(root, padding=8); top.pack(fill="x")
     host = tk.StringVar(value=a.host); src = tk.StringVar(value=a.src); dst = tk.StringVar(value=a.dst)
     listen = tk.BooleanVar(value=True); parrot = tk.BooleanVar(value=False)
@@ -127,10 +129,18 @@ def gui(a):
         if not st["last"]: say("nothing heard yet"); return
         f = filedialog.asksaveasfilename(defaultextension=".wav", filetypes=[("WAV", "*.wav")])
         if f: save_wav(f, bytes(st["last"])); say("saved " + f)
+    def stop():
+        if st["link"]:
+            try: st["link"].stop()
+            except OSError: pass
+        if st["player"]: st["player"].close(); st["player"] = None
+        st["mute"] = True
+        say("stopped: sending ended, playback cut (the next transmission plays again)")
     def set_parrot():
         if st["link"]: st["link"].parrot(parrot.get())
     ttk.Button(bar, text="Connect", command=connect).pack(side="left")
     ttk.Button(bar, text="Send audio file…", command=send).pack(side="left", padx=6)
+    ttk.Button(bar, text="Stop", command=stop).pack(side="left", padx=6)
     ttk.Checkbutton(bar, text="Listen", variable=listen).pack(side="left", padx=6)
     ttk.Checkbutton(bar, text="Parrot", variable=parrot, command=set_parrot).pack(side="left", padx=6)
     ttk.Button(bar, text="Save last heard…", command=save).pack(side="left", padx=6)
@@ -141,15 +151,15 @@ def gui(a):
             elif k == "ev":
                 e = v.get("event")
                 if e == "start":
-                    st["heard"] = bytearray(); say("hearing %s -> %s" % (v.get("src"), v.get("dst")))
+                    st["heard"] = bytearray(); st["mute"] = False; say("hearing %s -> %s" % (v.get("src"), v.get("dst")))
                     if listen.get() and not st["player"]: st["player"] = Player()
                 elif e == "end":
                     st["last"] = st["heard"]; say("end %s -> %s, %s s, %s frames" % (v.get("src"), v.get("dst"), v.get("seconds"), v.get("frames")))
-                elif e == "sent": say("hotspot sent %s s as %s -> %s" % (v.get("seconds"), v.get("src"), v.get("dst")))
+                elif e == "sent": say("hotspot sent %s s as %s -> %s%s" % (v.get("seconds"), v.get("src"), v.get("dst"), " (stopped)" if v.get("stopped") else ""))
                 else: say(v.get("text", json.dumps(v)))
             elif k == "au":
                 st["heard"].extend(v)
-                if listen.get():
+                if listen.get() and not st["mute"]:
                     if not st["player"]: st["player"] = Player()
                     st["player"].write(v)
         root.after(50, tick)
