@@ -3040,6 +3040,18 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## Symbol stream still silent after a power-off, a digital tune, and FW26 (2026-10-26, 21:10)
+
+Steps 1–4 of the 20:55 task, on the image that was already loaded (`7126749f…b779`) until step 4.
+
+Before one failing stream, `0x34` read `DMR003.FW27.V022`. `0x25` read `28 64 DF 1B 28 64 DF 1B 01 00 02 00 00 00 00 02 08 02 02`: both frequencies 467.625 MHz, power 0, squelch 2, volume 8. `0x24` read 163 bytes beginning `E8 27 E7 17`. The 19:22:46 pass did not keep its RadioService log; its runner line is carrier 45.41 s, p99 2855 Hz. The failing `cmdsym` at 20:58:01 produced only status byte 4, at 20:58:47.095 and 20:58:47.422, then `0x26` off `sr=0`. No status 3. The capture was no carrier.
+
+`dmr009` `pwd` was held at 0 for 15 s and read back `pwd :0`, then set to 1. `0x34` answered `DMR003.FW27.V022`. The stream at 21:00:04 was no carrier. VFO off, channel 4 (digital, 467.700 MHz, not keyed), then channel 2. The stream at 21:01:32 was no carrier.
+
+FW26 `71949d24…a34e` loaded at 21:05:16, boot peak 0.041 dB. The stream at 21:05:36 was no carrier. The factory image `90e361fd…8c10` loaded at 21:09:33, boot peak 0.095 dB, tag `DMR003.UV4T.V022`. On channel 4, low power, SignalDeck's own PTT for 3 s: the status API said transmitting, status 3 then status 4, and the HackRF file (LNA 16, VGA 16, centre 467.460 MHz) had a per-second RMS ratio of 3.38, 10.6 dB. Stock digital TX radiates. The symbol stream was not restored by any step.
+
+End state: factory image, channel 2, 467.625 MHz, power byte 1, not transmitting. HackRF idle.
+
 ## FW27 symbol stream is silent on the variant-6 image too (2026-10-26, 20:50)
 
 Bisect step 1 of the 20:45 task. Rebuilt `7126749f…b779` from the variant-6 source and loaded it at 20:44:34. Boot peak 0.054 dB, clip 0, channel 2, 467.625 MHz, not transmitting. Runner `stream` at 20:44:54 returned `ERROR a cannot be empty`. The 53 s capture's per-second RMS ran from 2.16 to 4.05, a ratio of 1.87 (5.4 dB), so the file is no carrier. Status byte 4 and `0x26` off `sr=0` are in the log, as on `f8298581…3ef8`.

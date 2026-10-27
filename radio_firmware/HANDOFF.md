@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -198,17 +198,16 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-**Stuck (20:50), bisect step 1.** The symbol stream is silent on the variant-6 image that scored 1125/1125 at 19:29. A channel write and a module restart did not restore it. A tone on the same image did radiate.
+**Stuck (21:10), steps 1–4.** Nothing restored the symbol stream. Stock digital PTT on the factory image does radiate.
 
-1. Loaded `7126749f…b779` at 20:44:34 (`fwload ok`, boot peak 0.054 dB, clip 0). Runner `stream` at 20:44:54: `ERROR a cannot be empty`. The capture's loudest second was 1.87 times its quietest (5.4 dB), so there was no carrier. The log shows status byte 4 and `0x26` off `sr=0`, the same shape as the two failures on `f8298581…3ef8`.
-2. One channel write, `POST /api/channel/select` number 2, at 20:46 (channel 2, 467.625 MHz, power byte 1). Runner `stream` at 20:46:36 failed the same way.
-3. DIAG `restartmodule` at 20:47:49, `0x34` back as `DMR003.FW27.V022`. Runner `stream` at 20:48:15 failed the same way. Status byte 4 at 20:49:01, then `0x26` off `sr=0`.
+1. On `7126749f…b779`, before the key, `0x34` was `DMR003.FW27.V022`. `0x25` returned `28 64 DF 1B` twice (467.625 MHz both ways), then `01 00 02 00 00 00 00 02 08 02 02` (power 0, squelch 2, volume 8). `0x24` returned a 163-byte body beginning `E8 27 E7 17`. The 19:22:46 pass log was not kept; that run's carrier was 45.41 s at p99 2855 Hz, so it had a real key-up. The failing run's `cmdsym` was 20:58:01 and the only status bytes are 4 at 20:58:47.095 and 20:58:47.422, then `0x26` off `sr=0`. No status 3.
+2. `dmr009` `pwd` held at 0 for 15 s (read back `pwd :0`), then `pwd :1`. `0x34` answered `DMR003.FW27.V022`. Stream at 21:00:04 still had no carrier.
+3. VFO off, channel 4 (digital, 467.700 MHz, no key), then channel 2. Stream at 21:01:32 still had no carrier.
+4. FW26 `71949d24…a34e` loaded (boot peak 0.041 dB). Stream at 21:05:36 still had no carrier. Factory `90e361fd…8c10` loaded (boot peak 0.095 dB). Channel 4, low power, SignalDeck PTT for 3 s: `transmitting` true, status 3 then status 4, HackRF RMS ratio 3.38 (10.6 dB) at LNA 16 / VGA 16. Stock digital TX radiates.
 
-A runner `tone` at 20:49:35 on this image passed: carrier 10.85 s, clip 0, p99 2705 Hz. The radio radiates on the tone path. The symbol path does not, on both images.
+Module: `DMR003.UV4T.V022`, channel 2, 467.625 MHz, power byte 1, not keyed. HackRF idle.
 
-Module: `DMR003.FW27.V022`, sha `7126749f…b779`, VFO 467.625 MHz, low power, not keyed. Phone: SignalDeck running, stock app not in front, battery 33.4 °C, `mtktsAP` 41.4 °C, `mtktsbtsmdpa` 40.2 °C. HackRF idle.
-
-Question: the prescribed clears did not bring the symbol stream back, and the failure is not unique to the variant-7 bytes. What is the next move?
+Question: the symbol stream sends no status 3 and no carrier on FW26 and on FW27, after a 15 s power-off and a digital tune. The factory image's own DMR PTT does both. What is the next move?
 
 ## Owner question
 

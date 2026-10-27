@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-26 (21:10) — The symbol stream still has no status 3.** A 15 s `dmr009` power-off, a digital tune through channel 4, and FW26 `71949d24…a34e` each left the runner `stream` with no carrier. The factory image's own PTT on channel 4 did radiate: status 3, then 4, HackRF ratio 3.38. `HANDOFF.md` is `STATUS: STUCK`.
+
 **2026-10-26 (20:50) — The symbol stream is silent on variant 6 as well.** Loaded `7126749f…b779` (boot peak 0.054 dB). Runner `stream` had no carrier (5.4 dB above the quietest second). A channel-2 write and `restartmodule` each left the next stream the same. A tone on that image passed, carrier 10.85 s, p99 2705 Hz. `HANDOFF.md` is `STATUS: STUCK`.
 
 **2026-10-26 (20:34) — Variant 7 writes AT1846S `0x44` bits 7:4.** Wi-Fi ADB sticks at `192.168.1.125:5555` (`persist.adb.tcp.port` `5555`) after the panel is opened; USB is unplugged. The FM tune constants `0x42` and `0x43` are not a level. DAC gain is the field, bits 11:8 held at `0xA`. Image `ab726955…9a52` branched to XIP+`0x2B220` and hung; `restartmodule` recovered the tag. Loaded image `f8298581…3ef8` calls IRAM `0x2B220`. `0x81` matches the stock deviation curve and `0x41` doubles it, ceiling included, so 2.4 kHz stays at about 0.46 of the straight line. Channel 56 drops 19.6 dB and 25.1 dB and keeps the 9.5 dB dip at 500 Hz. No 30-frame file. The route is closed on this phone. Runner: boot 0.073 dB, tone p99 2490 Hz, receive −19.0 dBFS, heat 38.7 to 39.6 °C. The symbol stream accepted `0x40` and sent status 4 with no carrier, twice.
