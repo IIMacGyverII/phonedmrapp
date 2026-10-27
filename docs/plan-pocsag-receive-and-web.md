@@ -40,7 +40,10 @@ Build:
    DMR, M17 and pager with unread counts and the transport chip. Inside a thread: received left, sent right, time,
    baud, check state (signed / sent / corrected codewords); the compose bar adapts to the transport (pager: RIC chips,
    speed, signing, the existing `PagerScreen` send routine; M17: destination; DMR: ID or talkgroup). A page for another
-   thread shows a one-line banner at the top of the open thread. **Tap any RIC** (pages list, history line, contact
+   thread shows a one-line banner at the top of the open thread. **M17 texts** (PR 24) key their thread by the
+   source callsign, matched to the contact that carries it (the same callsign field APRS uses), and texts to `@ALL`
+   file under one shared "M17 everyone" thread the way a talkgroup thread does for DMR; a reply from a callsign
+   thread goes to that callsign, from the everyone thread to `@ALL` (owner, 2026-10-27 00:15). **Tap any RIC** (pages list, history line, contact
    RICs) and its thread opens, with "Save as contact" and "Mute" on an unassigned RIC thread.
 4. **Monitor mode** (the switch in the Messages header): receive only, sending disabled in the tab, the "All pages
    heard" list is the front page, and a **pager scan list** of frequencies runs through the channel scanner so several
