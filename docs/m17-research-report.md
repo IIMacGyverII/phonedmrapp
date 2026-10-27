@@ -2,7 +2,7 @@
 
 **Project:** SignalDeck (an Android app that drives the radio module built into some rugged phones) and the
 phonedmrapp research repository. **Device:** Ulefone Armor 26 Ultra. **Period:** 2026-10-22 to 2026-10-27.
-**Status:** receive and transmit work on this phone; every decode figure below comes from our own decoder, and the
+**Status:** draft, to be shared once the hotspot and Atom XL checks are done. Receive and transmit work on this phone; every decode figure below comes from our own decoder, and the
 independent cross-check (an MMDVM hotspot and the Mobilinkd decoder) is still open. Section 9 says exactly what is and
 is not proven.
 
@@ -183,6 +183,7 @@ SMS both ways, and the Codec 2 voice path.
   Mobilinkd `m17-demod`/`m17-mod` tools as decoder and encoder cross-checks
   (`radio_firmware/plan-independent-m17-check.md`). We would welcome the M17 Project's test vectors or a check with a
   real M17 radio.
+- **A second phone.** The Atom XL, a phone with a different radio module family, is the next device to check against.
 - **Other phones.** The equaliser taps are measured for the Armor 26 Ultra. Other phones with the same module family are
   expected to work on receive after their own calibration; transmit needs the firmware engine ported to their module image.
 - **Weak signals below about −99 dBm** were not measured.
