@@ -234,8 +234,8 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-Part B is PR 27 (`grok/web-pager` `fffe3e2d`). Headless Chrome opened the Pager page. A HackRF page was in the pages list after 1 s. The M17 text box listed its text. Monitor switched on and off. The radio-module card read FW27, the Armor profile, 34.9 °C battery and 41.3 °C processor. The browser's own page send was filed and was not on the air: the log shows the waveform command and the channel restored, with no page-key line, and the HackRF capture stayed under 500 Hz. The update check found a newer build and did not install it.
-End state: channel 2, 467.625 MHz, pager receive off, not transmitting. HackRF idle. Battery 34.9 °C.
+The phone-path page (DIAG `page`, the same `sendPage` as the Pager screen) does not key either. Pager receive and monitor were off. Op 3 reset is answered. Op 8, the pager waveform, was sent eight times with no reply (`page: waveform not accepted`). The runner `stream` test on this FW27 image is 1125/1125, so the symbol engine is not stuck and the factory image was not loaded. A browser M17 text was on the air for 0.45 s; the host decoder found one frame and no link setup, so the text was not recovered. The browser page was not on the air.
+End state: channel 2, 467.625 MHz, pager receive off, monitor off, not transmitting. HackRF idle. Battery 35.1 °C.
 
 ## Owner question
 

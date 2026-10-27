@@ -3040,6 +3040,18 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## POCSAG page send did not key (2026-10-27, 13:31)
+
+No firmware change. The phone-path send is DIAG `page`, which calls the same `sendPage` as the Pager screen. Pager receive was off and monitor was off. Channel 2, 467.625 MHz. RIC 1001, 512 baud, text PHONEPAGE, signing off.
+
+The radio logged the page, wrote the low-power wide VFO, and sent command `0x40` op 3. That reset was answered (`sr=0`). It then sent op 8, the pager waveform, eight times. None of them got a reply. The log line is `page: waveform not accepted`, and the channel was restored. A 20 s HackRF capture at 467.625 MHz stayed at a deviation p99 of 265 Hz. The host decoder found no codeword.
+
+The runner's `stream` test on the same image, straight after, was PASS 1125/1125 (carrier 45.41 s, p99 2870 Hz, clip 0, end bit set). The symbol engine is not stuck, so the factory-key rule was not applied. Op 8 is the command that gets no answer. Op 1 and op 7, which the stream uses, still key.
+
+A browser M17 text, "WEB M17" to @ALL, was on the air for 0.45 s in an offset capture (467.385 MHz, 2.4 MS/s, LNA 16, VGA 16). The host packet decoder found one frame and no link setup, so the text was not recovered.
+
+End state: channel 2, 467.625 MHz, pager receive off, monitor off, not transmitting. HackRF idle. Battery 35.1 °C.
+
 ## POCSAG web pager (2026-10-27, 13:12)
 
 No firmware change. SignalDeck `grok/web-pager` `fffe3e2d`, PR 27, installed over the phone (`1.0.0-beta.19`). Headless Chrome on `adb forward` to port 8080, logged in. The PIN was not written to the log.
