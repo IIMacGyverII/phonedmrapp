@@ -3040,6 +3040,22 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## POCSAG sync cadence and leaky restore (2026-10-27, 11:15)
+
+No firmware change. Channel 2, 467.625 MHz. HackRF transmit, amplifier off, VGA 20, 0.5 s of idle words after the page. The phone was not keyed.
+
+`PocsagTest.three_rics_in_one_transmission` passes. The first sync still needs a preamble. Each later sync is expected 544 bits after the previous one and is accepted within two bit errors whether or not a page is still open. If that sync is absent, the transmission is over and the search waits for a preamble again.
+
+The inverse filter is now `state = s − b·prev + c·state`, with `c = exp(−1/(fs·τ_long))`. On the held ALPHA clip, τ_long of 100 ms decodes nothing. At 250 ms the page is RIC 1001 and the text is "ALPHA ONE" plus one extra character. On the padded RESTORE B clip (`tools/pocsag-research/rx/recordings-armor26/rx_restore_b.wav`) every leak from 100 ms through a pure integrator reads RIC 1001 and a text that starts with "RESTORE" and is not "RESTORE B". At 250 ms that text is "RESTORE ?`".
+
+| Sent | Heard |
+|---|---|
+| RESTORE A | exact, corrected 2, and also "RESTORE a" |
+| RESTORE B | "RESTORE `" and "RESTORE" |
+| RESTORE C | "RESTORE Sp" |
+
+Not 3/3. Pager receive was turned off. The radio stayed on channel 2.
+
 ## POCSAG false pages and the tail (2026-10-27, 10:58)
 
 No firmware change. Channel 2, 467.625 MHz unless a monitor step says otherwise. HackRF transmit, amplifier off, VGA 20. The phone was not keyed.

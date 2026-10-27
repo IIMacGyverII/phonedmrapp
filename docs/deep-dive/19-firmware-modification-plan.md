@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-27 (11:15) — POCSAG sync cadence and leaky restore.** Later batches in one transmission are read again (`three_rics_in_one_transmission` passes). A 100 ms leak empties the ALPHA clip; 250 ms does not recover the full RESTORE B text. Padded 512 baud on the air was 1 of 3 exact. Details in `results.md`.
+
 **2026-10-27 (10:58) — POCSAG false pages and the tail.** A page needs a preamble, and an address or message word repaired by two bits is not used. Sixty seconds of noise opens no page. Lengths 1–40 round-trip. Padded 512 baud was 1 of 3 exact on the air. After a measured 0.8 s retune settle the monitor dwell is 2.5 s, and both texts were exact. Details in `results.md`.
 
 **2026-10-27 (10:31) — POCSAG 512 baud droop.** A 1.6 ms high-pass inverse, used only when the preamble measures 512 baud. The clip then decodes as RIC 1001. 1200 and 2400 stay on the held-path taps and were payload-exact once each on the air. Two of the 512 baud texts were exact and two lost the last character. Details in `results.md`.
