@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-27 (10:31) — POCSAG 512 baud droop.** A 1.6 ms high-pass inverse, used only when the preamble measures 512 baud. The clip then decodes as RIC 1001. 1200 and 2400 stay on the held-path taps and were payload-exact once each on the air. Two of the 512 baud texts were exact and two lost the last character. Details in `results.md`.
+
 **2026-10-27 (09:26) — POCSAG 512 threshold.** One threshold per batch. The generator file at 8 kHz decodes as RIC 1001. On the air, 512 baud still returned RIC 123617. Details in `results.md`.
 
 **2026-10-27 (09:00) — POCSAG parity and 512.** Even parity is checked after the BCH repair. 512 baud on the held path still returned RIC 123617. A signed page filed under the callsign and a bare page under the RIC. Stock receive is refused. Details in `results.md`.

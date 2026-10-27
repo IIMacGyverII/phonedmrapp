@@ -3040,6 +3040,25 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## POCSAG 512 baud droop (2026-10-27, 10:31)
+
+No firmware change. Image unchanged, channel 2, 467.625 MHz. HackRF transmit, amplifier off, VGA 20, deviation 2.5 kHz. The phone was not keyed. Voice-filter hold on (`data hold action=1 sr=0`).
+
+The held-path clip `tools/pocsag-research/rx/recordings-armor26/rx_p512_held.wav` (8 kHz, RIC 1001, "ALPHA ONE") does not decode until a one-pole high-pass of 1.6 ms is inverted. That coefficient is on the Armor profile. The inverse runs only when the preamble period is within 1.5 samples of 15.625 (512 baud). A 1200 baud preamble measures about 6.7 samples, so it is not restored. 1200 and 2400 use the phone's held-path taps. Those taps turn the 512 baud address into RIC 123617, so they are not used at 512.
+
+| Check | Result |
+|---|---|
+| Host, 512 clip, restore 1.6 ms | RIC 1001, text starts with ALPHA |
+| Host, 1200 clip `rx_g1200.wav`, taps | RIC 1002, "STILL 1200" |
+| Host, 2400 clip `rx_g2400.wav`, taps | RIC 1003, "STILL 2400" |
+| Air, 1200, RIC 1002, "STILL 1200" | Exact, corrected 0 |
+| Air, 2400, RIC 1003, "STILL 2400" | Exact, corrected 1 |
+| Air, 512, RIC 1001 | RIC 1001 each time. "RESTORE A" and "FOR CONTACT" exact, corrected 0. "RESTORE B" and "RESTORE C" kept the RIC and damaged the last character |
+| Contact diagnostic | Saved through the contact store. The following 512 baud page filed on that contact (`c:117`). The row was deleted afterward |
+| Monitor, 467.625 and 467.650, 1200 baud, repeat 3 | 15 steps. Dwell 1 s, preamble checked every 150 ms, hold 1 s after the preamble. "RIGHT THREE" on 467.650 was exact, corrected 0. "LEFT THREE" on 467.625 was not listed. Four other listings were not the sent texts |
+
+Pager receive was turned off. The radio was put back on channel 2.
+
 ## POCSAG 512 baud threshold (2026-10-27, 09:26)
 
 One threshold per batch, the mean of the sync-word samples. No running mean across the bits. The generator's 512 baud file, resampled to 8 kHz, decodes as RIC 1001 with that threshold. A three-error address opens no page.
