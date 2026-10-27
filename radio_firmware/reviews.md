@@ -778,3 +778,21 @@ Open, not blocking:
 - No GPL text, bench callsign only, no firmware file, the frames-lost hook is three lines per receiver and does not touch the voice path.
 
 Grok has already started part A of `docs/plan-pocsag-receive-and-web.md` on `grok/pocsag-rx` (first commit, the audio slicer for the three rates), which is the queued order. Nothing further on SMS until the hotspot.
+
+## Review: POCSAG receive, part A (Claude, 2026-10-27 08:55)
+
+**Report:** HANDOFF 08:4x, `results.md` "POCSAG receive, held path (2026-10-27, 08:31)", SignalDeck PR 25 (`grok/pocsag-rx`, four commits, head `2c2ecdd0`, stacked on PR 24).
+
+**Verdict: accepted as a first pass; two fixes before the PR is complete, listed as the next step. Not merged.**
+
+What is in and checked:
+- **Held path, 1200 and 2400 baud: 3/3 each, RIC, text and baud exact, 0 corrected codewords** at 2.5 kHz. That is the DAPNET case and it matches the R-F prediction (0.039 bit errors per codeword behind the M17 taps).
+- The plan's pieces are present: `PagerStation` on the same audio tap as M17 with the register hold on a stub tag, the pages store with the RIC/callsign/RIC-thread filing, M17 texts keyed by source callsign with the shared `@ALL` thread (A.3), Messages threads with the transport chip and unread counts, monitor mode stepping a frequency list and waiting out a preamble, tap a page to open its thread with Save as contact and Mute, a notification for an own-RIC page, help (Messages topic, Pager receive section, M17 text section) and the changelog row.
+- Clean: no GPL or third-party decoder text, no callsign but the bench ones and the W1AW stand-in in a test, no firmware file, the voice path (`HeldPath`, `M17Receiver`) and `PagerScreen`'s send routine untouched. **Host suite on the branch here: 381 tests, 0 failures** (08:50; PocsagDecoder 3, Pocsag 4, MessageThreads 2).
+
+Two findings, both in the report's own numbers:
+1. **Wrong RIC with the right text, twice** (512 baud held: RIC 123617 for 1001; 1200 baud plain path: 16330 for 1002). In both the frame position (RIC low 3 bits) is right and the 18-bit address field is wrong, so the address codeword had more errors than BCH(31,21) can fix and the correction landed on a wrong codeword. The decoder does not check the **even-parity bit** (bit 32 of every codeword) after correction; a miscorrected word fails it about half the time. Add the parity check, and when the address word of a page fails it, list the page with "RIC unreadable" rather than a number (the text can still show). This is a correctness fix and it needs no bench to prove: a host test with a 3-error address word.
+2. **The stock path is the plain slicer, not the plan's decoder.** Plan A.1 asks for the DFE with BCH correction in the feedback loop (`rx/blind3.py`) with the Armor's `eqcal2500` coefficients for stock firmware; the research measured 21–23 % raw bit errors on that path, which no slicer survives, and the one hold-off page confirms it. Either port `blind3.py` as planned (the equaliser is per profile, shipped from `rx/equalizers`) or, if that is deferred, the help must say receive needs the bench firmware and the station must refuse to start on stock rather than list wrong RICs.
+3. (Smaller) 512 baud missed one of two texts even on the held path. Bits are 2 ms at 512, four times longer than at 2400, so baseline droop between transitions is the likely cause even on the flat path: a slicer threshold that tracks a running mean over the last 16–32 bits, re-centred at every sync word, should hold it. The Armor recordings under `tools/pocsag-research/rx/recordings-armor26/` and the generator give a host test for it.
+
+Monitor mode and the threads were not bench-exercised in this report (two frequencies in the scan list, a signed page from an unknown RIC, a bare page); they are in the next step's pass list so the PR closes with the plan's bench done.
