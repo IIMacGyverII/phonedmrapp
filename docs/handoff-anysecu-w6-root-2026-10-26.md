@@ -8,7 +8,7 @@ owner's own device, bought for this project.
 **Two agents, in order:**
 1. **Grok** — roots the device. Works in its own Ubuntu VM, its own way. Claude is not involved in the
    root and does not advise on it.
-2. **Claude** — takes over once Grok reports the device rooted: installs SignalDeck, runs the device
+2. **Claude** — takes over when the owner says the device is ready: installs SignalDeck, runs the device
    report, and uses this new, unsupported phone to improve and tune the report, and ultimately to add a
    device profile that makes the W6 compatible.
 
@@ -28,26 +28,13 @@ ability to run a command as root and read `/dev`, `/sys` and other apps' APKs.
 in place (its APK carries the radio's firmware asset and the clues the profile is built from). It only
 needs to be *disabled at runtime* later, which SignalDeck does itself.
 
-### Report back here when done
-
-Append a dated line to the "Grok status" section below saying the device is rooted and reboot-persistent.
-If it's easy to grab while you're in the shell, these save Claude a round-trip (all optional — Claude will
-collect them if you don't):
-
-```
-getprop ro.product.model ro.product.device ro.product.manufacturer ro.build.version.release
-su -c 'ls -lZ /dev/ttyS* /sys/devices/platform/ 2>/dev/null | grep -i -E "ttyS|intercom|dmr|radio"'
-su -c 'ps -AZ | grep -i -E "ptt|radio|talk|intercom|zello"'
-pm list packages -f | grep -i -E "ptt|radio|talk|intercom|zello|anysecu"
-```
-
 Leave the phone reachable over adb (USB cable on the bench; Wi-Fi ADB does not survive a reboot).
 
 ---
 
 ## Part 2 — Claude's job: SignalDeck bring-up and compatibility
 
-Starts only after Grok's "rooted" line appears below. Nothing here is Grok's to do.
+Starts only when the owner tells Claude the device is ready. Nothing here is Grok's to do.
 
 1. **Install SignalDeck** (release build, same keystore) and grant it root (Magisk). Do **not**
    `adb uninstall` anything on this phone.
@@ -69,16 +56,8 @@ Starts only after Grok's "rooted" line appears below. Nothing here is Grok's to 
    SignalDeck recognises the W6 and drives its radio. New profile constant + `ProfileRegistry`; advisory
    rules as for the Xplore 1.
 5. Changelog, in-app help and host tests for every SignalDeck change, as usual; secret grep clean; one
-   branch/PR per change; status lines to the SignalDeck queue handoff.
+   branch/PR per change.
 
 Reference: `docs/multi-device-xplore1-findings.md` §3–5 (the device-profile abstraction and the
 engine/profile architecture), `docs/multi-device-atomxl-findings.md`, `docs/multi-device-armor3wt-findings.md`.
 
----
-
-## Grok status
-
-- 2026-10-26: handoff created. Device not yet rooted. Claude is on standby and does not act until a
-  "rooted" line appears here.
-
-<!-- Grok: append your status below. -->
