@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -198,8 +198,8 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-Variant 6 now answers. The hole's `lrw`s were 32-bit and correct; image A acked with an empty body, image B read `0x000F1010`, and the loaded image `7126749f…b779` writes bits 15:8 and returns the word. `0x08` doubles the old deviation curve and `0x04` quadruples it at 0.5 kHz. Both sit on a ceiling by 2.4 kHz, so there was no linear value for a 30-frame decode. Channel 56 is unchanged. Runner `all` passed (boot peak 0.06 dB, tone p99 2489 Hz, stream 1125/1125, receive −19.0 dBFS).
-End state: `DMR003.FW27.V022` sha `7126749f…b779`, channel 2, 467.625 MHz, coefficient `0x10`, mode 5 off, not transmitting. HackRF idle.
+Variant 7 writes AT1846S `0x44` bits 7:4 (bits 11:8 stay `0xA`). Wi-Fi ADB sticks at `192.168.1.125:5555` after the panel is opened; USB is unplugged. Image `f8298581…3ef8` is loaded (an earlier image branched to the wrong address and was restarted). `0x81` matches the stock deviation curve and `0x41` doubles it, ceiling included, so 2.4 kHz stays near 0.46 of the straight line. Channel 56 drops 19.6 dB and 25.1 dB and keeps the 9.5 dB dip. The knee does not move. The route is closed on this phone. The symbol stream accepted `0x40` and sent status 4 with no carrier, twice; the tone path radiated (p99 2490 Hz).
+End state: `DMR003.FW27.V022` sha `f8298581…3ef8`, VFO 467.625 MHz, low power, mode 5 off, not transmitting. HackRF idle.
 
 ## Owner question
 

@@ -3040,6 +3040,33 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## FW27 variant 7 lowers AT1846S register 0x44 (2026-10-26, 20:34)
+
+Wi-Fi ADB. `persist.adb.tcp.port` reads `5555` after the reboot with USB attached, and `adb connect 192.168.1.125:5555` succeeded without `adb tcpip` once the phone associated. Association waited until the Wi-Fi panel was opened. USB was unplugged after both transports had listed. Own-the-radio-at-boot is off, so SignalDeck was started after the reboot. This session's connect still answers, and the property still reads `5555`.
+
+The FM branch of `at1846_tune` writes `0x42` = `0x1052`, `0x43` = `0x0100`, and `0x44` = `0x0AD1` (the tune table above). `0x42` and `0x43` are constants. Guide register 44h names bits 11:8 `gain_tx`, bits 7:4 the DAC gain, and bits 3:0 the digital volume. OpenRTX calls bits 7:0 the receive volume. The field tried is bits 7:4, with bits 11:8 held at `0xA` and bits 3:0 held at `1`. The C7000 FM receive input is the AT1846S demod audio (guide §7.2.2.3.2). The receive count scale is `FM_DEV_COEF` bits 15:8, already measured as a gain after the limiter. This image programs no separate C7000 FM input-gain field.
+
+The first stage D image `ab726955…9a52` encoded the I²C branch from a file-offset PC, so the call landed at XIP+`0x2B220`. `[6, 7, 0x81]` and the following `[6, 5, 0]` got no reply. `restartmodule` returned `DMR003.FW27.V022`. The loaded image is `f8298581…3ef8`. Its three I²C calls use the XIP PC and land on IRAM `0x2B220`, the helper mode 5 uses for `0x58`. Variant 7 writes `0x44` with the value byte as the low byte and acks through variant 6's empty ack. Mode 5 off writes `0x58` = `0x8405` and `0x44` = `0x0AD1`. Load boot peak 0.041 dB, clip 0. Channel 2's power byte was 1 before the load. At 20:18, `[6, 7, 0x81]`, `[6, 5, 1]`, and `[6, 5, 0]` each returned `sr=0 len=0`.
+
+1 kHz tone, HackRF VGA 20, centre 467.625 MHz, phone not keyed, mode 5 on. Amplitude is the same Hann `2/N` peak as the 16:53 table. `0x81` matches that table. `0x41` is twice that table at every step, ceiling included. A straight line through the 0.5 kHz point is about 12900 at `0x81` and about 25600 at `0x41` for 2.4 kHz. The measured points are 6001 and 11795, the same fraction of the line as the stock curve (about 0.46). The knee stays at 1 kHz of deviation. The 30-frame file was not sent.
+
+| Deviation kHz | stock `0x10` (16:53) | `0x81` | `0x41` |
+|---:|---:|---:|---:|
+| 0.5 | 2774 | 2693 | 5344 |
+| 1.0 | 4377 | 4359 | 8580 |
+| 1.5 | 5445 | 5481 | 10802 |
+| 2.0 | 5888 | 5895 | 11595 |
+| 2.4 | 5980 | 6001 | 11795 |
+| 3.0 | 6017 | 6052 | 11888 |
+| 3.5 | 6034 | 6068 | 11913 |
+| 4.0 | 6032 | 6061 | 11904 |
+
+Channel 56, mode 5 off, 1 kHz deviation, the steady half-second after the squelch opens. The 2.5 kHz dummy is not these numbers. `0x81` reads 44 at 500 Hz and 134 at 1000 Hz, −19.6 dB against the 19:28 clip's 1280. `0x41` reads 24 and 71, −25.1 dB. The 500 Hz dip stays about 9.5 dB. The phone path follows this register. The receive-RAM knee stays put. The route is closed on this phone. The audio path with the taps is the M17 receiver. The stream remains the path for a phone without a flat audio path, and for a mode that stays inside ±1 kHz.
+
+Runner `all` on `f8298581…3ef8`. Boot peak 0.073 dB. Tone carrier 10.535 s, p99 2490 Hz, clip 0. Receive −19.0 dBFS. Heat, 45 s at low power: `mtktsAP` 38.7 to 39.6 °C, battery 32.0 to 32.3 °C. The symbol stream, tried at 20:23 and again at 20:33, accepted the `0x40` chunks (`sr=0`) and later sent status byte 4, with `0x26` off acked. Both HackRF files stayed within 6 dB of their quietest second, so the capture is no carrier. The tone path on this image did radiate.
+
+End state: `DMR003.FW27.V022` sha `f8298581…3ef8`, VFO 467.625 MHz, low power, not transmitting, mode 5 off. HackRF idle.
+
 ## FW27 variant 6 writes the receive coefficient (2026-10-26, 19:28)
 
 The five `lrw` instructions in the hole of `b207ea72…9848` are the 32-bit form (file bytes `84 ea` or `80 ea`). The pool address is `(PC & ~3) + 4 × imm`, and each one lands on its own word: `0x5B820` → `0x4B008`, `0x5B826` → `0x5354524D`, `0x5B84C` → `0x11000504`, `0x5B852` → `0xFFFF00FF`, `0x5B85E` → `0x180000A0`. A short `lrw` was not the hang. The value-not-1 exit was replaced with a branch to a filter in the hole: value 1 returns to `0x5B2C2`, any other variant goes to `0x5B308` with `r15` and the stack untouched, and variant 6 calls the body and then takes the value-1 epilogue.

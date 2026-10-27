@@ -99,9 +99,9 @@ class Fw27Test(unittest.TestCase):
         self.assertIn(bytes.fromhex("01149414"), hole)
         self.assertEqual(sorted(br_targets(self.new, fw27_build.FILT_AT, fw27_build.VAR6_AT)),
                          [0x5B2C2, 0x5B308])
-        def calls(target):
+        def calls(target, xip=False):
             return [off for off in range(fw27_build.VAR6_AT, fw27_build.VAR6_END - 3, 2)
-                    if fw26_target(self.new, off) == target]
+                    if fw26_target(self.new, off, xip=xip) == target]
         if fw27_build.STAGE == "A":
             self.assertEqual(len(calls(0x8E7C)), 1)
             self.assertNotIn(struct.pack("<I", 0x11000504), hole)
@@ -111,13 +111,19 @@ class Fw27Test(unittest.TestCase):
             self.assertEqual(calls(0x8E7C), [])
             self.assertIn(struct.pack("<I", 0x11000504), hole)
             self.assertNotIn(struct.pack("<I", 0x11000500), hole)
-        else:
+        elif fw27_build.STAGE == "C":
             self.assertEqual(len(calls(0x5C0F8)), 1)
             self.assertEqual(calls(0x8E7C), [])
             pool = self.new[fw27_build.POOL_AT:fw27_build.POOL_END]
             for word in (0x11000504, 0xFFFF00FF, 0x4AE08, 0x4B008, 0x5354524D):
                 self.assertIn(struct.pack("<I", word), pool)
             self.assertNotIn(struct.pack("<I", 0x180000A0), pool)
+        else:
+            self.assertEqual(len(calls(0x8E7C)), 1)
+            self.assertEqual(len(calls(0x2B220, xip=True)), 3)
+            self.assertEqual(calls(0x2B220), [])
+            self.assertEqual(fw26_target(self.new, 0x5BD68), fw27_build.RESTORE_AT)
+            self.assertEqual(br_target(self.new, 0x5BD6C), 0x5BD72)
         self.assertNotIn(struct.pack("<I", 0x11000500), self.new[fw27_build.WRAP:fw27_build.POOL_END])
         self.assertNotIn(struct.pack("<I", 0x3A81C), self.new[fw27_build.WRAP:fw27_build.POOL_END])
         self.assertEqual(self.old[0x52A8:0x52AC], self.new[0x52A8:0x52AC])
