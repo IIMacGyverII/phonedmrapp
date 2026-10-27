@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -232,8 +232,8 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-The padding run fits τ = 7.6 ms. The 512 baud restore now uses 7.5 ms, subtracts the preamble mean, stops the text at NUL or EOT, and holds a run until the level clears a quarter of the eye. Host: both new clips are RIC 1001, "ALPHA ONE" and "RESTORE B", corrected 0. Air, channel 2, 467.625 MHz, phone not keyed: RESTORE A/B/C at 512 baud and one page each at 1200 and 2400, all corrected 0. Part A closes.
-End state: channel 2, 467.625 MHz, pager receive off, not transmitting. HackRF idle. Battery 34.0 °C.
+Part B is PR 27 (`grok/web-pager` `fffe3e2d`). Headless Chrome opened the Pager page. A HackRF page was in the pages list after 1 s. The M17 text box listed its text. Monitor switched on and off. The radio-module card read FW27, the Armor profile, 34.9 °C battery and 41.3 °C processor. The browser's own page send was filed and was not on the air: the log shows the waveform command and the channel restored, with no page-key line, and the HackRF capture stayed under 500 Hz. The update check found a newer build and did not install it.
+End state: channel 2, 467.625 MHz, pager receive off, not transmitting. HackRF idle. Battery 34.9 °C.
 
 ## Owner question
 

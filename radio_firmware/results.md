@@ -3040,6 +3040,16 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## POCSAG web pager (2026-10-27, 13:12)
+
+No firmware change. SignalDeck `grok/web-pager` `fffe3e2d`, PR 27, installed over the phone (`1.0.0-beta.19`). Headless Chrome on `adb forward` to port 8080, logged in. The PIN was not written to the log.
+
+Chrome opened the Pager page (the page state read OFF, the login form stayed hidden). The browser's Send returned "Sending to 1 RIC" for RIC 1001, "WEB PAGE", 512 baud, 467.625 MHz, signing off. The phone filed that page. Two HackRF captures of that transmission (16 s at LNA 0, then 22 s and 25 s at LNA 16, VGA 8, amplifier off) had a deviation p99 of 270–480 Hz and the host decoder found no codeword. The radio log shows the low-power wide VFO write, the symbol-waveform command, and the channel restored, with no page-key line. Channel 2 is high power and narrow, so the send hops off it and back.
+
+A HackRF page "FROM AIR" (512 baud, RIC 1001) was in `/api/pager/pages` one second after the transmission. The browser's M17 text to @ALL, "WEB M17", was in the M17 text list. Monitor turned on and then off from the browser (the flag read true, then the switch was turned off). The radio-module card read tag `DMR003.FW27.V022`, not the factory image, profile `ulefone-armor26ultra` revision 1, battery 34.9 °C, processor 41.3 °C, own-at-boot off, Wi-Fi debugging on port 5555. The update check found a newer build and did not install it.
+
+End state: channel 2, 467.625 MHz, pager receive off, monitor off, not transmitting. HackRF idle. Battery 34.9 °C.
+
 ## POCSAG padding run (2026-10-27, 12:16)
 
 No firmware change. The dip at bits 806–822 of the padded RESTORE B clip is the 17 padding bits after the text. From bit 810 the sample means fall 2541, 2267, 1947, 1603, 1302, 1020, 798, 576, 446, 321, 221, 160. An exponential fit of that run is slope −131 s⁻¹, τ = 7.6 ms. The Armor profile now uses 7.5 ms.
