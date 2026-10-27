@@ -3674,3 +3674,29 @@ Image `DMR003.FW27.V022`, 378620 bytes, sha256 `400c7cc84edbaecde2f3c9d24bc479c0
 Op 17 calls op 5's existing send (`0x5B1B4`). That reply body is 514 bytes, not a new 516-byte opcode-17 body. Samples are big-endian at body 0..511. Body 512 is the sequence byte and is also the slot, so it runs 0, 1, 2, 3, 4, 5, 0. Body 513 is the half id (0 = RAM `0x160004E0`, 1 = RAM `0x160006E0`). The host should wrap at 6. An empty ack does not carry the rate byte. A frame seen during the stream that is not `[17, 2]` ends the stream and is not executed afterwards. Mode 5 is not cleared by a channel write; the host sends `[6, 5, 0]`.
 
 Op 16 `[16, 1]` at 57600: `sr=0` at 10:04:09, 10:04:52 and 10:05:22. The host then opened 230400. A `0x34` frame, sent after the module's 20 ms post-ack delay, produced 0 bytes in 1.2 s. Three seconds at 230400 produced no version reply. From 10:05:25 to 10:06:00 the host sent nothing. `0x34` at 57600 still failed, and a second `[16, 1]` got no answer. The update knock at 230400 returned `00 00 FC`, not `C`. Power cycle at 10:06:11, banner, `0x34` true, tag unchanged. Channel 2, 467.625 MHz, not keyed, monitor off, RSSI −110. HackRF was not started. Section 4 (b), (c) and (d) were not run.
+
+# Hotspot setup and the first independent M17 decode (Claude, 2026-10-27 17:40–18:05)
+
+**Hotspot:** WPSD "M17 Edition", updated during the session (owner); MMDVMHost `20261012_M17` git `2b27b08` (was `20250620_WPSD` `07fba41` before the update); Raspbian 12, aarch64. Modem: `MMDVM_HS_Dual_Hat-v1.6.1 20231115_WPSD 14.7456MHz dual ADF7021`, GitID `7e16099`, on `/dev/ttyAMA0` at 115200. Duplex-capable board, configured simplex (`Duplex=0`). Login and network keys are not recorded anywhere in the repos.
+
+**Configuration for the cage (RF only):** `Callsign=N0CALL`; `[M17] Enable=1`, `SelfOnly=0`, CAN 0; every network off; RX/TX 467.625 MHz; `RXOffset=-450`; RF level unchanged (100 %), the hotspot has not transmitted. Backup of the original file on the hotspot: `/etc/mmdvmhost.bak-claude-20261027`.
+
+**Armor:** SignalDeck `ebe814a4` (Grok's build), module `DMR003.FW26.V022`, VFO low power, station callsign N0CALL only during the keys and restored after each run. Bursts: `DIAG m17 --ei tx` (Codec 2 tone through the symbol engine).
+
+**Finding 1, deviation depends on frequency.** HackRF capture (receive only, LNA 8 / VGA 8): at **438.800 MHz** the M17 body p99 deviation is **4523 Hz** (carrier +832 Hz, our decoder 75/75 frames); at **467.625 MHz** it is **2866 Hz** (carrier +897 Hz, 75/75). The hotspot found no M17 sync at 438.800 for any RXOffset from −3000 to +3000 Hz. The symbol engine's scale was set at 467.625; on 70 cm it is about 1.58× too wide for a standard receiver. **Open item: a per-frequency deviation scale in SignalDeck (or the engine), measured across the band.**
+
+**Finding 2, the hotspot decodes SignalDeck M17 voice.** At 467.625 MHz, 3 s bursts, RSSI −47 dBm:
+
+| RXOffset (Hz) | Hotspot log |
+|---|---|
+| −900 | voice from N0CALL to ALL, 3.0 s, BER 0.3 % |
+| −600 | voice from N0CALL to ALL, 3.0 s, BER 0.0 % |
+| −300 | voice from N0CALL to ALL, 3.0 s, BER 0.0 % |
+| 0 | **late entry** voice from N0CALL to ALL, 2.7 s, BER 6.5 % |
+| +300, +600 | nothing |
+
+With −450 a further burst logged `received RF voice transmission from N0CALL to ALL` … `4.0 seconds, BER: 0.0%`. This is the first decode of our M17 transmit by an independent implementation: sync words, LSF coding, callsign encoding, LICH, the stream frames and the EOT are right.
+
+**Finding 3, packet mode does not pass.** `DIAG m17 --es sms "HOTSPOT CHECK 1" --es to @ALL` (returned null = sent): `M17, received RF packet transmission from N0CALL to ALL`, then `M17, RF packet from N0CALL to ALL, ended before its last frame`, `0.0 seconds, BER: 0.0%`. The packet LSF is recognised (type field right); the packet frame after it is not accepted. Our own decoder passes the same transmission, so this is a convention difference in the packet frame (sync `0x75FF`, the 6-bit metadata / last-frame field, P3 puncturing, or the CRC placement), or a gap in the hotspot's packet reader. **Open item: check §2.15–2.17 of the current spec line by line against `M17.java`'s packet frame; if it matches, compare with the spec version MMDVMHost implements.** PR 24 (M17 SMS) stays open on this.
+
+End state: Armor on 467.625 MHz, not transmitting, callsign restored, Grok's build installed. Hotspot as above, `[Modem] Debug=0`. HackRF idle, released to the W6 agent.

@@ -51,7 +51,9 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 **Now (17:15, Claude): the owner reassigned the hotspot session to Claude. Grok: stay idle, do not touch the hotspot or the phone until a line here hands them back.** Claude holds the Armor (lease below) and the hotspot for the session.
 
-**Phone lease (Claude) 17:15–19:15 on 2026-10-27:** hotspot setup and the M17 transmit check (low power, N0CALL, in the cage). Grok's build stays installed unless a line here says otherwise.
+**Lease ended 18:06 (Claude):** hotspot session part 1 done (`results.md`, "Hotspot setup and the first independent M17 decode"): the hotspot decodes SignalDeck M17 voice at 0.0 % BER on 467.625 MHz; deviation is 1.58× too wide on 438.800; packet mode is not accepted by the hotspot. Phone back on 467.625, callsign restored, Grok's build installed. Grok stays idle; the hotspot session stays Claude's.
+
+~~Phone lease (Claude) 17:15–19:15 on 2026-10-27:~~ hotspot setup and the M17 transmit check (low power, N0CALL, in the cage). Grok's build stays installed unless a line here says otherwise.
 
 ~~**Now (17:10, Claude): the MMDVM hotspot is on the LAN (owner, 2026-10-27). Was the task for Grok: route item 5, the setup session; the checks follow once it is set up.**~~ Read from its dashboard (read-only, 17:05): `192.168.1.194`, WPSD "M17 Edition" dashboard `6a0762f850` (update offered, not applied), host name WPSD42, ssh and http open, `/admin` asks for a login; radio idle, **438.800 MHz, Simplex** (the order was a duplex board: say which board and firmware it really is), modem `/dev/ttyAMA0` at 115200; no mode or network enabled yet.
 
