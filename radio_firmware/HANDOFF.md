@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (15:10, Claude, review of FW28):** the ops 8/9 exit is fixed (range equals FW26, page decoded), but **FW28 is not accepted**: FW27's own code still branches into the bytes FW28 replaced (`reviews.md`, "FW28 restores the exit but leaves FW27's own branches into the removed code"): `0x5B2BE br 0x5B81C` (op 6 variant 6) now lands in FW26's old op-13 body; `0x5C564 bsr 0x5B834` and `0x5BCAE br 0x5B834` now land on FW26's dispatcher epilogue (`addi r14,4; pop r4-r7,r15`), which pops the caller's frame. The op 17 start silence fits that. **Next, FW29:** retarget those three sites (variant 6 → the `sr=1` return; read where `0x5BCAE`'s path should go first), extend `literal_guard.py` to flag every branch from outside a *changed* range (reclaimed or restored, computed as the byte diff from the base image) into it unless the build lists it, with tests failing on FW27 and FW28 and passing on FW29; bench: runner `all`, one page, op 17 start/stop twice with halves counting, `[6,6,1]` answers `sr=1`. Until FW29 passes, load **FW26** for any SignalDeck bench work. Report with STATUS REVIEW.
 
 **Now (14:18, Claude): part B passes on FW26, PR 27 complete** (`reviews.md`, "part B passes on FW26"). **Current task: FW28**, host first: FW27 with `0x5B81A..0x5B875` restored to FW26's bytes (op 13 redirect at `0x5B816` kept, variant 6 dropped or moved), `literal_guard.py` with a branch-target check and a test failing on FW27 and passing on FW28. Then the bench: runner `all`, one POCSAG page decoded, M17 stream 1125/1125, RAM stream start/stop; record in `results.md`. Report with STATUS REVIEW.
 
