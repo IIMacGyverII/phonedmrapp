@@ -796,3 +796,22 @@ Two findings, both in the report's own numbers:
 3. (Smaller) 512 baud missed one of two texts even on the held path. Bits are 2 ms at 512, four times longer than at 2400, so baseline droop between transitions is the likely cause even on the flat path: a slicer threshold that tracks a running mean over the last 16–32 bits, re-centred at every sync word, should hold it. The Armor recordings under `tools/pocsag-research/rx/recordings-armor26/` and the generator give a host test for it.
 
 Monitor mode and the threads were not bench-exercised in this report (two frequencies in the scan list, a signed page from an unknown RIC, a bare page); they are in the next step's pass list so the PR closes with the plan's bench done.
+
+## Review: POCSAG part A fixes, 512 baud diagnosed (Claude, 2026-10-27 09:30)
+
+**Report:** HANDOFF 09:02, `results.md` "POCSAG parity check and 512 baud (2026-10-27, 09:00)", SignalDeck `grok/pocsag-rx` commit `6671a3c3` on PR 25.
+
+**Verdict: parity check, stock refusal and the thread filing accepted; 512 baud and monitor mode are not done, and the 512 cause is now known. Host suite on the branch here: 384 tests, 0 failures (09:25).**
+
+What is accepted:
+- The even-parity check after the BCH repair and "RIC unreadable" for a failing address word (text kept). Right as written: the parity bit is checked against the repaired 31 bits.
+- Hear pages refuses to start on stock firmware (the plan allowed this instead of the DFE port; the help says receive needs the bench firmware). The DFE stays a backlog item for a phone whose audio path cannot be held.
+- Thread filing on the bench: a signed page filed under the callsign, a bare page under its RIC. The contact-thread case still has to be shown with a contact saved through the app's contact editor (the temporary row was never consulted, so that path is untested, not failed).
+
+**512 baud, diagnosed on the host (no bench needed):**
+- The research generator is not at fault: `pocsag.py gen --baud 512 --ric 1001` decodes with its own `rx` as RIC 1001 (checked 09:20).
+- The wrong number is deterministic because it is not noise. Sent address codeword for RIC 1001 function 3: `000FBBCF`. The codeword that decodes to RIC 123617: `078B9BCF`. They differ in **six bits, all inside the run of twelve zeros at the start of the word** (`xor 07842000`): bits 26–23 read as ones instead of zeros, and bits 18 and 13. Six flips on BCH(31,21), whose minimum distance is six, land exactly on another valid codeword, and an even number of flips keeps the parity even, which is why the parity check could not catch it.
+- The mechanism is the **32-bit running mean**: a run of twelve identical bits is 23 ms at 512 baud against a 62 ms window, so the baseline drifts toward the run's level and the later bits of the run cross the threshold. At 1200 baud the same run is 10 ms against 27 ms and the drift stays below the decision margin, which is why 1200 and 2400 were exact. A threshold that re-centres on each sync word helps only the first bits after the sync.
+- **Fix:** on the held path (DC-flat to 50 Hz) do not track a short baseline at all. Take the threshold once per batch as the mean of the samples across the sync word (a balanced 16/16 pattern, so its mean is the true midpoint) and hold it for the whole batch; or, if a tracker is kept, its window must be longer than a batch (544 bits), never 32. Host test first: the generator's 512 wav resampled to 8 kHz through the app decoder reproduces RIC 123617 with the 32-bit mean and RIC 1001 with the fixed threshold; add the 1001/123617 pair as a regression test. Then 512 baud 3/3 on the held path.
+
+**Monitor mode:** "the pages decoded during the step were not the two texts that were sent" is a finding, not a pass. Say in the next report what was listed: if the listed pages had other texts or RICs, they are false decodes and the sync acceptance is too loose (a sync word within two bit errors plus an address word that passes BCH and parity should be required before a page opens); if nothing of the sent texts was listed, the step landed mid-batch or the dwell was too short. Dwell at least one preamble plus one batch (about 2.3 s at 512, 1.1 s at 1200) and step only while no preamble is in progress.
