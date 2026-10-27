@@ -3040,6 +3040,28 @@ Written into `radio_firmware/plan-independent-m17-check.md` under "Arrival-day r
 
 No image. The control stub assembles at file `0x5C54C` and ends at `0x5C690` (324 bytes): the opcode gate, mode 5, its restore, the rate switch, and the divisor write. That leaves 108 bytes of the 432-byte tail. The half-copy, assembled with the stream-marker check, an `FM_ADDR_SW` value of only 1 or 2, the frame placed at `0x4AC00` so it ends before the saves at `0x4B000`, and the checksum before `uart_send`, is 164 bytes. The two together are 488 bytes. The only other zero run of 40 bytes or more is `0x35F64` (128 bytes), the data-table tail where R4l did not boot. Nothing was loaded.
 
+## POCSAG false pages and the tail (2026-10-27, 10:58)
+
+No firmware change. Channel 2, 467.625 MHz unless a monitor step says otherwise. HackRF transmit, amplifier off, VGA 20. The phone was not keyed.
+
+The five listings that were not the sent texts, from the 10:31 monitor, all at 1200 baud:
+
+| RIC | Text | Corrected |
+|---|---|---|
+| 1262599 | `)5193` | 1 |
+| 2035770 | `)5193)5193)5193)5193` | 6 |
+| 2035770 | `)5193)5193)5193)5193)5193` | 6 |
+| 2035770 | `393)5193)5193)5193)5193` | 7 |
+| 1616023 | `-,` | 1 |
+
+Those are numeric-function pages opened from noise. A sync is now kept only when the 256 bits before it alternate, except the sync that continues a page already open. An address or a message word repaired by two bits does not extend a page. Sixty seconds of band-limited noise at a squelch-open level opens no page. Lengths 1 through 40 round-trip through the encoder and the bit decoder at 512, 1200 and 2400, so a short text does not lose its last character there.
+
+`pocsag.py gen` appends 0.5 s of idle words. On the air, padded 512 baud RIC 1001: "RESTORE A" was exact. "RESTORE B" and "RESTORE C" still lost the last character. A clip of the padded "RESTORE B" transmission decoded the same way, so the missing character is in the received audio.
+
+Audio after a monitor retune came up about 0.8 s after the tune line (clip energy at 1.7 s, tune 0.9 s after the clip started). The dwell is now 2.5 s. The following monitor took 7 steps and listed both texts and nothing else: "LEFT THREE" RIC 6101 corrected 0, "RIGHT THREE" RIC 6102 corrected 0.
+
+Pager receive was turned off. The radio was put back on channel 2.
+
 ## POCSAG 512 baud droop (2026-10-27, 10:31)
 
 No firmware change. Image unchanged, channel 2, 467.625 MHz. HackRF transmit, amplifier off, VGA 20, deviation 2.5 kHz. The phone was not keyed. Voice-filter hold on (`data hold action=1 sr=0`).

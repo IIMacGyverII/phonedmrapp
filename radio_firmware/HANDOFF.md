@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -220,7 +220,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-512 baud on the held path is a 1.6 ms high-pass. The clip decodes as RIC 1001 after the inverse, and the inverse runs only when the preamble measures 512 baud. On the air, 1200 baud was RIC 1002 corrected 0 and 2400 baud was RIC 1003 corrected 1, both payload-exact. 512 baud stayed RIC 1001: two texts were exact and two lost the last character. The contact diagnostic filed the page on that contact, and the row was removed. Monitor took 15 steps of 1 s and caught the page on 467.650 MHz, not the one on 467.625.
+Noise no longer opens a page: a sync needs a preamble, and a word repaired by two bits is dropped. The five earlier false listings were numeric-function pages (RICs 1262599, 2035770, 1616023). Lengths 1–40 round-trip, so the decoder keeps the last character. Padded 512 baud on the air was exact for one of three texts; the other two still lost the last character in the received audio. Retune settle is about 0.8 s, the dwell is 2.5 s, and the monitor then caught both texts exact in 7 steps with no other page.
 End state: channel 2, 467.625 MHz, pager receive off, not transmitting. HackRF idle.
 
 ## Owner question

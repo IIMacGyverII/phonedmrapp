@@ -1,9 +1,9 @@
 """POCSAG bench tools.
-  python -P pocsag.py gen <prefix> [--baud 1200] [--dev 3500] [--ric 1234567] [--msg TEXT] [--repeat 3]
+  python -P pocsag.py gen <prefix> [--baud 1200] [--dev 3500] [--ric 1234567] [--msg TEXT] [--repeat 3] [--pad 0.5]
       writes <prefix>.wav (48 kHz NRZ baseband) and <prefix>.iq (2 MS/s FM for hackrf_transfer -t)
   python -P pocsag.py rx <wav> [--baud 1200]    decode a recording (8 kHz or any rate), both polarities
 """
-import sys, wave, numpy as np
+import math, sys, wave, numpy as np
 
 SYNC = 0x7CD215D8; IDLE = 0x7A89C197; G = 0x769
 
@@ -117,9 +117,12 @@ if __name__ == '__main__':
     a = sys.argv[1:]
     def opt(k, d): return type(d)(a[a.index(k) + 1]) if k in a else d
     if a[0] == 'gen':
-        pre = a[1]; baud = opt('--baud', 1200); dev = opt('--dev', 3500.0); ric = opt('--ric', 1234567); msg = opt('--msg', 'DAPNET BENCH TEST 123'); rep = opt('--repeat', 3)
+        pre = a[1]; baud = opt('--baud', 1200); dev = opt('--dev', 3500.0); ric = opt('--ric', 1234567); msg = opt('--msg', 'DAPNET BENCH TEST 123'); rep = opt('--repeat', 3); pad = opt('--pad', 0.5)
         bits = []
         for r in range(rep): bits += transmission(ric, 3, msg)
+        # hackrf_transfer -n drops up to about 260 ms at the end of the file. Idle words there keep the last message word.
+        for _ in range(int(math.ceil(pad * baud / 32.0)) if pad > 0 else 0):
+            bits += [(IDLE >> (31 - k)) & 1 for k in range(32)]
         fs = 48000; spb = fs / baud
         x = np.concatenate([np.zeros(fs // 2)] + [np.full(int(round((i + 1) * spb)) - int(round(i * spb)), -1.0 if b else 1.0) for i, b in enumerate(bits)] + [np.zeros(fs // 2)])
         ww = wave.open(pre + '.wav', 'wb'); ww.setnchannels(1); ww.setsampwidth(2); ww.setframerate(fs); ww.writeframes((x * 20000).astype('<i2').tobytes()); ww.close()
