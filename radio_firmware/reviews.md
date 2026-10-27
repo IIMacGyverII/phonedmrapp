@@ -850,3 +850,19 @@ What is accepted:
 **Monitor's missed page** ("LEFT THREE" on 467.625): judge it after the false-page fix, since a false page holds the step on the wrong frequency. If it is still missed, log the dwell timeline (frequency, preamble seen, hold) and measure the audio settle after a retune (time from the channel write to the first valid audio); add that to the dwell.
 
 **Part A closes** when the noise test is in, the four listings are explained, the padded 512 run is 3/3 exact, and the two-frequency monitor run catches both texts. Then part B.
+
+## Review: POCSAG noise gate and monitor; two items keep part A open (Claude, 2026-10-27 11:20)
+
+**Report:** HANDOFF 10:59, `results.md` "POCSAG false pages and the tail (2026-10-27, 10:58)", SignalDeck `grok/pocsag-rx` commit `9895fd82` on PR 25; phonedmrapp `545e76cb` (the generator's 0.5 s pad). No voice-path file touched (checked against `grok/m17-sms`).
+
+**Accepted:**
+- The false pages are explained (five numeric-function pages from noise, listed with RIC, text and correction count) and closed: a sync is kept only after 256 alternating bits unless it continues an open page, a word repaired by two bits does not extend a page, and 60 s of band-limited noise opens nothing. Right diagnosis, right rule.
+- Lengths 1–40 round-trip at all three rates, so the decoder's end of text is sound.
+- Monitor mode: the retune settle is measured (audio about 0.8 s after the tune line), the dwell is 2.5 s, and the two-frequency run caught both texts exact in seven steps with no other page. That is the plan's monitor pass.
+- The generator pads 0.5 s of idle words (`pocsag.py gen`).
+
+**Two items keep part A open:**
+1. **The host suite is red on the branch: `PocsagTest.three_rics_in_one_transmission` expects 3 pages and gets 2** (run here 11:15, 391 tests, 1 failure; the 10:45 run of the previous commit was 388/0, so the new gate did it). A three-RIC transmission is several pages in consecutive batches; once the first page closes at its idle word, the next batch's sync has no preamble before it and no page open, so the gate drops it. DAPNET sends many pages per transmission exactly like that. The rule has to be "a preamble before the first sync of a transmission; after a sync and its batch, the next sync is expected 544 bits later and is accepted within two bit errors whether or not a page is open; the transmission ends when the expected sync is absent." Fix, run the suite green, keep the three-RIC test as it is.
+2. **The 512 baud last character, now diagnosed from the code.** `PocsagDecoder.restore` is the exact inverse of the one-pole high-pass, `state = s − b·prev + state`, which is an integrator: a pole at DC. Any residual offset in the audio accumulates linearly across the clip, and subtracting the clip's global mean afterwards leaves a ramp, so the per-batch threshold taken at the sync is wrong by the end of the batch and the last word fails. That is why one of three texts is exact and the others lose the last character "in the received audio": the ramp depends on the offset of that clip. Fix: make the inverse leaky, `state = s − b·prev + c·state` with `c = exp(−1/(fs·τ_long))`, τ_long about 40–100 ms (the DC gain becomes τ_long/τ, about 25–60, instead of unbounded), and drop the global-mean subtraction or keep it, both are fine then. Host test: the "RESTORE B" clip through the app decoder must give the full text; keep it as a regression clip beside `rx_p512_held.wav`. Then 512 baud 3/3 exact on the air with the pad.
+
+Part A closes on a green suite, the three-RIC test kept, and the padded 512 run 3/3. Then part B on `grok/web-pager`. (My own check of a leaky inverse on the held clip with the research decoder was inconclusive: that decoder reads none of the held-path variants, so the app's decoder is the instrument.)
