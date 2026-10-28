@@ -329,16 +329,20 @@ checked against a reference table before use. Nothing was keyed on the phone.
 | Group, **TG 9** (not in the list) | MS | **nothing at all**: no frame, `call_in` unchanged |
 | **Private** to ID 1 (own), from 54321 | MS | `0x2B` `00 31 D4 00 00 01 00 00 00` (type 0) |
 
-- **No `0x36` push arrives during DMR receive on V067, nor `0x26`.** The module's only unsolicited frame is
-  `0x2B` caller info, route 01, `rw` **00**, 9-byte body as on the Armor (`[0]` type, `[1..4]` caller LE, `[5..8]`
-  target LE). The HAL forwards every tty read to the app one for one (`ExtModule: tty_read 20` per frame).
-- **Receive start and end come from the bridge's `call_in` line**, sysfs `/sys/bus/platform/drivers/mcu/call_in`,
-  **active low**: read as root, `1` idle, `0` during the call, `1` after (one read each, marker logged first). The
-  stock app's `createCallInThread` polls it (`detectAudioinState`) and starts playback on 0; it fired within 7 ms of
-  the `0x2B` and ended ~0.3 s after the last burst.
-- Route **02** frames `0x67 01` / `0x66 01` are the bridge's answers to the stock app's own 12-byte play start/stop
-  requests (written right after `call_in` changes); the stock app only logs them. Not module pushes.
+- **No `0x36` push arrives during DMR receive on V067, nor `0x26`.** The unsolicited frames are two **route 02**
+  frames, `rw` 00, one data byte `01`: **`0x67` at receive start** (~110–160 ms after `call_in` falls) and **`0x66`
+  at receive end** (~10–20 ms after it rises). Nothing is written to the port before either (checked 17:54 with the
+  HAL's `tty_write` log). The stock app only logs route 02.
+  *(Corrected 17:55: the first write-up called `0x2B` a push. It is the **reply** to the stock app's own `0x2B` query,
+  the 12-byte `tty_write` (checksum 64723, `getDmr09RecvCallInfo`) that the app sends when `call_in` falls; the
+  route 02 frames were taken for replies to it.)*
+- `0x2B` reply: route 01, `rw` 00, 9-byte body as on the Armor (`[0]` type, `[1..4]` caller LE, `[5..8]` target LE).
+  The HAL forwards every tty read to the app one for one (`ExtModule: tty_read 20` per frame).
+- **The bridge's `call_in` line mirrors the same state**, sysfs `/sys/bus/platform/drivers/mcu/call_in`, **active
+  low**: read as root, `1` idle, `0` during the call, `1` after (one read each, marker logged first). The stock app's
+  `createCallInThread` polls it (`detectAudioinState`) and starts playback on 0.
 - The Armor's receive-list rule holds on V067: a group call passes only if its TG is in `groups[]`; private calls to
   the own ID always pass.
-- So the design's open questions 1 and 2 are answered: SignalDeck's transport must turn `call_in` edges into the
-  engine's receive start/stop (`RECEIVE_START` / end), and take caller info from `0x2B` as on the Armor.
+- So the design's open questions 1 and 2 are answered: the transport maps route 02 `0x67`/`0x66` to the engine's
+  `RECEIVE_START`/`RECEIVE_STOP` (with `call_in` as a cross-check), and asks for caller info with `0x2B` at receive
+  start, as the stock app does.

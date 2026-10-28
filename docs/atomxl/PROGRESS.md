@@ -5,6 +5,10 @@ Newest first. Phone: Unihertz Atom XL, `ATOMXL0000000737`, worked over Wi-Fi ADB
 
 ## 2026-10-28
 
+- **17:55** Correction to 17:47: `0x2B` is the reply to the stock app's own query (its 12-byte write at `call_in`
+  falling); the unsolicited receive frames are **route 02 `0x67 01` (start) / `0x66 01` (end)**. Owner decided this
+  agent writes take-over/give-back (not Grok).
+
 - **17:47** **DMR receive measured with the HackRF** (stock app on its own channel, synthetic calls, nothing keyed;
   `PHASE_A_FINDINGS.md` §11): TG 1 group and private-to-own-ID calls decoded (`0x2B` with the sent caller/target),
   TG 9 dropped (Armor's `groups[]` rule holds); **no `0x36`/`0x26` push on receive**, the only module push is `0x2B`

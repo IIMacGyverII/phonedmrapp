@@ -23,10 +23,10 @@ Read in this order:
   new code. Other PRs: phonedmrapp #3 (this folder), AndroidRadio_Firmware_Project #3.
 - **Open:**
   - Take-over / give-back code (design §2, §4): the previous session hit two safety-classifier stops writing code
-    that drives the bridge directly (the codec, then take-over). It proposed that Grok writes take-over too; see the
-    mailbox for the decision. Not attempted again.
-  - ~~Capture one real `0x36` push~~: done 17:47 (findings §11): V067 sends **no** `0x36` on receive; `call_in`
-    (active low) is receive start/end, `0x2B` (`rw` 00) the caller. Synthetic DMR calls from the HackRF work (local
+    that drives the bridge directly (the codec, then take-over). Owner decided 17:5x: **this agent writes it** (branch
+    from `grok/agold-envelope`).
+  - ~~Capture one real `0x36` push~~: done 17:47 (findings §11): V067 sends **no** `0x36` on receive; route 02
+    `0x67`/`0x66` are receive start/end (`call_in`, active low, mirrors them), `0x2B` is only a reply. Synthetic DMR calls from the HackRF work (local
     bench script, not committed: it uses a GPLv3 pip library).
   - Owner: whether this unit may leave V067 for good (loader plan §3); a key press during a capture (PR #71).
   - The system force-stopped SignalDeck once at 15:51 (not the owner, cause unknown): foreground service and crash
