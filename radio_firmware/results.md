@@ -4085,3 +4085,13 @@ DMR transmit, 14:40:55, channel 49, low power, bench ID, parrot off, 3 s key. St
 **Free word for the flag.** The op 16/17 state (`0x4B360`–`0x4B398`) sits inside the stock object `0x4A3C8`–`0x4B83E`, so none of it is outside that object. Aligned factory dwords in the bss above the object: `0x4B840` (file `0x56DE8`, `0x57044`, `0x57994`), `0x4B864` (file `0x3E67C`), then `0x4C464` (file `0x3E680`, `0x56074`). The word `0x4BE64` is the midpoint, 0x600 bytes from each of those, inside the zeroed bss, and outside the object. No 4-byte sequence in the factory image or in FW3E has a value within 0x100 of it.
 
 End state 14:41: `DMR003.FW3G.V022`, channel 49, not transmitting, RSSI −108. Battery 35.4 °C, AP 41.3 °C, PA 40.2 °C. The later bench steps were not run.
+
+**FW3H boots, and three bench-ID keys are unlistened (14:57–15:00).** The flag literal at `0x5BE20` is `0x4BE64`. The set and clear sites are FW3F's. Tag `DMR003.FW3H.V022`, sha256 `6d36e82ca95a08728736c08956709a02209fa7b838184cbee29b1c29fa6d55da`. Commit `81fe365e`.
+
+Load 14:57, after the lease. Tag read `DMR003.FW3H.V022` at 14:59:35. HackRF was idle.
+
+Three keys, channel 49, low power, bench ID, parrot off, 3 s: 14:59:52, 15:00:05, 15:00:18. Each had status 3 once and status 4 once. No relay `dmr_start` or `dmr_end`. The MMDVM log gained no RF DMR line. The bench ID was restored. The replay and steps (c)–(e) were not run.
+
+Stock init at `0x3E60C` passes destination `0x4B864`, value 0 and length `0xC00` (192 shifted left 4). That span runs through `0x4C464` and includes `0x4BE64`.
+
+End state 15:00: `DMR003.FW3H.V022`, channel 49, not transmitting, RSSI −108. Battery 35.9 °C, AP 42.1 °C, PA 40.9 °C. HackRF was idle.

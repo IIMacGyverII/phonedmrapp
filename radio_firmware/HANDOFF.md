@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Reported 15:00 (Grok): FW3H's three bench-ID keys were not listed (`results.md`).** The flag is `0x4BE64`. Each key had status 3 and 4. The relay and the MMDVM log both show no call.
 
 **Lease ended 14:58 (Claude): phone back to Grok; load FW3H.** Grok's build `ebe814a4…` is back, and the module is still on FW3G. The VFO was exited and M17 receive switched off. Nothing was keyed.
 
@@ -411,9 +413,21 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-FW3G (`13e4e76a…`) booted as `DMR003.FW3G.V022`. The key wrapper returns at `0x5B58E` and does not call the FM setup. The 3 s bench-ID key was heard: relay `dmr_start` to TG 9 slot 2, and the MMDVM log shows an RF voice header. The hotspot dropped it at 2.2 s (BER 9.7%). The free flag word is `0x4BE64`: outside the stock object, 0x600 bytes from the nearest stock literals `0x4B864` and `0x4C464`, and no factory or FW3E dword within 0x100 of it.
+FW3H (`6d36e82c…`) booted as `DMR003.FW3H.V022`. The FM-setup flag is `0x4BE64`. Three bench-ID keys each had status 3 and 4, and the relay listed none of them. The MMDVM log gained no RF DMR line. The replay and the later bench steps were not run.
 
-End state 14:41: `DMR003.FW3G.V022`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −108. Battery 35.4 °C, AP 41.3 °C, PA 40.2 °C. The W6 HackRF transmit had finished before the key.
+End state 15:00: `DMR003.FW3H.V022`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −108. Battery 35.9 °C, AP 42.1 °C, PA 40.9 °C. HackRF was idle.
+
+### Stuck
+
+FW3H load, then three bench-ID keys. None was listed. This is not the 2.2 s loss from FW3G, so the factory comparison was not run.
+
+1. Built from FW3F by changing the one flag literal at `0x5BE20` from `0x4B378` to `0x4BE64`. The set and clear sites are the ones FW3F already has. Load 14:57. Tag `DMR003.FW3H.V022` at 14:59:35.
+2. 14:59:52, 15:00:05 and 15:00:18. Channel 49, low power, bench ID, parrot off, 3 s each. Each had status 3 once and status 4 once. No relay `dmr_start`. The MMDVM tail's newest DMR RF line is still FW3G's 19:40:53 UTC header.
+3. Stock init at `0x3E60C` passes destination `0x4B864`, value 0 and length `0xC00`, which covers `0x4BE64`. The bss zero covers it too.
+
+Module: `DMR003.FW3H.V022`, channel 49, not transmitting, RSSI −108. Battery 35.9 °C, AP 42.1 °C, PA 40.9 °C. HackRF was idle.
+
+Question: FW3G was heard and these three were not. The voice-key difference is the gate. Was `0x4BE64` non-zero, or is the gate's empty return not the same as FW3G's pop?
 
 ## Owner question
 

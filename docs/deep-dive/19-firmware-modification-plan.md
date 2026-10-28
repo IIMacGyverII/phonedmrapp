@@ -224,6 +224,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 **2026-10-28 — Skipping the FM setup makes the bench-ID key heard.** FW3G returns at `0x5B58E`. The relay listed the call. A bss word no stock literal names, `0x4BE64`, is the candidate flag. Details in `results.md`.
 
+**2026-10-28 — FW3H's flag at `0x4BE64` did not keep the bench-ID key heard.** Three keys had status 3 and 4 and no relay listing. Details in `results.md`.
+
 **2026-10-28 — FW3E boots and decodes DMR.** The FM setup runs only when the ring is armed. A 3 s key had status 3 and 4 and was not listed by the relay. Details in `results.md`.
 
 **2026-10-28 — FW3D boots and decodes DMR.** The 3 s key had status 3 and 4 and was not listed by the relay. The key wrapper differs from F30F at `0x5B58E` only. Details in `results.md`.
