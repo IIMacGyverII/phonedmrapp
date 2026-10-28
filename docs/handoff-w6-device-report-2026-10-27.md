@@ -254,3 +254,8 @@ All of them pass the host suite (417–421 tests depending on the branch). The C
 - Host suite **421 / 0**, release build `1f467a20…`.
 - **W6 smoke passed:** installed over the agent's combo build (saved as scratchpad `w6_installed_f6a6c0b9b1eec400.apk`), took the radio, READY on channel 02 (467.6250 MHz FM), no crash. The W6 now runs this build.
 - **Before main:** the Armor checks for 50, 52, 53 and 56 (item 2 above). They need an Armor lease while Grok holds it for the FW30 bisect. Then one integration PR, as with PR 48.
+
+- **Merged 13:40 (Claude):** integration **PR 58** is in main, so #50 and #53–#57 show as merged. #52 was closed with a pointer to #58: its base was #50's branch, and all of its commits are on main.
+  - **Armor checks** (module FW3D, no transmit): #50 live sync passed (one `channels` event, the ★ zone on the phone); #53 the DMR template is intact; #56 the bars sit inside the panel.
+  - #52 was not shown on the device (it needs an empty channel list); its host tests cover it.
+  - **Still open:** W6 data-mode transmit in the cage, the Soft SQ level sweep, optionally capping the bar height on small screens, Restricted wiring after PR 26, firmware repo PR 1, and the small follow-ups.
