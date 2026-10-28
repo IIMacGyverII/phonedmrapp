@@ -74,6 +74,10 @@ image gets back to the same state in one pass. Everything below is bench-only: c
      FM off). It also stops and disables DMRGateway and M17Gateway, because the relay takes their ports, and
      restarts MMDVMHost and DAPNETGateway;
    - prints the checks.
+   - **Then the bench SSH key (owner, from a real terminal, not through an agent):** in PowerShell,
+     `Get-Content "$env:USERPROFILE\.ssh\id_ed25519_wpsd.pub" | ssh pi-star@192.168.1.194 "mkdir -p ~/.ssh; chmod 700 ~/.ssh; cat >> ~/.ssh/authorized_keys; chmod 600 ~/.ssh/authorized_keys"`,
+     then `ssh -i "$env:USERPROFILE\.ssh\id_ed25519_wpsd" -o IdentitiesOnly=yes pi-star@192.168.1.194 echo ok`. A reflash
+     removes it. The relay over TCP 8080 works without it.
 3. **Checks** (`deploy.sh <host> check` any time):
    - `mmdvmhost`, `dapnetgateway` and `m17relay` are active; `dmrgateway` and `m17gateway` are not.
    - UDP 62031 and 17010 are bound by python3 (the relay), and 62032 and 17011 are bound. Run plain `ss` without sudo
