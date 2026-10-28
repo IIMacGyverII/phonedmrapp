@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-27 (21:05) — FW30 image 2, quiet retest.** With the phone and the hotspot otherwise idle, the 1125-frame stream reaches the relay (1119 frames, 44.76 s, end bit) and the receive level is 1.3 at 3 s. Three shorter keys fall to 1.3 by about 4 s. Storing `WORK_MODE` `0x6E` does not hold the audio. Details in `results.md`.
+
 **2026-10-27 (20:34) — FW30 does not restore receive.** The `0x30` edge alone leaves the APRS level at 1.3 after a symbol key. Storing `WORK_MODE` `0x6E` from the eight-byte hole did not hold the level across three keys (5614, then 902, then a clip at 2.9). The 1125-frame stream on the first image reached the hotspot relay through the end bit (1118 frames, 44.72 s). Details in `results.md`.
 
 **2026-10-27 (15:33) — FW29.** The three stale callers no longer enter the restored exit. `0x5B2BE` is FW26's value compare again, and `0x5C564` and `0x5BCAE` branch to the sr=1 tail. Runner `all` passes, one page is Hamming 0, and `[6,6,1]` answers `sr=1`. Op 17 start and stop answer, and no half was logged at 57600. The phone is back on FW26. Details in `results.md`.
