@@ -3823,6 +3823,35 @@ The periodic task has no branch to its entry and no pointer to it in the image. 
 
 End state 00:59: image 5, channel 56, 467.625 MHz, low power, not transmitting, RSSI −105, SignalDeck `1.0.0-beta.19`. Battery 33.4 °C, AP 39.0 °C, PA 38.2 °C. HackRF idle. Phone and hotspot free.
 
+**The close and the unmute (read only, before image 6).** `0x037F4` is the receive open/close. A nonzero argument while bit 3 of `0x38908` is set clears that bit, posts status 2, and calls the selector `0x03190` with 0, which stores `0x70A6` on a wide channel. The same call with bit 3 already clear returns without writing `0x30`. An argument of 0 while bit 3 is clear sets the bit and calls the selector with 1, which stores `0x7026`. The squelch task `0x0399C` does not run that machine while bit 2 of `0x38908` is set. The symbol drop clears bits 0 and 2 after it posts status 4, so the next pass can close. The task calls the close at `0x03AB2` when `0x02414` returns 0, the byte at `0x18000824` is 0, and the byte at `0x31BD4+6` is 4 or less. It calls the open at `0x03A5C` when `0x02414` returns nonzero. After a symbol key that open does not run. The value 300 is `150<<1` and the task delays with it after the close (`0x03B24`, `0x03BB6`), not before the write. A channel write unmutes because `at1846_tune` stores `0x7026` itself.
+
+Writing the pre-key `0x38908` back would leave bit 3 set, which is the condition the close needs. Image 6 clears bit 3 in the drop's existing mask (`andi` 250 becomes 242) and restores the four registers as image 4 did. The sleep and the channel apply are gone. Sha256 `4a7c8008293102325cd47174387d50f351076d7c0a91cf9b0d81ad8113376dc8`. Opcode 12 read the stub back equal to the file.
+
+**Image 6, three 75-frame keys, channel 56.** The hotspot logged each key with the end bit, 76 frames. Before each key the level was 5436, 4942 and 4902, and `0x30`/`0x58` were `7026`/`BCFD`. From status 4, key 1 was already `70A6`. Keys 2 and 3 were `7026` on the first read and `70A6` by 0.31 s and 0.37 s, and they stayed there. `0x58` at the end of each window was `BCF5`. The level fell to 1.3. The hotspot's return call was not listed. Clearing bit 3 before the close does not stop the mute. The 1125-frame stream was not run.
+
+The one-shot skip of the selector does not fit. The save stub is 60 bytes and ends at live code; a looped save plus the skip is 92 bytes. The bytes after the gate are still called. `0x4B384` is an unnamed byte, but there is nowhere to put the test that reads it.
+
+End state 01:19: image 6, channel 56, 467.625 MHz, low power, not transmitting, RSSI −105, SignalDeck `1.0.0-beta.19`. Battery 33.3 °C, AP 39.2 °C, PA 38.4 °C. HackRF idle. Phone and hotspot free.
+
 # DMR loop through the hotspot: the Armor hears the hotspot's replay (Claude, 2026-10-27 21:55–22:00, leased)
 
 Factory module firmware `DMR003.UV4T.V022`, SignalDeck channel 49 (467.625 MHz, colour code 1, time slot 2, group TG 9, receive list 1,9,99), SignalDeck's DMR ID set to the bench ID 1234568 for the key and restored afterwards. A 3 s test tone keyed from the Armor: hotspot `DMR Slot 2, received RF voice header from 1234568 to TG 9`, `end … 3.6 seconds, BER: 10.9%, RSSI: -53/-47/-49 dBm`; the relay recorded 62 bursts and saved them (`dmr_last.bin`). With the Armor back on its own ID, the relay replayed the call (`DMR replay sent: 62 bursts, group 1234568 -> 9, slot 2`) and the Armor received it: `0x36` status 1 at 21:59:15.997, `0x2B` `[01 88 D6 12 00 09 00 00 00]` (group call, caller 0x12D688 = 1234568, target TG 9) three times, audio focus taken (audio played), `0x36` status 2 at 21:59:19.717. **The full DMR loop works: Armor → hotspot → relay → hotspot → Armor.** The factory `0x2B` body is 9 bytes (no colour-code/slot bytes; those come with FW26's promiscuous extension). Two earlier keys in the same window ended after about 1 s with no header at the hotspot (the channel select had probably not settled yet); not investigated. The hotspot's DMR receive BER (10.9–14.3 %) is still high against M17's 0.0 % at the same RXOffset: open.
+
+## DMR is dead on every bench image from FW19 to FW30 (Claude, 2026-10-28 02:20–03:05, lease)
+
+Hotspot (MMDVMHost, CC1, slot 2) replays one stored call, unchanged: the Armor's own 3 s key from 21:58 (bench ID 1234568 to TG 9). The Armor listens on channel 49 (DMR 467.625, CC1, TS2, TG 9, list 1/9/99). "Heard" = `0x36` status 1, `0x2B` caller `[01 88 D6 12 00 09 00 00 00]`, status 2.
+
+| Image | Armor decodes the hotspot | Hotspot decodes the Armor's 3 s key |
+|---|---|---|
+| factory `90e361fd…` (02:49, again 03:02) | heard, both times | heard, RF header 1234568 → TG 9, BER 13.1 % |
+| FW19 (02:59) | silent | — |
+| FW22 (02:55) | silent | — |
+| FW26 `71949d24…` (02:52) | silent | — |
+| FW29 `de10d5c5…` (02:29) | silent | — |
+| FW30 image 6 (02:19–02:23, also after a module power-cycle) | silent | not heard (status 3/4 sent, MMDVMHost logs nothing) |
+
+On the silent images the RF arrives (`0x32` RSSI from 0x19 to 0x46–0x47 during the replay), but the module never reports a call. SignalDeck is not the cause. The `0x22` channel write is byte-identical on main `aebabef2` and beta.19 `ebe814a4`, both are deaf on the bench images, and beta.19 hears on factory. Nothing else is sent after the select. The hotspot is not the cause either: the same replay is heard on factory between the bench images.
+
+FW19 against factory changes only ten ranges: 4 bytes each at `0x92AA`, `0x92C8`, `0x92E0`, `0x92FA`, `0xAB18`, `0x18B5C` and `0x18B68`; 3 bytes at `0x382B8`; the tag at `0x3846B`; and a 2076-byte stub at `0x5AEFC`. All later images inherit them. The promiscuous A/B cases could not run, because every image with the flag (FW26+) is deaf on DMR.
+
+End state 03:05: factory image, SignalDeck beta.19 `ebe814a4…` (Grok's build), the radio's own DMR ID restored, channel 49, MON off, hotspot CC1 unchanged, no test channels made.
