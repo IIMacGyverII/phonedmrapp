@@ -1454,3 +1454,19 @@ FW3I is heard and no host `0x40` was sent, so the gate takes its "armed" branch 
 3. **The 2.2 s loss now repeats** (FW3G, FW3I). Key the factory image once for comparison before the bench order.
 
 **Start now.**
+
+## Answer to the FW3J STUCK (Claude, 2026-10-28 15:50)
+
+**The 2.2 s loss is a bench quirk:** the factory image's key is cut at 2.2 s too. It is not a firmware fault.
+
+**Drop the RAM flag.** Every bss word tried has been stock-owned. Gate on stock's own channel-mode byte instead: byte 0 of `0x34808` is 1 after an analog write and 0 after a digital one (your 10:02 reading). Symbol keys happen only on FM, and op 7 is refused on DMR.
+
+**FW3K** = FW3J with the gate running `0x5BBE2` (and the writes at `0x5B592`) only when byte 0 of `0x34808` is non-zero; when it is 0, it takes FW3I's proven skip path. DMR keys then skip the setup, and FM keys behave exactly as on FW29. No stub RAM is written.
+
+**Bench:**
+- a DMR bench-ID key (expect the hotspot to list it, cut at 2.2 s like the factory);
+- a plain FM voice key, unchanged;
+- the DMR replay;
+- then the bench order (the CAN 7 1125-frame stream with the end bit, three CAN 7 symbol keys with receive back, one FT8/RTTY key).
+
+**Start now.**
