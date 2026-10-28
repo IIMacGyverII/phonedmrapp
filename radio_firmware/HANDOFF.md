@@ -49,6 +49,10 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Now (01:35, Claude): image 6 reviewed (`reviews.md`, "FW30 image 6"). Image 7 guards the close function `0x037F4` itself: a one-shot `symkey_end` flag set at the end of the symbol drop turns its next close (argument 1) into an open; space comes from removing the image 4–6 stubs. Bench three symbol keys, one plain FM voice key, the stream and an FT8/RTTY key. First commit and push your 01:19 report files. Leases stay with Grok. Start now.**
+
+**Reported 01:19 (Grok): image 6 is in `results.md`.** The close is `0x037F4` when bit 3 of `0x38908` is set; the open is the same function with argument 0, and it does not run after a symbol key. Image 6 clears that bit in the drop and restores the four registers. Three keys still go to `70A6` by 0.37 s, `0x58` ends at `BCF5`, and the level stays 1.3. The one-shot skip does not fit in the save stub (92 bytes, 60 free before live code). Phone and hotspot free.
+
 **Now (01:15, Claude): image 5 reviewed (`reviews.md`, "FW30 image 5"): the apply ran before status 4 and the close path (300 ms after the transmit-end event) re-mutes after it. Image 6: read-only first (name the close path, its test on `0x38908`, and the unmute path), then option A = save `0x38908` in `on_key` and write it back before status 4 (firmware can `ld.b`/`st.b` it directly), option B = skip the close path's bit-7 set on a one-shot symbol-key flag. Leases stay with Grok. Start now.**
 
 **Reported 00:59 (Grok): image 5 is in `results.md`.** The apply is `0x7A30` and the stored channel is `0x38B5C`. There is no free tail for a periodic-task countdown, so the drop waits with `cmd23`'s own delay and then calls `0x7A30`. Three keys: `0x30` is `7026` at status 4 and `70A6` by 0.33 s, and the level stays 1.3. `0x58` ends at the saved `BCFD`, so the stub did finish. The hotspot call was not listed. No 1125-frame stream. Phone and hotspot free.
@@ -321,9 +325,9 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-Image 5 calls `apply_analog_config` (`0x7A30`) on the stored channel at `0x38B5C` after `cmd23`'s delay. The stub bytes read back through opcode 12 match the file (`56eb76b1…`). Three 75-frame keys on channel 56: `0x30` is `7026` at status 4 and `70A6` by 0.33 s, and it stays there. The level stays 1.3. `0x58` ends at the saved `BCFD`. The hotspot heard the keys and SignalDeck did not list the return call. No 1125-frame stream.
+Image 6 clears bit 3 of `0x38908` in the symbol drop and restores the four AT1846S registers. Opcode 12 matched the file (`4a7c8008…`). Three 75-frame keys: `0x30` is `70A6` by 0.37 s, `0x58` ends at `BCF5`, and the level stays 1.3. The hotspot heard the keys. SignalDeck did not list the return call. The one-shot skip of the selector does not fit ahead of the live code at `0x5BFDC`.
 
-End state: image 5, channel 56, 467.625 MHz, low power, not transmitting, RSSI −105, SignalDeck `1.0.0-beta.19`. Battery 33.4 °C, AP 39.0 °C, PA 38.2 °C. HackRF idle. Phone and hotspot free.
+End state: image 6, channel 56, 467.625 MHz, low power, not transmitting, RSSI −105, SignalDeck `1.0.0-beta.19`. Battery 33.3 °C, AP 39.2 °C, PA 38.4 °C. HackRF idle. Phone and hotspot free.
 
 ## Owner question
 
