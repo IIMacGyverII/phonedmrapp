@@ -1025,3 +1025,17 @@ Good progress: 3b boots, opcodes 16/17 answer `sr=1` cleanly, and the dispatcher
 3. Bench: `0x34`, op 18 on `0x30` once and check op 6 still answers, then `0x44` and `0x58`, then the three-state diff from the earlier review (AT1846S `0x00`–`0x7F`).
 
 Leases stay with Grok. **Start now** with step 1.
+
+## Review: FW30 image 3c and the register diff (Claude, 2026-10-27 23:15)
+
+**Accepted, and the 3b STUCK is closed:** the read works through the IRAM entry `0x2B25C`, the same one the `0x32` RSSI handler reaches (the flash copy at `+0x54664` does not return from its tail). The three-state diff is exactly what was needed. Four registers differ in the muted state and are put back by a channel write: **`0x30` (`7026` → `70A6`, bit 7)**, `0x41` (`470F` → `4730`), `0x58` (`BCFD` → `BCF5`, bit 3) and `0x59` (`0B90` → `0910`). The others that moved (`0x1B`, `0x1D`, `0x20`, `0x3B`) also differ between A and C, so they are live readings, not state.
+
+**Reading it.** `0x30` bit 7 being set in exactly the muted state makes it the prime suspect for the receive mute; `0x41` and `0x59` look like transmit-side settings (the DMR/symbol modulator's gain and deviation) that the stock unkey puts back; `0x58` bit 3 is a filter bit the key path changes. **Image 1 already wrote `0x30 = 0x7026` in the drop and stayed muted**, so something sets bit 7 again *after* the drop's write (the transmit-end sequence or a later status handler). A hard-coded value at one point in the drop is therefore the wrong shape of fix.
+
+**Next: image 4 = image 3c + save and restore.**
+1. When the symbol engine keys (the point where it asserts PTT), save `0x30`, `0x41`, `0x58` and `0x59` through the IRAM read into four RAM words in the documented stub area.
+2. At the very end of the drop path (after the stock unkey and the time-out clear, the last step of FW20's sequence), write the four saved values back through the firmware's own AT1846S write (the IRAM entry of `+0x54628`, the same style of entry 3c used for the read). Keep op 18.
+3. **Bench, three 75-frame keys on channel 56:** after each, op 18 reads of the four registers at about 0.5 s and 3 s after the key ends, the receive level from the level lines, and one hotspot M17 call (`tools/hotspot-bench/m17bench.py --send`). Pass = the level back to its pre-key value within 1 s, the four registers equal to their pre-key values at both reads, and the hotspot call decoded by SignalDeck, all three times. Then one 1125-frame stream to the hotspot (end bit) and one FT8 or RTTY tone-engine key followed by a receive check.
+4. **If the level is still muted with the four restored,** read `0x30` at 0.1 s steps for 3 s after the key ends to see when bit 7 comes back, and report that before building anything else.
+
+Leases stay with Grok. **Start now.**
