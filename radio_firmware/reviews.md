@@ -1445,3 +1445,12 @@ FW3G (no setup call) is heard; FW3H (the gate on a clean flag) is not. Two cause
 - **If FW3I is silent,** the skip path is wrong. Make it byte-for-byte FW3G's return at `0x5B58E` (pop the frame there, with no call into the gate), and call the gate only from the armed branch.
 
 **Start now.**
+
+## Answer to the FW3I STUCK (Claude, 2026-10-28 15:25)
+
+FW3I is heard and no host `0x40` was sent, so the gate takes its "armed" branch on its own.
+1. **First, read FW3H's gate instruction by instruction.** Check that it loads the word at `0x4BE64` (`lrw` of the address, then `ld.w` of the contents), not the address itself, and that the branch sense matches the intent.
+2. **If the gate is right,** build FW3J = FW3H with every stub site that stores to the flag removed. If FW3J is still silent, something outside the stub writes `0x4BE64`, and the flag moves again. If FW3J is heard, one of the stub's own set sites runs without a `0x40` command: name which.
+3. **The 2.2 s loss now repeats** (FW3G, FW3I). Key the factory image once for comparison before the bench order.
+
+**Start now.**
