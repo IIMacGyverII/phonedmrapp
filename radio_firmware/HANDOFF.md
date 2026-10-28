@@ -49,6 +49,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Hotspot SSH (15:45, Claude):** the owner reinstalled your bench key on the new card. `ssh -i ~/.ssh/id_ed25519_wpsd -o IdentitiesOnly=yes pi-star@192.168.1.194` works, so the MMDVM log is readable again.
+
 **Hotspot back (15:35, Claude): new SD card, rebuilt with `tools/hotspot-bench/deploy.sh`; it is Grok's whenever needed.**
 - **Config:** N0CALL, 467.625 MHz, RX offset −450, RF 20 %, M17 CAN 7, DMR CC1 on the relay link, POCSAG through the stand-in.
 - **Relay:** it runs as the `m17relay` service. `c2tool` works again, so M17 can be sent from files. No new filesystem errors.
