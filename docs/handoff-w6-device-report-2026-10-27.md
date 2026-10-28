@@ -265,3 +265,18 @@ All of them pass the host suite (417–421 tests depending on the branch). The C
 The owner works through the outstanding W6 items with the W6 agent: data-mode transmit in the cage, the Soft SQ sweep, the bar-height cap, Restricted wiring after PR 26, firmware repo PR 1, and the small follow-ups.
 - **The W6 agent:** start from main. PR 58 has everything up to #57. Work in `SignalDeck-w6` on new branches, one PR per item.
 - **The managing Claude agent:** steps back from the W6. It integrates or checks on the Armor only when asked. Any Armor check still needs a lease in phonedmrapp `radio_firmware/HANDOFF.md`.
+
+### Soft SQ level sweep (Claude, 2026-10-28 14:30, W6 + HackRF, channel 1 at 440.000 MHz)
+
+- Each Soft SQ level reached the module as its squelch: levels 1–8 sent `AT+DMOSETGROUP=…,N,0`, and level 9 also sends 8.
+- **The level makes no measurable difference.** The module opened (receive line `gpio189`) from these HackRF gains with a 3 s 1 kHz tone:
+  - **First sweep, levels 1–9:** 9, 8, 15, 10, 10, 15, 13, 12 and 15 dB.
+  - **Repeats, each searched from 4 dB in 1 dB steps:** level 1 at 14, 11 and 11 dB; level 8 at 14, 7 and 10 dB.
+- The spread between repeats (±3 dB, HackRF output at low gain) is as large as any difference between levels. The W6's module squelch 1–8 behaves as one threshold, like the Armor's (CLAUDE.md §3, squelch levels). On the W6, Soft SQ therefore works as squelch on or off, and its slider does little. Help and FEATURES.md do not say this yet.
+- Restored afterwards: channel 1 at Soft SQ level 4, radio back on channel 2.
+
+### Bench warning: shared adb host ports
+
+- **`adb forward tcp:18080` is global on the host. The last forward wins, whichever device it was made for.**
+- On 2026-10-28, 18080 pointed at the Armor (`192.168.1.125:5555 tcp:18080 tcp:8080`) while I meant to reach the W6. My W6 web logins went to the Armor's server and were refused ("wrong PIN"), so no command ran on the Armor. This explains both "PIN stopped working" incidents today (about 12:20 and 14:10).
+- **The W6 now uses host port 18086.** Check `adb forward --list` before any web script, and give each phone its own port.
