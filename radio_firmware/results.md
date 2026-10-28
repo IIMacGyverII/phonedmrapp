@@ -4075,3 +4075,13 @@ Load 14:31. Tag read `DMR003.FW3F.V022` at 14:33:31. No silence restart. Channel
 DMR transmit, 14:33:53, bench ID, parrot off, 3 s key. Status 3 once, status 4 once. No relay `dmr_start` or `dmr_end`. The MMDVM tail gained no RF line. The bench ID was restored.
 
 End state 14:34: `DMR003.FW3F.V022`, channel 49, not transmitting, RSSI −107. Battery 35.4 °C, AP 41.5 °C, PA 40.4 °C. HackRF was not used. The later bench steps were not run.
+
+**FW3G's key is heard when the FM setup is never called (14:37–14:41).** At `0x5B58E` the wrapper pops its frame and returns. The writes at `0x5B592` do not run. Tag `DMR003.FW3G.V022`, sha256 `13e4e76af6274df69acc7e944e29ef35d76608cfb89c83829fdd33e7ff68d39f`. Commit `5e852740`.
+
+Load 14:37. Tag read `DMR003.FW3G.V022` at 14:40:07. A W6 HackRF transmit (`robot36.iq` at 439.800 MHz) was running, so the key waited. That transmit ended at 14:40:27. It was not stopped.
+
+DMR transmit, 14:40:55, channel 49, low power, bench ID, parrot off, 3 s key. Status 3 once. The relay sent `dmr_start`, bench ID to TG 9, slot 2. The MMDVM log: `Mode set to DMR` at 19:40:53 UTC, then `received RF voice header` from the bench ID to TG 9, then `RF voice transmission lost` at 2.2 s, BER 9.7%, RSSI −47. The log window closed on `dmr_start`, so a status 4 line was not counted. The bench ID was restored.
+
+**Free word for the flag.** The op 16/17 state (`0x4B360`–`0x4B398`) sits inside the stock object `0x4A3C8`–`0x4B83E`, so none of it is outside that object. Aligned factory dwords in the bss above the object: `0x4B840` (file `0x56DE8`, `0x57044`, `0x57994`), `0x4B864` (file `0x3E67C`), then `0x4C464` (file `0x3E680`, `0x56074`). The word `0x4BE64` is the midpoint, 0x600 bytes from each of those, inside the zeroed bss, and outside the object. No 4-byte sequence in the factory image or in FW3E has a value within 0x100 of it.
+
+End state 14:41: `DMR003.FW3G.V022`, channel 49, not transmitting, RSSI −108. Battery 35.4 °C, AP 41.3 °C, PA 40.2 °C. The later bench steps were not run.
