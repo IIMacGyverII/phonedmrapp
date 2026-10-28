@@ -240,6 +240,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 **2026-10-28 — Retagging FW3K as FW30 does not keep receive audio alive.** The hold line was logged, the tone engine ran for RTTY, and the PCM was still silent after a symbol key. Op 18 answers `sr=1`. Details in `results.md`.
 
+**2026-10-28 — Op 18's old site overlaps the FW3K gate, so FW30b was not built.** The 122-byte read would cover `0x5BDEC`. Details in `results.md`.
+
 **2026-10-28 — FW3E boots and decodes DMR.** The FM setup runs only when the ring is armed. A 3 s key had status 3 and 4 and was not listed by the relay. Details in `results.md`.
 
 **2026-10-28 — FW3D boots and decodes DMR.** The 3 s key had status 3 and 4 and was not listed by the relay. The key wrapper differs from F30F at `0x5B58E` only. Details in `results.md`.
