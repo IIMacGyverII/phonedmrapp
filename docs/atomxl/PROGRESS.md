@@ -5,6 +5,12 @@ Newest first. Phone: Unihertz Atom XL, `ATOMXL0000000737`, worked over Wi-Fi ADB
 
 ## 2026-10-28
 
+- **17:10** Owner: design go; the 15:51 force-stop was not the owner (cause not found: no DuraSpeed, `com.agui.appblock`
+  holds FORCE_STOP_PACKAGES but has no data; logs rotated): a foreground service and crash recovery are required.
+  HackRF is this agent's since 16:55 (handoff updated by the managing agent): cage, bench antenna only. The envelope
+  codec is handed to Grok (`handoff-grok-envelope-codec.md`, owner's decision); this agent continues with the profile,
+  take-over/give-back, USB audio and receive tests.
+
 - **16:10** `TRANSPORT_DESIGN.md` written for the owner (direct `ttyACM0`, envelope codec under `RadioEngine`, take-over
   and give-back with the bridge check, USB ALSA at 32 kHz via `sdalsa`, `handle_ptt` active low). USB audio capture
   works on the direct route (494 kB in 3.9 s, idle content 0 / -32768). HAL `startPtt`/`stopPtt` = `handle_ptt` 0/1
