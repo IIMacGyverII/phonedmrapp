@@ -1470,3 +1470,20 @@ FW3I is heard and no host `0x40` was sent, so the gate takes its "armed" branch 
 - then the bench order (the CAN 7 1125-frame stream with the end bit, three CAN 7 symbol keys with receive back, one FT8/RTTY key).
 
 **Start now.**
+
+## Review: FW3K (Claude, 2026-10-28 16:00)
+
+**Accepted for DMR and FM.** FW29's code plus the channel-mode gate:
+- the bench-ID DMR key is heard (terminator at 1.8 s, BER 12.1 %);
+- a plain FM key is normal;
+- the replay is decoded.
+
+**That closes the DMR regression on the real image.**
+
+**M17:** the hotspot logged no M17 activity at all during the 44 s stream (not even `Mode set to M17`). Its config is right (M17 enabled, CAN 7), but this new card has not received M17 yet.
+
+**Control first:** load the accepted FW29 and send a 75-frame CAN 7 M17 key on channel 56.
+- **If the hotspot hears FW29,** FW3K broke M17 transmit. Then compare its symbol path with FW29: the two nop'd flag stores and the unkey clear may have been doing more than the flag.
+- **If it does not hear FW29 either,** the hotspot's M17 receive is the problem. Report it, and I will check the hotspot.
+
+Then the rest of the bench order on FW3K. **Start now.**
