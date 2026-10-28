@@ -3756,6 +3756,31 @@ End state: factory tag `DMR003.UV4T.V022`, channel 3, analog, 462.675 MHz, low p
 
 End state: tag `DMR003.FW30.V022` (this file), channel 56, 467.625 MHz, not transmitting, RSSI −105, SignalDeck `1.0.0-beta.19`. Opcode 6 answers. Battery 34.0 °C, AP 40.0 °C. HackRF was not started. The hotspot was not used.
 
+**How command `0x32` reads the AT1846S (FW29, read-only).** The dispatch word at file `0x38280` is `0x03024B6A`. That thunk (`0xAB6A`) calls `0xA6A8`. `0xA6A8` calls `0x377C`, stores the returned byte, and sends a 1-byte `sr=0` reply through `0x90B0`. `0x377C` is only `bsr 0x2B4C`. `0x2B4C` is `movi r0, 27` (register `0x1B`), the 4-byte far call whose file-relative target is `0x1125C` (objdump's flat name `0xFD01125C`), then `zext` bits 15:8. That target is the IRAM entry of the read at file `+0x54664` (IRAM `0x2B25C`). There is no lock and no cached RAM value in this handler. The raw function, once entered at its IRAM address, calls `0x55260`, which takes a lock and releases it. The only ordinary `bsr` to file `+0x54664` is at `0x54890`, inside the block that boot copies to IRAM, so the call stays in IRAM. The tail past `0x5AEFC`, where opcode 18 lives, has no such call. Image 3b's `bsr` from that tail landed on the flash copy and did not return.
+
+Image 3c keeps 3b and replaces that `bsr` with `lrw r1, 0x0002B25C` / `jsr r1`. `r0` is still the register number. The reply is the full 16-bit value. RSSI keeps only bits 15:8 because register `0x1B` stores the reading there.
+
+**Image 3c, sha256 `6ff663cf120ea95af0306c3a7b9f37095da2b560743a50170a41d8361c404bd8`, same tag.** The call is `lrw r1` / `jsr r1` at `0x5BD80` (`3f 10 c5 7b`). The literal at `0x5BDFC` is `0x0002B25C`. The patch suite was green (54) before the load. Opcode 14 was not widened.
+
+Loaded over image 3b (`fwload ok` 22:49:49, 139 s, banner `module DMR003.FW30.V022`, `0x34` the same tag). Channel 56, 467.625 MHz, low power, SignalDeck `1.0.0-beta.19`. HackRF was not started. The hotspot was not used.
+
+Three snapshots, 128 reads each, every read returned a 16-bit value. A is after a channel write (level 5607.3). B is after a 75-frame symbol-engine key with the end bit (level 1.4). C is after the next channel write (level 5583.4). Registers where B differs from both A and C:
+
+| Reg | A | B | C | Channel write puts B back |
+|---|---|---|---|---|
+| `0x1B` | `1F41` | `1E42` | `1D42` | no; A and C already differ (the RSSI register) |
+| `0x1D` | `4021` | `4020` | `401D` | no; A and C already differ |
+| `0x20` | `0660` | `09D5` | `0831` | no; A and C already differ |
+| `0x30` | `7026` | `70A6` | `7026` | yes; B sets bit 7 (`0x0080`) |
+| `0x3B` | `2918` | `2E1A` | `2A19` | no; A and C already differ |
+| `0x41` | `470F` | `4730` | `470F` | yes; low byte `0F` versus `30` |
+| `0x58` | `BCFD` | `BCF5` | `BCFD` | yes; B clears bit 3 (`0x0008`) |
+| `0x59` | `0B90` | `0910` | `0B90` | yes; difference `0x0280` |
+
+`0x44` stayed `07FE` in all three. The muted `0x30` is `70A6`, which is the open value `7026` with bit 7 set. It is not the `4026` the earlier drop reading named. The four rows a channel write puts back are `0x30`, `0x41`, `0x58` and `0x59`. The `0x1100xxxx` blocks were not read: opcode 14 still accepts only `0x18000000`–`0x1800FFFF`. No GPIO was named. Image 4 was not built.
+
+End state 22:59: this image, channel 56, analog, 467.625 MHz, low power, not transmitting, RSSI −105, SignalDeck `1.0.0-beta.19`, link ready. Battery 34.7 °C, AP 45.6 °C, PA 42.4 °C. HackRF idle. Pager receive was off.
+
 # DMR loop through the hotspot: the Armor hears the hotspot's replay (Claude, 2026-10-27 21:55–22:00, leased)
 
 Factory module firmware `DMR003.UV4T.V022`, SignalDeck channel 49 (467.625 MHz, colour code 1, time slot 2, group TG 9, receive list 1,9,99), SignalDeck's DMR ID set to the bench ID 1234568 for the key and restored afterwards. A 3 s test tone keyed from the Armor: hotspot `DMR Slot 2, received RF voice header from 1234568 to TG 9`, `end … 3.6 seconds, BER: 10.9%, RSSI: -53/-47/-49 dBm`; the relay recorded 62 bursts and saved them (`dmr_last.bin`). With the Armor back on its own ID, the relay replayed the call (`DMR replay sent: 62 bursts, group 1234568 -> 9, slot 2`) and the Armor received it: `0x36` status 1 at 21:59:15.997, `0x2B` `[01 88 D6 12 00 09 00 00 00]` (group call, caller 0x12D688 = 1234568, target TG 9) three times, audio focus taken (audio played), `0x36` status 2 at 21:59:19.717. **The full DMR loop works: Armor → hotspot → relay → hotspot → Armor.** The factory `0x2B` body is 9 bytes (no colour-code/slot bytes; those come with FW26's promiscuous extension). Two earlier keys in the same window ended after about 1 s with no header at the hotspot (the channel select had probably not settled yet); not investigated. The hotspot's DMR receive BER (10.9–14.3 %) is still high against M17's 0.0 % at the same RXOffset: open.

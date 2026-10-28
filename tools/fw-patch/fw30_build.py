@@ -52,7 +52,11 @@ _READ_PATH = bytes.fromhex(
     "fee31d8f3c78683120a4218721a4003122a4013123a4003124a425a426a427a4"
     "103128a40930536cfee34397136c0931fee3058f3c78"
 )
-_READ_CALLS = ((0x0C, 0x54664), (0x38, 0x8E5C), (0x40, 0x7DE8), (0x6A, 0x8E5C), (0x72, 0x7DE8))
+# The 4 bytes at offset 0x0C are not a bsr. They become lrw r1 / jsr r1,
+# and the literal is the IRAM entry of the read (file +0x54664).
+_READ_CALLS = ((0x38, 0x8E5C), (0x40, 0x7DE8), (0x6A, 0x8E5C), (0x72, 0x7DE8))
+IRAM_READ = 0x0002B25C
+READ_POOL = 0x5BDFC
 
 
 def bsr_target(blob, at):
@@ -67,6 +71,16 @@ def encode_bsr(at, target):
     disp = (target - at) >> 1
     word = (0b111000 << 26) | (disp & 0x3FFFFFF)
     return struct.pack("<HH", (word >> 16) & 0xFFFF, word & 0xFFFF)
+
+
+def encode_lrw_r1(at, pool):
+    # r1's lrw is based at the instruction. r3's, in encode_lrw_r3, is not.
+    if at & 3:
+        raise SystemExit("lrw r1 at %X" % at)
+    imm = (pool - at) // 4
+    if not 0 <= imm <= 31 or at + imm * 4 != pool:
+        raise SystemExit("lrw r1 from %X to %X" % (at, pool))
+    return struct.pack("<H", 0x1020 + imm)
 
 
 def encode_br(at, target):
@@ -87,6 +101,9 @@ def read_stub():
     stub[0x0A:0x0C] = bytes.fromhex("1f08")
     for off, dest in _READ_CALLS:
         stub[off:off + 4] = encode_bsr(READ_AT + off, dest)
+    call = READ_AT + 0x0C
+    stub[0x0C:0x0E] = encode_lrw_r1(call, READ_POOL)
+    stub[0x0E:0x10] = bytes.fromhex("c57b")  # jsr r1
     return bytes(stub)
 
 
@@ -160,6 +177,9 @@ def build():
     base[GATE_OP:GATE_OP + 14] = op
     base[READ_AT:READ_AT + len(stub)] = stub
     base[refuse_at:refuse_at + len(refuse)] = refuse
+    if READ_POOL < refuse_at + len(refuse) or READ_POOL + 4 > POOL:
+        raise SystemExit("read literal")
+    base[READ_POOL:READ_POOL + 4] = struct.pack("<I", IRAM_READ)
     if bsr_target(base, GATE_OP + 4) != READ_AT:
         raise SystemExit("read call")
     if bsr_target(base, refuse_at + 4) != 0x8E7C:
