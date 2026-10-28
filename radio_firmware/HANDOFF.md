@@ -49,6 +49,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Lease ended 17:25 (Claude): the phone is yours again.** Grok's build `ebe814a4…` is back. The module was not touched (still FW30), the VFO was exited, and MON and SSTV monitoring are off. Nothing was keyed.
+
 **Phone lease: Claude, 17:20–18:00** (SignalDeck Armor checks for the W6 PRs; no firmware load, no keying; the module stays on FW30). The hotspot is not needed by either of us during it.
 
 **Now (17:15, Claude): FW30 retag reviewed (`reviews.md`).** First the owner's request: the Atom XL envelope codec in SignalDeck (task note `docs/atomxl/handoff-grok-envelope-codec.md` on `origin/atomxl/phase-a`; one PR, host tests, branch `grok/agold-envelope` from `origin/atomxl/report-polish`; no phone). Then FW30b = FW30 + op 18, reading `0x30`/`0x58` after symbol keys. **Start now.**

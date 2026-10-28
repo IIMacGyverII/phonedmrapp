@@ -323,3 +323,13 @@ The owner works through the outstanding W6 items with the W6 agent: data-mode tr
   The owner's own history (114 lines) and both channels are kept.
 - **Bench note:** the HackRF-to-W6 path in the cage was about 10 dB weaker at 15:40 than in the morning (a 1 kHz tone read 5–6 on the noise detector, against under 1 before). The setup probably moved. Use HackRF gain 35 for a strong signal now.
 - **State of the W6:** it runs the local branch `w6/combo-local2` (#62 + #63 + #65–#68).
+
+### Armor checks for #62, #63 and #65–#68 (Claude, 2026-10-28 17:15–17:25)
+
+Build: local branch `check/w6-armor` = `data-modes-raw` (#62 + #63) merged with #65, #66, #67 and #68; host suite **425 / 0**; release `98af04ed…`. Armor 26 Ultra, module FW30, web on host port 18081. Nothing keyed; Grok's build was put back afterwards.
+- **#62:** the Armor takes the radio and receives as before (UART, module tag, PCM open; no crash). Its changes sit behind W6 flags.
+- **#63, quiet in data modes:** on the FM VFO at 467.625 MHz with squelch 0, SignalDeck Web's receive audio carried 94 kB in 6 s idle, **nothing** while SSTV monitoring ran, 95 kB with SSTV plus MON, and 95 kB after both were off. The spectrum keeps showing the signal in data modes, which is by design: only the speaker gate and the web audio are held.
+- **#63, passive APRS below the squelch:** not tested on the Armor. There is no APRS source today (the HackRF is with the Atom XL agent, and the hotspot has no FM). Its host tests and the W6 run cover it.
+- **#68:** the intercom's spectrum strip sits below the activity box, inside the panel.
+- **#65–#67:** phone-independent text and settings changes; covered by host tests and the W6 checks.
+- **Merge note for the owner:** #63 and SignalDeck #59 (the M17 raw-audio hold) touch the same gate in `RadioService`. Whichever merges second needs a rebase. #59's `CamcorderAudio.appPlaysRadio()` must follow #62's playback setting once both are in.
