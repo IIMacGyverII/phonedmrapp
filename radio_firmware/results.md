@@ -4067,3 +4067,11 @@ One group restored per image, 3 s bench-ID key on channel 49, low power. Each ha
 | `E3G3` | the four promiscuous sites | `781dc0bd…` | 14:04:05 silent |
 
 End state 14:04: `DMR003.E3G3.V022`, channel 49, not transmitting, RSSI −107. Battery 35.2 °C, AP 41.1 °C, PA 39.8 °C. HackRF was not used.
+
+**FW3F boots, and the relay does not list the key (14:31–14:34).** The FM setup runs only when `0x4B378` is non-zero. That word is the one after the one-shot, and only the op 17 tail named it before. Op 1, op 7 on an FM channel, and a successful op 8, 9 or 10/11 store 1. The unkey wrapper stores 0. A plain key does none of those. The drop's own clear does not fit before the live pool at `0x5BE34`; the host unkey that follows a drop clears it. Tag `DMR003.FW3F.V022`, sha256 `4b6bbf420f6045d8855b4910a6e70ad1bbe1c76c99178204bca05824371f710f`. Commit `70669012`.
+
+Load 14:31. Tag read `DMR003.FW3F.V022` at 14:33:31. No silence restart. Channel 49, 467.625 MHz, low power.
+
+DMR transmit, 14:33:53, bench ID, parrot off, 3 s key. Status 3 once, status 4 once. No relay `dmr_start` or `dmr_end`. The MMDVM tail gained no RF line. The bench ID was restored.
+
+End state 14:34: `DMR003.FW3F.V022`, channel 49, not transmitting, RSSI −107. Battery 35.4 °C, AP 41.5 °C, PA 40.4 °C. HackRF was not used. The later bench steps were not run.
