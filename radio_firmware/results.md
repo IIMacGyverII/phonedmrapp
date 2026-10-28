@@ -4162,4 +4162,6 @@ RTTY `HI` at 16:53:52. The log shows 38 `0x40` lines and 6 `0x26` lines, so the 
 
 End state 16:54: `DMR003.FW30.V022`, channel 56, not transmitting, RSSI −106. Battery 35.8 °C, AP 43.0 °C, PA 41.1 °C. HackRF was idle. The 1125-frame stream was not run.
 
+**PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
+
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.
