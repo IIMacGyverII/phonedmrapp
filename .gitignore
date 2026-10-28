@@ -146,3 +146,6 @@ scripts/__pycache__/
 radio_firmware/symbols.export.csv
 radio_firmware/build/
 tools/fw-patch/__pycache__/
+
+# Website plan (owner 2026-10-28: kept local only)
+docs/plan-website.md
