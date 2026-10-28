@@ -3929,4 +3929,12 @@ The instruction after the call is an unconditional `br`, so it does not read `C`
 
 End state 09:22: factory `DMR003.UV4T.V022`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −108. Battery 33.1 °C, AP 39.0 °C, PA 38.0 °C.
 
+**Byte 0 of `0x34808`, read only.** No image was loaded. The factory disassembly was read.
+
+The shared channel initializer at `0x11E0` is called from `0x176FC` and from `0x17B62`. It reads byte 0 of the stored channel at `0x38B5C` (the low byte of the RX frequency). When that byte is nonzero, which is every normal frequency, it stores 0 at byte 0 of `0x34808`. It then stores byte `0xAF` of the same channel at byte 1. `cmd23_analog` (`0x99B4`) writes 0 to offset `0xAF` of its local image before the copy, so a normal analog channel leaves byte 1 at 0. The wake stores 1 at byte 0 only when byte 1 is already nonzero and the saved interrupt word has bit 13 or 15, so that path does not run on a normal channel.
+
+The analog command has a continuation past the early return at `0x9B48`. That continuation reaches `0x9CD0`, which stores 1 at byte 0. The digital command at `0x9310` returns by `0x968E` and does not contain that store. `0x19470` also stores 0, and its callers (`0x62A8`, `0x6380`) run only when byte `0xAF` is nonzero, so a normal analog channel does not take it.
+
+So after an accepted analog channel write the byte is 1, and the task takes `0x18B68`. After a digital channel write it stays 0, and the task takes `0x18B5C`. `0x18B5C` stays stock. The refill belongs on `0x18B68`, and only while `0x4DAAC` is set.
+
 End state 07:21: factory image, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107, SignalDeck `1.0.0-beta.19`. Battery 30.7 °C, AP 34.8 °C, PA 34.4 °C. HackRF idle. Phone and hotspot free.
