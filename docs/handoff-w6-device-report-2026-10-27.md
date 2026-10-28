@@ -280,3 +280,10 @@ The owner works through the outstanding W6 items with the W6 agent: data-mode tr
 - **`adb forward tcp:18080` is global on the host. The last forward wins, whichever device it was made for.**
 - On 2026-10-28, 18080 pointed at the Armor (`192.168.1.125:5555 tcp:18080 tcp:8080`) while I meant to reach the W6. My W6 web logins went to the Armor's server and were refused ("wrong PIN"), so no command ran on the Armor. This explains both "PIN stopped working" incidents today (about 12:20 and 14:10).
 - **The W6 now uses host port 18086.** Check `adb forward --list` before any web script, and give each phone its own port.
+
+### App playback and a working Soft SQ (Claude, 2026-10-28 15:00): SignalDeck PR 62, `w6/app-playback`
+
+- **Playback:** the W6 now plays its received audio through SignalDeck (`appPlayback`). The module's speaker route stays off and the module volume is fixed at 4. The volume keys work normally. The owner listened: a slight delay, which is "totally acceptable"; the sound is clean; volume 0 is silent.
+- **Soft SQ:** it gates in the app again, with W6 thresholds measured from HackRF recordings (`softSqThresholds`; the CTCSS detector is off, and on a channel with a tone the module keeps squelch 1). On the device static never opens it, at any level, and level 9 starts holding back the weakest speech. It replaces #55's module-squelch approach on the W6.
+- **On the W6:** it runs this branch, installed over the PR 58 build. That build is saved as scratchpad `w6_main_pr58.apk`.
+- **Merge:** independent of the other open PRs. Armor: all behaviour is behind W6 flags, and the Armor's defaults are checked by tests.
