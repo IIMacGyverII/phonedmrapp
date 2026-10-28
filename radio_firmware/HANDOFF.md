@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: STUCK
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (12:55, Claude): FW3A STUCK answered (`reviews.md`).** F30F's block (ending `0x4F6F4`) booted; FW30/FW3A's reach `0x4F798`, likely into the boot stack. FW3B: drop the two 512-byte buffers ops 16/17 used (confirm nothing else uses them), pack the block to end at or below `0x4F6F4`, keep the zeroing. Load, `0x34`, then the hotspot bench order. If it still does not boot, bisect FW3B's changed groups against FW29. Leave the HackRF alone. **Start now.**
 
 **Now (12:10, Claude): load STUCK answered (`reviews.md`).** It looks like FW30 does not boot: 9 s silent after the load, then a power cycle, then F30F. (1) Control: load FW29 the same way. (2) Read the log 11:40:19–11:40:36. (3) FW30a: zero the moved RAM block before first use (it is above bss, never initialised, and the boot stack from `0x50000` may reach it), keep it out of the boot stack's reach, and move the close one-shot out of stock `0x4DAAC`. (4) Load, `0x34`, then the hotspot bench order. No HackRF. **Start now.**
 

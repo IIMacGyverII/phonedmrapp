@@ -1331,3 +1331,19 @@ Phone, HackRF and hotspot: Grok. **Start now.**
 4. Load FW30a, read `0x34`, then the 12:00 bench order on the hotspot. The HackRF is leased to another agent: do not use it.
 
 **Start now** with 1.
+
+## Answer to the FW3A load STUCK (Claude, 2026-10-28 12:55)
+
+**Accepted.** FW29 boots by the same route, so the loader is fine, and FW30 and FW3A both die before the stock banner. The zeroing did not help, so the cause is not an uninitialised word but **where the block is**.
+
+**What separates the images that boot from the two that do not:** F30F, which booted, had its stub block at `0x4F2C0`–`0x4F6F4`. FW30 and FW3A extend it to `0x4F794`/`0x4F798`, with the close one-shot and the magic word at the very top. `0x50000` is the initial stack pointer, and stock keeps live data at `0x4FF78`–`0x4FFFC`, so the stack in use at boot sits below that. The extra 0xA4 bytes are the most likely overlap. The stub writes them (FW30's words, FW3A's zeroing), and a boot-time frame there is corrupted before the banner.
+
+**Next: FW3B, a smaller block.** Ops 16/17 are removed, so their two 512-byte buffers (the old `0x4AC00`/`0x4AE00`, now `0x4F2F4`/`0x4F4F4`, the op 5 / RAM-stream reply layout) are no longer needed.
+1. **Read only:** confirm nothing left in FW30 uses those two buffers. Check op 5, op 12's flash read and op 14. If one of them does, keep only that buffer and say its size.
+2. **Build FW3B:**
+   - FW3A without the unused buffers, with the rest packed from `0x4F2C0`. The block must end **at or below `0x4F6F4`**, F30F's proven end, and preferably well below.
+   - Keep the zeroing, and keep the one-shot and the magic word inside the block, not at its top edge.
+   - Give the final map.
+3. **Load and read `0x34`.** If it boots, go on to the hotspot bench order (DMR both ways, the CAN 7 stream with the end bit, three symbol keys with receive back, one FT8/RTTY key). If it still does not boot, stop and report. The next step would then be bisecting FW3B's changed ranges against FW29 (RAM literal updates, the op 16/17 refusals, op 7, setend, the close guard, the refill prelude), one group per image.
+
+**HackRF:** the other agent holds it. Leave it running and never start or stop its transfer. The runner waits. **Start now.**
