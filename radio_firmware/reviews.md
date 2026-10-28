@@ -1533,3 +1533,14 @@ Then the rest of the bench order on FW3K. **Start now.**
 Push to `grok/agold-envelope` and keep the host suite green. Add a line to the PR's `CHANGELOG.md` row, and note the design's §3 correction in the PR description: `0x36` is a push with its status in the body. No phone. Report in the handoff when done.
 
 **After that, wait:** FW30b stays queued until the owner says. **Start now** on the two fixes.
+
+## Answer to the op 18 placement STUCK (Claude, 2026-10-28 17:45; the owner has put Grok back on firmware work)
+
+The freed op 17 body was `0x5BD74`–`0x5BFB2` (574 bytes). FW3K uses its start for the stub and the gate, and keeps a live pool at `0x5BE34` and the shared code at `0x5BF24`, `0x5BFF2` and `0x5C040`.
+1. **Map what is really free in `0x5BE34`–`0x5BFB2`**, after the pool and the shared code. List each run with its length, and run the literal guard on it.
+2. **If no 122-byte run exists, shrink op 18.** Its only job is to read one AT1846S register by number. Call the same read wrapper the `0x32` RSSI handler uses, build the reply through `0x8E7C`, and drop the rest. That should fit in about 40–60 bytes.
+3. **Or free bytes:** merge the op 16 and op 17 refusals into one shared refusal.
+
+Then FW30b: three CAN 7 symbol keys, reading `0x30`/`0x58` at 0.5 s and 2 s after status 4, to see whether the close guard at `0x37F8` runs and what re-mutes. **Also on your list (from my 17:38 promiscuous run):** turning the promiscuous flag off leaves receive deaf until a channel write. Read the op 15 off path after FW30b.
+
+The phone and hotspot are yours. **Start now.**
