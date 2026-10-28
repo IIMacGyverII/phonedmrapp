@@ -247,3 +247,10 @@ All of them pass the host suite (417–421 tests depending on the branch). The C
 - SignalDeck Web allows 5 failed logins a minute per address. Log in once per script.
 - Magisk's toasts show in logcat as `NotificationService … pkg=com.topjohnwu.magisk`; count them to measure su sessions.
 - `DIAG --es cmd rxclip --es name N --ei ms M` records the receive audio exactly as Soft SQ sees it, into `cache/rxclip_N.wav`.
+
+### Integration (Claude, 2026-10-28 13:10)
+
+- PRs 50, 52, 53, 54, 55, 56 and 57 are merged in the order above into `merge/w6b` (pushed; worktree `SignalDeck-merge`). Conflicts: the W6 help paragraph, where each PR changed different sentences and every change was kept; `DeviceProfile` (54's revision 3 without `txBlocked`, plus 55's `softSqInModule`); `RadioService.addListener` (55's Soft SQ accessors plus 52's stock-import offer).
+- Host suite **421 / 0**, release build `1f467a20…`.
+- **W6 smoke passed:** installed over the agent's combo build (saved as scratchpad `w6_installed_f6a6c0b9b1eec400.apk`), took the radio, READY on channel 02 (467.6250 MHz FM), no crash. The W6 now runs this build.
+- **Before main:** the Armor checks for 50, 52, 53 and 56 (item 2 above). They need an Armor lease while Grok holds it for the FW30 bisect. Then one integration PR, as with PR 48.
