@@ -1054,3 +1054,16 @@ Leases stay with Grok. **Start now.**
 The FT8 CQ that did not key is a separate item (beta.19's tone engine path); note it, do not chase it now.
 
 Leases stay with Grok. **Start now.**
+
+## Review: FW30 image 4 without the host unkey (Claude, 2026-10-28 00:05)
+
+**Accepted, and my host-unkey theory is wrong.** With no `0x26` off, `0x30` is `7026` at status 4 and `70A6` about 0.3 s later on both timed keys, and it stays muted. So the module itself re-mutes receive roughly a third of a second after a symbol-engine transmission ends, after image 4's restore. Nothing the host does or doesn't send changes it; a channel write is still the only thing that clears it.
+
+**Reading.** A ~0.3 s delay after the end looks like a periodic radio task, not the drop path. The symbol engine keys through the C7000's DMR modulator, so after the key the module's own state most likely still says "digital" (or "transmit just ended in digital mode"), and its task applies the digital receive set-up: `0x30` bit 7 (the analog audio mute: in DMR mode the audio comes from the vocoder, not the AT1846S) and `0x58` bit 3. A channel write sets that state back to analog, which is why it, and only it, unmutes. If so, the fix is to restore that **state variable** at the end of the drop, not registers.
+
+**Next: two read-only steps, then image 5.**
+1. **Static:** list every call site in the image that writes AT1846S `0x30` with bit 7 set (`0x70A6`, or an OR of `0x80`), and every site that writes `0x58 = 0xBCF5`. For each: the function, what decides it (a mode byte, a channel-type field, a flag), and whether it runs from a periodic task. Also: what `on_key` / the symbol engine's arm path changes in RAM (mode, channel type, a "digital TX" flag) that the analog channel write (`0x23`) sets back.
+2. **Dynamic:** with image 4, read RAM through op 14 (its `0x1800xxxx` window) over the radio-state structure the static step names, in the three states again (A after a channel write, B 1 s after a symbol key, C after the next channel write). The byte that differs in B and is restored in C is the candidate.
+3. **Image 5** = image 4 + at the end of the drop, set that state back to its pre-key value (save it in `on_key` like the registers). Bench as before: three keys, `0x30` at 0.1 s steps for 1 s after status 4, the level lines and a hotspot call each.
+
+Write the step-1 findings into `results.md` before building. Leases stay with Grok. **Start now.**
