@@ -30,7 +30,7 @@ import fw23_build
 ROOT = Path(__file__).resolve().parents[2]
 BUILD = ROOT / "radio_firmware" / "build"
 FW29 = BUILD / "DMR003.FW29.V022.bin"
-DEST = BUILD / "DMR003.FW30.V022.bin"
+DEST = BUILD / "DMR003.FW30.V022.image4.bin"
 TAG = range(0x38464, 0x38474)
 # drop_ptt's 0x58 = 0x8405 write, immediately before 0x30 = 0x7026.
 PAIR = 0x5B66A

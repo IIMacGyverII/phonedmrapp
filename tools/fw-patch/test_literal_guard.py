@@ -91,7 +91,7 @@ class LiteralGuardTest(unittest.TestCase):
         fw29_build.build()
         fw30_build.build()
         fw29 = (ROOT / "DMR003.FW29.V022.bin").read_bytes()
-        fw30 = (ROOT / "DMR003.FW30.V022.bin").read_bytes()
+        fw30 = (ROOT / "DMR003.FW30.V022.image4.bin").read_bytes()
         self.assertEqual(fw30[0x5B66A:0x5B66C], bytes.fromhex("0f6d"))
         self.assertEqual(fw30[0x5B66C:0x5B672], bytes.fromhex("303001ea0670"))
         self.assertEqual(fw30[0x5B676:0x5B67C], fw29[0x5B674:0x5B67A])
@@ -121,6 +121,32 @@ class LiteralGuardTest(unittest.TestCase):
         self.assertEqual(rows[0x5B71A][0], "movi")
         self.assertEqual(rows[0x5B71C][0], "st.w")
         self.assertEqual(rows[0x5B71E][0], "pop")
+
+    def test_fw30_port_refuses_ops_16_and_17_and_passes_the_guard(self):
+        import fw30_port
+        fw29_build.build()
+        blob, syms, _moved = fw30_port.build()
+        fw29 = (ROOT / "DMR003.FW29.V022.bin").read_bytes()
+        fac = (ROOT.parents[1] / "radio_firmware" / "DMR003.UV4T.V022-ORIGINAL.bin").read_bytes()
+        self.assertEqual(blob[0x38464:0x38474], b"DMR003.FW30.V022")
+        self.assertEqual(blob[0x18B5C:0x18B60], fac[0x18B5C:0x18B60])
+        self.assertEqual(blob[0x37F4:0x37F8], fac[0x37F4:0x37F8])
+        self.assertEqual(blob[0x35F64:0x35FE4], fw29[0x35F64:0x35FE4])
+        self.assertEqual(fw30_build.bsr_target(blob, 0x5BCC4), syms["refuse"])
+        self.assertEqual(fw30_build.bsr_target(blob, 0x5BCCA), syms["refuse"])
+        self.assertEqual(fw30_build.bsr_target(blob, 0x37F8), syms["guard"])
+        self.assertEqual(fw30_build.bsr_target(blob, 0x5AF4C), syms["op7"])
+        self.assertEqual(fw30_build.bsr_target(blob, 0x5B748), syms["setend"])
+        allowed = (
+            (0x5BCC4, syms["refuse"]), (0x5BCCA, syms["refuse"]),
+            (0x37F8, syms["guard"]), (0x5AF4C, syms["op7"]),
+            (0x5B748, syms["setend"]))
+        _, hits = literal_guard.changed_branches(fw29, blob, allowed)
+        self.assertEqual(hits, [], "FW30 covers %s" % (hits[:6],))
+        self.assertEqual(literal_guard.never_written(fw29, blob), [])
+        outside = [(pc, pool) for pc, pool in literal_guard.literal_loads(fw29)
+                   if 0x5BD74 <= pool < 0x5BE34 and not (0x5BD74 <= pc < 0x5BE34)]
+        self.assertEqual(outside, [])
 
 
 if __name__ == "__main__":
