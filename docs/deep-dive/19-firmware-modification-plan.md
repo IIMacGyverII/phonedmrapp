@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-28 — `F30F` decodes the DMR recording with `0x18B5C` left stock.** Status 1 three times. The close guard has to start after the prologue saves `r15`. Details in `results.md`.
+
 **2026-10-28 — byte 0 of `0x34808` is 1 after an analog channel write and 0 after a digital one.** The refill goes on `0x18B68`. Details in `results.md`.
 
 **2026-10-28 — a no-stack clear path at `0x18B5C` is still deaf.** F19B2 (`7df6e32f…`) at HackRF level 20: status 1 = 0. Factory decoded the same recording before and after. The site stays stock. Details in `results.md`.

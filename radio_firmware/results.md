@@ -3937,4 +3937,8 @@ The analog command has a continuation past the early return at `0x9B48`. That co
 
 So after an accepted analog channel write the byte is 1, and the task takes `0x18B68`. After a digital channel write it stays 0, and the task takes `0x18B5C`. `0x18B5C` stays stock. The refill belongs on `0x18B68`, and only while `0x4DAAC` is set.
 
+**F30F hears the same recording.** Factory at 10:03 and 10:08: status 1 three times, caller packet. `F19D` (FW19 with only `0x18B5C` restored, `82a2f8d6…`) at 10:11: status 1 three times, caller packet. `F30B` (RAM moved, op 7 refused when the byte is 0, no close guard, `045bca9c…`) at 10:17: the same. `F30F` (`a76b44c0…`) at 10:28: the same.
+
+`F30F` is FW19 with `0x18B5C` stock, the `0x18B68` refill kept, the launch wrappers kept, the stub RAM moved to `0x4F2C0`, op 7 sent to the reject path when byte 0 is 0, and the close guard. A `bsr` in place of the prologue at `0x37F4` overwrites `r15` before it is saved, and those images (`F30A` `7f292dd1…`, `F30C` `e16c6b0e…`) had status 1 = 0. The guard is a `bsr` at `0x37F8`, after the prologue has saved `r15`. It rewrites argument 1 into 0 only when `0x4DAAC` is 1 and the next byte is `0xA5`, then continues at `0x37FC`. The phone is on `F30F`. HackRF free after the 10:28 replay.
+
 End state 07:21: factory image, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107, SignalDeck `1.0.0-beta.19`. Battery 30.7 °C, AP 34.8 °C, PA 34.4 °C. HackRF idle. Phone and hotspot free.
