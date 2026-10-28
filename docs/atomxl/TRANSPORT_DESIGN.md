@@ -46,9 +46,14 @@ root after it appears (the Armor's `ttyS0` is fixed at boot; this one is not).
   body. Mapping, per command:
   - data replies (`0x34` version, `0x32` RSSI, `0x2B` caller info, `0x2D` text, `0x25`/`0x24` read-back, `0x40`):
     `sr = 0`, body as it is;
-  - set replies (`0x22`, `0x23`, `0x2E`, `0x30`, `0x31`, `0x36`, …): body `[result]` → `sr = result`, empty body
-    (seen: `0x22` → `00`, `0x2E` → `00`).
-  - unknown: logged raw, nothing acked. The mapping is a table with a host test per command.
+  - **`0x36` is a module push, not a set reply** (corrected 2026-10-28 after the managing agent's review of PR #73):
+    its status code (`RECEIVE_START`, `SEND_START` …) is the body, which `RadioEngine` reads from `body[0]`; it keeps
+    its body with `sr = 0`. Only our own request's reply (`rw` 00) folds a one-byte result into `sr`. The `rw` of a
+    real push is to be confirmed on the phone;
+  - set replies (`0x22`, `0x23`, `0x2E`, `0x30`, `0x31`, …): body `[result]` → `sr = result`, empty body
+    (seen: `0x22` → `00`, `0x2E` → `00`);
+  - unlisted commands: mapped the same way by shape (a 1-byte `rw` 00 body → `sr`, anything else data), each logged
+    once. As built: SignalDeck PR #73 (Grok, branch `grok/agold-envelope`).
 - **In, route 00 (bridge):** not the engine's. `0x01` version, `0x04` init finished, `0x06` start finished, `0x07`
   error, `0x08` state report (`03` = "pcm error, reset mcu" in the stock app), `0x09`/`0x0A` update results (*read*,
   `ExtModuleManager.parseCmd`). The transport logs them and, on a state report `03`, runs release + bring-up.
