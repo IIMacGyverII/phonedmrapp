@@ -52,4 +52,4 @@ frames that did not come through its own DMR receive path is the central researc
 
 - Which published documents cover each mode's frame structure in enough detail (Fusion's air interface, the D-Star
   specification, TIA-102 for P25, the NXDN technical specifications). Collect and cite them in the first step of each.
-- Whether the owner wants voice research (step 1) at all, given it depends on the module's vocoder.
+- **Owner decision point after step 1:** the read-only study runs regardless (nothing built, nothing keyed). Its report says whether the module's vocoder can decode host-supplied AMBE+2 frames and encode host audio, and what a prototype would take; the owner then decides whether step 3 (the voice prototype) goes ahead. The data-only steps do not wait for that decision.
