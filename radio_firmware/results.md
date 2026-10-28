@@ -3941,4 +3941,14 @@ So after an accepted analog channel write the byte is 1, and the task takes `0x1
 
 `F30F` is FW19 with `0x18B5C` stock, the `0x18B68` refill kept, the launch wrappers kept, the stub RAM moved to `0x4F2C0`, op 7 sent to the reject path when byte 0 is 0, and the close guard. A `bsr` in place of the prologue at `0x37F4` overwrites `r15` before it is saved, and those images (`F30A` `7f292dd1…`, `F30C` `e16c6b0e…`) had status 1 = 0. The guard is a `bsr` at `0x37F8`, after the prologue has saved `r15`. It rewrites argument 1 into 0 only when `0x4DAAC` is 1 and the next byte is `0xA5`, then continues at `0x37FC`. The phone is on `F30F`. HackRF free after the 10:28 replay.
 
-End state 07:21: factory image, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107, SignalDeck `1.0.0-beta.19`. Battery 30.7 °C, AP 34.8 °C, PA 34.4 °C. HackRF idle. Phone and hotspot free.
+**F30F hotspot bench, 10:38–11:08.** DMR both ways passed. The M17 stream and the receive-back check did not, and the runner's stream capture is over the 5 kHz stop. No firmware was changed after `a76b44c0…`.
+
+DMR transmit, 10:38, channel 49, bench ID, parrot off, 3 s low-power key. The relay reported `dmr_start` (bench ID to TG 9, slot 2) then `dmr_end`, 62 frames, terminator. MMDVM logged a voice header and a 3.6 s end, BER 13.3 %, RSSI −47. The bench ID was restored. Replay of that stored call: `F30F` at 10:39 and the factory image at 10:41 each had status 1 three times, a caller packet, RSSI −107.
+
+A CAN 0 stream (type `0x0005`) keyed: status 3, 54144 symbol bytes, op 7, unkey 45 s later. The MMDVM log did not grow. The hotspot's M17 CAN is 7. A CAN 7 stream (type `0x0385`) at 10:56 radiated (HackRF magnitude 2.2 quiet, 50 while keyed, level 16/16, no clip in that short capture) and the relay reported 1127 frames, why timeout. A 40-frame CAN 7 probe just before it was 36 frames, why timeout. The end bit was not in either `end`.
+
+Three 75-frame CAN 7 keys on channel 56 (type 2, 467.625 MHz, low power). The relay reported 77 frames timeout, 76 frames end bit, and 71 frames timeout. Receive level was 5609 before the first key and 1.3 after it. Selecting channel 56 again left it at 1.3. After each key the hotspot sent a 2 s call (50 frames). The Armor listed none of them.
+
+Runner `all` on the same image, low power, 467.625 MHz: boot PASS silent (peak 0.0 dB). Tone FAIL, carrier 10.54 s, clip 0, p99 3041 Hz, 1 kHz line 857 Hz. Stream FAIL, carrier 45.15 s, clip 0, LSF found, 0 payload frames, end bit false, p99 8186 Hz. Receive PASS, −19.1 dBFS, line 1.51. Heat PASS, no stop, AP 38.5 to 39.2 °C, battery 31.7 to 31.9 °C. Records under the temp bench results for `DMR003.F30F.V022`.
+
+End state 11:08: `DMR003.F30F.V022`, VFO channel 0, 467.625 MHz, low power, not transmitting, RSSI −105. SignalDeck owns the radio; the stock app is disabled. Battery 31.9 °C, AP 38.0 °C, PA 37.7 °C. HackRF idle.

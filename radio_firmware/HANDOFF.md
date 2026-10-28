@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -363,21 +363,21 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-Byte 0 of `0x34808` is 1 after an accepted analog write and 0 after a digital write. `F30F` (`a76b44c0…`) keeps `0x18B5C` stock and puts the refill on `0x18B68`. Same recording, level 20: status 1 three times, caller packet. Factory before it did the same. A guard that replaces the `0x37F4` prologue is deaf; the working guard starts at `0x37F8`, after `r15` is saved. HackRF free.
+F30F (`a76b44c0…`) passes DMR both ways. The hotspot decoded a CAN 7 M17 stream, 1127 frames, and closed it on timeout rather than the end bit. Receive audio stayed at RMS 1.3, so the return calls were not decoded. The runner's HackRF stream measured p99 8186 Hz, over the 5 kHz stop. Stopped. HackRF free.
 
-End state 10:28: `DMR003.F30F.V022`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107. Battery 30.3 °C, AP 34.2 °C, PA 33.7 °C.
+End state 11:08: `DMR003.F30F.V022`, VFO channel 0, 467.625 MHz, low power, not transmitting, RSSI −105. Battery 31.9 °C, AP 38.0 °C, PA 37.7 °C.
 
 ### Stuck
 
-The hotspot half of the F30F bench. Receive on the HackRF recording passes. The both-ways check needs a new reference call and the MMDVM log.
+The 10:35 list after DMR both ways. No firmware was changed.
 
-1. Factory at 10:03, level 20: status 1 = 3, caller packet.
-2. `F30F` at 10:28, same file, level 20: status 1 = 3, caller packet. `F19D` and `F30B` also passed; `F30A` and `F30C` (guard overwrote `r15`) did not.
-3. `ssh -o BatchMode=yes -o IdentitiesOnly=yes -i ~/.ssh/id_ed25519_wpsd pi-star@192.168.1.194 echo up` returned `Permission denied (publickey,password)`. No second user was tried.
+1. DMR transmit at 10:38, channel 49, bench ID, parrot off, 3 s. The relay reported `dmr_start` (bench ID to TG 9, slot 2) then `dmr_end`, 62 frames, terminator. MMDVM logged a 3.6 s call, BER 13.3 %, RSSI −47. Replay of that call: F30F and factory each had status 1 three times, a caller packet, RSSI −107.
+2. A CAN 0 stream keyed (status 3, 54144 bytes, op 7, unkey at 45 s) and the MMDVM log did not grow. CAN 7 was heard: 1127 frames, why timeout. HackRF magnitude 2.2 quiet and 50 while keyed. Three 75-frame keys: 77 timeout, 76 end bit, 71 timeout. Level 5609 before the first and 1.3 after it. Selecting channel 56 again left it at 1.3. Three hotspot calls of 50 frames were not listed.
+3. Runner `all`: boot silent; tone FAIL, p99 3041 Hz, 1 kHz line 857 Hz; stream FAIL, 0/1125, LSF found, p99 8186 Hz, carrier 45.15 s; receive PASS, −19.1 dBFS; heat PASS, AP 38.5 to 39.2 °C, battery 31.7 to 31.9 °C.
 
-Module: `DMR003.F30F.V022`, channel 49, 467.625 MHz, low power, not transmitting. Phone: SignalDeck has the radio, battery 30.3 °C, AP 34.2 °C, PA 33.7 °C. HackRF idle since 10:28.
+Module: `DMR003.F30F.V022`, VFO, 467.625 MHz, low power, not transmitting. Phone: SignalDeck owns the radio, stock app disabled, battery 31.9 °C, AP 38.0 °C, PA 37.7 °C. HackRF idle.
 
-Question: the bench key is still refused. Should the 1125-frame stream and the three symbol keys wait until SSH works, or proceed with the HackRF as the checker?
+Question: the 8.2 kHz capture is over the stop, and receive did not come back. Should the next image add the FW20 tail drain and the image-4 register restore, or should that capture be repeated at a lower HackRF gain before any firmware change?
 
 ## Owner question
 
