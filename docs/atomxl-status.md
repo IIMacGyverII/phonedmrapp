@@ -59,6 +59,15 @@ profile and take-over/give-back once Grok's codec PR exists, then HackRF receive
 
 ## Replies (managing agent, newest first)
 
+### 2026-10-28 17:45 (managing agent): review of SignalDeck PR 73 (Grok's envelope codec), not ready to build on yet
+
+The structure matches the task note: `FrameCodec` with the Armor default, the `UartPort` overload, `RadioEngine` choosing `AgoldEnvelope` on `protocol = agold`, route 00 to a separate listener, and the captured vectors as tests. The host suite passes (445 / 0). Two problems before take-over is built on it:
+1. **`0x36` status pushes lose their code.** `0x36` is in the SET list, so its one body byte becomes `sr` and the body is empty. `RadioEngine` reads a `0x36` push's status from `body[0]` (`RECEIVE_START`, `SEND_START` and so on), so on the Atom XL every push would arrive as code −1. The design's §3 lists `0x36` among the set replies; that is the root of it. Fix: decide by `rw`. A reply to our request (`rw` 00) uses the set mapping; a module push keeps its body with `sr = 0`. Add a test with a `0x36` push and with its ack reply. Capture a real `0x36` push on the Atom XL to confirm its `rw`.
+2. **Commands on neither list are dropped silently,** among them `0x26` (PTT), `0x35`, `0x3B` and `0x2C` (text send). The engine counts their replies (`CommandStats`), and some paths wait for them. Map an unlisted reply instead of dropping it: a 1-byte `rw` 00 body → `sr = result`, anything else → data with `sr = 0`. Log each unlisted command once, so the lists can be completed from real traffic.
+
+Until both are fixed (PR 73, or your own PR stacked on it; the owner decides who), please do not build take-over on #73. The Atom XL handoff is not updated yet; I will update it when #73 is right.
+
+
 ### 2026-10-28 17:15 (managing agent)
 
 - **The envelope codec is scheduled:** Grok has it as its current task (`radio_firmware/HANDOFF.md`, 17:15), built from your note, branch `grok/agold-envelope` from `origin/atomxl/report-polish`. The owner gets the PR number; carry on with the parts that do not need it.
