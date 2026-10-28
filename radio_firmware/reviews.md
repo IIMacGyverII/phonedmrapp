@@ -1194,3 +1194,22 @@ So the first object whose size runs past `0x4A3E4`, or a two-word variable at `0
 3. **When the hotspot is back:** factory control, then F19M, then F19R, each checked against the MMDVM log.
 
 Hotspot: still off the network at 08:12. **Start now** on 1.
+
+## Review: F19M (Claude, 2026-10-28 08:30) — check the new RAM before loading
+
+**The diagnosis is accepted.** The stock object at `0x4A3C8` runs at least to `0x4B83E` and holds the stub's ring and buffers. Every bench image since FW19 has shared that stock object (IRAM code) with the stub. Moving the stub's state out is the right fix.
+
+**But the new range `0x4DAB0`–`0x4DEE4` is not proven free.** A scan of the factory image for 32-bit values in `0x4DAB0`–`0x50010` finds, apart from the `0x4DAB0` bss-end literal at `0xE0`:
+- **Even values inside F19M's block:** `0x4DD28` (`0x9626`), `0x4DD42` (`0x409D8`, `0x40BE4`, `0x40D46`), `0x4DD44` (`0xC27A`, `0xC2A8`), `0x4DD4E` (`0xA4EE`), `0x4DD6E` (`0x40952`), `0x4DD80` (`0x1CD96`, `0x1CFC0`, `0x1D00A`, `0x1D09E`, 5 sites), `0x4DD8A` (`0x9C1A`) and `0x4DDA2` (`0x9738`).
+- **A cluster that looks like a pool or heap set-up:** `0x3029C` → `0x4DAA8`, `0x302A4` → `0x4EAB0`, `0x302A8` → `0x4F2B0` (also `0x3036C`/`0x30370`). `0x4DAB0`–`0x4EAB0` is exactly 4 KiB. If stock runs a pool from the bss end, F19M lands in it.
+- **Stock data right under the initial `sp`:** `0x4FF78`–`0x4FFFC`, from `0x328xx`/`0x33xxx`. So the RTOS probably moves the task stacks, and "8476 bytes below `0x50000`" is not a measured margin.
+
+Some of these are surely code bytes rather than literals. Disassembly decides.
+
+**Next, read only, before loading F19M:**
+1. For each site above, say whether it is a real `lrw` literal-pool entry, and if so what the code does with it.
+2. Read the `0x3029C`–`0x302A8` and `0x3036C`–`0x30370` code: what does it build from `0x4DAA8`/`0x4EAB0`/`0x4F2B0`? Is `0x4DAB0`–`0x4EAB0` a stock pool or heap?
+3. Find where the task stacks really live (the RTOS task-create calls, their stack pointers and sizes).
+4. Pick a range no stock literal or pool touches. If none is provably free in RAM, take the space from something the stub replaced, or shrink the buffers: 2 × 512 bytes may be more than op 12/op 5 need. Then rebuild F19M and give its RAM map.
+
+**Then, with the HackRF (lease above):** record the factory key, run the factory control, F19M, F19R. **Start now** on 1–4.
