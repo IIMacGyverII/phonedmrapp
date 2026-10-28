@@ -287,3 +287,21 @@ The owner works through the outstanding W6 items with the W6 agent: data-mode tr
 - **Soft SQ:** it gates in the app again, with W6 thresholds measured from HackRF recordings (`softSqThresholds`; the CTCSS detector is off, and on a channel with a tone the module keeps squelch 1). On the device static never opens it, at any level, and level 9 starts holding back the weakest speech. It replaces #55's module-squelch approach on the W6.
 - **On the W6:** it runs this branch, installed over the PR 58 build. That build is saved as scratchpad `w6_main_pr58.apk`.
 - **Merge:** independent of the other open PRs. Armor: all behaviour is behind W6 flags, and the Armor's defaults are checked by tests.
+
+### Data modes and the W6's monitor mode (Claude, 2026-10-28 15:10): SignalDeck PR 63 (`data-modes-raw`, stacked on #62)
+
+- **Receive regression on the PR 62 build** (channel 1, 440.000 MHz): SSTV Robot 36 complete; FT8 both messages; M17 96/100 and 91/100 frames clean. Passive APRS lost packets with Soft SQ on.
+- **Cause: the W6 module's squelch 0** (its monitor mode, always open), not the app's gate. Passive APRS decoded 23 of 24 packets at squelch 2 and 38 of 48 at squelch 0, with or without the gate. Details in the comment on #62.
+- **PR 63, which the owner approved:**
+  - Passive APRS decodes below the squelch (FCS-checked).
+  - While a data mode runs (APRS monitoring, SSTV, FT8, M17), the speaker and SignalDeck Web stay quiet unless MON is on.
+  - On the W6 (`dataSquelch` 1), data modes keep the channel's squelch (at least 1) instead of 0. On the W6: 0 → 2 when SSTV or FT8 starts, back to 0 when it stops; SSTV and FT8 decode.
+  - Passive APRS with Soft SQ on for voice (squelch 0) still loses some packets. That is accepted.
+- **Open:**
+  - The owner confirms by ear that the speaker is silent during a data mode.
+  - Armor checks for #62 (flags must leave it unchanged) and #63 (passive APRS below the squelch and a quiet speaker in data modes apply to every phone).
+  - Merge #62, then #63, retargeting 63 to main first.
+- **State of the W6:**
+  - It runs `data-modes-raw` (#62 + #63).
+  - Channel 1 "bench 1" at 440.000 MHz: squelch 2, Soft SQ on at level 4. Media volume 0.
+  - The PR 58 build is saved as scratchpad `w6_main_pr58.apk`.
