@@ -76,9 +76,11 @@ image gets back to the same state in one pass. Everything below is bench-only: c
    - prints the checks.
 3. **Checks** (`deploy.sh <host> check` any time):
    - `mmdvmhost`, `dapnetgateway` and `m17relay` are active; `dmrgateway` and `m17gateway` are not.
-   - UDP 62031 and 17010 are bound by python3 (the relay), and 62032 and 17011 by MMDVMHost.
-     **If 62032 has no process, MMDVMHost's DMR link is down:** replays are "sent" by the relay but never transmitted.
-     Restart MMDVMHost. This happened on 2026-10-28 at about 06:58, with no error logged.
+   - UDP 62031 and 17010 are bound by python3 (the relay), and 62032 and 17011 are bound. Run plain `ss` without sudo
+     and MMDVMHost's sockets show no process name, because it runs as another user. That is normal, not a fault.
+   - **The real test of the DMR link:** after a replay, the MMDVM log must show `DMR Slot 2, received network voice
+     header`. If it does not, the relay sent into nothing: restart MMDVMHost. On 2026-10-28 from about 06:58 the log
+     had no such line for any replay, with no error logged.
    - The MMDVM log shows the M17 and POCSAG lines and `Color Code: 1`.
 4. **Record a DMR test call again.** The reflash erased `~/claude-bench/dmr_last.bin`. With the parrot off and the
    Armor on the factory image, set the bench ID (`dmr_bench_id.sh set`), key a 3 s call on SignalDeck's channel 49,
@@ -87,7 +89,7 @@ image gets back to the same state in one pass. Everything below is bench-only: c
 5. **Before any receive verdict,** check that MMDVMHost logged `received network voice header` for that replay.
 
 Known traps:
-- WPSD's watchdog tries to restart DMRGateway and M17Gateway every few minutes ("DMRGateway is not running.
+- WPSD's watchdog (and the `dmrgateway`/`m17gateway` timers, which `hotspot_setup.py` now stops too) tries to restart DMRGateway and M17Gateway every few minutes ("DMRGateway is not running.
   Restarting…"). With the relay holding their ports they exit again, which is harmless. But if a gateway ever starts
   before the relay, it holds the port and the relay cannot bind it. The relay service starts before MMDVMHost for that
   reason.

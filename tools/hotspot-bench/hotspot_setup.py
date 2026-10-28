@@ -100,7 +100,7 @@ def main():
     apply("/etc/dapnetgateway", DAPNETGATEWAY, stamp)
     # The relay takes the gateways' UDP ports, so the real gateways stay stopped.
     for svc in ("dmrgateway", "m17gateway"):
-        print(svc, "stop/disable:", sh(f"systemctl stop {svc}; systemctl disable {svc} 2>&1 | tail -1") or "ok")
+        print(svc, "stop/disable:", sh(f"systemctl stop {svc}.timer {svc}; systemctl disable {svc}.timer {svc} 2>&1 | tail -1") or "ok")
     print("mmdvmhost restart:", sh("systemctl restart mmdvmhost") or "ok")
     print("dapnetgateway restart:", sh("systemctl restart dapnetgateway") or "ok")
 

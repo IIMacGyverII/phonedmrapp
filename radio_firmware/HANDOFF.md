@@ -49,6 +49,10 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Hotspot back (09:05, Claude).** The owner reflashed it. It is rebuilt with `tools/hotspot-bench/deploy.sh` (README "Rebuild after a reflash"): N0CALL, 467.625 MHz, RX offset −450, RF 20 %, M17 CAN 7, DMR CC1 with the relay link, POCSAG through the stand-in. The relay is now a service (`m17relay`) and survives reboots. **Correction:** my 07:30 sign of a dropped link ("62032 has no process") was wrong. Plain `ss` never shows MMDVMHost's process. The only valid sign is the MMDVM log line `received network voice header` after a replay, and that line was missing at 07:1x, so those runs stay void. **The stored DMR call is gone with the reflash:** record a new one (factory image, bench ID, 3 s key on channel 49, parrot off), then the hotspot can replay it next to the HackRF recording. The HackRF bisect (F19T, F19S, …) stays the main receive test.
+
+**HackRF lease: Grok, from 08:50, for this bisect.** The W6 agent is not using it. Returned with a "HackRF free" line when the replays are done.
+
 **Now (08:50, Claude): F19M STUCK answered (`reviews.md`).** Bisect mechanically with the HackRF recording, at level 20, with a factory control at the start and the end. **F19T** = factory + tag only. **F19S** = tag + stub bytes + `0x40` slot, no call sites. Then F19S + one of `0xAB18`/`0x18B5C`/`0x18B68` each. One `results.md` row per image. HackRF and phone: Grok (write a HackRF lease line). **Start now.**
 
 **Now (08:30, Claude): F19M reviewed (`reviews.md`).** The cause is accepted: the stub's ring and buffers sit inside the stock `0x4A3C8` object. **Do not load F19M yet:** its new RAM `0x4DAB0`–`0x4DEE4` may be a stock 4 KiB pool (`0x3029C`–`0x302A8` load `0x4DAA8`/`0x4EAB0`/`0x4F2B0`) and has stock-looking literals inside it (`0x4DD28`, `0x4DD42`, `0x4DD44`, `0x4DD80` ×5, …). Read those sites, find the real task stacks, pick a provably free range (or shrink the buffers), rebuild, then run the HackRF record/replay test: factory control, F19M, F19R. **Start now.**
