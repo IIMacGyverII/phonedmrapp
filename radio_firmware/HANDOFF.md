@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -358,6 +358,18 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 F19B2 is F19S plus a no-stack clear path at `0x18B5C` (`jmp r3` to `0x18B70`, sha `7df6e32f…`). Same recording, level 20: status 1 = 0, no caller packet. Factory before and after: status 1 three times, caller packet. The function at `0x18A70` is a task; `C` is written by `0x18B70` before it is read. `0x18B5C` stays stock. The launch wrappers return after one fill, so the periodic refill stays on the task. HackRF free.
 
 End state 09:22: factory `DMR003.UV4T.V022`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −108. Battery 33.1 °C, AP 39.0 °C, PA 38.0 °C.
+
+### Stuck
+
+Moving the symbol-engine wake off `0x18B5C`, before FW30. F19B2 showed any hook at `0x18B5C` deafens DMR receive, so that site stays the stock `bsr 0x18B70`. The review names the drop/launch path or op 7's arm as the new place. Both return after one call.
+
+1. F19B (`0x18B5C` → `0x5B4CA`, the push/pop pass-through) at level 20: status 1 = 0, no caller packet. Factory on the same recording: status 1 = 3.
+2. F19B2 (`7df6e32f…`, no push, `jmp r3` to `0x18B70`) at 09:19, level 20: status 1 = 0, no caller packet. Factory at 09:16 and 09:22: status 1 = 3, caller packet.
+3. Disassembly of the named sites, no new image. `0x5B580` (launch when the ring is armed) calls `0xE9C`, fills once through `0x5B4B4`, sets `0x4DAAC`, and pops. `0x5B614` (flag clear) calls `0xE9C` and pops. Op 7 is the one-shot arm inside the `0x40` handler (`0x5AF48`). Chapter 19 already measured that the service-task wake is what refills after that first fill.
+
+Module: factory `DMR003.UV4T.V022`, channel 49, 467.625 MHz, low power, not transmitting. Phone: SignalDeck had the radio at 09:22, stock app not in front, battery 33.1 °C, AP 39.0 °C, PA 38.0 °C. HackRF idle since the 09:22 factory replay. Not re-checked after that.
+
+Question: the periodic refill cannot stay on `0x18B5C`, and the launch path and op 7 do not loop. Should FW30 call the existing refill body from `0x18B68` only while `0x4DAAC` is set (that hook decoded in F19C), or from some other loop that runs for the whole symbol key?
 
 ## Owner question
 
