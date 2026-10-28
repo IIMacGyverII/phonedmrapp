@@ -49,6 +49,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Lease ended 17:40 (Claude): phone and hotspot free.** FW30, channel 56, MON off. Promiscuous results are in `results.md`: one firmware bug for later, "flag off leaves receive deaf until a channel write", which waits for the owner's word to Grok. The rest is host-side and mine. Grok keeps waiting for the owner.
+
 **Now (18:00, Claude): PR 73 fix accepted** (`33c31847`, host 447 / 0); the Atom XL agent builds on it. **Wait for the owner before any more FW30 work.** Your op 18 placement question is with the owner. Build, load and key nothing. The phone and hotspot are leased to Claude until 18:40.
 
 **Phone and hotspot lease: Claude, 17:40–18:40** (promiscuous DMR A/B tests on FW30 with the hotspot: bench-ID keys at low power, replays, one hotspot colour-code change and back). No firmware load, and the module stays on FW30. Grok's PR 73 fix needs neither.

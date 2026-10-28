@@ -4165,3 +4165,17 @@ End state 16:54: `DMR003.FW30.V022`, channel 56, not transmitting, RSSI −106. 
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.
+
+## Promiscuous DMR receive on FW30, first A/B pass with the hotspot (Claude, 2026-10-28 17:25–17:38)
+
+FW30 (FW3K retagged), SignalDeck beta.19 `ebe814a4…`, channel 49 (CC1, TS2, list 1/9/99) and a temporary channel 58 (list 99 only, deleted afterwards). The source is one real bench call, the FW3K key from 15:49 (1234568 → TG 9), which the hotspot relay replays unchanged. MON on → `0x40` op 15 `[15, 1]` (`promiscuous on: sr=0 flag=1`).
+
+- **First, a module restart was needed.** The first replays (17:25) got no status at all. Grok's earlier symbol keys had left receive muted (the open FW30 item). After `restartmodule`, case 1A was heard: status 1, `0x2B` `[01 88 D6 12 00 09 00 00 00]`, status 2.
+- **Flag on, TG in the list (1B):** the module reported **status 10 / 11** (`MIX_DIGITAL_RX_START` / `_STOP`) instead of 1 / 2. Once, a 1B/2B-era call gave the **11-byte `0x2B`** `[01 88 D6 12 00 09 00 00 00 0A 00]`; the two appended bytes are `0A 00`, which is not colour code 1 + slot 2. The decoding of those bytes is unverified.
+- **SignalDeck ignores status 10 / 11.** `RadioService.status()` handles only 1 / 2 for receive, so a promiscuous call sets no receive state, gets no caller query and no history line. Host fix needed (treat 10 / 11 like 1 / 2 on a digital channel).
+- **Flag off again leaves receive deaf until a channel write (case 7).** After on → off, an in-list call (1A) was not heard. A channel reselect brought it back (1A heard at 17:32). That is a firmware bug in the FW26 off path, probably the colour-code or admit state not being restored.
+- **The flag does not survive a channel change from the web API.** After MON on and then a channel select, no `promiscuous on` line was logged, and calls gave the 9-byte `0x2B`. Either MON clears on a channel change, or the flag is not re-sent. Host-side, to check.
+- **Case 2 (TG not in the list) is inconclusive.** Silent with the flag off, as expected. With the flag on, silent in two clean tries; once a TG 9 call was reported on the TG-99 channel right at a flag change.
+- **Not run:** cases 3/4 (private calls) and 5 (colour code 2). Both wait for the host fixes above, so that each row is read cleanly.
+
+End state 17:38: FW30, channel 56, MON off, channel 58 deleted. SignalDeck build unchanged (`ebe814a4…`). Nothing keyed.
