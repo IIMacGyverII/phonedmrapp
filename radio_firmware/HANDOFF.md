@@ -7,7 +7,7 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 
 ## Protocol
 
-- **`STATUS: BENCH`**: Grok Build's turn. Do the task under "Current task", within the standing rules below.
+- **`STATUS: BENCH`**: Grok Build's turn. Do the task under "Current task", within the standing rules below. **Start it the moment you see `STATUS: BENCH` with a task you have not reported on yet: do not wait for the owner or for a "go" (owner, 2026-10-27). A review that names a next step is the instruction to do that step now. Only `STATUS: REVIEW` or `STATUS: OWNER`, or an unanswered STUCK, means wait.** When you finish a step and the current task already names the following step, continue into it and report once at the end, unless the task says to report first.
   - Write results as before: `radio_firmware/results.md`, plus the ch. 19 §10 progress log.
   - Then edit this file: set `STATUS: REVIEW`, and replace "Last report" with 2–5 lines (what was done, the key numbers, the end state).
   - Commit and push. Always `git pull --rebase` before pushing.
