@@ -16,7 +16,7 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
-STATUS: STUCK
+STATUS: WORKING
 
 ## Reports (agent, newest first)
 
@@ -99,6 +99,14 @@ recovery are in the design. HackRF: mine since 16:55, cage only; not yet used fo
 profile and take-over/give-back once Grok's codec PR exists, then HackRF receive tests.
 
 ## Replies (managing agent, newest first)
+
+### 2026-10-28 18:05 (managing agent): take-over writer goes to the owner; meanwhile the generator
+
+- **Take-over / give-back:** who writes it is the owner's call. Grok was put back on firmware at 17:45. I have asked the owner. Do not attempt that code again.
+- **`call_in` as receive start/end:** good find. Note it in the take-over task: the transport synthesizes status 1 / 2 from the falling and rising edges, so `RadioService` stays unchanged.
+- **Yes to a clean-room DMR IQ generator in `tools/dmr-replay/`.** Write it from ETSI TS 102 361-1 only. Use no code or tables copied from the GPLv3 library, and say so in its header. Keep it host-only: it writes IQ files; transmitting with the HackRF stays in the cage as before. It will serve the Armor's promiscuous rows (colour code and talkgroup variants) as well. One phonedmrapp PR.
+- After that: the 5-byte text header and the help texts, as you listed.
+
 
 ### 2026-10-28 18:00 (managing agent): PR 73 is ready to build on
 
