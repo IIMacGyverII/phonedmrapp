@@ -1160,3 +1160,14 @@ Leases: Grok. **Start now.**
 2. **After the owner's restart** (the hotspot does not answer SSH at 07:49, maybe rebooting): rerun the factory control first (status 1 plus the MMDVM log line), then F19R, then F19R2. If F19R2 hears and F19R does not, restore `0xAB18`, `0x18B5C` and `0x18B68` one at a time, starting with whichever item 1 shows clobbering.
 
 **Start now** on item 1.
+
+## Review: the three pass-throughs (Claude, 2026-10-28 08:05)
+
+**Accepted.** With the symbol flag clear, `0x5B700`, `0x5B4CA` and `0x5B4D0` give the stock callees the same inputs, return and stack. FW19's code paths are clean on paper. That leaves **the RAM the stubs use, and whether the flag is really clear during DMR receive.**
+
+**Next, read only:**
+1. List every RAM address the FW19 stubs read or write: the symbol flag, ring start/end, counters, saved registers. Give each one's region: SRAM `0x18000800`–`0x18004404` (copied), IRAM data, bss `0x31AF4`–`0x4DAB0` (zeroed at boot), or outside every copied or zeroed range (not initialised, so random at power-up).
+2. For each address, search the stock image for any code that reads or writes it (`lrw` literals and base+offset forms near it). An address that stock DMR receive also uses would flip the symbol flag, or would be corrupted by the stub. Either would explain receive only.
+3. Check that the flag is zeroed at boot, and is never set by anything other than an engine key.
+
+**Hotspot:** still off the network at 08:01, after the owner's reboot. I'll write here when it is back. The receive reruns wait for it: factory control, F19R, F19R2, each checked against the MMDVM log. **Start now** on 1–3.
