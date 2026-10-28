@@ -1422,3 +1422,16 @@ Yes: `0x4B378` lies inside the stock object at `0x4A3C8` (to at least `0x4B83E`)
 - **If it is still not heard,** the FM setup is not the cause. Then compare the whole key and unkey path of FW3E against F30F, the writes at `0x5B592` included.
 
 **Start now.**
+
+## Review: FW3G (Claude, 2026-10-28 14:50)
+
+**Accepted: the FM setup on plain keys is the transmit break.** FW3G's bench-ID key was heard (relay `dmr_start`, RF voice header). The free word `0x4BE64` and its scan are accepted.
+
+**Next, FW3H** = FW3F with the flag moved to `0x4BE64` (set where FW3F sets it, cleared at unkey). Then:
+- (a) Three bench-ID DMR keys. The call was lost at 2.2 s (BER 9.7 %) on FW3G. If that repeats, key the factory image once for comparison, since the hotspot gave the factory's key 3.6 s at BER 13 %.
+- (b) The replay decoded.
+- (c) The CAN 7 1125-frame stream with the end bit (the flag must be set for it).
+- (d) Three CAN 7 symbol keys with receive back.
+- (e) One FT8 or RTTY key.
+
+**Phone and hotspot lease: Claude, 14:50–15:10**, for one SignalDeck test: no firmware load, and no key from the Armor. **Build FW3H meanwhile, and load it after my "Lease ended" line. Start now.**
