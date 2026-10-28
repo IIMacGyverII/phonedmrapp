@@ -10,13 +10,15 @@ PC  m17bench.py  <--audio----   hotspot  m17relay.py  <--network frames--   MMDV
 
 `m17relay.py` takes the place of M17Gateway on MMDVMHost's local network link. It decodes every transmission the
 hotspot hears (Codec 2 3200) and streams the audio to the PC. It encodes audio the PC sends into M17 network frames,
-which MMDVMHost transmits. It can also act as a parrot, replaying each transmission it hears.
+which MMDVMHost transmits. It can also act as a parrot, replaying each transmission it hears. For POCSAG it stands in
+for the DAPNET core (127.0.0.1:43434), so the hotspot's own DAPNETGateway logs in to it and transmits the pages the PC
+sends.
 
 ## Files
 
 | File | Runs on | What |
 |---|---|---|
-| `m17bench.py` | PC (Python 3, ffmpeg and ffplay) | A window: Connect, Send audio file (WAV, MP3, FLAC, OGG, M4A), Listen live, Parrot, Save last heard. Also a command line, below. |
+| `m17bench.py` | PC (Python 3, ffmpeg and ffplay) | A window: Connect, Send audio file (WAV, MP3, FLAC, OGG, M4A), Stop, Listen live, Parrot, Save last heard, and a POCSAG page row (RIC, function, text). Also a command line, below. |
 | `m17relay.py` | hotspot (Python 3) | The relay. Listens on TCP 8080, a port the WPSD firewall already allows. |
 | `c2tool.c` | hotspot | Codec 2 3200 encode/decode filter, built against the upstream Codec 2 library (LGPL-2.1). |
 
@@ -26,6 +28,12 @@ which MMDVMHost transmits. It can also act as a parrot, replaying each transmiss
 with the default addresses (127.0.0.1, 17010/17011). Leave M17Gateway stopped, because the relay takes its UDP port.
 Set `[Modem] RXOffset` for this board. On ours, −300 to −600 Hz gave 0.0 % BER and −450 is set. With 0, the hotspot
 joined late at 6.5 % BER. For the cage, `[Modem] RFLevel=20`. Then restart MMDVMHost with `sudo systemctl restart mmdvmhost`.
+
+For POCSAG (back up both files first): in `/etc/mmdvmhost`, `[POCSAG] Enable=1` and `Frequency=` your test frequency
+(467625000 here), `[POCSAG Network] Enable=1`. In `/etc/dapnetgateway`, `[General] Callsign=N0CALL`, `[DAPNET]
+Address=127.0.0.1`, `Port=43434`, `AuthKey=benchkey` (any letters and digits; the stand-in does not check it). Restart
+MMDVMHost, start the relay, then `sudo systemctl restart dapnetgateway`. The relay's log shows "dapnet link online".
+The hotspot transmits POCSAG at 1200 baud only, and it cannot receive POCSAG: SignalDeck is the receiver under test.
 
 Build Codec 2 and the tool on the hotspot. Copy the `codec2/` folder of SignalDeck's `app/src/main/cpp` and
 `c2tool.c` to `~/claude-bench/c2/`, then:
@@ -48,6 +56,7 @@ Add `--parrot` to start it with the parrot on. The window can also switch the pa
 python m17bench.py                                   # the window
 python m17bench.py --send music.mp3                  # send one file (first 120 s; --max to change)
 python m17bench.py --listen 60 --save heard.wav      # listen 60 s and save what the hotspot heard
+python m17bench.py --page 1234567 --text "hello"     # one POCSAG page (--func 0 numeric, 3 alphanumeric)
 ```
 
 Options: `--host 192.168.1.194`, `--src N0CALL`, `--dst @ALL`. Use only the bench callsign on the cage bench.
@@ -60,4 +69,8 @@ Options: `--host 192.168.1.194`, `--src N0CALL`, `--dst @ALL`. Use only the benc
   5.0 seconds".
 - SignalDeck decodes the hotspot's transmissions on its M17 channel (about 85–94 % good frames); the parrot round trip
   (Armor key, hotspot replay, Armor decode) works with the CAN matched.
+- A POCSAG page from the PC went out on air: DAPNETGateway "Sending message in slot 4 to 1234567, type 6, func
+  Alphanumeric", MMDVMHost "POCSAG, transmitted 2 frame(s) of data from 1 message(s)".
+- This board's firmware has no FM mode (the modem NAKs `SET_FM_PARAMS2` and MMDVMHost stops), so FT8, APRS, SSTV and
+  other audio modes cannot go through this hotspot.
 - MMDVMHost writes a zero CRC in network frames on this link. The relay writes the spec CRC, and MMDVMHost accepts both.

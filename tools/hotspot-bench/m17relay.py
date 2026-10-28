@@ -10,6 +10,7 @@ PC protocol on TCP port 8080 (already open in the WPSD firewall), one client at 
   client -> relay  'T' JSON {"src": "N0CALL", "dst": "@ALL"} then 'P' s16le 8 kHz mono PCM chunks, then 'E' (send it)
                    'R' JSON {"parrot": true|false}
                    'S' stop: ends a transmission in progress with an end frame
+                   'G' JSON {"ric": 1234, "func": 3, "text": "...", "numeric": false}: a POCSAG page via DAPNETGateway
   relay -> client  'H' JSON {"event": "start"|"end"|"sent"|"info", ...}  'A' s16le 8 kHz mono PCM of what was heard
 No internet and no reflector are involved. Written for the SignalDeck bench.
 """
@@ -54,6 +55,65 @@ def hotspot_can():
             elif sec == "[M17]" and line.startswith("CAN="): return max(0, min(15, int(line[4:])))
     except (OSError, ValueError): pass
     return 0
+
+class DapnetCore:
+    """A stand-in for the DAPNET core on 127.0.0.1:43434, so the hotspot's own DAPNETGateway transmits our pages.
+    Implements the legacy transmitter protocol: the gateway logs in with "[type vX CALL KEY]", the core runs a few
+    time-sync rounds ("2:TTTT", answered "2:TTTT:CCCC" then "+"), sends the time adjust ("3:+0000") and the time slots
+    ("4:0123456789ABCDEF", all slots), then pages as "#NN 6:1:<RIC hex>:<function>:<text>" (6 = alphanumeric,
+    5 = numeric; 1 = 1200 baud), each acknowledged "#NN +". Written from the protocol, for the bench only."""
+    def __init__(self, relay, port=43434):
+        self.relay = relay; self.port = port; self.q = []; self.cv = threading.Condition(); self.seq = 0; self.online = False
+        threading.Thread(target=self.serve, daemon=True).start()
+
+    def page(self, ric, func, text, numeric=False):
+        with self.cv:
+            self.seq = (self.seq + 1) % 256
+            self.q.append((self.seq, ric, func, text, numeric)); self.cv.notify()
+        return self.seq
+
+    def serve(self):
+        srv = socket.socket(); srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1); srv.bind(("127.0.0.1", self.port)); srv.listen(1)
+        while True:
+            c, _ = srv.accept()
+            try: self.session(c)
+            except Exception as e: self.relay.event(event="info", text="dapnet session ended: %s" % e)
+            finally:
+                self.online = False
+                try: c.close()
+                except OSError: pass
+
+    def session(self, c):
+        f = c.makefile("rwb", buffering=0)
+        def line():
+            b = f.readline()
+            if not b: raise EOFError("gateway closed")
+            return b.decode(errors="replace").strip()
+        def send(t): f.write((t + chr(10)).encode())
+        login = line()
+        self.relay.event(event="info", text="dapnet gateway logged in: %s" % login.split(" ")[0])
+        for _ in range(2):
+            t = "%04X" % (int(time.time() * 10) & 0xFFFF)
+            send("2:" + t); line(); line()
+        send("3:+0000"); line()
+        send("4:0123456789ABCDEF"); line()
+        self.online = True; self.relay.event(event="info", text="dapnet link online")
+        c.settimeout(0.5)
+        while True:
+            with self.cv:
+                while not self.q:
+                    if not self.cv.wait(timeout=20): break
+                item = self.q.pop(0) if self.q else None
+            if item is None:
+                continue
+            seq, ric, func, text, numeric = item
+            send("#%02X %d:1:%X:%d:%s" % (seq, 5 if numeric else 6, ric, func, text))
+            ack = ""
+            t0 = time.time()
+            while time.time() - t0 < 10:
+                try: ack = line(); break
+                except socket.timeout: continue
+            self.relay.event(event="page", seq=seq, ric=ric, func=func, text=text, ack=ack)
 
 class Relay:
     def __init__(self):
@@ -174,6 +234,11 @@ class Relay:
                 elif kind == b"E":
                     src = (hdr.get("src") or "N0CALL"); dst = (hdr.get("dst") or "@ALL")
                     threading.Thread(target=self.transmit, args=(bytes(pcm), src, dst), daemon=True).start(); pcm = bytearray()
+                elif kind == b"G":
+                    g = json.loads(data or b"{}")
+                    if not self.dapnet.online: self.event(event="info", text="dapnet link not online; page queued")
+                    seq = self.dapnet.page(int(g.get("ric", 0)), int(g.get("func", 3)), str(g.get("text", ""))[:80], bool(g.get("numeric")))
+                    self.event(event="info", text="page #%02X queued for RIC %s" % (seq, g.get("ric")))
                 elif kind == b"S":
                     if self.sending: self.abort = True
                 elif kind == b"R":
@@ -185,5 +250,5 @@ class Relay:
 
 if __name__ == "__main__":
     import sys
-    r = Relay(); r.parrot = "--parrot" in sys.argv
+    r = Relay(); r.parrot = "--parrot" in sys.argv; r.dapnet = DapnetCore(r)
     r.serve()

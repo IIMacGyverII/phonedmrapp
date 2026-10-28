@@ -5,6 +5,7 @@ Talks to m17relay.py on the hotspot (TCP 8080). Needs Python 3 and ffmpeg/ffplay
   python m17bench.py                       the window: Connect, Send audio file, Listen, Save last heard, Parrot
   python m17bench.py --send song.mp3       command line: send one file and exit
   python m17bench.py --listen 30 --save heard.wav   command line: listen for 30 s, save what was heard
+  python m17bench.py --page 1234567 --text "hello"  command line: one POCSAG page (function 3 = alphanumeric)
 Options: --host 192.168.1.194  --src N0CALL  --dst @ALL  --max 120 (seconds of a file to send)
 """
 import argparse, json, os, queue, shutil, socket, struct, subprocess, sys, threading, time, wave
@@ -43,6 +44,8 @@ class Link:
     def parrot(self, on): self.msg(b"R", json.dumps({"parrot": bool(on)}).encode())
 
     def stop(self): self.msg(b"S")
+
+    def page(self, ric, func, text, numeric=False): self.msg(b"G", json.dumps({"ric": int(ric), "func": int(func), "text": text, "numeric": bool(numeric)}).encode())
 
     def loop(self):
         def rd(n):
@@ -90,6 +93,8 @@ def cli(a):
         print("sending %.1f s from %s as %s to %s" % (len(pcm) / 16000, a.send, a.src, a.dst), flush=True)
         link.send_pcm(pcm, a.src, a.dst)
         done.wait(len(pcm) / 16000 + 20)
+    if a.page is not None:
+        link.page(a.page, a.func, a.text or "Test page", numeric=(a.func == 0)); time.sleep(8)
     if a.listen:
         print("listening %d s" % a.listen, flush=True); time.sleep(a.listen)
         if a.save: save_wav(a.save, bytes(heard)); print("saved %.1f s to %s" % (len(heard) / 16000, a.save))
@@ -97,7 +102,7 @@ def cli(a):
 def gui(a):
     import tkinter as tk
     from tkinter import filedialog, ttk
-    root = tk.Tk(); root.title("M17 Hotspot Bench"); root.geometry("620x460")
+    root = tk.Tk(); root.title("M17 Hotspot Bench"); root.geometry("760x520")
     q = queue.Queue(); st = {"link": None, "player": None, "heard": bytearray(), "last": bytearray(), "mute": False}
     top = ttk.Frame(root, padding=8); top.pack(fill="x")
     host = tk.StringVar(value=a.host); src = tk.StringVar(value=a.src); dst = tk.StringVar(value=a.dst)
@@ -106,7 +111,13 @@ def gui(a):
         ttk.Label(top, text=lab).grid(row=0, column=2 * i, sticky="w", padx=(0, 4))
         ttk.Entry(top, textvariable=var, width=w).grid(row=0, column=2 * i + 1, padx=(0, 10))
     bar = ttk.Frame(root, padding=(8, 0)); bar.pack(fill="x")
-    log = tk.Text(root, height=18, wrap="word"); log.pack(fill="both", expand=True, padx=8, pady=8)
+    pg = ttk.LabelFrame(root, text="POCSAG page (1200 baud, through the hotspot's DAPNETGateway)", padding=8); pg.pack(fill="x", padx=8, pady=(8, 0))
+    ric = tk.StringVar(value="1234567"); func = tk.StringVar(value="3 alphanumeric"); ptext = tk.StringVar(value="Test page")
+    ttk.Label(pg, text="RIC").grid(row=0, column=0, sticky="w"); ttk.Entry(pg, textvariable=ric, width=10).grid(row=0, column=1, padx=(4, 10))
+    ttk.Label(pg, text="Function").grid(row=0, column=2, sticky="w")
+    ttk.Combobox(pg, textvariable=func, width=14, state="readonly", values=["0 numeric", "1", "2", "3 alphanumeric"]).grid(row=0, column=3, padx=(4, 10))
+    ttk.Label(pg, text="Text").grid(row=0, column=4, sticky="w"); ttk.Entry(pg, textvariable=ptext, width=28).grid(row=0, column=5, padx=(4, 10))
+    log = tk.Text(root, height=16, wrap="word"); log.pack(fill="both", expand=True, padx=8, pady=8)
     def say(t): log.insert("end", time.strftime("%H:%M:%S ") + t + "\n"); log.see("end")
     def on_event(e): q.put(("ev", e))
     def on_audio(b): q.put(("au", b))
@@ -136,6 +147,14 @@ def gui(a):
         if st["player"]: st["player"].close(); st["player"] = None
         st["mute"] = True
         say("stopped: sending ended, playback cut (the next transmission plays again)")
+    def send_page():
+        if not st["link"]: say("connect first"); return
+        try: r = int(ric.get().strip())
+        except ValueError: say("RIC must be a number (0 to 2097151)"); return
+        if not 0 <= r <= 2097151: say("RIC must be 0 to 2097151"); return
+        f = int(func.get().split()[0]); t = ptext.get().strip()
+        if not t: say("write the page text"); return
+        st["link"].page(r, f, t, numeric=(f == 0)); say("page to %d (function %d): %s" % (r, f, t))
     def set_parrot():
         if st["link"]: st["link"].parrot(parrot.get())
     ttk.Button(bar, text="Connect", command=connect).pack(side="left")
@@ -144,6 +163,7 @@ def gui(a):
     ttk.Checkbutton(bar, text="Listen", variable=listen).pack(side="left", padx=6)
     ttk.Checkbutton(bar, text="Parrot", variable=parrot, command=set_parrot).pack(side="left", padx=6)
     ttk.Button(bar, text="Save last heard…", command=save).pack(side="left", padx=6)
+    ttk.Button(pg, text="Send page", command=send_page).grid(row=0, column=6)
     def tick():
         while not q.empty():
             k, v = q.get()
@@ -155,6 +175,7 @@ def gui(a):
                     if listen.get() and not st["player"]: st["player"] = Player()
                 elif e == "end":
                     st["last"] = st["heard"]; say("end %s -> %s, %s s, %s frames" % (v.get("src"), v.get("dst"), v.get("seconds"), v.get("frames")))
+                elif e == "page": say("hotspot took page #%02X for RIC %s (%s)" % (v.get("seq", 0), v.get("ric"), "acknowledged" if str(v.get("ack", "")).endswith("+") else "no ack: " + str(v.get("ack"))))
                 elif e == "sent": say("hotspot sent %s s as %s -> %s%s" % (v.get("seconds"), v.get("src"), v.get("dst"), " (stopped)" if v.get("stopped") else ""))
                 else: say(v.get("text", json.dumps(v)))
             elif k == "au":
@@ -171,5 +192,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--host", default="192.168.1.194"); ap.add_argument("--src", default="N0CALL"); ap.add_argument("--dst", default="@ALL")
     ap.add_argument("--max", type=int, default=120); ap.add_argument("--send"); ap.add_argument("--listen", type=int, default=0); ap.add_argument("--save")
+    ap.add_argument("--page", type=int, help="send a POCSAG page to this RIC"); ap.add_argument("--func", type=int, default=3); ap.add_argument("--text")
     a = ap.parse_args()
-    (cli if (a.send or a.listen) else gui)(a)
+    (cli if (a.send or a.listen or a.page is not None) else gui)(a)
