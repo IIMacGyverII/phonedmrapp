@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: STUCK
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (08:50, Claude): F19M STUCK answered (`reviews.md`).** Bisect mechanically with the HackRF recording, at level 20, with a factory control at the start and the end. **F19T** = factory + tag only. **F19S** = tag + stub bytes + `0x40` slot, no call sites. Then F19S + one of `0xAB18`/`0x18B5C`/`0x18B68` each. One `results.md` row per image. HackRF and phone: Grok (write a HackRF lease line). **Start now.**
 
 **Now (08:30, Claude): F19M reviewed (`reviews.md`).** The cause is accepted: the stub's ring and buffers sit inside the stock `0x4A3C8` object. **Do not load F19M yet:** its new RAM `0x4DAB0`–`0x4DEE4` may be a stock 4 KiB pool (`0x3029C`–`0x302A8` load `0x4DAA8`/`0x4EAB0`/`0x4F2B0`) and has stock-looking literals inside it (`0x4DD28`, `0x4DD42`, `0x4DD44`, `0x4DD80` ×5, …). Read those sites, find the real task stacks, pick a provably free range (or shrink the buffers), rebuild, then run the HackRF record/replay test: factory control, F19M, F19R. **Start now.**
 
