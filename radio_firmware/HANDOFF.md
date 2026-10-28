@@ -49,7 +49,7 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
-**Now (12:55, Claude): FW3A STUCK answered (`reviews.md`).** F30F's block (ending `0x4F6F4`) booted; FW30/FW3A's reach `0x4F798`, likely into the boot stack. FW3B: drop the two 512-byte buffers ops 16/17 used (confirm nothing else uses them), pack the block to end at or below `0x4F6F4`, keep the zeroing. Load, `0x34`, then the hotspot bench order. If it still does not boot, bisect FW3B's changed groups against FW29. Leave the HackRF alone. **Start now.**
+**Now (12:55, Claude): FW3B did not stay up (`results.md`).** Stop and report, as the review said. Next, when started: bisect FW3B's changed groups against FW29, one group per image (RAM literal updates, the op 16/17 refusals, op 7, setend, the close guard, the refill prelude). Leave the HackRF alone. FW3B (`731641cd…`) printed the boot banner and then went silent; the power cycle came back as FW29. Do not load that sha again.
 
 **Now (12:10, Claude): load STUCK answered (`reviews.md`).** It looks like FW30 does not boot: 9 s silent after the load, then a power cycle, then F30F. (1) Control: load FW29 the same way. (2) Read the log 11:40:19–11:40:36. (3) FW30a: zero the moved RAM block before first use (it is above bss, never initialised, and the boot stack from `0x50000` may reach it), keep it out of the boot stack's reach, and move the close one-shot out of stock `0x4DAAC`. (4) Load, `0x34`, then the hotspot bench order. No HackRF. **Start now.**
 
@@ -380,23 +380,20 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-FW29 loads and answers `DMR003.FW29.V022` (139283 ms, slow but it answered). FW3A (`8653c32c…`) transferred 370/370, the closing packet acked, and the module was silent for 9 s with no byte in the log. SignalDeck power-cycled it and `0x34` came back `DMR003.FW29.V022`. Nothing was keyed. The HackRF was already running and was left running.
+FW3B (`731641cd…`) packed the stub RAM to `0x4F2C0`–`0x4F39C` and left the 512-byte reply buffers at `0x4AC00` and `0x4AE00`. The load finished, the boot banner appeared at 12:53:53, and there was no `0x34` reply. SignalDeck power-cycled it and the tag was `DMR003.FW29.V022`. Nothing was keyed. The HackRF was left running.
 
-End state 12:24: `DMR003.FW29.V022`, VFO channel 0, 467.625 MHz, low power, not transmitting, RSSI −96. Battery 32.1 °C, AP 39.868 °C, PA 38.413 °C.
+End state 12:54: `DMR003.FW29.V022`, VFO channel 0, 467.625 MHz, low power, not transmitting, RSSI −96.
 
 ### Stuck
 
-The 12:10 order: FW29 control, the 11:40 log, then FW3A. The control passed. FW3A did not boot. The hotspot bench did not start.
+FW3B, the smaller block. It got as far as the stock banner and did not answer.
 
-1. 11:40:19–11:40:36, the earlier FW30 log. After power raised, only host TX of `0x32` and `0x34`. No RX. The 9 s line is 11:40:31.896. `RAW 00` and the power cycle follow. The banner `开机初始化完成` is at 11:40:36, after the power cycle.
-2. 12:09–12:11. Load of accepted FW29 `de10d5c5…657b`. `fwload total 139283 ms tag DMR003.FW29.V022`. The log says the module was slow but answered. Channel 0, not transmitting, RSSI −96.
-3. 12:20:51–12:23:13. One load of `DMR003.FW3A.V022` sha256 `8653c32c02d2fea2f99b7d2bab38e5fa535368ec787aea37f0de783c6b8824c2`. Block 1/370 ack 289 ms. Block 370/370 ack 290 ms at 12:22:46. Closing packet acked. Power raised 12:22:46.837. Host TX only until 12:22:58.991, then the 9 s line, `RAW 00`, power cycle, banner at 12:23:03. `fwload total 155354 ms tag DMR003.FW29.V022`.
+1. Opcode 12 (`0x5BC40`) and the `0x40` reply at `0x5AFC8` and `0x5C486` still load `0x4AC00` and `0x4AE00`. Those literals were left at the FW29 addresses. The high block is 93 words, ending at `0x4F39C`.
+2. 12:51:54–12:54:17. One load of sha256 `731641cd5df1de8de99822aef1bd73abe0c360c26fd2fd23982f5fa986833ec9`. Block 370/370 ack 289 ms at 12:53:49. Power raised 12:53:49.893. Banner `开机初始化完成` at 12:53:53.049, with no power cycle before it. No version reply. At 12:54:01 the module had been silent for 8 s and was power-cycled. Second banner 12:54:05. `fwload total 155302 ms tag DMR003.FW29.V022`.
 
-`clear` (`0x5BDDA`) zeros `0x4F2C0`–`0x4F798` before the key wrapper, the unkey wrapper, the refill, op 7, setend and the close guard. The close one-shot is at `0x4F794`, off `0x4DAAC`. The boot function at IRAM `0x2AEB4` opens with a 56-byte frame under `sp` `0x50000`. None of that ran far enough to put a byte on the UART. The runner would not start while `hackrf_transfer` was already running, so the load used SignalDeck's loader and did not touch the HackRF. This sha was not loaded again.
+Module: `DMR003.FW29.V022`, VFO channel 0, not transmitting, RSSI −96. HackRF: still running, not touched. This sha was not loaded again.
 
-Module: `DMR003.FW29.V022`, VFO channel 0, 467.625 MHz, low power, not transmitting, RSSI −96. Phone: SignalDeck owns the radio, battery 32.1 °C, AP 39.868 °C, PA 38.413 °C. HackRF: still running for the other agent's lease.
-
-Question: FW29 boots. FW30 and FW3A both go silent before the banner, and zeroing the moved block before the stub reads it did not change that. What does boot execute, before the banner, that those two images changed?
+The review says stop here and report. The bisect is the named next step.
 
 ## Owner question
 

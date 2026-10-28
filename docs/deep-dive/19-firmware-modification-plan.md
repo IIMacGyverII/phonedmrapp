@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-28 — FW3B (`731641cd…`) prints the boot banner and does not stay up.** The packed block ends at `0x4F39C`. After the load the module was silent, and the power cycle came back as FW29. Details in `results.md`.
+
 **2026-10-28 — FW29 boots; FW3A (`8653c32c…`) does not.** The control load reported `DMR003.FW29.V022`. FW3A transferred 370/370 and was silent for 9 s, then the module came back as FW29. No key. Details in `results.md`.
 
 **2026-10-28 — FW30 (`58ece263…`) transfers and the module stays on F30F.** Two YModem loads, 370/370 and the closing packet acked, tag read back `DMR003.F30F.V022`. The phone's copy of the file matches the image. No key. Details in `results.md`.

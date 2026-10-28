@@ -3994,3 +3994,20 @@ The module answered after the second load. At 11:41:24: tag `DMR003.F30F.V022`, 
 Block 1/370 acked in 289 ms at 12:20:51. Block 370/370 acked in 290 ms at 12:22:46. Closing packet acked. Power raised 12:22:46.837. From there until 12:22:58.991 the log is host TX of `0x32` and `0x34` only. Then the 9 s silence, `RAW 00` twice, power-cycled at 12:23:00. Banner `开机初始化完成` at 12:23:03. `fwload total 155354 ms tag DMR003.FW29.V022`. A later read was the same tag, channel 0, not transmitting, RSSI −96. This sha was not loaded again. The hotspot bench did not run.
 
 End state 12:24: `DMR003.FW29.V022`, VFO channel 0, 467.625 MHz, low power, not transmitting, RSSI −96. Battery 32.1 °C, AP 39.868 °C, PA 38.413 °C. HackRF still in use by the other agent.
+
+**FW3B reached the boot banner and did not stay up (12:51–12:54).** The two 512-byte buffers stay at the FW29 addresses. `0x4AC00` is the scratch buffer for the `0x40` reply at `0x5AFC8` (up to 240 halfwords). `0x4AE00` is the reply buffer for that path and for opcode 12 at `0x5BC40` (header plus up to 240 bytes) and the reply at `0x5C486`. Those literals were not moved. The high block is the ring, the symbol flag, the close one-shot, the engine words and the magic:
+
+| Address | What |
+|---|---|
+| `0x4F2C0`–`0x4F2DC` | ring |
+| `0x4F2E0` | symbol flag |
+| `0x4F2E4` | close one-shot |
+| `0x4F2E8`–`0x4F2F4` | `0x4B000`–`0x4B00C`, arm at `0x4F2F4` |
+| `0x4F2F8`–`0x4F368` | `0x4B010`–`0x4B080` |
+| `0x4F36C` | `0x4B260` |
+| `0x4F370`–`0x4F394` | `0x4B360`–`0x4B384` |
+| `0x4F398` | magic `0xA5A55A5A` |
+
+The block ends at `0x4F39C`, 856 bytes below F30F's `0x4F6F4`. Tag `DMR003.FW3B.V022`, sha256 `731641cd5df1de8de99822aef1bd73abe0c360c26fd2fd23982f5fa986833ec9`, commit `f0d32a0a`. The literal-guard test passed. The HackRF was left running.
+
+One load. Block 1/370 ack 289 ms at 12:51:54. Block 370/370 ack 289 ms at 12:53:49. Closing packet acked. Power raised 12:53:49.893. The banner `开机初始化完成` is at 12:53:53.049, before any power cycle. No `0x34` reply. At 12:54:01.557 SignalDeck power-cycled a module that had been silent for 8 s. Second banner at 12:54:05. `fwload total 155302 ms tag DMR003.FW29.V022`. At 12:54:19: `DMR003.FW29.V022`, channel 0, not transmitting, RSSI −96. This sha was not loaded again. The hotspot bench did not run.
