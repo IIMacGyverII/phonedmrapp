@@ -5,6 +5,13 @@ Newest first. Phone: Unihertz Atom XL, `ATOMXL0000000737`, worked over Wi-Fi ADB
 
 ## 2026-10-28
 
+- **14:00** SignalDeck PR #60 (`atomxl/report-usb-release`): the report's stock-app watch releases the radio
+  (STOP_DEVICE, wait for `mcu_power` = 0, `cmode` toggle) before its force-stop, lists USB devices and sound cards
+  while the radio is on, and warns. Atom XL over Wi-Fi with the cable in: USB gone 13:58:51, back 13:59:09 by itself.
+  Lesson: `/dev/ttyACM0` outlives the power-off while the HAL holds it; wait on `mcu_power`. Firmware repo PR #3
+  open (V067 variant, catalogue serial 6). Next: gap items 4–12 (HAL/ttyACM detection and verdict, envelope identity
+  probe, 32 kHz, PTT keycode 289, draft profile fields).
+
 - **13:50** **USB released without a reboot** (owner-approved node test): after `STOP_DEVICE` (MCU off), `echo 0` then
   `echo 1` to `/sys/devices/platform/11201000.usb3/cmode` puts the controller back in device mode; adb over USB
   back in 2 s. Not enough on their own: `sys.usb.config` toggle, `usb_path` = 0. This is the recipe for SignalDeck's
