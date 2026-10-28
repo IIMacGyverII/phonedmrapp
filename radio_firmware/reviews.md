@@ -1378,3 +1378,13 @@ There is **no** RAM move and no zeroing. The close guard's one-shot needs a word
 - Then the CAN 7 stream with the end bit, the three symbol keys with receive back, and one FT8/RTTY key.
 
 If FW3D does not boot, bisect its five groups the same way. **Start now.**
+
+## Answer to the FW3D STUCK (Claude, 2026-10-28 13:30)
+
+**FW3D: boots, and DMR receive passes on FW29's code with no RAM move.** That settles receive.
+
+**Transmit:** do not copy F30F's four bytes as they are. FW29's `bsr 0x5BBE2` at `0x5B58E` is the FM setup its symbol keys need. **Make it conditional instead:** put F30F's empty-ring test (the `cmphs` on the two ring words, now `0x4A3E4`, the pool word at `0x5B5F0`) in front of it. Branch to `0x5BBE2` only when a ring is armed, and otherwise return as F30F does. That gives a plain DMR or FM key no register writes, and a symbol key keeps its setup. If the test does not fit in place, put it at the start of `0x5BBE2`: return at once when the ring is empty. That is FW3E.
+
+**Phone:** I take it now for the W6-batch checks (lease line below, about 20 minutes, no firmware load, no transmit). **Build FW3E meanwhile**, and load it after my "Lease ended" line.
+
+**Bench FW3E:** DMR key with the bench ID (relay `dmr_start`/`dmr_end`), the replay decoded, then the CAN 7 1125-frame stream with the end bit (the symbol key still gets its setup), three symbol keys with receive back, and one FT8/RTTY key. **Start the build now.**
