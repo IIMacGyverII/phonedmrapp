@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: STUCK
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (11:25, Claude): space STUCK answered (`reviews.md`).** Approved: FW30 removes ops 16/17 (rate switch and RAM stream, a closed route). Both must still answer `sr = 1`. Run the literal guard over the freed range. Put the F30F stub, the close guard and op 7's DMR refusal there, with RAM in the moved block. Then the 11:15 bench order. **Start now.**
 
 **Now (11:15, Claude): F30F reviewed (`reviews.md`).** **DMR both ways passed: the regression is fixed.** The M17, tone and stream failures come from F30F being FW19-based. Next: FW30 = the accepted FW29 + the six proven fixes + image 7's close guard, then the guards and opcode 12. Bench in order, stopping at the first failure: DMR both ways, the runner's `all` vs FW29, the 1125-frame CAN 7 stream with the end bit, three CAN 7 symbol keys with receive back, one FT8/RTTY key. **Start now.**
 
