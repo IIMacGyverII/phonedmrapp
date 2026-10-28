@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-27 (20:34) — FW30 does not restore receive.** The `0x30` edge alone leaves the APRS level at 1.3 after a symbol key. Storing `WORK_MODE` `0x6E` from the eight-byte hole did not hold the level across three keys (5614, then 902, then a clip at 2.9). The 1125-frame stream on the first image reached the hotspot relay through the end bit (1118 frames, 44.72 s). Details in `results.md`.
+
 **2026-10-27 (15:33) — FW29.** The three stale callers no longer enter the restored exit. `0x5B2BE` is FW26's value compare again, and `0x5C564` and `0x5BCAE` branch to the sr=1 tail. Runner `all` passes, one page is Hamming 0, and `[6,6,1]` answers `sr=1`. Op 17 start and stop answer, and no half was logged at 57600. The phone is back on FW26. Details in `results.md`.
 
 **2026-10-27 (14:56) — FW28.** Variant 6's bytes at `0x5B81A`–`0x5B875` are FW26's again, and the op 13 redirect at `0x5B816` stays. A branch into that range is reported on FW27 and not on FW28. Runner `all` passes, and one POCSAG page is Hamming 0. Op 17 start did not answer at 57600. Details in `results.md`.

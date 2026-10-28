@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -281,8 +281,17 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-FW29 (`de10d5c5…657b`). `0x5B2BE` is FW26's value compare again, so value 1 still reaches the variant checks. `0x5C564` and `0x5BCAE` branch to the sr=1 tail at `0x5C584`. The changed-range guard reports the old callers on FW27 and FW28 and none on FW29. Runner `all` passed (tone p99 2503 Hz, stream 1125/1125, receive 1.50, heat 45 s). Page "FW29PAGE" Hamming 0. `[6,6,1]` answered `sr=1`. Op 17 start and stop answered `sr=0` twice; the host log showed no 514-byte half at 57600. The phone was loaded back to FW26.
-End state: channel 2, 467.625 MHz, pager receive off, monitor off, not transmitting. HackRF idle. Tag `DMR003.FW26.V022`.
+FW30 does not pass. The `0x30` edge alone (`f53c5a2d…`) leaves the receive level at 1.3. Adding a `WORK_MODE` `0x6E` store (`e1433e99…`, loaded, `fwload ok` 20:32:29) did not hold it: levels 5614, then 902, then a clip at 2.9. The 1125-frame stream on the first image reached the hotspot relay through the end bit (1118 frames, 44.72 s, type `0385`). The MMDVM BER line was not read.
+
+**Stuck.** Step 3 of FW30, the receive-recovery keys, after image 2 was loaded.
+
+1. Image 1 on beta.19, three 75-frame keys on channel 56: level settled at 1.3 (baseline about 5600). Clips in the first second were 2009, 1961, 2272.
+2. Image 2's first load, `fwload` at 20:17:36: another session's `DIAG testtone --ei ms 3000` wrote the port and the transfer stopped at block 65/370. `restartmodule` at 20:28:20 left the version reply empty and RSSI at −999.
+3. Image 2's retry finished (block 370/370, tag `DMR003.FW30.V022`). Three keys: relay 72 frames / 2.88 s / end bit with the level back at 5594; then 71 frames with level 902; then no relay event and a clip at 2.9. The phone listed no hotspot call. `DIAG ft8` logged nothing on beta.19.
+
+Module: tag `DMR003.FW30.V022` (image 2), channel 49, 467.625 MHz, not transmitting, RSSI −106. Phone: SignalDeck `1.0.0-beta.19` ready, stock app not in front, battery 34.1 °C, AP 41 °C. HackRF idle (not started).
+
+Question: retry image 2 on a quiet phone (one channel-56 key, level lines, and one hotspot call before and after), or treat `WORK_MODE` `0x6E` as not the missing write and name the next one?
 
 ## Owner question
 

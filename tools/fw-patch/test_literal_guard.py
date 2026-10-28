@@ -13,6 +13,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import fw28_build  # noqa: E402
 import fw29_build  # noqa: E402
+import fw30_build  # noqa: E402
 import literal_guard  # noqa: E402
 
 ROOT = HERE.parent.parent / "radio_firmware" / "build"
@@ -85,6 +86,27 @@ class LiteralGuardTest(unittest.TestCase):
         self.assertEqual(fw29[0x5B2BE:0x5B2C2], fw26[0x5B2BE:0x5B2C2])
         self.assertNotEqual(fw29[0x5C564:0x5C568], fw28[0x5C564:0x5C568])
         self.assertNotEqual(fw29[0x5BCAE:0x5BCB2], fw28[0x5BCAE:0x5BCB2])
+
+    def test_fw30_pulses_register_30_and_passes_the_guard(self):
+        fw29_build.build()
+        fw30_build.build()
+        fw29 = (ROOT / "DMR003.FW29.V022.bin").read_bytes()
+        fw30 = (ROOT / "DMR003.FW30.V022.bin").read_bytes()
+        self.assertEqual(fw30[0x5B66A:0x5B66C], bytes.fromhex("0f6d"))
+        self.assertEqual(fw30[0x5B66C:0x5B672], bytes.fromhex("303001ea0670"))
+        self.assertEqual(fw30[0x5B676:0x5B67C], fw29[0x5B674:0x5B67A])
+        self.assertEqual(fw30[0x5B718:0x5B720], bytes.fromhex("7f246e3240b49414"))
+        self.assertEqual(fw30_build.bsr_target(fw30, 0x5B672), fw30_build.bsr_target(fw29, 0x5B670))
+        self.assertEqual(fw30_build.bsr_target(fw30, 0x5B68A), fw30_build.bsr_target(fw29, 0x5B688))
+        _, hits = literal_guard.changed_branches(fw29, fw30, ((0x5B68E, 0x5B718),))
+        self.assertEqual(hits, [])
+        rows = {pc: (mnem, rest) for pc, _ln, mnem, rest in literal_guard._disassemble(fw30)
+                if 0x5B660 <= pc <= 0x5B720}
+        self.assertEqual(rows[0x5B66A][0], "mov")
+        self.assertEqual(rows[0x5B718][0], "addi")
+        self.assertEqual(rows[0x5B71A][0], "movi")
+        self.assertEqual(rows[0x5B71C][0], "st.w")
+        self.assertEqual(rows[0x5B71E][0], "pop")
 
 
 if __name__ == "__main__":
