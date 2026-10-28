@@ -4011,3 +4011,16 @@ End state 12:24: `DMR003.FW29.V022`, VFO channel 0, 467.625 MHz, low power, not 
 The block ends at `0x4F39C`, 856 bytes below F30F's `0x4F6F4`. Tag `DMR003.FW3B.V022`, sha256 `731641cd5df1de8de99822aef1bd73abe0c360c26fd2fd23982f5fa986833ec9`, commit `f0d32a0a`. The literal-guard test passed. The HackRF was left running.
 
 One load. Block 1/370 ack 289 ms at 12:51:54. Block 370/370 ack 289 ms at 12:53:49. Closing packet acked. Power raised 12:53:49.893. The banner `开机初始化完成` is at 12:53:53.049, before any power cycle. No `0x34` reply. At 12:54:01.557 SignalDeck power-cycled a module that had been silent for 8 s. Second banner at 12:54:05. `fwload total 155302 ms tag DMR003.FW29.V022`. At 12:54:19: `DMR003.FW29.V022`, channel 0, not transmitting, RSSI −96. This sha was not loaded again. The hotspot bench did not run.
+
+**Bisect, 13:02–13:10.** FW3C is FW3B with `0x18B68` restored to the direct `bsr 0x5B4D0` (sha256 `7c89df2cabb130020849fd1a054728b0f510f67809b0cea9e9497313d94cf15b`). It reached the banner at 13:01:37 and the tag came back `DMR003.FW29.V022` (`fwload total 155309 ms`). Removing the prelude did not keep the image up.
+
+One group on FW29, in order, stopping at the first image that answered `0x34` with its own tag:
+
+| Image | Group | Result |
+|---|---|---|
+| `B3G1` `8023657c…` | RAM literal move only | Banner, silent 9 s, tag `DMR003.FW29.V022` (`155289 ms`) |
+| `B3G2` `ba97a60b…` | op 16/17 refusal only | Banner, `fwload total 139334 ms tag DMR003.B3G2.V022` |
+
+The RAM-literal move alone is enough to go silent after the banner. The refusal alone stays up.
+
+On `B3G2`, channel 49, 467.625 MHz, low power, bench ID, parrot off. A 3 s key at 13:09 produced no `dmr_start` on the relay, and the stored-call replay gave status 1 = 0 and no caller packet. A second 3 s key at 13:10:37 produced status 3 once and status 4 once. The relay still did not emit `dmr_start` or `dmr_end`. The bench ID was restored. End state 13:11: `DMR003.B3G2.V022`, channel 49, not transmitting, RSSI −108. Steps (b)–(d) were not run. The HackRF was not running and was not started.
