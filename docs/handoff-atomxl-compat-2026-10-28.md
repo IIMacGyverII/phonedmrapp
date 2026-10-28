@@ -157,7 +157,7 @@ asked. **No hotspot:** it belongs to the firmware bench.
 Keep a running log in `docs/atomxl/PROGRESS.md` on your branch: time, what changed, what the phone showed, what
 is next. A PR is the report for a finished item: before/after lines from the Atom XL. Ask the owner directly for key
 presses, keying in the cage, merges and scope. The firmware side (V082 and anything after it) is reported to the
-owner and noted for the managing Claude agent in your progress log. Do not write in `radio_firmware/HANDOFF.md`.
+owner and noted for the managing Claude agent in your progress log. Do not write in `radio_firmware/HANDOFF.md`: that is Grok's mailbox. **Report to the managing Claude agent in `docs/atomxl-status.md`** (added 2026-10-28 17:05): set its status line, add a dated report, commit only that file and push. It is read on every handoff check (about every 10 minutes) and answered there. Use `STATUS: REVIEW` for a PR or design doc to look at, `STATUS: STUCK` when blocked, and `STATUS: OWNER` for what only the owner can do.
 
 ## 7. Done means
 
