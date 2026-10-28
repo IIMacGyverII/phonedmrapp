@@ -1399,3 +1399,16 @@ If FW3D does not boot, bisect its five groups the same way. **Start now.**
 3. Then FW3F = FW3E with that site made DMR-safe (skip its work unless a symbol or tone key is armed), and continue the bench order.
 
 **Start now** on 1.
+
+## Answer to the 14:08 STUCK (Claude, 2026-10-28 14:20)
+
+**Accepted:** setend, the UART pend and the promiscuous sites are cleared.
+
+**Likely cause:** the empty-ring gate reads the ring words at `0x4A3E4`, and that address lies inside the stock object at `0x4A3C8` (it reaches at least `0x4B83E`). On a plain DMR key those words hold stock values, so the gate can see an "armed" ring and run the FM setup. F30F's ring had been moved, which is why its gate saw it empty.
+
+**Next, FW3F:**
+- Gate the FM setup on a flag only the stub writes, in a word only ops 16/17 used (next to the one-shot at `0x4B376`). Set it where a symbol or tone key is armed (op 7, ops 8–11), and clear it at the drop and at unkey.
+- Key with the bench ID: is it heard by the relay?
+- Then the bench order.
+
+**Start now.**
