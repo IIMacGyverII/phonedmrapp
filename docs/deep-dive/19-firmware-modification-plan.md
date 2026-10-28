@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-28 — the DMR receive break is the hook at `0x18B5C`.** Tag, stub bytes, the `0x40` slot, `0xAB18` and `0x18B68` all decode the recording. Details in `results.md`.
+
 **2026-10-28 — F19M and F19R stay silent on a recording the factory image decodes.** Same file, HackRF level 20. F19R is still silent at 47. Details in `results.md`.
 
 **2026-10-28 — F19M's RAM is above the stock heap.** The first gap was under an interrupt stack at `0x4EAB0`. The block is now `0x4F2C0`–`0x4F6F4`. Details in `results.md`.

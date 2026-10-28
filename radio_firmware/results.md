@@ -3906,4 +3906,19 @@ The only store of 1 into `0x4DAAC` is at `0x5B5E4`. It runs only when the ring's
 
 End state 08:41: factory `DMR003.UV4T.V022`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107, SignalDeck `1.0.0-beta.19`. Battery 31.5 °C, AP 36.9 °C, PA 35.9 °C.
 
+**Bisect, same recording, HackRF level 20, channel 49.** Factory at 08:48 decoded it (status 1 three times, caller packet). Each later image is the factory file plus the named FW19 bytes.
+
+| Image | What | Sha256 | Status 1 | Caller |
+|---|---|---|---|---|
+| F19T | tag only | `599e3d5d…` | 3 | yes |
+| F19S | tag, stub `0x5AEFC`–`0x5B718`, `0x40` slot | `4fa6b3eb…` | 3 | yes |
+| F19A | F19S plus `0xAB18` | `b134fc73…` | 3 | yes |
+| F19B | F19S plus `0x18B5C` | `f3a3ac1c…` | 0 | no |
+| F19C | F19S plus `0x18B68` | `48bdb5c8…` | 3 | yes |
+| Factory | end of session | stock | 3 | yes |
+
+The launch sites were factory on every one of these. The deaf image is the one whose `0x18B5C` calls `0x5B4CA` instead of `0x18B70`. HackRF free.
+
+End state 09:04: factory `DMR003.UV4T.V022`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −108, SignalDeck `1.0.0-beta.19`. Battery 32.1 °C, AP 37.2 °C, PA 36.0 °C.
+
 End state 07:21: factory image, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107, SignalDeck `1.0.0-beta.19`. Battery 30.7 °C, AP 34.8 °C, PA 34.4 °C. HackRF idle. Phone and hotspot free.
