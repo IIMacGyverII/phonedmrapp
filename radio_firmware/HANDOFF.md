@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -347,7 +347,19 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-`0x30210` builds the stock heap from `0x4EAB0` to `0x4F2B0`. The interrupt at `0x39A68` borrows `0x4EAB0` as a stack. The words inside `0x4DD28`–`0x4DDA2` are not `lrw` literals. F19M was rebuilt with its RAM at `0x4F2C0`–`0x4F6F4` (sha256 `01cf250e…`). No factory pointer lands there. Not loaded. Factory image still on the radio.
+The stock heap is `0x4EAB0`–`0x4F2B0`. F19M's RAM is `0x4F2C0`–`0x4F6F4`. A factory recording decodes on the factory image at HackRF level 20, before and after. F19M at 20 and F19R at 20 and at 47 do not: no status 1, no caller packet. HackRF free.
+
+### Stuck
+
+Doing the 08:30 test: factory control, F19M, F19R, one recorded key.
+
+1. Recorded 32 000 000 bytes at 467.425 MHz while channel 49 sent a 3 s tone under the bench ID. The ID was restored (bench ID left: 0).
+2. Factory replay at level 20: status 1 three times, caller packet present.
+3. F19M (`01cf250e…`, tag read back) at level 20: status 1 = 0, no caller packet. F19R at 20 and at 47: the same. Factory again at 20: status 1 three times, caller packet present.
+
+Module: factory `DMR003.UV4T.V022`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107. Phone: SignalDeck `1.0.0-beta.19`, battery 31.5 °C, AP 36.9 °C, PA 35.9 °C. HackRF free.
+
+Moving the stub RAM out of the `0x4A3C8` object did not restore DMR receive. What should the next image change?
 
 ## Owner question
 
