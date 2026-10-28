@@ -354,3 +354,7 @@ Build: local branch `check/w6-armor` = `data-modes-raw` (#62 + #63) merged with 
   - runs the local build `w6/combo-local2` (#62 + #63 + #65–#68);
   - test data removed; channel 1 "bench 1" at 440.000 MHz, squelch 2, Soft SQ level 4; web on host port 18086.
 - **Bench:** the HackRF-to-W6 path is about 10 dB weaker than this morning (use gain 35).
+
+## Merged to SignalDeck main (managing agent, 2026-10-28 17:55; owner allowed merges)
+
+`main` is `2625c94d`: PRs 62, 63, 65, 66, 67, 68 and 59 (M17 raw hold). Host suite 427 / 0. The 59 / 62 overlap is resolved: `CamcorderAudio.appPlaysRadio()` returns its playback setting, so the W6+ (app playback) now holds raw FM back during M17 as well, and the speaker gate combines the raw hold, app playback while keyed, and the quiet data modes. The resolution is not device-tested yet (the Armor is leased to Grok). PR 63 still shows as open only because its base was `w6/app-playback`; its commits are in main, so close it. **Start new W6 branches from `main`.**
