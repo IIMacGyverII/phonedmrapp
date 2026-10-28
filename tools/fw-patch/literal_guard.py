@@ -88,6 +88,27 @@ def _inside(addr, spans):
     return False
 
 
+# Live data. The 128 zeros at 0x35F64 are the tail of this table, not a
+# code cave: image 3 and R4l both failed to boot after writing there.
+# Measured on FW29, which matches the factory image across the range:
+# the 0x05 run, the short gap, then 0x03, 0x02, 0x01 and the zero tail.
+NEVER_WRITE = (range(0x35DF4, 0x35FE4),)
+
+
+def never_written(old, new):
+    """Offsets inside NEVER_WRITE whose bytes changed. Empty means clean."""
+    if len(old) != len(new):
+        raise ValueError("length")
+    hits = []
+    for span in NEVER_WRITE:
+        for i in span:
+            if i < len(old) and old[i] != new[i]:
+                hits.append(i)
+                if len(hits) >= 8:
+                    return hits
+    return hits
+
+
 _BRANCH = {"br", "bt", "bf", "bsr", "jmpi"}
 _TARGET = re.compile(r"0x([0-9a-f]+)")
 

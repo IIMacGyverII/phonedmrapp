@@ -14,9 +14,11 @@
 # address of the TX-RAM bit (0x11000080) in r4, which the i2c write and
 # the status post preserve, and the eight free bytes at 0x5B718 add 0x80
 # and store 0x6E at 0x11000100, the analog channel's WORK_MODE.
-# Image 3 adds opcode 18, a read of one AT1846S register, in the 128-byte
-# hole at 0x35F64. The gate's upper compare becomes 19 and the old
-# opcode-17 call branches here first.
+# Image 3b adds opcode 18, a read of one AT1846S register. The 128 zero
+# bytes at 0x35F64 are the tail of a live data table (image 3 did not
+# boot). The stub sits at the start of opcode 17. Opcodes 16 and 17
+# answer sr=1, so FW30 drops the parked receive-RAM stream. The gate's
+# upper compare becomes 19. The literal pool at 0x5BE34 stays.
 import hashlib
 import struct
 from pathlib import Path
@@ -32,17 +34,25 @@ PAIR = 0x5B66A
 HOLE = 0x5B718
 # The literal 0x1100039C. The lrw that names it shifts by two bytes.
 POOL_39C = 0x5B694
-# Opcode 18 lives in the old data-table pad. Nothing branches there and
-# nothing loads it. The gate compare is the byte that was cmphsi r3, 18.
-READ_AT = 0x35F64
+# Opcode 18 replaces the start of opcode 17. The pool the gate and the
+# mode-5 path load begins at 0x5BE34, so the stub has to end before it.
+READ_AT = 0x5BD74
+POOL = 0x5BE34
 GATE_CMP = 0x5BCBC
-GATE_CALL = 0x5BCCA
-READ_STUB = bytes.fromhex(
-    "513b040801e0062f3c78098724eaae04884cc7381e0800e075f3436d683120a4"
-    "218721a4003122a423a424a425a426a4023127a4a8a4284d29a410312aa40b30"
-    "536cfee35b97136c0b31fee31d8f3c78683120a4218721a4003122a4013123a4"
-    "003124a425a426a427a4103128a40930536cfee34397136c0931fee3058f3c78"
+GATE_OP = 0x5BCC0
+DONE = 0x5BCD6
+# The read path only. Each path used to end with jmp r15, but r15 is the
+# return from the send, so that jmp never left the stub. Return through r6,
+# which the dispatcher saved before it called the gate. The two checksum
+# and send calls in the failure path shift by the two bytes inserted on
+# the success path.
+_READ_PATH = bytes.fromhex(
+    "098724eaae04884cc7381e0800e075f3436d683120a4218721a4003122a423a4"
+    "24a425a426a4023127a4a8a4284d29a410312aa40b30536cfee35b97136c0b31"
+    "fee31d8f3c78683120a4218721a4003122a4013123a4003124a425a426a427a4"
+    "103128a40930536cfee34397136c0931fee3058f3c78"
 )
+_READ_CALLS = ((0x0C, 0x54664), (0x38, 0x8E5C), (0x40, 0x7DE8), (0x6A, 0x8E5C), (0x72, 0x7DE8))
 
 
 def bsr_target(blob, at):
@@ -57,6 +67,35 @@ def encode_bsr(at, target):
     disp = (target - at) >> 1
     word = (0b111000 << 26) | (disp & 0x3FFFFFF)
     return struct.pack("<HH", (word >> 16) & 0xFFFF, word & 0xFFFF)
+
+
+def encode_br(at, target):
+    disp = (target - at) >> 1
+    if not -32768 <= disp <= 32767:
+        raise SystemExit("br from %X to %X" % (at, target))
+    return struct.pack("<HH", 0xE800, disp & 0xFFFF)
+
+
+def read_stub():
+    stub = bytearray(_READ_PATH)
+    ends = [i for i in range(len(stub) - 1) if stub[i:i + 2] == bytes.fromhex("3c78")]
+    if ends != [0x44, 0x74]:
+        raise SystemExit("return sites %s" % [hex(i) for i in ends])
+    for i in reversed(ends):
+        stub[i:i] = bytes.fromhex("db6f")
+    # The failure path starts two bytes later once the success return grew.
+    stub[0x0A:0x0C] = bytes.fromhex("1f08")
+    for off, dest in _READ_CALLS:
+        stub[off:off + 4] = encode_bsr(READ_AT + off, dest)
+    return bytes(stub)
+
+
+def refuse_stub(at):
+    """Opcodes 16 and 17: sr=1 through the normal ack, then the dispatcher's return."""
+    body = bytearray(bytes.fromhex("01870131"))
+    body += encode_bsr(at + 4, 0x8E7C)
+    body += bytes.fromhex("db6f3c78")
+    return bytes(body)
 
 
 def encode_lrw_r3(at, target):
@@ -96,16 +135,37 @@ def build():
     base[HOLE:HOLE + 8] = bytes.fromhex("7f246e3240b49414")
     if bsr_target(base, 0x5B672) != i2c or bsr_target(base, 0x5B68A) != status:
         raise SystemExit("bsr retarget")
-    if len(READ_STUB) != 128 or base[READ_AT:READ_AT + 128] != b"\x00" * 128:
-        raise SystemExit("read stub hole")
+    stub = read_stub()
+    if READ_AT + len(stub) > POOL:
+        raise SystemExit("read stub hits the pool")
     if base[GATE_CMP:GATE_CMP + 2] != bytes.fromhex("113b"):
         raise SystemExit("gate compare")
-    # cmphsi r3, 19. Opcode 18 falls into the old opcode-17 call.
+    if base[GATE_OP:GATE_OP + 2] != bytes.fromhex("503b"):
+        raise SystemExit("gate opcode compare")
+    kept = bytes(base[0x35DF4:0x35FE4])
+    # cmphsi r3, 19. Opcode 18 reads. Opcodes 16 and 17 ack sr=1.
+    # 0x5C584 is not that ack: it calls the dispatcher again.
+    refuse_at = READ_AT + len(stub)
+    refuse = refuse_stub(refuse_at)
+    if refuse_at + len(refuse) > POOL:
+        raise SystemExit("refuse stub hits the pool")
     base[GATE_CMP:GATE_CMP + 2] = bytes.fromhex("123b")
-    base[GATE_CALL:GATE_CALL + 4] = encode_bsr(GATE_CALL, READ_AT)
-    base[READ_AT:READ_AT + 128] = READ_STUB
-    if bsr_target(base, GATE_CALL) != READ_AT:
+    op = bytearray()
+    op += bytes.fromhex("523b0408")
+    op += encode_bsr(GATE_OP + 4, READ_AT)
+    op += bytes.fromhex("0704")
+    op += encode_br(GATE_OP + 10, refuse_at)
+    if len(op) != 14:
+        raise SystemExit("gate op %d" % len(op))
+    base[GATE_OP:GATE_OP + 14] = op
+    base[READ_AT:READ_AT + len(stub)] = stub
+    base[refuse_at:refuse_at + len(refuse)] = refuse
+    if bsr_target(base, GATE_OP + 4) != READ_AT:
         raise SystemExit("read call")
+    if bsr_target(base, refuse_at + 4) != 0x8E7C:
+        raise SystemExit("refuse ack")
+    if base[0x35DF4:0x35FE4] != kept:
+        raise SystemExit("data table was written")
     base[TAG.start:TAG.stop] = b"DMR003.FW30.V022"
     DEST.write_bytes(base)
     print(DEST)

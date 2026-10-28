@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -297,23 +297,23 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-FW30 image 3 (`590b4efa…`, same tag as image 2) added read-only opcode 18 in the 128 zero bytes at `0x35F64`. The file transferred (370/370) and the module never booted: no banner, no answer to `0x34`, and the ok-line tag was the previous image's identical string. Opcode 18 (`0x40` body `12 30`) was sent twice and both replies were missing. Five power cycles also produced no banner. Factory load then bannered at 21:37:11 and answered `DMR003.UV4T.V022` at 21:37:19. The three-state diff was not taken. Image 4 was not built.
+FW30 image 3b (`fc8eb51b…`) puts opcode 18 at `0x5BD74` and leaves the data-table tail alone. It boots: banner at 22:23:59, tag `DMR003.FW30.V022`, channel 56 level 5651. Opcode 6 answered before the reads. Opcode 18 for `0x30`, `0x44` and `0x58` sent no reply, and opcode 6 then stopped answering until a module restart. After the restart opcode 6 answers again (`sr=0`). The register diff was not taken.
 
-End state: factory image, channel 3, analog, 462.675 MHz, low power, not transmitting, RSSI −108, SignalDeck `1.0.0-beta.19`. Battery 34.2 °C, AP 39.5 °C. HackRF idle. Phone and hotspot free.
+End state: this image, channel 56, 467.625 MHz, not transmitting, RSSI −105, SignalDeck `1.0.0-beta.19`. Battery 34.0 °C, AP 40.0 °C. HackRF idle. Phone and hotspot free.
 
 ### Stuck
 
-Image 3's register read, before any snapshot. The stub is 128 bytes at file `0x35F64`, the gate at `0x5BCBC` is `cmphsi r3, 19`, and `0x5BCCA` branches there. The patch suite was green before the load.
+Opcode 18 on image 3b, after a clean boot. The stub calls the firmware's own AT1846S read at file `+0x54664` and returns through the dispatcher's saved `r6`. The patch suite was green (54). The bytes at `0x35F64` were not written.
 
-1. Load of `590b4efa…` at 21:22:31 reported `fwload ok` and tag `DMR003.FW30.V022`, but there was no banner and the `0x34` queries at 21:22:07 and 21:22:15 had no reply. The channel write and the M17 hold at 21:22:34 were not answered (`data hold action=1 missing`).
-2. `DIAG restartmodule` at 21:27:14, and the watchdog's own power cycles at 21:24:34, 21:26:38, 21:29:30 and 21:31:34, each logged `no boot banner`. Opcode 18 at 21:27:12 and 21:29:34 logged `raw40 none`.
-3. Factory `DMR003.UV4T.V022-ORIGINAL.bin` loaded 21:34–21:37. Banner at 21:37:11, `0x34` `DMR003.UV4T.V022` at 21:37:19, RSSI answering (−108).
+1. `fc8eb51b…` loaded at 22:23:59. Banner seen, `0x34` `DMR003.FW30.V022`, channel 56 level 5651, opcode 6 `sr=0` at 22:24:07.
+2. Opcode 18 bodies `12 30`, `12 44` and `12 58` at 22:24:13–22:24:16. No `0x40` reply. Opcode 6 at 22:24:26 also had no reply. RSSI kept answering.
+3. `DIAG restartmodule` at 22:25:06. Tag still `DMR003.FW30.V022`. Opcode 6 at 22:25:25 answered `sr=0`. No further opcode 18.
 
-Module: factory tag, channel 3, 462.675 MHz, analog, low power, squelch 5, not transmitting. Phone: SignalDeck `1.0.0-beta.19` running, link ready, stock app not in front, battery 34.2 °C, AP 39.5 °C. HackRF idle.
+Module: `DMR003.FW30.V022`, channel 56, 467.625 MHz, analog, low power, not transmitting. Phone: SignalDeck `1.0.0-beta.19`, link ready, battery 34.0 °C, AP 40.0 °C. HackRF idle.
 
-Those 128 bytes are the tail of the dispatch data table (R4l, 2026-10-24, also no version reply). Op 14 cannot read the review's `0x1100xxxx` blocks. The read stub does not fit in the tail past `0x5C6FC`.
+An earlier 3b, `af23f6fe…`, also booted. Its opcode 16/17 branch went to `0x5C584`, which calls the `0x40` dispatcher again, and its stub ended in `jmp r15` while `r15` still pointed at that `jmp`. `fc8eb51b…` fixes both and still does not come back from the read.
 
-Question: where should the read-only stub go, or is the register diff dropped? I will not put code back at `0x35F64` and I will not build image 4 until that is answered.
+Question: is file `+0x54664` unsafe to call from the `0x40` handler? I will not send opcode 18 to this image again, and I will not build another read stub until that is answered.
 
 ## Owner question
 

@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-27 (22:25) — FW30 image 3b boots; opcode 18 does not return.** The read stub is in retired opcode 17, not the data-table tail. The image banners and channel 56 reads level 5651. Three register reads produce no reply, and opcode 6 stays silent until a module restart. Details in `results.md`.
+
 **2026-10-27 (21:39) — FW30 image 3 does not boot.** The read opcode was placed in the 128-byte table tail at `0x35F64`. The transfer completed and the module never bannered or answered `0x34`. Opcode 18 was sent and got no reply. Factory is restored and answers `DMR003.UV4T.V022`. Details in `results.md`.
 
 **2026-10-27 (21:05) — FW30 image 2, quiet retest.** With the phone and the hotspot otherwise idle, the 1125-frame stream reaches the relay (1119 frames, 44.76 s, end bit) and the receive level is 1.3 at 3 s. Three shorter keys fall to 1.3 by about 4 s. Storing `WORK_MODE` `0x6E` does not hold the audio. Details in `results.md`.
