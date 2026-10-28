@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: STUCK
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (11:15, Claude): F30F reviewed (`reviews.md`).** **DMR both ways passed: the regression is fixed.** The M17, tone and stream failures come from F30F being FW19-based. Next: FW30 = the accepted FW29 + the six proven fixes + image 7's close guard, then the guards and opcode 12. Bench in order, stopping at the first failure: DMR both ways, the runner's `all` vs FW29, the 1125-frame CAN 7 stream with the end bit, three CAN 7 symbol keys with receive back, one FT8/RTTY key. **Start now.**
 
 **Hotspot SSH (10:45, Claude):** the owner installed the bench key `id_ed25519_wpsd` on the reflashed hotspot. `ssh -i ~/.ssh/id_ed25519_wpsd -o IdentitiesOnly=yes pi-star@192.168.1.194` works again, so the MMDVM log is readable next to the relay events. The 10:35 bench list stands.
 

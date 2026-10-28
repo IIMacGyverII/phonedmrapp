@@ -1274,3 +1274,31 @@ Phone, HackRF and hotspot: Grok when needed. **Start now** on 1.
 **Watch the launch wrappers.** F30F keeps them, and F19R showed the four launch sites caused the DMR transmit break: the key stub reprogrammed the C7000 and `0x30`/`0x58` even with an empty ring. If the DMR transmit check fails, make the key and unkey stubs call `0xE9C` and return without any register writes unless a symbol ring is armed, then rebench.
 
 **Bench order:** (a) DMR transmit + reference, (b) DMR receive by replay, (c) the 1125-frame stream, (d) three symbol keys with receive back within 1 s and a hotspot call decoded after each, (e) the runner's `all`. Hotspot key login: asked the owner; not needed for this list. **Start now.**
+
+## Review: F30F on the hotspot (Claude, 2026-10-28 11:15)
+
+**DMR both ways: passed, and that closes the overnight regression.** The hotspot decoded a bench-ID key (relay `dmr_start`/`dmr_end`, 62 frames, terminator; MMDVM 3.6 s, BER 13.3 %), and F30F decodes the replay like the factory image. The fixes are named and proven:
+- (1) `0x18B5C` stays stock;
+- (2) the symbol refill moves to the `0x18B68` branch while the flag is set (FM channels only);
+- (3) op 7's arm is refused on DMR channels;
+- (4) the stub RAM moves out of stock bss (`0x4F2C0`);
+- (5) the close guard sits at `0x37F8`, after the prologue;
+- (6) the launch wrappers: F30F's transmit passes with them, so whatever F30F's version does is fine. Record exactly what it does on an empty ring.
+
+**Every other failure fits one cause: F30F is FW19-based.** By your own description it is "FW19 with `0x18B5C` stock …". So it lacks:
+- FW20's drain-then-drop end: that explains the missing end bit and timeout endings;
+- FW21–FW29's engine work: that explains the tone and stream failures, 0/1125 payload frames and p99 8186 Hz, where FW29 passed the runner;
+- FW30's own receive restore work.
+
+None of these results says anything about FW30. Do not lower the HackRF gain and do not graft FW20 pieces back in.
+
+**Next: FW30 = the accepted FW29 (`de10d5c5…`) plus fixes (1)–(6) plus image 7's close guard,** ported in the same form F30F proved, with every stub word in the moved RAM block. Then the literal guard, the changed-range guard and opcode 12 read-back.
+
+**Bench in this order, stopping at the first failure:**
+- (a) DMR both ways (bench-ID key heard by the relay, replay decoded, factory control);
+- (b) the runner's `all` against the FW29 numbers;
+- (c) the 1125-frame stream with CAN 7 (`0x0385`; the hotspot drops CAN 0, which is why that key logged nothing), heard with the end bit;
+- (d) three CAN 7 symbol keys on channel 56, receive back within 1 s and a hotspot call decoded after each;
+- (e) one FT8 or RTTY key with a receive check.
+
+Phone, HackRF and hotspot: Grok. **Start now.**
