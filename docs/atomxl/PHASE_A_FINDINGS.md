@@ -144,6 +144,45 @@ on the wire is 32 kHz (`ro.agold.extmodule.32k=yes`). The HAL opens `/dev/snd/pc
   `mcu_power`, release with `mcu_power` 0 + `usb_path` 0 + `cmode` toggle + restart the HAL. Audio is then ours too
   (USB Audio card 1, 32 kHz). To be designed in `TRANSPORT_DESIGN.md`.
 
+## 8. The HAL's power-up, and the bridge commands for a boot capture (2026-10-28 15:00–15:07)
+
+Toward a non-destructive way to read a module's image (owner: V082 was seen on a user's phone; archive it if a
+simple, reliable extraction exists). Phone in the Faraday cage; no PTT, no `'1'`, nothing written to the module.
+
+**The HAL's `startMcu`, traced** (`sdtrace -p <HAL> -f /` during a stock-app start; the trace stalled after 6.4 s
+and had to be killed, so attach for a fixed short window only):
+
+```
+usb_path    <- 1                    USB to host
+mcu_power   <- 1
+rstmcu      <- 0     (+750 ms)      the bridge's reset released
+/dev/stmcu  read 00, 00, 01 (+1.7 s)  the bridge reports ready
+/dev/ttyACM0 open, 115200 8N1 raw
+00/01 version, 01/34 version, 01/22 channel, 01/2E volume
+```
+
+- **After a fresh boot the bridge does not enumerate without the `rstmcu` 0 write** (two attempts, 15:00, with and
+  without the cable: host up, hub with one port, no device). The earlier direct probes worked because the stock app
+  had released the reset since boot. Fixed recipe: `usb_path` 1, `mcu_power` 1, 0.75 s, `rstmcu` 0, wait for
+  `ttyACM0`, 2 s.
+- **Device mode → host is refused** (`device -> host, it's illegal`) in some states; the HAL goes through "none"
+  (power off, `otg disable`, `otg enable`). A power-up that gets no port in 3 s does that cycle and retries.
+
+**The bridge commands from the extraction note** (`temp/V082-EXTRACTION-HANDOFF.md`, from M17's write-up), each
+checked with a framed `0x34` before and after:
+
+| Frame | Expected | Seen on bridge `20201016161541` |
+|---|---|---|
+| `00 10` data `00` (module power off) | module off | **yes**: `0x34` stops answering |
+| `00 10` data `01` (module power on) | module on | **no**: `0x34` still silent 4 s later |
+| `00 08` data `01` (transparent bridge) | raw pass-through | nothing comes back at all (module off at the time) |
+| native `68 34 01 01 95 b9 00 01 01 10` while transparent | module's own reply | nothing |
+
+None of the four is acknowledged by the bridge. After a bridge power-cycle (`mcu_power` 0 then the recipe above) the
+bridge and the module answer again (`20201016161541`, `DMR006.U4A.V067`). So the note's capture sequence does not
+fit this bridge build; the stock updater's real sequence is in the HAL's `update_dmr_firmware` (static reading next),
+and whether the module's bootloader can send its flash at all is still unknown.
+
 ## 4. PTT key (press-tested with the owner, 2026-10-28 13:17)
 
 - **The app receives it as `android.intent.action.PTT.down` / `android.intent.action.PTT.up`** (and `.PTT.timeout`),

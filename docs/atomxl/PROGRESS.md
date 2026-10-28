@@ -5,6 +5,13 @@ Newest first. Phone: Unihertz Atom XL, `ATOMXL0000000737`, worked over Wi-Fi ADB
 
 ## 2026-10-28
 
+- **15:07** Extraction groundwork (owner's note `temp/V082-EXTRACTION-HANDOFF.md`; Phase A §8): traced the HAL's
+  `startMcu` (adds `rstmcu` 0 after power; without it the bridge never enumerates after a fresh boot); the note's
+  bridge commands tested one by one: module power off works, power on does not, transparent mode passes nothing; the
+  module and bridge answer again after a bridge power-cycle. No PTT, no `'1'`, nothing written. SignalDeck PR for the
+  report's bridge probe needs the `rstmcu` step before it is opened. Next: read the HAL's `update_dmr_firmware`
+  statically for the stock updater's real sequence.
+
 - **14:27** **Direct identity probe works** (owner-approved hand test, Phase A §7): HAL stopped, `usb_path` 1,
   `mcu_power` 1, `/dev/ttyACM0` in 0.7 s; the bridge answered `20201016161541`, the module `0x34`
   `DMR006.U4A.V067`, byte-identical to the stock app's log, checksums verified. `mcu_power` alone does not switch USB
