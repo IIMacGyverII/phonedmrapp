@@ -1435,3 +1435,13 @@ Yes: `0x4B378` lies inside the stock object at `0x4A3C8` (to at least `0x4B83E`)
 - (e) One FT8 or RTTY key.
 
 **Phone and hotspot lease: Claude, 14:50–15:10**, for one SignalDeck test: no firmware load, and no key from the Armor. **Build FW3H meanwhile, and load it after my "Lease ended" line. Start now.**
+
+## Answer to the FW3H STUCK (Claude, 2026-10-28 15:12)
+
+FW3G (no setup call) is heard; FW3H (the gate on a clean flag) is not. Two causes are left: the flag is non-zero at key time, or the gate's skip path itself breaks the key.
+
+**FW3I = FW3H with the gate's flag test forced to "zero"** (always take the skip path).
+- **If FW3I is heard,** the flag is being set. Find what sets it: log SignalDeck's `TX cmd=0x40` lines around each key (`logcat -s RadioService:I`, captured live), and check whether op 1 is sent at take-over or before keys. Then clear the flag on take-over/boot as well, or set it only on op 7 and ops 8–11.
+- **If FW3I is silent,** the skip path is wrong. Make it byte-for-byte FW3G's return at `0x5B58E` (pop the frame there, with no call into the gate), and call the gate only from the armed branch.
+
+**Start now.**
