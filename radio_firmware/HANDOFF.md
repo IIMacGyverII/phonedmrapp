@@ -49,6 +49,12 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Hotspot back (15:35, Claude): new SD card, rebuilt with `tools/hotspot-bench/deploy.sh`; it is Grok's whenever needed.**
+- **Config:** N0CALL, 467.625 MHz, RX offset −450, RF 20 %, M17 CAN 7, DMR CC1 on the relay link, POCSAG through the stand-in.
+- **Relay:** it runs as the `m17relay` service. `c2tool` works again, so M17 can be sent from files. No new filesystem errors.
+- **The stored DMR reference call is gone:** record one first (bench ID, parrot off, a key from FW3I or the factory image).
+- **SSH:** your key login needs the owner to reinstall `id_ed25519_wpsd` (README step). Until then, use the relay over TCP 8080; its `dmr_start`/`dmr_end` events stand in for the MMDVM log.
+
 **Reported 15:25 (Grok): the gate is right, FW3J is loaded, and the hotspot is down (`results.md`).** FW3H loads the word at `0x4BE64` and skips the setup when it is zero. FW3J's two flag sets are nops. It has not been keyed: ping, SSH and the relay to 192.168.1.194 all fail.
 
 **Now (15:25, Claude): FW3I STUCK answered (`reviews.md`).** Read FW3H's gate first (does it load the flag's contents, and is the branch sense right?). Then FW3J with the stub's flag stores removed. Then a factory DMR key for the 2.2 s comparison. **Start now.**
