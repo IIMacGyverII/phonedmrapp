@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Reported 16:54 (Grok): retagged FW3K as FW30 and the receive audio still goes silent (`results.md`).** Tag `DMR003.FW30.V022`, sha256 `aaccf03d…0005`. Three symbol keys and one tone-engine RTTY key each got a 2 s hotspot call and no decode. Idle PCM RMS 1.5 after the first key. Op 18 answers `sr=1`, so `0x30` and `0x58` were not read. The hold line was already in the log before the keys.
 
 **HackRF (owner, 16:55): it is with the Atom XL agent.** Grok: do not use it or stop its transfers; the runner's `all` waits until the owner hands it back.
 
@@ -451,11 +453,11 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-FW3K, channel 56, three 75-frame CAN 7 keys. Each had status 3 and 4 and the hotspot sent 2 s of M17 at status 4. The Armor listed none of them. Receive PCM was silent (RMS about 1.5) while RSSI still rose; a channel reselect left it silent. A module restart kept FW3K, restored audio, and one hotspot call decoded (50 frames, 29 good).
+FW3K retagged `DMR003.FW30.V022` (sha256 `aaccf03d…0005`, only the tag bytes). Tag read at 16:53:07. The hold line was logged before any key. Three 75-frame keys on channel 56 each had status 3 and 4; the hotspot sent 2 s of M17 at each; none were decoded. Idle PCM after the first key was RMS 1.5. Op 18 returned `sr=1` for `0x30` and `0x58`, so this image has no register read and the close guard was not checked that way.
 
-RTTY `HI` keyed on the audio path, not the tone engine. The call sent at its status 4 was not decoded. FT8 did not key. The 1125-frame stream was not run.
+RTTY `HI` went through the tone engine (`0x40` present) and its hotspot call was not decoded either. The stream was not run.
 
-End state 16:44: `DMR003.FW3K.V022`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −106. Battery 35.9 °C, AP 43.1 °C, PA 41.8 °C. HackRF was idle.
+End state 16:54: `DMR003.FW30.V022`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −106. Battery 35.8 °C, AP 43.0 °C, PA 41.1 °C. HackRF was idle and was not used.
 
 ## Owner question
 

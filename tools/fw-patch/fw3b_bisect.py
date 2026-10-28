@@ -513,6 +513,20 @@ def build_fw3k():
     return blob
 
 
+def build_fw30_retag():
+    """FW3K with only the version tag changed, so SignalDeck reads a bench number."""
+    src = BUILD / "DMR003.FW3K.V022.bin"
+    img = bytearray(src.read_bytes())
+    if img[TAG.start:TAG.stop] != b"DMR003.FW3K.V022":
+        raise SystemExit("FW3K tag")
+    img[TAG.start:TAG.stop] = b"DMR003.FW30.V022"
+    blob = bytes(img)
+    dest = BUILD / "DMR003.FW30.V022.bin"
+    dest.write_bytes(blob)
+    print("fw30", hashlib.sha256(blob).hexdigest())
+    return blob
+
+
 def build_fw3j():
     """FW3H with the stub's two flag sets removed."""
     src = BUILD / "DMR003.FW3H.V022.bin"

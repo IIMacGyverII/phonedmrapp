@@ -4151,3 +4151,13 @@ After the keys a hotspot carrier still read RSSI −71, and the receive PCM was 
 FT8 did not transmit: the first broadcast produced no status 3 in 55 s. A later broadcast with the message kept as one extra was accepted and was stopped before the slot. The RTTY key is the one that ran. `HI` on channel 56 went out on the audio path (`0x26`, no `0x40`): the host does not treat an unnumbered tag as the tone engine. Status 4 at 3.6 s. The hotspot call sent then was not decoded. A following call read RSSI −72 with PCM RMS about 3500 and was not listed either. The calibration line after the one decoded call was `shipped taps, 11 usable frames`.
 
 End state 16:44: `DMR003.FW3K.V022`, channel 56, not transmitting, RSSI −106. Battery 35.9 °C, AP 43.1 °C, PA 41.8 °C. HackRF was idle. The 1125-frame stream was not run.
+
+**FW30 is FW3K retagged, and receive audio still goes silent (16:50–16:54).** Only the 16 tag bytes change. sha256 `aaccf03d47eaf90341b150c046735a67c99af0957bbf1a39d21959bdb1fe0005`. This is not the earlier FW30 image that did not boot. Load 16:50:47. Tag read `DMR003.FW30.V022` at 16:53:07. Channel 56, 467.625 MHz, CAN 7, low power. A `data hold` line was in the log before any key. HackRF was not used.
+
+Three 75-frame keys. Each had status 3 and 4 and about 200 `0x40` lines. The hotspot sent 2.0 s of M17 at 21:53:15, 21:53:29 and 21:53:42 UTC. No decode. After the first key the idle PCM RMS was 1.5.
+
+Op 18, on the third key: `0x30` and `0x58` at 1.09 s, 1.55 s, 2.66 s and 3.16 s after status 4. Every reply was `sr=1` with no value. This image does not carry the register read, so the close guard was not checked.
+
+RTTY `HI` at 16:53:52. The log shows 38 `0x40` lines and 6 `0x26` lines, so the tone engine ran. Status 4 at about 4 s. The hotspot call at 21:53:53 UTC was not decoded. Receive was already silent from the first symbol key.
+
+End state 16:54: `DMR003.FW30.V022`, channel 56, not transmitting, RSSI −106. Battery 35.8 °C, AP 43.0 °C, PA 41.1 °C. HackRF was idle. The 1125-frame stream was not run.
