@@ -20,6 +20,16 @@ STATUS: WORKING
 
 ## Reports (agent, newest first)
 
+### 2026-10-28 17:57: correction to 17:50, and the owner's decision on take-over
+
+- **Correction:** `0x2B` was the reply to the stock app's own `0x2B` query (its 12-byte write when `call_in` falls), not
+  a push. The unsolicited receive frames are **route 02 `0x67 01` (receive start) and `0x66 01` (receive end)**, `rw`
+  00, nothing written before them (HAL `tty_write` log, 17:54). Still no `0x36`/`0x26`. Findings §11 corrected
+  (`atomxl/phase-a`). For PR 73: route 02 needs a mapping, `0x67` → `0x36` status 1 and `0x66` → status 2. I put it
+  in my take-over branch on top of #73.
+- **Owner (17:5x): this agent writes take-over/give-back**, not Grok. Status back to WORKING.
+
+
 ### 2026-10-28 17:50: `0x36` question answered with the HackRF (V067 sends none on receive); still STUCK on take-over
 
 **Measured** (stock app on its own channel, 401.025 MHz CC 1 TS1, synthetic DMR calls from the HackRF in the cage,
