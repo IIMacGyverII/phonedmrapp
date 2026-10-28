@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -333,19 +333,21 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-FW19's four `0x26` launch sites are the handler at `0x9264`, not the digital channel write. `0x0E9C` is the stock key action. The FW19 replacements call it and then, for an empty ring as well, reprogram the HR-C7000 and store `0x30`/`0x58`. F19R puts the four sites back. The hotspot sent 62 bursts to TG 9. The Armor's signal stayed −108 dBm, with no status 1, and the 3 s key was not heard.
+F19T (factory code, tag `DMR003.F19T.V022`) and F19R2 (`0xAB18`/`0x18B5C`/`0x18B68` restored, tag `DMR003.FR22.V022`) both stayed at about −107 dBm on the 62-burst replay, with no status 1 and no caller packet. A factory reload did the same. Take-over on the stub tag sent `0x34`, `0x22`, `0x35`, `0x22`, `0x35`, then `0x32`. The singles were not built.
 
 ### Stuck
 
-Doing the 03:05 bisect: FW19 with only `0x92AA`/`0x92C8`/`0x92E0`/`0x92FA` restored.
+Doing the 07:10 receive bisect, step 2.
 
-1. Named the handler and built `DMR003.F19R.V022` (`4290cafa…`). The load reported that tag.
-2. Hotspot replay: "62 bursts, slot 2, TG 9". Armor RSSI stayed −108 to −107 for 12 s. Status 1 count 0. Caller packets 0.
-3. `testtone` 3000 ms logged `TX 1 kHz test tone`. Hotspot DMR events during that key: none.
+1. F19T loaded. Hotspot: 62 bursts, slot 2, TG 9. RSSI −108 to −106. Status 1 = 0. Caller packets = 0. Take-over commands: `34 22 35 22 35 32`.
+2. F19R2 loaded (`DMR003.FR22.V022`). Same replay. RSSI −108 to −107. Status 1 = 0. Caller packets = 0.
+3. Factory reloaded (`DMR003.UV4T.V022`) as the same-session control. Same replay. RSSI −107 flat. Status 1 = 0. Caller packets = 0.
 
-Module: `DMR003.F19R.V022`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −108. Phone: SignalDeck `1.0.0-beta.19` ready, stock app not in front, battery 30.6 °C, AP 36.4 °C, PA 35.5 °C. HackRF idle.
+`0xAB18` replaces the `0x3B` store at `0xA308` with the 120-clamp at `0x5B700`. `0x18B5C` replaces `0x18B70`; the stub still jumps there when the symbol flag is clear. `0x18B68` replaces `0x3D20`; while the flag is clear the stub returns without that call.
 
-The four launch sites are not sufficient, and this pass also did not see the carrier. Which remaining FW19 change should the next image remove: the `0x40` slot at `0x382B8`, the `0x18B5C`/`0x18B68` pair, the `0xAB18` time-out stub, or the 2076-byte stub?
+Module: factory `DMR003.UV4T.V022`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107. Phone: SignalDeck `1.0.0-beta.19` ready, battery 30.7 °C, AP 34.8 °C, PA 34.4 °C. HackRF idle.
+
+The hotspot reports the bursts and the Armor does not see a carrier, on factory code as well. The three sites were not separated. Is the hotspot still transmitting on 467.625?
 
 End state: image 6, channel 56, 467.625 MHz, low power, not transmitting, RSSI −105, SignalDeck `1.0.0-beta.19`. Battery 33.3 °C, AP 39.2 °C, PA 38.4 °C. HackRF idle. Phone and hotspot free.
 

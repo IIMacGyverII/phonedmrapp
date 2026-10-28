@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-28 — the receive bisect had no carrier, including on the factory image.** F19T and F19R2 stayed at −107 dBm with no status 1. A factory reload did the same while the hotspot reported 62 bursts. Details in `results.md`.
+
 **2026-10-28 — FW19's four `0x26` launch sites are not the whole DMR break.** Putting them back (`DMR003.F19R.V022`) left channel 49 silent: the hotspot sent 62 bursts, the signal stayed −108 dBm, and a 3 s key was not heard. Details in `results.md`.
 
 **2026-10-28 — image 6 clears bit 3 of `0x38908` and the mute still wins.** `0x30` is `70A6` by 0.37 s on three keys, `0x58` ends at `BCF5`, and the level stays 1.3. The one-shot skip does not fit in the save stub. Details in `results.md`.
