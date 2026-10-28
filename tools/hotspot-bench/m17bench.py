@@ -45,6 +45,8 @@ class Link:
 
     def stop(self): self.msg(b"S")
 
+    def dmr_replay(self): self.msg(b"Q")
+
     def page(self, ric, func, text, numeric=False): self.msg(b"G", json.dumps({"ric": int(ric), "func": int(func), "text": text, "numeric": bool(numeric)}).encode())
 
     def loop(self):
@@ -102,7 +104,7 @@ def cli(a):
 def gui(a):
     import tkinter as tk
     from tkinter import filedialog, ttk
-    root = tk.Tk(); root.title("M17 Hotspot Bench"); root.geometry("760x520")
+    root = tk.Tk(); root.title("M17 Hotspot Bench"); root.geometry("780x580")
     q = queue.Queue(); st = {"link": None, "player": None, "heard": bytearray(), "last": bytearray(), "mute": False}
     top = ttk.Frame(root, padding=8); top.pack(fill="x")
     host = tk.StringVar(value=a.host); src = tk.StringVar(value=a.src); dst = tk.StringVar(value=a.dst)
@@ -117,7 +119,11 @@ def gui(a):
     ttk.Label(pg, text="Function").grid(row=0, column=2, sticky="w")
     ttk.Combobox(pg, textvariable=func, width=14, state="readonly", values=["0 numeric", "1", "2", "3 alphanumeric"]).grid(row=0, column=3, padx=(4, 10))
     ttk.Label(pg, text="Text").grid(row=0, column=4, sticky="w"); ttk.Entry(pg, textvariable=ptext, width=28).grid(row=0, column=5, padx=(4, 10))
-    log = tk.Text(root, height=16, wrap="word"); log.pack(fill="both", expand=True, padx=8, pady=8)
+    dm = ttk.LabelFrame(root, text="DMR (the hotspot hears and repeats DMR; it cannot decode DMR voice to audio on the PC)", padding=8); dm.pack(fill="x", padx=8, pady=(8, 0))
+    dmr_last = tk.StringVar(value="no DMR call heard yet")
+    ttk.Button(dm, text="Replay last DMR call", command=lambda: st["link"] and st["link"].dmr_replay()).pack(side="left")
+    ttk.Label(dm, textvariable=dmr_last).pack(side="left", padx=10)
+    log = tk.Text(root, height=14, wrap="word"); log.pack(fill="both", expand=True, padx=8, pady=8)
     def say(t): log.insert("end", time.strftime("%H:%M:%S ") + t + "\n"); log.see("end")
     def on_event(e): q.put(("ev", e))
     def on_audio(b): q.put(("au", b))
@@ -161,7 +167,7 @@ def gui(a):
     ttk.Button(bar, text="Send audio file…", command=send).pack(side="left", padx=6)
     ttk.Button(bar, text="Stop", command=stop).pack(side="left", padx=6)
     ttk.Checkbutton(bar, text="Listen", variable=listen).pack(side="left", padx=6)
-    ttk.Checkbutton(bar, text="Parrot", variable=parrot, command=set_parrot).pack(side="left", padx=6)
+    ttk.Checkbutton(bar, text="Parrot (M17 + DMR)", variable=parrot, command=set_parrot).pack(side="left", padx=6)
     ttk.Button(bar, text="Save last heard…", command=save).pack(side="left", padx=6)
     ttk.Button(pg, text="Send page", command=send_page).grid(row=0, column=6)
     def tick():
@@ -175,6 +181,10 @@ def gui(a):
                     if listen.get() and not st["player"]: st["player"] = Player()
                 elif e == "end":
                     st["last"] = st["heard"]; say("end %s -> %s, %s s, %s frames" % (v.get("src"), v.get("dst"), v.get("seconds"), v.get("frames")))
+                elif e == "dmr_start": say("DMR %s call %s -> %s on slot %s" % ("private" if v.get("private") else "group", v.get("src"), v.get("dst"), v.get("slot")))
+                elif e == "dmr_end":
+                    t = "DMR %s %s -> %s, slot %s, %s s, %s bursts" % ("private" if v.get("private") else "group", v.get("src"), v.get("dst"), v.get("slot"), v.get("seconds"), v.get("frames"))
+                    dmr_last.set("last: " + t); say("end " + t)
                 elif e == "page": say("hotspot took page #%02X for RIC %s (%s)" % (v.get("seq", 0), v.get("ric"), "acknowledged" if str(v.get("ack", "")).endswith("+") else "no ack: " + str(v.get("ack"))))
                 elif e == "sent": say("hotspot sent %s s as %s -> %s%s" % (v.get("seconds"), v.get("src"), v.get("dst"), " (stopped)" if v.get("stopped") else ""))
                 else: say(v.get("text", json.dumps(v)))

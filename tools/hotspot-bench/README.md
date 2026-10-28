@@ -18,7 +18,7 @@ sends.
 
 | File | Runs on | What |
 |---|---|---|
-| `m17bench.py` | PC (Python 3, ffmpeg and ffplay) | A window: Connect, Send audio file (WAV, MP3, FLAC, OGG, M4A), Stop, Listen live, Parrot, Save last heard, and a POCSAG page row (RIC, function, text). Also a command line, below. |
+| `m17bench.py` | PC (Python 3, ffmpeg and ffplay) | A window: Connect, Send audio file (WAV, MP3, FLAC, OGG, M4A), Stop, Listen live, Parrot, Save last heard, a POCSAG page row (RIC, function, text) and a DMR row (calls heard, Replay last DMR call; the parrot covers DMR too). Also a command line, below. |
 | `m17relay.py` | hotspot (Python 3) | The relay. Listens on TCP 8080, a port the WPSD firewall already allows. |
 | `c2tool.c` | hotspot | Codec 2 3200 encode/decode filter, built against the upstream Codec 2 library (LGPL-2.1). |
 
@@ -28,6 +28,10 @@ sends.
 with the default addresses (127.0.0.1, 17010/17011). Leave M17Gateway stopped, because the relay takes its UDP port.
 Set `[Modem] RXOffset` for this board. On ours, −300 to −600 Hz gave 0.0 % BER and −450 is set. With 0, the hotspot
 joined late at 6.5 % BER. For the cage, `[Modem] RFLevel=20`. Then restart MMDVMHost with `sudo systemctl restart mmdvmhost`.
+
+For DMR (back up first): `[DMR] Enable=1`, `SelfOnly=0`, `ColorCode=1`; `[DMR Network] Enable=1` with `Type=Gateway`
+and the local addresses (127.0.0.1, 62031/62032); leave DMRGateway stopped. The simplex board uses time slot 2 only. Plan
+for the DMR tests: `docs/plan-dmr-hotspot-tests.md`.
 
 For POCSAG (back up both files first): in `/etc/mmdvmhost`, `[POCSAG] Enable=1` and `Frequency=` your test frequency
 (467625000 here), `[POCSAG Network] Enable=1`. In `/etc/dapnetgateway`, `[General] Callsign=N0CALL`, `[DAPNET]

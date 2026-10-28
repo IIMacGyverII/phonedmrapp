@@ -10,6 +10,7 @@ PC protocol on TCP port 8080 (already open in the WPSD firewall), one client at 
   client -> relay  'T' JSON {"src": "N0CALL", "dst": "@ALL"} then 'P' s16le 8 kHz mono PCM chunks, then 'E' (send it)
                    'R' JSON {"parrot": true|false}
                    'S' stop: ends a transmission in progress with an end frame
+                   'Q' replay the last DMR call the hotspot heard (the hotspot transmits it again)
                    'G' JSON {"ric": 1234, "func": 3, "text": "...", "numeric": false}: a POCSAG page via DAPNETGateway
   relay -> client  'H' JSON {"event": "start"|"end"|"sent"|"info", ...}  'A' s16le 8 kHz mono PCM of what was heard
 No internet and no reflector are involved. Written for the SignalDeck bench.
@@ -115,12 +116,25 @@ class DapnetCore:
                 except socket.timeout: continue
             self.relay.event(event="page", seq=seq, ric=ric, func=func, text=text, ack=ack)
 
+DMR_HOST = ("127.0.0.1", 62032)
+
+def dmr_fields(d):
+    """A DMRD packet: "DMRD", seq, source 3, destination 3, repeater 4, flags, stream 4, 33-byte burst."""
+    f = d[15]
+    return {"seq": d[4], "src": int.from_bytes(d[5:8], "big"), "dst": int.from_bytes(d[8:11], "big"),
+            "slot": 2 if f & 0x80 else 1, "private": bool(f & 0x40), "ftype": (f >> 4) & 3, "dtype": f & 0x0F,
+            "stream": d[16:20]}
+
 class Relay:
     def __init__(self):
         self.udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); self.udp.bind(("127.0.0.1", 17010))
         self.client = None; self.lock = threading.Lock(); self.parrot = False; self.sending = False; self.abort = False
         self.rx = None   # current RF transmission: dict with dec process, packets, ids
         threading.Thread(target=self.udp_loop, daemon=True).start()
+        # DMR: MMDVMHost's [DMR Network] Type=Gateway talks to 127.0.0.1:62031 from 62032 (DMRC config every 10 s, DMRD bursts)
+        self.dmr = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); self.dmr.bind(("127.0.0.1", 62031))
+        self.dmr_rx = None; self.dmr_last = []; self.dmr_sending = False
+        threading.Thread(target=self.dmr_loop, daemon=True).start()
 
     def to_client(self, kind, payload):
         with self.lock:
@@ -184,6 +198,48 @@ class Relay:
             time.sleep(0.3); self.sending = False
         self.event(event="info", text="parrot replayed %d frames" % len(pkts))
 
+    # ---- DMR: record, parrot, replay ----
+    def dmr_loop(self):
+        self.dmr.settimeout(0.3)
+        while True:
+            try:
+                d, _ = self.dmr.recvfrom(2048)
+            except socket.timeout:
+                if self.dmr_rx and time.time() - self.dmr_rx["last"] > 1.0: self.dmr_end("timeout")
+                continue
+            if d[:4] != b"DMRD" or len(d) < 53 or self.dmr_sending: continue
+            f = dmr_fields(d); now = time.time()
+            if not self.dmr_rx or self.dmr_rx["stream"] != f["stream"]:
+                if self.dmr_rx: self.dmr_end("new stream")
+                self.dmr_rx = dict(f, pkts=[], t0=now, last=now)
+                self.event(event="dmr_start", src=f["src"], dst=f["dst"], slot=f["slot"], private=f["private"])
+            self.dmr_rx["pkts"].append((now, d)); self.dmr_rx["last"] = now
+            if f["ftype"] == 2 and f["dtype"] == 2: self.dmr_end("terminator")
+
+    def dmr_end(self, why):
+        r, self.dmr_rx = self.dmr_rx, None
+        if not r: return
+        self.dmr_last = r["pkts"]
+        secs = round(r["pkts"][-1][0] - r["pkts"][0][0], 2) if r["pkts"] else 0
+        self.event(event="dmr_end", src=r["src"], dst=r["dst"], slot=r["slot"], private=r["private"], frames=len(r["pkts"]), seconds=secs, why=why)
+        if self.parrot and r["pkts"]:
+            threading.Thread(target=self.dmr_replay, args=(r["pkts"],), daemon=True).start()
+
+    def dmr_replay(self, pkts=None):
+        pkts = pkts or self.dmr_last
+        if not pkts: self.event(event="info", text="no DMR call recorded yet"); return
+        time.sleep(1.5); self.dmr_sending = True
+        try:
+            sid = os.urandom(4); t0 = pkts[0][0]; r0 = time.time()
+            for t, d in pkts:
+                w = (t - t0) - (time.time() - r0)
+                if w > 0: time.sleep(w)
+                self.dmr.sendto(d[:16] + sid + d[20:], DMR_HOST)    # same call, a new stream id
+        finally:
+            time.sleep(0.3); self.dmr_sending = False
+        f = dmr_fields(pkts[0][1])
+        self.event(event="info", text="DMR replay sent: %d bursts, %s %d -> %d, slot %d" % (len(pkts), "private" if f["private"] else "group", f["src"], f["dst"], f["slot"]))
+
     # ---- what the PC sends ----
     def transmit(self, pcm, src, dst):
         enc = subprocess.run([C2, "enc"], input=pcm, stdout=subprocess.PIPE).stdout
@@ -239,6 +295,8 @@ class Relay:
                     if not self.dapnet.online: self.event(event="info", text="dapnet link not online; page queued")
                     seq = self.dapnet.page(int(g.get("ric", 0)), int(g.get("func", 3)), str(g.get("text", ""))[:80], bool(g.get("numeric")))
                     self.event(event="info", text="page #%02X queued for RIC %s" % (seq, g.get("ric")))
+                elif kind == b"Q":
+                    threading.Thread(target=self.dmr_replay, daemon=True).start()
                 elif kind == b"S":
                     if self.sending: self.abort = True
                 elif kind == b"R":
