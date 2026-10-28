@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-28 — The five extra hooks are not why FW3E's key is unlistened.** Restoring setend, the UART pend, or the promiscuous sites still left a 3 s key with status 3 and 4 and no relay listing. Details in `results.md`.
+
 **2026-10-28 — FW3E boots and decodes DMR.** The FM setup runs only when the ring is armed. A 3 s key had status 3 and 4 and was not listed by the relay. Details in `results.md`.
 
 **2026-10-28 — FW3D boots and decodes DMR.** The 3 s key had status 3 and 4 and was not listed by the relay. The key wrapper differs from F30F at `0x5B58E` only. Details in `results.md`.

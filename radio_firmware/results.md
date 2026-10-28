@@ -4044,3 +4044,26 @@ DMR receive, 13:43:56. The relay sent 62 bursts, bench ID to TG 9, slot 2. Statu
 DMR transmit, 13:43:37, bench ID, parrot off, 3 s key. Status 3 once, status 4 once. No relay `dmr_start` or `dmr_end`. The bench ID was restored. Battery 35.2 °C, AP 41.7 °C, PA 40.2 °C. The later bench steps were not run. HackRF was not used.
 
 End state 13:44: `DMR003.FW3E.V022`, channel 49, not transmitting, RSSI −108.
+
+**Sites FW3E has and F30F does not (13:55, read, then three keys).** F30F and FW3E both hook `0xAB18` to `0x5B700`, `0x18B68` to `0x5B4D0`, and `0x5AF4C` to an op 7 refusal. `0x18B5C` is factory on both. The external branches only FW3E has, and the stock target each replaces:
+
+| Site | FW3E calls | Stock |
+|---|---|---|
+| `0x7C56` | `0x5C040` UART pend | `0x2B0C` |
+| `0xA890` | `0x5C4E2` reply builder | `0x90B0` |
+| `0xC1BA` | `0x5C4C8` admit | `0x2404` |
+| `0xC244` | `0x5C4C8` admit | `0x2404` |
+| `0x17E26` | `0x5C518` colour-code bit | `andi r2, 15` |
+| `0x5B748` | `0x5BD98` setend | FW29's own `bsr` (`ff e3 89 ff`) |
+
+`0x37F8` is a close guard on both images, at different stubs. `0x5B58E` is the empty-ring gate on FW3E and F30F's `bf`/`pop`.
+
+One group restored per image, 3 s bench-ID key on channel 49, low power. Each had status 3 and status 4. None produced a relay `dmr_start`. The MMDVM log gained no RF DMR line. The lines still in the tail are the 18:43 UTC network replay.
+
+| Image | Restored | sha256 | Key |
+|---|---|---|---|
+| `E3G1` | setend `0x5B748` | `bf8e4a06…` | 13:58:02 silent |
+| `E3G2` | UART pend `0x7C56` | `5f5ad34e…` | 14:01:06 silent |
+| `E3G3` | the four promiscuous sites | `781dc0bd…` | 14:04:05 silent |
+
+End state 14:04: `DMR003.E3G3.V022`, channel 49, not transmitting, RSSI −107. Battery 35.2 °C, AP 41.1 °C, PA 39.8 °C. HackRF was not used.
