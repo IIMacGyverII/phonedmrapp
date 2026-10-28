@@ -4137,3 +4137,7 @@ Replay, 15:50:54, back on channel 49. The relay sent 32 bursts, bench ID to TG 9
 Stream, 15:52:01, channel 56 (M17, 467.625 MHz, CAN 7, low power), 1125 frames, `cmdsym` with the end marker. `0x40` ran until status 4 at 15:52:45, about 44 s. The relay reported no M17 event. The three symbol keys and the FT8 key were not run.
 
 End state 15:53: `DMR003.FW3K.V022`, channel 49, not transmitting, RSSI −108. Battery 36.1 °C, AP 43.7 °C, PA 42.3 °C. HackRF was idle.
+
+**FW29's 75-frame M17 key is not heard either (16:00).** Control for the unlisted FW3K stream. Tag `DMR003.FW29.V022`. Load 15:57, tag read at 16:00:11. Channel 56, 467.625 MHz, CAN 7, low power. `cmdsym` of 75 frames at 16:00:15, rc 0. The relay reported no M17 event. The MMDVM tail's newest lines are still the 20:49–20:51 UTC DMR lines. No `Mode set to M17`.
+
+End state 16:01: `DMR003.FW29.V022`, channel 56, not transmitting, RSSI −106. Battery 35.9 °C, AP 42.0 °C, PA 40.8 °C. HackRF was idle. The symbol keys and the FT8 key were not run.

@@ -234,6 +234,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 **2026-10-28 — FW3K gates the FM setup on the channel-mode byte.** DMR is heard with a real end, FM keys, and the replay decodes. The 1125-frame stream was not listed. Details in `results.md`.
 
+**2026-10-28 — The new hotspot does not hear M17 from FW29 either.** A 75-frame CAN 7 key drew no MMDVM M17 line. Details in `results.md`.
+
 **2026-10-28 — FW3E boots and decodes DMR.** The FM setup runs only when the ring is armed. A 3 s key had status 3 and 4 and was not listed by the relay. Details in `results.md`.
 
 **2026-10-28 — FW3D boots and decodes DMR.** The 3 s key had status 3 and 4 and was not listed by the relay. The key wrapper differs from F30F at `0x5B58E` only. Details in `results.md`.
