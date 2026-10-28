@@ -182,7 +182,7 @@ The exact build on the W6 is the **local, unpushed** branch `w6/test-combo` in `
    - The channel editor's "empty String" message seen once.
    - The packet finder needs UHF frequencies entered by hand on the W6.
 
-## 10. Integration status (Claude, 2026-10-27 23:10)
+## 10. Integration status (Claude, 2026-10-27 23:10; updated 2026-10-28 07:05)
 
 | Item | Status |
 |---|---|
@@ -191,7 +191,7 @@ The exact build on the W6 is the **local, unpushed** branch `w6/test-combo` in `
 | Privacy scan of the added reports | clean (unit 1 serial masked; only the bench adb serial) |
 | Code review of shared code (`RadioService`, engine selection, bands, multi-select) | done; the Armor keeps `RadioEngine` (engine chosen by `profile.protocol`) |
 | W6 smoke test of the merged build | **passed**: installs over the agent's build (saved), starts with no crash; the stock app still owns the radio |
-| Armor regression | **passed 2026-10-28 00:10–00:16** (take-over, receive audio and S-meter, a low-power transmit, every Armor feature in the PKT sheet, Channels header, M17 page). Not covered: a DMR call through the hotspot and live M17 receive on stock firmware (module on a bench image); the DFE change passes its host test on the Armor recording |
+| Armor regression | **passed 2026-10-28 00:10–00:16** (take-over, receive audio and S-meter, a low-power transmit, every Armor feature in the PKT sheet, Channels header, M17 page). Not covered at the time: a DMR call through the hotspot and live M17 receive on stock firmware (module on a bench image); the DFE change passes its host test on the Armor recording. **DMR update 2026-10-28 03:05:** on the factory image the hotspot's DMR call is decoded with beta.19, and the Armor's key is heard by MMDVMHost. Main `aebabef2` sends a byte-identical `0x22` channel write (main itself was run only on bench images, where DMR is dead for a firmware reason: `radio_firmware/results.md`, not a W6-merge regression). Still open: main on the factory image for the DMR call, and live M17 receive on stock firmware, about 10 minutes when the phone is free |
 | Merge PR 48 into main | **done** 2026-10-28 (`c556707d`); PRs 30–38, 40–45, 47 show as merged |
 | W6 transmit (voice, APRS, SSTV Robot 24, FT8) and speaker-silent-at-volume-0 by ear | **waiting** for the owner in the cage |
 | W6 marked compatible + README phone table | **done**: PR 49 (profile revision 2, verified for receive, `txBlocked` until on-air transmit) and PR 46 (README phone table), both merged 2026-10-28 |
