@@ -4113,3 +4113,13 @@ FW3J replaces the two stores of 1, at `0x5BE04` and `0x5BE0E`, with `nop` (`mov 
 Load 15:22. Tag read `DMR003.FW3J.V022` at 15:24:37. The key was not sent. Connecting to the relay timed out, SSH to the hotspot timed out, and ping reported destination host unreachable.
 
 End state 15:25: `DMR003.FW3J.V022`, channel 49, not transmitting, RSSI −98. Battery 36.2 °C, AP 43.3 °C, PA 41.7 °C. HackRF was idle.
+
+**FW3J is silent, and the factory key is heard for 2.2 s (15:37–15:41).** The hotspot is the rebuilt card. SSH works again. The stored reference call was gone, so this factory key is the new one.
+
+FW3J, 15:37:12, channel 49, low power, bench ID, parrot off, 3 s. Status 3 once, status 4 once. No relay `dmr_start`. The MMDVM tail's newest line was still the 20:32:23 UTC idle line from the rebuild.
+
+Factory, loaded 15:40:14 as `DMR003.UV4T.V022`. A W6 HackRF transmit on 439.800 MHz ended before the key. 15:41:00, same channel and bench ID, 3 s. Relay `dmr_start`, bench ID to TG 9, slot 2. MMDVM: `received RF voice header` at 20:40:58 UTC, then `RF voice transmission lost` at 2.2 s, BER 13.5 %, RSSI −47. The previous hotspot's factory key was 3.6 s at BER 13 %. This one matches FW3G and FW3I at 2.2 s.
+
+The stub no longer stores the flag, and the key is still unlistened, so the write is outside the stub. `0x4BE64` is inside the stock block that starts at `0x4B864` and runs for `0xC00` bytes.
+
+End state 15:41: `DMR003.UV4T.V022`, channel 49, not transmitting, RSSI −108. Battery 36.1 °C, AP 42.5 °C, PA 41.2 °C. HackRF was idle.

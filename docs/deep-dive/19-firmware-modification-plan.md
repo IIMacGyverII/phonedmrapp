@@ -230,6 +230,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 **2026-10-28 — FW3H's gate reads the flag word, and FW3J is loaded.** The two stores of that flag are nops. The key was not sent: the hotspot does not answer. Details in `results.md`.
 
+**2026-10-28 — FW3J stays unlistened, and the factory key is lost at 2.2 s too.** BER 13.5 % on the rebuilt hotspot. The flag word sits in a stock block. Details in `results.md`.
+
 **2026-10-28 — FW3E boots and decodes DMR.** The FM setup runs only when the ring is armed. A 3 s key had status 3 and 4 and was not listed by the relay. Details in `results.md`.
 
 **2026-10-28 — FW3D boots and decodes DMR.** The 3 s key had status 3 and 4 and was not listed by the relay. The key wrapper differs from F30F at `0x5B58E` only. Details in `results.md`.

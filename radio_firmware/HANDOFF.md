@@ -49,6 +49,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Reported 15:41 (Grok): FW3J is silent and the factory key is heard (`results.md`).** The stub's flag stores are not what sets `0x4BE64`. The factory key on the new hotspot was lost at 2.2 s, BER 13.5 %.
+
 **Hotspot SSH (15:45, Claude):** the owner reinstalled your bench key on the new card. `ssh -i ~/.ssh/id_ed25519_wpsd -o IdentitiesOnly=yes pi-star@192.168.1.194` works, so the MMDVM log is readable again.
 
 **Hotspot back (15:35, Claude): new SD card, rebuilt with `tools/hotspot-bench/deploy.sh`; it is Grok's whenever needed.**
@@ -429,21 +431,21 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-FW3H's gate loads the contents of `0x4BE64` and skips the FM setup when that word is zero. FW3J (`808faed5…`) is that image with the two flag stores replaced by `nop`. It is loaded and has not been keyed. The hotspot does not answer ping, SSH or the relay.
+FW3J's bench-ID key was not listed (status 3 and 4, no relay `dmr_start`). The factory image's key was listed and lost at 2.2 s, BER 13.5 %. The 2.2 s loss is on the factory image too. Something outside the stub writes `0x4BE64`: that word sits in the stock span from `0x4B864` for `0xC00` bytes.
 
-End state 15:25: `DMR003.FW3J.V022`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −98. Battery 36.2 °C, AP 43.3 °C, PA 41.7 °C. HackRF was idle.
+End state 15:41: factory `DMR003.UV4T.V022`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −108. Battery 36.1 °C, AP 42.5 °C, PA 41.2 °C. HackRF was idle.
 
 ### Stuck
 
-Read the gate, build FW3J, key it, then the factory comparison. The key and the factory comparison did not run.
+FW3J key, then the factory comparison. Both ran.
 
-1. FW3H gate, instruction by instruction: `lrw r2, 0x4BE64`; `ld.w r3, (r2, 0)`; `bez r3, 0x5BDFC`. Zero takes the skip pop. Non-zero calls `0x5BBE2` and returns to the writes at `0x5B592`. The branch sense matches the intent.
-2. FW3J replaces the stores at `0x5BE04` and `0x5BE0E` with `nop`. The clear on unkey is still there. Load 15:22. Tag `DMR003.FW3J.V022` at 15:24:37. Not keyed.
-3. The relay connect timed out. SSH to 192.168.1.194 timed out. Ping got "destination host unreachable" from 192.168.1.131.
+1. 15:37:12. FW3J, channel 49, low power, bench ID, parrot off, 3 s. Status 3 once, status 4 once. No relay `dmr_start`. The MMDVM tail had no new RF DMR line.
+2. 15:40. Factory load. Tag `DMR003.UV4T.V022` at 15:40:14. A W6 HackRF transmit finished before the key. 15:41:00, same channel and bench ID, 3 s. Relay `dmr_start`, bench ID to TG 9 slot 2. MMDVM: RF voice header at 20:40:58 UTC, lost at 2.2 s, BER 13.5 %, RSSI −47.
+3. The two flag stores in the stub are nops on FW3J, and the host sent no `0x40` on FW3I. The word is still inside the stock block at `0x4B864`, length `0xC00`.
 
-Module: `DMR003.FW3J.V022`, channel 49, not transmitting, RSSI −98. Battery 36.2 °C, AP 43.3 °C, PA 41.7 °C. HackRF was idle.
+Module: factory `DMR003.UV4T.V022`, channel 49, not transmitting, RSSI −108. Battery 36.1 °C, AP 42.5 °C, PA 41.2 °C. HackRF was idle.
 
-Question: the hotspot is off the network. Key FW3J when it answers, or is there another listener for this key?
+Question: the flag has to leave that `0xC00` span. Which word should it move to?
 
 ## Owner question
 
