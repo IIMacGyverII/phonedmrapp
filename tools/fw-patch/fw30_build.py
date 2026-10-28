@@ -14,6 +14,9 @@
 # address of the TX-RAM bit (0x11000080) in r4, which the i2c write and
 # the status post preserve, and the eight free bytes at 0x5B718 add 0x80
 # and store 0x6E at 0x11000100, the analog channel's WORK_MODE.
+# Image 3 adds opcode 18, a read of one AT1846S register, in the 128-byte
+# hole at 0x35F64. The gate's upper compare becomes 19 and the old
+# opcode-17 call branches here first.
 import hashlib
 import struct
 from pathlib import Path
@@ -29,6 +32,17 @@ PAIR = 0x5B66A
 HOLE = 0x5B718
 # The literal 0x1100039C. The lrw that names it shifts by two bytes.
 POOL_39C = 0x5B694
+# Opcode 18 lives in the old data-table pad. Nothing branches there and
+# nothing loads it. The gate compare is the byte that was cmphsi r3, 18.
+READ_AT = 0x35F64
+GATE_CMP = 0x5BCBC
+GATE_CALL = 0x5BCCA
+READ_STUB = bytes.fromhex(
+    "513b040801e0062f3c78098724eaae04884cc7381e0800e075f3436d683120a4"
+    "218721a4003122a423a424a425a426a4023127a4a8a4284d29a410312aa40b30"
+    "536cfee35b97136c0b31fee31d8f3c78683120a4218721a4003122a4013123a4"
+    "003124a425a426a427a4103128a40930536cfee34397136c0931fee3058f3c78"
+)
 
 
 def bsr_target(blob, at):
@@ -82,6 +96,16 @@ def build():
     base[HOLE:HOLE + 8] = bytes.fromhex("7f246e3240b49414")
     if bsr_target(base, 0x5B672) != i2c or bsr_target(base, 0x5B68A) != status:
         raise SystemExit("bsr retarget")
+    if len(READ_STUB) != 128 or base[READ_AT:READ_AT + 128] != b"\x00" * 128:
+        raise SystemExit("read stub hole")
+    if base[GATE_CMP:GATE_CMP + 2] != bytes.fromhex("113b"):
+        raise SystemExit("gate compare")
+    # cmphsi r3, 19. Opcode 18 falls into the old opcode-17 call.
+    base[GATE_CMP:GATE_CMP + 2] = bytes.fromhex("123b")
+    base[GATE_CALL:GATE_CALL + 4] = encode_bsr(GATE_CALL, READ_AT)
+    base[READ_AT:READ_AT + 128] = READ_STUB
+    if bsr_target(base, GATE_CALL) != READ_AT:
+        raise SystemExit("read call")
     base[TAG.start:TAG.stop] = b"DMR003.FW30.V022"
     DEST.write_bytes(base)
     print(DEST)

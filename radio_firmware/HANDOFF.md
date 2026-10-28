@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -293,9 +293,23 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-FW30 image 2 (`e1433e99…`), retested with the phone and the hotspot quiet. The 1125-frame stream reached the relay (1119 frames, 44.76 s, end bit, type `0385`) and the receive level was 1.3 at 3 s. A channel write restored it to about 5550. Three 75-frame keys each ended at 76 frames / 3.04 s / end bit, and the level was 1.3 again by about 4 s. `WORK_MODE` `0x6E` does not hold the audio. The 20:32 keys are discarded; they overlapped the other session.
+FW30 image 3 (`590b4efa…`, same tag as image 2) added read-only opcode 18 in the 128 zero bytes at `0x35F64`. The file transferred (370/370) and the module never booted: no banner, no answer to `0x34`, and the ok-line tag was the previous image's identical string. Opcode 18 (`0x40` body `12 30`) was sent twice and both replies were missing. Five power cycles also produced no banner. Factory load then bannered at 21:37:11 and answered `DMR003.UV4T.V022` at 21:37:19. The three-state diff was not taken. Image 4 was not built.
 
-End state: channel 56, 467.625 MHz, not transmitting, RSSI −106, tag `DMR003.FW30.V022`, SignalDeck `1.0.0-beta.19`. Battery 35.1 °C, AP 44.2 °C. HackRF not started. Phone and hotspot free.
+End state: factory image, channel 3, analog, 462.675 MHz, low power, not transmitting, RSSI −108, SignalDeck `1.0.0-beta.19`. Battery 34.2 °C, AP 39.5 °C. HackRF idle. Phone and hotspot free.
+
+### Stuck
+
+Image 3's register read, before any snapshot. The stub is 128 bytes at file `0x35F64`, the gate at `0x5BCBC` is `cmphsi r3, 19`, and `0x5BCCA` branches there. The patch suite was green before the load.
+
+1. Load of `590b4efa…` at 21:22:31 reported `fwload ok` and tag `DMR003.FW30.V022`, but there was no banner and the `0x34` queries at 21:22:07 and 21:22:15 had no reply. The channel write and the M17 hold at 21:22:34 were not answered (`data hold action=1 missing`).
+2. `DIAG restartmodule` at 21:27:14, and the watchdog's own power cycles at 21:24:34, 21:26:38, 21:29:30 and 21:31:34, each logged `no boot banner`. Opcode 18 at 21:27:12 and 21:29:34 logged `raw40 none`.
+3. Factory `DMR003.UV4T.V022-ORIGINAL.bin` loaded 21:34–21:37. Banner at 21:37:11, `0x34` `DMR003.UV4T.V022` at 21:37:19, RSSI answering (−108).
+
+Module: factory tag, channel 3, 462.675 MHz, analog, low power, squelch 5, not transmitting. Phone: SignalDeck `1.0.0-beta.19` running, link ready, stock app not in front, battery 34.2 °C, AP 39.5 °C. HackRF idle.
+
+Those 128 bytes are the tail of the dispatch data table (R4l, 2026-10-24, also no version reply). Op 14 cannot read the review's `0x1100xxxx` blocks. The read stub does not fit in the tail past `0x5C6FC`.
+
+Question: where should the read-only stub go, or is the register diff dropped? I will not put code back at `0x35F64` and I will not build image 4 until that is answered.
 
 ## Owner question
 

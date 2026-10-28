@@ -98,8 +98,13 @@ class LiteralGuardTest(unittest.TestCase):
         self.assertEqual(fw30[0x5B718:0x5B720], bytes.fromhex("7f246e3240b49414"))
         self.assertEqual(fw30_build.bsr_target(fw30, 0x5B672), fw30_build.bsr_target(fw29, 0x5B670))
         self.assertEqual(fw30_build.bsr_target(fw30, 0x5B68A), fw30_build.bsr_target(fw29, 0x5B688))
-        _, hits = literal_guard.changed_branches(fw29, fw30, ((0x5B68E, 0x5B718),))
+        _, hits = literal_guard.changed_branches(
+            fw29, fw30, ((0x5B68E, 0x5B718), (0x5BCCA, 0x35F64),
+                         (0x5BCC2, 0x5BCCA), (0x35F78, 0x35FB4)))
         self.assertEqual(hits, [])
+        self.assertEqual(fw30[0x5BCBC:0x5BCBE], bytes.fromhex("123b"))
+        self.assertEqual(fw30_build.bsr_target(fw30, 0x5BCCA), 0x35F64)
+        self.assertEqual(fw30[0x35F64:0x35F68], bytes.fromhex("513b0408"))
         rows = {pc: (mnem, rest) for pc, _ln, mnem, rest in literal_guard._disassemble(fw30)
                 if 0x5B660 <= pc <= 0x5B720}
         self.assertEqual(rows[0x5B66A][0], "mov")
