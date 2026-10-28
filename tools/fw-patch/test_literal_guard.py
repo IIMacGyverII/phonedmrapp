@@ -100,7 +100,8 @@ class LiteralGuardTest(unittest.TestCase):
         self.assertEqual(fw30_build.bsr_target(fw30, 0x5B68A), fw30_build.bsr_target(fw29, 0x5B688))
         _, hits = literal_guard.changed_branches(
             fw29, fw30, ((0x5B68E, 0x5B718), (0x5BCC4, 0x5BD74),
-                         (0x5BCCA, 0x5BDEE), (0x5BD7E, 0x5BDBC)))
+                         (0x5BCCA, 0x5BDEE), (0x5BD7E, 0x5BDBC),
+                         (0x5B582, 0x5BFA0), (0x5B76E, 0x5BE00)))
         self.assertEqual(hits, [], "FW30 covers %s" % (hits[:8],))
         self.assertEqual(literal_guard.never_written(fw29, fw30), [])
         self.assertEqual(literal_guard.covered_loads(fw29, fw30)[1], [])

@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-27 (23:39) — FW30 image 4 saves the four registers and the receive audio stays muted.** The save is at the start of `on_key` and the restore is the last step of the drop. After three 75-frame keys, `0x41` and `0x59` match the pre-key values and `0x30`/`0x58` stay at the muted values `70A6`/`BCF5`. The level is 1.3. `0x30` is already `70A6` when the host logs the unkey. The 1125-frame stream reached the hotspot (1118 frames, end bit). Details in `results.md`.
+
 **2026-10-27 (22:59) — FW30 image 3c reads the AT1846S and names four restore rows.** Opcode 18 calls IRAM `0x2B25C`. The image banners. A 75-frame symbol key drops the receive level from 5607 to 1.4, and the next channel write brings it back to 5583. The rows that write puts back are `0x30` (`7026`/`70A6`/`7026`), `0x41`, `0x58` and `0x59`. Image 4 is not built. Details in `results.md`.
 
 **2026-10-27 (22:25) — FW30 image 3b boots; opcode 18 does not return.** The read stub is in retired opcode 17, not the data-table tail. The image banners and channel 56 reads level 5651. Three register reads produce no reply, and opcode 6 stays silent until a module restart. Details in `results.md`.

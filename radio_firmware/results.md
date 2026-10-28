@@ -3781,6 +3781,18 @@ Three snapshots, 128 reads each, every read returned a 16-bit value. A is after 
 
 End state 22:59: this image, channel 56, analog, 467.625 MHz, low power, not transmitting, RSSI −105, SignalDeck `1.0.0-beta.19`, link ready. Battery 34.7 °C, AP 45.6 °C, PA 42.4 °C. HackRF idle. Pager receive was off.
 
+**Image 4, sha256 `44572ba28fc92c65223d4c04895b7ee143f86695861d5b8d46cc026e7f13e5ce`, same tag.** Image 3c plus a save and a restore. The save is the first thing `on_key` does (the call at file `0x5B582`): it reads `0x30`, `0x41`, `0x58` and `0x59` through IRAM `0x2B25C` into `0x4B388`, then makes the stock key call those four bytes replaced. The restore is the last step of the FW20 drop (file `0x5B76E`), after the stock unkey and the timeout clears: it writes the four words back through IRAM `0x2B220`. Opcode 18 is unchanged. The literal-guard tests passed.
+
+Loaded over image 3c (`fwload ok` 23:34:32, banner `module DMR003.FW30.V022`). Channel 56, 467.625 MHz, low power, SignalDeck `1.0.0-beta.19`. HackRF was not started.
+
+Three 75-frame keys. The hotspot logged each with the end bit: 70 frames / 2.8 s, then 76 / 3.04 s, then 76 / 3.04 s, type `0385`. Before each key the level was 5587, 5570 and 5564, and the four registers were `7026`, `470F`, `BCFD`, `0B90`. At about 0.5 s and at 3 s after the unkey log, every key read `0x30=70A6`, `0x41=470F`, `0x58=BCF5`, `0x59=0B90`. The level about 4 s after each unkey was 1.3. A 2 s call from the hotspot after each key was not listed. `0x41` and `0x59` match the pre-key values. `0x30` and `0x58` match the muted snapshot from image 3c.
+
+A fourth key read `0x30` from the moment the host logged the unkey: `70A6` at 0, 0.33, 0.69, 1.04, 1.51, 1.86, 2.23, 2.56 and 2.88 s. Bit 7 is already set at that log line.
+
+The 1125-frame stream reached the hotspot: 1118 frames, 44.72 s, end bit, type `0385`. An FT8 CQ was requested with the bench callsign set for that command and restored afterwards. The radio did not key during the next 46 s.
+
+End state 23:39: this image, channel 56, 467.625 MHz, low power, not transmitting, RSSI −105, SignalDeck `1.0.0-beta.19`. Battery 34.7 °C, AP 42.3 °C, PA 41.2 °C. HackRF idle. No further image was built.
+
 # DMR loop through the hotspot: the Armor hears the hotspot's replay (Claude, 2026-10-27 21:55–22:00, leased)
 
 Factory module firmware `DMR003.UV4T.V022`, SignalDeck channel 49 (467.625 MHz, colour code 1, time slot 2, group TG 9, receive list 1,9,99), SignalDeck's DMR ID set to the bench ID 1234568 for the key and restored afterwards. A 3 s test tone keyed from the Armor: hotspot `DMR Slot 2, received RF voice header from 1234568 to TG 9`, `end … 3.6 seconds, BER: 10.9%, RSSI: -53/-47/-49 dBm`; the relay recorded 62 bursts and saved them (`dmr_last.bin`). With the Armor back on its own ID, the relay replayed the call (`DMR replay sent: 62 bursts, group 1234568 -> 9, slot 2`) and the Armor received it: `0x36` status 1 at 21:59:15.997, `0x2B` `[01 88 D6 12 00 09 00 00 00]` (group call, caller 0x12D688 = 1234568, target TG 9) three times, audio focus taken (audio played), `0x36` status 2 at 21:59:19.717. **The full DMR loop works: Armor → hotspot → relay → hotspot → Armor.** The factory `0x2B` body is 9 bytes (no colour-code/slot bytes; those come with FW26's promiscuous extension). Two earlier keys in the same window ended after about 1 s with no header at the hotspot (the channel select had probably not settled yet); not investigated. The hotspot's DMR receive BER (10.9–14.3 %) is still high against M17's 0.0 % at the same RXOffset: open.

@@ -1,4 +1,5 @@
 # Build DMR003.FW30.V022 from FW29. The file does not grow.
+# Image 4 adds the save and restore on top of image 3c.
 #
 # A symbol-engine key leaves the AT1846S at 0x30 = 0x4026 (bit 5 already
 # set) and drop_ptt then writes only 0x30 = 0x7026. The analog channel
@@ -21,7 +22,10 @@
 # upper compare becomes 19. The literal pool at 0x5BE34 stays.
 import hashlib
 import struct
+import subprocess
 from pathlib import Path
+
+import fw23_build
 
 ROOT = Path(__file__).resolve().parents[2]
 BUILD = ROOT / "radio_firmware" / "build"
@@ -56,7 +60,76 @@ _READ_PATH = bytes.fromhex(
 # and the literal is the IRAM entry of the read (file +0x54664).
 _READ_CALLS = ((0x38, 0x8E5C), (0x40, 0x7DE8), (0x6A, 0x8E5C), (0x72, 0x7DE8))
 IRAM_READ = 0x0002B25C
+IRAM_WRITE = 0x0002B220
 READ_POOL = 0x5BDFC
+# Four words the factory image does not name, after the stream bytes at
+# 0x4B380 and before the next named word at 0x4B398.
+SAVE_RAM = 0x4B388
+# on_key's stock call. The save runs first and then makes this call.
+STOCK_KEY = 0xE9C
+SAVE_HOOK = 0x5B582
+SAVE_AT = 0x5BFA0
+# The two timeout stores and the following pop stay the end of the drop.
+RESTORE_HOOK = 0x5B76E
+RESTORE_AT = 0x5BE00
+# 0x5BE34 is a live literal pool. 0x5BFF2 is a branch target of code this
+# image still contains, so the save stub stops before it.
+SAVE_END = 0x5BFF2
+RESTORE_END = 0x5BE34
+AS = Path(r"C:\Users\Joshua\tools\csky-elfabiv2\bin\csky-elfabiv2-as.exe")
+LD = Path(r"C:\Users\Joshua\tools\csky-elfabiv2\bin\csky-elfabiv2-ld.bfd.exe")
+_SAVE_ASM = """
+	.text
+	.global	save4
+save4:
+	push	r4-r6, r15
+	mov	r4, r0
+	mov	r5, r1
+	lrw	r6, 0x2b25c
+	movi	r0, 48
+	jsr	r6
+	lrw	r1, 0x4b388
+	st.w	r0, (r1, 0)
+	movi	r0, 65
+	jsr	r6
+	lrw	r1, 0x4b388
+	st.w	r0, (r1, 4)
+	movi	r0, 88
+	jsr	r6
+	lrw	r1, 0x4b388
+	st.w	r0, (r1, 8)
+	movi	r0, 89
+	jsr	r6
+	lrw	r1, 0x4b388
+	st.w	r0, (r1, 12)
+	mov	r0, r4
+	mov	r1, r5
+	.short	0xE000, 0x0E9C
+	pop	r4-r6, r15
+"""
+_RESTORE_ASM = """
+	.text
+	.global	restore4
+restore4:
+	st.b	r2, (r4, 4)
+	st.b	r2, (r4, 5)
+	push	r4-r6, r15
+	lrw	r6, 0x2b220
+	lrw	r5, 0x4b388
+	movi	r0, 48
+	ld.w	r1, (r5, 0)
+	jsr	r6
+	movi	r0, 65
+	ld.w	r1, (r5, 4)
+	jsr	r6
+	movi	r0, 88
+	ld.w	r1, (r5, 8)
+	jsr	r6
+	movi	r0, 89
+	ld.w	r1, (r5, 12)
+	jsr	r6
+	pop	r4-r6, r15
+"""
 
 
 def bsr_target(blob, at):
@@ -123,6 +196,35 @@ def encode_lrw_r3(at, target):
     return struct.pack("<H", 0x1061 + imm)
 
 
+def _linked(asm, base, name):
+    out = Path(r"C:\Users\Joshua\AppData\Local\Temp\fw1718\fw30")
+    out.mkdir(parents=True, exist_ok=True)
+    src = out / ("%s.S" % name)
+    src.write_text(asm, encoding="utf-8")
+    subprocess.check_call([str(AS), "-mcpu=ck803", "-o", str(out / ("%s.o" % name)), str(src)])
+    subprocess.check_call([str(LD), "-Ttext=0x%X" % base, "-o", str(out / ("%s.elf" % name)),
+                           str(out / ("%s.o" % name))])
+    code, addr = fw23_build.text_of((out / ("%s.elf" % name)).read_bytes())
+    if addr != base:
+        raise SystemExit("%s linked at %X" % (name, addr))
+    return code
+
+
+def save_restore():
+    save = _linked(_SAVE_ASM, SAVE_AT, "save4")
+    token = bytes.fromhex("00e09c0e")
+    at = save.find(token)
+    if at < 0 or save.find(token, at + 4) >= 0:
+        raise SystemExit("stock call placeholder")
+    save[at:at + 4] = encode_bsr(SAVE_AT + at, STOCK_KEY)
+    restore = _linked(_RESTORE_ASM, RESTORE_AT, "restore4")
+    if SAVE_AT + len(save) > SAVE_END:
+        raise SystemExit("save stub reaches %X" % (SAVE_AT + len(save)))
+    if RESTORE_AT + len(restore) > RESTORE_END:
+        raise SystemExit("restore stub reaches %X" % (RESTORE_AT + len(restore)))
+    return save, restore
+
+
 def build():
     base = bytearray(FW29.read_bytes())
     if base[TAG.start:TAG.stop] != b"DMR003.FW29.V022":
@@ -186,6 +288,15 @@ def build():
         raise SystemExit("refuse ack")
     if base[0x35DF4:0x35FE4] != kept:
         raise SystemExit("data table was written")
+    save, restore = save_restore()
+    base[SAVE_AT:SAVE_AT + len(save)] = save
+    base[RESTORE_AT:RESTORE_AT + len(restore)] = restore
+    base[SAVE_HOOK:SAVE_HOOK + 4] = encode_bsr(SAVE_HOOK, SAVE_AT)
+    base[RESTORE_HOOK:RESTORE_HOOK + 4] = encode_bsr(RESTORE_HOOK, RESTORE_AT)
+    if bsr_target(base, SAVE_HOOK) != SAVE_AT:
+        raise SystemExit("save hook")
+    if bsr_target(base, RESTORE_HOOK) != RESTORE_AT:
+        raise SystemExit("restore hook")
     base[TAG.start:TAG.stop] = b"DMR003.FW30.V022"
     DEST.write_bytes(base)
     print(DEST)
