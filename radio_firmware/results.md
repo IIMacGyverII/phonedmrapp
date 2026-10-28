@@ -4141,3 +4141,13 @@ End state 15:53: `DMR003.FW3K.V022`, channel 49, not transmitting, RSSI −108. 
 **FW29's 75-frame M17 key is not heard either (16:00).** Control for the unlisted FW3K stream. Tag `DMR003.FW29.V022`. Load 15:57, tag read at 16:00:11. Channel 56, 467.625 MHz, CAN 7, low power. `cmdsym` of 75 frames at 16:00:15, rc 0. The relay reported no M17 event. The MMDVM tail's newest lines are still the 20:49–20:51 UTC DMR lines. No `Mode set to M17`.
 
 End state 16:01: `DMR003.FW29.V022`, channel 56, not transmitting, RSSI −106. Battery 35.9 °C, AP 42.0 °C, PA 40.8 °C. HackRF was idle. The symbol keys and the FT8 key were not run.
+
+**FW3K symbol keys: the hotspot call is not decoded, and receive audio is silent until a restart (16:33–16:43).** Same image as 15:46, sha256 `e8b2c89f…7494`. The first load's process died and the tag stayed `DMR003.FW29.V022`. The second load stayed up. Tag read `DMR003.FW3K.V022` at 16:35:54. Channel 56, 467.625 MHz, CAN 7, low power. HackRF was idle.
+
+Three 75-frame CAN 7 keys, `cmdsym` with the end marker, `N0CALL`. Each had status 3 and status 4 and about 200 `0x40` lines. At each status 4 the hotspot sent a 2.0 s M17 call (MMDVM network voice at 21:36:04, 21:36:17 and 21:36:29 UTC). The Armor listed no call.
+
+After the keys a hotspot carrier still read RSSI −71, and the receive PCM was silent (RMS about 1.5). Selecting channel 56 again left it silent. A module restart kept the tag `DMR003.FW3K.V022`, the PCM rose to an RMS of several thousand, and the next hotspot call was decoded: `N0CALL` to `@ALL`, 50 frames, 29 good.
+
+FT8 did not transmit: the first broadcast produced no status 3 in 55 s. A later broadcast with the message kept as one extra was accepted and was stopped before the slot. The RTTY key is the one that ran. `HI` on channel 56 went out on the audio path (`0x26`, no `0x40`): the host does not treat an unnumbered tag as the tone engine. Status 4 at 3.6 s. The hotspot call sent then was not decoded. A following call read RSSI −72 with PCM RMS about 3500 and was not listed either. The calibration line after the one decoded call was `shipped taps, 11 usable frames`.
+
+End state 16:44: `DMR003.FW3K.V022`, channel 56, not transmitting, RSSI −106. Battery 35.9 °C, AP 43.1 °C, PA 41.8 °C. HackRF was idle. The 1125-frame stream was not run.
