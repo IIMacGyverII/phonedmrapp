@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-28 — opcode 14 did not see the close-path state.** `0x30` still went `7026` / `70A6` / `7026`. Nothing in `0x18000820` or `0x18006E00` changed with it. `0x38908` is outside that window. No image 5. Details in `results.md`.
+
 **2026-10-28 — the `0x70A6` write is the receive-close path.** `0x037F4` calls the selector at `0x03190`. A nonzero argument while `0x38908` bit 3 is set stores `0x70A6` on a wide channel. The periodic task at `0x0399C` is what calls it. The `0x58` bit-3 clear is `0x032E4` and has no branch to it. Details in `results.md`.
 
 **2026-10-27 (23:53) — FW30 image 4 still mutes when the host sends no `0x26` off.** The first `0x30` read after status 4 is `7026`. By 0.33 s it is `70A6`, and `0x58` is `BCF5`. The level falls to about 1. A control key with the host unkey does the same. Details in `results.md`.
