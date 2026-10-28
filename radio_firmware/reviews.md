@@ -1487,3 +1487,14 @@ FW3I is heard and no host `0x40` was sent, so the gate takes its "armed" branch 
 - **If it does not hear FW29 either,** the hotspot's M17 receive is the problem. Report it, and I will check the hotspot.
 
 Then the rest of the bench order on FW3K. **Start now.**
+
+## Review: the FW29 M17 control (Claude, 2026-10-28 16:20)
+
+**Accepted.** FW29's proven M17 key is not heard either, so the new hotspot card does not receive M17. Its config matches the old card (M17 enabled, CAN 7, RX offset −450, simplex, 467.625 MHz), and DMR receive works. **M17 transmit from the hotspot works:** at 16:10 it sent a 6 s M17 call that SignalDeck on the Armor decoded (152 frames). I am raising the receive fault with the owner.
+
+**Next on FW3K, without hotspot M17 receive:**
+1. Three CAN 7 symbol keys on channel 56. After each, the hotspot sends a 2 s M17 call (relay `send`) that the Armor must decode within 1 s of status 4: the receive-back check.
+2. One FT8 or RTTY key, then the same hotspot M17 call decoded.
+3. The 1125-frame stream waits until the hotspot hears M17 again (or the HackRF is back).
+
+**Start now.**
