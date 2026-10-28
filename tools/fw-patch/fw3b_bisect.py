@@ -359,6 +359,103 @@ def build_tx_group(name):
     return blob
 
 
+# Word only the op 17 tail named (its saved return at 0x5BE0C). The one-shot
+# uses the two bytes at 0x4B376. Startup zeroes this word, so a plain key
+# sees it clear until a symbol or tone op sets it.
+FLAG3F = 0x4B378
+APPEND_XIP = XIP + 0x5AF52
+
+
+def build_fw3f():
+    """FW3E, but the FM setup runs only when the stub's own flag is set."""
+    src = BUILD / "DMR003.FW3E.V022.bin"
+    if not src.is_file():
+        build_fw3e()
+    img = bytearray(src.read_bytes())
+    if img[TAG.start:TAG.stop] != b"DMR003.FW3E.V022":
+        raise SystemExit("FW3E tag")
+    if fw30_build.bsr_target(img, 0x5B58E) != 0x5BDEC:
+        raise SystemExit("gate call moved")
+    code = fw30_build._linked("""
+	.text
+	.global gate
+	.global empty
+	.global armst
+	.global setjmp
+	.global setpop
+	.global clrunkey
+gate:
+	lrw	r2, 0x4b378
+	ld.w	r3, (r2, 0)
+	bez	r3, empty
+	push	r15
+	.long	0xA5A5A5A1
+	pop	r15
+empty:
+	pop	r4-r7, r15
+armst:
+	st.w	r1, (r4, 0)
+setjmp:
+	lrw	r4, 0x4b378
+	movi	r1, 1
+	st.w	r1, (r4, 0)
+	lrw	r4, 0x3074f52
+	jmp	r4
+setpop:
+	lrw	r4, 0x4b378
+	movi	r3, 1
+	st.w	r3, (r4, 0)
+	movi	r0, 0
+	pop	r15
+clrunkey:
+	lrw	r4, 0x4b378
+	movi	r2, 0
+	st.w	r2, (r4, 0)
+	lrw	r2, 0x4daac
+	ld.w	r2, (r2, 0)
+	jmp	r15
+""", 0x5BDEC, "fw3f")
+    end = 0x5BDEC + len(code)
+    if end > 0x5BE34:
+        raise SystemExit("fw3f spills to %X" % end)
+    syms = fw30_port._symbols("fw3f")
+    slot = 0x5BDEC + code.find(bytes.fromhex("a1a5a5a5"))
+    code = bytearray(code)
+    code[slot - 0x5BDEC:slot - 0x5BDEC + 4] = fw30_build.encode_bsr(slot, 0x5BBE2)
+    img[0x5BDEC:end] = code
+    if fw30_build.bsr_target(img, slot) != 0x5BBE2:
+        raise SystemExit("setup call")
+    if end < 0x5BE34:
+        img[end:0x5BE34] = bytes(0x5BE34 - end)
+    # Op 7's FM accept jumps here, which sets the flag and then appends.
+    img[0x5BDD8:0x5BDDC] = struct.pack("<I", XIP + syms["setjmp"])
+    def plant(at, expect, dest):
+        if img[at:at + len(expect)] != expect:
+            raise SystemExit("site %X is %s" % (at, img[at:at + len(expect)].hex()))
+        img[at:at + 4] = fw30_build.encode_bsr(at, dest)
+    # Op 1 already has r4 = 0x4B00C and r1 = 0. armst stores that, then sets
+    # the flag and joins the append. Op 7 sets the flag via its new jump.
+    plant(0x5AF44, bytes.fromhex("20b40604"), syms["armst"])
+    for at in (0x5B91C, 0x5B97C, 0x5BA52):
+        plant(at, bytes.fromhex("00309014"), syms["setpop"])
+    plant(0x5B616, bytes.fromhex("5f104092"), syms["clrunkey"])
+    # The drop at 0x5B65A does not come through this unkey. Its clear would
+    # need a pool past the live literals at 0x5BE34. The host's 0x26 unkey
+    # follows the drop and clears the flag there.
+    if img[0x5BE34:0x5BE3C] != src.read_bytes()[0x5BE34:0x5BE3C]:
+        raise SystemExit("live pool")
+    if struct.pack("<I", APPEND_XIP) not in img[0x5BDEC:0x5BE34]:
+        raise SystemExit("append literal")
+    if struct.pack("<I", FLAG3F) not in img[0x5BDEC:0x5BE34]:
+        raise SystemExit("flag literal")
+    img[TAG.start:TAG.stop] = b"DMR003.FW3F.V022"
+    blob = bytes(img)
+    dest = BUILD / "DMR003.FW3F.V022.bin"
+    dest.write_bytes(blob)
+    print("fw3f", len(code), hashlib.sha256(blob).hexdigest())
+    return blob
+
+
 if __name__ == "__main__":
     for name in ("E3G1", "E3G2", "E3G3"):
         build_tx_group(name)
