@@ -310,3 +310,35 @@ No. Searched read-only as root on 2026-10-28:
 
 The module runs V067, older than the V076 the phone carries for its updater. The stock updater did not offer an
 update (`getLastestDmrFirware isDmrUpdate:0 … mDMRFirmwareDir:null`). Nothing was loaded and nothing will be.
+
+## 11. DMR receive with the stock app, synthetic calls from the HackRF (2026-10-28 17:38–17:47)
+
+Phone in the cage, stock app running on its own channel (401.025 MHz, digital, CC 1, TS1, direct mode, localId 1,
+receive list `[1]`, contact TG 1; read from the stock app's own `0x22` frame, nothing changed). HackRF on the bench
+antenna, `-x 20`, no amp, tuned 200 kHz below and shifted digitally; one-shot transfers, a zero primer first. The
+calls were synthesized with a local, uncommitted bench script (voice LC header ×3, voice superframes with embedded LC,
+terminator ×2, 4FSK 4800 Bd, RRC 0.2, burst in one 30 ms slot of every 60 ms). Its slot-type and EMB words were
+checked against a reference table before use. Nothing was keyed on the phone.
+
+| Call | Sync | Seen at the phone |
+|---|---|---|
+| Plain carrier 3 s | – | nothing |
+| Group, TG 1, from 12345 | MS | `0x2B` `01 39 30 00 00 01 00 00 00` (group, 12345, TG 1); playback ~1 s after the start |
+| Same | BS | the same |
+| Same | direct-mode TS1 sync | nothing (the channel is direct mode, not TDMA direct) |
+| Group, **TG 9** (not in the list) | MS | **nothing at all**: no frame, `call_in` unchanged |
+| **Private** to ID 1 (own), from 54321 | MS | `0x2B` `00 31 D4 00 00 01 00 00 00` (type 0) |
+
+- **No `0x36` push arrives during DMR receive on V067, nor `0x26`.** The module's only unsolicited frame is
+  `0x2B` caller info, route 01, `rw` **00**, 9-byte body as on the Armor (`[0]` type, `[1..4]` caller LE, `[5..8]`
+  target LE). The HAL forwards every tty read to the app one for one (`ExtModule: tty_read 20` per frame).
+- **Receive start and end come from the bridge's `call_in` line**, sysfs `/sys/bus/platform/drivers/mcu/call_in`,
+  **active low**: read as root, `1` idle, `0` during the call, `1` after (one read each, marker logged first). The
+  stock app's `createCallInThread` polls it (`detectAudioinState`) and starts playback on 0; it fired within 7 ms of
+  the `0x2B` and ended ~0.3 s after the last burst.
+- Route **02** frames `0x67 01` / `0x66 01` are the bridge's answers to the stock app's own 12-byte play start/stop
+  requests (written right after `call_in` changes); the stock app only logs them. Not module pushes.
+- The Armor's receive-list rule holds on V067: a group call passes only if its TG is in `groups[]`; private calls to
+  the own ID always pass.
+- So the design's open questions 1 and 2 are answered: SignalDeck's transport must turn `call_in` edges into the
+  engine's receive start/stop (`RECEIVE_START` / end), and take caller info from `0x2B` as on the Armor.

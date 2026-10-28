@@ -48,8 +48,9 @@ root after it appears (the Armor's `ttyS0` is fixed at boot; this one is not).
     `sr = 0`, body as it is;
   - **`0x36` is a module push, not a set reply** (corrected 2026-10-28 after the managing agent's review of PR #73):
     its status code (`RECEIVE_START`, `SEND_START` …) is the body, which `RadioEngine` reads from `body[0]`; it keeps
-    its body with `sr = 0`. Only our own request's reply (`rw` 00) folds a one-byte result into `sr`. The `rw` of a
-    real push is to be confirmed on the phone;
+    its body with `sr = 0`. Only our own request's reply (`rw` 00) folds a one-byte result into `sr`. **Measured
+    2026-10-28 (`PHASE_A_FINDINGS.md` §11): V067 sends no `0x36` (nor `0x26`) during DMR receive at all;** the only
+    module push is `0x2B`, `rw` 00. Receive start/end must come from `call_in` (§5);
   - set replies (`0x22`, `0x23`, `0x2E`, `0x30`, `0x31`, …): body `[result]` → `sr = result`, empty body
     (seen: `0x22` → `00`, `0x2E` → `00`);
   - unlisted commands: mapped the same way by shape (a 1-byte `rw` 00 body → `sr`, anything else data), each logged
@@ -98,7 +99,10 @@ next start or a restart. On its next start SignalDeck finds `mcu_power` = 1 with
 - **Receive detection:** the stock app does not use the module's `0x26` status pushes at all (its parser has no case
   for them); it polls `detectAudioinState` every 100 ms and starts playback on 1. `call_in` (sysfs, read only) reads 1
   while idle with the radio on. Whether that is the same line, and whether the bridge forwards `0x26`, is open
-  question 2. Until then the engine's own `0x26` handling stays and the audio level gates the speaker as on the W6.
+  question 2. **Answered 2026-10-28 (§11 of the findings): `call_in` is that line, active low (1 idle, 0 during a
+  call), and the module sends no status push on receive.** The transport polls `call_in` as root (100 ms, as the
+  HAL does) and hands the engine a synthesized `0x36` `RECEIVE_START` on 1→0 and the receive-end code on 0→1,
+  so `RadioEngine` stays unchanged; caller info comes from `0x2B` as on the Armor.
 
 ## 6. Transmit
 
@@ -136,9 +140,10 @@ is lifted and it is marked verified.
 
 ## 9. Open questions (each with the test that answers it)
 
-1. **Do module pushes reach us?** Receive a call from the owner's radio with SignalDeck owning the port: are `0x26`,
+1. **Do module pushes reach us?** *Answered for receive (findings §11, stock app owning the port): only `0x2B`, route
+   01, `rw` 00; no `0x36`/`0x26`. `0x2D` (texts) still to see.* Receive a call from the owner's radio with SignalDeck owning the port: are `0x26`,
    `0x2B`, `0x2D` frames forwarded by the bridge (route 01, `rw` 00)?
-2. **Receive detection:** is `call_in` the HAL's `detectAudioinState`? Read it once a second during a reception.
+2. *Answered (§11): yes, active low.* **Receive detection:** is `call_in` the HAL's `detectAudioinState`? Read it once a second during a reception.
 3. **Audio content:** the idle capture was 0 then −32768 constant. What does a real reception look like at the card,
    and does the module need a volume (`0x2E`) or the HAL's PCM-open order before audio flows?
 4. **Background kill:** the system force-stopped SignalDeck at 15:51 while it was idle (`ActivityManager: Force

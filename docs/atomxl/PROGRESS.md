@@ -5,6 +5,13 @@ Newest first. Phone: Unihertz Atom XL, `ATOMXL0000000737`, worked over Wi-Fi ADB
 
 ## 2026-10-28
 
+- **17:47** **DMR receive measured with the HackRF** (stock app on its own channel, synthetic calls, nothing keyed;
+  `PHASE_A_FINDINGS.md` §11): TG 1 group and private-to-own-ID calls decoded (`0x2B` with the sent caller/target),
+  TG 9 dropped (Armor's `groups[]` rule holds); **no `0x36`/`0x26` push on receive**, the only module push is `0x2B`
+  (`rw` 00); receive start/end = `call_in` sysfs, active low (read 1/0/1). Route 02 `0x67`/`0x66` are the bridge's
+  answers to the stock app's play start/stop. Design §3/§5/§9 updated: the transport synthesizes receive start/end
+  from `call_in`. Take-over code still waits on the mailbox decision.
+
 - **17:10** Owner: design go; the 15:51 force-stop was not the owner (cause not found: no DuraSpeed, `com.agui.appblock`
   holds FORCE_STOP_PACKAGES but has no data; logs rotated): a foreground service and crash recovery are required.
   HackRF is this agent's since 16:55 (handoff updated by the managing agent): cage, bench antenna only. The envelope
