@@ -98,6 +98,12 @@ on the wire is 32 kHz (`ro.agold.extmodule.32k=yes`). The HAL opens `/dev/snd/pc
 
 ## 4. PTT key (press-tested with the owner, 2026-10-28 13:17)
 
+- **The app receives it as `android.intent.action.PTT.down` / `android.intent.action.PTT.up`** (and `.PTT.timeout`),
+  the same pair as the Armor's: `IComService` registers them; the manifest's `IComReceiver` starts the app on
+  `PTT.down` when its service is not running. Also registered: `agui.intercom.intent.action.START_PTT` / `STOP_PTT` /
+  `PTT_TIMEOUT` / `STOP_DEVICE` / `OPEN_TEST`, `agui.intent.action.AUTO_EXIT` (read from the APK, SHA-256
+  `26bd68cc…05ccb`; to confirm on the phone with the stock app up).
+
 - **The side PTT key is `mtk-kpd` (event2), Linux key code 249 (`0x00f9`).** Two presses, both seen: 0.39 s and
   0.95 s, clean DOWN/UP pairs. It is **not** the `KEY_F12` the earlier reports saw (that is `hall-kpd`, the cover
   sensor).

@@ -5,6 +5,12 @@ Newest first. Phone: Unihertz Atom XL, `ATOMXL0000000737`, worked over Wi-Fi ADB
 
 ## 2026-10-28
 
+- **13:40** Stock app read (jadx, APK SHA-256 `26bd68cc…05ccb`): the PTT key arrives as `android.intent.action.PTT.down`
+  / `.up` / `.timeout` (the Armor's pair); clean power-off is `agui.intercom.intent.action.STOP_DEVICE` (protected,
+  root only) or `agui.intent.action.AUTO_EXIT` → `stop()` → `stopCom()` → HAL `stopMcu()`. Tested STOP_DEVICE: MCU off,
+  ttyACM0 gone, **but USB stayed down (controller mode "none") even after a replug; only a reboot restored it**.
+  Corrected Phase A §1, the CLAUDE.md row and the firmware repo's device page.
+
 - **13:20** Owner requirement for the transport design: SignalDeck's **Exit** and **Hand back to the stock app**
   buttons must both power the radio MCU off (HAL `stopMcu`, `mcu power 0`) so the USB port returns to device mode;
   a force-stop is not enough (Phase A §1).

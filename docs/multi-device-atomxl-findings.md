@@ -3,9 +3,9 @@
 > **Measured on a bench Atom XL, 2026-10-28 (`docs/atomxl/PHASE_A_FINDINGS.md`):**
 > - **Radio on = no USB to the PC.** The bridge MCU sits on the phone's only USB controller; powering the radio
 >   (`mcu power 1`) switches that controller to host mode (`usb_intf_switch otg enable`, `switch_port_to_host`), so
->   adb over the cable, MTP and the PC link drop within ~1 s and stay down until the MCU is powered off (HAL
->   `stopMcu()`, `mcu power 0`) or the phone reboots. Force-stopping the stock app does **not** power it off (the HAL
->   keeps `/dev/ttyACM0` open). Work on this phone over Wi-Fi ADB (`persist.adb.tcp.port=5555`).
+>   adb over the cable, MTP and the PC link drop within ~1 s and stay down until the phone reboots: force-stopping
+>   the stock app does **not** power the MCU off (the HAL keeps `/dev/ttyACM0` open), and even the stock app's clean
+>   power-off (`STOP_DEVICE` → HAL `stopMcu()`) leaves the USB controller in mode "none", replug or not. Work on this phone over Wi-Fi ADB (`persist.adb.tcp.port=5555`).
 > - The bridge is USB `0483:5730` "Agold Audio Class": USB Audio (card 1, `pcmC1D0c`/`pcmC1D0p`, **32 kHz** stereo
 >   S16) plus CDC-ACM (`/dev/ttyACM0`). The 48 kHz below is the stock app's AudioTrack/AudioRecord side.
 > - The bench phone's module answers **`DMR006.U4A.V067`**, not V082 (V082 was the reporting owner's phone). Module
