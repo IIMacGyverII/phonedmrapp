@@ -3921,4 +3921,12 @@ The launch sites were factory on every one of these. The deaf image is the one w
 
 End state 09:04: factory `DMR003.UV4T.V022`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −108, SignalDeck `1.0.0-beta.19`. Battery 32.1 °C, AP 37.2 °C, PA 36.0 °C.
 
+**What holds `0x18B5C`.** The function starts at `0x18A70`. It opens a 16-byte frame (two `subi r14, 8`), saves `r8` and `r15`, and loops at `0x18A84`. At `0x18B52` it reads the byte at `0x34808`. When that byte is 0 it calls `0x18B70` from `0x18B5C` and branches to `0x18A84`. When the byte is not 0 it calls `0x3D20` from `0x18B68` and branches to the same place. Nothing in the image is a `bsr` to `0x18A70`. The one absolute reference is the XIP pointer `0x03032A70` at file `0x1F30`, loaded by `lrw r2` at `0x1C92` in a repeated registration sequence (the next entries pass `0x03032964` and `0x03032A48` the same way). It is a task entry. It is not the interrupt at `0x39A68`, which switches the stack pointer to `0x4EAB0`.
+
+The instruction after the call is an unconditional `br`, so it does not read `C`. `0x18B70` begins with `subi r14, 8`, which writes `C` before the first conditional branch in that function (`bez` at `0x18B92`). `0x18B7E` writes `r3` (`subi r3, r8, 4`) before anything reads it. At the call the task has already allocated 16 bytes. `0x18B70` allocates 12 more. The old stub allocated 20 on top of that.
+
+**F19B2, same recording, HackRF level 20, channel 49.** Factory at 09:16 decoded it (status 1 three times, caller packet). F19B2 is F19S plus a clear path at `0x5B718`: `lrw` the flag, `ld.w`, `bez` to the stock jump, else `jmp` to `0x5B4CA`. The stock jump is `jmp r3` to `0x18B70` with `r15` left at `0x18B60`. There is no `push`. A `br` cannot encode that jump from the zero tail: the 32-bit `br` reaches ±64 KiB and the gap is `0x42BA8`. Tag `DMR003.F1B2.V022`, sha256 `7df6e32f999f8df7ca03bb0058aa22d7808161f95c4766ca4b61c2db4c828ac9`. Status 1 = 0, no caller packet. Factory loaded again and decoded the same file (status 1 three times, caller packet). The hook site itself is the receive break. `0x18B5C` stays the stock `bsr 0x18B70` in later images. HackRF free.
+
+End state 09:22: factory `DMR003.UV4T.V022`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −108. Battery 33.1 °C, AP 39.0 °C, PA 38.0 °C.
+
 End state 07:21: factory image, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107, SignalDeck `1.0.0-beta.19`. Battery 30.7 °C, AP 34.8 °C, PA 34.4 °C. HackRF idle. Phone and hotspot free.

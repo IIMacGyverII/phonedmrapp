@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -355,9 +355,9 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-Same recording, HackRF level 20. Factory decodes it at the start and the end. F19T, F19S, F19A (`0xAB18`) and F19C (`0x18B68`) decode it. F19B (`0x18B5C` → `0x5B4CA`) does not: status 1 = 0, no caller packet. HackRF free.
+F19B2 is F19S plus a no-stack clear path at `0x18B5C` (`jmp r3` to `0x18B70`, sha `7df6e32f…`). Same recording, level 20: status 1 = 0, no caller packet. Factory before and after: status 1 three times, caller packet. The function at `0x18A70` is a task; `C` is written by `0x18B70` before it is read. `0x18B5C` stays stock. HackRF free.
 
-End state: factory `DMR003.UV4T.V022`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −108. Battery 32.1 °C, AP 37.2 °C, PA 36.0 °C.
+End state 09:22: factory `DMR003.UV4T.V022`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −108. Battery 33.1 °C, AP 39.0 °C, PA 38.0 °C.
 
 ## Owner question
 
