@@ -3872,4 +3872,12 @@ End state 06:58: `DMR003.F19R.V022`, channel 49, 467.625 MHz, low power, not tra
 
 **FW19 entries into the stub, from outside it.** The four `0x26` sites `0x92AA`, `0x92C8`, `0x92E0`, `0x92FA`; `0xAB18` to `0x5B700`; `0x18B5C` to `0x5B4CA`; `0x18B68` to `0x5B4D0`; and the `0x40` pointer. FW30 adds external branches FW19 does not have, at `0x7C56`, `0xA890`, `0xC1BA`, `0xC244` and `0x17E26`, all into the later stub past `0x5C000`. No image was loaded. The rerun waits on the owner's MMDVMHost restart.
 
+**The three pass-throughs, with the symbol flag clear (read only).** `0x5B700` pushes `r15`, may store 120 at `r0+8`, then `bsr 0xA308` and pops. `r0` is still the packet the thunk put there (`mov r0, r4` at `0xAB16`). `r1` is 120, `r2` is the old byte and `r3` is `r0+8`. `0xA308` overwrites `r1`–`r3` before it reads them, and it uses `r15` only to return. The stack is one word deeper while it runs. The return still reaches `0xAB1C`.
+
+`0x5B4CA` pushes `r4`–`r7` and `r15`, sees the flag clear, pops them, and jumps to `0x18B70`. That restores `r15` to `0x18B60`, the same link a direct `bsr` would have used, and the stack is back where it was. `r0`–`r2` are untouched. `r3` is then the jump address. `0x18B70` writes `r3` (`subi r3, r8, 4`) before it reads it, and it loads `0x4C7E0` itself rather than taking it in a register.
+
+`0x5B4D0` does not call `0x3D20` on this path. It pops and returns to `0x18B6C`. `0x3D20` is `jmp r15`, so a direct call would also land there and would read no other register. The stub leaves `r3` as 0. The next instruction is `br 0x18A84`, which does not use `r3`. The caller's `r0` (the word from `0x4C7E0`) is unchanged.
+
+With the flag set, the wake stub does rewrite `r0`–`r2` before the same tail call. That is the symbol-key path, not a DMR receive with the flag clear.
+
 End state 07:21: factory image, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107, SignalDeck `1.0.0-beta.19`. Battery 30.7 °C, AP 34.8 °C, PA 34.4 °C. HackRF idle. Phone and hotspot free.

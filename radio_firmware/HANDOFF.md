@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -339,7 +339,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-`0x382B8` is the command `0x40` slot. Stock it is the shared empty pop at `0xAA54` (71 of 112 dispatch entries). DMR receive commands have their own handlers. FW19's outside entries into the stub are the four `0x26` sites, `0xAB18`, `0x18B5C`, `0x18B68`, and that `0x40` pointer. The rerun waits on the owner's MMDVMHost restart. Factory image still loaded. No replay.
+With the symbol flag clear, `0x5B700` passes `0xA308` the same `r0` and `0xA308` overwrites `r1`–`r3` before reading them. `0x5B4CA` tail-calls `0x18B70` with `r15` restored to `0x18B60` and the stack balanced; `0x18B70` does not read the incoming `r3`. `0x5B4D0` returns without calling `0x3D20`, which is `jmp r15`. The receive rerun still waits on the MMDVMHost restart. Factory image loaded. No replay.
 
 ## Owner question
 

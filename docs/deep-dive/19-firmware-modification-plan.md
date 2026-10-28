@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-28 — the three FW19 pass-throughs do not change what the stock callee reads while the symbol flag is clear.** `0x3D20` is not even called. Details in `results.md`.
+
 **2026-10-28 — command `0x40` is the dispatch slot at `0x382B8`.** Stock it is the shared empty pop at `0xAA54`. FW19 points it at the stub. DMR receive does not go through that slot. Details in `results.md`.
 
 **2026-10-28 — stock `0x3D20` is `jmp r15`.** Skipping it does not change a digital channel. MMDVMHost was not restarted: the bench SSH key was refused. Details in `results.md`.
