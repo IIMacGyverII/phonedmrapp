@@ -3958,3 +3958,29 @@ End state 11:08: `DMR003.F30F.V022`, VFO channel 0, 467.625 MHz, low power, not 
 On an empty ring, F30F's key wrapper at `0x5B580` calls `0xE9C` and returns. It compares the two words at the ring (`0x4F2C0` after the move) and skips the FM setup unless the second is below the first. The unkey wrapper at `0x5B614` calls `0xE9C` and returns when the flag word (`0x4F2E0`) is 0. FW29's four launch sites match F30F's bytes.
 
 End state 11:18: still `DMR003.F30F.V022`, VFO, 467.625 MHz, low power, not transmitting, RSSI −105. Battery 31.7 °C, AP 36.5 °C, PA 36.1 °C. HackRF idle.
+
+**FW30 load rejected (11:33 and 11:38). Bench order stopped before any key.** Host image `DMR003.FW30.V022`, sha256 `58ece263d6f79b3bad96ccd4ac9c07b5d464ceb1eeddb54f5e206afcf15f7d3b`, 378620 bytes, tag only at `0x38464`. Built from accepted FW29 `de10d5c5…657b` by `tools/fw-patch/fw30_port.py` (commit `eae9a419`). Ops 16 and 17 are removed from the dispatch: both `bsr` the refusal at `0x5BD74`, which calls the `sr = 1` ack (`0x8E7C`) and returns. The UART rate stays the image's 57600. That refusal was not run on the module, because the image never became the running firmware.
+
+The new stub is 120 bytes at `0x5BD74` and ends at `0x5BDEC`. Bytes through `0x5BE34` are the stub plus zeros. The live pool at `0x5BE34` stays. Shared code kept: `0x5BF24`, `0x5C040`, `0x5BFF2`. `0x18B5C` and the close prologue `0x37F4`–`0x37F8` are the factory bytes. The refill hook at `0x18B68` is still `bsr 0x5B4D0`. `0x35F64`–`0x35FE4` is unchanged. The literal-guard test passed on the host: `never_written` empty, no outside load of a pool inside `0x5BD74`–`0x5BE34`, and the only new branches are the two refusals, the close guard at `0x37F8`, op 7 at `0x5AF4C`, and setend at `0x5B748`. Opcode 12 was not read back on the device.
+
+RAM map, 102 aligned dwords moved, last word ends at `0x4F794` (next stock word `0x4F7E4`). The close one-shot stays in zeroed BSS at `0x4DAAC` (byte 0 = 1, byte 1 = `0xA5`). The symbol flag moves.
+
+| Old | New | What |
+|---|---|---|
+| `0x4A3E4`–`0x4A400` | `0x4F2C0`–`0x4F2DC` | ring |
+| `0x4DAAC` | `0x4F2E0` | symbol flag |
+| `0x4B000`–`0x4B00C` | `0x4F2E4`–`0x4F2F0` | block; arm is `0x4F2F0` |
+| `0x4AC00`–`0x4ADFF` | `0x4F2F4`–`0x4F4F3` | 512-byte buffer |
+| `0x4AE00`–`0x4AFFF` | `0x4F4F4`–`0x4F6F3` | second buffer |
+| `0x4B010`–`0x4B080` | `0x4F6F4`–`0x4F764` | engine words |
+| `0x4B260` | `0x4F768` | one word |
+| `0x4B360`–`0x4B384` | `0x4F76C`–`0x4F790` | tail, ends `0x4F794` |
+
+`0x4C7E0` was left. The factory image names it, and the refill still loads it.
+
+Two loads of this sha, over `DMR003.F30F.V022`. Nothing keyed. HackRF idle.
+
+1. 11:33–11:35. `fwload total 155851 ms tag DMR003.F30F.V022`, then `fwload ok(DMR003.F30F.V022)`.
+2. 11:38:23–11:40:46, log kept. Block 1/370 acked in 292 ms. Block 370/370 acked in 290 ms at 11:40:18. Closing packet `tx 01 seq 0` acked (`rx 06`). Power raised 11:40:19. At 11:40:31 the module had not answered for 9 s, so SignalDeck power-cycled it. Banner at 11:40:36, then `0x34`. `fwload total 155927 ms tag DMR003.F30F.V022`. The file pulled from `/sdcard/Download/DMR/Firmware/DMR003.FW30.V022.bin` is byte-identical to the local image (same sha, 378620 bytes, tag bytes `DMR003.FW30.V022`).
+
+The module answered after the second load. At 11:41:24: tag `DMR003.F30F.V022`, VFO channel 0, not transmitting, RSSI −104. Battery 31.0 °C, AP 34.761 °C, PA 34.386 °C. SignalDeck owns the radio. The same sha was not loaded a third time. Steps (a)–(e) did not run.

@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -369,23 +369,21 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-FW30 was not built. FW29 has no room for the F30F stub: that stub is 104 bytes and the only free run at its site is 8 bytes. The 128 zero bytes at `0x35F64` are the table tail that does not boot. Nothing was loaded. HackRF free.
+FW30 (`58ece263…`, tag `DMR003.FW30.V022`) was built on FW29 with ops 16/17 refusing `sr = 1` and the F30F fixes in that body. Two loads finished (370/370, closing packet acked, power raised) and `0x34` came back `DMR003.F30F.V022` both times. The file on the phone matches the image. Nothing was keyed. HackRF idle.
 
-End state 11:18: `DMR003.F30F.V022`, VFO channel 0, 467.625 MHz, low power, not transmitting, RSSI −105. Battery 31.7 °C, AP 36.5 °C, PA 36.1 °C.
+End state 11:41: `DMR003.F30F.V022`, VFO channel 0, 467.625 MHz, low power, not transmitting, RSSI −104. Battery 31.0 °C, AP 34.761 °C, PA 34.386 °C.
 
 ### Stuck
 
-Placing fixes (3) and (5) on FW29. Read only. No image was written.
+Step (a) of the 11:15 bench order, the FW30 load, before any key. Host guards passed (`eae9a419`). The image did not become the running firmware.
 
-1. F30F's added stub is `0x5B718`–`0x5B77F`, 104 bytes. On FW29 that address is 8 zero bytes (`0x5B718`–`0x5B71F`) and then live code (`d414…`). The longest zero run in the whole image that is not the `0x35F64` table tail is under 32 bytes. The IRAM image and the XIP tail have no 16-byte hole. The file cannot grow past `0x5C6FC`.
-2. `0x35F64` is 128 zeros in both factory and FW29. Image 3 wrote there and did not boot. `literal_guard.never_written` treats a change there as a hit.
-3. Opcode 17's body, `0x5BD74` until opcode 16 at `0x5BFB2`, is 574 bytes. That is the parked receive-RAM stream. It is large enough. The 11:15 task does not say to remove it.
+1. 11:33–11:35. Load of `radio_firmware/build/DMR003.FW30.V022.bin` (sha256 `58ece263d6f79b3bad96ccd4ac9c07b5d464ceb1eeddb54f5e206afcf15f7d3b`, 378620 bytes). `fwload total 155851 ms tag DMR003.F30F.V022`, then `fwload ok(DMR003.F30F.V022)`.
+2. 11:38:23–11:40:46, same file, log kept. Block 1/370 ack 292 ms. Block 370/370 ack 290 ms at 11:40:18. Closing `tx 01 seq 0` acked (`rx 06`). Power raised 11:40:19. At 11:40:31 SignalDeck power-cycled a module that had been silent for 9 s. Banner 11:40:36. `fwload total 155927 ms tag DMR003.F30F.V022`.
+3. Pull of `/sdcard/Download/DMR/Firmware/DMR003.FW30.V022.bin` equals the local file (same sha, tag bytes `DMR003.FW30.V022`). A later `0x34` read at 11:41:24 was still `DMR003.F30F.V022`, RSSI −104, so the module was answering and the answer was F30F.
 
-F30F's launch wrappers, recorded for fix (6). On an empty ring the key wrapper at `0x5B580` calls `0xE9C` and pops: the ring check is `cmphs` of the two words at `0x4F2C0`, and the FM setup is skipped when the second word is not below the first. The unkey wrapper at `0x5B614` calls `0xE9C` and pops when the word at `0x4F2E0` is 0. Neither path writes the C7000 or `0x30`/`0x58` in that case. FW29's four launch sites are the same bytes as F30F's.
+Module: `DMR003.F30F.V022`, VFO channel 0, 467.625 MHz, low power, not transmitting, RSSI −104. Phone: SignalDeck owns the radio, battery 31.0 °C, AP 34.761 °C, PA 34.386 °C. HackRF idle. This sha was not loaded again.
 
-Module: `DMR003.F30F.V022`, VFO, 467.625 MHz, low power, not transmitting. Phone: SignalDeck owns the radio, stock app disabled, battery 31.7 °C, AP 36.5 °C, PA 36.1 °C. HackRF idle.
-
-Question: the stub is 96 bytes short of a place to live. May opcode 16 and opcode 17 be removed so the guard, the op 7 check and setend can use that body, or is there another range?
+Question: the transfer completes and the module keeps F30F. What check is discarding the image?
 
 ## Owner question
 

@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-28 — FW30 (`58ece263…`) transfers and the module stays on F30F.** Two YModem loads, 370/370 and the closing packet acked, tag read back `DMR003.F30F.V022`. The phone's copy of the file matches the image. No key. Details in `results.md`.
+
 **2026-10-28 — FW30 has nowhere to put the F30F stub.** FW29's free run at `0x5B718` is 8 bytes; the stub is 104. Details in `results.md`.
 
 **2026-10-28 — `F30F` hotspot bench.** DMR both ways passed. A CAN 7 stream was 1127 frames and closed on timeout. Receive stayed at RMS 1.3 and the return calls were not decoded. The runner stream capture was p99 8186 Hz. Details in `results.md`.
