@@ -107,16 +107,12 @@ save4:
 	.short	0xE000, 0x0E9C
 	pop	r4-r6, r15
 """
-# Image 5 keeps image 4's save. The 52-byte restore window cannot also hold
-# the four register writes, a delay and the channel apply. The register
-# writes are what the close path undoes, so this window waits and applies.
-# 250<<1 is the delay cmd23_analog uses before it applies a channel.
-# 0x7B04 also calls apply_analog_config, then creates a task; this calls
-# 0x7A30 only. The tune stores 0x58 = 0x8405, so the saved hold is written
-# back after it. 0x7A30 preserves r4-r6.
-_DELAY = 0x18A4
-_APPLY = 0x7A30
-_STRUCT = 0x38B5C
+# Image 6 drops image 5's delay and channel apply. The register restore is
+# image 4's again. The close writes 0x70A6 only when bit 3 of 0x38908 is
+# set; the pre-key value has that bit set whenever audio is open, so
+# writing the saved byte back would not stop the mute. The drop already
+# clears bits 0 and 2 here, after status 4 and before the close runs.
+# Clearing bit 3 in the same mask makes that close return without writing.
 _RESTORE_ASM = """
 	.text
 	.global	restore4
@@ -126,17 +122,17 @@ restore4:
 	push	r4-r6, r15
 	lrw	r6, 0x2b220
 	lrw	r5, 0x4b388
-	movi	r0, 250
-	lsli	r0, r0, 1
-	.short	0xE000, 0x18A4
-	lrw	r4, 0x38b5c
-	ld.w	r0, (r4, 0)
-	ld.w	r1, (r4, 4)
-	ld.w	r2, (r4, 8)
-	ld.w	r3, (r4, 12)
-	.short	0xE000, 0x7A30
+	movi	r0, 48
+	ld.w	r1, (r5, 0)
+	jsr	r6
+	movi	r0, 65
+	ld.w	r1, (r5, 4)
+	jsr	r6
 	movi	r0, 88
 	ld.w	r1, (r5, 8)
+	jsr	r6
+	movi	r0, 89
+	ld.w	r1, (r5, 12)
 	jsr	r6
 	pop	r4-r6, r15
 """
@@ -231,8 +227,6 @@ def save_restore():
     save = _linked(_SAVE_ASM, SAVE_AT, "save4")
     _patch_one(save, SAVE_AT, bytes.fromhex("00e09c0e"), STOCK_KEY, "stock call placeholder")
     restore = _linked(_RESTORE_ASM, RESTORE_AT, "restore4")
-    _patch_one(restore, RESTORE_AT, bytes.fromhex("00e0a418"), _DELAY, "delay placeholder")
-    _patch_one(restore, RESTORE_AT, bytes.fromhex("00e0307a"), _APPLY, "apply placeholder")
     if SAVE_AT + len(save) > SAVE_END:
         raise SystemExit("save stub reaches %X" % (SAVE_AT + len(save)))
     if RESTORE_AT + len(restore) > RESTORE_END:
@@ -309,6 +303,10 @@ def build():
     base[RESTORE_AT:RESTORE_AT + len(restore)] = restore
     base[SAVE_HOOK:SAVE_HOOK + 4] = encode_bsr(SAVE_HOOK, SAVE_AT)
     base[RESTORE_HOOK:RESTORE_HOOK + 4] = encode_bsr(RESTORE_HOOK, RESTORE_AT)
+    # andi r2, r2, 250 clears bits 0 and 2. 242 also clears bit 3.
+    if base[0x5B760:0x5B764] != bytes.fromhex("42e4fa20"):
+        raise SystemExit("state mask")
+    base[0x5B762] = 0xF2
     if bsr_target(base, SAVE_HOOK) != SAVE_AT:
         raise SystemExit("save hook")
     if bsr_target(base, RESTORE_HOOK) != RESTORE_AT:

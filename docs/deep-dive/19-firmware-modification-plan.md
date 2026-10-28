@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-28 — image 6 clears bit 3 of `0x38908` and the mute still wins.** `0x30` is `70A6` by 0.37 s on three keys, `0x58` ends at `BCF5`, and the level stays 1.3. The one-shot skip does not fit in the save stub. Details in `results.md`.
+
 **2026-10-28 — image 5 calls `0x7A30` after `cmd23`'s delay and the mute still wins.** `0x30` is `7026` at status 4 and `70A6` by 0.33 s, three times. The level stays 1.3. `0x58` ends at the saved `BCFD`, so the stub did finish. No 1125-frame stream. Details in `results.md`.
 
 **2026-10-28 — the stored channel apply is `0x7A30`.** It ends in `at1846_tune` and, on a wide channel, writes `0x30` = `0x7026`. The 176-byte block is `0x38B5C`. The `0x25` record is `0x38C70`. Image 5 waits with `cmd23`'s own delay, then calls `0x7A30`. Details in `results.md`.
