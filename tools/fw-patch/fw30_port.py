@@ -14,9 +14,9 @@ ROOT = Path(__file__).resolve().parents[2]
 BUILD = ROOT / "radio_firmware" / "build"
 FW29 = BUILD / "DMR003.FW29.V022.bin"
 FACTORY = ROOT / "radio_firmware" / "DMR003.UV4T.V022-ORIGINAL.bin"
-DEST = BUILD / "DMR003.FW3A.V022.bin"
+DEST = BUILD / "DMR003.FW3B.V022.bin"
 TAG = range(0x38464, 0x38474)
-TAG_TEXT = b"DMR003.FW3A.V022"
+TAG_TEXT = b"DMR003.FW3B.V022"
 STUB_AT = 0x5BD74
 STUB_END = 0x5BE34
 DROP_CALL = 0x5B748
@@ -25,24 +25,23 @@ OP7_AT = 0x5AF4C
 GUARD_AT = 0x37F8
 XIP = 0x0301A000
 
-# Moved block. The F30F layout, then the later engine words that FW29 added
-# past 0x4B00C. 0x4C7E0 stays: the factory image names it too.
+# Moved block, packed from 0x4F2C0 and ending at 0x4F39C. The two 512-byte
+# reply buffers stay at 0x4AC00 and 0x4AE00: opcode 12 and the 0x40 reply
+# at 0x5AFC8 still use them. 0x4C7E0 stays: the factory image names it too.
 RING = 0x4F2C0
 FLAG = 0x4F2E0
-BLOCK = 0x4F2E4
-ARM = 0x4F2F0
-BUF = 0x4F2F4
-BUF2 = 0x4F4F4
-EXT = 0x4F6F4
-WORD_B260 = 0x4F768
-TAIL = 0x4F76C
+ONESHOT = 0x4F2E4
+BLOCK = 0x4F2E8
+ARM = 0x4F2F4
+EXT = 0x4F2F8
+WORD_B260 = 0x4F36C
+TAIL = 0x4F370
 ENDF = 0x4DAAC
-ONESHOT = 0x4F794
-MAGIC_AT = 0x4F798
+MAGIC_AT = 0x4F398
 CLEAR_LO = 0x4F2C0
 CLEAR_MAGIC = 0xA5A55A5A
 MAGIC = 0xA5
-RAM_END = 0x4F794
+BLOCK_END = 0x4F39C
 PRE_AT = 0x5BFB2
 PRE_END = 0x5BFF2
 
@@ -54,10 +53,6 @@ def new_of(w):
         return FLAG
     if 0x4B000 <= w <= 0x4B00C:
         return BLOCK + (w - 0x4B000)
-    if 0x4AC00 <= w < 0x4AE00:
-        return BUF + (w - 0x4AC00)
-    if 0x4AE00 <= w < 0x4B000:
-        return BUF2 + (w - 0x4AE00)
     if 0x4B010 <= w <= 0x4B080:
         return EXT + (w - 0x4B010)
     if w == 0x4B260:
@@ -217,6 +212,8 @@ def build():
         raise SystemExit("drop call at %X is not %X" % (DROP_CALL, DROP_TAIL))
     if img[0x37F4:0x37F8] != fac[0x37F4:0x37F8]:
         raise SystemExit("close prologue differs from factory")
+    if BLOCK_END > 0x4F6F4:
+        raise SystemExit("block passes F30F's end")
     moved = relocate(img)
     code = fw30_build._linked(stub_asm(), STUB_AT, "fw30port")
     if STUB_AT + len(code) > STUB_END:

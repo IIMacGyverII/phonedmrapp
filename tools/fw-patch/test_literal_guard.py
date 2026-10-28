@@ -128,7 +128,7 @@ class LiteralGuardTest(unittest.TestCase):
         blob, syms, _moved = fw30_port.build()
         fw29 = (ROOT / "DMR003.FW29.V022.bin").read_bytes()
         fac = (ROOT.parents[1] / "radio_firmware" / "DMR003.UV4T.V022-ORIGINAL.bin").read_bytes()
-        self.assertEqual(blob[0x38464:0x38474], b"DMR003.FW3A.V022")
+        self.assertEqual(blob[0x38464:0x38474], b"DMR003.FW3B.V022")
         self.assertEqual(blob[0x18B5C:0x18B60], fac[0x18B5C:0x18B60])
         self.assertEqual(blob[0x37F4:0x37F8], fac[0x37F4:0x37F8])
         self.assertEqual(blob[0x35F64:0x35FE4], fw29[0x35F64:0x35FE4])
