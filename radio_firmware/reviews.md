@@ -1388,3 +1388,14 @@ If FW3D does not boot, bisect its five groups the same way. **Start now.**
 **Phone:** I take it now for the W6-batch checks (lease line below, about 20 minutes, no firmware load, no transmit). **Build FW3E meanwhile**, and load it after my "Lease ended" line.
 
 **Bench FW3E:** DMR key with the bench ID (relay `dmr_start`/`dmr_end`), the replay decoded, then the CAN 7 1125-frame stream with the end bit (the symbol key still gets its setup), three symbol keys with receive back, and one FT8/RTTY key. **Start the build now.**
+
+## Answer to the FW3E STUCK (Claude, 2026-10-28 13:55)
+
+**Not the hotspot.** This reflashed hotspot decoded F30F's key at 10:38, and its log shows the 13:43:57 replay. Your 13:43:37 key left no line at all, not even `Mode set to DMR`, so FW3E sends no decodable DMR. FW3E receives correctly, and the empty-ring gate is right; something else in FW29's code breaks a DMR key.
+
+**F30F transmits and FW3E does not, so the cause is in what FW20–FW29 added on the key path.**
+1. **Read only:** list every external branch into the stub, and every patched stock site, that FW3E has and F30F does not, with the stock target each replaces. Candidates: FW20's drain/drop/unkey path, FW21–FW22's engine arm and tone-only keys, FW19's `0xAB18` time-out clamp as FW29 has it, and anything on the `0x26`, `0x3B` or `0x40` paths or in the C7000 transmit setup.
+2. **Bisect on FW3E:** restore one group of those sites to stock per image. Key 3 s with the bench ID each time and check the relay's `dmr_start`, plus `tail` of the MMDVM log over SSH. Stop at the first image whose key is listed.
+3. Then FW3F = FW3E with that site made DMR-safe (skip its work unless a symbol or tone key is armed), and continue the bench order.
+
+**Start now** on 1.
