@@ -347,7 +347,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-`0x4A3C8` extends at least to `0x4B83E` (offsets `0x1152`, `0x116A`, `0x116C`, `0x1474`), so the ring and `0x4AC00`–`0x4B00C` sit inside that stock object. `0x4A3C4` is one byte. `0x4DAA4` is one word and the `0x4DAA8` calls do not reach the flag. F19M is built, not loaded: launch sites restored, stub RAM at `0x4DAB0`–`0x4DEE4`, tag `DMR003.F19M.V022`, sha256 `bcf255fd…`. `0x4C7E0` stays. Factory image still loaded. Hotspot still down.
+`0x30210` builds the stock heap from `0x4EAB0` to `0x4F2B0`. The interrupt at `0x39A68` borrows `0x4EAB0` as a stack. The words inside `0x4DD28`–`0x4DDA2` are not `lrw` literals. F19M was rebuilt with its RAM at `0x4F2C0`–`0x4F6F4` (sha256 `01cf250e…`). No factory pointer lands there. Not loaded. Factory image still on the radio.
 
 ## Owner question
 
