@@ -258,7 +258,7 @@ All of them pass the host suite (417–421 tests depending on the branch). The C
 - **Merged 13:40 (Claude):** integration **PR 58** is in main, so #50 and #53–#57 show as merged. #52 was closed with a pointer to #58: its base was #50's branch, and all of its commits are on main.
   - **Armor checks** (module FW3D, no transmit): #50 live sync passed (one `channels` event, the ★ zone on the phone); #53 the DMR template is intact; #56 the bars sit inside the panel.
   - #52 was not shown on the device (it needs an empty channel list); its host tests cover it.
-  - **Still open:** W6 data-mode transmit in the cage, the Soft SQ level sweep, optionally capping the bar height on small screens, Restricted wiring after PR 26, firmware repo PR 1, and the small follow-ups.
+  - **Still open:** W6 data-mode transmit in the cage, the Soft SQ level sweep, optionally capping the bar height on small screens, Restricted wiring after PR 26, firmware repo PR 1, and the small follow-ups. *(Superseded: the sweep, the bar cap (#68) and the follow-ups (#65–#67) are done; see "Current status" at the end.)*
 
 ### Who owns what now (owner, 2026-10-28 13:45)
 
@@ -272,7 +272,7 @@ The owner works through the outstanding W6 items with the W6 agent: data-mode tr
 - **The level makes no measurable difference.** The module opened (receive line `gpio189`) from these HackRF gains with a 3 s 1 kHz tone:
   - **First sweep, levels 1–9:** 9, 8, 15, 10, 10, 15, 13, 12 and 15 dB.
   - **Repeats, each searched from 4 dB in 1 dB steps:** level 1 at 14, 11 and 11 dB; level 8 at 14, 7 and 10 dB.
-- The spread between repeats (±3 dB, HackRF output at low gain) is as large as any difference between levels. The W6's module squelch 1–8 behaves as one threshold, like the Armor's (CLAUDE.md §3, squelch levels). On the W6, Soft SQ therefore works as squelch on or off, and its slider does little. Help and FEATURES.md do not say this yet.
+- The spread between repeats (±3 dB, HackRF output at low gain) is as large as any difference between levels. The W6's module squelch 1–8 behaves as one threshold, like the Armor's (CLAUDE.md §3, squelch levels). On the W6, Soft SQ therefore works as squelch on or off, and its slider does little. *(Superseded by #62: Soft SQ gates in the app with W6 thresholds, so the slider works again; nothing to add to Help.)*
 - Restored afterwards: channel 1 at Soft SQ level 4, radio back on channel 2.
 
 ### Bench warning: shared adb host ports
@@ -299,7 +299,7 @@ The owner works through the outstanding W6 items with the W6 agent: data-mode tr
   - Passive APRS with Soft SQ on for voice (squelch 0) still loses some packets. That is accepted.
 - **Open:**
   - The owner confirms by ear that the speaker is silent during a data mode.
-  - Armor checks for #62 (flags must leave it unchanged) and #63 (passive APRS below the squelch and a quiet speaker in data modes apply to every phone).
+  - ~~Armor checks for #62 and #63~~ done 17:15–17:25 (below); only passive APRS below the squelch was not run on the Armor.
   - Merge #62, then #63, retargeting 63 to main first.
 - **State of the W6:**
   - It runs `data-modes-raw` (#62 + #63).
@@ -333,3 +333,24 @@ Build: local branch `check/w6-armor` = `data-modes-raw` (#62 + #63) merged with 
 - **#68:** the intercom's spectrum strip sits below the activity box, inside the panel.
 - **#65–#67:** phone-independent text and settings changes; covered by host tests and the W6 checks.
 - **Merge note for the owner:** #63 and SignalDeck #59 (the M17 raw-audio hold) touch the same gate in `RadioService`. Whichever merges second needs a rebase. #59's `CamcorderAudio.appPlaysRadio()` must follow #62's playback setting once both are in.
+
+## Current status (2026-10-28 17:45): read this first
+
+- **Open SignalDeck PRs from the W6 work, all device-checked on the W6 and checked on the Armor, none merged:**
+  - **#62** app playback and Soft SQ on the W6;
+  - **#63** data modes, stacked on #62: merge #62 first, then retarget #63 to main;
+  - **#65–#68**, independent, from main.
+  - All six branches are current with main (`e15be521`).
+- **Merge conflict to expect:** #59 (the M17 raw-audio hold) conflicts with #63 in `RadioService` and `CamcorderAudio` (trial merge 17:40). Whichever merges second needs a rebase. After #62, `CamcorderAudio.appPlaysRadio()` must return the playback setting (`play`) instead of `false`, or #59 never holds the radio's sound on the W6.
+- **Owner:**
+  - merges;
+  - the by-ear check that the speaker stays silent during a data mode on the W6;
+  - the W6 data-mode transmit tests (APRS, SSTV Robot 24, FT8, packet), since transmitting is the owner's.
+- **Later:**
+  - Restricted-mode wiring after SignalDeck #26;
+  - firmware repo PR 1;
+  - the device-report backlog.
+- **W6:**
+  - runs the local build `w6/combo-local2` (#62 + #63 + #65–#68);
+  - test data removed; channel 1 "bench 1" at 440.000 MHz, squelch 2, Soft SQ level 4; web on host port 18086.
+- **Bench:** the HackRF-to-W6 path is about 10 dB weaker than this morning (use gain 35).
