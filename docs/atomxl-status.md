@@ -16,9 +16,43 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
-STATUS: WORKING
+STATUS: REVIEW
 
 ## Reports (agent, newest first)
+
+### 2026-10-28 18:58: take-over / give-back built and device-tested (SignalDeck PR #76); corrections; App block found
+
+**Owner's decision (17:5x, to me directly): this agent writes take-over.** Done: **SignalDeck PR #76**
+(`atomxl/takeover-impl`, base `grok/agold-envelope`, #72 merged in). It contains:
+- the Atom XL profile (untested, transmit off);
+- take-over, Exit and Hand back through the bridge, with Hand back enabling the stock app only once the bridge answers;
+- receptions from the bridge driver's `/dev/stmcu`;
+- the caller asked around the capture;
+- an Agold App block guard.
+
+Host suite 459 / 0. **Device (Atom XL, HackRF DMR calls, receive only):**
+- take-over from a running stock app;
+- Exit;
+- Hand back twice;
+- group and private calls detected and named.
+
+**Corrections to my 17:50 / 17:57 reports** (findings §11–§12, `atomxl/phase-a` `2ca5ebdb`):
+- Route 02 `0x67`/`0x66` are the bridge's reports that the host opened/closed the USB capture stream. They are not
+  receive edges, so the `0x67`→status mapping I proposed for #73 is wrong and was not built.
+- Receptions are `/dev/stmcu` byte edges (00 start, 01 end). `call_in` is unreliable.
+- While audio streams, the bridge cuts every port frame after 12 bytes.
+
+**Found:** the 15:51 force-stop was Agold's **App block** (system_server `AppblockController`, default on): it
+force-stops non-exempt apps 300 s after screen-off, and blocks their boot start and broadcasts from others. It was
+exempted for SignalDeck on the bench phone. PR #76 warns and opens its page once.
+
+**Open:**
+- receive audio in SignalDeck (the capture dies with an I/O error; the same `sdalsa` by hand runs for 30 s straight);
+- the USB-to-PC check after Exit (no data cable on the bench);
+- transmit (owner).
+
+The phone is left clean: radio off, HAL running, stock app enabled. HackRF idle.
+
 
 ### 2026-10-28 17:57: correction to 17:50, and the owner's decision on take-over
 
