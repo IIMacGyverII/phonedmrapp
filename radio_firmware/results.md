@@ -4095,3 +4095,13 @@ Three keys, channel 49, low power, bench ID, parrot off, 3 s: 14:59:52, 15:00:05
 Stock init at `0x3E60C` passes destination `0x4B864`, value 0 and length `0xC00` (192 shifted left 4). That span runs through `0x4C464` and includes `0x4BE64`.
 
 End state 15:00: `DMR003.FW3H.V022`, channel 49, not transmitting, RSSI −108. Battery 35.9 °C, AP 42.1 °C, PA 40.9 °C. HackRF was idle.
+
+**FW3I is heard, and the host sent no `0x40` (15:11–15:14).** The gate's first instruction is `br 0x5BDFC`, so the skip path always runs. Tag `DMR003.FW3I.V022`, sha256 `8f7ce23946ee45b5e271eb060e64dab48b76df7f56a7a4113f399a188f168c6e`. Commit `89e7b13c`.
+
+Load 15:11. Tag read `DMR003.FW3I.V022` at 15:13:33. HackRF was idle.
+
+DMR transmit, 15:13:54, channel 49, low power, bench ID, parrot off, 3 s. Status 3 once. Relay `dmr_start`, bench ID to TG 9, slot 2. MMDVM: `Mode set to DMR` and `received RF voice header` at 20:13:52 UTC, then `RF voice transmission lost` at 2.2 s, BER 7.1 %, RSSI −47. The bench ID was restored.
+
+`logcat -s RadioService:I` from the process that started at 15:13:54 (the load's restart) through the key: no `TX cmd=0x40`. The key command was `0x26`.
+
+End state 15:14: `DMR003.FW3I.V022`, channel 49, not transmitting. HackRF was idle. The replay and steps (c)–(e) were not run.
