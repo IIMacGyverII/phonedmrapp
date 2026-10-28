@@ -44,6 +44,17 @@ def call_dec(b):
     while v: s += CHARS[v % 40]; v //= 40
     return s.strip()
 
+def hotspot_can():
+    """The channel access number in /etc/mmdvmhost [M17]: M17 receivers drop a transmission with another CAN."""
+    try:
+        sec = None
+        for line in open("/etc/mmdvmhost"):
+            line = line.strip()
+            if line.startswith("["): sec = line
+            elif sec == "[M17]" and line.startswith("CAN="): return max(0, min(15, int(line[4:])))
+    except (OSError, ValueError): pass
+    return 0
+
 class Relay:
     def __init__(self):
         self.udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); self.udp.bind(("127.0.0.1", 17010))
@@ -119,7 +130,7 @@ class Relay:
         n = len(enc) // 16
         if n == 0: self.event(event="info", text="nothing to send"); return
         sid = os.urandom(2)
-        lsd = call_enc(dst) + call_enc(src) + bytes.fromhex("0005") + bytes(14)
+        lsd = call_enc(dst) + call_enc(src) + (0x0005 | (hotspot_can() << 7)).to_bytes(2, "big") + bytes(14)   # stream, voice 3200, the hotspot's CAN
         self.sending = True; self.abort = False; stopped = False
         try:
             t0 = time.time()

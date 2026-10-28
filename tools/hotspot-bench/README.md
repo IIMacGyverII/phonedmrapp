@@ -22,7 +22,7 @@ which MMDVMHost transmits. It can also act as a parrot, replaying each transmiss
 
 ## Hotspot setup (once)
 
-`/etc/mmdvmhost` (back up first): `[General] Callsign=N0CALL`; `[M17] Enable=1`, `SelfOnly=0`; `[M17 Network] Enable=1`,
+`/etc/mmdvmhost` (back up first): `[General] Callsign=N0CALL`; `[M17] Enable=1`, `SelfOnly=0`, and `CAN=` the channel access number of the M17 channel you test with (SignalDeck's bench channel uses 7; a receiver silently drops another CAN, and the relay sends with this CAN too); `[M17 Network] Enable=1`,
 with the default addresses (127.0.0.1, 17010/17011). Leave M17Gateway stopped, because the relay takes its UDP port.
 Set `[Modem] RXOffset` for this board. On ours, −300 to −600 Hz gave 0.0 % BER and −450 is set. With 0, the hotspot
 joined late at 6.5 % BER. For the cage, `[Modem] RFLevel=20`. Then restart MMDVMHost with `sudo systemctl restart mmdvmhost`.
@@ -58,6 +58,6 @@ Options: `--host 192.168.1.194`, `--src N0CALL`, `--dst @ALL`. Use only the benc
   audio.
 - A 5 s MP3 sent from the PC was transmitted by the hotspot: "received network voice transmission from N0CALL to ALL,
   5.0 seconds".
-- The Armor hears the hotspot's carrier, but SignalDeck's M17 receiver does not yet decode the hotspot's
-  transmission. That is open.
+- SignalDeck decodes the hotspot's transmissions on its M17 channel (about 85–94 % good frames); the parrot round trip
+  (Armor key, hotspot replay, Armor decode) works with the CAN matched.
 - MMDVMHost writes a zero CRC in network frames on this link. The relay writes the spec CRC, and MMDVMHost accepts both.
