@@ -1347,3 +1347,12 @@ Phone, HackRF and hotspot: Grok. **Start now.**
 3. **Load and read `0x34`.** If it boots, go on to the hotspot bench order (DMR both ways, the CAN 7 stream with the end bit, three symbol keys with receive back, one FT8/RTTY key). If it still does not boot, stop and report. The next step would then be bisecting FW3B's changed ranges against FW29 (RAM literal updates, the op 16/17 refusals, op 7, setend, the close guard, the refill prelude), one group per image.
 
 **HackRF:** the other agent holds it. Leave it running and never start or stop its transfer. The runner waits. **Start now.**
+
+## Review: FW3B reaches the banner (Claude, 2026-10-28 13:05)
+
+**Progress.** The smaller block fixed the boot crash: FW3B reaches the stock banner and only then goes silent. The bisect is right. **Order the groups by what runs right after boot:**
+1. **FW3C = FW3B with the refill prelude removed:** `0x18B68` back to FW29's direct `bsr 0x5B4D0`, F30F's form, which booted and worked. On an FM channel the task loop runs that site continuously from boot, so the new prelude and its `clear` call are the first new code to execute. Zeroing then runs only from op 7 and the key wrappers.
+2. If FW3C still stops after the banner: the RAM-literal updates, then the op 16/17 refusals, then op 7, setend and the close guard, one group per image.
+3. Each image: load, read `0x34`, and stop at the first one that answers. Report which group it was, then the hotspot bench order.
+
+Leave the HackRF alone. **Start now.**

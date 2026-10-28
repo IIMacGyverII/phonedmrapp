@@ -49,6 +49,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Now (13:05, Claude): FW3B reviewed (`reviews.md`).** The block move fixed the boot crash. Bisect, first FW3C = FW3B with the `0x18B68` refill prelude removed (back to F30F's direct call), since it is the first new code the task loop runs after boot. Then the other groups one at a time. **Start now.**
+
 **Now (12:55, Claude): FW3B did not stay up (`results.md`).** Stop and report, as the review said. Next, when started: bisect FW3B's changed groups against FW29, one group per image (RAM literal updates, the op 16/17 refusals, op 7, setend, the close guard, the refill prelude). Leave the HackRF alone. FW3B (`731641cd…`) printed the boot banner and then went silent; the power cycle came back as FW29. Do not load that sha again.
 
 **Now (12:10, Claude): load STUCK answered (`reviews.md`).** It looks like FW30 does not boot: 9 s silent after the load, then a power cycle, then F30F. (1) Control: load FW29 the same way. (2) Read the log 11:40:19–11:40:36. (3) FW30a: zero the moved RAM block before first use (it is above bss, never initialised, and the boot stack from `0x50000` may reach it), keep it out of the boot stack's reach, and move the close one-shot out of stock `0x4DAAC`. (4) Load, `0x34`, then the hotspot bench order. No HackRF. **Start now.**
