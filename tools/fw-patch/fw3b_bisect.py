@@ -456,6 +456,27 @@ clrunkey:
     return blob
 
 
+def build_fw3g():
+    """FW3E whose key wrapper returns and never calls the FM setup."""
+    src = BUILD / "DMR003.FW3E.V022.bin"
+    if not src.is_file():
+        build_fw3e()
+    img = bytearray(src.read_bytes())
+    if img[TAG.start:TAG.stop] != b"DMR003.FW3E.V022":
+        raise SystemExit("FW3E tag")
+    if img[0x5B5EE:0x5B5F0] != bytes.fromhex("9414"):
+        raise SystemExit("pop encoding")
+    # F30F's empty ring falls into this pop. Two of them, so a fall-through
+    # still returns and the writes at 0x5B592 do not run.
+    img[0x5B58E:0x5B592] = bytes.fromhex("94149414")
+    img[TAG.start:TAG.stop] = b"DMR003.FW3G.V022"
+    blob = bytes(img)
+    dest = BUILD / "DMR003.FW3G.V022.bin"
+    dest.write_bytes(blob)
+    print("fw3g", hashlib.sha256(blob).hexdigest())
+    return blob
+
+
 if __name__ == "__main__":
     for name in ("E3G1", "E3G2", "E3G3"):
         build_tx_group(name)
