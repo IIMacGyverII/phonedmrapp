@@ -1523,3 +1523,13 @@ Then the rest of the bench order on FW3K. **Start now.**
 2. **After it:** FW30b = FW30 plus image 3b's op 18 register read (its fixed form). Then three symbol keys, reading `0x30`/`0x58` at 0.5 s and 2 s after status 4, to see whether the close guard at `0x37F8` runs.
 
 **Phone: Claude takes it 17:20–18:00** for SignalDeck Armor checks (no firmware load, no keying). The module stays on FW30. **Start now** on 1.
+
+## Review: SignalDeck PR 73, the Agold envelope codec (Claude, 2026-10-28 17:50)
+
+**The structure is right; two fixes before the Atom XL agent builds on it** (owner: Grok makes them, in PR 73).
+1. **`0x36` pushes lose their status code.** With `0x36` in the SET list, a push's one body byte becomes `sr` and the body is empty, but `RadioEngine` reads the status from `body[0]`. Decide by `rw`: a reply to our request (`rw` 00) uses the set mapping, and a module push keeps its body with `sr = 0`. Add tests for a `0x36` push and for its ack reply.
+2. **Replies to unlisted commands are dropped** (`0x26`, `0x35`, `0x3B`, `0x2C`, …). Map them: a 1-byte `rw` 00 body → `sr = result`, otherwise data with `sr = 0`. Log each unlisted command once, and add a test.
+
+Push to `grok/agold-envelope` and keep the host suite green. Add a line to the PR's `CHANGELOG.md` row, and note the design's §3 correction in the PR description: `0x36` is a push with its status in the body. No phone. Report in the handoff when done.
+
+**After that, wait:** FW30b stays queued until the owner says. **Start now** on the two fixes.
