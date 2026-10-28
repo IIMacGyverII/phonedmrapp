@@ -58,12 +58,12 @@ def hotspot_can():
     return 0
 
 class DapnetCore:
-    """A stand-in for the DAPNET core on 127.0.0.1:43434, so the hotspot's own DAPNETGateway transmits our pages.
+    """A stand-in for the DAPNET core on 127.0.0.1:14343 (outside the ephemeral port range: on 43434 the gateway once connected to itself), so the hotspot's own DAPNETGateway transmits our pages.
     Implements the legacy transmitter protocol: the gateway logs in with "[type vX CALL KEY]", the core runs a few
     time-sync rounds ("2:TTTT", answered "2:TTTT:CCCC" then "+"), sends the time adjust ("3:+0000") and the time slots
     ("4:0123456789ABCDEF", all slots), then pages as "#NN 6:1:<RIC hex>:<function>:<text>" (6 = alphanumeric,
     5 = numeric; 1 = 1200 baud), each acknowledged "#NN +". Written from the protocol, for the bench only."""
-    def __init__(self, relay, port=43434):
+    def __init__(self, relay, port=14343):
         self.relay = relay; self.port = port; self.q = []; self.cv = threading.Condition(); self.seq = 0; self.online = False
         threading.Thread(target=self.serve, daemon=True).start()
 
@@ -74,7 +74,11 @@ class DapnetCore:
         return self.seq
 
     def serve(self):
-        srv = socket.socket(); srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1); srv.bind(("127.0.0.1", self.port)); srv.listen(1)
+        while True:                                       # a restart can find the port still held for a moment: retry
+            try:
+                srv = socket.socket(); srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1); srv.bind(("127.0.0.1", self.port)); srv.listen(1); break
+            except OSError:
+                srv.close(); time.sleep(2)
         while True:
             c, _ = srv.accept()
             try: self.session(c)
@@ -133,7 +137,7 @@ class Relay:
         threading.Thread(target=self.udp_loop, daemon=True).start()
         # DMR: MMDVMHost's [DMR Network] Type=Gateway talks to 127.0.0.1:62031 from 62032 (DMRC config every 10 s, DMRD bursts)
         self.dmr = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); self.dmr.bind(("127.0.0.1", 62031))
-        self.dmr_rx = None; self.dmr_last = []; self.dmr_sending = False
+        self.dmr_rx = None; self.dmr_last = self.load_dmr(); self.dmr_sending = False
         threading.Thread(target=self.dmr_loop, daemon=True).start()
 
     def to_client(self, kind, payload):
@@ -216,10 +220,29 @@ class Relay:
             self.dmr_rx["pkts"].append((now, d)); self.dmr_rx["last"] = now
             if f["ftype"] == 2 and f["dtype"] == 2: self.dmr_end("terminator")
 
+    DMR_FILE = os.path.join(HERE, "dmr_last.bin")
+
+    def save_dmr(self, pkts):
+        """The last DMR call on disk (relative time in ms, 4 bytes; packet length, 2 bytes; packet), so a restart keeps it."""
+        try:
+            t0 = pkts[0][0]
+            with open(self.DMR_FILE, "wb") as f:
+                for t, d in pkts: f.write(struct.pack(">IH", int((t - t0) * 1000), len(d)) + d)
+        except (OSError, IndexError): pass
+
+    def load_dmr(self):
+        out = []
+        try:
+            b = open(self.DMR_FILE, "rb").read(); i = 0
+            while i + 6 <= len(b):
+                ms, n = struct.unpack(">IH", b[i:i + 6]); out.append((ms / 1000.0, b[i + 6:i + 6 + n])); i += 6 + n
+        except OSError: pass
+        return out
+
     def dmr_end(self, why):
         r, self.dmr_rx = self.dmr_rx, None
         if not r: return
-        self.dmr_last = r["pkts"]
+        self.dmr_last = r["pkts"]; self.save_dmr(r["pkts"])
         secs = round(r["pkts"][-1][0] - r["pkts"][0][0], 2) if r["pkts"] else 0
         self.event(event="dmr_end", src=r["src"], dst=r["dst"], slot=r["slot"], private=r["private"], frames=len(r["pkts"]), seconds=secs, why=why)
         if self.parrot and r["pkts"]:
@@ -228,7 +251,7 @@ class Relay:
     def dmr_replay(self, pkts=None):
         pkts = pkts or self.dmr_last
         if not pkts: self.event(event="info", text="no DMR call recorded yet"); return
-        time.sleep(1.5); self.dmr_sending = True
+        time.sleep(3.0); self.dmr_sending = True          # a radio that just unkeyed needs a moment before it hears again
         try:
             sid = os.urandom(4); t0 = pkts[0][0]; r0 = time.time()
             for t, d in pkts:

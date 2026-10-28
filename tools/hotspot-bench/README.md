@@ -11,7 +11,7 @@ PC  m17bench.py  <--audio----   hotspot  m17relay.py  <--network frames--   MMDV
 `m17relay.py` takes the place of M17Gateway on MMDVMHost's local network link. It decodes every transmission the
 hotspot hears (Codec 2 3200) and streams the audio to the PC. It encodes audio the PC sends into M17 network frames,
 which MMDVMHost transmits. It can also act as a parrot, replaying each transmission it hears. For POCSAG it stands in
-for the DAPNET core (127.0.0.1:43434), so the hotspot's own DAPNETGateway logs in to it and transmits the pages the PC
+for the DAPNET core (127.0.0.1:14343), so the hotspot's own DAPNETGateway logs in to it and transmits the pages the PC
 sends.
 
 ## Files
@@ -35,7 +35,7 @@ for the DMR tests: `docs/plan-dmr-hotspot-tests.md`.
 
 For POCSAG (back up both files first): in `/etc/mmdvmhost`, `[POCSAG] Enable=1` and `Frequency=` your test frequency
 (467625000 here), `[POCSAG Network] Enable=1`. In `/etc/dapnetgateway`, `[General] Callsign=N0CALL`, `[DAPNET]
-Address=127.0.0.1`, `Port=43434`, `AuthKey=benchkey` (any letters and digits; the stand-in does not check it). Restart
+Address=127.0.0.1`, `Port=14343` (outside the ephemeral port range; with 43434 the gateway can connect to itself), `AuthKey=benchkey` (any letters and digits; the stand-in does not check it). Restart
 MMDVMHost, start the relay, then `sudo systemctl restart dapnetgateway`. The relay's log shows "dapnet link online".
 The hotspot transmits POCSAG at 1200 baud only, and it cannot receive POCSAG: SignalDeck is the receiver under test.
 
