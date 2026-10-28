@@ -177,6 +177,22 @@ pre:
     return blob
 
 
+def build_fw3c():
+    """FW3B with 0x18B68 restored to FW29's direct refill call."""
+    import fw30_port
+    fw30_port.build()
+    img = bytearray((BUILD / "DMR003.FW3B.V022.bin").read_bytes())
+    fw29 = FW29.read_bytes()
+    img[0x18B68:0x18B6C] = fw29[0x18B68:0x18B6C]
+    if fw30_build.bsr_target(img, 0x18B68) != 0x5B4D0:
+        raise SystemExit("refill not restored")
+    img[TAG.start:TAG.stop] = b"DMR003.FW3C.V022"
+    blob = bytes(img)
+    dest = BUILD / "DMR003.FW3C.V022.bin"
+    dest.write_bytes(blob)
+    print("fw3c", hashlib.sha256(blob).hexdigest())
+    return blob
+
+
 if __name__ == "__main__":
-    for name in GROUPS:
-        build(name)
+    build_fw3c()
