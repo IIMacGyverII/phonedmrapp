@@ -329,5 +329,36 @@ empty:
     return blob
 
 
+def build_tx_group(name):
+    """FW3E with one extra-hook group restored. E3G1 setend, E3G2 UART pend, E3G3 promiscuous."""
+    groups = {
+        "E3G1": (("fw29", (0x5B748,)),),
+        "E3G2": (("fac", (0x7C56,)),),
+        "E3G3": (("fac", (0xA890, 0xC1BA, 0xC244, 0x17E26)),),
+    }
+    if name not in groups:
+        raise SystemExit(name)
+    src = BUILD / "DMR003.FW3E.V022.bin"
+    if not src.is_file():
+        build_fw3e()
+    fac = (ROOT / "radio_firmware" / "DMR003.UV4T.V022-ORIGINAL.bin").read_bytes()
+    fw29 = FW29.read_bytes()
+    img = bytearray(src.read_bytes())
+    pools = {"fac": fac, "fw29": fw29}
+    for which, sites in groups[name]:
+        for at in sites:
+            img[at:at + 4] = pools[which][at:at + 4]
+    text = ("DMR003.%s.V022" % name).encode()
+    if len(text) != 16:
+        raise SystemExit("tag len")
+    img[TAG.start:TAG.stop] = text
+    blob = bytes(img)
+    dest = BUILD / ("DMR003.%s.V022.bin" % name)
+    dest.write_bytes(blob)
+    print(name, hashlib.sha256(blob).hexdigest())
+    return blob
+
+
 if __name__ == "__main__":
-    build_fw3e()
+    for name in ("E3G1", "E3G2", "E3G3"):
+        build_tx_group(name)
