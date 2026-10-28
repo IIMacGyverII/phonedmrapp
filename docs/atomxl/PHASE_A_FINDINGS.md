@@ -37,7 +37,25 @@ Things that do **not** bring USB back:
   so the port stays in host mode (checked 12 s after force-stop: `ttyACM0` still there, USB still gone);
 - unplugging and replugging the cable.
 
-What does: **so far only a reboot.** The stock app's own power-off was tested 2026-10-28 13:35: the broadcast
+What does (found 2026-10-28 13:50, owner-approved test): **power the MCU off, then toggle the MediaTek USB
+controller's cable mode.** The release sequence, as root:
+
+```
+am broadcast -a agui.intercom.intent.action.STOP_DEVICE     # stock app running: stop() -> stopCom() -> HAL stopMcu()
+                                                             # (SignalDeck owning the HAL: call stopMcu() itself)
+echo 0 > /sys/devices/platform/11201000.usb3/cmode           # mtu3_phone: NORMAL -> CHRG_ONLY
+sleep 1
+echo 1 > /sys/devices/platform/11201000.usb3/cmode           # CHRG_ONLY -> NORMAL -> switch_port_to_device
+```
+
+Kernel: `musb_cmode_store NORMAL --> CHRG_ONLY`, `CHRG_ONLY --> NORMAL`, `ssusb_set_mode = 1`,
+`switch_port_to_device`, `USB_STATE=CONFIGURED`; adb over the cable answered 2 s after the second write, the radio
+stayed off. `cmode` read `1` before (standard MediaTek node, not Agold's). Tried first and **not** enough:
+`sys.usb.config` none → adb (gadget pull-up ran, controller stayed in "none"), and `echo 0 > …/mcu/usb_path` (already
+`usb mode = 0` after the power-off; `1` while the radio is on). `mcu_power` reads `power on = 0` when off. Every node
+was read once with a marker in the kernel log first; nothing else was written.
+
+Earlier finding, kept for the record: the power-off alone (no `cmode` toggle) is not enough. The stock app's own power-off was tested 2026-10-28 13:35: the broadcast
 `agui.intercom.intent.action.STOP_DEVICE` (protected: the shell user is refused, root may send it) runs
 `ExtModuleManager.stop()` → `stopCom()` → HAL `stopMcu()`. The kernel logged `mcu power 0`, `mt_usbhost_disconnect`,
 `usb_intf_switch otg disable` and `/dev/ttyACM0` went away, **but the controller went to mode "none"**
@@ -60,13 +78,13 @@ Consequences:
 - **Device report:** the stock-app watch (`am force-stop` at the end) leaves the radio powered and the phone off USB.
   `run_checks.sh` over USB loses the phone mid-run and reports "no result" although the checks finished (the
   12:43 run wrote its folder at 12:45). The report must say up front that this phone family drops USB while the radio
-  is on, recommend Wi-Fi ADB, and power the radio back off (through the stock app's own stop, not a force-stop) at
-  the end of the watch.
+  is on, recommend Wi-Fi ADB, and at the end of the watch release the radio (`STOP_DEVICE`, then the `cmode` toggle)
+  instead of a force-stop.
 - **SignalDeck:** while SignalDeck owns the radio on this phone, USB is unavailable (no adb, no file transfer, no USB
   audio or Android Auto over the cable; charging still works). Exit and Hand back must power the MCU off (owner,
-  2026-10-28), and that alone does not yet give USB back (above): until a way back to device mode is found, the help
-  and the Exit/Hand back dialogs must say "USB to a computer returns after a restart". The in-app help for the Atom XL
-  profile must say this.
+  2026-10-28), then toggle `cmode` (the release sequence above) so USB to a computer comes back; the pass list for
+  both buttons includes "adb over the cable answers within 5 s". The in-app help for the Atom XL profile says that USB
+  to a computer is off while SignalDeck has the radio.
 
 ## 2. Module and bridge identity
 

@@ -5,6 +5,11 @@ Newest first. Phone: Unihertz Atom XL, `ATOMXL0000000737`, worked over Wi-Fi ADB
 
 ## 2026-10-28
 
+- **13:50** **USB released without a reboot** (owner-approved node test): after `STOP_DEVICE` (MCU off), `echo 0` then
+  `echo 1` to `/sys/devices/platform/11201000.usb3/cmode` puts the controller back in device mode; adb over USB
+  back in 2 s. Not enough on their own: `sys.usb.config` toggle, `usb_path` = 0. This is the recipe for SignalDeck's
+  Exit and Hand back (Phase A §1).
+
 - **13:40** Stock app read (jadx, APK SHA-256 `26bd68cc…05ccb`): the PTT key arrives as `android.intent.action.PTT.down`
   / `.up` / `.timeout` (the Armor's pair); clean power-off is `agui.intercom.intent.action.STOP_DEVICE` (protected,
   root only) or `agui.intent.action.AUTO_EXIT` → `stop()` → `stopCom()` → HAL `stopMcu()`. Tested STOP_DEVICE: MCU off,
