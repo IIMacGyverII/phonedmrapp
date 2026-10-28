@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -337,23 +337,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-MMDVMHost was not restarted. SSH as `pi-star` with the bench key was refused (`Permission denied (publickey,password)`; the key was offered and not accepted). The factory image is still loaded. No replay was run.
-
-Stock `0x3D20` is two bytes, `3c 78`, `jmp r15`. The `0x18B68` stub returns without calling it while the symbol flag is clear, which is the same as the stock call.
-
-### Stuck
-
-Doing step 1 of the 07:30 answer: `sudo systemctl restart mmdvmhost`.
-
-1. `ssh -i id_ed25519_wpsd -o BatchMode=yes -o IdentitiesOnly=yes pi-star@192.168.1.194 echo ok` → exit 1, `Permission denied (publickey,password)`. The server accepted the connection, offered publickey and password, and did not accept the key.
-2. No second login was tried. MMDVMHost was not restarted. `ss` was not run.
-3. Read `0x3D20` in the factory image: `3c 78` then zeros. It is an empty return.
-
-Module: factory `DMR003.UV4T.V022`, channel 49, 467.625 MHz, low power, not transmitting. Phone: SignalDeck `1.0.0-beta.19`, not keyed this pass. HackRF idle. Hotspot SSH closed.
-
-The bench key no longer logs in. How should MMDVMHost be restarted?
-
-End state: image 6, channel 56, 467.625 MHz, low power, not transmitting, RSSI −105, SignalDeck `1.0.0-beta.19`. Battery 33.3 °C, AP 39.2 °C, PA 38.4 °C. HackRF idle. Phone and hotspot free.
+`0x382B8` is the command `0x40` slot. Stock it is the shared empty pop at `0xAA54` (71 of 112 dispatch entries). DMR receive commands have their own handlers. FW19's outside entries into the stub are the four `0x26` sites, `0xAB18`, `0x18B5C`, `0x18B68`, and that `0x40` pointer. The rerun waits on the owner's MMDVMHost restart. Factory image still loaded. No replay.
 
 ## Owner question
 

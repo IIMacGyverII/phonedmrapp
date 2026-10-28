@@ -3868,4 +3868,8 @@ End state 06:58: `DMR003.F19R.V022`, channel 49, 467.625 MHz, low power, not tra
 
 **`0x3D20` is an empty return.** The factory bytes at `0x3D20` are `3c 78 00 00`, `jmp r15`. Skipping that call, which the `0x18B68` stub does while the symbol flag is clear, matches the stock call. The 07:30 restart of MMDVMHost did not run: SSH as `pi-star` with the bench key was refused.
 
+**The `0x382B8` slot is command `0x40` (read only).** The dispatch pointers run from `0x38224` to `0x383E4`, 112 entries. With command `0x22` at `0x38240`, command `0x40` is the word at `0x382B8`. Stock it holds `0x03024A54`, file `0xAA54`, the two bytes `95 14`, a pop. 71 of the 112 entries point at that same pop, so it is the shared default for an unused command. Commands `0x22`, `0x23`, `0x2B`, `0x36` and `0x3B` each have their own handler. Nothing in the DMR receive path indexes this slot. The patch notes record that nothing at boot sends `0x40`. FW19 stores `0x03074EFC` there, the stub at `0x5AEFC`.
+
+**FW19 entries into the stub, from outside it.** The four `0x26` sites `0x92AA`, `0x92C8`, `0x92E0`, `0x92FA`; `0xAB18` to `0x5B700`; `0x18B5C` to `0x5B4CA`; `0x18B68` to `0x5B4D0`; and the `0x40` pointer. FW30 adds external branches FW19 does not have, at `0x7C56`, `0xA890`, `0xC1BA`, `0xC244` and `0x17E26`, all into the later stub past `0x5C000`. No image was loaded. The rerun waits on the owner's MMDVMHost restart.
+
 End state 07:21: factory image, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107, SignalDeck `1.0.0-beta.19`. Battery 30.7 °C, AP 34.8 °C, PA 34.4 °C. HackRF idle. Phone and hotspot free.
