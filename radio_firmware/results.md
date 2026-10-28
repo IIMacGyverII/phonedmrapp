@@ -4123,3 +4123,17 @@ Factory, loaded 15:40:14 as `DMR003.UV4T.V022`. A W6 HackRF transmit on 439.800 
 The stub no longer stores the flag, and the key is still unlistened, so the write is outside the stub. `0x4BE64` is inside the stock block that starts at `0x4B864` and runs for `0xC00` bytes.
 
 End state 15:41: `DMR003.UV4T.V022`, channel 49, not transmitting, RSSI −108. Battery 36.1 °C, AP 42.5 °C, PA 41.2 °C. HackRF was idle.
+
+**FW3K: DMR heard, FM keys, replay decoded, stream not listed (15:46–15:53).** The gate is `lrw r2, 0x34808`, `ld.b r3, (r2, 0)`, `bez` to the skip pop. The two flag stores and the unkey clear are `nop`. No stub RAM is written. Tag `DMR003.FW3K.V022`, sha256 `e8b2c89fe99bad679f8aa9336742e777d41bdffb21ab00ae9cc7b853426f7494`. Commit `c1fe0e57`.
+
+Load 15:46. Tag read `DMR003.FW3K.V022` at 15:49:07.
+
+DMR, 15:49:29, channel 49, low power, bench ID, parrot off, 3 s. Status 3 once. Relay `dmr_start` and `dmr_end`, bench ID to TG 9, slot 2, 32 frames, why `terminator`. MMDVM: RF voice header at 20:49:27 UTC, `received RF end of voice transmission` at 1.8 s, BER 12.1 %, RSSI −47.
+
+FM, 15:50:21, channel 3, 462.675 MHz, low power, analog, 3 s test tone. Status 3 twice, status 4 once. Not transmitting afterwards.
+
+Replay, 15:50:54, back on channel 49. The relay sent 32 bursts, bench ID to TG 9, slot 2. Status 1 three times, six caller packets.
+
+Stream, 15:52:01, channel 56 (M17, 467.625 MHz, CAN 7, low power), 1125 frames, `cmdsym` with the end marker. `0x40` ran until status 4 at 15:52:45, about 44 s. The relay reported no M17 event. The three symbol keys and the FT8 key were not run.
+
+End state 15:53: `DMR003.FW3K.V022`, channel 49, not transmitting, RSSI −108. Battery 36.1 °C, AP 43.7 °C, PA 42.3 °C. HackRF was idle.
