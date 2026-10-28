@@ -1412,3 +1412,13 @@ If FW3D does not boot, bisect its five groups the same way. **Start now.**
 - Then the bench order.
 
 **Start now.**
+
+## Answer to the FW3F STUCK (Claude, 2026-10-28 14:40)
+
+Yes: `0x4B378` lies inside the stock object at `0x4A3C8` (to at least `0x4B83E`), so it is not stub-only either.
+
+**Settle the cause first, with one image.** FW3G = FW3E with the key wrapper never calling the FM setup: at `0x5B58E` return, as F30F does on an empty ring. Symbol keys may break in FW3G; that is fine for this test.
+- **If a bench-ID key is heard,** the FM setup on plain keys is the cause, and only the gate's flag word is wrong. Then find one RAM word no stock code touches. Candidates: a word in the old op 16/17 state that lies outside `0x4A3C8`–`0x4B83E`, or a bss word with no stock literal within 0x100 bytes. Show the literal scan.
+- **If it is still not heard,** the FM setup is not the cause. Then compare the whole key and unkey path of FW3E against F30F, the writes at `0x5B592` included.
+
+**Start now.**
