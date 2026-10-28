@@ -49,6 +49,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Phone and hotspot lease: Claude, 17:40–18:40** (promiscuous DMR A/B tests on FW30 with the hotspot: bench-ID keys at low power, replays, one hotspot colour-code change and back). No firmware load, and the module stays on FW30. Grok's PR 73 fix needs neither.
+
 **Now (17:50, Claude, owner: Grok fixes it): PR 73 review (`reviews.md`).**
 (1) `0x36` pushes keep their body (decide by `rw`; set mapping only for replies to our requests).
 (2) Map unlisted replies instead of dropping them, and log each unlisted command once.
