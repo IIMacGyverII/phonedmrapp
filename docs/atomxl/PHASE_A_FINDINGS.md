@@ -214,6 +214,28 @@ module's bootloader offers anything besides `'1'` (download). That is answered b
 sending nothing, with PTT held: a transmit risk if the bootloader is not entered (the module would boot its
 application with PTT asserted), so in the cage, with the owner's go.
 
+## 10. Listen-only bootloader test (owner's go, Faraday cage, 2026-10-28 15:17)
+
+The stock updater's steps 1–4 (§9) with its timings, then nothing sent for 16 s; the port read from before step 1
+to the end (26 s, 115200 raw, `boot_listen.sh` kept outside the repositories). Never `'1'`; a shell trap released PTT
+on any exit; PTT released before the bridge was powered off.
+
+- **0 bytes** in the whole window: no banner, no menu, no `C`.
+- Before and after: bridge `20201016161541`, module `DMR006.U4A.V067` (framed `0x34`), both checksums ok; HAL
+  restarted; `handle_ptt` back to 1. No HackRF was used, so whether the module keyed meanwhile was not measured.
+- Reading: the bootloader, if it was entered, says nothing until it is sent a key; the stock updater sends `'1'`
+  straight away without reading a menu (§9), which fits. The Armor's bootloader of the same family is also only ever
+  seen answering `C` after `'1'`.
+
+**Verdict for "extract V082 from a user's phone":** there is no read path in the stock software. The stock app and
+the HAL only send; the module's application has no flash read command (V076's dispatch, §§ of
+`multi-device-atomxl-findings.md`); the bootloader offers nothing unprompted. What is left is guessing other keys at
+the bootloader (unknown effects, possibly erase or execute: not done), loading our own image with a read command
+(erases the original first: defeats the purpose), or a physical SPI read of the module (opening the phone). So V082
+has to come from a file: a newer Unihertz package or OTA, the stock app's download (its allow-list names
+V067/V076/V080/V082, so builds with those files existed), or the vendor. Once one V082 file exists, a SignalDeck check
+can tell a user's module apart by its `0x34` reply without reading the flash.
+
 ## 4. PTT key (press-tested with the owner, 2026-10-28 13:17)
 
 - **The app receives it as `android.intent.action.PTT.down` / `android.intent.action.PTT.up`** (and `.PTT.timeout`),

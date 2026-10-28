@@ -5,6 +5,11 @@ Newest first. Phone: Unihertz Atom XL, `ATOMXL0000000737`, worked over Wi-Fi ADB
 
 ## 2026-10-28
 
+- **15:17** Listen-only bootloader test (owner's go, cage; Phase A §10): the stock entry (off, PTT held, update mode,
+  on), then 16 s of listening: 0 bytes. Never `'1'`. Both chips answer afterwards. Verdict: no read path in the stock
+  software; V082 must come from a file. For the managing agent: the Agold bootloader is silent until keyed, like the
+  Armor's; and the loader rule "the vendor copy is the backup" does not hold on Agold phones (vendor V076, module V067).
+
 - **15:14** HAL `update_dmr_firmware` read statically (Phase A §9): module off (00 10 00), 4 s, `handle_ptt` 0, 2 s,
   transparent (00 08 01), 2 s, module on (00 10 01), 2 s, `'1'`, YModem. Bench: `00 10 01` outside update mode never
   brings the module back (10 s); a bridge power-cycle does. Listen-first with PTT held needs the owner's go (cage).
