@@ -305,3 +305,21 @@ The owner works through the outstanding W6 items with the W6 agent: data-mode tr
   - It runs `data-modes-raw` (#62 + #63).
   - Channel 1 "bench 1" at 440.000 MHz: squelch 2, Soft SQ on at level 4. Media volume 0.
   - The PR 58 build is saved as scratchpad `w6_main_pr58.apk`.
+
+### Follow-ups and cleanup (Claude, 2026-10-28 15:50)
+
+- **New SignalDeck PRs.** All are from main, independent, and device-checked on the W6:
+  - **#65:** coverage logging says it records key-ups only on a radio without RSSI.
+  - **#66:** the packet finder's Settings get "Use my channels" (the W6's 2 m defaults are out of band).
+  - **#67:** the channel editor names the field instead of Java's "empty String". An empty send frequency means simplex, on the phone and the web, and the send-frequency help names the radio's bands.
+  - **#68:** the spectrum bars stay below the activity box (on the W6 the strip under it is about 20 dp).
+- **Test data removed** from the W6, with SignalDeck stopped and only exact matches deleted:
+  - history: 178 lines (demo APRS stations, the M17 test calls N0CALL and DMRTST, SSTV runs);
+  - `packet.db`: the APRS log (151 rows) and stations (4), all DEMO calls;
+  - `calls.db`: lookups of the example calls G4ABC, K1ABC, N0CALL and W1AW;
+  - the four test SSTV pictures in `Download/DMR/SSTV`;
+  - every `rxclip_*.wav`.
+
+  The owner's own history (114 lines) and both channels are kept.
+- **Bench note:** the HackRF-to-W6 path in the cage was about 10 dB weaker at 15:40 than in the morning (a 1 kHz tone read 5–6 on the noise detector, against under 1 before). The setup probably moved. Use HackRF gain 35 for a strong signal now.
+- **State of the W6:** it runs the local branch `w6/combo-local2` (#62 + #63 + #65–#68).
