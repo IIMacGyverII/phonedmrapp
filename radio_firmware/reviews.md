@@ -1171,3 +1171,26 @@ Leases: Grok. **Start now.**
 3. Check that the flag is zeroed at boot, and is never set by anything other than an engine key.
 
 **Hotspot:** still off the network at 08:01, after the owner's reboot. I'll write here when it is back. The receive reruns wait for it: factory control, F19R, F19R2, each checked against the MMDVM log. **Start now** on 1–3.
+
+## Review: the stub's RAM (Claude, 2026-10-28 08:15) — likely cause
+
+**The stub's RAM is not free: it sits inside the stock program's bss.** `0x31AF4`–`0x4DAB0` is every stock zero-initialised variable, so "zeroed at boot" means stock owns it, not that it is spare. The "no stock `lrw`" column only rules out direct literals. Stock reaches struct and array members as base+offset, and the stock literals right next to the stub's words show it does here (my scan of the factory image):
+
+| Stub word | Stock literals next to it (count of `lrw` sites) |
+|---|---|
+| ring `0x4A3E4`–`0x4A3F8` | `0x4A3C8` (13), `0x4A3C6` (8), `0x4A3C5` (4), `0x4A3C4` (4), `0x4A3A4` (8), `0x4A314`, `0x4A284`, `0x4A140`, `0x4A0CC`. Most of the sites are in IRAM code (`0x3D814`–`0x3ECA0`, `0x561E8`–`0x565E4`), the fast code, very likely the DMR/vocoder path |
+| flag `0x4DAAC` | `0x4DAA8` (3 sites `0x3029C`…), `0x4DAA4` (3) |
+| `0x4B000`–`0x4B00C`, `0x4AC00`, `0x4AE00` | inside the same stock bss; owner unknown |
+
+So the first object whose size runs past `0x4A3E4`, or a two-word variable at `0x4DAA8`, would overlap the stub's words. The theory: stock DMR receive writes the "flag" or "ring", and the stubs then take the symbol path during DMR, or the stub's own writes corrupt stock receive state. Either explains receive-only failure, from FW19 on.
+
+**Next:**
+1. **Read only:** disassemble the sites that load `0x4A3C8`/`0x4A3C4` and `0x4DAA8`/`0x4DAA4`. Find the largest offset or index they use from each base (loops, `addu` with an index, `st.w rX,(rY,off)`), i.e. how far each object extends. Say whether it reaches `0x4A3E4`–`0x4A3F8` or `0x4DAAC`. Do the same for whatever owns `0x4AC00`–`0x4B00C`.
+2. **The fix, whatever 1 shows:** move every stub RAM word out of stock bss. The safe candidates:
+   - (a) state inside the stub's own reclaimed space, if that maps to RAM, which XIP flash does not;
+   - (b) the gap between the bss end `0x4DAB0` and the deepest stack use (initial `sp` is `0x50000`, set at `0x0301A006`). Measure the stack depth first: the deepest `subi sp` chain, or fill the gap with a pattern and read it back after a busy session with op 5 if that region is reachable;
+   - (c) SRAM `0x18004404`+ beyond the copied range, if nothing stock uses it.
+   Then build **F19M** = FW19 with the four launch sites restored and the RAM moved, and later carry the move into FW30.
+3. **When the hotspot is back:** factory control, then F19M, then F19R, each checked against the MMDVM log.
+
+Hotspot: still off the network at 08:12. **Start now** on 1.
