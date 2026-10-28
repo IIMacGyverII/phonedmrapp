@@ -37,7 +37,16 @@ Things that do **not** bring USB back:
   so the port stays in host mode (checked 12 s after force-stop: `ttyACM0` still there, USB still gone);
 - unplugging and replugging the cable.
 
-What does: the HAL's `stopMcu()` (the stock app's own exit path; `mcu power 0` in the log), or a reboot.
+What does: **so far only a reboot.** The stock app's own power-off was tested 2026-10-28 13:35: the broadcast
+`agui.intercom.intent.action.STOP_DEVICE` (protected: the shell user is refused, root may send it) runs
+`ExtModuleManager.stop()` → `stopCom()` → HAL `stopMcu()`. The kernel logged `mcu power 0`, `mt_usbhost_disconnect`,
+`usb_intf_switch otg disable` and `/dev/ttyACM0` went away, **but the controller went to mode "none"**
+(`ssusb_set_mode = 2`, `switch_port_to_none`), not back to device mode: `usb_state<DISCONNECTED>` every ~5 s, and
+replugging the cable did not change it, although Android's port manager saw the cable (`connected=true`,
+`data_role=device`). A reboot restored USB. (At boot the controller had never left device mode: `device -> host,
+it's illegal`, so the later `otg disable` left the gadget working; that is why the boot-time power cycle did not cut
+USB.) Whether a write to the mtu3 mode node or the `mcu` driver's `usb_path` brings device mode back is untested:
+vendor nodes, owner's decision, one node at a time.
 
 Who powers it: the `mcu power 1` call came from a HwBinder thread of pid 607, `vendor.mediatek.hardware.agolddaemon@1.0-service`,
 not the extmodule HAL; the sysfs side is the `mcu` platform driver (`/sys/bus/platform/drivers/mcu/`: `mcu_power`,
@@ -54,8 +63,10 @@ Consequences:
   is on, recommend Wi-Fi ADB, and power the radio back off (through the stock app's own stop, not a force-stop) at
   the end of the watch.
 - **SignalDeck:** while SignalDeck owns the radio on this phone, USB is unavailable (no adb, no file transfer, no USB
-  audio or Android Auto over the cable; charging still works). Give-back must power the MCU off, or the phone stays
-  in host mode. The in-app help for the Atom XL profile must say this.
+  audio or Android Auto over the cable; charging still works). Exit and Hand back must power the MCU off (owner,
+  2026-10-28), and that alone does not yet give USB back (above): until a way back to device mode is found, the help
+  and the Exit/Hand back dialogs must say "USB to a computer returns after a restart". The in-app help for the Atom XL
+  profile must say this.
 
 ## 2. Module and bridge identity
 
