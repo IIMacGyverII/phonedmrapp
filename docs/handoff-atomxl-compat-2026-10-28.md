@@ -22,8 +22,9 @@ this PC, and neither is yours:
 - **ANYSECU W6+** (USB `W6202601000904`): the owner's.
 
 Never send either one a command, install on it, or reboot it. Never run `adb` without `-s`: with three phones attached,
-a bare call fails or hits the wrong one. **No HackRF and no hotspot** for this work. Both belong to other work, and
-the HackRF is leased elsewhere today. Ask the owner if a test truly needs an RF source.
+a bare call fails or hits the wrong one. **HackRF: yours since 2026-10-28 16:55 (owner).** Use it in the cage only, on the bench antenna, never transmitting from the outdoor
+one. Check that no `hackrf_transfer` is already running before you start, never leave a `-R` in the background, and hand it back to the owner when
+asked. **No hotspot:** it belongs to the firmware bench.
 
 ## 2. Read first
 

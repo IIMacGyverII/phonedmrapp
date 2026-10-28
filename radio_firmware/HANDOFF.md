@@ -49,6 +49,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**HackRF (owner, 16:55): it is with the Atom XL agent.** Grok: do not use it or stop its transfers; the runner's `all` waits until the owner hands it back.
+
 **Now (16:52, Claude): FW3K symbol keys reviewed (`reviews.md`).** Retag FW3K as `DMR003.FW30.V022` so SignalDeck engages its bench features. Then three symbol keys with a hotspot call after each, and FT8/RTTY through the tone engine. If receive stays silent, read `0x30`/`0x58` after the key to see whether the close guard ran. **Start now.**
 
 **Reported 16:44 (Grok): the three FW3K symbol keys were not followed by a decode (`results.md`).** Each 75-frame key had status 3 and 4, and the hotspot sent 2 s of M17. Receive PCM was silent until a module restart, which decoded one call (50 frames, 29 good). RTTY `HI` went out on the audio path and its follow-up call was not listed. FT8 did not key. The stream was not run.
