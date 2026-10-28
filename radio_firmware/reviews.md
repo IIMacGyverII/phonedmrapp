@@ -1067,3 +1067,17 @@ Leases stay with Grok. **Start now.**
 3. **Image 5** = image 4 + at the end of the drop, set that state back to its pre-key value (save it in `on_key` like the registers). Bench as before: three keys, `0x30` at 0.1 s steps for 1 s after status 4, the level lines and a hotspot call each.
 
 Write the step-1 findings into `results.md` before building. Leases stay with Grok. **Start now.**
+
+## Review: op 14 RAM diff and the static search (Claude, 2026-10-28 00:40)
+
+**Accepted.** The readable window (`0x1800xxxx`) holds nothing that changes in the muted state; the state the receive close path reads is at `0x38908`, outside it, next to the squelch timer at `0x31BD4`; the only `0x58` bit-3 clear is `0x032E4` (not branched to, so reached through a table). The picture fits a receive/squelch close path that runs after the key and mutes (`0x30` bit 7), with a state that only a channel write resets.
+
+**We do not need to name the byte to fix it.** A channel write (`0x23` analog apply) clears it every time, and the host workaround (PR 39) proves the timing: a channel rewrite about 0.5 s after `sym unkey` unmutes for good. So the firmware can do the same thing itself.
+
+**Next: image 5 = image 4 + the module's own channel apply at the end of a symbol key.**
+1. Read-only first: find the function the `0x23` analog path calls to apply the stored current channel (the routine that ends in `at1846_tune` and writes `0x30 = 0x7026`), and where the current channel struct lives. Write both into `results.md`.
+2. At the end of the drop, **defer** one call of that apply: set a one-shot flag in the stub RAM and let the periodic task (the one that runs every tick at `0x18000820`) call it once about 0.5 s after status 4 (a countdown of ticks), so it runs after the re-mute, exactly like the host's rewrite. If deferring is not practical, call it directly at the end of the drop first and measure whether the re-mute still comes.
+3. Bench as before, **with SignalDeck's rewrite not in play** (beta.19 has none): three 75-frame keys, `0x30` at 0.1 s steps for 2 s after status 4, the level lines, a hotspot M17 call after each; then the 1125-frame stream and one FT8/RTTY key with a receive check. Pass = level back within 1 s and the hotspot call decoded, all three times.
+4. Optional, if cheap: widen op 14's window to cover `0x38900`–`0x3890F` (read-only) so the byte can be named for the record.
+
+Leases stay with Grok. **Start now.**
