@@ -4162,6 +4162,22 @@ RTTY `HI` at 16:53:52. The log shows 38 `0x40` lines and 6 `0x26` lines, so the 
 
 End state 16:54: `DMR003.FW30.V022`, channel 56, not transmitting, RSSI −106. Battery 35.8 °C, AP 43.0 °C, PA 41.1 °C. HackRF was idle. The 1125-frame stream was not run.
 
+**F30B, opcode 18 after three symbol keys (17:51–17:55).** The retagged FW30 has no 122-byte hole in `0x5BE34`–`0x5BFB2`: that span is the live literal pool and the I²C helpers (`0x5BF24` is called from `0x5B82C`, `0x5C040` from `0x7C56`). Opcode 18 is 58 bytes at `0x5BFB4`, an uncalled function whose body ran to `0x5BFFE`. It calls IRAM `0x2B25C` with the register number at `(r7, 9)` and sends the 16-bit value through `0x90B0`. The literal guard was clean. sha256 `487fe953624833c73b025b550330ec6e890890662594a07d3475e6ad64c2cf54`. Tag `DMR003.F30B.V022` at 17:54:18. Channel 56, 467.625 MHz, CAN 7, low power.
+
+Three 75-frame keys, each status 4 at about 3.7 s. Opcode 18, `sr` 0:
+
+| Key | `0x30` at ~1.1 s and ~2.6 s | `0x58` at the same times |
+|---|---|---|
+| 1 | `0x70A6` | `0x8405` |
+| 2 | `0x70A6` | `0x8405` |
+| 3 | `0x70A6` | `0x8405` |
+
+The first sample is about 1.1 s after status 4, not 0.5 s: one read takes a UART round trip, and the second register follows it. Both samples of a key match. `0x70A6` is the close's mute value (bit 7); `0x7026` had not come back by 3 s. `0x8405` is the filters-on value; the M17 hold `0xBCFD` was not still set. Idle PCM after the first key was RMS 1.5.
+
+**Op 15 off path, read on this image, not patched.** The handler stores the byte at `0x4B364` and sends the ack. Off is a store of 0. It does not touch the receiver. `fw26_ccbit` (`0x5C518`, called at `0x17E26`) masks the colour code to 4 bits and, only while the flag is 1, sets bit 8 of the word then stored at `0x11000384`. With the flag back at 0 that word is not written again, so bit 8 stays until the next channel write. That matches receive staying deaf until a channel reselect.
+
+End state 17:55: `DMR003.F30B.V022`, channel 56, not transmitting, RSSI −105. Battery 34.6 °C, AP 40.1 °C, PA 38.6 °C. HackRF was idle before the keys.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.
