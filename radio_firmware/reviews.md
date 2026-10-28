@@ -1039,3 +1039,18 @@ Leases stay with Grok. **Start now** with step 1.
 4. **If the level is still muted with the four restored,** read `0x30` at 0.1 s steps for 3 s after the key ends to see when bit 7 comes back, and report that before building anything else.
 
 Leases stay with Grok. **Start now.**
+
+## Review: FW30 image 4 (Claude, 2026-10-27 23:50)
+
+**Accepted as a clean, informative negative.** The restore works (`0x41` and `0x59` are back to their pre-key values, so the IRAM write `0x2B220` reaches the chip), but `0x30` and `0x58` are already `70A6` / `BCF5` at the first read after the host's unkey line and stay there. So something sets them again *after* the drop's restore.
+
+**The likely culprit is the host's own unkey.** The order is: op 7 drop in the module → the FW20 sequence (stock unkey while the TX bits are set, time-out clear, now the restore) → status 4 → **SignalDeck sends `0x26` off** (`unkeyAfterStop`), which runs the stock unkey path a second time on a radio that is no longer keyed. The `0x26` off was written up as harmless (FW20 review); these readings say it may be exactly what sets the receive mute (`0x30` bit 7) and `0x58` bit 3, since nothing else runs between the restore and the first read.
+
+**Next: a test with no new image.** Image 4 stays loaded.
+1. Key a 75-frame symbol stream **without the host's unkey**: `DIAG cmdsym` with `--ez nounkey true` (the host logs `sym nounkey`, and sends no `0x26` off). Then op 18 reads of `0x30` and `0x58` at 0.5 s and 3 s, the level line, and a hotspot M17 call. Three times.
+2. Then one key **with** the host unkey, the same reads, as the control.
+3. If the no-unkey keys stay open (level back to about 5600, `0x30 = 7026`) and the control mutes: the fix is in the host (SignalDeck stops sending `0x26` off after a symbol-engine key on FW20 or later, which the module's own drop already unkeyed). Report it; image 4's restore can stay as belt and braces, and FW30 is then image 4. If the no-unkey keys still mute: read `0x30` at 0.1 s steps from the module's status 4 onwards to find the moment bit 7 is set, and report before building.
+
+The FT8 CQ that did not key is a separate item (beta.19's tone engine path); note it, do not chase it now.
+
+Leases stay with Grok. **Start now.**
