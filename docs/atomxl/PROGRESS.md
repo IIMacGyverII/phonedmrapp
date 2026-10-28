@@ -5,6 +5,13 @@ Newest first. Phone: Unihertz Atom XL, `ATOMXL0000000737`, worked over Wi-Fi ADB
 
 ## 2026-10-28
 
+- **14:25** SignalDeck PR #61 (stacked on #60): draft profile in the report and `00_SUMMARY.txt`, PTT broadcasts and
+  HIDL interfaces from the stock app's code, the bridge port/label/holder while the radio is on, a correct verdict
+  for a bridged phone. Atom XL draft right field by field (pttKey unknown: no press during that run). Found: the
+  handoff's "draft profile / report.json in main via PR 48" was not so; neither existed (W6 gaps B7/B13 open), so the
+  draft is built here and `report.json` + `report_diff.py` are next. The identity probe through the envelope needs
+  the radio powered without the stock app: approach to agree with the owner.
+
 - **14:00** SignalDeck PR #60 (`atomxl/report-usb-release`): the report's stock-app watch releases the radio
   (STOP_DEVICE, wait for `mcu_power` = 0, `cmode` toggle) before its force-stop, lists USB devices and sound cards
   while the radio is on, and warns. Atom XL over Wi-Fi with the cable in: USB gone 13:58:51, back 13:59:09 by itself.
