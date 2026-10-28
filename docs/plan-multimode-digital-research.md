@@ -53,3 +53,12 @@ frames that did not come through its own DMR receive path is the central researc
 - Which published documents cover each mode's frame structure in enough detail (Fusion's air interface, the D-Star
   specification, TIA-102 for P25, the NXDN technical specifications). Collect and cite them in the first step of each.
 - **Owner decision point after step 1:** the read-only study runs regardless (nothing built, nothing keyed). Its report says whether the module's vocoder can decode host-supplied AMBE+2 frames and encode host audio, and what a prototype would take; the owner then decides whether step 3 (the voice prototype) goes ahead. The data-only steps do not wait for that decision.
+
+## 5. After the research: putting it into SignalDeck (owner, 2026-10-27)
+
+The research results get a review of their own before any SignalDeck feature is designed: what actually works, how well,
+on which firmware, and what a user would do with it. Then decide how each mode fits SignalDeck in a useful way rather
+than as a lab tool, for example as a channel type (as M17 became), as a monitor in the PKT section, as callsign and
+position lines in Last heard, the history and the map, or as message threads in the unified Messages tab. Each mode that
+ships follows the usual rules: in-app help, a CHANGELOG row, host tests, Restricted-mode wiring, and stock-firmware
+behaviour stated plainly where a mode needs bench firmware.
