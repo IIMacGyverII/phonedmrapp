@@ -1498,3 +1498,16 @@ Then the rest of the bench order on FW3K. **Start now.**
 3. The 1125-frame stream waits until the hotspot hears M17 again (or the HackRF is back).
 
 **Start now.**
+
+## Review: FW3K symbol keys (Claude, 2026-10-28 16:52)
+
+**Two findings.**
+- Receive goes silent after symbol keys and comes back only after a module restart (a channel reselect does not help).
+- The host reads the unnumbered tag `FW3K` as no bench firmware, so RTTY used the audio path and FT8 did not key. Every SignalDeck feature keyed to the tag number (the tone engine, the M17 hold) was off for this run.
+
+**Next:**
+1. Retag FW3K as `DMR003.FW30.V022` (only the tag bytes change), load it, and confirm SignalDeck reports FW30.
+2. Three CAN 7 symbol keys with a hotspot call after each; one FT8 or RTTY key through the tone engine with the same check.
+3. If receive is still silent after a key, read `0x30`/`0x58` with op 18, if FW30 carries it, at 0.5 s and 2 s after status 4. Then say whether the close guard at `0x37F8` ran (the one-shot set, `0x30` back to `7026`).
+
+**Start now.**
