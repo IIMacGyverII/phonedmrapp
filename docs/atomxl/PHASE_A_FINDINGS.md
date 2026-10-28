@@ -183,6 +183,37 @@ bridge and the module answer again (`20201016161541`, `DMR006.U4A.V067`). So the
 fit this bridge build; the stock updater's real sequence is in the HAL's `update_dmr_firmware` (static reading next),
 and whether the module's bootloader can send its flash at all is still unknown.
 
+## 9. The stock updater's bootloader entry, read from the HAL (static, 2026-10-28 15:10)
+
+`vendor.mediatek.hardware.aguiextmodule@1.0-service` (42 464 bytes, SHA-256 `a36809a5…5ec89e91`, copied from the
+phone as root; disassembled with the NDK's `llvm-objdump`, strings resolved from `adrp`/`add` pairs and the
+`.rela.dyn` pointer table). `update_dmr_firmware`, from `0x6e9c`:
+
+| Step | Code | Action | Wait after |
+|---|---|---|---|
+| 0 | `0x66b0` | its tty/`vendor.agui.extmodule.open` set-up | 4 s, then 1 s |
+| 1 | `0x6450(fd, 0)`, log "stop dmr" | bridge frame route 00 cmd **0x10** data 00 (`setDmrOnOffState`: module off) | 4 s |
+| 2 | `0x5748(1, 0)`, log "start ptt" | `/sys/bus/platform/drivers/mcu/handle_ptt` ← `0` (PTT held; idle reads 1) | 2 s |
+| 3 | `0x6590(fd, 1)`, log "enter dmr update mode" | bridge frame route 00 cmd **0x08** data 01 | 2 s |
+| 4 | `0x6450(fd, 1)`, log "start dmr" | bridge frame route 00 cmd 0x10 data 01 (module on), sent **after** step 3 | 2 s |
+| 5 | `0x70e0` | `'1'` (`0x31`) via `Send_Byte` (`0x5fd8`); read up to 60 bytes until six `'C'` | — |
+| 6 | `0x4e50` | YModem-1K transmit of `/storage/self/primary/intercom/dmr/<name>`, else `/vendor/data/dmr/<name>` | |
+
+The sysfs name table at `0xa600` is `mcu_power`, `handle_ptt`, `rstmcu`, `usb_path` (indices 0–3). The order is
+the one in the extraction note (and M17's), with the timings above. Nothing in the routine reads data back from the
+module beyond the `C` count; there is no receive side.
+
+**Bench check of step 4 outside update mode** (15:13, no PTT, no transparent mode): module off, 8 s, module on,
+then a framed `0x34` every second for 10 s: **no answer at all**. The module answered before the off. Only a power
+cycle of the whole bridge (`mcu_power` 0, then the §8 recipe) brings it back (`DMR006.U4A.V067`). So on this bridge
+build `00 10 01` does not bring the module back to a state that answers framed commands; whether it powers the module
+into its bootloader when PTT is held and transparent mode is on (the only way the stock updater uses it) is untested.
+
+**What that leaves for a non-destructive extraction:** the stock path is send-only. The open question is whether the
+module's bootloader offers anything besides `'1'` (download). That is answered by listening after steps 1–4 and
+sending nothing, with PTT held: a transmit risk if the bootloader is not entered (the module would boot its
+application with PTT asserted), so in the cage, with the owner's go.
+
 ## 4. PTT key (press-tested with the owner, 2026-10-28 13:17)
 
 - **The app receives it as `android.intent.action.PTT.down` / `android.intent.action.PTT.up`** (and `.PTT.timeout`),

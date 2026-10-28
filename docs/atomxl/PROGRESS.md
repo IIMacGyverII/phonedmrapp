@@ -5,6 +5,10 @@ Newest first. Phone: Unihertz Atom XL, `ATOMXL0000000737`, worked over Wi-Fi ADB
 
 ## 2026-10-28
 
+- **15:14** HAL `update_dmr_firmware` read statically (Phase A §9): module off (00 10 00), 4 s, `handle_ptt` 0, 2 s,
+  transparent (00 08 01), 2 s, module on (00 10 01), 2 s, `'1'`, YModem. Bench: `00 10 01` outside update mode never
+  brings the module back (10 s); a bridge power-cycle does. Listen-first with PTT held needs the owner's go (cage).
+
 - **15:07** Extraction groundwork (owner's note `temp/V082-EXTRACTION-HANDOFF.md`; Phase A §8): traced the HAL's
   `startMcu` (adds `rstmcu` 0 after power; without it the bridge never enumerates after a fresh boot); the note's
   bridge commands tested one by one: module power off works, power on does not, transparent mode passes nothing; the
