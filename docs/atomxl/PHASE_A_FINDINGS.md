@@ -85,12 +85,19 @@ on the wire is 32 kHz (`ro.agold.extmodule.32k=yes`). The HAL opens `/dev/snd/pc
 - `/dev/stmcu` (`agui_device`, 0666), `/vendor/bin/dfu-util`, `/vendor/bin/auto_update` (DFU to `0483:df11` at
   `0x08000000`: the bridge MCU's updater; never run).
 
-## 4. PTT key
+## 4. PTT key (press-tested with the owner, 2026-10-28 13:17)
 
-Not pressed yet (needs the owner). Input devices: `mtk-kpd` (event2: HOME, VOLUME±, POWER, `00f9`, RESTART),
-`hall-kpd` (event1: `KEY_F12`), `fingerprint_key` (event3: … `KEY_F11` …), `ACCDET`, `mtk-tpd(-kpd)`. The F12 the
-earlier reports saw is on `hall-kpd`, not `mtk-kpd`. The HAL has `startPtt`/`stopPtt`, and the mcu driver a
-`handle_ptt` node.
+- **The side PTT key is `mtk-kpd` (event2), Linux key code 249 (`0x00f9`).** Two presses, both seen: 0.39 s and
+  0.95 s, clean DOWN/UP pairs. It is **not** the `KEY_F12` the earlier reports saw (that is `hall-kpd`, the cover
+  sensor).
+- Key layout `/system/usr/keylayout/mtk-kpd.kl`: `key 249 FUNC1` → Android keycode **289**, a vendor keycode
+  beyond AOSP's list (Android 11 ends at 288). The framework sees it in `interceptKeyBeforeQueueing keyCode:289`.
+- Agold's framework hooks it first (`AguiShortcutFunction` / `A35ShortcutFunction: <ShortcutInterceptKey> …
+  mIsPTTDown:false, isPTT:0`): with the radio off and the stock app not running it was not treated as PTT. Whether
+  it becomes a broadcast to the app (`ro.agui.smartkey_ptt=com.agold.intercom`) when the stock app runs, and what
+  that broadcast is called, is still open (read the stock app's receivers; capture once with the stock app up).
+- The HAL also has `startPtt`/`stopPtt` and the `mcu` driver a `handle_ptt` node: those key the radio, they are not
+  the key.
 
 ## 5. Gap list: what baseline report A (beta.20, main `8a1420cf`) got wrong or missed
 
@@ -117,8 +124,8 @@ Report A: run 2026-10-28 12:43 with `scripts/w6/run_checks.sh`, watch = auto. Ke
    (HAL binary strings name `/dev/ttyACM0`, `/dev/snd/pcmC1D%u`, `/dev/stmcu`, `/sys/bus/platform/drivers/mcu/%s`).
 9. **No MCU-envelope framing** in the draft profile (`7E 96 69 … 81`, route, checksum); the frames are only used for
    the "module answered" line.
-10. **PTT**: the capture found no key (nobody pressed); input device list is good. The `hall-kpd` F12 needs a press
-    test with the owner.
+10. **PTT**: the capture found no key (nobody pressed). The real key is `mtk-kpd` code 249 / keycode 289 (§4);
+    the report should name a vendor keycode above the AOSP range as a PTT candidate.
 11. **The 32 kHz wire rate** is not found (the clue scanner reads the app's 48000).
 12. **Platform devices**: it picked `mt_soc_tdmrx_pcm` as "looks like a radio module" (a name match on `pcm`); the
     real one is the `mcu` platform driver.

@@ -5,6 +5,11 @@ Newest first. Phone: Unihertz Atom XL, `ATOMXL0000000737`, worked over Wi-Fi ADB
 
 ## 2026-10-28
 
+- **13:20** Owner requirement for the transport design: SignalDeck's **Exit** and **Hand back to the stock app**
+  buttons must both power the radio MCU off (HAL `stopMcu`, `mcu power 0`) so the USB port returns to device mode;
+  a force-stop is not enough (Phase A §1).
+- **13:17** PTT press test with the owner: side key = `mtk-kpd` code 249 → `FUNC1` → keycode 289 (Phase A §4).
+
 - **13:15** Wrote `PHASE_A_FINDINGS.md` (USB/radio disconnection, identity, gap list, Phase B search) and the
   correction block at the top of `docs/multi-device-atomxl-findings.md`. Next: PTT press test with the owner, then
   the "image not on the phone" note on the firmware repository's device page and the firmware-work note below.
