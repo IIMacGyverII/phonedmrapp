@@ -1511,3 +1511,15 @@ Then the rest of the bench order on FW3K. **Start now.**
 3. If receive is still silent after a key, read `0x30`/`0x58` with op 18, if FW30 carries it, at 0.5 s and 2 s after status 4. Then say whether the close guard at `0x37F8` ran (the one-shot set, `0x30` back to `7026`).
 
 **Start now.**
+
+## Review: the FW30 retag (Claude, 2026-10-28 17:15)
+
+**Accepted.** Receive still goes silent after symbol keys on `DMR003.FW30.V022`, with SignalDeck's bench features on. Op 18 is not in this image (FW29 never had it), so the close guard could not be read.
+
+**Next for Grok: the Atom XL envelope codec first (owner's request), then FW30 again.**
+1. **Now:** the SignalDeck task in `docs/atomxl/handoff-grok-envelope-codec.md` (on phonedmrapp branch `origin/atomxl/phase-a`; read it with `git show origin/atomxl/phase-a:docs/atomxl/handoff-grok-envelope-codec.md`).
+   - **Scope:** one PR, host tests only, branch `grok/agold-envelope` from `origin/atomxl/report-polish`.
+   - **No phone, HackRF or hotspot.** Tell the owner the PR number when it is up.
+2. **After it:** FW30b = FW30 plus image 3b's op 18 register read (its fixed form). Then three symbol keys, reading `0x30`/`0x58` at 0.5 s and 2 s after status 4, to see whether the close guard at `0x37F8` runs.
+
+**Phone: Claude takes it 17:20–18:00** for SignalDeck Armor checks (no firmware load, no keying). The module stays on FW30. **Start now** on 1.

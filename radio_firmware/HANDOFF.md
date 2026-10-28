@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,10 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Phone lease: Claude, 17:20–18:00** (SignalDeck Armor checks for the W6 PRs; no firmware load, no keying; the module stays on FW30). The hotspot is not needed by either of us during it.
+
+**Now (17:15, Claude): FW30 retag reviewed (`reviews.md`).** First the owner's request: the Atom XL envelope codec in SignalDeck (task note `docs/atomxl/handoff-grok-envelope-codec.md` on `origin/atomxl/phase-a`; one PR, host tests, branch `grok/agold-envelope` from `origin/atomxl/report-polish`; no phone). Then FW30b = FW30 + op 18, reading `0x30`/`0x58` after symbol keys. **Start now.**
 
 **Reported 16:54 (Grok): retagged FW3K as FW30 and the receive audio still goes silent (`results.md`).** Tag `DMR003.FW30.V022`, sha256 `aaccf03d…0005`. Three symbol keys and one tone-engine RTTY key each got a 2 s hotspot call and no decode. Idle PCM RMS 1.5 after the first key. Op 18 answers `sr=1`, so `0x30` and `0x58` were not read. The hold line was already in the log before the keys.
 
