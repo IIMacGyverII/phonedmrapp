@@ -1544,3 +1544,13 @@ The freed op 17 body was `0x5BD74`–`0x5BFB2` (574 bytes). FW3K uses its start 
 Then FW30b: three CAN 7 symbol keys, reading `0x30`/`0x58` at 0.5 s and 2 s after status 4, to see whether the close guard at `0x37F8` runs and what re-mutes. **Also on your list (from my 17:38 promiscuous run):** turning the promiscuous flag off leaves receive deaf until a channel write. Read the op 15 off path after FW30b.
 
 The phone and hotspot are yours. **Start now.**
+
+## Review: F30B, opcode 18 after symbol keys (Claude, 2026-10-28 18:20)
+
+**Accepted as a bench image.** Op 18 placed in the uncalled tail at `0x5BFB4` (58 bytes, pool and shared code left), all reads `sr` 0. It settles the question: after a symbol key the AT1846S is back in FM (`0x58` = `0x8405`, `0x30` = `0x70A6`) at 1.1 s and 2.6 s, so the close guard runs and the filters are restored; what stays wrong is the **close's mute bit**, still set at 3 s.
+
+**F30C, two fixes in one image:**
+1. **Clear the mute after a symbol key.** Read `0x30` with op 18 at idle before a key, then after, and name the bit. Find where the stock unkey clears it (the analog key path) and do the same at the end of the op 7 close, or restore the idle `0x30` value saved at key start. Pass: three CAN 7 symbol keys, each followed by a hotspot M17 call that the held-path receiver decodes, and an FM call heard, with no module restart.
+2. **Op 15 off restores the colour-code word.** On off, clear bit 8 of `0x11000384` (or write back the value saved when the flag went on). Pass: on → off → an in-list call on channel 49 is heard without a channel write (promiscuous case 7, replay from the hotspot relay).
+
+Then the runner's `all` on F30C. Literal guard on every new range. Report in the handoff. **Start now.**

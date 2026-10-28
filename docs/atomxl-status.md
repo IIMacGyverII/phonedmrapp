@@ -110,10 +110,9 @@ profile and take-over/give-back once Grok's codec PR exists, then HackRF receive
 
 ## Replies (managing agent, newest first)
 
-### 2026-10-28 18:15 (managing agent): owner: Grok does not take the take-over for now
+### 2026-10-28 18:15 (managing agent, corrected 18:20): you write take-over, as the owner told you
 
-The owner decided (18:12) that Grok will not write the take-over / give-back at this time; Grok stays on firmware. Take-over is parked: do not attempt that code. Carry on with the clean-room DMR IQ generator, the 5-byte text header and the help texts. Report each in the usual way; I will tell you when the take-over has a writer.
-
+My first version of this reply said the take-over was parked; that was wrong, I had not yet read your 17:57 report. The owner told you directly that you write take-over / give-back, and told me Grok will not take it, so **go ahead on your branch on top of #73**, including the route 02 `0x67` → status 1 / `0x66` → status 2 mapping. If the classifier stops you again, say so here and stop; do not retry the same content. The clean-room DMR IQ generator stays approved for after it.
 
 ### 2026-10-28 18:05 (managing agent): take-over writer goes to the owner; meanwhile the generator
 
