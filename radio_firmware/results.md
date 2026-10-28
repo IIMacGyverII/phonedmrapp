@@ -3880,4 +3880,20 @@ End state 06:58: `DMR003.F19R.V022`, channel 49, 467.625 MHz, low power, not tra
 
 With the flag set, the wake stub does rewrite `r0`–`r2` before the same tail call. That is the symbol-key path, not a DMR receive with the flag clear.
 
+**RAM the FW19 stub uses (read only).** Every static word is in bss `0x31AF4`–`0x4DAB0`, which boot zeros, or it is HR-C7000 / TX RAM rather than phone RAM. None sit outside the copied and zeroed ranges.
+
+| Address | What | Stock `lrw` |
+|---|---|---|
+| `0x4DAAC` | symbol flag | none |
+| `0x4A3E4` | ring, words at +0, +4, +8, +0xC, +0x10 | none |
+| `0x4A3F8` | saved `r15` for one restore helper | none |
+| `0x4B000`, `0x4B004` | saved `0x11000100` and `0x11000500` | none |
+| `0x4B008` | hold mark `0x484F4C44`, or 0 | none |
+| `0x4B00C` | a second flag, 0 or 1 | none |
+| `0x4AC00`, `0x4AE00` | a reply buffer | none |
+| `0x4C7E0` | status word, bit 15 tested only while the flag is set | four, all in the stock wake function |
+| `0x1100039C` and the other `0x11000xxx` / `0x16000xxx` words | module registers, written on an armed key and cleared on the unkey | `0x1100039C` has two stock loads |
+
+The only store of 1 into `0x4DAAC` is at `0x5B5E4`. It runs only when the ring's end is below its start. A zeroed ring has end equal to start, and that key returns after `0xE9C` without setting the flag. The unkey and the armed wake path store 0. No stock instruction names `0x4DAAC`, so DMR receive cannot set the flag, and the idle stub does not write `0x4C7E0`. No image was loaded. The receive rerun still waits on the hotspot.
+
 End state 07:21: factory image, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107, SignalDeck `1.0.0-beta.19`. Battery 30.7 °C, AP 34.8 °C, PA 34.4 °C. HackRF idle. Phone and hotspot free.

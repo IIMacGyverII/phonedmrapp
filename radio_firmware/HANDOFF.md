@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -341,7 +341,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-With the symbol flag clear, `0x5B700` passes `0xA308` the same `r0` and `0xA308` overwrites `r1`–`r3` before reading them. `0x5B4CA` tail-calls `0x18B70` with `r15` restored to `0x18B60` and the stack balanced; `0x18B70` does not read the incoming `r3`. `0x5B4D0` returns without calling `0x3D20`, which is `jmp r15`. The receive rerun still waits on the MMDVMHost restart. Factory image loaded. No replay.
+The FW19 stub's static words are all in bss `0x31AF4`–`0x4DAB0` (zeroed at boot) or in module registers. The symbol flag `0x4DAAC` is set only at `0x5B5E4`, and only when the ring's end is below its start. Stock code does not name that flag. The idle stub does not write the shared status word `0x4C7E0`. The receive rerun still waits on the hotspot. Factory image loaded. No replay.
 
 ## Owner question
 
