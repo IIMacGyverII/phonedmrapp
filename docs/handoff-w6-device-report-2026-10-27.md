@@ -181,3 +181,19 @@ The exact build on the W6 is the **local, unpushed** branch `w6/test-combo` in `
    - Coverage logging records key-ups only on the W6 (no signal readings); hide it or label it.
    - The channel editor's "empty String" message seen once.
    - The packet finder needs UHF frequencies entered by hand on the W6.
+
+## 10. Integration status (Claude, 2026-10-27 23:10)
+
+| Item | Status |
+|---|---|
+| Merge of PRs 30–38, 42, 40, 41, 44, 47, 43, 45 in the handoff order | **done** on `merge/w6`, integration **PR 48**; one conflict (`assets/web/app.css`, both sides kept) |
+| Host suite on the merged tree | **417 / 0**, release build OK |
+| Privacy scan of the added reports | clean (unit 1 serial masked; only the bench adb serial) |
+| Code review of shared code (`RadioService`, engine selection, bands, multi-select) | done; the Armor keeps `RadioEngine` (engine chosen by `profile.protocol`) |
+| W6 smoke test of the merged build | **passed**: installs over the agent's build (saved), starts with no crash; the stock app still owns the radio |
+| Armor regression (M17 stock-firmware receive, Armor profile features present, Channels header, take-over, receive, transmit, a DMR call) | **waiting** for a phone lease (Grok holds the Armor for FW30) |
+| Merge PR 48 into main | **waiting** for the Armor check |
+| W6 transmit (voice, APRS, SSTV Robot 24, FT8) and speaker-silent-at-volume-0 by ear | **waiting** for the owner in the cage |
+| W6 marked compatible + README phone table | after the merge (receive verified now; transmit when the owner confirms) |
+| Restricted-mode wiring for the bulk channel actions | after PR 26 merges |
+| Smaller follow-ups (coverage label without RSSI, packet finder UHF list, editor "empty String") | open |
