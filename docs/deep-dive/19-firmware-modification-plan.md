@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-28 — FW30 has nowhere to put the F30F stub.** FW29's free run at `0x5B718` is 8 bytes; the stub is 104. Details in `results.md`.
+
 **2026-10-28 — `F30F` hotspot bench.** DMR both ways passed. A CAN 7 stream was 1127 frames and closed on timeout. Receive stayed at RMS 1.3 and the return calls were not decoded. The runner stream capture was p99 8186 Hz. Details in `results.md`.
 
 **2026-10-28 — `F30F` decodes the DMR recording with `0x18B5C` left stock.** Status 1 three times. The close guard has to start after the prologue saves `r15`. Details in `results.md`.

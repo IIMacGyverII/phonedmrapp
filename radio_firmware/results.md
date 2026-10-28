@@ -3952,3 +3952,9 @@ Three 75-frame CAN 7 keys on channel 56 (type 2, 467.625 MHz, low power). The re
 Runner `all` on the same image, low power, 467.625 MHz: boot PASS silent (peak 0.0 dB). Tone FAIL, carrier 10.54 s, clip 0, p99 3041 Hz, 1 kHz line 857 Hz. Stream FAIL, carrier 45.15 s, clip 0, LSF found, 0 payload frames, end bit false, p99 8186 Hz. Receive PASS, −19.1 dBFS, line 1.51. Heat PASS, no stop, AP 38.5 to 39.2 °C, battery 31.7 to 31.9 °C. Records under the temp bench results for `DMR003.F30F.V022`.
 
 End state 11:08: `DMR003.F30F.V022`, VFO channel 0, 467.625 MHz, low power, not transmitting, RSSI −105. SignalDeck owns the radio; the stock app is disabled. Battery 31.9 °C, AP 38.0 °C, PA 37.7 °C. HackRF idle.
+
+**FW30 does not fit yet (11:18, read only).** No image was built and nothing was loaded. F30F's added stub occupies `0x5B718`–`0x5B77F` (104 bytes). FW29 has 8 zero bytes there and then live code. The 128 zero bytes at `0x35F64` are the same in the factory image; writing them stopped image 3 from booting. There is no other zero run of 16 bytes in the IRAM copy or the XIP tail, and the file cannot grow past `0x5C6FC`. Opcode 17's body from `0x5BD74` to opcode 16 at `0x5BFB2` is 574 bytes.
+
+On an empty ring, F30F's key wrapper at `0x5B580` calls `0xE9C` and returns. It compares the two words at the ring (`0x4F2C0` after the move) and skips the FM setup unless the second is below the first. The unkey wrapper at `0x5B614` calls `0xE9C` and returns when the flag word (`0x4F2E0`) is 0. FW29's four launch sites match F30F's bytes.
+
+End state 11:18: still `DMR003.F30F.V022`, VFO, 467.625 MHz, low power, not transmitting, RSSI −105. Battery 31.7 °C, AP 36.5 °C, PA 36.1 °C. HackRF idle.
