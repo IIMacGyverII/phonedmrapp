@@ -128,7 +128,7 @@ class LiteralGuardTest(unittest.TestCase):
         blob, syms, _moved = fw30_port.build()
         fw29 = (ROOT / "DMR003.FW29.V022.bin").read_bytes()
         fac = (ROOT.parents[1] / "radio_firmware" / "DMR003.UV4T.V022-ORIGINAL.bin").read_bytes()
-        self.assertEqual(blob[0x38464:0x38474], b"DMR003.FW30.V022")
+        self.assertEqual(blob[0x38464:0x38474], b"DMR003.FW3A.V022")
         self.assertEqual(blob[0x18B5C:0x18B60], fac[0x18B5C:0x18B60])
         self.assertEqual(blob[0x37F4:0x37F8], fac[0x37F4:0x37F8])
         self.assertEqual(blob[0x35F64:0x35FE4], fw29[0x35F64:0x35FE4])
@@ -137,10 +137,24 @@ class LiteralGuardTest(unittest.TestCase):
         self.assertEqual(fw30_build.bsr_target(blob, 0x37F8), syms["guard"])
         self.assertEqual(fw30_build.bsr_target(blob, 0x5AF4C), syms["op7"])
         self.assertEqual(fw30_build.bsr_target(blob, 0x5B748), syms["setend"])
+        self.assertEqual(fw30_build.bsr_target(blob, 0x92C8), syms["pre_key"])
+        self.assertEqual(fw30_build.bsr_target(blob, 0x92E0), syms["pre_key"])
+        self.assertEqual(fw30_build.bsr_target(blob, 0x92AA), syms["pre_unkey"])
+        self.assertEqual(fw30_build.bsr_target(blob, 0x92FA), syms["pre_unkey"])
+        self.assertEqual(fw30_build.bsr_target(blob, 0x18B68), syms["pre_refill"])
         allowed = (
             (0x5BCC4, syms["refuse"]), (0x5BCCA, syms["refuse"]),
             (0x37F8, syms["guard"]), (0x5AF4C, syms["op7"]),
-            (0x5B748, syms["setend"]))
+            (0x5B748, syms["setend"]),
+            (0x92C8, syms["pre_key"]), (0x92E0, syms["pre_key"]),
+            (0x92AA, syms["pre_unkey"]), (0x92FA, syms["pre_unkey"]),
+            (0x18B68, syms["pre_refill"]),
+            (syms["pre_key"] + 2, syms["clear"]),
+            (syms["pre_unkey"] + 2, syms["clear"]),
+            (syms["pre_refill"] + 2, syms["clear"]),
+            (syms["op7"], syms["clear"]),
+            (syms["setend"] + 2, syms["clear"]),
+            (syms["guard"], syms["clear"]))
         _, hits = literal_guard.changed_branches(fw29, blob, allowed)
         self.assertEqual(hits, [], "FW30 covers %s" % (hits[:6],))
         self.assertEqual(literal_guard.never_written(fw29, blob), [])
