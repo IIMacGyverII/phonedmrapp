@@ -456,6 +456,32 @@ clrunkey:
     return blob
 
 
+FLAG3H = 0x4BE64
+
+
+def build_fw3h():
+    """FW3F with the flag word moved to 0x4BE64."""
+    src = BUILD / "DMR003.FW3F.V022.bin"
+    if not src.is_file():
+        build_fw3f()
+    img = bytearray(src.read_bytes())
+    if img[TAG.start:TAG.stop] != b"DMR003.FW3F.V022":
+        raise SystemExit("FW3F tag")
+    pool = 0x5BE20
+    if img[pool:pool + 4] != struct.pack("<I", FLAG3F):
+        raise SystemExit("flag pool")
+    img[pool:pool + 4] = struct.pack("<I", FLAG3H)
+    # 0x5BE48 still holds 0x4B378 for the op 17 tail this image overwrote.
+    if img[0x5BE48:0x5BE4C] != struct.pack("<I", FLAG3F):
+        raise SystemExit("orphan moved")
+    img[TAG.start:TAG.stop] = b"DMR003.FW3H.V022"
+    blob = bytes(img)
+    dest = BUILD / "DMR003.FW3H.V022.bin"
+    dest.write_bytes(blob)
+    print("fw3h", hashlib.sha256(blob).hexdigest())
+    return blob
+
+
 def build_fw3g():
     """FW3E whose key wrapper returns and never calls the FM setup."""
     src = BUILD / "DMR003.FW3E.V022.bin"
