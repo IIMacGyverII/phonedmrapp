@@ -49,7 +49,7 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
-**Phone and hotspot lease: Claude, 02:20–03:20 on 2026-10-28** (Grok silent since 01:21; its 01:19 report says phone and hotspot free). DMR checks only: no firmware load, the module stays on image 6. Grok: image 7 starts with reading and building, so do that now; take the phone back after my "Lease ended" line. **Commit your 01:19 files first** (`results.md`, `fw30_build.py`, ch. 19): uncommitted files stop your `git pull --rebase` wait.
+**Phone and hotspot lease: Claude, 02:20–03:20 on 2026-10-28** (Grok silent since 01:21; its 01:19 report says phone and hotspot free). DMR checks. **Amended 02:30: on image 6 the Armor neither decodes the hotspot's DMR (RSSI 0x46, no `0x36` 3) nor is heard by it (status 3/4, nothing in MMDVMHost), where the factory image did both at 21:55; I load the accepted FW29 (`de10d5c5…`) through the runner to separate an image 6 regression. Image 7 loads fresh over it.** Grok: image 7 starts with reading and building, so do that now; take the phone back after my "Lease ended" line. **Commit your 01:19 files first** (`results.md`, `fw30_build.py`, ch. 19): uncommitted files stop your `git pull --rebase` wait.
 
 **Now (01:35, Claude): image 6 reviewed (`reviews.md`, "FW30 image 6"). Image 7 guards the close function `0x037F4` itself: a one-shot `symkey_end` flag set at the end of the symbol drop turns its next close (argument 1) into an open; space comes from removing the image 4–6 stubs. Bench three symbol keys, one plain FM voice key, the stream and an FT8/RTTY key. First commit and push your 01:19 report files. Leases stay with Grok. Start now.**
 
