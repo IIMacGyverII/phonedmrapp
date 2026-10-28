@@ -285,5 +285,49 @@ def build_fw3c():
     return blob
 
 
+def build_fw3e():
+    """FW3D with the FM setup called only when the ring is armed."""
+    src = BUILD / "DMR003.FW3D.V022.bin"
+    if not src.is_file():
+        build_fw3d()
+    img = bytearray(src.read_bytes())
+    if img[TAG.start:TAG.stop] != b"DMR003.FW3D.V022":
+        raise SystemExit("FW3D tag")
+    if fw30_build.bsr_target(img, 0x5B58E) != 0x5BBE2:
+        raise SystemExit("setup call moved")
+    gate_at = 0x5BDEC
+    code = fw30_build._linked("""
+	.text
+	.global gate
+gate:
+	lrw	r2, 0x4A3E4
+	ld.w	r3, (r2, 0)
+	ld.w	r1, (r2, 4)
+	cmphs	r1, r3
+	bt	empty
+	push	r15
+	.long	0xA5A5A5A1
+	pop	r15
+empty:
+	pop	r4-r7, r15
+""", gate_at, "fw3egate")
+    if gate_at + len(code) > 0x5BE34:
+        raise SystemExit("gate spills")
+    img[gate_at:gate_at + len(code)] = code
+    slot = gate_at + code.find(bytes.fromhex("a1a5a5a5"))
+    img[slot:slot + 4] = fw30_build.encode_bsr(slot, 0x5BBE2)
+    img[0x5B58E:0x5B592] = fw30_build.encode_bsr(0x5B58E, gate_at)
+    if fw30_build.bsr_target(img, 0x5B58E) != gate_at:
+        raise SystemExit("gate not called")
+    if fw30_build.bsr_target(img, slot) != 0x5BBE2:
+        raise SystemExit("setup not called")
+    img[TAG.start:TAG.stop] = b"DMR003.FW3E.V022"
+    blob = bytes(img)
+    dest = BUILD / "DMR003.FW3E.V022.bin"
+    dest.write_bytes(blob)
+    print("fw3e", len(code), hashlib.sha256(blob).hexdigest())
+    return blob
+
+
 if __name__ == "__main__":
-    build_fw3d()
+    build_fw3e()
