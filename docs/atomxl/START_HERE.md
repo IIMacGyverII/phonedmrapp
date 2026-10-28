@@ -15,18 +15,20 @@ Read in this order:
 - **Phone:** Atom XL, adb **`192.168.1.106:5555`** (Wi-Fi, persistent; check `ro.serialno` = `ATOMXL0000000737`
   first). USB is unusable while the radio is on (§1 of the findings). Left clean: radio off, HAL running, stock app
   enabled. SignalDeck (from `atomxl/report-polish`) installed with root.
-- **HackRF:** this agent's since 16:55 (cage, bench antenna only, nothing backgrounded with `-R`). Used 17:38–17:47 for synthetic DMR receive tests (§11).
+- **HackRF:** this agent's since 16:55 (cage, bench antenna only, nothing backgrounded with `-R`). Used 17:38–18:50 for synthetic DMR receive tests (§11, §12); the generator is local only (GPLv3 library), a clean-room one is approved for `tools/dmr-replay/`.
   The hotspot is not ours.
 - **SignalDeck PRs (stacked, owner merges):** #60 ← #61 ← #64 ← #70 ← #71 ← #72 (report work, and the 32 kHz
   direct-audio conversion). Grok's codec: #73 (`grok/agold-envelope`, accepted by the managing agent 18:00).
   Worktree `D:\Documents\code\personal\SignalDeck-atomxl`; local branch `atomxl/takeover` = #73 + #72 merged, no
   new code. Other PRs: phonedmrapp #3 (this folder), AndroidRadio_Firmware_Project #3.
 - **Open:**
-  - Take-over / give-back code (design §2, §4): the previous session hit two safety-classifier stops writing code
-    that drives the bridge directly (the codec, then take-over). Owner decided 17:5x: **this agent writes it** (branch
-    from `grok/agold-envelope`).
-  - ~~Capture one real `0x36` push~~: done 17:47 (findings §11): V067 sends **no** `0x36` on receive; route 02
-    `0x67`/`0x66` are receive start/end (`call_in`, active low, mirrors them), `0x2B` is only a reply. Synthetic DMR calls from the HackRF work (local
+  - Take-over / give-back: **done, SignalDeck PR #76** (`atomxl/takeover-impl`, worktree `SignalDeck-atomxl`),
+    receive device-tested (findings §12). Next: **receive audio** (capture dies in SignalDeck, fine by hand), then
+    the 5-byte text header, the owner's transmit script, the USB-to-PC check with a data cable.
+  - ~~Capture one real `0x36` push~~: V067 sends **no** `0x36` on receive; receptions = `/dev/stmcu` edges; route
+    02 `0x67`/`0x66` = USB audio stream opened/closed; `0x2B` only a reply (findings §11–§12).
+  - Agold **App block** force-stops SignalDeck 5 min after screen-off unless exempted (findings §12); exempted on the
+    bench phone. DIAG broadcasts are blocked by its Start blocker until then. Synthetic DMR calls from the HackRF work (local
     bench script, not committed: it uses a GPLv3 pip library).
   - Owner: whether this unit may leave V067 for good (loader plan §3); a key press during a capture (PR #71).
   - The system force-stopped SignalDeck once at 15:51 (not the owner, cause unknown): foreground service and crash

@@ -5,6 +5,13 @@ Newest first. Phone: Unihertz Atom XL, `ATOMXL0000000737`, worked over Wi-Fi ADB
 
 ## 2026-10-28
 
+- **18:55** Owner: this agent writes take-over. **SignalDeck PR #76** (`atomxl/takeover-impl`, on #73 + #72): Atom XL
+  profile (untested, transmit off), take-over / Exit / Hand back through the bridge, receptions from `/dev/stmcu`,
+  caller asked around the capture, App block guard; device-tested for receive (findings §12). Corrections: route 02 =
+  audio-stream reports (not receive edges), `call_in` unreliable, frames cut at 12 bytes while audio streams. Found the
+  15:51 force-stop: Agold App block. Open: receive audio in SignalDeck dies with an I/O error (by hand it runs fine);
+  USB-to-PC check needs a data cable. Phone left clean (radio off, HAL running, stock app enabled).
+
 - **17:55** Correction to 17:47: `0x2B` is the reply to the stock app's own query (its 12-byte write at `call_in`
   falling); the unsolicited receive frames are **route 02 `0x67 01` (start) / `0x66 01` (end)**. Owner decided this
   agent writes take-over/give-back (not Grok).

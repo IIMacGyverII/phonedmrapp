@@ -329,20 +329,45 @@ checked against a reference table before use. Nothing was keyed on the phone.
 | Group, **TG 9** (not in the list) | MS | **nothing at all**: no frame, `call_in` unchanged |
 | **Private** to ID 1 (own), from 54321 | MS | `0x2B` `00 31 D4 00 00 01 00 00 00` (type 0) |
 
-- **No `0x36` push arrives during DMR receive on V067, nor `0x26`.** The unsolicited frames are two **route 02**
-  frames, `rw` 00, one data byte `01`: **`0x67` at receive start** (~110–160 ms after `call_in` falls) and **`0x66`
-  at receive end** (~10–20 ms after it rises). Nothing is written to the port before either (checked 17:54 with the
-  HAL's `tty_write` log). The stock app only logs route 02.
-  *(Corrected 17:55: the first write-up called `0x2B` a push. It is the **reply** to the stock app's own `0x2B` query,
-  the 12-byte `tty_write` (checksum 64723, `getDmr09RecvCallInfo`) that the app sends when `call_in` falls; the
-  route 02 frames were taken for replies to it.)*
-- `0x2B` reply: route 01, `rw` 00, 9-byte body as on the Armor (`[0]` type, `[1..4]` caller LE, `[5..8]` target LE).
-  The HAL forwards every tty read to the app one for one (`ExtModule: tty_read 20` per frame).
-- **The bridge's `call_in` line mirrors the same state**, sysfs `/sys/bus/platform/drivers/mcu/call_in`, **active
-  low**: read as root, `1` idle, `0` during the call, `1` after (one read each, marker logged first). The stock app's
-  `createCallInThread` polls it (`detectAudioinState`) and starts playback on 0.
+- **No `0x36` push arrives during DMR receive on V067, nor `0x26`.** *(Corrected twice, final at 18:50; see §12 for
+  the measurements.)* Route 02 `0x67 01` / `0x66 01` are the bridge's reports that the **host opened / closed the USB
+  capture stream** (the stock app opens its PCM 100 ms after a reception starts, which made them look like receive
+  edges). `0x2B` is only ever the reply to a query.
+- **Reception start / end come from the bridge driver's `/dev/stmcu`** (agui_device, mode 0666): the HAL's
+  `detectAudioinState` keeps it open and reads one byte at a time; each read blocks until the radio's audio line
+  changes, `00` = reception started, `01` = ended. The sysfs `call_in` node is not reliable (it read 0 for minutes on
+  the direct route and 1 through a whole call on another run).
 - The Armor's receive-list rule holds on V067: a group call passes only if its TG is in `groups[]`; private calls to
   the own ID always pass.
-- So the design's open questions 1 and 2 are answered: the transport maps route 02 `0x67`/`0x66` to the engine's
-  `RECEIVE_START`/`RECEIVE_STOP` (with `call_in` as a cross-check), and asks for caller info with `0x2B` at receive
-  start, as the stock app does.
+- So the design's open questions 1 and 2 are answered: receptions from `/dev/stmcu`, the caller asked with `0x2B`.
+
+## 12. Direct route in detail, and SignalDeck driving the radio (2026-10-28 18:04–18:50)
+
+Hand tests as root with the HAL stopped (power-up as in §8, the stock app's own frames), then SignalDeck PR #76.
+HackRF DMR calls (TG 1, CC 1, TS1) in the cage; nothing keyed on the phone.
+
+- **The module decodes on the direct route.** `0x2B` queries during a call return the caller (12345, TG 1); with no
+  query nothing arrives, which first looked like "no decode".
+- **`/dev/stmcu` edges:** `00 00` at power-up (the line reads active until the first reception ends); on later
+  calls `00` at the start and `01` at the end, within ~0.5 s. Through SignalDeck's reader every call was caught,
+  the first after take-over included.
+- **While the bridge streams audio, every frame on `ttyACM0` is cut after 12 bytes** (each read is 12 bytes; a 20-byte
+  `0x2B` reply loses its last 8 bytes for good). 12-byte replies (`0x32`, set results) are unaffected. The stock app
+  asks for the caller before it opens the PCM and never during it; SignalDeck now does the same.
+- **The bridge pads short USB packets with zero bytes** (a 12-byte frame read as 20 bytes); skipped by the codec.
+- **USB capture by hand:** `sdalsa cap -c 1 -d 0 -r 32000 -n 2` delivers whenever it is open, idle or in a call:
+  3 × 10 s back to back at 127.8 kB/s (32 kHz × 2 ch × 16 bit), each open/close giving a route 02 `0x67`/`0x66`.
+  **In SignalDeck** the capture opened at take-over delivered (270 kB) but ended with `read: I/O error` after 3 to 17 s,
+  and captures reopened at each reception delivered nothing. Cause open (next bench item).
+- **Agold App block** (`com.agui.server.AppblockController` in system_server, on because `ro.agui.appblock=on`):
+  an app without its own entry in `Settings.System appblock_list` gets clean (force-stop `appclear_time` s after
+  screen-off, default 300), block-boot and block-start (also blocks broadcasts to it from other apps, the
+  "Firewall blocked" lines in `BroadcastQueue`). Exempt: launcher-less apps, its white list, the default IME / dialer /
+  SMS app, the chosen PTT app (`smartkey_ptt_app_picker` when `smartkey_ptt_app_enable` = 1; `ro.agui.smartkey_ptt` =
+  `com.agold.intercom`), music playing with audio focus, a map notification. **This is the 15:51 force-stop.** The page
+  `com.agui.appblock/.AppBlockActivity --es package_name <pkg>` (not exported, root can start it) sets the entry; on the
+  bench Atom XL SignalDeck's Boot blocker, Start blocker and Background cleanup were switched off there (18:11).
+- **SignalDeck PR #76 on the phone:** take-over from a running stock app (bridge up in 1.0 s), Exit (radio off, HAL
+  running), Hand back twice (bridge and module answered, stock app enabled), group and private calls named correctly.
+  USB to a computer after Exit was not checked: no data cable to the PC (controller "not attached" even after a manual
+  `cmode` toggle, battery "USB powered").

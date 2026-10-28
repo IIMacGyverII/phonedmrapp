@@ -49,9 +49,9 @@ root after it appears (the Armor's `ttyS0` is fixed at boot; this one is not).
   - **`0x36` is a module push, not a set reply** (corrected 2026-10-28 after the managing agent's review of PR #73):
     its status code (`RECEIVE_START`, `SEND_START` …) is the body, which `RadioEngine` reads from `body[0]`; it keeps
     its body with `sr = 0`. Only our own request's reply (`rw` 00) folds a one-byte result into `sr`. **Measured
-    2026-10-28 (`PHASE_A_FINDINGS.md` §11): V067 sends no `0x36` (nor `0x26`) during DMR receive at all;** receive
-    start/end arrive as **route 02** `0x67 01` / `0x66 01` (`rw` 00), which the codec turns into `0x36`
-    `RECEIVE_START` (1) / `RECEIVE_STOP` (2) for the engine; `0x2B` is only a reply to a query;
+    2026-10-28 (`PHASE_A_FINDINGS.md` §11): V067 sends no `0x36` (nor `0x26`) during DMR receive at all;** receptions
+    come from `/dev/stmcu` (§5); route 02 `0x67`/`0x66` are the bridge's audio-stream reports (logged); `0x2B` is only a
+    reply to a query, and while audio streams the bridge cuts frames after 12 bytes (findings §12);
   - set replies (`0x22`, `0x23`, `0x2E`, `0x30`, `0x31`, …): body `[result]` → `sr = result`, empty body
     (seen: `0x22` → `00`, `0x2E` → `00`);
   - unlisted commands: mapped the same way by shape (a 1-byte `rw` 00 body → `sr`, anything else data), each logged
@@ -101,9 +101,8 @@ next start or a restart. On its next start SignalDeck finds `mcu_power` = 1 with
   for them); it polls `detectAudioinState` every 100 ms and starts playback on 1. `call_in` (sysfs, read only) reads 1
   while idle with the radio on. Whether that is the same line, and whether the bridge forwards `0x26`, is open
   question 2. **Answered 2026-10-28 (§11 of the findings): `call_in` is that line, active low (1 idle, 0 during a
-  call); the module sends no `0x36` on receive, but route 02 `0x67`/`0x66` arrive at receive start/end.** The codec
-  maps those to `0x36` status 1/2, so `RadioEngine` stays unchanged; `call_in` is kept as `rxDetectNode` for the
-  report and a cross-check; caller info is asked with `0x2B` at receive start, as on the Armor.
+  call)**, *superseded at 18:50: `call_in` is not reliable; receptions are the `/dev/stmcu` byte edges (00 start, 01
+  end), read by a thread in `RadioEngine` that hands the engine status 1/2, as built in SignalDeck PR #76.*
 
 ## 6. Transmit
 
