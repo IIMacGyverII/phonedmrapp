@@ -107,6 +107,16 @@ save4:
 	.short	0xE000, 0x0E9C
 	pop	r4-r6, r15
 """
+# Image 5 keeps image 4's save. The 52-byte restore window cannot also hold
+# the four register writes, a delay and the channel apply. The register
+# writes are what the close path undoes, so this window waits and applies.
+# 250<<1 is the delay cmd23_analog uses before it applies a channel.
+# 0x7B04 also calls apply_analog_config, then creates a task; this calls
+# 0x7A30 only. The tune stores 0x58 = 0x8405, so the saved hold is written
+# back after it. 0x7A30 preserves r4-r6.
+_DELAY = 0x18A4
+_APPLY = 0x7A30
+_STRUCT = 0x38B5C
 _RESTORE_ASM = """
 	.text
 	.global	restore4
@@ -116,17 +126,17 @@ restore4:
 	push	r4-r6, r15
 	lrw	r6, 0x2b220
 	lrw	r5, 0x4b388
-	movi	r0, 48
-	ld.w	r1, (r5, 0)
-	jsr	r6
-	movi	r0, 65
-	ld.w	r1, (r5, 4)
-	jsr	r6
+	movi	r0, 250
+	lsli	r0, r0, 1
+	.short	0xE000, 0x18A4
+	lrw	r4, 0x38b5c
+	ld.w	r0, (r4, 0)
+	ld.w	r1, (r4, 4)
+	ld.w	r2, (r4, 8)
+	ld.w	r3, (r4, 12)
+	.short	0xE000, 0x7A30
 	movi	r0, 88
 	ld.w	r1, (r5, 8)
-	jsr	r6
-	movi	r0, 89
-	ld.w	r1, (r5, 12)
 	jsr	r6
 	pop	r4-r6, r15
 """
@@ -210,18 +220,24 @@ def _linked(asm, base, name):
     return code
 
 
+def _patch_one(blob, base, token, dest, what):
+    at = blob.find(token)
+    if at < 0 or blob.find(token, at + 4) >= 0:
+        raise SystemExit(what)
+    blob[at:at + 4] = encode_bsr(base + at, dest)
+
+
 def save_restore():
     save = _linked(_SAVE_ASM, SAVE_AT, "save4")
-    token = bytes.fromhex("00e09c0e")
-    at = save.find(token)
-    if at < 0 or save.find(token, at + 4) >= 0:
-        raise SystemExit("stock call placeholder")
-    save[at:at + 4] = encode_bsr(SAVE_AT + at, STOCK_KEY)
+    _patch_one(save, SAVE_AT, bytes.fromhex("00e09c0e"), STOCK_KEY, "stock call placeholder")
     restore = _linked(_RESTORE_ASM, RESTORE_AT, "restore4")
+    _patch_one(restore, RESTORE_AT, bytes.fromhex("00e0a418"), _DELAY, "delay placeholder")
+    _patch_one(restore, RESTORE_AT, bytes.fromhex("00e0307a"), _APPLY, "apply placeholder")
     if SAVE_AT + len(save) > SAVE_END:
         raise SystemExit("save stub reaches %X" % (SAVE_AT + len(save)))
     if RESTORE_AT + len(restore) > RESTORE_END:
-        raise SystemExit("restore stub reaches %X" % (RESTORE_AT + len(restore)))
+        raise SystemExit("restore stub reaches %X, len %d" % (
+            RESTORE_AT + len(restore), len(restore)))
     return save, restore
 
 
