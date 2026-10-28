@@ -482,6 +482,37 @@ def build_fw3h():
     return blob
 
 
+def build_fw3k():
+    """FW3J gated on the channel-mode byte, with no stub RAM writes."""
+    src = BUILD / "DMR003.FW3J.V022.bin"
+    if not src.is_file():
+        build_fw3j()
+    img = bytearray(src.read_bytes())
+    if img[TAG.start:TAG.stop] != b"DMR003.FW3J.V022":
+        raise SystemExit("FW3J tag")
+    # Gate lrw currently names the shared flag pool. Point it at a new
+    # literal so the unkey clear can keep its own address, then nop that
+    # store too: this image writes no stub RAM.
+    pool = 0x5BE2C
+    if img[pool:pool + 4] != b"\x00\x00\x00\x00":
+        raise SystemExit("literal hole")
+    img[pool:pool + 4] = struct.pack("<I", 0x34808)
+    off = (pool - (0x5BDEC & ~3)) >> 2
+    img[0x5BDEC:0x5BDEE] = bytes((0x40 | off, 0x10))
+    if img[0x5BDEE:0x5BDF0] != bytes.fromhex("6092"):
+        raise SystemExit("ld.w")
+    img[0x5BDEE:0x5BDF0] = bytes.fromhex("6082")  # ld.b r3, (r2, 0)
+    if img[0x5BE18:0x5BE1A] != bytes.fromhex("40b4"):
+        raise SystemExit("clear store")
+    img[0x5BE18:0x5BE1A] = bytes.fromhex("036c")
+    img[TAG.start:TAG.stop] = b"DMR003.FW3K.V022"
+    blob = bytes(img)
+    dest = BUILD / "DMR003.FW3K.V022.bin"
+    dest.write_bytes(blob)
+    print("fw3k", hashlib.sha256(blob).hexdigest())
+    return blob
+
+
 def build_fw3j():
     """FW3H with the stub's two flag sets removed."""
     src = BUILD / "DMR003.FW3H.V022.bin"
