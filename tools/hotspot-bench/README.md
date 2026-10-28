@@ -54,6 +54,47 @@ cd ~/claude-bench && setsid nohup python3 -u m17relay.py > relay.log 2>&1 < /dev
 
 Add `--parrot` to start it with the parrot on. The window can also switch the parrot.
 
+## Rebuild after a reflash (or after a WPSD config-page save)
+
+The hotspot's SD card was reflashed on 2026-10-28. This is the complete list of what the bench needs on it, so a fresh
+image gets back to the same state in one pass. Everything below is bench-only: callsign N0CALL, DMR ID 1234567,
+467.625 MHz, every network link local.
+
+1. **WPSD first-boot (owner).** Join the home Wi-Fi (it should come back at 192.168.1.194; if not, use the new
+   address everywhere below), set the login password, and let the first update finish. Do not configure while it updates.
+2. **From the PC:** `HOTSPOT_PASS=<login password> tools/hotspot-bench/deploy.sh 192.168.1.194`. The password goes
+   only in that environment variable, never in a file in the repo. It:
+   - copies `m17relay.py` and `hotspot_setup.py` to `~/claude-bench/`, and `c2tool.c` with SignalDeck's Codec 2
+     sources to `~/claude-bench/c2/`, then builds `c2tool` there;
+   - installs the relay as the `m17relay` systemd service (restarts on failure, starts at boot, logs to
+     `~/claude-bench/relay.log`), so a reboot no longer drops it;
+   - runs `sudo python3 hotspot_setup.py`, which backs up and edits `/etc/mmdvmhost` and `/etc/dapnetgateway` to the
+     values in the script (the full list is there, with the reason for each: RX offset −450, RF level 20 %, M17 with
+     CAN 7, DMR CC1 with the gateway link to the relay, POCSAG on 467.625 MHz through the relay's DAPNET stand-in,
+     FM off). It also stops and disables DMRGateway and M17Gateway, because the relay takes their ports, and
+     restarts MMDVMHost and DAPNETGateway;
+   - prints the checks.
+3. **Checks** (`deploy.sh <host> check` any time):
+   - `mmdvmhost`, `dapnetgateway` and `m17relay` are active; `dmrgateway` and `m17gateway` are not.
+   - UDP 62031 and 17010 are bound by python3 (the relay), and 62032 and 17011 by MMDVMHost.
+     **If 62032 has no process, MMDVMHost's DMR link is down:** replays are "sent" by the relay but never transmitted.
+     Restart MMDVMHost. This happened on 2026-10-28 at about 06:58, with no error logged.
+   - The MMDVM log shows the M17 and POCSAG lines and `Color Code: 1`.
+4. **Record a DMR test call again.** The reflash erased `~/claude-bench/dmr_last.bin`. With the parrot off and the
+   Armor on the factory image, set the bench ID (`dmr_bench_id.sh set`), key a 3 s call on SignalDeck's channel 49,
+   then `dmr_bench_id.sh restore`. The relay keeps the call as `dmr_last.bin`. Copy it to `dmr_factory.bin` as the
+   reference.
+5. **Before any receive verdict,** check that MMDVMHost logged `received network voice header` for that replay.
+
+Known traps:
+- WPSD's watchdog tries to restart DMRGateway and M17Gateway every few minutes ("DMRGateway is not running.
+  Restarting…"). With the relay holding their ports they exit again, which is harmless. But if a gateway ever starts
+  before the relay, it holds the port and the relay cannot bind it. The relay service starts before MMDVMHost for that
+  reason.
+- A WPSD config-page save rewrites `/etc/mmdvmhost`: run `deploy.sh` again afterwards.
+- MMDVMHost rejects DMR source IDs under 5 digits ("RF user … rejected"). Key DMR only with the bench ID.
+- This modem has no FM mode: leave `[FM] Enable=0`, or MMDVMHost stops at start.
+
 ## Use (PC)
 
 ```sh
