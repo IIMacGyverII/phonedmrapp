@@ -355,7 +355,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-F19B2 is F19S plus a no-stack clear path at `0x18B5C` (`jmp r3` to `0x18B70`, sha `7df6e32f…`). Same recording, level 20: status 1 = 0, no caller packet. Factory before and after: status 1 three times, caller packet. The function at `0x18A70` is a task; `C` is written by `0x18B70` before it is read. `0x18B5C` stays stock. HackRF free.
+F19B2 is F19S plus a no-stack clear path at `0x18B5C` (`jmp r3` to `0x18B70`, sha `7df6e32f…`). Same recording, level 20: status 1 = 0, no caller packet. Factory before and after: status 1 three times, caller packet. The function at `0x18A70` is a task; `C` is written by `0x18B70` before it is read. `0x18B5C` stays stock. The launch wrappers return after one fill, so the periodic refill stays on the task. HackRF free.
 
 End state 09:22: factory `DMR003.UV4T.V022`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −108. Battery 33.1 °C, AP 39.0 °C, PA 38.0 °C.
 
