@@ -258,6 +258,12 @@ can tell a user's module apart by its `0x34` reply without reading the flash.
 
 ## 5. Gap list: what baseline report A (beta.20, main `8a1420cf`) got wrong or missed
 
+**Status (2026-10-28 16:15), SignalDeck PRs stacked #60 ← #61 ← #64 ← #70 ← #71:** 1–3 #60 (release after the
+watch, warning, USB/audio while the radio is on); 4 #64 (identity probe through the bridge); 5 #71 (bridge first,
+no UART sweep); 6–9 #61 (bridge port and holder, the verdict, HAL/HIDL clues, the envelope in the draft); 10 #71
+(vendor keycode; press test owed); 11 #61 (32 kHz from the stream); 12 #61 (the draft names the real port, not the
+`pcm` name match). `report.json` + `scripts/report_diff.py` #70.
+
 Report A: run 2026-10-28 12:43 with `scripts/w6/run_checks.sh`, watch = auto. Kept unscrubbed outside the repositories.
 
 1. **USB loss not foreseen** (§1). The run lost the phone at the watch; the script gave up after 600 s while the
