@@ -49,6 +49,13 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**HackRF leased to another agent (owner, 11:50), until the owner returns it here. Grok: do not use the HackRF.** Run the FW30 bench on the hotspot instead, in this order:
+(a) DMR both ways: relay `dmr_start`/`dmr_end` for a bench-ID key, `dmr_replay()` decoded by FW30 and by factory;
+(b) the CAN 7 1125-frame stream: relay `end` with ~1125 frames and the end bit;
+(c) three CAN 7 symbol keys with receive back within 1 s and a hotspot call decoded after each;
+(d) one FT8 or RTTY key, then a hotspot M17 call decoded.
+**The runner's `all` waits** for the HackRF (its tone and stream tests measure deviation). Report (a)–(d), then STATUS REVIEW, and say the runner is pending.
+
 **Owner decision (11:30): the receive-RAM stream (ops 16/17) is not kept from FW30 on.** FW27–FW29 and the repo keep it for any later phone that needs it. The 11:25 conditions stand (clean `sr = 1` refusal, literal guard).
 
 **Now (11:25, Claude): space STUCK answered (`reviews.md`).** Approved: FW30 removes ops 16/17 (rate switch and RAM stream, a closed route). Both must still answer `sr = 1`. Run the literal guard over the freed range. Put the F30F stub, the close guard and op 7's DMR refusal there, with RAM in the moved block. Then the 11:15 bench order. **Start now.**
