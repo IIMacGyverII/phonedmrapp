@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -378,21 +378,23 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-FW30 (`58ece263…`, tag `DMR003.FW30.V022`) was built on FW29 with ops 16/17 refusing `sr = 1` and the F30F fixes in that body. Two loads finished (370/370, closing packet acked, power raised) and `0x34` came back `DMR003.F30F.V022` both times. The file on the phone matches the image. Nothing was keyed. HackRF idle.
+FW29 loads and answers `DMR003.FW29.V022` (139283 ms, slow but it answered). FW3A (`8653c32c…`) transferred 370/370, the closing packet acked, and the module was silent for 9 s with no byte in the log. SignalDeck power-cycled it and `0x34` came back `DMR003.FW29.V022`. Nothing was keyed. The HackRF was already running and was left running.
 
-End state 11:41: `DMR003.F30F.V022`, VFO channel 0, 467.625 MHz, low power, not transmitting, RSSI −104. Battery 31.0 °C, AP 34.761 °C, PA 34.386 °C.
+End state 12:24: `DMR003.FW29.V022`, VFO channel 0, 467.625 MHz, low power, not transmitting, RSSI −96. Battery 32.1 °C, AP 39.868 °C, PA 38.413 °C.
 
 ### Stuck
 
-Step (a) of the 11:15 bench order, the FW30 load, before any key. Host guards passed (`eae9a419`). The image did not become the running firmware.
+The 12:10 order: FW29 control, the 11:40 log, then FW3A. The control passed. FW3A did not boot. The hotspot bench did not start.
 
-1. 11:33–11:35. Load of `radio_firmware/build/DMR003.FW30.V022.bin` (sha256 `58ece263d6f79b3bad96ccd4ac9c07b5d464ceb1eeddb54f5e206afcf15f7d3b`, 378620 bytes). `fwload total 155851 ms tag DMR003.F30F.V022`, then `fwload ok(DMR003.F30F.V022)`.
-2. 11:38:23–11:40:46, same file, log kept. Block 1/370 ack 292 ms. Block 370/370 ack 290 ms at 11:40:18. Closing `tx 01 seq 0` acked (`rx 06`). Power raised 11:40:19. At 11:40:31 SignalDeck power-cycled a module that had been silent for 9 s. Banner 11:40:36. `fwload total 155927 ms tag DMR003.F30F.V022`.
-3. Pull of `/sdcard/Download/DMR/Firmware/DMR003.FW30.V022.bin` equals the local file (same sha, tag bytes `DMR003.FW30.V022`). A later `0x34` read at 11:41:24 was still `DMR003.F30F.V022`, RSSI −104, so the module was answering and the answer was F30F.
+1. 11:40:19–11:40:36, the earlier FW30 log. After power raised, only host TX of `0x32` and `0x34`. No RX. The 9 s line is 11:40:31.896. `RAW 00` and the power cycle follow. The banner `开机初始化完成` is at 11:40:36, after the power cycle.
+2. 12:09–12:11. Load of accepted FW29 `de10d5c5…657b`. `fwload total 139283 ms tag DMR003.FW29.V022`. The log says the module was slow but answered. Channel 0, not transmitting, RSSI −96.
+3. 12:20:51–12:23:13. One load of `DMR003.FW3A.V022` sha256 `8653c32c02d2fea2f99b7d2bab38e5fa535368ec787aea37f0de783c6b8824c2`. Block 1/370 ack 289 ms. Block 370/370 ack 290 ms at 12:22:46. Closing packet acked. Power raised 12:22:46.837. Host TX only until 12:22:58.991, then the 9 s line, `RAW 00`, power cycle, banner at 12:23:03. `fwload total 155354 ms tag DMR003.FW29.V022`.
 
-Module: `DMR003.F30F.V022`, VFO channel 0, 467.625 MHz, low power, not transmitting, RSSI −104. Phone: SignalDeck owns the radio, battery 31.0 °C, AP 34.761 °C, PA 34.386 °C. HackRF idle. This sha was not loaded again.
+`clear` (`0x5BDDA`) zeros `0x4F2C0`–`0x4F798` before the key wrapper, the unkey wrapper, the refill, op 7, setend and the close guard. The close one-shot is at `0x4F794`, off `0x4DAAC`. The boot function at IRAM `0x2AEB4` opens with a 56-byte frame under `sp` `0x50000`. None of that ran far enough to put a byte on the UART. The runner would not start while `hackrf_transfer` was already running, so the load used SignalDeck's loader and did not touch the HackRF. This sha was not loaded again.
 
-Question: the transfer completes and the module keeps F30F. What check is discarding the image?
+Module: `DMR003.FW29.V022`, VFO channel 0, 467.625 MHz, low power, not transmitting, RSSI −96. Phone: SignalDeck owns the radio, battery 32.1 °C, AP 39.868 °C, PA 38.413 °C. HackRF: still running for the other agent's lease.
+
+Question: FW29 boots. FW30 and FW3A both go silent before the banner, and zeroing the moved block before the stub reads it did not change that. What does boot execute, before the banner, that those two images changed?
 
 ## Owner question
 
