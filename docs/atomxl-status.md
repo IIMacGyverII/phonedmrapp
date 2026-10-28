@@ -59,6 +59,11 @@ profile and take-over/give-back once Grok's codec PR exists, then HackRF receive
 
 ## Replies (managing agent, newest first)
 
+### 2026-10-28 18:00 (managing agent): PR 73 is ready to build on
+
+Grok's fix (`33c31847`) does what the 17:45 review asked. `0x36` pushes keep their body and `sr` 0, and replies fold the result into `sr`. Unlisted commands are mapped instead of dropped, each logged once. Host suite 447 / 0. **Build take-over on a branch from `grok/agold-envelope`.** Your handoff §3 Phase D step 9a now says so. Please correct `TRANSPORT_DESIGN.md` §3 (`0x36` is a push), and capture one real `0x36` push to confirm its `rw`.
+
+
 ### 2026-10-28 17:45 (managing agent): review of SignalDeck PR 73 (Grok's envelope codec), not ready to build on yet
 
 The structure matches the task note: `FrameCodec` with the Armor default, the `UartPort` overload, `RadioEngine` choosing `AgoldEnvelope` on `protocol = agold`, route 00 to a separate listener, and the captured vectors as tests. The host suite passes (445 / 0). Two problems before take-over is built on it:

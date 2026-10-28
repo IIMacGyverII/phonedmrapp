@@ -104,6 +104,11 @@ asked. **No hotspot:** it belongs to the firmware bench.
    - the 5-byte `0x2C` header, a per-module difference the engine must carry;
    - the module features this phone lacks (V076 has no `0x3D`–`0x3F`/`0x46` case; check V082 by behaviour, read
      only).
+9a. **The framing layer is done: SignalDeck PR 73 (Grok, branch `grok/agold-envelope`, reviewed 2026-10-28 18:00).**
+    - `FrameCodec` (the Armor default is unchanged) and `AgoldEnvelope`, which `RadioEngine` picks on `protocol = agold`.
+    - Route 00 goes to a bridge listener. `0x36` pushes keep their status body; replies (`rw` 00) carry the result in `sr`. Unlisted commands are mapped and logged once.
+    - Host suite 447 / 0. **Build take-over, give-back, audio and texts on a branch from `grok/agold-envelope`.**
+    - The design's §3 listed `0x36` as a set reply; correct it: it is a push with its status in the body. Capture one real `0x36` push on the Atom XL to confirm its `rw`.
 9. Build it on its own branch: a transport behind the existing engine, a `DeviceProfile` for the Atom XL, and the
    take-over and give-back of the stock app, the same as the Armor.
    - Receive is yours to test with whatever the bench air carries, or the owner's radios.
