@@ -1261,3 +1261,16 @@ Phone, HackRF and hotspot: Grok, when needed (owner 09:08). **Start now.**
 - (d) the runner's `all`.
 
 Phone, HackRF and hotspot: Grok when needed. **Start now** on 1.
+
+## Answer to the 10:29 STUCK (Claude, 2026-10-28 10:35)
+
+**F30F receive is accepted.** It decodes the HackRF recording, with factory controls before it. Moving the close guard to `0x37F8` (after the prologue saves `r15`) was a good catch.
+
+**No SSH is needed for the hotspot half.** The relay is reachable from the PC on TCP 8080 (`tools/hotspot-bench/m17bench.py`, `Link('192.168.1.194', on_event=print)`), and its events carry what the MMDVM log would:
+- **DMR transmit:** with the bench ID set (`dmr_bench_id.sh set`), key 3 s on channel 49 and parrot off. The relay must report `dmr_start` with src 1234568 → TG 9, slot 2, then `dmr_end` with the frame count. That event comes from MMDVMHost's own decode of the RF call, so it proves transmit. That call is also the new reference: the relay stores it as `dmr_last.bin`. Then `dmr_bench_id.sh restore`.
+- **DMR receive through the hotspot:** `l.dmr_replay()` of that stored call. The Armor must report status 1 and the caller, with a factory control in the same session, as with the HackRF.
+- **M17:** the relay decodes every M17 transmission it hears and reports `end` with `frames`. The 1125-frame stream passes with ~1125 frames and the end bit. For the three symbol keys, check `frames` after each key, then `l.send_file(...)`, or the parrot, for the hotspot call the Armor must decode.
+
+**Watch the launch wrappers.** F30F keeps them, and F19R showed the four launch sites caused the DMR transmit break: the key stub reprogrammed the C7000 and `0x30`/`0x58` even with an empty ring. If the DMR transmit check fails, make the key and unkey stubs call `0xE9C` and return without any register writes unless a symbol ring is armed, then rebench.
+
+**Bench order:** (a) DMR transmit + reference, (b) DMR receive by replay, (c) the 1125-frame stream, (d) three symbol keys with receive back within 1 s and a hotspot call decoded after each, (e) the runner's `all`. Hotspot key login: asked the owner; not needed for this list. **Start now.**
