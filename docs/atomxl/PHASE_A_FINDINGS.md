@@ -114,6 +114,36 @@ on the wire is 32 kHz (`ro.agold.extmodule.32k=yes`). The HAL opens `/dev/snd/pc
 - `/dev/stmcu` (`agui_device`, 0666), `/vendor/bin/dfu-util`, `/vendor/bin/auto_update` (DFU to `0483:df11` at
   `0x08000000`: the bridge MCU's updater; never run).
 
+## 7. Direct identity probe through `/dev/ttyACM0` with the HAL stopped (owner-approved, 2026-10-28 14:27)
+
+**The module and the bridge answer a plain process on `/dev/ttyACM0`; no HAL is needed.** Hand test as root
+(`probe_acm.sh`, kept outside the repositories), sending only the stock app's own two version queries:
+
+| Step | What | Kernel |
+|---|---|---|
+| 1 | `stop aguiextmodule` (init service; the HAL process exits) | |
+| 2 | `echo 1 > /sys/bus/platform/drivers/mcu/usb_path` | `usb_intf_switch otg enable`, `switch_port_to_host` |
+| 3 | `echo 1 > /sys/bus/platform/drivers/mcu/mcu_power` | `mcu power 1`; `cdc_acm 1-1:1.3: ttyACM0` 0.7 s later |
+| 4 | wait 2 s (as the stock app does after `startMcu`), `stty raw -echo` | |
+| 5 | write `7e 96 69 00 01 01 00 01 01 fd fd 81` (bridge version) | reply `7e 96 69 00 01 00 00 0e "20201016161541" 8e a1 81` |
+| 6 | write `7e 96 69 01 34 01 00 01 01 fc ca 81` (module `0x34`) | reply `7e 96 69 01 34 00 00 10 "DMR006.U4A.V067" 00 18 0d 81` |
+| 7 | `mcu_power` 0, `usb_path` 0, `cmode` 0 then 1, `start aguiextmodule` | USB device mode back, HAL running |
+
+- Both replies are byte-identical to the ones the stock app logged; their checksums verify. Requests are built like
+  the stock app's `IComUtils.makePackage(cmd, rw, data)`: `7E 96 69`, route, cmd, rw (`01` request), length BE, data
+  (`01` for both queries), the one's-complement 16-bit sum of route…data (an odd last byte in the high half), `81`.
+- **`mcu_power` alone powers the bridge but does not switch USB to host** (first try: `mcu power 1`, the bridge's
+  interrupt line toggled, no `ttyACM0` in 10 s). `usb_path` = 1 first is what the stock start-up does
+  (`mt_usbhost_connect`, `usb_intf_switch otg enable`, then `store_mcu_power_on`).
+- Afterwards the stock app started normally: `handleRecvFirmwareVersion … 20201016161541`, module V067, no update.
+- **Hazard found in its code:** if the stock app gets no bridge version reply within 4 s of start-up it calls
+  `updateMcu(null)` (`ExtModuleManager.getMcuFirmwareVersion`, the 4000 ms runnable), i.e. a bridge firmware update
+  from `/vendor/data/mcu/`. Anything that leaves the bridge in a bad state must be undone before the stock app runs
+  again, and SignalDeck's give-back must check the bridge answers its version query before re-enabling the stock app.
+- So the Phase D transport can be the direct route: stop the HAL, own `ttyACM0`, power with `usb_path` +
+  `mcu_power`, release with `mcu_power` 0 + `usb_path` 0 + `cmode` toggle + restart the HAL. Audio is then ours too
+  (USB Audio card 1, 32 kHz). To be designed in `TRANSPORT_DESIGN.md`.
+
 ## 4. PTT key (press-tested with the owner, 2026-10-28 13:17)
 
 - **The app receives it as `android.intent.action.PTT.down` / `android.intent.action.PTT.up`** (and `.PTT.timeout`),

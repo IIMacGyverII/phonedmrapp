@@ -5,6 +5,13 @@ Newest first. Phone: Unihertz Atom XL, `ATOMXL0000000737`, worked over Wi-Fi ADB
 
 ## 2026-10-28
 
+- **14:27** **Direct identity probe works** (owner-approved hand test, Phase A §7): HAL stopped, `usb_path` 1,
+  `mcu_power` 1, `/dev/ttyACM0` in 0.7 s; the bridge answered `20201016161541`, the module `0x34`
+  `DMR006.U4A.V067`, byte-identical to the stock app's log, checksums verified. `mcu_power` alone does not switch USB
+  to host. Cleanup restored USB and the HAL; the stock app then started normally (no bridge update). Hazard: the
+  stock app updates the bridge firmware if it gets no version reply in 4 s. Next: build the probe into the report,
+  then `TRANSPORT_DESIGN.md` (direct route).
+
 - **14:25** SignalDeck PR #61 (stacked on #60): draft profile in the report and `00_SUMMARY.txt`, PTT broadcasts and
   HIDL interfaces from the stock app's code, the bridge port/label/holder while the radio is on, a correct verdict
   for a bridged phone. Atom XL draft right field by field (pttKey unknown: no press during that run). Found: the
