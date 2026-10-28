@@ -482,6 +482,27 @@ def build_fw3h():
     return blob
 
 
+def build_fw3i():
+    """FW3H whose gate always takes the skip path."""
+    src = BUILD / "DMR003.FW3H.V022.bin"
+    if not src.is_file():
+        build_fw3h()
+    img = bytearray(src.read_bytes())
+    if img[TAG.start:TAG.stop] != b"DMR003.FW3H.V022":
+        raise SystemExit("FW3H tag")
+    # br from 0x5BDEC to the skip pop at 0x5BDFC. Same encoding as the
+    # stock br at 0x5AF46 (displacement in halfwords, opcode 0x04).
+    dest = 0x5BDFC
+    disp = (dest - 0x5BDEC) >> 1
+    img[0x5BDEC:0x5BDEE] = bytes((disp & 0xFF, 0x04))
+    img[TAG.start:TAG.stop] = b"DMR003.FW3I.V022"
+    blob = bytes(img)
+    out = BUILD / "DMR003.FW3I.V022.bin"
+    out.write_bytes(blob)
+    print("fw3i", hashlib.sha256(blob).hexdigest())
+    return blob
+
+
 def build_fw3g():
     """FW3E whose key wrapper returns and never calls the FM setup."""
     src = BUILD / "DMR003.FW3E.V022.bin"
