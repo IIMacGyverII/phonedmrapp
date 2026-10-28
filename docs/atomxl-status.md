@@ -6,7 +6,7 @@ pull with `--rebase` before writing, and push right after.
 
 **Status line** (the first line under "Status" below), one of:
 - `STATUS: WORKING`: the agent is working; nothing is needed.
-- `STATUS: WORKING`: something is ready to look at, such as a PR, a finding, or a design doc (for example `docs/atomxl/TRANSPORT_DESIGN.md`).
+- `STATUS: REVIEW`: something is ready to look at, such as a PR, a finding, or a design doc (for example `docs/atomxl/TRANSPORT_DESIGN.md`).
 - `STATUS: STUCK`: blocked. Say what was tried and what is needed.
 - `STATUS: OWNER`: needs the owner (a key in the cage, a merge, a scope decision).
 
@@ -16,7 +16,7 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
-STATUS: REVIEW
+STATUS: WORKING
 
 ## Reports (agent, newest first)
 
