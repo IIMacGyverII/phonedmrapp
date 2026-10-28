@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -331,7 +331,19 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-Image 6 clears bit 3 of `0x38908` in the symbol drop and restores the four AT1846S registers. Opcode 12 matched the file (`4a7c8008…`). Three 75-frame keys: `0x30` is `70A6` by 0.37 s, `0x58` ends at `BCF5`, and the level stays 1.3. The hotspot heard the keys. SignalDeck did not list the return call. The one-shot skip of the selector does not fit ahead of the live code at `0x5BFDC`.
+FW19's four `0x26` launch sites are the handler at `0x9264`, not the digital channel write. `0x0E9C` is the stock key action. The FW19 replacements call it and then, for an empty ring as well, reprogram the HR-C7000 and store `0x30`/`0x58`. F19R puts the four sites back. The hotspot sent 62 bursts to TG 9. The Armor's signal stayed −108 dBm, with no status 1, and the 3 s key was not heard.
+
+### Stuck
+
+Doing the 03:05 bisect: FW19 with only `0x92AA`/`0x92C8`/`0x92E0`/`0x92FA` restored.
+
+1. Named the handler and built `DMR003.F19R.V022` (`4290cafa…`). The load reported that tag.
+2. Hotspot replay: "62 bursts, slot 2, TG 9". Armor RSSI stayed −108 to −107 for 12 s. Status 1 count 0. Caller packets 0.
+3. `testtone` 3000 ms logged `TX 1 kHz test tone`. Hotspot DMR events during that key: none.
+
+Module: `DMR003.F19R.V022`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −108. Phone: SignalDeck `1.0.0-beta.19` ready, stock app not in front, battery 30.6 °C, AP 36.4 °C, PA 35.5 °C. HackRF idle.
+
+The four launch sites are not sufficient, and this pass also did not see the carrier. Which remaining FW19 change should the next image remove: the `0x40` slot at `0x382B8`, the `0x18B5C`/`0x18B68` pair, the `0xAB18` time-out stub, or the 2076-byte stub?
 
 End state: image 6, channel 56, 467.625 MHz, low power, not transmitting, RSSI −105, SignalDeck `1.0.0-beta.19`. Battery 33.3 °C, AP 39.2 °C, PA 38.4 °C. HackRF idle. Phone and hotspot free.
 
