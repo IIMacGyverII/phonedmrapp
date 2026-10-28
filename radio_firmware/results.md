@@ -4034,3 +4034,13 @@ DMR receive, 13:21:37. The relay sent the stored call, 62 bursts, bench ID to TG
 DMR transmit, 13:21:18, bench ID, parrot off, 3 s key. Status 3 once, status 4 once. The relay did not emit `dmr_start` or `dmr_end`. The bench ID was restored. Battery 35.0 °C, AP 41.5 °C, PA 40.0 °C. HackRF was not used.
 
 The unkey wrapper `0x5B614`–`0x5B65A` matches F30F. The four launch sites match. The key wrapper matches except `0x5B58E`: FW3D and FW29 are `00 e0 2a 03` (`bsr 0x5BBE2`). F30F is `02 0c 94 14` (`bf 0x5B592`, then `pop`), so an empty ring returns before the FM register writes. The ring pointer at pool `0x5B5F0` is `0x4A3E4` on FW3D. End state 13:21: `DMR003.FW3D.V022`, channel 49, not transmitting, RSSI −107.
+
+**FW3E boots, decodes DMR, and the relay does not list the key (13:40–13:44).** `0x5B58E` now calls a gate at `0x5BDEC`. The gate reloads the two words at `0x4A3E4`. When the second is below the first it calls `0x5BBE2` and returns to `0x5B592`. Otherwise it pops the key wrapper and returns, so the register writes do not run. Tag `DMR003.FW3E.V022`, sha256 `018d32afbe19cb755d4ebaf72b743d793ff8af4af0ce90c5b55a5dabbdf89313`. Commit `d93a312e`.
+
+Load 13:40. `fwload total 138953 ms tag DMR003.FW3E.V022`. No silence restart. Channel 49, 467.625 MHz, low power.
+
+DMR receive, 13:43:56. The relay sent 62 bursts, bench ID to TG 9, slot 2. Status 1 three times, six caller packets.
+
+DMR transmit, 13:43:37, bench ID, parrot off, 3 s key. Status 3 once, status 4 once. No relay `dmr_start` or `dmr_end`. The bench ID was restored. Battery 35.2 °C, AP 41.7 °C, PA 40.2 °C. The later bench steps were not run. HackRF was not used.
+
+End state 13:44: `DMR003.FW3E.V022`, channel 49, not transmitting, RSSI −108.
