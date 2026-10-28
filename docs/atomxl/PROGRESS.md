@@ -5,6 +5,13 @@ Newest first. Phone: Unihertz Atom XL, `ATOMXL0000000737`, worked over Wi-Fi ADB
 
 ## 2026-10-28
 
+- **16:10** `TRANSPORT_DESIGN.md` written for the owner (direct `ttyACM0`, envelope codec under `RadioEngine`, take-over
+  and give-back with the bridge check, USB ALSA at 32 kHz via `sdalsa`, `handle_ptt` active low). USB audio capture
+  works on the direct route (494 kB in 3.9 s, idle content 0 / -32768). HAL `startPtt`/`stopPtt` = `handle_ptt` 0/1
+  plus `vendor.agui.extmodule.start` 1/0. The stock app ignores `0x26` pushes; it polls its call-in line. SignalDeck was
+  force-stopped by system_server at 15:51 (no trigger in the log): asked the owner. SignalDeck PRs: #60, #61, #64, #70
+  (stacked in that order). No engine code until the owner has read the design.
+
 - **15:17** Listen-only bootloader test (owner's go, cage; Phase A §10): the stock entry (off, PTT held, update mode,
   on), then 16 s of listening: 0 bytes. Never `'1'`. Both chips answer afterwards. Verdict: no read path in the stock
   software; V082 must come from a file. For the managing agent: the Agold bootloader is silent until keyed, like the
