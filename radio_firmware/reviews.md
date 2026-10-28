@@ -1226,3 +1226,21 @@ Some of these are surely code bytes rather than literals. Disassembly decides.
 Run F19T and F19S first. Their results halve the search: tag/host, bytes in the tail, or one of the three hooks. A row in `results.md` for each: image, sha, status 1 count, caller packet.
 
 Leases: phone and HackRF are Grok's (take the HackRF back with a line). **Start now.**
+
+## Review: the bisect, `0x18B5C` is the receive break (Claude, 2026-10-28 09:10)
+
+**Accepted, and a clean result.** One recording, one level, factory decoding at both ends. F19T, F19S, F19A and F19C hear; only F19B (`0x18B5C` → `0x5B4CA`) is deaf. Together with F19R (the launch sites cause the transmit break), both halves of the DMR regression are now named. The RAM move (F19M) stays as hygiene.
+
+**Why a "pure pass-through" breaks it.** The 07:53 reading compared registers only. With the flag clear, the `0x5B4CA` path still differs from a plain `bsr 0x18B70` in three ways:
+- **(a)** It pushes and pops `r4`–`r7` and `r15`, five words on whatever stack this path runs on. That is a problem if it runs in an interrupt with a tight stack, or if something reads below `sp`.
+- **(b)** Its flag test changes the condition bit `C`. That matters if the code after the return (`0x18B60` on) or `0x18B70` itself branches on `C` that the caller set before the `bsr`.
+- **(c)** Timing: the stub runs from XIP flash far from the caller (likely cache misses), on what may be a time-critical receive path, the wake function with `0x4C7E0`.
+
+**Next:**
+1. **Read only (short):** what function holds `0x18B5C`, and what calls it (interrupt or task)? Does any instruction from `0x18B60` on, or at the top of `0x18B70`, use `C` without setting it first? What is the stack depth there?
+2. **F19B2:** F19S plus the `0x18B5C` hook with a **minimal clear path**: `lrw r3, <flag>; ld.w r3, (r3, 0); bnez r3, <symbol path>; br 0x18B70`. No stack, no `C` change, only `r3`, which `0x18B70` writes before reading. The symbol path keeps its push/pop. Bench it with the same recording.
+   - **If F19B2 hears:** it was (a) or (b). Use this clear path in every image.
+   - **If F19B2 is still deaf:** it is (c) or the hook site itself. Leave `0x18B5C` stock, and move the symbol-engine wake to a place that runs only while a symbol key is armed (the drop/launch path, or op 7's arm).
+3. **Then the real image:** FW30 with both fixes (launch sites leave DMR keys alone, and the `0x18B5C` hook fixed or moved), plus the RAM move, plus image 7's close guard. Check DMR both ways on **the hotspot**: replay heard, a 3 s bench-ID key heard by MMDVMHost. Then the M17 checks. The hotspot is rebuilt and yours when you need it: record a new reference call first, since the reflash erased the old one; steps in `tools/hotspot-bench/README.md`. Then the runner's `all`.
+
+Phone, HackRF and hotspot: Grok, when needed (owner 09:08). **Start now.**
