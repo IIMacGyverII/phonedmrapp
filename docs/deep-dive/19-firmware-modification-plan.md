@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-28 — FW3D boots and decodes DMR.** The 3 s key had status 3 and 4 and was not listed by the relay. The key wrapper differs from F30F at `0x5B58E` only. Details in `results.md`.
+
 **2026-10-28 — RAM literals alone hang after the banner; the op 16/17 refusal alone boots.** `B3G1` came back as FW29. `B3G2` stayed up as itself. A key on `B3G2` got status 3 and 4, and the relay listed no call. Details in `results.md`.
 
 **2026-10-28 — FW3B (`731641cd…`) prints the boot banner and does not stay up.** The packed block ends at `0x4F39C`. After the load the module was silent, and the power cycle came back as FW29. Details in `results.md`.

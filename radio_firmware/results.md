@@ -4024,3 +4024,13 @@ One group on FW29, in order, stopping at the first image that answered `0x34` wi
 The RAM-literal move alone is enough to go silent after the banner. The refusal alone stays up.
 
 On `B3G2`, channel 49, 467.625 MHz, low power, bench ID, parrot off. A 3 s key at 13:09 produced no `dmr_start` on the relay, and the stored-call replay gave status 1 = 0 and no caller packet. A second 3 s key at 13:10:37 produced status 3 once and status 4 once. The relay still did not emit `dmr_start` or `dmr_end`. The bench ID was restored. End state 13:11: `DMR003.B3G2.V022`, channel 49, not transmitting, RSSI −108. Steps (b)–(d) were not run. The HackRF was not running and was not started.
+
+**FW3D boots and decodes DMR (13:18–13:21).** FW29 plus five changes and no RAM move: `0x18B5C` is the factory `bsr 0x18B70`, op 7 refuses when byte 0 of `0x34808` is 0, the close guard is at `0x37F8`, setend marks the one-shot, and ops 16 and 17 refuse with `sr = 1`. The one-shot is `0x4B376`. The only load of that address in FW29 is op 17 at `0x5BDC0` (`ld.b`). The kept tail uses `0x4B373` and `0x4B374` as their own bytes. `0x4B376` is inside the zeroed bss. Tag `DMR003.FW3D.V022`, sha256 `585bde05bb0a1f83273a8fde2aafe3f2e6922237586dbc41cfa7df86eb0165d3`, 120 stub bytes at `0x5BD74`. Commit `3dc2251f`.
+
+Load 13:18. Banner 13:20:18. `fwload total 138427 ms tag DMR003.FW3D.V022`. No silence restart. Channel 49, 467.625 MHz, low power.
+
+DMR receive, 13:21:37. The relay sent the stored call, 62 bursts, bench ID to TG 9, slot 2. Status 1 three times, six caller packets. RSSI −107.
+
+DMR transmit, 13:21:18, bench ID, parrot off, 3 s key. Status 3 once, status 4 once. The relay did not emit `dmr_start` or `dmr_end`. The bench ID was restored. Battery 35.0 °C, AP 41.5 °C, PA 40.0 °C. HackRF was not used.
+
+The unkey wrapper `0x5B614`–`0x5B65A` matches F30F. The four launch sites match. The key wrapper matches except `0x5B58E`: FW3D and FW29 are `00 e0 2a 03` (`bsr 0x5BBE2`). F30F is `02 0c 94 14` (`bf 0x5B592`, then `pop`), so an empty ring returns before the FM register writes. The ring pointer at pool `0x5B5F0` is `0x4A3E4` on FW3D. End state 13:21: `DMR003.FW3D.V022`, channel 49, not transmitting, RSSI −107.
