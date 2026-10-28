@@ -119,3 +119,65 @@ merge, or a decision about scope. The reviewing Claude agent does not manage thi
 > is the ANYSECU W6+ on USB, adb serial W6202601000904; pass `-s W6202601000904` on every adb call and never touch
 > the Armor 26 Ultra (192.168.1.125:5555 or 5006AF1020002922). Start at Phase 1 of the SignalDeck repository's
 > `docs/W6_DEVICE_REPORT_PLAN.md`, in your own SignalDeck worktree.
+
+## 9. Status at handoff (2026-10-27, end of the first agent's work) and what the next agent finishes
+
+The W6 receives and decodes in SignalDeck, the UI shows only what this radio can do, and everything fits its 320 dp
+screen. **Transmit has not been keyed**, so the profile stays unverified and the app refuses push-to-talk on the W6.
+What works and what does not, feature by feature: `docs/w6/FEATURES.md` in SignalDeck (branch `w6/radio-caps`, PR 47).
+
+### Open PRs (SignalDeck), merge order
+
+All are mine, unmerged, based on `main` unless noted. Each later branch already merges the earlier one, so merging
+in this order should be conflict-free except where noted.
+
+| Order | PR | Branch | What |
+|---|---|---|---|
+| 1 | 30 → 31 → 32 → 33 → 34 → 35 | `w6/phase1-baseline` … `w6/engine-design` | Device report work, bench driver, AT probe, serial sniff (`sdtrace`), 32-bit clues, engine design doc |
+| 2 | 36 | `w6/compact-intercom` | Compact intercom (screens under 700 dp tall), splash version ≥ 15 dp on small screens, crowded headers on two rows |
+| 3 | 37 → 42 | `w6/rx-audio`, `w6/ptt-capture` | Receive-audio test doc, PTT capture |
+| 4 | 38 → 40 | `w6/module-engine`, `w6/at-engine` | `ModuleEngine` interface; `AtModuleEngine` for the W6 (camcorder audio with gain 12, speaker follows media volume, volume 0 = speaker route off) |
+| 5 | 41 | `w6/analog-only-ui` | DMR pages, DMR ID, roaming, RadioID tile, firmware loader and variant-submission offer hidden without DMR |
+| 6 | 44 | `w6/web-analog` | SignalDeck Web hides the DMR parts |
+| 7 | 47 | `w6/radio-caps` (on 44) | Profile bands / RSSI / symbol engine; out-of-band and no-RSSI features hidden or refused; `docs/w6/FEATURES.md` |
+| 8 | 43 | `multi-select` | Select several channels (delete, zone, star), phone and web. **Conflicts with 44/47 in `assets/web/app.css`**: both append rules after `.no-dmr .dmr-only`; keep both sides |
+| 9 | 45 | `w6/m17-dfe` | M17 receiver history corrections, self-calibration for the decision-feedback receiver (`DfeCal`), W6 M17 table and test recording |
+
+Resolved while merging up the stack (expect the same if you rebase): `ui/HelpView.java` (the W6 line in "Untested
+profiles": keep the analog-only wording and the media-volume sentence) and `DeviceProfile.java` (`copy()` and
+`fromJson` need both `bandsHz`/`rssi` and `muteLines`).
+
+The exact build on the W6 is the **local, unpushed** branch `w6/test-combo` in `D:\Documents\code\personal\SignalDeck-w6`:
+`w6/ptt-capture` + `multi-select` + `w6/radio-caps` + `w6/m17-dfe` merged. Full unit suite on it: 416 tests, 0 failures.
+
+### Verified on the W6 (HackRF into the W6, shielded, 435.025 MHz, receive only)
+
+- Take over and hand back, 128 stock channels imported, tone squelch 62.5 Hz.
+- Receive response: cut below ~300 Hz (−48 dB at 250 Hz); the module refuses both filter commands.
+- APRS 6/6. SSTV Robot 36 238/240 lines. FT8 both messages.
+- M17 98 and 92 of 100 frames confirmed live, after the receiver change in PR 45. Self-calibration kept a fit (91 vs 90 confirmed) and rejected worse ones.
+- Media volume 0: speaker route off, recording unchanged (−22.6 dBFS). **Not yet confirmed by ear: that the speaker is silent.**
+- UI walk on the phone: intercom, PKT sheet, FT8/M17/SSTV pages, channels, multi-select (zone created and removed), editor, VFO, Device page, Help.
+- Web checked by a headless-Chrome script (classes, hidden parts, no horizontal overflow at phone width).
+- Live M17 runs sometimes miss one of two calls. An offline decode of the simultaneous clip gives the same numbers, so the cause is the HackRF signal, not the app.
+
+### For the handoff agent
+
+1. **Merges** in the order above; rerun `./gradlew testReleaseUnitTest` after each step.
+2. **Armor tests** (the first agent was told not to touch the Armor; use the bench lease in `radio_firmware/HANDOFF.md`):
+   - **PR 45:** M17 receive on stock firmware, live (the DFE receiver changed; its Armor recording passes 300/300).
+   - **PR 47:** on the Armor's profile nothing should change. Check that APRS monitoring, SSTV 144.500, the band scope, weather alerts, the pager and the S-meter are all still there.
+   - **PR 36:** Channels keeps its one-row header on the Armor.
+3. **Transmit on the W6, with the owner in the cage.** Mark the profile verified in a build only for this test, or add a bench override. Then key:
+   - voice (side key `KEY_F2`/`F3`, PTT `gpio188`, mic `gpio222`);
+   - APRS beacon and SSTV Robot 24 on a UHF channel at low power, with the HackRF receiving at f − 200 kHz;
+   - FT8 send.
+   Check the transmit audio level and deviation. Set `verified` and bump the profile revision only after the owner confirms on air.
+4. **Speaker silent at media volume 0:** the owner listens while a tone is received.
+5. **Restricted mode:** wire the bulk channel actions (PR 43) into Restricted mode once PR 26 merges.
+6. **Remaining report backlog** (plan Phase 2): `report.json` plus the host diff script, the draft profile in the summary, and the report diff from a supported phone the owner provides.
+7. **Firmware repo PR 1** (`AndroidRadio_Firmware_Project`, branch `w6-device-page`): W6 device page and SA818 module page. The catalogue is unchanged, so no signature is needed. The owner merges.
+8. **Smaller follow-ups:**
+   - Coverage logging records key-ups only on the W6 (no signal readings); hide it or label it.
+   - The channel editor's "empty String" message seen once.
+   - The packet finder needs UHF frequencies entered by hand on the W6.
