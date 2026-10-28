@@ -4105,3 +4105,11 @@ DMR transmit, 15:13:54, channel 49, low power, bench ID, parrot off, 3 s. Status
 `logcat -s RadioService:I` from the process that started at 15:13:54 (the load's restart) through the key: no `TX cmd=0x40`. The key command was `0x26`.
 
 End state 15:14: `DMR003.FW3I.V022`, channel 49, not transmitting. HackRF was idle. The replay and steps (c)–(e) were not run.
+
+**FW3H's gate loads the flag, and FW3J is loaded but not keyed (15:25).** The gate is `lrw r2, 0x4BE64`, then `ld.w r3, (r2, 0)`, then `bez r3, 0x5BDFC`. A zero word takes the skip pop. A non-zero word calls `0x5BBE2` and returns to the writes at `0x5B592`.
+
+FW3J replaces the two stores of 1, at `0x5BE04` and `0x5BE0E`, with `nop` (`mov r0, r0`). The unkey clear remains. Tag `DMR003.FW3J.V022`, sha256 `808faed59b5eb55d9a6a72b972a03502fd1bdfda587e7102e9570544c6f0b7a4`. Commit `93f5a3e5`.
+
+Load 15:22. Tag read `DMR003.FW3J.V022` at 15:24:37. The key was not sent. Connecting to the relay timed out, SSH to the hotspot timed out, and ping reported destination host unreachable.
+
+End state 15:25: `DMR003.FW3J.V022`, channel 49, not transmitting, RSSI −98. Battery 36.2 °C, AP 43.3 °C, PA 41.7 °C. HackRF was idle.
