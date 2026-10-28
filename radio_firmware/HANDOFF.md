@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -335,21 +335,21 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-F19T (factory code, tag `DMR003.F19T.V022`) and F19R2 (`0xAB18`/`0x18B5C`/`0x18B68` restored, tag `DMR003.FR22.V022`) both stayed at about −107 dBm on the 62-burst replay, with no status 1 and no caller packet. A factory reload did the same. Take-over on the stub tag sent `0x34`, `0x22`, `0x35`, `0x22`, `0x35`, then `0x32`. The singles were not built.
+MMDVMHost was not restarted. SSH as `pi-star` with the bench key was refused (`Permission denied (publickey,password)`; the key was offered and not accepted). The factory image is still loaded. No replay was run.
+
+Stock `0x3D20` is two bytes, `3c 78`, `jmp r15`. The `0x18B68` stub returns without calling it while the symbol flag is clear, which is the same as the stock call.
 
 ### Stuck
 
-Doing the 07:10 receive bisect, step 2.
+Doing step 1 of the 07:30 answer: `sudo systemctl restart mmdvmhost`.
 
-1. F19T loaded. Hotspot: 62 bursts, slot 2, TG 9. RSSI −108 to −106. Status 1 = 0. Caller packets = 0. Take-over commands: `34 22 35 22 35 32`.
-2. F19R2 loaded (`DMR003.FR22.V022`). Same replay. RSSI −108 to −107. Status 1 = 0. Caller packets = 0.
-3. Factory reloaded (`DMR003.UV4T.V022`) as the same-session control. Same replay. RSSI −107 flat. Status 1 = 0. Caller packets = 0.
+1. `ssh -i id_ed25519_wpsd -o BatchMode=yes -o IdentitiesOnly=yes pi-star@192.168.1.194 echo ok` → exit 1, `Permission denied (publickey,password)`. The server accepted the connection, offered publickey and password, and did not accept the key.
+2. No second login was tried. MMDVMHost was not restarted. `ss` was not run.
+3. Read `0x3D20` in the factory image: `3c 78` then zeros. It is an empty return.
 
-`0xAB18` replaces the `0x3B` store at `0xA308` with the 120-clamp at `0x5B700`. `0x18B5C` replaces `0x18B70`; the stub still jumps there when the symbol flag is clear. `0x18B68` replaces `0x3D20`; while the flag is clear the stub returns without that call.
+Module: factory `DMR003.UV4T.V022`, channel 49, 467.625 MHz, low power, not transmitting. Phone: SignalDeck `1.0.0-beta.19`, not keyed this pass. HackRF idle. Hotspot SSH closed.
 
-Module: factory `DMR003.UV4T.V022`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107. Phone: SignalDeck `1.0.0-beta.19` ready, battery 30.7 °C, AP 34.8 °C, PA 34.4 °C. HackRF idle.
-
-The hotspot reports the bursts and the Armor does not see a carrier, on factory code as well. The three sites were not separated. Is the hotspot still transmitting on 467.625?
+The bench key no longer logs in. How should MMDVMHost be restarted?
 
 End state: image 6, channel 56, 467.625 MHz, low power, not transmitting, RSSI −105, SignalDeck `1.0.0-beta.19`. Battery 33.3 °C, AP 39.2 °C, PA 38.4 °C. HackRF idle. Phone and hotspot free.
 

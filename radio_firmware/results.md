@@ -3866,4 +3866,6 @@ End state 06:58: `DMR003.F19R.V022`, channel 49, 467.625 MHz, low power, not tra
 
 **Receive bisect, channel 49, the same 62-burst replay.** F19T is the factory image with the tag `DMR003.F19T.V022` (`599e3d5d…`). On take-over SignalDeck sent `0x34`, `0x22`, `0x35`, `0x22`, `0x35`, then `0x32`. No `0x40`. RSSI stayed −108 to −106. No status 1 and no caller packet. F19R2 restores `0xAB18`, `0x18B5C` and `0x18B68` as well and keeps the `0x40` slot and the stub. Its tag is `DMR003.FR22.V022` (`66611624…`, retagged so SignalDeck treats it as a bench image). Same replay, RSSI −108 to −107, no status 1, no caller packet. The factory image reloaded afterwards (`DMR003.UV4T.V022`) did the same: RSSI −107, no status 1, no caller packet, while the hotspot again reported 62 bursts. The three sites were not separated. The singles were not built.
 
+**`0x3D20` is an empty return.** The factory bytes at `0x3D20` are `3c 78 00 00`, `jmp r15`. Skipping that call, which the `0x18B68` stub does while the symbol flag is clear, matches the stock call. The 07:30 restart of MMDVMHost did not run: SSH as `pi-star` with the bench key was refused.
+
 End state 07:21: factory image, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107, SignalDeck `1.0.0-beta.19`. Battery 30.7 °C, AP 34.8 °C, PA 34.4 °C. HackRF idle. Phone and hotspot free.
