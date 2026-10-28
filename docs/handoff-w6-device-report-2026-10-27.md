@@ -259,3 +259,9 @@ All of them pass the host suite (417–421 tests depending on the branch). The C
   - **Armor checks** (module FW3D, no transmit): #50 live sync passed (one `channels` event, the ★ zone on the phone); #53 the DMR template is intact; #56 the bars sit inside the panel.
   - #52 was not shown on the device (it needs an empty channel list); its host tests cover it.
   - **Still open:** W6 data-mode transmit in the cage, the Soft SQ level sweep, optionally capping the bar height on small screens, Restricted wiring after PR 26, firmware repo PR 1, and the small follow-ups.
+
+### Who owns what now (owner, 2026-10-28 13:45)
+
+The owner works through the outstanding W6 items with the W6 agent: data-mode transmit in the cage, the Soft SQ sweep, the bar-height cap, Restricted wiring after PR 26, firmware repo PR 1, and the small follow-ups.
+- **The W6 agent:** start from main. PR 58 has everything up to #57. Work in `SignalDeck-w6` on new branches, one PR per item.
+- **The managing Claude agent:** steps back from the W6. It integrates or checks on the Armor only when asked. Any Armor check still needs a lease in phonedmrapp `radio_firmware/HANDOFF.md`.
