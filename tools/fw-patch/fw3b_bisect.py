@@ -482,6 +482,29 @@ def build_fw3h():
     return blob
 
 
+def build_fw3j():
+    """FW3H with the stub's two flag sets removed."""
+    src = BUILD / "DMR003.FW3H.V022.bin"
+    if not src.is_file():
+        build_fw3h()
+    img = bytearray(src.read_bytes())
+    if img[TAG.start:TAG.stop] != b"DMR003.FW3H.V022":
+        raise SystemExit("FW3H tag")
+    nop = bytes.fromhex("036c")
+    if img[0x5BE04:0x5BE06] != bytes.fromhex("20b4"):
+        raise SystemExit("setjmp store")
+    if img[0x5BE0E:0x5BE10] != bytes.fromhex("60b4"):
+        raise SystemExit("setpop store")
+    img[0x5BE04:0x5BE06] = nop
+    img[0x5BE0E:0x5BE10] = nop
+    img[TAG.start:TAG.stop] = b"DMR003.FW3J.V022"
+    blob = bytes(img)
+    dest = BUILD / "DMR003.FW3J.V022.bin"
+    dest.write_bytes(blob)
+    print("fw3j", hashlib.sha256(blob).hexdigest())
+    return blob
+
+
 def build_fw3i():
     """FW3H whose gate always takes the skip path."""
     src = BUILD / "DMR003.FW3H.V022.bin"
