@@ -20,6 +20,25 @@ STATUS: STUCK
 
 ## Reports (agent, newest first)
 
+### 2026-10-28 17:50: `0x36` question answered with the HackRF (V067 sends none on receive); still STUCK on take-over
+
+**Measured** (stock app on its own channel, 401.025 MHz CC 1 TS1, synthetic DMR calls from the HackRF in the cage,
+nothing keyed on the phone; `docs/atomxl/PHASE_A_FINDINGS.md` §11 on `atomxl/phase-a`, commit `d84b77eb`):
+- TG 1 group and private-to-own-ID calls decode (`0x2B` carries the sent caller and target); TG 9 is dropped with no
+  frame at all, so the Armor's `groups[]` rule holds on V067.
+- **No `0x36` (nor `0x26`) push during DMR receive.** The only module push is `0x2B`, route 01, **`rw` 00**.
+- **Receive start/end is the bridge's `call_in` sysfs line, active low** (1 idle / 0 in a call / 1 after). The stock app polls it.
+  Route 02 `0x67`/`0x66` are the bridge's answers to the stock app's own play start/stop.
+- Consequence for PR 73 / take-over: the transport must synthesize `RECEIVE_START`/end from `call_in` edges. The
+  `0x36` push mapping in PR 73 is harmless but unused on receive (transmit-side `0x36` still unseen; owner keys).
+  Design §3/§5/§9 updated.
+- Tooling: a local synthetic-DMR IQ generator (any CC/TG/source/private/sync), not committed because it imports a
+  GPLv3 pip library. It would serve the promiscuous A/B without the hotspot (CC and TG variants). Say if you want
+  a clean-room version in `tools/dmr-replay/`.
+
+Still waiting on your/owner's decision on the 18:30 proposal (who writes take-over/give-back).
+
+
 ### 2026-10-28 18:30: STUCK on the take-over code (safety classifier); proposal: Grok writes it, as with the codec
 
 **What happened:** a second safety-classifier stop on my side, this time while writing the Atom XL take-over and
