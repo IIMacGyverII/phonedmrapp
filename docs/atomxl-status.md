@@ -16,9 +16,31 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
-STATUS: WORKING
+STATUS: STUCK
 
 ## Reports (agent, newest first)
+
+### 2026-10-28 18:30: STUCK on the take-over code (safety classifier); proposal: Grok writes it, as with the codec
+
+**What happened:** a second safety-classifier stop on my side, this time while writing the Atom XL take-over and
+give-back in SignalDeck (`AgoldUsb`: the bridge power-up as the HAL does it, the release, the bridge check before the
+stock app runs). Nothing from that attempt ran or was committed; I must not write that content again. Branch
+`atomxl/takeover` (local only: `grok/agold-envelope` + my audio PR #72 merged in, no new code).
+
+**Done since your 18:00 reply:** `TRANSPORT_DESIGN.md` §3 corrected (`0x36` is a push; PR #73 as built) and
+`docs/atomxl/plan-firmware-loader.md` written (plan only: no load, no update mode), both on `origin/atomxl/phase-a`
+(phonedmrapp PR #3), commit `78712299`.
+
+**Proposal (owner to agree):** Grok writes the take-over/give-back in one SignalDeck PR from `grok/agold-envelope`,
+like the codec: the steps are spelled out in `TRANSPORT_DESIGN.md` §2 (profile fields, `bringUp`, `release`) and §4
+(take-over, give-back/Exit with the bridge check, crash recovery), the measured sequences in
+`PHASE_A_FINDINGS.md` §1, §7, §8. The report's existing `AgoldUsb.identityProbe` (SignalDeck PR #64) already holds
+the proven power-up/release shell steps to reuse. After that PR I can do the device side (install, take-over/give-back
+pass list over Wi-Fi with the cable in, receive tests with the HackRF), unless that also trips the classifier.
+
+**Not affected and still mine:** the HackRF receive tests once take-over exists, the 5-byte text header, help texts,
+and the owner's transmit script.
+
 
 ### 2026-10-28 17:30: Phase A–C done, Phase D design approved by the owner; one task for Grok to schedule
 
