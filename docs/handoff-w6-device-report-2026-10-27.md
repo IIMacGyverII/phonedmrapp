@@ -197,3 +197,53 @@ The exact build on the W6 is the **local, unpushed** branch `w6/test-combo` in `
 | W6 marked compatible + README phone table | **done**: PR 49 (profile revision 2, verified for receive, `txBlocked` until on-air transmit) and PR 46 (README phone table), both merged 2026-10-28 |
 | Restricted-mode wiring for the bulk channel actions | after PR 26 merges |
 | Smaller follow-ups (coverage label without RSSI, packet finder UHF list, editor "empty String") | open |
+
+## 11. Owner session on the W6 (Claude, 2026-10-28, 08:00–12:45)
+
+The owner tested the merged build on the W6 and reported problems one at a time. Each fix is its own SignalDeck PR,
+device-tested on the W6 (HackRF where it needed a signal). None is merged. Not one was run on the Armor.
+
+### Open PRs, merge order
+
+| PR | Branch | What | Merge note |
+|---|---|---|---|
+| **50** | `live-channel-sync` | The phone's channel list and SignalDeck Web update each other live: one debounced `onChannels` event per change, and a `channels` SSE event on the web. Deleting every channel now clears the intercom on both sides (it kept showing the last channel). | First. |
+| **52** | `ask-stock-import` | Taking over with an empty channel list **asks** before importing the stock app's channels, on the phone and on an open web page. The first answer counts. "Start empty" is remembered until a later import. Device → Re-import on the W6 and the Xplore 1 now uses their own importers (it called the DMR area importer). | Stacked on 50: merge 50 first, then retarget 52 to main. |
+| **53** | `w6/no-dmr-channels` | Radios without DMR get no DMR settings when adding a channel. Covers the web editor (the bug: the DMR section was chosen before the type was set), the server template and save guard, the Relay row (phone and web), Nearby repeaters (DMR-only and out-of-band repeaters dropped, DMR+FM added as FM; the band filter applies to every phone), and shared or CHIRP imports. | Independent. |
+| **54** | `w6/tx-verified` | **W6 profile revision 3: `txBlocked` cleared.** The owner keyed the W6 in the cage and confirmed transmit works, using a local build with only the block lifted, which the owner explicitly approved. FEATURES.md lists the data modes' transmit as "should work". | Conflicts with 55 on one `DeviceProfile` line: keep 54's revision 3 comment and 55's `softSqInModule = true`. |
+| **55** | `w6/softsq-speaker` | **Soft SQ on the W6 drives the module's own squelch** (new profile flag `softSqInModule`). The Soft SQ level 1–9 maps to the module's squelch 1–8; the slider re-sends it after 300 ms; the app's audio gate stays off. Why: Soft SQ used to set the module's squelch to 0, which is monitor on this module (always open, tones ignored). Its gate only muted the app's playback, which on the W6 is silent. Its noise detector cannot work there either: the audio level follows the volume (static RMS 246 at volume 8, 15,844 at 25) and nothing passes above ~3.4 kHz. An earlier attempt in the same branch history gated the speaker line instead; it opened on static and was removed. | See 54. |
+| **56** | `w6/spectrum-fit` | The intercom's spectrum bars stand on the panel's floor. The module's port anchored them 22.5 dp below the panel, which cut them off **on every phone**. On the W6's short panel the tallest bars reach behind the history box. | Independent. **Check on the Armor:** the bars will look taller there. |
+| **57** | `w6/root-shell` | No Magisk "Superuser" toast at every reception. The W6 engine now keeps one root shell (`RootShell`) for its line switching instead of an `su -c` per change. Measured: 1 toast at the first reception after start, then 0. | Independent. |
+
+All of them pass the host suite (417–421 tests depending on the branch). The CHANGELOG row of each PR holds its device result.
+
+### State of the W6 at handoff
+
+- It runs the **local, unpushed** branch `w6/combo-local` in `D:\Documents\code\personal\SignalDeck-w6`, which is `ask-stock-import` + 53 + 54 + 55 + 56 + 57 merged. That build transmits (revision 3).
+- Channels: the owner deleted the 128 stock channels while testing. The phone has one channel, "bench 1", at 440.0000 MHz: squelch 2, Soft SQ on at level 4, no tone. Device → Re-import brings the stock 128 back.
+- Media volume: 8 (set by the owner).
+- History and APRS heard list hold **bench packets of mine** ("hello from the demo", weather): the APRS demo IQ sent six times at about 12:39 for the toast test. They are not real stations. The owner was told; delete them if asked.
+- SignalDeck Web's login refused the PIN stored in prefs from about 12:20 ("wrong PIN"). The owner may have changed it; I stopped logging in. Read it fresh, and never print it.
+
+### Still open
+
+1. **Merge 50, 52–57** in the order above. Rerun the host suite after each merge, and build one release for the W6 from main afterwards.
+2. **Armor checks** for the shared changes:
+   - **50:** live sync on a DMR phone.
+   - **52:** the import question with the DMR area importer.
+   - **53:** a DMR radio still offers DMR in the editor and Nearby repeaters, and its out-of-band filter is correct.
+   - **56:** the bar heights.
+   - **57:** untouched on the Armor (W6 engine only).
+3. **W6 data-mode transmit** (APRS, SSTV Robot 24, FT8, packet) in the cage. FEATURES.md says "should work" until each has been tried.
+4. **Soft SQ on the W6:** measure how far each level moves the opening point. The sweep stopped when the web login broke off; HackRF gain 0 stayed shut even at level 1.
+5. **Spectrum bars on the W6:** optionally cap their height on small screens so they stay under the history box (offered to the owner, not asked for).
+6. **Restricted mode** (after PR 26): the bulk channel actions, the import question and Re-import.
+7. Items 6–8 of §9 (report backlog, firmware repo PR 1, small follow-ups) are unchanged.
+
+### Bench notes from today
+
+- The W6's media volume can be set with `cmd media_session volume --stream 3 --set N`. Don't run it in a pipeline that discards its output: it silently didn't apply once.
+- `adb shell` in Git Bash needs `MSYS_NO_PATHCONV=1`, or `/sys/...` paths get rewritten to `C:/Program Files/Git/...`.
+- SignalDeck Web allows 5 failed logins a minute per address. Log in once per script.
+- Magisk's toasts show in logcat as `NotificationService … pkg=com.topjohnwu.magisk`; count them to measure su sessions.
+- `DIAG --es cmd rxclip --es name N --ei ms M` records the receive audio exactly as Soft SQ sees it, into `cache/rxclip_N.wav`.
