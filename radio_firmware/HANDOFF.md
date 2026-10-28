@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -343,7 +343,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-The FW19 stub's static words are all in bss `0x31AF4`–`0x4DAB0` (zeroed at boot) or in module registers. The symbol flag `0x4DAAC` is set only at `0x5B5E4`, and only when the ring's end is below its start. Stock code does not name that flag. The idle stub does not write the shared status word `0x4C7E0`. The receive rerun still waits on the hotspot. Factory image loaded. No replay.
+`0x4A3C8` extends at least to `0x4B83E` (offsets `0x1152`, `0x116A`, `0x116C`, `0x1474`), so the ring and `0x4AC00`–`0x4B00C` sit inside that stock object. `0x4A3C4` is one byte. `0x4DAA4` is one word and the `0x4DAA8` calls do not reach the flag. F19M is built, not loaded: launch sites restored, stub RAM at `0x4DAB0`–`0x4DEE4`, tag `DMR003.F19M.V022`, sha256 `bcf255fd…`. `0x4C7E0` stays. Factory image still loaded. Hotspot still down.
 
 ## Owner question
 

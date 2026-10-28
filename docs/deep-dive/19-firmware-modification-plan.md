@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-28 — F19M moves the stub's RAM above stock bss.** The object at `0x4A3C8` extends at least to `0x4B83E`, which covers the ring. The image is built and not loaded. Details in `results.md`.
+
 **2026-10-28 — the FW19 stub's RAM is in zeroed bss, and the symbol flag is set only when a ring's end is below its start.** Stock DMR code does not name the flag. Details in `results.md`.
 
 **2026-10-28 — the three FW19 pass-throughs do not change what the stock callee reads while the symbol flag is clear.** `0x3D20` is not even called. Details in `results.md`.
