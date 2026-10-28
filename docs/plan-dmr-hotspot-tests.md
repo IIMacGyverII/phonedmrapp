@@ -16,7 +16,7 @@ bits 3–0 data type), stream id 4, 33-byte burst.
 | Log every DMR call the hotspot hears (source, destination, slot, group or private, length) | built |
 | Parrot: replay each call it hears, about 1.5 s after the end | built |
 | Replay the last call on demand | built |
-| Replay a recorded call with a different source, destination or call type | phase 2: the IDs are also inside the call's link control (voice header, terminator and the embedded LC in the voice bursts). The relay has to re-encode those from ETSI TS 102 361-1 (BPTC(196,96), the CRC masks, the 5-bit checksum of the embedded LC). Our own code, written from the standard. |
+| Replay a recorded call with different IDs | not done: the relay only replays calls unchanged. Test calls come from real transmissions on the bench, with the transmitting radio's own settings changed instead. |
 | A different colour code | hotspot setting `[DMR] ColorCode`, one restart |
 | Time slot 1 | the simplex board uses slot 2 only. Slot 1 needs `Duplex=1` and split frequencies: a SignalDeck channel with RX on the hotspot's TX frequency and TX on its RX frequency. |
 | Decode DMR voice to audio on the PC | not possible: no AMBE+2 decoder on the PC. The Armor's module decodes, so the Armor is the listener. |
@@ -37,9 +37,9 @@ against a real DMR carrier yet. With the flag off, behaviour is byte-identical t
 MON on a digital channel sends the flag on FW26 and later. Specification:
 `docs/promiscuous-rx-patch-spec-2026-10-24.md`.
 
-**Method.** The source of every call is the Armor itself: a short key on the bench channel, recorded by the hotspot.
-The hotspot then replays it, in phase 2 rewritten to the case under test, and the Armor listens with the flag off (A),
-then on (B). One case per row. The Armor's log gives `RECEIVE_START`, the `0x2B` body and whether audio played.
+**Method.** The source of every call is a real transmission on the bench: a short key from the Armor (or a second
+bench radio later) with its channel set up for the case, recorded by the hotspot and replayed unchanged, while the Armor
+listens with the flag off (A), then on (B). The talkgroup is changed by changing the transmitting channel's contact. One case per row. The Armor's log gives `RECEIVE_START`, the `0x2B` body and whether audio played.
 
 | Case | Call as replayed | A, flag off, expected | B, flag on, expected |
 |---|---|---|---|
@@ -51,7 +51,7 @@ then on (B). One case per row. The Armor's log gives `RECEIVE_START`, the `0x2B`
 | 6 | slot 1 against the channel's slot 2 (duplex mode) | silent | heard if the slot gate is open; `0x2B` slot reads 1 |
 | 7 | parrot of case 1 with the flag switched off again | heard | (n/a) proves the flag clears |
 
-Cases 1, 3 and 5 run with today's relay. Cases 2 and 4 need the phase-2 rewrite. Case 6 needs duplex.
+Cases 1, 2, 3 and 5 run with today's relay (case 2: key to a talkgroup, then remove it from the listening channel's list). Case 4 needs a second bench radio with its own ID. Case 6 needs duplex.
 
 **Pass.** Every A column matches stock behaviour, so the flag off changes nothing. Every B row is heard, with the `0x2B`
 colour code and slot equal to what was sent. Record each row in `radio_firmware/results.md` with the image tag, the
@@ -83,7 +83,6 @@ diagnostics.
 1. Owner creates the bench DMR channel (§1).
 2. Parrot check: an Armor key is heard by the hotspot, replayed, and heard by the Armor.
 3. Promiscuous cases 1, 3, 5 and 7 (A and B), with a SignalDeck build that has PR 11.
-4. Phase 2 rewrite in the relay, written from ETSI TS 102 361-1 with host tests against the hotspot's own recordings,
-   then cases 2 and 4.
+4. Case 4 when a second bench radio is available.
 5. Duplex set-up for case 6, if the owner wants slot 1 covered.
 6. Enhancer pairs: a short pilot of 10 minutes, scored by ear and by a simple distance measure, before any long run.
