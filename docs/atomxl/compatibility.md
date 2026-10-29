@@ -69,8 +69,8 @@
 5. **No M17 transmit or POCSAG** without the bench firmware's symbol engine. No firmware loading from SignalDeck on
    this module.
 6. **UHF only (400–480 MHz):** no 2 m, no NOAA or SAME.
+7. **Agold App block** must be switched off for SignalDeck (Settings → App block). SignalDeck opens the page once,
+   otherwise Android force-stops it 5 minutes after screen-off.
 8. **A transmitter close by deafens it.** In the test cage another phone keying on 446 MHz at low power dropped the
    Atom XL's signal reading on 401.025 MHz from its idle level to near the bottom of its range for the whole key
    (2026-10-29); it hears nothing meanwhile, and recovers at once when the key ends. It does not fake a reception.
-7. **Agold App block** must be switched off for SignalDeck (Settings → App block). SignalDeck opens the page once,
-   otherwise Android force-stops it 5 minutes after screen-off.
