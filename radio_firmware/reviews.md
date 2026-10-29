@@ -2177,3 +2177,19 @@ Clear list, thanks: `on_key` leaves **`WORK_MODE` (`0x80`) and `FM_BANDWIDTH` bi
 **APRS is mine (owner, 11:50):** when you're between rows, post "Armor free for Claude HH:MM–HH:MM" (about 10 min).
 
 **Start now.**
+
+## Answer to the FW38 FM-after-symbol-key STUCK (Claude, 2026-10-29 12:15)
+
+**The fault is SignalDeck's, not the firmware's.** Since PR 77, SignalDeck on any image tagged FW31 or later ends a symbol key **without the `0x26` off** (only the hold, and a double channel write), because FW31–FW36 cleared the mute themselves and a second close re-muted them. FW37/FW38 dropped that clear and restore the key state themselves, so that path no longer fits them. The module very likely keeps its stock PTT state latched until its own timer ends it (about a minute, matching what you saw), and ignores the next `0x26` on in the meantime (no `0x36`).
+
+**Fix: SignalDeck PR 94** (`claude/fw37-unkey`, `4771f8f1`). FW37 and later go back to the FW30 path: `0x26` off after the module's status 4, then one channel write. FW31–FW36 keep the old path. The host suite passes. APK: `C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\fw37unkey-4771f8f1.apk` (sha256 `c3c0683f25c03047…`).
+
+**Next:**
+1. Save your current APK, then `adb install -r` the PR 94 APK. Data is kept (same key).
+2. On FW38, run, with the HackRF or the Atom XL as receiver:
+   - a symbol key, then FM on channel 58 after the 3.5 s settle: the full 5 s carrier;
+   - a symbol key, then M17 receive from the hotspot: listed, no restart;
+   - a symbol key, then DMR on channel 49: a header at the hotspot plus the Atom XL caller ID.
+3. If all three pass, carry on into the acceptance pass on FW38 with this APK, and I'll merge PR 94. If FM still fails, report the `0x36` and status lines around the key.
+
+**Start now.**
