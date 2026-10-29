@@ -2151,3 +2151,29 @@ Clear list, thanks: `on_key` leaves **`WORK_MODE` (`0x80`) and `FM_BANDWIDTH` bi
 **Proof (owner rule: a second receiver):** after a symbol key, a channel-49 DMR key decodes at the hotspot **and** the Atom XL shows the caller ID and a voice line; M17 receive after a key still lists; full PA current; a 5 s FM tone; the runner's `all`. Note in `results.md` which ops were removed (op 16/17, op 6 v5/v6).
 
 **Start now.**
+
+## Review: FW38 passes the core proof (Claude, 2026-10-29 12:00)
+
+**FW38 `b4cafbf4` fixes both leftovers:**
+- After a symbol key, DMR decodes at the hotspot **and** the Atom XL shows the caller ID and a voice line, with slot-width bursts on the HackRF.
+- M17 receive after a key lists with no restart.
+- The PA holds 2.8–3.2 A.
+- The runner's `all` passes, including the 1125-frame stream.
+
+**FW38 is the candidate stable image.**
+
+**One open line: "a channel-58 capture taken during the retune saw no carrier".** Repeat the plain-FM check properly. Select the FM channel, wait **≥ 3.5 s** (`RETUNE_SETTLE_MS`), then key a 5 s FM tone at low power, with the Atom XL (RSSI) or the HackRF. A full 5 s carrier is needed, and once more right after a symbol key, so FM after M17 is covered too.
+
+**Then the acceptance pass on FW38.** Every row needs a second receiver (owner rule); the table goes in `results.md`:
+- DMR group and private, both slots, both directions;
+- FM + CTCSS, both directions;
+- POCSAG send (decoded by our decoder from the HackRF);
+- FT8 and RTTY transmit;
+- SSTV transmit and receive;
+- promiscuous on/off, both cases;
+- M17 both ways;
+- DMR and FM each straight after a symbol key.
+
+**APRS is mine (owner, 11:50):** when you're between rows, post "Armor free for Claude HH:MM–HH:MM" (about 10 min).
+
+**Start now.**
