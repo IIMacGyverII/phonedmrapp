@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (10:40, Claude): the link is proven and the hotspot is cleared.** Read `0x11000100`/`0x11000104` on a freshly restarted module, idle on channel 56 and on channel 49. Then (1) **check whether op 5 can write HR-C7000 registers.** If it can, SignalDeck restores the two words after each symbol key and FW36 is unchanged. Test it: DMR header at the hotspot plus the Atom XL after a key, and M17 receive after a key. (2) If not, **FW37 = FW36 without the bit-7 clear** (the channel write already restores `0x30`), with the two-word restore in that slot. Same proof, plus full PA current, FM and the runner's `all`. **Start now.**
 
 **Now (10:10, Claude): one leftover symbol-key state likely breaks both M17 receive and DMR transmit framing; only a restart clears it.** (1) On FW36, after `restartmodule`: DMR key on channel 49 (hotspot plus Atom XL), then a 75-frame M17 key, then the same DMR key. A header the first time and none the second proves the link. (2) Diff FWD1 against FW30 on the symbol-key path (key wrapper, `on_key` `0x5B000`, op 7 end, `0x18B68`, writes to `WORK_MODE`/`RF_MODE`/`0x11000080`) and find what's set at key start and never restored. (3) FW37 = FW36 plus that restore at the symbol-key end. Proof: DMR header after a symbol key, M17 receive after a key without a restart, PA current, FM, the runner's `all`. **Start now.**
 

@@ -2089,3 +2089,16 @@ Two strong results:
    Proof: DMR header at the hotspot plus the Atom XL after a symbol key; M17 receive after a key with no restart; full PA current; FM tone; runner `all`.
 
 **Start now.**
+
+## Review: the link is proven (Claude, 2026-10-29 10:40)
+
+Clean result: **after a restart DMR decodes at the hotspot and the Atom XL; after one symbol key, the same DMR key radiates normally (+1002 Hz, the same width as the factory image) but doesn't decode.** So one leftover state breaks DMR transmit framing and M17 receive alike, and **the hotspot is cleared**. `RF_MODE` `0x10E0` and `WORK_MODE` `0x80` are set at key start and never written back, which makes them the prime suspects.
+
+**Space: three options, cheapest first.**
+1. **Host-side, no firmware change.** Can opcode 5 (or another existing op) *write* HR-C7000 registers? Its refusal "while the hold marker is set" suggests it touches registers. If it can write `0x11000100`/`0x11000104`, SignalDeck restores both after each symbol key (alongside the double write it already sends), and FW36 stays as it is. Check op 5's handler for a write path and test it: after a symbol key, restore both words through op 5, then DMR to the hotspot and M17 receive.
+2. **Drop the bit-7 clear from FW37.** The channel write already puts `0x30` back to `0x7026` (FWD1 showed this), and SignalDeck sends that write after every key. That frees 26 bytes: the 32-byte slot then holds the two-word restore (26 bytes) instead.
+3. Only if neither works: report what else could go.
+
+**What values to restore:** read `0x11000100`/`0x11000104` on a freshly restarted module, idle on channel 56 and on channel 49 (op 5 with the hold briefly off, or FWD1). The stock channel write evidently doesn't set them (a channel change doesn't recover), so restore the **boot values**, or the per-mode values if they differ.
+
+**Proof for whichever you pick:** a DMR header at the hotspot plus the Atom XL **after** a symbol key; M17 receive after a key with no restart; full PA current; a 5 s FM tone; the runner's `all`. **Start now with option 1.**
