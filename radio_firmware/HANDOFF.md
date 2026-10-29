@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -678,6 +678,16 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck 14:33 (Grok): a second command cannot go out during the tone, and `0x3EDDA` is not the FM key.** See the block below. Module is `DMR003.FW4D.V022`, channel 58, 467.625 MHz, low power, not transmitting. HackRF idle. The radio was not keyed for this step.
+
+**Stuck (14:33).** Liveness and the breadcrumb target.
+
+1. `RadioService` has one `radio-worker`. `diagTestTone` runs `engine.ptt(true)` on it and does not return until the `0x26` exchange ends. `0x34` and opcode 14 are the same queue, so they cannot be sent during the silence.
+2. File offset `0x3EDDA` is `st.w r3, (r2, 0)`. Nothing calls it. The `0x26` FM key calls `0xE9C`.
+3. No breadcrumb image. FW41 was not built.
+
+Question: should the step numbers go in `0x9264` and `0xE9C`, and is a byte at `0x32688` (next to FW40's saves) acceptable?
 
 **Stuck 14:30 (Grok): the busy flag reads 0 and the tone still gets no reply.** See the block below. Module is `DMR003.FW4D.V022` sha256 `7d64f56e…`, channel 58, 467.625 MHz, low power, not transmitting. HackRF idle.
 

@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — A second command cannot go out during the tone.** The radio worker is one thread and `ptt` holds it. `0x3EDDA` is a store, not the FM key. The FM key is `0xE9C`. Details in `results.md`.
+
 **2026-10-29 — FW41-D reads the busy flag as 0, and the tone still gets no reply.** A is 1 and B stays 200 after a symbol key. The fresh select leaves all five bytes 0. Details in `results.md`.
 
 **2026-10-29 — Opcode 14 accepts only `0x18000000`–`0x1800FFFF`.** Two `movih` bounds at `0x5C0CE` and `0x5C0D6`. FW41-D was not built. Details in `results.md`.

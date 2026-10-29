@@ -4717,3 +4717,5 @@ The length in r2 must be 1..240 (`cmpnei r2, 0`, then `movi r3, 240; cmphs r3, r
 | (iv) +10 s | 0 | 0 | 1 | 200 | 0 |
 
 B does not count down. A tone on that channel 58, with the flag still 0, at 14:29:53: `0x26` on, no reply before `0x26` off at 14:29:58, HackRF keyed 0. The `0x32457` wait is not where this `0x26` sits. FW41 was not built. Left on channel 58, not transmitting, tag `DMR003.FW4D.V022`. Heat before the key: battery 31.8 °C, `mtktsAP` 36.8 °C, `mtktsbtsmdpa` 36.2 °C. HackRF idle.
+
+**Liveness (14:33), from the app, no new key.** `RadioService` has one `radio-worker`. `diagTestTone` runs `transmitPcm` on that thread, and `transmitPcm` calls `engine.ptt(true)` and does not return until the exchange ends. `diagCmd` (`0x34`) and `diagRaw40` (opcode 14) are also `worker.execute(...)`. A version query or an opcode 14 read broadcast during the silence stays queued behind the tone. It cannot show whether the module's command task is alive. `0x3EDDA` in this image is the instruction `st.w r3, (r2, 0)`, not a function entry. The `0x26` FM key calls `0xE9C`. No breadcrumb image was built. Module still `DMR003.FW4D.V022`, channel 58, not transmitting.
