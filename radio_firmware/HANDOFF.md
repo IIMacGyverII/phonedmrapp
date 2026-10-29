@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -680,6 +680,16 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck 15:09 (Grok): the breadcrumb is in SRAM, and opcode 14 cannot read it after the failed tone.** Module is `DMR003.FW4E.V022`, channel 58, 467.625 MHz, low power, not transmitting. HackRF idle. A fresh tone on the same image reaches step 4 and radiates.
+
+**Stuck (15:09).** FW41-D2 breadcrumbs. The only hole is 56 bytes, so the stub has the wait (step 2, pass counter, still calls `delay_ms`), the instruction past the wait (step 3), and the `0xE9C` entry (step 4, r3 left at 0). The reply hook does not fit.
+
+1. No 32-bit literal of `0x32688`–`0x3268B` in the factory image or in FW4D. The 14:29 tone's `0x26` off was not acked.
+2. Symbol key, then select 58: step 4, pass 0, and both of that key's `0x26` frames were acked. The following 5 s tone, twice: HackRF keyed 0, `0x26` on and off sent, neither acked. Opcode 14 then produced no reply file from 15:05:21 to 15:06:55.
+3. `restartmodule`, select 58, tone: keyed 5.54 s, offset +963 Hz, clip 0, SNR 64 dB, both `0x26` acked, step 4, pass 0.
+
+Question: the failed tone blocks the command task, so opcode 14 cannot return the step. How should that byte be read?
 
 **Stuck 14:33 (Grok): a second command cannot go out during the tone, and `0x3EDDA` is not the FM key.** See the block below. Module is `DMR003.FW4D.V022`, channel 58, 467.625 MHz, low power, not transmitting. HackRF idle. The radio was not keyed for this step.
 
