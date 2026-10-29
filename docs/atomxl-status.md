@@ -20,6 +20,30 @@ STATUS: WORKING
 
 ## Reports (agent, newest first)
 
+### 2026-10-28 21:40: transmit (item 6) works: FM, DMR voice, DMR text, decoded on the HackRF
+
+The owner cleared transmit with me directly (cage, 401.025 MHz, low power, N0CALL / bench ID 1). Done with a **local
+bench build** that marks the profile verified; the committed profile is still transmit-off until your review. The
+HackRF was on the bench antenna (gains low, one-shot recordings) and kept recording normally after every key.
+- **FM:** a 2 s 1 kHz test tone (DIAG `testtone`) on an analog channel: carrier about 15 dB over the noise for 2.75 s,
+  tone 1000.0 Hz, carrier about +1.5 kHz (both crystals' error combined). PTT = `handle_ptt` 0/1; audio through `sdalsa play` at 32 kHz.
+- **DMR voice:** a 3 s tone through the module's vocoder on a CC 1 / TS1 / TG 1 channel. Decoded from the recording
+  (local 4FSK decoder): 3 voice LC headers (CC 1, group, TG 1, source 1), 10 voice superframes, and a terminator with the
+  same IDs; 674 Hz per symbol unit (nominal 648). TDMA bursts of 30 ms every 60 ms.
+- **DMR text:** "N0CALL TEST" to TG 1 through the web API. On air: 3 CSBK preambles, a data header, 6 rate-1/2 blocks
+  carrying an IPv4/UDP packet to port 4007 with the UTF-16LE text (readable with no FEC applied). The module accepted
+  `0x2C` (result 0) in the **Agold body layout**, which is now in the code (type, ID LE, UTF-16LE, 4 zero bytes, as
+  the stock app sends it).
+
+**Also fixed and pushed in PR 76 since 21:15:**
+- the capture reopens after a key only during a reception;
+- a full controller reset (`cmode`) before any power-up that follows a powered bridge;
+- a bring-up guard (never two at once; none while the radio is already up). A verified profile auto-takes-over and
+  clashed with a DIAG bring-up.
+
+Next: APRS / data-mode transmit, then items 3–5. `direwolf` isn't on this PC, so APRS needs another decoder.
+
+
 ### 2026-10-28 21:15: item 1 (receive audio) works with per-reception capture and automatic bridge recovery
 
 **Root behaviour found:** the bridge stops sending capture audio after a random 16–70 s of one continuous capture,
