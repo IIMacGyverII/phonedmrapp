@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -634,6 +634,10 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+FW36 receive bisect: a hotspot call lists with no key first. After a symbol key, channel 49 then 56 does not bring it back, and op 6 hold off/on does not either. `restartmodule` does (75 frames, 54 good). FWD1 `d7efd88a`: `0x30` is `0x7026` idle, `0x70A6` just after the key and 5 s later, and `0x7026` again after selecting channel 56, and that call is listed (75 frames, 55 good). The 3b diff was not run. The factory image's channel-49 DMR key got a hotspot voice header at 14:40:21 UTC. HackRF, LNA 16 VGA 16: factory offset +986 Hz and FW30 +1071 Hz, both about 22 dB above the floor, p99 about 20 kHz on both. FW36 is loaded again.
+
+End state 10:01: `DMR003.FW36.V022`, channel 56, 467.625 MHz, low power, not transmitting. Atom XL link stopped. HackRF idle.
 
 **Stuck.** Reading AT1846S `0x30` on FW36. Opcode 18, body `[18, 0x30]`, via `raw40`:
 1. Idle, 09:21:52: `sr=1`, no value.

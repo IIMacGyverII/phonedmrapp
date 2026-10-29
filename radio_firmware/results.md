@@ -4554,3 +4554,17 @@ End state 09:18: `DMR003.FW36.V022`, channel 56, 467.625 MHz, low power, not tra
 **Hotspot DMR logs (read-only, 09:20).** `MMDVM-2026-10-28.log` and `MMDVM-2026-10-29.log`, times UTC (local is UTC−5). The last `received RF voice header` is 2026-10-28 20:49:27 (15:49 local). The next `Mode set to DMR` is 20:50:55 the same day, and there is no RF voice header after 20:49:27 in either file. The 29 October log has 0 RF voice headers and 14 `Mode set to DMR` lines, the first at 01:06:28 UTC (20:06 local on the 28th) and the later ones at 13:00:29 and 13:24:58 UTC. The modem had been opened at 20:32:18 UTC, before the last good header; the next open is 2026-10-29 02:08:51 UTC, after the first header-less mode line. The last `M17, received RF` is 2026-10-29 14:07:34 UTC (09:07 local).
 
 **0x30 on FW36 (09:21).** Opcode 18, body `[18, 0x30]`, `sr=1` with no value while idle and about 1 s after a 75-frame key. Five seconds later there was no `raw40` reply. The register was not read.
+
+**FW36 receive bisect (09:28–09:30).** Tag `DMR003.FW36.V022`. A hotspot call with no key first listed N0CALL, 76 frames, 53 good.
+
+| After a symbol key | Listed |
+| --- | --- |
+| Select channel 49, then 56 | No |
+| Op 6 hold off, then on (mode 3) | No |
+| `restartmodule`, then channel 56 | Yes, 75 frames, 54 good |
+
+**FWD1 `0x30` (09:35).** Tag `DMR003.FWD1.V022` `d7efd88a…`. Idle `0x7026`. A 75-frame key ended at 3.8 s (status 4): `0x70A6`. Five seconds later, still `0x70A6`. Selecting channel 56: `0x7026`. The hotspot call after that select listed N0CALL, 75 frames, 55 good. The 3b register diff was not run.
+
+**Factory DMR (09:40) and the HackRF compare (09:55–09:58).** Factory tag `DMR003.UV4T.V022`. One hardware PTT on channel 49. The hotspot logged `Mode set to DMR` and a voice header at 2026-10-29 14:40:21 UTC. The Atom XL RSSI went to −85; hearing stayed off and the caller field stayed empty. HackRF LNA 16 VGA 16, capture tuned 240 kHz below 467.625: both keys rose from RMS 2.2 to about 27. Factory carrier offset +986 Hz, p99 20.4 kHz. FW30 offset +1071 Hz, p99 20.3 kHz. FW36 was loaded again.
+
+End state 10:01: `DMR003.FW36.V022`, channel 56, 467.625 MHz, low power, not transmitting. Atom XL link stopped. HackRF idle.

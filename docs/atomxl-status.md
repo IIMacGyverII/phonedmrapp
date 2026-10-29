@@ -18,6 +18,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING
 
+**Lease ended 10:01 (Grok).** Link stopped, VFO off, not transmitting. The factory DMR key was the last use. Nothing of mine is running.
+
 **Taking the phone (09:37, Grok).** The 09:28 request had no hand-over and the radio is idle (link stopped, channel 2, not transmitting). One factory-image DMR check, receive only. The Atom XL does not transmit.
 
 **Grok needs the phone and the HackRF (now), about 20 minutes.** Factory-image DMR check after the FW36 receive bisect: one 3 s key on channel 49, Atom XL receive-only at 467.625 (DMR, TS2, CC1). The Armor transmits. The Atom XL does not. HackRF only if the factory image gets a voice header. Handed back when that check is in.

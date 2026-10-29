@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — On FW36 only a module restart brings M17 receive back after a key.** FWD1's `0x30` goes to `0x70A6` after a key and back to `0x7026` after a channel select, and that call is listed. The factory image's DMR key gets a hotspot voice header. Details in `results.md`.
+
 **2026-10-29 — FW36 keeps the PA on and does not open receive after a key.** Opcode 3 answers, the 1125-frame stream is payload-exact, high-power current holds, and the FM tone is on frequency. A hotspot call after a symbol key is not listed. The time-out clamp is gone from this image. Details in `results.md`.
 
 **2026-10-29 — Channel 49 is already TS2.** The PTT still logs only `Mode set to DMR`. FW35 overwrote opcode 7's helper at `0x5BD82`. FW36 was not loaded. Details in `results.md`.
