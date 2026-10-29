@@ -1,4 +1,4 @@
-# Atom XL agent: start here (state at 2026-10-28 21:55)
+# Atom XL agent: start here (state at 2026-10-28 23:15)
 
 Read in this order:
 
@@ -29,20 +29,17 @@ Read in this order:
   - USB audio routing off while owning the radio; Agold text layout; App block guard;
   - DIAG `bringup` / `exit [--ez stock]` / `web --ez tx`.
   The stack stays unmerged until the managing agent reviews it (after receive works). Earlier report PRs: #60–#72.
-- **Done and device-tested:** take-over / Exit / Hand back with the cable (USB adb back after ~8 s / ~21 s); receive
-  detection + caller (when the line works); receive audio per reception (−14.0 dBFS for 1 kHz at ±3 kHz) with recovery
-  from the bridge's stall; **transmit FM, DMR voice, DMR text, APRS**, decoded from the HackRF (bench build only).
-- **Open, next session starts here:**
-  1. **Reception line stuck "active":** in some sessions `/dev/stmcu` never delivers an edge after take-over (the read
-     never returns, sysfs `call_in` = 0), so no reception is detected even at −84 dBm; in others (21:05, 21:15) it
-     works. Compare a working and a failing session's power-up (dmesg `stmcu_read`, how often `usb 1-1: new` appears,
-     the reader's open time vs `rstmcu`). Blocks item 2 (receive features) and item 4 (data receive).
-  2. Then APRS / data receive, boot persistence, heat, a clean Device report, profile verified, help + changelog, review.
-  3. From the managing agent's V076 analysis (`docs/atomxl-v076-firmware-analysis.md` on main): a guard so SignalDeck
-     never creates `/sdcard/intercom/dmr` (the stock app flashes `.bin` files from there) + a note in PR 76; correct
-     `plan-firmware-loader.md` (update mode wraps every YModem byte in route 00 cmd `0x09`, replies one byte per
-     envelope); band 400–490 MHz (confirm on V067); `0x3B` acks sr = 1; don't send `0x3D`–`0x3F`/`0x46`/`0x89`/`0x8A`.
-  4. Owner: whether this unit may leave V067 for good (loader plan §3).
+- **Done and device-tested (all on PR 76, head `b058ac31`, host suite 461 / 0):** take-over / Exit / Hand back with the
+  cable; boot (routing restored, stock app back); DMR group and private calls with caller; receive audio per reception
+  with bridge recovery (−14.0 dBFS for 1 kHz at ±3 kHz); the **reception watchdog** (the bridge's line sticks until a
+  phone reboot, the stock app then misses every call: control test 22:02, 0/9; SignalDeck detects receptions from RSSI
+  meanwhile); DMR texts in (`0x36 [05]` push, `rw` 00, then `0x2D`) and out; APRS in (6/10) and out; DTMF in; REC;
+  scanner; S-meter; FM / DMR voice / text / APRS transmit (bench build only); a clean Device report (`run_checks.sh -s
+  192.168.1.106:5555 -w auto -t`). **Mailbox status REVIEW (23:12): the stack waits for the managing agent's review**
+  and its decision on marking the profile verified with transmit on.
+- **Open:** SSTV / POCSAG / SAME receive untested (same audio path as APRS / DTMF; long receptions get ~6 s gaps at
+  each bridge stall); Android Auto not checked; stock-app channel import not done; owner: whether this unit may leave
+  V067 (loader plan §3); the clean-room DMR generator for `tools/dmr-replay/` (approved).
 - **Bench tools (local only, never committed; GPLv3 `dmr_utils3` in a scratchpad venv):** synthetic DMR call generator,
   4FSK DMR decoder (voice LC and data blocks), Bell 202 AFSK generator and decoder. Rebuild from these notes if the
   scratchpad is gone; a clean-room DMR generator for `tools/dmr-replay/` is approved. **Bench APK for transmit** = the

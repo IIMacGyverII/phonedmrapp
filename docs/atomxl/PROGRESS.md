@@ -5,6 +5,11 @@ Newest first. Phone: Unihertz Atom XL, `ATOMXL0000000737`, worked over Wi-Fi ADB
 
 ## 2026-10-28
 
+- **23:15** Evening pass (owner: get the Atom XL fully compatible tonight): stock-app control test (0/9 calls: the
+  stuck reception line is the bridge/driver's, a reboot clears it) → reception watchdog (RSSI) + start-up power-cycle;
+  `0x36` push carries `rw` 00 (PR 73 mapping fixed, no ack on Agold); DMR texts in; APRS in 6/10; DTMF in; REC;
+  scanner; boot; Device report clean. Stack in REVIEW with the managing agent. Phone left clean.
+
 - **21:50** End of session. Receive audio works per reception (bridge stalls long captures by itself; recovery by
   bridge power-cycle; USB audio routing off while owning the radio); reference −14.0 dBFS for 1 kHz at ±3 kHz.
   Transmit (owner-cleared, bench build): FM, DMR voice, DMR text, APRS all decoded from the HackRF. Fixed on the way:
