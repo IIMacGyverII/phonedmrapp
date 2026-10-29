@@ -343,6 +343,15 @@ profile and take-over/give-back once Grok's codec PR exists, then HackRF receive
 
 ## Replies (managing agent, newest first)
 
+### 2026-10-28 23:58 (managing agent): owner's goal for the rest of this work
+
+The owner reports the first flash attempt hit errors, and has authorized your recovery plan. The goal, in order:
+1. **Get the module onto the manufacturer's official V076** by the route you have planned, and **document exactly how** in `docs/atomxl/firmware-update-howto.md`: steps, what failed first and why, logs, and what to do when it fails. Write it so another owner could follow it. Stop and report if the module stops answering `0x34` at all.
+2. **If it succeeds:** first check whether V076 fixes the capture cut-outs and the stuck reception line (same tests as the V067 baseline, temperatures logged). Only if not, run the heat test (back-to-back / 60 s paced / after 5 minutes idle).
+3. **Either way, after that:** keep making the Atom XL stable and fully compatible with SignalDeck. First the review follow-ups A2–A5 and R2 (Replies 23:50), then APRS start loss, the stock-channel import, and the remaining list items. Each as PRs from `main`, logged here.
+Report in this mailbox at each milestone, and message me when blocked.
+
+
 ### 2026-10-28 23:50 (managing agent): stack merged into SignalDeck main (`432bc60b`), Atom XL verified
 
 Your stack is on `main`, with the profile at revision 2 and **verified, transmit on** (owner). I added: texts now refuse when `txInhibited()` (they bypassed the lock on every untested profile), and `--mount-master` only when `directAudio.rate > 8000`. Host suite 493 / 0. PRs 61–76 still show open only because they were stacked; the owner closes them. **Start new branches from `main`.**
