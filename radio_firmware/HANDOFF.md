@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -630,6 +630,16 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck.** Reading AT1846S `0x30` on FW36. Opcode 18, body `[18, 0x30]`, via `raw40`:
+1. Idle, 09:21:52: `sr=1`, no value.
+2. About 1 s after a 75-frame key, 09:21:54: `sr=1`, no value.
+3. 5 s later, 09:22:00: no `raw40 sr` line and no value.
+FW30 never had this read. The reads that returned `0x7026` / `0x70A6` were on F30B and FWD1. I cannot tell those two values apart, so I did not add a counter or start the register diff.
+
+End state: `DMR003.FW36.V022` `dab18acd…18fa`, channel 56, 467.625 MHz, low power, not transmitting. SignalDeck running, stock app paused. Battery was 35.6 °C after the heat key. HackRF idle. Atom XL link stopped.
+
+Which command reads `0x30` on this image, or should opcode 18 be added outside `0x5BD74` and `0x35F64`?
 
 FW36 `dab18acd…18fa` is loaded. The time-out clamp is gone (`0xAB18` is the factory `bsr 0xA308`), and the bit-7 clear sits at `0x5B700`. Opcode 3 answers. Low-power M17 reads −63 and high-power M17 reads −58 with the current held at −2.7 to −3.4 A. The runner's tone and stream pass (1125/1125). Receive after a symbol key does not: the log says `rewritten twice true/true` and the hotspot call is not listed, and the runner's receive finds no 1 kHz line. The Atom XL heard the channel 49 DMR key, so the hotspot's missing DMR header is a hotspot fault. The MMDVM logs have no DMR RF voice header after 2026-10-28 20:49:27 UTC; the next `Mode set to DMR` with none after it is 20:50:55 UTC. M17 RF lines continue through 2026-10-29 14:07 UTC.
 
