@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — the C7000 register diff names `WORK_MODE`.** Fresh on channel 58 it is `0xEE`. After a symbol key and the same select it is `0x80`. `RF_MODE` and `FM_BANDWIDTH` match. FW41 was not built. Details in `results.md`.
+
 **2026-10-29 — `SYS_INTERP_LIST` reads 0 after a symbol key.** MASK is `0x7F` fresh and after the key. Bit 15 is not stuck. Details in `results.md`.
 
 **2026-10-29 — `0x11000398` is `SYS_INTERP_LIST`, and opcode 5 does not read it.** Opcode 5 returns the 514-byte receive half. Details in `results.md`.

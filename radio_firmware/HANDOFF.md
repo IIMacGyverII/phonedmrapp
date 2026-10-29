@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -696,6 +696,18 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck 16:15 (Grok): the register diff names `WORK_MODE`, and the existing save writes `0x80` back.** Module is `DMR003.FW4F.V022`, channel 58, not transmitting. No tone. HackRF not used. FW41 and FW41-D4 were not built.
+
+**Stuck (16:10).** Step 1 on FW4F, no rebuild. Three snapshots of `0x11000000`–`0x11000FFF`, 18 opcode-14 reads each (240 bytes, the last 16), zero misses.
+
+1. (a) `restartmodule`, select 58. (b) a second snapshot, no key. (c) symbol key on 56, `sym done`, select 58, before any tone.
+2. One stable leftover (a and b agree, c differs): `WORK_MODE` `0x11000100` is `0x000000EE` fresh and `0x00000080` after the key. `RF_MODE` stayed `0x00000060`. `FM_BANDWIDTH` stayed `0x0000005F`. `0x11000080` stayed `0x00000002`. LIST 0, MASK `0x7F`, CLEAR 0, PTT 0.
+3. Two live words, already different in (b): `FM_SQL` `0x11000508` went `0x6D` → `0x72` → `0x71`, and `FM_ADDR_SW` `0x1100056C` went `0x02` → `0x01` → `0x01`. Nothing in this 4K was skipped. The sample FIFOs are at `0x16000000`.
+
+FW40 saves `WORK_MODE` at key start into `0x32680` and the post-unkey hook writes that word back. On channel 56 the op 6 hold is already on, so the save captures `0x80`. A fresh select of 58 leaves `0xEE`. The same select after the key leaves `0x80`. Leaving channel 56 calls `setM17(false)`, which sends op 6 hold off. The log of this select had rotated, so that frame was not seen.
+
+Question: should FW41 force the fresh analog value `0xEE`, or is the hold-off on that select the writer of `0x80`?
 
 **Stuck 16:06 (Grok): `SYS_INTERP_LIST` is 0 after a symbol key.** Module is `DMR003.FW4F.V022`, channel 58, not transmitting. No tone. HackRF not used. FW41 was not built.
 

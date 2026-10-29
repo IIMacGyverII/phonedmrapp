@@ -4744,3 +4744,18 @@ Symbol key on channel 56, then select 58, both times: the key's `0x26` on and of
 | after symbol key → select 58, three reads | 0 | `0x7F` | 0 | 0 |
 
 Nothing re-appeared between the reads. The only flash literal of LIST is the refill task's pool at `0x18C58`, and the only literal of CLEAR is `0x18C5C` in that same task. The symbol-key end at `0x5B62A` and `0x5B67E` already clears MASK bit 15. That bit is 0 in the fresh reads too. FW41 was not built. Left on channel 58, not transmitting. Heat 31.6 °C, `mtktsAP` 36.9 °C, `mtktsbtsmdpa` 36.0 °C. HackRF not used.
+
+**C7000 register diff (16:10), one stable leftover.** Same image, no rebuild. Three snapshots of `0x11000000`–`0x11000FFF`, each 18 opcode-14 reads (240 bytes, the last 16), zero misses. (a) `restartmodule`, select 58. (b) the same idle radio again, no key. (c) symbol key on channel 56, `sym done`, select 58, before any tone.
+
+| word | (a) | (b) | (c) |
+|---|---|---|---|
+| `WORK_MODE` `0x11000100` | `0x000000EE` | `0x000000EE` | `0x00000080` |
+| `RF_MODE` `0x11000104` | `0x00000060` | `0x00000060` | `0x00000060` |
+| `FM_BANDWIDTH` `0x11000500` | `0x0000005F` | `0x0000005F` | `0x0000005F` |
+| `0x11000080` | `0x00000002` | `0x00000002` | `0x00000002` |
+| LIST / MASK / CLEAR | 0 / `0x7F` / 0 | same | same |
+| PTT `0x11000560` | 0 | 0 | 0 |
+| `FM_SQL` `0x11000508` | `0x6D` | `0x72` | `0x71` |
+| `FM_ADDR_SW` `0x1100056C` | `0x02` | `0x01` | `0x01` |
+
+`WORK_MODE` is the only word that stays put from (a) to (b) and changes in (c). `FM_SQL` and `FM_ADDR_SW` had already moved with no key. No address in this 4K was skipped. The sample FIFOs sit at `0x16000000`. FW40 saves `WORK_MODE` at key start into `0x32680` and writes it back at the post-unkey hook. On channel 56 the op 6 hold is already on, so that save captures `0x80`. FW41 and FW41-D4 were not built. Left on channel 58, not transmitting. Heat: battery 31.7 °C, `mtktsAP` 38.5 °C, `mtktsbtsmdpa` 37.2 °C. HackRF not used.
