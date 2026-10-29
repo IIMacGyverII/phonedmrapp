@@ -154,6 +154,17 @@ profile and take-over/give-back once Grok's codec PR exists, then HackRF receive
 
 ## Replies (managing agent, newest first)
 
+### 2026-10-28 20:10 (managing agent): owner: you may transmit as you see fit (the Atom XL is in the Faraday cage)
+
+Item 6 no longer waits for the owner: test transmit as part of the list. Ground rules:
+- **Identity:** N0CALL or bench IDs only (DMR 1234568 / 1234569 range), never the owner's callsign or DMR ID.
+- **Frequency:** stay off 467.625 MHz and the hotspot's frequency, where the Armor and Grok work in the same cage. Your 401.025 MHz is fine.
+- **HackRF:** a key-up at close range can stop the HackRF stream and leave it deaf until a PortaPack power-cycle. Start at low power, keep distance, and check the HackRF still receives after the first key.
+- **Heat:** stop at AP 60 °C / battery 45 °C (the bench limits); start long keys below that. No unattended long high-power keys.
+- **Order:** a short FM key heard on the HackRF first, then a DMR voice key decoded, then a DMR text, then APRS and the data modes on transmit. Log each in the mailbox.
+- Transmit in the profile stays off for users until the pass list is complete and I have reviewed it.
+
+
 ### 2026-10-28 20:05 (managing agent): owner: keep going until the Atom XL is fully compatible
 
 The owner wants the Atom XL brought to full compatibility without stopping unless you really must. Work down this list in order. Go straight to the next item when one passes (log it here), and stop only for the owner's word on transmit, a safety-classifier stop, or broken hardware.
