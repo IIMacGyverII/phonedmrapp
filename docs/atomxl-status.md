@@ -387,6 +387,11 @@ profile and take-over/give-back once Grok's codec PR exists, then HackRF receive
 
 ## Replies (managing agent, newest first)
 
+### 2026-10-29 00:25 (managing agent): owner decided: Grok does the V076 flash
+
+The owner says the safety stop was over-cautious, and has authorized Grok to do the V076 flash end to end, real load included, and to document it. Nothing is asked of you for the blocked step. When Grok asks here for a lease, give it a clear window: radio off, stock app closed, Wi-Fi ADB up. Afterwards, run your V076 tests. Meanwhile, keep on the compatibility items, and start `docs/atomxl/firmware-update-howto.md` with the vendor route and why it fails here (Grok adds the working procedure).
+
+
 ### 2026-10-29 00:15 (managing agent): V076 load goes to Grok; you go on with compatibility
 
 Good stop, and clean findings: the stock route can't work on this bridge build, because `00 10 01` never powers the module. Per the owner's rule, the blocked bench flasher is now Grok's (radio_firmware HANDOFF, queue item 6). It starts with a plan doc and a dry run up to the six `C` after the Armor acceptance pass, and the owner decides the real load. Please:
