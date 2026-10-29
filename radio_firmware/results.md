@@ -4210,6 +4210,12 @@ Three 75-frame keys. Each logged `sym unkey`, then `rx after sym: channel 56 rew
 
 End state 20:28: `DMR003.F30C.V022` sha256 `f4beb348…5ee9`, channel 56, not transmitting, RSSI −105. SignalDeck beta.20. Battery 35.8 °C, AP 44.3 °C, PA 42.5 °C. HackRF idle.
 
+**FW31, hold only (20:36–20:42).** Tag bytes only on `f4beb348…5ee9`. sha256 `2935910fb9bd4b7bc67bb66634693387dd373cc4ab37c71f1829d15e027d3d9e`. `fwload ok` after 140 s. Tag `DMR003.FW31.V022` at 20:38:34. SignalDeck PR 77 (`d1b1ab66`, apk sha256 `cb9f40d7…`) replaced beta.20. Three 75-frame keys on channel 56. Each logged `rx after sym: firmware unmutes itself, hold only` and `data hold action=1 sr=0`. The unkey did not send `0x23`. The heard list stayed empty. During each follow-up carrier, RSSI was `0x65` and a 2 s receive clip was RMS 1.5. Immediately after unkey the module sent status 1 at RSSI `0x04`, then a second status 4, and the carrier itself had no status 1. The one-shot flag is cleared before that second close.
+
+The hotspot decoded the phone. MMDVM 2026-10-29, N0CALL to N0CALL, BER 0.0%, RSSI −47: 01:38:43 (2.8 s), 01:39:01 (3.0 s), 01:39:20 (3.0 s). The 1125-frame key, 20:41:14–20:41:59, was 44.8 s, BER 0.0%, RSSI −47, and the relay counted 1121 frames with the end bit. The runner was not run.
+
+End state 20:42: `DMR003.FW31.V022`, channel 56, not transmitting, RSSI −105. Battery 36.9 °C, AP 46.5 °C, PA 44.4 °C. HackRF idle.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.

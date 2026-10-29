@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-28 — FW31 sends only the hold, and a second status 4 mutes the receiver again.** The hotspot decoded the 75-frame keys and the 1125-frame stream at BER 0. The phone's clip during the carrier was RMS 1.5. Details in `results.md`.
+
 **2026-10-28 — The host sends the hold, and the channel rewrite leaves the receiver silent.** `rx after sym` and `data hold action=1 sr=0` on all three keys. RSSI rose on the hotspot carrier and the PCM stayed at RMS 1.3. Details in `results.md`.
 
 **2026-10-28 — The five extra hooks are not why FW3E's key is unlistened.** Restoring setend, the UART pend, or the promiscuous sites still left a 3 s key with status 3 and 4 and no relay listing. Details in `results.md`.
