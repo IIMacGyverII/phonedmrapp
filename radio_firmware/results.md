@@ -4204,6 +4204,12 @@ End state 19:36: `DMR003.F30C.V022`, channel 56, not transmitting, RSSI −105. 
 
 End state 20:09: `DMR003.F30C.V022` sha256 `afb28ab522e390dbbcba63e9dad8db22b932c1cb4fb3333533f6eaafb9f247e2`, channel 56, not transmitting, RSSI −105.
 
+**F30C hold pass (20:24–20:28).** SignalDeck `main` `7a99fcc0` (1.0.0-beta.20, versionCode 119) was installed with `adb install -r`. The dex contains `rx after sym` and `data hold`. The previous install was beta.19 `ebe814a4`, saved before the install. The first-pass builder from `47be235f` rebuilt sha256 `f4beb34816fadb2aaede488c0577cf6fc0546bc2665b2f7796ec8a3e3f105ee9` (check 56 bytes, set 16, end `0x5BFFC`). The phone file hashed the same. `fwload ok` after 140 s. Tag `DMR003.F30C.V022` at 20:26:51. Channel 56, type 2, 467625000 Hz, power 0, CAN 7. M17 receive was on.
+
+Three 75-frame keys. Each logged `sym unkey`, then `rx after sym: channel 56 rewritten true`, then `data hold action=1 sr=0`. The `0x23` follows status 4. The relay answered `sent` for each follow-up call (50 frames, 2.0 s). The phone's heard list stayed empty on all three. The first call's PCM RMS was 1.3. During that call the RSSI byte went from `0x1E` to `0x65` and back, and there was no status 1 on the carrier. The same image without the channel rewrite had RMS 750–940. A channel write on F30B left bit 7 set, so this rewrite puts the mute back after the one-shot. The hotspot decoded the phone's own keys (69, 76 and 76 frames, end bit). FM was not sent. Op 15 was not added. The image was not retagged.
+
+End state 20:28: `DMR003.F30C.V022` sha256 `f4beb348…5ee9`, channel 56, not transmitting, RSSI −105. SignalDeck beta.20. Battery 35.8 °C, AP 44.3 °C, PA 42.5 °C. HackRF idle.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.

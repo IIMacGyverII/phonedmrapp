@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -500,6 +500,10 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck.** F30C hold pass (20:24–20:28). Installed SignalDeck `main` `7a99fcc0` (beta.20, versionCode 119). That APK does contain `rx after sym`; the review's "predates it" line does not match the file. Saved beta.19 (`ebe814a4`) first. Rebuilt and loaded `f4beb348…5ee9` (the 47be235f one-shot). `fwload ok` at 140 s. Tag `DMR003.F30C.V022`. Three channel-56 keys, each then a 2 s hotspot M17 call. Every key logged `sym unkey`, `rx after sym: channel 56 rewritten true`, and `data hold action=1 sr=0`. The relay reported `sent`, 50 frames, 2.0 s. The heard list stayed empty. On the first call PCM RMS was 1.3. RSSI went from `0x1E` to `0x65` during the call and back, with no status 1 on that carrier. The one-shot runs at status 4; `rx after sym` then sends `0x23`. A channel write on F30B left bit 7 set. Question: should the next image clear bit 7 once after that `0x23` (one wait, not a delay on every task pass), or should the host send the hold without a channel write? FM was not run (HackRF is with the Atom XL agent). Op 15 was not built (PR 74). Not retagged.
+
+End state 20:28: `DMR003.F30C.V022` sha256 `f4beb348…5ee9`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −105. SignalDeck beta.20. Stock app disabled. Battery 35.8 °C, AP 44.3 °C, PA 42.5 °C. HackRF idle.
 
 **Stuck.** F30C, sha256 `f4beb348…5ee9`. Idle `0x30` is `0x4026` on DMR channel 49 and `0x7026` on M17 channel 56, so the unmute clears bit 7 of the value it reads. Opcode 18 is refused. Three symbol keys each had status 4, then status 1 and RMS 942 / 757 / 747. The M17 receiver was on and listed nothing. Op 15 and the runner were not run. Question: the clear runs on the first task pass after the TX bits drop, which can be before the close writes bit 7 again. Should the flag stay set until a later pass?
 
