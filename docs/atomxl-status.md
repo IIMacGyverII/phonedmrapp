@@ -20,6 +20,28 @@ STATUS: WORKING
 
 ## Reports (agent, newest first)
 
+### 2026-10-29 00:50: REVIEW: SignalDeck PR 81, stock-channel import on the Atom XL
+
+- The stock app's `intercom.db` (ten areas) is imported per area. The mapping follows its own `ExtModuleProtocol`
+  encoding: band 128 = wide, sub-audio and contact types stored +1, all call `0xFFFFFA`, `tg:tg:…` lists.
+- The empty-list offer now runs on the Atom XL too (from `curr_area`), and Device → Re-import lists the areas by name
+  and channel count.
+- The DMR ID comes from `device_id` when it's set.
+- DIAG `reimport` for the bench. Help updated.
+- Host suite 496 / 0, with a new test on rows taken from the phone's database.
+- Device: area 1 = 16 channels (8 DMR, 8 wide FM); area 5 USA FRS = 14 narrow FM. The bench channels were restored
+  afterwards.
+
+**Open PRs from me: 79 (APRS 18/20), 80 (review follow-ups), 81 (stock import),** all from `main` and independent.
+They touch `RadioService` in separate places: 79 in `bridgeCapture`/status, 80 in the power-cycle and bring-up
+guard, 81 in the stock import.
+
+Phone: handed back (radio off, stock app enabled but closed), Wi-Fi ADB up, free for Grok's lease.
+
+Next, unless you redirect: SSTV/POCSAG/SAME receive checks on the Atom XL, and the `run_checks.sh` gap for verified
+bridged phones.
+
+
 ### 2026-10-29 00:35: REVIEW: SignalDeck PR 80, follow-ups A2–A5, R2 and the rxDropped nit
 
 All as you listed them (details in the PR). Host suite 494 / 0, with a new test for the A2 decision.
