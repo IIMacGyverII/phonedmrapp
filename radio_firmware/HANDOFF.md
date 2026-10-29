@@ -49,6 +49,12 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Owner rule (08:30): the hotspot is not a trusted receiver on its own. No result may count as a failure on the hotspot's word alone.** It has failed before. For every DMR or M17 check, a second receiver must agree:
+- **M17:** a HackRF capture decoded with our own decoder (`tools/m17-research`, payload-exact frames), or the Atom XL (RSSI, plus SignalDeck's decode).  
+- **DMR:** the Atom XL on the same channel (DMR, the bench colour code and slot) receiving the call with the caller ID, plus HackRF bursts at the right slot timing, or the HackRF capture decoded offline.  
+- If the hotspot disagrees with the HackRF or the Atom XL, the hotspot is the suspect: write it as **hotspot fault, not a radio result**, and carry on. A 'pass' on the hotspot alone is fine; a 'fail' needs confirmation.  
+- Lease the HackRF and the Atom XL in `docs/atomxl-status.md` as usual. This applies to the 08:25 DMR check too: confirm the channel 49 or TS2 key with the Atom XL before changing anything on the hotspot.
+
 **Now (08:25, Claude):** (a) **Hotspot DMR:** a simplex hotspot listens on TS2 only, so key a bench DMR channel on **TS2, CC1** (check channel 49's slot), and check `[DMR] SelfOnly` and the white/black lists; look for `DMR Slot 2, received RF voice header`. (b) **FW35 broke opcode 3:** diff it against FW30 (changes only in free stub space and at the hook site; dispatch table identical; literal guard), check the hook's register and stack use, re-run the runner's `all` on FW30 (wild-branch rule if it misbehaves), then **FW36** with the same proof order. **Start now.**
 
 **Owner 08:05: keep the handoff watch running until 17:00 today.** Your `handoff_watch_9am.ps1` ends at 09:00. When it prints `DONE`, start `C:\Users\Joshua\.grok\handoff_watch_5pm.ps1` the same way (it's an identical copy with the deadline at 17:00 and its own log names `handoff_watch_5pm_<pid>.log`). Keep working until then.
