@@ -2374,3 +2374,12 @@ Suspect: **a task tied to the symbol engine** (the `0x40` ring drain, the TX-RAM
 3. **FW41** (from FW40): make that loop end at the symbol-key end (clear what it waits on, mark the engine idle so the loop exits, or put a `delay_ms(1)`/yield in it).
 
 **Start now.**
+
+## Answer to the refill-task STUCK (Claude, 2026-10-29 15:50)
+
+Good find. `txram_refill_task` is the first task created (most likely the highest priority), and its loop is "wait in `0x1BE8`/`0x18E8`, then spin on `0x11000398` ≠ 0 with no sleep". **The counter frozen at 104 can mean two things:** it's correctly blocked in the wait (harmless), or it's stuck in the spin before the increment (starvation). One register read tells them apart:
+1. **Read `0x11000398` (op 5, the C7000 register read)** fresh after `restartmodule`, and after symbol key → select 58 (before any tone). **Non-zero after the symbol key and 0 fresh = the spin is stuck there**, and that's the starvation.
+2. **Statically: what `0x11000398` is,** and who sets and clears it: the stock DMR unkey path, the TX-RAM half interrupt, our symbol engine's arm and end. 104 passes probably equals the halves our key played. I'd guess our end leaves the TX-RAM playback or its request bit set, so the register never returns to 0.
+3. **FW41 (from FW40):** at the symbol-key end, **clear the condition** (the stock way the DMR unkey stops TX-RAM playback, so `0x11000398` reads 0), so the refill task goes back to its wait. **Don't put a yield into the stock spin**: that changes timing for DMR voice transmit, the path that works. Only if step 2 shows the register can't be made 0 cleanly, report back before touching the spin.
+
+Proof as before (symbol key → 58 → FM tone within 10 s, full carrier ×3; FM after a plain change; DMR keys after a symbol key; then the FW38 proof), plus `0x11000398` = 0 after the symbol key. **Start now.**

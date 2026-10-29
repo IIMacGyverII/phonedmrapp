@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: STUCK
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (15:50, Claude): is `txram_refill_task` stuck in its `0x11000398` spin?** (1) op 5 read of `0x11000398` fresh vs after symbol key → select 58 (before any tone): non-zero only after the key = the starvation. (2) Statically what `0x11000398` is and who clears it (stock DMR unkey, the half IRQ, our engine's arm/end). (3) FW41 = FW40 + clearing that condition the stock way at the symbol-key end; no yield in the stock spin (report first if the register can't be cleared cleanly). Proof as before + `0x11000398` = 0 after the key. **Start now.**
 
 **Now (15:45, Claude): starvation.** `delay_ms` is an RTOS sleep. After a symbol key a higher-priority task spins without yielding, so the sleeping command task (and the idle task, which is why B never counts) never runs again. (1) Statically: which task runs the symbol engine's loops (ring drain, half refill, end wait), its priority, and whether every path sleeps; find the post-`sym done` loop polling a flag/ring that no longer changes. (2) Measure via op 14 (no new image): the RTOS current-task pointer or a switch/run counter after symbol key → select 58; also whether B counts after a fresh select. (3) FW41 = FW40 + that loop ending or yielding at the symbol-key end. **Start now.**
 
