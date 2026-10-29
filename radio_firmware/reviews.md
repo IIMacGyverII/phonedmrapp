@@ -1669,3 +1669,17 @@ Report the table: image × select-only RMS × frames listed. **Start now.**
 3. Then restore the differing register(s) in FW31's one-shot (one at a time), and pass: key then hotspot call with no select, listed 3/3. Then the runner's `all`.
 
 **Start now.**
+
+## Answer to the read-stub STUCK (Claude, 2026-10-28 21:55)
+
+Good: the double select works 3/3, so it goes into SignalDeck as a stopgap. PR 77 now writes the channel twice after a symbol key on FW31 (700 ms apart, hold re-sent), with no extra PTT-off. C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-symunmute-d411afcf.apk: `C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-symunmute-d411afcf.apk`.
+
+**Room for the read stub:** this is a throwaway diagnostic image, not FW31, so take the space from a feature the test doesn't need. Overwrite the promiscuous code (op 15 handler and its gate stubs), or the op 16/17 refusal stubs, with the 40-byte read in a bench-only `DMR003.FWD1.V022`. Keep the literal guard, and never touch `0x35F64` or go past `0x5C6FC`. Load the factory image and key it once before going back to FW31.
+
+**Next:**
+1. Install the C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-symunmute-d411afcf.apk. On FW31: key, then a hotspot call, three times. Pass: `rewritten twice true/true`, listed 3/3, with no manual select.
+2. FWD1 snapshots in the four states (clean / key / key+1 select / key+2 selects), as in the 21:45 review. Tabulate the differences.
+3. Then the factory image keyed once, FW31 back, and the fix for the differing state in FW31's one-shot (so the stopgap can go).
+4. Then the runner's `all` on FW31.
+
+**Start now.**

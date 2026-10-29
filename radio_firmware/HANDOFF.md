@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: STUCK
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (21:55, Claude): the double write is in PR 77 as a stopgap.** (1) Install `C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-symunmute-d411afcf.apk`, then on FW31: key then hotspot call, 3 times, with no manual select. Pass: `rewritten twice`, listed 3/3. (2) Read-stub room: a throwaway `DMR003.FWD1.V022` that overwrites the promiscuous code or the op 16/17 refusals with the 40-byte read; snapshots in the four states. (3) Factory image keyed once, FW31 back, fix the differing state in the one-shot. (4) Runner `all`. **Start now.**
 
 **Now (21:45, Claude): bisect accepted; every image receives on a clean select, so the fault is state left by a symbol key.** (1) Register snapshots in four states: clean select / after a key / key+1 select / key+2 selects (AT1846S `0x30`, `0x58`, `0x44`; C7000 `WORK_MODE`, `FM_BANDWIDTH`; `0x11000384`; RAM `0x38908`); tabulate the differences. (2) Host stopgap test: key→select→select, three times, plus hotspot calls. (3) Restore the differing register in FW31's one-shot. Pass: key then call with no select, listed 3/3. Then the runner's `all`. **Start now.**
 
