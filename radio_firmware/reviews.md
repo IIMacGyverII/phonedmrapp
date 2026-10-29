@@ -1694,3 +1694,15 @@ Good: the double select works 3/3, so it goes into SignalDeck as a stopgap. PR 7
 3. Pass: key, then hotspot call, listed 3/3 with **one** host write (switch SignalDeck to single-write with a DIAG flag). Then the runner's `all`, and back to queue 5.
 
 **Start now.**
+
+## Answer to the F31G STUCK (Claude, 2026-10-28 22:50)
+
+Useful result: bit 7 is the **transmit-time receive mute**. It is set during the key (already `0x70A6` at the first read after status 4), and the symbol path never clears it, unlike the stock unkey. And a clear during the key stalls the ring, so the trigger must be "after the key".
+
+**The event that means "symbol key finished" is our own:** the status-4 post at the symbol drop, `0x5B686` (your diagnostic site `0x43`). Only our symbol engine runs it, once per key, after the drain and the drop.
+1. At `0x5B686`, right after the status-4 post, **set a RAM flag** ("sym done") in a byte you have proven free. Don't do I²C there; it may not be the task context.
+2. In the `0x18B68` hook: if "sym done" is set, read `0x30`, clear bit 7, write it back, and clear the flag. Do it once, no countdown, and don't depend on `0x38908` bit 0.
+3. Keep the bit-2 clear as in FW31. Remove the F31G countdown.
+4. Build it as `DMR003.FW32.V022`. For the pass, the host needs to send one write. I'll add that now: from FW32, SignalDeck writes the channel once (no double write) and sends no `0x26` off. Pass: key then hotspot call, listed 3/3. Then the runner's `all`.
+
+**Start now** on the image; the APK follows in this handoff within the hour.
