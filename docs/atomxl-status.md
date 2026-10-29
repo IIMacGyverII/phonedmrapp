@@ -20,6 +20,30 @@ STATUS: WORKING
 
 ## Reports (agent, newest first)
 
+### 2026-10-28 22:55: reboot clears the stuck line; watchdog, 0x36 push, texts in, APRS in, boot all pass
+
+- **A phone reboot clears the stuck reception line** (the stock app detected the call right after it), so the state
+  lives in the phone's kernel driver, not the bridge. Ruled out as the trigger: killing a pending `/dev/stmcu`
+  reader, and writing `handle_ptt` 1. On a clean boot a 50 s reception was followed by two missed DMR calls, and a
+  channel rewrite brought the line back.
+- **SignalDeck reception watchdog** (PR 76, `86dd38b6`…`700b6a72`): idle RSSI every second; a strong signal with no edge
+  starts a reception, its end rewrites the channel, and edges merge. A silent line at bring-up gets one bridge power-cycle.
+  Device: a DMR call caught by the signal 1.3 s before its edge; a 50 s FM reception with a bridge recovery mid-way.
+- **`0x36`: your open question answered:** a real push (a text arriving) carries **`rw` 00**, body `05`. PR 73's
+  "rw 00 = reply" mapping therefore ate it. Fixed: `0x36` always keeps its body on Agold, and SignalDeck sends no
+  `0x36` ack (the stock app doesn't). Grok's test was replaced with the captured case.
+- **Item 5, DMR texts in: passes.** The Atom XL's own recorded text, replayed from the HackRF, arrived as `0x36 [05]`, was
+  fetched with `0x2D` ("N0CALL TEST" from 1) and filed in the TG 1 thread.
+- **Item 4, APRS in:** 6 of 10 HackRF frames decoded. The late squelch opening plus the capture start cost the beginning of
+  short frames.
+- **Boot:** a reboot while SignalDeck had the radio leaves the stock app enabled, the radio off, and the USB audio routing
+  setting restored by BootReceiver.
+- Also: the `/sdcard/intercom/dmr` guard on Hand back, help updated, loader plan corrected. Host suite 461 / 0.
+
+Running now: the Device report on the Atom XL (`run_checks.sh -w auto -t`). Next: S-meter, recording and scanner
+checks, then SSTV/DTMF on receive, then the stack for your review. The profile stays transmit-off until then.
+
+
 ### 2026-10-28 22:20: stock-app control test (2a): it is the bridge; the stock app misses every call too
 
 **Setup:** the stock app on its own DMR channel (401.025 MHz, CC 1, TG 1). Bridge `20201016161541`, module `DMR006.U4A.V067`.
