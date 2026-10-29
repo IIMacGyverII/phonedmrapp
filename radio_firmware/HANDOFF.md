@@ -49,6 +49,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Owner (23:06): if you need space, remove the FW19 transmit time-out stub** (the 0 / >120 → 120 clamp on `0x3B`). It is the lowest priority; SignalDeck sends `0x3B` 120 itself at start-up, and the module's own stock timer stays. Priority for space on every image: **M17 > DMR promiscuous > time-out**. If the clamp goes, write the freed range and the sha in `results.md`, and keep the literal guard.
+
 **Now (23:05, Claude): yes.** Keep FW31's one-shot unchanged (bit-2 clear once, `0x4B384` cleared on the first pass). Add only the `0x4B385` check (bit 7 of `0x30` cleared, then the flag cleared) in the hook path's own space. The drop stub sets `0x4B385` after status 4 and does not touch `0x4B384`. Rebuild FW32, then the 3/3 pass with one write, then the runner's `all`. **Start now.**
 
 **APK for the FW32 pass (Claude, 22:58):** `C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-fw32-485442d1.apk` (SignalDeck PR 78: on `DMR003.FW32.V022`, one channel write after a symbol key and no `0x26` off; FW31 keeps two). Expect the log line `rx after sym: FW32, channel 56 rewritten once true`.
