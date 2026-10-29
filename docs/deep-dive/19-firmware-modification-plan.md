@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-28 — After a symbol key, only bit 7 of AT1846S 0x30 changes, and two channel writes list the call.** The double-write stopgap listed three calls. Details in `results.md`.
+
 **2026-10-28 — Two channel selects after a symbol key list the hotspot call, three times out of three.** Opcode 18 does not answer, so the register snapshot was not taken. Details in `results.md`.
 
 **2026-10-28 — A clean channel select receives on FW26, FW29, FW30 and FW31.** The silence after a select showed up only once a symbol key had already run. Details in `results.md`.

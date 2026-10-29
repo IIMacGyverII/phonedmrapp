@@ -4247,6 +4247,21 @@ End state 21:33: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, not tr
 
 End state 21:37: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, not transmitting, RSSI −105. Battery 38.3 °C, AP 45.4 °C, PA 43.7 °C. HackRF idle.
 
+**Double write and register snapshots (21:49–22:03).** Installed PR 77 `d411afcf` (apk sha256 `c991ae6d…`). On FW31 `997cb714`, three symbol keys with no manual select. Each logged `rx after sym: FW31, channel 56 rewritten twice true/true` and listed N0CALL: 79 frames / 56 good, 50 / 34, 76 / 54.
+
+`DMR003.FWD1.V022` sha256 `d7efd88aa209b639e924e4e2481826aeecfef7226928da9e87eb21c324d8a229` puts the FW30 register read at `0x5C490` and points opcode 18 at it. The literal at `0x5C488` and the pool at `0x5C6BC` were left in place. The literal guard was clean. Opcode 18 answered `sr=0`.
+
+| State | RMS | 0x30 | 0x58 | 0x44 |
+| --- | --- | --- | --- | --- |
+| Clean select | 7055 | 0x7026 | 0xBCFD | 0x7FE |
+| Eight seconds after a key | 1.5 | 0x70A6 | 0xBCFD | 0x7FE |
+| Key, then one select | 6955 | 0x7026 | 0xBCFD | 0x7FE |
+| Key, then two selects | 7027 | 0x7026 | 0xBCFD | 0x7FE |
+
+Only bit 7 of `0x30` changes. It is set after the key and clear again after a channel write. The factory image was loaded, keyed 3 s on channel 49 (status 3 and status 4), and FW31 `997cb714` was loaded again. The one-shot was not edited: this read was on an image that already contains it, and `0x30` was still `0x70A6` at eight seconds.
+
+End state 22:03: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, not transmitting, RSSI −104. Battery 37.1 °C, AP 42.8 °C, PA 41.5 °C. HackRF idle.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.

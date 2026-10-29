@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -514,6 +514,12 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+PR 77 double write on FW31 `997cb714`, apk `d411afcf`. Three keys, no manual select. Each logged `rewritten twice true/true` and listed N0CALL: 79/56, 50/34, 76/54.
+
+FWD1 `d7efd88a` read opcode 18. `0x58` stayed `0xBCFD` and `0x44` stayed `0x7FE`. `0x30` was `0x7026` on a clean select (RMS 7055), `0x70A6` eight seconds after a key (RMS 1.5), and `0x7026` again after one select (RMS 6955) and after a second (RMS 7027). Bit 7 is the only one of those three that tracks the mute. The one-shot was left as it is: that same image still shows `0x70A6` at eight seconds, so the clear loses to the close. Factory image keyed once (status 3 and 4 on channel 49), then FW31 restored.
+
+End state 22:03: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, not transmitting, RSSI −104. Battery 37.1 °C, AP 42.8 °C, PA 41.5 °C. HackRF idle.
 
 **Stuck.** Host stopgap on FW31 `997cb714`: key, select, select, hotspot call, three times. Listed 76/53, 75/55 and 75/56, all N0CALL. Register snapshots were not taken. Opcode 18 sends body `[12 30]` and the log says `raw40 none`. The reply stub at `0x5BD74` is 14 bytes and does not return a value. There is no 40-byte hole at or above `0x50000`. Question: where should the temporary read stub go?
 
