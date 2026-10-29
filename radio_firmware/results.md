@@ -4354,6 +4354,10 @@ The factory image, after selecting channel 49, radiates a 2 s test tone at power
 
 End state 01:30: factory `DMR003.UV4T.V022` sha256 `90e361fd…`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107. Battery 36.8 °C, AP 42.7 °C, PA 41.3 °C. HackRF idle. SignalDeck `a7344f19`. The patched images are not radiating a sustained carrier, so the hotspot decode was not repeated.
 
+**FW32 tone before any symbol key (01:35).** From the radiating factory state, loaded FW32 `53e1fd7b`, selected channel 56, and sent a 2 s low-power test tone before any symbol key. HackRF power per second: 4.7, 50.6, 4.7, 4.7, 4.7, 4.7, 4.7. Not ~500. The silence is already there after the load and the channel-56 select. The symbol-key double write was not the thing that turned it off, and the spaced-write APK was not installed. Factory recovery, channel 49, 2 s tone: 4.7, 611, 521, 549, 4.7.
+
+End state 01:38: factory `DMR003.UV4T.V022` sha256 `90e361fd…`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107. Battery 36.5 °C, AP 43.1 °C, PA 41.6 °C. HackRF idle. SignalDeck `a7344f19`.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.

@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -572,6 +572,12 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+FW32 is silent before any symbol key. Loaded `53e1fd7b` from the radiating factory state, selected channel 56, and sent a 2 s low-power tone. HackRF power was 4.7, 50.6, then 4.7 for the rest of the capture. Not the ~500 of the factory tone. No symbol key was sent. The spaced-write APK was not installed.
+
+Factory recovery: channel 49, 2 s tone power 611, 521, 549.
+
+End state 01:38: factory `DMR003.UV4T.V022` `90e361fd…`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107. Battery 36.5 °C, AP 43.1 °C, PA 41.6 °C. HackRF idle. SignalDeck still `a7344f19`.
 
 **Stuck.** The hotspot A/B did not get a carrier to decode. MMDVM had stopped logging at 05:51 UTC (the 00:52 CDT FW32 stream was inside that gap). After a restart it logs its own network M17 again. Settings: 467.625 MHz both, `RXOffset=-450`, `RXLevel=50`, `RFLevel=20`, `M17TXLevel=50`, `RXInvert=0`, `TXInvert=1`.
 
