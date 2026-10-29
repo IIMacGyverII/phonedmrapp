@@ -1,16 +1,9 @@
-# F30C: F30B plus two fixes.
-# After a symbol drop, write 0x30 = 0x7026 again. The drop's stock unkey
-# runs last and leaves bit 7 set (0x70A6). The symbol unkey itself already
-# writes 0x7026 before that call.
-# The close at 0x37F4 already calls the one-shot guard at 0x5BDAA. That
-# guard turned the first r0==1 close into r0==0 and then cleared the flag.
-# The stock unkey enters the same function with r0==0, so clearing on that
-# entry let the squelch task's next close write 0x70A6. This build leaves
-# the flag set. On the phone, opcode 3 then stops answering (see the
-# handoff Stuck block). Do not load this output until that is answered.
-# The empty unkey at 0x5B61E stays the stock call.
-# Op 15's success path clears bit 8 of 0x11000384 and then points r4 at
-# the ack buffer, which is what the two instructions it replaces did.
+# F30C: F30B without opcode 18. The tail holds two stubs.
+# Idle 0x30 is 0x7026 on the wide M17 channel and 0x4026 on DMR, so the
+# unmute writes back the value it read with bit 7 cleared.
+# The key wrapper sets a flag at 0x4B384. The FM task branch at 0x18B68
+# calls the check: when the flag is set and TX bits 0 and 2 of 0x38908
+# are clear, it clears bit 7 and then the flag. Opcode 18 is refused.
 import hashlib
 from pathlib import Path
 
@@ -21,54 +14,45 @@ ROOT = Path(r"D:\Documents\code\personal\phonedmrapp")
 SRC = ROOT / "radio_firmware" / "build" / "DMR003.F30B.V022.bin"
 DEST = ROOT / "radio_firmware" / "build" / "DMR003.F30C.V022.bin"
 TAG = slice(0x38464, 0x38474)
-OP18 = 0x5BFB2
-CC = 0x5BFD8
-UNMUTE = 0x5BFEC
+CHECK = 0x5BFB4
+SET = 0x5BFEC
 LIMIT = 0x5BFFE
-# The symbol unkey's own write. The displacement is PC-relative, so copy the target, not the bytes.
+FLAG = 0x4B384
 
-_OP18 = """
+_CHECK = """
 	.text
-	.global	op18
-op18:
-	push	r15
-	ld.b	r0, (r7, 9)
-	lrw	r1, 0x2b25c
-	jsr	r1
-	mov	r4, r14
-	st.b	r0, (r4, 0)
-	lsri	r0, r0, 8
-	st.b	r0, (r4, 1)
-	ld.b	r0, (r7, 1)
-	movi	r1, 0
-	mov	r2, r4
-	movi	r3, 2
-	.short	0xE000, 0x90B0
-	pop	r15
-"""
-
-_UNMUTE = """
-	.text
-	.global	unmute
-unmute:
-	push	r15
-	.short	0xE000, 0x0E9C
+	.global	check
+check:
+	push	r4, r15
+	.short	0xE000, 0x4D0B
+	lrw	r4, 0x4b384
+	ld.b	r2, (r4, 0)
+	bez	r2, .Ldone
+	lrw	r3, 0x38908
+	ld.b	r2, (r3, 0)
+	andi	r2, r2, 5
+	bnez	r2, .Ldone
 	movi	r0, 48
-	movi	r1, 28710
-	.short	0xE000, 0x2B20
-	pop	r15
+	.short	0xE000, 0x125C
+	bclri	r0, 7
+	mov	r1, r0
+	movi	r0, 48
+	.short	0xE000, 0x1220
+	movi	r2, 0
+	st.b	r2, (r4, 0)
+.Ldone:
+	pop	r4, r15
 """
 
-_CC = """
+_SET = """
 	.text
-	.global	ccclr
-ccclr:
-	st.b	r0, (r4, 0)
-	lrw	r3, 0x11000384
-	ld.w	r2, (r3, 0)
-	bclri	r2, 8
+	.global	setflag
+setflag:
+	movi	r2, 1
 	st.w	r2, (r3, 0)
-	subi	r4, r4, 1380
+	lrw	r4, 0x4b384
+	movi	r2, 1
+	st.b	r2, (r4, 0)
 	jmp	r15
 """
 
@@ -77,44 +61,35 @@ def build():
     img = bytearray(SRC.read_bytes())
     if img[TAG] != b"DMR003.F30B.V022":
         raise SystemExit("tag")
-    if img[0x5B758:0x5B75C] != bytes.fromhex("fde3a22b"):
-        raise SystemExit("stock unkey")
-    if img[0x5C484:0x5C486] != bytes.fromhex("00a4"):
-        raise SystemExit("flag store")
-    op18 = bytearray(fw30_build._linked(_OP18, OP18, "f30c18"))
-    fw30_build._patch_one(op18, OP18, bytes.fromhex("00e0b090"), 0x90B0, "reply")
-    unmute = bytearray(fw30_build._linked(_UNMUTE, UNMUTE, "f30cun"))
-    fw30_build._patch_one(unmute, UNMUTE, bytes.fromhex("00e09c0e"), 0xE9C, "unkey")
-    at = unmute.find(bytes.fromhex("00e0202b"))
-    if at < 0:
-        raise SystemExit("write placeholder")
-    write_to = fw30_build.bsr_target(img, 0x5B654)
-    unmute[at:at + 4] = fw30_build.encode_bsr(UNMUTE + at, write_to)
-    cc = bytearray(fw30_build._linked(_CC, CC, "f30ccc"))
-    end = CC + len(cc)
-    if end > LIMIT:
-        raise SystemExit("cc ends %X" % end)
-    if OP18 + len(op18) > CC or CC + len(cc) > UNMUTE or UNMUTE + len(unmute) > LIMIT:
-        raise SystemExit("overlap %X %X %X" % (OP18 + len(op18), CC + len(cc), UNMUTE + len(unmute)))
-    img[OP18:OP18 + len(op18)] = op18
-    img[UNMUTE:UNMUTE + len(unmute)] = unmute
-    img[CC:end] = cc
-    img[0x5B758:0x5B75C] = fw30_build.encode_bsr(0x5B758, UNMUTE)
-    img[0x5C484:0x5C488] = fw30_build.encode_bsr(0x5C484, CC)
-    # 0x5BDBC still skips to the zextb when r0 is not 1. When r0 is 1 the
-    # flag stores become nops and r0 becomes 0, so the close does not mute.
-    guard = img[0x5BDBC:0x5BDC6]
-    if guard != bytes.fromhex("0508003240a341a30030"):
-        raise SystemExit("guard %s" % guard.hex())
-    img[0x5BDBC:0x5BDC6] = bytes.fromhex("05080030036c036c036c")
-    if fw30_build.bsr_target(img, 0x5B61E) != 0xE9C:
-        raise SystemExit("empty unkey")
-    if fw30_build.bsr_target(img, 0x5B758) != UNMUTE:
-        raise SystemExit("unmute call")
-    if fw30_build.bsr_target(img, 0x5C484) != CC:
-        raise SystemExit("cc call")
+    if fw30_build.bsr_target(img, 0x18B68) != 0x5B4D0:
+        raise SystemExit("refill")
+    if img[0x5B5E2:0x5B5E6] != bytes.fromhex("013240b3"):
+        raise SystemExit("key store")
     if fw30_build.bsr_target(img, 0x5BCC4) != 0x5BFB4:
-        raise SystemExit("op18 call")
+        raise SystemExit("op18")
+    base = SRC.read_bytes()
+    read_to = fw30_build.bsr_target(base, 0x3898)
+    write_to = fw30_build.bsr_target(base, 0x5B654)
+    check = bytearray(fw30_build._linked(_CHECK, CHECK, "f30cck"))
+    fw30_build._patch_one(check, CHECK, bytes.fromhex("00e00b4d"), 0x5B4D0, "refill")
+    fw30_build._patch_one(check, CHECK, bytes.fromhex("00e05c12"), read_to, "read")
+    fw30_build._patch_one(check, CHECK, bytes.fromhex("00e02012"), write_to, "write")
+    flag = bytearray(fw30_build._linked(_SET, SET, "f30cset"))
+    if CHECK + len(check) != SET:
+        raise SystemExit("layout %X %d" % (CHECK + len(check), len(check)))
+    if SET + len(flag) > LIMIT:
+        raise SystemExit("end %X" % (SET + len(flag)))
+    img[CHECK:CHECK + len(check)] = check
+    img[SET:SET + len(flag)] = flag
+    img[0x18B68:0x18B6C] = fw30_build.encode_bsr(0x18B68, CHECK)
+    img[0x5B5E2:0x5B5E6] = fw30_build.encode_bsr(0x5B5E2, SET)
+    img[0x5BCC4:0x5BCC8] = fw30_build.encode_bsr(0x5BCC4, 0x5BD74)
+    if fw30_build.bsr_target(img, 0x18B68) != CHECK:
+        raise SystemExit("check call")
+    if fw30_build.bsr_target(img, 0x5B5E2) != SET:
+        raise SystemExit("set call")
+    if fw30_build.bsr_target(img, 0x5BCC4) != 0x5BD74:
+        raise SystemExit("refuse")
     old = SRC.read_bytes()
     if literal_guard.covered_loads(old, bytes(img))[1]:
         raise SystemExit("load guard")
@@ -124,7 +99,7 @@ def build():
     DEST.write_bytes(img)
     print(DEST)
     print(hashlib.sha256(img).hexdigest())
-    print("op18", len(op18), "unmute", len(unmute), "cc", len(cc), "end", hex(end))
+    print("check", len(check), "set", len(flag), "end", hex(SET + len(flag)))
 
 
 if __name__ == "__main__":
