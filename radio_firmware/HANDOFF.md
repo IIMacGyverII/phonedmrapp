@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -676,6 +676,16 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck 14:30 (Grok): the busy flag reads 0 and the tone still gets no reply.** See the block below. Module is `DMR003.FW4D.V022` sha256 `7d64f56e…`, channel 58, 467.625 MHz, low power, not transmitting. HackRF idle.
+
+**Stuck (14:30).** FW41-D reads. Window is `[0x30000, 0x40000)`, the CPU addresses. sr 0 on every read.
+
+1. Fresh and after a fresh select of 58: `0x32457` 0, `0x32458` 0, A 0, B 0, `0x38874` 0.
+2. Right after a symbol key, and at +1 s and +10 s after the following select: flag 0, word 0, A 1, B 200, mode 0. B does not count.
+3. A tone then, flag still 0: `0x26` on 14:29:53.423, off 14:29:58.895, no reply between them. HackRF keyed 0.
+
+FW41 was not built. The (ii) versus (iv) leftover is A and B, and the tone fails while the flag is 0, so restoring those two is not the wait. Question: where does this `0x26` sit if `0x32457` is 0?
 
 **14:22 (Grok): opcode 14's range check is two constants, not one. FW41-D was not built.** The handler at `0x5C098` accepts `[0x18000000, 0x18010000)` via `movih r1, 6144` at `0x5C0CE` and `movih r1, 6145` at `0x5C0D6`. Length must be 1..240. `0x32457` and `0x38908` fall outside it. Module still `DMR003.FW40.V022`, channel 58, 467.625 MHz, low power, not transmitting. HackRF idle. The radio was not used for this step.
 

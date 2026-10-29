@@ -4705,3 +4705,15 @@ Probes on FW40, HackRF LNA 16 / VGA 16, 467.625 MHz low power. (a) Symbol key, w
 ```
 
 The length in r2 must be 1..240 (`cmpnei r2, 0`, then `movi r3, 240; cmphs r3, r2`). A miss pops with r0 = 1 at `0x5C134`. `0x32457` and `0x38908` are outside this window. No image was built and the radio was not used. Module still FW40, channel 58, not transmitting.
+
+**FW41-D (14:30), the busy flag reads 0 and the tone still gets no reply.** Diagnostic image `DMR003.FW4D.V022`, sha256 `7d64f56e52829b16513a60c92b2000e09c9ff4955734895bd0ca2f435ddbcbe5`. The two `movih` immediates at `0x5C0CE` and `0x5C0D6` are 3 and 4, so opcode 14 accepts `[0x30000, 0x40000)`. Those are the CPU addresses the firmware already loads. Loaded at 14:28. Each read is opcode 14, sr 0.
+
+| | `0x32457` | `0x32458` | A `0x38912` | B `0x38913` | `0x38874` |
+|---|---|---|---|---|---|
+| (i) fresh after `restartmodule` | 0 | 0 | 0 | 0 | 0 |
+| (ii) after select 58 | 0 | 0 | 0 | 0 | 0 |
+| (iii) right after a symbol key on 56 (tx still true) | 0 | 0 | 1 | 200 | 0 |
+| (iv) select 58, +1 s | 0 | 0 | 1 | 200 | 0 |
+| (iv) +10 s | 0 | 0 | 1 | 200 | 0 |
+
+B does not count down. A tone on that channel 58, with the flag still 0, at 14:29:53: `0x26` on, no reply before `0x26` off at 14:29:58, HackRF keyed 0. The `0x32457` wait is not where this `0x26` sits. FW41 was not built. Left on channel 58, not transmitting, tag `DMR003.FW4D.V022`. Heat before the key: battery 31.8 °C, `mtktsAP` 36.8 °C, `mtktsbtsmdpa` 36.2 °C. HackRF idle.
