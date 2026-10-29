@@ -4321,6 +4321,12 @@ No-write poll on the diagnostic image `3d7fca89…4290` (opcode 18 at `0x5C14C`,
 
 End state 00:35: `DMR003.FW32.V022` sha256 `53e1fd7b…1d11`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −104. Battery 36.4 °C, AP 44.4 °C, PA 43.0 °C. HackRF idle. SignalDeck `e218a12a` (`5a0d18d9`). The 3/3 listing was not met, so the runner was not started.
 
+**M17 receiver restart (00:43–00:44).** Installed `SignalDeck-fw32-31c514d0.apk` (sha256 `b0e1cfd8…`) on the same FW32 image. One 75-frame key: status 4 at 00:43:28.407, `no 0x26 off`, `rx after sym: FW32 unmutes itself, hold only (no channel write), M17 receiver restarted`, `data hold action=1 sr=0`. The hotspot transmitted (05:43:28 UTC, N0CALL to ALL, 3.0 s). Quality stayed 0 and the heard list stayed empty. The three-call pass was not continued.
+
+DIAG `m17` off, then on, then another hotspot call (05:43:48 UTC, 3.0 s). Still quality 0, heard empty. The off line was `running false, receiving false, fixed taps for this phone; the module's voice filter is held open`. The on line was `running true, receiving false, calibrated on this phone model`. A repeat of the off/on at 00:44:16 logged the same two lines. Turning the receiver off and on after the key does not make it lock.
+
+End state 00:44: `DMR003.FW32.V022` sha256 `53e1fd7b…1d11`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −117 at 00:43. Battery 36.3 °C, AP 44.2 °C, PA 42.1 °C at 00:43. HackRF idle. SignalDeck `b0e1cfd8` (`31c514d0`). M17 receive was left on. The runner was not started.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.

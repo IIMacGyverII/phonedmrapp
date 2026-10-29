@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -564,6 +564,12 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+The receiver restart does not list the call, and a manual off/on does not either. SignalDeck `31c514d0` on FW32 `53e1fd7b`. One key logged `hold only (no channel write), M17 receiver restarted`, one status 4, `data hold sr=0`. The hotspot transmitted (3.0 s). Quality stayed 0.
+
+DIAG `m17` off then on, then another hotspot call: still quality 0. Off logged `fixed taps for this phone; the module's voice filter is held open`. On logged `calibrated on this phone model`.
+
+End state 00:44: `DMR003.FW32.V022` `53e1fd7b…1d11`, channel 56, 467.625 MHz, low power, not transmitting. Battery 36.3 °C, AP 44.2 °C, PA 42.1 °C. HackRF idle. SignalDeck `31c514d0`. M17 receive left on. The runner was not started.
 
 Hold-only does not list M17, and the mute is not the cause. On FW32 `53e1fd7b` with SignalDeck `5a0d18d9`, one key logged `hold only (no channel write)`, one status 4, and `data hold sr=0`. The hotspot transmitted. The phone's M17 quality stayed 0. AGC RMS during the carrier was about 3600. An FM tone from the HackRF (1 kHz, ±2.5 kHz, TX VGA 8) was RMS 3579.
 

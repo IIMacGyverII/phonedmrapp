@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — Restarting the M17 receiver after a symbol key still does not list the hotspot call, and a manual M17 off/on does not either.** FW32 `53e1fd7b…1d11` stays loaded. Details in `results.md`.
+
 **2026-10-29 — With no channel write, `0x30` stays `0x7026` and `0x58` is `0xBCFD`, FM audio is RMS ~3600, and the M17 decoder does not lock.** The original FW32 `53e1fd7b…1d11` is loaded again. Details in `results.md`.
 
 **2026-10-29 — A channel write 1.0 s after status 4 still leaves the receiver muted.** `0x30` is `0x7026` through 0.89 s and `0x70A6` from 1.81 s. The original FW32 `53e1fd7b…1d11` is loaded again. Details in `results.md`.
