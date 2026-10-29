@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -562,6 +562,12 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+Hold-only does not list M17, and the mute is not the cause. On FW32 `53e1fd7b` with SignalDeck `5a0d18d9`, one key logged `hold only (no channel write)`, one status 4, and `data hold sr=0`. The hotspot transmitted. The phone's M17 quality stayed 0. AGC RMS during the carrier was about 3600. An FM tone from the HackRF (1 kHz, ±2.5 kHz, TX VGA 8) was RMS 3579.
+
+With no channel write, `0x30` stayed `0x7026` from 0.18 s through 2.29 s, and `0x58` read `0xBCFD`. Bit 7 stays clear. The voice-filter hold is set. The decoder still does not lock.
+
+End state 00:35: `DMR003.FW32.V022` `53e1fd7b…1d11`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −104. Battery 36.4 °C, AP 44.4 °C, PA 43.0 °C. HackRF idle. SignalDeck `5a0d18d9`. The runner was not started.
 
 PR 78's one-second write does not list the hotspot call. On FW32 `53e1fd7b`, status 4 then `rewritten once` at +1.01 s, hotspot on the air (3.0 s, N0CALL), phone RMS still 1.3 two minutes later.
 

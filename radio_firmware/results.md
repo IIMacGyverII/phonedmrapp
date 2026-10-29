@@ -4313,6 +4313,14 @@ Bit 7 is clear for at least 0.89 s after status 4. The single host write is at 1
 
 End state 00:20: `DMR003.FW32.V022` sha256 `53e1fd7b…1d11`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −106. Battery 35.7 °C, AP 42.1 °C, PA 40.9 °C. HackRF idle. SignalDeck `887afbd1` (`cbe74c70`). The 3/3 listing was not met, so the runner was not started.
 
+**Hold only, no channel write (00:26–00:35).** Installed `SignalDeck-fw32-5a0d18d9.apk` (sha256 `e218a12a…`) on FW32 `53e1fd7b`. One 75-frame key: status 4 at 00:26:10.619, `no 0x26 off`, `rx after sym: FW32 unmutes itself, hold only (no channel write)`, `data hold action=1 sr=0`. The hotspot transmitted (05:26:11 UTC, N0CALL to ALL, 3.0 s). The phone listed nothing. A second call with no new key, and a third on the diagnostic image below, did the same: M17 `receiving` false, quality 0, heard empty, while the AGC RMS during the carrier was 3753, 3578 and 3599.
+
+FM after that key, HackRF, 467.625 MHz, 1 kHz at ±2.5 kHz, TX VGA 8, amp off, phone not keyed: RMS median 3579 (2 samples). The audio path is open. The M17 decoder does not lock.
+
+No-write poll on the diagnostic image `3d7fca89…4290` (opcode 18 at `0x5C14C`, same FW32 tag). `restartmodule` first. Status 4 at 00:31:13.542. `rewritten` was not logged. `0x30` was `0x7026` at 0.178, 0.386, 0.565, 0.751, 0.941, 1.125, 1.314, 1.503, 1.696, 1.881, 2.076 and 2.285 s. One read of `0x58` after that was `0xBCFD`. Bit 7 stays clear when the host does not write the channel, and the voice-filter hold is in place. The original image was loaded again.
+
+End state 00:35: `DMR003.FW32.V022` sha256 `53e1fd7b…1d11`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −104. Battery 36.4 °C, AP 44.4 °C, PA 43.0 °C. HackRF idle. SignalDeck `e218a12a` (`5a0d18d9`). The 3/3 listing was not met, so the runner was not started.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.
