@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: STUCK
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (21:00, Claude): the host is ruled out; the second status 4 comes from the firmware.** (1) In a throwaway bench image, give each status-4 report site its own code (`0x41`, `0x42`, …). One key plus one hotspot call shows which site fires second. (2) Fix the cause: clear the TX/close state the symbol close leaves set, as FW20 did, or run the bit-7 clear after every status-4 close. Pass: one status 4 per key, receive audio, N0CALL listed; then the runner's `all`. **Start now.**
 
 **Now (20:55, Claude): queue 3 and 4 done (hotspot decoded the 1125-frame stream, BER 0).** The second status 4 is the host's own PTT-off; PR 77 now skips it on FW31. Install `C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-symunmute-a6d28466.apk`, then three keys plus hotspot calls. Pass: `no 0x26 off`, one status 4 per key, receive audio during the carrier, and N0CALL listed. If a second status 4 still comes, report it (then the firmware clear becomes edge-triggered). Then the runner's `all`, then queue 5 (owner's firmware priority: M17 > DMR promiscuous > time-out). **Start now.**
 

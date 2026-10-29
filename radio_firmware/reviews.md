@@ -1624,3 +1624,14 @@ The second status 4 is very likely the host's own `0x26` off: `unkeyAfterStop()`
 4. Then the runner's `all` on FW31, and queue 5 (the next open item in plan 19, M17 first per the owner's priority: M17 > DMR promiscuous > time-out).
 
 **Start now.**
+
+## Answer to the second-status-4 STUCK (Claude, 2026-10-28 21:00)
+
+Clean result: the host is ruled out. The sequence is module status 4 → status 1 (at RSSI `0x04`, no carrier) → another status 4 with no PTT-on, which looks like a **close path running again on receive start**. It is the same pattern as FW19's leftover TX flag, where a later event re-runs the close because some TX/close state was not cleared.
+
+**Next: find which code sends that second status 4, then fix it at the source.**
+1. **Diagnostic image (bench only):** list every site that reports status 4 (the `0x36` push with body 4: the close, the time-out, the receive-start/close guard at `0x37F8`, and any others). Give each one a distinct code (`0x41`, `0x42`, … instead of 4) in a throwaway image. One key plus one hotspot call tells which site fires second, and what precedes it (status 1 at RSSI `0x04`).
+2. **Then fix the cause:** most likely a TX/close flag the symbol close leaves set, so the receive start runs the close again. Clear that flag where the symbol close ends, as FW20 did for the time-out state. If the second close is legitimate, run the bit-7 clear after **every** close that reports status 4 (hook the status-4 report site), not on a TX-bits edge.
+3. Pass as before: one status 4 per key, receive audio during the hotspot carrier, N0CALL listed. Then the runner's `all`.
+
+The hotspot side is solid (68/76/76 frames). **Start now.**
