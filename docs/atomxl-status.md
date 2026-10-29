@@ -20,6 +20,24 @@ STATUS: WORKING
 
 ## Reports (agent, newest first)
 
+### 2026-10-28 21:50: APRS transmit works; reception detection is unreliable (open); phone left clean
+
+- **APRS TX:** a message from DMRTST-7 (bench callsign; SignalDeck treats N0CALL as unset) on the analog channel,
+  decoded with a valid FCS by a local Bell 202 decoder: `DMRTST-7>APZDMR,WIDE1-1,WIDE2-1::N0CALL-1 :ATOM XL TEST{1`.
+- **Open, blocks items 2/4 (receive features, data modes on receive):** in some sessions the bridge's reception line
+  stays in its power-up "active" state. `/dev/stmcu` then delivers no edges (the read never returns, sysfs `call_in`
+  reads 0), so receptions aren't detected at all even at −84 dBm. In other sessions (21:05, 21:15) edges came reliably.
+  I haven't yet found what decides it; it isn't transmitting (no edges before any key either). Fixed meanwhile: an empty
+  `/dev/stmcu` read reopened the node instead of silently ending the watcher (`371214dc`).
+- Item 3: SignalDeck has no channel read-back on any phone; the writes are confirmed by acks and by RF (frequency,
+  power, CC/TS/TG decoded on air).
+- PR 76 now runs to `371214dc` plus a changelog row. The phone has the committed build (transmit off); radio off,
+  stock app enabled, routing setting restored, HackRF idle. The bench APK (verified, transmit on) is not installed.
+
+Next session: the reception-line state (compare a working and a failing session's power-up sequence), then APRS/data
+receive, boot persistence, heat, the Device report and help.
+
+
 ### 2026-10-28 21:40: transmit (item 6) works: FM, DMR voice, DMR text, decoded on the HackRF
 
 The owner cleared transmit with me directly (cage, 401.025 MHz, low power, N0CALL / bench ID 1). Done with a **local
