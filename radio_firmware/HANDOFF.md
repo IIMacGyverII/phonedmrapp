@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -582,6 +582,14 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck.** FW31 holds the carrier for one second, the same as FW32, so the idle bit-7 clear is not the cause. A 5 s plain-FM tone on FW31 `997cb714`, LNA 0 / VGA 12, peak/median 9124 then 12–19 for the rest of the key. FW31's branch at `0x5BFCA` still goes to `0x5BFF2` and does not enter the `0x4B385` check. FW33 was not built.
+
+Tried: load FW31, select a new plain-FM channel at 467.625, one 5 s tone. The host's transmit flag stayed set after the carrier was gone; it is clear now. No second key.
+
+End state 02:24: `DMR003.FW31.V022` `997cb714…ac30`, channel 58, 467.625 MHz, low power, not transmitting. Battery 35.8 °C, AP 45.9 °C, PA 43.4 °C. HackRF idle. SignalDeck `a7344f19`.
+
+Question: FW31 has no idle clear and still drops the FM carrier after one second. What should the next image change?
 
 The HackRF is hearing. At LNA 0 / VGA 12, a factory plain-FM tone is a full carrier (peak/median about 10^6 to 10^7 for the whole key). The same capture on FW32 is one second at about 9000, then the noise floor. No stuck `hackrf_transfer`. A 5 s factory tone sent two `0x26` frames; the hotspot log did not add a line (newest M17 line still 06:14 UTC, a network transmission). Acceptance was not started.
 

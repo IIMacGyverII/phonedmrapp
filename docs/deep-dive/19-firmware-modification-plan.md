@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — FW31's 5 s FM tone is one second of carrier, then the floor, the same as FW32.** The idle bit-7 clear is not in FW31. FW33 was not built. Details in `results.md`.
+
 **2026-10-29 — The HackRF hears a full factory FM carrier at LNA 0 / VGA 12. FW32's FM tone is about one second, then gone.** The hotspot log did not record the FM key. Details in `results.md`.
 
 **2026-10-29 — A single analog `0x23` leaves no full carrier, on a plain FM channel and on the VFO.** Channel 56 adds the op 6 hold 19 ms later and is the same. Factory image reloaded after a 15 s `dmr009` off, and not keyed. Details in `results.md`.

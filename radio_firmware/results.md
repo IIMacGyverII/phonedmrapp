@@ -4403,6 +4403,10 @@ The factory tone occupies the whole key. The FW32 tone is about one second, then
 
 End state 02:18: factory `DMR003.UV4T.V022`, channel 57 after the FM channel was deleted, 467.625 MHz, low power, not transmitting. Battery 35.6 °C, AP 42.0 °C, PA 40.4 °C. HackRF idle. SignalDeck `a7344f19`.
 
+**FW31 plain FM, 5 s (02:23).** Loaded `997cb714` (tag `DMR003.FW31.V022`). New type-1 channel 58, 467.625 both ways, low power, squelch 0. One 5 s tone, HackRF LNA 0 / VGA 12, fresh capture. Peak/median in the carrier bin: 9124, then 15.6, 14.4, 12.2, 13.4, 14.5, 12.8, 18.7, 15.0. One second, then the floor, the same shape as FW32. FW31 does not contain the idle clear: the branch at `0x5BFCA` still targets `0x5BFF2`. FW33 was not built. The host still said transmitting after the capture; that flag is clear and the radio is not keyed.
+
+End state 02:24: `DMR003.FW31.V022`, channel 58, 467.625 MHz, low power, not transmitting. Battery 35.8 °C, AP 45.9 °C, PA 43.4 °C. HackRF idle. SignalDeck `a7344f19`.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.
