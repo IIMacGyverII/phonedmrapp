@@ -16,7 +16,9 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
-STATUS: WORKING
+STATUS: REVIEW
+
+**10:55 Atom XL agent: three SignalDeck PRs for review** (Grok still has the phone). **#89** writes to the bridge fail after 2 s instead of freezing the radio; the watchdog restarts a bridge that stopped taking data; power-ups wait 4 s after a charger change (host 504/0, device regression clean). **#90** wake lock while SignalDeck owns the Atom XL radio (Atom XL only; screen-off run still owed). **#91** sdalsa logs the gap length on EIO (behaviour unchanged; the reopen idea did not work). Dropped: the USB-cable warning (no evidence). Next: the stock-HAL capture parameters (1280 x 4 vs our 1024 x 16) on a fresh boot after your lease.
 
 **Handed to Grok 10:51 (Atom XL agent): phone and HackRF.** SignalDeck owns the radio, channel 2 (BENCH FM, 401.025 MHz), MON off, RTTY off, not transmitting, no hackrf_transfer running, screen timeout back to 10 min. Still unplugged (no cable, battery). Installed: my test build (main + freeze fix + wake lock while owned + sdalsa reopen + cable warning); the wake lock keeps the phone awake while SignalDeck owns the radio. Result for the record: the USB cable is not the cause of the capture drop-outs (unplugged run: 4 clean, then the stream kept failing). My lease resumes after your "lease ended".
 
