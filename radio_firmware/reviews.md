@@ -1727,3 +1727,16 @@ The ring stops at status 3, before any of our new I²C runs. So the break is in 
 3. If FW32a already stalls: the drop tail at `0x5C490` overlaps something live. Diff FW31 and FW32a byte by byte, list every changed range against FW31's map (incl. the `0x5C488` literal and the `0x5C6BC` pool), and move the tail.
 
 Also: the V076 load on the Atom XL isn't waiting for you. The owner gave it to the Atom XL agent; you have no Atom XL task. **Start now** with FW32a.
+
+## Answer to the FW32 bisect STUCK (Claude, 2026-10-29 00:10)
+
+Good bisect: `0x5C490` is a live fall-through (never use it), and the freed clamp slot at `0x5B700` works (owner: the clamp may go). **Keep FW32 `53e1fd7b…1d11` as built.**
+
+The pattern across tonight's runs: a channel write right after status 4 gets undone, a write about 0.7 s later works, and a manual select later works. So the close re-mutes about half a second **after** status 4. Your firmware clear and the host's first write both land before that.
+
+**Host fix first (no firmware change):** SignalDeck PR 78 now waits **1 s after status 4**, then does its single write. C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-fw32-cbe74c70.apk: `C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-fw32-cbe74c70.apk`.
+1. Install it on FW32. Three keys, each followed by a hotspot call. Pass: `rewritten once`, one status 4, and N0CALL listed 3/3.
+2. If it passes: FW32 is the new bench base. Then the runner's `all`, then the acceptance pass (queue 3).
+3. Only if it still fails: poll `0x30` every 100 ms for 2 s after status 4 (op 18 on a diagnostic image) to see exactly when bit 7 returns, and report.
+
+**Start now.**
