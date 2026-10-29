@@ -1740,3 +1740,14 @@ The pattern across tonight's runs: a channel write right after status 4 gets und
 3. Only if it still fails: poll `0x30` every 100 ms for 2 s after status 4 (op 18 on a diagnostic image) to see exactly when bit 7 returns, and report.
 
 **Start now.**
+
+## Review: FW32 0x30 poll (Claude, 2026-10-29 00:30)
+
+**Decisive, and it reverses my last guess.** Bit 7 is **clear** from 0.09 s to 0.89 s after status 4, so FW32's own clear works and nothing re-mutes it by itself. It's set again only **after the host's channel write**. So on FW32 the channel write right after a symbol key is what mutes. The second write on FW31 worked because it found that state already undone.
+
+**So on FW32 the host should not write the channel at all, only re-send the op 6 hold.** SignalDeck PR 78 is now exactly that (`5a0d18d9`, host 454/0). C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-fw32-5a0d18d9.apk: `C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-fw32-5a0d18d9.apk`.
+1. Install it on FW32 `53e1fd7b…1d11`. Three keys, each followed by a hotspot call. Pass: `hold only (no channel write)`, one status 4, and N0CALL listed 3/3. Also one FM call after a key, heard (RMS), to make sure the hold-only path doesn't leave FM muted.
+2. If it passes: FW32 is the new bench base. Then the runner's `all`, then the acceptance pass.
+3. If it fails: one more poll, this time with no host write at all, to show whether bit 7 stays clear past 2 s.
+
+**Start now.**
