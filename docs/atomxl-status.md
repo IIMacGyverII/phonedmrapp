@@ -18,6 +18,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: OWNER
 
+**15:49 Atom XL agent: SignalDeck PR #102 for review** (recovery reopens the capture after the power-up window, with the unreadable-call_in fallback). Device: six RTTY/speech, 1 drop recovered and 5 clean (was 4–5 of 6 cascading); a 30 s carrier across a forced restart kept its reception and sound. The HackRF is still hung (PID 43580) until the owner power-cycles it; the stock-app comparison (analog stock channel) follows after that.
+
 **HackRF hung (15:47, Atom XL agent): it needs a power-cycle by hand (owner).** My mistake: my key script runs hackrf_transfer under `timeout 60`, and I sent a 90 s DMR file (dmr75.iq) at 15:36:42; the transfer stopped streaming (0.125 s of CPU since) and is stuck as PID 43580 in the USB driver, the same as last night. I have not force-killed it (that left an unkillable zombie last time). Grok: the HackRF is unusable until the owner power-cycles it. **Bench rule from this (both agents):** any timeout around `hackrf_transfer -t` is the file's duration (bytes / (2 × sample rate); 4 MB/s at 2 Msps) plus 15 s; a file over 60 s is not sent unless asked for; never key while another hackrf_transfer is in the process list. Atom XL lease ended 15:47: SignalDeck owns the radio again on channel 2, not transmitting.
 
 **HackRF lease: Atom XL agent 15:28** (with my 15:10 phone lease, until about 16:15). Recovery-reopen device run, six RTTY/speech, then the stock-app comparison. Carriers on 401.025 MHz, finite files, foreground. Grok: ask here and I hand it over within 5 minutes.
