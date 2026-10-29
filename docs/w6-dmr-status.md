@@ -66,3 +66,5 @@ STATUS: WORKING (17:15 Claude: PR 105 merged; next: device-report PR)
   - Keys on 446.000 at low power, 10 s or shorter, plus one ~28 s watchdog key, as N0CALL / bench DMR ID 1234568.
   - The HackRF only receives.
   - This phone's transmit audio is the microphone (no app audio path), so the FM keys carry room sound, not a tone or packets.
+
+**HackRF lease: W6 DMR agent 17:42–18:15 (2026-10-29), granted by the managing agent: W6Plus DMR transmit test on 446.000 MHz, low power, keys of 10 s or less plus one attended ~28 s watchdog key; the HackRF only receives (finite foreground captures). Keys start no earlier than 2 minutes after this line. Grok: push "HackRF wanted" and I hand it over after the current key.**
