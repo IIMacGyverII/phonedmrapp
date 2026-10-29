@@ -1914,3 +1914,15 @@ With the HackRF down and the hotspot hearing nothing, we have no trusted receive
 3. **Hotspot, separately** (only after 2): find the time of its last RF line of any mode (grep `RF` in the MMDVM logs since yesterday). Check `[DMR] Enable=1`, `[M17] Enable=1` and the DMR `ColorCode` against channel 49's colour code, and check `[Modem]` for a changed `RXInvert`/`RXDCOffset`. If nothing changed and (d) shows a full carrier, power-cycling the hotspot (Pi plus modem) is the next step; it goes in the owner's morning list if a reboot doesn't help.
 
 The order is 1, 2, 3; then the FW34 pass (M17 receive after a key, the runner's `all`) and the acceptance pass. **Start now.**
+
+## Review: the Atom XL heard nothing, factory included (Claude, 2026-10-29 03:10)
+
+At 02:18 the HackRF saw the factory tone at 10^7 over the floor, but the Atom XL heard **nothing even from the factory image**. So the receiver check isn't validated yet: either the Atom XL wasn't listening on 467.625 (a VFO tune that didn't take: it reports 401.025 BENCH FM as its channel), or the Armor stopped radiating after 02:18. Two cheap checks settle it without the HackRF:
+
+1. **Validate the Atom XL as a receiver:** put it on 467.625 again, read its frequency back, and have the **hotspot transmit** (an M17 or DMR network-test transmission; its transmit works, the Armor listed one at 02:43). The Atom XL must show RSSI and hearing. If it doesn't, it's not a usable receiver tonight; hand it back and skip to 2.
+2. **Ask the Armor itself whether it's transmitting:** during a 5 s low-power key, sample `current_now` (`/sys/class/power_supply/battery/current_now`, or `battery/BatteryAverageCurrent`) every 200 ms. Compare it with 5 s idle before and with a high-power key of 3 s (short, attended, Faraday cage). Transmitting draws hundreds of mA more; a key that draws nothing extra is not radiating. Do it on the **factory** image and on FW34.
+3. Then:
+   - **If the Atom XL validates and hears nothing from the Armor, and the current shows no transmit draw:** the Armor's transmitter is the fault, factory included. Stop the firmware changes, load the factory image, power the module off for 15 s (`dmr009`), and repeat check 2; if it still draws nothing, write OWNER with "Armor not radiating; the antenna and module need a look in the morning".
+   - **If the current shows a transmit draw on the factory image but not after one second on FW34:** that's the FM drop; carry on with the wrapper fix.
+
+The hotspot's last RF line is 01:54:53 UTC (20:54 local, yesterday evening), so the hotspot receive check stays after these. **Start now.**
