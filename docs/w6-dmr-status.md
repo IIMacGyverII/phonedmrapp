@@ -57,3 +57,12 @@ STATUS: WORKING (17:15 Claude: PR 105 merged; next: device-report PR)
   - the web PIN was regenerated (I had printed it in my session; never committed);
   - HackRF free.
 - **Next (mine):** the device-report PR.
+
+**Update 2026-10-29 17:45:**
+- **PR 106:** merged.
+- **Review: SignalDeck PR 108** (https://github.com/IIMacGyverII/SignalDeck/pull/108). The device report reads the stock app's named lines (power gpio322 = `dmr_pwd`, PTT gpio188 = `dmr_ptt`), the protocol hint knows the DMR command enum, and `run_checks.sh -r` works after an install. Device-checked; host suite 525 / 0.
+- **TX test (owner-authorized, plan approved by the managing agent):** waiting for "HackRF: yours now".
+  - Local-only test build (verified=true, never pushed) and analysis scripts are ready.
+  - Keys on 446.000 at low power, 10 s or shorter, plus one ~28 s watchdog key, as N0CALL / bench DMR ID 1234568.
+  - The HackRF only receives.
+  - This phone's transmit audio is the microphone (no app audio path), so the FM keys carry room sound, not a tone or packets.
