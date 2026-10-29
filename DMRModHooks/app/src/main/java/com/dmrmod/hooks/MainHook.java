@@ -11736,6 +11736,16 @@ public class MainHook implements IXposedHookLoadPackage {
     /**
      * Update the history box header based on channel type
      */
+    /** The stock app's "send limit" (Local settings): 15/30/60/120 s, or -1 = No limit. The stock app ends the key at
+     *  that time itself (the module's own time-out is sent as 0 = off), so the banner shows that value, not a fixed 30 s. */
+    private static int oemSendLimitS() {
+        try {
+            android.content.Context c = homeActivityRef != null ? homeActivityRef.get() : null;
+            if (c == null) return TX_LIMIT_S;
+            return c.getSharedPreferences("com.pri.prizeinterphone.data.person", 0).getInt("pref_person_limit_send_time", TX_LIMIT_S);
+        } catch (Throwable t) { return TX_LIMIT_S; }
+    }
+
     private static void startTxTimer() {
         try {
             txStartMs = System.currentTimeMillis(); txWarned = false;
@@ -11747,11 +11757,14 @@ public class MainHook implements IXposedHookLoadPackage {
                     int sec = (int) ((System.currentTimeMillis() - txStartMs) / 1000);
                     TextView tv = activityHeaderTextView;
                     if (tv != null) {
-                        boolean late = sec >= TX_WARN_S;
-                        tv.setText("📡 TRANSMITTING  " + sec + " s  /  " + TX_LIMIT_S + " s" + (late ? "  \u2014 WRAP UP" : ""));
+                        int limW = oemSendLimitS();
+                        boolean late = limW > 0 && sec >= limW - (TX_LIMIT_S - TX_WARN_S);
+                        int lim = oemSendLimitS();
+                        tv.setText("📡 TRANSMITTING  " + sec + " s" + (lim > 0 ? "  /  " + lim + " s" : "  (no limit)") + (late ? "  — WRAP UP" : ""));
                         tv.setTextColor(late ? 0xFFFF5555 : 0xFFFFAA00);
                     }
-                    if (sec >= TX_WARN_S && !txWarned) {
+                    int limV = oemSendLimitS();
+                    if (limV > 0 && sec >= limV - (TX_LIMIT_S - TX_WARN_S) && !txWarned) {
                         txWarned = true;
                         try {
                             android.content.Context c = homeActivityRef != null ? homeActivityRef.get() : null;

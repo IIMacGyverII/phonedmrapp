@@ -3,6 +3,12 @@
 The 2026-10-19 APRS transmit section shipped in **v4.1.1** (module changes only; the standalone rows are DMRStandalone, unreleased). Everything after it down to the **v4.0.0** marker shipped in **v4.1.0** (2026-10-17); the sections below the marker shipped in v4.0.0 (2026-10-15). Running log per the feature-log convention in `.grok/rules/copilot-instructions.md` § "Feature Log Convention" — newest first.
 Built, installed and device-tested on the attached radio unless an entry says otherwise.
 
+## 2026-10-28 — Transmit banner follows the stock send-limit setting (issue #2)
+
+| Backlog | Change | Files | Test |
+|---|---|---|---|
+| GitHub issue #2 | The intercom's "TRANSMITTING n s / 30 s" banner had a fixed 30 s. It now shows the stock app's Local settings → send limit (15/30/60/120 s), or "(no limit)" when No limit is selected; the wrap-up warning and vibration come 5 s before that limit and are off with No limit. Display only: the stock app's own countdown ends the key, and the module's time-out is sent as 0 (off) | `MainHook.java` | Build only; not device-tested (the bench phone runs SignalDeck) |
+
 ## 2026-10-22 — Copyright, license terms and About (protecting the project)
 
 | Backlog | Change | Files | Test |
