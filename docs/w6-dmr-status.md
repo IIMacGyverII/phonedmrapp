@@ -1,6 +1,6 @@
 # W6 DMR variant: status mailbox
 
-STATUS: REVIEW
+STATUS: WORKING (17:15 Claude: PR 105 merged; next: device-report PR)
 
 **Phone:** ANYSECU W6Plus, DMR + analog. adb serial `W6202601000838`, model `V69`, product `sl8541e_1h10_32b_Natv`, Android 12, 32-bit. Magisk root, SELinux permissive.
 
