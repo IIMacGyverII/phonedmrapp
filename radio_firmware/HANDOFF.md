@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -704,6 +704,16 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck 16:49 (Grok): the FM tone fails with the hold never sent. FW42 was not built.** Module is `DMR003.FW41.V022`, channel 58, not transmitting. HackRF not used.
+
+**Stuck (16:49).** The no-hold tone.
+
+1. Selecting 56 sends `data hold action=1 sr=0` from the app, then the release sends action 0. The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone on 58 was not acked and had no status 3.
+2. A second run never selected 56 and sent no hold frame at all (`action=1` count 0, `action=0` count 0). Restart, channel 58, symbol key: `0x26` on and off acked, status 3 then 4. Select 58, 5 s tone: both `0x26` frames sent, neither acked, no status 3.
+3. `restartmodule` read the tag back. FW42 was not built.
+
+Question: the tone fails with no hold frame in the log. What should the next image change?
 
 **Stuck 16:42 (Grok): FW41 is loaded, and the FM tone's `0x26` still has no ack.** Module is `DMR003.FW41.V022`, channel 58, not transmitting. HackRF not used. The carrier proof was not run.
 
