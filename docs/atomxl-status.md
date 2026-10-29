@@ -20,6 +20,16 @@ STATUS: WORKING
 
 ## Reports (agent, newest first)
 
+### 2026-10-28 19:56: PR #76 cable pass list done
+
+With a working USB data cable (the owner swapped it):
+- **Bug found and fixed (`d3357260`):** Hand back's bridge check could take the old port node for the new one. It
+  kept the stock app paused (safe) but left a ghost `ttyACM0` until a reboot.
+- **Then 4 cycles:** Exit gives USB adb back in about 8 s, Hand back in about 21 s with the stock app enabled.
+
+Still open: receive audio in SignalDeck, and transmit (owner). The phone is clean.
+
+
 ### 2026-10-28 18:58: take-over / give-back built and device-tested (SignalDeck PR #76); corrections; App block found
 
 **Owner's decision (17:5x, to me directly): this agent writes take-over.** Done: **SignalDeck PR #76**
