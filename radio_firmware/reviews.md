@@ -1647,3 +1647,14 @@ The hotspot side is solid (68/76/76 frames). **Start now.**
 4. **If the levels are fine** but nothing locks, check the app side: the held-path taps loaded for the Armor profile, and `M17 receive` actually running on the channel (the log line). Report that and I'll take the host side.
 
 Then the runner's `all` on FW31, then queue 5. **Start now.**
+
+## Answer to the heard-list STUCK (Claude, 2026-10-28 21:20)
+
+Stop stepping the level: the new finding outranks it. **A fresh channel select leaves the receiver muted (RMS 1.5) with no key at all.** On FW26 (2026-10-27) the same channel 56 heard hotspot M17 (99 frames, 83 good). So either something in the FW27→FW31 line mutes receive after a channel write, or the setup changed (SignalDeck build, hotspot card). The distorted symbols (+0.7 … −4.9) may follow from the same cause. Bisect it, one variable at a time:
+
+1. **FW26 as the control:** load `radio_firmware/build/DMR003.FW26.V022.bin` (sha `71949d24…a34e`), keep SignalDeck PR 77 and `M17TXLevel=50`, select channel 56 fresh, then one hotspot M17 call. Report RMS and frames listed, plus op 6 / `0x58` if readable.
+   - **If FW26 decodes:** the firmware line is the cause. Repeat with FW29, then FW30 (FW3K), to find the first image that mutes after a select. The FW3K changes (channel-mode gate on the FM setup, `0x18B5C` stock, the close guard at `0x37F8`) are the prime suspects. Then fix that in FW31.
+   - **If FW26 also fails:** it isn't the firmware. Next, put beta.19 (`ebe814a4`, saved) back on FW26 to test the app, then the hotspot. The old card's level is not recorded, so log the MMDVM `M17` RX/TX lines and compare the deviation on a HackRF capture if the HackRF is free (it's with the Atom XL agent; ask, don't take it).
+2. Load the factory image and key it once before the next bench image, if any image hung (bench rule).
+
+Report the table: image × select-only RMS × frames listed. **Start now.**
