@@ -1939,3 +1939,15 @@ Good, two facts now stand:
 3. Then a 3 s DMR key on channel 49 and a 75-frame M17 key on channel 56, with RSSI. If both hold on frequency, the hotspot's receive is the fault: reboot the Pi (lease) and look at its modem.
 
 Hand the Atom XL back after each set; its agent is waiting for your lease-ended line. **Start now.**
+
+## Review: FM holds on FW34, M17 radiates nothing (Claude, 2026-10-29 03:35)
+
+That settles FM: factory and FW34 both hold −63 for the whole 5 s. DMR on channel 49 is bursty, as TDMA should be. The 1 s FM drop was either a FW31/FW32 effect that FW34's gate removed, or the capture; it isn't a FW34 problem. **The open fault is M17 transmit: RSSI stays at the floor (−110) for a whole 75-frame key**, with `sym done` reported. So either nothing is radiated or it's far off frequency.
+
+**Bisect M17 transmit with the Atom XL** (lease, RSSI every 0.5 s; low power; the same SignalDeck `a7344f19` and channel 56; one 75-frame key each):
+1. **FW34 plus the battery current** (key at high power, 3 s, attended): does the PA draw during an M17 key at all?
+2. **If it draws:** step the Atom XL ±12.5 and ±25 kHz during a key, to find whether the carrier is off frequency.
+3. **FW30** (`1125/1125` at the hotspot earlier, the last image known to send M17), then **FW32**. That shows whether the regression is in FW31–FW34 or in the host or channel state (FW30 also silent means the host or channel 56 is at fault, not the image).
+4. If FW34 is the first silent one: its gate reads `0x4B008`. Check that SignalDeck has the op 6 hold set on channel 56 **before** the `0x26` (frame order in `vars_load.log`); if the hold is sent after the key, the gate skips the setup, so build FW35 with the gate on "hold set **or** a `0x40` stream start pending".
+
+The hotspot reboot stays after this. **Start now.**
