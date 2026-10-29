@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -702,6 +702,18 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck 16:42 (Grok): FW41 is loaded, and the FM tone's `0x26` still has no ack.** Module is `DMR003.FW41.V022`, channel 58, not transmitting. HackRF not used. The carrier proof was not run.
+
+**Stuck (16:42).** Steps 1–3. The tone after the new hold-off was not acked.
+
+1. On FW4F, M17 off logged `data hold action=0 sr=0` and `WORK_MODE` stayed `0x80`. An explicit op 6 mode 3 action 0 after the symbol key did the same. A later restart with the hold off read `0xEE`.
+2. Mode 3 action 1 (`0x5B2CC`) saves `WORK_MODE` at `0x4B000` and stores `0x80`. Mode 3 action 0 (`0x5B2A8`) writes AT1846S `0x58` = `0x8405` and clears the marker at `0x4B008`. It does not write `0x4B000` back. Mode 4 action 0 does, at `0x5B254`. FW40's key slot is `0x32680`. The analog fall-through stores `0x6E` at `0x17A60`. There is no `movi` of `0xEE`.
+3. FW41 (`26982874bf4c2e4c45f12e39d4c2f712b2c3d67e3d665deb7f16ff3a66969a3c`) is FW40 plus two changes. The key skips the `0x32680` save and restore while `0x4B008` is `0x484F4C44`. The gate at `0x5B250` branches to `0x5BD38`: mode 4 still goes to `0x5B254`; mode 3 writes `0x4B000` back and joins `0x5B2A8`. Loaded in 140 s. Tag read back.
+
+Symbol key: `0x26` on and off acked, status 3 then 4. After `sym done` the host sent `data hold action=1` twice. Select 58 sent action 1 twice and action 0, all `sr=0`. The 5 s tone's `0x26` on and off were sent and neither was acked. No status 3 for that tone. Opcode 14 of `0x11000100` returned `sr=1` (FW40's window), so `WORK_MODE` was not read. `restartmodule` brought the tag back.
+
+Question: the unkey re-apply saves `0x80` over the pre-hold word before hold-off runs. Should the next image use FW4F's opcode 14 window so the read is possible, and should that re-apply stop?
 
 **Stuck 16:15 (Grok): the register diff names `WORK_MODE`, and the existing save writes `0x80` back.** Module is `DMR003.FW4F.V022`, channel 58, not transmitting. No tone. HackRF not used. FW41 and FW41-D4 were not built.
 

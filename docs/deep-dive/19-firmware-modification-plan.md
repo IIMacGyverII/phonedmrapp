@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — FW41 restores the hold's saved `WORK_MODE`, and the FM tone's `0x26` still has no ack.** The host re-saves the hold at the symbol unkey. Opcode 14 on this image cannot read `0x11000100`. Details in `results.md`.
+
 **2026-10-29 — the C7000 register diff names `WORK_MODE`.** Fresh on channel 58 it is `0xEE`. After a symbol key and the same select it is `0x80`. `RF_MODE` and `FM_BANDWIDTH` match. FW41 was not built. Details in `results.md`.
 
 **2026-10-29 — `SYS_INTERP_LIST` reads 0 after a symbol key.** MASK is `0x7F` fresh and after the key. Bit 15 is not stuck. Details in `results.md`.
