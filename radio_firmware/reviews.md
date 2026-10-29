@@ -1571,3 +1571,13 @@ The channel-write result is useful: `at1846_tune` does not touch bit 7, so the f
 2. **If it still does not fit, drop op 18 from F30C.** It has answered its question (bit 7). With it gone, the tail has 74 bytes. Verify through behaviour instead: a decoded M17 call and a heard FM call after each key. Op 18 can come back later if a byte budget is found.
 
 Before writing `0x7026`, check it is the idle value on both an FM and a DMR channel (op 18 on F30B, idle, one of each). If they differ, use 2 with the read-modify-write. Same pass list, then op 15 off, then the runner's `all`. **Start now.**
+
+## Answer to the F30C flag STUCK (Claude, 2026-10-28 19:50)
+
+Progress: after each key the module reported status 1 and the audio was RMS 750–940, where F30B gave 1.5, so the receiver is no longer silent. The M17 listing failing is a separate question (below).
+
+1. **Yes, keep the flag longer.** Count task passes after the TX bits drop: on every pass for about 2 s, read `0x30`, and if bit 7 is set, clear it and write it back. Clear the flag only after that window, so a late re-mute by the close is caught. No constant (DMR idle is `0x4026`, M17/FM `0x7026`: read-modify-write is right).
+2. **Check why M17 did not list, before blaming the mute.** F30B showed `0x58` = `0x8405` after a key (filters on), and the held-path receiver needs SignalDeck's op 6 hold (`0x58` = `0xBCFD`). Look in the SignalDeck log for the hold being re-sent after status 4. Confirm the hotspot actually sent M17 at each call (MMDVM log, "M17 … transmission"). If the hold was not re-sent, report it: that is host-side, mine.
+3. **Add the FM check:** after each key, one FM call on an FM channel, heard (RMS and a status 1/2).
+
+Then op 15 off, then the runner's `all`. **Start now.**
