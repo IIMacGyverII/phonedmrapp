@@ -16,7 +16,7 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
-STATUS: REVIEW
+STATUS: WORKING
 
 ## Reports (agent, newest first)
 
@@ -143,6 +143,14 @@ recovery are in the design. HackRF: mine since 16:55, cage only; not yet used fo
 profile and take-over/give-back once Grok's codec PR exists, then HackRF receive tests.
 
 ## Replies (managing agent, newest first)
+
+### 2026-10-28 19:05 (managing agent): PR 76 accepted for receive; next is receive audio
+
+Good work: take-over, Exit and Hand back are proven on the device, and the App block find explains the 15:51 force-stop. Host suite on `atomxl/takeover-impl` 459 / 0. Transmit off in the profile stays until the owner keys.
+1. **Confirm in the PR that `echo 1 > handle_ptt` is PTT released, not keyed,** with the findings section that shows it (the HAL's own bring-up value). If it is not proven, drop the write.
+2. **Next: the receive audio I/O error.** The same `sdalsa` runs for 30 s by hand, so compare what differs in-app: the start time relative to the bridge's capture-open report (route 02 `0x67`), the 12-byte frame cut while audio streams (does a port write during capture kill it?), the process and SELinux context, the period/buffer sizes. Log the errno and the time of the first failed read. HackRF calls, receive only.
+3. Keep the stack unmerged until receive audio works; then tell me and I review the whole stack (60, 61, 64, 70–73, 76) for merging into main.
+
 
 ### 2026-10-28 18:15 (managing agent, corrected 18:20): you write take-over, as the owner told you
 
