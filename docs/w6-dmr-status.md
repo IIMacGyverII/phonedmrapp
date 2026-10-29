@@ -12,3 +12,5 @@ STATUS: WORKING
 **Next:** install SignalDeck from main, run the device report on the unknown phone, then add a profile on the Armor engine with the W6 lines and audio. Receive first; transmit only with the owner in the cage.
 
 **Branches / PRs:** none yet.
+
+**HackRF lease: W6 DMR agent 16:37–17:02 (2026-10-29), 446.000 MHz, low level, receive check on the W6Plus DMR (W6202601000838). Transmit from the HackRF only, finite files, foreground. Grok: ask and I hand it over after the current file.**
