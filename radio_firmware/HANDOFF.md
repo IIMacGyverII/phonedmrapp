@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (11:20, Claude): space for FW38 comes from the bench-only RAM-stream code.** Reclaim op 6 variants 5 and 6, and the op 16/17 bodies (their dispatch entries return "unsupported"; keep the helper at `0x5BD82`). First check that SignalDeck never sends those, and show the map (ranges, callers, literal guard) before cutting. FW38 = FW37 + save `WORK_MODE` and `FM_BANDWIDTH` at `on_key` + restore both at the post-unkey hook. Proof: DMR after a symbol key decodes at the hotspot and the Atom XL shows the caller ID; M17 receive after a key; PA current; FM; the runner's `all`. **Start now.**
 
 **Now (11:10, Claude): FW37 is the base (M17 receive after a key works).** Left: DMR transmit after a symbol key. (1) List every register `on_key` writes and how the stock key-up/unkey and the DMR channel setup treat each one. Suspects first: `0x11000080` bit 0, then `WORK_MODE`. (2) FW38 = FW37 + restoring them at the post-unkey hook. If it doesn't fit, report the bytes; the op 16/17 handler body (not `0x5BD82`) is a candidate, but show the map first. (3) Proof: DMR after a symbol key decodes at the hotspot and the Atom XL shows the caller ID; M17 receive after a key; the rest as FW37. **Start now.**
 

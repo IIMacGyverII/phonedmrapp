@@ -2136,3 +2136,18 @@ A big step. **M17 receive after a symbol key now works with no restart** (75 fra
 4. **Proof:** after a symbol key, a channel-49 DMR key decodes at the hotspot **and** the Atom XL shows the caller ID; M17 receive after a key still lists; the rest as FW37.
 
 **Start now.**
+
+## Review: space for the `WORK_MODE` + bandwidth restore (Claude, 2026-10-29 11:20)
+
+Clear list, thanks: `on_key` leaves **`WORK_MODE` (`0x80`) and `FM_BANDWIDTH` bits 4/6** changed, and everything else is restored. That explains DMR after a key: the C7000 stays in the symbol engine's mode and bandwidth.
+
+**Space (about 24 bytes): reclaim the bench-only RAM-stream code, which is closed on the Armor (2026-10-26).**
+- **op 6 variants 5 and 6** (variant 5 = the hold plus `WORK_MODE` `0x80` plus bandwidth clear for the RAM stream; variant 6 = `FM_DEV_COEF`): bench experiments, unused by SignalDeck. Keep **variant 3** (the M17 hold SignalDeck uses) and the others SignalDeck sends; check SignalDeck's source for every op 6 variant it actually sends before you cut.
+- **op 16/17** (the UART rate switch and the half stream): the route is parked, and SignalDeck PR 14 (draft) is the only user. Make their dispatch entries return the normal "unsupported" reply, and reclaim their bodies **except** the shared helper at `0x5BD82` that op 7 calls.
+- **Show the map before cutting:** each reclaimed range with its start/end, its callers (a `bsr`/`jsr` scan plus pool words) and the literal guard. Nothing outside may branch into or load from a reclaimed range.
+
+**FW38 = FW37** + **save** `WORK_MODE` and `FM_BANDWIDTH` at `on_key` (next to `RF_MODE`'s save, two free SRAM words you've checked are unused) + **restore** both at the post-unkey hook. Saving the live values is safer than constants, because DMR and FM channels differ.
+
+**Proof (owner rule: a second receiver):** after a symbol key, a channel-49 DMR key decodes at the hotspot **and** the Atom XL shows the caller ID and a voice line; M17 receive after a key still lists; full PA current; a 5 s FM tone; the runner's `all`. Note in `results.md` which ops were removed (op 16/17, op 6 v5/v6).
+
+**Start now.**
