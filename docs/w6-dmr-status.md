@@ -69,3 +69,34 @@ STATUS: WORKING (17:15 Claude: PR 105 merged; next: device-report PR)
 
 **HackRF lease: W6 DMR agent 17:42–18:15 (2026-10-29), granted by the managing agent: W6Plus DMR transmit test on 446.000 MHz, low power, keys of 10 s or less plus one attended ~28 s watchdog key; the HackRF only receives (finite foreground captures). Keys start no earlier than 2 minutes after this line. Grok: push "HackRF wanted" and I hand it over after the current key.**
 **HackRF lease ended 17:47: HackRF free (W6 DMR agent). Keys done: FM 17:44:18–26, DMR 17:45:03–09 and 17:45:58–17:46:04, FM watchdog 17:46:31–59 (SignalDeck released at 28 s); 446.000 MHz, low power; the HackRF only received; no transfer running.**
+
+## TX test results (2026-10-29 17:44–17:47, owner-authorized, slot from the managing agent)
+
+Setup:
+- W6Plus DMR, local test build with transmit allowed (verified=true, never pushed). Main build back afterwards.
+- 446.000 MHz, low power, bench DMR ID 1234568.
+- HackRF receive-only captures at 2.4 MS/s, LNA 0 / VGA 8, no clipping.
+- Keys through SignalDeck Web PTT.
+
+| Key | Result |
+|---|---|
+| FM, 8 s (17:44:18) | Carrier 7.5 s, 27.5 dB over the floor, offset +1598 Hz. Module status 3 SEND_START / 4 SEND_STOP; the PTT line gpio188 keys it (no 0x26). Deviation p99 ~1.0 kHz (room sound: the mic is the only audio path) |
+| DMR, 6 s ×2 (17:45:03, 17:45:58) | Carrier 6.0 s. Our own decoder (scratchpad `iqan.py --dmr`: 4FSK, sync search, slot type, BPTC 196/96) on both keys: MS-sourced direct mode; 3 voice LC headers 60 ms apart, 16 voice syncs 360 ms apart, a terminator with LC; colour code 1, group call (FLCO 0), dst TG 9, src 1234568. Outer symbol deviation 1815 Hz (nominal 1944), offset +1604 Hz |
+| FM, PTT held 30 s (17:46:31) | SignalDeck's watchdog released at 28 s ("TX watchdog: releasing PTT after 28 s"); 28.24 s of carrier; status 4; PTT and mic lines back to 0 |
+
+- **Release:** every key ended on release with status 4.
+- **Heat:** battery 42.1 °C before, 42.8 °C after the 28 s key (43.5 °C 10 min later); CPU zone 51–53 °C. Well below the stops.
+- **Offset:** about +1.6 kHz on every key. That is the W6 and HackRF crystal errors together (the Armor + HackRF pair reads +0.8–1.0 kHz), so the W6 is probably ~0.6–0.8 kHz high. Inside DMR tolerance; a reference would separate the two.
+- **Not tested, not possible on this phone:** Morse, APRS or tones from the app. The transmit audio is the microphone, wired to the module.
+
+**Owner:** do these results confirm transmit, so the profile can go to revision 2 with verified=true (as with the W6+ revision 3)? Still open in any case:
+- a voice key heard by ear on another radio;
+- a side-key press;
+- the listening check;
+- DMR voice audio level (it waits for Grok's bench-ID clip).
+
+**End state:**
+- main build installed; DMR ID setting restored;
+- bench channels deleted; my test history removed;
+- radio handed back to the stock app (running, holds ttyS2);
+- web transmit off; HackRF lease ended in all three mailboxes.
