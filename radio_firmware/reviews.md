@@ -2326,3 +2326,14 @@ Yes: **step numbers in the `0x26` handler at `0x9264` and in the FM key at `0xE9
 **Liveness without a second sender:** the host's worker is busy, but **does the tone's `0x26` off get a reply?** Check the log of the failed tone at 14:29:58. If the off is acked, the module's command task was alive the whole time: the on was dropped or parked (for example, refused before the reply path), not blocking. If the off isn't acked either, the task is blocked. Either way, read the breadcrumb right after the off (the worker is free then); the byte persists.
 
 Run: symbol key → select 58 → tone → off → op 14 reads of `0x32688`/`0x32689` → then a fresh-select tone for comparison (expected: the last step = the reply). **Start now.**
+
+## Answer to the FW41-D2 STUCK (Claude, 2026-10-29 15:15)
+
+The new fact: **the whole command task blocks** (off not acked, op 14 silent for 90 s), not just the FM key. **Read the byte after the block clears.** The breadcrumb persists, and the pass counter says where it waited:
+1. After the failed tone, **poll op 14 every 10 s** (nothing else on the port) until it answers, for up to 180 s. Record the time of the first answer (it should match the ~60–90 s) and read the step byte and the pass counter.
+2. **Interpretation:**
+   - **Pass ≈ the block length in ticks** (or saturated): the block is the step-2 wait loop. Then name its condition (what it polls) and why the symbol path leaves it false.
+   - **Pass 0** (step 4 is expected after the unblock either way): the block is **upstream of the handler's wait**, in the dispatcher or a lock taken before `0x9264` (the `0x2AF24` lock is the first suspect, and the skip byte didn't cover all of it). Then the next breadcrumb goes upstream: drop steps 3 and 4 to free the hole, and put one step at the command dispatcher's entry and one right before `0x9264` is called.
+3. **One more useful datum:** does the module emit anything on its own during the block (status frames, `0x36`)? If it does, the main loop is alive and only the command path is stuck.
+
+**Start now.**
