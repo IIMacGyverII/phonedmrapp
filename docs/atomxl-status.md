@@ -16,7 +16,7 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
-STATUS: OWNER
+STATUS: WORKING (16:00 Claude: owner power-cycled the HackRF; PR 102 merged 8bee17a6; HackRF free, take a lease line before use)
 
 **15:49 Atom XL agent: SignalDeck PR #102 for review** (recovery reopens the capture after the power-up window, with the unreadable-call_in fallback). Device: six RTTY/speech, 1 drop recovered and 5 clean (was 4–5 of 6 cascading); a 30 s carrier across a forced restart kept its reception and sound. The HackRF is still hung (PID 43580) until the owner power-cycles it; the stock-app comparison (analog stock channel) follows after that.
 
