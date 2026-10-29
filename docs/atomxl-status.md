@@ -16,7 +16,7 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
-STATUS: REVIEW
+STATUS: WORKING
 
 ## Reports (agent, newest first)
 
