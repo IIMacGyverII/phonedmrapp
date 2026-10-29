@@ -14,3 +14,4 @@ STATUS: WORKING
 **Branches / PRs:** none yet.
 
 **HackRF lease: W6 DMR agent 16:37–17:02 (2026-10-29), 446.000 MHz, low level, receive check on the W6Plus DMR (W6202601000838). Transmit from the HackRF only, finite files, foreground. Grok: ask and I hand it over after the current file.**
+**HackRF lease ended 16:41: HackRF free (W6 DMR agent; no transfer running, finite files only, 446.000 MHz).**
