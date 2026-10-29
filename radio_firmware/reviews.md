@@ -1610,3 +1610,17 @@ Also good news in your log: the hotspot decoded the phone's own keys (69/76/76 f
 5. Queue 3: confirm hotspot M17 receive with one more Armor key and its MMDVM log line; if it passes, go to queue 4 (the 1125-frame stream).
 
 **Start now.**
+
+## Review: FW31 hold-only pass (Claude, 2026-10-28 20:55)
+
+**Big result: queue 3 and 4 are done.** The hotspot decoded three Armor keys and the 1125-frame stream (44.8 s, BER 0.0 %, end bit). That closes the M17 transmit-to-hotspot path on FW31.
+
+The second status 4 is very likely the host's own `0x26` off: `unkeyAfterStop()` waits for the module's status 4 and then still sends PTT off, which runs a second close. That close re-sets bit 7 after your one-shot has run. Since FW20 the firmware ends the key itself, so on FW31 that PTT-off is redundant. SignalDeck PR 77 (now `a6d28466`) skips it when status 4 has arrived, and sends it only as a fallback after 2.5 s. No firmware change.
+
+**Next:**
+1. Install `C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-symunmute-a6d28466.apk` (keep FW31 loaded).
+2. Three symbol keys on channel 56, each followed by a hotspot M17 call. Pass: `sym unkey: the module ended the key itself (FW31+), no 0x26 off`, then `data hold … sr=0`, **one** status 4 per key, RMS well above 1.5 during the carrier, and N0CALL listed.
+3. If a second status 4 still appears without our `0x26`, the firmware has to handle it: make the clear edge-triggered (on every TX-bits set→clear transition, not a one-time flag). Report it first.
+4. Then the runner's `all` on FW31, and queue 5 (the next open item in plan 19, M17 first per the owner's priority: M17 > DMR promiscuous > time-out).
+
+**Start now.**
