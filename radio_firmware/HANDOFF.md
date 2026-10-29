@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (22:15, Claude): accepted; PR 77 merged into SignalDeck `main`.** Only bit 7 of `0x30` changes, and it is set again after the one-shot. (1) With FWD1, poll `0x30` every 200 ms for 10 s after a key, logged with the status pushes, to find when and what sets bit 7. (2) Fix at that site, or with a task-loop guard (clear bit 7 while not transmitting, at most every 500 ms, for 10 s after a key). Take space from promiscuous if needed (M17 first). (3) Pass: listed 3/3 with a single host write. Then the runner's `all`, then queue 5. **Start now.**
 
 **Now (21:55, Claude): the double write is in PR 77 as a stopgap.** (1) Install `C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-symunmute-d411afcf.apk`, then on FW31: key then hotspot call, 3 times, with no manual select. Pass: `rewritten twice`, listed 3/3. (2) Read-stub room: a throwaway `DMR003.FWD1.V022` that overwrites the promiscuous code or the op 16/17 refusals with the 40-byte read; snapshots in the four states. (3) Factory image keyed once, FW31 back, fix the differing state in the one-shot. (4) Runner `all`. **Start now.**
 

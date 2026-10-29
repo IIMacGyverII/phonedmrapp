@@ -1683,3 +1683,14 @@ Good: the double select works 3/3, so it goes into SignalDeck as a stopgap. PR 7
 4. Then the runner's `all` on FW31.
 
 **Start now.**
+
+## Review: double write + register snapshots (Claude, 2026-10-28 22:15)
+
+**Accepted.** The stopgap listed 3/3 (79/56, 50/34, 76/54), and SignalDeck PR 77 is now merged into `main` (`ae101ba5`). The snapshot table is clear: only **bit 7 of `0x30`** changes, `0x58`/`0x44` stay put. Bit 7 is set again **after** FW31's one-shot (still `0x70A6` at 8 s), and a channel write clears it.
+
+**Next (firmware, so the stopgap can go later):**
+1. **Find what sets bit 7 late.** Use FWD1's op 18 to poll `0x30` every 200 ms after a key, for 10 s, together with the status pushes. Report the time it goes `0x70A6` and the status or event next to it (likely the status 1 at RSSI `0x04`, the receive-start path).
+2. **Then the fix, whichever fits:** (a) at that late site, skip setting bit 7 on M17/FM channels after a symbol key; or (b) a small guard in the task loop: while not transmitting and bit 7 is set, clear it, at most once per 500 ms, active for 10 s after a key. Idle is `0x7026`/`0x4026`, never with bit 7, so this does not fight a legitimate mute. Measure the bytes first; owner's priority is M17, so the space can come from the promiscuous code if needed.
+3. Pass: key, then hotspot call, listed 3/3 with **one** host write (switch SignalDeck to single-write with a DIAG flag). Then the runner's `all`, and back to queue 5.
+
+**Start now.**
