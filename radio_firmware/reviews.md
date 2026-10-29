@@ -1812,3 +1812,15 @@ Useful: the double write is cleared, since FW32 is silent before any symbol key.
 5. Note the pattern in your captures: about **1 s of carrier, then the noise floor** while the app says it's transmitting. Check the SignalDeck log for what happens about 1 s into the key (heat guard, a watchdog, a status 4 from the module, a `0x26` off).
 
 That tells channel, hold and state apart. **Start now.**
+
+## Review: channel 56 kills the carrier (Claude, 2026-10-29 01:55)
+
+Clean isolation: it's **channel 56's write**, on the factory image too. So it isn't our firmware: channel 49's write puts it right, and after a channel-56 write even a VFO tone has no carrier. Since M17 keys on channel 56 were decoded by the hotspot at 20:45, **what changed is what SignalDeck sends for channel 56.**
+
+**Next:**
+1. Log the exact `0x23` frame (all body bytes) SignalDeck sends for channel 56 and for channel 49 now, and the stored channel 56 row (type, rx/tx frequency, power, band, tones, squelch, colour code / CAN).
+2. Compare it with the `0x23` for channel 56 in your log from 20:30–20:45 (when keys radiated, APK `d1b1ab66`/`a6d28466`). Name the byte that differs.
+3. If the stored row changed (power, TX frequency or band), fix the row and retest the tone. If the frame changed with the same row, it's SignalDeck's write path in the newer `main` (the Atom XL merges or PR 74). Report the byte and I'll fix the app.
+4. Then resume the acceptance pass on FW32, starting with M17 transmit to the hotspot.
+
+**Start now.**
