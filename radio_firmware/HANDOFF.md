@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: STUCK
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (13:00, Claude): the missing `TX`/`data hold` log lines mean SignalDeck's radio worker is blocked about a minute after a symbol key. That's a SignalDeck bug, and the firmware is fine (FW38 stays).** (1) Two minutes: a symbol key, select 58, send the tone, then within 5 s a thread dump (`kill -3` the app's pid, then pull `/data/anr/`) plus `logcat -d -s DiagReceiver`; push the `radio-worker`, `m17-sym` and `main` stacks. (2) Then the acceptance pass on FW38, with every row except FM-right-after-a-symbol-key (that row waits for my fix). **Start now.**
 
 **Added (12:50, Claude), probably the answer:** SignalDeck re-sends the op 6 hold on every channel write while M17 receive is on (`dataReceive`), plain FM channels included, so after the channel-56 M17 work, channel 58 gets the hold too and the FM key goes down the symbol path. Updated **PR 94 APK: `C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\fw37unkey-fb1f89e0.apk`** (sha256 `b7f5196f…`): before a plain FM key (test tone, voice PTT, AFSK, SSTV) it sends op 6 hold off and puts the hold back after the unkey. Install it (`install -r`) and run test 2 (a symbol key on 56, then 58, then a tone) first. If it keys, also run tests 1 and 3, then the acceptance pass.
 

@@ -2223,3 +2223,14 @@ FW30 fails the same way, and op 14 can't read SRAM, so we narrow it by behaviour
 - If only 3 or 4 work: report the table and I'll pick the next read.
 
 **Start now.**
+
+## Answer to the updated-PR 94 STUCK (Claude, 2026-10-29 13:00)
+
+The important detail: **there's no `data hold` line and no `TX 1 kHz test tone` line at all.** `transmitPcm` runs on SignalDeck's single **radio worker** thread and logs as its first step (skipped, refused or keyed), so a silent log means **the tone's task never ran: the worker is blocked for about a minute after a symbol key**. That fits every result (FW30 and FW38 alike, and the tone working again about 70–90 s later), and **it's a SignalDeck bug, not firmware.** My best guess: the end of the symbol key (`unkeyAfterStop` → `rxAfterSym` → `applyChannelNow`, on the `m17-sym` thread) holds a lock or waits on an ack that the worker also needs.
+
+**Please capture the evidence (two minutes, no RF):**
+1. After a symbol key on 56, select 58 and send the tone. Then within 5 s take a **thread dump** of SignalDeck: `adb shell su -c 'kill -3 $(pidof com.macdmr.radio)'` and pull `/data/anr/` (or `debuggerd -j <pid>`).
+2. `adb logcat -d -s DiagReceiver` to confirm `cmd testtone` arrived.
+3. Push the dump (or the `radio-worker`, `m17-sym` and `main` stacks) to `radio_firmware/results.md`, or attach it to the report.
+
+With the stacks I'll fix the blocking in PR 94 and stage a new APK. The firmware side is done for this item, so FW38 stays. Until then the acceptance pass can run everything except "FM right after a symbol key": go ahead with it now (DMR group/private both slots, FM + CTCSS without a preceding symbol key, POCSAG, FT8/RTTY, SSTV, promiscuous on/off, M17 both ways). Leave the FM-after-key row for my fix. **Start now.**
