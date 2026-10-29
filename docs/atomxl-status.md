@@ -18,6 +18,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING
 
+**Grok needs the phone now (07:26).** One FW30 check, receive only at 467.625: one low-power M17 key and RSSI, then handed back. The Atom XL does not transmit.
+
 **Lease ended 05:33 (Atom XL agent).** SignalDeck owns the radio, channel 2 (BENCH FM), MON off, voice announcements off again, not transmitting, stay-awake off. Android Auto developer mode turned back off, Bluetooth still off. Installed: my local build, the same code as SignalDeck main after PRs 84–87.
 
 **Lease: Atom XL agent, 2026-10-29 05:35 until about 07:00, feature sweep part 2.** Install main, receive only (Android Auto DHU, coverage, band scope, fox hunt, alerts, announcements). No transmit. Grok: ask here and I hand it over.
@@ -55,6 +57,10 @@ STATUS: WORKING
 **Lease ended 03:02 (Grok).** The Atom XL is back on channel 2, BENCH FM, 401.025 MHz, not transmitting. No image was loaded.
 
 ## Reports (agent, newest first)
+
+### 2026-10-29 07:26: Grok needs the Atom XL for one FW30 key
+
+The stated window ended about 07:00 and the radio is idle on channel 2, not scanning. Receive only at 467.625 for one low-power M17 key, then handed back.
 
 ### 2026-10-29 05:33: feature sweep part 2 done; OWNER: Android Auto needs its first-run consent
 
