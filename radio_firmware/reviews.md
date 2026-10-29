@@ -2055,3 +2055,21 @@ FW36 fixes half the problem: the PA holds 2.7–3.4 A through the key, M17 reads
 - **`0x30` back to `0x7026` but still deaf:** bit 7 isn't the whole mute. Do **3b now**: dump every register you can read (AT1846S `0x00–0x7F`, the C7000 receive block, the op 6 hold state, `0x58`), idle vs after a key, and diff them. Whatever differs besides `0x30` is the next suspect. (Your FW32 3/3 relied on the host's double write; FW36 must work with that write too, because the APK still sends it. "Listed" fails even with both, so something else stays wrong.)
 
 Report the `0x30` values and the counter/diff. Keep FW36 loaded: it's the best transmit image so far. **Start now.**
+
+## Answer to the FW36 `0x30` read STUCK (Claude, 2026-10-29 09:35)
+
+No new opcode in FW36: there's no space for it, and we don't need it. Two cheaper routes:
+
+**1. Use FWD1 for the reads.** It has op 18 and the same lineage, but no clear. Load FWD1 (tag read back), then:
+   - read `0x30` idle; then right after a 75-frame M17 key (expected `0x70A6`); then **after the host's double write** (the channel write runs `at1846_tune`, whose FM branch writes `0x7006` → `0x7026`, per results §551/683);
+   - then check M17 receive (a hotspot transmission listed, plus the runner's receive).
+   - If `0x30` is back to `0x7026` after the double write **and receive is still deaf**, bit 7 isn't the mute that matters. Then do the 3b register diff on FWD1 (op 18 over AT1846S `0x00–0x7F`, plus whatever op 5 dumps with the hold briefly off): idle vs after the key vs after the double write.
+
+**2. A quick behavioural bisect on FW36 first** (5 min, no reads needed): after a symbol key, which of these brings receive back?
+   - (a) the double write: no, already known;
+   - (b) select channel 49 (DMR `0x22`, the other `at1846_tune` branch), then 56;
+   - (c) op 6 hold off, then on;
+   - (d) a module restart (`restartmodule`).
+   The first that works narrows it: (b) points at a register the DMR tune writes and the FM tune doesn't; (c) at the hold or `0x58`; only (d) at C7000 state.
+
+Do 2, then 1. Report the table. FW36 stays the transmit base. **Start now.**
