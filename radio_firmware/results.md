@@ -4510,6 +4510,12 @@ End state 07:30: `DMR003.FW30.V022`, channel 56, 467.625 MHz, low power, not tra
 | 5 s FM tone, channel 58, HackRF LNA 0 VGA 12 | The carrier sat at about +241 kHz for the tone and was gone in the last half-second. An earlier capture in the same minute showed only the noise floor; this one is the reading |
 | Runner `all` | boot PASS silent. tone PASS, carrier 10.534 s, p99 2515 Hz. stream PASS 1125/1125, end bit, carrier 45.41 s. receive PASS. heat PASS, 45 s low power, battery 33.1 to 33.3 °C, no stop |
 
+**Hotspot DMR and FW35 (08:00–08:15).** The hotspot's `[DMR] Enable=1` and `ColorCode=1`. `[M17] Enable=1` as well. A hardware-PTT key on channel 49 produced one hotspot line, `Mode set to DMR`, and no voice header.
+
+FW35 is FW30 with the bit-7 clear on the fall-through after the stock unkey, and only when `0x38908` bits 0 and 2 are already clear. The early countdown return is unchanged. Opcode 18's old stub was replaced by that clear, and the gate's two calls take the sr=1 ack. sha256 `a66f3655bbe7f273eac0b8f29fa2b41623100a295e4adc9915052ed86b580764`. The literal guard was clean. The tag read back `DMR003.FW35.V022`. Opcode 3, the symbol reset, got no reply within 500 ms (`sym reset failed`). No status 3. Two high-power attempts stayed at idle current, about −224 mA, because the key never started. Stopped. FW30 loaded again.
+
+End state 08:15: `DMR003.FW30.V022`, channel 56, 467.625 MHz, low power, not transmitting. SignalDeck `a7344f19`.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.

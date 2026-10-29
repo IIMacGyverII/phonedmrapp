@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — FW35 did not start a symbol key.** Opcode 3 got no reply. The hotspot's DMR is enabled at colour code 1, and a PTT key produced `Mode set to DMR` with no voice header. FW30 is loaded again. Details in `results.md`.
+
 **2026-10-29 — FW30's runner `all` passed, and a 5 s FM tone held on the HackRF.** M17 receive after a symbol key still does not list, and a channel-49 DMR tone was not logged by the hotspot. Details in `results.md`.
 
 **2026-10-29 — FW30's M17 key reads −63 at low power and the high-power current holds around −2.7 A.** The hotspot decoded both keys. Details in `results.md`.

@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -614,6 +614,12 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+Hotspot DMR is on. `[DMR] Enable=1`, `ColorCode=1`, and `[M17] Enable=1`. A hardware-PTT key on channel 49 made the log say `Mode set to DMR` and nothing else: no voice header.
+
+FW35 `a66f3655…0764` loaded and the tag read back. A symbol key did not start: opcode 3 got no reply, the log said `sym reset failed`, and there was no status 3. The battery stayed at idle, so there is no PA-current reading. Stopped there. FW30 is loaded again.
+
+End state 08:15: `DMR003.FW30.V022`, channel 56, 467.625 MHz, low power, not transmitting.
 
 FW30 base check, not the acceptance pass. The 5 s FM tone held: HackRF LNA 0 VGA 12, carrier near +241 kHz for the tone. Runner `all` passed: boot silent, tone 10.534 s, stream 1125/1125, receive, heat 45 s with the battery 33.1 to 33.3 °C. M17 from the hotspot lists when no key comes first (77 frames, 55 good) and does not list after a symbol key, including a second try 4 s after `rewritten true`. A 3 s tone on channel 49 got status 3 and status 4 from the module, and the hotspot logged no DMR line. The Armor is on channel 56, 467.625 MHz, low power, not transmitting. The HackRF lease is ended.
 
