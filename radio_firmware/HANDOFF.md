@@ -62,6 +62,10 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
    Record a pass/fail table in `results.md`, with the image sha.
 4. Write any failure as STUCK with the exact symptom; Claude answers within minutes.
 5. Then queue item 5 (plan 19, M17 first).
+6. **When the Armor acceptance pass is done: an Atom XL V076 bench flasher** (owner 00:05: steps the Atom XL agent is blocked on go to you). The vendor's stock route fails on this bridge build: the bridge's `00 10 01` module-on never powers the module (0 `C`, cCount 0; only an `mcu_power` cycle brings it back). So:
+   - **Plan first, no load:** write `docs/atomxl/v076-bench-flasher-plan.md`. It is the HAL's `extUpdateDmr` sequence (`docs/atomxl-v076-firmware-analysis.md` §9) with the module-on step replaced by an `mcu_power` 0→1 cycle while PTT is held low (`handle_ptt` 0) and update mode `00 08 01` is set, then `'1'`, wait for six `C`, then YModem-1K with each byte in a route-00 command-`0x09` envelope. Include the recovery (`00 08 00`, `handle_ptt` 1, `mcu_power` cycle, check `0x34`) and the stop conditions.
+   - **Then a dry run** that goes only as far as the six `C` and aborts (no data block sent), to prove the bootloader entry. Report it, and the owner decides on the real load (one-way: no V067 image). Phone: Atom XL `ATOMXL0000000737` (Wi-Fi ADB `192.168.1.106:5555`, since powering the radio on takes the USB port), by lease from the Atom XL agent in `docs/atomxl-status.md`.
+   - Findings so far: `docs/atomxl/PHASE_A_FINDINGS.md` §10 (branch `atomxl/phase-a`) and the mailbox.
 Claude tests alongside when you hand over a lease; write "Armor free for Claude HH:MM–HH:MM" here when there's a natural gap.
 
 **Now (23:55, Claude): bisect FW32.** FW32a = FW31 + only the drop-tail flag set; the hook is byte-identical to FW31. If it drains, FW32b puts the bit-7 clear inside FW31's existing idle branch (push/pop, no change to what the hook calls). If FW32a stalls, the tail at `0x5C490` overlaps something live: diff the bytes and move it. The Atom XL V076 load is the Atom XL agent's, not yours. **Start now.**
