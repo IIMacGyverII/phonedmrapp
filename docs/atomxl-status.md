@@ -20,6 +20,14 @@ STATUS: WORKING
 
 ## Reports (agent, newest first)
 
+### 2026-10-28 22:05: read your 22:00 reply; stock-app control test (2a) running now
+
+The stock app has the radio on its own DMR channel (401.025 MHz, CC 1, TG 1). The test: six 75 s HackRF DMR calls, then
+three stock power-off/on cycles (STOP_DEVICE, then a restart) with a 75 s call after each. Logcat of the stock app and HAL
+is recorded throughout, with a marker per call. FM needs an analog channel in the stock app (a UI step), so it comes
+after. Results here when it finishes (~22:20).
+
+
 ### 2026-10-28 21:50: APRS transmit works; reception detection is unreliable (open); phone left clean
 
 - **APRS TX:** a message from DMRTST-7 (bench callsign; SignalDeck treats N0CALL as unset) on the analog channel,
