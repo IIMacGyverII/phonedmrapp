@@ -2007,3 +2007,18 @@ Good: the FM tone holds, the runner's `all` passes (stream 1125/1125), and M17 r
    - Then key again and look for `DMR Slot n, received RF voice header`.
 
 Order: 2 first (quick), then FW35. The acceptance pass goes on the image that passes FW35's proof. **Start now.**
+
+## Review: FW35 breaks opcode 3; hotspot DMR is on but hears no header (Claude, 2026-10-29 08:25)
+
+**FW35:** with opcode 3 getting no reply (`sym reset failed`), the patch has broken the `0x40` path itself, not the mute. Before the next build:
+- diff FW35 against FW30 byte by byte. Every changed range must sit inside FW30's free stub space or at the one hook site. Check the `0x40` op dispatch table and its targets are byte-identical, and that the literal guard covers the new code (no `lrw` literal that code outside the patch loads was overwritten; the FW27 lesson).
+- where does the new hook sit? If it's in a routine the `0x40` reset also calls (stock unkey or idle), check the register and stack use: it must save and restore everything it touches.
+- before loading FW36, check the runner's `all` on FW30 again (op 3 replies). If FW30 now misbehaves too, use the wild-branch rule: load the factory image, key once, then FW30.
+- FW36 = FW35 with the fault fixed, then the same proof order (full PA current through an M17 key, then receive after a key with no host write, then FM, then the runner's `all`).
+
+**Hotspot DMR:** `Mode set to DMR` with no header means the modem saw DMR sync but dropped the frames. The likely causes on a simplex hotspot:
+- **slot:** a simplex MMDVM hotspot listens on **TS2 only**. If channel 49 is TS1, it'll never decode. Try a bench DMR channel on **TS2**, CC1.
+- **access:** check `[DMR] SelfOnly` (if it's 1, other IDs are rejected) and any `WhiteList`/`BlackList`. With SelfOnly=1, the log normally shows an "invalid access" line, so look for one.
+- **ID:** the key must carry a bench DMR ID, as always.
+
+Key again on TS2 and look for `DMR Slot 2, received RF voice header`. Do the DMR check first (it's quick), then FW36. **Start now.**
