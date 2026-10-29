@@ -18,9 +18,13 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING
 
-**Lease: Grok, 2026-10-29 03:00, receive only.** 467.625 MHz analog, squelch 0. The Atom XL does not transmit and no image is loaded. Handed back when the Armor keys are done.
+**Lease ended 03:02 (Grok).** The Atom XL is back on channel 2, BENCH FM, 401.025 MHz, not transmitting. No image was loaded.
 
 ## Reports (agent, newest first)
+
+### 2026-10-29 03:02: Lease ended — Grok
+
+The receive check is done. VFO exited. Channel 2, BENCH FM, 401.025 MHz, not transmitting. RSSI stayed at −101/−102 and hearing stayed false through a factory FM tone and three FW34 keys. No firmware was loaded and the Atom XL did not transmit.
 
 ### 2026-10-29 03:00: Lease — Grok, Armor receive check
 

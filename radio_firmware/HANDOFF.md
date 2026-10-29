@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **HackRF needs a power cycle.** `hackrf_transfer` PID 42764 survives `taskkill` and `Stop-Process`. `pnputil /restart-device` on `USB\VID_1D50&PID_6089\...` returned access denied. `hackrf_info` still gets `hackrf_open` access denied (−1000). The FM carrier check is waiting on that power cycle.
@@ -592,6 +592,19 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+The Atom XL did not hear the Armor. At 467.625 analog, squelch 0, its RSSI stayed at −101/−102 and hearing stayed false for all four keys, including the factory 5 s FM tone. The Pi was not rebooted. The Atom XL is back on channel 2.
+
+| Key | Atom XL RSSI | Hearing | Edge |
+| --- | --- | --- | --- |
+| Factory, channel 58, 5 s FM | −101 | false | 0 s |
+| FW34, channel 58, 5 s FM | −102 | false | 0 s |
+| FW34, channel 49, 3 s | −102 | false | 0 s |
+| FW34, channel 56, 75-frame M17 | −102 | false | 0 s |
+
+Hotspot: last RF line is 2026-10-29 01:54:53 UTC, M17. DMR is enabled, colour code 1. M17 is enabled. Modem `RXInvert=0`, `RXDCOffset=0`. The FW34 pass and the acceptance pass were not run.
+
+End state 03:02: Armor `DMR003.FW34.V022` `7b64a823a4c3af5e…9f8f`, channel 56, 467.625 MHz, low power, not transmitting. Battery 35.4 °C, AP 42.7 °C, PA 40.4 °C. Atom XL channel 2, 401.025 MHz, not transmitting. HackRF still needs a power cycle. SignalDeck `a7344f19`.
 
 **Stuck.** The hotspot logged no RF for a DMR control on channel 49, before or after `mmdvmhost` was restarted, and none for the FW34 M17 key either. The log itself is moving.
 

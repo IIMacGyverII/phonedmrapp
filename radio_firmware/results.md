@@ -4423,6 +4423,19 @@ FW34 sha256 `7b64a823a4c3af5e11faf15157a3198c6ff9906855b08591a32d03fc15929f8f`. 
 
 End state 02:51: `DMR003.FW34.V022`, channel 56, 467.625 MHz, low power, not transmitting. Battery 35.6 °C, AP 41.6 °C, PA 40.1 °C. HackRF still will not open. SignalDeck `a7344f19`. Bench ID restored.
 
+**Atom XL as the receiver (02:55–03:02).** Lease in `docs/atomxl-status.md`. SignalDeck on the Atom XL, VFO 467.625 analog, squelch 0, receive only. RSSI and hearing sampled about every 0.5 s. The floor was −101/−102 and hearing never went true.
+
+| Key from the Armor | Samples | RSSI | Hearing | Edge |
+| --- | --- | --- | --- | --- |
+| Factory, channel 58, 5 s FM | 11 | −101 | false | 0 s |
+| FW34, channel 58, 5 s FM | 12 | −102 | false | 0 s |
+| FW34, channel 49, 3 s | 9 | −102 | false | 0 s |
+| FW34, channel 56, 75-frame M17 | 13 | −102 | false | 0 s |
+
+The VFO was exited. The Atom XL is on channel 2, BENCH FM, 401.025 MHz, not transmitting. Hotspot last RF line: 2026-10-29 01:54:53 UTC, M17. `[DMR] Enable=1`, `ColorCode=1`. `[M17] Enable=1`. `[Modem] RXInvert=0`, `RXDCOffset=0`. The Pi was not rebooted. The FW34 pass and the acceptance pass were not run.
+
+End state 03:02: Armor `DMR003.FW34.V022` `7b64a823a4c3af5e…9f8f`, channel 56, 467.625 MHz, low power, not transmitting. Battery 35.4 °C, AP 42.7 °C, PA 40.4 °C. HackRF still will not open. SignalDeck `a7344f19`.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.
