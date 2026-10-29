@@ -16,7 +16,9 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
-STATUS: WORKING
+STATUS: REVIEW
+
+**Lease ended 08:08 (Atom XL agent). HackRF lease ended 08:08.** No hackrf_transfer running. SignalDeck owns the radio, channel 2 (BENCH FM, 401.025 MHz), MON off, FT8/RTTY/M17/captions off, keywords empty again, voice off, not transmitting. Left on the phone: the 125 MB Vosk model `vosk-model-en-us-0.22-lgraph` in the app's files (the default model; delete on request). Results: FT8, RTTY and keyword alerts **work on air**; M17 does not decode on the stock path (expected; clips kept for an offline fit). **New finding:** the USB capture still dies about 4 s into some receptions on a **healthy** line (2 of 8 HackRF receptions 07:54–08:07; the others ran 5.6–12 s clean), so the stall is not only the stuck line. The reboot at 07:43 did clear the line (corrected below).
 
 **Lease: Atom XL agent, 2026-10-29 07:54 until about 09:00, resumed. HackRF lease: Atom XL agent 07:54.** Check the reception line with one carrier (cold start if stuck), then RTTY, M17, keyword alerts. HackRF transmits low level on 401.025 MHz, finite IQ files, foreground only; the Atom XL does not transmit. I pull before every key. Grok: ask here and I hand both over within minutes.
 
@@ -93,10 +95,10 @@ The stated window ended about 07:00 and the radio is idle on channel 2, not scan
 | Fox hunt | works (by its parts) | needs `profile.rssi` (true); signal readings come through during a reception (9 replies to 7 requests in 15 s of MON, −103 dBm shown while hearing); the dialog itself not opened |
 | Coverage log | works (by its parts) | same readings, polled every 2 s while hearing; no GPS run tonight |
 | Voice announcements | **works** | channel changes spoken by Google TTS on the phone speaker (output 0x2), not the radio's USB card; setting put back to off |
-| Keyword alerts | pending | come from captions; no Vosk model on the phone yet, and a speech source needs the HackRF |
-| FT8 receive | fixed in code (PR 84) | on-air pending (HackRF) |
-| RTTY receive | likely works | waits for an open squelch (fits per-reception audio); on-air pending (HackRF) |
-| M17 receive | partial (expected) | stock module: the DFE path with the Armor's table and its "calibrated on the Armor" warning; the held path needs bench firmware; on-air pending (HackRF) |
+| Keyword alerts | **works** | 2026-10-29 08:07: HackRF speech (Windows TTS, 12 s), default Vosk model (en-us-0.22-lgraph, downloaded on the phone), caption near word for word, 🔔 alert in the history |
+| FT8 receive | **works on air** (PR 84) | 2026-10-29 07:40: HackRF slot, both messages decoded, −13 dB, DT +0.1 s |
+| RTTY receive | **works on air** | 2026-10-29 07:55/07:56: 45.45 Bd from the HackRF (independent encoder), full text 2 of 2 when the capture held; an earlier try lost to a 4 s capture stall |
+| M17 receive | **does not decode (expected)** | 2026-10-29 07:57: 100-frame HackRF transmissions, full 5.6 s receptions, "frames 1/4 good 0" on the Armor-trained DFE; two receive clips kept for an offline Atom XL fit |
 | **Android Auto (DHU)** | **OWNER** | the DHU connected over the head unit server (TLS ok, car session to PREFLIGHT), then Android Auto showed its **first-run welcome on this phone**: it asks for access to contacts, call logs, SMS and location, shares data with Google, and turns on Bluetooth and syncs contacts. That consent is the owner's to give, so I pressed Exit, stopped the DHU, removed the 5277 forward and turned AA developer mode back off. Owner: either accept AA's setup on the Atom XL once (then I run the DHU check), or mark AA "not checked" for this phone |
 
 **No new PRs from part 2:** nothing broken found beyond the four already merged.
@@ -115,7 +117,7 @@ The stated window ended about 07:00 and the radio is idle on channel 2, not scan
 
 **Finding:** a stuck line also stalls the audio within seconds (every capture after a bridge restart died after ~2 s). On a healthy line, MON ran 15 min (02:32) and 55 s (05:17) without a stall. So a phone restart is the fix, and the app asks for it. **The reboot at 05:16 cleared it:** MON's reception got the line's own edge 200 ms later, and MON off ended with a real `RECEIVE_STOP`. All three earlier sessions (03:52, 04:16, 05:13) were stuck. Grok's −71 dBm "hearing false" was this.
 
-**Reboot is not proven to clear it every time (07:43, untested):** after the 07:43 reboot the line gave only its power-up `0x00` (as at 05:16, which then went on to give real edges), but no HackRF carrier reached the radio afterwards (RSSI stayed at −101…−103 through four 3 s carriers, with no reception at all, while the HackRF was booked by Grok from 07:46). So the line's state after that reboot is unknown, not stuck. Record it as "a reboot cleared it at 05:16; 07:43 not yet checked". Differences I can see: 05:16 came after a 90 s MON test, 07:43 after Grok's own link session (radio found powered off, SignalDeck re-took it at 07:39); stock app ran before neither. Next on the phone: one carrier to check the line, then a full power-off and on if it is stuck.
+**The 07:43 reboot cleared it too (checked 07:54):** the first carrier after Grok's lease gave real `RECEIVE_START`/`RECEIVE_STOP` edges and 12 s of audio with no stall; the four carriers before 07:46 never reached the radio (a carrier file at the wrong offset, then the HackRF collision), so they said nothing about the line. A reboot has cleared it 2 of 2 (05:16, 07:43). A bridge restart (recovery at 07:59) did **not** stick it: the next transmission had real edges again.
 
 **Sweep rows so far:**
 
