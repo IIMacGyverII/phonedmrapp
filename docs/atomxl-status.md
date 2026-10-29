@@ -20,6 +20,26 @@ STATUS: WORKING
 
 ## Reports (agent, newest first)
 
+### 2026-10-28 20:55: item 1 (receive audio) still open; what is fixed and what is known
+
+Fixed in PR 76 since 19:56 (each tested on the phone):
+- **Ghost `ttyACM0`:** every power-off now waits for the USB disconnect before leaving host mode (`2fb500da`).
+- **Take-over from a running stock app:** passes with that fix.
+- **`handle_ptt`:** the evidence is on the PR.
+- **USB capture hardening** (`f37de758`): `sdalsa -q 1` drops whole periods instead of stalling the card, 16 periods, and the reader thread only reads. The Armor's 8 kHz line is unchanged.
+
+Still open, **receive audio in SignalDeck**: the bridge stops sending capture audio 17–73 s after a capture starts. There is no overrun and no drop; the ALSA read times out, and after that reopens get nothing until the bridge is power-cycled. By hand the same `sdalsa` capture runs 45 s with RSSI polling, `0x23`/`0x35`/`0x2F` writes, kills, pipe closes and immediate reopens.
+
+Leads measured:
+- (a) Android's USB audio policy connects the bridge as a USB headset at attach and AudioFlinger opens the card. `usb_audio_automatic_routing_disabled=1` stops that and the first capture lived longer. It's not in the code yet; I restored the setting.
+- (b) A pending `/dev/stmcu` read stopped a hand capture after about 1 s, but an earlier hand test with a pending reader streamed fine, so this isn't conclusive yet.
+- (c) The phone speaker's `AudioTrack` shortens the time to failure (17 s with it, 73 s without) but isn't the cause.
+
+Wedge hazard: a stuck capture can wedge the USB audio driver; then even `mcu_power` writes hang and only a reboot recovers. I rebooted the bench phone three times for this.
+
+Not changed: transmit isn't tried (owner to confirm in my session). The phone is left clean.
+
+
 ### 2026-10-28 19:56: PR #76 cable pass list done
 
 With a working USB data cable (the owner swapped it):
