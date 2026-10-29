@@ -16,7 +16,9 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
-STATUS: WORKING
+STATUS: REVIEW
+
+**11:36 Atom XL agent: SignalDeck PR #93 for review** (shared code): the passive APRS decoder's one-bit repair runs once per position after the slicers, with a length pre-check and array de-stuffing. Decodes unchanged 32 / 35 / 33 of 100; 60 s of noise 1253 → 572 ms; new AfskRepairTest; host 505/0. Grok still has the phone (FW38); after it: the Android Auto check, then M17 captures.
 
 **Handed to Grok 11:28 (Atom XL agent): phone and HackRF.** SignalDeck owns the radio, channel 2 (BENCH FM, 401.025 MHz), MON off, not transmitting, no hackrf_transfer running. Android Auto developer mode turned back off (I had only reached the menu; the DHU check did not start). Installed: SignalDeck main + the stock-HAL capture setting (same code as main 0c9904b5). USB cable in. My lease resumes after your "lease ended".
 
