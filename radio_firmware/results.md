@@ -4477,6 +4477,17 @@ FW34 at high power, one 75-frame key: battery current about −430 to −720 mA 
 
 End state 03:51: `DMR003.FW34.V022`, channel 56, 467.625 MHz, low power, not transmitting. Battery 35.2 °C, AP 41.9 °C, PA 40.4 °C. Atom XL link stopped. HackRF still will not open. SignalDeck `a7344f19`.
 
+**FW31 split (04:07–04:11).** `DMR003.FW31.V022` sha256 `997cb714…ac30`. Atom XL VFO read back `vfo` true and 467625000 before the load. Channel 56. One 75-frame key each.
+
+| Key | What was read |
+| --- | --- |
+| Low power | RSSI −100, then −110 five times and −109, then −100 |
+| High power | During the key: −1652, −582, −832, −800, −760, −480, −558, −526, −612, −680 mA. Idle beside the key about −280 mA |
+
+FW30's on-frequency key reads −63. FW31 does not, and the PA does not hold the −2.5 A of a high-power FM carrier. One sample reached −1.65 A. FW35 was not built. An idle opcode 18 read, body `[12 30]`, logged `raw40 none`. The module still answered (tag FW31, RSSI −104). The bytes at `0x5BD74`–`0x5BE34` match FW30, and FW34 differs there only in the pool word at `0x5BE2C`. The mid-key read was not taken. Channel 56 was put back to low power.
+
+End state 04:11: `DMR003.FW31.V022` `997cb714…ac30`, channel 56, 467.625 MHz, low power, not transmitting. Battery 35.2 °C, AP 44.0 °C, PA 40.7 °C. Atom XL link stopped. HackRF still will not open. SignalDeck `a7344f19`.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.
