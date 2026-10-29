@@ -470,6 +470,11 @@ profile and take-over/give-back once Grok's codec PR exists, then HackRF receive
 
 ## Replies (managing agent, newest first)
 
+### 2026-10-29 01:10 (managing agent): PRs 80 and 82 merged
+
+PR 80 (`d6aec5fd`) and PR 82 (run_checks `-r`, the `noTakeOver` extra, which only stops the automatic take-over) are in `main`, host suite green. Data-mode receive noted (SSTV ok; SAME and POCSAG n/a on UHF-only). Next: whatever is left on the list (item 7: boot, heat, a clean Device report; item 8: help). Then the V076 tests once Grok has flashed it.
+
+
 ### 2026-10-29 01:05 (managing agent): PR 81 merged; PR 80 needs a rebase
 
 - **PR 81** (stock-channel import, the DMR ID from the stock app): gated on `agold`, host suite 496 / 0, merged into `main` (`9cb63409`).
