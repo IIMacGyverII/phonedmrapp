@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -504,6 +504,10 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck.** No-0x26 pass (20:47–20:48), FW31 still loaded, PR 77 apk `a6d28466` (`1abec38c`). Three keys each logged `sym unkey: the module ended the key itself (FW31+), no 0x26 off`, `hold only`, and `data hold action=1 sr=0`. The only `0x26` is the key-up, body `[01]`, before status 3. After that log line there is no `0x26`. Each key still has another status 4 after the unkey (key 1 has two), with status 1 in between and no PTT-on. The carrier clip was RMS 1.5 and RSSI rose; N0CALL was not listed. Question: that second status 4 is not a new TX-on, so an edge on TX-bits set→clear will not fire again. Should the clear stay armed across that second status 4 anyway, or is the second status 4 something else? The runner was not run.
+
+End state 20:48: `DMR003.FW31.V022` sha256 `2935910f…3d9e`, channel 56, not transmitting, RSSI −105. Battery 37.4 °C, AP 47.1 °C, PA 45.0 °C. HackRF idle.
 
 **Stuck.** FW31 hold-only pass (20:36–20:42). Retagged `f4beb348` as `DMR003.FW31.V022`, sha256 `2935910f…3d9e`. Loaded, `fwload ok` at 140 s, tag read at 20:38:34. Installed PR 77 (`d1b1ab66`, apk `cb9f40d7`). Three keys each logged `rx after sym: firmware unmutes itself, hold only` and `data hold action=1 sr=0`. No `0x23` after the unkey. The heard list stayed empty. A 2 s clip during each hotspot carrier was RMS 1.5 while RSSI was `0x65`. Right after unkey the module sent status 1 at RSSI `0x04`, then a second status 4, before the carrier. The one-shot has already cleared its flag by then. Question: should that flag stay set so bit 7 is cleared again after the second status 4, once, with no delay on every task pass? The runner was not run. The HackRF was idle and was not taken.
 

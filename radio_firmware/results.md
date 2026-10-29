@@ -4216,6 +4216,10 @@ The hotspot decoded the phone. MMDVM 2026-10-29, N0CALL to N0CALL, BER 0.0%, RSS
 
 End state 20:42: `DMR003.FW31.V022`, channel 56, not transmitting, RSSI −105. Battery 36.9 °C, AP 46.5 °C, PA 44.4 °C. HackRF idle.
 
+**FW31, no 0x26 off (20:47–20:48).** Installed `a6d28466` (apk sha256 `1abec38c…`). The module stayed `DMR003.FW31.V022`. Three 75-frame keys. Each logged `sym unkey: the module ended the key itself (FW31+), no 0x26 off` and `data hold action=1 sr=0`. The `0x26` in the log is the key-up, body `[01]`, before status 3. Nothing sends `0x26` after the unkey line. A status 4 still follows the unkey (two of them on the first key), with status 1 between the module's own status 4 and that later one. The hotspot carrier's 2 s clip was RMS 1.5. The heard list stayed empty. The hotspot again decoded the phone (68, 76 and 76 frames, end bit).
+
+End state 20:48: `DMR003.FW31.V022`, channel 56, not transmitting, RSSI −105. Battery 37.4 °C, AP 47.1 °C, PA 45.0 °C. HackRF idle.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.
