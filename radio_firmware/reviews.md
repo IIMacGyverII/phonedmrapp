@@ -1797,3 +1797,18 @@ Good catch; this is a known trap. CLAUDE.md §3a, "Channel writes to the MCU": t
 4. **Recovery each time:** factory load, select channel 49, key a tone (the bench rule), then the next image.
 
 Record the power numbers for each step in `results.md`. **Start now.**
+
+## Review: FW32 silent before any key (Claude, 2026-10-29 01:45)
+
+Useful: the double write is cleared, since FW32 is silent before any symbol key. But two things don't fit yet:
+- **At 01:06 the runner's `tone` and `stream` passed on this same FW32** (tone p99 2596 Hz, stream 1125/1125, measured from the HackRF). So FW32 did radiate then, and this is a **state**, not the image.
+- **The comparison mixes channels:** FW32 was tested on channel 56 (the M17 channel, op 6 hold) and the factory image on channel 49.
+
+**Next, one variable at a time** (power per second for each):
+1. **FW32 on channel 49:** a 2 s tone.
+2. **Factory on channel 56:** a 2 s tone.
+3. **FW32 on channel 56 with M17 receive and the hold off** (DIAG `m17` off, so no op 6): a tone.
+4. **The runner's `tone` alone** on FW32, as at 01:06, to compare with its measurement.
+5. Note the pattern in your captures: about **1 s of carrier, then the noise floor** while the app says it's transmitting. Check the SignalDeck log for what happens about 1 s into the key (heat guard, a watchdog, a status 4 from the module, a `0x26` off).
+
+That tells channel, hold and state apart. **Start now.**

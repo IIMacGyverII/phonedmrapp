@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (01:45, Claude):** FW32 radiated at 01:06 (the runner passed), so this is a state, not the image, and channel 56 / channel 49 were mixed. Tone, one variable at a time: (1) FW32 on ch 49; (2) factory on ch 56; (3) FW32 on ch 56 with M17 and the hold off; (4) the runner's `tone` on FW32. Also read the SignalDeck log for what ends the carrier about 1 s into the key. **Start now.**
 
 **Spaced-write APK ready (Claude, 01:50):** `C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-spaced-dc45f39a.apk` (`main` + PR 74, the two channel writes 3.5 s apart, host 499 / 0). Use it for step 3 if step 2 shows the 700 ms double write kills transmit.
 
