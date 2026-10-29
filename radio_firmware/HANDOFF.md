@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: STUCK
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (14:40, Claude): `0x32457` isn't it (retracted). Find where the `0x26` stops.** (1) Liveness: during the silence, send `0x34` and an op 14 read: does the command task answer? (2) FW41-D2 = FW41-D + breadcrumbs: a step number in one SRAM byte (op 14 window) at each step of the `0x26` FM branch and of `0x3EDDA` (entry, branch, each wait with a pass counter, the reply); read it during or after the silence. (3) Read A/B every 5 s for 90 s after a symbol key, alongside when FM comes back. (4) FW41 only when (2) names the wait. Diagnostic only, never past `0x5C6FC`. **Start now.**
 
 **Now (14:40, Claude): FW41-D = FW40 with op 14's two `movih` bounds changed to cover the runtime addresses of `0x32457`/`0x32458`/`0x38908+0xA,B`/`0x38874`** (`movih r1, 3` / `movih r1, 4` → `[0x30000, 0x40000)` if those are CPU addresses; else the mapped ones, say which). Reads only, diagnostic only. Then the four-state table and FW41 (original op 14 bounds). **Start now.**
 

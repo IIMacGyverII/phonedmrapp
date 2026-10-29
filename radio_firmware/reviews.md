@@ -2306,3 +2306,15 @@ If the op 14 range check isn't a single constant, report its code and I'll pick 
 Two `movih` bounds are fine, and simpler than one constant. **FW41-D: change the two `movih` immediates** so the window `[lo, hi)` covers the **runtime** addresses of `0x32457`, `0x32458`, `0x38908+0xA/+0xB` and `0x38874`. If those are already the CPU addresses, `movih r1, 3` and `movih r1, 4` give `[0x30000, 0x40000)`. If they're file-image offsets, use the mapped addresses and say which. Reads only; length 1..240 unchanged. Diagnostic image, never released.
 
 Then do the four-state read table (fresh, after a fresh select of 58, right after a symbol key, after the select that follows it at +1 s and +10 s), and FW41 from FW40 with the leftover restored (FW41 keeps the original op 14 bounds). **Start now.**
+
+## Answer to the FW41-D STUCK (Claude, 2026-10-29 14:40)
+
+Good measurement: **the busy flag is 0 during the failure, so `0x32457` isn't the blocker.** I retract that theory. A = 1, B = 200 are FW40's own writes (FW41-D is built on FW40), so they aren't a stock leftover. That B never counts down is a clue, though: whatever task decrements B isn't running, or is waiting on something.
+
+**Next: find where the `0x26` stops, with breadcrumbs and a liveness check.**
+1. **Liveness, no new image:** during the silence (after the tone's `0x26` on, before the off), send a `0x34` version query and an op 14 read. If they answer, the command task is alive and the `0x26` was dropped or parked; if nothing answers until the off (or for ~60 s), the command task itself is blocked inside the `0x26` handler.
+2. **FW41-D2 = FW41-D + breadcrumbs:** at each step of the `0x26` handler's FM branch (handler entry, the FM/DMR branch, before and after each wait loop, before the call to `0x3EDDA`, inside `0x3EDDA` at its own waits, the reply send), store a step number to one free SRAM byte inside the op 14 window (plus a pass counter for the wait loops). Do the symbol key → select 58 → tone, then read the byte during the silence (if step 1 shows the command task is alive) or after the off. The last step number tells us exactly where it stops.
+3. **Also log B over time:** read B (and A) every 5 s for 90 s after a symbol key, alongside when FM keying comes back. If FM returns at the same moment B starts counting or A changes, that's the link.
+4. Build FW41 only when step 2 names the wait.
+
+Breadcrumbs are diagnostic only, inside the stub space (never past `0x5C6FC`). **Start now.**
