@@ -100,3 +100,5 @@ Setup:
 - bench channels deleted; my test history removed;
 - radio handed back to the stock app (running, holds ttyS2);
 - web transmit off; HackRF lease ended in all three mailboxes.
+
+**Atom XL check (its agent, Atom XL mailbox 275e23c3):** every W6 key pulled the Atom XL's RSSI on 401.025 *down* (to 0x0D–0x14, following the DMR slots), and it recovered at once. It never rose and no reception started. So the W6's transmitter desensitises the Atom XL while keying, and it is not the source of the 17:06 rise. The decoder is now `tools/dmr-replay/iqan_tx.py`.

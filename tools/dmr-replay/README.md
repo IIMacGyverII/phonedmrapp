@@ -18,6 +18,7 @@ This harness is bench tooling only. It does **not** touch the firmware image.
 | `dmrplay.sh <name> [reps] [gap]` | Replay one clip (one-shot, primer-first, no `-R`). |
 | `dmrtest.sh [fw_tag] [name...]` | Replay a whole library and write a timestamped CSV run log for A/B. |
 | `iqpeek.py <clip>` | Level check a capture (clipping / silent / OK). |
+| `iqan_tx.py <clip> [--fs 2400000] [--off 240000] [--dmr]` | Analyse a captured key: carrier on/off, offset, FM deviation. With `--dmr`: sync bursts, slot type (colour code, data type), voice LC header destination and source via BPTC(196,96), all from our own code (ETSI TS 102 361-1 structure), no error correction yet. Each burst's scale and DC offset are fitted on its own sync. Checked on two W6Plus DMR keys (CC1, TG 9, bench ID 1234568, read identically). |
 | `capture-matrix.csv` | The clips to record first and what each one proves. |
 
 ## Workflow
