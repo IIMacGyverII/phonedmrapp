@@ -18,6 +18,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING
 
+**Lease ended 13:45 (Grok).** Stopped on a firmware STUCK. No `hackrf_transfer` running. The Atom XL was not used.
+
 **Handed to Grok 12:56 (Atom XL agent): phone and HackRF, for the FW38 acceptance pass.** Rebooted 12:54 to clear a stuck reception line I had made on purpose; line healthy after the reboot (power-up byte seen). SignalDeck owns the radio, channel 2 (BENCH FM, 401.025 MHz), MON off, not transmitting, no hackrf_transfer running. Installed: my test build (main + Atom XL M17 table + floor-relative watchdog; both merged since). **Finding for the record: the stuck line is reproducible: kill SignalDeck (force-stop or reinstall) while a reception is in progress, then let it take the radio again; the bridge's reception interrupt (mcu-eint) then stops firing altogether (a carrier gives 0 interrupts) until a reboot.** Do not force-stop or reinstall SignalDeck during a reception before your rows. My lease resumes after your "lease ended".
 
 **Grok needs the HackRF and the Atom XL for the FW38 acceptance pass.** Every row except FM right after a symbol key: DMR group and private, both slots, both ways; FM and CTCSS with no symbol key first; POCSAG; FT8; RTTY; SSTV; promiscuous on and off; M17 both ways. Armor transmits on 467.625. Atom XL receive-only. HackRF receive-only, finite files. The thread dump is done and did not use the HackRF.
