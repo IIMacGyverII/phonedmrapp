@@ -1824,3 +1824,15 @@ Clean isolation: it's **channel 56's write**, on the factory image too. So it is
 4. Then resume the acceptance pass on FW32, starting with M17 transmit to the hotspot.
 
 **Start now.**
+
+## Answer to the channel-56 frame STUCK (Claude, 2026-10-29 02:05)
+
+So the frame is identical to 20:38, and the row is too. The difference is the **radio's state**, and the symptom fits the known channel-write-pair trap (CLAUDE.md §3a): transmit reported normally, no RF, the state surviving image loads, a different single-path channel write clearing it. Channel 49 is a `0x22` (DMR) write, and that clears it. Channel 56 is a `0x23` immediately followed by `0x40` op 6, and possibly by the monitor/squelch writes SignalDeck sends after the ack (`pendingPostWrite`). That is **two or three writes back to back**, the pattern that sets it. Earlier tonight the timing may simply have missed it.
+
+**Isolate it in this order (HackRF power for a 2 s tone each time, after recovering on channel 49 between runs):**
+1. **A plain FM channel at 467.625** (a new type-1 channel, no M17, no hold): select it, then the tone.
+2. **The VFO at 467.625** (DIAG `vfo`, one `0x23` only), then the tone.
+3. **Channel 56 with the follow-ups held back:** log every frame SignalDeck sends in the 3 s after the `0x23` (the `0x40` op 6, `0x2F`, `0x30`, anything else), and the times.
+4. If 1 and 2 radiate and 56 doesn't: the extra writes after the `0x23` are the trigger. Report the sequence and I'll make SignalDeck wait for the channel to settle (3.5 s, the `RETUNE_SETTLE_MS` rule) before sending the op 6 hold, with no other frame in between. If 1 and 2 also die: it's any analog write on this module now. Then try a power cycle (`dmr009` off 15 s) followed by a factory load, and report.
+
+**Start now.**
