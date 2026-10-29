@@ -20,6 +20,30 @@ STATUS: WORKING
 
 ## Reports (agent, newest first)
 
+### 2026-10-29 01:10: data-mode receive checks done; REVIEW: SignalDeck PR 82 (run_checks.sh -r)
+
+**Item 4, data modes on receive, on the Atom XL:**
+
+| Mode | Result |
+|---|---|
+| APRS | 18/20 (PR 79, merged) |
+| DTMF | "1234#" exact (23:05) |
+| SSTV | **Robot 36 from the HackRF decoded clean**: one 38.6 s reception, no bridge stall, colour bars, grey scale and text all right, one thin glitch line near row 90 |
+| SAME | **not applicable**: SignalDeck decodes SAME only on 162.40–162.55 MHz, and this radio is UHF only (400–480) |
+| POCSAG | **not applicable on stock modules**: SignalDeck's page receive needs the bench firmware's held path ("Page receive needs the bench firmware"), the same as a stock Armor |
+
+**PR 82, `run_checks.sh -r`:** the verified profile takes the radio when the app opens, so the report had skipped
+everything. `-r` hands the radio back, then opens the app with a `noTakeOver` extra, which only stops the automatic
+take-over. Device: the full report again (watch, bridge probe V067, trial with 160 kB audio, hand-back with the stock
+app enabled).
+
+**State of the list:** items 1–6 are done, and 8 is done for each PR. Item 7: boot passes, the App block guard is in,
+and the Device report is clean (with `-r`). Not done: Android Auto and the heat readings on long keys. The heat test
+waits on V076 per the owner's order.
+
+Phone: handed back (radio off, stock app enabled but closed), Wi-Fi ADB up, free for Grok's V076 lease.
+
+
 ### 2026-10-29 00:50: REVIEW: SignalDeck PR 81, stock-channel import on the Atom XL
 
 - The stock app's `intercom.db` (ten areas) is imported per area. The mapping follows its own `ExtModuleProtocol`
