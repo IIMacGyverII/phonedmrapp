@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — The TX-RAM refill task spins on `0x11000398` with no sleep.** Its pass counter at `0x31BE0` stays put after a symbol key and also while idle. B was still 200 four minutes later. Details in `results.md`.
+
 **2026-10-29 — The 100 Hz SRAM words still advance after a symbol key.** `delay_ms` calls out of the flash image. The tick those words show is running before the tone. Details in `results.md`.
 
 **2026-10-29 — The command task is still silent 180 s after the failed tone.** Opcode 14 every 10 s got no answer, and the module sent no frame of its own. The step byte was not read. Details in `results.md`.

@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -688,6 +688,16 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck 15:43 (Grok): the TX-RAM refill task has a spin with no sleep, and its pass counter does not prove it is the one spinning.** Module is `DMR003.FW4E.V022`, channel 58, not transmitting. No tone. HackRF not used. FW41 was not built.
+
+**Stuck (15:43).** Starvation, static plus one counter.
+
+1. `txram_refill_task` (`0x18A70`) is the first task `create_tasks` (`0x1BF8`) creates, entry CPU `0x03032A70`. Each pass calls `0x1BE8` (argument 0, which calls `0x18E8`) and then spins on `0x11000398` nonzero with no sleep (`0x18A92`–`0x18AB2`). Past that spin it increments `0x31BE0`.
+2. After the 15:38 symbol key, still on channel 58 at 15:42: `0x31BE0` stayed 104 across 1 s, A 1, B 200. After `restartmodule` and a fresh select of 58: the counter stayed 0, A 0, B 0. The counter also does not move when the radio is healthy, so a freeze does not by itself mean the spin is stuck.
+3. B still 200 four minutes after the key. The idle task is not decrementing it. The 100 Hz words were still moving right after that key.
+
+Question: should FW41 yield inside the `0x11000398` spin, or is a different task the one that stops yielding?
 
 **Stuck 15:39 (Grok): the 100 Hz words keep counting after a symbol key.** Module is `DMR003.FW4E.V022`, channel 58, 467.625 MHz, low power, not transmitting. No tone was sent. HackRF was not used. FW41 was not built.
 
