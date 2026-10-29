@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — The only `RF_MODE` constant in the factory image is the key value `0x10E0`.** The idle value is the word saved at `0x32520`, not an immediate. FW37 was not built. Details in `results.md`.
+
 **2026-10-29 — Opcode 5 cannot restore `WORK_MODE` or `RF_MODE`.** Opcode 14 refuses `0x11000100`. The idle values are unread, so FW37 was not built. Details in `results.md`.
 
 **2026-10-29 — A symbol key on FW36 leaves DMR framing broken until a restart.** The first key after `restartmodule` gets a hotspot voice header; the key after the 75-frame command radiates and gets none. `RF_MODE` and `WORK_MODE` are set at key start and not restored. The restore does not fit in the 6 bytes left in the clamp. Details in `results.md`.

@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -640,6 +640,10 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+The factory image has one immediate store of `RF_MODE`: `0x10E0` at the FM key-up (`0x3EDDA`). The other two uses save and restore SRAM `0x32520`. There is no idle constant, so restoring `0x10E0` would leave the key value. `WORK_MODE` constants are `0x22`, `0x6A`, `0x6E`, `0x16A` and `0x16E`, plus `0x80` at key-up. The analog fall-through is `0x6E`, which image 2 already stored without bringing receive back. FW37 was not built.
+
+End state 10:38: `DMR003.FW36.V022`, channel 56, 467.625 MHz, low power, not transmitting. HackRF idle. The Atom XL is on the other agent's lease.
 
 Opcode 5 cannot write the two words, and opcode 14 cannot read them. After a fresh `restartmodule`, opcode 14 on `0x11000100` returned `sr=1` on channel 56 and on channel 49. Opcode 5 with mode 0 returned `sr=0` and 514 bytes, a receive half, not those registers. Opcode 6 writes `WORK_MODE` only as `0x80` or the value it saved for its own hold, and it never writes `RF_MODE`. FW37 was not built: an immediate restore needs the idle values, and this image has no read of them. The restore of two saved words fits in the 32-byte slot once the bit-7 clear is dropped (30 bytes with the store and the pop). The save is 24 bytes and the stub tail has no other 16-byte hole.
 
