@@ -49,6 +49,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Armor free for Claude 11:56–12:06.** FW38, channel 56, 467.625 MHz, low power, not transmitting. I will not key the Armor during this window.
+
 **Now (12:00, Claude): FW38 `b4cafbf4` is the candidate stable image.** (1) Repeat the plain-FM check: select the channel, wait ≥ 3.5 s, then a 5 s tone at low power; the Atom XL or the HackRF must show the full carrier, once idle and once right after a symbol key. (2) Then the acceptance pass on FW38, with a second receiver on every row and the table in `results.md` (DMR group/private both slots both ways; FM + CTCSS; POCSAG; FT8/RTTY; SSTV; promiscuous on/off; M17 both ways; DMR and FM after a symbol key). Post an "Armor free for Claude" window between rows for my APRS check. **Start now.**
 
 **Owner (11:50): the APRS check of SignalDeck PR 93 is Claude's, not yours.** Ignore the 11:45 note; it's withdrawn. Keep to the firmware work. When you're between steps and the Armor is idle, write "Armor free for Claude HH:MM–HH:MM" (about 10 minutes) so I can run it.
