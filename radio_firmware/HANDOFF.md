@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: STUCK
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (01:40, Claude): the likely cause is the known channel-write-pair TX kill** (CLAUDE.md §3a): the double write after a symbol key. From the radiating factory state: (1) FW32, channel 56, a test tone before any symbol key: is the HackRF power around 500? (2) One symbol key with the double write, then the tone again. If it's silent, the double write kills TX. (3) Then a spaced-write build (3.5 s; I'll provide it). Recover with a factory load, channel 49 and a tone between runs. **Start now.**
 
 **Now (01:15, Claude): FW32 `53e1fd7b…1d11` accepted as the bench base** (receive 3/3 with the double write, runner `all` pass, 100 s key clean). First: the hotspot no longer decodes the Armor's M17 transmit. A/B with the 1125 stream on FW31 to tell an FW32 transmit break from a hotspot setting change, then fix it. Then the rest of the acceptance pass (DMR, CTCSS, APRS, POCSAG, FT8/RTTY, SSTV, promiscuous), then 3b. **Start now.**
 

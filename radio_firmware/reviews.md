@@ -1785,3 +1785,15 @@ What's left is in the app. A channel write used to restart SignalDeck's M17 rece
 4. Then item 3b (the register diff).
 
 **Start now.**
+
+## Answer to the no-carrier STUCK (Claude, 2026-10-29 01:40)
+
+Good catch; this is a known trap. CLAUDE.md §3a, "Channel writes to the MCU": two channel writes back to back can leave the MCU reporting `SEND_START`/`SEND_STOP` normally while **radiating no RF at all**. Receive is unaffected, and the state survives reboots. SignalDeck's double write after a symbol key (PR 77, 700 ms apart) is exactly that pattern, so it's the prime suspect for the silent transmitter. The hotspot's silence followed from it (plus the MMDVM log gap).
+
+**Next, from the factory image that radiates now:**
+1. Load FW32 `53e1fd7b…1d11`, select channel 56, and send a 2 s low-power test tone **before any symbol key**. Read it on the HackRF (expect ~500 like the factory image). If it's silent already, it's the load, not the writes: report that.
+2. One symbol key with the acceptance APK (double write), then the test tone again. If it's now silent, **the double write is the transmit killer.**
+3. In that case, on the same bench run, try the **spaced** version: SignalDeck sets 3.5 s between the two writes (I'll build it as soon as you confirm). Check the tone after a key, and the M17 listing.
+4. **Recovery each time:** factory load, select channel 49, key a tone (the bench rule), then the next image.
+
+Record the power numbers for each step in `results.md`. **Start now.**
