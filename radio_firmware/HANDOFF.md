@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -578,6 +578,18 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+A plain FM channel, the VFO, and channel 56 all failed to radiate a full carrier. HackRF power per second, 2 s low-power tone, FW32, recovering on channel 49 between them:
+
+| Case | Write in the next 3 s | Power |
+| --- | --- | --- |
+| New FM channel, 467.625, squelch 0 | one `0x23` `… 01 00 00 …`, no `0x40` | 58, then the floor |
+| VFO 467.625 low | one `0x23` `… 01 00 02 …` (squelch 2) | floor the whole way |
+| Channel 56 | `0x23` `… 01 00 00 …`, then 19 ms later `0x40` `[06 03 01]` | 49 in one second, otherwise the floor |
+
+No `0x2F` and no `0x30` after any of them. The op 6 hold is not required for the failure. `dmr009` was off for 15 s (tag stayed FW32), then the factory image loaded.
+
+End state 02:07: factory `DMR003.UV4T.V022` `90e361fd…`, channel 49, 467.625 MHz, low power, not transmitting. The factory image was not keyed. Battery 35.9 °C, AP 42.1 °C, PA 40.9 °C. HackRF idle. SignalDeck `a7344f19`. The temporary FM channel was deleted.
 
 **Stuck.** The 01:55 comparison found no byte to fix. At 01:57, channel 56's stored row is type 2, 467.625 MHz both ways, power 0, band 1, squelch 0, tones 0, CAN 7, destination N0CALL. Its `0x23` body is `28 64 DF 1B 28 64 DF 1B 01 00 00 00 00 00 00 02 08 02 02`, then `0x40` `[06 03 01]`. That is the 20:38 frame, byte for byte, from the FW31 load whose keys the hotspot decoded. Channel 49's select sends `0x22` length 163 and no `0x23`. The row was not edited. No tone. Acceptance was not started: this is the same write that leaves the carrier dead.
 

@@ -4380,6 +4380,18 @@ Selecting 49 sent one `0x22` of length 163. It sent no `0x23`. Selecting 56 sent
 
 End state 01:58: `DMR003.FW32.V022`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107. Battery 36.1 °C, AP 43.0 °C, PA 41.5 °C. HackRF idle. SignalDeck `a7344f19`. Acceptance was not started.
 
+**Analog writes, one at a time (02:03–02:07).** FW32 `53e1fd7b`, SignalDeck `a7344f19`. A 2 s low-power tone after each, HackRF power per second. Channel 49 was selected between them. No `0x2F` and no `0x30` in the 3 s after any `0x23`. The other TX lines in that window were status acks (`0x36`) and RSSI polls (`0x32`).
+
+| Case | Write | Power |
+| --- | --- | --- |
+| New type-1 channel 58, 467.625 both ways, power 0, band 1, squelch 0, no tones | one `0x23` `28 64 DF 1B 28 64 DF 1B 01 00 00 00 00 00 00 02 08 02 02` | 4.7, 58.3, then the floor |
+| VFO 467.625, low power | one `0x23` `28 64 DF 1B 28 64 DF 1B 01 00 02 00 00 00 00 02 08 02 02` | 4.6–4.7 the whole way |
+| Channel 56 | the same squelch-0 `0x23`, then 19 ms later `0x40` `[06 03 01]` | 4.6–4.7, then 48.8 in one second |
+
+A single analog `0x23` is enough. The op 6 hold is not required. Channel 58 was deleted. `dmr009` was held off for 15 s; the tag was still `DMR003.FW32.V022`. The factory image then loaded (`fwload ok`, 140 s).
+
+End state 02:07: factory `DMR003.UV4T.V022` sha256 `90e361fd…`, channel 49, 467.625 MHz, low power, not transmitting. The factory image was not keyed after the load. Battery 35.9 °C, AP 42.1 °C, PA 40.9 °C. HackRF idle. SignalDeck `a7344f19`.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.
