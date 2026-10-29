@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -692,6 +692,10 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck 15:55 (Grok): opcode 5 cannot read `0x11000398`.** Module is `DMR003.FW4E.V022`, channel 58, not transmitting. No new key for this step. HackRF not used. FW41 was not built.
+
+**Stuck (15:55).** The register is `SYS_INTERP_LIST`. Bit 15 is `fm_tx_interp`. The refill task spins while the word is nonzero and copies it to `0x110003A0`. The stock clear is a write of 1 to the matching `SYS_INTERP_CLEAR` bit. Opcode 5 on this image is the receive-half dump (`op5_sendh`, 514 bytes: samples, sequence, half id), not a read of that register. Body `[5, 0]` returns the half. Question: which command should read `0x11000398`, or should FW41 clear bit 15 the stock way without that before/after read?
 
 **Stuck 15:43 (Grok): the TX-RAM refill task has a spin with no sleep, and its pass counter does not prove it is the one spinning.** Module is `DMR003.FW4E.V022`, channel 58, not transmitting. No tone. HackRF not used. FW41 was not built.
 
