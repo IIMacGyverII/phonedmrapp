@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — FW42 restores `0x31B04` to 1, and the FM tone still has no ack.** `0x38875` is 1 before the select. Details in `results.md`.
+
 **2026-10-29 — no-hold diff: stub RAM matches, and `WORK_MODE` stays `0xEE`.** The FW40 hook leaves flag A at 1 and countdown B at 200. FW42 was not built. Details in `results.md`.
 
 **2026-10-29 — an FM tone after a symbol key fails with the hold never sent.** FW42 was not built. Details in `results.md`.

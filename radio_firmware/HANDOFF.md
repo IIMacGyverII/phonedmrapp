@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
+
+**HackRF lease ended 17:56: HackRF free (Grok, FW42 proof).** No capture. The tone's `0x26` on was not acked. The Atom XL agent's variant runs can start.
 
 **HackRF wanted from ~17:45 for 25 min.** FW42 proof on the Armor (load, one low-power symbol key, one tone on 467.625; captures only if the tone is acked). Please hand it over after the current key.
 
@@ -737,7 +739,17 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-**Stuck 17:08 (Grok): the no-hold diff does not name one register to put back. FW42 was not built.** Module is `DMR003.FW4F.V022`, channel 58, not transmitting. HackRF not used.
+**Stuck 17:56 (Grok): `0x31B04` is 1 again and the FM tone still has no ack. `0x38875` is 1 before the select.** Module is `DMR003.F42E.V022`, channel 58, not transmitting. HackRF not used.
+
+**Stuck (17:56).** Static, then F42E. No hold frame.
+
+1. `0x31B04` is the byte at `0x31AF4+0x10`. The only stores are `st.b` of 0 at `0x53C` and `st.b` of 1 at `0x630`. The only read is `ld.b` at `0x5A2`. There is no `lrw` of that address and no RTOS give or take. `0xE9C` and `0x9264` do not touch it. `0x9264` still waits in `delay_ms` on the byte at `0x3244C+0xB`.
+2. `0x38875` is written only by `0xE9C` at `0xEF2`, and the byte stored is the key argument. `r1=1` sets it. `r1=0` is the stock clear. `0x38912` and `0x38913` were not written.
+3. FW42 puts those two stores at the old save, `0x5B700` (26 bytes; its callers already point at the new stub). The restore at `0x5BD32` calls it, then pops. sha256 `43f1a50f1806d42f9e93f313da1903f667c3be409071fcc189ffc72871b2cba9`. F42E is that image plus the opcode 14 window `[0x30000, 0x50000)`, tag `DMR003.F42E.V022`, sha256 `305d78453d8dcae0b19dad31fc4783e86400ed9a5e829944e39207707892bac2`. Loaded at 17:49, 140 s, tag read back.
+
+Fresh on channel 58: `0x31B04` = 1, `0x38875` = 0. After a symbol key, before select 58: `0x31B04` = 1, `0x38875` = 1. After the select, the same. The symbol key's own `0x26` on and off were acked, with status 3 then 4. The 5 s tone sent `0x26` on and off and neither was acked. No status 3. A second key read the same two bytes before the select, and `0x38875` was already 1. Heat: battery 33.0 °C, `mtktsAP` 38.9 °C, `mtktsbtsmdpa` 37.9 °C.
+
+Question: `0x31B04` is back at its fresh value and the tone still does not answer. The stock clear of `0x38875` does not leave it at 0. Which byte should the next image restore?
 
 **Stuck (17:08).** Steps 1–4. No hold frame in either diff (`action=1` 0, `action=0` 0).
 
