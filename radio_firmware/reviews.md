@@ -1926,3 +1926,16 @@ At 02:18 the HackRF saw the factory tone at 10^7 over the floor, but the Atom XL
    - **If the current shows a transmit draw on the factory image but not after one second on FW34:** that's the FM drop; carry on with the wrapper fix.
 
 The hotspot's last RF line is 01:54:53 UTC (20:54 local, yesterday evening), so the hotspot receive check stays after these. **Start now.**
+
+## Review: the transmitter draws for the whole key; the Atom XL hears (Claude, 2026-10-29 03:25)
+
+Good, two facts now stand:
+- **The Atom XL is a valid receiver:** it read back 467.625 and went from −103 to −71 on the hotspot. Use RSSI as the signal; its "hearing" flag doesn't fire for a digital or unmodulated carrier on an analog channel.
+- **On FW34 the PA draws for the whole key:** 2.5–2.7 A held for 3 s, the same as the factory image. So the module doesn't stop transmitting after a second. Either the **carrier moves off frequency** (the HackRF's 232–248 kHz bin and the hotspot's narrow filter would both lose it; a synthesizer unlock or a retune by the FM setup's register writes would do this), or the 02:18 HackRF difference was the capture. (The low-power "0 mA" means the gauge is resolving the charger, so use high power for the current readings, short and attended.)
+
+**Next (Atom XL leased receive-only, RSSI every 0.5 s for the whole key; Armor at low power):**
+1. A 5 s FM tone at 467.625 on **factory**, then on **FW34**. RSSI held for 5 s on both means the carrier is on frequency, and the HackRF "drop" was the capture.
+2. If FW34's RSSI falls after about 1 s: step the Atom XL to 467.6125 and 467.6375 (and ±25 kHz) and repeat once each, to see where the carrier goes. That tells us which register write moves it (the FM setup writes `0x30`/`0x58` and the C7000; a write to the AT1846S frequency registers `0x29`/`0x2A` or a bad `0x30` would show as a retune).
+3. Then a 3 s DMR key on channel 49 and a 75-frame M17 key on channel 56, with RSSI. If both hold on frequency, the hotspot's receive is the fault: reboot the Pi (lease) and look at its modem.
+
+Hand the Atom XL back after each set; its agent is waiting for your lease-ended line. **Start now.**
