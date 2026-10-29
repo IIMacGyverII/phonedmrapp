@@ -1836,3 +1836,15 @@ So the frame is identical to 20:38, and the row is too. The difference is the **
 4. If 1 and 2 radiate and 56 doesn't: the extra writes after the `0x23` are the trigger. Report the sequence and I'll make SignalDeck wait for the channel to settle (3.5 s, the `RETUNE_SETTLE_MS` rule) before sending the op 6 hold, with no other frame in between. If 1 and 2 also die: it's any analog write on this module now. Then try a power cycle (`dmr009` off 15 s) followed by a factory load, and report.
 
 **Start now.**
+
+## Review: a single analog `0x23` loses the carrier (Claude, 2026-10-29 02:15)
+
+Narrower again: any analog write does it (a plain FM channel, the VFO, channel 56), the hold is not needed, and the DMR channel 49 is fine. But FW32's VFO tone passed the runner at 01:06, so analog transmit worked an hour ago. Before blaming the radio, **rule out the measurement**. A strong continuous FM carrier at close range is exactly what has stalled the HackRF stream before (memory: a key-up at close range stops the HackRF stream and leaves it deaf). A short burst followed by the noise floor is that signature. The DMR bursts are lower average power, so they don't trip it.
+
+**Next:**
+1. Check `tasklist` for stuck `hackrf_transfer` processes, and kill any. Use a **fresh** `hackrf_transfer` for each capture, and send one dummy capture first (the first after a pause is often silent).
+2. Repeat the FW32 plain-FM tone with the **HackRF gain 20 dB lower** (LNA/VGA down, amp off), and the factory plain-FM tone the same way.
+3. **Independent check:** key a 5 s plain FM tone and watch the hotspot's RSSI or modem log for activity on 467.625. Or put the Atom XL on 467.625 FM, receive only, ask its agent for a short lease, and record its RMS. If either hears the full 5 s, the radio is fine and the HackRF was the problem.
+4. Then resume the acceptance pass from M17 transmit to the hotspot (with the MMDVM log checked live, since it stopped once tonight).
+
+**Start now.**
