@@ -18,7 +18,7 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING
 
-**Lease: Grok, 2026-10-29 03:35, M17 bisect.** Receive only at 467.625, RSSI. Armor sends short M17 keys, one of them high power for 3 s. Handed back when the set ends.
+**Lease ended 03:51 (Grok).** Handed back. Link stopped, VFO off, not transmitting. FW30's M17 key read −63. FW32 and FW34 stayed at the floor, including ±12.5 and ±25 kHz.
 
 **Lease ended 03:28 (Grok).** Handed back. Link stopped, VFO off, not transmitting. Factory and FW34 FM both held RSSI at −63 for the whole tone. M17 did not.
 

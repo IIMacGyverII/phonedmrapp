@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **HackRF needs a power cycle.** `hackrf_transfer` PID 42764 survives `taskkill` and `Stop-Process`. `pnputil /restart-device` on `USB\VID_1D50&PID_6089\...` returned access denied. `hackrf_info` still gets `hackrf_open` access denied (−1000). The FM carrier check is waiting on that power cycle.
@@ -600,6 +600,19 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+FW30's M17 key is on 467.625. FW32 and FW34 are not, and FW34 is not at ±12.5 or ±25 kHz either. FW34 is not the first silent image, so FW35 was not built. The Atom XL has been handed back.
+
+| Image | Key | RSSI on a confirmed 467.625 |
+| --- | --- | --- |
+| FW30 | 75-frame, low | −63 five times |
+| FW32 | 75-frame, low | −99 the whole key |
+| FW34 | 75-frame, low | −109 to −111 |
+| FW34 | same key at ±12.5 and ±25 kHz | floor at all four |
+
+FW34 high-power M17 current was about −430 to −720 mA during the key, against an idle of −284 mA. That is not the −2.5 A of a high-power FM carrier. Channel 56 was put back to low power.
+
+End state 03:51: `DMR003.FW34.V022` `7b64a823a4c3af5e…9f8f`, channel 56, 467.625 MHz, low power, not transmitting. Battery 35.2 °C, AP 41.9 °C, PA 40.4 °C. Atom XL link stopped. HackRF still needs a power cycle. SignalDeck `a7344f19`.
 
 Factory and FW34 both hold a low-power FM carrier on 467.625 for the whole 5 s. The Atom XL reads −63 the whole time. FW34 does not fall off after one second, so the offset steps were not run. M17 does not: RSSI stays at −110. The Pi was not rebooted. The Atom XL has been handed back.
 

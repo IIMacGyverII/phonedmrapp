@@ -4464,6 +4464,19 @@ FW34's FM carrier stays on 467.625 for the whole tone. The ±12.5 / ±25 kHz ste
 
 End state 03:28: `DMR003.FW34.V022`, channel 56, 467.625 MHz, low power, not transmitting. Battery 35.5 °C, AP 42.7 °C, PA 40.8 °C. HackRF still will not open. SignalDeck `a7344f19`.
 
+**M17 bisect (03:36–03:51).** Atom XL VFO read back before each confirmed row. One 75-frame key, channel 56, low power, unless noted. RSSI above −90 is the carrier seen on FM.
+
+| Image | Where the Atom XL listened | RSSI |
+| --- | --- | --- |
+| FW30 `aaccf03d` | 467.625 | −100, then −63 five times, then the floor |
+| FW32 `53e1fd7b` | 467.625 | −99 for the whole key |
+| FW34 `7b64a823` | 467.625 | −109 to −111 |
+| FW34 | 467.6125, 467.6375, 467.600, 467.650 | floor at each |
+
+FW34 at high power, one 75-frame key: battery current about −430 to −720 mA while the key was up, idle −284 mA. A high-power FM key on this phone is about −2.5 A. Channel 56 was set back to low power. FW34 is not the first silent image. FW35 was not built.
+
+End state 03:51: `DMR003.FW34.V022`, channel 56, 467.625 MHz, low power, not transmitting. Battery 35.2 °C, AP 41.9 °C, PA 40.4 °C. Atom XL link stopped. HackRF still will not open. SignalDeck `a7344f19`.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.
