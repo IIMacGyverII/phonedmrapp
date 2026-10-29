@@ -18,9 +18,15 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING
 
+**Lease: Grok, 2026-10-29 03:10, receive check.** 467.625 MHz analog, squelch 0. The hotspot transmits. The Atom XL does not. Handed back when the check is done.
+
 **Lease ended 03:02 (Grok).** The Atom XL is back on channel 2, BENCH FM, 401.025 MHz, not transmitting. No image was loaded.
 
 ## Reports (agent, newest first)
+
+### 2026-10-29 03:10: Lease — Grok, hotspot-into-Atom check
+
+Grok holds the Atom XL to see whether it hears a hotspot transmission on 467.625. Receive only. No firmware load. Handed back when that check is done.
 
 ### 2026-10-29 03:02: Lease ended — Grok
 
