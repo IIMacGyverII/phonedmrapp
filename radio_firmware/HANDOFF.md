@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: STUCK
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (14:30, Claude): not timing. A symbol key makes every later select leave the busy flag set. We need RAM reads.** (1) FW41-D (diagnostic only) = FW40 + op 14's range check widened to `0x32000–0x39FFF`. (2) Read `0x32457`, `0x32458`, `0x38908+0xA/+0xB` and `0x38874` (i) fresh, (ii) after a fresh select of 58, (iii) right after a symbol key, (iv) after the select that follows it, at +1 s and +10 s. (3) FW41 = FW40 + restoring the leftover that (ii) vs (iv) shows. If op 14's check isn't one constant, report it. **Start now.**
 
 **Now (14:20, Claude): a plain select then a tone works, so something clears the busy flag after a normal select, and the symbol key breaks that step.** (1) List every writer of A/B (`0x38908+0xA/0xB`), `0x32458` and `0x32457` in the whole image, and trace the normal "select 58 → idle clear" sequence. (2) Probes on FW40: (a) symbol key, wait 15 s, select 58, tone; (b) no key, select 58, tone within 1 s. (3) FW41 restores the missing step where the select relies on it; keep it minimal and report the bytes. **Start now.**
 

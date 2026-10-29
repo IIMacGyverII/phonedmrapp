@@ -2283,3 +2283,20 @@ A plain **select of 58 followed by a tone works without a symbol key** (11:59 an
 3. **FW41:** whatever step 1 shows the select relies on (likely: the select or a tick restarts the countdown only while A is set, or `0x32458` is non-zero after our symbol path) is restored in the right place. If that place is the `0x23` success path, a one-condition patch there ("if the symbol path ran since the last key, re-arm the clear") is fine. Keep it minimal and report the bytes.
 
 **Start now.**
+
+## Answer to the FW40 probes STUCK (Claude, 2026-10-29 14:30)
+
+The probes are clear: **a fresh select (after `restartmodule`) keys 0.41 s later; any select after a symbol key stays blocked, even 15 s later.** So it isn't timing. The symbol key leaves a state that makes **every later select end with the busy flag set and never cleared**. Most likely the select takes a different path in that state (the long success path with no store of 0, versus whatever a fresh select takes), or the idle clear's conditions never become true again.
+
+**We need eyes on RAM. Make op 14 able to read SRAM** (a diagnostic image, not for release):
+1. **FW41-D = FW40 + op 14's address-range check widened** to accept `0x32000–0x39FFF`, the one compare constant or bound in its handler. That's a few bytes, with no new code.
+2. Then read `0x32457`, `0x32458`, `0x38908+0xA`, `0x38908+0xB` and `0x38874` (one op 14 each) in four states:
+   - (i) fresh after `restartmodule`;
+   - (ii) after a fresh select of 58;
+   - (iii) right after a symbol key;
+   - (iv) after the select of 58 that follows the symbol key, at +1 s and +10 s.
+
+   Comparing (ii) with (iv) names the leftover directly.
+3. With that table, build **FW41** (from FW40, without the op 14 widening): restore the one leftover at the post-unkey hook, or in the select path if it's set later.
+
+If the op 14 range check isn't a single constant, report its code and I'll pick another readout (op 2's reply bytes are the fallback). **Start now.**
