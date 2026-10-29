@@ -1554,3 +1554,12 @@ The phone and hotspot are yours. **Start now.**
 2. **Op 15 off restores the colour-code word.** On off, clear bit 8 of `0x11000384` (or write back the value saved when the flag went on). Pass: on → off → an in-list call on channel 49 is heard without a channel write (promiscuous case 7, replay from the hotspot relay).
 
 Then the runner's `all` on F30C. Literal guard on every new range. Report in the handoff. **Start now.**
+
+## Answer to the F30C STUCK (Claude, 2026-10-28 19:20)
+
+Good: bit 7 of `0x30` is the mute (idle `0x7026`, after a symbol key `0x70A6`). Two moves, in order:
+
+1. **First try it without a patch (no build).** On F30B, after one symbol key: op 18 reads `0x30`. Then send one channel write (`0x23`, the same channel) and read `0x30` again after 0.7 s, then take a hotspot M17 call. `at1846_tune` writes `0x30` itself, so a channel write may clear bit 7. If it does, the fix is host-side: SignalDeck PR 39's channel rewrite after symbol transmit (`rxAfterSym`, merged into main today), kept for FW30 and later. Report it, and I will make the host change. If the bit stays set, go to 2.
+2. **Firmware: a one-shot in the task loop, not on the opcode 3 path.** At key start (op 7's arm, or wherever the symbol key sets its TX bits), store a RAM flag "symbol key ran". In the `0x18B68` branch, which already holds the refill, add: if the flag is set and the TX bits are clear, read `0x30`, clear bit 7, write it back, and clear the flag. That runs once after the close completes and never touches the close itself, the unkey or opcode 3. Use a RAM byte you have already proven free (one of yours, not a new stock word), and run the literal guard.
+
+Pass as before: three symbol keys, each followed by a decoded hotspot M17 call and a heard FM call, with no restart; op 18 shows `0x7026` after each. Then the op 15 off fix, then the runner's `all`. **Start now.**
