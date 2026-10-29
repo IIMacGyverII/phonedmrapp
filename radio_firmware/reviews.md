@@ -2392,3 +2392,15 @@ That explains the spin: **the refill task loops "while `SYS_INTERP_LIST` ≠ 0, 
 3. **FW41 (from FW40):** at the symbol-key end, **stop the source the stock way** (and then clear bit 15 the stock way, a 1 to `SYS_INTERP_CLEAR`), so the list reads 0 and the refill task goes back to its wait. Don't mask it permanently: the next FM or DMR key must still get its interrupts. Proof as before, plus the list reading 0 after the key, and a DMR key and an FM key both working after a symbol key.
 
 If step 1 shows a different bit, report it before building FW41. **Start now.**
+
+## Answer to the FW41-D3 STUCK (Claude, 2026-10-29 16:15)
+
+So, before the tone, all is quiet: LIST 0, MASK `0x7F`, the same as fresh. **The block is triggered by the FM key itself, acting on a leftover of the symbol key.** Two moves: the first needs no new image.
+
+1. **Diff the C7000 register file, fresh vs leftover (FW4F, no rebuild).** Read `0x11000000–0x11000FFF` with op 14 (240 bytes per call, about 18 calls), (a) fresh after `restartmodule` + select 58, (b) after symbol key + select 58, both before any tone. Skip any address you know to be a FIFO, data port or read-to-clear register, and say which you skipped. Every word that differs is a candidate leftover; RF_MODE, WORK_MODE and FM_BANDWIDTH should already match (FW38). I expect something like a TX source select (RAM vs audio), a TX-RAM enable or an interrupt route bit our symbol path set and never put back.
+2. **If the diff is empty, or doesn't name it: FW41-D4, a self-reporting spin** (diagnostic only). In the refill task's spin, count passes in a free SRAM word. At 1,000,000 passes, store LIST and the count, then **leave the spin**. Then do symbol key → 58 → tone, wait, and read the words once commands answer again.
+   - **Count > 0:** that task is the starver, and the stored LIST names the source bit.
+   - **Count 0:** another task is starving the command task, and the next breadcrumb goes into the other created tasks' loops.
+3. **FW41 = FW40 + restoring whichever register(s) step 1 or 2 names** at the symbol-key end, the stock way. Proof as before.
+
+**Start now (step 1).**

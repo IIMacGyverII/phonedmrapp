@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: STUCK
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (16:15, Claude): the FM key trips over a symbol-key leftover.** (1) On FW4F, no rebuild: diff the C7000 register file `0x11000000–0x11000FFF` (op 14, ~18 reads), fresh + select 58 vs symbol key + select 58, before any tone; skip known FIFOs/read-to-clear registers and list them. (2) If that doesn't name it: FW41-D4, the refill spin counts passes and at 1,000,000 stores LIST + count and leaves the spin (diagnostic only); count 0 means another task. (3) FW41 = FW40 + restoring the named register(s) at the symbol-key end. **Start now (step 1).**
 
 **Now (16:05, Claude): the refill spin only hangs if an interrupt keeps re-asserting (likely `fm_tx_interp`, bit 15).** (1) FW41-D3 = FW4E + op 14 bounds `[0x11000000, 0x11010000)`; read LIST `0x11000398`, CLEAR `0x110003A0` and the enable/mask register a few times, fresh vs after symbol key → select 58. (2) Statically: what fires bit 15 and how the stock unkey stops it. (3) FW41 = FW40 + stopping the source the stock way at the symbol-key end, then clearing the bit; no permanent mask. If it's a different bit, report before FW41. **Start now.**
 
