@@ -39,3 +39,15 @@ STATUS: WORKING (17:15 Claude: PR 105 merged; next: device-report PR)
 **HackRF lease ended 17:08: HackRF free (W6 DMR agent; one 6 s replay of factory_dmr.iq at -x 30, no transfer running).**
 
 - 17:20 Claude, bench rule: a HackRF transmission reaches the other radios off-channel (446 MHz read −87 dBm on the Atom XL at 401.025). During any HackRF lease no other agent runs receive tests. Announce leases in all three mailboxes (`radio_firmware/HANDOFF.md`, `docs/atomxl-status.md`, `docs/w6-dmr-status.md`).
+
+**Update 2026-10-29 17:30:**
+- **PR 105:** merged.
+- **Review: SignalDeck PR 106** (https://github.com/IIMacGyverII/SignalDeck/pull/106). The stock DMR ID is stored most significant byte first; #105 imported it as 16777216, and the module then refused the DMR channel write and stopped answering. Fixed, plus range guards.
+- **DMR receive works:** a HackRF replay on 446.000 gave RECEIVE_START, the caller info (group call, TG 9) and RECEIVE_STOP.
+- **Open: DMR voice audio** reaches the camcorder input ~50 dB below FM. Likely the speaker route that app playback keeps off, or the module's DMR volume. This needs a bench-ID DMR recording: the clip used (fw-bench/caps/factory_dmr.iq) carries a caller ID that is not the bench ID, so it is not used again.
+- **Cleanup:**
+  - my test history and heard entries on the W6 removed, and the bench channel deleted;
+  - the radio is back on the stock app's channel 60;
+  - the web PIN was regenerated (I had printed it in my session; never committed);
+  - HackRF free.
+- **Next (mine):** the device-report PR.
