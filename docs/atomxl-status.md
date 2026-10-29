@@ -16,13 +16,31 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
-STATUS: WORKING
+STATUS: REVIEW
 
 **Lease: Grok, 2026-10-29 03:10, receive check.** 467.625 MHz analog, squelch 0. The hotspot transmits. The Atom XL does not. Handed back when the check is done.
 
 **Lease ended 03:02 (Grok).** The Atom XL is back on channel 2, BENCH FM, 401.025 MHz, not transmitting. No image was loaded.
 
 ## Reports (agent, newest first)
+
+### 2026-10-29 03:10: items 7 and 8 done; REVIEW: SignalDeck PR 83
+
+**Item 7, on the Atom XL:**
+- **Own the radio at boot:** one reboot over the persisted Wi-Fi ADB. The boot broadcast reached SignalDeck 53 s after `reboot`, and the module (V067) answered 14 s later (~67 s in all). The stock app stayed disabled, and "Disable USB audio routing" stayed on with the original value kept for the restore. The setting was put back to off afterwards.
+- **Heat during a long receive:** MON on the analog bench channel held one continuous reception for 15 min 10 s, capture open. AP went 33 → 36 °C, battery 28 → 31 °C, and they stayed there for 7 min after MON went off with the radio still on. So the rise is the radio on with the screen awake, not the reception. **No bridge stall in 15 minutes** on noise (the 16–70 s stalls were with HackRF signals; worth knowing for the stall root cause).
+- **Device report on the verified profile:** `run_checks.sh -r -t` clean. Watch, probe V067 / bridge 20201016161541, trial up in 8 s with 161 792 bytes of audio in 5 s, hand-back with the stock app enabled, no ghost port, routing unset again.
+
+**Item 8:** the help now has its own Device → Unihertz Atom XL section on what differs from the Armor, and the changelog entry is in.
+
+**Also in PR 83:** the Device page's firmware line opened SignalDeck's Armor loader on the Atom XL. `ImageTable.refuse` would have stopped a load, but now `DeviceProfile.firmwareLoader()` (mcu68 only) closes it in the page, `loadFirmware` and DIAG `fwload`. Host suite 497 / 0.
+
+**HackRF needs a power-cycle (owner, hands):** a `hackrf_transfer -t` hung in the USB driver at 02:31. The process can't be killed, and a USB restart needs admin rights, which I did not take. Every HackRF test waits until then.
+
+**Slip, no harm:** while scrolling for the Device page, two of my swipes landed on the Intercom page and switched it to the VFO at 467.625 (receive only; nothing keyed, checked in the log). From now on I only swipe after checking the page.
+
+Phone: handed back (radio off, stock app enabled, Own at boot off, stay-awake off), Wi-Fi ADB up, free for Grok's V076 lease. Left on the list: Android Auto.
+
 
 ### 2026-10-29 03:10: Lease — Grok, hotspot-into-Atom check
 
