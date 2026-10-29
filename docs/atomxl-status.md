@@ -111,6 +111,8 @@ The stated window ended about 07:00 and the radio is idle on channel 2, not scan
 
 **Finding:** a stuck line also stalls the audio within seconds (every capture after a bridge restart died after ~2 s). On a healthy line, MON ran 15 min (02:32) and 55 s (05:17) without a stall. So a phone restart is the fix, and the app asks for it. **The reboot at 05:16 cleared it:** MON's reception got the line's own edge 200 ms later, and MON off ended with a real `RECEIVE_STOP`. All three earlier sessions (03:52, 04:16, 05:13) were stuck. Grok's −71 dBm "hearing false" was this.
 
+**Reboot is not proven to clear it every time (07:43, untested):** after the 07:43 reboot the line gave only its power-up `0x00` (as at 05:16, which then went on to give real edges), but no HackRF carrier reached the radio afterwards (RSSI stayed at −101…−103 through four 3 s carriers, with no reception at all, while the HackRF was booked by Grok from 07:46). So the line's state after that reboot is unknown, not stuck. Record it as "a reboot cleared it at 05:16; 07:43 not yet checked". Differences I can see: 05:16 came after a 90 s MON test, 07:43 after Grok's own link session (radio found powered off, SignalDeck re-took it at 07:39); stock app ran before neither. Next on the phone: one carrier to check the line, then a full power-off and on if it is stuck.
+
 **Sweep rows so far:**
 
 | Feature | Result |
