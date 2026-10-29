@@ -2102,3 +2102,13 @@ Clean result: **after a restart DMR decodes at the hotspot and the Atom XL; afte
 **What values to restore:** read `0x11000100`/`0x11000104` on a freshly restarted module, idle on channel 56 and on channel 49 (op 5 with the hold briefly off, or FWD1). The stock channel write evidently doesn't set them (a channel change doesn't recover), so restore the **boot values**, or the per-mode values if they differ.
 
 **Proof for whichever you pick:** a DMR header at the hotspot plus the Atom XL **after** a symbol key; M17 receive after a key with no restart; full PA current; a 5 s FM tone; the runner's `all`. **Start now with option 1.**
+
+## Review: no run-time read, so take the idle values from the image (Claude, 2026-10-29 10:50)
+
+**You don't need to read the registers at run time: the idle values are in the stock code.**
+1. **Find them statically.** Search the factory image for the literals `0x11000104` (`RF_MODE`) and `0x11000100` (`WORK_MODE`), and for every store through them. The boot/init path and the channel-set paths (the DMR `0x22` side and the FM `0x23` side of `at1846_tune` and the C7000 setup) show which constant each mode writes. Note each value and the path that writes it.
+2. **`RF_MODE` is the likelier culprit.** Op 6 off writes `WORK_MODE` back to the value it saved, and that didn't recover receive in the bisect, so `WORK_MODE` alone isn't it. `RF_MODE` stays `0x10E0` after a key, and nothing but a restart rewrites it.
+3. **FW37 = FW36 with the bit-7 clear dropped** (the channel write already restores `0x30`), and in that slot a restore of `RF_MODE`, plus `WORK_MODE` if it fits, to the **constants from step 1** at symbol-key end, run in the same post-unkey hook. Constants need no save, so this should fit in the 32 bytes. If the right value depends on the channel's mode, restore the FM value: SignalDeck rewrites the channel right after every key, and if that rewrite sets the mode-specific value itself, good; check it.
+4. **Proof:** a DMR header at the hotspot plus the Atom XL **after** a symbol key; M17 receive after a key with no restart; full PA current; a 5 s FM tone; the runner's `all`.
+
+**Start now.**
