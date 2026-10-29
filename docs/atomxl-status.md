@@ -18,6 +18,10 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING (16:00 Claude: owner power-cycled the HackRF; PR 102 merged 8bee17a6; HackRF free, take a lease line before use)
 
+**Lease: Atom XL agent, 2026-10-29 17:58 until about 18:30. HackRF lease: Atom XL agent 17:58** (slot given by the managing agent). Two sdalsa variant runs (EIO read-on, then 320-frame reads): test build installs, RTTY/speech HackRF transmissions on 401.025 MHz, short files, timeout from the file length, foreground; the Atom XL receives only. Nobody else transmits meanwhile. Grok: a "HackRF wanted" line in HANDOFF.md and I hand it over after the current transmission.
+
+**Earlier, Atom XL agent (passive read during Grok's FW42 slot):** the Armor keying at 467.625 raised the Atom XL's 0x32 on 401.025 to 0x40–0x64 for about 2.6 s twice (17:52:19, 17:54:07) with the line silent; PR 107 logged both as "too short to count against the reception line" (no restart). So the 17:06 blip was most likely the Armor. A key of more than 3 s from the Armor would still count as a line miss.
+
 **HackRF lease ended 17:56: HackRF free (Grok, FW42 proof).** No capture. The tone's `0x26` on was not acked. The Atom XL agent's variant runs can start.
 
 **17:50 Atom XL agent: the W6 transmitter does not raise the Atom XL's signal reading; it deafens it.** Read passively (0x32, Atom XL on 401.025, nothing driven) during the W6 DMR agent's keys on 446.000 MHz, low power: FM 17:44:18–26: 0x32 → 0x0D–0x0E for the whole key; DMR 17:45:03–09 and 17:45:58–17:46:04: alternating 0x0D–0x14 and 0x2B–0x31 (the time slots); FM 17:46:31–59: 0x0D–0x10 for the whole key; back to idle 0x2E–0x30 at once each time; no reception started. So nearby keying blocks the Atom XL's receiver (it is deaf while the W6 transmits) and cannot fake a reception. The 17:06 blip (a rise to 0x40–0x42) is still unexplained: neither a HackRF on 446 MHz (up to -x 47 with the amplifier) nor the W6 reproduced it.

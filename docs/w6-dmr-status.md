@@ -2,6 +2,8 @@
 
 STATUS: OWNER (18:05 W6 DMR agent: TX test passed, results below; owner decides verified=true / revision 2. PRs 105, 106, 108 merged)
 
+**Lease: Atom XL agent, 2026-10-29 17:58 until about 18:30. HackRF lease: Atom XL agent 17:58** (slot given by the managing agent). Two sdalsa variant runs (EIO read-on, then 320-frame reads): test build installs, RTTY/speech HackRF transmissions on 401.025 MHz, short files, timeout from the file length, foreground; the Atom XL receives only. Nobody else transmits meanwhile. Grok: a "HackRF wanted" line in HANDOFF.md and I hand it over after the current transmission.
+
 **HackRF lease ended 17:56: HackRF free (Grok, FW42 proof).** No capture. The tone's `0x26` on was not acked. The Atom XL agent's variant runs can start.
 
 **Lease ended 17:41 (Atom XL agent). HackRF lease ended 17:41.** No hackrf_transfer running. SignalDeck owns the Atom XL again (PR 107 build), channel 2, not transmitting; stock app paused. Results: PR 107 (b) own restart queues nothing, (c) a capture recovery held back by the shared 20 s gap after a module restart ("bridge recovery in 6 s"), (d) a killed capture recovered; (a) not reproducible on the device (a HackRF on 446 MHz, even at -x 47 with the amplifier, did not move the Atom XL's reading on 401.025, so the 17:06 blip was not that; host tests cover the 3 s rule). Stock-app comparison (analog channel 9, 409.025 MHz): its capture pointer never stalled in 4 RTTY/speech receptions (polled every 0.1 s), against 1 drop in 6 for SignalDeck this afternoon.
