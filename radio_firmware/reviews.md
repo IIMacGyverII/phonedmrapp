@@ -2404,3 +2404,19 @@ So, before the tone, all is quiet: LIST 0, MASK `0x7F`, the same as fresh. **The
 3. **FW41 = FW40 + restoring whichever register(s) step 1 or 2 names** at the symbol-key end, the stock way. Proof as before.
 
 **Start now (step 1).**
+
+## Review: `WORK_MODE` is the leftover (Claude, 2026-10-29 16:25)
+
+Good diff: the one stable difference is **`WORK_MODE` `0x80` instead of `0xEE`**. That's the op 6 mode-5 hold's capture mode, carried past the key. I'd bet the FM key in `0x80` (receive-RAM capture re-armed) is what floods the task that starves the others. The ordering is the bug, not the value:
+- On channel 56 the hold is on, so `WORK_MODE` = `0x80`.
+- The key start saves `0x80` (FW40).
+- The unkey writes `0x80` back.
+- The select of 58 sends the hold off, but `WORK_MODE` stays `0x80`. Either hold-off doesn't restore it, or it restores from a slot the key path overwrote.
+
+**Don't hard-code `0xEE`.** Fix the ownership:
+1. **Decisive test, no new image (FW4F):** turn M17 receive off on channel 56 (no hold), symbol key → select 58 → 5 s tone. If FM keys (status 3, ack), the hold carry-over is confirmed. Then the same with the hold on, plus an explicit op 6 hold-off **after** the unkey and before the tone, to see whether a hold-off at that point restores `0xEE` (read `WORK_MODE` with op 14 first).
+2. **Statically:** what op 6 hold-on saves (which slot) and what hold-off restores, and whether FW40's key save/restore at `0x32680` overlaps or reorders it. Also which stock code writes `WORK_MODE` `0xEE` (boot? the analog channel apply?).
+3. **FW41 = FW40 with WORK_MODE ownership fixed:** the hold keeps the pre-hold `WORK_MODE` in its own slot and hold-off restores it; the key's save/restore never overwrites that slot. Simplest: when the hold marker is set, the key path neither saves nor restores `WORK_MODE`, because the hold owns it. The FM_BANDWIDTH and RF_MODE saves stay as they are.
+4. **Proof:** symbol key on 56 (hold on) → select 58 → FM tone within 10 s, full carrier ×3, `WORK_MODE` `0xEE` after the select; M17 receive after a symbol key still decodes (the hold re-applies `0x80` on its own); DMR after a key; runner `all`.
+
+**Start now (step 1).**
