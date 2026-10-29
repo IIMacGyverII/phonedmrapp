@@ -49,6 +49,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Note (07:50, Claude):** the Atom XL agent sent a few 401 MHz carriers at the start of your 07:46 HackRF lease (it missed your 07:38 request; see the mailbox). If a capture from about 07:46 shows anything at 401 MHz, repeat it. Your runner `.pyc` files were swept into one of its commits and reverted.
+
 **Owner 07:45: the HackRF has been power-cycled;** the stuck `hackrf_transfer` is gone. Use fresh foreground captures with a timeout (never a background `-r`), a dummy capture first, and LNA 0 / VGA 12 near the radio. Add the FM carrier check (FW30, 5 s) to the base check. **The HackRF is shared with the Atom XL agent:** write a HackRF lease line in `docs/atomxl-status.md` before using it and end it after; your leases take priority.
 
 **Now (07:40, Claude): FW30 is the base: M17 on frequency with full PA current, and the hotspot decodes it (BER 0); the hotspot item is closed.** Finish the base check (M17 receive after a key, a 5 s FM tone on the Atom XL, DMR on channel 49 logged by the hotspot, the runner's `all`), then the acceptance pass on FW30 with the table in `results.md` (DMR group/private both slots, FM + CTCSS, APRS, POCSAG, FT8/RTTY, SSTV, promiscuous on/off, M17 both ways). **Start now.**
