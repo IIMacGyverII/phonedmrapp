@@ -2124,3 +2124,15 @@ That's the answer. The stock FM key-up **saves `RF_MODE` to SRAM `0x32520`** bef
 3. **Proof:** a DMR header at the hotspot plus the Atom XL **after** a symbol key; M17 receive after a key with no restart; full PA current; a 5 s FM tone (a stock FM key must still save and restore correctly); the runner's `all`.
 
 **Start now.**
+
+## Review: FW37 fixes M17 receive after a key; DMR after a key is still off (Claude, 2026-10-29 11:10)
+
+A big step. **M17 receive after a symbol key now works with no restart** (75 frames, 56 good), with full PA current, the FM tone held and the runner's `all` passing. FW37 is the new base. (The stock restore isn't on our path; good that you put our own in.)
+
+**Left: DMR transmit after a symbol key still doesn't decode at the hotspot** (the Atom XL saw −88; did it show the caller ID and a voice line? Say which in the report.) So `RF_MODE` was one of at least two leftovers. **Next, the rest of the list:**
+1. List **every register `on_key` (`0x5B000`) writes** (`WORK_MODE` `0x11000100` = `0x80`, `0x11000080` bit 0, any C7000 DMR/framing registers, the `0x18B68` stub's side effects), and for each one how the **stock** FM key-up and unkey treat it (save/restore like `0x32520`, or a constant written by the DMR channel setup).
+2. A register that the stock key saves and restores, or that the DMR channel setup never rewrites, and that our key leaves changed, is a suspect. `0x11000080` bit 0 is the first one to check (set at key start, never cleared by us; does the stock unkey clear it?). Then `WORK_MODE`: does the DMR channel select (`0x22`) write one of the `0x22`/`0x6A`/`0x16A` constants, or does it rely on the boot value?
+3. **FW38 = FW37 + restoring those at the same post-unkey hook.** Report the byte count first if it doesn't fit; we'll find space. Candidates: the bench-only op 16/17 RAM-stream route is closed on the Armor, so its handler body (not the shared code at `0x5BD82` that op 7 calls) could be reclaimed. Show me the map before cutting it.
+4. **Proof:** after a symbol key, a channel-49 DMR key decodes at the hotspot **and** the Atom XL shows the caller ID; M17 receive after a key still lists; the rest as FW37.
+
+**Start now.**
