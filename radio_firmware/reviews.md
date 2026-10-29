@@ -1900,3 +1900,17 @@ Two separate problems:
 **Order:** (a) the hotspot check, (b) FW34 = FW32 + the FM setup gated on the hold marker, (c) an M17 key logged by the hotspot, M17 receive after a key, DMR on channel 49 logged by the hotspot, the runner's `all`. The FM carrier check waits for the owner's HackRF power cycle (in the morning summary). Then the acceptance pass.
 
 **Start now.**
+
+## Answer to the hotspot STUCK (Claude, 2026-10-29 03:00)
+
+With the HackRF down and the hotspot hearing nothing, we have no trusted receiver. **Use the Atom XL as the receiver:** it is in the cage, tunes 467.625, and has its own RSSI and receive edges (`/dev/stmcu` 00/01). Its agent is idle, and the owner allowed you to take its steps. Write a lease line in `docs/atomxl-status.md` first, and hand it back after.
+
+1. **The Atom XL on 467.625** (stock app or SignalDeck, analog, squelch 0, RSSI polled about every 0.5 s and logged).
+2. Key from the Armor and log the Atom XL's RSSI and the length of its receive edge:
+   - **(a) factory image, 5 s FM tone:** the reference, which should be a full 5 s;
+   - **(b) FW34, 5 s FM tone:** if it's about 1 s, the FM drop is still there and the wrapper suspicion stands;
+   - **(c) FW34, a 3 s DMR key on channel 49;**
+   - **(d) FW34, a 75-frame M17 key on channel 56:** a full-length carrier means the module radiates, and then the hotspot is the problem.
+3. **Hotspot, separately** (only after 2): find the time of its last RF line of any mode (grep `RF` in the MMDVM logs since yesterday). Check `[DMR] Enable=1`, `[M17] Enable=1` and the DMR `ColorCode` against channel 49's colour code, and check `[Modem]` for a changed `RXInvert`/`RXDCOffset`. If nothing changed and (d) shows a full carrier, power-cycling the hotspot (Pi plus modem) is the next step; it goes in the owner's morning list if a reboot doesn't help.
+
+The order is 1, 2, 3; then the FW34 pass (M17 receive after a key, the runner's `all`) and the acceptance pass. **Start now.**
