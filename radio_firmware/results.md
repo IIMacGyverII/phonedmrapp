@@ -4220,6 +4220,12 @@ End state 20:42: `DMR003.FW31.V022`, channel 56, not transmitting, RSSI −105. 
 
 End state 20:48: `DMR003.FW31.V022`, channel 56, not transmitting, RSSI −105. Battery 37.4 °C, AP 47.1 °C, PA 45.0 °C. HackRF idle.
 
+**Status-4 sites (20:52–21:04).** Three `movi r0, 4` calls of `0x7E08`: `0x89C` (after `0x387C`), `0xC2A0`, and the symbol drop at `0x5B686`. The throwaway image tags them `0x41`, `0x42` and `0x43`. sha256 `8d94d54b69cbdf451d2c4faff9a6dd8bdce75f71078c45c95c4886e9681292f5`, tag `DMR003.FW32.V022`. One 75-frame key: status `0x43`, then status 1, then status `0x41` twice. `0x42` did not appear. `0x41` is the loop at `0x878`, which runs when bit 2 of `0x38908` is set.
+
+The fix image is the FW31 one-shot with that bit cleared before the transmit-bit test, and the test masked to bit 0 only. sha256 `997cb71469317129b58bf54b478f1779c10992434dffedf0f7c751a9f6beac30`, tag `DMR003.FW31.V022`. Three keys each had one status 4, `no 0x26 off`, `hold only`, and `data hold action=1 sr=0`. The receive clip during the hotspot carrier was RMS 4467, 4533 and 4470. The heard list stayed empty. MMDVM recorded the three network transmissions, N0CALL to ALL, 2.0 s. A later 3.0 s call, with no receive clip, was also unlisted. M17 receive was on, analog, and the calibration line said the voice filter was held open.
+
+End state 21:04: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, not transmitting, RSSI −117. Battery 37.8 °C, AP 46.5 °C, PA 44.4 °C. HackRF idle.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.

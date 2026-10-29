@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -506,6 +506,12 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck.** The second status 4 is the site at `0x89C` (diagnostic code `0x41`). `0x43` is the symbol drop at `0x5B686`. `0x42` (`0xC2A0`) did not fire. `0x89C` runs when bit 2 of `0x38908` is set, calls `0x387C`, then posts status 4. The throwaway image is sha256 `8d94d54b…92f5`, tag `DMR003.FW32.V022`.
+
+The fix image clears that bit in the symbol-key check and then tests only bit 0. sha256 `997cb71469317129b58bf54b478f1779c10992434dffedf0f7c751a9f6beac30`, tag `DMR003.FW31.V022`. Three keys: one status 4 each, `no 0x26 off`, `hold only`, `data hold action=1 sr=0`, clip RMS 4467 / 4533 / 4470. The heard list stayed empty. The hotspot did transmit (MMDVM network, N0CALL to ALL, 2.0 s). A fourth call with no receive clip was also unlisted. Question: the mute is gone and the audio is loud. Is the empty list a held-path decoder problem, or the hotspot's transmit level? The runner was not run.
+
+End state 21:04: that FW31 image, channel 56, not transmitting, RSSI −117. Battery 37.8 °C, AP 46.5 °C, PA 44.4 °C. HackRF idle.
 
 **Stuck.** No-0x26 pass (20:47–20:48), FW31 still loaded, PR 77 apk `a6d28466` (`1abec38c`). Three keys each logged `sym unkey: the module ended the key itself (FW31+), no 0x26 off`, `hold only`, and `data hold action=1 sr=0`. The only `0x26` is the key-up, body `[01]`, before status 3. After that log line there is no `0x26`. Each key still has another status 4 after the unkey (key 1 has two), with status 1 in between and no PTT-on. The carrier clip was RMS 1.5 and RSSI rose; N0CALL was not listed. Question: that second status 4 is not a new TX-on, so an edge on TX-bits set→clear will not fire again. Should the clear stay armed across that second status 4 anyway, or is the second status 4 something else? The runner was not run.
 

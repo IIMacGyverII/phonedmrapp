@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-28 — The second status 4 is the bit-2 path at `0x89C`, and clearing that bit opens the audio.** One status 4 per key and receive RMS about 4500. The heard list stayed empty. Details in `results.md`.
+
 **2026-10-28 — Skipping the host PTT-off still leaves a second status 4.** The unkey sends no `0x26`. The carrier clip stays at RMS 1.5. Details in `results.md`.
 
 **2026-10-28 — FW31 sends only the hold, and a second status 4 mutes the receiver again.** The hotspot decoded the 75-frame keys and the 1125-frame stream at BER 0. The phone's clip during the carrier was RMS 1.5. Details in `results.md`.
