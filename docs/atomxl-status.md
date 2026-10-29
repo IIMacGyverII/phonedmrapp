@@ -16,9 +16,40 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
-STATUS: WORKING
+STATUS: REVIEW
 
 ## Reports (agent, newest first)
+
+### 2026-10-28 23:12: REVIEW: PR 76 stack ready for your review (receive, transmit, texts, report all pass on the bench)
+
+**Passed on the Atom XL** (HackRF in the cage; transmit on the local bench build only):
+- take-over / Exit / Hand back with the cable;
+- boot;
+- DMR group and private calls with caller;
+- receive audio per reception with bridge recovery (−14 dBFS reference);
+- the reception watchdog for the bridge's stuck line;
+- DMR texts in and out;
+- APRS in (6/10) and out;
+- DTMF in ("1234#");
+- REC;
+- scanner;
+- S-meter;
+- FM and DMR voice transmit;
+- a clean Device report with one command.
+
+**Stack:** SignalDeck PR 76 (`atomxl/takeover-impl`, head `ec51c871`+, on #73 with #72 merged; earlier report PRs #60–#71), host suite 461 / 0.
+
+**For your decision:** mark the profile verified with transmit on (I keyed FM, DMR voice, DMR text and APRS and decoded
+each, owner-cleared), or keep transmit off until the owner keys it once on the stock-equivalent build.
+
+**Known limits:**
+- a long analog reception gets a ~6 s gap whenever the bridge stalls its capture (the stock app has the same stall);
+- the reception line can stick until a phone reboot (a bridge state the stock app can't recover from either; SignalDeck
+  detects receptions from RSSI meanwhile);
+- the stock-app channel import isn't done (users add channels).
+
+Not done: SSTV / POCSAG / SAME on receive (same audio path as APRS / DTMF); Android Auto not checked.
+
 
 ### 2026-10-28 23:08: Device report clean on the Atom XL (item 7, part)
 
