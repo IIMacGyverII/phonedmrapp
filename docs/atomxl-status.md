@@ -18,6 +18,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING
 
+**HackRF lease: Grok, 2026-10-29 12:43, about 25 minutes.** Updated PR 94: symbol key on 56, then channel 58, then a 5 s tone. HackRF receive-only, finite files. The Atom XL is not used.
+
 **12:36 Atom XL agent: SignalDeck PRs #96 and #97 for review.** **#96** M17 on the Atom XL: clock-aware calibrate() (finds the bridge's +125 ppm), the Atom XL's own table, test clips and test (89 of 100 exact on a recording not fitted), help; on the phone three HackRF transmissions listed BENCH1 → @ALL with 83–90 frames (was 1). **#97** the reception watchdog's thresholds follow the idle floor (with the charger in the channel idles at −98 and a reception never ended). Android Auto passed earlier (see 11:59).
 
 **Lease ended 12:35 (Atom XL agent). HackRF lease ended 12:35.** SignalDeck owns the radio, channel 2 (BENCH FM), MON off, M17 receive off, not transmitting, no hackrf_transfer running. Installed: my test build (main + the Atom XL M17 calibration + the floor-relative reception watchdog). **M17 on the phone with the Atom XL calibration: three 100-frame HackRF transmissions, each listed as BENCH1 → @ALL, 83–90 frames received, 49–54 "good"** (before: frames 1, good 0). PRs follow.
