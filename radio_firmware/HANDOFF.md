@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -574,6 +574,20 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+It is channel 56, on both images. A 2 s low-power tone, HackRF power per second:
+
+| Case | Power |
+| --- | --- |
+| FW32 `53e1fd7b`, channel 49 | 450, 627, 488 |
+| Factory, channel 56 | noise floor only |
+| FW32, channel 56, M17 off | 44, then the noise floor |
+| Runner VFO tone on FW32, after the channel-56 steps | no carrier |
+| FW32, channel 49 again after that | 627, 532, 571 |
+
+During the channel-56 tone the app sends `0x26` on, holds it, and sends `0x26` off 2.4 s later. There is no status 4 and no other command at the one-second mark. The module drops the carrier while PTT is still asserted.
+
+End state 01:52: `DMR003.FW32.V022` `53e1fd7b…1d11`, channel 49, 467.625 MHz, low power, not transmitting. Battery 36.0 °C, AP 45.3 °C, PA 43.0 °C. HackRF idle. SignalDeck `a7344f19`.
 
 FW32 is silent before any symbol key. Loaded `53e1fd7b` from the radiating factory state, selected channel 56, and sent a 2 s low-power tone. HackRF power was 4.7, 50.6, then 4.7 for the rest of the capture. Not the ~500 of the factory tone. No symbol key was sent. The spaced-write APK was not installed.
 

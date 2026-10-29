@@ -4358,6 +4358,22 @@ End state 01:30: factory `DMR003.UV4T.V022` sha256 `90e361fd…`, channel 49, 46
 
 End state 01:38: factory `DMR003.UV4T.V022` sha256 `90e361fd…`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107. Battery 36.5 °C, AP 43.1 °C, PA 41.6 °C. HackRF idle. SignalDeck `a7344f19`.
 
+**Channel against image (01:44–01:52).** One 2 s low-power test tone each. HackRF power per second, same gain as the runner.
+
+| Case | Power |
+| --- | --- |
+| FW32 `53e1fd7b`, channel 49 | 4.7, 450, 627, 488, 4.7 |
+| Factory, channel 56 | 4.7 all the way |
+| FW32, channel 56, DIAG `m17` off | 4.6, 44, then 4.7 |
+| Runner `tone` (VFO, 10 s) on FW32 after those channel-56 steps | no carrier |
+| FW32, channel 49 again | 4.6, 627, 532, 571, 4.7 |
+
+Channel 56 kills the carrier on the factory image and on FW32, with the M17 hold off. Channel 49 restores it on FW32. The runner's VFO tone does not, once channel 56 has been selected, until channel 49 is selected again.
+
+A channel-56 tone's log is only `0x26` on and, 2.4 s later, `0x26` off. No status 4 and no other command around the one-second point. The app is still asserting PTT when the carrier is already gone.
+
+End state 01:52: `DMR003.FW32.V022` sha256 `53e1fd7b…1d11`, channel 49, 467.625 MHz, low power, not transmitting. Battery 36.0 °C, AP 45.3 °C, PA 43.0 °C. HackRF idle. SignalDeck `a7344f19`.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.

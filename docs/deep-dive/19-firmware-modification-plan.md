@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — Channel 56 kills the carrier on the factory image and on FW32. Channel 49 restores it.** The app still has PTT asserted when the carrier drops. Details in `results.md`.
+
 **2026-10-29 — FW32 is silent on a test tone immediately after the load and a channel-56 select, before any symbol key.** The factory tone after channel 49 is a full carrier. Details in `results.md`.
 
 **2026-10-29 — After the later loads, FW31 and FW32 put out no sustained carrier. The factory image does, after a channel-49 select.** The hotspot logged no RF M17 for the FW31 stream. Details in `results.md`.
