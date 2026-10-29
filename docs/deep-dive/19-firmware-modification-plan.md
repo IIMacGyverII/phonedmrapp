@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — The HackRF hears a full factory FM carrier at LNA 0 / VGA 12. FW32's FM tone is about one second, then gone.** The hotspot log did not record the FM key. Details in `results.md`.
+
 **2026-10-29 — A single analog `0x23` leaves no full carrier, on a plain FM channel and on the VFO.** Channel 56 adds the op 6 hold 19 ms later and is the same. Factory image reloaded after a 15 s `dmr009` off, and not keyed. Details in `results.md`.
 
 **2026-10-29 — Channel 56's `0x23` is the same 19 bytes as the 20:38 select that radiated.** The stored row matches that frame. Channel 49's select is `0x22`. Details in `results.md`.

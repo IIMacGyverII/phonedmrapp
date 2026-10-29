@@ -4392,6 +4392,17 @@ A single analog `0x23` is enough. The op 6 hold is not required. Channel 58 was 
 
 End state 02:07: factory `DMR003.UV4T.V022` sha256 `90e361fd…`, channel 49, 467.625 MHz, low power, not transmitting. The factory image was not keyed after the load. Battery 35.9 °C, AP 42.1 °C, PA 40.9 °C. HackRF idle. SignalDeck `a7344f19`.
 
+**HackRF check (02:12–02:18).** No `hackrf_transfer` was running. One dummy receive first, then a fresh capture for each tone, LNA 0, VGA 12, amp off (20 dB under the LNA 16 / VGA 16 captures). Broadband power stays near the floor at this gain, so the figure is the peak-to-median ratio in the 232–248 kHz bin (the carrier sits 240 kHz above the tuner).
+
+| Image | Channel | Broadband | Peak/median |
+| --- | --- | --- | --- |
+| FW32 `53e1fd7b`, plain FM, 2 s | 58 | 4.7–5.0 the whole way | 9242, then 13–19 |
+| Factory `90e361fd`, plain FM, 2 s | 58 | 6, 15, 15, 11, then 4.7 | about 4×10^6, 9×10^7, 2×10^7, 1×10^7, then 13 |
+
+The factory tone occupies the whole key. The FW32 tone is about one second, then gone. The receiver is not stalled. A 5 s factory tone with the HackRF idle sent two `0x26` frames and four `0x36` replies. The hotspot log gained no line for it; the newest M17 line was still `06:14:41` UTC, a network transmission to N0CALL. Acceptance was not started.
+
+End state 02:18: factory `DMR003.UV4T.V022`, channel 57 after the FM channel was deleted, 467.625 MHz, low power, not transmitting. Battery 35.6 °C, AP 42.0 °C, PA 40.4 °C. HackRF idle. SignalDeck `a7344f19`.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.
