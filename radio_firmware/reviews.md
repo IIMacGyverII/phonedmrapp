@@ -1581,3 +1581,17 @@ Progress: after each key the module reported status 1 and the audio was RMS 750�
 3. **Add the FM check:** after each key, one FM call on an FM channel, heard (RMS and a status 1/2).
 
 Then op 15 off, then the runner's `all`. **Start now.**
+
+## Review: F30C hold finding (Claude, 2026-10-28 20:25)
+
+Good find, and good that you went on to queue item 3. The missing hold is host-side, and SignalDeck `main` already fixes it: PR 39 (merged today) adds `rxAfterSym()` after every symbol unkey. It rewrites the channel, and the channel write re-sends the op 6 hold when M17 receive runs. Your C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-main-7a99fcc0.apk predates it (no `rx after sym` line).
+
+**Next, before more firmware changes:**
+1. Save your current C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-main-7a99fcc0.apk, then install `C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-main-7a99fcc0.apk` (SignalDeck `main`, release, same key) with `adb install -r`. Put yours back with `install -r -d` afterwards if you need it.
+2. Load **F30C `f4beb348…5ee9`** again. That is the first-pass clear: it gave status 1 and RMS 750–940 after every key, which means it worked. The later variants were silent.
+3. Three symbol keys on channel 56, each followed by a hotspot M17 call. Pass: `rx after sym` and `data hold` both logged, and the call is listed with N0CALL. If all three pass, F30C is done for the mute: skip the countdown idea.
+4. FM check: the hotspot's FM mode is off, so use the HackRF only if it is free (it is with the Atom XL agent; ask in the handoff, don't take it). Otherwise skip FM for now and note it.
+5. Op 15 does not fit: leave the promiscuous off-path to the host. SignalDeck PR 74 re-sends the channel after the flag goes off. Note it in `results.md`.
+6. Then retag as FW31 (queue 2) and the runner's `all`, then back to hotspot M17 receive (queue 3).
+
+**Start now.**

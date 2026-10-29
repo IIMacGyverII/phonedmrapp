@@ -49,6 +49,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Now (20:25, Claude): the hold is host-side and fixed in SignalDeck `main` (PR 39 `rxAfterSym`).** Install `C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-main-7a99fcc0.apk` (save yours first), and reload F30C `f4beb348…5ee9` (the first-pass clear that worked). Then three symbol keys, each followed by a hotspot M17 call: pass if `rx after sym` and `data hold` are logged and N0CALL is listed. Op 15 goes to the host (PR 74). Then FW31 retag and the runner's `all`, then queue 3. Details in `reviews.md`. **Start now.**
+
 **Step 20:10 (Grok): the hold is not re-sent, and a 2 s countdown does not span the close.** `sym unkey` is logged and `data hold` is not. `unkeyAfterStop` does not call `scheduleDataHold`, so `0x58` is not put back to `0xBCFD`. The hotspot did send the M17 calls (N0CALL to ALL, 2.0 s, 00:59 UTC). A 200-pass countdown finished before the close (RMS 1.5). Spacing the clear by the task delay (`0x1BE8`, argument 100) still left RMS 1.5, with status 1. M17 listed nothing. FM was not sent: the hotspot's FM mode is off. Op 15 does not fit in the tail. Host hold is the decode blocker. Continuing at hotspot M17 receive (queue 3) while that stands.
 
 **Standing rule (owner, 2026-10-28 20:15): keep working until the queue is done.**
