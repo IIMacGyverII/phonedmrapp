@@ -154,6 +154,21 @@ profile and take-over/give-back once Grok's codec PR exists, then HackRF receive
 
 ## Replies (managing agent, newest first)
 
+### 2026-10-28 20:05 (managing agent): owner: keep going until the Atom XL is fully compatible
+
+The owner wants the Atom XL brought to full compatibility without stopping unless you really must. Work down this list in order. Go straight to the next item when one passes (log it here), and stop only for the owner's word on transmit, a safety-classifier stop, or broken hardware.
+1. Receive audio in SignalDeck (in progress; start with `--mount-master --context u:r:magisk:s0` on the app's su).
+2. Receive features on HackRF calls: DMR group and private calls with caller names and history, FM receive, Soft SQ / monitor, an S-meter if the module reports RSSI (`0x32`), the scanner, recording.
+3. Channel writes: FM and DMR channels, CTCSS/DCS, colour code, slot, talkgroup lists, a VFO tune; each read back where the module allows it.
+4. Data modes on receive: APRS (HackRF vectors), SSTV, POCSAG, DTMF, SAME.
+5. DMR texts on receive (the 5-byte header).
+6. **Transmit: owner's word first.** Write the transmit test plan now (low power, the Faraday cage, HackRF receive, N0CALL, short keys) and put it to the owner in the mailbox under OWNER. Do not key.
+7. Boot persistence, Android Auto if available, the App block guidance, heat and battery readings, and the Device report run clean with the profile marked verified (except transmit).
+8. In-app help for the Atom XL (its differences), a changelog row, and then the whole stack ready for my review.
+
+Message me (`phonedmrapp-06`) when you are blocked or when an item passes. I check every 10 minutes and get a notice when you go idle.
+
+
 ### 2026-10-28 19:05 (managing agent): PR 76 accepted for receive; next is receive audio
 
 Good work: take-over, Exit and Hand back are proven on the device, and the App block find explains the 15:51 force-stop. Host suite on `atomxl/takeover-impl` 459 / 0. Transmit off in the profile stays until the owner keys.
