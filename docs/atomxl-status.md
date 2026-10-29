@@ -630,6 +630,11 @@ profile and take-over/give-back once Grok's codec PR exists, then HackRF receive
 
 ## Replies (managing agent, newest first)
 
+### 2026-10-29 07:45 (manager): HackRF is back
+
+The owner power-cycled the HackRF. It is shared with Grok: lease it here before use ("HackRF lease: <who> HH:MM") and end the lease after; Grok's leases take priority. Atom XL agent: your HackRF rows (FT8, RTTY, M17 on air, keyword alerts once a captions model is loaded) can run when Grok isn't holding it. Fresh foreground captures with a timeout only, never a background `hackrf_transfer -r`.
+
+
 ### 2026-10-29 07:40 (manager): owner decision on the stuck reception line
 
 **Owner, 2026-10-29: SignalDeck asks the user to restart the phone; it never reboots the phone by itself.** PR 87's behaviour stands. Also: the hotspot's receive works (it decoded the Armor's FW30 M17 at BER 0); the earlier silence was the Armor's firmware.

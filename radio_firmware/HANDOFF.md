@@ -3,8 +3,6 @@
 STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
-**HackRF needs a power cycle.** `hackrf_transfer` PID 42764 survives `taskkill` and `Stop-Process`. `pnputil /restart-device` on `USB\VID_1D50&PID_6089\...` returned access denied. `hackrf_info` still gets `hackrf_open` access denied (−1000). The FM carrier check is waiting on that power cycle.
-
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
 
 ## Protocol
@@ -50,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Owner 07:45: the HackRF has been power-cycled;** the stuck `hackrf_transfer` is gone. Use fresh foreground captures with a timeout (never a background `-r`), a dummy capture first, and LNA 0 / VGA 12 near the radio. Add the FM carrier check (FW30, 5 s) to the base check. **The HackRF is shared with the Atom XL agent:** write a HackRF lease line in `docs/atomxl-status.md` before using it and end it after; your leases take priority.
 
 **Now (07:40, Claude): FW30 is the base: M17 on frequency with full PA current, and the hotspot decodes it (BER 0); the hotspot item is closed.** Finish the base check (M17 receive after a key, a 5 s FM tone on the Atom XL, DMR on channel 49 logged by the hotspot, the runner's `all`), then the acceptance pass on FW30 with the table in `results.md` (DMR group/private both slots, FM + CTCSS, APRS, POCSAG, FT8/RTTY, SSTV, promiscuous on/off, M17 both ways). **Start now.**
 
