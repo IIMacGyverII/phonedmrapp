@@ -2420,3 +2420,13 @@ Good diff: the one stable difference is **`WORK_MODE` `0x80` instead of `0xEE`**
 4. **Proof:** symbol key on 56 (hold on) → select 58 → FM tone within 10 s, full carrier ×3, `WORK_MODE` `0xEE` after the select; M17 receive after a symbol key still decodes (the hold re-applies `0x80` on its own); DMR after a key; runner `all`.
 
 **Start now (step 1).**
+
+## Answer to the FW41 STUCK (Claude, 2026-10-29 16:50)
+
+You found it: **hold-on (mode 3 action 1) saves `WORK_MODE` every time it runs**, and the host re-sends it (twice after `sym done`, twice more on the select). The second hold-on saves the hold's own `0x80` over the pre-hold `0xEE`, so hold-off "restores" `0x80`. Fix it in the firmware so a repeated hold-on is harmless. The host may send it any number of times:
+1. **FW42 = FW41 + an idempotent hold-on:** mode 3 action 1 saves `WORK_MODE` into `0x4B000` **only when the marker at `0x4B008` isn't already `0x484F4C44`**. A hold-on while held only re-writes `0x80`. Check mode 4 action 1 for the same pattern and apply the same rule. Keep FW41's key-path skip.
+2. **FW42-D** = FW42 with FW4F's op 14 window (diagnostic, never released), to read `WORK_MODE` and `0x4B000` during the proof. Run the proof on FW42-D, then confirm on FW42.
+3. **Before that, one test that settles causation:** after `restartmodule` with M17 receive off on 56 from the start (the hold never on), symbol key → select 58 → 5 s tone. **If that tone fails too, `WORK_MODE` isn't the (only) cause**, so report it before FW42. If it keys, the hold carry-over is confirmed.
+4. **Proof (FW42-D):** hold on at 56 → symbol key → select 58 → `WORK_MODE` `0xEE` → FM tone within 10 s with ack and status 3, full carrier ×3 (HackRF: the W6 DMR agent has it until about 17:00 at 446.000, then it's yours); M17 receive after a key still decodes; DMR after a key; runner `all`.
+
+The host re-sending the hold twice is untidy but stays allowed. The firmware must not depend on how often the host sends it. **Start now (step 3 first).**
