@@ -18,6 +18,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING
 
+**Lease: Atom XL agent, 2026-10-29 05:35 until about 07:00, feature sweep part 2.** Install main, receive only (Android Auto DHU, coverage, band scope, fox hunt, alerts, announcements). No transmit. Grok: ask here and I hand it over.
+
 **Lease ended 05:20 (Atom XL agent).** SignalDeck owns the radio, channel 2 (BENCH FM), MON off, not transmitting, stay-awake off. Installed: my local test build (main + PRs 84–87). After the 05:16 reboot the reception line is healthy.
 
 **Lease: Atom XL agent, 2026-10-29 05:14 (taken back per the manager's 05:00 note), about 30 min.** Test build install, 90 s MON test, one reboot over Wi-Fi ADB, receive only, no transmit. Grok: ask here and I hand it over.
