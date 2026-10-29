@@ -20,6 +20,50 @@ STATUS: WORKING
 
 ## Reports (agent, newest first)
 
+### 2026-10-29 00:05: V076 load: the stock route fails on this bridge build; next step STUCK (classifier); module healthy on V067
+
+**Baseline on V067 (before any load):**
+- SignalDeck 75 s FM capture 1: no cut.
+- SignalDeck 75 s FM capture 2: cut at 62.8 s (EIO, 0 overruns). Its recovery was skipped because of a stale static
+  `exiting` flag after a DIAG Exit; that's a bench-only path, fixed on local branch `atomxl/aprs-warm` (`ff1937cb`),
+  not the stack.
+- Stock app, one 75 s DMR call: heard 73 s, continuous pcm read, no error.
+
+**Image:** sha256 `4f5f287b…4d40fe`, identical to the phone's own `/vendor/data/dmr/DMR006.U4A.V076.bin` (the path is
+`/vendor/data/dmr/`, not `/vendor/data/DMR/dmr/`). Owner's go, given to me directly.
+
+**Attempt 1 (23:25):** the vendor HAL aborted (SIGABRT, "HIDL return status not checked", `tombstone_01`) on its first
+reply after I had force-stopped the stock app. The update never started. Rule: never force-stop the stock app before an
+update; reboot instead.
+
+**Attempt 2 (23:30, after a clean reboot; stock app opened once, untouched):**
+- The app found the file and showed "Update DMR". The HAL then ran its sequence: module off `00 10 00`, `handle_ptt` 0,
+  update mode `00 08 01`, module on `00 10 01`, `'1'`.
+- It logged `sdcard error no:13 Permission denied`, which is harmless: it fell back to `/vendor/data/dmr/` (`flen = 358100`).
+- It then waited 4 min with **`Ymodem_Transmit cCount = 0`**, then `onDmrUpdateFailed`.
+- Its clean-up left the HAL at `mcuState = 2`, so the app's restart timed out ("Init failed"). A reboot clears that.
+- **Nothing was written.**
+
+**D1 diagnostic (23:43; no PTT, no update mode, no `'1'`):**
+- The bridge answers `00 01` throughout.
+- The module answers `01 34` before `00 10 00`, then stays **silent for 30 s after `00 10 00` / `00 10 01`**.
+- An `mcu_power` cycle brings it back as V067.
+- **So on bridge `20201016161541` the vendor updater's "module on" step never powers the module back.** Its bootloader
+  is never entered, and the stock route cannot succeed as shipped. This fits V076 sitting in the ROM with
+  `dmr_update` = 0. It also voids the 0-byte listen-only result of findings §10, which relied on the same step.
+
+**Health (23:40):** after a reboot the stock app reads bridge `20201016161541` and module `DMR006.U4A.V067` and sets its
+channel. `/sdcard/intercom/dmr/` is deleted. Phone left with radio off, PTT idle, HAL running.
+
+**STUCK:** a load path other than the stock route (my own bench sender with a different power-up sequence). A safety
+classifier stopped me while I was writing it. Per the owner's rule I'm not retrying it, and I'm not writing its commands
+out for another agent either, since that would route the stopped content around the block. It's the owner's call how,
+or whether, to pursue it. The stock route stays the only documented path, and it fails here for the reason above.
+
+Next for me: the compatibility items (APRS start loss on `atomxl/aprs-warm`, A2–A5 / R2, stock-channel import), PRs
+from `main`.
+
+
 ### 2026-10-28 23:12: REVIEW: PR 76 stack ready for your review (receive, transmit, texts, report all pass on the bench)
 
 **Passed on the Atom XL** (HackRF in the cage; transmit on the local bench build only):
