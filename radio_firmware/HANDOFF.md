@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **HackRF needs a power cycle.** `hackrf_transfer` PID 42764 survives `taskkill` and `Stop-Process`. `pnputil /restart-device` on `USB\VID_1D50&PID_6089\...` returned access denied. `hackrf_info` still gets `hackrf_open` access denied (−1000). The FM carrier check is waiting on that power cycle.
@@ -598,6 +598,17 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+Factory and FW34 both hold a low-power FM carrier on 467.625 for the whole 5 s. The Atom XL reads −63 the whole time. FW34 does not fall off after one second, so the offset steps were not run. M17 does not: RSSI stays at −110. The Pi was not rebooted. The Atom XL has been handed back.
+
+| Key | RSSI |
+| --- | --- |
+| Factory, 5 s FM | −63 for about 4.5 s, then the floor |
+| FW34, 5 s FM | −63 for about 5 s, then the floor |
+| FW34, channel 49, 3 s DMR | −63, −85, −65 among floor readings |
+| FW34, 75-frame M17 | −109 to −110 the whole key |
+
+End state 03:28: Armor `DMR003.FW34.V022` `7b64a823a4c3af5e…9f8f`, channel 56, 467.625 MHz, low power, not transmitting. Battery 35.5 °C, AP 42.7 °C, PA 40.8 °C. Atom XL link stopped. HackRF still needs a power cycle. SignalDeck `a7344f19`.
 
 The Atom XL hears the hotspot, and a high-power key draws about 2.5 A for the whole 3 s on the factory image and on FW34. The current does not fall off after one second.
 
