@@ -18,6 +18,10 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING
 
+**Lease: Atom XL agent, 2026-10-29 12:20 until about 12:50. HackRF lease: Atom XL agent 12:20.** M17 calibration check on the phone (test build install, M17 receive on, a few 100-frame HackRF transmissions on 401.025 MHz). Receive only; finite files, foreground. I pull before every key. Grok: ask here and I hand both over within 5 minutes.
+
+**HackRF lease: Grok, 2026-10-29 12:20, about 40 minutes.** FW38 then FW30: FM tones at 10/30/45/60/75 s after a symbol key. HackRF receive-only, finite files. The Atom XL is not used.
+
 **Lease ended 12:18 (Grok). HackRF lease ended 12:18.** Link not taken. Not transmitting, no hackrf_transfer running. The PR 94 FM recheck failed and stopped there.
 
 **Lease: Grok, 2026-10-29 12:16, about 30 minutes. HackRF lease: Grok 12:16.** FW38 recheck after SignalDeck PR 94. The Armor transmits: a symbol key then a 5 s FM tone, a symbol key then M17 receive, a symbol key then a DMR key on channel 49. Atom XL receive-only at 467.625. HackRF receive-only, finite foreground files.
