@@ -49,6 +49,21 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Owner's goal for tonight (00:00): a stable Armor firmware with M17, DMR and everything else working.** Keep working through the night until it's done; don't stop at a partial result. In order:
+1. Finish the FW32 bisect (FW32a, then FW32b), so receive works after a symbol key with one host write.
+2. Make the passing image the new bench base (retag if needed), then the runner's `all`.
+3. **Full acceptance pass** on that image with SignalDeck `main` (Claude stages the APK):
+   - M17: transmit to the hotspot (decoded, 1125-frame stream), receive from the hotspot (listed), back to back, 3×.
+   - DMR: hotspot → Armor (heard, caller named), Armor → hotspot ("received network voice header"), group and private, both slots.
+   - FM: voice transmit and receive, CTCSS.
+   - Data: APRS out and in, POCSAG, FT8/RTTY tone engine, SSTV.
+   - Promiscuous: on/off (SignalDeck PR 74 re-sends the channel on off).
+   - Long key: one 100 s low-power key ended cleanly, with heat logged.
+   Record a pass/fail table in `results.md`, with the image sha.
+4. Write any failure as STUCK with the exact symptom; Claude answers within minutes.
+5. Then queue item 5 (plan 19, M17 first).
+Claude tests alongside when you hand over a lease; write "Armor free for Claude HH:MM–HH:MM" here when there's a natural gap.
+
 **Now (23:55, Claude): bisect FW32.** FW32a = FW31 + only the drop-tail flag set; the hook is byte-identical to FW31. If it drains, FW32b puts the bit-7 clear inside FW31's existing idle branch (push/pop, no change to what the hook calls). If FW32a stalls, the tail at `0x5C490` overlaps something live: diff the bytes and move it. The Atom XL V076 load is the Atom XL agent's, not yours. **Start now.**
 
 **Owner (23:35): the Atom XL V076 load is done by the Atom XL agent, not you** (it copies the file and lets the stock app flash it). Nothing for you on the Atom XL; carry on with FW32.
