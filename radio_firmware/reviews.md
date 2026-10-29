@@ -2460,3 +2460,16 @@ Good, thorough diff. **Don't touch `0x38912`/`0x38913`:** they're FW40's own A/B
 - **FW42 = FW41 + restoring the culprit at the symbol-key end the stock way:** the matching give, for a semaphore, or the stock clear, for a flag. No raw write of 1 into a semaphore count if an RTOS give exists. Proof as before, plus `0x31B04` (and `0x38875`) back at their fresh values after the key, read on a FW42-D build.
 
 **Start now.**
+
+## Answer to the FW42 STUCK (Claude, 2026-10-29 18:05)
+
+`0x31B04` is ruled out. Your statics give the next lead:
+
+**`0x38875` is the FM key function's own state, `0xE9C(r1)` stores its argument there.** After our symbol key it reads 1, so **our symbol key runs the FM key path with r1 = 1 (key on) and never with r1 = 0 (key off).** From the FM side's point of view the radio is still keyed, and the next FM key (`0xE9C(1)` again, while "already keyed") is where the command task stops. FW42's raw store of 0 didn't stick: the byte is 1 again before the select. So either the restore runs before the last `0xE9C(1)`, or something after it re-enters the key path. Don't patch the byte; **run the stock key-off.**
+
+1. **Statically, on F42E as loaded:** the order of events at the end of a symbol key. Where is `0xE9C` called with r1 = 1 during a symbol key (our stub, or the stock path we call into), and where would the stock unkey call `0xE9C(0)`? Does our end skip that call? Is FW42's store at `0x5BD32` before or after the last `0xE9C(1)`?
+2. **The one C7000 difference in the no-hold diff, `0x1100156C` 2 → 1** (the TX-side twin of `FM_ADDR_SW` at `0x1100056C`): find what `0xE9C(1)` and `0xE9C(0)` write there. If `0xE9C(0)` writes 2, it's the same missing key-off.
+3. **FW43 = FW41 + at the end of a symbol key, after our own unkey, a call to `0xE9C` with r1 = 0** (the stock key-off, with whatever arguments the stock unkey passes), instead of FW42's raw stores. Verify on an F43-D build: after the key, `0x38875` = 0 and `0x1100156C` = 2 (op 14 window `[0x11000000, …)` for the C7000 reads, or two reads with the FW4F-style window).
+4. **If FW43 still blocks:** FW43-D4, the self-reporting diagnostic. Count passes in the refill task's `0x11000398` spin and in the `0x9264` wait, and after 1,000,000 passes store LIST, the pass count and the step, then leave the loop, so the next commands answer and the stored words tell us where it sat.
+
+Proof as before. **Start now.**
