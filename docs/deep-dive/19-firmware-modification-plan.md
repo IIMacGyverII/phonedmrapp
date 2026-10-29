@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-28 — The split FW32 still does not drain the symbol ring.** Fill climbed through 1536, 1728 and 1920. The last status before the power cycle was 3. FW31 is loaded again. Details in `results.md`.
+
 **2026-10-28 — FW32's sym-done flag never ran: the symbol ring stuck at fill 1920 before status 4.** The drop that sets the flag did not run. FW31 is loaded again. Details in `results.md`.
 
 **2026-10-28 — Bit 7 of 0x30 is already set at status 4, and a task-loop clear during the key stalled the symbol ring.** The first read after the unkey was `0x70A6` and it stayed there. The guard image's ring sat at fill 1920 until the module refused the next append. FW31 is loaded again. Details in `results.md`.

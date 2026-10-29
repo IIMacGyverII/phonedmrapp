@@ -4278,6 +4278,12 @@ Installed SignalDeck `485442d1` (apk sha256 `20708eb1…`). Loaded at 22:50:56, 
 
 End state 23:02: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −106. Battery 35.9 °C, AP 41.4 °C, PA 40.2 °C. HackRF idle. SignalDeck `485442d1`.
 
+**FW32 split (23:05–23:15).** The one-shot at `0x5BFC0` is the FW31 bytes. The tail at `0x5C490` posts status 4 and sets `0x4B385`. The hook at `0x18B68` calls the one-shot, then clears bit 7 of `0x30` when `0x4B385` is set and clears that byte. sha256 `302929e911f78bc2b16f7557701f3109d01534ab8df77c2ff44f17b58f87b04d`. Literal guard clean. Loaded 23:08:00.
+
+One 75-frame key. Status 3 at 23:08:03.061. No later status until the power cycle. Op 2 fill: 1536 × 400, 1728 × 400, 1920 × 75, then `7A 08 18 E2 99 03` × 126. The ring did not drain. `sym refused at 480` at 23:08:42. `restartmodule` power-cycled at 23:08:29 and status 1 arrived at 23:08:33. Factory image keyed on channel 49 (status 3 and 4). FW31 restored.
+
+End state 23:15: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, not transmitting, RSSI −106. Battery 35.6 °C, AP 41.1 °C, PA 39.8 °C. HackRF idle. SignalDeck `485442d1`.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.

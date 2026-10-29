@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -527,6 +527,14 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck.** Rebuilt FW32 with the FW31 one-shot left byte-for-byte, and the new flag beside it. sha256 `302929e911f78bc2b16f7557701f3109d01534ab8df77c2ff44f17b58f87b04d`. The hook at `0x18B68` calls the one-shot, then clears bit 7 of `0x30` only when `0x4B385` is set. The drop sets `0x4B385` after status 4 and does not clear `0x4B384`. Literal guard clean. APK `485442d1`. Loaded 23:08:00, tag `DMR003.FW32.V022`, channel 56.
+
+The key got status 3 at 23:08:03.061 and nothing after it. Op 2 fill climbed and did not drain: 1536 for 400 polls, 1728 for 400, 1920 for 75, then `7A 08 18 E2 99 03` for 126. `sym refused at 480` at 23:08:42. `restartmodule` power-cycled at 23:08:29; status 1 at 23:08:33. The host transmit flag cleared after the app was started again. Factory image keyed on channel 49 (status 3 and 4). FW31 `997cb714` restored. The Atom XL V076 load is waiting on this answer. No further Armor image.
+
+Question: the ring stops draining with the one-shot unchanged and the new I²C not yet reached. What should the next image change?
+
+End state 23:15: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −106. Battery 35.6 °C, AP 41.1 °C, PA 39.8 °C. HackRF idle. SignalDeck `485442d1`.
 
 **Stuck.** FW32 sym-done flag, then one host write and a hotspot call. `DMR003.FW32.V022` sha256 `13a2ee8c…4195`. The drop at `0x5B686` sets `0x4B385` after it posts status 4 and clears `0x4B384`. The task hook clears bit 7 of `0x30` only when `0x4B385` is set. APK `485442d1` was installed. Loaded 22:50:56, tag `DMR003.FW32.V022`, channel 56. The key got status 3 at 22:50:59.869 and op 2 stayed at fill 1920 through 22:51:25. No status 4, so the new flag was never set, and there is no `rewritten once`. Transmitting was still set at 22:51:38. `restartmodule` at 22:54:22 returned the tag and cleared transmitting. Factory image keyed on channel 49 (status 3 and 4). FW31 `997cb714` restored.
 
