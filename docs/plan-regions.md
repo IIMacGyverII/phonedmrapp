@@ -41,9 +41,8 @@ only by the user. A travel case ("I'm abroad for a week") is just switching the 
   licence-free services available (as references to channel presets), whether NOAA-style weather radio and SAME exist,
   the amateur band edges for the bands the module covers (for the "is this an amateur frequency" checks), the default
   units (km/mi), and the BrandMeister country talkgroup (the MCC-based one, e.g. 206 Belgium) as a suggestion.
-- **Data, not code**: one JSON asset `assets/regions.json`, so a frequency fix is a data change. Updatable later through
-  the same signed-list mechanism the profile list uses (`profiles/profiles.json` + `sign_profiles.py`), so a correction
-  can reach users without an app release. Unknown country → its IARU region's default entry.
+- **Data, not code**: one JSON asset `assets/regions.json`, so a frequency fix is a data change, shipped with the next
+  app release (owner, 2026-10-29: no remote update). Unknown country → its IARU region's default entry.
 - **One accessor**: `Region.current(context)` plus `RegionValues` with per-value user overrides (stored in prefs, cleared
   when the region changes, after asking).
 - **Replace the constants**: `PacketEngine.APRS_FREQ_HZ` and every literal found in the review below become
