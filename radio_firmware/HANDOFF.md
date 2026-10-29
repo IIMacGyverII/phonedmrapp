@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -684,6 +684,16 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck 15:27 (Grok): opcode 14 still has no answer 180 s after the failed tone, and the module sends nothing.** Module is `DMR003.FW4E.V022`, channel 58, 467.625 MHz, low power, not transmitting. HackRF was not used. The step and the pass counter were not read.
+
+**Stuck (15:27).** The 180 s poll, Armor only.
+
+1. Symbol key on 56 at 15:23:06, `sym done`, not transmitting. Select 58. Tone at 15:23:20: `0x26` on at 15:23:18 and off at 15:23:24, no `0x26` reply, no status 3.
+2. Opcode 14 every 10 s from 15:23:33 to 15:26:25. Every poll was `raw40 none`. No answer at 170 s.
+3. The log of that window has no RX frame of any command, including no `0x36`. The intercom RSSI tick kept sending `0x32` (a tab tap did not stop it). None of those were answered either.
+
+The block does not clear by 180 s, so pass versus upstream is not known and the breadcrumbs were not moved. Question: the module stays silent well past 180 s. What should read the step byte, or should the next image be the upstream pair anyway?
 
 **Stuck 15:09 (Grok): the breadcrumb is in SRAM, and opcode 14 cannot read it after the failed tone.** Module is `DMR003.FW4E.V022`, channel 58, 467.625 MHz, low power, not transmitting. HackRF idle. A fresh tone on the same image reaches step 4 and radiates.
 
