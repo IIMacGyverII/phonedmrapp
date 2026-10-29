@@ -611,6 +611,8 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
+FW30 base check, not the acceptance pass. The 5 s FM tone held: HackRF LNA 0 VGA 12, carrier near +241 kHz for the tone. Runner `all` passed: boot silent, tone 10.534 s, stream 1125/1125, receive, heat 45 s with the battery 33.1 to 33.3 °C. M17 from the hotspot lists when no key comes first (77 frames, 55 good) and does not list after a symbol key, including a second try 4 s after `rewritten true`. A 3 s tone on channel 49 got status 3 and status 4 from the module, and the hotspot logged no DMR line. The Armor is on channel 56, 467.625 MHz, low power, not transmitting. The HackRF lease is ended.
+
 FW30 is on frequency again. Tag `DMR003.FW30.V022`, channel 56. A repeated 75-frame low-power key read −63 five times on the Atom XL, with the VFO still at 467625000. The high-power key read −58 and drew −2.6 to −3.4 A through the key. The hotspot decoded both, BER 0. The first low-power RSSI window stayed at −101 while the hotspot still decoded that key, so that window is not the reading.
 
 End state 07:30: `DMR003.FW30.V022`, channel 56, 467.625 MHz, low power, not transmitting. Battery 31.3 °C, AP 38.9 °C, PA 37.0 °C. Atom XL link stopped. HackRF still needs a power cycle. SignalDeck `a7344f19`.

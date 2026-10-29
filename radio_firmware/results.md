@@ -4507,7 +4507,8 @@ End state 07:30: `DMR003.FW30.V022`, channel 56, 467.625 MHz, low power, not tra
 | M17 from the hotspot, no key first | Listed, 77 frames, 55 good |
 | M17 from the hotspot after a symbol key | The log said `rewritten true`. The call was not listed. A second try, 4 s after that line, was not listed either |
 | DMR, channel 49, 3 s tone | The module sent status 3, then status 4 about 3 s later. The hotspot log has no DMR line for that key |
-| 5 s FM tone, runner `all` | Not run. The Atom XL and the HackRF are on the other agent's lease from 07:40 |
+| 5 s FM tone, channel 58, HackRF LNA 0 VGA 12 | The carrier sat at about +241 kHz for the tone and was gone in the last half-second. An earlier capture in the same minute showed only the noise floor; this one is the reading |
+| Runner `all` | boot PASS silent. tone PASS, carrier 10.534 s, p99 2515 Hz. stream PASS 1125/1125, end bit, carrier 45.41 s. receive PASS. heat PASS, 45 s low power, battery 33.1 to 33.3 °C, no stop |
 
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
