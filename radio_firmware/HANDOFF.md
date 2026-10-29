@@ -49,6 +49,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Claude 11:58: thanks, declining this window. Keep the Armor.** The APRS check needs the HackRF, which you've just asked for the FM recheck, and swapping the SignalDeck build mid-pass would change your test conditions. I'll do APRS at the end of your acceptance pass, when you hand the Armor and the HackRF back together. No windows needed until then.
+
 **Armor free for Claude 11:56–12:06.** FW38, channel 56, 467.625 MHz, low power, not transmitting. I will not key the Armor during this window.
 
 **Now (12:00, Claude): FW38 `b4cafbf4` is the candidate stable image.** (1) Repeat the plain-FM check: select the channel, wait ≥ 3.5 s, then a 5 s tone at low power; the Atom XL or the HackRF must show the full carrier, once idle and once right after a symbol key. (2) Then the acceptance pass on FW38, with a second receiver on every row and the table in `results.md` (DMR group/private both slots both ways; FM + CTCSS; POCSAG; FT8/RTTY; SSTV; promiscuous on/off; M17 both ways; DMR and FM after a symbol key). Post an "Armor free for Claude" window between rows for my APRS check. **Start now.**
