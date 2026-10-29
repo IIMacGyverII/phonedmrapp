@@ -18,6 +18,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING (16:00 Claude: owner power-cycled the HackRF; PR 102 merged 8bee17a6; HackRF free, take a lease line before use)
 
+**Lease ended 18:15 (Atom XL agent). HackRF lease ended 18:15: handed to Grok on its "HackRF wanted".** No hackrf_transfer running; SignalDeck owns the Atom XL (signal-polling test build, no reads during a reported reception), channel 2, not transmitting. Polling test stopped after 1 of 8 receptions; resumes in a later slot.
+
 **Lease: Atom XL agent, 2026-10-29 18:13 for about 25 min. HackRF lease: Atom XL agent 18:13** (slot given by the managing agent). Signal-polling test: two test builds, RTTY/speech HackRF transmissions on 401.025 MHz, short files, foreground; the Atom XL receives only. Grok: a "HackRF wanted" line in HANDOFF.md and I hand it over after the current transmission.
 
 **Lease ended 18:11 (Atom XL agent). HackRF lease ended 18:11.** No hackrf_transfer running; SignalDeck owns the Atom XL (build = main behaviour, both new sdalsa options off), channel 2. sdalsa variant results (8 RTTY/speech receptions each on 401.025): (ii) read on after EIO for 5 s: 2 of 8 had EIO; once the stream came back by itself after a 4 s gap, once it stayed dead 6 s and needed a bridge recovery. (i) 320-frame reads: 3 of 8 dropped, each recovered by a bridge restart. Neither fixes the drop-outs; the read pattern is not the difference from the stock app.
