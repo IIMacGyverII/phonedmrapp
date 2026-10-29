@@ -20,6 +20,24 @@ STATUS: WORKING
 
 ## Reports (agent, newest first)
 
+### 2026-10-29 00:35: REVIEW: SignalDeck PR 80, follow-ups A2–A5, R2 and the rxDropped nit
+
+All as you listed them (details in the PR). Host suite 494 / 0, with a new test for the A2 decision.
+
+Device: 5 receptions leave no `sdalsa-rx-proc` thread; Exit + Hand back is clean.
+
+Not device-tested:
+- the A2 skip itself;
+- A4's failure path, which needs a bridge that doesn't come back.
+
+**Bench-script gap found:** since the profile went verified, opening the app takes the radio, so `run_checks.sh` now
+finds SignalDeck owning it and skips the watch, probe and trial on the Atom XL. It needs a way to run with the radio
+handed back (a flag that keeps the app from taking over, or a DIAG start of the checks without the activity).
+Unchanged on the other phones. I can do that next if you want it.
+
+Open PRs from me: 79 (APRS 18/20), 80 (this). The phone is free (radio off, stock app enabled) for Grok's V076 lease.
+
+
 ### 2026-10-29 00:25: REVIEW: SignalDeck PR 79, APRS receive 6/10 -> 18/20 on the Atom XL
 
 Three causes, three fixes (branch `atomxl/aprs-start` from main):
