@@ -4417,6 +4417,12 @@ One 75-frame key on channel 56: `sym last op 7 fill=1460`, `sym done bytes=3744`
 
 End state 02:43: `DMR003.FW33.V022`, channel 49, 467.625 MHz, low power, not transmitting. Battery 35.9 °C, AP 43.2 °C, PA 41.3 °C. HackRF still will not open. SignalDeck `a7344f19`. Bench ID restored.
 
+**Hotspot check and FW34 (02:46–02:51).** Two 3 s DMR tones on FW33, channel 49, bench ID, MMDVM log live. No RF line either time. `systemctl restart mmdvmhost` returned 0. Config after the restart: `RXFrequency=467625000`, `TXFrequency=467625000`, `RXOffset=-450`, `RXLevel=50`, `M17TXLevel=50`. The log did grow (a non-RF line at 07:47:17 UTC).
+
+FW34 sha256 `7b64a823a4c3af5e11faf15157a3198c6ff9906855b08591a32d03fc15929f8f`. It is FW32 with the word at `0x5BE2C` set to `0x4B008`. The `ld.b` / `bez` at `0x5BDEC` skips `0x5BBE2` when that byte is 0. Loaded, `restartmodule`, channel 56. One 75-frame key: `sym last op 7 fill=1460`, `sym done bytes=3744`, not transmitting. No new MMDVM line. Receive-after-key and the runner were not run.
+
+End state 02:51: `DMR003.FW34.V022`, channel 56, 467.625 MHz, low power, not transmitting. Battery 35.6 °C, AP 41.6 °C, PA 40.1 °C. HackRF still will not open. SignalDeck `a7344f19`. Bench ID restored.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.

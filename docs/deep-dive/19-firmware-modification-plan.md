@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — FW34 gates the FM setup on the op 6 hold byte at `0x4B008`.** A DMR control on channel 49 left no hotspot RF line before or after an `mmdvmhost` restart, and the FW34 M17 key left none either. Details in `results.md`.
+
 **2026-10-29 — FW33 skips the FM setup when the ring is empty.** The 75-frame key finished and the hotspot logged no RF. M17 receive listed the hotspot call. The HackRF still needs a power cycle. Details in `results.md`.
 
 **2026-10-29 — The FW19 / FW26 / FW30 FM bisect did not start.** `hackrf_transfer` would not die and the board would not open. No tone. Details in `results.md`.
