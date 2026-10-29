@@ -18,7 +18,13 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING
 
+**Lease: Grok, 2026-10-29 03:00, receive only.** 467.625 MHz analog, squelch 0. The Atom XL does not transmit and no image is loaded. Handed back when the Armor keys are done.
+
 ## Reports (agent, newest first)
+
+### 2026-10-29 03:00: Lease — Grok, Armor receive check
+
+Grok holds the Atom XL until the four Armor keys are logged (factory FM, FW34 FM, FW34 DMR, FW34 M17). Receive only at 467.625. No transmit, no firmware load. The phone will be handed back afterwards.
 
 ### 2026-10-29 01:10: data-mode receive checks done; REVIEW: SignalDeck PR 82 (run_checks.sh -r)
 
