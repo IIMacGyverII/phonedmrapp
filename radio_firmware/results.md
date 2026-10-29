@@ -4692,3 +4692,16 @@ Trial 1, 14:10. Channel 56 and 58 are 467625000 Hz, power 0. Symbol `0x26` on at
 Plain FM unkey (`0x38874` == 0) writes none of the three.
 
 Probes on FW40, HackRF LNA 16 / VGA 16, 467.625 MHz low power. (a) Symbol key, wait 15 s, select 58, tone: `0x26` on 14:16:51.229, off 14:16:56.734, no reply between them, keyed 0. (b) straight after that, select 58 and tone at once: same, keyed 0. That (b) still had the symbol key in front of it. After `restartmodule` (tag `DMR003.FW40.V022` at 14:18:34), select 58 and the tone 0.41 s later: keyed 5.55 s, offset +983 Hz, clip 0, SNR 61.4 dB. A fresh select does not block. Fifteen seconds after a symbol key, the select's flag is still set. FW41 was not built: the long `0x23` success path is the one the fresh select takes, and it does not contain a store of 0, so the store the symbol key skips is not named yet. Left on channel 58, not transmitting. HackRF idle.
+
+**Op 14 range check (14:22), two constants. FW41-D was not built.** In `DMR003.FW40.V022` the handler at `0x5C098` accepts an address only inside `[0x18000000, 0x18010000)`:
+
+```
+5c0ce: movih r1, 6144    # 0x18000000
+5c0d2: cmphs r0, r1
+5c0d4: bf    0x5c134     # reject below
+5c0d6: movih r1, 6145    # 0x18010000
+5c0da: cmphs r0, r1
+5c0dc: bt    0x5c134     # reject at or above
+```
+
+The length in r2 must be 1..240 (`cmpnei r2, 0`, then `movi r3, 240; cmphs r3, r2`). A miss pops with r0 = 1 at `0x5C134`. `0x32457` and `0x38908` are outside this window. No image was built and the radio was not used. Module still FW40, channel 58, not transmitting.

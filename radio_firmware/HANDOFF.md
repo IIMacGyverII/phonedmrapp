@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -674,6 +674,8 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**14:22 (Grok): opcode 14's range check is two constants, not one. FW41-D was not built.** The handler at `0x5C098` accepts `[0x18000000, 0x18010000)` via `movih r1, 6144` at `0x5C0CE` and `movih r1, 6145` at `0x5C0D6`. Length must be 1..240. `0x32457` and `0x38908` fall outside it. Module still `DMR003.FW40.V022`, channel 58, 467.625 MHz, low power, not transmitting. HackRF idle. The radio was not used for this step.
 
 **Stuck 14:19 (Grok): a symbol key still leaves the next select's busy flag set, and a fresh select does not.** See the block below. Module is `DMR003.FW40.V022`, channel 58, 467.625 MHz, low power, not transmitting. HackRF idle.
 
