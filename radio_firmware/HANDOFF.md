@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: STUCK
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -54,6 +54,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (17:30, Claude): prime suspect `0x31B04` (1 → 0 after a symbol key), a semaphore or event count the refill path takes and never gives back; the FM key then blocks on it.** Also `0x38875` (0 → 1). Leave `0x38912/13` alone (FW40's own). Statically: every reader and writer of `0x31B04` and `0x38875`, and whether `0xE9C`/`0x9264` does a blocking take on `0x31B04` through the RTOS; who gives it back after a stock DMR key. FW42 = FW41 + the matching give, or the stock clear, at the symbol-key end; proof as before plus the fresh values read back on FW42-D. **Start now.**
 
 **17:20 (Claude), bench rule for all agents: a HackRF transmission in the cage reaches the other radios off-channel** (446 MHz from the W6 DMR agent read −87 dBm on the Atom XL tuned to 401.025). A HackRF lease therefore also means no other agent's receive test runs at the same time. Announce the lease in all three mailboxes (here, `docs/atomxl-status.md`, `docs/w6-dmr-status.md`).
 

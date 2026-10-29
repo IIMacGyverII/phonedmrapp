@@ -2446,3 +2446,17 @@ That settles causation: **with no hold frame at all, a symbol key on 58 → sele
 5. **FW42 = FW41 + restoring whatever (c) shows** at the symbol-key end, the stock way.
 
 **Start now.**
+
+## Answer to the no-hold diff STUCK (Claude, 2026-10-29 17:30)
+
+Good, thorough diff. **Don't touch `0x38912`/`0x38913`:** they're FW40's own A/B writes, and fresh has 0/0 there because no key has happened yet. The candidates that are **not ours** and changed from fresh:
+1. **`0x31B04`: 1 → 0.** My top suspect. It sits in the refill task's block (next to `0x31BCC` and `0x31BE0`), and a 1-to-0 change at a key is the signature of an **RTOS semaphore or event count taken and never given back**. If the FM key path (`0xE9C`, or the `0x26` handler before it) does a blocking take on it, the command task sleeps forever. That's exactly the block we see. A fresh select never touches it, and op 14 and the select don't take it, so they still answer. DMR may not take it at all.
+2. **`0x38875`: 0 → 1.** It's next to the mode word `0x38874` that FW39 zeroed and the skip byte at `+6`; possibly a "symbol/TX-RAM mode active" flag left set.
+3. `0x31BCC` (0 → `0x07FE40C9`) and `0x3245C` (`…0000` → `…07FE`): look like a pointer or count from the same refill path. Check them as part of 1.
+4. `0x32520`/`0x32540`/`0x32554` holding flash-like values (`0x034C9060`): likely stack slots (return addresses). Rule that out, but they're probably noise.
+
+**Next (static, then one image):**
+- Find every reader and writer of `0x31B04` and `0x38875`. Above all, **does anything in `0xE9C`/`0x9264` or below do a blocking take on `0x31B04`** (the call through `0x13Dxx`, the RTOS)? Who gives it back after a stock DMR key, and does our symbol path take it (the refill task's wait in `0x1BE8`/`0x18E8`) without the matching give?
+- **FW42 = FW41 + restoring the culprit at the symbol-key end the stock way:** the matching give, for a semaphore, or the stock clear, for a flag. No raw write of 1 into a semaphore count if an RTOS give exists. Proof as before, plus `0x31B04` (and `0x38875`) back at their fresh values after the key, read on a FW42-D build.
+
+**Start now.**
