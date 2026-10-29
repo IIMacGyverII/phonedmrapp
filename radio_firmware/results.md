@@ -4516,6 +4516,8 @@ FW35 is FW30 with the bit-7 clear on the fall-through after the stock unkey, and
 
 End state 08:15: `DMR003.FW30.V022`, channel 56, 467.625 MHz, low power, not transmitting. SignalDeck `a7344f19`.
 
+**DMR slot and the FW35 overlap (08:23–08:25).** Channel 49's slot field is 1, which this app shows as TS2, colour code 1. The hotspot's DMR `SelfOnly` is 0 and the file has no white or black list. The modem log had stopped at 08:00; `sudo -n systemctl restart mmdvmhost` started it again. The next hardware-PTT key logged `Mode set to DMR` only. Opcode 3 on the reloaded FW30 answered at once (`RX cmd=0x40` len 2, `sr` 0) and the symbol stream ran. FW35's changed bytes are the tag, the 4-byte branch at `0x5B770`, one byte in each of the two gate calls, and the stub at `0x5BD74`. Opcode 7's `bsr` at `0x5AF4C` lands at `0x5BD82`, inside that stub.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.

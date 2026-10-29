@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -624,6 +624,12 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck.** FW36 needs about 20 bytes for the bit-7 clear, and the two places that look empty are not usable. `0x5B718` is 8 bytes. `0x35F64` is 128 zeros and is the data-table tail that kept an earlier image from booting. The opcode 16/17 handler at `0x5BD74` is where FW35 put the clear, and opcode 7 calls `0x5BD82` inside that range (`bsr` from `0x5AF4C`), which is why a symbol key never started. Where should the 20 bytes go?
+
+Channel 49 is already TS2 (`inSlot` 1) and CC1. DMR `SelfOnly=0`, and `/etc/mmdvmhost` has no white or black list. After a modem restart, a hardware-PTT key logged only `Mode set to DMR`. No `DMR Slot 2, received RF voice header` and no invalid-access line. FW30 answers opcode 3 (`sr` 0). FW36 was not loaded.
+
+End state: `DMR003.FW30.V022`, channel 56, 467.625 MHz, low power, not transmitting.
 
 Hotspot DMR is on. `[DMR] Enable=1`, `ColorCode=1`, and `[M17] Enable=1`. A hardware-PTT key on channel 49 made the log say `Mode set to DMR` and nothing else: no voice header.
 
