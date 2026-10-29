@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-28 — A fresh channel is muted, and the open post-key audio does not lock M17.** `M17TXLevel` 50 and 30 both fail to follow a sync. 30 was put back to 50. Details in `results.md`.
+
 **2026-10-28 — The second status 4 is the bit-2 path at `0x89C`, and clearing that bit opens the audio.** One status 4 per key and receive RMS about 4500. The heard list stayed empty. Details in `results.md`.
 
 **2026-10-28 — Skipping the host PTT-off still leaves a second status 4.** The unkey sends no `0x26`. The carrier clip stays at RMS 1.5. Details in `results.md`.

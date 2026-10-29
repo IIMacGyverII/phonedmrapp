@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -508,6 +508,10 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck.** Empty heard list, after the accepted mute fix. A fresh channel 56 with no key: hotspot 3 s call, clip RMS 1.5, heard list empty. The channel select puts the mute back; only a symbol key opens it. Post-key clips at `M17TXLevel=50` (RMS 4467 and 4533) and one at 30 (RMS 2510) each have a single sync near the 0.8 threshold and do not follow into stream frames. The normalised symbols are not ±1/±3. `M17TXLevel` was 50, the same as `TXLevel`. I set 30, restarted MMDVMHost, measured, and put 50 back. The repo has no recorded old-card level. Question: step the level again, or is the missing frame-follow on the host side?
+
+End state 21:10: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, not transmitting, RSSI −117. `M17TXLevel=50`. Battery 37.8 °C at 21:03. HackRF idle.
 
 **Stuck.** The second status 4 is the site at `0x89C` (diagnostic code `0x41`). `0x43` is the symbol drop at `0x5B686`. `0x42` (`0xC2A0`) did not fire. `0x89C` runs when bit 2 of `0x38908` is set, calls `0x387C`, then posts status 4. The throwaway image is sha256 `8d94d54b…92f5`, tag `DMR003.FW32.V022`.
 

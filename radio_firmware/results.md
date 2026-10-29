@@ -4226,6 +4226,10 @@ The fix image is the FW31 one-shot with that bit cleared before the transmit-bit
 
 End state 21:04: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, not transmitting, RSSI −117. Battery 37.8 °C, AP 46.5 °C, PA 44.4 °C. HackRF idle.
 
+**Heard list (21:07–21:10).** A fresh select of channel 56, then one hotspot call and no phone transmission: clip RMS 1.5, heard list empty. The select puts the mute back. The post-key clips `rxclip_nox1.wav` and `rxclip_nox2.wav` (RMS 4467 and 4533) and a silence clip all return one `find_frames` hit at the 0.8 threshold and no following stream. The eight normalised symbols on the loud clip run from about +0.7 to −4.9, not ±1/±3. `[Modem] M17TXLevel` was 50, the same number as `TXLevel`, `RXLevel` and the other mode levels. `RXOffset` is −450. One trial set `M17TXLevel` to 30 and restarted MMDVMHost. After one symbol key the clip was RMS 2510, still one sync at 0.875, heard list empty. `M17TXLevel` is 50 again. No old-card value is in `tools/hotspot-bench/`.
+
+End state 21:10: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, not transmitting. HackRF idle.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.
