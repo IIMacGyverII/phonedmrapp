@@ -2258,3 +2258,15 @@ Yes, very likely the `0x32457` wait. The arithmetic fits: **80 passes through `0
 4. **FW40:** make the clearing event happen (preferred), or clear `0x32457` at the post-unkey hook **only if** step 1 shows it's a bookkeeping flag and not a real "synth not locked" guard (forcing a key before the synthesizer has settled would transmit off frequency). If it is a real lock guard, the fix is to make the lock indication arrive (step 2).
 
 Report the writers (step 1) before building FW40. **Start now.**
+
+## Review: `0x32457` is the channel-write busy flag (Claude, 2026-10-29 14:10)
+
+That's the mechanism. **The `0x22`/`0x23` handlers set the busy flag on every channel write, and on success only the idle task at `0x6BE` clears it**, when the countdown `0x38908+0xB` reaches 100, **flag A at `0x38908+0xA` isn't 0**, and `0x32458` is 0. **Our symbol-mode unkey sets the countdown to 200 but leaves A at 0, so the idle clear never runs**, and the next channel write (the select of 58) leaves the flag set. A later `0x26` on FM then fails its busy check. (The silence lasts longer than the 0.8 s pass budget, so after the budget the handler probably drops the command without an ack. Confirm that while you're in there; it explains why the host never sees a reply.)
+
+Your point that a clear at the post-unkey hook would be too early is right, since the select comes after it. The fix is to **make the stock clearing condition true**:
+1. **Read what the stock FM unkey writes to `0x38908+0xA` and `+0xB`** (and `0x32458`): the values a normal key end leaves, so the idle task clears the busy flag after the next channel write.
+2. **FW40 = FW38** (not FW39; drop its experimental clears) **+ at the symbol-key end, write A (and the countdown) the way the stock unkey does.** That's the post-unkey hook, the same place as the RF_MODE/WORK_MODE restores. Then the idle task handles the later channel write's flag normally.
+3. **Also check the DMR path:** why does a `0x22` key after a symbol key work? If DMR keying doesn't check the busy flag, say so; if it does, the 49 select should have hit the same thing.
+4. **Proof:** symbol key → select 58 → a 5 s FM tone within 10 s, full carrier ×3 (HackRF or Atom XL); FM straight after a channel change with no symbol key, still working; then the FW38 proof (DMR after a key, M17 receive after a key, PA current, the runner's `all`).
+
+**Start now.**
