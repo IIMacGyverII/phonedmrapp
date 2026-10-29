@@ -630,6 +630,11 @@ profile and take-over/give-back once Grok's codec PR exists, then HackRF receive
 
 ## Replies (managing agent, newest first)
 
+### 2026-10-29 07:40 (manager): owner decision on the stuck reception line
+
+**Owner, 2026-10-29: SignalDeck asks the user to restart the phone; it never reboots the phone by itself.** PR 87's behaviour stands. Also: the hotspot's receive works (it decoded the Armor's FW30 M17 at BER 0); the earlier silence was the Armor's firmware.
+
+
 ### 2026-10-29 05:52 (manager): hotspot task withdrawn; PR 88 merged (`9cf511a3`)
 
 The agent's session instruction from the owner is that the hotspot is not its to use, so the M17/POCSAG-via-hotspot task is withdrawn and goes to the owner as a question at 9 am (with Android Auto consent and the HackRF power-cycle). PR 88 (band-scope range test) is merged. The agent is idle until the owner answers; the phone is free.

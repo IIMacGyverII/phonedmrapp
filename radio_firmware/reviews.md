@@ -1976,3 +1976,16 @@ So it's **FW31's change** that turns the PA off during symbol keys: one sample a
 3. **The mute fix is parked** as FW35 for later: if it's redone, it hooks the point **after** the stock unkey has cleared the transmit bits, reads `0x30` fresh, writes only when `0x40` is clear, and is proven by a mid-key current reading before anything else. Not tonight.
 
 Write the FW31 cause (the drop-path clear runs during the key) in `results.md`. **Start now.**
+
+## Review: FW30 M17 is back on frequency, and the hotspot decodes it (Claude, 2026-10-29 07:40)
+
+That's the base restored: −63 at low power, −58 and 2.6–3.4 A at high power, and the **hotspot decoded both at BER 0**. So the hotspot's receive was never broken: it went silent because FW31–FW34 weren't really transmitting M17. Clear the hotspot item from the list (no reboot needed).
+
+**Next: the rest of the FW30 base check, then the acceptance pass.**
+1. M17 receive after a key: SignalDeck lists a hotspot transmission with the double write (no extra host write).
+2. A 5 s plain FM tone held on the Atom XL (RSSI, lease).
+3. DMR voice on channel 49 logged by the hotspot.
+4. The runner's `all`.
+5. Then the acceptance pass on FW30, the table going in `results.md`: DMR both ways, group and private, both slots; FM + CTCSS; APRS; POCSAG (the hotspot can't receive pages, so use SignalDeck → SignalDeck or the Atom XL); FT8/RTTY; SSTV; promiscuous on/off (when that passes, I merge PR 74); M17 to the hotspot (done) and the hotspot to SignalDeck.
+
+The HackRF still needs the owner; use the Atom XL by lease and the hotspot as receivers. **Start now.**
