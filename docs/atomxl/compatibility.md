@@ -1,6 +1,6 @@
 # SignalDeck on the Unihertz Atom XL: compatibility
 
-**State as of:** 2026-10-29 13:00.
+**State as of:** 2026-10-29 14:40.
 
 **Bench phone:**
 - Unihertz Atom XL ATOMXL0000000737, Android 10 (Agold build), rooted.
@@ -48,12 +48,14 @@
 
 ## Known limits
 
-1. **The reception line can stick.** The bridge's "reception started/ended" signal (`/dev/stmcu`) stops for the whole
-   session. Reproduced on purpose: kill SignalDeck (force-stop, or a reinstall) while a reception is in progress, then
-   let it take the radio again (see `HAL_SEQUENCES.md`).
-   - SignalDeck notices it (PR 87), finds receptions from the signal reading instead, and asks for a restart.
-   - Only a phone reboot clears it today. A no-reboot fix (the stock HAL's power-off pulse, or a driver rebind) is
-     being tested.
+1. **The reception line can stick.** The bridge's "reception started/ended" signal (`/dev/stmcu`, interrupt `mcu-eint`)
+   stops for the whole session.
+   - Reproduced 2026-10-29 (1 of 3 replays): a bridge restart during a reception, then SignalDeck force-stopped during
+     another, then started again. A force-stop on its own did not do it (11 runs).
+   - SignalDeck notices it (PR 87), finds receptions from the signal reading instead, and restarts the bridge once.
+   - With PR 98 that restart, and taking the radio again, use the stock HAL's power-off pulse. It brought a stuck line
+     back without a phone reboot (1 of 1 so far).
+   - A phone reboot always clears it. The exact trigger is still under investigation.
 2. **Capture drop-outs.** The bridge's USB audio sometimes stops for 2 s. The kernel then ends the stream, and only a
    bridge power-cycle restarts it, a few seconds without sound.
    - With PR 92 this is rare and recovers.

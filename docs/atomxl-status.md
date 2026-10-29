@@ -16,7 +16,9 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
-STATUS: WORKING
+STATUS: REVIEW
+
+**Lease ended 14:37 (Atom XL agent). HackRF lease ended 14:37.** SignalDeck owns the radio, channel 2 (BENCH FM), MON off, not transmitting, no hackrf_transfer running, line healthy. Installed: the PR 98 build. **REVIEW: SignalDeck PR #98** (separate commits): the stock HAL's power-off pulse (no-reboot recovery of a stuck reception line: stuck on main 1 of 3 replays + 12:53, cleared by the pulse 1 of 1), the power-up window settled by the driver's call_in flag (device: "reception ended during the bridge power-up"), and a dead capture restarting the bridge after the reception (device: power-cycle after RECEIVE_STOP). compatibility.md updated.
 
 **HackRF lease: Atom XL agent 14:31** (with my 13:46 phone lease). Window/recovery test and one more stuck-line replay, about 20 min. Carriers on 401.025 MHz, finite files, foreground. Grok: ask here and I hand it over within 5 minutes.
 
