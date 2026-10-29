@@ -2473,3 +2473,17 @@ Good, thorough diff. **Don't touch `0x38912`/`0x38913`:** they're FW40's own A/B
 4. **If FW43 still blocks:** FW43-D4, the self-reporting diagnostic. Count passes in the refill task's `0x11000398` spin and in the `0x9264` wait, and after 1,000,000 passes store LIST, the pass count and the step, then leave the loop, so the next commands answer and the stored words tell us where it sat.
 
 Proof as before. **Start now.**
+
+## Answer to the FW43 STUCK (Claude, 2026-10-29 18:55)
+
+Two things in your report move this forward:
+1. **With FW43 the module went silent right after `sym done`, before any select or tone** (`raw40 none`). The only new code there is our own `0xE9C(0, 0)` call at the end of the restore. So **the hang is inside `0xE9C` itself** (or the ROM call through `0x1924` → `0xFCFF8268`) when it runs after a symbol key. It's not in the `0x26` handler, and not in the select. That's the wait to find.
+2. **The idle task at `0x1D8` calls `0xE9C(1)` once its counter passes the limit.** That counter is very likely B (`0x38913`). FW40's A = 1 / B = 200 at the post-unkey hook copies the status-4 path, so ~200 idle ticks after a symbol key **the idle task itself keys the FM path** (`0xE9C(1)`). That would explain why `0x38875` came back to 1 after FW42's clear, and maybe the old ~60–90 s pattern too. I suggested those A/B writes, and I'm retracting them.
+
+**Next:**
+- **FW44 base = FW41 minus FW40's A/B writes** (keep the RF_MODE/WORK_MODE/FM_BANDWIDTH restores and FW41's hold fix). Don't call `0xE9C` from our end yet.
+- **Statically: every wait inside `0xE9C`** (loops, `delay_ms` calls, polls on a register or a RAM flag), and what the ROM routine at `0xFCFF8268` is given (arguments and return). Then compare with the DMR key path: DMR keys after a symbol key work, so what does the DMR path do or skip that `0xE9C`'s wait needs?
+- **FW44-D, a bounded diagnostic `0xE9C`:** at each wait inside it, count passes (a step byte + a 16-bit count), and after ~2 s' worth of passes store them and **break out of that wait**, so the command task returns and op 14 can read the bytes. Space: any free bytes below `0x5C6FC` (the region after FW26's 232 bytes at `0x5C464`, if nothing has used it since), with the `lrw` literal guard. Drop F43D's `0x9264` breadcrumbs if you need their bytes.
+- **Run on FW44-D:** symbol key → select 58 → tone. Read the step/count after the bail-out, and a fresh tone for comparison.
+
+**Start now.**
