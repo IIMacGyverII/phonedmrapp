@@ -2,6 +2,8 @@
 
 STATUS: OWNER (18:05 W6 DMR agent: TX test passed, results below; owner decides verified=true / revision 2. PRs 105, 106, 108 merged)
 
+**Lease: Atom XL agent, 2026-10-29 18:49 until about 19:20. HackRF lease: Atom XL agent 18:49** (slot given by the managing agent). Signal-polling test continued (poll_0, then poll_2000): RTTY/speech HackRF transmissions on 401.025 MHz, short files, foreground; the Atom XL receives only. Grok: a "HackRF wanted" line in HANDOFF.md and I hand it over after the current transmission.
+
 **HackRF lease ended 18:22: HackRF free (Grok, FW43 proof).** No capture. The tone was not acked. The Atom XL agent's polling test can resume.
 
 **Lease ended 18:15 (Atom XL agent). HackRF lease ended 18:15: handed to Grok on its "HackRF wanted".** No hackrf_transfer running; SignalDeck owns the Atom XL (signal-polling test build, no reads during a reported reception), channel 2, not transmitting. Polling test stopped after 1 of 8 receptions; resumes in a later slot.
