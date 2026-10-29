@@ -4298,6 +4298,21 @@ MMDVMHost logged both hotspot calls (UTC file `MMDVM-2026-10-29.log`): 04:50:41 
 
 End state 00:00: `DMR003.FW32.V022` sha256 `53e1fd7b…1d11`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −106. The last action was that select, so the receiver is open. Battery 35.7 °C, AP 42.3 °C, PA 40.9 °C. HackRF idle. SignalDeck `485442d1`. MMDVMHost was restarted at 04:58:33 UTC and came back idle; the two key-time transmissions are from before that restart.
 
+**PR 78 one-second write, then the 0x30 poll (00:07–00:20).** Installed `SignalDeck-fw32-cbe74c70.apk` (sha256 `887afbd1…`) on FW32 `53e1fd7b`. One 75-frame key: status 4 at 00:07:17.566, `no 0x26 off`, `rewritten once true` at 00:07:18.579 (1.01 s after status 4). The hotspot transmitted (05:07:18 UTC, N0CALL to ALL, 3.0 s). The phone listed nothing. Two minutes later, with no further key, a hotspot call still read RMS 1.3.
+
+Diagnostic image sha256 `3d7fca893d2f2848903aedd170af090f71bbb3973856f8272f71a2278cbe4290`, same tag `DMR003.FW32.V022`. Opcode 18 is the F30B read, placed at `0x5C14C` (56 bytes, ends `0x5C184`). The symbol path, the drop, the idle clear and `0x5C490` were not written. Literal guard clean against `53e1fd7b`. The first key after the load stalled (fill 1920); `restartmodule` and the next key posted status 4.
+
+On that key, status 4 at 00:16:42.673, `rewritten once` at 00:16:43.698. Opcode 18 replies for register `0x30`, little-endian:
+
+| Seconds after status 4 | Value |
+| --- | --- |
+| 0.093, 0.289, 0.489, 0.695, 0.887 | `0x7026` |
+| 1.812 through 2.156 (seven samples) | `0x70A6` |
+
+Bit 7 is clear for at least 0.89 s after status 4. The single host write is at 1.03 s. The next sample, at 1.81 s, is the mute value, and it stays. The UART was busy with that write, so there is no sample between 0.89 s and 1.81 s. The original FW32 `53e1fd7b` was loaded again. `restartmodule` cleared the sym-done flag.
+
+End state 00:20: `DMR003.FW32.V022` sha256 `53e1fd7b…1d11`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −106. Battery 35.7 °C, AP 42.1 °C, PA 40.9 °C. HackRF idle. SignalDeck `887afbd1` (`cbe74c70`). The 3/3 listing was not met, so the runner was not started.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.

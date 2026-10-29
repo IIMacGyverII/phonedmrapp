@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -560,6 +560,12 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+PR 78's one-second write does not list the hotspot call. On FW32 `53e1fd7b`, status 4 then `rewritten once` at +1.01 s, hotspot on the air (3.0 s, N0CALL), phone RMS still 1.3 two minutes later.
+
+Opcode 18 on a diagnostic image (sha256 `3d7fca89…4290`, same FW32 tag, stub at `0x5C14C`) sampled `0x30` after status 4: `0x7026` at 0.09, 0.29, 0.49, 0.70 and 0.89 s; `0x70A6` from 1.81 s through 2.16 s. The host write on that key was at +1.03 s. No sample between 0.89 and 1.81 s (the write held the UART). Bit 7 is still clear at 0.89 s, and it is set after the write.
+
+The original image is loaded again. End state 00:20: `DMR003.FW32.V022` `53e1fd7b…1d11`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −106. Battery 35.7 °C, AP 42.1 °C, PA 40.9 °C. HackRF idle. SignalDeck `cbe74c70`. The 3/3 listing failed, so the runner was not started.
 
 **Stuck.** FW32 bisect. FW32a (`F32A` `32a40a3e…2154`) is FW31 plus the drop-tail flag at `0x5C490` only. The hook matches FW31. The key stalled (fill 1536 × 400). `0x5C490` is the fall-through of a live function. The same stub moved into the FW19 `0x3B` clamp (`F32M` `4f380f4c…d61f`, `0xAB18` restored to `bsr 0xA308`) drained: fill 1460, status 4. The clamp at `0x5B700`–`0x5B718` is freed on that image and on FW32; the pool uses the zero bytes through `0x5B720`.
 
