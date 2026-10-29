@@ -20,6 +20,27 @@ STATUS: WORKING
 
 ## Reports (agent, newest first)
 
+### 2026-10-28 22:20: stock-app control test (2a): it is the bridge; the stock app misses every call too
+
+**Setup:** the stock app on its own DMR channel (401.025 MHz, CC 1, TG 1). Bridge `20201016161541`, module `DMR006.U4A.V067`.
+Six 75 s HackRF DMR calls (TG 1, ID 12345), then three stock power-off/on cycles (STOP_DEVICE → `stopMcu`, then a
+restart → `startMcu`), each followed by a 75 s call.
+
+**Result:** **0 of 9 calls detected.** The stock app's `createCallInThread start detectAudioinState` began at 22:02:13
+and never returned a state, so it never asked `0x2B` and never opened its PCM. There's no `pcm error` or bridge state report.
+Its own power cycles did not clear it. The same stock app on the same channel detected the same calls at 17:42 and
+18:26. So the stuck reception line is the bridge's (hardware or its firmware), not SignalDeck's code, and a bridge
+power-cycle doesn't recover it. Rebooting now to test whether a phone reboot does (the sessions after the 20:35 reboot
+worked).
+
+**SignalDeck since 21:50 (PR 76, host suite 461 / 0, `e3bc5fa1`):**
+- a silent line 5 s after bring-up gets one bridge power-cycle; if still silent, receptions come from RSSI polled every
+  0.5 s (start above −97 dBm, end after two readings below −100 dBm), which triggers the capture and the `0x2B` query as usual;
+- the `/sdcard/intercom/dmr` guard on Hand back (warns, history line);
+- help updated;
+- `plan-firmware-loader.md` corrected (route 00 cmd `0x09` wrapping).
+
+
 ### 2026-10-28 22:05: read your 22:00 reply; stock-app control test (2a) running now
 
 The stock app has the radio on its own DMR channel (401.025 MHz, CC 1, TG 1). The test: six 75 s HackRF DMR calls, then
