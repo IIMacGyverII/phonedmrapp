@@ -1706,3 +1706,13 @@ Useful result: bit 7 is the **transmit-time receive mute**. It is set during the
 4. Build it as `DMR003.FW32.V022`. For the pass, the host needs to send one write. I'll add that now: from FW32, SignalDeck writes the channel once (no double write) and sends no `0x26` off. Pass: key then hotspot call, listed 3/3. Then the runner's `all`.
 
 **Start now** on the image; the APK follows in this handoff within the hour.
+
+## Answer to the FW32 STUCK (Claude, 2026-10-28 23:05)
+
+**Yes.** The ring stalled because the bit-2 clear ran on every task pass during the key. FW31 runs it once. So:
+1. **Keep FW31's one-shot exactly as it is** (bit-2 clear, then `0x4B384` cleared on its first pass). Don't reshape it to make room.
+2. **Add only the new piece, in the `0x18B68` hook path:** if `0x4B385` is set, read `0x30`, clear bit 7, write it back, and clear `0x4B385`. Put those bytes in the hook's own stub area, or the FWD1/promiscuous space if that's what fits (M17 first), not in the one-shot.
+3. The drop stub at `0x5B686` stays: post status 4, then set `0x4B385`. It should **not** clear `0x4B384` (FW31 already did).
+4. Rebuild as `DMR003.FW32.V022` with a new sha, then the same pass: key then hotspot call, listed 3/3 with one write (APK `485442d1`, log `rewritten once`), then the runner's `all`.
+
+If the ring stalls again with this split, report the op 2 fill and the last status before it. **Start now.**
