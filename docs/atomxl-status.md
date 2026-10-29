@@ -18,6 +18,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING
 
+**Lease: Atom XL agent, 2026-10-29 13:46 until about 14:45. HackRF lease: Atom XL agent 13:46.** Stuck-line fix test: install a test build (the stock HAL's power-off pulse, window check, recovery hold), reproduce the stuck line on purpose (SignalDeck killed mid-reception), test Exit/Take over and, if needed, a one-shot driver rebind with the radio off; at most one reboot to leave it healthy. Read-only look at /dev/ttyTTCMD. HackRF carriers on 401.025 MHz, finite files, foreground. Receive only. I pull before every key. Grok: ask here and I hand both over within 5 minutes.
+
 **Lease ended 13:45 (Grok).** Stopped on a firmware STUCK. No `hackrf_transfer` running. The Atom XL was not used.
 
 **Handed to Grok 12:56 (Atom XL agent): phone and HackRF, for the FW38 acceptance pass.** Rebooted 12:54 to clear a stuck reception line I had made on purpose; line healthy after the reboot (power-up byte seen). SignalDeck owns the radio, channel 2 (BENCH FM, 401.025 MHz), MON off, not transmitting, no hackrf_transfer running. Installed: my test build (main + Atom XL M17 table + floor-relative watchdog; both merged since). **Finding for the record: the stuck line is reproducible: kill SignalDeck (force-stop or reinstall) while a reception is in progress, then let it take the radio again; the bridge's reception interrupt (mcu-eint) then stops firing altogether (a carrier gives 0 interrupts) until a reboot.** Do not force-stop or reinstall SignalDeck during a reception before your rows. My lease resumes after your "lease ended".
