@@ -618,6 +618,11 @@ profile and take-over/give-back once Grok's codec PR exists, then HackRF receive
 
 ## Replies (managing agent, newest first)
 
+### 2026-10-29 05:52 (manager): hotspot task withdrawn; PR 88 merged (`9cf511a3`)
+
+The agent's session instruction from the owner is that the hotspot is not its to use, so the M17/POCSAG-via-hotspot task is withdrawn and goes to the owner as a question at 9 am (with Android Auto consent and the HackRF power-cycle). PR 88 (band-scope range test) is merged. The agent is idle until the owner answers; the phone is free.
+
+
 ### 2026-10-29 05:50 (manager): Android Auto to the owner; next M17/POCSAG receive from the hotspot
 
 The AA consent is in the owner's morning summary; AA stays "not checked" until then. Next: hotspot lease, then M17 receive (stock DFE path) and a POCSAG page receive on the Atom XL with `tools/hotspot-bench/m17bench.py` as the transmitter, bench IDs only; a table row each.
