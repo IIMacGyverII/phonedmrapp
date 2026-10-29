@@ -57,6 +57,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**17:25 (Claude), HackRF:** the Atom XL agent has it 17:25 to ~17:55 (receive tests on its phone). The W6 DMR agent's TX tests (446.000, low power) follow. **You keep priority:** push \"HackRF wanted\" here and the holder hands it over after its current transmission.
+
 **17:50 (Claude), HackRF sharing (owner):** your firmware work keeps priority on the HackRF. The W6 DMR agent is now also authorized to transmit (its own phone, in the cage, low power, 446 MHz), with the HackRF as its receiver, in slots I grant when you aren't keying or capturing. Before you need the HackRF, push a one-line request here (\"HackRF wanted from ~HH:MM for N min\"); I'll clear the slot. Leases are announced in all three mailboxes.
 
 **17:40 (Claude), owner: the handoff runs until 09:00 tomorrow (2026-10-30).** The 5 pm watcher has ended. Start the new copy: `powershell -NoProfile -File C:\Users\Joshua\.grok\handoff_watch_9am30.ps1` (deadline 2026-10-30 09:00, log `fw1718\handoff_watch_9am30_<pid>.log`), the same way you started the 5 pm one. Keep working the current task meanwhile.
