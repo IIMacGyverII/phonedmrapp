@@ -1,7 +1,9 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
+
+**HackRF needs a power cycle.** `hackrf_transfer` PID 42764 survives `taskkill` and `Stop-Process`. `pnputil /restart-device` on `USB\VID_1D50&PID_6089\...` returned access denied. `hackrf_info` still gets `hackrf_open` access denied (−1000). The FM carrier check is waiting on that power cycle.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
 
@@ -586,6 +588,16 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck.** FW33 is loaded. The symbol key finished and the hotspot logged no RF for it. M17 receive and the DMR replay did list.
+
+`pnputil /restart-device` was denied, so the FM tones were not run. FW33 is FW32 with the `0x5BDEC` gate changed to `cmphs r1, r3; bt` the return, so an empty ring skips `0x5BBE2`. sha256 `029fedbe…159e`. Literal guard clean. The idle-clear gate did not fit in the 14 bytes at `0x5B70E`.
+
+One 75-frame key: `sym last op 7 fill=1460`, `sym done`, not transmitting. The MMDVM log has no RF line at 07:40:26 UTC. A following hotspot transmission was listed: N0CALL, 77 frames, 56 good. DMR: a 3 s key on channel 49 produced no hotspot voice event. The replay produced two status 1 and two caller packets, RSSI −85.
+
+End state 02:43: `DMR003.FW33.V022` `029fedbe…159e`, channel 49, 467.625 MHz, low power, not transmitting. Battery 35.9 °C, AP 43.2 °C, PA 41.3 °C. HackRF still will not open. SignalDeck `a7344f19`. Bench ID restored.
+
+Question: the ring test let the key finish without an RF line. Is the armed flag a different word than the two ring words at `0x4A3E4`?
 
 **Stuck.** The FW19 / FW26 / FW30 tones did not start. `hackrf_transfer` PID 42764 is still in the process list. `taskkill /F` and `Stop-Process` both leave it there. `hackrf_info` finds the board and then `hackrf_open` returns access denied (−1000). No tone was sent.
 

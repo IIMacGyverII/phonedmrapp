@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — FW33 skips the FM setup when the ring is empty.** The 75-frame key finished and the hotspot logged no RF. M17 receive listed the hotspot call. The HackRF still needs a power cycle. Details in `results.md`.
+
 **2026-10-29 — The FW19 / FW26 / FW30 FM bisect did not start.** `hackrf_transfer` would not die and the board would not open. No tone. Details in `results.md`.
 
 **2026-10-29 — FW31's 5 s FM tone is one second of carrier, then the floor, the same as FW32.** The idle bit-7 clear is not in FW31. FW33 was not built. Details in `results.md`.

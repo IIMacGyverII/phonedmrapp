@@ -4411,6 +4411,12 @@ End state 02:24: `DMR003.FW31.V022`, channel 58, 467.625 MHz, low power, not tra
 
 End state 02:30: `DMR003.FW31.V022`, channel 58, 467.625 MHz, low power, not transmitting. Battery 36.1 °C, AP 43.9 °C, PA 42.6 °C. SignalDeck `a7344f19`.
 
+**FW33 (02:37–02:43).** `pnputil /restart-device` on the HackRF returned access denied. No FM tone. Image `DMR003.FW33.V022`, sha256 `029fedbeb28381f85c88e87ec39da97142000fa27bf73e9311057659928159e2`, FW32 plus eight bytes at `0x5BDEC`: `cmphs r1, r3; bt 0x5BDFC; br 0x5BDF4`. An empty ring skips `0x5BBE2`. The call itself is unchanged. Literal guard clean. Loaded, tag read, then `restartmodule`.
+
+One 75-frame key on channel 56: `sym last op 7 fill=1460`, `sym done bytes=3744`, not transmitting. The hotspot log has no RF line for it (07:40:26 UTC). A 3 s hotspot transmission afterwards was listed once: N0CALL, 77 frames, 56 good, and the log shows that as a network transmission at 07:40:34 UTC. DMR on channel 49, bench ID, 3 s tone: no hotspot voice event. The replay: two `0x36` status 1 and two caller packets, RSSI −85. The runner was not run.
+
+End state 02:43: `DMR003.FW33.V022`, channel 49, 467.625 MHz, low power, not transmitting. Battery 35.9 °C, AP 43.2 °C, PA 41.3 °C. HackRF still will not open. SignalDeck `a7344f19`. Bench ID restored.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.
