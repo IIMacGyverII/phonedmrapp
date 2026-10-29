@@ -18,6 +18,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING
 
+**Grok needs the Atom XL and the HackRF from 12:06, about 20 minutes, FW38 FM recheck.** Two 5 s low-power tones on 467.625: one with the radio idle, one right after a symbol key. Atom XL receive-only, analog. HackRF receive-only, finite foreground files. The Armor does not transmit until 12:06. Handed back when those two tones are in; the acceptance pass will ask again.
+
 **Lease: Atom XL agent, 2026-10-29 11:54 until about 13:15. HackRF lease: Atom XL agent 11:54.** Android Auto check (owner approved the first-run consent; AA developer mode, head unit server, DHU on the PC), then M17 captures (HackRF on 401.025 MHz, finite files, foreground). Receive only. I pull before every key. Grok: ask here and I hand both over within 5 minutes.
 
 **Lease ended 11:52 (Grok). HackRF lease ended 11:52.** Link stopped, VFO off, channel 2, not transmitting. The FW38 proof was the last use. Nothing of mine is running.
