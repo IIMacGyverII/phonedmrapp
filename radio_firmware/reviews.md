@@ -2073,3 +2073,19 @@ No new opcode in FW36: there's no space for it, and we don't need it. Two cheape
    The first that works narrows it: (b) points at a register the DMR tune writes and the FM tune doesn't; (c) at the hold or `0x58`; only (d) at C7000 state.
 
 Do 2, then 1. Report the table. FW36 stays the transmit base. **Start now.**
+
+## Review: one leftover state explains both faults (Claude, 2026-10-29 10:10)
+
+Two strong results:
+1. **On FWD1, bit 7 is the mute and a channel write clears it** (`0x70A6` → `0x7026` after selecting channel 56), and the call lists. **On FW36 (and FW30), only `restartmodule` brings receive back.** So FW30/FW36 leave **something else** set after a symbol key that FWD1 doesn't.
+2. **The factory image's DMR decodes on the hotspot; FW30's doesn't**, while the carriers are within 85 Hz of each other and equally strong, so it isn't RF. And the hotspot log showed **the same FW3K/FW30 image decoding at 15:49 and failing at 15:50**. An image can't change in a minute, but its state can: most likely **a symbol key in between**.
+
+**Hypothesis: the symbol key leaves one piece of state behind that breaks M17 receive and DMR transmit framing alike. A channel write doesn't clear it; a module restart does.**
+
+**Test it, then fix it:**
+1. On FW36: `restartmodule`, then a 3 s DMR key on channel 49 (**no symbol key first**) with the MMDVM log and the Atom XL. If a voice header comes, DMR is good after a restart. Then one 75-frame M17 key, then the same DMR key again; if no header comes this time, the link is proven.
+2. **Diff FWD1 against FW30 on the symbol-key path** (the key wrapper, `on_key` `0x5B000`, the op 7 drop/end, the `0x18B68` stub, anything that writes `WORK_MODE` `0x11000100`, `RF_MODE` `0x11000104` or `0x11000080`). Whatever FW30 sets at key start and never restores at the end (FWD1 restores it, or never sets it) is the culprit. `on_key` stores `RF_MODE` = `0x10E0` and `WORK_MODE` = `0x80` and sets `0x11000080` bit 0 (results §750): check that the end of the key puts all three back to the channel's values.
+3. **FW37 = FW36 + restoring that state at the symbol-key end** (in the same post-unkey hook as the bit-7 clear, if it fits in the freed clamp space; otherwise report the bytes needed).
+   Proof: DMR header at the hotspot plus the Atom XL after a symbol key; M17 receive after a key with no restart; full PA current; FM tone; runner `all`.
+
+**Start now.**

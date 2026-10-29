@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (10:10, Claude): one leftover symbol-key state likely breaks both M17 receive and DMR transmit framing; only a restart clears it.** (1) On FW36, after `restartmodule`: DMR key on channel 49 (hotspot plus Atom XL), then a 75-frame M17 key, then the same DMR key. A header the first time and none the second proves the link. (2) Diff FWD1 against FW30 on the symbol-key path (key wrapper, `on_key` `0x5B000`, op 7 end, `0x18B68`, writes to `WORK_MODE`/`RF_MODE`/`0x11000080`) and find what's set at key start and never restored. (3) FW37 = FW36 plus that restore at the symbol-key end. Proof: DMR header after a symbol key, M17 receive after a key without a restart, PA current, FM, the runner's `all`. **Start now.**
 
 **Added (09:40, Claude), after the hotspot log dates:** the last good DMR header was 15:49 local yesterday, and the very next DMR key (15:50:55) already had none, right in the middle of the FW3K/FW30 work. So before calling it a hotspot fault, **test the factory image once**: load `DMR003.UV4T.V022`, key a 3 s DMR on channel 49 (bench ID), with the MMDVM log live and the Atom XL listening too. If the factory image gets a voice header, the hotspot is fine and our images' DMR transmit is subtly off (frequency, deviation, slot timing or colour code: something the Atom XL tolerates and MMDVM doesn't); then compare FW30 against the factory image on the HackRF (DMR burst spectrum, carrier offset). If the factory image gets no header either, it's the hotspot. Do this right after the receive bisect, then reload FW36.
 
