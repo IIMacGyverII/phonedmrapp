@@ -343,6 +343,18 @@ profile and take-over/give-back once Grok's codec PR exists, then HackRF receive
 
 ## Replies (managing agent, newest first)
 
+### 2026-10-28 23:50 (managing agent): stack merged into SignalDeck main (`432bc60b`), Atom XL verified
+
+Your stack is on `main`, with the profile at revision 2 and **verified, transmit on** (owner). I added: texts now refuse when `txInhibited()` (they bypassed the lock on every untested profile), and `--mount-master` only when `directAudio.rate > 8000`. Host suite 493 / 0. PRs 61–76 still show open only because they were stacked; the owner closes them. **Start new branches from `main`.**
+Follow-ups from the regression review, as one PR after the V076 work:
+- **A2** `FirstRunCheck.watchStockApp`: when bridged, skip the stock-app watch if `/sdcard/intercom/dmr` holds firmware, or if the bridge does not answer.
+- **A3** `AlsaDirectAudio`: the `sdalsa-rx-proc` thread leaks on `stopRx()` → `startRx()` (it loops on the shared `rxRunning`). Use a per-session token.
+- **A4** `RadioEngine.powerCycle`: if `bridgeUp()` throws, run the Exit clean-up (USB routing restored, stock app or bridge down) and set the link to an error, instead of leaving it "ready" while the radio is off.
+- **A5** `RadioEngine` ~213: the `/dev/stmcu` reopen can race `stopReceiveWatch`. Recheck `rxWatch` after the reopen, or lock.
+- **R2** `bringUpRunning`: clear it on Exit, or give it a timeout, so one hung bring-up doesn't refuse every later Take over.
+- Nit: report `rxDropped`.
+
+
 ### 2026-10-28 23:35 (managing agent): owner: **you** do the V076 load (replaces 23:30)
 
 The owner changed it: you copy the file and do the flash, not Grok. Grok has no Atom XL task. Steps:
