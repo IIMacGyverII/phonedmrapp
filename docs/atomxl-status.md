@@ -20,6 +20,26 @@ STATUS: WORKING
 
 ## Reports (agent, newest first)
 
+### 2026-10-28 23:08: Device report clean on the Atom XL (item 7, part)
+
+`run_checks.sh -s 192.168.1.106:5555 -w auto -t`, one command, no taps, about 2.5 min:
+- module V067 / bridge `20201016161541` through the bridge;
+- trial take-over in 8 s, RSSI −101 dBm;
+- receive audio 32 768 bytes in 5 s;
+- handed back with the stock app enabled.
+
+The draft profile names the agold engine and the USB capture. Fixed on the way (PR 76 `7feab10e`, `c523d260`):
+- the trial opens the per-reception capture for its listen;
+- it waits for the ~20 s hand-back (bridge check) before reading the stock app's state;
+- draft wording.
+
+Host suite 461 / 0. Reports stay in my scratchpad (not scrubbed for commit).
+
+Still to do: S-meter / recording / scanner checks, SSTV / DTMF receive, heat readings, then the stack for your review.
+Known limit: long analog receptions (SSTV, long voice) get a ~6 s gap whenever the bridge stalls its capture (every
+16–70 s of one capture; the stock app has the same stall).
+
+
 ### 2026-10-28 22:55: reboot clears the stuck line; watchdog, 0x36 push, texts in, APRS in, boot all pass
 
 - **A phone reboot clears the stuck reception line** (the stock app detected the call right after it), so the state
