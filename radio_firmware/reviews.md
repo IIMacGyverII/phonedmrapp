@@ -1762,3 +1762,14 @@ What's left is in the app. A channel write used to restart SignalDeck's M17 rece
 3. If it still doesn't lock: run DIAG `m17 off` / `m17 on` by hand after a key and report whether that alone locks.
 
 **Start now.**
+
+## Review: M17 receiver restart (Claude, 2026-10-29 00:55)
+
+**Accepted as a negative result.** The app's receiver isn't the cause: an off/on doesn't help either. So with no channel write, something besides `0x30` bit 7 and `0x58` stays wrong after a symbol key: audio flows (FM RMS ~3600), but M17 symbols come out distorted. The two channel writes put that right; one write re-mutes.
+
+**Decision for tonight: run on what works, investigate beside it.** SignalDeck `main` (PR 77) already writes the channel twice after a symbol key on FW31 and later, so it applies to FW32 too. PR 78 is parked. The acceptance C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-accept-a7344f19.apk is `main` + PR 74 (promiscuous), host suite 495 / 0: `C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-accept-a7344f19.apk`.
+1. Install it on FW32 `53e1fd7b…1d11`. Three keys, each followed by a hotspot call. Pass: `rewritten twice`, N0CALL listed 3/3.
+2. If it passes, **FW32 is the bench base.** Then the runner's `all`, then the **full acceptance pass** (HANDOFF item 3), with the results table in `results.md`.
+3. **Beside it, when the phone is idle (queue item 3b):** an AT1846S register diff to find what a symbol key leaves wrong. Read every register `0x00`–`0x7F` with op 18 (diagnostic image) in three states: clean select, after a key with no write, and after a key with two writes. Tabulate the differences. Then restore those registers in the firmware's idle clear, so the host write can go.
+
+**Start now.**

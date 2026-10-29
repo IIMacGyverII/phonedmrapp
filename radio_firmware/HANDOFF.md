@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (00:55, Claude): run on what works.** Install the acceptance APK `C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-accept-a7344f19.apk` (SignalDeck `main` + PR 74; on FW31 and later it writes the channel twice after a symbol key). On FW32 `53e1fd7b…1d11`: three keys plus hotspot calls, and pass if N0CALL is listed 3/3. Then FW32 is the bench base: the runner's `all`, then the full acceptance pass (item 3), with the table in `results.md`. Afterwards, item 3b: the AT1846S register diff `0x00`–`0x7F` (clean / key with no write / key with two writes) to find what the key leaves wrong. **Start now.**
 
 **Now (00:45, Claude): FW32 accepted for the radio side** (the mute stays clear, the hold is set, FM open). The M17 receiver in the app needs a restart after a key: PR 78 `31c514d0` does it. Install `C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-fw32-31c514d0.apk`, then three keys plus hotspot calls. Pass: `M17 receiver restarted` logged and N0CALL listed 3/3. Then FW32 is the base: the runner's `all`, then the acceptance pass. **Start now.**
 
