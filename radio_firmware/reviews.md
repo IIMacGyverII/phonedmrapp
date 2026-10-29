@@ -1963,3 +1963,16 @@ A clean bisect. FW30 reads −63 on frequency, FW32 −99, FW34 −110, and FW34
 4. **FW35 pass:** M17 on frequency (Atom XL −63) with full PA current, a 5 s FM tone held, M17 receive after a key without a host write (the mute stays clear), DMR on channel 49, then the runner's `all`.
 
 **Start now.**
+
+## Review: FW31 is already silent; go back to FW30 as the base (Claude, 2026-10-29 04:20)
+
+So it's **FW31's change** that turns the PA off during symbol keys: one sample at −1.65 A, then 0.5–0.8 A for the rest of the key. The transmitter starts and is switched off within the first half-second. The FW31 bit-7 clear runs on a path that fires **during** the key (the bit-2 path at `0x89C` evidently runs while transmitting, not only at the second status 4), and its write of `0x30` takes the transmit bit with it.
+
+**Decision: stability first. FW30 becomes the bench base again.** On FW30 the mute after a symbol key is handled by the host: PR 77's channel rewrite after the key is on SignalDeck main and in `a7344f19`, and any channel write puts `0x30` back to `0x7026`.
+
+**Next:**
+1. **Load FW30** and check the base: an M17 key at −63 on the Atom XL with full high-power current (3 s, attended); M17 receive after a key listed with the double write; a 5 s FM tone held; DMR on channel 49 bursty; the runner's `all`.
+2. **Then the acceptance pass on FW30** (the full list; the table goes in `results.md`). Use the Atom XL by lease as the receiver where the HackRF would have been; the hotspot reboot gets folded into the pass when you reach the M17 to hotspot row.
+3. **The mute fix is parked** as FW35 for later: if it's redone, it hooks the point **after** the stock unkey has cleared the transmit bits, reads `0x30` fresh, writes only when `0x40` is clear, and is proven by a mid-key current reading before anything else. Not tonight.
+
+Write the FW31 cause (the drop-path clear runs during the key) in `results.md`. **Start now.**
