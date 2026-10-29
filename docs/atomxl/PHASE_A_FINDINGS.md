@@ -371,3 +371,30 @@ HackRF DMR calls (TG 1, CC 1, TS1) in the cage; nothing keyed on the phone.
   running), Hand back twice (bridge and module answered, stock app enabled), group and private calls named correctly.
   USB to a computer after Exit was not checked: no data cable to the PC (controller "not attached" even after a manual
   `cmode` toggle, battery "USB powered").
+
+## 13. Bridge audio, reception line and transmit, measured with SignalDeck (2026-10-28 19:40–21:50)
+
+- **USB capture stalls by itself:** one continuous capture of the bridge's card stops delivering after a random 16–70 s
+  (no overrun, no drop; ALSA's read times out with EIO), also by hand with no SignalDeck involved (a 45 s hand capture
+  passed three times and failed at 20 s once). The stock app opens its PCM per reception and resets the bridge on its
+  "pcm error" report. **A stalled reader** (a consumer that stops reading for seconds) is worse: `sdalsa` hangs in
+  `__snd_pcm_lib_xfer`, the USB audio driver wedges, `mcu_power` writes hang and only a reboot recovers.
+- **Android routes to the bridge:** at every enumeration the audio policy connects "USB-Audio - Agold Audio Class"
+  (card 1) and the USB audio HAL opens it (`audio.service.m` creates the capture endpoint). The developer setting
+  `usb_audio_automatic_routing_disabled` = 1 stops it.
+- **Frames on the port are cut at 12 bytes while audio streams** (a 20-byte `0x2B` reply loses its tail); the bridge also
+  pads short USB packets with zeros.
+- **Ghost `ttyACM0`:** cutting bridge power and leaving host mode (`usb_path` 0, `cmode`) before the USB disconnect is
+  processed leaves device `1-1` and `ttyACM0` registered for good (open gives ENODEV, no re-enumeration, a write to the
+  device's USB `remove` hangs); only a reboot clears it. Waiting for `/sys/class/tty/ttyACM0` to go first avoids it. A
+  power-up after a powered bridge needs the full reset (power off, wait, `usb_path` 0, `cmode` 0/1).
+- **`/dev/stmcu`:** the driver logs `stmcu_read : call_in_flag = N` per returned read. At power-up the HAL sees `00 00 01`
+  within 1.7 s; a reader opened ~2.5 s later gets a single `00` (ignored by SignalDeck for 2 s). A read can come back
+  empty (EOF). **Open:** in some sessions no edge ever arrives after take-over (read never returns, sysfs `call_in` = 0)
+  although the radio hears the carrier (RSSI −84 dBm); in others edges follow every reception.
+- **Receive level:** 1 kHz FM tone at ±3 kHz deviation, analog wide, sq 2, HackRF `-x 30` on the bench antenna:
+  −14.0 dBFS RMS at 1000 Hz, 2nd / 3rd harmonics 42 / 46 dB down, a clipped opening transient in the first 0.5 s.
+- **Transmit (owner-cleared, low power, 401.025 MHz):** PTT = `handle_ptt` 0 (no `0x26`), audio through the card's
+  playback at 32 kHz. FM tone carrier +1.5 kHz off nominal (both crystals). DMR: MS sync, TDMA 30 ms bursts every 60 ms,
+  674 Hz per symbol unit. Texts: the module takes the stock layout (type, call number LE, UTF-16LE, four zero bytes) and
+  sends a standard IPv4/UDP port-4007 text after three CSBK preambles. No `0x36` pushes on transmit either.

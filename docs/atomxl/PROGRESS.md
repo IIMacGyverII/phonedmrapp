@@ -5,6 +5,13 @@ Newest first. Phone: Unihertz Atom XL, `ATOMXL0000000737`, worked over Wi-Fi ADB
 
 ## 2026-10-28
 
+- **21:50** End of session. Receive audio works per reception (bridge stalls long captures by itself; recovery by
+  bridge power-cycle; USB audio routing off while owning the radio); reference −14.0 dBFS for 1 kHz at ±3 kHz.
+  Transmit (owner-cleared, bench build): FM, DMR voice, DMR text, APRS all decoded from the HackRF. Fixed on the way:
+  ghost `ttyACM0` (wait for the USB disconnect), full controller reset before re-power-up, bring-up guard, empty
+  `/dev/stmcu` read. **Open:** the reception line sometimes stays in its power-up "active" state (no edges). Three
+  reboots today for kernel USB wedges. Details: findings §13, mailbox 21:15–21:50, PR 76 changelog.
+
 - **19:55** Cable pass list (owner swapped the USB cable; the old one carried no data, which is why USB "never came
   back" earlier). Found and fixed (PR #76 `d3357260`): Hand back's bridge check took the still-present old port node
   for the new port, kept the stock app paused (safe) and left a ghost `ttyACM0` until a reboot; every power-up now
