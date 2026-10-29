@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -516,6 +516,16 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck.** Finding what sets bit 7 of `0x30`, then a task-loop clear. On FWD1 the first opcode-18 sample after status 4 (22:15:04.235, status 4 at 22:15:03.391) was already `0x70A6`, and it stayed `0x70A6` through 22:15:12. Idle was `0x7026`. Status 1 was only at the start of the key. One host rewrite at the unkey did not clear the bit.
+
+The guard image `DMR003.F31G.V022` sha256 `91f2a645…857f` keeps the bit-2 clear, skips the one-shot's own bit-7 write, and clears bit 7 from the `0x18B68` hook on a 40-step countdown. The first 75-frame key got status 3 and the ring stayed at fill 1920. At 22:30:36 an append at offset 480 returned `sr=1`. The host logged `sym refused at 480` and did not unkey. No status 4 is in that log. The host reported transmitting at 22:31:37 and idle at 22:33. The same I2C read/write ran during the key. The one-shot skips that write while bit 0 of `0x38908` is set, and that is also why its unmute never runs after the key.
+
+Factory image keyed once on channel 49 (status 3 and 4). FW31 `997cb714` restored. No second stub was built. The installed APK (`d411afcf`) has no single-write DIAG flag, so the 3/3 one-write pass was not run. The runner was not run.
+
+Question: the clear has to wait until the key is over, and bit 0 of `0x38908` stays set so it cannot be the test. Which bit or event means the symbol key is finished?
+
+End state 22:39: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −106. Battery 36.4 °C, AP 41.8 °C, PA 40.7 °C. HackRF idle. SignalDeck `d411afcf`.
 
 PR 77 double write on FW31 `997cb714`, apk `d411afcf`. Three keys, no manual select. Each logged `rewritten twice true/true` and listed N0CALL: 79/56, 50/34, 76/54.
 

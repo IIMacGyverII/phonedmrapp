@@ -4262,6 +4262,16 @@ Only bit 7 of `0x30` changes. It is set after the key and clear again after a ch
 
 End state 22:03: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, not transmitting, RSSI −104. Battery 37.1 °C, AP 42.8 °C, PA 41.5 °C. HackRF idle.
 
+**0x30 poll after a symbol key (22:15), then a task-loop guard that stalled the ring (22:26–22:39).** FWD1 `d7efd88a…` was reloaded. Opcode 18 was not sent until status 4. Idle `0x30` was `0x7026`, `sr=0`. One 75-frame key: status 3 at 22:15:00.068, status 1 at 22:15:00.209, .309 and .459, status 4 at 22:15:03.391, `sym unkey` at 22:15:03.407, and one `rx after sym: channel 56 rewritten true` at 22:15:03.424 (tag `FWD1` is not FW31, so this APK writes the channel once and still sends `0x26` off). The first `raw40` line is 22:15:04.235. From that sample through 22:15:12.824 every successful read was `0x70A6`. There was no second status 4. The status 1 bytes were during the key.
+
+`DMR003.F31G.V022` sha256 `91f2a6453288fd90af6e096cb9dff4b36c8fee3c7211e1a64527d7a1e05b857f` keeps the FW31 one-shot's bit-2 clear and calls it from the task hook at `0x18B68`. The one-shot's own bit-7 write and its flag clear are `mov r0, r0`. A countdown in `0x4B384` / `0x4B385` then clears bit 7 of `0x30` about every 255 task passes, 40 times. The literal guard was clean. The installed APK has no single-write flag; tag `F31G` is how that APK does one channel write.
+
+Loaded at 22:29:13, tag `DMR003.F31G.V022`, channel 56. The first 75-frame key got status 3 at 22:30:01.999. Op 2 then stayed at fill 1920, underrun 0, err 0. At 22:30:36 an append at offset 480 came back `sr=1` with fill still 1920. The host logged `sym refused at 480` and returned without an unkey, so there is no status 4 in that log. The host still reported transmitting at 22:31:37 and reported idle at 22:33. No hotspot call was listed. The same I2C read/write the one-shot uses ran from this guard during the key. The one-shot skips that write while bit 0 of `0x38908` is set, which is the bit that also keeps the unmute from running.
+
+The factory image was loaded and keyed 3 s on channel 49 (status 3 and status 4). FW31 `997cb714…ac30` was loaded again. Channel 56 was selected. Nothing was keyed on FW31 after that.
+
+End state 22:39: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −106. Battery 36.4 °C, AP 41.8 °C, PA 40.7 °C at 22:39 before that select. HackRF idle. SignalDeck `d411afcf`.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.
