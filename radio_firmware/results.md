@@ -4629,3 +4629,38 @@ No HackRF capture on this tone. Left on channel 56, not transmitting.
 **FW39 (13:45), the tone's `0x26` on is not acked.** Three images, each a symbol key on 56 (`sym done`, status 3 about 7 ms after `0x26` on) then channel 58 and a 5 s tone within 10 s. HackRF keyed 0 every time. The tone's `0x26` body `01` has no `RX cmd=0x26` for at least 5.5 s; the host then sends body `02`. An idle tone on the first image, with no symbol key, keyed 5.55 s, offset +939 Hz, clip 0, SNR 63.9 dB.
 
 The clear runs from both unkey tails (`0x5B622` and `0x5B658`) and from the post-unkey restore. It sets the ring cursor equal to its count, zeroes `0x4B00C`, the mode word, `0x4B02C` and `0x4B030`, and clears bits 0–3 of `0x38908`. The second image also stores 1 at `0x38874+6` on those tails. The third image does that store again immediately before the `0x2AF24(1, 1)` prelude, which is the byte that skips the lock wait on bit 31 of `0x44000004`. The symbol key still takes the fast path. The following tone still does not get an ack. Shas: `1415e52d…` (unkey clear only), `77ed8abc…` (byte on the unkey tails), `8e8ee5a8…` (byte forced before the prelude). The loaded image is the third. Left on channel 56, 467.625 MHz, not transmitting.
+
+**`0x32457` writers (13:59), static, factory image. FW40 was not built.** Byte `0x3244C+0xB` sits on the same object the ack builder uses (`0x8E7C` fills offsets 0–3 and 6–8 of `0x3244C` and leaves `+0xB` alone). It is the channel-write busy flag. The synthesizer spin is the other mechanism: the prelude at `0x2AF24` waits on bit 31, then bit 30, of `0x44000004`, and returns at once when `0x38874+6` is 1.
+
+Stores of 1, both then `bsr 0x18E8` on object `0x39124`:
+
+| Site | Who |
+|---|---|
+| `0x9336` | Digital channel write `0x22`, function `0x9310`. `movi r3, 1; st.b r3, (r2, 0xB)`. |
+| `0x99D6` | Analog channel write `0x23`, function `0x99B4`. `movi r3, 1; st.b r3, (r8, 0xB)`. |
+
+Stores of 0, each with the register value traced, then `bsr 0x1924` except the two that are outside the handlers:
+
+| Site | Value | Who |
+|---|---|---|
+| `0x9552` | r3 = 0 (`0x9548`) | `0x22` tail, power above 1 |
+| `0x9592` | r7 = 0 (`movi` at `0x9438`, still 0 on the branch from `0x94BA`) | `0x22` frequency reject |
+| `0x95B6` | r3 = 0 (`0x95AC`) | `0x22` tail |
+| `0x95D8` | r3 = 0 (`0x95CE`) | `0x22` tail |
+| `0x9682` | r3 = 0 (`0x9678`) | `0x22` tail |
+| `0x9986` | r7 = 0 (`movi` at `0x96C2`, then the branch at `0x96D4`) | `0x22` tail |
+| `0x999E` | r7 = 0 (same `0x96C2`, branch at `0x96DA`) | `0x22` tail |
+| `0x9AE6` | r3 = 0 (`0x9AE2`) | `0x23` reject tail |
+| `0x9B3E` | r10 = 0 (`movi` at `0x9A4E`) | `0x23` frequency reject |
+| `0x137C` | r3 = 0 (`0x135C`), direct address | Function `0x11E0`, a mode-setup path: runs when `(r4, 2) != 2` and `0x38908+8` is neither 1 nor 2 |
+| `0x6BE` | r3 = 0 | Task `0x63C`. See below |
+
+The long success return of `0x22` is `0x9968` → `0x9558`, which is the epilogue after the clear at `0x9552`. The long success return of `0x23` unlocks at `0x9CC8`, applies the channel, acks, and branches to `0x9AEE`, which is the epilogue after the clear at `0x9AE6`. Both success returns leave the byte at 1.
+
+The deferred clear is the task at `0x63C`. It loads `0x32457` into r9. On a pend return of 1, with `0x38908+0xA` not 0, bit 0 of `0x38908` clear, and `0x38908+0xD` not 1, it decrements `0x38908+0xB`. When that decrement lands on 100 and the word at `0x32458` is 0, it stores 0 to `0x32457`. A symbol-mode `0x26` (byte `0x38874` not 0) sets that word to 1, `0x38908+0xD` to 1 and `0x38908+0xA` to 0 on key (`0x92DE`, `0x92EA`, `0x92EC`). The matching unkey stores 0 to the word, 0 to D, and 200 to B (`0x92F8`, `0x9306`, `0x9308`: `subi r3, r7, 56` with r7 = 0, low byte 200). It leaves A at 0. With A at 0 the task takes the branch at `0x682` and the countdown never moves, so this clear does not run after a symbol key.
+
+The channel select after that unkey is a fresh store of 1, and its success return leaves the 1 in place. A store of 0 at the post-unkey hook is earlier than that select.
+
+Readers, not writers: `0x15C` in `0x124` (skip the work while the byte is set), the `0x26` wait at `0x9278` (80 passes, then ack with sr 1 and no key), `0x39DA` in FmRecv `0x399C`, `0x9E70`, and `0xA392`. `0x9C4E` stores `+0xB` of the analog channel image `0x38C70`. `0x8F3A` is offset `0xA`, `0xA124` is a halfword at `+0x10`, `0xAA6A` is offset `0x12`.
+
+Pass length, static only. `0x18A4` is `delay_ms` (`symbols.csv`: r0 is milliseconds). It sleeps `(r0+9)/10` ticks. The `0x26` loop passes 10, so each pass is one tick, and the ceiling is 80 ticks. Read as 10 ms ticks, that ceiling is 0.8 s. The tone's `0x26` had no reply for 5.5 s, which is longer than 0.8 s, so the tick period is not settled and this loop's ceiling is not the minute by itself. The countdown from 200 to 100 is 100 steps of whatever period makes the pend return 1, and that path is the one a symbol unkey arms and then disables by leaving A at 0. No image was built. The radio and the HackRF were not used (the Atom XL agent holds the HackRF until about 14:45). Module still the third FW39, last seen at 13:45 on channel 56, not transmitting.

@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -668,6 +668,8 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**13:59 (Grok): step 1 of the `0x32457` task. FW40 was not built.** The byte is the channel-write busy flag. `0x22` (`0x9336`) and `0x23` (`0x99D6`) store 1 and take the lock. Every error tail stores 0. Both success returns leave the 1. The other runtime clear is the idle task at `0x6BE`, and only when `0x38908+0xB` counts down to 100, `0x38908+0xA` is not 0, and the word at `0x32458` is 0. A symbol-mode unkey sets the countdown to 200 and leaves A at 0, so that clear does not run. The channel-58 select is the later store of 1, so a clear at the post-unkey hook is too early. Each `0x26` pass is `delay_ms(10)`, one OS tick; 80 ticks is 0.8 s if the tick is 10 ms, and the 5.5 s silence is longer than that. Radio not used. HackRF still with the Atom XL agent. Module still FW39 `8e8ee5a8…`, last seen 13:45 on channel 56, not transmitting.
 
 **Stuck 13:45 (Grok): FW39 still does not ack a plain `0x26` on a few seconds after a symbol key.** See the block below. Module is `DMR003.FW39.V022` sha256 `8e8ee5a8…`, channel 56, 467.625 MHz, low power, not transmitting. HackRF idle.
 
