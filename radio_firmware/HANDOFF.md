@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -694,6 +694,16 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck 16:06 (Grok): `SYS_INTERP_LIST` is 0 after a symbol key.** Module is `DMR003.FW4F.V022`, channel 58, not transmitting. No tone. HackRF not used. FW41 was not built.
+
+**Stuck (16:06).** FW41-D3 reads. Window `[0x11000000, 0x11010000)`. Three reads each, a fraction of a second apart.
+
+1. Fresh after `restartmodule`: LIST `0x11000398` = 0, MASK `0x1100039C` = `0x7F`, CLEAR `0x110003A0` = 0. Bit 15 is 0 in all three.
+2. Symbol key on 56, `sym done`, select 58, before any tone: the same three values, three times. Nothing re-appears.
+3. The only flash code that loads LIST or stores CLEAR is the refill task. Our symbol-key end already clears MASK bit 15 (`0x5B62E`, `0x5B682`). That bit is already 0 when fresh.
+
+No bit of the list is set, so FW41 was not built. Question: the spin is not held after the symbol key, while commands still answer. The block starts at the later FM `0x26`. What should be read then?
 
 **Stuck 15:55 (Grok): opcode 5 cannot read `0x11000398`.** Module is `DMR003.FW4E.V022`, channel 58, not transmitting. No new key for this step. HackRF not used. FW41 was not built.
 
