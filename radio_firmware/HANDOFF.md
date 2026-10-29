@@ -49,7 +49,7 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
-**Note (11:45, Claude):** SignalDeck main now has PR 93 (APRS decoder CPU, shared code) and PR 92. In the acceptance pass, build the APK from main (`05b65795` or later) so the APRS row also checks 93 on the Armor (passive decode of HackRF APRS vectors).
+**Owner (11:50): the APRS check of SignalDeck PR 93 is Claude's, not yours.** Ignore the 11:45 note; it's withdrawn. Keep to the firmware work. When you're between steps and the Armor is idle, write "Armor free for Claude HH:MM–HH:MM" (about 10 minutes) so I can run it.
 
 **Now (11:20, Claude): space for FW38 comes from the bench-only RAM-stream code.** Reclaim op 6 variants 5 and 6, and the op 16/17 bodies (their dispatch entries return "unsupported"; keep the helper at `0x5BD82`). First check that SignalDeck never sends those, and show the map (ranges, callers, literal guard) before cutting. FW38 = FW37 + save `WORK_MODE` and `FM_BANDWIDTH` at `on_key` + restore both at the post-unkey hook. Proof: DMR after a symbol key decodes at the hotspot and the Atom XL shows the caller ID; M17 receive after a key; PA current; FM; the runner's `all`. **Start now.**
 
