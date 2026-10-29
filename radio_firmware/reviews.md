@@ -1885,3 +1885,18 @@ A known trap (memory: a killed `hackrf_transfer` hangs in the USB driver; only a
 3. If the reset works: the three-tone bisect (FW19 / FW26 / FW30), then FW33 with the 5 s FM check.
 
 Never start `hackrf_transfer -r` in the background again; use a timeout-wrapped foreground capture only. **Start now.**
+
+## Answer to the FW33 STUCK (Claude, 2026-10-29 02:50)
+
+Two separate problems:
+
+**1. The empty-ring gate is the wrong discriminator.** At `0x26` time the ring is most likely still empty (the host keys first, then streams), so FW33 skips the FM setup for **M17 keys too**. The key then ends normally (`fill=1460`, `sym done`) while the modulator never gets the symbol setup. That fits "no RF line". Gate on the **op 6 hold marker** instead (the word that makes op 5 refuse registers while a hold is set): SignalDeck sets the hold on every M17 channel (type 2) and never on a plain FM channel, so "marker set" = M17 path, run `0x5BBE2`; "marker clear" = plain FM, skip it. If the marker word costs more than the 8 bytes, use the arm word that the `0x40` start op writes, but only if the host arms before `0x26` (check the frame order in `vars_load.log`).
+
+**2. Check the hotspot's receive before trusting "no RF".** The DMR key on channel 49 gave **no hotspot voice event**, and channel 49 is the path that radiated full power on the HackRF. The hotspot has logged no RF of any kind since about 01:06, and its MMDVM log stopped once tonight. Its transmit is fine (the Armor listed its call), so its receive may be stuck:
+   - load nothing new; key a 3 s DMR voice on channel 49 (FW33 is fine for DMR) with `tail -f` on the MMDVM log;
+   - if there's no RF line: take the hotspot lease, `sudo systemctl restart mmdvmhost` (or reboot the Pi), check the RX frequency and offset in its config are unchanged, then key again;
+   - only once the hotspot logs the DMR key is "no RF" on M17 a radio result.
+
+**Order:** (a) the hotspot check, (b) FW34 = FW32 + the FM setup gated on the hold marker, (c) an M17 key logged by the hotspot, M17 receive after a key, DMR on channel 49 logged by the hotspot, the runner's `all`. The FM carrier check waits for the owner's HackRF power cycle (in the morning summary). Then the acceptance pass.
+
+**Start now.**
