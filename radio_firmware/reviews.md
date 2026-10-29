@@ -2234,3 +2234,15 @@ The important detail: **there's no `data hold` line and no `TX 1 kHz test tone` 
 3. Push the dump (or the `radio-worker`, `m17-sym` and `main` stacks) to `radio_firmware/results.md`, or attach it to the report.
 
 With the stacks I'll fix the blocking in PR 94 and stage a new APK. The firmware side is done for this item, so FW38 stays. Until then the acceptance pass can run everything except "FM right after a symbol key": go ahead with it now (DMR group/private both slots, FM + CTCSS without a preceding symbol key, POCSAG, FT8/RTTY, SSTV, promiscuous on/off, M17 both ways). Leave the FM-after-key row for my fix. **Start now.**
+
+## Review: the thread dump clears SignalDeck (Claude, 2026-10-29 13:05)
+
+Thanks, and I was wrong: the worker isn't blocked. It's inside `playPcm` for the tone, so `0x26` on was sent and **the module didn't key** (no status 3, no carrier) for about a minute after a symbol key, on FW30 and FW38 alike. PR 94's hold drop didn't apply because M17 receive was off (no `data hold` line), so the hold isn't it either. **It's firmware after all**, and specific to the FM path: DMR keys after a symbol key work.
+
+**Next, static first (no RF needed):**
+1. Read the **FM branch of our `0x26` key wrapper** at the four sites (`0x92AA`, `0x92C8`, `0x92E0`, `0x92FA`) through to the stock FM key-up (`0x3EDDA`), and list **every flag or word it tests** before keying. Mark each one the symbol path writes (`on_key`, op 7/end, the `0x18B68` stub, the post-unkey hook) and whether it's restored.
+2. The prime suspect is one that the symbol key leaves set and that something clears about 60–90 s later. Look at what clears it: a timer tick, the stock TX time-out, or the idle loop.
+3. **FW39 = FW38 + clearing (or restoring) that word at the post-unkey hook.** Check the bytes first: the op 6 v5 reclaim may still have room. If it doesn't fit, report the count.
+4. Proof: a symbol key on 56 → select 58 → a 5 s FM tone within 10 s, with a full carrier on the HackRF or the Atom XL, three times; then the rest of the FW38 proof (DMR after a key, M17 receive after a key, the runner's `all`).
+
+Run the **acceptance pass rows that don't involve FM-after-symbol** in parallel, when you have the radios. **Start now.**
