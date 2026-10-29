@@ -154,11 +154,9 @@ and stay out of the region table.
 4. Repeater directory and DMR suggestions.
 5. Help, restricted-mode wiring and the changelog in each step.
 
-## 6. Decisions for the owner
+## 6. Owner decisions (2026-10-29)
 
-- Country-level (recommended) or only IARU region-level?
-- Allow a signed remote update of `regions.json` (like the profile list), or only with app releases?
-- For services that aren't legal in the user's region, hide them, or show them marked "not legal here"? (Suggested: show,
-  marked, below the legal ones; receive is fine almost everywhere.)
-- Reply on issue #95 with this plan (and invite the author to review the Region 1 entries)? Posting to GitHub is public, so
-  only with the owner's go.
+- **Country-level** regions (not only IARU regions); an unknown country falls back to its IARU region's entry.
+- **`regions.json` changes ship with app releases only** (no remote signed update).
+- **Services not legal in the user's region are shown, marked "not legal here"**, below the legal ones: it is the user's responsibility to know their rules and use the radio correctly.
+- **The plan is shared on issue #95** (the owner posted a first reply; the plan follows as the next comment), inviting the reporter to review the Region 1 entries.
