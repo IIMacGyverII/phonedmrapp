@@ -4671,4 +4671,24 @@ A DMR key is the same `0x26`, and the busy test at `0x9278` is before the digita
 
 FW40 is FW38's save/restore plus, in `restore` just before the pop: `0x38908+0xA = 1` and `+0xB = 200`. Sha256 `c5a970249033cf8411bc377d8f804ca5b6fe323e6f2cd15f1354da968c2934d9`, tag `DMR003.FW40.V022`. Loaded at 14:09, tag read back on channel 56.
 
-Trial 1, 14:10. Channel 56 and 58 are 467625000 Hz, power 0. Symbol `0x26` on at 14:10:57.659, reply sr 0 at .671, status 3 at .677, `sym done` at 14:11:00.442, status 4 at 14:11:01.000, `0x26` off at .008, reply sr 0 at .014. Select 58, `0x23` reply sr 0 at 14:11:01.850. Tone `0x26` on at 14:11:07.546. The host sent `0x26` off at 14:11:12.997. No `RX cmd=0x26` between those two. HackRF keyed 0 (LNA 16, VGA 16). Stopped. Trials 2 and 3, the plain channel-change tone, and the FW38 proof were not run. Heat before the tone: battery 32.6 °C, `mtktsAP` 37.6 °C, `mtktsbtsmdpa` 36.8 °C. Left on channel 56, not transmitting, tag `DMR003.FW40.V022`. HackRF idle.
+Trial 1, 14:10. Channel 56 and 58 are 467625000 Hz, power 0. Symbol `0x26` on at 14:10:57.659, reply sr 0 at .671, status 3 at .677, `sym done` at 14:11:00.442, status 4 at 14:11:01.000, `0x26` off at .008, reply sr 0 at .014. Select 58, `0x23` reply sr 0 at 14:11:01.850. Tone `0x26` on at 14:11:07.546. The host sent `0x26` off at 14:11:12.997. No `RX cmd=0x26` between those two. HackRF keyed 0 (LNA 16, VGA 16). Stopped. Trials 2 and 3, the plain channel-change tone, and the FW38 proof were not run. Heat before the tone: battery 32.6 °C, `mtktsAP` 37.6 °C, `mtktsbtsmdpa` 36.8 °C.
+
+**FW40 probes (14:18).** Writers of A (`0x38908+0xA`), B (`+0xB`), the word at `0x32458`, and `0x32457`:
+
+| Site | Writes | Value and condition |
+|---|---|---|
+| `0x7CC` task `0x7B0` | A | 0, when `0x38874` is not 0 and `0x38874+2` is 0 |
+| `0x85A` / `0x85C` | A, B | 1 and 200, when `0x38874` is not 0, `+2` is not 0, and flag bit 0 is set, after the TX-end delays |
+| `0x92EC` symbol-mode key | A | 0. The same site stores 1 at D |
+| `0x9308` symbol-mode unkey | B | 200. Also D = 0 and the word at `0x32458` = 0 (`0x92F8`). Does not write A |
+| `0x92DE` symbol-mode key | `0x32458` | 1 |
+| `0x69A` / `0x69C` idle `0x63C` | A, B | 0, when flag bit 1 is set and bit 0 is clear |
+| `0x6C4` / `0x6C6` idle | A, B | 0, when D is 1. Also stores 0 at D |
+| `0x6AE` idle | B | decrement. The clear of `0x32457` at `0x6BE` runs only when that decrement lands on 100, A is not 0, D is not 1, bit 0 is clear, and the word at `0x32458` is 0 |
+| `0x9370` / `0x9A0E` | B | 200, channel-write early path when flag bits 0 or 2 are set |
+| `0x9336` / `0x99D6` | `0x32457` | 1 at the start of `0x22` / `0x23` |
+| handler tails | `0x32457` | 0 on every reject tail. The long success return does not store 0 |
+
+Plain FM unkey (`0x38874` == 0) writes none of the three.
+
+Probes on FW40, HackRF LNA 16 / VGA 16, 467.625 MHz low power. (a) Symbol key, wait 15 s, select 58, tone: `0x26` on 14:16:51.229, off 14:16:56.734, no reply between them, keyed 0. (b) straight after that, select 58 and tone at once: same, keyed 0. That (b) still had the symbol key in front of it. After `restartmodule` (tag `DMR003.FW40.V022` at 14:18:34), select 58 and the tone 0.41 s later: keyed 5.55 s, offset +983 Hz, clip 0, SNR 61.4 dB. A fresh select does not block. Fifteen seconds after a symbol key, the select's flag is still set. FW41 was not built: the long `0x23` success path is the one the fresh select takes, and it does not contain a store of 0, so the store the symbol key skips is not named yet. Left on channel 58, not transmitting. HackRF idle.

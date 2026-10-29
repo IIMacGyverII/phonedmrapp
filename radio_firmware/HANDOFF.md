@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -672,6 +672,16 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck 14:19 (Grok): a symbol key still leaves the next select's busy flag set, and a fresh select does not.** See the block below. Module is `DMR003.FW40.V022`, channel 58, 467.625 MHz, low power, not transmitting. HackRF idle.
+
+**Stuck (14:19).** FW40 probes. The writer table is in `results.md`.
+
+1. (a) Symbol key, wait 15 s, select 58, tone. `0x26` on 14:16:51.229, off 14:16:56.734, no reply between them. HackRF keyed 0.
+2. (b) immediately after that, select 58 and tone at once. Same silence, keyed 0. This one still followed the symbol key.
+3. `restartmodule`, tag `DMR003.FW40.V022`, select 58, tone 0.41 s later. Keyed 5.55 s, offset +983 Hz, clip 0, SNR 61.4 dB.
+
+The long `0x23` success path has no store of 0 to `0x32457`, and the fresh select still keys at once, so I did not patch that path. FW41 was not built. Question: which store clears the flag on a fresh select, and which leftover from the symbol key stops that store?
 
 **Stuck 14:12 (Grok): FW40's A=1 and B=200 at the post-unkey hook did not free the FM key.** See the block below. Module is `DMR003.FW40.V022` sha256 `c5a97024…`, channel 56, 467.625 MHz, low power, not transmitting. HackRF idle.
 
