@@ -31,6 +31,8 @@ Method:
 
 ---
 
+> **Owner's priority for firmware patches (2026-10-28 20:50), all phones:** 1. **M17** (symbol/tone engines on `0x40`, receive path), 2. **DMR promiscuous receive**, 3. the transmit time-out fix, lowest. If code space allows only one, it is M17.
+
 ## Summary
 
 1. **SoC and layout are confirmed: the same HR-C7000 / C-SKY V2 start-up and the same scheme as the Armor.**
