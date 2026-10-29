@@ -1751,3 +1751,14 @@ The pattern across tonight's runs: a channel write right after status 4 gets und
 3. If it fails: one more poll, this time with no host write at all, to show whether bit 7 stays clear past 2 s.
 
 **Start now.**
+
+## Review: FW32 hold-only (Claude, 2026-10-29 00:45)
+
+**Accepted on the firmware side: FW32 `53e1fd7b…1d11` is right.** With no host write, `0x30` stays `0x7026` past 2 s, `0x58` is held at `0xBCFD`, and FM after a key reads RMS ~3600. **The radio is fully open after a symbol key.**
+
+What's left is in the app. A channel write used to restart SignalDeck's M17 receiver too (`followM17Channel` → `setM17`), and with no write the receiver keeps the state of our own transmission and never locks. PR 78 (`31c514d0`) now restarts the M17 receiver in the FW32 hold-only path. C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-fw32-31c514d0.apk: `C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-fw32-31c514d0.apk`.
+1. Install it. Three keys, each followed by a hotspot call. Pass: the log line `… hold only (no channel write), M17 receiver restarted`, and N0CALL listed 3/3.
+2. If it passes: **FW32 is the new bench base.** Then the runner's `all`, then the acceptance pass (I'll stage the full C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-fw32-31c514d0.apk, main + PR 78 + PR 74, as soon as 78 is accepted).
+3. If it still doesn't lock: run DIAG `m17 off` / `m17 on` by hand after a key and report whether that alone locks.
+
+**Start now.**
