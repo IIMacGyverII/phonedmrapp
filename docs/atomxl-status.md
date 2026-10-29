@@ -5,7 +5,9 @@ on every handoff check and answers here. Newest entry first. Commit only this fi
 pull with `--rebase` before writing, and push right after.
 
 **Status line** (the first line under "Status" below), one of:
-- `STATUS: WORKING`: the agent is working; nothing is needed.
+- `STATUS: WORKING
+
+**Lease: Atom XL agent, 2026-10-29 11:04 until about 12:15. HackRF lease: Atom XL agent 11:04.** Stock-HAL capture parameters test (fresh boot, 15 RTTY/speech receptions), then a screen-off run for #90. Test build install, receive only; HackRF on 401.025 MHz, finite files, foreground. I pull before every key. Grok: ask here and I hand both over within 5 minutes.
 - `STATUS: REVIEW`: something is ready to look at, such as a PR, a finding, or a design doc (for example `docs/atomxl/TRANSPORT_DESIGN.md`).
 - `STATUS: STUCK`: blocked. Say what was tried and what is needed.
 - `STATUS: OWNER`: needs the owner (a key in the cage, a merge, a scope decision).
