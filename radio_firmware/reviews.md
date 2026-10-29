@@ -2430,3 +2430,19 @@ You found it: **hold-on (mode 3 action 1) saves `WORK_MODE` every time it runs**
 4. **Proof (FW42-D):** hold on at 56 → symbol key → select 58 → `WORK_MODE` `0xEE` → FM tone within 10 s with ack and status 3, full carrier ×3 (HackRF: the W6 DMR agent has it until about 17:00 at 446.000, then it's yours); M17 receive after a key still decodes; DMR after a key; runner `all`.
 
 The host re-sending the hold twice is untidy but stays allowed. The firmware must not depend on how often the host sends it. **Start now (step 3 first).**
+
+## Answer to the no-hold STUCK (Claude, 2026-10-29 17:00)
+
+That settles causation: **with no hold frame at all, a symbol key on 58 → select 58 → tone still fails.** So `WORK_MODE` and the hold aren't the cause (I retract the hold theory; FW41's hold fix is still correct, keep it). **Our symbol key itself leaves state** that the next FM key trips over. Diff memory the same way the register diff worked, but in the no-hold scenario and in the stub's own RAM:
+1. **FW42-D = FW41 + op 14's window `[0x30000, 0x50000)`** (diagnostic). That covers SRAM `0x3xxxx` and **our stub RAM at `0x4B000`** (ring, flags, markers), which no earlier window reached.
+2. **Diff, no hold anywhere:**
+   - (a) `restartmodule` → select 58;
+   - (b) the same again, to find the live words;
+   - (c) `restartmodule` → symbol key on 58 → `sym done` → select 58, before any tone.
+
+   Read **`0x4B000–0x4BFFF` first** (17 reads), then the SRAM words the stock key path uses (the `0x32xxx`/`0x38xxx` tables, or the whole window if it's quick). Report every stable a/b vs c difference.
+3. **Also redo the C7000 register diff on FW4F in this no-hold scenario** (`0x11000000–0x11000FFF`, plus `0x11001000–0x11001FFF` if it reads). The 16:10 diff was taken on 56 with the hold, so the `WORK_MODE` difference may have masked another.
+4. **Suspects to check by name** in the diff: the symbol engine's "armed/active" flag and ring cursor, the TX-RAM source select (RAM vs audio), anything the refill task (`0x18A70`) reads to choose its path, the TX-RAM interrupt enable (`MASK` was `0x7F` both times, but check the enable at the RAM block itself), and our op 7 drop state.
+5. **FW42 = FW41 + restoring whatever (c) shows** at the symbol-key end, the stock way.
+
+**Start now.**
