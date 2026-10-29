@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -520,6 +520,14 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck.** FW32 sym-done flag, then one host write and a hotspot call. `DMR003.FW32.V022` sha256 `13a2ee8c…4195`. The drop at `0x5B686` sets `0x4B385` after it posts status 4 and clears `0x4B384`. The task hook clears bit 7 of `0x30` only when `0x4B385` is set. APK `485442d1` was installed. Loaded 22:50:56, tag `DMR003.FW32.V022`, channel 56. The key got status 3 at 22:50:59.869 and op 2 stayed at fill 1920 through 22:51:25. No status 4, so the new flag was never set, and there is no `rewritten once`. Transmitting was still set at 22:51:38. `restartmodule` at 22:54:22 returned the tag and cleared transmitting. Factory image keyed on channel 49 (status 3 and 4). FW31 `997cb714` restored.
+
+The one-shot does not clear `0x4B384` on its bit-2 pass, so that clear repeats for the whole key. FW31 clears `0x4B384` on the first pass. The live `bsr` at `0x5C6BC` to `0x5BFFE` left no free bytes in the one-shot for that store.
+
+Question: should the hook clear `0x4B384` on the first pass, as FW31 does, and gate the `0x30` write only on `0x4B385`?
+
+End state 23:02: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −106. Battery 35.9 °C, AP 41.4 °C, PA 40.2 °C. HackRF idle. SignalDeck `485442d1`.
 
 **Stuck.** Finding what sets bit 7 of `0x30`, then a task-loop clear. On FWD1 the first opcode-18 sample after status 4 (22:15:04.235, status 4 at 22:15:03.391) was already `0x70A6`, and it stayed `0x70A6` through 22:15:12. Idle was `0x7026`. Status 1 was only at the start of the key. One host rewrite at the unkey did not clear the bit.
 

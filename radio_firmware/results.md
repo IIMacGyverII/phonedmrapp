@@ -4272,6 +4272,12 @@ The factory image was loaded and keyed 3 s on channel 49 (status 3 and status 4)
 
 End state 22:39: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −106. Battery 36.4 °C, AP 41.8 °C, PA 40.7 °C at 22:39 before that select. HackRF idle. SignalDeck `d411afcf`.
 
+**FW32 sym-done flag (22:48–23:02).** `DMR003.FW32.V022` sha256 `13a2ee8c22894620a72186c1123700e66348aa39bc045c84f349cebf470c4195`. The drop at `0x5B686` calls a stub that posts status 4, clears `0x4B384`, and sets `0x4B385`. The `0x18B68` hook still calls the one-shot: while `0x4B384` is set it clears bit 2 of `0x38908`, and while `0x4B385` is set it clears bit 7 of `0x30` and then clears `0x4B385`. There was no countdown. The literal guard was clean. The one-shot does not clear `0x4B384` itself; that byte stays set until the drop, so the bit-2 clear runs on every task pass for the whole key. The live call at `0x5BFFE` left no room for that extra clear in the one-shot.
+
+Installed SignalDeck `485442d1` (apk sha256 `20708eb1…`). Loaded at 22:50:56, tag `DMR003.FW32.V022`, channel 56. The 75-frame key got status 3 at 22:50:59.869. Op 2 then stayed at fill 1920 through 22:51:25. No status 4 and no `rewritten once`. The host still reported transmitting at 22:51:38. `restartmodule` at 22:54:22 brought the tag back and cleared transmitting. The factory image was keyed on channel 49 (status 3 and status 4). FW31 `997cb714…ac30` was loaded again.
+
+End state 23:02: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −106. Battery 35.9 °C, AP 41.4 °C, PA 40.2 °C. HackRF idle. SignalDeck `485442d1`.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.
