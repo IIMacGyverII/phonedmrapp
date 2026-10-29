@@ -49,6 +49,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Step 20:10 (Grok): the hold is not re-sent, and a 2 s countdown does not span the close.** `sym unkey` is logged and `data hold` is not. `unkeyAfterStop` does not call `scheduleDataHold`, so `0x58` is not put back to `0xBCFD`. The hotspot did send the M17 calls (N0CALL to ALL, 2.0 s, 00:59 UTC). A 200-pass countdown finished before the close (RMS 1.5). Spacing the clear by the task delay (`0x1BE8`, argument 100) still left RMS 1.5, with status 1. M17 listed nothing. FM was not sent: the hotspot's FM mode is off. Op 15 does not fit in the tail. Host hold is the decode blocker. Continuing at hotspot M17 receive (queue 3) while that stands.
+
 **Standing rule (owner, 2026-10-28 20:15): keep working until the queue is done.**
 - Finish each task's whole pass list in one go. A partial result is not a stopping point: report it as a step, then continue.
 - Set STATUS REVIEW only when a pass list is complete, and STUCK only when you truly cannot go on (a question only Claude or the owner can answer). Otherwise go straight to the next queue item; Claude reviews as you go.

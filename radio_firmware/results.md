@@ -4200,6 +4200,10 @@ End state 19:19: `DMR003.F30B.V022`, channel 56, not transmitting, RSSI −105. 
 
 End state 19:36: `DMR003.F30C.V022`, channel 56, not transmitting, RSSI −105. Battery 33.3 °C, AP 38.8 °C, PA 37.6 °C. HackRF idle.
 
+**F30C window and the hold (19:56–20:09).** The hotspot log shows each bench call: `M17, received network … from N0CALL to ALL, 2.0 seconds` at 00:59 UTC. SignalDeck logged `sym unkey` and did not log `data hold`. `unkeyAfterStop` sends `0x26` off and does not call `scheduleDataHold`, so the op 6 hold (`0x58` = `0xBCFD`) is not put back after a symbol key. sha256 `de204068…` counted 200 task passes; receive RMS was 1.5 and status 1 was 0. Those passes finish before the close. sha256 `afb28ab5…` waits on `0x1BE8` with argument 100 between clears and leaves the flag set. One key then a hotspot call: RMS 1.5, status 1 = 6, M17 heard list empty, no `data hold` line. FM was not transmitted; the hotspot's FM mode is off.
+
+End state 20:09: `DMR003.F30C.V022` sha256 `afb28ab522e390dbbcba63e9dad8db22b932c1cb4fb3333533f6eaafb9f247e2`, channel 56, not transmitting, RSSI −105.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.

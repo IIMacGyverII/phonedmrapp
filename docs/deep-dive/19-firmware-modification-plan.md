@@ -252,6 +252,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 **2026-10-28 — F30C clears bit 7 after the TX bits drop.** DMR idle is `0x4026` and M17 idle is `0x7026`. Three keys opened the squelch (RMS about 800) and listed no M17 call. Details in `results.md`.
 
+**2026-10-28 — The symbol unkey does not re-send the voice-filter hold.** The hotspot sent the M17 calls. A countdown of task passes ends before the close. Details in `results.md`.
+
 **2026-10-28 — FW3E boots and decodes DMR.** The FM setup runs only when the ring is armed. A 3 s key had status 3 and 4 and was not listed by the relay. Details in `results.md`.
 
 **2026-10-28 — FW3D boots and decodes DMR.** The 3 s key had status 3 and 4 and was not listed by the relay. The key wrapper differs from F30F at `0x5B58E` only. Details in `results.md`.

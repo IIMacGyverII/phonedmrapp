@@ -2,9 +2,12 @@
 # Idle 0x30 is 0x7026 on the wide M17 channel and 0x4026 on DMR, so the
 # unmute writes back the value it read with bit 7 cleared.
 # The key wrapper sets a flag at 0x4B384. The FM task branch at 0x18B68
-# calls the check: when the flag is set and TX bits 0 and 2 of 0x38908
-# are clear, it clears bit 7 and then the flag. Opcode 18 is refused.
+# calls the check. The flag byte is set to 200 at key start and is not
+# counted down: 200 task passes finish before the close's 0.3 s mute, so
+# a countdown missed it. While the flag is set and the TX bits are clear,
+# every pass clears bit 7. Opcode 18 is refused.
 import hashlib
+import subprocess
 from pathlib import Path
 
 import fw30_build
@@ -15,13 +18,20 @@ SRC = ROOT / "radio_firmware" / "build" / "DMR003.F30B.V022.bin"
 DEST = ROOT / "radio_firmware" / "build" / "DMR003.F30C.V022.bin"
 TAG = slice(0x38464, 0x38474)
 CHECK = 0x5BFB4
-SET = 0x5BFEC
 LIMIT = 0x5BFFE
 FLAG = 0x4B384
 
-_CHECK = """
+_BOTH = """
 	.text
+	.global	setflag
 	.global	check
+setflag:
+	movi	r2, 1
+	st.w	r2, (r3, 0)
+	lrw	r4, 0x4b384
+	movi	r2, 200
+	st.b	r2, (r4, 0)
+	jmp	r15
 check:
 	push	r4, r15
 	.short	0xE000, 0x4D0B
@@ -32,29 +42,32 @@ check:
 	ld.b	r2, (r3, 0)
 	andi	r2, r2, 5
 	bnez	r2, .Ldone
+	movi	r0, 100
+	.short	0xE000, 0x1BE8
 	movi	r0, 48
 	.short	0xE000, 0x125C
 	bclri	r0, 7
 	mov	r1, r0
 	movi	r0, 48
 	.short	0xE000, 0x1220
-	movi	r2, 0
-	st.b	r2, (r4, 0)
 .Ldone:
 	pop	r4, r15
 """
 
-_SET = """
-	.text
-	.global	setflag
-setflag:
-	movi	r2, 1
-	st.w	r2, (r3, 0)
-	lrw	r4, 0x4b384
-	movi	r2, 1
-	st.b	r2, (r4, 0)
-	jmp	r15
-"""
+
+def _both(base):
+    out = Path(r"C:\Users\Joshua\AppData\Local\Temp\fw1718\fw30")
+    out.mkdir(parents=True, exist_ok=True)
+    src = out / "f30cboth.S"
+    src.write_text(_BOTH, encoding="utf-8")
+    subprocess.check_call([str(fw30_build.AS), "-mcpu=ck803", "-mno-laf", "-o",
+                           str(out / "f30cboth.o"), str(src)])
+    subprocess.check_call([str(fw30_build.LD), "-Ttext=0x%X" % base, "-o",
+                           str(out / "f30cboth.elf"), str(out / "f30cboth.o")])
+    code, addr = fw30_build.fw23_build.text_of((out / "f30cboth.elf").read_bytes())
+    if addr != base:
+        raise SystemExit("linked at %X" % addr)
+    return bytearray(code)
 
 
 def build():
@@ -70,23 +83,21 @@ def build():
     base = SRC.read_bytes()
     read_to = fw30_build.bsr_target(base, 0x3898)
     write_to = fw30_build.bsr_target(base, 0x5B654)
-    check = bytearray(fw30_build._linked(_CHECK, CHECK, "f30cck"))
-    fw30_build._patch_one(check, CHECK, bytes.fromhex("00e00b4d"), 0x5B4D0, "refill")
-    fw30_build._patch_one(check, CHECK, bytes.fromhex("00e05c12"), read_to, "read")
-    fw30_build._patch_one(check, CHECK, bytes.fromhex("00e02012"), write_to, "write")
-    flag = bytearray(fw30_build._linked(_SET, SET, "f30cset"))
-    if CHECK + len(check) != SET:
-        raise SystemExit("layout %X %d" % (CHECK + len(check), len(check)))
-    if SET + len(flag) > LIMIT:
-        raise SystemExit("end %X" % (SET + len(flag)))
-    img[CHECK:CHECK + len(check)] = check
-    img[SET:SET + len(flag)] = flag
-    img[0x18B68:0x18B6C] = fw30_build.encode_bsr(0x18B68, CHECK)
-    img[0x5B5E2:0x5B5E6] = fw30_build.encode_bsr(0x5B5E2, SET)
+    stub = _both(CHECK)
+    fw30_build._patch_one(stub, CHECK, bytes.fromhex("00e00b4d"), 0x5B4D0, "refill")
+    fw30_build._patch_one(stub, CHECK, bytes.fromhex("00e05c12"), read_to, "read")
+    fw30_build._patch_one(stub, CHECK, bytes.fromhex("00e02012"), write_to, "write")
+    fw30_build._patch_one(stub, CHECK, bytes.fromhex("00e0e81b"), 0x1BE8, "delay")
+    check_at = CHECK + 12
+    if CHECK + len(stub) > LIMIT:
+        raise SystemExit("end %X" % (CHECK + len(stub)))
+    img[CHECK:CHECK + len(stub)] = stub
+    img[0x18B68:0x18B6C] = fw30_build.encode_bsr(0x18B68, check_at)
+    img[0x5B5E2:0x5B5E6] = fw30_build.encode_bsr(0x5B5E2, CHECK)
     img[0x5BCC4:0x5BCC8] = fw30_build.encode_bsr(0x5BCC4, 0x5BD74)
-    if fw30_build.bsr_target(img, 0x18B68) != CHECK:
+    if fw30_build.bsr_target(img, 0x18B68) != check_at:
         raise SystemExit("check call")
-    if fw30_build.bsr_target(img, 0x5B5E2) != SET:
+    if fw30_build.bsr_target(img, 0x5B5E2) != CHECK:
         raise SystemExit("set call")
     if fw30_build.bsr_target(img, 0x5BCC4) != 0x5BD74:
         raise SystemExit("refuse")
@@ -99,7 +110,7 @@ def build():
     DEST.write_bytes(img)
     print(DEST)
     print(hashlib.sha256(img).hexdigest())
-    print("check", len(check), "set", len(flag), "end", hex(SET + len(flag)))
+    print("stub", len(stub), "check", hex(check_at), "end", hex(CHECK + len(stub)))
 
 
 if __name__ == "__main__":
