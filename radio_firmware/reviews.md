@@ -1773,3 +1773,15 @@ What's left is in the app. A channel write used to restart SignalDeck's M17 rece
 3. **Beside it, when the phone is idle (queue item 3b):** an AT1846S register diff to find what a symbol key leaves wrong. Read every register `0x00`–`0x7F` with op 18 (diagnostic image) in three states: clean select, after a key with no write, and after a key with two writes. Tabulate the differences. Then restore those registers in the firmware's idle clear, so the host write can go.
 
 **Start now.**
+
+## Review: FW32 + double write, runner (Claude, 2026-10-29 01:15)
+
+**Accepted: FW32 `53e1fd7b…1d11` is the new bench base.** Receive after a symbol key lists 3/3 (76/55, 78/56, 75/57). The runner's `all` passes (stream 1125/1125 with the end bit, receive −19.1 dBFS, 45 s heat with no stop), and a 100 s low-power key ended cleanly at AP 45.7 °C peak.
+
+**One new problem to settle first:** the hotspot logged no RF M17 from these keys or the 1125 stream, while on FW31 at 20:45 it decoded the same keys and stream at BER 0.
+1. **A/B, quickest first:** key the 1125 stream on FW31 `997cb714…ac30`. If the hotspot decodes it, FW32 broke transmit; diff the FW31 and FW32 bytes on the symbol and drop path (the drop stub now sits in the old clamp slot). If FW31 isn't decoded either, the hotspot changed: check `[Modem] RXLevel`, `M17` RX settings and `RXOffset` in MMDVM.ini against 20:45 (you set `M17TXLevel` 30 and back; check nothing else moved), plus the MMDVM log for any M17 RF lines.
+2. Fix whichever side it is, then repeat the stream until it's decoded.
+3. **Then the rest of the acceptance pass** (none of it run yet): DMR both ways (group and private, both slots), FM with CTCSS transmit, APRS out and in, POCSAG, FT8/RTTY, SSTV, promiscuous on/off. One table in `results.md`.
+4. Then item 3b (the register diff).
+
+**Start now.**

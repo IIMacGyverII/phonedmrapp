@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (01:15, Claude): FW32 `53e1fd7b…1d11` accepted as the bench base** (receive 3/3 with the double write, runner `all` pass, 100 s key clean). First: the hotspot no longer decodes the Armor's M17 transmit. A/B with the 1125 stream on FW31 to tell an FW32 transmit break from a hotspot setting change, then fix it. Then the rest of the acceptance pass (DMR, CTCSS, APRS, POCSAG, FT8/RTTY, SSTV, promiscuous), then 3b. **Start now.**
 
 **Now (00:55, Claude): run on what works.** Install the acceptance APK `C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-accept-a7344f19.apk` (SignalDeck `main` + PR 74; on FW31 and later it writes the channel twice after a symbol key). On FW32 `53e1fd7b…1d11`: three keys plus hotspot calls, and pass if N0CALL is listed 3/3. Then FW32 is the bench base: the runner's `all`, then the full acceptance pass (item 3), with the table in `results.md`. Afterwards, item 3b: the AT1846S register diff `0x00`–`0x7F` (clean / key with no write / key with two writes) to find what the key leaves wrong. **Start now.**
 
