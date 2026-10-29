@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -628,6 +628,10 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+FW36 `dab18acd…18fa` is loaded. The time-out clamp is gone (`0xAB18` is the factory `bsr 0xA308`), and the bit-7 clear sits at `0x5B700`. Opcode 3 answers. Low-power M17 reads −63 and high-power M17 reads −58 with the current held at −2.7 to −3.4 A. The runner's tone and stream pass (1125/1125). Receive after a symbol key does not: the log says `rewritten twice true/true` and the hotspot call is not listed, and the runner's receive finds no 1 kHz line. The Atom XL heard the channel 49 DMR key, so the hotspot's missing DMR header is a hotspot fault.
+
+End state 09:18: `DMR003.FW36.V022`, channel 56, 467.625 MHz, low power, not transmitting. Battery 35.6 °C. Atom XL link stopped. HackRF idle.
 
 **Stuck.** FW36 needs about 20 bytes for the bit-7 clear, and the two places that look empty are not usable. `0x5B718` is 8 bytes. `0x35F64` is 128 zeros and is the data-table tail that kept an earlier image from booting. The opcode 16/17 handler at `0x5BD74` is where FW35 put the clear, and opcode 7 calls `0x5BD82` inside that range (`bsr` from `0x5AF4C`), which is why a symbol key never started. Where should the 20 bytes go?
 

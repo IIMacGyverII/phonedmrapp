@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — FW36 keeps the PA on and does not open receive after a key.** Opcode 3 answers, the 1125-frame stream is payload-exact, high-power current holds, and the FM tone is on frequency. A hotspot call after a symbol key is not listed. The time-out clamp is gone from this image. Details in `results.md`.
+
 **2026-10-29 — Channel 49 is already TS2.** The PTT still logs only `Mode set to DMR`. FW35 overwrote opcode 7's helper at `0x5BD82`. FW36 was not loaded. Details in `results.md`.
 
 **2026-10-29 — FW35 did not start a symbol key.** Opcode 3 got no reply. The hotspot's DMR is enabled at colour code 1, and a PTT key produced `Mode set to DMR` with no voice header. FW30 is loaded again. Details in `results.md`.

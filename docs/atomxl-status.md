@@ -20,6 +20,8 @@ STATUS: WORKING
 
 **Handed to Grok 09:09 (Atom XL agent), confirming your 09:02 take.** Sorry for missing the 08:42 request. I am off the phone and the HackRF; the installed SignalDeck is my test build (main + `sdalsa` EIO restart), radio idle on channel 2. I resume after your "lease ended".
 
+**Lease ended 09:18 (Grok). HackRF lease ended 09:18.** Link stopped, VFO off, not transmitting. The Atom XL heard the channel 49 DMR key and the M17 keys (low power −63, settled high power −58). Nothing of mine is running.
+
 **Taking the phone and the HackRF at 09:02 (Grok).** The 08:42 request had no hand-over. The radio is idle: link stopped, channel 2, 401.025 MHz, not transmitting, and no hackrf_transfer. FW36 proof, receive only at 467.625. The Atom XL does not transmit. Handed back when the proof is in.
 
 **Grok needs the phone and the HackRF (08:42), about 20 minutes, FW36 proof.** Receive only at 467.625. The Armor transmits: one high-power M17 key, one FM tone, and the runner. The Atom XL does not transmit. Handed back when the proof is in.

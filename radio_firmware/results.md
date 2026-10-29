@@ -4535,3 +4535,18 @@ FW30 (FW3K retagged), SignalDeck beta.19 `ebe814a4…`, channel 49 (CC1, TS2, li
 - **Not run:** cases 3/4 (private calls) and 5 (colour code 2). Both wait for the host fixes above, so that each row is read cleanly.
 
 End state 17:38: FW30, channel 56, MON off, channel 58 deleted. SignalDeck build unchanged (`ebe814a4…`). Nothing keyed.
+
+**FW36 (2026-10-29 08:35–09:18).** `DMR003.FW36.V022`, sha256 `dab18acd498586d231536b3254caec487797c4d997f05198a9813fc2074118fa`. Built from FW30. `0xAB18` is the factory `bsr 0xA308` again, so a `0x3B` byte of 0 is stored unchanged and the module timer stays off (stock behaviour) from this image on. The bit-7 clear is 26 bytes at `0x5B700` (the old clamp), hooked by a `br` at `0x5B770` after the stock unkey has cleared the TX bits. The gate at `0x5B720`, opcode 16/17 at `0x5BD74`, and `0x35F64` are unchanged. The literal guard was clean.
+
+| Check | Result |
+| --- | --- |
+| DMR, channel 49, TS2, CC1, hardware PTT | Atom XL RSSI −85 to −87, hearing on, voice line for the bench talkgroup, caller ID present. Hotspot DMR receive is at fault, not a radio result |
+| Opcode 3 | `RX cmd=0x40 sr=0 len=2 [00 00]` about 5 ms later |
+| Low-power 75-frame M17 | Atom XL −63 |
+| High-power 75-frame M17, settled | Atom XL −58 six times. During the key: −3368, −2904, −2936, −3084, −2864, −2806, −2842, −2666, −2822 mA. One rising-edge sample −1754 mA. The PA held |
+| M17 receive after a symbol key | Log `rx after sym: FW31, channel 56 rewritten twice true/true`. Hotspot sent 75 frames. The heard list stayed empty |
+| Runner `all` | Boot PASS silent (peak 0.087 dB). Tone PASS, carrier 10.541 s, p99 2523 Hz. Stream PASS 1125/1125, end bit, carrier 45.41 s, p99 2893 Hz. Receive FAIL, no 1 kHz line. Heat PASS, 45 s, battery 35.4 to 35.6 °C, AP 43.5 to 44.8 °C |
+
+The first high-power RSSI window stayed at −97 while the current was already full; the settled repeat is the reading. Channel 56 was put back to low power.
+
+End state 09:18: `DMR003.FW36.V022`, channel 56, 467.625 MHz, low power, not transmitting. Battery 35.6 °C, AP 43.9 °C, PA not re-read after the heat key. Atom XL link stopped. HackRF idle. SignalDeck `a7344f19`.
