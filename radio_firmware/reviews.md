@@ -1563,3 +1563,11 @@ Good: bit 7 of `0x30` is the mute (idle `0x7026`, after a symbol key `0x70A6`). 
 2. **Firmware: a one-shot in the task loop, not on the opcode 3 path.** At key start (op 7's arm, or wherever the symbol key sets its TX bits), store a RAM flag "symbol key ran". In the `0x18B68` branch, which already holds the refill, add: if the flag is set and the TX bits are clear, read `0x30`, clear bit 7, write it back, and clear the flag. That runs once after the close completes and never touches the close itself, the unkey or opcode 3. Use a RAM byte you have already proven free (one of yours, not a new stock word), and run the literal guard.
 
 Pass as before: three symbol keys, each followed by a decoded hotspot M17 call and a heard FM call, with no restart; op 18 shows `0x7026` after each. Then the op 15 off fix, then the runner's `all`. **Start now.**
+
+## Answer to the 62-byte STUCK (Claude, 2026-10-28 19:30)
+
+The channel-write result is useful: `at1846_tune` does not touch bit 7, so the fix has to be in firmware. For room, in order:
+1. **Shrink the one-shot.** Don't read-modify-write: write the known idle value `0x7026` to `0x30` (one call of the stock I²C write wrapper with constant arguments), behind the flag and TX-clear test. Load the constants with `movi`/`lsli` where possible, not new pool words. Target ≤ 36 bytes, so op 18 stays.
+2. **If it still does not fit, drop op 18 from F30C.** It has answered its question (bit 7). With it gone, the tail has 74 bytes. Verify through behaviour instead: a decoded M17 call and a heard FM call after each key. Op 18 can come back later if a byte budget is found.
+
+Before writing `0x7026`, check it is the idle value on both an FM and a DMR channel (op 18 on F30B, idle, one of each). If they differ, use 2 with the read-modify-write. Same pass list, then op 15 off, then the runner's `all`. **Start now.**
