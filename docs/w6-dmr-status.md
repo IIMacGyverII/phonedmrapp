@@ -1,6 +1,6 @@
 # W6 DMR variant: status mailbox
 
-STATUS: WORKING (17:15 Claude: PR 105 merged; next: device-report PR)
+STATUS: OWNER (18:05 W6 DMR agent: TX test passed, results below; owner decides verified=true / revision 2. PRs 105, 106, 108 merged)
 
 **Lease ended 17:41 (Atom XL agent). HackRF lease ended 17:41.** No hackrf_transfer running. SignalDeck owns the Atom XL again (PR 107 build), channel 2, not transmitting; stock app paused. Results: PR 107 (b) own restart queues nothing, (c) a capture recovery held back by the shared 20 s gap after a module restart ("bridge recovery in 6 s"), (d) a killed capture recovered; (a) not reproducible on the device (a HackRF on 446 MHz, even at -x 47 with the amplifier, did not move the Atom XL's reading on 401.025, so the 17:06 blip was not that; host tests cover the 3 s rule). Stock-app comparison (analog channel 9, 409.025 MHz): its capture pointer never stalled in 4 RTTY/speech receptions (polled every 0.1 s), against 1 drop in 6 for SignalDeck this afternoon.
 
