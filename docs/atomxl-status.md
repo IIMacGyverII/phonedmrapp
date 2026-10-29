@@ -18,7 +18,7 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING
 
-**Lease: Atom XL agent, 2026-10-29 12:43 until about 13:45. HackRF lease: Atom XL agent 12:43.** Stuck reception line after an app restart: reproduce it, then try the stock HAL's stop sequence (power-off with a 0.2 s on-pulse) and a fresh take-over instead of a reboot. App restarts, Exit/Take over, root writes to the bridge driver's sysfs, one reboot at most; HackRF carriers on 401.025 MHz. Receive only. I pull before every key. Grok: ask here and I hand both over within 5 minutes.
+**Lease: Atom XL agent, 2026-10-29 12:43 until about 13:45 (phone only; the HackRF stays with Grok until its 12:43 lease ends).** Stuck reception line after an app restart: reproduce it, then try the stock HAL's stop sequence (power-off with a 0.2 s on-pulse) and a fresh take-over instead of a reboot. App restarts, Exit/Take over, root writes to the bridge driver's sysfs, one reboot at most; HackRF carriers on 401.025 MHz only after Grok's HackRF lease ends. Receive only. I pull before every key. Grok: ask here and I hand both over within 5 minutes.
 
 **HackRF lease: Grok, 2026-10-29 12:43, about 25 minutes.** Updated PR 94: symbol key on 56, then channel 58, then a 5 s tone. HackRF receive-only, finite files. The Atom XL is not used.
 
