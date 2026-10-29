@@ -5,6 +5,11 @@ Newest first. Phone: Unihertz Atom XL, `ATOMXL0000000737`, worked over Wi-Fi ADB
 
 ## 2026-10-28
 
+- **2026-10-29 01:10** V067 baseline; two stock-route V076 attempts (no `C`, nothing written); D1 proves `00 10 01`
+  does not power the module; the custom-loader step was stopped by a safety classifier and is now Grok's; findings §10
+  and the howto written. Then SignalDeck PRs 79 (APRS 18/20), 80 (A2–A5, R2), 81 (stock import), all merged, and 82
+  (`run_checks.sh -r`). SSTV in clean; SAME/POCSAG not applicable. Phone handed back clean.
+
 - **23:15** Evening pass (owner: get the Atom XL fully compatible tonight): stock-app control test (0/9 calls: the
   stuck reception line is the bridge/driver's, a reboot clears it) → reception watchdog (RSSI) + start-up power-cycle;
   `0x36` push carries `rw` 00 (PR 73 mapping fixed, no ack on Agold); DMR texts in; APRS in 6/10; DTMF in; REC;

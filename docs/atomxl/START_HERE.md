@@ -1,4 +1,4 @@
-# Atom XL agent: start here (state at 2026-10-28 23:15)
+# Atom XL agent: start here (state at 2026-10-29 01:10)
 
 Read in this order:
 
@@ -29,17 +29,21 @@ Read in this order:
   - USB audio routing off while owning the radio; Agold text layout; App block guard;
   - DIAG `bringup` / `exit [--ez stock]` / `web --ez tx`.
   The stack stays unmerged until the managing agent reviews it (after receive works). Earlier report PRs: #60–#72.
-- **Done and device-tested (all on PR 76, head `b058ac31`, host suite 461 / 0):** take-over / Exit / Hand back with the
-  cable; boot (routing restored, stock app back); DMR group and private calls with caller; receive audio per reception
-  with bridge recovery (−14.0 dBFS for 1 kHz at ±3 kHz); the **reception watchdog** (the bridge's line sticks until a
-  phone reboot, the stock app then misses every call: control test 22:02, 0/9; SignalDeck detects receptions from RSSI
-  meanwhile); DMR texts in (`0x36 [05]` push, `rw` 00, then `0x2D`) and out; APRS in (6/10) and out; DTMF in; REC;
-  scanner; S-meter; FM / DMR voice / text / APRS transmit (bench build only); a clean Device report (`run_checks.sh -s
-  192.168.1.106:5555 -w auto -t`). **Mailbox status REVIEW (23:12): the stack waits for the managing agent's review**
-  and its decision on marking the profile verified with transmit on.
-- **Open:** SSTV / POCSAG / SAME receive untested (same audio path as APRS / DTMF; long receptions get ~6 s gaps at
-  each bridge stall); Android Auto not checked; stock-app channel import not done; owner: whether this unit may leave
-  V067 (loader plan §3); the clean-room DMR generator for `tools/dmr-replay/` (approved).
+- **SignalDeck main has the whole Atom XL stack** (PR 76 merged as `432bc60b`; profile **verified, transmit on**, owner)
+  plus PR 79 (APRS 6/10 → 18/20: capture tail, decoder window flush, shorter empty-open wait), PR 80 (review follow-ups
+  A2–A5, R2) and PR 81 (stock-channel import per area, DMR ID). **PR 82 open** (`run_checks.sh -r`: hand back and open
+  without take-over, needed on verified phones). Start new branches from `main`; worktree `SignalDeck-atomxl`.
+- **Device-tested on the Atom XL:** take-over / Exit / Hand back, boot, DMR calls with caller, receive audio per
+  reception with bridge recovery, the reception watchdog, DMR texts in/out, APRS in (18/20) and out, DTMF in, SSTV in
+  (Robot 36 clean), REC, scanner, S-meter, FM / DMR voice transmit, stock import, a clean Device report (with `-r`).
+  SAME is not applicable (UHF-only radio); POCSAG receive needs the bench firmware (not on stock modules).
+- **V076:** the stock route fails on this bridge build (`00 10 01` never powers the module, findings §10,
+  `firmware-update-howto.md`). The module is healthy on V067. **Grok does the load** (owner's decision, radio_firmware
+  HANDOFF queue item 6); give it a clean window when it asks for a lease in the mailbox (radio off, stock app closed,
+  Wi-Fi ADB up), then run the V076 retest: the same captures (SignalDeck and stock app, FM and DMR), the reception line,
+  `0x36`/`0x2B`, temperatures logged; the heat test only if V076 doesn't fix the cut-outs.
+- **Open:** Android Auto; the occasional empty capture open (about 1 in 10, 8 s bridge power-cycle); the stuck
+  reception line's root cause (a reboot clears it).
 - **Bench tools (local only, never committed; GPLv3 `dmr_utils3` in a scratchpad venv):** synthetic DMR call generator,
   4FSK DMR decoder (voice LC and data blocks), Bell 202 AFSK generator and decoder. Rebuild from these notes if the
   scratchpad is gone; a clean-room DMR generator for `tools/dmr-replay/` is approved. **Bench APK for transmit** = the
