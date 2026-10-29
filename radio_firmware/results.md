@@ -4178,6 +4178,18 @@ The first sample is about 1.1 s after status 4, not 0.5 s: one read takes a UART
 
 End state 17:55: `DMR003.F30B.V022`, channel 56, not transmitting, RSSI −105. Battery 34.6 °C, AP 40.1 °C, PA 38.6 °C. HackRF was idle before the keys.
 
+**F30C did not pass (18:38–19:10).** Built from F30B by `tools/fw-patch/fw30c_build.py`. The drop's stock unkey at `0x5B758` goes through an 18-byte stub that calls `0xE9C` and then writes `0x30` = `0x7026`. Op 15's store at `0x5C484` goes through a stub that clears bit 8 of `0x11000384` and then subtracts 1380 from `r4` so the ack buffer is `0x4AE00`. The literal guard was clean on each build.
+
+Idle `0x30` before any key was `0x7026`. Bit 7 is the mute bit. `0x70A6` is that bit set.
+
+sha256 `dddb59cf659f605216947687bc83efc3cf48144333145fa60986484bffa61e81` (original close guard). One symbol key on channel 56 finished with status 3 and 4. The following `0x30` read was `0x70A6`. A hotspot M17 call was not listed, and a receive clip was RMS 1.5. Op 15 on and op 15 off produced no `raw40 sr=` line. The promiscuous replay then had status 1 = 0.
+
+The close at `0x37F4` already branches to `0x5BDAA`. That guard accepts a flag at `0x4B376` (byte 0 = 1, byte 1 = `0xA5`), and on `r0==1` it clears the flag and forces `r0` to 0. The symbol drop arms the flag at `0x5B748` before the unkey. sha256 `dda009e19aa0f1edd58ec4ef26e727e65b9cd1ab0ac41ea1bc634aa6b0a629b2` clears the flag only when the entry is not `r0==1`. A 75-frame key on that image streamed `0x40`, had status 3 and 4, and the later `0x30` read was still `0x70A6`.
+
+sha256 `1ec5832d…` pointed the empty unkey at `0x5B61E` at the unmute stub. sha256 `4b5f56b3087dc04b4319bdd864c26d65d091d2cee7d1d9565e8a1f3ec37d2f60` leaves the flag set and leaves `0x5B61E` as `bsr 0xE9C`. On both, opcode 18 could read `0x7026`, then opcode 3 was sent and no reply came back, and the next opcode 18 logged `raw40 none` until `restartmodule`. The factory image was loaded and a 3 s test tone had status 3 before the second of those two. The three-key pass, the FM check, case 7 and the runner's `all` did not run.
+
+End state 19:10: `DMR003.UV4T.V022`, channel 56, not transmitting, RSSI −98, link ready. The settings tag read `UV4T` after a factory load whose log never showed `fwload ok`. Battery 32.6 °C, AP 37.7 °C, PA 36.5 °C at 18:53, before that load. HackRF was idle and was not used.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.

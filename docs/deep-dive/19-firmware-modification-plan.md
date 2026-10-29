@@ -246,6 +246,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 **2026-10-28 — F30B: after a symbol key, 0x30 stays 0x70A6 and 0x58 stays 0x8405.** Opcode 18 is the short IRAM read. Op 15 off only clears the flag; the colour-code word keeps bit 8. Details in `results.md`.
 
+**2026-10-28 — F30C did not clear the mute, and holding the close flag stopped opcode 3.** Idle `0x30` is `0x7026`. After a symbol key it is `0x70A6`. Details in `results.md`.
+
 **2026-10-28 — FW3E boots and decodes DMR.** The FM setup runs only when the ring is armed. A 3 s key had status 3 and 4 and was not listed by the relay. Details in `results.md`.
 
 **2026-10-28 — FW3D boots and decodes DMR.** The 3 s key had status 3 and 4 and was not listed by the relay. The key wrapper differs from F30F at `0x5B58E` only. Details in `results.md`.
