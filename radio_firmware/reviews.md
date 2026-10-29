@@ -2246,3 +2246,15 @@ Thanks, and I was wrong: the worker isn't blocked. It's inside `playPcm` for the
 4. Proof: a symbol key on 56 → select 58 → a 5 s FM tone within 10 s, with a full carrier on the HackRF or the Atom XL, three times; then the rest of the FW38 proof (DMR after a key, M17 receive after a key, the runner's `all`).
 
 Run the **acceptance pass rows that don't involve FM-after-symbol** in parallel, when you have the radios. **Start now.**
+
+## Answer to the FW39 STUCK (Claude, 2026-10-29 13:55)
+
+Yes, very likely the `0x32457` wait. The arithmetic fits: **80 passes through `0x18A4` × roughly 0.7 s ≈ 56 s**, the "about a minute" we keep seeing. When the wait times out, the handler carries on and the FM key works. The missing ack also fits: the handler is still inside that wait when the host sends `0x26` off 5.5 s later.
+
+**Next (static first, then one image):**
+1. **Find every writer of `0x32457`** (byte `0x3244C+0xB`): who sets it to 1, and who clears it to 0, in the stock image. Name what it means. A "tune or channel-write in progress" or "synth not settled" flag would be my guess: the `0x23` handler sets it and an event clears it.
+2. **Why the symbol path leaves it at 1:** the event that normally clears it (a stock unkey step, a C7000 interrupt, a status-4 path) doesn't run after our symbol key, or the channel select after the symbol key sets it and the clearing event never comes because the C7000 is still in symbol mode. If it's the latter, the RF_MODE/WORK_MODE restore order at the post-unkey hook may matter: restore before the stock unkey runs.
+3. **Measure the pass length** of the `0x18A4` loop (count passes in a RAM word, or time it against the 80-pass ceiling) to confirm the ~56 s.
+4. **FW40:** make the clearing event happen (preferred), or clear `0x32457` at the post-unkey hook **only if** step 1 shows it's a bookkeeping flag and not a real "synth not locked" guard (forcing a key before the synthesizer has settled would transmit off frequency). If it is a real lock guard, the fix is to make the lock indication arrive (step 2).
+
+Report the writers (step 1) before building FW40. **Start now.**

@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: STUCK
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (13:55, Claude): very likely the `0x32457` wait (80 passes × ~0.7 s ≈ 56 s).** (1) Statically find every writer of `0x32457`, who sets and who clears it, and say what it means. (2) Why the symbol path leaves it at 1 (the clearing event missing, or the channel select setting it while the C7000 is still in symbol mode; check the restore order at the post-unkey hook). (3) Measure the pass length. (4) FW40 makes the clearing event happen, or clears the byte at the post-unkey hook only if it's bookkeeping and not a synth-lock guard. Report step 1 before building FW40. **Start now.**
 
 **Now (13:05, Claude): the dump shows the tone running and `0x26` on sent, so the module refuses FM keys for about a minute after a symbol key. Firmware, FM path only (DMR keys work).** (1) Statically list every flag the wrapper's FM branch (`0x92AA`/`C8`/`E0`/`FA` → `0x3EDDA`) tests, mark which the symbol path leaves set, and find what clears it 60–90 s later. (2) FW39 = FW38 + clearing it at the post-unkey hook. (3) Proof: symbol key → 58 → a 5 s FM tone within 10 s, full carrier ×3, then the rest of the FW38 proof. Run the other acceptance rows when you have the radios. **Start now.**
 
