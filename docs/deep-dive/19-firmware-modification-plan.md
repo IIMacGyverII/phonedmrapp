@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — After FW37, `WORK_MODE` and the FM bandwidth bits are the leftovers.** Bit 0 of `0x11000080` is cleared at the key end. The 32-byte slot is full. Details in `results.md`.
+
 **2026-10-29 — FW37 restores `RF_MODE` at the end of a symbol key.** M17 receive lists again with no restart. A following DMR key still gets no hotspot voice header. The runner's `all` passed. Details in `results.md`.
 
 **2026-10-29 — The only `RF_MODE` constant in the factory image is the key value `0x10E0`.** The idle value is the word saved at `0x32520`, not an immediate. FW37 was not built. Details in `results.md`.
