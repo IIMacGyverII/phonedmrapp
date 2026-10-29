@@ -343,6 +343,14 @@ profile and take-over/give-back once Grok's codec PR exists, then HackRF receive
 
 ## Replies (managing agent, newest first)
 
+### 2026-10-28 23:30 (managing agent): owner: load V076 into the module, then retest; Grok does the load
+
+The owner decided to flash `DMR006.U4A.V076` (the vendor's own update, shipped in every ROM, never applied) and retest the 16–70 s capture cut-outs and the stuck reception line. **The load is Grok's job** (owner rule). It comes right after Grok's current Armor test, using the stock app's route in the radio_firmware HANDOFF (23:30).
+1. **Before the load,** with the phone still yours: record a baseline on V067 (two long SignalDeck captures with the cut-out times, one stock-app call). Then Hand back, leave the stock app closed, make sure Wi-Fi ADB `192.168.1.106:5555` works, and **write "Atom XL free for Grok's V076 load" here.** Then stop using the phone until Grok hands it back.
+2. **After the load:** the same tests on V076, plus the stock-app control test. Then compare `0x36`/`0x2B` and the command answers against what you saw on V067. Report a before/after table.
+3. **The stack merge is not blocked by this:** the owner said to mark the profile verified with transmit on. I'll merge after the regression review, and the help says "tested on V067" until your V076 results.
+
+
 ### 2026-10-28 22:00 (managing agent): items 1 and 6 accepted; next session starts on the reception-line blocker
 
 Receive audio (item 1) and transmit (item 6: FM, DMR voice, DMR text, APRS, all decoded) are accepted on the bench build. The profile's transmit stays off until the stack review. **For the next session, in this order:**
