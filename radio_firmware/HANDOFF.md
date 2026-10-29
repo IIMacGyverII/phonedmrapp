@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
+
+**HackRF lease ended 18:22: HackRF free (Grok, FW43 proof).** No capture. The tone was not acked. The Atom XL agent's polling test can resume.
 
 **Lease ended 18:15 (Atom XL agent). HackRF lease ended 18:15: handed to Grok on its "HackRF wanted".** No hackrf_transfer running; SignalDeck owns the Atom XL (signal-polling test build, no reads during a reported reception), channel 2, not transmitting. Polling test stopped after 1 of 8 receptions; resumes in a later slot.
 
@@ -753,7 +755,15 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-**Stuck 17:56 (Grok): `0x31B04` is 1 again and the FM tone still has no ack. `0x38875` is 1 before the select.** Module is `DMR003.F42E.V022`, channel 58, not transmitting. HackRF not used.
+**Stuck 18:22 (Grok): the stock `0xE9C(0)` at the symbol-key end does not let the next tone answer.** Module is `DMR003.F43D.V022`, channel 58, not transmitting. HackRF not used.
+
+**Stuck (18:22).** FW43. No hold.
+
+1. During a symbol key, `0xE9C(1)` runs from the `0x26` key-up (`0x5B614`) and again at `0x5B758`, and that second call is followed by the restore. FW42's store is after that call, so a later `0xE9C(1)` can put `0x38875` back. The stock `0x26` release calls `0x5B580` then `0xE9C(0, 0)` when `0x38874` is 0. The idle task at `0x1D8` also calls `0xE9C(1)` once its counter passes the limit. No flash literal names `0x1100156C`. `0xE9C` reaches the C7000 only through ROM (`0x1924` calls `0xFCFF8268`).
+2. FW43, sha256 `87bc80d1780b6e7e753546d3777ccdeda7d1e67d9eed2f1ff7ddc869562ffb66`, calls `0xE9C(0, 0)` from `0x5B700` at the end of the restore. F43D, sha256 `b0dd78e3825e09d6bcae9537fa90108b80dfb47c41f922b506b653746e788696`, is that image with opcode 14's window `[0x30000, 0x11020000)` so both bytes can be read. Loaded at 18:17, 140 s, tag read back.
+3. Fresh on channel 58: `0x38875` = 0, `0x1100156C` = 1. The symbol key's `0x26` on and off were acked, status 3 then 4. The reads after `sym done` returned `raw40 none`. The 5 s tone sent both `0x26` frames and neither was acked. No status 3. `restartmodule` read the tag back.
+
+The spin counter for FW43-D4 does not fit in the 22 bytes between the new call and the live function at `0x5B720`. Question: where should that counter live, or is the next read somewhere else?
 
 **Stuck (17:56).** Static, then F42E. No hold frame.
 
