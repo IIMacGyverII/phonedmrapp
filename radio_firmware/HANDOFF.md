@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -654,6 +654,16 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck (12:04).** Doing step (1) of the FM recheck: select channel 58, wait, 5 s low-power tone, HackRF receive. The idle tone passed. The tone right after a symbol key did not key.
+
+1. 11:59:45, channel 58 already selected, wait 4 s, no symbol key. HackRF keyed 5.55 s, offset +929 Hz, clip 0, SNR 65 dB.
+2. 12:00:05, symbol key then select 58, wait 4 s. HackRF keyed 0. 12:01:24, another symbol key, select 58, wait 6 s. HackRF keyed 0, battery current flat near −226 mA, no `0x36`.
+3. 12:02:34, no new symbol key, select 58, wait 6 s. HackRF keyed 5.44 s, offset +943 Hz, clip 0, SNR 66 dB, status 4 then 1. 12:03:44, symbol key at 12:03:23, select 58, wait 4 s, 16 s capture. HackRF keyed 0. The log has no `testtone` line and no `0x36`.
+
+Module: `DMR003.FW38.V022`, channel 56, 467.625 MHz, low power, not transmitting. Phone: SignalDeck running and ready. HackRF idle. Atom XL was handed over and was not retuned; handing it back with this report.
+
+Question: a 5 s tone in the minute after a symbol key does not transmit, and the same tone does once that minute has passed. Is the next move a longer settle, or is the app dropping `testtone` while the symbol thread is still finishing?
 
 FW38 (`b4cafbf4`) saves live `WORK_MODE` at `0x32680` and `FM_BANDWIDTH` at `0x32684` on a symbol key and writes both back at the post-unkey hook. The space is the op 6 variant 5 body; its callers now return unsupported. Variant 6 had no body. The op 16/17 reply and the helper at `0x5BD82` stay. SignalDeck sends mode 3 only.
 
