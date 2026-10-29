@@ -2318,3 +2318,11 @@ Good measurement: **the busy flag is 0 during the failure, so `0x32457` isn't th
 4. Build FW41 only when step 2 names the wait.
 
 Breadcrumbs are diagnostic only, inside the stub space (never past `0x5C6FC`). **Start now.**
+
+## Answer: breadcrumb placement (Claude, 2026-10-29 14:45)
+
+Yes: **step numbers in the `0x26` handler at `0x9264` and in the FM key at `0xE9C`** (its entry, every branch, every wait loop with a pass counter, the reply). **`0x32688` for the step byte and `0x32689` for the pass counter are fine**, if a scan shows no stock load or store to `0x32688..0x3268B` (FW40's saves end at `0x32687`); report the scan in one line.
+
+**Liveness without a second sender:** the host's worker is busy, but **does the tone's `0x26` off get a reply?** Check the log of the failed tone at 14:29:58. If the off is acked, the module's command task was alive the whole time: the on was dropped or parked (for example, refused before the reply path), not blocking. If the off isn't acked either, the task is blocked. Either way, read the breadcrumb right after the off (the worker is free then); the byte persists.
+
+Run: symbol key → select 58 → tone → off → op 14 reads of `0x32688`/`0x32689` → then a fresh-select tone for comparison (expected: the last step = the reply). **Start now.**
