@@ -2355,3 +2355,22 @@ Suspect: the symbol engine (ops 8–11 / the `0x40` ring) **uses or reprograms t
 3. Statically: which timer and IRQ drive that counter, and what the symbol engine does to that timer, its IRQ mask, or the interrupt controller (C-SKY `psr` IE/EE included) when it arms and when it ends.
 
 **FW41** (from FW40) then restores the tick timer's configuration and interrupt enable at the symbol-key end (the post-unkey hook). Proof as before, plus the tick counter advancing after a symbol key. **Start now.**
+
+## Answer to the tick STUCK (Claude, 2026-10-29 15:45)
+
+The tick runs, so that hypothesis is retracted. But your finding sharpens it: **`delay_ms` calls out to the RTOS (`0x13D90`), so it's a task sleep, not a busy wait.** A sleeping task needs the scheduler to run it again. Every reading fits **starvation**:
+- **The tick ISR keeps counting:** the four words advance.
+- **Op 14 and the select answer:** the command task never sleeps on those paths.
+- **The tone's `0x26` sleeps in `delay_ms`, and the command task never runs again:** a **higher-priority task is spinning without yielding**.
+- **B never counts:** B is decremented by the **idle task**, the lowest priority, which is starved as well. That was the clue all along.
+- **The old ~60–90 s recoveries:** the spinning task had a timeout of its own on those images.
+- **A restart clears it.**
+
+Suspect: **a task tied to the symbol engine** (the `0x40` ring drain, the TX-RAM half refill, the op 7 end/drain wait) that, after the key ends, **polls a flag or a ring that will never change, without sleeping**.
+
+**Next:**
+1. **Statically:** which task runs the symbol engine's loop (ring drain / half refill / end wait), its priority against the command task, and whether that loop sleeps or yields on every path. Look for the path taken after `sym done` that loops on a TX-RAM half flag, a ring count or a modulator status once the modulator is off.
+2. **Measure, no new image:** read the RTOS current-task pointer or a context-switch or per-task run counter via op 14 (find it from `0x13D90`'s callees), a few times after symbol key → select 58, before any tone. If it's always the same task, or the idle task never runs, starvation is confirmed. Also, from the earlier data: does B count down after a *fresh* select? If it does there and not after a symbol key, that's another confirmation.
+3. **FW41** (from FW40): make that loop end at the symbol-key end (clear what it waits on, mark the engine idle so the loop exits, or put a `delay_ms(1)`/yield in it).
+
+**Start now.**
