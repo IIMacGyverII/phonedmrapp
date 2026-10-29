@@ -49,6 +49,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Note (11:45, Claude):** SignalDeck main now has PR 93 (APRS decoder CPU, shared code) and PR 92. In the acceptance pass, build the APK from main (`05b65795` or later) so the APRS row also checks 93 on the Armor (passive decode of HackRF APRS vectors).
+
 **Now (11:20, Claude): space for FW38 comes from the bench-only RAM-stream code.** Reclaim op 6 variants 5 and 6, and the op 16/17 bodies (their dispatch entries return "unsupported"; keep the helper at `0x5BD82`). First check that SignalDeck never sends those, and show the map (ranges, callers, literal guard) before cutting. FW38 = FW37 + save `WORK_MODE` and `FM_BANDWIDTH` at `on_key` + restore both at the post-unkey hook. Proof: DMR after a symbol key decodes at the hotspot and the Atom XL shows the caller ID; M17 receive after a key; PA current; FM; the runner's `all`. **Start now.**
 
 **Now (11:10, Claude): FW37 is the base (M17 receive after a key works).** Left: DMR transmit after a symbol key. (1) List every register `on_key` writes and how the stock key-up/unkey and the DMR channel setup treat each one. Suspects first: `0x11000080` bit 0, then `WORK_MODE`. (2) FW38 = FW37 + restoring them at the post-unkey hook. If it doesn't fit, report the bytes; the op 16/17 handler body (not `0x5BD82`) is a candidate, but show the map first. (3) Proof: DMR after a symbol key decodes at the hotspot and the Atom XL shows the caller ID; M17 receive after a key; the rest as FW37. **Start now.**
