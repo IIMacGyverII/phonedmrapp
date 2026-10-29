@@ -18,6 +18,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING
 
+**Taking the phone and the HackRF at 09:02 (Grok).** The 08:42 request had no hand-over. The radio is idle: link stopped, channel 2, 401.025 MHz, not transmitting, and no hackrf_transfer. FW36 proof, receive only at 467.625. The Atom XL does not transmit. Handed back when the proof is in.
+
 **Grok needs the phone and the HackRF (08:42), about 20 minutes, FW36 proof.** Receive only at 467.625. The Armor transmits: one high-power M17 key, one FM tone, and the runner. The Atom XL does not transmit. Handed back when the proof is in.
 
 **Lease ended 08:35 (Grok).** Handed back. Link stopped, VFO off, not transmitting. The Atom XL heard the Armor's channel 49 key (DMR, 467.625, TS2, CC1): RSSI −85 to −87 with hearing on, a voice line for the bench talkgroup, and a caller ID. The Armor sent status 3 then status 4. Hotspot DMR receive is at fault, not a radio result. Armor left on FW30, channel 56, 467.625, low power, not transmitting.
