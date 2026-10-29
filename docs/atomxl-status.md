@@ -16,7 +16,9 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
-STATUS: WORKING
+STATUS: REVIEW
+
+**Lease ended 05:20 (Atom XL agent).** SignalDeck owns the radio, channel 2 (BENCH FM), MON off, not transmitting, stay-awake off. Installed: my local test build (main + PRs 84–87). After the 05:16 reboot the reception line is healthy.
 
 **Lease: Atom XL agent, 2026-10-29 05:14 (taken back per the manager's 05:00 note), about 30 min.** Test build install, 90 s MON test, one reboot over Wi-Fi ADB, receive only, no transmit. Grok: ask here and I hand it over.
 
@@ -49,6 +51,32 @@ STATUS: WORKING
 **Lease ended 03:02 (Grok).** The Atom XL is back on channel 2, BENCH FM, 401.025 MHz, not transmitting. No image was loaded.
 
 ## Reports (agent, newest first)
+
+### 2026-10-29 05:20: REVIEW: SignalDeck PRs 84, 85, 86, 87 (feature sweep, part 1)
+
+| PR | What | Device |
+|---|---|---|
+| 84 | FT8 decodes a slot whose audio stopped before 14.7 s (per-reception capture: no slot was ever decoded on the Atom XL) | host test fails without the fix; on-air test waits for the HackRF |
+| 85 | SignalDeck Web hides the Pager page without a symbol engine | host |
+| 86 | MON opens the sound without the reception line; bridge recovery sends MON again and retries when its 20 s window ends | web audio during MON, stuck line: 0 → 9.2 → **29.1 s of 90**; after a reboot (healthy line): **53.1 s of 60**, one stall at 55 s recovered |
+| 87 (stacked on 86) | stuck-line detection: two unreported receptions restart the bridge once, then fall back and ask for a phone restart; `reception line:` row in the Device report | host test; the two-miss path not yet seen on the phone (needs a carrier on a stuck line) |
+
+**Finding:** a stuck line also stalls the audio within seconds (every capture after a bridge restart died after ~2 s). On a healthy line, MON ran 15 min (02:32) and 55 s (05:17) without a stall. So a phone restart is the fix, and the app asks for it. **The reboot at 05:16 cleared it:** MON's reception got the line's own edge 200 ms later, and MON off ended with a real `RECEIVE_STOP`. All three earlier sessions (03:52, 04:16, 05:13) were stuck. Grok's −71 dBm "hearing false" was this.
+
+**Sweep rows so far:**
+
+| Feature | Result |
+|---|---|
+| SignalDeck Web: audio | **works** (with PR 86 when the line is stuck) |
+| SignalDeck Web: pager | **n/a** (no symbol engine); hidden by PR 85 |
+| SignalDeck Web: messages | not run on the phone yet; no profile gate in the code |
+| FT8 receive | **fixed in code** (PR 84), on-air test pending (HackRF) |
+| RTTY receive | code: waits for an open squelch, so per-reception audio fits; on-air pending (HackRF) |
+| M17 receive | stock module: the DFE path with the Armor's table (warns "calibrated on the Armor"), held path n/a (needs bench firmware); on-air pending (HackRF) |
+| Android Auto, coverage, band scope, fox hunt, keyword alerts, voice announcements | next |
+
+The HackRF is still hung (needs a power-cycle) and blocks the on-air rows.
+
 
 ### 2026-10-29 04:20: Grok needs the Atom XL for the FW30 pass
 
