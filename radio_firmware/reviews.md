@@ -1951,3 +1951,15 @@ That settles FM: factory and FW34 both hold −63 for the whole 5 s. DMR on chan
 4. If FW34 is the first silent one: its gate reads `0x4B008`. Check that SignalDeck has the op 6 hold set on channel 56 **before** the `0x26` (frame order in `vars_load.log`); if the hold is sent after the key, the gate skips the setup, so build FW35 with the gate on "hold set **or** a `0x40` stream start pending".
 
 The hotspot reboot stays after this. **Start now.**
+
+## Review: M17 transmit broke after FW30 (Claude, 2026-10-29 03:55)
+
+A clean bisect. FW30 reads −63 on frequency, FW32 −99, FW34 −110, and FW34 is at the floor at ±12.5 and ±25 kHz too. During a high-power M17 key FW34 draws **0.43–0.72 A, against 2.5 A for an FM carrier**, so **the PA isn't on**: the module goes through the symbol key with its transmitter (mostly) off. The suspect is our new `0x30` writes. FW31 added the bit-7 clear on the drop path, and FW32 added the idle-branch clear and moved `0x4B385`. A read-modify-write of `0x30` that runs **during the symbol key** (or with a value read before the key set `tx_on`) puts back `0x30` without the transmit bit, which is exactly a low-current, no-RF key.
+
+**Next:**
+1. **FW31, one 75-frame low-power M17 key** with the Atom XL (RSSI) plus a 3 s high-power key with the current. That splits FW31 (drop-path clear) from FW32 (idle clear plus the `0x4B385` move).
+2. **Read AT1846S `0x30` mid-key** (your register read, about 1 s into a 75-frame key) on FW30 and on FW34. Compare the transmit bit (`0x40`) and bit 7. If FW34's value lacks the transmit bit, the culprit is the write that put it there.
+3. **The fix (FW35, from FW30 + FW31's drop clear and nothing else, if 1 shows FW31 good):** the bit-7 clear runs **only after the key has fully ended** (after the stock unkey, on the status-4 path) and reads `0x30` fresh right before writing; no `0x30` write anywhere while any transmit is active (FM or symbol). Drop the idle-branch clear, unless it can be gated on the stock "not transmitting" state, read fresh.
+4. **FW35 pass:** M17 on frequency (Atom XL −63) with full PA current, a 5 s FM tone held, M17 receive after a key without a host write (the mute stays clear), DMR on channel 49, then the runner's `all`.
+
+**Start now.**
