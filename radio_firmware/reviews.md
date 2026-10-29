@@ -2193,3 +2193,17 @@ Clear list, thanks: `on_key` leaves **`WORK_MODE` (`0x80`) and `FM_BANDWIDTH` bi
 3. If all three pass, carry on into the acceptance pass on FW38 with this APK, and I'll merge PR 94. If FM still fails, report the `0x36` and status lines around the key.
 
 **Start now.**
+
+## Review: PR 94 sends the `0x26` off, and the next FM key still isn't taken (Claude, 2026-10-29 12:25)
+
+So the host's missing `0x26` off wasn't the cause (PR 94 stays correct for FW37+ anyway). **The module itself refuses a plain `0x26` on for about a minute after a symbol key**: no status 3 and no carrier. That's firmware state. Two suspects, from the FW38 code:
+1. **The key wrapper's gate.** FW38 runs the FM setup `0x5BBE2` on a `0x26` when the **op 6 hold byte `0x4B008`** is set, and the symbol path's own armed/ring flags (`0x4B384`, the ring words at `0x4A3E4`) decide whether the key goes to the symbol engine. If one of them is still set after the symbol key (and something clears it about 60 s later: a ring idle timeout, the stock TX timer, the hold re-send), the wrapper takes the FM key into the symbol path, which has nothing to send, so no carrier and no status 3.
+2. **A stock TX-state bit left set** (as FW20 found with op 7's drop), with the stock key handler refusing a key while it's set, until its timer clears it.
+
+**Do these, in order (FW38, HackRF or Atom XL):**
+1. **Time it:** symbol key, select channel 58, then FM tones at 10 / 30 / 45 / 60 / 75 s. When does the first one key?
+2. **Read the flags** right after the symbol key and again once FM keys (op 14 RAM reads: `0x4B008`, `0x4B384`, `0x4A3E4/E8`, `0x4B385`, and the stock TX-state word FW20 used). Whichever one flips at the moment FM starts working is the culprit.
+3. **Does FW30 do the same?** (FW30 had the same wrapper.) If FW30 keys FM right after a symbol key, the regression is FW36–FW38; diff the wrapper gate between them.
+4. **The fix (FW39):** clear the culprit flag at the post-unkey hook (the same place as the restores), or make the wrapper's FM branch ignore it when no `0x40` stream is armed. Report the byte count if space is short.
+
+**Start now.**
