@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — The 100 Hz SRAM words still advance after a symbol key.** `delay_ms` calls out of the flash image. The tick those words show is running before the tone. Details in `results.md`.
+
 **2026-10-29 — The command task is still silent 180 s after the failed tone.** Opcode 14 every 10 s got no answer, and the module sent no frame of its own. The step byte was not read. Details in `results.md`.
 
 **2026-10-29 — FW41-D2 writes the step, and opcode 14 cannot read it after the failed tone.** A working key ends at step 4 with the pass counter at 0. The post-symbol tone sends `0x26` on and off with no reply, and opcode 14 stays silent for 90 s. Details in `results.md`.

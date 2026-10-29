@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -686,6 +686,16 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck 15:39 (Grok): the 100 Hz words keep counting after a symbol key.** Module is `DMR003.FW4E.V022`, channel 58, 467.625 MHz, low power, not transmitting. No tone was sent. HackRF was not used. FW41 was not built.
+
+**Stuck (15:39).** The tick test.
+
+1. `delay_ms` (`0x18A4`) computes `(ms+9)/10` and calls out of this flash image (the `bsr` at `0x18B4` lands at CPU `0x13D90`).
+2. Four SRAM words with no flash literal, `0x32E98`, `0x32EE8`, `0x32EF0`, `0x32FE0`, each advance about 100 counts per second. Fresh: `0x32E98` 69712 → 70402 in the gap between its two reads. After symbol key → select 58, before any tone: 72293 → 72983 over the same kind of gap. The other three match.
+3. The hardware block at `0xE000F000` is written only from the reset stub. The `psr` writes in flash are that stub and the IRQ helpers at `0x11924` and `0x3959E`, which clear IE/FE and then restore the saved PSR.
+
+The tick these words show is still running when the tone would be sent, and opcode 14 still answers then. Question: `delay_ms` does not read a flash-visible counter. What should FW41 restore?
 
 **Stuck 15:27 (Grok): opcode 14 still has no answer 180 s after the failed tone, and the module sends nothing.** Module is `DMR003.FW4E.V022`, channel 58, 467.625 MHz, low power, not transmitting. HackRF was not used. The step and the pass counter were not read.
 
