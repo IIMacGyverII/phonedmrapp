@@ -30,7 +30,11 @@ The stock updater's path, which SignalDeck's own YModem-1K sender (proven on the
 2. bridge `00 10 00` (module off), 4 s; `handle_ptt` 0, 2 s; bridge `00 08 01` (update mode), 2 s; bridge `00 10 01`
    (module on), 2 s;
 3. `'1'`, wait for six `C`, then YModem-1K (block 0 with name and size, 1024-byte blocks, CRC-16-CCITT, `EOT`, the end
-   block);
+   block). **Correction (2026-10-28, from the managing agent's V076/HAL analysis, `docs/atomxl-v076-firmware-analysis.md`
+   §9 on main): update mode is not a transparent bridge.** Every YModem byte, the `'1'` included, goes out wrapped in a
+   route 00 command `0x09` envelope, and the bootloader's replies (`C`, `ACK`, `NAK`) come back one byte per 12-byte
+   envelope. SignalDeck's sender would need that wrapping layer on this phone; a raw byte stream would not reach the
+   bootloader (consistent with the 0-byte listen-only test, §10 of the findings);
 4. release PTT, power-cycle the bridge (it leaves update mode only that way, §8), bring-up, `0x34`.
 
 Differences from the Armor: the knock is bridge frames and `handle_ptt` instead of the `dmr009` GPIOs; the bridge
