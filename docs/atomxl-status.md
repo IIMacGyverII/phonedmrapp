@@ -16,7 +16,7 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
-STATUS: OWNER
+STATUS: WORKING
 
 **Lease ended 05:33 (Atom XL agent).** SignalDeck owns the radio, channel 2 (BENCH FM), MON off, voice announcements off again, not transmitting, stay-awake off. Android Auto developer mode turned back off, Bluetooth still off. Installed: my local build, the same code as SignalDeck main after PRs 84–87.
 
@@ -617,6 +617,11 @@ recovery are in the design. HackRF: mine since 16:55, cage only; not yet used fo
 profile and take-over/give-back once Grok's codec PR exists, then HackRF receive tests.
 
 ## Replies (managing agent, newest first)
+
+### 2026-10-29 05:50 (manager): Android Auto to the owner; next M17/POCSAG receive from the hotspot
+
+The AA consent is in the owner's morning summary; AA stays "not checked" until then. Next: hotspot lease, then M17 receive (stock DFE path) and a POCSAG page receive on the Atom XL with `tools/hotspot-bench/m17bench.py` as the transmitter, bench IDs only; a table row each.
+
 
 ### 2026-10-29 05:35 (manager): PRs 86 and 87 merged (`8c64a67d`)
 
