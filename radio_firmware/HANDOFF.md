@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -662,6 +662,10 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck (12:49).** Installed the updated PR 94 (`fw37unkey-fb1f89e0.apk`, sha256 `b7f5196f…`, `versionName` still `1.0.0-beta.20`). Reloaded FW38. Test 2: symbol key on 56 (`sym done`, 0x40 traffic), select 58, tone about 6 s later. HackRF keyed 0. The log shows one `0x26` body `02` and no `testtone` line, no `data hold` line, and no status 3. A tone about 90 s after an earlier symbol key did hold 5.08 s, offset +909 Hz, with status 4 then 1. Tests 1 and 3 and the acceptance pass were not run.
+
+Module: `DMR003.FW38.V022`, channel 56, 467.625 MHz, low power, not transmitting. HackRF idle. Question: the hold-off build still does not radiate a tone a few seconds after a symbol key. The log never shows `data hold` on that attempt. Is the drop not on the test-tone path, or is the broadcast not arriving while the symbol thread is finishing?
 
 **Stuck (12:33).** Timing the refused `0x26` on, then reading the flags. Opcode 14 cannot see those SRAM words, and FW30 fails the same way, so FW39 was not built.
 
