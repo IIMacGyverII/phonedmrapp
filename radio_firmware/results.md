@@ -4488,6 +4488,18 @@ FW30's on-frequency key reads −63. FW31 does not, and the PA does not hold the
 
 End state 04:11: `DMR003.FW31.V022` `997cb714…ac30`, channel 56, 467.625 MHz, low power, not transmitting. Battery 35.2 °C, AP 44.0 °C, PA 40.7 °C. Atom XL link stopped. HackRF still will not open. SignalDeck `a7344f19`.
 
+**FW30 base (07:28–07:30).** Tag read back `DMR003.FW30.V022`. Channel 56, 467.625 MHz. The Atom XL VFO read back `vfo` true and 467625000 before each key.
+
+| Key | Atom XL RSSI | Other |
+| --- | --- | --- |
+| 75-frame, low power, first | −101 for the whole window | Hotspot decoded it, BER 0.0 %, 3.0 s |
+| 75-frame, low power, repeat | −63 five times, frequency still 467625000 | Channel power 0 |
+| 75-frame, high power | −58 six times | During the key: −3418, −2714, −3088, −2824, −2754, −2602, −2778, −2626 mA. Idle after the key about −284 mA |
+
+The hotspot decoded the high-power key as well, BER 0.0 %, 3.0 s. FW30's M17 key is on frequency and the PA holds a full high-power current. Channel 56 was put back to low power.
+
+End state 07:30: `DMR003.FW30.V022`, channel 56, 467.625 MHz, low power, not transmitting. Battery 31.3 °C, AP 38.9 °C, PA 37.0 °C. Atom XL link stopped. HackRF still will not open. SignalDeck `a7344f19`.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.

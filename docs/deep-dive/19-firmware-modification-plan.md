@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — FW30's M17 key reads −63 at low power and the high-power current holds around −2.7 A.** The hotspot decoded both keys. Details in `results.md`.
+
 **2026-10-29 — FW31's M17 key stays at the floor (about −110) and the high-power current does not hold at the FM level.** Opcode 18 did not answer. FW35 was not built. Details in `results.md`.
 
 **2026-10-29 — FW30's M17 key reads −63. FW32 and FW34 stay at the floor, and FW34 is not at ±12.5 or ±25 kHz.** Details in `results.md`.
