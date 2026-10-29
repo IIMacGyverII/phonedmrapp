@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — The Atom XL hears a hotspot transmission (RSSI −103 to −71).** A high-power key draws about 2.5 A for the whole 3 s on the factory image and on FW34. Details in `results.md`.
+
 **2026-10-29 — The Atom XL at 467.625 stayed at −102 through a factory FM tone and three FW34 keys.** Hearing never opened. The hotspot's last RF line is 01:54:53 UTC. Details in `results.md`.
 
 **2026-10-29 — FW34 gates the FM setup on the op 6 hold byte at `0x4B008`.** A DMR control on channel 49 left no hotspot RF line before or after an `mmdvmhost` restart, and the FW34 M17 key left none either. Details in `results.md`.

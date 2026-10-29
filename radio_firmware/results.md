@@ -4436,6 +4436,21 @@ The VFO was exited. The Atom XL is on channel 2, BENCH FM, 401.025 MHz, not tran
 
 End state 03:02: Armor `DMR003.FW34.V022` `7b64a823a4c3af5e…9f8f`, channel 56, 467.625 MHz, low power, not transmitting. Battery 35.4 °C, AP 42.7 °C, PA 40.4 °C. HackRF still will not open. SignalDeck `a7344f19`.
 
+**Atom XL validation and battery current (03:06–03:15).** The Atom XL's link was stopped. After take-over, the VFO read back 467625000. A 3 s hotspot transmission moved RSSI from −103 to −71 (6 of 11 samples above −90). Hearing stayed false. VFO exited and the radio was handed back; the link then read stopped.
+
+`current_now` is permission-denied without root. The first pass, read as the shell user, was empty. That empty pass is not a current. It did power the module off for 15 s. The samples below are after that, read with root. Discharge is negative. Median:
+
+| Case | Idle | Key |
+| --- | --- | --- |
+| Factory, channel 58, 5 s low | −274 mA | 0 mA (the gauge sits on 0) |
+| Factory, VFO high, 3 s | −274 mA | −2576 mA for the whole key |
+| FW34, channel 58, 5 s low | −284 mA | 0 mA (the gauge sits on 0) |
+| FW34, VFO high, 3 s | −284 mA | −2687 mA for the whole key |
+
+High-power current does not fall off after one second on either image.
+
+End state 03:15: `DMR003.FW34.V022`, channel 58, 467.625 MHz, low power, not transmitting. Battery 35.6 °C, AP 43.4 °C, PA 41.2 °C. Atom XL handed back. HackRF still will not open. SignalDeck `a7344f19`.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.

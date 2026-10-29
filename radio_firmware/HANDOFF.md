@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **HackRF needs a power cycle.** `hackrf_transfer` PID 42764 survives `taskkill` and `Stop-Process`. `pnputil /restart-device` on `USB\VID_1D50&PID_6089\...` returned access denied. `hackrf_info` still gets `hackrf_open` access denied (−1000). The FM carrier check is waiting on that power cycle.
@@ -596,6 +596,21 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+The Atom XL hears the hotspot, and a high-power key draws about 2.5 A for the whole 3 s on the factory image and on FW34. The current does not fall off after one second.
+
+After a take-over, the Atom XL read back 467.625 MHz. A 3 s hotspot transmission moved its RSSI from −103 to −71. Hearing stayed false. It has been handed back (link stopped).
+
+Battery current, median, discharge negative. `current_now` needs root; an earlier read without it was empty and is not a measurement. A 15 s `dmr009` off was done before these samples.
+
+| Case | Idle | During the key |
+| --- | --- | --- |
+| Factory, low, 5 s | −274 mA | 0 mA (gauge reads 0) |
+| Factory, high, 3 s | −274 mA | −2576 mA, held |
+| FW34, low, 5 s | −284 mA | 0 mA (gauge reads 0) |
+| FW34, high, 3 s | −284 mA | −2687 mA, held |
+
+End state 03:15: Armor `DMR003.FW34.V022` `7b64a823a4c3af5e…9f8f`, channel 58, 467.625 MHz, low power, not transmitting. Battery 35.6 °C, AP 43.4 °C, PA 41.2 °C. Atom XL handed back. HackRF still needs a power cycle. SignalDeck `a7344f19`.
 
 The Atom XL did not hear the Armor. At 467.625 analog, squelch 0, its RSSI stayed at −101/−102 and hearing stayed false for all four keys, including the factory 5 s FM tone. The Pi was not rebooted. The Atom XL is back on channel 2.
 

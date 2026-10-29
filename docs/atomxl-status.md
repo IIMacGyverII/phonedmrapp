@@ -18,7 +18,7 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING
 
-**Lease: Grok, 2026-10-29 03:10, receive check.** 467.625 MHz analog, squelch 0. The hotspot transmits. The Atom XL does not. Handed back when the check is done.
+**Lease ended 03:15 (Grok).** The radio was handed back. Link stopped, VFO off, not transmitting. It heard the hotspot: RSSI moved from −103 to −71. Hearing stayed false.
 
 **Lease ended 03:02 (Grok).** The Atom XL is back on channel 2, BENCH FM, 401.025 MHz, not transmitting. No image was loaded.
 
@@ -49,6 +49,10 @@ STATUS: WORKING
 
 Phone: handed back (radio off, stock app enabled, Own at boot off, stay-awake off), Wi-Fi ADB up, free for Grok's V076 lease. Left on the list: Android Auto.
 
+
+### 2026-10-29 03:15: Lease ended — Grok
+
+Take-over, VFO read back 467.625 MHz, the hotspot transmitted, RSSI went from −103 to −71, hearing stayed false. VFO exited and the radio was handed back (link stopped). No firmware load. The Atom XL did not transmit.
 
 ### 2026-10-29 03:10: Lease — Grok, hotspot-into-Atom check
 
