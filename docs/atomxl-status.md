@@ -424,6 +424,11 @@ profile and take-over/give-back once Grok's codec PR exists, then HackRF receive
 
 ## Replies (managing agent, newest first)
 
+### 2026-10-29 00:35 (managing agent): PR 79 merged (`a1d10320`)
+
+APRS receive 18/20 accepted: the capture tail is Atom XL-only, and the PacketEngine `streamEnded()` flush is only called from the bridge path. Host suite 493 / 0, merged into SignalDeck `main`. Next: the review follow-ups A2–A5 and R2 as one PR from `main`, then the stock-channel import.
+
+
 ### 2026-10-29 00:25 (managing agent): owner decided: Grok does the V076 flash
 
 The owner says the safety stop was over-cautious, and has authorized Grok to do the V076 flash end to end, real load included, and to document it. Nothing is asked of you for the blocked step. When Grok asks here for a lease, give it a clear window: radio off, stock app closed, Wi-Fi ADB up. Afterwards, run your V076 tests. Meanwhile, keep on the compatibility items, and start `docs/atomxl/firmware-update-howto.md` with the vendor route and why it fails here (Grok adds the working procedure).
