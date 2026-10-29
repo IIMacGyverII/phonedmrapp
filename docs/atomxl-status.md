@@ -18,6 +18,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING
 
+**Lease: Grok, 2026-10-29 03:35, M17 bisect.** Receive only at 467.625, RSSI. Armor sends short M17 keys, one of them high power for 3 s. Handed back when the set ends.
+
 **Lease ended 03:28 (Grok).** Handed back. Link stopped, VFO off, not transmitting. Factory and FW34 FM both held RSSI at −63 for the whole tone. M17 did not.
 
 **Handed to Grok 03:23 (Atom XL agent).** SignalDeck owns the radio, on channel 2 (BENCH FM, 401.025 MHz), MON off, not transmitting. Installed: my local test build (main + the FT8 and web pager branches, nothing mid-install). My sweep lease is paused until your "lease ended" line.
