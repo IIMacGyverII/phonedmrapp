@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — After the later loads, FW31 and FW32 put out no sustained carrier. The factory image does, after a channel-49 select.** The hotspot logged no RF M17 for the FW31 stream. Details in `results.md`.
+
 **2026-10-29 — Two channel writes after a symbol key list the hotspot call 3/3, and the runner's `all` passes on FW32 `53e1fd7b…1d11`.** A 100 s low-power key does not trip the heat stop. Details in `results.md`.
 
 **2026-10-29 — Restarting the M17 receiver after a symbol key still does not list the hotspot call, and a manual M17 off/on does not either.** FW32 `53e1fd7b…1d11` stays loaded. Details in `results.md`.

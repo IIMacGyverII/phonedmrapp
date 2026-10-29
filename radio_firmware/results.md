@@ -4346,6 +4346,14 @@ Not run in this pass: DMR both ways, FM CTCSS transmit, APRS, POCSAG, FT8/RTTY, 
 
 End state 01:06: `DMR003.FW32.V022` sha256 `53e1fd7b…1d11`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −105. Battery 37.8 °C, AP 44.7 °C, PA 43.3 °C. HackRF idle. SignalDeck `f305486a` (`a7344f19`).
 
+**Hotspot A/B (01:08–01:30).** The MMDVM log had stopped at 05:51 UTC while the process from the 23:58 CDT restart was still up. The FW32 runner stream at 00:52 CDT fell in that gap. A restart at 06:13 UTC logs again. Settings then: RX and TX frequency 467625000, `RXOffset=-450`, `RXLevel=50`, `RFLevel=20`, `M17TXLevel=50`, `RXInvert=0`, `TXInvert=1`. Its own network M17 still logs (06:14:39 UTC, 2.0 s).
+
+FW31 `997cb714` was loaded. A 1125-frame key finished (`sym done bytes=54144`, unkey). A 75-frame key finished (fill 1460, status 4, `rewritten twice true/true`). The hotspot logged no RF M17 for either. A HackRF capture of a later 75-frame key and of a 2 s test tone on FW31 was the noise floor (power ~4.7) except one 0.5–1 s burst at power ~35–66. The same on FW32 after it was loaded back: symbol key one second at 51, test tone all ~4.7, including after selecting channel 49.
+
+The factory image, after selecting channel 49, radiates a 2 s test tone at power 500–630 (HackRF, same gain). That was repeated after a second factory load: power 586, 501, 584. A channel select on the patched images did not restore the carrier.
+
+End state 01:30: factory `DMR003.UV4T.V022` sha256 `90e361fd…`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107. Battery 36.8 °C, AP 42.7 °C, PA 41.3 °C. HackRF idle. SignalDeck `a7344f19`. The patched images are not radiating a sustained carrier, so the hotspot decode was not repeated.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.

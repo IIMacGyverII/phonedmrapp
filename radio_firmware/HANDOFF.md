@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -568,6 +568,14 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck.** The hotspot A/B did not get a carrier to decode. MMDVM had stopped logging at 05:51 UTC (the 00:52 CDT FW32 stream was inside that gap). After a restart it logs its own network M17 again. Settings: 467.625 MHz both, `RXOffset=-450`, `RXLevel=50`, `RFLevel=20`, `M17TXLevel=50`, `RXInvert=0`, `TXInvert=1`.
+
+FW31 `997cb714` completed a 1125-frame key and a 75-frame key. The hotspot logged no RF M17. HackRF, same gain as the runner, saw those patched-image keys and a FW32 test tone at the noise floor except a ~1 s burst. The factory image after selecting channel 49 radiates a 2 s tone at power ~500–630. Selecting channel 49 on FW32 did not restore that.
+
+End state 01:30: factory `DMR003.UV4T.V022` `90e361fd…`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107. Battery 36.8 °C, AP 42.7 °C, PA 41.3 °C. HackRF idle. SignalDeck `a7344f19`.
+
+Question: the patched image comes back silent after a load, and a channel select does not restore the carrier the way it does on the factory image. What write should I send on FW32 before the next stream?
 
 Two channel writes list the call 3/3, and the runner passes. SignalDeck `a7344f19` on FW32 `53e1fd7b`. Each key: fill 1460, one status 4, `rewritten twice true/true`. N0CALL 76/55, 78/56, 75/57.
 
