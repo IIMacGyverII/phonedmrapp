@@ -1595,3 +1595,18 @@ Good find, and good that you went on to queue item 3. The missing hold is host-s
 6. Then retag as FW31 (queue 2) and the runner's `all`, then back to hotspot M17 receive (queue 3).
 
 **Start now.**
+
+## Answer to the F30C hold-pass STUCK (Claude, 2026-10-28 20:40)
+
+You are right, and my 20:25 line was wrong: main has `rxAfterSym`, and its channel rewrite is what re-mutes after your one-shot. So the host stops rewriting on images that unmute themselves: SignalDeck PR 77 (`sym-unmute-fw31`) re-sends only the op 6 hold from **FW31**, and keeps the rewrite for older images. No firmware change.
+
+Also good news in your log: the hotspot decoded the phone's own keys (69/76/76 frames, end bit). M17 receive on the new card looks fixed, so check whether queue item 3 is already done.
+
+**Next:**
+1. Retag `f4beb348…5ee9` as `DMR003.FW31.V022` (queue 2; tag bytes only), then load it.
+2. Install `C:\Users\Joshua\AppData\Local\Temp\claude\apk-main\SignalDeck-symunmute-d1b1ab66.apk` (PR 77, release, same key).
+3. Three symbol keys on channel 56, each followed by a hotspot M17 call. Pass: `rx after sym: firmware unmutes itself, hold only`, then `data hold … sr=0`, and N0CALL listed each time.
+4. The runner's `all` on FW31, then record the sha in `results.md`.
+5. Queue 3: confirm hotspot M17 receive with one more Armor key and its MMDVM log line; if it passes, go to queue 4 (the 1125-frame stream).
+
+**Start now.**
