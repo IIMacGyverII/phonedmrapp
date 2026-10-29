@@ -4374,6 +4374,12 @@ A channel-56 tone's log is only `0x26` on and, 2.4 s later, `0x26` off. No statu
 
 End state 01:52: `DMR003.FW32.V022` sha256 `53e1fd7b…1d11`, channel 49, 467.625 MHz, low power, not transmitting. Battery 36.0 °C, AP 45.3 °C, PA 43.0 °C. HackRF idle. SignalDeck `a7344f19`.
 
+**Channel 56 frame against the 20:38 frame (01:57).** No tone. FW32 `53e1fd7b` still loaded, SignalDeck `a7344f19`. Stored row 56: type 2, name Bench M17, rx and tx 467625000, power 0, band 1, squelch 0, all four tone fields 0, colour code / CAN 7, relay 2, destination N0CALL. Stored row 49: type 0, name dmr test, same frequency both ways, power 0, band 1, squelch 0, colour code 1.
+
+Selecting 49 sent one `0x22` of length 163. It sent no `0x23`. Selecting 56 sent `0x23` body `28 64 DF 1B 28 64 DF 1B 01 00 00 00 00 00 00 02 08 02 02` and then `0x40` `[06 03 01]`. That body is the 20:38 frame from `fw31_pass.log` (the FW31 load whose keys the hotspot decoded): both frequencies 467625000, band 1, power 0, squelch 0, tones 0, save 2, volume 8, monitor 2, relay 2. No byte differs. The row was not changed.
+
+End state 01:58: `DMR003.FW32.V022`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107. Battery 36.1 °C, AP 43.0 °C, PA 41.5 °C. HackRF idle. SignalDeck `a7344f19`. Acceptance was not started.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.

@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -576,6 +576,14 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck.** The 01:55 comparison found no byte to fix. At 01:57, channel 56's stored row is type 2, 467.625 MHz both ways, power 0, band 1, squelch 0, tones 0, CAN 7, destination N0CALL. Its `0x23` body is `28 64 DF 1B 28 64 DF 1B 01 00 00 00 00 00 00 02 08 02 02`, then `0x40` `[06 03 01]`. That is the 20:38 frame, byte for byte, from the FW31 load whose keys the hotspot decoded. Channel 49's select sends `0x22` length 163 and no `0x23`. The row was not edited. No tone. Acceptance was not started: this is the same write that leaves the carrier dead.
+
+Tried: (1) read both stored rows; (2) select 49 and log the write; (3) select 56 and log the write. No load, no HackRF, no key.
+
+End state 01:58: `DMR003.FW32.V022` `53e1fd7b…1d11`, channel 49, 467.625 MHz, low power, not transmitting, RSSI −107. SignalDeck `a7344f19` ready. Battery 36.1 °C, AP 43.0 °C, PA 41.5 °C. HackRF idle.
+
+Question: the frame and the row match the radiating 20:38 select. What should change before the acceptance pass, which starts with M17 on channel 56?
 
 It is channel 56, on both images. A 2 s low-power tone, HackRF power per second:
 
