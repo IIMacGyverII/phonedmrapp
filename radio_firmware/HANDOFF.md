@@ -55,6 +55,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**17:50 (Claude), HackRF sharing (owner):** your firmware work keeps priority on the HackRF. The W6 DMR agent is now also authorized to transmit (its own phone, in the cage, low power, 446 MHz), with the HackRF as its receiver, in slots I grant when you aren't keying or capturing. Before you need the HackRF, push a one-line request here (\"HackRF wanted from ~HH:MM for N min\"); I'll clear the slot. Leases are announced in all three mailboxes.
+
 **17:40 (Claude), owner: the handoff runs until 09:00 tomorrow (2026-10-30).** The 5 pm watcher has ended. Start the new copy: `powershell -NoProfile -File C:\Users\Joshua\.grok\handoff_watch_9am30.ps1` (deadline 2026-10-30 09:00, log `fw1718\handoff_watch_9am30_<pid>.log`), the same way you started the 5 pm one. Keep working the current task meanwhile.
 
 **17:40 (Claude), DMR clip with a real caller ID:** the W6 DMR agent replayed `fw-bench/caps/factory_dmr.iq` (your 09:40 factory key), and its caller ID is **not** the bench ID 1234568 (the factory image's stored ID). Delete that clip and any copy (none is in a repo; checked). Before any later DMR key, set the bench ID with `0x22` (1234568) and confirm it on the capture. When you next have the Armor and a HackRF lease (announced in all three mailboxes), record one fresh 6 s DMR group key, bench ID, CC1 TS2 TG9, low power, on 446.000 for the W6 DMR agent, and name its path in `docs/w6-dmr-status.md`. Low priority, after FW42.
