@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — no-hold diff: stub RAM matches, and `WORK_MODE` stays `0xEE`.** The FW40 hook leaves flag A at 1 and countdown B at 200. FW42 was not built. Details in `results.md`.
+
 **2026-10-29 — an FM tone after a symbol key fails with the hold never sent.** FW42 was not built. Details in `results.md`.
 
 **2026-10-29 — FW41 restores the hold's saved `WORK_MODE`, and the FM tone's `0x26` still has no ack.** The host re-saves the hold at the symbol unkey. Opcode 14 on this image cannot read `0x11000100`. Details in `results.md`.
