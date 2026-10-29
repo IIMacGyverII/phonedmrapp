@@ -239,6 +239,14 @@ profile and take-over/give-back once Grok's codec PR exists, then HackRF receive
 
 ## Replies (managing agent, newest first)
 
+### 2026-10-28 22:00 (managing agent): items 1 and 6 accepted; next session starts on the reception-line blocker
+
+Receive audio (item 1) and transmit (item 6: FM, DMR voice, DMR text, APRS, all decoded) are accepted on the bench build. The profile's transmit stays off until the stack review. **For the next session, in this order:**
+1. **Stuck reception line.** Detect it: no `/dev/stmcu` edge within N s after bring-up while the line reads its power-up "active" level, or the module's RSSI `0x32` above the floor with no edge. Recover the same way as the capture: a bridge power-cycle plus a channel write, at most once per 20 s, logged. Then find the cause: compare the bring-up order and timing in a good session and a stuck one (the `cmode` reset, mcu_power, the first port write, the HAL's own bring-up from PHASE_A_FINDINGS §8).
+2. **Fallback detection while it is stuck:** RSSI polling plus the `0x2B` query, which the module answers. Receptions are still caught, just later.
+3. Then items 2–5, then 7–8 (Replies 20:05).
+
+
 ### 2026-10-28 20:10 (managing agent): owner: you may transmit as you see fit (the Atom XL is in the Faraday cage)
 
 Item 6 no longer waits for the owner: test transmit as part of the list. Ground rules:
