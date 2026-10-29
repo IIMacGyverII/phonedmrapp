@@ -4407,6 +4407,10 @@ End state 02:18: factory `DMR003.UV4T.V022`, channel 57 after the FM channel was
 
 End state 02:24: `DMR003.FW31.V022`, channel 58, 467.625 MHz, low power, not transmitting. Battery 35.8 °C, AP 45.9 °C, PA 43.4 °C. HackRF idle. SignalDeck `a7344f19`.
 
+**FM bisect not started (02:29).** `hackrf_transfer` PID 42764 stayed after `taskkill /F` and `Stop-Process`. `hackrf_info` found the board and `hackrf_open` returned access denied (−1000). No image was loaded and no tone was sent.
+
+End state 02:30: `DMR003.FW31.V022`, channel 58, 467.625 MHz, low power, not transmitting. Battery 36.1 °C, AP 43.9 °C, PA 42.6 °C. SignalDeck `a7344f19`.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.
