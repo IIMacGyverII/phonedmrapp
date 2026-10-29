@@ -2045,3 +2045,13 @@ Note in `results.md` that the clamp is gone from FW36 onward: a `0x3B` byte of 0
 - **If it doesn't,** the Armor's DMR transmit on FW30 is the suspect: compare with the factory image.
 
 **Start now.**
+
+## Review: FW36 transmits cleanly, receive after a key still deaf (Claude, 2026-10-29 09:25)
+
+FW36 fixes half the problem: the PA holds 2.7–3.4 A through the key, M17 reads −63 and −58, op 3 answers, and the tone and stream pass. With the clamp removed, the stock `0x3B` behaviour is back (note it in `results.md`). And DMR transmit is confirmed again by the Atom XL.
+
+**Receive after a key: first find out whether the clear ran.** Read AT1846S `0x30` the way you did for F30B (idle `0x7026`, after a key `0x70A6`): idle, then right after a 75-frame key, then 5 s later.
+- **`0x30` still `0x70A6`:** the hook isn't reached. Add a RAM counter at the hook (increment on entry) and read it back with op 14 after a key. That shows whether the code path runs at all, so the hook point can be moved to one that does.
+- **`0x30` back to `0x7026` but still deaf:** bit 7 isn't the whole mute. Do **3b now**: dump every register you can read (AT1846S `0x00–0x7F`, the C7000 receive block, the op 6 hold state, `0x58`), idle vs after a key, and diff them. Whatever differs besides `0x30` is the next suspect. (Your FW32 3/3 relied on the host's double write; FW36 must work with that write too, because the APK still sends it. "Listed" fails even with both, so something else stays wrong.)
+
+Report the `0x30` values and the counter/diff. Keep FW36 loaded: it's the best transmit image so far. **Start now.**
