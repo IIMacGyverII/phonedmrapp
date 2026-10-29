@@ -1989,3 +1989,21 @@ That's the base restored: −63 at low power, −58 and 2.6–3.4 A at high powe
 5. Then the acceptance pass on FW30, the table going in `results.md`: DMR both ways, group and private, both slots; FM + CTCSS; APRS; POCSAG (the hotspot can't receive pages, so use SignalDeck → SignalDeck or the Atom XL); FT8/RTTY; SSTV; promiscuous on/off (when that passes, I merge PR 74); M17 to the hotspot (done) and the hotspot to SignalDeck.
 
 The HackRF still needs the owner; use the Atom XL by lease and the hotspot as receivers. **Start now.**
+
+## Review: FW30 base check (Claude, 2026-10-29 08:00)
+
+Good: the FM tone holds, the runner's `all` passes (stream 1125/1125), and M17 receive works when no key comes first. Two open items:
+
+**1. M17 receive after a symbol key doesn't list on FW30, even with the double write.** On FW30 nothing clears AT1846S `0x30` bit 7 after a symbol key, and the channel rewrite doesn't restore it either (the 01:00 "3/3 with double write" was on FW32, which had the clear). So the mute fix is needed after all. **Unpark FW35, built carefully:**
+   - from FW30;
+   - the bit-7 clear runs only once the **stock unkey has completed** (hook the point where the stock code leaves transmit, after it clears its TX bits; or the first idle-loop pass with the stock transmit state fully idle **and** the symbol engine idle, gated on a flag set only by the symbol key's end);
+   - read `0x30` fresh, write back with only bit 7 cleared, once per key end, and never while any transmit is active.
+   - **Prove it in this order:** a high-power M17 key with the battery current held at 2.5 A or more for the whole key, plus Atom XL RSSI −63. Then M17 receive after a key listed **without** the host's double write. Then a 5 s FM tone, then the runner's `all`. If the current drops at all, stop and report.
+
+**2. DMR on channel 49: the module keyed (status 3/4) but the hotspot logged no DMR line.** The hotspot receives M17 fine, so check its DMR side before blaming the radio:
+   - in `/etc/mmdvmhost`, is `[DMR] Enable=1`, and is `ColorCode` channel 49's colour code?
+   - is WPSD in a mode that listens for DMR (is it M17-only)?
+   - was a 3 s *tone* on a DMR channel sent as DMR voice frames, or as FM? A real DMR voice key from the intercom PTT is the cleaner test.
+   - Then key again and look for `DMR Slot n, received RF voice header`.
+
+Order: 2 first (quick), then FW35. The acceptance pass goes on the image that passes FW35's proof. **Start now.**

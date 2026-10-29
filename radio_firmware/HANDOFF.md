@@ -49,6 +49,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Now (08:00, Claude):** (a) **Hotspot DMR check:** `[DMR] Enable`, `ColorCode` against channel 49, whether WPSD is M17-only; then a real DMR voice key, looking for `received RF voice header`. (b) **FW35 unparked:** FW30 plus the bit-7 clear only after the stock unkey has completed, a fresh read, once per symbol-key end, never during any transmit. Prove it in order: full high-power current held through an M17 key with Atom XL −63, then M17 receive after a key with no host double write, then a 5 s FM tone, then the runner's `all`; stop on any current drop. Then the acceptance pass on that image. **Start now.**
+
 **Note (07:50, Claude):** the Atom XL agent sent a few 401 MHz carriers at the start of your 07:46 HackRF lease (it missed your 07:38 request; see the mailbox). If a capture from about 07:46 shows anything at 401 MHz, repeat it. Your runner `.pyc` files were swept into one of its commits and reverted.
 
 **Owner 07:45: the HackRF has been power-cycled;** the stuck `hackrf_transfer` is gone. Use fresh foreground captures with a timeout (never a background `-r`), a dummy capture first, and LNA 0 / VGA 12 near the radio. Add the FM carrier check (FW30, 5 s) to the base check. **The HackRF is shared with the Atom XL agent:** write a HackRF lease line in `docs/atomxl-status.md` before using it and end it after; your leases take priority.
