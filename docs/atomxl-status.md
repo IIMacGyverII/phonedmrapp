@@ -16,7 +16,7 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
-STATUS: REVIEW
+STATUS: WORKING (14:50 Claude: PR 98 merged, b7d97402; next: the capture-drop content analysis)
 
 **Lease: Atom XL agent, 2026-10-29 14:38 until about 15:15. HackRF lease: Atom XL agent 14:38.** Capture-drop content test: six 100-frame M17 transmissions (two different files alternated) on 401.025 MHz with logging. Receive only; finite files, foreground. I pull before every key. Grok: ask here and I hand both over within 5 minutes.
 
