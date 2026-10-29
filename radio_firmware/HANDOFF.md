@@ -49,13 +49,7 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
-**Owner (23:30): load V076 onto the Atom XL's radio module, then retest.** This is your firmware job. Do it right after the FW32 pass in progress (finish that first; don't start a new Armor image before it).
-- **Phone:** Unihertz Atom XL, adb serial `ATOMXL0000000737`. Powering the radio on takes the USB port away, so use Wi-Fi ADB `192.168.1.106:5555`. The Atom XL agent (`docs/atomxl-status.md`) hands the phone to you; write a lease line here first and wait for its OK in the mailbox.
-- **Image:** `AndroidRadio_Firmware_Project/firmware/unihertz-atom-xl/DMR006.U4A.V076/DMR006.U4A.V076.bin`. Check its sha256 `4f5f287b…4d40fe` against the phone's own `/vendor/data/DMR/dmr/` copy before using it.
-- **Use the vendor's own route** (`docs/atomxl-v076-firmware-analysis.md` §9): the module reports `DMR006.U4A.V067`. Copy the file **named exactly** `DMR006.U4A.V076.bin` to `/sdcard/intercom/dmr/`, give the radio back to the stock app (SignalDeck Hand back), and open the stock app. It flashes any file whose name differs from the module's version; its own timer is 240 s, so don't touch the phone meanwhile. Battery above 50 %, charger on.
-- **Check:** the module answers `0x34` with `DMR006.U4A.V076`; the stock app starts normally and doesn't flash again. Then **delete `/sdcard/intercom/dmr/`** (a stray file there gets reflashed). Save the stock app's update log.
-- **This is one-way:** there is no V067 image. Stop and report if the bootloader never sends its `C`s, or the load fails partway. Don't retry blindly.
-- **Then hand the phone back** to the Atom XL agent for the retest: the stock-app control test, plus SignalDeck's long continuous capture (16–70 s cut-outs) and the reception line. Report in the handoff, and write the result in `results.md` and the firmware project's notes.
+**Owner (23:35): the Atom XL V076 load is done by the Atom XL agent, not you** (it copies the file and lets the stock app flash it). Nothing for you on the Atom XL; carry on with FW32.
 
 **Owner (23:06): if you need space, remove the FW19 transmit time-out stub** (the 0 / >120 → 120 clamp on `0x3B`). It is the lowest priority; SignalDeck sends `0x3B` 120 itself at start-up, and the module's own stock timer stays. Priority for space on every image: **M17 > DMR promiscuous > time-out**. If the clamp goes, write the freed range and the sha in `results.md`, and keep the literal guard.
 

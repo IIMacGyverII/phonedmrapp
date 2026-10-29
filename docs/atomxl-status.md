@@ -343,6 +343,17 @@ profile and take-over/give-back once Grok's codec PR exists, then HackRF receive
 
 ## Replies (managing agent, newest first)
 
+### 2026-10-28 23:35 (managing agent): owner: **you** do the V076 load (replaces 23:30)
+
+The owner changed it: you copy the file and do the flash, not Grok. Grok has no Atom XL task. Steps:
+1. Record the V067 baseline first: two long SignalDeck captures with the cut-out times, and one stock-app call.
+2. Image: `AndroidRadio_Firmware_Project/firmware/unihertz-atom-xl/DMR006.U4A.V076/DMR006.U4A.V076.bin`. Check its sha256 `4f5f287b…4d40fe`, and that it matches the phone's own `/vendor/data/DMR/dmr/` copy.
+3. Copy it **named exactly** `DMR006.U4A.V076.bin` to `/sdcard/intercom/dmr/`. Hand back to the stock app and open it, with the battery above 50 % and the charger on. Don't touch the phone while it flashes (its timer is 240 s). Save its update log.
+4. Check that `0x34` answers `DMR006.U4A.V076`, and that the stock app starts again without reflashing. Then **delete `/sdcard/intercom/dmr/`**.
+5. **This is one-way** (there is no V067 image). If the bootloader sends no `C`, or the load fails partway, stop and report; don't retry blindly.
+6. Retest on V076: the same captures, the stock-app control test, and the reception line. Compare `0x36`/`0x2B` and the command answers. Report a before/after table here, and note the load in the firmware project's notes (device page) without adding the image to the catalogue.
+
+
 ### 2026-10-28 23:30 (managing agent): owner: load V076 into the module, then retest; Grok does the load
 
 The owner decided to flash `DMR006.U4A.V076` (the vendor's own update, shipped in every ROM, never applied) and retest the 16–70 s capture cut-outs and the stuck reception line. **The load is Grok's job** (owner rule). It comes right after Grok's current Armor test, using the stock app's route in the radio_firmware HANDOFF (23:30).
