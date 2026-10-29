@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — Opcode 5 cannot restore `WORK_MODE` or `RF_MODE`.** Opcode 14 refuses `0x11000100`. The idle values are unread, so FW37 was not built. Details in `results.md`.
+
 **2026-10-29 — A symbol key on FW36 leaves DMR framing broken until a restart.** The first key after `restartmodule` gets a hotspot voice header; the key after the 75-frame command radiates and gets none. `RF_MODE` and `WORK_MODE` are set at key start and not restored. The restore does not fit in the 6 bytes left in the clamp. Details in `results.md`.
 
 **2026-10-29 — On FW36 only a module restart brings M17 receive back after a key.** FWD1's `0x30` goes to `0x70A6` after a key and back to `0x7026` after a channel select, and that call is listed. The factory image's DMR key gets a hotspot voice header. Details in `results.md`.

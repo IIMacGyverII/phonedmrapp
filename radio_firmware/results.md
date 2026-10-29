@@ -4576,3 +4576,7 @@ FWD1 and FW30 are the same from `0x5B580` through the op 7 end, except four byte
 A two-word restore is 14 bytes of code plus 12 bytes of literals (28 bytes linked). The bit-7 clear already uses 26 of the 32 bytes at `0x5B700`. Six bytes remain. The save, which has to run before the stores, is 24 bytes of code plus a 16-byte pool. FW37 was not built.
 
 End state 10:29: `DMR003.FW36.V022`, channel 56, 467.625 MHz, low power, not transmitting. Bench ID restored. Atom XL link stopped, channel 2, 401.025 MHz. HackRF idle.
+
+**Opcode 5 and opcode 14 (10:38), FW36, no key.** `restartmodule`, tag `DMR003.FW36.V022`. Opcode 14, address `0x11000100`, length 8: `sr=1` and an empty reply on channel 56 and on channel 49. Opcode 5, body `[5, 0]`, on channel 49: `sr=0`, 514 bytes. That is a receive half, not the two registers. The op 6 handler at `0x5B240` writes `WORK_MODE` as `0x80` when the hold is applied and writes the saved word back when it is released. It has no store of a host value, and it does not write `RF_MODE`. There is no host read of the idle words on this image. FW37 was not built.
+
+End state 10:38: `DMR003.FW36.V022`, channel 56, 467.625 MHz, low power, not transmitting. HackRF idle. The Atom XL was not used.

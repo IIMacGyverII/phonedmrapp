@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -638,6 +638,10 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+Opcode 5 cannot write the two words, and opcode 14 cannot read them. After a fresh `restartmodule`, opcode 14 on `0x11000100` returned `sr=1` on channel 56 and on channel 49. Opcode 5 with mode 0 returned `sr=0` and 514 bytes, a receive half, not those registers. Opcode 6 writes `WORK_MODE` only as `0x80` or the value it saved for its own hold, and it never writes `RF_MODE`. FW37 was not built: an immediate restore needs the idle values, and this image has no read of them. The restore of two saved words fits in the 32-byte slot once the bit-7 clear is dropped (30 bytes with the store and the pop). The save is 24 bytes and the stub tail has no other 16-byte hole.
+
+End state 10:38: `DMR003.FW36.V022`, channel 56, 467.625 MHz, low power, not transmitting. HackRF idle. The Atom XL was not used.
 
 After `restartmodule` on FW36, a channel-49 DMR key got a hotspot voice header at 15:28:13 UTC and the Atom XL showed the call (RSSI −85, voice line, caller ID). After the 75-frame symbol command, the same DMR key radiated (HackRF carrier 4.00 s, offset +1002 Hz, clip 0, p99 20.5 kHz, the same width as the decoded factory key) and the hotspot logged no DMR line. FWD1 and FW30 set the same `RF_MODE` `0x10E0` and `WORK_MODE` `0x80` at key start and neither writes them back; `0x11000080` bit 0 is cleared. A two-word restore is 14 bytes of code plus 12 bytes of literals, and the clamp has 6 bytes left after the 26-byte bit-7 clear, so FW37 was not built.
 
