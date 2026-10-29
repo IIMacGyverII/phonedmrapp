@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -512,6 +512,10 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck.** Host stopgap on FW31 `997cb714`: key, select, select, hotspot call, three times. Listed 76/53, 75/55 and 75/56, all N0CALL. Register snapshots were not taken. Opcode 18 sends body `[12 30]` and the log says `raw40 none`. The reply stub at `0x5BD74` is 14 bytes and does not return a value. There is no 40-byte hole at or above `0x50000`. Question: where should the temporary read stub go?
+
+End state 21:37: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, not transmitting, RSSI −105. Battery 38.3 °C, AP 45.4 °C, PA 43.7 °C. HackRF idle.
 
 Select-mute bisect, same app (PR 77) and `M17TXLevel=50`. A clean load, then channel 56 and one hotspot call, no phone transmission:
 

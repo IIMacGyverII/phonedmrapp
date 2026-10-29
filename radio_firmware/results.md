@@ -4243,6 +4243,10 @@ FW26's select logged `data hold action=1 sr=0`. A clean select does not mute on 
 
 End state 21:33: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, not transmitting, RSSI −98. Battery 38.7 °C, AP 45.4 °C, PA 43.9 °C before the last load. HackRF idle.
 
+**Double select (21:35–21:37).** FW31 `997cb714`, channel 56. Three cycles of a 75-frame key, two channel selects, then a 3 s hotspot call. Listed N0CALL each time: 76 frames / 53 good, 75 / 55, 75 / 56. Opcode 18 does not answer: `raw40 none` after body `[12 30]`. The stub at `0x5BD74` is `push; ld.b; movi r1, 1; jsr 0x8E7C; pop`. No zero run of 20 bytes exists at or above `0x50000`, so a 40-byte read was not added.
+
+End state 21:37: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, not transmitting, RSSI −105. Battery 38.3 °C, AP 45.4 °C, PA 43.7 °C. HackRF idle.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.

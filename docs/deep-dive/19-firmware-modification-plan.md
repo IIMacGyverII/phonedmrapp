@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-28 — Two channel selects after a symbol key list the hotspot call, three times out of three.** Opcode 18 does not answer, so the register snapshot was not taken. Details in `results.md`.
+
 **2026-10-28 — A clean channel select receives on FW26, FW29, FW30 and FW31.** The silence after a select showed up only once a symbol key had already run. Details in `results.md`.
 
 **2026-10-28 — A fresh channel is muted, and the open post-key audio does not lock M17.** `M17TXLevel` 50 and 30 both fail to follow a sync. 30 was put back to 50. Details in `results.md`.
