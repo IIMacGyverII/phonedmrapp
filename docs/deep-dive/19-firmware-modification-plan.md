@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — FW40 writes the stock TX-stop pair at the post-unkey hook, and the next FM key still gets no reply.** A = 1 and B = 200. The tone's `0x26` on had no reply for 5.5 s and the HackRF stayed at the floor. Details in `results.md`.
+
 **2026-10-29 — `0x32457` is the channel-write busy flag.** `0x22` and `0x23` store 1 on entry. Their error tails store 0. Both success returns leave the 1. The idle task's clear needs `0x38908+0xA` set, and a symbol-mode unkey leaves that byte at 0. FW40 was not built. Details in `results.md`.
 
 **2026-10-29 — FW39 does not ack a plain `0x26` on a few seconds after a symbol key.** Clearing the ring, the mode word and `0x38908` bits 0–3, and forcing the prelude skip byte, still leaves the tone's `0x26` without a reply. Details in `results.md`.
