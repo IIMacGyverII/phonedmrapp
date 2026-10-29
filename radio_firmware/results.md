@@ -4625,3 +4625,7 @@ End state 11:52: `DMR003.FW38.V022`, channel 56, 467.625 MHz, low power, not tra
 ```
 
 No HackRF capture on this tone. Left on channel 56, not transmitting.
+
+**FW39 (13:45), the tone's `0x26` on is not acked.** Three images, each a symbol key on 56 (`sym done`, status 3 about 7 ms after `0x26` on) then channel 58 and a 5 s tone within 10 s. HackRF keyed 0 every time. The tone's `0x26` body `01` has no `RX cmd=0x26` for at least 5.5 s; the host then sends body `02`. An idle tone on the first image, with no symbol key, keyed 5.55 s, offset +939 Hz, clip 0, SNR 63.9 dB.
+
+The clear runs from both unkey tails (`0x5B622` and `0x5B658`) and from the post-unkey restore. It sets the ring cursor equal to its count, zeroes `0x4B00C`, the mode word, `0x4B02C` and `0x4B030`, and clears bits 0–3 of `0x38908`. The second image also stores 1 at `0x38874+6` on those tails. The third image does that store again immediately before the `0x2AF24(1, 1)` prelude, which is the byte that skips the lock wait on bit 31 of `0x44000004`. The symbol key still takes the fast path. The following tone still does not get an ack. Shas: `1415e52d…` (unkey clear only), `77ed8abc…` (byte on the unkey tails), `8e8ee5a8…` (byte forced before the prelude). The loaded image is the third. Left on channel 56, 467.625 MHz, not transmitting.

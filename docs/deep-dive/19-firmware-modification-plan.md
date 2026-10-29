@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — FW39 does not ack a plain `0x26` on a few seconds after a symbol key.** Clearing the ring, the mode word and `0x38908` bits 0–3, and forcing the prelude skip byte, still leaves the tone's `0x26` without a reply. Details in `results.md`.
+
 **2026-10-29 — FW38 restores `WORK_MODE` and the FM bandwidth after a symbol key.** A following DMR key gets a hotspot voice header, and the Atom XL shows a voice line with the caller ID. M17 receive still lists. The runner's `all` passed. Details in `results.md`.
 
 **2026-10-29 — After FW37, `WORK_MODE` and the FM bandwidth bits are the leftovers.** Bit 0 of `0x11000080` is cleared at the key end. The 32-byte slot is full. Details in `results.md`.

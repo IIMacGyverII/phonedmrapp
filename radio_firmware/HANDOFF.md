@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -667,7 +667,17 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-Thread dump 12:52, pid 27745, `/data/anr/trace_05`, 1.2 s after DiagReceiver logged `testtone 5000 ms`. `main` is idle in the looper. `m17-sym` had already exited. `radio-worker` is in `TinyServiceAudio.playPcm` line 147, called from `transmitPcm` line 694, so the tone's task is running, not queued. Stacks are in `results.md`. Acceptance pass is next, except the FM-after-a-symbol-key row. It waits on the HackRF and the Atom XL.
+**Stuck 13:45 (Grok): FW39 still does not ack a plain `0x26` on a few seconds after a symbol key.** See the block below. Module is `DMR003.FW39.V022` sha256 `8e8ee5a8…`, channel 56, 467.625 MHz, low power, not transmitting. HackRF idle.
+
+**Stuck (13:45).** FW39, symbol key then channel 58 then a 5 s tone within 10 s. The symbol key still acks (`0x26` on, reply in 7 ms, status 3, `sym done`). The tone's `0x26` on gets no reply for at least 5.5 s, and the HackRF stays at the floor.
+
+1. `1415e52d…`: at both unkey tails, set the ring cursor to its count, zero `0x4B00C` / the mode word / `0x4B02C` / `0x4B030`, clear bits 0–3 of `0x38908`. Tone keyed 0. An idle tone on this image, no symbol key, keyed 5.55 s, offset +939 Hz, clip 0, SNR 63.9 dB.
+2. `77ed8abc…`: the same, plus store 1 at `0x38874+6` on those tails (the byte that skips the `0x2AF24` lock wait). Tone keyed 0. Still no ack on the tone's `0x26`.
+3. `8e8ee5a8…`: also force that byte to 1 immediately before the prelude call. The symbol key is unchanged (ack in 7 ms, status 3). The tone's `0x26` on at 13:43:59 still has no `RX cmd=0x26` before the host sends `0x26` off at 13:44:04. Keyed 0.
+
+The prelude is not where this `0x26` is sitting: the symbol key goes through the same call and returns at once, and forcing the skip byte did not make the tone's command return. The handler's earlier wait is byte `0x3244C+0xB` (`0x32457`) equal to 1, up to 80 passes through `0x18A4`. I did not measure that pass length.
+
+Module: `DMR003.FW39.V022` `8e8ee5a8…`, channel 56, 467.625 MHz, low power, not transmitting. SignalDeck running, stock app not in front, battery 34.3 °C, `mtktsAP` 39.8 °C. HackRF idle. Question: is the missing ack the `0x32457` wait, and what clears that byte about a minute later?
 
 **Stuck (12:49).** Installed the updated PR 94 (`fw37unkey-fb1f89e0.apk`, sha256 `b7f5196f…`, `versionName` still `1.0.0-beta.20`). Reloaded FW38. Test 2: symbol key on 56 (`sym done`, 0x40 traffic), select 58, tone about 6 s later. HackRF keyed 0. The log shows one `0x26` body `02` and no `testtone` line, no `data hold` line, and no status 3. A tone about 90 s after an earlier symbol key did hold 5.08 s, offset +909 Hz, with status 4 then 1. Tests 1 and 3 and the acceptance pass were not run.
 
