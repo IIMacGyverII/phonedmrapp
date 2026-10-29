@@ -4550,3 +4550,5 @@ End state 17:38: FW30, channel 56, MON off, channel 58 deleted. SignalDeck build
 The first high-power RSSI window stayed at −97 while the current was already full; the settled repeat is the reading. Channel 56 was put back to low power.
 
 End state 09:18: `DMR003.FW36.V022`, channel 56, 467.625 MHz, low power, not transmitting. Battery 35.6 °C, AP 43.9 °C, PA not re-read after the heat key. Atom XL link stopped. HackRF idle. SignalDeck `a7344f19`.
+
+**Hotspot DMR logs (read-only, 09:20).** `MMDVM-2026-10-28.log` and `MMDVM-2026-10-29.log`, times UTC (local is UTC−5). The last `received RF voice header` is 2026-10-28 20:49:27 (15:49 local). The next `Mode set to DMR` is 20:50:55 the same day, and there is no RF voice header after 20:49:27 in either file. The 29 October log has 0 RF voice headers and 14 `Mode set to DMR` lines, the first at 01:06:28 UTC (20:06 local on the 28th) and the later ones at 13:00:29 and 13:24:58 UTC. The modem had been opened at 20:32:18 UTC, before the last good header; the next open is 2026-10-29 02:08:51 UTC, after the first header-less mode line. The last `M17, received RF` is 2026-10-29 14:07:34 UTC (09:07 local).

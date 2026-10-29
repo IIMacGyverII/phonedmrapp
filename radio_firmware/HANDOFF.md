@@ -631,7 +631,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-FW36 `dab18acd…18fa` is loaded. The time-out clamp is gone (`0xAB18` is the factory `bsr 0xA308`), and the bit-7 clear sits at `0x5B700`. Opcode 3 answers. Low-power M17 reads −63 and high-power M17 reads −58 with the current held at −2.7 to −3.4 A. The runner's tone and stream pass (1125/1125). Receive after a symbol key does not: the log says `rewritten twice true/true` and the hotspot call is not listed, and the runner's receive finds no 1 kHz line. The Atom XL heard the channel 49 DMR key, so the hotspot's missing DMR header is a hotspot fault.
+FW36 `dab18acd…18fa` is loaded. The time-out clamp is gone (`0xAB18` is the factory `bsr 0xA308`), and the bit-7 clear sits at `0x5B700`. Opcode 3 answers. Low-power M17 reads −63 and high-power M17 reads −58 with the current held at −2.7 to −3.4 A. The runner's tone and stream pass (1125/1125). Receive after a symbol key does not: the log says `rewritten twice true/true` and the hotspot call is not listed, and the runner's receive finds no 1 kHz line. The Atom XL heard the channel 49 DMR key, so the hotspot's missing DMR header is a hotspot fault. The MMDVM logs have no DMR RF voice header after 2026-10-28 20:49:27 UTC; the next `Mode set to DMR` with none after it is 20:50:55 UTC. M17 RF lines continue through 2026-10-29 14:07 UTC.
 
 End state 09:18: `DMR003.FW36.V022`, channel 56, 467.625 MHz, low power, not transmitting. Battery 35.6 °C. Atom XL link stopped. HackRF idle.
 
