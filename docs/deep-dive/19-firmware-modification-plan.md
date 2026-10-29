@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — FW37 restores `RF_MODE` at the end of a symbol key.** M17 receive lists again with no restart. A following DMR key still gets no hotspot voice header. The runner's `all` passed. Details in `results.md`.
+
 **2026-10-29 — The only `RF_MODE` constant in the factory image is the key value `0x10E0`.** The idle value is the word saved at `0x32520`, not an immediate. FW37 was not built. Details in `results.md`.
 
 **2026-10-29 — Opcode 5 cannot restore `WORK_MODE` or `RF_MODE`.** Opcode 14 refuses `0x11000100`. The idle values are unread, so FW37 was not built. Details in `results.md`.

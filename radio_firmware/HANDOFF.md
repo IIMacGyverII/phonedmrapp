@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -642,6 +642,10 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+FW37 `8a5d16dc` saves `RF_MODE` to `0x32520` before the symbol-key store and writes it back at the post-unkey hook. The stock restore is not on that path. M17 receive after a symbol key listed 75 frames, 56 good, with no restart. A channel-49 DMR key after a symbol key moved the Atom XL to −88 and the hotspot logged no voice header. High-power current held about −2.7 to −3.8 A. A 5 s FM tone held (5.54 s, +852 Hz, clip 0). The runner's `all` passed, including the 1125-frame stream.
+
+End state 11:04: `DMR003.FW37.V022`, channel 56, 467.625 MHz, low power, not transmitting. Atom XL link stopped. HackRF idle. The bit-7 clear is not in this image.
 
 The factory image has one immediate store of `RF_MODE`: `0x10E0` at the FM key-up (`0x3EDDA`). The other two uses save and restore SRAM `0x32520`. There is no idle constant, so restoring `0x10E0` would leave the key value. `WORK_MODE` constants are `0x22`, `0x6A`, `0x6E`, `0x16A` and `0x16E`, plus `0x80` at key-up. The analog fall-through is `0x6E`, which image 2 already stored without bringing receive back. FW37 was not built.
 
