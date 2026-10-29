@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -558,6 +558,16 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck.** FW32 bisect. FW32a (`F32A` `32a40a3e…2154`) is FW31 plus the drop-tail flag at `0x5C490` only. The hook matches FW31. The key stalled (fill 1536 × 400). `0x5C490` is the fall-through of a live function. The same stub moved into the FW19 `0x3B` clamp (`F32M` `4f380f4c…d61f`, `0xAB18` restored to `bsr 0xA308`) drained: fill 1460, status 4. The clamp at `0x5B700`–`0x5B718` is freed on that image and on FW32; the pool uses the zero bytes through `0x5B720`.
+
+FW32b is `DMR003.FW32.V022` sha256 `53e1fd7bf6a3561157fc76f2c48d74ff69400fe8d70b558eda47bfff75ea1d11`. The idle `bez` at `0x5BFCA` goes to a 14-byte check at `0x5B70E` that clears `0x4B385` and branches to the existing bit-7 clear. The hook still calls `0x5BFC0`. The first key stalled because F32M had left `0x4B385` set and the load did not clear SRAM. After `restartmodule`, two keys each drained (fill 1460), posted one status 4, logged `no 0x26 off` and `rewritten once true`. The hotspot transmitted both (04:50:41 and 04:51:13 UTC, 3.0 s, N0CALL to ALL). The phone listed nothing. Left as the key finished, RMS was 1.3 during the 04:59:44 UTC call. One select of channel 56, then the 04:59:55 UTC call: RMS 4792, N0CALL 80 frames / 56 good.
+
+The 3/3 one-write listing was not met. The runner was not started. The clear in the idle branch runs, and the close that writes `0x70A6` still wins over the single host write.
+
+Question: where should the bit-7 clear run so it happens after that close?
+
+End state 00:00: `DMR003.FW32.V022` `53e1fd7b…1d11`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −106. The last action was the select, so the receiver is open. Battery 35.7 °C, AP 42.3 °C, PA 40.9 °C. HackRF idle. SignalDeck `485442d1`.
 
 **Stuck.** Rebuilt FW32 with the FW31 one-shot left byte-for-byte, and the new flag beside it. sha256 `302929e911f78bc2b16f7557701f3109d01534ab8df77c2ff44f17b58f87b04d`. The hook at `0x18B68` calls the one-shot, then clears bit 7 of `0x30` only when `0x4B385` is set. The drop sets `0x4B385` after status 4 and does not clear `0x4B384`. Literal guard clean. APK `485442d1`. Loaded 23:08:00, tag `DMR003.FW32.V022`, channel 56.
 

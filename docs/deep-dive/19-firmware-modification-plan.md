@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-28 — FW32a at `0x5C490` stalls the symbol ring; the same drop moved into the old `0x3B` clamp drains, and the idle-branch bit-7 clear still leaves receive muted after one host write.** RMS 1.3 until a second channel write, then RMS 4792 and N0CALL 80/56. `DMR003.FW32.V022` sha256 `53e1fd7b…1d11` stays loaded. Details in `results.md`.
+
 **2026-10-28 — The split FW32 still does not drain the symbol ring.** Fill climbed through 1536, 1728 and 1920. The last status before the power cycle was 3. FW31 is loaded again. Details in `results.md`.
 
 **2026-10-28 — FW32's sym-done flag never ran: the symbol ring stuck at fill 1920 before status 4.** The drop that sets the flag did not run. FW31 is loaded again. Details in `results.md`.
