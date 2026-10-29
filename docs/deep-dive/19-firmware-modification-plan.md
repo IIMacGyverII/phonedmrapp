@@ -248,6 +248,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 **2026-10-28 — F30C did not clear the mute, and holding the close flag stopped opcode 3.** Idle `0x30` is `0x7026`. After a symbol key it is `0x70A6`. Details in `results.md`.
 
+**2026-10-28 — A channel write on F30B leaves bit 7 set.** `0x30` stayed `0x70A6` at 0.7 s and at 3.5 s. The task-loop stub is 62 bytes and the free tail is 36. Details in `results.md`.
+
 **2026-10-28 — FW3E boots and decodes DMR.** The FM setup runs only when the ring is armed. A 3 s key had status 3 and 4 and was not listed by the relay. Details in `results.md`.
 
 **2026-10-28 — FW3D boots and decodes DMR.** The 3 s key had status 3 and 4 and was not listed by the relay. The key wrapper differs from F30F at `0x5B58E` only. Details in `results.md`.

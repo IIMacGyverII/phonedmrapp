@@ -4190,6 +4190,10 @@ sha256 `1ec5832d…` pointed the empty unkey at `0x5B61E` at the unmute stub. sh
 
 End state 19:10: `DMR003.UV4T.V022`, channel 56, not transmitting, RSSI −98, link ready. The settings tag read `UV4T` after a factory load whose log never showed `fwload ok`. Battery 32.6 °C, AP 37.7 °C, PA 36.5 °C at 18:53, before that load. HackRF was idle and was not used.
 
+**Channel write on F30B (19:16–19:19).** No new image. sha256 `487fe953…cf54`, tag `DMR003.F30B.V022` at 19:19:08. Channel 56. Idle `0x30` `0x7026`, `sr` 0. One 75-frame key, status 4. Then `0x30` `0x70A6`, `sr` 0. Selecting channel 56 again (`0x23` on the same M17 channel) left `0x70A6` at 0.7 s and at 3.5 s, both `sr` 0. Bit 7 did not clear. No hotspot call after that. The `0x18B68` check, linked at `0x5BFDA`, is 62 bytes. A 38-byte opcode 18 at `0x5BFB4` leaves 36 bytes before the live word at `0x5BFFE`. Nothing else in the file is a code hole of that size. The 128 zero bytes at `0x35F64` are the data-table tail.
+
+End state 19:19: `DMR003.F30B.V022`, channel 56, not transmitting, RSSI −105. Battery 32.8 °C, AP 38.5 °C, PA 37.4 °C before the load. HackRF idle.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.
