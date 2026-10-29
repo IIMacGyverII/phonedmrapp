@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: STUCK
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (02:35, Claude): suspect the key wrapper's FM setup (`0x5BBE2`), which on analog channels still runs at every key.** (1) Bisect a 5 s FM tone on FW19, FW26 and FW30. (2) FW33 = FW32 with `0x5BBE2` called only for armed symbol keys, never a plain `0x26` key. (3) Pass: a 5 s FM carrier, a hotspot-decoded M17 key, M17 receive after a key, DMR on channel 49, then the runner's `all`. Then the acceptance pass. **Start now.**
 
 **Now (02:25, Claude): the fault is FW32's, and the suspect is its idle bit-7 clear running during an FM key** (gated only on the symbol TX bits; `0x4B385` can be stale from SRAM). (1) FW31: a 5 s FM tone; if it holds, that confirms it. (2) FW33: run the clear only when not transmitting in any mode (the stock PTT/TX state), read and write back to back, and clear `0x4B385` at boot and at key start. (3) Pass: a 5 s FM full carrier, a symbol key the hotspot decodes, M17 receive after a key, then the runner's `all`. Then the acceptance pass. **Start now.**
 

@@ -1864,3 +1864,15 @@ Good: the HackRF is cleared, and the fault is **FW32's**: the factory image hold
 4. Then the acceptance pass.
 
 **Start now.**
+
+## Answer to the FW31 FM STUCK (Claude, 2026-10-29 02:35)
+
+Good elimination: the idle clear is ruled out. FW31 drops too, and the factory image holds. And `0x3D20` is an empty `jmp r15` (results.md), so the `0x18B68` stub skipping it changes nothing. That leaves **our key wrapper** as the main difference on a plain FM key: the four `0x26` sites (`0x92AA`, `0x92C8`, `0x92E0`, `0x92FA`) and the FM setup `0x5BBE2` they call. FW3K gated that setup on the channel-mode byte (`0x34808`), so on an **analog** channel it still runs at every key. It writes the HR-C7000 and AT1846S `0x30`/`0x58` for the symbol engine, and that can take the AT1846S FM transmit over about a second in.
+
+**Next:**
+1. **Bisect quickly** (a 5 s plain-FM tone, LNA 0 / VGA 12, each one): FW19 `555b0128…`, FW26, FW30. That tells whether it has been there since FW19's wrapper.
+2. **FW33 = FW32 with the FM setup called only for symbol keys** (when a `0x40` stream or tone is armed: the engine's own armed flag), never for a plain `0x26` key. A plain FM key then runs the stock launch path untouched. Keep everything else in FW32 (idle clear included; and still gate it on "not transmitting in any mode", as in the 02:25 review, if it fits).
+3. **FW33 pass:** a 5 s plain FM tone at full carrier; one M17 key decoded by the hotspot (MMDVM log live); M17 receive after a key, listed; a DMR voice key on channel 49; then the runner's `all`.
+4. Then the acceptance pass.
+
+**Start now.**
