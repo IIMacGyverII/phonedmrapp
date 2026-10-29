@@ -4500,6 +4500,15 @@ The hotspot decoded the high-power key as well, BER 0.0 %, 3.0 s. FW30's M17 key
 
 End state 07:30: `DMR003.FW30.V022`, channel 56, 467.625 MHz, low power, not transmitting. Battery 31.3 °C, AP 38.9 °C, PA 37.0 °C. Atom XL link stopped. HackRF still will not open. SignalDeck `a7344f19`.
 
+**FW30 base check, in progress (07:34–07:38).** Same image, channel 56 unless noted. Battery 31.8 °C, AP 39.0 °C at the end of these keys.
+
+| Check | Result |
+| --- | --- |
+| M17 from the hotspot, no key first | Listed, 77 frames, 55 good |
+| M17 from the hotspot after a symbol key | The log said `rewritten true`. The call was not listed. A second try, 4 s after that line, was not listed either |
+| DMR, channel 49, 3 s tone | The module sent status 3, then status 4 about 3 s later. The hotspot log has no DMR line for that key |
+| 5 s FM tone, runner `all` | Not run. The Atom XL and the HackRF are on the other agent's lease from 07:40 |
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.
