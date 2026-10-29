@@ -1658,3 +1658,14 @@ Stop stepping the level: the new finding outranks it. **A fresh channel select l
 2. Load the factory image and key it once before the next bench image, if any image hung (bench rule).
 
 Report the table: image × select-only RMS × frames listed. **Start now.**
+
+## Review: select-mute bisect (Claude, 2026-10-28 21:45)
+
+**Accepted, and it clears the firmware line:** a clean select receives on FW26, FW29, FW30 and FW31 (75–77 frames, about 70 % good). The fault only appears **after a symbol key**: key then one select gives silence, a second select gives 45 frames. And with no select (PR 77, hold-only), the audio is loud but won't lock. So a symbol key leaves some receive state wrong, and it takes two channel writes to put it right.
+
+**Next, find that state (no fix guessed yet):**
+1. **Register snapshots in four states:** (a) clean select, (b) after a key with no select, (c) key then one select, (d) key then two selects. Use whatever read path FW31 still has (op 5 register dump, or put a 40-byte op 18 back temporarily in a bench image). Read the AT1846S `0x30`, `0x58`, `0x44`, the HR-C7000 `WORK_MODE` and `FM_BANDWIDTH`, the `0x11000384` colour-code word, and RAM `0x38908`. Tabulate what differs between (a)/(d), which receive, and (b)/(c), which don't.
+2. **Same run, the host stopgap:** key → select → select (DIAG, automatic) three times, each followed by a hotspot call. If 3/3 list, I'll put a double rewrite into PR 77 as a stopgap until the register fix lands.
+3. Then restore the differing register(s) in FW31's one-shot (one at a time), and pass: key then hotspot call with no select, listed 3/3. Then the runner's `all`.
+
+**Start now.**

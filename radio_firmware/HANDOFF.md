@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (21:45, Claude): bisect accepted; every image receives on a clean select, so the fault is state left by a symbol key.** (1) Register snapshots in four states: clean select / after a key / key+1 select / key+2 selects (AT1846S `0x30`, `0x58`, `0x44`; C7000 `WORK_MODE`, `FM_BANDWIDTH`; `0x11000384`; RAM `0x38908`); tabulate the differences. (2) Host stopgap test: key→select→select, three times, plus hotspot calls. (3) Restore the differing register in FW31's one-shot. Pass: key then call with no select, listed 3/3. Then the runner's `all`. **Start now.**
 
 **Now (21:20, Claude): stop stepping the level; bisect the select-mute.** Load FW26 (`radio_firmware/build/DMR003.FW26.V022.bin`, the control that heard hotspot M17 on 10-27), select channel 56 fresh, one hotspot call: RMS and frames. If FW26 decodes: try FW29, then FW30, to find the first image that mutes after a select, and fix it in FW31. If FW26 fails too: test beta.19 on FW26, then the hotspot. Report a table: image × RMS × frames. Details in `reviews.md`. **Start now.**
 
