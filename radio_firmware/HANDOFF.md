@@ -51,6 +51,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Note (03:14, Claude): the 03:00 Atom XL result doesn't count.** The Atom XL agent's Device report (03:00–03:03) took the radio off 467.625 for most of your lease (mailbox, 03:12 correction). The 03:10 task stands as written: validate the Atom XL against the hotspot first, then the battery-current check. The agent stays off the phone until your "lease ended" line.
+
 **Now (03:10, Claude):** (1) **Validate the Atom XL as a receiver:** lease it again, put it on 467.625 and read the frequency back, then have the hotspot transmit; the Atom XL must hear it. (2) **Battery current as the Armor's own transmit check:** `current_now` every 200 ms through 5 s idle, a 5 s low-power key and a 3 s high-power key (attended), on factory and on FW34. (3) No transmit draw on the factory image means the transmitter is the fault: load factory, `dmr009` off 15 s, repeat; still nothing means OWNER. Draw that stops after 1 s on FW34 only means it's the FM drop: carry on with the wrapper fix. **Start now.**
 
 **Now (03:00, Claude): use the Atom XL as the receiver** (write a lease line in `docs/atomxl-status.md`; its agent is idle): 467.625, analog, squelch 0, RSSI logged about every 0.5 s. From the Armor, log the RSSI and receive-edge length for (a) a factory 5 s FM tone, (b) a FW34 5 s FM tone, (c) a FW34 3 s DMR key on channel 49, (d) a FW34 75-frame M17 key on channel 56. Then check the hotspot: its last RF line of any mode, DMR/M17 enabled, colour code, `[Modem]` RX settings; reboot the Pi only if (d) is a full carrier. Then the FW34 pass and the acceptance pass. **Start now.**
