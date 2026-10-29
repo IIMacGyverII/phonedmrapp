@@ -4327,6 +4327,25 @@ DIAG `m17` off, then on, then another hotspot call (05:43:48 UTC, 3.0 s). Still 
 
 End state 00:44: `DMR003.FW32.V022` sha256 `53e1fd7b…1d11`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −117 at 00:43. Battery 36.3 °C, AP 44.2 °C, PA 42.1 °C at 00:43. HackRF idle. SignalDeck `b0e1cfd8` (`31c514d0`). M17 receive was left on. The runner was not started.
 
+**Double write on FW32 (00:50), then the runner and a 100 s key.** Installed the acceptance APK `SignalDeck-accept-a7344f19.apk` (sha256 `f305486a…`, SignalDeck `main` + PR 74) on FW32 `53e1fd7b`. Three 75-frame keys, no manual select. Each drained (fill 1460), one status 4, `no 0x26 off`, and `rx after sym: FW31, channel 56 rewritten twice true/true` (the log names FW31 for every tag at 31 and above). Hotspot calls listed N0CALL: 76 frames / 55 good, 78 / 56, 75 / 57.
+
+Runner `all` on the same image, low power, 467.625 MHz. Records under `DMR003.FW32.V022`:
+
+| Test | Verdict | Numbers |
+| --- | --- | --- |
+| boot | PASS silent | peak 0.078 dB, no run at or over 10 dB, clip 0 |
+| tone | PASS | 10.534 s, p99 2596 Hz, 1 kHz line 2494 Hz, hottest half-second 4045 Hz, clip 0 |
+| stream | PASS 1125/1125 | end bit, carrier 45.41 s, p99 2925 Hz, clip 0 |
+| receive | PASS line | clip −19.1 dBFS, 1 kHz line relative 1.49 |
+| heat 45 s | PASS no stop | AP 50.8 °C before and at the peak, 47.2 °C after; battery 38.4 °C both |
+| heat 100 s | PASS no stop | AP 45.7 °C before and at the peak, 44.7 °C after; battery 38.2 → 37.9 °C |
+
+The hotspot log has no RF M17 from these keys or from the 1125-frame stream. The last RF M17 it decoded was 01:47 UTC, before the 04:58 UTC MMDVMHost restart. Network transmissions to the phone were logged.
+
+Not run in this pass: DMR both ways, FM CTCSS transmit, APRS, POCSAG, FT8/RTTY, SSTV, promiscuous on/off, and the register diff.
+
+End state 01:06: `DMR003.FW32.V022` sha256 `53e1fd7b…1d11`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −105. Battery 37.8 °C, AP 44.7 °C, PA 43.3 °C. HackRF idle. SignalDeck `f305486a` (`a7344f19`).
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.

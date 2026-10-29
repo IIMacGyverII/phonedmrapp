@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -566,6 +566,14 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+Two channel writes list the call 3/3, and the runner passes. SignalDeck `a7344f19` on FW32 `53e1fd7b`. Each key: fill 1460, one status 4, `rewritten twice true/true`. N0CALL 76/55, 78/56, 75/57.
+
+Runner `all`: boot peak 0.078 dB; tone p99 2596 Hz, hottest half-second 4045 Hz; stream 1125/1125, p99 2925 Hz, end bit; receive −19.1 dBFS, line 1.49; 45 s heat no stop. A separate 100 s low-power key: AP 45.7 °C peak, battery 38.2 → 37.9 °C, no stop.
+
+The hotspot did not log RF M17 from these keys or from the 1125 stream. Not run: DMR, CTCSS transmit, APRS, POCSAG, FT8/RTTY, SSTV, promiscuous, and the register diff.
+
+End state 01:06: `DMR003.FW32.V022` `53e1fd7b…1d11`, channel 56, 467.625 MHz, low power, not transmitting, RSSI −105. Battery 37.8 °C, AP 44.7 °C, PA 43.3 °C. HackRF idle. SignalDeck `a7344f19`.
 
 The receiver restart does not list the call, and a manual off/on does not either. SignalDeck `31c514d0` on FW32 `53e1fd7b`. One key logged `hold only (no channel write), M17 receiver restarted`, one status 4, `data hold sr=0`. The hotspot transmitted (3.0 s). Quality stayed 0.
 
