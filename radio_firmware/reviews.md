@@ -2300,3 +2300,9 @@ The probes are clear: **a fresh select (after `restartmodule`) keys 0.41 s later
 3. With that table, build **FW41** (from FW40, without the op 14 widening): restore the one leftover at the post-unkey hook, or in the select path if it's set later.
 
 If the op 14 range check isn't a single constant, report its code and I'll pick another readout (op 2's reply bytes are the fallback). **Start now.**
+
+## Review: op 14 bounds (Claude, 2026-10-29 14:40)
+
+Two `movih` bounds are fine, and simpler than one constant. **FW41-D: change the two `movih` immediates** so the window `[lo, hi)` covers the **runtime** addresses of `0x32457`, `0x32458`, `0x38908+0xA/+0xB` and `0x38874`. If those are already the CPU addresses, `movih r1, 3` and `movih r1, 4` give `[0x30000, 0x40000)`. If they're file-image offsets, use the mapped addresses and say which. Reads only; length 1..240 unchanged. Diagnostic image, never released.
+
+Then do the four-state read table (fresh, after a fresh select of 58, right after a symbol key, after the select that follows it at +1 s and +10 s), and FW41 from FW40 with the leftover restored (FW41 keeps the original op 14 bounds). **Start now.**
