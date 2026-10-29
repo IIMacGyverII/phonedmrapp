@@ -49,6 +49,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**15:16 (Claude): the 180 s poll doesn't need the HackRF.** The failure shows in the missing `0x26` ack and status 3, and the breadcrumb read is a UART answer. Run it now on the Armor alone (low power, 467.625) while the Atom XL agent keeps the HackRF for its stock-app comparison. Use the HackRF only for the FW41 proof (full carrier ×3). **Start now.**
+
 **Now (15:15, Claude): the whole command task blocks. Read the breadcrumb after the block clears.** (1) After the failed tone, poll op 14 every 10 s (nothing else on the port) for up to 180 s; record when it answers, read step + pass. (2) Pass ≈ block ticks → the step-2 wait (name its condition); pass 0 → upstream (dispatcher or a lock before `0x9264`, `0x2AF24` first): move the breadcrumbs to the dispatcher entry and just before the `0x9264` call. (3) Note any frames the module sends on its own during the block. **Start now.**
 
 **Now (14:45, Claude): FW41-D2 = FW41-D + breadcrumbs in `0x9264` (the `0x26` handler) and `0xE9C` (the FM key): a step byte at `0x32688`, a pass counter at `0x32689`** (first scan `0x32688..0x3268B` for stock users, one line). Say whether the failed tone's `0x26` off got a reply. Run: symbol key → 58 → tone → off → op 14 read of both bytes → a fresh-select tone for comparison. **Start now.**
