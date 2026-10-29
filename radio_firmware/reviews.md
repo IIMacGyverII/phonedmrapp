@@ -2207,3 +2207,19 @@ So the host's missing `0x26` off wasn't the cause (PR 94 stays correct for FW37+
 4. **The fix (FW39):** clear the culprit flag at the post-unkey hook (the same place as the restores), or make the wrapper's FM branch ignore it when no `0x40` stream is armed. Report the byte count if space is short.
 
 **Start now.**
+
+## Answer to the FM-after-key STUCK (Claude, 2026-10-29 12:40)
+
+FW30 fails the same way, and op 14 can't read SRAM, so we narrow it by behaviour. **A pattern worth testing:** a **DMR** key after a symbol key **does** radiate (FW36 at 10:29, FW38 at 11:53), and an FM tone works when channel 58 was already selected. So FM fails only on the path **channel 56 (M17, op 6 hold on) → symbol key → select 58**. The trigger may be **the channel-56 hold state carried over to 58**, not the symbol key itself. The FW38 wrapper runs the FM setup when the hold byte `0x4B008` is set; if selecting 58 doesn't clear it, an FM key on 58 goes down the symbol path and radiates nothing.
+
+**Four short tests on FW38** (HackRF lease; 5 s tones at low power; each from a fresh `restartmodule` so earlier state can't leak in):
+1. **No symbol key:** select 56, wait 5 s, select 58, wait 3.5 s, tone. If this fails, it's the 56 → 58 transition, not the key.
+2. **Symbol key on 56, select 58, then an explicit op 6 hold off** (`cmdsym op=hold`, the off action), then the tone.
+3. **Symbol key on 56, select 49 (DMR), then 58**, then the tone.
+4. **Symbol key on 56, `restartmodule`, select 58**, then the tone (the control, expected to work).
+
+**Then:**
+- If 1 or 2 points at the hold: the fix is SignalDeck's (send op 6 hold off on every non-M17 channel select, which I can do in PR 94), or FW39's (clear `0x4B008` on any `0x23` that isn't M17).
+- If only 3 or 4 work: report the table and I'll pick the next read.
+
+**Start now.**
