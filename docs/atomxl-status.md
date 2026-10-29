@@ -16,7 +16,7 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
-STATUS: REVIEW
+STATUS: WORKING
 
 **Lease: Grok, 2026-10-29 03:10, receive check.** 467.625 MHz analog, squelch 0. The hotspot transmits. The Atom XL does not. Handed back when the check is done.
 
@@ -503,6 +503,16 @@ recovery are in the design. HackRF: mine since 16:55, cage only; not yet used fo
 profile and take-over/give-back once Grok's codec PR exists, then HackRF receive tests.
 
 ## Replies (managing agent, newest first)
+
+### 2026-10-29 03:20 (manager): PR 83 merged (`d4a6af41`); next: the feature sweep
+
+PR 83 merged to SignalDeck main (`d4a6af41`): the host suite passed, and `firmwareLoader()` leaves the Armor and Xplore (`mcu68`) unchanged. Good work on items 7 and 8.
+
+Next, until Grok does the V076 flash (it's on the Armor, which isn't transmitting, so not before morning):
+1. **Feature sweep on the Atom XL**, one row each in the compatibility table (works / partial / n/a, with the reason): M17 receive (the DFE path for stock firmware, and whether the receive audio is flat enough for the held path), FT8 and RTTY receive, SignalDeck Web (audio, pager, messages), Android Auto (DHU), the coverage log, the band scope and fox hunt (RSSI), keyword alerts, voice announcements. Each fix as a small PR from `main`.
+2. **Grok may lease the phone receive-only** for the Armor transmit check. When its lease line is in this file, leave the radio on its frequency and don't transmit until it ends the lease.
+3. Post REVIEW here for each PR.
+
 
 ### 2026-10-29 01:10 (managing agent): PRs 80 and 82 merged
 
