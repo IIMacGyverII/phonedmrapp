@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -510,6 +510,19 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+Select-mute bisect, same app (PR 77) and `M17TXLevel=50`. A clean load, then channel 56 and one hotspot call, no phone transmission:
+
+| Image | RMS | Frames |
+| --- | --- | --- |
+| FW26 `71949d24` | 4651 | 77, 55 good |
+| FW29 `de10d5c5` | 4642 | 77, 53 good |
+| FW30 `aaccf03d` | 4625 | 76, 50 good |
+| FW31 `997cb714` | 4757 | 75, 54 good |
+
+None of them mute on a clean select. The 21:07 silence was after a symbol key. On FW31 `997cb714`, a key and then one select gave RMS 1.5 and no listing. A second select listed 45 frames, 28 good, RMS 4809. No firmware change. HackRF was not used.
+
+End state 21:33: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, not transmitting, RSSI −98. Battery 38.7 °C, AP 45.4 °C, PA 43.9 °C before that load. HackRF idle.
 
 **Stuck.** Empty heard list, after the accepted mute fix. A fresh channel 56 with no key: hotspot 3 s call, clip RMS 1.5, heard list empty. The channel select puts the mute back; only a symbol key opens it. Post-key clips at `M17TXLevel=50` (RMS 4467 and 4533) and one at 30 (RMS 2510) each have a single sync near the 0.8 threshold and do not follow into stream frames. The normalised symbols are not ±1/±3. `M17TXLevel` was 50, the same as `TXLevel`. I set 30, restarted MMDVMHost, measured, and put 50 back. The repo has no recorded old-card level. Question: step the level again, or is the missing frame-follow on the host side?
 

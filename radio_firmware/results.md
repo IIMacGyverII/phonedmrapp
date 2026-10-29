@@ -4230,6 +4230,19 @@ End state 21:04: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, not tr
 
 End state 21:10: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, not transmitting. HackRF idle.
 
+**Select-mute bisect (21:12–21:33).** SignalDeck PR 77 stayed installed. `M17TXLevel` stayed 50. Each row is a clean load, then channel 56, then one hotspot call and no phone transmission.
+
+| Image | sha256 | RMS | Listed |
+| --- | --- | --- | --- |
+| FW26 | `71949d24…` | 4651 | 77 frames, 55 good |
+| FW29 | `de10d5c5…` | 4642 | 77 frames, 53 good |
+| FW30 | `aaccf03d…` | 4625 | 76 frames, 50 good |
+| FW31 | `997cb714…` | 4757 | 75 frames, 54 good |
+
+FW26's select logged `data hold action=1 sr=0`. A clean select does not mute on any of these images. On FW31 `997cb714`, one symbol key and then a select gave RMS 1.5 and no new listing. Selecting channel 56 again listed 45 frames, 28 good, and the clip was RMS 4809, with status 1 and `data hold action=1 sr=0`. An idle-pass clear of bit 7 (`1f1440ff…`, not kept) did not change the first select after a key: RMS 1.5. That image was replaced by `997cb714`.
+
+End state 21:33: `DMR003.FW31.V022` sha256 `997cb714…ac30`, channel 56, not transmitting, RSSI −98. Battery 38.7 °C, AP 45.4 °C, PA 43.9 °C before the last load. HackRF idle.
+
 **PR 73, the two review fixes (17:55).** SignalDeck `33c31847` on `grok/agold-envelope`. A `0x36` push (`rw` not 0) keeps its body and `sr` 0. A `rw` 00 reply of one byte becomes `sr` and an empty body. An unlisted command is delivered the same way, and the first sight of each command is logged. `AgoldEnvelopeTest` 9 tests, 0 failures. No phone. FW30b was not started.
 
 **FW30b was not built (17:30).** Image 3c's register read (`fw30_build.read_stub`) is 122 bytes. At `0x5BD74` it ends at `0x5BDEE`. The refuse stub that image 3b put after it ends at `0x5BDFA`. This FW30's channel-mode gate, inherited from FW3K, starts at `0x5BDEC`. The only zero run of 100 bytes or more in the file is `0x35F64`–`0x35FE4`. No image was written and the module was not loaded again.
