@@ -236,6 +236,37 @@ has to come from a file: a newer Unihertz package or OTA, the stock app's downlo
 V067/V076/V080/V082, so builds with those files existed), or the vendor. Once one V082 file exists, a SignalDeck check
 can tell a user's module apart by its `0x34` reply without reading the flash.
 
+**Correction (2026-10-28 23:43, D1 below):** this test relied on the module-on step `00 10 01`, which does not power the
+module back on this bridge build. The module was most likely off for the whole window, so the 0 bytes say nothing
+about the bootloader.
+
+**D1: the module after bridge `00 10 00` / `00 10 01` (2026-10-28 23:43, HAL stopped, no PTT, no update mode, no `'1'`).**
+The bridge answered `00 01` (`20201016161541`) at every step. The module answered `01 34` (`DMR006.U4A.V067`) before
+`00 10 00`, and stayed silent for 30 s after it and after `00 10 01` (asked every ~2.7 s). After an `mcu_power` cycle
+it answered V067 again. **On this bridge build, `00 10 01` does not bring the module back**, so the vendor updater
+(§9, steps 4–5) never reaches a running bootloader.
+
+**The two stock-route V076 attempts (owner's go, 2026-10-28; the image's sha256 `4f5f287b…4d40fe` equals the phone's
+own `/vendor/data/dmr/DMR006.U4A.V076.bin`):**
+- **23:25, attempt 1.** The file was pushed as `/sdcard/intercom/dmr/DMR006.U4A.V076.bin`, then the stock app was
+  force-stopped and started. The HAL aborted on its first reply (`F/HidlStatus: Failed HIDL return status not checked`,
+  SIGABRT in its HwBinder thread, `tombstone_01`), right after the bridge version reply; it still held a callback to
+  the killed app. The update never started. Rule: never force-stop the stock app before an update.
+- **23:30, attempt 2** (clean reboot, stock app opened once, untouched):
+  - The app found the file and showed "Update DMR" (`updateDmr mIsFirstDmrUpdate:true`).
+  - HAL `updateDmr`: `stop dmr` (`00 10 00`), 4 s; `start ptt` (`handle_ptt` 0), 2 s; `enter dmr update mode`
+    (`00 08 01`), 2 s; `start dmr` (`00 10 01`), 2 s.
+  - It logged `update_dmr_firmware sdcard error no:13 error:Permission denied`, a denied `dac_read_search`/`dac_override`
+    on the `root:everybody 0660` pushed file. This is harmless: it read the vendor copy (`flen = 358100`).
+  - `Ymodem_Transmit start` then waited from 23:30:45 to 23:34:23: **`cCount = 0`**, `onDmrUpdateFailed`.
+  - Its clean-up (`00 10 00`, `handle_ptt` 1, power-down) left the HAL at `mcuState = 2`. The app's automatic restart
+    then timed out (`onManagerStartTimeout`, "Device init failed"). A reboot clears it.
+  - Nothing was written. After a reboot the stock app reads `DMR006.U4A.V067` and sets its channel (23:40).
+- Both logs are kept outside the repositories (`v076_update_log.txt`, `v076_update_log2_full.txt`, the agent's scratchpad).
+- **Conclusion: the stock route cannot load V076 on this phone as shipped**, because its module-on step does not power
+  the module. This fits V076 having sat in every ROM with `dmr_update` = 0. A bench route with a different power-up is
+  queued as Grok's item 6 (plan first, owner decides the load).
+
 ## 4. PTT key (press-tested with the owner, 2026-10-28 13:17)
 
 - **The app receives it as `android.intent.action.PTT.down` / `android.intent.action.PTT.up`** (and `.PTT.timeout`),
