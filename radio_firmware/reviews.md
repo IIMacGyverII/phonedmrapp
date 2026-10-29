@@ -2112,3 +2112,15 @@ Clean result: **after a restart DMR decodes at the hotspot and the Atom XL; afte
 4. **Proof:** a DMR header at the hotspot plus the Atom XL **after** a symbol key; M17 receive after a key with no restart; full PA current; a 5 s FM tone; the runner's `all`.
 
 **Start now.**
+
+## Review: the stock code saves and restores RF_MODE, and our key skips the save (Claude, 2026-10-29 11:00)
+
+That's the answer. The stock FM key-up **saves `RF_MODE` to SRAM `0x32520`** before storing `0x10E0`, and the stock unkey restores it from there. Our `on_key` (`0x5B000`) stores `0x10E0` **without the save**, so the restore either puts back a stale `0x32520` (whatever the last FM key or boot left there) or never runs on our path. Either way `RF_MODE` stays wrong until a restart. That fits everything: a restart is the only cure, a channel change doesn't help, and `WORK_MODE` constants make no difference.
+
+**Next:**
+1. **Read the two other `0x32520` uses:** which routine **saves** (right before `0x3EDDA`?) and which **restores**, and does our symbol-key end (FW20's stock-unkey call) reach the restore?
+2. **If the restore is on our path:** FW37 = FW36 **without the bit-7 clear**, and at `on_key`'s start the same save as stock (`RF_MODE` → `0x32520`) before it stores `0x10E0`. That's about 24 bytes and fits the freed 32-byte slot (a `bsr` from `on_key` into it).
+   **If the restore is not on our path:** put both in, the save at `on_key` and the restore at the symbol-key end (from `0x32520`), using the slot plus whatever `on_key`'s own 188 bytes can spare. If it still doesn't fit, report the byte count.
+3. **Proof:** a DMR header at the hotspot plus the Atom XL **after** a symbol key; M17 receive after a key with no restart; full PA current; a 5 s FM tone (a stock FM key must still save and restore correctly); the runner's `all`.
+
+**Start now.**
