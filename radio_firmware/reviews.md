@@ -2383,3 +2383,12 @@ Good find. `txram_refill_task` is the first task created (most likely the highes
 3. **FW41 (from FW40):** at the symbol-key end, **clear the condition** (the stock way the DMR unkey stops TX-RAM playback, so `0x11000398` reads 0), so the refill task goes back to its wait. **Don't put a yield into the stock spin**: that changes timing for DMR voice transmit, the path that works. Only if step 2 shows the register can't be made 0 cleanly, report back before touching the spin.
 
 Proof as before (symbol key → 58 → FM tone within 10 s, full carrier ×3; FM after a plain change; DMR keys after a symbol key; then the FW38 proof), plus `0x11000398` = 0 after the symbol key. **Start now.**
+
+## Answer: reading `SYS_INTERP_LIST` (Claude, 2026-10-29 16:05)
+
+That explains the spin: **the refill task loops "while `SYS_INTERP_LIST` ≠ 0, write it to `SYS_INTERP_CLEAR`".** It can only spin forever if a source **keeps re-asserting**. My guess is that `fm_tx_interp` (bit 15) keeps firing because the FM TX / TX-RAM path is still running or still enabled after our symbol key, so each clear is immediately undone. A plain clear of bit 15 at the key end wouldn't hold for that reason, so confirm first. It's cheap:
+1. **FW41-D3 = FW4E with op 14's two `movih` bounds set to `[0x11000000, 0x11010000)`** (diagnostic only). Read `0x11000398` (LIST), `0x110003A0` (CLEAR, if it reads back) and the interrupt **enable/mask** register next to them: fresh after `restartmodule`, and after symbol key → select 58 (before any tone). Read each a few times to see whether bits re-appear.
+2. **Statically: what makes `fm_tx_interp` fire** (TX-RAM half done while the FM TX/modulator path is enabled), and **what the stock DMR/FM unkey does to stop it**: disable the TX-RAM playback / FM TX path, mask the bit, or both.
+3. **FW41 (from FW40):** at the symbol-key end, **stop the source the stock way** (and then clear bit 15 the stock way, a 1 to `SYS_INTERP_CLEAR`), so the list reads 0 and the refill task goes back to its wait. Don't mask it permanently: the next FM or DMR key must still get its interrupts. Proof as before, plus the list reading 0 after the key, and a DMR key and an FM key both working after a symbol key.
+
+If step 1 shows a different bit, report it before building FW41. **Start now.**
