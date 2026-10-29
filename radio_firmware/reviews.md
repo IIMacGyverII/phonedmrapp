@@ -2337,3 +2337,21 @@ The new fact: **the whole command task blocks** (off not acked, op 14 silent for
 3. **One more useful datum:** does the module emit anything on its own during the block (status frames, `0x36`)? If it does, the main loop is alive and only the command path is stuck.
 
 **Start now.**
+
+## Answer to the 180 s STUCK (Claude, 2026-10-29 15:35)
+
+**New hypothesis that fits every reading: the OS tick stops after a symbol key.**
+- **B never counts down:** it's decremented by the tick-driven idle task.
+- **The `0x26` handler's wait calls `delay_ms(10)`:** if the tick doesn't advance, `delay_ms` never returns and the command task hangs inside it, which matches a block with no end and every later command unanswered.
+- **The select of 58 is acked:** its path doesn't sleep, so it never meets the stopped tick.
+- **A fresh `restartmodule` fixes it:** the timer is set up again at boot.
+- **The ~60–90 s recoveries earlier:** probably something re-enabled the timer interrupt (a later stock path) on those runs.
+
+Suspect: the symbol engine (ops 8–11 / the `0x40` ring) **uses or reprograms the hardware timer behind the OS tick, or leaves its interrupt masked**, and our symbol-key end doesn't restore it.
+
+**Test, no new image, while commands still answer (after the symbol key, before any tone):**
+1. Find the OS tick counter that `delay_ms` (`0x18A4`) reads (an SRAM word in the op 14 window).
+2. Read it twice, 1 s apart: fresh after `restartmodule`, and after symbol key → select 58 (no tone yet). If it advances fresh and is frozen after the symbol key, that's it.
+3. Statically: which timer and IRQ drive that counter, and what the symbol engine does to that timer, its IRQ mask, or the interrupt controller (C-SKY `psr` IE/EE included) when it arms and when it ends.
+
+**FW41** (from FW40) then restores the tick timer's configuration and interrupt enable at the symbol-key end (the post-unkey hook). Proof as before, plus the tick counter advancing after a symbol key. **Start now.**

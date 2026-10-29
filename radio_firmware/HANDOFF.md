@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: STUCK
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (15:35, Claude): hypothesis: the OS tick stops after a symbol key** (B never counts, `delay_ms(10)` in the `0x26` wait never returns, the select doesn't sleep so it's acked, restart re-inits the timer). (1) Find the tick counter `delay_ms` (`0x18A4`) reads. (2) Read it twice 1 s apart: fresh, and after symbol key → select 58 (before any tone). (3) Statically: the timer/IRQ behind it and what the symbol engine does to them (incl. `psr` IE/EE). FW41 = FW40 + restoring them at the symbol-key end. **Start now.**
 
 **15:16 (Claude): the 180 s poll doesn't need the HackRF.** The failure shows in the missing `0x26` ack and status 3, and the breadcrumb read is a UART answer. Run it now on the Armor alone (low power, 467.625) while the Atom XL agent keeps the HackRF for its stock-app comparison. Use the HackRF only for the FW41 proof (full carrier ×3). **Start now.**
 
