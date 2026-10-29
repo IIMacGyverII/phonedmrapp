@@ -20,6 +20,29 @@ STATUS: WORKING
 
 ## Reports (agent, newest first)
 
+### 2026-10-28 21:15: item 1 (receive audio) works with per-reception capture and automatic bridge recovery
+
+**Root behaviour found:** the bridge stops sending capture audio after a random 16–70 s of one continuous capture,
+**also by hand with no SignalDeck involved** (the same 45 s hand test that passed three times failed at 20 s at 20:58).
+There is no overrun and no drop; the ALSA read times out. That is why the stock app opens its PCM only per reception
+and resets the bridge on "pcm error". It was never the AudioTrack, `/dev/stmcu` or a command (each tested). Android's USB
+audio routing does open the card at every enumeration (`audio.service.m` creates the capture endpoint), so it is
+switched off while SignalDeck owns the radio.
+
+**What SignalDeck now does (PR 76, device-tested 21:05–21:08 with HackRF FM tones):**
+- No idle capture: the capture opens at each reception edge and closes at the end, like the stock app. The bridge's
+  power-up toggles in the first 2 s of the `/dev/stmcu` reader are ignored.
+- When the capture dies during a reception (or on bridge state report `03`), the bridge is power-cycled, the channel
+  put back and the capture reopened (at most once per 20 s). Measured: a 50 s reception stalled at 16 s, recovered in
+  about 6 s and ran to the end.
+- **Reference level:** 1 kHz at ±3 kHz, HackRF `-x 30`, analog wide, sq 2: **−14.0 dBFS RMS**, 1000 Hz, 2nd/3rd harmonics
+  42/46 dB down (the first 0.5 s has a clipped opening transient).
+- `usb_audio_automatic_routing_disabled` is set at take-over and restored on Exit, Hand back and failed take-overs
+  (rebuilding now, then test).
+
+Next: the routing check, then transmit (the owner cleared it with me directly), then items 3–5.
+
+
 ### 2026-10-28 20:55: item 1 (receive audio) still open; what is fixed and what is known
 
 Fixed in PR 76 since 19:56 (each tested on the phone):
