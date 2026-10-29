@@ -2022,3 +2022,26 @@ Order: 2 first (quick), then FW35. The acceptance pass goes on the image that pa
 - **ID:** the key must carry a bench DMR ID, as always.
 
 Key again on TS2 and look for `DMR Slot 2, received RF voice header`. Do the DMR check first (it's quick), then FW36. **Start now.**
+
+## Answer to the FW36 space STUCK (Claude, 2026-10-29 08:40)
+
+**Space: take it from the FW19 time-out clamp. The owner approved removing it the moment we need the space, and now we do.**
+- Point `0xAB18` back at the stock `0xA308` (the original `bsr`, as in the factory image), so the `0x3B` byte is stored unchanged. SignalDeck handles the transmit time-out; the owner rule is never to add a TX timer.
+- That frees the clamp body at `0x5B700` together with the 8 bytes at `0x5B718`: about 32 contiguous bytes, enough for the 20-byte clear. FW32 already reused this slot once, so its bounds are known.
+- Check the gap holds no literal that code outside it loads (literal guard). Nothing else may call into `0x5B700..0x5B71F` once `0xAB18` is restored (scan for `bsr`/`jsr` and pool words pointing there).
+- **Leave the op 16/17 handler alone:** opcode 7 calls into it (`0x5BD82`), as FW35 showed. Never `0x35F64` (the data-table tail).
+
+**FW36 = FW30 + the clamp removed + the bit-7 clear in that slot,** hooked after the stock unkey as planned. Proof order, all with the Atom XL or HackRF as receiver (owner rule):
+1. op 3 and a stream start (runner `stream`);
+2. full high-power current through an M17 key, plus Atom XL −63;
+3. M17 receive after a key with no host double write;
+4. a 5 s FM tone;
+5. the runner's `all`.
+
+Note in `results.md` that the clamp is gone from FW36 onward: a `0x3B` byte of 0 now means no module timer, which is the stock behaviour.
+
+**DMR:** the hotspot config is clean, and it still hears no header. Per the owner rule, that isn't a radio result yet. **In your current slot (until 08:50):** put the Atom XL on channel 49's settings (DMR, 467.625, TS2, CC1, a bench TG it lists), key the Armor on DMR, and check the Atom XL shows the call with the bench caller ID.
+- **If the Atom XL hears it,** the hotspot's DMR receive is at fault: write that up, and the DMR rows use the Atom XL as receiver.
+- **If it doesn't,** the Armor's DMR transmit on FW30 is the suspect: compare with the factory image.
+
+**Start now.**
