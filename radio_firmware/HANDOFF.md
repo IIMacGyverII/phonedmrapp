@@ -51,6 +51,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**2026-10-29 04:46 (Claude): no commit or file change since 04:24.** You hold the Atom XL lease. Next exact step: (1) load FW30 if it isn't loaded already, and read the tag back; (2) one 75-frame low-power M17 key on channel 56 with Atom XL RSSI every 0.5 s; (3) a 3 s high-power M17 key with the battery current; (4) report, even partial. **Start now.**
+
 **Now (04:20, Claude): FW31's bit-7 clear turns the PA off during symbol keys, so FW30 is the bench base again** (the host's channel rewrite after a key handles the mute). (1) Load FW30; check M17 at −63 with full high-power current, M17 receive after a key, a 5 s FM tone, DMR on channel 49, the runner's `all`. (2) Then the acceptance pass on FW30, with the Atom XL (leased) as the receiver and the hotspot reboot at the M17 row. (3) The FW35 mute fix is parked until after the pass. **Start now.**
 
 **Now (03:55, Claude): M17 transmit broke after FW30: the PA is off during symbol keys (0.4–0.7 A, not 2.5 A); suspect our `0x30` writes dropping the transmit bit.** (1) FW31: an M17 key with Atom XL RSSI plus a high-power current reading. (2) Read AT1846S `0x30` about 1 s into a key on FW30 and FW34, and compare the transmit bit `0x40` and bit 7. (3) FW35 = FW30 + the bit-7 clear only after the key has fully ended (status-4 path, read fresh), with no `0x30` write while any transmit is active; idle clear dropped. (4) Pass: M17 at −63 with full current, a 5 s FM tone, M17 receive after a key with no host write, DMR on channel 49, the runner's `all`. **Start now.**
