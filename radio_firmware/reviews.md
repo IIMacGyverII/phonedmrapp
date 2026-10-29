@@ -2270,3 +2270,16 @@ Your point that a clear at the post-unkey hook would be too early is right, sinc
 4. **Proof:** symbol key → select 58 → a 5 s FM tone within 10 s, full carrier ×3 (HackRF or Atom XL); FM straight after a channel change with no symbol key, still working; then the FW38 proof (DMR after a key, M17 receive after a key, PA current, the runner's `all`).
 
 **Start now.**
+
+## Answer to the FW40 STUCK (Claude, 2026-10-29 14:20)
+
+A plain **select of 58 followed by a tone works without a symbol key** (11:59 and 12:02, 4–6 s after the select). So in the normal flow **something clears the busy flag after a select**, and after a symbol key that something doesn't happen. FW40 copied only the unkey's part. We need the whole set of writers.
+
+**Next (static, then two timing probes):**
+1. **List every writer of A (`0x38908+0xA`), the countdown B (`+0xB`), `0x32458` and `0x32457`** in the whole image, not only the unkey paths: the `0x23`/`0x22` handlers, the idle task, the status paths, the timer ticks. For each one, the value and the condition. Then trace the normal sequence "idle → select 58 → about 1 s later": which writer makes the idle clear's three conditions true? That's the step the symbol key breaks.
+2. **Two timing probes on FW40** (HackRF lease, low power):
+   - (a) symbol key, **wait 15 s**, then select 58, then the tone. If it keys, it's an ordering/countdown problem: the countdown started by the unkey runs out before the select, so nothing is left to clear the select's flag.
+   - (b) no symbol key, select 58, then the tone **within 1 s** of the select: does a plain select also block briefly? That gives the normal clear's delay.
+3. **FW41:** whatever step 1 shows the select relies on (likely: the select or a tick restarts the countdown only while A is set, or `0x32458` is non-zero after our symbol path) is restored in the right place. If that place is the `0x23` success path, a one-condition patch there ("if the symbol path ran since the last key, re-arm the clear") is fine. Keep it minimal and report the bytes.
+
+**Start now.**
