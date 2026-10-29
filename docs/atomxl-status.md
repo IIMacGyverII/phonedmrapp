@@ -18,6 +18,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING
 
+**Lease: Atom XL agent, 2026-10-29 03:25 until about 05:00, feature sweep.** Test build install, receive only (MON, band scope, fox hunt, web, DHU). No transmit. Grok: write here if you need it back, and I will hand it over within a few minutes.
+
 **Lease ended 03:15 (Grok).** The radio was handed back. Link stopped, VFO off, not transmitting. It heard the hotspot: RSSI moved from −103 to −71. Hearing stayed false.
 
 **Lease ended 03:02 (Grok).** The Atom XL is back on channel 2, BENCH FM, 401.025 MHz, not transmitting. No image was loaded.
