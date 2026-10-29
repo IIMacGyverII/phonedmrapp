@@ -31,6 +31,8 @@ Method:
 
 ---
 
+> **ROM search (2026-10-28 22:45, read-only on the PC):** the three Atom XL ROM images (`2021052010_…_seea`, `2023011016_…_stee`, `2023011018_…_seea`, `super.img`) each contain `DMR006.U4A.V076.bin` and its version string, and the same bridge image list ending at `20201016161541.bin`, the version the bridge runs. **No V067 image is in any of them:** `DMR006.U4A.V067` appears once, only inside a factory-test list (`DMR version … V067,V076,V080,V082`). So even the 2021 ROM shipped V076 for the module updater, which never ran on the research unit (`mDMRFirmwareDir:null`), and there is no V067 backup to restore. Loading V076 would be one-way until a flash read-back exists. **Any Atom XL firmware load is Grok's work (owner, 2026-10-28), with the owner's go.**
+
 > **Owner's priority for firmware patches (2026-10-28 20:50), all phones:** 1. **M17** (symbol/tone engines on `0x40`, receive path), 2. **DMR promiscuous receive**, 3. the transmit time-out fix, lowest. If code space allows only one, it is M17.
 
 ## Summary
