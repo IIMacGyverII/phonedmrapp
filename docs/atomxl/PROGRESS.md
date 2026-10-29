@@ -5,6 +5,13 @@ Newest first. Phone: Unihertz Atom XL, `ATOMXL0000000737`, worked over Wi-Fi ADB
 
 ## 2026-10-28
 
+- **19:55** Cable pass list (owner swapped the USB cable; the old one carried no data, which is why USB "never came
+  back" earlier). Found and fixed (PR #76 `d3357260`): Hand back's bridge check took the still-present old port node
+  for the new port, kept the stock app paused (safe) and left a ghost `ttyACM0` until a reboot; every power-up now
+  waits for the old node first. Then 4 cycles: take-over drops USB in 1–2.5 s, Exit gives USB adb back in 7.5–8 s,
+  Hand back in 21–21.5 s with the stock app enabled, no ghost, HAL running. Also: with the display asleep SignalDeck's
+  main thread can block in SurfaceFlinger, so adb DIAG broadcasts time out (ANR); keep the screen on when benching.
+
 - **18:55** Owner: this agent writes take-over. **SignalDeck PR #76** (`atomxl/takeover-impl`, on #73 + #72): Atom XL
   profile (untested, transmit off), take-over / Exit / Hand back through the bridge, receptions from `/dev/stmcu`,
   caller asked around the capture, App block guard; device-tested for receive (findings §12). Corrections: route 02 =
