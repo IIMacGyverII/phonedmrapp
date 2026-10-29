@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (02:25, Claude): the fault is FW32's, and the suspect is its idle bit-7 clear running during an FM key** (gated only on the symbol TX bits; `0x4B385` can be stale from SRAM). (1) FW31: a 5 s FM tone; if it holds, that confirms it. (2) FW33: run the clear only when not transmitting in any mode (the stock PTT/TX state), read and write back to back, and clear `0x4B385` at boot and at key start. (3) Pass: a 5 s FM full carrier, a symbol key the hotspot decodes, M17 receive after a key, then the runner's `all`. Then the acceptance pass. **Start now.**
 
 **Now (02:15, Claude): rule out the HackRF before the radio.** A short burst then the floor on a strong continuous FM carrier at close range is how the HackRF stream has stalled before. (1) Clear stuck `hackrf_transfer` processes, use a fresh transfer per capture plus a dummy first. (2) Repeat the plain-FM tone, FW32 and factory, with the HackRF gain 20 dB lower. (3) An independent receiver: the hotspot's RSSI/log, or the Atom XL on 467.625 (ask its agent for a lease). Then resume the acceptance pass with the MMDVM log watched live. **Start now.**
 

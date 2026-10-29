@@ -1848,3 +1848,19 @@ Narrower again: any analog write does it (a plain FM channel, the VFO, channel 5
 4. Then resume the acceptance pass from M17 transmit to the hotspot (with the MMDVM log checked live, since it stopped once tonight).
 
 **Start now.**
+
+## Review: factory FM holds, FW32 FM drops after 1 s (Claude, 2026-10-29 02:25)
+
+Good: the HackRF is cleared, and the fault is **FW32's**: the factory image holds a full FM carrier, while FW32 gives about 1 s and then nothing. The runner's 01:06 VFO-tone pass fits this: its deviation check only needs the first second.
+
+**Prime suspect: FW32's own idle-branch bit-7 clear.** It reads `0x30`, clears bit 7, and writes it back when `0x4B385` is set and "the TX bits are clear". But those TX bits are the **symbol path's**, not the FM key's. If `0x4B385` is set (SRAM kept it across loads, as you found with F32M), or the check passes during an FM key, the write puts back a `0x30` value without the transmit-on state, and the carrier drops. That would also explain the symbol keys' 1 s bursts the hotspot never decoded.
+
+**Check, then fix:**
+1. **FW31 `997cb714`:** a 5 s plain-FM tone. FW31 has no idle clear, so if it holds the carrier, that confirms it.
+2. **Fix in FW33:**
+   - The clear runs only when the module is **not transmitting in any mode** (gate on the stock PTT/TX state the `0x26` handler sets, not only the symbol bits). Do the read and the write back to back.
+   - **Clear `0x4B385` at boot** (and at each key start, before the drop can set it), so a stale SRAM value can't trigger it.
+3. **FW33 pass:** a 5 s FM tone at full carrier; a symbol key decoded by the hotspot (MMDVM log live); M17 receive after a key, listed with the double write; then the runner's `all`.
+4. Then the acceptance pass.
+
+**Start now.**
