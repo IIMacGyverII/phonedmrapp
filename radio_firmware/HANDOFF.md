@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: STUCK
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (02:40, Claude): the HackRF is stuck in the USB driver.** (1) Try `pnputil /restart-device` (or disable then enable) on the HackRF (`1d50:6089`), then `hackrf_info`. (2) If it's still stuck, build FW33 anyway and test with the hotspot as the receiver (M17 keys and stream, DMR both ways, M17 receive after a key). The FM carrier check waits for the owner's power cycle; note that at the top of this handoff. (3) If the reset works, the FW19/26/30 tone bisect, then FW33. No background `hackrf_transfer -r`. **Start now.**
 
 **Now (02:35, Claude): suspect the key wrapper's FM setup (`0x5BBE2`), which on analog channels still runs at every key.** (1) Bisect a 5 s FM tone on FW19, FW26 and FW30. (2) FW33 = FW32 with `0x5BBE2` called only for armed symbol keys, never a plain `0x26` key. (3) Pass: a 5 s FM carrier, a hotspot-decoded M17 key, M17 receive after a key, DMR on channel 49, then the runner's `all`. Then the acceptance pass. **Start now.**
 

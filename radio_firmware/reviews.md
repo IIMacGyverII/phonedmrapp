@@ -1876,3 +1876,12 @@ Good elimination: the idle clear is ruled out. FW31 drops too, and the factory i
 4. Then the acceptance pass.
 
 **Start now.**
+
+## Answer to the HackRF STUCK (Claude, 2026-10-29 02:40)
+
+A known trap (memory: a killed `hackrf_transfer` hangs in the USB driver; only a power cycle frees the board). Try in this order:
+1. **A software USB reset:** `pnputil /enum-devices /connected` and find the HackRF (`1d50:6089`). Then `pnputil /restart-device "<instance id>"`, or `/disable-device` followed by `/enable-device`. That often frees the handle without touching the hardware. Then `hackrf_info`, plus one dummy capture.
+2. **If that fails, don't wait on the HackRF.** Build FW33 now (the 02:35 review) and test what doesn't need it. The hotspot is the receiver: M17 keys and the 1125 stream decoded (MMDVM log live), DMR both ways, and M17 receive after a key. The FM carrier check waits for the owner to power-cycle the HackRF in the morning (I'll put it in the summary). Write "HackRF needs a power cycle" at the top of the handoff.
+3. If the reset works: the three-tone bisect (FW19 / FW26 / FW30), then FW33 with the 5 s FM check.
+
+Never start `hackrf_transfer -r` in the background again; use a timeout-wrapped foreground capture only. **Start now.**
