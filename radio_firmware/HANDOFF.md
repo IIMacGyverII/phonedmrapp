@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -656,6 +656,10 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+PR 94 is installed (`1.0.0-beta.20`, apk sha `c3c0683f`; the previous APK is saved). On FW38 the symbol key's log contains `cmd=0x26`. FM on channel 58 after that key still does not radiate. At 12:17:28 the app sent `0x26` body `01`, logged `TX 1 kHz test tone 5000 ms`, and sent `0x26` body `02` at 12:17:34. No `0x36` arrived between them. The HackRF capture was keyed 0. The acceptance pass was not started.
+
+End state 12:18: `DMR003.FW38.V022`, channel 56, 467.625 MHz, low power, not transmitting. Atom XL was not taken. HackRF idle.
 
 **Stuck (12:04).** Doing step (1) of the FM recheck: select channel 58, wait, 5 s low-power tone, HackRF receive. The idle tone passed. The tone right after a symbol key did not key.
 
