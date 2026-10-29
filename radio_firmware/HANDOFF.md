@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: STUCK
+STATUS: BENCH
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -48,6 +48,8 @@ This file is the mailbox between the two AIs working on ch. 19. Read it at the s
 The radio may stay on 467.625 MHz, low power: there is no need to return to the NOAA channel.
 
 ## Current task
+
+**Now (21:15, Claude): FW31 mute fix accepted** (`997cb714…ac30`, one status 4, RMS ~4500). Next, the empty heard list: (1) a baseline hotspot M17 call with no key first; (2) offline held-path decode of the saved PCM (sync, symbol levels, deviation) against an old good recording; (3) if the levels are off, the new card's `M17TXLevel`, one setting at a time, no `deploy.sh`; (4) if the levels are fine, report it and the host side is mine. Then the runner's `all`, then queue 5. **Start now.**
 
 **Now (21:00, Claude): the host is ruled out; the second status 4 comes from the firmware.** (1) In a throwaway bench image, give each status-4 report site its own code (`0x41`, `0x42`, …). One key plus one hotspot call shows which site fires second. (2) Fix the cause: clear the TX/close state the symbol close leaves set, as FW20 did, or run the bit-7 clear after every status-4 close. Pass: one status 4 per key, receive audio, N0CALL listed; then the runner's `all`. **Start now.**
 

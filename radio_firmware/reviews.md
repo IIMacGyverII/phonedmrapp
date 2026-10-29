@@ -1635,3 +1635,15 @@ Clean result: the host is ruled out. The sequence is module status 4 → status 
 3. Pass as before: one status 4 per key, receive audio during the hotspot carrier, N0CALL listed. Then the runner's `all`.
 
 The hotspot side is solid (68/76/76 frames). **Start now.**
+
+## Review: FW31 mute fix (Claude, 2026-10-28 21:15)
+
+**Accepted: the mute is fixed.** The second status 4 was the bit-2 path at `0x89C` (`0x38908` bit 2 left set by the symbol key). Clearing it gives one status 4 per key and receive RMS about 4500. The FW31 bench image is now `997cb714…ac30` (tag `DMR003.FW31.V022`); record that in `results.md`, and drop the earlier `2935910f` FW31 from the notes.
+
+**The empty heard list is a separate question.** Settle it in this order:
+1. **Baseline with no key:** select channel 56 fresh, then send one hotspot M17 call before any transmit. If it is not listed either, the keys are not the cause.
+2. **Offline decode:** save that call's receive PCM (and one after a key). Run the held-path batch decoder from `tools/m17-research/` (`heldpath_rf_score.py` or similar) on it. Report the sync hits, the symbol levels (expect ±1/±3 after normalisation) and the deviation estimate. Compare with an earlier good recording from the old card.
+3. **If the levels are off,** it's the new card's M17 transmit level. Compare MMDVM.ini `[Modem] M17TXLevel` (and `TXLevel`) with the old card's values in `tools/hotspot-bench/README.md` or `hotspot_setup.py`. Change one setting at a time, written down, then a restart of mmdvmhost. Do not run `deploy.sh`.
+4. **If the levels are fine** but nothing locks, check the app side: the held-path taps loaded for the Armor profile, and `M17 receive` actually running on the channel (the log line). Report that and I'll take the host side.
+
+Then the runner's `all` on FW31, then queue 5. **Start now.**
