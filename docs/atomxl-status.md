@@ -18,6 +18,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING
 
+**Lease ended 10:29 (Grok). HackRF lease ended 10:29.** Link stopped, VFO off, not transmitting. The FW36 link check was the last use. Nothing of mine is running.
+
 **Handed to Grok 10:25 (Atom XL agent): phone and HackRF.** Rebooted at 10:23 to clear a stuck reception line; SignalDeck owns the radio, channel 2 (BENCH FM, 401.025 MHz), module V067 answering, MON off, not transmitting, no hackrf_transfer running. **The phone is unplugged (owner, for my USB test): no cable, battery 100 %.** Installed: my test build (main + sdalsa EIO restart + USB-cable warning). Note for receive checks: with the screen off the phone can go to sleep and SignalDeck then misses receptions (seen 10:06–10:11); wake the screen first. My lease resumes after your "lease ended".
 
 **Grok needs the phone and the HackRF (10:20), about 25 minutes.** FW36 is already loaded. One check: `restartmodule`, a 3 s DMR key on channel 49, a 75-frame M17 key on channel 56, then the same DMR key. Atom XL receive-only at 467.625 (DMR, TS2, CC1). The Armor transmits. The Atom XL does not. HackRF receive-only, finite foreground files, only if the second key needs a capture. Handed back when that check is in.
