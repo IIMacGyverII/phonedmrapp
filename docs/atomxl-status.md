@@ -16,7 +16,9 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
-STATUS: WORKING
+STATUS: OWNER
+
+**Lease ended 05:33 (Atom XL agent).** SignalDeck owns the radio, channel 2 (BENCH FM), MON off, voice announcements off again, not transmitting, stay-awake off. Android Auto developer mode turned back off, Bluetooth still off. Installed: my local build, the same code as SignalDeck main after PRs 84–87.
 
 **Lease: Atom XL agent, 2026-10-29 05:35 until about 07:00, feature sweep part 2.** Install main, receive only (Android Auto DHU, coverage, band scope, fox hunt, alerts, announcements). No transmit. Grok: ask here and I hand it over.
 
@@ -53,6 +55,30 @@ STATUS: WORKING
 **Lease ended 03:02 (Grok).** The Atom XL is back on channel 2, BENCH FM, 401.025 MHz, not transmitting. No image was loaded.
 
 ## Reports (agent, newest first)
+
+### 2026-10-29 05:33: feature sweep part 2 done; OWNER: Android Auto needs its first-run consent
+
+**Compatibility rows (Atom XL, module V067):**
+
+| Feature | Result | How / why |
+|---|---|---|
+| SignalDeck Web: audio | **works** | `/api/audio` during MON: 53 s of 60 on a healthy line (PR 86 covers a stuck line) |
+| SignalDeck Web: pager | **n/a** | no symbol engine; hidden by PR 85 |
+| SignalDeck Web: messages | likely works | no profile gate in the code; DMR texts proven on the phone (2026-10-28); page not opened tonight |
+| Band scope | **works** | 400.0–401.2 MHz, 49 steps in 34.8 s, noise −103…−105 dBm, no capture opened, back on 401.025; a 2 m range is refused ("The radio tunes 400–480 MHz") |
+| Fox hunt | works (by its parts) | needs `profile.rssi` (true); signal readings come through during a reception (9 replies to 7 requests in 15 s of MON, −103 dBm shown while hearing); the dialog itself not opened |
+| Coverage log | works (by its parts) | same readings, polled every 2 s while hearing; no GPS run tonight |
+| Voice announcements | **works** | channel changes spoken by Google TTS on the phone speaker (output 0x2), not the radio's USB card; setting put back to off |
+| Keyword alerts | pending | come from captions; no Vosk model on the phone yet, and a speech source needs the HackRF |
+| FT8 receive | fixed in code (PR 84) | on-air pending (HackRF) |
+| RTTY receive | likely works | waits for an open squelch (fits per-reception audio); on-air pending (HackRF) |
+| M17 receive | partial (expected) | stock module: the DFE path with the Armor's table and its "calibrated on the Armor" warning; the held path needs bench firmware; on-air pending (HackRF) |
+| **Android Auto (DHU)** | **OWNER** | the DHU connected over the head unit server (TLS ok, car session to PREFLIGHT), then Android Auto showed its **first-run welcome on this phone**: it asks for access to contacts, call logs, SMS and location, shares data with Google, and turns on Bluetooth and syncs contacts. That consent is the owner's to give, so I pressed Exit, stopped the DHU, removed the 5277 forward and turned AA developer mode back off. Owner: either accept AA's setup on the Atom XL once (then I run the DHU check), or mark AA "not checked" for this phone |
+
+**No new PRs from part 2:** nothing broken found beyond the four already merged.
+
+**Blocked:** the HackRF is still hung (needs a power-cycle) for FT8, RTTY, M17 and keyword alerts on the air.
+
 
 ### 2026-10-29 05:20: REVIEW: SignalDeck PRs 84, 85, 86, 87 (feature sweep, part 1)
 
