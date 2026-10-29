@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -648,6 +648,12 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+FW38 (`b4cafbf4`) saves live `WORK_MODE` at `0x32680` and `FM_BANDWIDTH` at `0x32684` on a symbol key and writes both back at the post-unkey hook. The space is the op 6 variant 5 body; its callers now return unsupported. Variant 6 had no body. The op 16/17 reply and the helper at `0x5BD82` stay. SignalDeck sends mode 3 only.
+
+After a symbol key, a channel-49 DMR key got a hotspot voice header at 16:43:33 UTC. The Atom XL showed a voice line and the caller ID (RSSI −85), and the HackRF saw slot-width bursts (4.27 s, clip 0). M17 receive listed N0CALL, 75 frames, 55 good, with no restart. High-power current held about −2.8 to −3.2 A. The runner's `all` passed, including a 10.547 s tone at p99 2527 Hz and the 1125-frame stream. A channel-58 capture taken during the retune saw no carrier.
+
+End state 11:52: `DMR003.FW38.V022`, channel 56, 467.625 MHz, low power, not transmitting. Atom XL link stopped. HackRF idle.
 
 `on_key` at `0x5B580` writes `RF_MODE` `0x10E0` (FW37 restores it), `WORK_MODE` `0x80` (not restored), `0x11000080` bit 0 (cleared again at `0x5B640` and `0x5B666`), and `FM_BANDWIDTH` bits 4 and 6 (not restored). It also sets PTT, the cursor, and bit 15 of `0x1100039C`, and the end clears those. The 32-byte slot is full. A `WORK_MODE` plus bandwidth restore needs about 24 more bytes. Opcode 16's body starts at `0x5BD74` (gate calls it); `0x5BD82` is the helper op 7 calls and was not cut. The FW37 DMR key was not checked for an Atom XL voice line or caller ID, only RSSI −88.
 
