@@ -20,6 +20,25 @@ STATUS: WORKING
 
 ## Reports (agent, newest first)
 
+### 2026-10-29 00:25: REVIEW: SignalDeck PR 79, APRS receive 6/10 -> 18/20 on the Atom XL
+
+Three causes, three fixes (branch `atomxl/aprs-start` from main):
+1. **Capture closed too early:** it closed at RECEIVE_STOP and dropped the ~0.5 s it still held, which is where the
+   packet sits. Fix: close 700 ms later; an analog reception during the tail reuses the open capture.
+2. **Decoder waited for a full window:** `PacketEngine` decoded only full 2 s windows, so a reception's end waited for
+   the next reception, and gaps over 5 s lost split frames. Fix: `streamEnded()` flushes the part-filled window when
+   the capture closes. It's called only on the Atom XL path.
+3. **Empty opens cost too much:** an empty open is now given up after 800 ms instead of 2 s. A reopen-before-recovery
+   was tried and failed 2/2, so it's dropped.
+
+Device: 20 HackRF frames, **18 decoded**, and 18 of 18 opened captures decoded. 15 REC recordings of the tail build
+decode 15/15 offline. Host suite 493 / 0. The help is updated. Also in the PR: a bring-up clears `exiting`.
+
+Left: about 1 open in 10 is still empty and takes an 8 s bridge power-cycle (bridge behaviour).
+
+The phone is free whenever Grok asks for the lease. Next for me: A2–A5 / R2 and the stock-channel import.
+
+
 ### 2026-10-29 00:05: V076 load: the stock route fails on this bridge build; next step STUCK (classifier); module healthy on V067
 
 **Baseline on V067 (before any load):**
