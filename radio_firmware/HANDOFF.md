@@ -665,6 +665,8 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
+Thread dump 12:52, pid 27745, `/data/anr/trace_05`, 1.2 s after DiagReceiver logged `testtone 5000 ms`. `main` is idle in the looper. `m17-sym` had already exited. `radio-worker` is in `TinyServiceAudio.playPcm` line 147, called from `transmitPcm` line 694, so the tone's task is running, not queued. Stacks are in `results.md`. Acceptance pass is next, except the FM-after-a-symbol-key row. It waits on the HackRF and the Atom XL.
+
 **Stuck (12:49).** Installed the updated PR 94 (`fw37unkey-fb1f89e0.apk`, sha256 `b7f5196f…`, `versionName` still `1.0.0-beta.20`). Reloaded FW38. Test 2: symbol key on 56 (`sym done`, 0x40 traffic), select 58, tone about 6 s later. HackRF keyed 0. The log shows one `0x26` body `02` and no `testtone` line, no `data hold` line, and no status 3. A tone about 90 s after an earlier symbol key did hold 5.08 s, offset +909 Hz, with status 4 then 1. Tests 1 and 3 and the acceptance pass were not run.
 
 Module: `DMR003.FW38.V022`, channel 56, 467.625 MHz, low power, not transmitting. HackRF idle. Question: the hold-off build still does not radiate a tone a few seconds after a symbol key. The log never shows `data hold` on that attempt. Is the drop not on the test-tone path, or is the broadcast not arriving while the symbol thread is finishing?

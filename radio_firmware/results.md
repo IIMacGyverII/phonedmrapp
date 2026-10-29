@@ -4612,3 +4612,16 @@ End state 11:52: `DMR003.FW38.V022`, channel 56, 467.625 MHz, low power, not tra
 **FW30 (12:32).** Loaded `DMR003.FW30.V022` sha256 `aaccf03d47eaf903…`. Symbol key with `cmd=0x26` in the log, channel 58, tone about 18 s later: HackRF keyed 0. Same refusal as FW38. Left on channel 56, not transmitting. FW39 was not built.
 
 **Updated PR 94 (12:48).** Installed `fw37unkey-fb1f89e0.apk`, sha256 `b7f5196f…`. Reloaded `DMR003.FW38.V022`. A symbol key on channel 56 logged `sym done`. Channel 58, tone about 6 s later: HackRF keyed 0. The following log has one `0x26` body `02` and no `testtone`, no `data hold`, and no status 3. A separate tone about 90 s after a symbol key held 5.08 s, offset +909 Hz, clip not quoted, status 4 then status 1. Tests 1 and 3 were not run. Left on channel 56, not transmitting.
+
+**Thread dump (12:52).** Symbol key on 56, select 58, `testtone 5000 ms` logged by DiagReceiver at 12:52:19.585. `kill -3` of pid 27745 at 12:52:20.782 (`/data/anr/trace_05`). `main` is idle in `Looper.loop`. `m17-sym` is not in the dump. `radio-worker` is inside the tone, not blocked before it:
+
+```
+"radio-worker" prio=5 tid=35 Sleeping
+  at java.lang.Thread.sleep(Native method)
+  at com.macdmr.radio.TinyServiceAudio.playPcm(TinyServiceAudio.java:147)
+  at com.macdmr.radio.RadioService.transmitPcm(RadioService.java:694)
+  at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1145)
+  at java.lang.Thread.run(Thread.java:1012)
+```
+
+No HackRF capture on this tone. Left on channel 56, not transmitting.
