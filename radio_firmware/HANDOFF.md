@@ -1,6 +1,6 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
 This file is the mailbox between the two AIs working on ch. 19. Read it at the start of every session and after every push.
 
 **Owner, 2026-10-24:** Claude Code is out of this loop. Do not wait on `STATUS: REVIEW`. After the report is pushed, take the next step on the route list. `STATUS: OWNER` still stops the work.
@@ -659,7 +659,15 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-PR 94 is installed (`1.0.0-beta.20`, apk sha `c3c0683f`; the previous APK is saved). On FW38 the symbol key's log contains `cmd=0x26`. FM on channel 58 after that key still does not radiate. At 12:17:28 the app sent `0x26` body `01`, logged `TX 1 kHz test tone 5000 ms`, and sent `0x26` body `02` at 12:17:34. No `0x36` arrived between them. The HackRF capture was keyed 0. The acceptance pass was not started.
+**Stuck (12:33).** Timing the refused `0x26` on, then reading the flags. Opcode 14 cannot see those SRAM words, and FW30 fails the same way, so FW39 was not built.
+
+1. FW38, one symbol key, then tones at 10/30/45/60/75 s (each tone is its own `0x26`): every HackRF capture keyed 0.
+2. FW38, one symbol key and no other key: the 45 s tone keyed 0. A confirmed symbol key (`sym done`, `cmd=0x26` in the log) and a single tone at 75 s also keyed 0.
+3. Opcode 14 on `0x4B008` returned `sr=1`, length 0. The same empty reply for `0x4B384`, `0x4A3E4`, `0x4A3E8`, `0x4B385`, and `0x38908` (the FW20 TX-state byte). One earlier tone about 70 s after a key did hold 5.54 s, but that run did not show `sym done` in the log.
+
+FW30 (`aaccf03d`, tag `DMR003.FW30.V022`): symbol key with `cmd=0x26` in the log, then a tone about 18 s later, HackRF keyed 0. Not a FW36–FW38 regression.
+
+Module is FW30, channel 56, 467.625 MHz, low power, not transmitting. HackRF idle. Question: opcode 14's window still refuses `0x4xxxx`. Which read should name the flag, or which word should FW39 clear?
 
 End state 12:18: `DMR003.FW38.V022`, channel 56, 467.625 MHz, low power, not transmitting. Atom XL was not taken. HackRF idle.
 
