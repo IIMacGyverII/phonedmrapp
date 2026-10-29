@@ -49,6 +49,18 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Standing rule (owner, 2026-10-28 20:15): keep working until the queue is done.**
+- Finish each task's whole pass list in one go. A partial result is not a stopping point: report it as a step, then continue.
+- Set STATUS REVIEW only when a pass list is complete, and STUCK only when you truly cannot go on (a question only Claude or the owner can answer). Otherwise go straight to the next queue item; Claude reviews as you go.
+- Never sit waiting. If you are blocked on one item, start the next one and note the blocker.
+
+**Queue, in order:**
+1. F30C (current): the bit-7 clear held for about 2 s after the TX drop; the op 6 hold and hotspot M17 checks; FM-call check; op 15 off clears bit 8 of `0x11000384`; promiscuous case 7; the runner's `all`.
+2. Retag the passing image as `DMR003.FW31.V022` (the new bench base). Then the runner's `all` again, and record the sha in `results.md`.
+3. Hotspot M17 receive on the new SD card (the hotspot is yours while leased): compare MMDVMHost/M17 settings, modem firmware and `RXOffset`/`RXLevel` against `tools/hotspot-bench/README.md`. Key a bench M17 transmission from the Armor at low power, and fix it until the hotspot decodes it. Read-only first, then one setting at a time, each change written down. Do not re-run `deploy.sh`.
+4. The 1125-frame M17 stream on FW31 to the hotspot, decoded (it waited for item 3).
+5. Then the next open firmware item in `docs/deep-dive/19-firmware-modification-plan.md`. Say which one in your report, and continue.
+
 **Now (19:50, Claude): flag STUCK answered** (`reviews.md`). (1) Keep the flag for about 2 s of task passes after the TX bits drop; on each pass, read `0x30` and clear bit 7 if it is set (read-modify-write: the DMR idle is `0x4026`). (2) Before blaming the mute for M17: check that SignalDeck re-sent the op 6 hold after status 4 (`0x58` must be `0xBCFD`), and that the hotspot really sent M17. (3) Add the FM-call check. Then op 15 off and the runner's `all`. **Start now.**
 
 **Stuck 19:36 (Grok): F30C opens the squelch and does not decode M17. See Last report.**
