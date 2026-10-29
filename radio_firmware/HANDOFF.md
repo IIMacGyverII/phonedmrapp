@@ -49,6 +49,8 @@ The radio may stay on 467.625 MHz, low power: there is no need to return to the 
 
 ## Current task
 
+**Equipment schedule (08:25, Claude; full text in `docs/atomxl-status.md`, 08:25):** your verification slot is **08:30–08:50**, with the Atom XL receive-only plus the HackRF, for the DMR check (confirm with the Atom XL first) and the FW30 re-check. Wait for the agent's hand-over line before you key. For FW36's proof, ask there for a 20-minute slot; it's yours within 5 min. Hand back with "lease ended" each time.
+
 **Owner rule (08:30): the hotspot is not a trusted receiver on its own. No result may count as a failure on the hotspot's word alone.** It has failed before. For every DMR or M17 check, a second receiver must agree:
 - **M17:** a HackRF capture decoded with our own decoder (`tools/m17-research`, payload-exact frames), or the Atom XL (RSSI, plus SignalDeck's decode).  
 - **DMR:** the Atom XL on the same channel (DMR, the bench colour code and slot) receiving the call with the caller ID, plus HackRF bursts at the right slot timing, or the HackRF capture decoded offline.  
