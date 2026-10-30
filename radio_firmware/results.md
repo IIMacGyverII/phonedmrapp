@@ -4780,6 +4780,28 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**F58D gaps (17:51). Loaded. Not transmitting.** Tag `DMR003.F58D.V022`. No second load. The VFO read back as digital, 467.625 MHz, low power, colour code 1, slot field 1, call 9, groups 1 and 9. The relay file's network destination was 99 and a new process had loaded it before each replay. Hotspot config was not written. 434.000 was not used. No promiscuous line.
+
+| Replay | MON | Clip RMS | Peak | `0x4C59C+0xC` | `0x4C7A0+4` | `0x2B` |
+|---|---|---|---|---|---|---|
+| talkgroup 99 file | on | 1389.3 | 4987 | 9 | 9 | 9 bytes, type 1, target 9 |
+| talkgroup 99 file | off | 1392.2 | 4784 | 9 | 9 | 9 bytes, type 1, target 9 |
+
+The logged body with the caller bytes hidden is `01 xx xx xx xx 09 00 00 00`. History says Voice RX TG 9. Factory, same file, same VFO shape (16:15): MON off RMS 26.0 and MON on RMS 1323.8, and the target was 9 both times. On F58D the MON-off clip is as loud as MON on, and the report is still 9 rather than 99.
+
+Op 6, DIAG raw40, each reply `sr=0` and an empty body. Opcode 14 then read 16 bytes at `0x4B000`.
+
+| When | Saved word | Marker |
+|---|---|---|
+| before | `0xEE` | 0 |
+| `[6,3,1]` | `0x6E` | `0x484F4C44` |
+| `[6,3,1]` again | `0x6E` | `0x484F4C44` |
+| `[6,3,0]` | `0x6E` | 0 |
+
+The second apply left the saved mode word unchanged while the hold marker was set. The release cleared the marker. The script prints those words as 238 and 110; those are `0xEE` and `0x6E`.
+
+Channel 49 is digital, low power, colour code 1, slot field 1, group call 9, groups 1, 9 and 99. The key was DIAG testtone for 3000 ms: `engine.ptt` on that channel, then 1 kHz PCM. HackRF receive, 4.2 s, no sample clipped. Carrier from 0.71 s to 4.20 s, 49.9 dB over the floor, offset +631 Hz, deviation p50 2055 Hz and p99 14666 Hz. Best sync MS voice, correlation 0.994. 13 sync bursts: 10 MS voice and 3 MS data, median spacing 360 ms. Mean square 140.7 over the whole file and 171.5 on the loudest 2.5 s. The earlier channel 49 key was 356.7. Not transmitting afterwards. Battery 34.8 °C, `mtktsAP` 43.2 °C, `mtktsbtsmdpa` 41.4 °C.
+
 **F58D steps 1-2 (17:21). Loaded. Not transmitting.** Tag `DMR003.F58D.V022`. Channel 49, 467.625 MHz, colour code 1, slot field 1. That channel's group list contains 9 and 99, so the talkgroup 99 replay is in-list here. The hotspot replayed the stored calls on slot 2. Hotspot config was not written. 434.000 was not used.
 
 | Replay | MON | Clip RMS | Peak | `0x4C59C+0xC` | `0x4C7A0+4` |

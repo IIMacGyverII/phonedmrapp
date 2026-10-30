@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — F58D gaps ran.** On a VFO whose list is 1 and 9, the talkgroup 99 file is loud with MON off (RMS 1392) and the `0x2B` target stays 9. The op 6 second apply leaves the saved mode at `0x6E`. The channel 49 key has 13 DMR sync bursts. Details in `results.md`.
+
 **2026-10-30 — F58D steps 1-2 ran.** On channel 49 the All-Call with MON off is loud (RMS 1396) and `0x4C59C+0xC` reads 16777215. Talkgroup 99 is in that channel's list, so MON off stays loud and the report word is 99. Details in `results.md`.
 
 **2026-10-30 — FW58 and F58D were built.** F58D was loaded later the same day for steps 1-2. FW58 (sha256 `021347e2aad2fc88404f80c391d544e9d2163fd273bb300d8da8151fe6d5ba51`) stores the heard talkgroup, unmutes only an All-Call, and saves the op 6 hold once. F58D (sha256 `cadb44e93b7e4c9c836860ba9f5b49a55789068a9817ab209c8ac9e3dd111350`) opens opcode 14 on `0x30000`–`0x50000` for the bench read of `0x4C59C+0xC`. Details in `results.md`.
