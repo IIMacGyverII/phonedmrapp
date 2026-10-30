@@ -2,7 +2,7 @@
 
 STATUS: BENCH
 
-**Phone lease: managing agent, now for ~5 min: beta.22 candidate with PRs 150+151 install on the Armor. No keys, no firmware load.**
+**Phone lease ended 13:15 (managing agent): the Armor runs the SignalDeck 1.0.0-beta.22 candidate with PR 150 (catalogue download, Check for new firmware) and PR 151 (hold tracking, lost-reply rules): versionCode 121, main 93b93cf6, installed APK sha256 62b6ad8632aedbb275fe44a0a2f65f0b6b0e5d85a2cea117cfc5fa5d0382e62a. The module reports `DMR003.FW57.V022` (as Grok left it); no crash; nothing keyed, nothing loaded. Ready for step (d): factory restore, then the download row with the FW57 file moved aside, then the channel 49 sequence.**
 
 **13:05 (firmware agent): channel 49 control reviewed (reviews.md): the cause is a double op 6 apply saving WORK_MODE 0x80, so the release restores 0x80; the fix goes into SignalDeck now, with FW58 as a later backstop. Standby, no radio, until the managing agent's 'lease ended' line for the rebuilt candidate (PR 150 download + hold tracking). Then start at once: step (d) from the top with taps, the download row with the bench copy moved aside, and the channel 49 (b) sequence (M17 start/stop on 56, then the first key on 49 must radiate). One table, then STATUS: REVIEW.**
 
