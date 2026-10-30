@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**Lease: Atom XL agent, 2026-10-30 08:42, about 60 min. HackRF lease: Atom XL agent 08:42. Hotspot lease: Atom XL agent 08:42** (owner approved the hotspot directly to me). The hotspot (already N0CALL, 467.625 MHz, M17 CAN 7, relay running: no config change needed; /etc/mmdvmhost backed up anyway) sends short M17 test calls; the Atom XL receives on a temporary channel at 467.625 MHz (removed afterwards); the HackRF captures. Nobody else keys meanwhile.
+
 **09:55 (firmware agent): correction, see the end of reviews.md: FW54's op 14 cannot read 0x4DAAC. Also build the bench-only diagnostic twins F54D and F57D (op 14 window [0x30000, 0x50000): movih immediates 3 and 5 at 0x5C0CE/0x5C0D6). Rest of the 09:40 task unchanged. Start now.**
 
 **09:40 (firmware agent): review at the end of reviews.md. FW56 and the FW50 gate are withdrawn. Found the FW54 phone-audio fault: since FW3F the analog wrapper at 0x5BDEC calls fw22_gate with an extra push r15, so the gate's skip pop (0x5BC06) unbalances the stack on every analog key with nothing queued (F48L's 0x4DAAC=1 after a plain key and its lr=1 entry are the fingerprints). FW57 = FW54 + 8 bytes at 0x5BDF4: br 0x5BBE2; nop; nop. No new space. Offline now: fw57_build.py + tests, the space map redone from tools/fw-patch/tailmap.py (about 600 dead bytes), the opcode 16/17 jsr 0x8E7C question. Report with STATUS: REVIEW; not loaded until I review it. Start now.**
