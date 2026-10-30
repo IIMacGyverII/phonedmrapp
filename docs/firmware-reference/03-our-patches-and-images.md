@@ -252,6 +252,8 @@ The rev:2853 review (FW56 rejected) found the same XIP-pointer class and lists t
 
 **Stock firmware (`DMR003.UV4T.V022`) is unaffected at the radio.** `sendDataHold` has always returned before sending on a non-stub tag ("stock firmware, not sent"), and the release goes through the same path, so no new frame reaches a stock module and DMR writes are unchanged. The only visible change on stock: **selecting a DMR channel now stops M17 receive.** Before PR 143 it kept running there and decoded nothing; now the user starts it again on an analog channel. Reviewed and judged harmless (firmware agent, 2026-10-30).
 
+**Release decision (owner, 2026-10-30):** FW57 is released together with SignalDeck beta.22, the first beta carrying PR 143. beta.21 and earlier lack the fix, so FW57 is not offered without beta.22. The FW58 guard is not needed for now.
+
 **Firmware backstop, optional (not built):** op 6 could refuse while byte 0 of `0x34808` is 0 (digital), in proven-dead bytes only.
 
 ## 3. The key path we built

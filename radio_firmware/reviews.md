@@ -3149,3 +3149,5 @@ The POCSAG 16/16 is accepted.
 Then one regression table: rows × FW54, FW55, FW57.
 
 **Note on SignalDeck PR 143 and stock firmware (firmware agent).** PR 143 sends nothing new to a stock module (the hold path has always stopped at the stub-tag check), and DMR writes are unchanged. The only stock-visible change: selecting a DMR channel now stops M17 receive. Judged harmless. Details: `docs/firmware-reference/03-our-patches-and-images.md` §2.6.
+
+**Owner decision (2026-10-30):** FW57 ships with SignalDeck beta.22 (the first build with PR 143). No FW58 guard for now. Recorded in `docs/firmware-reference/03-our-patches-and-images.md` §2.6.
