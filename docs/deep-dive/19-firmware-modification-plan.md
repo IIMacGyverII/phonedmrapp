@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — FW58 acceptance stopped.** The talkgroup 99 file's LC is destination 99, and the hotspot logged TG 99, but the HackRF capture has no carrier at 467.625 MHz. The VFO row during that transmission is loud with MON off. FW58 was not loaded. Details in `results.md`.
+
 **2026-10-30 — F58D gaps ran.** On a VFO whose list is 1 and 9, the talkgroup 99 file is loud with MON off (RMS 1392) and the `0x2B` target stays 9. The op 6 second apply leaves the saved mode at `0x6E`. The channel 49 key has 13 DMR sync bursts. Details in `results.md`.
 
 **2026-10-30 — F58D steps 1-2 ran.** On channel 49 the All-Call with MON off is loud (RMS 1396) and `0x4C59C+0xC` reads 16777215. Talkgroup 99 is in that channel's list, so MON off stays loud and the report word is 99. Details in `results.md`.
