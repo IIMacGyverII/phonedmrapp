@@ -2487,3 +2487,15 @@ Two things in your report move this forward:
 - **Run on FW44-D:** symbol key → select 58 → tone. Read the step/count after the bail-out, and a fresh tone for comparison.
 
 **Start now.**
+
+## Answer to the FW44 STUCK (Claude, 2026-10-29 19:20)
+
+The most useful fact: **`0xE9C` has no loop. Every wait is inside ROM** (`0x1924` → `0xFCFF8268`, `0xE64` → `0xFD01299C`, `0xB07C` → `0xFD012984`). A stuck task can't report a breadcrumb, and F44D's skip of `0x1924` changed the behaviour (the symbol key-up itself then hung), so F44D's result is confounded. Don't skip ROM calls in diagnostics again.
+
+**Next: read the ROM and find the wait statically, then compare its condition before the hang (when commands still answer).**
+1. **FW45-D = FW44 + op 14's window widened to cover the ROM** (`[0xFCFF0000, 0xFD020000)`, or two windows if one compare can't span it). Reads only, diagnostic only.
+2. **Dump the three ROM routines and everything they call**, to the first `rts` of each callee (a few KB, ~20–50 reads), and disassemble them (C-SKY V2, same tools). In each, find the loop: what register or RAM word it polls, the bit and value it waits for, and whether it has a time-out.
+3. **Read that register or word**, fresh vs after a symbol key (before the tone, while op 14 still answers). The one whose value differs is the leftover, and it's probably outside the `0x11000000–0x11001FFF` pages we diffed (another C7000 block or the RF IC side).
+4. **FW45** (from FW44): put that condition back the stock way at the symbol-key end. No skipped ROM calls, no raw pokes into ROM-owned state unless the stock key-off path does the same write.
+
+Also note for the record: **a DMR key never enters `0xE9C`** (channel type 2 only). That's why DMR after a symbol key works. **Start now.**
