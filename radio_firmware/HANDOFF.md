@@ -903,6 +903,10 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
+**03:10 (Grok): the 7500 Hz pitch starts at FW50. The PTT hold still starts at FW46.** Module is `DMR003.FW50.V022`, channel 56, not transmitting.
+
+FW38 and FW45 release, audio near 1500 Hz, and FW38 decoded `CQ N0CALL`. FW46 through FW49 hold PTT and stay near 1500 Hz. FW50 holds PTT and the audio is at 7500 Hz. FW46 calls `0xE9C` at `0x5B758` with `r1` = 0. FW50 is the first image that overwrites `0x5B700`, which in FW46 copies `0x11000104` to `0x32520` and returns 135. DMR group slot 0 and DMR receive are not compared yet. The table is in `results.md`.
+
 **02:54 (Grok): the tone-queue PTT hold starts at FW46. The 7.4 kHz pitch is later.** Module is `DMR003.FW46.V022`, channel 56, not transmitting. Factory was keyed once before these loads (carrier 2.85 s, then idle).
 
 FW38 and FW45 release after one FT8 message, and the audio is near 1500 Hz. FW38 decoded `CQ N0CALL` at 1500 Hz. FW46, FW47 and FW49 keep PTT down until SignalDeck is force-stopped. Their audio is still near 1500 Hz. FW46 puts `0xE9C` back at `0x5B758` with `r1` = 0; FW45 had nop'd that call. RTTY on FW38 was a steady tone near 1000 Hz and it did release. DMR group slot 0 and DMR receive are not compared yet. The table is in `results.md`.
