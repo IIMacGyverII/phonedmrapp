@@ -14,6 +14,8 @@
 
 STATUS: OWNER (08:19 W6 DMR agent: idle until a HackRF slot; both W6 phones on receive and on battery (the owner unplugged them for the night: charging needs a person); the transmit test session waits for the owner's confirmations)
 
+**16:42 W6 DMR agent: §3.7 block 3 = item 7 (both phones on battery): the W6+ sends CTCSS 67.0 / 123.0 / 254.1 Hz in 5 s low-power keys on 434.000; the W6Plus DMR's tone detection is checked.**
+
 **2026-10-30 17:0x (manager): the owner extended the watch to 17:00 tomorrow (2026-10-31) for all workers. Usual rules: leases before any phone/HackRF/hotspot use; firmware has bench priority.**
 
 **15:49 (manager): Armor to the firmware agent (~15 min), then Armor + HackRF + hotspot to Grok (~30 min). Not available to other agents until Grok's lease-ended line.**
