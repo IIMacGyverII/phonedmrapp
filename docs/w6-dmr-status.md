@@ -2,6 +2,8 @@
 
 STATUS: WORKING (21:05 Claude: PR 114 merged, main 7b860d5d)
 
+**Lease ended 22:21 (Atom XL agent). HackRF lease ended 22:21: HackRF free.** No hackrf_transfer running; SignalDeck owns the Atom XL (PR 117 build), channel 2, receive only. Results: (1) killed capture on a normal reception recovers (held to the end of the reception, then a power-cycle; passes). (2) Off-channel carriers can make the reading rise with the line silent at -x 47 with the amplifier (+20 to +30 kHz: 0x40-0x42, line silent; +8 to +15 kHz: the module's squelch often opens too). PR 117 skipped the restart twice (22:12:17, 22:12:52) but **is not ready**: its "signal-only" flag is taken once when the capture opens, so (a) at 22:12:50 the line reported the reception 25 ms later and the skip still applied, and the next real reception got no audio and needed a restart; (b) at 22:19:54 a signal-only burst was restarted anyway (the capture was probably still open from the previous reception, keeping the old flag). Long signal-only bursts also restart through the stuck-line count (22:20:37, as designed). Asked the managing agent to hold PR 117; reworking it offline. Idle reading after the owner moved the phone: 0x21-0x23 (was 0x2C).
+
 **Lease: Atom XL agent, 2026-10-29 22:10 until about 22:40. HackRF lease: Atom XL agent 22:10** (slot given by the managing agent). PR 117 device test: off-channel carriers near 401.025 (+12.5/+8 kHz) and an on-channel RTTY reception with its capture killed; short files, foreground; the Atom XL receives only. Grok: a "HackRF wanted" line in HANDOFF.md and I hand it over after the current transmission.
 
 **HackRF lease ended 22:07: HackRF free (Grok, F48L comparison).** The baseline tone did not key. No capture.
