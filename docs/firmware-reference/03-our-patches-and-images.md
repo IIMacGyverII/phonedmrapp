@@ -622,21 +622,23 @@ What the outside hooks point at in FW54 (**C**): `0x37F8`→`0x5BDAA` (close gua
 | `0x5B65A`–`0x5B69F` | **`drop_ptt`** + pool `0x5B690`–`0x5B69F` (`0x4DAAC`, `0x1100039C`, `0x11000560`, `0x11000080`; also used by `on_unkey`) | pointer `0x5BDE4` (`jsr`) | **live** (FW49/50/51/52/56 wrote it) |
 | `0x5B6A0`–`0x5B6A3` | dibit table `01 03 FF FD` (00→+1, 01→+3, 10→−1, 11→−3, `sym.S` `dibit`) | pointer `0x5B3FC` | **live** |
 | `0x5B6A4`–`0x5B6FD` | RRC taps, 45 × int16 (`sym.S` `coeffs`) | pointer `0x5B4A4` | **live** (90 bytes, the indexed extent is phase 0–4 × 9 taps × 2 B) |
-| `0x5B6FE`–`0x5B6FF` | padding | — | |
-| `0x5B700`–`0x5B71F` | FW37 `RF_MODE` save/restore + pool | **nothing found** (§3.6) | dead by static analysis since FW38; labelled "pitch helper" elsewhere; not bench-proven free |
+| `0x5B6FE`–`0x5B6FF` | padding | — | **dead** (`tailmap.py`) |
+| `0x5B700`–`0x5B71F` | FW37 `RF_MODE` save/restore + pool | **nothing** (§3.6; `tailmap.py`: unreached on FW46 and FW54) | **dead** by reachability since FW44's move (`fw44_build.OLD_SAVE`); not a "pitch helper"; in `space_map.FREE` |
 | `0x5B720`–`0x5B793` | FW20 drain gate / "tone-end task" (`gate.S`) incl. the drop call `0x5B748`, the unkey sequence `0x5B74C`–`0x5B75B` (FW54: nops at `0x5B758`), the restore branch `0x5B770`, pool `0x5B77C`–`0x5B793` | `0x5B53A` | live |
 | `0x5B794`–`0x5BCA3` | FW21–FW25 extension: `fw21_op3` (`0x5B794`), `fw21_fill` (`0x5B7AC`), `fw21_ops` (ops 8–11), FW22 key test `0x5BBE2`, tone/sample engines (`0x5BB92` polyphase sum), FW26 gate patch `0x5B7DE`, FW27/FW28 changes `0x5B816`–`0x5B86F` | `0x5AF1E` (op 3), `0x5B308` (unknown-op path), `0x5BDF6` | live |
 | `0x5BCA4`–`0x5BCD9` | FW27 low stub remnant (op 5/6 v5 dispatch, `jmp r12` → `0x5C464` at `0x5BCD0`), FW29 `0x5BCB0`, FW38 `0x5BCB3` | op dispatch | |
 | `0x5BCDA`–`0x5BD73` | FW38 save (`0x5BCDC`) / restore (`0x5BD06`) + pool `0x5BD44`–`0x5BD67`; FW41/44 changes; branches to `0x5B254`, `0x5B2A8` (op 6 mode-3 tail) | `on_key` `0x5B592`, task `0x5B770` | was op 6 variant 5 (FW27) |
 | `0x5BD74`–`0x5BDE9` | FW3K block: op 16/17 refuse (`0x5BD74`), op 7 helper (`0x5BD82`), drop helper (`0x5BD98`), close guard (`0x5BDAA`), pool `0x5BDD0`–`0x5BDE8` | `0x5BCC4`, `0x5AF4C`, `0x5B748`, `0x37F8` | |
 | `0x5BDEA`–`0x5BE33` | FW3E/FW3K key gate (`0x5BDEC`), append entry (`0x5BDFE`), flag helpers (`0x5BE0A`, `0x5BE14`), pool `0x5BE20`–`0x5BE33` | `0x5B58E`, `0x5AF44`, `0x5B616` | |
-| `0x5BE34`–`0x5BFB1` | FW21–FW27 literal pool (incl. the key-helper pool `0x5BE60`–`0x5BEDF` whose overwrite broke FW27), sine table (FW21, addressed at XIP `0x03075C64` in FW21), I²C helpers (`0x5BF24`, `0x5BF8A`) | many | live (F30B text: "the live literal pool and the I²C helpers") |
-| `0x5BFB2`–`0x5BFFD` | old opcode body, retargeted to refuse by FW30 | none found | **the only range the firmware agent's working-tree map proposes as dead** (76 B); F30B/F30C put diagnostic op 18 here |
-| `0x5BFFE`–`0x5C098` | FW27 high stub (stream, rate switch), `0x5C040` UART pend hook (from `0x7C56`) | `0x7C56` | live |
+| `0x5BE34`–`0x5BF9D` | FW21–FW27 literal pool (incl. the key-helper pool `0x5BE60`–`0x5BEDF` whose overwrite broke FW27), sine table (FW21, addressed at XIP `0x03075C64` in FW21), I²C helpers (`0x5BF24`, `0x5BF8A`) | many | live (F30B text: "the live literal pool and the I²C helpers"), **except `0x5BE38`–`0x5BE87` (80 B), unreached by `tailmap.py` and not yet identified; kept out of `FREE`** |
+| `0x5BF9E`–`0x5C03F` | opcode 16 body (`0x5BFB2`, rate switch) with its helpers `0x5BF9E`/`0x5BFF2`, and opcode 17's half copy `0x5BFFE` | none: FW30 retargeted `0x5BCC4` to the refuse at `0x5BD74`; `0x5BFFE` is reached only from `0x5C6BC`, inside the dead cluster below | **dead** (162 B, `tailmap.py`, firmware agent 2026-10-30; F30B/F30C once put diagnostic op 18 at `0x5BFB2`) |
+| `0x5C040`–`0x5C087` | `0x5C040` UART pend hook (from `0x7C56`) + pool `0x5C078`–`0x5C087` | `0x7C56` | live |
+| `0x5C088`–`0x5C097` | pool of the dead op 17 copy | none | **dead** (16 B) |
 | `0x5C09A`–`0x5C137` | op 14 RAM read (window `movih` at `0x5C0CE`/`0x5C0D6`) | op dispatch | live |
 | `0x5C138`–`0x5C463` | FW23–FW25 extension: tone-engine state (`0x5C14C` reads `0x4B02C`/`0x4B030`/`0x4B036`), sample store `0x5C138`, table `0x5C200` (pointer `0x5C45C`), pools | `0x5BBDC` and others | live |
 | `0x5C464`–`0x5C54B` | FW26 promiscuous stubs (`0x5C4C8`, `0x5C4E2`, `0x5C518`) | `0xC1BA`, `0xC244`, `0xA890`, `0x17E26`, pointer `0x5BE34` | live |
-| `0x5C54C`–`0x5C6FB` | FW27 tail: variant 5 trampoline `0x5C54C`, `0x5C564`, unsupported reply `0x5C584`, four-entry table `0x5C58C`–`0x5C598`, wrap `0x5C59C`, pool `0x5C6E0` | op dispatch | live |
+| `0x5C54C`–`0x5C59B` | FW27 tail: variant 5 trampoline `0x5C54C`, `0x5C564`, unsupported reply `0x5C584`, four-entry table `0x5C58C`–`0x5C59B` | op dispatch | live |
+| `0x5C59C`–`0x5C6FB` | op 17 half sender ("wrap") + pool (`0x5C6C8`, `0x5C6E0`) | only `0x5C032` (dead); it calls back to `0x5BFFE`: a closed dead cluster | **dead** (352 B) |
 
 **V (C):** there is no run of 16 or more `0x00` or `0xFF` bytes anywhere in the FW54 tail (rev:2853 states the same). New bytes can only come from ranges proven dead.
 
@@ -677,9 +679,9 @@ What the outside hooks point at in FW54 (**C**): `0x37F8`→`0x5BDAA` (close gua
 
 1. **Is `0x5B700`–`0x5B71F` really dead?** Static analysis says yes since FW38. A one-image bench check (FW54 with that range zeroed, FT8 and RTTY decoded and released) would settle the "pitch helper" claim before anyone reclaims or protects it.
 2. **What caused FT8 at 7.4–7.5 kHz on FW50/FW52?** Candidates: the gate inside `drop_ptt` (stack 20 bytes low on return, rev:2853), the op 1 retarget at `0x5AF44`, or the arm writing `0x4DAAC`. Not bisected.
-3. **The `0x5BDEC` → `0x5BBE2` stack balance** (§3.2 caveat): with byte 0 of `0x34808` non-zero and nothing queued, `0x5BBE2`'s `pop r4-r7,r15` runs with one extra word on the stack. Which channels make that byte non-zero, and does any key reach that exit?
+3. **The `0x5BDEC` → `0x5BBE2` stack balance** (§3.2 caveat). **Answered (reviews.md, firmware agent 2026-10-30 09:40):** byte 0 of `0x34808` is 1 on analog channels, so every analog key with nothing queued (plain FM, the CTCSS test tone, SSTV) reaches that exit and returns through an unbalanced stack. F48L's `0x4DAAC` = 1 after a plain key and its `lr` = 1 entry are the fingerprints. FW57 replaces `push r15; bsr 0x5BBE2; pop r15` at `0x5BDF4` with `br 0x5BBE2; nop; nop` (8 bytes, no new space); bench proof pending.
 4. **What does byte 0 of `0x34808` mean?** The FW3K gate depends on it ("channel-mode byte", fw3b_bisect `build_fw3k`): symbol keys only arm, and op 7 is only accepted, when it is non-zero. Which channel types set it is not confirmed here.
-5. **The first group slot 0 key with no sync** persists on FW55 (stock sites), so it is not the `0x26` sites; the brief's bisect (factory → FW20 → FW26 → FW30 → FW37 → FW44 → FW46) is open, as is the 07:58 busy-flag (`0x32457`) reading.
+5. **The first group slot 0 key with no sync** persists on FW55 (stock sites), so it is not the `0x26` sites. FW55 differs from the factory image outside the tail only in seven 4-byte hooks (`0x37F8`, `0x7C56`, `0xA890`, `0xC1BA`, `0xC244`, `0x17E26`, `0x18B68`) plus the `0x40` dispatch word, so the plan is a hook bisect plus a RAM read of `0x4B364`/`0x4B368`/`0x4B376` (reviews.md, 10:15), replacing the lineage bisect. The 07:58 busy-flag (`0x32457`) reading is still open.
 6. **Why does `0xE9C(r1=0)` not return** in our use (FW46, FW49)? The stock unkey sites pass `r1`=1 through the prelude (fw49 header); the mechanism is inferred.
 7. **Op 13 and op 18 in the current lineage:** which bytes still belong to them, and are they reachable (op 13 retired by FW27's reclaim; op 18 refused)? Needed before any reclaim.
 8. **F30E and B3G3–B3G6** exist as files with no recorded result; no script builds FW3A although the file exists.
