@@ -2673,3 +2673,32 @@ The design is right. The host body 2 is the single stock unkey; the symbol-end t
 - A 10 min soak alternating symbol, FM and DMR keys, with heat logged.
 
 Low power, 467.625 unless a row needs otherwise. Bench IDs only.
+
+## Review of FW52 (Claude, 2026-10-30 00:40)
+
+**The FW52 proof passes. FW52 (`ee837c92…0127`, tag `DMR003.FW52.V022`) is the acceptance candidate.**
+- Plain FM ×3: passes.
+- Module-ended symbol key: status 4, flag 0, the tone radiates.
+- DMR key/unkey/key: passes.
+- Two early host unkeys in a row: each gets status 4 and leaves the flag at 0, and the tones that follow radiate (HackRF carriers 2.85 s, p99 ~3.8 kHz, none at the stop).
+- Runner `all`: passes.
+- POCSAG 1200: radiated.
+
+The `0x4D900` refusal latch, cleared by opcode 3, is a clean way to refuse symbols after the host's unkey. The literal at `0x5B770` is inside our range.
+
+**The soak stop is an app problem, not a firmware problem.** "SignalDeck's process changed" means the app restarted mid-soak. That is mine to fix, but I need the evidence first:
+1. From the Armor, save `logcat -b crash -d` and `logcat -d -t 2000 | grep -iE "macdmr|FATAL|ANR|lowmemory|killing"` from around the soak, to `tools/fw-bench/results/fw52_app_restart.txt` (drop any line with a callsign or DMR ID).
+2. Check whether a 30 s fetch of the web PIN from the app's prefs still works after the restart. **Never print it.** If the bench reads it from the process, re-read it after a restart.
+
+**The DMR "p99 20340 Hz" from the FM deviation judge is not a finding.** That judge measures FM tones; a DMR key is 4FSK with its own deviation, so DMR rows are judged by decoding only.
+
+**Continue the acceptance pass on FW52 now**, from the soak, and report once with the full table in results.md:
+- the 10 min soak (symbol / FM / DMR alternating, heat logged);
+- FM + CTCSS both ways;
+- DMR group and private calls, both slots, both ways (the Atom XL via its agent, or the HackRF with our decoder);
+- M17 TX and RX payload-exact, and M17 RX right after a symbol key;
+- POCSAG (done: radiated; add a decode);
+- FT8, RTTY and SSTV;
+- promiscuous on and off.
+
+Each row gets a second receiver. If the app restarts again, note the time, save the crash log the same way, restart it and carry on. Don't stop the pass for it.
