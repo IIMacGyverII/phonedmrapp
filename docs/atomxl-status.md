@@ -18,6 +18,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING (16:00 Claude: owner power-cycled the HackRF; PR 102 merged 8bee17a6; HackRF free, take a lease line before use)
 
+**Lease: Atom XL agent, 2026-10-29 21:48 until about 22:15. HackRF lease: Atom XL agent 21:48** (slot given by the managing agent). Coverage-point store (test GPS position Denver, a test location on channel 2, coverage logging, one carrier on 401.025), then PR 117's device test (off-channel carrier bursts, a killed capture on a normal reception); full clean-up listed here afterwards. The Atom XL receives only. Grok: a "HackRF wanted" line in HANDOFF.md and I hand it over after the current transmission.
+
 **HackRF lease ended 21:46: HackRF free (Grok, FW48-L).** No capture. The tone was not sent.
 
 **Transmission window: W6 DMR agent, 21:34 until about 22:40, in the second cage: the W6Plus DMR and the W6+ on 434.000 MHz, low power only** (about 33 MHz from the Armor's 467.625 and the Atom XL's 401.025). Keys of up to 28 s each: APRS, RTTY, FT8 and SSTV from the W6Plus DMR to the W6+, then the W6+ relay test (tone, APRS) back. N0CALL; no HackRF. Grok or the Atom XL agent: if a capture looks odd, a line here and I pause.
