@@ -4780,6 +4780,19 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**FW57 promiscuous rerun (15:05).** Published SignalDeck `1.0.0-beta.22`, module `DMR003.FW57.V022`, no image loaded. The hotspot relay replayed calls the phone had just keyed, slot 2, colour code 1, 467.625 MHz, low power. The listen channel was a VFO whose receive list was 1 and 9. Channel 49's list also contains 99, so it was not the listener. The bench ID was set for the keys and put back afterwards. Heat stayed near 37 °C battery, 43 °C `mtktsAP`, 42 °C `mtktsbtsmdpa`. Left on channel 49, not transmitting.
+
+The log never contained `promiscuous on`. MON was switched, and the status read back at that moment still said the promiscuous flag was off. So the rows below are MON off and MON on, not a confirmed opcode-15 flag.
+
+| Row | What the hotspot replayed | MON | `0x36` | `0x2B` | Receive clip |
+|---|---|---|---|---|---|
+| Out of list | group, talkgroup 99, 92 bursts | off | none | none | RMS 1.7, peak 13, silence |
+| Out of list | the same talkgroup 99 call | on | `01`, `01` | four replies, 9 bytes, type 0, target 0 | RMS 1346, peak 4760, voice |
+| In the list | group, talkgroup 9, 92 bursts | on | `01`, `01` | 9 bytes, type 0, target not 9 | RMS 1349, peak 4672, voice |
+| All-Call | group address 16777215, 58 bursts | off | `01` then `02` | 9 bytes, type 2, target 16777215 | RMS 48, peak 2316 |
+
+No reply was 11 bytes, so no colour code or slot was appended. Talkgroup 99 with MON off posted nothing and the clip is silence. The same replay with MON on posted status 1 and the clip is voice, while the caller report stayed type 0 target 0. The All-Call, with MON off, posted status 1 and status 2 and named itself an All-Call to 16777215. Its clip is far quieter than the group clips. The HackRF files from these replays sit at the noise floor. The hotspot log is what confirms the talkgroup 9 replay left the hotspot, and the phone's status and clip confirm the others.
+
 **Analog `0x23` delays (14:43), recorded and stopped.** Factory image, no radio, no image built. P4 gets no bench time. `delay_ms` is `0x18A4`: `r0` is milliseconds, rounded up to a 10 ms tick.
 
 An idle analog write (`0x38908` bits 0 and 2 clear) takes no delay before the unpack. `0x99D6` sets the busy byte `0x32457` to 1, and the success return leaves it at 1. The handler has no loop that waits on that byte.

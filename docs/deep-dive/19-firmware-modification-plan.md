@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — FW57 receive rerun: talkgroup 99 is silent with MON off and voiced with MON on, and an All-Call is reported as type 2.** Details in `results.md`. The promiscuous flag line never appeared.
+
 **2026-10-30 — The idle analog `0x23` ack is followed by 600 ms inside `0x2BAC` before the second `at1846_tune`.** Details in `results.md`. P4 has no bench time.
 
 **2026-10-30 — Factory reading for P1/P2: `0x2404` selects status 1/2 or 10/11, and contactType 2 is not that byte.** Details in `results.md`.
