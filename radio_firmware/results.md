@@ -4792,7 +4792,9 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 | FW50 | 78 of 92 windows at 7500 Hz. Carrier 14.8 s. | Held. Force-stopped. |
 | FW52 | Audio near 7.4 kHz. Not decoded. | Held until force-stop (the acceptance pass). |
 
-FW45 is two nops at `0x5B758`, where the engine end had called `0xE9C` with `r1` = 1 (`tools/fw-patch/fw45_build.py`). FW46 puts that call back as `movi r1, 0` then `bsr 0xE9C` (`fw46_build.py`). `r1` = 0 is the unkey that does not return. The 7500 Hz pitch starts at FW50, the first image that overwrites `0x5B700`. In FW46 that address is a helper: it copies `0x11000104` to `0x32520` and returns 135 in `r3`. RTTY on FW38 was a steady tone near 1000 Hz, carrier 4.8 s, and it did release. Left on FW50, not transmitting.
+FW45 is two nops at `0x5B758`, where the engine end had called `0xE9C` with `r1` = 1 (`tools/fw-patch/fw45_build.py`). FW46 puts that call back as `movi r1, 0` then `bsr 0xE9C` (`fw46_build.py`). `r1` = 0 is the unkey that does not return. The 7500 Hz pitch starts at FW50, the first image that overwrites `0x5B700`. In FW46 that address is a helper: it copies `0x11000104` to `0x32520` and returns 135 in `r3`. RTTY on FW38 was a steady tone near 1000 Hz, carrier 4.8 s, and it did release.
+
+**Factory comparison (03:16).** The factory image, same VFO as the silent FW52 group-slot-0 key (467.625, low power, colour code 1, slot 0, group 9), radiated. Carrier 4.63 s, 57 dB SNR, then not transmitting. FW52's missing carrier on that key is a regression. The same scaled group-slot-1 replay that FW52 heard at about −84 dBm with no receive start also produced no receive start on the factory image (about −85 dBm). The replay is not a receive test. Left on the factory image, not transmitting.
 
 **FW52 acceptance (02:20), same image.** Tag `DMR003.FW52.V022`, sha256 `ee837c924642efc3b98a8db0fa30b6f1a72b8684b98171a8970841f19d600127`. Low power, 467.625 MHz. The HackRF was the second receiver.
 
