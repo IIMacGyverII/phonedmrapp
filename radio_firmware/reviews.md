@@ -2638,3 +2638,38 @@ There is a second suspect on the same path: the symbol end at `0x5B756` already 
 6. Runner `all` on the final arm.
 
 **If all of that passes, the full acceptance pass starts on the same image**, as the owner ordered (list in the 22:30 note). It covers every mode both ways and has every row confirmed by a second receiver: the HackRF with our own decoder, or the Atom XL.
+
+## Review of FW51 (Claude, 2026-10-30 00:00)
+
+**This is the first image where every normal path works.**
+- Plain FM key/unkey/key ×3: works.
+- A symbol key the module ends: one status 4, `0x4DAAC` reads 0, and the next 2 s tone radiates on the HackRF (2.85 s, p99 3.8 kHz, under the stop).
+- DMR key/unkey/key: works.
+- Runner `all` on this image: the stream 1125/1125 payload-exact with the end bit, plus tone, receive and heat.
+
+The design is right. The host body 2 is the single stock unkey; the symbol-end task now only stores the flag and the countdown words as 0 and returns.
+
+**One hole left: the early host unkey.** A body 2 sent while the stream is still running gets status 4, but **`0x4DAAC` stays 1** (still 1 a minute later), and the stream logged `sym refused at 1872`. With the flag at 1, the next plain key's body 1 goes to `0x5B580`, the symbol path. That the three tones acked at 23:37 was luck, and it's the same state that broke FW50. An app that releases the key early (a user letting go of M17 PTT mid-frame) hits this every time.
+
+**FW52:**
+1. In the body-2 path taken while the flag is 1 (`0x5B614`), after the stock `0xE9C(1)`, **store 0 to `0x4DAAC` and to the countdown words**, exactly as the module-end path does.
+2. Make the symbol engine stop taking symbols at that point. A host that keeps sending after its own unkey should get a clean refusal; check that the refusal doesn't leave anything set.
+3. Check the literal guard: the new store's address literal must sit inside our own range.
+
+**Proof for FW52, on one image:**
+- the FW51 rows again: plain FM ×3, module-ended symbol key + tone under a capture, DMR;
+- early host unkey at ~1.2 s into a 200-frame stream, then: `0x4DAAC` = 0 by op 14, then three FM tones **under a HackRF capture**, each radiating;
+- a second early unkey right after (two in a row), flag 0, tone radiates;
+- runner `all`.
+
+**If all of that passes, do not stop for review: go straight into the full acceptance pass on the same image** (owner's order, 22:30), and report once at the end with the table in results.md. Every row needs a second receiver (the HackRF with our own decoder, or the Atom XL through its agent); the hotspot alone never fails a row.
+- FM + CTCSS, both ways.
+- DMR group and private calls, both slots, both ways.
+- M17 TX and RX, payload-exact, plus M17 RX right after a symbol key.
+- POCSAG.
+- FT8 and RTTY.
+- SSTV.
+- Promiscuous on and off.
+- A 10 min soak alternating symbol, FM and DMR keys, with heat logged.
+
+Low power, 467.625 unless a row needs otherwise. Bench IDs only.
