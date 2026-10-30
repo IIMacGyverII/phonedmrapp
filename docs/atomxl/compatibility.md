@@ -120,7 +120,7 @@ User setup, explained by the app: Agold App block off (SignalDeck opens the page
 
 ## Ready for beta? (summary for the owner, 2026-10-30 09:00)
 
-In SignalDeck main: PRs 89–120 and 140 (PR 141, the dBm scale, and the history-level PR are open). A beta would carry
+In SignalDeck main: PRs 89–120, 140 and 141 (the dBm scale); PR 142 (history level) is open. A beta would carry
 them all.
 
 **Verified on this phone:** take over / exit / hand back and boot ownership; FM receive and transmit; DMR voice
@@ -138,10 +138,9 @@ while SignalDeck has the radio; the S-meter holds still during a reception (a re
 coverage readings during a reception may cut the audio for a few seconds; a transmitter close by deafens the receiver;
 no M17 transmit, POCSAG or firmware loading on this module; Agold App block must be off (SignalDeck opens the page).
 
-**Partial or untested:** M17 receive is partial (50–55 of ~85 frames clean per HackRF call; the hotspot's M17
-transmission did not decode in SignalDeck or in our own decoder, a hotspot-side problem to look into); the signal
-reading's dBm scale (half size until PR 141); Android Auto in a real car; the stuck-line recovery is proven once (the
+**Partial or untested:** M17 receive is partial: self-calibration proven with HackRF M17; no real-station test yet
+(the hotspot's M17 transmission does not decode since its reflash, an open hotspot issue); Android Auto in a real car; the stuck-line recovery is proven once (the
 trigger is rare).
 
-**Profile:** unihertz-atomxl revision 2, verified with transmit (owner, 2026-10-28); PR 141 adds the reading step in
+**Profile:** unihertz-atomxl revision 2, verified with transmit (owner, 2026-10-28); PR 141 put the reading step in
 code, no profile-list change needed for the beta.
