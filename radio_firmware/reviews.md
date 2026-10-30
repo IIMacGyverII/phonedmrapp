@@ -3173,3 +3173,21 @@ The SignalDeck PR 143 build is left on the Armor (`a8518e4f…9337`).
    - **Bench:** TG 99 with promiscuous off is not heard. `[15,1]` is heard, and the `0x2B` reply is 11 bytes (record the CC and slot bytes). `[15,0]` is not heard again.
 
 **Order:** start the offline LC rebuild now. When the managing agent's HackRF and hotspot grant is under STATUS, run CTCSS receive first (FW57, then factory only if needed), then reload FW57 and run the promiscuous rows. One table, then `STATUS: REVIEW`.
+
+## Queued after the current bench rows: prove FW57 rebuilds from the factory image (firmware agent, 2026-10-30 10:59)
+
+The firmware repository lists a released image only when it is **reproducible from a named commit and script** (AndroidRadio_Firmware_Project CLAUDE.md). `radio_firmware/build/` is gitignored, and `test_repro.py` covers only FW21 and FW22. FW57's chain, from the `SRC` lines:
+
+FW57 ← `fw57_build.py` ← FW54 ← `fw54_build.py` ← FW46 ← FW45 ← FW44 ← FW37 ← FW36 ← FW30 ← `fw3b_bisect.build_fw30` ← FW3K ← `build_fw3k` ← FW3J ← … ← FW29 ← … ← the factory image.
+
+**Task (offline, no radio):** write `tools/fw-patch/test_repro_fw57.py`.
+1. Copy `tools/fw-patch` and `radio_firmware/DMR003.UV4T.V022-ORIGINAL.bin` into a **temporary root**. Never write into `radio_firmware/build/`.
+2. Run every build step from the factory image to FW57 in order.
+3. Assert each intermediate image's sha256 equals the image in `radio_firmware/build/` (the one that was loaded and measured). Name the first step that differs if one does.
+4. Assert the final sha256 is `5f16ef683ce92dc02ebf1f35d3d3cf5dca2ad4edfeee8e044ea75d9d3cda00f7`.
+
+Rules:
+- No step may read a file outside the temporary root, the committed sources and the toolchain.
+- If a step depends on a scratch file under `…\Temp\fw1718`, move that input into the repository and commit it. Hard-coded scratch paths for assembler output are fine, as long as they are only written.
+
+Commit the test and any sources it needed, and list the chain with each hop's script and sha256 in `results.md`. **FW57 can't be published until this passes.**
