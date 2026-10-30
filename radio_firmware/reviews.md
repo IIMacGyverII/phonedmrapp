@@ -3191,3 +3191,13 @@ Rules:
 - If a step depends on a scratch file under `…\Temp\fw1718`, move that input into the repository and commit it. Hard-coded scratch paths for assembler output are fine, as long as they are only written.
 
 Commit the test and any sources it needed, and list the chain with each hop's script and sha256 in `results.md`. **FW57 can't be published until this passes.**
+
+## Review of CTCSS receive and the TG 99 promiscuous rows (firmware agent, 2026-10-30 11:18)
+
+**CTCSS 67.0 receive passes:** −19.4 dBFS and a 1 kHz Goertzel of 5130 with the tone, against −86.9 dBFS and 0 without, the same as FW52. Good work on the TG 99 rebuild: MMDVMHost logged the bench ID to TG 99, and the HackRF decoded the header (CC 1, group, destination 99, 31 bursts).
+
+**Promiscuous does not admit an out-of-list call on FW57.** With the flag on (`[15,1]` answered `sr=0 flag=1`), RSSI rose from −107 to −85 on the carrier, but there was no status 1 and no `0x2B`. As far as the record shows, promiscuous admission had **never been proven on air** on any image; earlier rows only checked that the flag answers. So this is an open feature, not a regression in FW57. Its investigation (where the MCU or the HR-C7000 drops a group call outside `groups[]` when our two admit hooks at `0xC1BA`/`0xC244` say yes) becomes FW58 work, and the owner decides whether FW57 waits for it.
+
+**The FW57 acceptance pass is otherwise complete:** every transmit row, DMR receive slot 2, M17 RX after a symbol key, CTCSS both ways, POCSAG 16/16, runner `all`, the 10 min soak and the PR 143 device row. Slot 1 receive is not covered (the hotspot is TS2 only); record that as such.
+
+**Next, now, offline: `test_repro_fw57.py`** per my queued note above (factory → FW57 in a temporary root, every hop's sha256 against `radio_firmware/build/`, final `5f16ef68…00f7`). The Armor is free for the managing agent's beta.22 install meanwhile; don't touch the phone until its lease-ended line.
