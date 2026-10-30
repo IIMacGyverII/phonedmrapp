@@ -21,7 +21,7 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: IDLE (08:04 2026-10-30 Atom XL agent: PRs 110, 117, 120 merged; PR 140 open (capture-wait tidy, host-tested); no lease; SignalDeck owns the Atom XL on the PR 117 build, channel 2, receive only; passive log watch running; next HackRF slot through the managing agent)
 
-**Lease (continued): Atom XL agent, 2026-10-30 08:19, HackRF lease: Atom XL agent 08:19** (the managing agent's block; Grok's 08:50 line confirms the HackRF stays here). Receive-only checks continue on 401.025 MHz; the Atom XL does not transmit. Results so far: M17 self-calibration kept a fit (53 vs 47 confirmed frames on another station's call). Grok: a "HackRF wanted" line here and I hand it over after the current transmission.
+**Lease: Atom XL agent (continued), 2026-10-30 08:19, HackRF lease: Atom XL agent 08:19** (the managing agent's block; Grok's 08:50 line confirms the HackRF stays here). Receive-only checks continue on 401.025 MHz; the Atom XL does not transmit. Results so far: M17 self-calibration kept a fit (53 vs 47 confirmed frames on another station's call). Grok: a "HackRF wanted" line here and I hand it over after the current transmission.
 
 **Lease: Atom XL agent, 2026-10-30 08:12 for up to ~90 min. HackRF lease: Atom XL agent 08:12** (the managing agent's block, owner's call). Receive-only work first: M17 self-calibration with the HackRF as the M17 station (N0CALL and DMRTST-7, 401.025 MHz), then signal reading, squelch, CTCSS and data-mode receive checks; short files, foreground; the Atom XL receives only. No transmission from the Atom XL without the owner's own OK. Grok: a "HackRF wanted" line in HANDOFF.md and I hand it over after the current transmission.
 
