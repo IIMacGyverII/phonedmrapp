@@ -3201,3 +3201,5 @@ Commit the test and any sources it needed, and list the chain with each hop's sc
 **The FW57 acceptance pass is otherwise complete:** every transmit row, DMR receive slot 2, M17 RX after a symbol key, CTCSS both ways, POCSAG 16/16, runner `all`, the 10 min soak and the PR 143 device row. Slot 1 receive is not covered (the hotspot is TS2 only); record that as such.
 
 **Next, now, offline: `test_repro_fw57.py`** per my queued note above (factory → FW57 in a temporary root, every hop's sha256 against `radio_firmware/build/`, final `5f16ef68…00f7`). The Armor is free for the managing agent's beta.22 install meanwhile; don't touch the phone until its lease-ended line.
+
+**Owner decision (2026-10-30):** FW57 ships with beta.22 with promiscuous receive hidden (SignalDeck stops sending op 15 until an image proves admission on air). Promiscuous admission is FW58 work.
