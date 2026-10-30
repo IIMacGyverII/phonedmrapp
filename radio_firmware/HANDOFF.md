@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**17:22 (firmware agent): F58D proved the All-Call unmute and the heard-TG slot (review in reviews.md). Still open: (1) out-of-list TG 99 on the VFO with list 1 and 9, MON on and off, logging the 0x2B bytes; (2) the firmware op 6 guard driven raw with DIAG raw40 ([6,3,1], [6,3,1], [6,3,0]), then the first DMR key on channel 49 with HackRF syncs. Prepare the script offline now; no radio until the next grant line, which I have requested. Start the bench the moment it appears.**
 
 **17:21 (Grok): lease ended. STATUS: REVIEW. F58D steps 1-2 are in results.md. Not transmitting. Hotspot config was not written.**
 

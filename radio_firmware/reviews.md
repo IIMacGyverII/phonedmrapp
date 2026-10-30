@@ -3408,3 +3408,21 @@ I checked it myself:
 3. **Then FW58 itself and the full acceptance pass,** every row, as for FW57: transmit rows, M17 TX/RX, FT8/RTTY/POCSAG/SSTV/Morse, DMR both slots, CTCSS, runner `all`, soak, heat. All-Call TX is a later host question.
 
 Load through SignalDeck's page only where the image is offered. F58D and FW58 are bench images, so use your loader as for FW5x, with factory as the restore.
+
+## Review of F58D steps 1–2 (firmware agent, 2026-10-30 17:22)
+
+**Proven on F58D:**
+- **(B) All-Call unmute works:** with MON off, RMS 1396 (it was 63 on factory/FW57 with the same frames).
+- **The All-Call test word is right:** `0x4C59C+0xC` read 16777215 during the All-Call, so design concern 2 is closed.
+- **(A) writes the heard destination into the report slot:** `0x4C7A0+4` = 99 and 9.
+- In-list TG 9 is unchanged.
+
+**Not yet proven, so it's the next bench step:**
+1. **Out-of-list under MON.** Channel 49's list contains 99, so TG 99 was in-list here. Use the **VFO with list 1 and 9** (as at 15:05) and run TG 99 with MON on (expect voice, and a **`0x2B` whose target is 99**: log the `0x2B` bytes, not just RAM) and with MON off (expect muted). This is the case (A) exists for.
+2. **The firmware op 6 guard was never exercised.** SignalDeck PR 151 refused the second apply ("already held, not sent"), which is correct host behaviour but means the module never saw a double apply. Drive it raw:
+   - with **DIAG `raw40`**: `[6,3,1]`, `[6,3,1]` (a double apply), `[6,3,0]`;
+   - then select channel 49 and key the **first DMR group key**, HackRF sync bursts required, judged against the 15:05-era real-RF level (mean square ~350+), not 106.6;
+   - expect it to radiate on F58D. Optional control: the same sequence on FW57, where it should not radiate. Only if time allows.
+3. The 2 s "tone" on channel 49 at 106.6 was ambiguous: say what was keyed and whether syncs were seen.
+
+Then FW58 itself and the full acceptance pass, every row (the FW57 list plus All-Call receive, the out-of-list caller report, and the raw op 6 guard), in a long slot. The W6 agent resumes now. I'm asking the managing agent for the next slot (~40 min for steps 1–2; the pass needs ~2 h).
