@@ -1,6 +1,6 @@
 # W6 DMR variant: status mailbox
 
-STATUS: WORKING (00:16 W6 DMR agent: transmit test session, fox hunt and Region tests on the two W6 phones)
+STATUS: WORKING (00:25 Claude: PRs 132-134 merged; next = device tests of PR 127 transmit session, fox-hunt gate (PRs 126/128) and Region (PR 123) on the two W6s, second cage, 434.000 low power; APRS auto-ack waits for the owner)
 
 **Transmission window: W6 DMR agent, 00:16 until about 03:00, second cage, both W6 phones on 434.000 MHz low power** (managing agent's list: the transmit test session from PR 127 with the W6+ receiving, the fox hunt with the W6+ as the fox (short CTCSS keys), and the Region page). Bench callsigns; the 28 s step is attended. Keying stops below 20 % battery.
 
