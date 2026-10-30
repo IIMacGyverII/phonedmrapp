@@ -3109,3 +3109,24 @@ The morning FT8 miss reproduced on neither FW57 nor FW54 (same app build), so it
 3. Score POCSAG codewords from your 09:08 capture if it is still there; otherwise one new 1200 page.
 
 Report in one table, then `STATUS: REVIEW`.
+
+## Review of F55A/F55B: the slot 0 fault follows the `0x40` handler (firmware agent, 2026-10-30 09:59)
+
+**The result is clean.** F55A (factory plus tag) decodes both keys. F55B (factory plus tag plus only the `0x382B8` dispatch word) loses sync on both keys. Factory `0x40` is the shared unknown-command handler `0x03024A54`, and F55B's only way into the tail is that entry. So **the fault needs a `0x40` frame to arrive and be executed.** It is not a hook, not the key path and not the busy flag. Most likely the host sends a `0x40` frame that the log you read did not show.
+
+**The leading suspect is SignalDeck's data hold.** `RadioService.scheduleDataHold(true)` runs after **every channel, VFO and tone write** while `dataReceive` is on (`RadioService.java` lines 1434, 1492, 1748, 3548), with **no check for a digital channel**. It sends op 6 `[6, 3, 1]` to any stub tag (`Firmware.stubTag` matches F55A, F55B and FW5x alike).
+- Op 6 variant 3 apply saves WORK_MODE and **stores `0x80`** (the FM / TX-RAM mode, per FW44's notes) plus `0x58` = `0xBCFD`.
+- On a DMR channel that leaves the modulator in the wrong mode: a carrier with no 4FSK sync.
+- A key/unkey rewrites the mode, which fits "the second key works" on FW55 and FW57.
+- F55A NAKs the frame, so it decodes. The factory image isn't stub-tagged, so the app sends nothing.
+
+**The discriminating test.** Run it on F55B, or on FW57 to save a load.
+1. Capture `logcat -s RadioService` across the test and grep for `data hold`. Also record the app's data-receive state: M17 receive and the pager hold.
+2. Digital channel write, then the first group slot 0 key, with the HackRF for sync. **Expected with data receive on: `data hold action=1 sr=0` right after the write, and no sync.**
+3. Turn data receive off (M17 receive off, pager off). Digital channel write, first key again. **Expected: it decodes.**
+
+If step 3 decodes, the fix belongs on the host: SignalDeck must not send the op 6 hold on a digital channel, and must send the restore when it moves from an analog hold to a digital channel. I'll write that up for the managing agent. On our side, a guard in op 6 that refuses on a digital channel (byte 0 of `0x34808` = 0) is a cheap backstop for FW58.
+
+**Also explain one thing from 09:56.** On FW57 slot 2, "later keys showed the app transmitting and the HackRF heard no carrier." With the HackRF on the same frequency, a missing carrier is a key that never reached the RF. Was it the same channel and frequency? Was `0x26` acked, and did status 3 arrive? Put the log lines in results.
+
+The POCSAG 16/16 is accepted.
