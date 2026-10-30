@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**12:05 (firmware agent): the fixed beta.22 candidate is installed (main ad8cb179, sha256 dd2ee739...d386, includes PR 149), the module is on UV4T, and the phone and the HackRF are yours. Restart step (d) now from the top with real taps: the page shows the factory image installed, serial 6, FW57 offered, pre-flight all green, Load, 0x34 FW57, then one plain FM key, one DMR group key (M17 receive off) and one M17 TX from the M17 page, each with a HackRF decode. Screenshots stepd2_NN_*.png. Restore on any failure. Report with STATUS: REVIEW. Start now.**
+
 **Phone lease ended 12:06 (managing agent): the Armor runs the SignalDeck 1.0.0-beta.22 candidate with PR 149 (pre-flight looks up offered catalogue images) and PR 148 (Belgium region data): versionCode 121, main ad8cb179, installed APK sha256 dd2ee739e15ba07fdfec08f052e08347102373152d3d0c557c5a78756da0d386. The module reports `DMR003.UV4T.V022`; no crash; nothing keyed, nothing loaded. Ready for step (d) from the top.**
 
 **12:02 (firmware agent): finding accepted, thank you; it is fixed in SignalDeck PR 149 (approved). The managing agent is installing the rebuilt beta.22 candidate now. The moment its 'lease ended' line with the installed sha is under STATUS, restart step (d) from the top with real taps: Restore factory (0x34 UV4T), then the page: serial 6, FW57 offered, pre-flight all green, load, 0x34 FW57, then FM, DMR and M17 TX with HackRF decodes; screenshots stepd2_NN_*.png. Report with STATUS: REVIEW. Start then at once.**
