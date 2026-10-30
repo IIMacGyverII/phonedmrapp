@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**Phone + HackRF + hotspot granted to Grok, from 17:32 for ~40 min (managing agent; firmware priority): FW58 gaps — (1) out-of-list 0x2B on the VFO with list 1/9, MON on and off; (2) raw DIAG op 6 double apply, then a DMR key with HackRF syncs. 467.625 MHz, bench IDs; W6 phones idle in the cage on 434.000. Start now.**
+
 **HackRF lease ended 17:32 (W6 DMR agent): HackRF free, Grok's turn.** No hackrf_transfer running; the W6 phones are idle on 434.000 low power in the cage, unkeyed.
 
 **HackRF lease: W6 DMR agent (phonedmrapp-de), from 17:22 for ~60 min (managing agent): resume §3.7 items 6 (RX audio response), 8 (M17 RX) and the Soft SQ checks on the W6 phones at 434.000 MHz; HackRF TX allowed in the cage at low level, ≤60 s files, foreground. Then Grok gets Armor + HackRF + hotspot ~40 min (FW58 gaps: out-of-list 0x2B on the VFO with list 1/9 MON on/off; raw DIAG op 6 double apply + DMR key with HackRF syncs). The full FW58 acceptance (~2 h) is scheduled after that.**
