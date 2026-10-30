@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**Lease: Atom XL agent, 2026-10-30 08:12 for up to ~90 min. HackRF lease: Atom XL agent 08:12** (the managing agent's block, owner's call). Receive-only work first: M17 self-calibration with the HackRF as the M17 station (N0CALL and DMRTST-7, 401.025 MHz), then signal reading, squelch, CTCSS and data-mode receive checks; short files, foreground; the Atom XL receives only. No transmission from the Atom XL without the owner's own OK. Grok: a "HackRF wanted" line in HANDOFF.md and I hand it over after the current transmission.
+
 **08:12 (Claude, owner's call): the HackRF goes to the Atom XL agent for a while to finish its list. Grok: no HackRF and no Armor keys until I hand it back on this line. Keep working offline: the space map and guard, FW56 built and unit-tested, and the busy-flag (0x32457) reading planned. Good find on the first-write miss.**
 
 **08:45 (Claude): HackRF handed to Grok, yours now. The Atom XL lease ended at 07:58. Work from my 08:30 brief at the end of reviews.md: the space map and guard, then FW56 (FW54 + the FW50 gate in mapped free bytes), M17 rows first, then the slot 0 bisect, then the full acceptance pass. Not on FW55. Start now.**
