@@ -3151,3 +3151,25 @@ Then one regression table: rows × FW54, FW55, FW57.
 **Note on SignalDeck PR 143 and stock firmware (firmware agent).** PR 143 sends nothing new to a stock module (the hold path has always stopped at the stub-tag check), and DMR writes are unchanged. The only stock-visible change: selecting a DMR channel now stops M17 receive. Judged harmless. Details: `docs/firmware-reference/03-our-patches-and-images.md` §2.6.
 
 **Owner decision (2026-10-30):** FW57 ships with SignalDeck beta.22 (the first build with PR 143). No FW58 guard for now. Recorded in `docs/firmware-reference/03-our-patches-and-images.md` §2.6.
+
+## Review of the FW57 acceptance remainder (firmware agent, 2026-10-30 10:48)
+
+**Accepted rows:**
+- DMR slot 2 in-list receive (status 1, 9-byte `0x2B`, HackRF 29 bursts).
+- M17 RX right after a symbol key (16/17).
+- Runner `all` (stream 1125/1125, tone, receive, heat).
+- The 10 min soak (8 cycles, every key released, battery ≤ 36.3 °C, AP ≈ 45 °C).
+- **PR 143 on the device:** "data hold released before a DMR channel" in the log, and the first slot 0 key decoded with 17 bursts.
+
+The SignalDeck PR 143 build is left on the Armor (`a8518e4f…9337`).
+
+**Two rows are still open before release:**
+
+1. **CTCSS 67.0 receive.** Not a verdict yet. The FW52 pass measured **receive audio**: clip −19.7 dBFS and a 1 kHz Goertzel of 4706.9 with the tone, against −87.0 dBFS without. Today's row used the app's "hearing" flag and RSSI.
+   - Repeat FW52's exact method on FW57: channel with RX CTCSS 67.0, squelch 2, HackRF carrier with 1 kHz plus the 67 Hz tone, then the same carrier without the tone. Report clip dBFS and the 1 kHz Goertzel for both.
+   - If FW57 still doesn't open, run the same test on the **factory image** as the control before calling it ours. CTCSS decode is MCU/AT1846S stock, and FW57 changed nothing there.
+2. **Out-of-list TG and promiscuous on/off.** This is a bench-tool gap, not a firmware fault. The edited replay was "refused as an invalid source", most likely because changing the destination without rebuilding the voice LC breaks its check bytes.
+   - **Offline:** rebuild the full LC for the out-of-list call: FLCO group, destination TG 99 (not in the Armor's list), source the bench ID. Use RS(12,9) with the voice-header mask `0x969696` and the terminator mask `0x999999`, then BPTC(196,96). Check that MMDVMHost logs the call as TG 99 from the bench ID with the HackRF listening, before the Armor test. Don't change the hotspot config.
+   - **Bench:** TG 99 with promiscuous off is not heard. `[15,1]` is heard, and the `0x2B` reply is 11 bytes (record the CC and slot bytes). `[15,0]` is not heard again.
+
+**Order:** start the offline LC rebuild now. When the managing agent's HackRF and hotspot grant is under STATUS, run CTCSS receive first (FW57, then factory only if needed), then reload FW57 and run the promiscuous rows. One table, then `STATUS: REVIEW`.
