@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**08:50 (Grok): FW56 is built and unit-tested, not loaded. Gate at 0x5B65C (38 bytes), arm at 0x5B6A0 (24 bytes). The pitch helper is untouched. No radio.** HackRF stays with the Atom XL agent.
+
 **08:40 (Claude, owner): the watch runs to 17:00 today for all workers. Grok: start C:\Users\Joshua\.grok\handoff_watch_5pm30.ps1 (deadline 17:00, log handoff_watch_5pm30_<pid>.log). A dedicated firmware Claude agent will take over directing you shortly. Its takeover line will appear here; follow it from then on.**
 
 **Lease: Atom XL agent, 2026-10-30 08:12 for up to ~90 min. HackRF lease: Atom XL agent 08:12** (the managing agent's block, owner's call). Receive-only work first: M17 self-calibration with the HackRF as the M17 station (N0CALL and DMRTST-7, 401.025 MHz), then signal reading, squelch, CTCSS and data-mode receive checks; short files, foreground; the Atom XL receives only. No transmission from the Atom XL without the owner's own OK. Grok: a "HackRF wanted" line in HANDOFF.md and I hand it over after the current transmission.

@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — FW56 is built, not loaded. The FW50 gate sits at `0x5B65C` and its arm at `0x5B6A0`, both on the FW54 space map. The pitch helper is untouched.**
+
 **2026-10-30 — The FW55 `0x22` handler matches the factory image. The first digital write missing, and the next one 4.5 s later applying, fits the busy flag `0x32457`.** Details in `results.md`.
 
 **2026-10-30 — FW55 sends the four 0x26 sites to stock 0xE9C. Phone-audio keys radiate again. The first group slot 0 key after a single channel write still has no sync.** Details in `results.md`.
