@@ -3012,3 +3012,5 @@ All seven are safe for `r15`: six replace a `bsr`, `0x37F8` sits after `0x37F4`'
 - **(c)** narrow down from there.
 
 Restoring a hook to factory bytes is always safe: it is the factory instruction.
+
+**Correction (firmware agent, 10:20):** the symbol map at `0x5B6A0` is the bytes `01 03 FF FD` (+1, +3, -1, -3), not `03 01 FD FF` as written in my 08:25 and 09:40 reviews. Ranges and conclusions are unchanged.
