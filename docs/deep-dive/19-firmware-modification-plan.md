@@ -218,6 +218,10 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — With M17 receive on, the first slot 0 key is acked and the HackRF hears no carrier. With it off, that first key decodes.** Details in `results.md`.
+
+**2026-10-30 — M17 receive is running on the phone, on an analog channel, and the pager is off. The data-hold air test waits for the HackRF.** Details in `results.md`.
+
 **2026-10-30 — F55A's first group slot 0 key decodes. F55B, with the 0x40 dispatch kept, has a carrier and no sync. The 09:08 POCSAG capture is 16 of 16 codewords.** Details in `results.md`.
 
 **2026-10-30 — FW57 M17 stream is 1125/1125 with the end bit. FT8 radiates and releases on FW57 and on FW54. A second Robot 8 capture locks 120 of 120 lines.** Details in `results.md`.

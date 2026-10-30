@@ -4780,6 +4780,17 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Data-hold test (10:02).** FW57, low power, 467.625 MHz. The pager was not listening. M17 receive was turned on while the VFO was analog, then each row was one digital write and the first group slot 0 key.
+
+| State | After the write | First key |
+|---|---|---|
+| M17 receive on | `0x40` op 6, body 6, 3, 1, reply `sr=0`, log `data hold action=1 sr=0` | `0x26` body 1 acked `sr=0`, status 3, body 2 acked `sr=0`, status 4. Another hold `action=1 sr=0` after the unkey. HackRF: no carrier |
+| M17 receive off | no `0x40` and no data-hold line | `0x26` body 1 acked `sr=0`, status 3, body 2 acked `sr=0`, status 4. Carrier 4.94 s, 17 sync bursts, 4 bench rows |
+
+M17 receive was turned off at the end. The phone is on `DMR003.FW57.V022`, not transmitting.
+
+**Data-receive state (10:02), no key.** The phone is on `DMR003.FW57.V022`, analog, not transmitting. M17 receive is running, and it is not in a call. The pager is not listening and its monitor is off. `dataReceive` is the in-memory hold flag set when M17 receive starts, so it is on. The last 400 `RadioService` lines contain no `data hold` line. The slot 2 keys that the HackRF called silent each had the app's transmitting flag set and one host `0x26`; the ack and status 3 lines were not kept.
+
 **F55A and F55B slot 0, POCSAG score (09:56).** Low power, 467.625 MHz. The HackRF received. Left on `DMR003.FW57.V022`, not transmitting. The hotspot's config was not changed. Slot 1 is not covered: the hotspot is simplex on slot 2.
 
 | Row | Result |
