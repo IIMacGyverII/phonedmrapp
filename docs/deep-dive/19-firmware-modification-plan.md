@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — hotspot sweep.** RX and TX are 467.625 MHz, TXOffset 0, RFLevel 20. DMRGateway is not running and does not rewrite 99 to 9. A sweep during the replay shows no steady carrier at 467.625 MHz. Details in `results.md`.
+
 **2026-10-30 — FW58 acceptance stopped.** The talkgroup 99 file's LC is destination 99, and the hotspot logged TG 99, but the HackRF capture has no carrier at 467.625 MHz. The VFO row during that transmission is loud with MON off. FW58 was not loaded. Details in `results.md`.
 
 **2026-10-30 — F58D gaps ran.** On a VFO whose list is 1 and 9, the talkgroup 99 file is loud with MON off (RMS 1392) and the `0x2B` target stays 9. The op 6 second apply leaves the saved mode at `0x6E`. The channel 49 key has 13 DMR sync bursts. Details in `results.md`.

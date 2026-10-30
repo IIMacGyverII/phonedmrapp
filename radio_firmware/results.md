@@ -4780,6 +4780,32 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Hotspot carrier and rewrite check (18:07). Read only. Acceptance not resumed.** Nothing in `/etc/mmdvmhost` or `/etc/dmrgateway` was written. The phone was not keyed.
+
+| Item | Value |
+|---|---|
+| RXFrequency | 467625000 |
+| TXFrequency | 467625000 |
+| RXOffset | −450 |
+| TXOffset | 0 |
+| RFLevel | 20 |
+| DMR Network | 127.0.0.1 port 62031, local port 62032 |
+| Slots | slot 2 enabled, slot 1 off |
+| dmrgateway service | inactive |
+
+The live DMR network target is the relay on 127.0.0.1:62031. `dmrgateway` is not running, so its rewrite file is not in the path. The file's slot-2 rules include talkgroup 9 left as 9, talkgroup 8 rewritten to 9, and talkgroup 4 rewritten to 9. No rule rewrites 99 to 9. Other rules start at 7-digit talkgroups.
+
+`hackrf_sweep -f 465:470 -w 100000 -l 32 -g 40`, 40 one-shot passes from 18:06:33 to 18:06:38. The relay had been reloaded on the talkgroup 99 file and logged `DMR replay sent: 86 bursts` to TG 99, slot 2, ending 18:06:38. The sweep covers that transmission.
+
+| | dB |
+|---|---|
+| 467.625 MHz bin, minimum | −62.8 |
+| median | −50.8 |
+| maximum | −42.5 |
+| Loudest bin in 465–470 MHz | −35.1 at 465.147 MHz |
+
+The dial bin is within 3 dB of the segment's loudest bin on 2 of 40 passes. There is no steady carrier at 467.625 MHz, or elsewhere in 465–470 MHz. MMDVMHost's log, last voice header 22:44:06 UTC (17:44 local), is `DMR Slot 2, received network voice header` to TG 99, 5.2 s, BER 0.8%. The log has no voice header at 22:52, 23:03, 23:04 or 23:06 UTC, which are the later relay sends.
+
 **FW58 acceptance stopped at the ground truth (17:56). FW58 not loaded. Not transmitting.** The file `dmr_tg99.bin` has one voice-header burst and one terminator. Both match the rebuilt LC for destination 99, colour code 1, and the network destination in every packet is 99. The relay was reloaded and MMDVMHost logged `DMR Slot 2, received network voice header` to TG 99 at 22:43, 22:44 and 22:52 UTC (17:43, 17:44 and 17:52 local), each 5.2 s, 0% packet loss, BER 0.8%. Hotspot config was not written.
 
 HackRF receive at 467.385 MHz, 2.4 MS/s, 10 s, over the 17:52 replay: LNA 16 / VGA 16 and LNA 40 / VGA 40. Neither file has a carrier at 467.625 MHz. The bin 240 kHz above the capture centre is 4.3 dB and 1.0 dB over the median. Wideband amplitude stays flat (−19.5 dBfs, then −14.3 dBfs). The voice LC was not decoded from a capture. A steady spur sits near 466.514 MHz in both the quiet and the replay window.
