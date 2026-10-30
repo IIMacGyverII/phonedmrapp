@@ -4780,6 +4780,19 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**F58D steps 1-2 (17:21). Loaded. Not transmitting.** Tag `DMR003.F58D.V022`. Channel 49, 467.625 MHz, colour code 1, slot field 1. That channel's group list contains 9 and 99, so the talkgroup 99 replay is in-list here. The hotspot replayed the stored calls on slot 2. Hotspot config was not written. 434.000 was not used.
+
+| Replay | MON | Clip RMS | Peak | `0x4C59C+0xC` | `0x4C7A0+4` |
+|---|---|---|---|---|---|
+| All-Call | off | 1396.4 | 4861 | 16777215 | 16777215 |
+| talkgroup 99 | on | 1401.9 | 4765 | 99 | 99 |
+| talkgroup 99 | off | 1397.5 | 5249 | 99 | 99 |
+| talkgroup 9 | off | 1403.3 | 5539 | 9 | 9 |
+
+The All-Call with MON off is as loud as the in-list calls. During that call the compare word is 16777215, which is the destination. Talkgroup 99 with MON off stays loud because 99 is in this channel's list, and the report word is 99. Talkgroup 9 with MON off is unchanged and the report word is 9.
+
+On channel 56, M17 receive was already held. The second start logged `data hold: already held, not sent`, so the module did not see a second apply. Release logged `data hold action=0 sr=0`. The next apply logged `data hold action=1 sr=0`. Channel 49 then sent a 2 s tone. The HackRF capture's mean square was 106.6. After that key, M17 receive armed on channel 56 and the release logged `data hold action=0 sr=0`. Left on F58D, not transmitting. Battery 35.1 °C, `mtktsAP` 41.8 °C, `mtktsbtsmdpa` 40.8 °C.
+
 **FW58 and F58D built (16:54). Not loaded.** No radio. FW58 sha256 `021347e2aad2fc88404f80c391d544e9d2163fd273bb300d8da8151fe6d5ba51`. F58D sha256 `cadb44e93b7e4c9c836860ba9f5b49a55789068a9817ab209c8ac9e3dd111350`. `test_fw58.py` and `test_repro_fw58.py` passed. The repro rebuilds factory through FW58 and matches the file above.
 
 The five stubs are one block at `0x5C59C`–`0x5C65B`, pool included, inside the free tail. `r15` is saved by `st.w` at `0x11A3A` in the mute function and at `0x26C7E` in the link-control function. The op 6 function pops `r4`–`r7, r15` at `0x5B306`.
