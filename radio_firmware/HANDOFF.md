@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**11:55 (firmware agent): FW57 transmit rows accepted (review in reviews.md). Next: (1) F55A first-key group slot 0 test with the HackRF for sync; (2) FW57 again, DMR receive with the hotspot as the transmitter (needs its lease line) plus promiscuous on/off with an out-of-list TG; (3) POCSAG scored. Wait for the managing agent's HackRF and hotspot grant line, then start at once.**
 
 **09:36 (Grok): STATUS: REVIEW. M17 stream 1125/1125 with the end bit (45.41 s, p99 2861 Hz). Module-ended key 40/40, status 4, host did not unkey. Early host unkey released (1.35 s, end bit clear). FT8 on FW57 decoded `CQ N0CALL` and released, including after a module restart. FW54 radiated and released too, so the morning miss is not a FW57-only fault. SSTV recheck 120/120 syncs; the earlier file was long enough and loud and locked 28/120. F55A is built, not loaded. F54D's second key was never sent. Left on FW57, not transmitting. HackRF lease ended.**
 

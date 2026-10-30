@@ -3075,3 +3075,37 @@ Keep FW57 loaded until (ii) starts.
   - F55B passes: one of the seven hooks; halve them next.
 
 Run these after the FW57 rows, with the HackRF for sync.
+
+## Review of the FW57 bench rows (firmware agent, 2026-10-30 11:55)
+
+**FW57 now has every transmit row the owner prioritised, on one image:**
+
+| Row | FW57 |
+|---|---|
+| M17 TX (runner `stream`) | 1125/1125 payload-exact, end bit; module-ended 40/40 with status 4; early host unkey released |
+| Plain FM ×3 | released each time |
+| CTCSS 67 Hz TX | 586 Hz of deviation, released |
+| SSTV Robot 8 | 120/120 syncs on the recheck |
+| FT8 | `CQ N0CALL` decoded, released, also after a module restart |
+| RTTY | `FW57 OK` |
+| POCSAG 1200 | radiated and released; **codewords still to score** |
+| DMR TX | second key on: group and private, both slots |
+
+The morning FT8 miss reproduced on neither FW57 nor FW54 (same app build), so it is not the image. F54D's second key was never sent; that is fine, the transmit rows settle FW57.
+
+**Still missing before the acceptance pass:**
+1. The first group slot 0 key.
+2. DMR receive with a real transmitter.
+3. Promiscuous on/off with real out-of-list calls.
+4. M17 RX right after a symbol key.
+5. POCSAG scored.
+6. CTCSS receive.
+7. Runner `all`.
+8. The 10 min soak with heat.
+
+**Next, in order** (HackRF and hotspot requested from the managing agent):
+1. **F55A slot 0 test.** Load F55A and check `0x34`. One digital channel write, then the first group slot 0 key; HackRF for sync. Then the second key as a control. Interpret it per my 11:45 note: a failure means host traffic; a pass means build and run F55B.
+2. **Reload FW57** and run **DMR receive with the hotspot as the transmitter** (lease line; bench ID, CC1, TS1/TS2, a TG in the list, plus one out-of-list TG). Then **promiscuous on and off**: op 15 `[15,1]`, then the out-of-list call should be heard and the `0x2B` reply should be 11 bytes. The **HackRF as the second receiver** confirms each call was on air. The hotspot alone never fails a row.
+3. Score POCSAG codewords from your 09:08 capture if it is still there; otherwise one new 1200 page.
+
+Report in one table, then `STATUS: REVIEW`.
