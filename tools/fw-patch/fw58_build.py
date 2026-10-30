@@ -408,6 +408,72 @@ def build_diag():
     return DIAG
 
 
+def build_subset(parts, tag, dest):
+    """FW57 plus the named FW58 stubs, and F58D's opcode 14 window.
+
+    parts is a subset of the hook names. The whole stub is still written into
+    the free tail; a part that is left out keeps the FW57 instruction at its site.
+    """
+    names = set(parts)
+    unknown = names - {name for name, _site, _kind, _exit in HOOKS}
+    if unknown or not names:
+        raise SystemExit("parts %s" % sorted(unknown or ["empty"]))
+    if len(tag) != 16:
+        raise SystemExit("tag length")
+    img = bytearray(SRC.read_bytes())
+    old = bytes(img)
+    if img[TAG] != b"DMR003.FW57.V022":
+        raise SystemExit("tag")
+    code, symbols, dump = _assemble()
+    _prev_mnemonic(dump)
+    ranges = _code_ranges(dump, symbols)
+    img[BASE:BASE + len(code)] = code
+    for name, site, kind, _exit in HOOKS:
+        if name not in names:
+            continue
+        word = _hook_bytes(kind, site, symbols[name])
+        img[site:site + 4] = word
+        landed = _br_target(img, site) if kind == "br" else fw30_build.bsr_target(img, site)
+        if landed != symbols[name]:
+            raise SystemExit("target %s %X" % (name, landed))
+    for at in (0x11D1C, 0x11D2E, 0x11D84, 0x11D96, 0x5B2D6, 0x5BD3E, 0x5B2F4, 0x5B2B6):
+        if img[at:at + 4] != old[at:at + 4]:
+            raise SystemExit("moved %X" % at)
+    if img[0x5B2CC:0x5B2D2] != old[0x5B2CC:0x5B2D2]:
+        raise SystemExit("apply load")
+    if literal_guard.covered_loads(old, bytes(img))[1]:
+        raise SystemExit("load guard")
+    if literal_guard.covered_branches(old, bytes(img))[1]:
+        raise SystemExit("branch guard")
+    if literal_guard.never_written(old, bytes(img)):
+        raise SystemExit("never-write")
+    pointed = literal_guard.pointed_into(old, bytes(img))
+    if pointed:
+        raise SystemExit("pointed %s" % [hex(p) for p in pointed[:12]])
+    if space_map.outside_free(old, bytes(img)):
+        raise SystemExit("space %s" % space_map.outside_free(old, bytes(img)))
+    if img[WIN_LO:WIN_LO + 4] != WIN_OLD[0] or img[WIN_HI:WIN_HI + 4] != WIN_OLD[1]:
+        raise SystemExit("window")
+    img[WIN_LO:WIN_LO + 4] = WIN_NEW[0]
+    img[WIN_HI:WIN_HI + 4] = WIN_NEW[1]
+    old_win = bytearray(img)
+    old_win[WIN_LO:WIN_LO + 4] = WIN_OLD[0]
+    old_win[WIN_HI:WIN_HI + 4] = WIN_OLD[1]
+    if literal_guard.covered_loads(bytes(old_win), bytes(img))[1]:
+        raise SystemExit("window load guard")
+    if literal_guard.covered_branches(bytes(old_win), bytes(img))[1]:
+        raise SystemExit("window branch guard")
+    if literal_guard.pointed_into(bytes(old_win), bytes(img)):
+        raise SystemExit("window pointed")
+    img[TAG] = tag.encode("ascii")
+    dest = Path(dest)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_bytes(img)
+    print(dest.name)
+    print(hashlib.sha256(bytes(img)).hexdigest())
+    return dest
+
+
 if __name__ == "__main__":
     build()
     build_diag()

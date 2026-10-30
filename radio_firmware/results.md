@@ -4780,6 +4780,19 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**F58B bisect (18:50). Factory left loaded. Not transmitting. Hotspot lease ended.** F58A was built and not loaded. Hotspot config was not written.
+
+F58B is FW57 plus the All-Call stubs and the op 6 guard, without the heard-talkgroup store, plus the opcode 14 window `[0x30000, 0x50000)`. Tag `DMR003.F58B.V022`, sha256 `f6ec5f367f911af55d6c47efc1c24013c18104fe0ce1c0729ea61e8a5f71e22a`. Loaded by the bench loader at 18:36. The VFO read back as list 1 and 9. The relay was already holding the talkgroup 99 file, and MMDVMHost was already open, so that row did not restart either.
+
+| Row | Header | Carrier ratio | Clip RMS | Peak | Loud time | `0x4C7BC` byte 2 | Gate byte |
+|---|---|---|---|---|---|---|---|
+| Talkgroup 99, MON off | TG 99, 23:37:14 UTC | 42.1 | 28.0 | — | 0.00 s | 0 before, 1 during | 0, 0 |
+| All-Call, MON off | TG ALL, 23:40:54 UTC | 43.6 | 22.3 | 1320 | 0.00 s | 1, 1 | 0, 0 |
+
+The All-Call read of 64 bytes at `0x4D318` during the call contains 16777215 in one word. The same read before the call contains 9 in one word and not 16777215. Neither row is the 20 s voice of F58D. (B) alone does not unmute the out-of-list call or the All-Call.
+
+F58A, sha256 `1efcaeadfd25455d248972c4c66f050eaa20d4d15de3007c40266718dc259358`, is FW57 plus the heard-talkgroup store and the op 6 guard, no All-Call stubs, same window. It was not loaded. Swapping the relay onto the All-Call file and restarting MMDVMHost left the log at the copyright banner after `Closing DMR Network` (23:42:05 UTC). A later start reported `MainPID=0` and no new `Opening DMR Network`. The F58A row was not sent. Factory was loaded again at 18:49:42, tag `DMR003.UV4T.V022`.
+
 **F58D against factory, out-of-list talkgroup 99 (18:26). Stopped. Factory left loaded. Not transmitting.**
 
 MMDVMHost was restarted once. Its log then says `DMR, Opening DMR Network` at 23:12:31 UTC. The relay was not restarted after that, and it was not written. One HackRF capture of the replay, after that open, has a carrier from 3.48 s to 10.19 s (6.71 s), 49.8 dB over the floor, 31 sync bursts. Two of them are voice-LC headers, colour code 1, FLCO 0, destination 99. MMDVMHost logged the network voice header to TG 99, 5.2 s, BER 0.8%.
