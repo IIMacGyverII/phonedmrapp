@@ -4780,6 +4780,17 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**FW57 Morse (13:45).** One key from SignalDeck's Morse sender (`ToneQueue.morse` at 20 words per minute and 800 Hz, through the module tone queue). The text was `N0CALL FW57`. Analog VFO, 467.625 MHz, low power. The saved callsign was put back afterwards; that test text is not in the packet settings.
+
+| | |
+|---|---|
+| Carrier | 8.26 s, SNR 65.4 dB |
+| Tone | 800 Hz (the strongest line). Dit 60 ms, which is 20 words per minute |
+| Decoded | `N0CALL FW57` |
+| Release | The module ended the key itself (status 4 at 8.2 s). The radio was not transmitting afterwards |
+
+Left on `DMR003.FW57.V022`, channel 49, not transmitting. Battery 36.1 °C, `mtktsAP` 43.8 °C, `mtktsbtsmdpa` 42.3 °C.
+
 **PR 150 download and PR 151 hold tracking (13:37).** SignalDeck `1.0.0-beta.22`, versionCode 121, main `93b93cf6`. Screenshots are `stepd3_*.png` in `%TEMP%\fw1718\fw30\`.
 
 | Step | Result |

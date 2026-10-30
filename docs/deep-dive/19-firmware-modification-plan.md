@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — FW57 Morse from SignalDeck's tone sender: `N0CALL FW57` at 20 wpm, 800 Hz, decoded and released.** Details in `results.md`.
+
 **2026-10-30 — Beta.22 with the catalogue download and hold tracking restores the factory image, downloads FW57, and loads it. After M17 is started and stopped, the first channel 49 key radiates.** Details in `results.md`.
 
 **2026-10-30 — On FW57, channel 49 radiates after a module restart when M17 was never started, and stays silent after M17 is started and stopped. The silent key follows `data hold action=0`.** Details in `results.md`.
