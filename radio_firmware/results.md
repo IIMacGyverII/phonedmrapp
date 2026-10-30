@@ -4780,6 +4780,24 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Step (d) stopped at pre-flight (12:01).** SignalDeck `1.0.0-beta.22`, versionCode 121, main `4c293f57`. The Module firmware page's Restore, then its confirm Load, put the factory image back. The page figures were 370 / 370 blocks, 378,620 bytes, 2956 B/s, 2:08 elapsed, 0 retries, and the handshake log said prompt C in 204 ms. The settings tag after that was `DMR003.UV4T.V022`. The screenshot rule arrived while that transfer was already running, so there is no `stepd_NN` frame of the restore dialog, the progress, or the end line.
+
+The stock baseline key was not on channel 56. That channel is receive-only, and the 2 s test tone was blocked. An analog VFO at 467.625 MHz, low power, settled 4.5 s, then the same tone. The HackRF capture `stepd_factory_fm` was keyed 2.85 s, SNR 61.8 dB, 1 kHz Goertzel 1187, and the radio released. That tune and tone were the web VFO and DIAG `testtone`, not a PTT tap. M17 receive was off. The DMR group key and the M17 page transmission were not run.
+
+The catalogue line `fwcatalog Firmware catalogue 6 loaded: 3 images` (11:48:55) came from DIAG `fwcatalog`, before the tap-only rule. It is not a user action. With the factory backup verified, the page's Download control is hidden (`FirmwareScreen` sets it `GONE`), and that control is the only one that calls `FirmwareCatalog.fetch`. After the page was opened again, the cached catalogue offered `DMR003.FW57.V022` between FW22 and B3G1. A second FW57 row lower in the list uses the unlisted summary. That row was not the one confirmed. Allow unlisted images stayed off.
+
+The chosen summary was the release text: 378,620 bytes, hash `5f16ef683ce92dc02ebf1f35d3d3cf5dca2ad4edfeee8e044ea75d9d3cda00f7`, file on this phone. Pre-flight was green for the module (`DMR003.UV4T.V022`), idle, stock app paused, battery 99% charging, the image hash (`5f16ef683ce9`), and the factory backup. "This phone" was red: "That file is not a known module image". Confirming Load did not erase or transfer. The phase stayed Waiting, and the result line was that same sentence. On `4c293f57`, a catalogue row is not unlisted, so `FirmwareSession.inspect` calls `ImageTable.refuse`. `refuse` returns that sentence when the sha is not the factory image and `bySha` misses. `bySha` walks only `ROWS`, which is the factory image and FW22. `run` finishes there and does not call the sender.
+
+Screenshots, reviewed, no callsign, ID, or location. They are in `%TEMP%\fw1718\fw30\`:
+
+| File | What it shows |
+|---|---|
+| `stepd_01_preflight.png` | 11:53. Module answers `DMR003.UV4T.V022`. Hash check `5f16ef683ce9`. Red phone line, the sentence above |
+| `stepd_02_refused.png` | 11:54. FW57 row highlighted. Amber result, the same sentence. Phase Waiting. Allow unlisted images off |
+| `stepd_03_offer.png` | 11:55. Installed `DMR003.UV4T.V022`. Chosen image is the release summary and the full hash above |
+
+Left on `DMR003.UV4T.V022`, VFO 467.625 MHz, low power, not transmitting. SignalDeck still `1.0.0-beta.22`. Battery 35.9 °C and 100% charging, `mtktsAP` 43.8 °C, `mtktsbtsmdpa` 42.2 °C. Waiting for the fixed candidate. Step (d) starts again from Restore after that install line.
+
 **FW57 reproduces from the factory image (11:40).** `tools/fw-patch/test_repro_fw57.py` copies `tools/fw-patch` and `radio_firmware/DMR003.UV4T.V022-ORIGINAL.bin` into a temporary root and builds there. It does not write `radio_firmware/build/`. Every hop matches the image that was loaded. The final sha256 is `5f16ef683ce92dc02ebf1f35d3d3cf5dca2ad4edfeee8e044ea75d9d3cda00f7`.
 
 The FW27 script on main was stage D, variant 7, sha256 `f8298581…3ef8`. That image was not the parent of FW28. The loaded FW27 is variant 6, stage C, from `fb159166`. The script is that revision again.

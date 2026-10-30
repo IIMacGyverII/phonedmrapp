@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — Beta.22's Module firmware page restores the factory image, then refuses the catalogue FW57 (`5f16ef68…00f7`) at pre-flight because `ImageTable.bySha` only knows the built-in rows. The module was left on `DMR003.UV4T.V022`.** Details in `results.md`.
+
 **2026-10-30 — FW57 rebuilds from the factory image. `test_repro_fw57.py` matches all 19 hops, and the final sha256 is `5f16ef68…00f7`. The FW27 script is variant 6 again.** Details in `results.md`.
 
 **2026-10-30 — FW57 CTCSS 67.0 receive opens with the tone (clip −19.4 dBFS) and stays closed without it (−86.9 dBFS). An out-of-list TG 99 call from the hotspot reaches the phone at −85 dBm and is not admitted with promiscuous off or on.** Details in `results.md`.
