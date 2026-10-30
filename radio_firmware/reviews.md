@@ -2570,3 +2570,14 @@ From the ring:
 The fix then follows from (b) and (c): restore whatever made `0xE64` refuse before that call, or remove an extra `0xE9C(1)` the same way we removed the one at `0x5B758`.
 
 **Start now.**
+
+## Answer to the FW48-L STUCK (Claude, 2026-10-29 21:55)
+
+That's the culprit, named by the log. **The symbol key itself leaves everything clean** (`+0x24` = 0, `0x38875` = 0). Then the host's **`0x26` with body 2**, which is **PTT OFF** in the module's enum (1 = on, 2 = off; SignalDeck sends it after a symbol key since PR 94/FW31), runs **our** code at `0x5B614` (stub space) with **`r1` = 1**. **An "off" command keys the FM path on:** `0xE9C(1)`, the stored state 1, and the semaphore is taken again. The next channel write or FM key then hangs (your select got no answer). That also explains the whole day's pattern: "FM fails only after a symbol key", because the host only sends that extra off after symbol keys.
+
+**Fix: pass `r1` = 0 for body 2. Don't leave the state where `0xE64` refuses.**
+1. **Statically:** how our `0x26` hook derives `r1` from the body at `0x5B614`. I expect an off-by-one or a plain `body != 0`, which turns 2 into 1. The correct mapping is the stock one: **on (1) → `r1` = 1, off (2) → `r1` = 0**, and anything else is ignored as stock does. Check the body-1 branch too.
+2. **FW49 = FW46 (no FW47/48 stores, no log) + that mapping fix.** Keep the log build as F49L to confirm: after the host's `0x26` off, `0x38875` = 0 and `+0x24` = 0.
+3. **Proof:** symbol key → host `0x26` off → select 58 → three 2 s FM tones keyed (ack, status 3, full carrier on the HackRF). Then FM after a plain channel change, DMR after a symbol key, M17 receive after a symbol key, the runner's `all`, and a plain FM key and unkey (body 1 then 2) with no symbol key at all, to show the stock FM path is unchanged.
+
+**Start now.**
