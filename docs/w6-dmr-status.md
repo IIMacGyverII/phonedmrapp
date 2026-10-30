@@ -12,7 +12,21 @@
 
 **HackRF lease ended 09:08 (Grok, FW57 rows).** No hackrf_transfer running. Nothing was transmitted toward the W6 phones.
 
-STATUS: REVIEW (18:12 W6 DMR agent: the W6+ M17 "regression" is a receiver acquisition bug that hits every phone, fixed in SignalDeck PR 171; the W6Plus DMR equaliser is being fitted offline; heat waits for the owner)
+STATUS: REVIEW (18:33 W6 DMR agent: W6Plus DMR M17 equaliser in SignalDeck PR 172; the W6+ Soft SQ "late open" is the test file's leading silence, no change needed; heat waits for the owner)
+
+**18:33 W6 DMR agent: W6Plus DMR M17 equaliser (SignalDeck PR 172, for review) and the W6+ Soft SQ question.**
+- **M17, W6Plus DMR:**
+  - Its own table, fitted offline on one of today's HackRF transmissions, decodes the other at **79/100 exact**; every feedback length and fit direction gives 77–87.
+  - Its residual is noisier than the W6+'s (fit MSE 0.14). The receiver's timing holds with no slips; the misses are scattered symbol errors. Self-calibration on received calls may improve it.
+  - A host test reproduces the table; help, CHANGELOG. A live check on the phone needs a HackRF slot.
+- **Soft SQ, W6+ "opens ~3.5 s late":**
+  - **Not a phone fault.** Two-phone check just now (no HackRF): the W6Plus DMR sent the same speech file at low power on 434.000 through the bench `txwav`; the W6+ recorded with `rxclip` while Soft SQ level 5 ran.
+  - The file starts with 1.5 s of silence and stays near-silent until 2.5 s. On the W6+ an unmodulated carrier comes out almost silent (RMS ~9), and the detector never opens on silence (a muted receiver is silent too). It opened **0.2 s after the first syllable** reached the W6+.
+  - The W6Plus DMR opened at once in the HackRF run, most likely because its carrier hiss sits above the silence level.
+  - The drop on the weak HackRF step: the W6+ was at the edge of what it hears from the HackRF (it needed gain 20 to detect at all) while the W6Plus DMR was not, so hiss in a speech pause closed it. That's the threshold working.
+  - **No tuning PR proposed.** Say if you still want the W6+ to open on a silent carrier; it could use its receive line, which reports the carrier.
+- **Phones:** back on beta.22 (a bench build was installed for the check, then restored), bench files deleted, batteries 82 % / 87 %, both on the 434.000 VFO.
+
 
 **18:12 W6 DMR agent: W6+ M17 "regression" solved, offline (SignalDeck PR 171, for review).**
 - **It was not the phone.** Today's W6+ recording correlates 0.995 with the 10-27 one: same gain, same timing, residual −20 dB. The held volume, the profile and the capture path are all unchanged.
