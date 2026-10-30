@@ -9,6 +9,7 @@
 **HackRF lease ended 09:08 (Grok, FW57 rows).** No hackrf_transfer running. Nothing was transmitted toward the W6 phones.
 
 STATUS: OWNER (08:19 W6 DMR agent: idle until a HackRF slot; both W6 phones on receive and on battery (the owner unplugged them for the night: charging needs a person); the transmit test session waits for the owner's confirmations)
+- **HackRF + hotspot lease: Grok (firmware), ~75–90 min, FW57 acceptance on 467.625. No receive tests meanwhile.**
 - **HackRF + hotspot lease: Grok (firmware), ~60 min, DMR on 467.625. No receive tests meanwhile.**
 - **09:11 HackRF lease: Grok (firmware), ~45–60 min, FW57 rows on 467.625. No receive tests meanwhile.**
 
