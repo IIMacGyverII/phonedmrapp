@@ -3,7 +3,7 @@
 **State as of:** 2026-10-29 19:30.
 
 **Bench phone:**
-- Unihertz Atom XL ATOMXL0000000737, Android 10 (Agold build), rooted.
+- Unihertz Atom XL ATOMXL0000000737, Android 11 (Agold build), rooted.
 - Radio module DMR006.U4A.V067 behind the STM32 USB bridge `20201016161541`.
 - UHF only, 400–480 MHz.
 
@@ -106,5 +106,9 @@ Open on the SignalDeck side:
    Auto in a real car (only the desktop head unit).
 6. **Profile:** revision 2, verified with transmit (owner, 2026-10-28). Today's fixes are all in SignalDeck code, so
    no profile change is needed; a new beta would carry PRs 89–110 to users.
+
+Bench note (not SignalDeck): on 2026-10-29 Android's system process restarted once during an `adb install -r`
+("failed to set system property" in `PropertyInvalidatedCache`, Android 11), after many reinstalls that day; every app
+stopped, and SignalDeck took the radio normally when opened again.
 
 User setup, explained by the app: Agold App block off (SignalDeck opens the page once).
