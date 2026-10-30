@@ -13,6 +13,23 @@
 **HackRF lease ended 09:08 (Grok, FW57 rows).** No hackrf_transfer running. Nothing was transmitted toward the W6 phones.
 
 STATUS: OWNER (08:19 W6 DMR agent: idle until a HackRF slot; both W6 phones on receive and on battery (the owner unplugged them for the night: charging needs a person); the transmit test session waits for the owner's confirmations)
+
+**13:52 W6 DMR agent: SignalDeck certification §3.7 (timing and calibration) for both W6 phones.** Both on beta.22 (installed over, data kept), charging, receiving on 434.000 low power.
+
+| # | Measure | W6Plus DMR | W6+ |
+|---|---|---|---|
+| 1 | Reading scale | HackRF (stepped carrier) | n/a: the module reports no signal strength (`rssi=false`) |
+| 2 | Settle after a retune | HackRF, or the W6+ keyed as a steady carrier (two-phone, short keys) | n/a (no reading) |
+| 3 | Reading time | **measured: 8 ms query→answer (median of 35, range 8–9 ms, settled, beta.22)**; the retune case is item 2 | n/a (no reading) |
+| 4 | Squelch opening level | HackRF (with the module squelch sweep already queued) | HackRF (the receive-detect line) |
+| 5 | Scan rate | two-phone: a scan list with the W6+ keyed on one channel | two-phone, the W6Plus DMR keyed |
+| 6 | Receive audio path | HackRF (fixed deviation; another phone's TX has its own pre-emphasis) | HackRF |
+| 7 | CTCSS/DCS | two-phone: the W6+ sends low/middle/high CTCSS and DCS codes (tone detection now works with PR 136) | the module's own tone squelch, two-phone; audio detection n/a (`subaudible=false`) |
+| 8 | Digital receive | DMR: needs another DMR radio (Atom XL/Armor, other agents); M17: HackRF | M17: HackRF (an equaliser already exists, `eq_anysecu-w6plus`) |
+| 9 | (TX) levels, offset, framing | HackRF: partly done 2026-10-29 (+1.6 kHz, DMR framing, sweep); the level at 10/25 is owed | HackRF: 0.2 provisional |
+| 10 | (TX) heat | attended five short keys + one long key (the owner present; data from 2026-10-29: battery 42.1–42.8 °C, AP 51–53 °C incl. a 28 s key) | attended, not yet measured |
+
+Two-phone items (2, 5, 7) can run without the HackRF in an announced window; the chargers' 120 Hz buzz may disturb tone detection (123.0 Hz sits near the 120 Hz harmonic), so item 7 is better on battery.
 - **HackRF + hotspot lease: Grok (firmware), ~45 min, CTCSS and promiscuous rows on 467.625. No receive tests meanwhile.**
 - **HackRF + hotspot lease: Grok (firmware), ~75–90 min, FW57 acceptance on 467.625. No receive tests meanwhile.**
 - **HackRF + hotspot lease: Grok (firmware), ~60 min, DMR on 467.625. No receive tests meanwhile.**
