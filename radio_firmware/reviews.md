@@ -2611,3 +2611,30 @@ This changes the picture: **on F48L (FW46 + the log), a plain FM key → unkey �
 4. If time allows, a quick bisect point: **does the factory image pass "plain FM key → unkey → key"?** It should. Does FW38? That tells us since when the hook diverged.
 
 **Start now.**
+
+## Review of FW50 (Claude, 2026-10-29 23:20)
+
+**Progress: the plain key/unkey is fixed.** Routing every `0x26` that is not part of a symbol transfer straight to the stock `0xE9C(1)` made plain FM key → unkey → key work three times on channel 58, and DMR on channel 49. That confirms the diagnosis: the divergence was our `0x5BE14` load before `0xE9C`. Keep the gate.
+
+**What is still wrong: the symbol path.** Two things in the 23:11 log point at the same cause:
+1. The symbol key ends with no status 4.
+2. **The three tones after it got no `0x26` ack at all.** On FW50 a plain key that fails like this has only one explanation: **`0x4DAAC` was still nonzero**, so the tones' body 1 went to our symbol key path `0x5B580`, not the stock path. Nothing in the description clears the flag after a symbol key. A module restart clears RAM, which is why the three FM cycles passed again afterwards.
+
+There is a second suspect on the same path: the symbol end at `0x5B756` already calls `0xE9C(1)` (`sym done`). The host's body 2 then goes to `0x5B614`, which calls `0x5BE14` and `0xE9C` again. That is **two key-offs for one key**, the same pattern as the FW45 semaphore leak.
+
+**FW51 design: one key-off per key, the flag cleared with it.**
+- **Rule:** every key gets exactly one `0xE9C(1)`, the stock call, and `0x4DAAC` goes to 0 in the same place.
+- **Module ends the transfer itself (`sym done`):** run the drain, the drop and then `0xE9C(1)` once, **clear `0x4DAAC`**, and set a "symbol key already off" byte. A host body 2 that arrives with that byte set acks without a second `0xE9C`, clears the byte, and returns.
+- **Host ends it first** (body 2 while the flag is set): stop the symbol engine, drain and drop, then `0xE9C(1)` once, clear `0x4DAAC`.
+- **Status 4:** find where the stock path emits it. Check whether it comes from inside `0xE9C` or from the TX task after the key state byte `0x38875` changes. If our drop clears `0x38875` before `0xE9C` runs, the stock code may see "already off" and skip status 4. If so, call `0xE9C` before the drop clears it. FW20 found the same thing: the stock unkey must run while the TX bits are still set.
+- Use the FW48-L call ring at `0x4D900` once: log every `0xE9C` call with `r1` and the flag value, for a symbol key with the module ending it and for one with the host ending it. Both runs must show one call each.
+
+**Proof for FW51, on one image:**
+1. Plain FM key/unkey/key ×3 on channel 58, the FW50 result kept.
+2. Symbol key that the module ends, then the host's body 2: status 4, then three FM tones keyed with a carrier on the HackRF.
+3. Symbol key the host ends early: status 4, then three FM tones.
+4. DMR key/unkey/key.
+5. The `0x4DAAC` value read with op 14 after each of 2–4: 0.
+6. Runner `all` on the final arm.
+
+**If all of that passes, the full acceptance pass starts on the same image**, as the owner ordered (list in the 22:30 note). It covers every mode both ways and has every row confirmed by a second receiver: the HackRF with our own decoder, or the Atom XL.
