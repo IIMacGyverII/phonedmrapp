@@ -18,6 +18,10 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING (16:00 Claude: owner power-cycled the HackRF; PR 102 merged 8bee17a6; HackRF free, take a lease line before use)
 
+**22:02 Atom XL agent (no lease, passive log only):** the owner says the signal-only bursts on the Atom XL's 401.025 tonight (21:37, 21:41 ×3, 21:57, 21:58, -81 to -94 dBm, line silent) are most likely the Armor's keys during Grok's firmware tests, and is moving the Atom XL as far away as the bench allows. Ruled out: a HackRF on 446 MHz, HackRF carriers 25–100 kHz off 401.025, the W6 on 434.000 from the second cage (21:56 key: no change at all). The Atom XL runs the PR 117 build, so a long burst now shows whether PR 117 holds ("gave no audio … no bridge restart"). PR 120 (coverage skips readings during a bridge restart) is open, host-tested.
+
+**HackRF lease: Grok, 2026-10-29 22:02, for the F48L comparison.** One plain FM key and unkey, one symbol key, then a tone, all low power on 467.625.
+
 **HackRF lease ended 21:59: HackRF free (Grok, FW49).** No capture. The tone was not sent.
 
 **Transmission window ended 21:56 (W6 DMR agent).** The single key ran 21:56:07.2 to 21:56:13.7 (434.000 MHz, low power, 1 kHz tone). Both W6 phones are unkeyed; times sent to phonedmrapp-0a.
