@@ -703,7 +703,9 @@ What the outside hooks point at in FW54 (**C**): `0x37F8`→`0x5BDAA` (close gua
 7. **Op 13 and op 18 in the current lineage:** which bytes still belong to them, and are they reachable (op 13 retired by FW27's reclaim; op 18 refused)? Needed before any reclaim.
 8. **F30E and B3G3–B3G6** exist as files with no recorded result; no script builds FW3A although the file exists.
 9. **Unbisected static findings** from reading the scripts (not run): FW52's arm uses `r6` as scratch without saving it; FWD1's op 18 refusal path branches into `0x38CF4`/`0x38CFC` (data); F32D's op 18 at `0x5C14C` overwrote the start of the tone engine; FW3B/FW3C's relocation packed the ring, tap table and queue over a 0xDC-byte block.
-10. **DMR receive on FW52/FW54/FW55** is unproven (replays at −105/−108 dBm); a real transmitter (hotspot as TX, W6Plus) is needed.
+10. **DMR receive on FW52/FW54/FW55** was unproven (replays at −105/−108 dBm). **FW57 (2026-10-30): slot 2 in-list receive proven with the hotspot as transmitter; slot 1 still not covered.**
+11. **Promiscuous admission** (route P1): on FW57 the flag is acked, but a real out-of-list TG 99 call is not admitted. Where the call is still dropped after the `0xC1BA`/`0xC244` hooks is unknown. SignalDeck beta.22 keeps the feature off (`PROMISCUOUS_FW` = max).
+12. **DMR All-Call** (route P2, owner 2026-10-30): is an incoming All-Call (`0xFFFFFF`) heard on a normal group channel (factory and FW57)? Why does contactType 2 (ALL / RECEIVE_ALL) give target `0xFFFFFF` and drop the audio (`bmaski r?, 24` at the all-call sites; 02 §11, 04)? Can the Armor transmit one? Is it the same admit gate as promiscuous (`0x2404`)?
 
 ## 9. Lessons
 
