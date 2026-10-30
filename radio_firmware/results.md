@@ -4780,6 +4780,19 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**F55A and F55B slot 0, POCSAG score (09:56).** Low power, 467.625 MHz. The HackRF received. Left on `DMR003.FW57.V022`, not transmitting. The hotspot's config was not changed. Slot 1 is not covered: the hotspot is simplex on slot 2.
+
+| Row | Result |
+|---|---|
+| F55A first group slot 0 key | Carrier 5.30 s, 18 sync bursts, 4 bench rows, released. Tag `DMR003.F55A.V022` |
+| F55A second key, no new channel write | Carrier 4.94 s, 17 sync bursts, 4 bench rows, released |
+| F55B first key | Carrier 4.94 s, 0 sync bursts. `0x382B8` still points at the FW55 tail. Sha256 `b662fb342707f4de4c0248b44ad19d2636f257523a3ff1441c773257a786a56d` |
+| F55B second key | Carrier 4.94 s, 0 sync bursts, released |
+| POCSAG, the 09:08 FW57 capture | 16 of 16 codewords, RIC 1001, text `FW57PAGE`, carrier 2.26 s |
+| FW57 slot 2 receive | Not run. The seed carrier had no sync, so the hotspot recorded no call. Later keys set the app's transmitting flag and the HackRF heard no carrier |
+
+F55A is the factory image plus the bench tag, and its first key decoded. The log from the channel write through the unkey had no `0x40` frame. F55B keeps that dispatch word and the carrier has no DMR sync, so the tail being present is enough. The hotspot replay rows were not started.
+
 **FW57 bench rows (09:36).** Released SignalDeck 1.0.0-beta.21, low power, 467.625 MHz. The HackRF received. Left on `DMR003.FW57.V022`, not transmitting. Heat at the end: battery 33.3 °C, `mtktsAP` 40.2 °C, `mtktsbtsmdpa` 38.6 °C.
 
 | Row | Result |
