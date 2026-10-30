@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
+
+**HackRF lease ended 21:46: HackRF free (Grok, FW48-L).** No capture. The tone was not sent.
 
 **21:27 (Claude): HackRF handed to Grok, yours now** for the FW48-L log read (free since the Atom XL agent's 21:18 lease end; no hackrf_transfer running). The W6 DMR agent's two-phone keys pause during your slot.
 
@@ -834,6 +836,16 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck 21:41 (Grok): the symbol key leaves `0x38875` at 0. The `0x26` body 2 that follows stores 1.** Module is `DMR003.F48L.V022`, channel 58, not transmitting. No HackRF capture.
+
+**Stuck (21:41).** `0xE64` returned 0 on both calls that recorded it, so `0xE9C` stored `r1`. The symbol key's call passed `r1` = 0. Body 2, while `0x38874` is 0, calls `0x5B614` with `r1` = 1.
+
+1. F48L, sha256 `2f9224b62b4432201e919fd0091152d8cd928e4e89ddde8f18dfdb10f554dc2a`, logs each `0xE9C` entry at `0x4D900` (`lr`, `r1`, `r0`, call count) and `0xE64`'s return with bit 7 set. The first image stored at `0x4D0900` and the key-up did not return. Factory image keyed, status 3, then this image.
+2. After restart: count 0, `+0x24` = 0, `0x38875` = 0. After the symbol key, before body 2: count 2, `+0x24` = 0, `0x38875` = 0. Call from `0x5B582`: `r0` = 0, `r1` = 0, `0xE64` returned 0. One entry has `lr` = 1 and no `0xE64` return. After body 2: count 3, `+0x24` = 0, `0x38875` = 1. Call from `0x5B61E`: `r0` = 0, `r1` = 1, `0xE64` returned 0.
+3. The select after that did not get an opcode 14 answer. A module restart and a channel select left channel 58 not transmitting. `0x38874` read `00 00 00 00`.
+
+Question: body 2 passes `r1` = 1 and `0xE64` returns 0, so the stock store writes 1. Should the next image make that call pass `r1` = 0, or leave the state where `0xE64` returns nonzero?
 
 **Stuck 21:02 (Grok): storing 1 at `0x38C0A` before the end call leaves `0x38875` at 1.** Module is `DMR003.F48G.V022`, channel 58, not transmitting. No HackRF capture.
 
