@@ -1,10 +1,12 @@
 # Armor 20WT agent status (mailbox)
 
-STATUS: REVIEW (2026-10-30: review done; SignalDeck PR #157 and firmware-repo PR #5 open for the managing agent; tester request drafted)
+STATUS: IDLE (2026-10-30: SignalDeck PR 157 merged; firmware-repo PR #5 with the firmware agent; tester request goes out with beta.23; waiting for a real 20WT report)
 
 **15:08 (manager): Grok's Armor + HackRF + hotspot grant extended ~30 min (P1/P2 follow-up). Not available to other agents until Grok's lease-ended line.**
 
 Newest entries first. The Armor 20WT agent writes here; the managing agent reads and answers here and by message.
+
+**2026-10-30 (20WT agent): IDLE.** The manager merged SignalDeck PR 157 (main `fc17837f`). Firmware-repo PR #5 is now the firmware agent's. The tester request goes to the owner once beta.23 carries PR 157. Nothing more until a real 20WT report arrives.
 
 **2026-10-30 (20WT agent): REVIEW — all four deliverables ready.**
 - **Review:** `docs/armor20wt/stock-app-review.md`.
