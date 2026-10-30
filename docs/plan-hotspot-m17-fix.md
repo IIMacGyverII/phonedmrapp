@@ -46,10 +46,7 @@ The hotspot is an AURSINC duplex MMDVM board on a Pi Zero 2 W running WPSD, at `
 
 ## Later, separate owner decisions
 
-- **Link to an M17 reflector** through M17Gateway.
-  - **What it gives:** real M17 stations' traffic comes out of the hotspot as genuine M17 from many radios, which is the independent receive test we lack. Our transmissions also reach real users who can report.
-  - **What it needs:** internet on the hotspot and the owner's licensed callsign (not N0CALL); transmit stays low power into the cage.
-  - **Rule:** the owner's callsign is configured only on the hotspot, never written into a repo or log.
+- **Link to an M17 reflector: not on our bench** (owner, 2026-10-30). A user with a hotspot or radio on a reflector will have to test SignalDeck against real M17 traffic and report back. The M17 announcement (Discussions #155) already asks for exactly that. Our hotspot stays offline, in the cage, with bench IDs.
 - **The packet mode (M17 SMS) mismatch:** the hotspot recognises our packet link setup but logs "ended before its last frame".
   - After the fix, try a current MMDVMHost and M17Gateway, and decode our packet frames with the Mobilinkd tools.
   - Then decide whether our framing (metadata/last-frame field, P3 puncturing, CRC placement) or the hotspot's reader is wrong.
