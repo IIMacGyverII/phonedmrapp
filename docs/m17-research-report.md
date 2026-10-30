@@ -1,10 +1,12 @@
 # M17 on a phone's built-in radio module: methods and results
 
 **Project:** SignalDeck (an Android app that drives the radio module built into some rugged phones) and the
-phonedmrapp research repository. **Device:** Ulefone Armor 26 Ultra. **Period:** 2026-10-22 to 2026-10-27.
-**Status:** draft, to be shared once the hotspot and Atom XL checks are done. Receive and transmit work on this phone; every decode figure below comes from our own decoder, and the
-independent cross-check (an MMDVM hotspot and the Mobilinkd decoder) is still open. Section 9 says exactly what is and
-is not proven.
+phonedmrapp research repository. **Device:** Ulefone Armor 26 Ultra (WT). **Period:** 2026-10-22 to 2026-10-30.
+**Status (2026-10-30):** receive and transmit work on this phone. The transmit engine ships in the released module
+firmware **FW57**, which SignalDeck 1.0.0-beta.22 loads from its Module firmware page. Most decode figures below come from
+our own decoder. One independent implementation has checked us: MMDVMHost on an MMDVM hotspot decoded our voice
+transmissions at BER 0 and its own M17 transmission was heard by the phone. **No real M17 radio has been tested yet;**
+section 9 says exactly what is and is not proven, and we are asking owners of M17 radios to check it.
 
 This report is written for the M17 Project. It describes the hardware, what blocks M17 on it, the two routes that got
 around those blocks, the measurements, and the code. Everything here was measured on one phone, on the bench, inside a
@@ -17,7 +19,7 @@ Faraday cage, at low power on 467.625 MHz, with a bench callsign (`N0CALL`).
 | Direction | Through the phone's normal audio path | Through our firmware changes |
 |---|---|---|
 | **Receive** | **Works** with an equaliser. The receive audio loses everything below ~250 Hz (−25 to −37 dB). A plain M17 demodulator decodes nothing. A decision-feedback equaliser trained once per phone decodes 100/100 frames at ±2.4 kHz. Works on unmodified (stock) module firmware. | **Works better.** One register write held in the RF chip (AT1846S `0x58` = `0xBCFD`) makes the receive audio flat from 50 Hz to 3.8 kHz. A fixed 41-tap linear equaliser per phone model then gives **98–100 % payload-exact frames at −87/−93 dBm** and ~95 % at −99 dBm on 18 independent transmissions. |
-| **Transmit** | **Not possible** for standard M17 receivers. The transmit audio path removes everything below ~250 Hz (~−60 dB), pre-emphasises, and limits deviation at ~±4.5 kHz. 0 of 90 frames decoded, even with pre-shaped audio. | **Works.** Symbols are sent over the module's serial link into a ring buffer, RRC-shaped inside the module, and played through the transceiver chip's own DMR 4FSK modulator, bypassing the audio path. **1125/1125 frames payload-exact** on a 45 s transmission; spoken voice with Codec 2 3200 decoded as speech; SMS (packet mode) round trips. |
+| **Transmit** | **Not possible** for standard M17 receivers. The transmit audio path removes everything below ~250 Hz (~−60 dB), pre-emphasises, and limits deviation at ~±4.5 kHz. 0 of 90 frames decoded, even with pre-shaped audio. | **Works.** Symbols are sent over the module's serial link into a ring buffer, RRC-shaped inside the module, and played through the transceiver chip's own DMR 4FSK modulator, bypassing the audio path. **1125/1125 frames payload-exact** on a 45 s transmission; spoken voice with Codec 2 3200 decoded as speech; SMS (packet mode) round trips with our own decoder. An MMDVM hotspot (MMDVMHost) decoded the voice stream at **BER 0**. |
 
 What made the difference was a mix of signal processing (equalisers that rebuild the missing low band) and reverse
 engineering the module's firmware (to hold a filter open on receive, and to feed the modulator directly on transmit).
@@ -136,8 +138,16 @@ directly, the path its own DMR mode uses. We added a small engine to the module 
 | M17 SMS (packet mode), 1, 5, 15 and 26-byte texts | transmit: CRC good, payload-exact, 3/3; receive (HackRF → phone): 9/9 and 3/3; a ping/pong both ways |
 
 The same engine also gained generic opcodes (2- or 4-level symbols at any rational rate, a hold or polyphase pulse,
-and a phase-continuous tone queue). Through them POCSAG, RTTY, MCW and FT8 transmit too. The transmit time-out is
-120 s.
+and a phase-continuous tone queue). Through them POCSAG, RTTY, MCW and FT8 transmit too. The firmware adds no transmit
+time-out of its own: the module's timer, which SignalDeck sets to 120 s at start-up, applies as on the factory firmware.
+
+**The released image, FW57 (2026-10-30).** All of the above ships as `DMR003.FW57.V022`, the first released image. Its
+acceptance pass on the bench: the 1125-frame M17 stream payload-exact, FT8, SSTV, CTCSS, RTTY and plain FM transmit, DMR
+transmit and in-list receive, M17 receive straight after a symbol-engine key (an earlier image left the receiver muted
+after one until the next channel write; fixed), CTCSS receive, a 10-minute soak with temperatures, and the bench runner.
+It was rebuilt byte for byte from the factory image by a scripted 19-step chain. Image, manifest and notes:
+<https://github.com/IIMacGyverII/AndroidRadio_Firmware_Project/tree/main/firmware/ulefone-armor-26-ultra/DMR003.FW57.V022>.
+Everything we know about the module firmware: <https://github.com/IIMacGyverII/phonedmrapp/tree/main/docs/firmware-reference>.
 
 ## 7. The software
 
@@ -176,23 +186,42 @@ The repositories are public: <https://github.com/IIMacGyverII/SignalDeck> (the a
 **Proven on this phone, by our decoder:** the receive figures in sections 3 and 4, the transmit figures in section 6,
 SMS both ways, and the Codec 2 voice path.
 
+**Checked by an independent implementation (MMDVMHost on an MMDVM duplex hotspot, in the cage, 2026-10-27/29):**
+- **Our transmit, voice.** Short keys logged as `received RF voice transmission from N0CALL to ALL`, BER 0.0 % (with the
+  hotspot's receive offset trimmed to −450 Hz); the 1125-frame, 44.8 s stream decoded at BER 0.0 % with the end bit; a
+  high-power key on FW30 also BER 0.0 %. So the sync words, link setup coding, callsign encoding, LICH, stream frames and
+  EOT agree with an implementation we did not write. These keys were on bench images FW30/FW31, which have the same
+  transmit engine as FW57; FW57 itself was checked by our decoder and the HackRF only.
+- **Our receive.** The hotspot's own M17 transmission (a parrot replay of the Armor's call, with the channel access
+  number matched, CAN 7) was heard by the Armor: 79 frames, 74 clean. A first attempt failed only because of a CAN
+  mismatch, which is correct M17 behaviour.
+- **Channel access number** handling agrees: with the CAN different, the hotspot ignored our keys silently, as the spec says.
+
 **Not yet proven:**
-- **Interoperability.** Every decode so far is our own spec-written code on both ends. A shared convention error (symbol
-  map, interleaver, randomizer, puncturing) would pass our tests and fail real M17 radios. An independent check is
-  planned and waiting for hardware: an MMDVM duplex hotspot in the cage (M17 to and from a reflector), and the
-  Mobilinkd `m17-demod`/`m17-mod` tools as decoder and encoder cross-checks
-  (`radio_firmware/plan-independent-m17-check.md`). We would welcome the M17 Project's test vectors or a check with a
-  real M17 radio.
-- **A second phone.** The Atom XL, a phone with a different radio module family, is the next device to check against.
-- **Other phones.** The equaliser taps are measured for the Armor 26 Ultra. Other phones with the same module family are
-  expected to work on receive after their own calibration; transmit needs the firmware engine ported to their module image.
+- **A real M17 radio.** No handheld or mobile M17 radio (OpenRTX, Module17, CS7000-M17, or others) has heard us, or been
+  heard by us. The hotspot is one independent implementation, not a radio. **We are asking owners of M17 radios to test
+  both directions.**
+- **Packet mode (SMS) with another implementation.** The hotspot recognises our packet link setup (the type field is
+  right) but logs `ended before its last frame` and does not accept the packet, while our own decoder passes it. Either our
+  packet frame differs from the spec in a detail (the 6-bit metadata / last-frame field, P3 puncturing, CRC placement) or
+  the hotspot's packet reader has a gap. Open; see question 3.
+- **The Mobilinkd `m17-demod`/`m17-mod` cross-check** (`radio_firmware/plan-independent-m17-check.md`) has not been run.
+- **The hotspot as a transmitter since 2026-10-28.** After a reflash of its SD card, the hotspot's M17 transmission no
+  longer decodes on any receiver here; that is a hotspot configuration issue, still open, so our receive side has had only
+  the one independent check above.
+- **A second phone.** The Unihertz Atom XL (a different module family) receives M17 from the HackRF with its own
+  calibration: 89 of 100 frames payload-exact on a recording it was not fitted to, and SignalDeck's self-calibration
+  kept a fit that decoded more frames (53 against 47) on another station's call. The Armor's transmission at the Atom XL
+  has so far been measured as signal strength only, not decoded. The Atom XL cannot transmit M17 (no firmware engine).
+- **Other phones.** The equaliser taps are measured for the Armor 26 Ultra and the Atom XL. Other phones are expected to
+  work on receive after their own calibration; transmit needs the firmware engine ported to their module image.
 - **Weak signals below about −99 dBm** were not measured.
 
 ## 10. Questions we would like the M17 Project's view on
 
 1. Is a receiver that equalises a high-passed FM discriminator (rather than requiring a flat one) of interest for other
    M17 hardware, for example handhelds whose audio path has a sub-audible filter?
-2. Are there official test vectors for whole transmissions (LSF + stream + EOT, and packet mode) we should check against
-   before the hotspot test?
+2. Are there official test vectors for whole transmissions (LSF + stream + EOT, and packet mode) we should check against?
+   Our stream transmissions pass MMDVMHost; our packet transmissions do not yet (section 9).
 3. Is the packet-mode reading in our SMS work right: P3 puncturing `[1,1,1,1,1,1,1,0]`, a 6-bit frame metadata field,
    protocol byte `0x05`, a null-terminated UTF-8 text, CRC-16 (`0x5935`, init `0xFFFF`) over type byte and payload?
