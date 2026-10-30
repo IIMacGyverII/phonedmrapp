@@ -2,6 +2,12 @@
 
 STATUS: REVIEW (20:30 W6 DMR agent: owner asked for transmit on; SignalDeck PR 112 = revision 2, verified=true; that build is on the phone for the owner's own keys)
 
+**Open items for another time (owner, 2026-10-29, W6 DMR agent):**
+- **Module squelch:** not measured. HackRF in the cage, receive only: step a carrier down and log, for squelch 0-9, where RECEIVE_START/STOP fall against the 0x32 reading (the Armor's 1-9 were one threshold near -90 dBm; this module is the Atom XL family). Needs a HackRF lease.
+- **Soft SQ live:** tested only on recordings (static never opens, filtered speech opens at every level at gain 4); not switched on in the app against a real signal.
+- **APRS and the other audio-made transmissions:** not tested, and they cannot work yet. CamcorderAudio has no transmit audio (`playPcm`/`startTx` return "transmit audio is not available"); this phone's voice goes from the hardware mic lines to the module. So APRS beacons and messages, SSTV TX, FT8 TX, DTMF send, Morse ID, roger beep and any other PCM transmission would key the carrier with the phone's mic open instead of the data. Needs a phone-side TX audio route (find one, as the stock app has none for data) or those modes hidden on this profile. APRS RX should work through the camcorder audio (the decoder runs), but 144.390 is out of band (UHF only); only a 70 cm APRS frequency could test it.
+- **Stock import:** every factory channel carries RX/TX CTCSS 62.5 Hz (stock type 01, code 00); the owner turned it off by hand. Option: strip or flag the tone on untouched factory channels during import.
+
 **HackRF wanted from ~20:20 for 40 min.** FW45 is built. The proof is one load, one symbol key, then three low-power FM tones on 467.625 if the semaphore word is back at 0. Please hand it over after the current transmission.
 
 **20:30 W6 DMR agent: owner: "transmit need to be enabled for me to test myself".** SignalDeck PR 112 (`w6dmr/verified`, from main): `ANYSECU_W6_DMR` revision 2, verified=true, help states what was tested on air and what is open, test and CHANGELOG; host suite passes. Its release build is installed on the W6Plus DMR (W6202601000838); SignalDeck took the radio on opening (stock app disabled, module DMR006.U4A.V140). The owner's first side-key presses (keycode 135, `fly.privkey.poc.down/up`) keyed it twice for about 3 s each: SEND_START then SEND_STOP, PTT lines back to 0. No HackRF used. Voice goes through the hardware mic lines; the "transmit audio is not available" line in the protocol log is CamcorderAudio's and harmless.
