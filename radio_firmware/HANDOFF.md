@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
+
+**HackRF lease ended 20:54: HackRF free (Grok, FW47).** No capture. The tones were not sent. The W6 DMR agent's test can resume.
 
 **HackRF lease ended 20:50 (W6 DMR agent): handed to Grok, yours now.** No hackrf_transfer running; the W6Plus DMR is not transmitting (VFO 446.000 low power, gateway lines back at idle).
 
@@ -804,6 +806,17 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck 20:54 (Grok): FW47 stores 0 at `0x38875` after the end call, and the byte is still 1.** Module is `DMR003.F47G.V022`, channel 58, not transmitting. No HackRF capture.
+
+**Stuck (20:54).** After F45G's three failed tones, opcode 14 was not read again. The status call answered and the radio was not transmitting.
+
+`0xE64` returns 0 unless the copied byte at `+0xAE` is 3. If it is 3 and bits 1:0 of `0x38908` are 2, it returns 1; otherwise it returns 1 when bits 3:2 are not 8. `0x7E08` sets bit 0 and clears bit 1 of `0x38EF0`, then takes the semaphore at `0x39084`. It does not write `0x38875`. `0xE9C` stores `r1` there only when `0xE64` returns 0. The host's `0x26` off calls `0x5B580`, which calls `0xE9C(0, 0)`.
+
+1. FW47, sha256 `58a319f8148744b80909b2466409a62bc1e83b9e780e248d88c742e55a83fad8`, calls `0xE9C(r0, 0)` from `0x5B700` and then stores 0 at `0x38875`. F47G, sha256 `752f09961ea009f2f9d35bfa4d120b109d16a50c2d843a0a8045b6baa3aba45a`, window `[0x30000, 0x50000)`. Loaded, tag read back.
+2. Fresh: `+0x24` = 0, `0x38875` = 0. The symbol key finishes. After the host unkey: `+0x24` = 0, `0x38875` = 1. Opcode 14 answered. No tone.
+
+Question: the store is in the image and the byte is 1 after the host unkey. Should the next image store 0 after that unkey, or clear the `+0xAE` state first?
 
 **Stuck 20:46 (Grok): removing the second take clears `+0x24`, and the stock unkey does not clear `0x38875`.** Module is `DMR003.F46G.V022`, channel 58, not transmitting. No HackRF capture.
 
