@@ -4809,7 +4809,7 @@ FW45 is two nops at `0x5B758`, where the engine end had called `0xE9C` with `r1`
 | M17 receive | 20 frames, 19 good, on channel 56. The same 19 of 20 immediately after a symbol key that had sent status 4. |
 | FT8 | The bench message was queued. The capture is a 27.6 s carrier at 61 dB SNR. Its audio sat near 7.4 kHz and was not decoded. The tone-queue sender then held PTT. SignalDeck was force-stopped, the carrier was gone, and the app was started again. |
 | RTTY | A 5.1 s carrier at 61 dB SNR was a steady tone near 1000 Hz. The text was not recovered. |
-| SSTV | Robot 8 BW. The log says 10630 ms. Carrier 11.5 s at 61 dB SNR, a 1900 Hz leader, VIS code 2, then 1500 Hz and 2300 Hz pixels. The picture was not rebuilt. |
+| SSTV | Robot 8 BW. The log says 10630 ms. Carrier 11.5 s at 61 dB SNR, a 1900 Hz leader, VIS code 2. The frequency track found all 120 line syncs and matched the sent checkerboard on 81 percent of the pixels. |
 
 Left on channel 56, 467.625 MHz, not transmitting. Heat after the stop: battery 34.7 °C, `mtktsAP` 42.9 °C, `mtktsbtsmdpa` 41.6 °C.
 

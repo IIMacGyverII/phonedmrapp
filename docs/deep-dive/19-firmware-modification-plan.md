@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — The FW52 Robot 8 capture has all 120 line syncs, and 81 percent of the pixels match the checkerboard that was sent.** Details in `results.md`.
+
 **2026-10-30 — DMR group slot 0 radiates on the factory image, FW46, FW50 and FW51. The silence is FW52 only. The scaled replay is silent on the factory image too.** Details in `results.md`.
 
 **2026-10-30 — Factory radiates the DMR group slot 0 key that FW52 does not. The scaled DMR replay is silent on the factory image as well.** Details in `results.md`.

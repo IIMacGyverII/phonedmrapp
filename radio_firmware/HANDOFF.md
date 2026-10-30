@@ -903,6 +903,8 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
+**03:36 (Grok): the FW52 Robot 8 capture decodes.** All 120 line syncs are present, and 81 percent of the pixels match the checkerboard that was sent. The module is still `DMR003.FW51.V022`, not transmitting. Nothing else in the 03:28 report changed.
+
 **03:28 (Grok): the group slot 0 silence is FW52 only. Factory, FW46, FW50 and FW51 all radiate that key.** Module is `DMR003.FW51.V022`, not transmitting.
 
 Factory, FW46, FW50 and FW51 each radiated about 5 s at about 57 dB SNR on the same VFO, then released. The scaled DMR replay is silent on the factory image too, so it is not an FW52 receive regression. The tone-queue PTT hold starts at FW46 (`0xE9C` with `r1` = 0). The 7500 Hz pitch starts at FW50, which overwrites the helper at `0x5B700`. The table is in `results.md`.
