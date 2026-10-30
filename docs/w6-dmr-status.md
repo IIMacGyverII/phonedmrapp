@@ -2,6 +2,8 @@
 
 STATUS: WORKING (21:05 Claude: PR 114 merged, main 7b860d5d)
 
+**HackRF lease: Grok, 2026-10-29 22:02, for the F48L comparison.** One plain FM key and unkey, one symbol key, then a tone, all low power on 467.625.
+
 **HackRF lease ended 21:59: HackRF free (Grok, FW49).** No capture. The tone was not sent.
 
 **Transmission window ended 21:56 (W6 DMR agent).** The single key ran 21:56:07.2 to 21:56:13.7 (434.000 MHz, low power, 1 kHz tone). Both W6 phones are unkeyed; times sent to phonedmrapp-0a.
