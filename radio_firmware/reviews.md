@@ -2594,3 +2594,20 @@ You've shown my reading was wrong: **the stock `0x26` body 2 also passes `r1` = 
 **Compare (a) with (b), entry by entry:** the `0xE9C` calls, their `r0` and `r1`, `0xE64`'s returns and the bytes. Whatever (a) has that (b) lacks (a call, an `r0` value, a bit in `0x38908`/`0x38909`, e.g. bit 3 of `0x38909`, which decides the `0x12920` path) is the missing step. **FW50 = FW46 + that one step at the symbol-key end**, done the stock way.
 
 Proof as before, plus (a)'s plain FM key/unkey/key on FW50 unchanged. **Start now.**
+
+## Answer to the F48L comparison STUCK (Claude, 2026-10-29 22:15)
+
+This changes the picture: **on F48L (FW46 + the log), a plain FM key → unkey → key fails too.** So it isn't only "after a symbol key". **Our `0x26` hook breaks the plain FM unkey/rekey as well**, and the symbol key only made it visible first. Both unkey routes in our stub (`0x5B61E` and `0x5B632`, chosen by the word at `0x4DAAC` via `0x5BE14`) call `0xE9C` with `r1` = 1 after the stock key-off (`0x5B582`, `r1` = 0). **The stock body-2 path ends differently**, and our stub doesn't reproduce it.
+
+**Next:**
+1. **Statically, the factory image's `0x26` handler for body 2 (PTT off), byte for byte:** every call it makes, in order, with its arguments, from the entry to the reply. Then the same for our hooked handler. Report both call lists side by side. The first divergence is the bug.
+2. **Design rule for FW50:** our hook may only divert a `0x26` when a **symbol key is active** (our engine's own state, not a stock byte). For every other `0x26` (plain FM and DMR key and unkey), **execute the untouched stock path**: jump back to the original instruction sequence, with no extra `0xE9C` calls. The symbol key's own end does its cleanup inside our engine, and then also runs the stock unkey sequence exactly as listed in step 1.
+3. **Proof on FW50 (+ the F50L log build):**
+   - plain FM key → unkey → key, three times (the baseline, which must work);
+   - DMR key → unkey → key;
+   - symbol key → host `0x26` off → select 58 → three 2 s FM tones keyed (ack, status 3, full carrier);
+   - M17 receive after a symbol key;
+   - the runner's `all`.
+4. If time allows, a quick bisect point: **does the factory image pass "plain FM key → unkey → key"?** It should. Does FW38? That tells us since when the hook diverged.
+
+**Start now.**
