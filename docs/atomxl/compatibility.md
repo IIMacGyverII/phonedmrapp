@@ -1,6 +1,6 @@
 # SignalDeck on the Unihertz Atom XL: compatibility
 
-**State as of:** 2026-10-29 21:30.
+**State as of:** 2026-10-30 08:35.
 
 **Bench phone:**
 - Unihertz Atom XL ATOMXL0000000737, Android 11 (Agold build), rooted.
@@ -22,9 +22,11 @@
 | Analog FM receive (sound) | **works** | 2026-10-29 | 76, 92, 100, 102, 110 | Per-reception capture from the bridge's USB sound card. Drop-outs fixed by PR 110 (no signal reading while the audio streams): 17 of 17 RTTY/speech receptions clean (12 bench build + 5 PR build), against 1 in 6 before. A drop that still happens recovers with one bridge restart (PR 92, 102) |
 | FM transmit | **works** | 2026-10-28 | 76 | Keyed in the cage, decoded |
 | DMR group and private calls, with caller ID | **works** | 2026-10-28 | 76 | HackRF DMR calls, caller named |
-| DMR voice transmit | **works** | 2026-10-28 | 76 | |
+| DMR voice transmit | **works** | 2026-10-30 | 76 | A 3 s key decoded by our own decoder from a HackRF capture: CC 1, voice LC headers, group call TG 1 from the bench ID, voice syncs every 360 ms, terminator |
 | DMR texts in and out | **works** | 2026-10-28 | 76 | |
 | Reception detection | **works** | 2026-10-29 | 87, 97, 98, 107 | The bridge's reception line, with a watchdog that finds receptions from the signal when the line misses one (PR 87). A stuck line is restarted without a phone reboot (PR 98, 1 of 1). Short off-channel bursts (another transmitter in the cage, about 2.6 s) are ignored and cause no restart (PR 107, seen live twice) |
+| CTCSS tone detection | **works** | 2026-10-30 | — | 100.0 and 131.8 Hz heard and offered for the channel (2 of 3 tries) |
+| Signal reading | **works**, dBm scale off | 2026-10-30 | — | Linear, about 1 step per dB over 50 dB; SignalDeck converts with the Armor's half-dB step, so dB differences show at half size (fix proposed). Channel squelch 2 opens 5–7 dB above the idle level. Since PR 110 the history's "Received" rows show the reading from before the reception |
 | MON | **works** | 2026-10-29 | 86 | Opens the sound at once on analog, even with a stuck reception line |
 | APRS receive (passive) | **works** | 2026-10-29 | 79 | 18 of 20 HackRF frames. Decoder CPU halved in PR 93 (all phones) |
 | APRS transmit | **works** | 2026-10-28 | 76 | Decoded in the cage |
@@ -34,12 +36,12 @@
 | RTTY receive | **works** | 2026-10-29 | 92 | 8 of 8 decoded after PR 92 (6 full, 2 missing the first letters) |
 | Live captions + keyword alerts | **works** | 2026-10-29 | — | Vosk on the phone (default model, 125 MB, downloaded). Caption near word for word, alert raised |
 | Voice announcements | **works** | 2026-10-29 | — | Spoken on the phone speaker |
-| M17 receive | **partial** | 2026-10-29 | 96 | Its own calibration (the bridge records ~125 ppm fast). 71–89 of 100 frames exact on test recordings. On the phone, three test transmissions were listed with 83–90 frames each. Self-calibration can improve it |
+| M17 receive | **partial**, self-calibrating | 2026-10-30 | 96 | Its own calibration (the bridge records ~125 ppm fast). 71–89 of 100 frames exact on test recordings. On the phone, three test transmissions were listed with 83–90 frames each. Self-calibration works on the phone (2026-10-30, HackRF as the M17 station): a fit from one call was kept after another station's call confirmed 53 frames against 47; clean frames per call rose from 47–49 to 50–55 |
 | M17 transmit | **n/a** | — | — | Needs the bench firmware's symbol engine. The stock module can't |
 | POCSAG page receive and send | **n/a** | — | 85 | Needs the bench firmware's symbol engine and held path. Hidden on the phone and in SignalDeck Web |
 | SAME weather alerts | **n/a** | — | — | SignalDeck decodes SAME only on 162.40–162.55 MHz; this radio is UHF only |
 | SignalDeck Web audio | **works** | 2026-10-29 | 86 | 53 of 60 s during MON on a healthy line |
-| SignalDeck Web messages | **works** (receive side) | 2026-10-29 | — | Page loads over Wi-Fi, lists and opens threads, quick replies and typing work, Send is enabled; a send from the web not run yet (it transmits) |
+| SignalDeck Web messages | **works** | 2026-10-30 | — | Page loads over Wi-Fi, lists and opens threads, quick replies and typing work; a DMR text sent from the web went out as a 0.74 s data burst (CSBK preambles, data header, data blocks; framing decoded from a HackRF capture) |
 | Band scope | **works** | 2026-10-29 | 88 | Inside 400–480 MHz; a 2 m range is refused |
 | Fox hunt, coverage log | **works** | 2026-10-29 | 110 | With a test GPS position: fox hunt readout, compass, map, a Mark at the position and Clear marks; Map around the position (49 repeaters from the online list), the Coverage maps introduction, Log coverage on/off, "0 readings" shown. A measured reading during a reception works (Diagnostics RSSI, 2 of 2). A coverage point stored: 3 readings at the test position from one carrier (2026-10-29 21:51) |
 | S-meter during a reception | **holds** | 2026-10-29 | 110 | Shows the reading from just before the reception and moves again when it ends (a reading during it breaks the audio). A reading every 2 s dropped the audio in 2 of 2 receptions, so the hold stays |
@@ -102,8 +104,11 @@ Open on the SignalDeck side:
    receptions (2026-10-29), so any reading during the stream is too many.
 4. **Coverage:** done (dialogs, fox hunt and a stored point, 2026-10-29). One reading was stored during the bridge
    restart its own reads caused (-109 dBm); a candidate to skip readings while the bridge restarts.
-5. **Not yet exercised on this phone:** a DMR text sent from SignalDeck Web (it transmits; needs a TX slot); Android
-   Auto in a real car (only the desktop head unit).
+5. **Not yet exercised on this phone:** Android Auto in a real car (only the desktop head unit). A web-sent DMR text
+   works (2026-10-30).
+7. **Signal reading scale:** the module reads about 1 step per dB, SignalDeck converts at half a dB per step (the
+   Armor's scale), so levels and differences in dBm are compressed; and since PR 110 the history shows the level
+   from before a reception. Both have proposed fixes.
 6. **Profile:** revision 2, verified with transmit (owner, 2026-10-28). Today's fixes are all in SignalDeck code, so
    no profile change is needed; a new beta would carry PRs 89–110 to users.
 
@@ -129,8 +134,8 @@ while SignalDeck has the radio; the S-meter holds still during a reception (a re
 coverage readings during a reception may cut the audio for a few seconds; a transmitter close by deafens the receiver;
 no M17 transmit, POCSAG or firmware loading on this module; Agold App block must be off (SignalDeck opens the page).
 
-**Partial or untested:** M17 receive is partial (needs a real M17 station to self-calibrate); a DMR text sent from
-SignalDeck Web (it transmits, needs a TX OK); Android Auto in a real car; the stuck-line
+**Partial or untested:** M17 receive is partial (self-calibration works; a real M17 station would refine it); the
+signal reading's dBm scale (half size, fix proposed); Android Auto in a real car; the stuck-line
 recovery is proven once (the trigger is rare).
 
 **Profile:** unihertz-atomxl revision 2, verified with transmit (owner, 2026-10-28); no profile change needed for
