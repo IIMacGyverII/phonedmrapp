@@ -4780,6 +4780,18 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**FW55 (07:16), the stock 0x26 path restores phone-audio keys.** Sha256 `68babf09fa368f68abbd4fe62cd3c994cc522ce9bf2b4b8ac9c55518467cdebc`, tag `DMR003.FW55.V022`. Built from FW54. The calls at `0x92AA`, `0x92C8`, `0x92E0` and `0x92FA` are the factory `bsr 0xE9C` again. The tone-end nops at `0x5B756` stay. Low power, 467.625 MHz.
+
+| Row | Result |
+|---|---|
+| Two 1 kHz tones | 2.85 s then 2.85 s, 60 dB SNR. Both released. |
+| CTCSS 67.0 Hz | Carrier 2.85 s. The 67 Hz line is 585 Hz of deviation and the 1 kHz line 1159 Hz. Released. Receive was not run. |
+| SSTV Robot 8 | Carrier 11.50 s. 120 of 120 line syncs, 81 percent of the pixels match the checkerboard. Released. |
+| First group slot 0 | After one channel write: a carrier with deviation p50 332 Hz and no sync burst, and on a second restart no carrier while the app showed transmitting. The following key, and a key after the channel was written twice, decoded: 18 and 17 direct-mode bursts, 4 rows from the bench ID. |
+| DMR replay | HackRF amp on, drive 47, capture centre. The phone read −105 dBm and logged 3 receive starts. That is not a decoded reception, and it is not the −80 dBm level. |
+
+Left on FW55, digital VFO, not transmitting. Heat at the end of the keys: battery 29.2 °C, `mtktsAP` 35.0 °C, `mtktsbtsmdpa` 34.5 °C. The full acceptance pass was not started.
+
 **FW54 acceptance (06:41), and the factory first key.** Low power, 467.625 MHz. The HackRF was the second receiver except for the replay, where it transmitted and the phone listened.
 
 The factory image's first group slot 0 key, after the same bench-ID restart and channel select that leaves FW54 silent, radiated. Carrier 5.30 s, 52 dB over the floor, 18 direct-mode bursts, 4 rows from the bench ID. The app was transmitting during the key and not afterwards. A second key was not required. This is not stock behaviour.
