@@ -14,6 +14,16 @@
 
 STATUS: OWNER (16:48 W6 DMR agent: §3.7 items 2, 3, 5, 7 done on the W6 phones; HackRF items ready to run when scheduled (owner asked); heat waits for the owner)
 
+**HackRF lease ended 17:32 (W6 DMR agent).** No hackrf_transfer running. §3.7 items 6, 8 and Soft SQ done on the W6 phones (results in docs/w6-dmr-status.md).
+
+**17:32 W6 DMR agent: §3.7 second HackRF slot (both phones on battery, beta.22, 434.000; HackRF gain 20 for the W6+, which sits farther from it: at gain 0 it never detected the signal).**
+- **Item 6, receive audio path** (100 Hz–3.5 kHz at 1.5 kHz deviation, against 1 kHz): W6Plus DMR 100–250 Hz −30…−36 dB, 300 +9.1, 500 +6.1, 1.5 k −3.2, 2.5 k −7.5, 3.5 k −10.8 dB, 1 kHz at amplitude 2779; W6+ 100–250 Hz −25…−33, 300 +13.0, 500 +8.7, 1.5 k −5.0, 2.5 k −11.8, 3.5 k −17.2, 1 kHz at 1673 (steeper treble roll-off). **Drop-outs: none, 15 of 15 receptions heard in full on each phone.**
+- **Item 8, M17 receive: fails on both.** W6Plus DMR: "2 frames (0 % clean)" (no equaliser of its own; the Armor's does not match its path). W6+: nothing decoded, although its own equaliser decoded 98/100 from a HackRF on 2026-10-27; to investigate. Raw receive audio of the two standard 100-frame transmissions captured on both phones (RMS ~3000–3700, no clipping) for offline equaliser work.
+- **Soft SQ live** (level 5, speech at four levels, then nothing): both phones open on strong, medium and weak speech and stay shut at the module's threshold and on static. The W6+ opens about 3.5 s later than the W6Plus DMR on a strong signal and dropped once on the weak one (tuning item). Soft SQ restored off on both.
+- Web PINs kept in scratch files only and deleted; Soft SQ, channels and VFOs as before.
+
+§3.7 status for the W6 phones: items 1–7 and 9 done (PR 160 carries the profile changes); 8: M17 needs an equaliser for the W6Plus DMR and a look at the W6+ (offline from the captures), DMR receive needs another DMR radio; 10 heat waits for the owner.
+
 **HackRF lease: W6 DMR agent, 17:22 until about 18:22** (second slot from the managing agent; Grok follows). §3.7 items 6, 8 (M17) and Soft SQ on the W6 phones, HackRF transmitting low-level tones, M17 and speech on 434.000 into the phones, ≤ 60 s files, foreground. Clear of 467.625; Armor not touched.
 
 **HackRF lease: W6 DMR agent (phonedmrapp-de), from 17:22 for ~60 min (managing agent): resume §3.7 items 6 (RX audio response), 8 (M17 RX) and the Soft SQ checks on the W6 phones at 434.000 MHz; HackRF TX allowed in the cage at low level, ≤60 s files, foreground. Then Grok gets Armor + HackRF + hotspot ~40 min (FW58 gaps: out-of-list 0x2B on the VFO with list 1/9 MON on/off; raw DIAG op 6 double apply + DMR key with HackRF syncs). The full FW58 acceptance (~2 h) is scheduled after that.**
