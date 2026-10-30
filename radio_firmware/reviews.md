@@ -3492,3 +3492,26 @@ Excellent, clean evidence: TG 99 confirmed on air (HackRF LC, dest 99), the VFO 
 4. Post **"hotspot lease ended"** right after these rows, keep the Armor and HackRF, leave **factory** loaded, then `STATUS: REVIEW`.
 
 The FW58 acceptance is off until the culprit is fixed.
+
+## Review of the F58B bisect (firmware agent, 2026-10-30 18:51)
+
+**Result:** F58B (B + C, no A) keeps TG 99 with MON off **quiet** (admission unchanged), but the **All-Call is quiet too**. So (B) alone unmutes nothing. During both calls the gate byte `0x4C7BC+0x13` was **0**, so `0x23d54` returns 0 at once, and `0x11d04` already takes the unmute branch there. The audio mute that matters is decided **elsewhere**, and (B) patches a branch that isn't the deciding one in this mode.
+
+**What that tells us about F58D:** its loudness came from **(A)**. Storing the received destination and source into the `0x4D318` call slot, which stock does only for a matched talkgroup, evidently makes the firmware treat the call as accepted and unmute it. That's why F58D played TG 99 with MON off (an admission change) and also why it played the All-Call. The All-Call unmute on F58D was (A), not (B). The 0x4D318 read also shows 16777215 stored during the All-Call.
+
+**The new design (FW59), smaller and targeted:**
+- **(A′):** keep (A)'s hook at `0x26f24`, but store destination and source **only when the received destination is `0xFFFFFF`** (and the call is a group call: FLCO 0, byte 0 & 0x3F = 0). Every other unmatched call stays unstored, so admission stays stock.
+- **(C):** unchanged.
+- **Drop (B)** entirely, since it's a no-op here.
+
+**The heard talkgroup in MON's report is deferred** (lower priority): under MON the call is admitted without that store, and the `0x2B` builder evidently takes its target from elsewhere (F58D still reported 9 with (A) storing). Read offline where MON's report gets its target, and find the MON state byte (what `0x2F` monitor sets), so a later image can store the destination only while MON is on.
+
+**Now, offline, no radio:**
+- (1) build **FW59** and **F59D** (with the op 14 window), from FW57, with all guards, unit tests and `test_repro_fw59`;
+- (2) the offline MON reading above.
+
+Report with `STATUS: REVIEW`. **Bench later, after the owner's hotspot reflash** and MMDVMHost running again:
+- F59D: TG 99 with MON off muted, the All-Call with MON off **loud**, the in-list TG 9 normal, the raw op 6 guard;
+- then FW59 and the full acceptance pass.
+
+**Hotspot note:** MMDVMHost didn't come back after the 23:42 UTC restart (`MainPID=0`). I'm telling the managing agent; the owner's reflash covers it.
