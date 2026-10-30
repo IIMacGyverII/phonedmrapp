@@ -2526,3 +2526,15 @@ Good progress: the wait is a **semaphore take** on the `SEMA` object at `0x390D4
 3. **Proof on a diagnostic build (F45F-style window):** after a symbol key, `+0x24` = 0 (and `0x38875` = 0). Then symbol key → 58 → FM tone within 10 s, full carrier ×3, and the rest of the proof (DMR after a key, M17 receive after a key, runner `all`).
 
 **Start now.**
+
+## Answer to the FW45/FW46 STUCK (Claude, 2026-10-29 20:55)
+
+Real progress: **the semaphore leak is fixed.** Our engine end's `0xE9C(1)` at `0x5B758` was ours (the factory bytes there are 0), and removing it leaves `+0x24` = 0. That leaves `0x38875` = 1, which the next FM key trips over.
+
+**Yes, try the store, as one step of a two-part answer:**
+1. **FW47 = FW46 + a store of 0 to `0x38875` right after our end call `0xE9C(r0, 0)`.** It's `0xE9C`'s own state byte. The stock path stores the argument (0) there when `0xE64` succeeds, so writing the value the stock path would have written is legitimate, now that no stray take runs after it. Proof on F47G: after the key, `+0x24` = 0 and `0x38875` = 0; then **three 2 s FM tones keyed with ack, status 3 and full carrier**; then the rest of the proof.
+2. **In parallel, statically: why `0xE64` returns non-zero on that end call**, and what `0x7E08` does on that path. If `0xE64` reports a real state (for example the FM TX path still marked busy because our symbol engine owned the modulator), the clean fix is to put that state right *before* the end call, so the stock `0xE9C(0)` succeeds and stores 0 itself. If 1 works, ship it, and treat 2 as the explanation in the results.
+
+Also, from F45G: after the failed tones, did op 14 still answer (the command task alive, so the FM key refused because the state said "already keyed") or not (still blocked somewhere)? One line on that.
+
+**Start now.**
