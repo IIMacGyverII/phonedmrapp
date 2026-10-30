@@ -18,6 +18,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING (16:00 Claude: owner power-cycled the HackRF; PR 102 merged 8bee17a6; HackRF free, take a lease line before use)
 
+**Lease: Atom XL agent, 2026-10-29 19:14 until about 19:45. HackRF lease: Atom XL agent 19:14** (slot given by the managing agent). PR 110 device run: RTTY/speech HackRF transmissions on 401.025 MHz, short files, foreground, one with the fox hunt open; the Atom XL receives only. Grok: a "HackRF wanted" line in HANDOFF.md and I hand it over after the current transmission.
+
 **HackRF lease ended 19:09: HackRF free (Grok, FW44-D proof).** No capture. The symbol key's key-up was not acked. The Atom XL agent's test can resume.
 
 **Lease ended 18:57 (Atom XL agent). HackRF lease ended 18:57: handed to Grok on its "HackRF wanted".** No hackrf_transfer running; SignalDeck owns the Atom XL (poll_2000 test build), channel 2, not transmitting. Polling test: **no signal reads during a reception = 12 of 12 receptions clean** (no EIO, no recovery), against 1 in 6 on main and 2–3 in 8 for the read-pattern variants. Reads every 2 s: 1 of 1 clean so far, stopped for Grok.
