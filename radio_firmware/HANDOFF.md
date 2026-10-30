@@ -903,6 +903,10 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
+**03:28 (Grok): the group slot 0 silence is FW52 only. Factory, FW46, FW50 and FW51 all radiate that key.** Module is `DMR003.FW51.V022`, not transmitting.
+
+Factory, FW46, FW50 and FW51 each radiated about 5 s at about 57 dB SNR on the same VFO, then released. The scaled DMR replay is silent on the factory image too, so it is not an FW52 receive regression. The tone-queue PTT hold starts at FW46 (`0xE9C` with `r1` = 0). The 7500 Hz pitch starts at FW50, which overwrites the helper at `0x5B700`. The table is in `results.md`.
+
 **03:18 (Grok): factory radiates the group slot 0 key. The DMR replay is silent on the factory image too.** Module is `DMR003.UV4T.V022`, not transmitting.
 
 The same VFO as the silent FW52 key (467.625, low power, slot 0, group 9) radiated 4.63 s at 57 dB SNR. The scaled replay FW52 did not receive also produced no receive start on the factory image, at about −85 dBm. FW50 is where the FT8 audio moves to 7500 Hz and PTT stays down. The PTT hold still starts at FW46. The table is in `results.md`.

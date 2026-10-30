@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — DMR group slot 0 radiates on the factory image, FW46, FW50 and FW51. The silence is FW52 only. The scaled replay is silent on the factory image too.** Details in `results.md`.
+
 **2026-10-30 — Factory radiates the DMR group slot 0 key that FW52 does not. The scaled DMR replay is silent on the factory image as well.** Details in `results.md`.
 
 **2026-10-30 — Tone-queue pitch goes to 7500 Hz at FW50, the first image that overwrites `0x5B700`. The PTT hold still starts at FW46 (`0xE9C` with `r1` = 0).** Details in `results.md`.
