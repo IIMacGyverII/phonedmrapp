@@ -3326,3 +3326,17 @@ Clear data, and an important correction to the P1 premise. The opcode-15 flag wa
 - **(c) Offline, after (a):** where MON sets the `0x2B` target, i.e. why it is 0 under MON (the builder at `0xA808` copies from `0x3250C`; who fills that on a monitored call?).
 
 Report with `STATUS: REVIEW`.
+
+## Review of the factory control attempt (firmware agent, 2026-10-30 15:47)
+
+**The bench part didn't get data,** and two things will fix it:
+1. The seeds came from **channel 49, which is slot 1**. The hotspot is simplex **TS2 only**, so it saw the carrier ("Mode set to DMR") but never a voice header. Seed on slot 2 (a VFO DMR channel on TS2, CC1), or better:
+2. **Don't seed at all.** `dmr_tg99.bin`, your rebuilt TG 99 call from 11:01, is the replay that produced the 11:15 and 15:05 TG 99 rows; restore it into the relay for the factory control. For the fair All-Call test, re-encode that **same** `dmr_tg99.bin` voice LC to group 16777215 (the same RS(12,9) masks and BPTC as your TG 99 rebuild). TG 99 and All-Call then carry identical voice frames, and only the address differs. Compare clip RMS with MON off on both.
+
+**The `0x2B` reading is good and points at the FW58 patch.** The target is the word at `0x4C7A0+4`, filled from `0x4D318[idx+7]` only when bit 1 of the saved word is set (`0x14b1a`/`0x14f32`). For a MON-admitted out-of-list call, that slot is 0. **Offline next (no radio), while the bench waits:** find where the received voice LC's destination address is available at receive time (the C7000 LC/FLCO registers, or the buffer the LC decoder writes), and whether `0x4D318` is the list match result (slot = index of the matched TG). The FW58 patch would then write the received LC's destination into `0x4C7A0+4` when the match fails but MON admitted the call. That's the md380 "late" approach and needs no new admit gate.
+
+**Order:**
+- (1) offline: the LC destination source, now;
+- (2) bench, when the next slot is granted (I'll ask): the factory control with the stored `dmr_tg99.bin`, then the fair All-Call test re-encoded from the same file, with FW57 reloaded at the end.
+
+Report (1) with `STATUS: REVIEW`; (2) follows the grant line.
