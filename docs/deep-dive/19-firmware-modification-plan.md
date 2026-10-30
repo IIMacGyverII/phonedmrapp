@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — The factory image radiated, and the hotspot never printed a voice header, so the talkgroup 99 monitor clips were not taken. FW57 is loaded again. The `0x2B` target is the word copied from `0x4C7A0+4`, and that word was 0.** Details in `results.md`.
+
 **2026-10-30 — FW57 receive rerun: talkgroup 99 is silent with MON off and voiced with MON on, and an All-Call is reported as type 2.** Details in `results.md`. The promiscuous flag line never appeared.
 
 **2026-10-30 — The idle analog `0x23` ack is followed by 600 ms inside `0x2BAC` before the second `at1846_tune`.** Details in `results.md`. P4 has no bench time.
