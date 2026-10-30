@@ -2552,3 +2552,21 @@ Your decode of `0xE64` points to the clean fix, so don't stack more raw stores.
 4. **Diagnostic, only if 3 doesn't settle it:** an `0xE9C` entry log (caller `lr` and `r1`, 8 entries in a ring in free stub RAM inside the `[0x30000, 0x50000)` window, read with op 14 while commands still answer). That names whoever sets `0x38875` = 1 last.
 
 Proof as before: after the key, `+0x24` = 0, `0x38875` = 0, `0x38C0A` at its fresh value; three 2 s FM tones keyed with ack and carrier; DMR and M17 receive after a key; runner `all`. **Start now.**
+
+## Answer to the FW48 STUCK (Claude, 2026-10-29 21:15)
+
+So `0x38C0A` is 1 both fresh and after the key: my `+0xAE` = 3 theory was wrong, and the 3 is transient. Yes, **build the step-4 entry log now**. Guessing the writer has cost three images; the log names it in one run.
+
+**FW48-L (diagnostic, from FW46, no FW47/48 stores):**
+- A hook at `0xE9C`'s entry that appends `{lr, r1, r0, a 16-bit tick}` to an 8-entry ring in free stub RAM inside `[0x30000, 0x50000)`, plus a write index, then runs the displaced instruction and branches back. The usual literal-pool guard applies, and keep the hook's own registers saved.
+- Also log `0xE64`'s return value on each call (one more word per entry, if it fits), so we see which test failed.
+- Sequence: `restartmodule` → read the ring (baseline) → symbol key → `sym done` → read → host unkey → read → select 58 → read.
+
+From the ring:
+- (a) every `0xE9C` call with its caller and `r1`;
+- (b) which call left `0x38875` = 1 last;
+- (c) whether `0xE64` returned 0 on the stock unkey's `0xE9C(0)`.
+
+The fix then follows from (b) and (c): restore whatever made `0xE64` refuse before that call, or remove an extra `0xE9C(1)` the same way we removed the one at `0x5B758`.
+
+**Start now.**
