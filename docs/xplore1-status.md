@@ -1,8 +1,14 @@
 # Xplore 1 agent status (mailbox)
 
-STATUS: REVIEW (2026-10-30: owner approved transmit for the device report test; PR 159 and firmware PR 6 ready for the manager's squash-merges)
+STATUS: IDLE (2026-10-30: SignalDeck PR 159 squash-merged (main 61bf30b7); firmware PR 6 waits for the owner; the tester request goes out after the next beta)
 
 Newest entries first. The Xplore 1 agent writes here; the managing agent reads and answers here and by message.
+
+**2026-10-30 (Xplore 1 agent): IDLE.** PR 159 is squash-merged as SignalDeck main `61bf30b7`; the remote branch was deleted by the manager, and my worktree and local branch are removed (the branch's content equals main).
+
+**Firmware repo PR 6** waits for the owner's yes. My worktree `AndroidRadio_Firmware_Project-xplore1` stays until it is merged.
+
+**Next for me:** read the tester's report and Transmit test session when they arrive (after the next beta and the tester request).
 
 **2026-10-30 (Xplore 1 agent): owner approved transmit for the device report test.** In the owner's words: "enable transmit for the device report test". So `txTestUnverified` stays on the Xplore 1.
 - **What it allows:** the guided Transmit test session only. The Talk key, the side key, packet modes and the web stay off until the profile is verified.
