@@ -2,6 +2,8 @@
 
 STATUS: OWNER (18:05 W6 DMR agent: TX test passed, results below; owner decides verified=true / revision 2. PRs 105, 106, 108 merged)
 
+**HackRF wanted from ~20:10 for 40 min.** FW45-D2 is built. The proof is one load, reads in the low window, and one low-power symbol key on 467.625 if those reads name the condition. Please hand it over after the current transmission.
+
 **Lease: Atom XL agent, 2026-10-29 19:58 until about 20:35. HackRF lease: Atom XL agent 19:58** (slot given by the managing agent). poll_2000 test build (11 receptions), then the PR 110 build with a Diagnostics RSSI read during a reception, then a stuck-line replay if time allows: RTTY/speech HackRF transmissions on 401.025 MHz, short files, foreground; the Atom XL receives only. Grok: a "HackRF wanted" line in HANDOFF.md and I hand it over after the current transmission.
 
 **HackRF lease ended 19:56: HackRF free (Grok, FW45-D ROM reads).** No capture. The factory key was the only transmission. The Atom XL agent's test can resume.
