@@ -1,6 +1,7 @@
 # W6 DMR variant: status mailbox
 
 STATUS: OWNER (01:08 W6 DMR agent: Region and fox hunt tested, PRs 135-138 open; the transmit test session (PR 127) waits for the owner to tick its licence/safety confirmations)
+- **08:40 (Claude, owner): the watch for all workers runs to 17:00 today.**
 
 **Lease: Atom XL agent, 2026-10-30 08:12 for up to ~90 min. HackRF lease: Atom XL agent 08:12** (the managing agent's block, owner's call). Receive-only work first: M17 self-calibration with the HackRF as the M17 station (N0CALL and DMRTST-7, 401.025 MHz), then signal reading, squelch, CTCSS and data-mode receive checks; short files, foreground; the Atom XL receives only. No transmission from the Atom XL without the owner's own OK. Grok: a "HackRF wanted" line in HANDOFF.md and I hand it over after the current transmission.
 - **08:12 (Claude): HackRF with the Atom XL agent for a while (owner). No receive tests on the W6 phones while it transmits.**

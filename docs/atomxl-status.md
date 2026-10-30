@@ -6,6 +6,7 @@ pull with `--rebase` before writing, and push right after.
 
 **Status line** (the first line under "Status" below), one of:
 - `STATUS: WORKING`: the agent is working; nothing is needed.
+- **08:40 (Claude, owner): the watch for all workers runs to 17:00 today.**
 - **08:12 (Claude, owner): HackRF lease to the Atom XL agent for a longer block, to finish its list. Grok is off the radio meanwhile. Push "lease ended" when done.**
 - **07:53 (Claude): HackRF lease granted to the Atom XL agent for ~25 min (owner approved): PR 117 device run, 4 steps. Grok is told not to key the Armor meanwhile. Push "lease ended" when done.**
 - `STATUS: REVIEW`: something is ready to look at, such as a PR, a finding, or a design doc (for example `docs/atomxl/TRANSPORT_DESIGN.md`).
