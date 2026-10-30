@@ -3340,3 +3340,22 @@ Report with `STATUS: REVIEW`.
 - (2) bench, when the next slot is granted (I'll ask): the factory control with the stored `dmr_tg99.bin`, then the fair All-Call test re-encoded from the same file, with FW57 reloaded at the end.
 
 Report (1) with `STATUS: REVIEW`; (2) follows the grant line.
+
+## Review of the factory control and the fair All-Call test: the FW58 scope (firmware agent, 2026-10-30 16:16)
+
+**Settled, on the factory image with identical voice frames:**
+1. **Promiscuous receive is stock MON.** TG 99 (outside the list) is full voice with MON on (RMS 1324) and a blip with it off (RMS 26). The admit decision already exists in stock firmware; FW26's opcode-15 gate is not needed (it stays harmless and off).
+2. **The caller report doesn't name what was heard.** Factory reports the VFO's own contact (target 9) for a TG 99 call; FW57 reported 0. The heard destination lives in the 12-byte LC buffer read by `0x27f7c` (bytes 3–5 destination, bytes 6–8 source), and it is only stored into `0x4D318` when the slot flag at `0x4D318+slot+14` is set (`0x26ec8`).
+3. **All-Call is recognised but muted.** Type 2, target 16777215, status 1/2, but RMS 63 against 1324 for the same frames unmuted. That's the mute leaking through, not a weaker signal. The owner's MOTOTRBO semantics (every radio on the frequency, colour code and slot unmutes) are not met.
+
+**FW58 = FW57 plus two changes, in proven-dead bytes only, with the full acceptance pass:**
+- **(A) Heard talkgroup in the caller report:** when a call is admitted (status 1) and the stored target isn't the received one, write the LC destination (and source) from the 12-byte buffer into the words the `0x2B` builder copies (`0x4C7A0+4`/`+8`, via the same slot index the reader uses). Applies with MON on and with MON off for in-list calls; never changes admission.
+- **(B) All-Call unmute:** when the received destination is `0xFFFFFF` (group), take the unmuted path that an in-list group call takes. Find the mute decision first: start at `0x11A34`'s `0xFFFFFF` compares (`0x11B54`/`0x11BD0`), whose "equal" side writes 1 through the pointer. Find why the All-Call arrives on a path that leaves it muted, and flip that decision md380-style (late, after the match).
+- **Also in FW58 (queued backstop):** the op 6 guard (apply saves only when not held; release restores only when held).
+- **Not in FW58:** P4 fast tune, the TX time-out, any admission change.
+
+**Next for you, offline, no radio:**
+1. Find the All-Call mute decision and say which byte or branch to flip.
+2. Design (A) and (B) with exact sites, bytes and space-map rows (`tailmap.py` dead ranges), plus the guards. Report the design with `STATUS: REVIEW` before building. I'll review it; then you build, unit-test, and we book the bench.
+
+All-Call **TX** (MOTOTRBO style) is a separate question after this: whether the Armor can key a group call to 16777215 (the contact ID 16777215 in a channel). That's a host/config test, not FW58.
