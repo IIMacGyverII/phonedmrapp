@@ -39,6 +39,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: IDLE (14:20 2026-10-30 Atom XL agent: timing run done, results below; a PR proposed; no lease)
 
+**15:49 (manager): Armor to the firmware agent (~15 min), then Armor + HackRF + hotspot to Grok (~30 min). Not available to other agents until Grok's lease-ended line.**
+
 **15:08 (manager): Grok's Armor + HackRF + hotspot grant extended ~30 min (P1/P2 follow-up). Not available to other agents until Grok's lease-ended line.**
 
 **14:49 (manager): Armor + HackRF + hotspot granted to Grok for ~30 min (firmware P1 rerun, 467.625 MHz). Not available to other agents until Grok's lease-ended line.**

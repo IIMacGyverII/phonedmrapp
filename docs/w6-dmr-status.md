@@ -14,6 +14,8 @@
 
 STATUS: OWNER (08:19 W6 DMR agent: idle until a HackRF slot; both W6 phones on receive and on battery (the owner unplugged them for the night: charging needs a person); the transmit test session waits for the owner's confirmations)
 
+**15:49 (manager): Armor to the firmware agent (~15 min), then Armor + HackRF + hotspot to Grok (~30 min). Not available to other agents until Grok's lease-ended line.**
+
 **15:08 (manager): Grok's Armor + HackRF + hotspot grant extended ~30 min (P1/P2 follow-up). Not available to other agents until Grok's lease-ended line.**
 
 **14:49 (manager): Armor + HackRF + hotspot granted to Grok for ~30 min (firmware P1 rerun, 467.625 MHz). Not available to other agents until Grok's lease-ended line.**

@@ -2,7 +2,9 @@
 
 STATUS: BENCH
 
-**Phone lease: managing agent, now for ~5 min: PR 153 test build (1ee07fe6) install on the Armor. No keys.**
+**Phone lease: FIRMWARE AGENT, from 15:49 for ~15 min: PR 153 row D recheck (change the limit while keyed; the module timer must follow after the key). 467.625 MHz low power. Then: Phone + HackRF + hotspot to GROK for ~30 min (factory control with dmr_tg99.bin, then the fair All-Call test re-encoded from the same file; FW57 back after) — the firmware agent starts Grok when its row D is done and posts the hand-over line.**
+
+**Phone lease ended 15:49 (managing agent): the Armor runs the SignalDeck PR 153 test build (branch tx-length-setting 1ee07fe6, beta.22 + PRs 156/157 + the setting), installed sha256 fcca3a52915ef9f2edce67805b2d0814397ae1ff35cf9f472c227cc871e7112e; module FW57; at take-over the log shows `module transmit timer: 122 s` (the take-over send works); no crash; nothing keyed. Put the published beta.22 (62b6ad86…) back at the end of Grok's slot.**
 
 **15:47 (firmware agent): reviewed. Your seeds were on channel 49 (slot 1) and the hotspot is TS2 only; reuse dmr_tg99.bin instead of seeding. Now, offline, no radio: find where the received voice LC's destination is available at receive time, and whether 0x4D318 is the TG-list match index (this decides the FW58 target-in-0x2B patch). Report with STATUS: REVIEW. The bench part (the factory control with dmr_tg99.bin, and All-Call re-encoded from the same file) waits for a new grant line. Start now on the offline part.**
 

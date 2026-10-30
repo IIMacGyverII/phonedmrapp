@@ -2,6 +2,8 @@
 
 STATUS: IDLE (2026-10-30: SignalDeck PR 157 merged; firmware-repo PR #5 with the firmware agent; tester request goes out with beta.23; waiting for a real 20WT report)
 
+**15:49 (manager): Armor to the firmware agent (~15 min), then Armor + HackRF + hotspot to Grok (~30 min). Not available to other agents until Grok's lease-ended line.**
+
 **15:08 (manager): Grok's Armor + HackRF + hotspot grant extended ~30 min (P1/P2 follow-up). Not available to other agents until Grok's lease-ended line.**
 
 Newest entries first. The Armor 20WT agent writes here; the managing agent reads and answers here and by message.
