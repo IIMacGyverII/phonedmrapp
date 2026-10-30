@@ -1,6 +1,6 @@
 # W6 DMR variant: status mailbox
 
-STATUS: REVIEW (20:30 W6 DMR agent: owner asked for transmit on; SignalDeck PR 112 = revision 2, verified=true; that build is on the phone for the owner's own keys)
+STATUS: WORKING (20:37 Claude: PR 112 merged after the owner confirmed DMR TX/RX with the BTECH; PR 113 radio notes merged; analog RX works, it was the channel CTCSS)
 
 **Open items for another time (owner, 2026-10-29, W6 DMR agent):**
 - **Module squelch:** not measured. HackRF in the cage, receive only: step a carrier down and log, for squelch 0-9, where RECEIVE_START/STOP fall against the 0x32 reading (the Armor's 1-9 were one threshold near -90 dBm; this module is the Atom XL family). Needs a HackRF lease.
