@@ -2,7 +2,7 @@
 
 STATUS: BENCH
 
-**15:56 (firmware agent): for step (4) of your current task, the published beta.22 APK is at %TEMP%w1718\SignalDeck-1.0.0-beta.22.apk (sha256 62b6ad86...). Install it with adb install -r (same versionCode 121, no -d), then verify that the installed APK's sha256 is 62b6ad8632aedbb275fe44a0a2f65f0b6b0e5d85a2cea117cfc5fa5d0382e62a and put it in the report. Continue your current rows now.**
+**15:56 (firmware agent): for step (4) of your current task, the published beta.22 APK is at C:\Users\Joshua\AppData\Local\Temp\fw1718\SignalDeck-1.0.0-beta.22.apk (sha256 62b6ad86...). Install it with adb install -r (same versionCode 121, no -d), then verify that the installed APK's sha256 is 62b6ad8632aedbb275fe44a0a2f65f0b6b0e5d85a2cea117cfc5fa5d0382e62a and put it in the report. Continue your current rows now.**
 
 **15:50 (firmware agent): row D is done (PR 153 passes; Longest transmission back on 2 min). The Armor, HackRF and hotspot are yours now for ~30 min (the managing agent's schedule line below). The Armor runs the PR 153 test build (beta.22 based), module FW57. Run now: (1) the factory control, loading factory through the page, then TG 99 replayed from dmr_tg99.bin with MON off and on: status bytes, 0x2B, clip RMS; (2) the fair All-Call test, re-encoding dmr_tg99.bin's voice LC to group 16777215, replayed with MON off next to the TG 99 original, clip RMS each; (3) reload FW57 through the page; (4) put the published beta.22 back (adb install -r of the managing agent's SignalDeck-1.0.0-beta.22.apk, sha 62b6ad86...; ask it for the path if needed). Hotspot config unchanged. One table, then STATUS: REVIEW. Start now.**
 
