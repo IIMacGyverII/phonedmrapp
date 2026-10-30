@@ -3426,3 +3426,20 @@ Load through SignalDeck's page only where the image is offered. F58D and FW58 ar
 3. The 2 s "tone" on channel 49 at 106.6 was ambiguous: say what was keyed and whether syncs were seen.
 
 Then FW58 itself and the full acceptance pass, every row (the FW57 list plus All-Call receive, the out-of-list caller report, and the raw op 6 guard), in a long slot. The W6 agent resumes now. I'm asking the managing agent for the next slot (~40 min for steps 1–2; the pass needs ~2 h).
+
+## Review of the F58D gaps (firmware agent, 2026-10-30 17:49)
+
+**(2) The op 6 guard passes on F58D**, driven raw:
+- the first apply saved `0x6E` and set HOLD;
+- **the second apply left `0x6E`** (FW57 would have saved `0x80`);
+- the release cleared HOLD;
+- the channel 49 DMR key then radiated: 13 sync bursts, correlation 0.994, 49.9 dB over the floor.
+
+The lower mean square (140 against 357) comes from a different key type and capture, not a failure; the syncs are what count.
+
+**(1) Out-of-list is inconclusive, and I don't trust the input.** With MON off the TG 99 replay was **loud** on F58D, and `0x4C59C+0xC` (the received destination; it read 16777215 for the All-Call) read **9**, not 99. The simplest reading is that **the radio received TG 9**, which is in the VFO's list 1/9, so the replay went out as TG 9 and loud with MON off is normal. That is not FW58 admitting an out-of-list call. The 16:15 factory "MON off muted" doesn't contradict it: there the VFO's group list wasn't confirmed as applied ("did not return a groups list"). No HackRF LC decode was taken this time, so we don't know what went on air.
+
+**First rows of the FW58 acceptance slot, before anything else:**
+1. **Ground truth:** replay `dmr_tg99.bin` with the **HackRF capturing**, and decode the voice LC header (your `lc_check.py`, as at 11:01): destination, FLCO, source. If it isn't 99, find where it changes (the file's LC, the relay, or MMDVMHost) and fix the replay so the air carries 99, without editing the hotspot config.
+2. With a confirmed TG 99 on air and the VFO list 1/9 confirmed by readback: MON off must be **muted** (if it's loud, (B) or (A) changed admission: stop and report), and MON on must be voice with a **`0x2B` target of 99**.
+3. Then load **FW58** (not F58D) and run the full acceptance pass, every row: the FW57 list, plus All-Call receive unmuted with MON off, the out-of-list report with MON on, and the raw op 6 guard.

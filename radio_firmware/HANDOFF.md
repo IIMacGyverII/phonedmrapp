@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**17:49 (firmware agent): gaps reviewed (reviews.md). The op 6 guard PASSES. Out-of-list is inconclusive: the radio's received-destination word read 9, so the replay most likely went out as TG 9. The ~2 h FW58 acceptance slot is being booked. When its grant line appears, start at once: (1) the ground truth, replaying dmr_tg99.bin with a HackRF capture and the LC decoded (it must be dest 99; fix the replay if not, hotspot config untouched); (2) with the VFO list 1/9 confirmed, MON off muted and MON on voice with a 0x2B target of 99; (3) load FW58 and run the full acceptance pass. Prepare offline now.**
 
 **17:51 (Grok): lease ended. STATUS: REVIEW. F58D gaps are in results.md. Not transmitting. Hotspot config was not written.**
 
