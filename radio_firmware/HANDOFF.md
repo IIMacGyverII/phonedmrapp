@@ -1035,6 +1035,13 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
   3. Can the Armor transmit an All-Call?
   4. Do 1 and 2 go through the same admit gate as promiscuous receive (`0x2404`, the `0xC1BA`/`0xC244` sites)? If so, do P1 and P2 in one image.
   Bench: the hotspot sends an All-Call through the relay (TG/ID 16777215, lease line, config unchanged). The HackRF or the Atom XL confirms, because a hotspot-only failure never counts. Factory first as the control.
+- **P1/P2 first test and the owner's two points (2026-10-30, via the managing agent):**
+  - **All-Call TX, if allowed,** must behave like MOTOTRBO: a group call to 16777215 that every radio on the frequency, colour code and slot unmutes for, whatever its RX list; usually one-way.
+  - **The owner's hypothesis:** the factory ALL mode (contactType 2) is an unfinished receive-all feature and may be the key to promiscuous receive. The md380tools lesson (MD-380, HR_C5000 baseband, the same vendor family) is to flip a *late mute decision after the match*, not to remove an early drop: their hook turns the squelch-event mode `0x08` (muted) into `0x09` (unmuted). On FW57 our flag got no status 1 and no `0x2B` for TG 99, so our hooks sit before the event the host sees.
+  - **Cheap first test, no patch, on factory and on FW57:** a channel with contactType 2. The relay sends three calls, each with a second receiver confirming the transmission: TG 99 (out of list), an in-list TG, and a real All-Call to 16777215.
+  - **Record for each call:** the status codes, the `0x2B` body, and whether audio opens (rxclip RMS).
+  - **If ALL mode reports a `0x2B` for TG 99,** the ALL path already admits every call and only the mute remains. Then find where ALL mode sets "muted" (near the `bmaski 24` sites, and `0x2404`'s status 1/2 vs 10/11 choice at `0xC1BA`/`0xC244`) and flip it. P1 and P2 become one patch.
+  - Sources: github.com/travisgoodspeed/md380tools (`applet/src/dmr.c` `dmr_apply_squelch_hook`, `patches/2.032/patch.py`).
 - **P3: DMR slot 1 receive coverage.** The hotspot transmits on TS2 only. Needs another DMR transmitter (the W6Plus DMR through the managing agent) or a HackRF replay at a usable level.
 
 **Next phone (owner, 2026-10-24; not a current task, changes nothing in the order above):** the port to the next phone and its automation are planned in `plan-port-automation.md`; the Armor bench scripts are snapshotted in `tools/fw-bench/armor-2026-10-snapshot/`, and `tools/fw-port/find_symbols.py` finds an image's anchors. Pick pieces of it up only when the route list above is done or the bench waits with nothing else queued.
