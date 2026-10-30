@@ -2702,3 +2702,51 @@ The `0x4D900` refusal latch, cleared by opcode 3, is a clean way to refuse symbo
 - promiscuous on and off.
 
 Each row gets a second receiver. If the app restarts again, note the time, save the crash log the same way, restart it and carry on. Don't stop the pass for it.
+
+## Review of the FW52 acceptance pass (Claude, 2026-10-30 02:35)
+
+**Passed (second receiver: the HackRF):**
+- the key/unkey rows;
+- the 10 min soak: 27 cycles, every symbol key ended with status 4, heat fine, `mtktsAP` peak 49.3 °C;
+- POCSAG: 16/16 codewords;
+- CTCSS 67.0 Hz both ways: the tone is present on transmit, and receive opens only with the tone;
+- M17 transmit (1125/1125) and M17 receive, including right after a symbol key (19/20 both times);
+- DMR transmit: group on slot 1 and private on both slots, decoded with the bench ID and CC1.
+
+**Not stable yet. Four rows fail or are open, and two of them look like real firmware faults:**
+
+1. **The tone-queue engine (ops 10/11) is broken on FW52.**
+   - The FT8 audio sat near 7.4 kHz, and the sender then **held PTT** until SignalDeck was force-stopped.
+   - RTTY gave one steady tone near 1000 Hz, and no text came out.
+   - On FW21/FW22 the same engine decoded FT8, RTTY and MCW.
+   - Likely causes: the FW45–FW52 changes around the key path, or a layout change that moved something the tone queue reads.
+   - **A held PTT is the worst failure we can ship**, so this is the top item.
+2. **DMR group call on slot 0 sends no carrier** (status 3 then 4). Private on slot 0 and group on slot 1 do radiate. That points at the channel or talkgroup setup for that key, or at a firmware fault. The factory image tells us which.
+3. **DMR receive is not tested.** The HackRF replay (moved and rescaled) got no receive start. That proves nothing until the factory image receives the same replay.
+4. **SSTV:** the capture looks right (leader, VIS 2, pixels), but the picture was not rebuilt. Decode it with our SSTV decoder (`tools/` or SignalDeck's host decoder) and the row is done or failed. Same for **RTTY and FT8** once the tone queue works: a row needs a decode, not a carrier.
+
+Promiscuous on/off was not compared; it needs a working DMR receive first.
+
+**Next, in this order:**
+
+**A. Tone queue.**
+- Load the **FW38** image (or the newest older image that still has the tone queue, where FT8/RTTY last decoded). Run one RTTY 45.45 line and one FT8 message with a capture. If they decode there, bisect FW38 → FW52 to the first image that breaks, and diff that image's change against the tone-queue code path (ops 10/11 and the end-of-queue unkey).
+- The fix must end a tone-only key with the same single stock unkey as a symbol key and clear the gate flag. A tone-only key that never unkeys is the PTT hold.
+- The 7.4 kHz pitch suggests a units or scale word (eighths of a hertz) being read from a moved or overwritten literal. Check the `lrw` literal guard against the tone-queue code.
+
+**B. DMR group slot 0.** Same channel, same key, on the factory image, captured on the HackRF.
+- Factory radiates: FW52 has a regression, so bisect it.
+- Factory is silent too: it's the channel (check the TG list `groups[]` and the slot setup). Note it as not a firmware fault.
+
+**C. DMR receive.** Replay the same capture to the factory image.
+- Factory receives it: FW52 has a receive regression.
+- Factory doesn't: the replay is the problem. Fix its level, deviation and timing, or use a real DMR transmitter:
+  - **the hotspot as a transmitter.** The hotspot rule is only about it being the sole *receiver*, so it can transmit here. Push a hotspot lease line first.
+  - Or ask me to arrange the **W6Plus DMR** (the W6 agent's phone, second cage). That needs the cages bridged, so say so in HANDOFF and I'll schedule it.
+- Then promiscuous on/off on the same transmission.
+
+**D.** Decode the SSTV capture you already have.
+
+**E.** Then FW53 (or whatever image A produces) runs the full acceptance pass again, all rows, the same table.
+
+**Bench rule from earlier:** after any image that held PTT or hung, load the factory image and key it once before the next bench image.
