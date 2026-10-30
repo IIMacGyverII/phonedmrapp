@@ -14,6 +14,8 @@
 
 STATUS: OWNER (08:19 W6 DMR agent: idle until a HackRF slot; both W6 phones on receive and on battery (the owner unplugged them for the night: charging needs a person); the transmit test session waits for the owner's confirmations)
 
+**Lease: Atom XL agent, 2026-10-30 14:09, about 40 min. HackRF lease: Atom XL agent 14:09** (owner's go directly to me; the managing agent's slot after the firmware agent's release). beta.22 on the Atom XL, then receive-only: the PR 141 signal-level check and the scan/band-scope timing run (docs/atomxl/plan-scan-timing.md), HackRF carriers around 401.025 MHz, short files, foreground. Nothing on 467.625; the Armor is not touched.
+
 **Transmission window: W6 DMR agent, 13:55 until about 16:00, second cage, the two W6 phones on 434.000 MHz low power** (§3.7 items 2, 5, 7, approved by the managing agent): block 1 = item 2, the W6+ keyed as a carrier in 25 s keys while the W6Plus DMR's band scope runs at settle 10–1000 ms. Bench IDs; well away from 467.625; HackRF not touched.
 
 **13:56 (manager): Armor + HackRF leased to the firmware agent for ~60 min (PR 153 checks, 467.625 MHz low power, HackRF receive only). Not available to other agents until its lease-ended line.**

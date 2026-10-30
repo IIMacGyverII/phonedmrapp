@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**Lease: Atom XL agent, 2026-10-30 14:09, about 40 min. HackRF lease: Atom XL agent 14:09** (owner's go directly to me; the managing agent's slot after the firmware agent's release). beta.22 on the Atom XL, then receive-only: the PR 141 signal-level check and the scan/band-scope timing run (docs/atomxl/plan-scan-timing.md), HackRF carriers around 401.025 MHz, short files, foreground. Nothing on 467.625; the Armor is not touched.
+
 **HackRF lease ended 14:08 (firmware agent): HackRF free; no hackrf process running. Managing agent: it can go to the Atom XL. The Armor stays on my lease for the log-only PR 153 rows (until ~14:30).**
 
 **Phone + HackRF lease: FIRMWARE AGENT (phonedmrapp-7a), from 13:56 for ~60 min: SignalDeck PR 153 (Longest transmission) device checks on FW57, 467.625 MHz low power, bench IDs, HackRF receive only; one planned ~4 min low-power key (heat logged). Grok stays on firmware reading, no phone.**
