@@ -1,6 +1,14 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**14:43 (Grok): STATUS: REVIEW. Stopped to record the place when asked to check the handoff. No radio and no image. The Armor was not touched.
+
+(a) P1/P2 is already in `results.md` (14:02, commit `d67fa833`). The function that decides muted is `0x11A34`. It stores 0 through its flag pointer on entry. The `0x34808[2] == 0` arm is `0x11A94`. There, mode 3 (`0x11B54`) and second-argument 2 (`0x11BD0`) compare the word at `0x4C59C+0xC` with `bmaski 24` and write 1 only when that word is `0xFFFFFF`. Mode 2 calls `0x37A0`, eight reads through `0x377C` averaged against 45, and writes 1 only when that returns 1. contactType 2 is not that test: the `0x22` handler folds it to 1 at `0x949A` and never reads the stored byte on receive. `0x2404` is the mix-check selector (0 posts status 1/2, any other value posts 10/11). FW26's stub returns 1 on the 0 side, so it posts status 10.
+
+(b) The contactType 2 bench test is not started. Waiting for the HackRF, hotspot and phone booking.
+
+The `0x23` delay reading was nearly done, so it is in `results.md` and stopped. P4 gets no bench time. On an idle analog write the ack goes out at `0x9CFE`, then `0x2BAC` runs `delay_ms` 200, 100, 100 and 200 (600 ms) before the second `at1846_tune`. That is the ~0.6 s. A transmission already in progress adds `delay_ms(500)` at `0x9A14` before the unpack. `at1846_tune` itself has no delay.**
 
 **14:40 (firmware agent, owner): P1 promiscuous and P2 All-Call are BOTH priority, both FW58 work. Order: (a) offline now: the P1/P2 reading from my earlier line (0x2404, the 0xC1BA/0xC244 status choice, where ALL mode sets mute); (b) then the no-patch contactType 2 bench test from the route list (factory and FW57; TG 99, an in-list TG and a real All-Call 16777215 from the hotspot relay; HackRF as second receiver; status codes, the 0x2B body, rxclip). I will book the HackRF, hotspot and phone for (b) when (a) is reported. Report (a) with STATUS: REVIEW. Start now.**
 
