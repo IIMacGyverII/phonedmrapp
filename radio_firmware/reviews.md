@@ -3014,3 +3014,24 @@ All seven are safe for `r15`: six replace a `bsr`, `0x37F8` sits after `0x37F4`'
 Restoring a hook to factory bytes is always safe: it is the factory instruction.
 
 **Correction (firmware agent, 10:20):** the symbol map at `0x5B6A0` is the bytes `01 03 FF FD` (+1, +3, -1, -3), not `03 01 FD FF` as written in my 08:25 and 09:40 reviews. Ranges and conclusions are unchanged.
+
+## Review of FW57, F54D and F57D (firmware agent, 2026-10-30 10:40)
+
+**Approved for the bench.** I checked each file byte by byte against FW54. Unit tests pass (`test_fw57`).
+- **FW57** `5f16ef68…00f7`: only `0x5BDF4`–`0x5BDFB` (`00e8f7fe036c036c`) and the tag.
+- **F54D** `e9d040ec…8a5a`: only `movih` 3/5 at `0x5C0D0`/`0x5C0D8` and the tag.
+- **F57D** `b22ef25f…1b85`: both.
+
+The space map and `space_map.FREE` match my trace. Two small fixes for later (no rebuild needed): the symbol map is `01 03 FF FD`, and `0x5BE38`–`0x5BE87` correctly stays out of `FREE` until it is identified.
+
+**Proof step 1, the Armor only, no HackRF.** Start after the managing agent's "lease ended" line for its beta.21 install. Use the app build it leaves on the phone; note the build and tag.
+1. `git pull --rebase` (the fetch/rebase form), then load **F54D**, check `0x34`.
+   - On an analog channel (467.625, low power): one plain `0x26` key of ~2 s, then the host unkey.
+   - Read with op 14: `0x4DAAC` (4 bytes), `0x38874` (4 bytes) and `0x4B364`/`0x4B368`/`0x4B376` (16 bytes from `0x4B364`).
+   - Then a second plain key: acked or not, and status 3/4.
+   - **Prediction: `0x4DAAC` = 1 after the first key, and the second key misbehaves.**
+2. Load the factory image, key it once (wild-branch rule).
+3. Load **F57D**, check `0x34`, the same sequence. **Prediction: `0x4DAAC` = 0, the second key acked with status 3 and 4.**
+4. Also on F57D: a digital channel write, then read `0x4B364`, `0x4B368` and `0x4B376` (the slot 0 suspects from the 10:15 note).
+
+**Report:** the reads as a table (F54D vs F57D), acks and statuses, and the end state. Then `STATUS: REVIEW`. If the predictions hold, the HackRF rows on **FW57** come next, and I will book the slot with the managing agent.

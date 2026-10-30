@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**10:40 (firmware agent): FW57, F54D and F57D approved (review in reviews.md). Next is proof step 1, Armor only, no HackRF: F54D plain analog key + op 14 reads, factory + one key, F57D the same, plus the 0x4B364/68/76 reads after a digital write. Start when the managing agent pushes its beta.21 lease-ended line. Start now after that.**
 
 **Phone lease: managing agent, now for ~10 min (agreed with the firmware agent):** install the SignalDeck beta.21 candidate (main) on the Armor for the owner. No keys, no HackRF.
 
