@@ -267,6 +267,76 @@ def covered_branches(old, new):
     return spans, hits
 
 
+XIP = 0x0301A000
+
+
+def _changed_runs(old, new):
+    runs = []
+    limit = min(len(old), len(new))
+    i = 0
+    while i < limit:
+        if old[i] == new[i]:
+            i += 1
+            continue
+        j = i + 1
+        while j < limit and old[j] != new[j]:
+            j += 1
+        runs.append((i, j))
+        i = j
+    return runs
+
+
+def _in_runs(addr, runs):
+    for start, end in runs:
+        if start <= addr < end:
+            return True
+        # A pointer at the push, with the body overwritten on the next halfword.
+        if addr < start <= addr + 4:
+            return True
+    return False
+
+
+def pointed_into(old, new):
+    """Words in the old image whose XIP address lands in a changed range.
+
+    Also a movih/ori pair in the new image that builds a 0x0307xxxx address
+    landing in a changed range. FW56 fails this: 0x5BDE4, 0x5B3FC, 0x5B4A4.
+    """
+    import struct
+    runs = _changed_runs(old, new)
+    hits = []
+    limit = min(len(old), len(new)) - 3
+    for off in range(0, max(0, limit), 2):
+        word = struct.unpack_from("<I", old, off)[0]
+        if word < XIP:
+            continue
+        target = word - XIP
+        if _in_runs(target, runs):
+            hits.append(off)
+    rows = [(pc, mnem, rest) for pc, _length, mnem, rest in _disassemble(new)]
+    built = {}
+    for pc, mnem, rest in rows:
+        reg = _REG.search(rest)
+        if not reg:
+            continue
+        n = int(reg.group(1))
+        if mnem == "movih":
+            imm = rest.split(",")[-1].strip()
+            try:
+                built[n] = int(imm, 0) << 16
+            except ValueError:
+                pass
+        elif mnem == "ori" and n in built:
+            imm = rest.split(",")[-1].strip()
+            try:
+                value = built[n] | int(imm, 0)
+            except ValueError:
+                continue
+            if (value & 0xFFFF0000) == 0x03070000 and _in_runs(value - XIP, runs):
+                hits.append(pc)
+    return hits
+
+
 def covered_loads(old, new):
     """Loads issued outside a written span whose literal sits inside one.
 

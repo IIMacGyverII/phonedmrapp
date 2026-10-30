@@ -162,6 +162,14 @@ class LiteralGuardTest(unittest.TestCase):
                    if 0x5BD74 <= pool < 0x5BE34 and not (0x5BD74 <= pc < 0x5BE34)]
         self.assertEqual(outside, [])
 
+    def test_fw56_pointers_land_in_the_patch(self):
+        fw54 = (ROOT / "DMR003.FW54.V022.bin").read_bytes()
+        fw56 = (ROOT / "DMR003.FW56.V022.bin").read_bytes()
+        hits = set(literal_guard.pointed_into(fw54, fw56))
+        self.assertIn(0x5BDE4, hits)
+        self.assertIn(0x5B3FC, hits)
+        self.assertIn(0x5B4A4, hits)
+
 
 if __name__ == "__main__":
     unittest.main()
