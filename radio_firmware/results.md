@@ -4780,6 +4780,18 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**FW57 CTCSS receive and out-of-list promiscuous (11:15).** FW57 stayed loaded. SignalDeck PR 143 stayed installed. The factory image was not loaded. M17 receive was off. Slot 1 is not covered. `/etc/mmdvmhost` matched its backup before and after (the file was not edited). The relay was restarted on the rebuilt call and then put back on the saved call it had before this pass. Left on `DMR003.FW57.V022`, channel 56, not transmitting.
+
+| Row | FW57 |
+|---|---|
+| CTCSS 67.0 receive | Analog VFO, RX CTCSS 67.0, squelch 2. HackRF carrier with 1 kHz at 2.5 kHz deviation plus 67 Hz at 600 Hz: clip −19.4 dBFS, 1 kHz Goertzel 5130. The same 1 kHz carrier with no 67 Hz tone: clip −86.9 dBFS, Goertzel 0. FW52 was −19.7 dBFS / 4706.9 and −87.0 dBFS |
+| TG 99 on the air | Voice LC header and terminator rebuilt, RS(12,9) then BPTC(196,96), replayed from the relay. MMDVMHost logged the bench ID to TG 99, 5.2 s, 0% packet loss, BER 0.8%. HackRF carrier 6.70 s, 31 sync bursts, two voice LC headers, colour code 1, group, destination 99 |
+| Promiscuous off | Not heard. Phone RSSI rose from −107 to −85 on the same carrier. No status 1 and no `0x2B` |
+| Promiscuous `[15,1]` | `sr=0 flag=1`. Not heard. No status 1 and no 11-byte `0x2B` |
+| Promiscuous `[15,0]` | Not heard |
+
+A UDP send straight at port 62032 is logged as an invalid source and does not radiate. The scored rows went out through the relay, which already holds port 62031.
+
 **FW57 acceptance remainder (10:46).** FW54 and FW55 were not loaded again. M17 receive was off for every DMR row until the PR 143 step. Slot 1 is not covered. The hotspot config was not changed. End state: SignalDeck PR 143, file sha256 `a8518e4f9d468e4b3e6ff524a4f659440c44eb5e2d73e3c0ca94255b5fb19337`, installed with `adb install -r`, module `DMR003.FW57.V022`, not transmitting.
 
 | Row | FW57 |

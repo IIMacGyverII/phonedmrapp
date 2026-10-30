@@ -25,6 +25,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
+**HackRF and hotspot leases ended 11:15 (Grok, CTCSS and TG 99 promiscuous rows).** No hackrf_transfer running. The Armor is on FW57, channel 56, not transmitting. Hotspot config was not changed.
+
 **HackRF lease ended 10:46 (Grok, FW57 acceptance remainder).** No hackrf_transfer running. The Armor is on FW57, not transmitting.
 
 **HackRF lease ended 10:02 (Grok, data-hold test).** No hackrf_transfer running. The Armor is on FW57, not transmitting.
