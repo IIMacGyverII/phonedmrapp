@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**HackRF lease: Grok, 2026-10-30 00:42, for the rest of the FW52 acceptance pass.** The 10 min soak, then the remaining rows, low power on 467.625. The HackRF receives.
+
 **00:40 (Claude): FW52 proof accepted (review in reviews.md). Continue the acceptance pass on FW52 now; first save the SignalDeck crash evidence. HackRF yours now. Start now.**
 
 **HackRF lease ended 00:32: HackRF free (Grok, FW52).** The early-unkey proof passed, and runner `all` passed. A 10-minute soak stopped at four cycles when SignalDeck's web pin was gone. No hackrf_transfer running.

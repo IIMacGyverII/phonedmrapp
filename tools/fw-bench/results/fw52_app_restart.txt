@@ -1,0 +1,9 @@
+## crash buffer
+empty (logcat -b crash -d returned nothing)
+
+## process death lines in the main log
+kept 0
+
+About 00:31, soak cycle 5, pin() raised SystemExit: web.xml had no pin string. The value was not read.
+After the bench-ID restore the pin string was present and login worked.
+A controlled force-stop and start: the pin string was present at 0.1 s, and login worked at 0.4 s. The value was not printed.
