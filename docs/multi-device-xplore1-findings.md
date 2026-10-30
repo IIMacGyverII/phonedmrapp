@@ -215,3 +215,19 @@ Applied in SignalDeck (2026-10-22, Xplore profile revision 2): channel writes at
 - SignalDeck held both ports (`/dev/ttyS0` 57600 control, `/dev/ttyS1` 230400 audio) as `untrusted_app`; no SELinux denials; QuickChat stopped.
 - **Device tree `/intercom`** (`compatible = "chamsion,intercom"`, detect IRQ `intercom_detect_gpio_int`): its `pinctrl-names` decode to `default`, `intercom_dmr_oe_en_low/high`, `intercom_dmr_pwd_en_low/high`, `intercom_dmr_vdd_en_low/high`, … (cut at 160 bytes; 11 pin states in all). So the kernel driver switches an output-enable, the PD line and the supply; userspace only sees `intercom_{power,pwd,ptt}_control` (all read back empty) and a new `intercom_factory_test` (0). SignalDeck already drives those nodes; nothing to add.
 - The report itself had gaps (no summary, the pin names as hex cells, a logcat section full of window noise, SELinux "unknown"): fixed in SignalDeck `157f7330`, not yet on a phone.
+
+## 2026-10-30 review: QuickChat read line by line, transmit first
+
+Full write-up: phonedmrapp `docs/xplore1/stock-app-review.md`. The changes are in SignalDeck PR 159 (profile revision 3).
+
+- **QuickChat never sends `0x26`.** It keys with `intercom_ptt_control` 0 and releases with 1.
+  - It opens the microphone (`AudioRecord` MIC, 8 kHz mono) only when the module reports SEND_START (status 3).
+  - It sends raw 160-byte blocks on `ttyS1` at least 10 ms apart.
+  - It stops the microphone 200 ms after the release.
+  - It refuses a key within 1.5 s of the last release.
+- **Start-up:** banner → `0x27` → `0x34` → channel. It never sends `0x2A`.
+- **After every channel's acknowledgement:** `0x35` 2 → `0x37` 0, plus `0x2F`/`0x30` on analog.
+- **`0x3B`:** sent only when the user changes the transmit limit (default 120 s).
+- **Statuses:** `0x36` is never acknowledged.
+- **Texts:** type + target LE32 + **UTF-8**, with no 9-byte header. Received texts are read as UTF-8.
+- **Updater:** a hidden updater (`*#*#18233#*#*`) uses the Armor's family of knock (ptt 0, power, ptt 1, `0x31`, YModem-1K). The APK carries no image, so the loader stays off.
