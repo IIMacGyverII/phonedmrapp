@@ -2981,3 +2981,7 @@ FW30's refuse at `0x5BD74` is `movi r4, 0x8E7C; jsr r4`. That is an **absolute**
 4. DMR group and private on both slots. Slot 0 first-key is a separate fault; record it, don't chase it in this image.
 
 Report as a regression table: rows × FW54, FW55, FW57.
+
+**Correction to the 09:40 task (firmware agent, 09:55).** FW54's opcode 14 reads only `[0x18000000, 0x18010000)` (`movih` 6144/6145 at `0x5C0CE`/`0x5C0D6`), so it cannot read `0x4DAAC` or `0x38875`. For proof step 1, also build two **bench-only diagnostic twins**, as FW4D and F49L did: **F54D** = FW54 and **F57D** = FW57, each with those two immediates set to 3 and 5 (window `[0x30000, 0x50000)`), tags `DMR003.F54D.V022` and `DMR003.F57D.V022`. These are never released and never used for the acceptance pass.
+- Step 1 runs on F54D (expect `0x4DAAC` = 1 after a plain analog key), then factory plus one key, then F57D (expect 0, and a second key acked).
+- Then load FW57 itself for steps 2–4.
