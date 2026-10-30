@@ -3224,3 +3224,17 @@ Your repro test passed, and I ran it myself too. **FW57 is published:** AndroidR
 4. **If anything fails, Restore puts the factory image back; report and stop.**
 
 End state: say which image and app build are left, and the heat. Then `STATUS: REVIEW`.
+
+**Step (d) is tightened (owner, 11:42): real button taps only.** Drive SignalDeck's screens the way a user does: find each control with `uiautomator dump` and press it with `adb shell input tap`.
+- **No DIAG broadcast, `am` intent, bench loader or direct call** for Restore, the catalogue refresh, choosing FW57 or loading it.
+- **Shell is allowed only to read state:** the `0x34` tag via logcat or DIAG read-only, logcat, screenshots, heat. The HackRF captures are unchanged.
+
+**Evidence for every step:** a screenshot (`adb exec-out screencap -p`) of
+- the Module firmware page with the factory image;
+- the list offering FW57, with its released status;
+- each confirmation dialog;
+- the progress during the load;
+- the end message;
+- the page showing FW57.
+
+Name them `stepd_NN_<what>.png` in your fw30 folder and list them in results. Review each image before it leaves the bench (demo identity rules). If a button can't be found or the flow needs something a user couldn't do, **stop and report it as a finding**: that is exactly what this test is for.
