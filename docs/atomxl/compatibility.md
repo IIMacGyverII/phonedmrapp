@@ -39,7 +39,7 @@
 | POCSAG page receive and send | **n/a** | — | 85 | Needs the bench firmware's symbol engine and held path. Hidden on the phone and in SignalDeck Web |
 | SAME weather alerts | **n/a** | — | — | SignalDeck decodes SAME only on 162.40–162.55 MHz; this radio is UHF only |
 | SignalDeck Web audio | **works** | 2026-10-29 | 86 | 53 of 60 s during MON on a healthy line |
-| SignalDeck Web messages | likely works | — | — | No profile gate; page not opened on this phone |
+| SignalDeck Web messages | **works** (receive side) | 2026-10-29 | — | Page loads over Wi-Fi, lists and opens threads, quick replies and typing work, Send is enabled; a send from the web not run yet (it transmits) |
 | Band scope | **works** | 2026-10-29 | 88 | Inside 400–480 MHz; a 2 m range is refused |
 | Fox hunt, coverage log | works (by its parts) | 2026-10-29 | 110 | They keep reading the signal during receptions (PR 110 holds only the S-meter); dialogs not run with GPS, and a fox-hunt reading during a reception not yet confirmed on the phone |
 | S-meter during a reception | **holds** | 2026-10-29 | 110 | Shows the reading from just before the reception and moves again when it ends (a reading during it breaks the audio). A reading every 2 s is an open follow-up (1 of 1 clean) |
@@ -102,8 +102,8 @@ Open on the SignalDeck side:
    measure.
 4. **Fox hunt / coverage:** confirm a reading during a reception on the phone (through the PKT sheet), and run the
    dialogs once with GPS.
-5. **Not yet exercised on this phone:** SignalDeck Web messages page; Android Auto in a real car (only the desktop
-   head unit).
+5. **Not yet exercised on this phone:** a DMR text sent from SignalDeck Web (it transmits; needs a TX slot); Android
+   Auto in a real car (only the desktop head unit).
 6. **Profile:** revision 2, verified with transmit (owner, 2026-10-28). Today's fixes are all in SignalDeck code, so
    no profile change is needed; a new beta would carry PRs 89–110 to users.
 
