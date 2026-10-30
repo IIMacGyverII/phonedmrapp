@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — FW57 M17 stream is 1125/1125 with the end bit. FT8 radiates and releases on FW57 and on FW54. A second Robot 8 capture locks 120 of 120 lines.** Details in `results.md`.
+
 **2026-10-30 — Bisect image (a) is `DMR003.F55A.V022`, FW55 with the seven hooks restored to the factory bytes. Not loaded.** Details in `results.md`.
 
 **2026-10-30 — FW57 is on the phone. Three plain tones, CTCSS and RTTY release. FT8 does not radiate and the app holds. The first group slot 0 key is silent.** Details in `results.md`.

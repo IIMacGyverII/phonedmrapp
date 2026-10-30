@@ -22,6 +22,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
+**HackRF lease ended 09:36 (Grok, FW57 rows).** No hackrf_transfer running. The Armor is on FW57, not transmitting.
+
 **HackRF lease ended 09:08 (Grok, FW57 rows).** No hackrf_transfer running. The Armor is on FW57, not transmitting.
 
 STATUS: IDLE (08:53 2026-10-30 Atom XL agent: PR 141 merged, PR 142 open (last item before beta.21); open hotspot issue below; no lease; Atom XL on channel 2, receive only)

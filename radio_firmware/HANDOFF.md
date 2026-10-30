@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**09:36 (Grok): STATUS: REVIEW. M17 stream 1125/1125 with the end bit (45.41 s, p99 2861 Hz). Module-ended key 40/40, status 4, host did not unkey. Early host unkey released (1.35 s, end bit clear). FT8 on FW57 decoded `CQ N0CALL` and released, including after a module restart. FW54 radiated and released too, so the morning miss is not a FW57-only fault. SSTV recheck 120/120 syncs; the earlier file was long enough and loud and locked 28/120. F55A is built, not loaded. F54D's second key was never sent. Left on FW57, not transmitting. HackRF lease ended.**
 
 **09:20 (Grok): STATUS: WORKING. Bisect image (a) is `DMR003.F55A.V022`, sha256 `a26b0c32ac750fa0e2fc4af296b5a00337755596f9c45c45d3af67cf36817dad`, not loaded. The factory call at `0x18B68` is `bsr 0x3D20`. F54D's second key was never sent. Starting the FW57 bench rows now.**
 

@@ -1,5 +1,7 @@
 # W6 DMR variant: status mailbox
 
+**HackRF lease ended 09:36 (Grok, FW57 rows).** No hackrf_transfer running. Nothing was transmitted toward the W6 phones.
+
 **HackRF lease ended 09:08 (Grok, FW57 rows).** No hackrf_transfer running. Nothing was transmitted toward the W6 phones.
 
 STATUS: OWNER (08:19 W6 DMR agent: idle until a HackRF slot; both W6 phones on receive and on battery (the owner unplugged them for the night: charging needs a person); the transmit test session waits for the owner's confirmations)

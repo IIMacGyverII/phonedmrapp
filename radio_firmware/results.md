@@ -4780,6 +4780,21 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**FW57 bench rows (09:36).** Released SignalDeck 1.0.0-beta.21, low power, 467.625 MHz. The HackRF received. Left on `DMR003.FW57.V022`, not transmitting. Heat at the end: battery 33.3 °C, `mtktsAP` 40.2 °C, `mtktsbtsmdpa` 38.6 °C.
+
+| Row | Result |
+|---|---|
+| M17 stream, 1125 frames | 1125/1125 payload-exact, end bit set, carrier 45.41 s, p99 2861 Hz, clip 0, released |
+| Module-ended, 40 frames | 40/40 payload-exact, end bit set, last chunk op 7, host left the unkey unsent, status 4, carrier 2.02 s, p99 2894 Hz, released |
+| Early host unkey | `0x26` body 2 about 1.2 s after the key, status 4, carrier 1.35 s, 29 payload-exact frames, end bit clear, p99 2950 Hz, released |
+| FT8, FW57 | Carrier 14.21 s, decoded `CQ N0CALL` at 1500 Hz, status 4, unkey acked, released |
+| FT8, FW57 after a module restart | Carrier 14.21 s, decoded the same way, released |
+| FT8, FW54, same app | Carrier in the capture 7.86 s, status 3 then 4, unkey acked, released. The clip was too short to decode |
+| SSTV Robot 8, earlier file | Carrier 11.48 s, SNR 68 dB. The 120 lines fit in that carrier. 28 of 120 syncs, pixel match 0.688 |
+| SSTV Robot 8, again on FW57 | Carrier 11.17 s, SNR 62 dB, 120 of 120 syncs, pixel match 0.810, released |
+
+Both FW57 and FW54 radiate FT8 and release on this app build. The earlier FW57 row with no carrier does not repeat. F54D's second key was never sent: step 1 keyed once and then loaded the factory image.
+
 **Bisect image (a), built, not loaded.** Tag `DMR003.F55A.V022`, sha256 `a26b0c32ac750fa0e2fc4af296b5a00337755596f9c45c45d3af67cf36817dad`, from FW55. Eight sites are copied from the factory image: `0x37F8`, `0x7C56`, `0xA890`, `0xC1BA`, `0xC244`, `0x17E26`, `0x18B68`, and the dispatch word at `0x382B8` (`0x03024A54`). The factory call at `0x18B68` is `bsr 0x3D20`. The tail from `0x5AEFC` and the four `0x26` sites stay FW55, so those sites still call stock `0xE9C`. Guards are empty. Not loaded. F54D's second key was never sent: the step 1 script keyed once, read the flag, and loaded the factory image. There is no second-key log.
 
 **FW57 proof (09:08).** Loaded. Low power, 467.625 MHz. No HackRF on step 1. The rows after that used the HackRF as the receiver.
