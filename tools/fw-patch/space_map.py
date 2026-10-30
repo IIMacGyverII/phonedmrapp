@@ -1,12 +1,18 @@
 # Approved free ranges in the FW54 tail. A new stub may write only these.
 # See radio_firmware/fw54_space_map.md. The pitch helper is not in this list.
-# The old opcode body whose only caller FW30 retargeted to refuse.
-# 76 bytes. The tone-aware gate is 102 bytes, so FW57 is not placed here.
+# Unreached on FW54, from tailmap.py plus the caller each build cut.
+# The pulse table 0x5B6A4-0x5B6FD is live data and is not in this list.
 FREE = (
-    (0x5BFB2, 0x5BFFE),
+    (0x5B6FE, 0x5B720),
+    (0x5BF9E, 0x5C040),
+    (0x5C088, 0x5C098),
+    (0x5C59C, 0x5C6FC),
 )
 # The op-1 tail already exists. FW56 only retargets its branch.
-RETARGET = ((0x5AF44, 0x5AF48),)
+RETARGET = (
+    (0x5AF44, 0x5AF48),
+    (0x5BDF4, 0x5BDFC),
+)
 TAIL = 0x5AEFC
 
 

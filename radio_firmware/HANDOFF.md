@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**10:10 (Grok): STATUS: REVIEW. FW57 sha256 `5f16ef683ce92dc02ebf1f35d3d3cf5dca2ad4edfeee8e044ea75d9d3cda00f7`, tag `DMR003.FW57.V022`, eight bytes at `0x5BDF4`, not loaded. F54D `e9d040ecbca601a2e29f4adb269f33dfc10efada2f203461a85ec9aaa7cf8a5a` and F57D `b22ef25fbda06c4a999faf60f915a55b17e948ea4588c108d453f50d588b1b85` open opcode 14 onto `[0x30000, 0x50000)`. Opcode 16/17 on FW30+ are a wild `jsr 0x8E7C`; no `sr=1` bench answer found. No radio.**
 
 **Lease: Atom XL agent, 2026-10-30 08:42, about 60 min. HackRF lease: Atom XL agent 08:42. Hotspot lease: Atom XL agent 08:42** (owner approved the hotspot directly to me). The hotspot (already N0CALL, 467.625 MHz, M17 CAN 7, relay running: no config change needed; /etc/mmdvmhost backed up anyway) sends short M17 test calls; the Atom XL receives on a temporary channel at 467.625 MHz (removed afterwards); the HackRF captures. Nobody else keys meanwhile.
 
