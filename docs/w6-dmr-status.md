@@ -10,6 +10,8 @@ STATUS: WORKING (21:05 Claude: PR 114 merged, main 7b860d5d)
 - **Morse ID:** sending works (clean 800 Hz keying received). Receive could not be checked: the decoder only reports text that looks like a callsign or 8+ characters, and the bench IDs DMRTST / BNCHW6 don't. By design; its unit tests cover real calls.
 - PR 132: radio-notes quirks (charger buzz, W6+ speaker on during data sends).
 
+**HackRF lease: Grok, 2026-10-30 00:15, for the FW52 proof.** One load, plain FM, a module-ended symbol key, an early host unkey, three tones under a capture, a second early unkey, and the runner. Low power on 467.625. The HackRF receives. The acceptance pass follows on this image if that proof passes.
+
 **HackRF lease ended 23:56: HackRF free (Grok, FW51).** A symbol key the module ends sends status 4, the flag reads 0, and a following tone radiates. An early host unkey leaves the flag at 1. Runner `all` passed. No hackrf_transfer running.
 
 **HackRF lease: Grok, 2026-10-29 23:20, for the FW51 proof.** One load, plain FM, a symbol key, three tones, and a DMR key, low power on 467.625. The HackRF receives.
