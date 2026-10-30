@@ -26,7 +26,7 @@
 | DMR texts in and out | **works** | 2026-10-28 | 76 | |
 | Reception detection | **works** | 2026-10-29 | 87, 97, 98, 107 | The bridge's reception line, with a watchdog that finds receptions from the signal when the line misses one (PR 87). A stuck line is restarted without a phone reboot (PR 98, 1 of 1). Short off-channel bursts (another transmitter in the cage, about 2.6 s) are ignored and cause no restart (PR 107, seen live twice) |
 | CTCSS tone detection | **works** | 2026-10-30 | — | 100.0 and 131.8 Hz heard and offered for the channel (2 of 3 tries) |
-| Signal reading | **works**, dBm scale off | 2026-10-30 | — | Linear, about 1 step per dB over 50 dB; SignalDeck converts with the Armor's half-dB step, so dB differences show at half size (fix proposed). Channel squelch 2 opens 5–7 dB above the idle level. Since PR 110 the history's "Received" rows show the reading from before the reception |
+| Signal reading | **works** | 2026-10-30 | 141 | One step per dB, linear over 50 dB, shown in real dB since PR 141 (checked on beta.22: 10 dB steps show 10–11 dB). Channel squelch 2 opens 5–7 dB above the idle level. Since PR 142 the history shows no stale level |
 | MON | **works** | 2026-10-29 | 86 | Opens the sound at once on analog, even with a stuck reception line |
 | APRS receive (passive) | **works** | 2026-10-29 | 79 | 18 of 20 HackRF frames. Decoder CPU halved in PR 93 (all phones) |
 | APRS transmit | **works** | 2026-10-28 | 76 | Decoded in the cage |
@@ -42,7 +42,7 @@
 | SAME weather alerts | **n/a** | — | — | SignalDeck decodes SAME only on 162.40–162.55 MHz; this radio is UHF only |
 | SignalDeck Web audio | **works** | 2026-10-29 | 86 | 53 of 60 s during MON on a healthy line |
 | SignalDeck Web messages | **works** | 2026-10-30 | — | Page loads over Wi-Fi, lists and opens threads, quick replies and typing work; a DMR text sent from the web went out as a 0.74 s data burst (CSBK preambles, data header, data blocks; framing decoded from a HackRF capture) |
-| Band scope | **works** | 2026-10-29 | 88 | Inside 400–480 MHz; a 2 m range is refused |
+| Band scope | **works** | 2026-10-30 | 88, 156 | Inside 400–480 MHz; a 2 m range is refused. Measured 2026-10-30: the module settles about 50 ms after a retune and answers a reading in 6–7 ms (the Armor: 0.7 s and 0.1–0.5 s). PR 156 runs the scope at 100 ms settle (about 0.11 s a step, a ninth of the Armor's time) and on the phone's reading scale |
 | Fox hunt, coverage log | **works** | 2026-10-29 | 110 | With a test GPS position: fox hunt readout, compass, map, a Mark at the position and Clear marks; Map around the position (49 repeaters from the online list), the Coverage maps introduction, Log coverage on/off, "0 readings" shown. A measured reading during a reception works (Diagnostics RSSI, 2 of 2). A coverage point stored: 3 readings at the test position from one carrier (2026-10-29 21:51) |
 | S-meter during a reception | **holds** | 2026-10-29 | 110 | Shows the reading from just before the reception and moves again when it ends (a reading during it breaks the audio). A reading every 2 s dropped the audio in 2 of 2 receptions, so the hold stays |
 | Android Auto | **works** | 2026-10-29 | — | Desktop head unit: SignalDeck appears as the media app, and next/previous change channel. A real car hides it until Android Auto's Unknown sources is on (the Device page explains) |
