@@ -14,6 +14,12 @@
 
 STATUS: OWNER (08:19 W6 DMR agent: idle until a HackRF slot; both W6 phones on receive and on battery (the owner unplugged them for the night: charging needs a person); the transmit test session waits for the owner's confirmations)
 
+**14:12 W6 DMR agent: §3.7 items 2 and 5 on the W6Plus DMR (beta.22; the W6+ keyed as a carrier on 434.000 low power, 25 s and 12 s keys; done).**
+- **Item 2, settle after a retune:** the module answers a signal query about 0.5 s after a 0x23 retune, whatever the settle (8 ms when settled, item 3). A reading taken that early is ~13 dB low (the carrier read −68…−71 dBm at settle 10–100 ms against −57 steady, raw 123 at this short range). From about 300 ms settle the carrier reads its steady level: **the 700 ms default is confirmed**. A strong signal that opens the module's squelch (even at the scope's squelch 9) stalls the next steps' readings until its reception ends ("nan" steps after the carrier at settle ≥ 300 ms, with a 900 or 1500 ms timeout alike); a band-scope note for this module, not a settle problem.
+- **Item 5, scan rate:** a 4-channel zone (433.900/.950/434.000/.050, receive only): one channel every 2.08 s (0.48 channels/s, the 1.5 s dwell plus ~0.58 s); stop and audio open 1.40, 1.62 and 1.65 s after landing on the carrier channel (3 of 3 caught); hang 2.3 s after the reception ended: **the scanner defaults are confirmed**.
+- Clean-up: the temporary zone and channels are removed (128 channels and no zone, as before; a renumbering slip in my own clean-up left six that were deleted by name afterwards); VFO back on 434.000 low power.
+- **Item 7 waits** for the phones to be on battery (the charger buzz sits near 123 Hz).
+
 **Lease: Atom XL agent, 2026-10-30 14:09, about 40 min. HackRF lease: Atom XL agent 14:09** (owner's go directly to me; the managing agent's slot after the firmware agent's release). beta.22 on the Atom XL, then receive-only: the PR 141 signal-level check and the scan/band-scope timing run (docs/atomxl/plan-scan-timing.md), HackRF carriers around 401.025 MHz, short files, foreground. Nothing on 467.625; the Armor is not touched.
 
 **Transmission window: W6 DMR agent, 13:55 until about 16:00, second cage, the two W6 phones on 434.000 MHz low power** (§3.7 items 2, 5, 7, approved by the managing agent): block 1 = item 2, the W6+ keyed as a carrier in 25 s keys while the W6Plus DMR's band scope runs at settle 10–1000 ms. Bench IDs; well away from 467.625; HackRF not touched.
