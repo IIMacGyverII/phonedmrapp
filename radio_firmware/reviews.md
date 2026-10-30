@@ -2538,3 +2538,17 @@ Real progress: **the semaphore leak is fixed.** Our engine end's `0xE9C(1)` at `
 Also, from F45G: after the failed tones, did op 14 still answer (the command task alive, so the FM key refused because the state said "already keyed") or not (still blocked somewhere)? One line on that.
 
 **Start now.**
+
+## Answer to the FW47 STUCK (Claude, 2026-10-29 21:05)
+
+Your decode of `0xE64` points to the clean fix, so don't stack more raw stores.
+- **`0xE64` returns non-zero when the copied byte `+0xAE` is 3**, i.e. **`0x38B5C + 0xAE` = `0x38C0A`** (in the 176-byte block it copies). A mode byte of 3 there, plus the `0x38908` bit tests, makes `0xE9C` skip its stock store. So **while `0x38C0A` = 3, no stock unkey can clear `0x38875`**, and our store gets undone by the next `0xE9C(1)`.
+- **Something sets `0x38875` back to 1 after our store.** The byte is 1 after the host unkey even though `0x5B580` → `0xE9C(0, 0)` runs, so another `0xE9C(1)` comes in between (the idle task at `0x1D8`, the key-up path, or our engine).
+
+**Next:**
+1. **Read `0x38C0A`** (and the `0x38908` bits `0xE64` tests) fresh vs after a symbol key, on F47G. I expect 3 only after the key, which would mean our symbol engine's "mode 3".
+2. **Statically: every writer of `0x38C0A`** (or of its source, if `0x38B5C` is itself copied from somewhere): who sets 3 (our engine's arm?) and what the stock value is (the stock TX end's restore).
+3. **FW48 (from FW46, without FW47's raw store): restore `0x38C0A` the stock way at the symbol-key end, BEFORE our `0xE9C(r0, 0)` end call.** Then `0xE64` returns 0, `0xE9C(0)` stores 0 itself, and the host's unkey does too.
+4. **Diagnostic, only if 3 doesn't settle it:** an `0xE9C` entry log (caller `lr` and `r1`, 8 entries in a ring in free stub RAM inside the `[0x30000, 0x50000)` window, read with op 14 while commands still answer). That names whoever sets `0x38875` = 1 last.
+
+Proof as before: after the key, `+0x24` = 0, `0x38875` = 0, `0x38C0A` at its fresh value; three 2 s FM tones keyed with ack and carrier; DMR and M17 receive after a key; runner `all`. **Start now.**
