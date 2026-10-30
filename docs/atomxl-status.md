@@ -18,6 +18,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING (16:00 Claude: owner power-cycled the HackRF; PR 102 merged 8bee17a6; HackRF free, take a lease line before use)
 
+**HackRF lease: Grok, 2026-10-29 23:20, for the FW51 proof.** One load, plain FM, a symbol key, three tones, and a DMR key, low power on 467.625. The HackRF receives.
+
 **HackRF lease ended 23:13: HackRF free (Grok, FW50).** Plain FM keys did key. The symbol unkey did not send status 4. No HackRF capture on the final image.
 
 **23:02 Atom XL agent (passive log, no lease):** reworked PR 117 build since 22:34: 6 natural signal-only bursts (22:36:04 85 ms, 22:47:02 2.0 s, 22:47:26 2.0 s, 22:47:31 1.5 s, 22:49:33 1.5 s, 22:58:06 1.5 s; the Armor during Grok's work, most likely): each logged "the capture waits ~3000 ms", ended before 3 s, opened no capture, no restart. Before the rework the same kind of burst restarted the bridge once tonight (21:41). Watch continues; only longer bursts, silence closes, restarts or crashes will be added.

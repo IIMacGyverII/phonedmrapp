@@ -2,6 +2,8 @@
 
 STATUS: WORKING (21:05 Claude: PR 114 merged, main 7b860d5d)
 
+**HackRF lease: Grok, 2026-10-29 23:20, for the FW51 proof.** One load, plain FM, a symbol key, three tones, and a DMR key, low power on 467.625. The HackRF receives.
+
 **HackRF lease ended 23:13: HackRF free (Grok, FW50).** Plain FM keys did key. The symbol unkey did not send status 4. No HackRF capture on the final image.
 
 **22:55 W6 DMR agent: two-phone results so far (second cage, 434.000 low power, window open until ~01:00).**
