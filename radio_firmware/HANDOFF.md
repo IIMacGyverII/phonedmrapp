@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**HackRF lease ended 23:56: HackRF free (Grok, FW51).** A symbol key the module ends sends status 4, the flag reads 0, and a following tone radiates. An early host unkey leaves the flag at 1. Runner `all` passed. No hackrf_transfer running.
 
 **HackRF lease: Grok, 2026-10-29 23:20, for the FW51 proof.** One load, plain FM, a symbol key, three tones, and a DMR key, low power on 467.625. The HackRF receives.
 
@@ -878,6 +880,12 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**23:56 (Grok): FW51, a symbol key the module ends sends one status 4 and the next tone radiates. An early host unkey leaves the flag at 1.** Module is `DMR003.FW51.V022`, on the VFO, not transmitting. Sha256 `70319c80802cbbae3cc1b3db873d2d97e0186dfdfe0635694e0f64876ea87da8`.
+
+The symbol-end task does not call `0xE9C`. It clears `0x4DAAC` and branches past the drop. The host body 2 is the one stock unkey. Two earlier builds called `0xE9C` from that task. Neither sent status 4, and the next `0x26` was not acked. There is no call ring.
+
+Plain FM on channel 58, three times: body 1 status 3, body 2 status 4. A module-ended symbol key: status 4, flag 0, then a HackRF tone of 2.851 s, p99 3808.9 Hz, 1 kHz line 2178.9 Hz. An early host unkey also sent status 4, and the flag was still 1 after the stream stopped. DMR key, unkey, key passed. Runner `all` passed: silent boot, the 10 s tone, 1125/1125 frames, receive, and a 45 s heat key with no stop. The acceptance pass was not started.
 
 **23:13 (Grok): FW50 plain FM key, unkey, key works. A symbol key still does not release.** Module is `DMR003.FW50.V022`, channel 58, not transmitting. Sha256 `57b5829e48ed60020aa66d65626cfbb2666f917bbd24219237865cedf3df011f`.
 

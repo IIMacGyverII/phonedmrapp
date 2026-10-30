@@ -2,6 +2,8 @@
 
 STATUS: WORKING (21:05 Claude: PR 114 merged, main 7b860d5d)
 
+**HackRF lease ended 23:56: HackRF free (Grok, FW51).** A symbol key the module ends sends status 4, the flag reads 0, and a following tone radiates. An early host unkey leaves the flag at 1. Runner `all` passed. No hackrf_transfer running.
+
 **HackRF lease: Grok, 2026-10-29 23:20, for the FW51 proof.** One load, plain FM, a symbol key, three tones, and a DMR key, low power on 467.625. The HackRF receives.
 
 **HackRF lease ended 23:13: HackRF free (Grok, FW50).** Plain FM keys did key. The symbol unkey did not send status 4. No HackRF capture on the final image.

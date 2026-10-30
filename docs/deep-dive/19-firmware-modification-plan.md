@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — FW51: a symbol key the module ends sends one status 4, the flag reads 0, and the next FM tone radiates. An early host unkey leaves the flag at 1. Runner `all` passed.** Details in `results.md`.
+
 **2026-10-29 — FW50: plain FM key, unkey, key works. A symbol key still does not send status 4.** Details in `results.md`.
 
 **2026-10-29 — F48L: a plain FM unkey leaves `0x38875` at 1, and the next tone does not key.** Details in `results.md`.

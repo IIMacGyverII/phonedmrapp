@@ -203,25 +203,13 @@ def build():
     for site in (0x92C8, 0x92E0):
         img[site:site + 4] = fw30_build.encode_bsr(site, syms["key_gate"])
     img[APPEND_SITE:APPEND_SITE + 4] = fw30_build.encode_bsr(APPEND_SITE, WRAP)
-    # Symbol end: flag becomes 2, then 0xE9C(r1=1) before the drop.
-    # 0x5B736 is movi r2, 0. The 20 bytes at 0x5B748 were the drop,
-    # the r0 setup, and a second 0xE9C.
-    if img[0x5B736:0x5B738] != bytes.fromhex("0032"):
-        raise SystemExit("flag clear")
-    img[0x5B736:0x5B738] = bytes.fromhex("0232")
-    end = _linked(END_ASM, 0x5B748, "fw51e")
-    if len(end) != 20:
-        raise SystemExit("end %d" % len(end))
-    es = end.find(struct.pack("<I", 0x11111111))
-    ed = end.find(struct.pack("<I", 0x22222222))
-    if es < 0 or ed < 0:
-        raise SystemExit("end tokens")
-    end[es:es + 4] = fw30_build.encode_bsr(0x5B748 + es, E9C)
-    end[ed:ed + 4] = fw30_build.encode_bsr(0x5B748 + ed, 0x5BD98)
-    img[0x5B748:0x5B75C] = end
-    if img[0x5B626:0x5B628] != bytes.fromhex("0032"):
-        raise SystemExit("host clear")
-    img[0x5B626:0x5B628] = bytes.fromhex("0232")
+    # The symbol-end task must not call 0xE9C. That call does not finish
+    # and does not send status 4. Leave the flag at 0 (the store above)
+    # and skip the drop and the 0xE9C. The host body 2 then takes the
+    # stock 0xE9C once, on the command task, which is the plain-FM unkey.
+    if img[0x5B748:0x5B74C] != fw30_build.encode_bsr(0x5B748, 0x5BD98):
+        raise SystemExit("drop site")
+    img[0x5B748:0x5B74C] = fw30_build.encode_br(0x5B748, 0x5B77A)
     if img[LIVE:LIVE + 2] != bytes.fromhex("d414"):
         raise SystemExit("live moved")
     if img[POOL:POOL + 4] != struct.pack("<I", FLAG):
