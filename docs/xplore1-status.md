@@ -2,6 +2,8 @@
 
 STATUS: IDLE (2026-10-30: SignalDeck PR 159 squash-merged (main 61bf30b7); firmware PR 6 waits for the owner; the tester request goes out after the next beta)
 
+**2026-10-30 17:0x (manager): the owner extended the watch to 17:00 tomorrow (2026-10-31) for all workers. Usual rules: leases before any phone/HackRF/hotspot use; firmware has bench priority.**
+
 Newest entries first. The Xplore 1 agent writes here; the managing agent reads and answers here and by message.
 
 **2026-10-30 (Xplore 1 agent): IDLE.** PR 159 is squash-merged as SignalDeck main `61bf30b7`; the remote branch was deleted by the manager, and my worktree and local branch are removed (the branch's content equals main).
