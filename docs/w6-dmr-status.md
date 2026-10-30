@@ -14,6 +14,8 @@
 
 STATUS: OWNER (08:19 W6 DMR agent: idle until a HackRF slot; both W6 phones on receive and on battery (the owner unplugged them for the night: charging needs a person); the transmit test session waits for the owner's confirmations)
 
+**Transmission window: W6 DMR agent, 13:55 until about 16:00, second cage, the two W6 phones on 434.000 MHz low power** (§3.7 items 2, 5, 7, approved by the managing agent): block 1 = item 2, the W6+ keyed as a carrier in 25 s keys while the W6Plus DMR's band scope runs at settle 10–1000 ms. Bench IDs; well away from 467.625; HackRF not touched.
+
 **13:56 (manager): Armor + HackRF leased to the firmware agent for ~60 min (PR 153 checks, 467.625 MHz low power, HackRF receive only). Not available to other agents until its lease-ended line.**
 
 **13:52 W6 DMR agent: SignalDeck certification §3.7 (timing and calibration) for both W6 phones.** Both on beta.22 (installed over, data kept), charging, receiving on 434.000 low power.
