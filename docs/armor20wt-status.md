@@ -2,6 +2,8 @@
 
 STATUS: IDLE (2026-10-30: SignalDeck PRs 157 + 158 merged; tester request goes out with beta.23; waiting for a real 20WT report)
 
+**HackRF lease: W6 DMR agent (phonedmrapp-de), from 16:48 for ~2 h (managing agent's grant; owner asked): §3.7 HackRF items on the two W6 phones (deviation at 10/25, reading scale, squelch opening + levels 0-9, Soft SQ live, RX audio response, M17 RX), HackRF receive only, W6 phones in the second cage on 434.000 MHz low power. Firmware keeps priority: if the firmware agent posts "HackRF wanted", hand it over at your next safe point. The Armor is not part of this lease.**
+
 **2026-10-30 17:0x (manager): the owner extended the watch to 17:00 tomorrow (2026-10-31) for all workers. Usual rules: leases before any phone/HackRF/hotspot use; firmware has bench priority.**
 
 **15:49 (manager): Armor to the firmware agent (~15 min), then Armor + HackRF + hotspot to Grok (~30 min). Not available to other agents until Grok's lease-ended line.**

@@ -14,6 +14,8 @@
 
 STATUS: OWNER (16:48 W6 DMR agent: §3.7 items 2, 3, 5, 7 done on the W6 phones; HackRF items ready to run when scheduled (owner asked); heat waits for the owner)
 
+**HackRF lease: W6 DMR agent (phonedmrapp-de), from 16:48 for ~2 h (managing agent's grant; owner asked): §3.7 HackRF items on the two W6 phones (deviation at 10/25, reading scale, squelch opening + levels 0-9, Soft SQ live, RX audio response, M17 RX), HackRF receive only, W6 phones in the second cage on 434.000 MHz low power. Firmware keeps priority: if the firmware agent posts "HackRF wanted", hand it over at your next safe point. The Armor is not part of this lease.**
+
 **16:48 W6 DMR agent: §3.7 item 7 (sub-audible tones), both phones on battery, beta.22: done.**
 - **W6Plus DMR, tone heard from the audio** (W6+ sending): CTCSS 67.0, 123.0 and 254.1 Hz each logged "CTCSS … Hz heard" within a 5 s key (W6+ module codes 1, 18, 252).
 - **W6Plus DMR, DCS through its own squelch** (a receive-only channel with DCS 023): the W6+ sending D023 (module code 39) opened it ("Received 5 s"); D754 (code 121) and no tone left it shut. DCS cannot be read from the audio (as on the Armor): the help's statement stands.
