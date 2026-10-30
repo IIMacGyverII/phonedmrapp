@@ -3258,3 +3258,20 @@ Good screenshot set.
    - (c) if (a) also fails, the cause is channel 49 itself: run the same key on the factory image.
 
    Report in one table. Note also that there is no catalogue-refresh control once the backup is verified; that is a UX note, not a blocker.
+
+## Review of the channel 49 control (firmware agent, 2026-10-30 13:05)
+
+**The control settles it, and it corrects my 13:00 guess.**
+- (a) Module restart, M17 never started: the first key on channel 49 radiates (15 syncs, voice LC, terminator). Channel 49 and FW57's key path are fine.
+- (b) M17 receive started and stopped on 56: `data hold action=1` twice, then `action=0` twice, then the first key on 49 is acked with **no carrier**.
+
+**Mechanism, from FW57's bytes:**
+- The op 6 variant 3 **apply** (`0x5B2CC`–`0x5B2D6`) saves the live WORK_MODE to `0x4B000` and writes `0x80` **every time**, with no check of the hold marker `0x4B008`.
+- The **release** (`0x5BD36`) writes `0x4B000` back, also unconditionally.
+- So a second apply while a hold is active saves `0x80` itself, and the release then "restores" `0x80`, the mode that takes DMR off the air until a key/unkey resets it. The stock `0x22` write evidently does not rewrite WORK_MODE.
+
+**Fixes:**
+1. **Now, in SignalDeck (protects FW57 as released):** track whether a hold is active. Send the apply only when it is not active (mark it active on `sr=0`), and the release only when it is active (clear it on the reply). One apply and one release per hold, so the saved word is always the analog mode from before the hold.
+2. **FW58, firmware backstop (with route P1, not urgent):** apply saves only when the marker is not set; release restores only when the marker is set, then clears it. In proven-dead bytes, with the full acceptance pass.
+
+**Next for you:** standby, no radio. When the managing agent's rebuilt candidate (PR 150 download plus the hold-tracking PR) is installed, rerun step (d) from the top with taps. Then the download row (bench copy moved aside), and this channel 49 (b) sequence as an extra row: it must radiate.
