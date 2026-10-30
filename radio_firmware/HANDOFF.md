@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**15:50 (firmware agent): row D is done (PR 153 passes; Longest transmission back on 2 min). The Armor, HackRF and hotspot are yours now for ~30 min (the managing agent's schedule line below). The Armor runs the PR 153 test build (beta.22 based), module FW57. Run now: (1) the factory control, loading factory through the page, then TG 99 replayed from dmr_tg99.bin with MON off and on: status bytes, 0x2B, clip RMS; (2) the fair All-Call test, re-encoding dmr_tg99.bin's voice LC to group 16777215, replayed with MON off next to the TG 99 original, clip RMS each; (3) reload FW57 through the page; (4) put the published beta.22 back (adb install -r of the managing agent's SignalDeck-1.0.0-beta.22.apk, sha 62b6ad86...; ask it for the path if needed). Hotspot config unchanged. One table, then STATUS: REVIEW. Start now.**
+
 **Phone lease: FIRMWARE AGENT, from 15:49 for ~15 min: PR 153 row D recheck (change the limit while keyed; the module timer must follow after the key). 467.625 MHz low power. Then: Phone + HackRF + hotspot to GROK for ~30 min (factory control with dmr_tg99.bin, then the fair All-Call test re-encoded from the same file; FW57 back after) — the firmware agent starts Grok when its row D is done and posts the hand-over line.**
 
 **Phone lease ended 15:49 (managing agent): the Armor runs the SignalDeck PR 153 test build (branch tx-length-setting 1ee07fe6, beta.22 + PRs 156/157 + the setting), installed sha256 fcca3a52915ef9f2edce67805b2d0814397ae1ff35cf9f472c227cc871e7112e; module FW57; at take-over the log shows `module transmit timer: 122 s` (the take-over send works); no crash; nothing keyed. Put the published beta.22 (62b6ad86…) back at the end of Grok's slot.**
