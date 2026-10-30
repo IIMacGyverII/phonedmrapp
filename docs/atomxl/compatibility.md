@@ -118,25 +118,30 @@ stopped, and SignalDeck took the radio normally when opened again.
 
 User setup, explained by the app: Agold App block off (SignalDeck opens the page once).
 
-## Ready for beta? (summary for the owner, 2026-10-29 21:30)
+## Ready for beta? (summary for the owner, 2026-10-30 09:00)
 
-Everything below is in SignalDeck main as of PR 110 (PR 111, help only, is open). A beta would carry PRs 89–110.
+In SignalDeck main: PRs 89–120 and 140 (PR 141, the dBm scale, and the history-level PR are open). A beta would carry
+them all.
 
 **Verified on this phone:** take over / exit / hand back and boot ownership; FM receive and transmit; DMR voice
-(group and private, caller ID) and DMR texts both ways; MON; APRS receive and transmit; DTMF, SSTV, FT8 and RTTY
-receive; live captions and keyword alerts; voice announcements; recording; scanning; band scope; SignalDeck Web audio
-and messages page (receive side); Android Auto on the desktop head unit; device report; screen-off receptions; fox
-hunt and coverage dialogs with a GPS position. Receive audio drop-outs fixed (17 of 17 clean, against 1 in 6), and a
-dead capture or a stuck reception line recovers without a reboot.
+(group and private, caller ID) and DMR texts both ways, including a voice key and a text sent from SignalDeck Web
+decoded from a HackRF capture by our own decoder (2026-10-30); MON; APRS receive and transmit; DTMF, SSTV, FT8 and
+RTTY receive; CTCSS tone detection; live captions and keyword alerts; voice announcements; recording; scanning; band
+scope; SignalDeck Web audio and messages; Android Auto on the desktop head unit; device report; screen-off
+receptions; fox hunt and coverage (dialogs and a stored point) with a GPS position. Receive audio drop-outs fixed
+(17 of 17 clean), short bursts from other transmitters ignored (PR 117: 4 of 4 bench steps, 7 natural bursts
+overnight), a dead capture or a stuck reception line recovers without a reboot. M17 self-calibration runs and keeps
+only improvements.
 
 **Known limits (documented in the app's help):** UHF only (no 2 m, NOAA, SAME); no computer data on the USB cable
 while SignalDeck has the radio; the S-meter holds still during a reception (a reading breaks the audio); fox hunt and
 coverage readings during a reception may cut the audio for a few seconds; a transmitter close by deafens the receiver;
 no M17 transmit, POCSAG or firmware loading on this module; Agold App block must be off (SignalDeck opens the page).
 
-**Partial or untested:** M17 receive is partial (self-calibration works; a real M17 station would refine it); the
-signal reading's dBm scale (half size, fix proposed); Android Auto in a real car; the stuck-line
-recovery is proven once (the trigger is rare).
+**Partial or untested:** M17 receive is partial (50–55 of ~85 frames clean per HackRF call; the hotspot's M17
+transmission did not decode in SignalDeck or in our own decoder, a hotspot-side problem to look into); the signal
+reading's dBm scale (half size until PR 141); Android Auto in a real car; the stuck-line recovery is proven once (the
+trigger is rare).
 
-**Profile:** unihertz-atomxl revision 2, verified with transmit (owner, 2026-10-28); no profile change needed for
-the beta.
+**Profile:** unihertz-atomxl revision 2, verified with transmit (owner, 2026-10-28); PR 141 adds the reading step in
+code, no profile-list change needed for the beta.
