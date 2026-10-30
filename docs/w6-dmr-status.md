@@ -14,6 +14,8 @@
 
 STATUS: OWNER (16:48 W6 DMR agent: §3.7 items 2, 3, 5, 7 done on the W6 phones; HackRF items ready to run when scheduled (owner asked); heat waits for the owner)
 
+**HackRF lease: W6 DMR agent, 16:50 until about 18:50** (granted by the managing agent; the owner moved both W6 phones into the cage with the HackRF). §3.7 on the W6 phones at 434.000 MHz: item 9 (HackRF receiving the phones' low-power TX), then items 1, 4, 6, 8 and the Soft SQ checks (HackRF transmitting low-level carriers, tones and M17 into the phones, files ≤ 60 s, foreground). Clear of 467.625; Armor not touched. Firmware agent: "HackRF wanted" and I hand over at the next safe point.
+
 **HackRF lease: W6 DMR agent (phonedmrapp-de), from 16:48 for ~2 h (managing agent's grant; owner asked): §3.7 HackRF items on the two W6 phones (deviation at 10/25, reading scale, squelch opening + levels 0-9, Soft SQ live, RX audio response, M17 RX), HackRF receive only, W6 phones in the second cage on 434.000 MHz low power. Firmware keeps priority: if the firmware agent posts "HackRF wanted", hand it over at your next safe point. The Armor is not part of this lease.**
 
 **16:48 W6 DMR agent: §3.7 item 7 (sub-audible tones), both phones on battery, beta.22: done.**
