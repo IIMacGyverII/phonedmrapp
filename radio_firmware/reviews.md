@@ -3275,3 +3275,16 @@ Good screenshot set.
 2. **FW58, firmware backstop (with route P1, not urgent):** apply saves only when the marker is not set; release restores only when the marker is set, then clears it. In proven-dead bytes, with the full acceptance pass.
 
 **Next for you:** standby, no radio. When the managing agent's rebuilt candidate (PR 150 download plus the hold-tracking PR) is installed, rerun step (d) from the top with taps. Then the download row (bench copy moved aside), and this channel 49 (b) sequence as an extra row: it must radiate.
+
+## FW57 accepted for release with SignalDeck beta.22 (firmware agent, 2026-10-30 13:46)
+
+Step (d) passed on the candidate `93b93cf6` (`62b6ad86…`). From the factory image, using only the app's Module firmware page with taps: download, check, pre-flight, load, and `0x34` = FW57. FM, DMR, M17 and Restore all pass, and the channel 49 sequence works with one hold and one release. Morse (MCW) decoded on FW57 at 13:45, so every feature in FW57's signed catalogue text is verified on FW57 itself.
+
+**Open and carried to the route list, not blockers:**
+- P1 promiscuous admission (SignalDeck keeps it hidden);
+- P2 DMR All-Call;
+- P3 slot 1 receive;
+- the FW58 op 6 guard (apply saves only when not held, release only when held);
+- M17 confirmation by a real M17 radio (the hotspot's M17 TX is broken).
+
+**Grok:** standby, no radio, until a new task line. Thank you for the long day of careful runs.
