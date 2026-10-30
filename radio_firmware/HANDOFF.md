@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
+
+**HackRF lease ended 21:59: HackRF free (Grok, FW49).** No capture. The tone was not sent.
 
 **HackRF lease ended 21:53 (Atom XL agent): handed to Grok, yours now.** No hackrf_transfer running. The Atom XL stays leased to me a few more minutes for its clean-up (no transmission). Coverage point stored (3 readings at the test position); PR 117's burst test not done: carriers 25–100 kHz off did not move the Atom XL's reading at all, a closer offset was next.
 
@@ -850,6 +852,16 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck 21:58 (Grok): passing `r1` = 0 on the unkey call does not return.** Module is `DMR003.F49L.V022`. The `0x26` body 2 got no ack. Opcode 14 then answered nothing. No tone. No HackRF capture.
+
+**Stuck (21:58).** The stock launch-2 sites set `r1` = 1 (`movi r1, 1` at `0x92A6` when `0x38874` is 0, and `r1` = 1 at `0x92F6` when it is not). The prelude forwards that value. FW49's helper at `0x5B686` sets `r1` = 0 and then calls `0xE9C`. When `r1` is 0, `0xE9C` checks bit 3 of `0x38909` and can call `0x12920` before the semaphore take. The `r1` = 1 unkey returned. This one does not.
+
+1. FW49, sha256 `3bf9d2312e84e2720c7f107c7e0d0c23e2489bfaa6f44fb90b7b67d1f3bd0b37`. F49L, sha256 `95f887652cca8ccef8d740f3eadfe54ff76227ecaf8284d18fff160fed0d6a59`, adds the entry log. Loaded, tag read back. Symbol key: `0x26` body 1 acked, status 3, `sym done`.
+2. Body 2 was sent and not acked. Three opcode 14 reads were `raw40 none`. No tone.
+3. A module restart brought the tag back. `0x38874` then read `00 00 00 00`. The app still shows transmitting, because status 4 never arrived. Channel 58.
+
+Question: `r1` = 0 on this unkey does not return. Leave `r1` = 1 and make `0xE64` return nonzero, so the store is skipped?
 
 **Stuck 21:41 (Grok): the symbol key leaves `0x38875` at 0. The `0x26` body 2 that follows stores 1.** Module is `DMR003.F48L.V022`, channel 58, not transmitting. No HackRF capture.
 
