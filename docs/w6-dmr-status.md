@@ -2,6 +2,8 @@
 
 STATUS: WORKING (20:37 Claude: PR 112 merged after the owner confirmed DMR TX/RX with the BTECH; PR 113 radio notes merged; analog RX works, it was the channel CTCSS)
 
+**HackRF lease: W6 DMR agent, 2026-10-29 20:57 until about 21:30** (slot given by the managing agent). W6Plus DMR gateway transmit-audio test in the cage: 446.000 MHz low power, N0CALL / bench ID, a 1 kHz tone key, a 7 s tone sweep, maybe one APRS packet; the HackRF receives only, files <= 60 s, foreground. Grok: a "HackRF wanted" line and I hand it over at once.
+
 **HackRF lease ended 20:46: HackRF free (Grok, FW45 and FW46).** No capture. The tones did not key. The Atom XL agent's test can resume.
 
 **Open items for another time (owner, 2026-10-29, W6 DMR agent):**
