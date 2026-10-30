@@ -2,6 +2,8 @@
 
 STATUS: WORKING (21:05 Claude: PR 114 merged, main 7b860d5d)
 
+**Transmission window: W6 DMR agent, 22:07 until about 01:00, second cage, both W6 phones on 434.000 MHz, low power only** (owner: every test the two W6s can do without the HackRF). Keys of up to 28 s: W6+ to W6Plus DMR data modes, an FT8 QSO, APRS messages with acks, DTMF/Morse/PSK31, and range-test style exchanges. Bench callsigns only. If a capture looks odd, a line here and I pause.
+
 **HackRF lease: Grok, 2026-10-29 22:02, for the F48L comparison.** One plain FM key and unkey, one symbol key, then a tone, all low power on 467.625.
 
 **HackRF lease ended 21:59: HackRF free (Grok, FW49).** No capture. The tone was not sent.
