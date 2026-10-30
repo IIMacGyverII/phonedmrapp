@@ -1,6 +1,6 @@
 # SignalDeck on the Unihertz Atom XL: compatibility
 
-**State as of:** 2026-10-29 19:00.
+**State as of:** 2026-10-29 19:30.
 
 **Bench phone:**
 - Unihertz Atom XL ATOMXL0000000737, Android 10 (Agold build), rooted.
@@ -19,11 +19,12 @@
 |---|---|---|---|---|
 | Take over / Exit / Hand back | **works** | 2026-10-28 | 76 | Hand back takes about 20 s (it checks the bridge answers first). Exit and Hand back power the radio off and give the USB port back |
 | Own the radio at boot | **works** | 2026-10-29 | 76 | ~67 s after a reboot |
-| Analog FM receive (sound) | **works** | 2026-10-29 | 76, 92 | Per-reception capture from the bridge's USB sound card. Since PR 92 a capture drop-out recovers with one bridge restart instead of failing until a reboot (15 receptions, 2 drop-outs, both recovered) |
+| Analog FM receive (sound) | **works** | 2026-10-29 | 76, 92, 100, 102, 110 | Per-reception capture from the bridge's USB sound card. Drop-outs fixed by PR 110 (no signal reading while the audio streams): 17 of 17 RTTY/speech receptions clean (12 bench build + 5 PR build), against 1 in 6 before. A drop that still happens recovers with one bridge restart (PR 92, 102) |
 | FM transmit | **works** | 2026-10-28 | 76 | Keyed in the cage, decoded |
 | DMR group and private calls, with caller ID | **works** | 2026-10-28 | 76 | HackRF DMR calls, caller named |
 | DMR voice transmit | **works** | 2026-10-28 | 76 | |
 | DMR texts in and out | **works** | 2026-10-28 | 76 | |
+| Reception detection | **works** | 2026-10-29 | 87, 97, 98, 107 | The bridge's reception line, with a watchdog that finds receptions from the signal when the line misses one (PR 87). A stuck line is restarted without a phone reboot (PR 98, 1 of 1). Short off-channel bursts (another transmitter in the cage, about 2.6 s) are ignored and cause no restart (PR 107, seen live twice) |
 | MON | **works** | 2026-10-29 | 86 | Opens the sound at once on analog, even with a stuck reception line |
 | APRS receive (passive) | **works** | 2026-10-29 | 79 | 18 of 20 HackRF frames. Decoder CPU halved in PR 93 (all phones) |
 | APRS transmit | **works** | 2026-10-28 | 76 | Decoded in the cage |
@@ -40,7 +41,8 @@
 | SignalDeck Web audio | **works** | 2026-10-29 | 86 | 53 of 60 s during MON on a healthy line |
 | SignalDeck Web messages | likely works | — | — | No profile gate; page not opened on this phone |
 | Band scope | **works** | 2026-10-29 | 88 | Inside 400–480 MHz; a 2 m range is refused |
-| Fox hunt, coverage log | works (by its parts) | 2026-10-29 | — | Signal readings come through during receptions; dialogs not run with GPS |
+| Fox hunt, coverage log | works (by its parts) | 2026-10-29 | 110 | They keep reading the signal during receptions (PR 110 holds only the S-meter); dialogs not run with GPS, and a fox-hunt reading during a reception not yet confirmed on the phone |
+| S-meter during a reception | **holds** | 2026-10-29 | 110 | Shows the reading from just before the reception and moves again when it ends (a reading during it breaks the audio). A reading every 2 s is an open follow-up (1 of 1 clean) |
 | Android Auto | **works** | 2026-10-29 | — | Desktop head unit: SignalDeck appears as the media app, and next/previous change channel. A real car hides it until Android Auto's Unknown sources is on (the Device page explains) |
 | Firmware loader | **n/a** | — | 83 | This module can't be loaded from SignalDeck; the stock app's own update route failed on this bridge build (V076 attempt 2026-10-28) |
 | Device report | **works** | 2026-10-29 | 82, 87 | With a `reception line:` row |
@@ -55,6 +57,8 @@
    - SignalDeck notices it (PR 87), finds receptions from the signal reading instead, and restarts the bridge once.
    - With PR 98 that restart, and taking the radio again, use the stock HAL's power-off pulse. It brought a stuck line
      back without a phone reboot (1 of 1 so far).
+   - PR 107: a burst from another transmitter shorter than 3 s no longer counts as a missed reception, and automatic
+     restarts are at least 20 s apart (no restart chains).
    - A phone reboot always clears it. The exact trigger is still under investigation.
 2. **Capture drop-outs.** The bridge's USB audio sometimes stops for 2 s. The kernel then ends the stream, and only a
    bridge power-cycle restarts it, a few seconds without sound.
@@ -78,3 +82,29 @@
 8. **A transmitter close by deafens it.** In the test cage another phone keying on 446 MHz at low power dropped the
    Atom XL's signal reading on 401.025 MHz from its idle level to near the bottom of its range for the whole key
    (2026-10-29); it hears nothing meanwhile, and recovers at once when the key ends. It does not fake a reception.
+
+## What is left before "fully compatible"
+
+Hardware or module limits (SignalDeck cannot change them; documented above and in the in-app help):
+- UHF only: no 2 m, NOAA, SAME or 2 m satellites.
+- No computer data on the USB cable while SignalDeck has the radio (one USB controller); Wi-Fi ADB works.
+- A transmitter close by deafens the receiver for the length of its key.
+- M17 transmit and POCSAG need the bench firmware's symbol engine, and this module cannot be loaded from SignalDeck (the
+  stock update route through the bridge failed with V076, 2026-10-28).
+
+Open on the SignalDeck side:
+1. **M17 receive is partial** (71–89 of 100 frames exact on recordings, 83–90 frames per call on the phone).
+   Self-calibration on real calls may lift it; it needs an M17 station other than the HackRF (the hotspot is not ours
+   to use, and a hotspot-only result does not count).
+2. **Stuck reception line:** recovery without a reboot is proven once (1 of 1); the trigger is known only as a replay
+   (1 of 3). More repeats would make the recovery claim solid.
+3. **S-meter frozen during receptions** (PR 110). A 2 s reading may keep it live without drops: 11 more receptions to
+   measure.
+4. **Fox hunt / coverage:** confirm a reading during a reception on the phone (through the PKT sheet), and run the
+   dialogs once with GPS.
+5. **Not yet exercised on this phone:** SignalDeck Web messages page; Android Auto in a real car (only the desktop
+   head unit).
+6. **Profile:** revision 2, verified with transmit (owner, 2026-10-28). Today's fixes are all in SignalDeck code, so
+   no profile change is needed; a new beta would carry PRs 89–110 to users.
+
+User setup, explained by the app: Agold App block off (SignalDeck opens the page once).
