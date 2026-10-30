@@ -4780,6 +4780,40 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Step (d) restarted on the fixed beta.22 (12:42).** SignalDeck `1.0.0-beta.22`, versionCode 121, main `ad8cb179`. The module was already `DMR003.UV4T.V022`, so factory was not flashed again before the first load. There is still no catalogue-refresh control once the factory backup is verified. The catalogue row offered `DMR003.FW57.V022` between FW22 and B3G1, with the release summary and hash `5f16ef683ce92dc02ebf1f35d3d3cf5dca2ad4edfeee8e044ea75d9d3cda00f7`, and it said the file was on the phone. Pre-flight was green, including "This phone — Ulefone Armor 26 Ultra". Confirming Load transferred 370 / 370 blocks, 378,620 bytes, 2841 B/s, 2:13 elapsed, 0 retries. The result was `DMR003.FW57.V022 · flash sample matched`, and the module answered that tag.
+
+| Check | Result |
+|---|---|
+| Plain FM | Analog VFO 467.625 MHz, low power, 2 s 1 kHz. Carrier 2.54 s, SNR 64.6 dB, the 1 kHz line at 879 Hz of deviation, peak 999.9 Hz. Released. A later control was 2.88 s, SNR 63.4 dB |
+| DMR, channel 49, slot 1 | 467.625 simplex, low power, M17 off. `data hold action=0 sr=0`. `0x26` on acked, status 3, unkey, status 4. HackRF peak 1 dB over the floor. The same on a second key |
+| DMR, simplex VFO, slot 0, group, colour code 1, talkgroup 9 | Carrier 4.58 s, 55.9 dB. 16 sync bursts (12 MS voice, 4 MS data). Voice LC header and a terminator, FLCO 0, destination 9. The source was the bench ID |
+| M17, Hold to talk on the M17 page, channel 56 | Carrier 8.26 s, SNR 61.0 dB. Link-setup CRC ok, 196 frames, every frame with no LICH error, end bit set. The page sends the microphone, so the frames were not compared to a seeded payload |
+
+The on-screen PTT on channel 49 and the PTT control both produced the silent status-3 key. M17 receive was off for those keys.
+
+**Download path.** The loader's non-factory lookup is `Download/DMR/Firmware/*.bin`. One file matched the FW57 hash: `/sdcard/Download/DMR/Firmware/DMR003.FW57.V022.bin`. The app files dir had only the factory copy. That FW57 file was moved, not deleted, to `/sdcard/Download/DMR/hold_stepd/1_DMR003.FW57.V022.bin`. Restore through the page then finished 370 / 370, 2951 B/s, 2:08, 0 retries, result `DMR003.UV4T.V022`. The cyan FW57 row still showed the release text and the hash, and it said "file not on this phone". Choosing it did not start a download. Pre-flight turned the image hash and "This phone" red: "The file does not match the known image". Confirming Load did not erase. The result was "That image is not in Download/DMR/Firmware". The held file was moved back; its sha256 is `5f16ef68…00f7` again. `hold_stepd` is empty.
+
+Left on `DMR003.UV4T.V022`, channel 56, 467.625 MHz, low power, not transmitting. Battery 36.2 °C, `mtktsAP` 47.1 °C, `mtktsbtsmdpa` 43.5 °C.
+
+Screenshots in `%TEMP%\fw1718\fw30\`, reviewed, no callsign, ID, or location:
+
+| File | What it shows |
+|---|---|
+| `stepd2_02_installed.png` | Factory image installed, FW57 in the list |
+| `stepd2_03_chosen.png` | Release summary and the full hash, file on this phone |
+| `stepd2_04_preflight.png` | All seven checks green, hash `5f16ef683ce9` |
+| `stepd2_05_confirm.png` | "Load DMR003.FW57.V022?" |
+| `stepd2_06_erasing.png` | Transfer at 20 / 370, 0:24 elapsed |
+| `stepd2_09_result.png` | `DMR003.FW57.V022 · flash sample matched`, module answers FW57 |
+| `stepd2_10_m17page.png` | M17 page, Hold to talk, channel 56, 467.625 MHz |
+| `stepd2_11_restore_confirm.png` | Restore confirmation |
+| `stepd2_14_uv4t.png` | Result `DMR003.UV4T.V022` |
+| `stepd2_15_nofile.png` | Chosen FW57, "file not on this phone" |
+| `stepd2_16_missing.png` | Hash and phone checks red |
+| `stepd2_18_not_downloaded.png` | "That image is not in Download/DMR/Firmware" |
+
+`stepd2_01_factory.png` is the page before its text filled. `stepd2_07_transfer.png` and `stepd2_08_done.png` are the finished 370 / 370 line. `stepd2_12` and `stepd2_13` are the factory restore's finished line.
+
 **Step (d) stopped at pre-flight (12:01).** SignalDeck `1.0.0-beta.22`, versionCode 121, main `4c293f57`. The Module firmware page's Restore, then its confirm Load, put the factory image back. The page figures were 370 / 370 blocks, 378,620 bytes, 2956 B/s, 2:08 elapsed, 0 retries, and the handshake log said prompt C in 204 ms. The settings tag after that was `DMR003.UV4T.V022`. The screenshot rule arrived while that transfer was already running, so there is no `stepd_NN` frame of the restore dialog, the progress, or the end line.
 
 The stock baseline key was not on channel 56. That channel is receive-only, and the 2 s test tone was blocked. An analog VFO at 467.625 MHz, low power, settled 4.5 s, then the same tone. The HackRF capture `stepd_factory_fm` was keyed 2.85 s, SNR 61.8 dB, 1 kHz Goertzel 1187, and the radio released. That tune and tone were the web VFO and DIAG `testtone`, not a PTT tap. M17 receive was off. The DMR group key and the M17 page transmission were not run.

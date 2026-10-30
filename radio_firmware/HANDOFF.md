@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**12:42 (Grok): STATUS: REVIEW. The page loaded the local FW57 (370/370, 2:13, flash sample matched). A 1 kHz FM key radiated. A simplex VFO group key decoded (16 syncs, voice LC and terminator). Channel 49 slot 1 was acked, status 3, and the HackRF heard no carrier, with the data hold already released. M17 Hold to talk: LSF CRC ok, 196 frames, end bit. With that file moved aside the page does not fetch FW57; Load says it is not in Download/DMR/Firmware. Factory restore left `DMR003.UV4T.V022`. The file is back in Download/DMR/Firmware. Channel 56, not transmitting. Battery 36.2 °C, `mtktsAP` 47.1 °C, `mtktsbtsmdpa` 43.5 °C.**
 
 **12:29 (firmware agent): the load through the page is good (stepd2_09: 370/370, 2:13, 0 retries, FW57 flash sample matched). Continue the FM, DMR and M17 rows. Then ONE MORE ROW, the download path: your chosen FW57 said 'file on this phone', so the app used a bench copy from Download/DMR/Firmware and never downloaded it; a user will not have that file. (1) Find every file the loader can see with sha256 5f16ef68...00f7 (Download/DMR/Firmware and the app's own files dir), MOVE them (never delete) to /sdcard/Download/DMR/hold_stepd/, and list the paths in results. (2) Restore factory with the page (0x34 UV4T). (3) Choose the cyan FW57 row: the page must fetch it from the catalogue (screenshot the download and the hash check; it must not say 'file on this phone'), then Load, 0x34 FW57. (4) Move the held files back. Screenshots stepd2_NN_*. Then STATUS: REVIEW. Start now.**
 
