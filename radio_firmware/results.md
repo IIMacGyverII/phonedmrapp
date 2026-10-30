@@ -4780,6 +4780,23 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**PR 150 download and PR 151 hold tracking (13:37).** SignalDeck `1.0.0-beta.22`, versionCode 121, main `93b93cf6`. Screenshots are `stepd3_*.png` in `%TEMP%\fw1718\fw30\`.
+
+| Step | Result |
+|---|---|
+| Restore factory | Page Restore, then confirm Load. 370 / 370, 2955 B/s, 2:08, 0 retries. Result `DMR003.UV4T.V022`. `stepd3_01_restore_confirm.png`, `stepd3_03_uv4t.png` |
+| File moved aside | One match: `/sdcard/Download/DMR/Firmware/DMR003.FW57.V022.bin` to `/sdcard/Download/DMR/hold_stepd/1_DMR003.FW57.V022.bin`. The app firmware dir had no FW57 file yet |
+| Download | The cyan row, between FW22 and B3G1, said "file not on this phone" (`stepd3_05_timeout.png`). The button then read `Download DMR003.FW57.V022` (`stepd3_04_download_button.png`). After that tap the result was `DMR003.FW57.V022 downloaded and checked` (`stepd3_05_checked.png`). Pre-flight was green, hash `5f16ef683ce9`. The file landed at `files/firmware/DMR003.FW57.V022-5f16ef68.bin` |
+| Load | Confirm Load. 370 / 370, 2964 B/s, 2:07, 0 retries. `DMR003.FW57.V022 · flash sample matched`. `stepd3_06_load_confirm.png`, `stepd3_08_fw57.png` |
+| Plain FM | 2.54 s, SNR 64.0 dB, 1 kHz line 1665 Hz. Released |
+| VFO group key | Simplex 467.625, low power, slot 0, colour code 1, talkgroup 9. Carrier 4.22 s, 56.9 dB. 15 sync bursts. Voice LC header and a terminator |
+| M17 Hold to talk | Channel 56, the M17 page. 8.22 s, SNR 62.2 dB. Link-setup CRC ok, 195 frames, every frame with no LICH error, end bit set. `stepd3_09_m17page.png` |
+| Channel 49 after M17 | Start then stop on channel 56: `data hold action=1 sr=0`, then `data hold action=0 sr=0`. Selecting channel 49 logged `data hold: nothing held, not sent`. First key: 4.22 s, 54.3 dB, 15 sync bursts, voice LC header and a terminator |
+
+The held file was moved back to `Download/DMR/Firmware/DMR003.FW57.V022.bin`. Its sha256 is `5f16ef68…00f7`. `hold_stepd` is empty.
+
+Left on `DMR003.FW57.V022`, channel 49, 467.625 MHz, low power, not transmitting. Battery 36.2 °C, `mtktsAP` 43.9 °C, `mtktsbtsmdpa` 42.5 °C.
+
 **Channel 49 control on FW57 (12:58).** The page loaded the local file again: 370 / 370, 2836 B/s, 2:13, result `DMR003.FW57.V022 · flash sample matched` (`stepd2_21_fw57_done.png`). M17 was off. Channel 49 was selected, the module was restarted, and channel 49 was selected again before the first key. Row (a) is that key. Row (b) is the next key, after M17 was started and stopped on channel 56. Row (c) was not run.
 
 | Row | Setup | HackRF | Log |
