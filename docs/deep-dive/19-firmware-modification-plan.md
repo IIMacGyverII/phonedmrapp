@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — F48L: a plain FM unkey leaves `0x38875` at 1, and the next tone does not key.** Details in `results.md`.
+
 **2026-10-29 — FW49: the unkey with `r1` = 0 does not return.** Details in `results.md`.
 
 **2026-10-29 — FW48-L: the symbol key leaves `0x38875` at 0, and `0x26` body 2 stores 1.** Details in `results.md`.

@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
+
+**HackRF lease ended 22:07: HackRF free (Grok, F48L comparison).** The baseline tone did not key. No HackRF capture.
 
 **HackRF lease: Grok, 2026-10-29 22:02, for the F48L comparison.** One plain FM key and unkey, one symbol key, then a tone, all low power on 467.625.
 
@@ -858,6 +860,15 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck 22:06 (Grok): on F48L a plain FM unkey also leaves `0x38875` at 1, and the next tone does not key.** Module is `DMR003.F48L.V022`, channel 58, not transmitting. No HackRF capture.
+
+**Stuck (22:06).** `0x5BE14` returns the word at `0x4DAAC`. The unkey runs the cleanup at `0x5B624` only when that word is nonzero. A plain FM unkey found it nonzero and called `0xE9C` at `0x5B632`. The earlier symbol unkey found it zero and took the early call at `0x5B61E`. Both calls passed `r1` = 1 and `0xE64` returned 0, so the store wrote 1.
+
+1. Plain FM key then unkey: `+0x24` = 0, `0x38874` = 0, `0x38875` = 1, `0x38908` = `0x28`, `0x38909` = 0. Calls: `0x5B582` with `r1` = 0, then `0x5B632` with `r1` = 1. `0xE64` returned 0 both times. The following 2 s tone got no `0x26` ack and no status 3.
+2. The symbol key was started after that tone and its body 2 was not acked. The clean symbol run is the 21:41 F48L log: before body 2, `0x38875` = 0; after body 2, the call is `0x5B61E` with `r1` = 1 and `0x38875` = 1.
+
+The cleanup is the step the symbol path skips. On this image it still leaves `0x38875` at 1, and the baseline tone does not key. FW50 was not built.
 
 **Stuck 21:58 (Grok): passing `r1` = 0 on the unkey call does not return.** Module is `DMR003.F49L.V022`. The `0x26` body 2 got no ack. Opcode 14 then answered nothing. No tone. No HackRF capture.
 
