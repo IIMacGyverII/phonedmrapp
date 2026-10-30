@@ -4780,6 +4780,31 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**P1/P2 factory reading (14:02).** Factory image only (`DMR003.UV4T.V022-ORIGINAL.bin`, objdump at file offsets). No image was built. The Armor was not touched.
+
+`0x2404` loads `0x38B5C` and returns the byte at `+0xAF`. It has thirteen callers: `0x162`, `0x19C`, `0x1214`, `0x62A0`, `0x6378`, `0x9FD0`, `0xA036`, `0xA072`, `0xA0A0`, `0xA0DC`, `0xA0F2`, `0xC1BA`, `0xC244`. The only `st.b` with displacement `0xAF` in the flash image is `0x99C4`, and that writes a stack slot in the handler at `0x99B4`. Nothing in flash stores `0x38B5C+0xAF` directly.
+
+The two gates both call `0x2404` and then `status_post` (`0x7E08`):
+
+| Getter | `0xC1BA`, the start event | `0xC244`, the stop event |
+|---|---|---|
+| 0 | status 1 | status 2 |
+| not 0 | status 10, and `0x3890E` and `0x3890F` are cleared | status 11, and `0x3890E` is set to 2 |
+
+A zero byte is the normal receive pair. A non-zero byte is the mix-check pair. On the start path, a word of 1 at `0x32510` together with `0x800099` at `0x32514` calls `0x6354` and posts no status. The stop path posts nothing for that same pair.
+
+The same byte is not a talkgroup match. `0x2430` returns 0 unless `0x38B5C[0]` is 1, then tests byte `0x96` of `0x38E4C` when `+0xAF` is 0 and byte `0x96` of `0x38AB0` when it is not. Offset `0x96` of the stored digital image is the encrypt byte. `0x62A0` and `0x6378` call `0x19470` only when `0x2404` returns non-zero.
+
+FW26's admit stub returns 1 when this getter is 0 and the flag is on. Zero is the side that posts status 1, so that return posts status 10 instead. A getter that is already non-zero stays on status 10. The stub does not turn a mix-check call into a status 1.
+
+contactType is body offset `0x90`. The `0x22` handler loads it at `0x93BE`, and that is the only load of offset `0x90` in flash. `cmpnei` against 2 reaches the `inct`/`incf` at `0x949A` with no flag write in between, so a byte of 2 becomes the working value 1 and any other byte is kept. The 163 bytes copied to `0x38E4C` are the raw body, so the stored contactType stays 2, and nothing in flash reads it back.
+
+There are 39 `bmaski …, 24` sites. Two of them compare a word with `0xFFFFFF`, both in `0x11A34`. At `0x11B54` the first argument is 3. At `0x11BD0` the second argument is 2. Equal writes 1 through the pointer argument. Not equal calls `0x180EC` with second argument 2 and returns 0, and the pointed byte stays 0 because the function stored 0 there on entry. `0x11A34` switches on `0x34808[2]`. Value 0 goes to `0x11A94`, which is the body that holds both compares. Value 3 returns 0 at once (`0x12108`). The calls at `0x1252C`, `0x12A5E` and `0x12BCE` pass mode 0. The call at `0x17402` passes mode 2, and that arm calls `0x37A0`, which is eight reads through `0x377C` averaged and compared with 45. That is a level test. The constant 2 at `0x17402` is not a load of contactType.
+
+The other `bmaski 24` uses are masks and range checks. The group-list copy at `0x960A` ANDs with the mask. `0x94E8` is a range check. `0xA8D8` and `0xA99A` replace a zero ID with `0xFFFFFF` in the text-send builders. The `0x2B` builder at `0xA808` copies the target out of `0x3250C`. It does not build `0xFFFFFF`.
+
+P1 and P2 are not one gate. The receive-status byte is a mix-check selector, and forcing it the way FW26 does moves a status 1 onto status 10. An incoming `0xFFFFFF` is recognized inside `0x11A34`, and only when that helper is entered on the value-0 arm with mode 3 or with the second argument 2. contactType 2 is folded to 1 while the channel is programmed and is not consulted on receive.
+
 **FW57 Morse (13:45).** One key from SignalDeck's Morse sender (`ToneQueue.morse` at 20 words per minute and 800 Hz, through the module tone queue). The text was `N0CALL FW57`. Analog VFO, 467.625 MHz, low power. The saved callsign was put back afterwards; that test text is not in the packet settings.
 
 | | |
