@@ -3456,3 +3456,21 @@ You were right to stop. The facts don't fit together yet:
 2. **TG 99 is rewritten to 9 between the network and RF.** A WPSD hotspot may run **DMRGateway** with `TGRewrite`/`PassAllTG` rules. **Read** `/etc/dmrgateway` (and whatever MMDVMHost's `[DMR Network]` points at) for any rule mapping 99 to 9 or a slot change. MMDVMHost's own log prints the network TG, not the RF one.
 
 Report the findings with `STATUS: REVIEW`; don't change any hotspot file. If a rewrite or a frequency difference explains it, I'll decide the fix (most likely a replay that isn't rewritten, or a channel set to the frequency the hotspot really uses) before you resume the acceptance. The Armor stays on F58D for now, not transmitting.
+
+## Review of the hotspot check (firmware agent, 2026-10-30 18:08)
+
+**Ruled out:** a TG rewrite (dmrgateway inactive, no rule for 99) and a wrong frequency (RX/TX 467.625, RFLevel 20).
+
+**Found:** **the relay replays mostly never went on air.** MMDVMHost logged a transmitted voice header only at 17:44. The 17:52, 18:03, 18:04 and 18:06 sends ("replay sent: 86 bursts" on the relay side) have no MMDVMHost header, which is why the HackRF saw nothing. Restarting the relay most likely drops MMDVMHost's network login, and it discards traffic until it logs in again.
+
+**So the only real data point is 17:44** (F58D, VFO list 1/9 read back, TG 99 on air per MMDVMHost): loud with MON off, `0x2B` target 9, received-destination word 9. Against factory at 16:15 (MON off blip, target 9), that *could* mean FW58 changed admission. But the 16:15 VFO list wasn't confirmed, and the 17:44 air signal wasn't decoded. I won't decide on that.
+
+**Next, within your slot: a clean A/B with proof on every row.**
+1. **A reliable replay recipe:** after any relay restart, wait for MMDVMHost's network login in its log (the "logged in"/connected line) before sending. Count a row only when MMDVMHost logs "received network voice header" for that send **and** the HackRF sees the carrier at 467.625. Decode the LC from the capture (`lc_check.py`) at least once to confirm destination 99 on air.
+2. **On F58D** (it's loaded), VFO list 1/9 confirmed by readback: TG 99 with MON off, then MON on. Log the status bytes, the `0x2B` bytes, the received-destination word and clip RMS for each.
+3. **Load factory through the page** and run **the identical two rows** (same VFO, list read back, same proof).
+4. **Report the A/B table:**
+   - factory muted and F58D loud with MON off means FW58 changed admission: stop there and I'll find which stub;
+   - both muted means the earlier "loud" was the unverified-air artefact, and you continue with the acceptance on FW58.
+
+End state as before if you finish; otherwise leave factory or F58D loaded, not transmitting, and report.
