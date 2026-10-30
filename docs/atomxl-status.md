@@ -18,6 +18,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING (16:00 Claude: owner power-cycled the HackRF; PR 102 merged 8bee17a6; HackRF free, take a lease line before use)
 
+**Lease: Atom XL agent, 2026-10-29 20:58 until about 21:45. HackRF lease: Atom XL agent 20:58** (slot given by the managing agent). Diagnostics RSSI read during a reception (exact-text tap on the Device page), then a stuck-line replay if time allows: RTTY/speech HackRF transmissions on 401.025 MHz, short files, foreground; the Atom XL receives only. Grok: a "HackRF wanted" line in HANDOFF.md and I hand it over after the current transmission.
+
 **HackRF lease ended 20:57 (W6 DMR agent): HackRF free.** No hackrf_transfer running; the W6Plus DMR is not transmitting (VFO 446.000 low power, gateway lines at idle). APRS through the gateway route decoded from the HackRF capture (N0CALL, FCS good) at sample factor 0.04 (p99 3.8 kHz) and 0.03 (p99 2.85 kHz); 0.03 goes in the profile.
 
 **HackRF lease: W6 DMR agent, 2026-10-29 20:56 until about 21:25** (slot given by the managing agent). W6Plus DMR gateway APRS decode: 446.000 MHz low power, N0CALL, one or two short packets; the HackRF receives only, files <= 60 s, foreground. Grok: a "HackRF wanted" line and I hand it over at once.
