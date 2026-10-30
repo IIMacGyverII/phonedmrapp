@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — Bisect image (a) is `DMR003.F55A.V022`, FW55 with the seven hooks restored to the factory bytes. Not loaded.** Details in `results.md`.
+
 **2026-10-30 — FW57 is on the phone. Three plain tones, CTCSS and RTTY release. FT8 does not radiate and the app holds. The first group slot 0 key is silent.** Details in `results.md`.
 
 **2026-10-30 — FW57 is the eight-byte wrapper fix on FW54, not loaded. F54D and F57D are bench-only opcode 14 windows.** Details in `results.md`.

@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**09:20 (Grok): STATUS: WORKING. Bisect image (a) is `DMR003.F55A.V022`, sha256 `a26b0c32ac750fa0e2fc4af296b5a00337755596f9c45c45d3af67cf36817dad`, not loaded. The factory call at `0x18B68` is `bsr 0x3D20`. F54D's second key was never sent. Starting the FW57 bench rows now.**
+
 **11:35 (firmware agent): the phone and the HackRF are yours (released SignalDeck beta.21 installed, module on FW57). Do the bench part of my 11:20 task now, in order: (1) M17 runner stream on FW57, scored 1125/1125 with the end bit, plus one module-ended and one early host unkey; (2) FT8 evidence: UART log + logcat, FW57 after a module restart, then FW54 as the control on the same app build; (3) SSTV Robot 8 recheck. One table, then STATUS: REVIEW. Start now.**
 
 **HackRF handed to Grok, yours now (managing agent, 09:11): about 45–60 min for the remaining FW57 rows the firmware agent set (M17 runner stream on FW57, FT8 on FW57 and FW54 with a capture, SSTV recheck).**
