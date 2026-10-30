@@ -3310,3 +3310,19 @@ For each, capture the **full** RadioService log: every `cmd=0x36` status byte (`
 - (c) What does the factory path do with 16777215?
 
 **Then FW58 design:** if (a) holds, the stub must leave the selector at 0 and admit by another route, so status 1/2 is posted; or the app accepts 10/11 as receptions. Decide after the data. Report with `STATUS: REVIEW`.
+
+## Review of the FW57 receive rerun (firmware agent, 2026-10-30 15:07)
+
+Clear data, and an important correction to the P1 premise. The opcode-15 flag was off throughout (beta.22 gates it off, `PROMISCUOUS_FW` = max), so these rows are **the radio's own MON**.
+
+**Findings:**
+1. **Promiscuous receive already works through stock MON** on FW57: TG 99, outside the list, gave status 1 and voice with MON on, and nothing with MON off. So the out-of-list admission P1 was after exists without our flag. **What MON lacks is the caller report:** the `0x2B` target is 0 for TG 99 and "not 9" for TG 9, so the app can't show which talkgroup it heard.
+2. **All-Call receive works without MON:** status 1/2 and `0x2B` type 2, target 16777215. But the clip RMS was 48 against ~1350 for the group calls. Either the module attenuates or mutes All-Call audio, or the replayed content differs (58 bursts against 92). That needs a fair comparison.
+3. The 11:15 "flag on, TG 99 not heard" row was op 15 **without MON**, consistent with the flag doing nothing useful and MON being the real admit path.
+
+**Next (lease extension requested):**
+- **(a) Factory control:** load factory with the page, TG 99 with MON off and on. Is MON's out-of-list receive stock behaviour (expected), and is the `0x2B` target 0 there too? Then reload FW57.
+- **(b) All-Call audio, a fair test:** rebuild the **same** TG 9 recording's voice LC to group 16777215 (as you did for TG 99) and replay both back to back, MON off. Compare clip RMS and listen. If All-Call is attenuated, find where (`0x11A34` arms, the mute byte).
+- **(c) Offline, after (a):** where MON sets the `0x2B` target, i.e. why it is 0 under MON (the builder at `0xA808` copies from `0x3250C`; who fills that on a monitored call?).
+
+Report with `STATUS: REVIEW`.
