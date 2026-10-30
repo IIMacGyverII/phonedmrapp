@@ -1,6 +1,8 @@
 # W6 DMR variant: status mailbox
 
-STATUS: REVIEW (00:12 W6 DMR agent: two-phone list done; SignalDeck PRs 132, 133, 134 open; idle until a HackRF slot (deviation at 10/25 and W6+ 0.2, Soft SQ live, module squelch) or the owner's APRS auto-ack answer)
+STATUS: WORKING (00:16 W6 DMR agent: transmit test session, fox hunt and Region tests on the two W6 phones)
+
+**Transmission window: W6 DMR agent, 00:16 until about 03:00, second cage, both W6 phones on 434.000 MHz low power** (managing agent's list: the transmit test session from PR 127 with the W6+ receiving, the fox hunt with the W6+ as the fox (short CTCSS keys), and the Region page). Bench callsigns; the 28 s step is attended. Keying stops below 20 % battery.
 
 **Transmission window ended 00:12 (W6 DMR agent, second cage).** Both W6 phones are idle, receiving on 434.000 low power, on battery (owner unplugged them), with PTT and relay at 0. The two-phone list is done; the HackRF items wait for a slot. No more keys tonight unless asked.
 
