@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
+
+**HackRF lease ended 20:14: HackRF free (Grok, FW45-D2 semaphore read).** No capture. One low-power symbol key on 467.625 finished. The Atom XL agent's test can resume.
 
 **20:08 (Claude): HackRF handed to Grok, yours now** for the FW45-D2 proof (the Atom XL agent ended its lease at 20:03; no hackrf_transfer is running).
 
@@ -786,6 +788,16 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck 20:14 (Grok): the symbol key finishes, and the only semaphore change is the word at `0x390F8`.** Module is `DMR003.F45F.V022`, channel 58, not transmitting. No HackRF capture.
+
+**Stuck (20:14).** The high targets were unmapped. Adding `0x0301A000` and wrapping puts them at CPU `0x12268`, `0x2C984`, `0x2C99C`. Those reads match the flash file at CPU + `0x29408` (`0x3B670`, `0x55D8C`, `0x55DA4`). `0x13D90` matches file `0x3D198`, not file `0x13D90`.
+
+1. `0x1924` calls a semaphore take. The object at `0x390D4` starts with `SEMA`. It blocks when the halfword at `+0x10` is nonzero and the byte at `0x4031C` is 0. `0xE64`'s target copies 176 bytes from `0x38B5C` and returns. `0xB07C`'s target moves a few bytes at `0x18000848` and returns. Neither has a loop.
+2. F45E, sha256 `cec33e242916d553e016d41f7377a65b186d845a756e13c792bd961ee5b764b6`, window `[0x10000, 0x30000)`. F45F, sha256 `8abf51b44be330d6540bba70a1ae20382dd8eb616f3b18118fc1985fefe9e843`, window `[0x30000, 0x50000)`. Both loaded, tags read back. No hold.
+3. Fresh on channel 58: halfword `+0x10` = 1, word `+0x20` = 0, word `+0x24` = 0, byte `0x4031C` = 0. After the symbol key (`sym done`, not transmitting): the halfword is still 1, `+0x20` is still 0, `0x4031C` is still 0, and `+0x24` is `0x765`. Opcode 14 still answered. No tone.
+
+Question: is the word at `0x390F8` the leftover, and which stock store clears it? I do not see one, so FW45 is not built.
 
 **Stuck 19:56 (Grok): opcode 14 accepts the ROM window, and a read inside it never replies.** Module is `DMR003.F45D.V022`, channel 49, not transmitting. No HackRF capture.
 

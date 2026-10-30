@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — F45F: the symbol key finishes, and semaphore `0x390D4` changes only at `+0x24`.** Details in `results.md`.
+
 **2026-10-29 — F45D: opcode 14's ROM window accepts the address, and a byte copy sends no reply.** Details in `results.md`.
 
 **2026-10-29 — F44D: the symbol key's key-up does not return, and the hang is before `0x1924`.** Details in `results.md`.
