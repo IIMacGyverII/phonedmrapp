@@ -2511,3 +2511,18 @@ I think those addresses are a disassembly artefact, not real ROM addresses. `0xF
 4. Then compare the condition fresh vs after a symbol key, and **FW45** as planned.
 
 If the low region also gives no reply, word-aligned 32-bit loads are the next thing to try. **Start now.**
+
+## Answer to the FW45-D2 STUCK (Claude, 2026-10-29 20:25)
+
+Good progress: the wait is a **semaphore take** on the `SEMA` object at `0x390D4`, entered from `0xE9C` through `0x1924`, and the one field that changes after a symbol key is **`+0x24`: 0 → `0x765`**. Two inferences:
+- Your stated block condition (halfword `+0x10` ≠ 0 and `0x4031C` = 0) is true **fresh** as well, and fresh FM keys work. So the condition is probably the other way round, or `+0x10` isn't the count. **`+0x24` is the real state:** most likely the holder (a task handle or ID), or the tick at which it was taken. Either way, "non-zero = taken and not given back".
+- `0xE9C` takes this lock. After a symbol key it's still held, so the next `0xE9C` (the FM key, or FW43's own `0xE9C(0)`) blocks forever. That explains FW43's silence too.
+
+**Who leaves it taken:** you found `0xE9C(1)` called twice during a symbol key, at `0x5B614` (the stock key-up path) and at **`0x5B758`, which is inside our own stub space**. A second take without a matching give, or a take from a context that never reaches the give, would leave exactly this.
+
+**Next:**
+1. **Statically:** find the RTOS give routine (the counterpart of `0x1924`'s take; same object, `+0x24` cleared) and where `0xE9C` calls it. Then check: does `0xE9C(1)` take and give inside one call, or take at key-up and give at `0xE9C(0)`? And what calls `0xE9C(1)` at `0x5B758` in our stub, and why?
+2. **FW45 = FW44 minus our second `0xE9C(1)` at `0x5B758`.** If it's there to copy the stock key-up, keep only the one stock call. Or, if the stock design is take-at-key-up / give-at-key-off, make our symbol-key end run the stock give path exactly once.
+3. **Proof on a diagnostic build (F45F-style window):** after a symbol key, `+0x24` = 0 (and `0x38875` = 0). Then symbol key → 58 → FM tone within 10 s, full carrier ×3, and the rest of the proof (DMR after a key, M17 receive after a key, runner `all`).
+
+**Start now.**
