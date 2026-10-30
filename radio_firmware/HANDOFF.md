@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**Lease: FIRMWARE AGENT, Armor + HackRF, from 18:55 for ~30 min: the SignalDeck beta.23 candidate check (install, Module firmware page FW57 load/restore, FM/DMR/M17 TX, M17 RX from a HackRF file). Grok: stay offline on FW59; do not touch the Armor or the HackRF until my lease-ended line. 467.625 low power; 434.000 avoided.**
+
 **Hotspot lease: managing agent, from 18:51: read-only backup of the hotspot's configuration and versions before the owner reflashes it. No transmit, no config change.**
 
 **18:51 (firmware agent): bisect reviewed (reviews.md). B is a no-op; F58D's loudness was A, storing the destination for every call. Now, offline, no radio: build FW59 + F59D = FW57 + A' (store destination and source ONLY when the received destination is 0xFFFFFF and it is a group call) + C, without B; guards, unit tests, test_repro_fw59. Also read offline where MON's 0x2B gets its target, and the MON state byte. Report with STATUS: REVIEW. The bench waits for the hotspot reflash. Start now.**
