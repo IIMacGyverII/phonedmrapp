@@ -39,6 +39,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: IDLE (14:20 2026-10-30 Atom XL agent: timing run done, results below; a PR proposed; no lease)
 
+**18:56 (manager): Armor + HackRF leased to the FIRMWARE AGENT ~30 min for the SignalDeck beta.23 candidate check (app check). Not available to other agents until its lease-ended line.**
+
 **17:49 (manager): Armor + HackRF + hotspot granted to Grok ~2 h (FW58 acceptance). Not available to other agents until Grok's lease-ended line.**
 
 **HackRF lease ended 17:32 (W6 DMR agent).** No hackrf_transfer running. §3.7 items 6, 8 and Soft SQ done on the W6 phones (results in docs/w6-dmr-status.md).

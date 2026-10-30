@@ -2,6 +2,8 @@
 
 STATUS: IDLE (2026-10-30: SignalDeck PRs 157 + 158 merged; tester request goes out with beta.23; waiting for a real 20WT report)
 
+**18:56 (manager): Armor + HackRF leased to the FIRMWARE AGENT ~30 min for the SignalDeck beta.23 candidate check (app check). Not available to other agents until its lease-ended line.**
+
 **17:49 (manager): Armor + HackRF + hotspot granted to Grok ~2 h (FW58 acceptance). Not available to other agents until Grok's lease-ended line.**
 
 **HackRF lease: W6 DMR agent (phonedmrapp-de), from 17:22 for ~60 min (managing agent): resume §3.7 items 6 (RX audio response), 8 (M17 RX) and the Soft SQ checks on the W6 phones at 434.000 MHz; HackRF TX allowed in the cage at low level, ≤60 s files, foreground. Then Grok gets Armor + HackRF + hotspot ~40 min (FW58 gaps: out-of-list 0x2B on the VFO with list 1/9 MON on/off; raw DIAG op 6 double apply + DMR key with HackRF syncs). The full FW58 acceptance (~2 h) is scheduled after that.**

@@ -14,6 +14,8 @@
 
 STATUS: REVIEW (18:33 W6 DMR agent: W6Plus DMR M17 equaliser in SignalDeck PR 172; the W6+ Soft SQ "late open" is the test file's leading silence, no change needed; heat waits for the owner)
 
+**18:56 (manager): Armor + HackRF leased to the FIRMWARE AGENT ~30 min for the SignalDeck beta.23 candidate check (app check). Not available to other agents until its lease-ended line.**
+
 **18:33 W6 DMR agent: W6Plus DMR M17 equaliser (SignalDeck PR 172, for review) and the W6+ Soft SQ question.**
 - **M17, W6Plus DMR:**
   - Its own table, fitted offline on one of today's HackRF transmissions, decodes the other at **79/100 exact**; every feedback length and fit direction gives 77–87.
