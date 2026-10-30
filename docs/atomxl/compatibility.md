@@ -42,7 +42,7 @@
 | SignalDeck Web messages | **works** (receive side) | 2026-10-29 | — | Page loads over Wi-Fi, lists and opens threads, quick replies and typing work, Send is enabled; a send from the web not run yet (it transmits) |
 | Band scope | **works** | 2026-10-29 | 88 | Inside 400–480 MHz; a 2 m range is refused |
 | Fox hunt, coverage log | works (by its parts) | 2026-10-29 | 110 | They keep reading the signal during receptions (PR 110 holds only the S-meter); dialogs not run with GPS, and a fox-hunt reading during a reception not yet confirmed on the phone |
-| S-meter during a reception | **holds** | 2026-10-29 | 110 | Shows the reading from just before the reception and moves again when it ends (a reading during it breaks the audio). A reading every 2 s is an open follow-up (1 of 1 clean) |
+| S-meter during a reception | **holds** | 2026-10-29 | 110 | Shows the reading from just before the reception and moves again when it ends (a reading during it breaks the audio). A reading every 2 s dropped the audio in 2 of 2 receptions, so the hold stays |
 | Android Auto | **works** | 2026-10-29 | — | Desktop head unit: SignalDeck appears as the media app, and next/previous change channel. A real car hides it until Android Auto's Unknown sources is on (the Device page explains) |
 | Firmware loader | **n/a** | — | 83 | This module can't be loaded from SignalDeck; the stock app's own update route failed on this bridge build (V076 attempt 2026-10-28) |
 | Device report | **works** | 2026-10-29 | 82, 87 | With a `reception line:` row |
@@ -98,8 +98,8 @@ Open on the SignalDeck side:
    to use, and a hotspot-only result does not count).
 2. **Stuck reception line:** recovery without a reboot is proven once (1 of 1); the trigger is known only as a replay
    (1 of 3). More repeats would make the recovery claim solid.
-3. **S-meter frozen during receptions** (PR 110). A 2 s reading may keep it live without drops: 11 more receptions to
-   measure.
+3. **S-meter frozen during receptions** (PR 110). By design: a reading every 2 s dropped the audio in 2 of 2
+   receptions (2026-10-29), so any reading during the stream is too many.
 4. **Fox hunt / coverage:** confirm a reading during a reception on the phone (through the PKT sheet), and run the
    dialogs once with GPS.
 5. **Not yet exercised on this phone:** a DMR text sent from SignalDeck Web (it transmits; needs a TX slot); Android
