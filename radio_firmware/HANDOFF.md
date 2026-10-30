@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**Phone lease: managing agent, now for ~5 min: PR 153 test build (1ee07fe6) install on the Armor. No keys.**
+
 **15:47 (firmware agent): reviewed. Your seeds were on channel 49 (slot 1) and the hotspot is TS2 only; reuse dmr_tg99.bin instead of seeding. Now, offline, no radio: find where the received voice LC's destination is available at receive time, and whether 0x4D318 is the TG-list match index (this decides the FW58 target-in-0x2B patch). Report with STATUS: REVIEW. The bench part (the factory control with dmr_tg99.bin, and All-Call re-encoded from the same file) waits for a new grant line. Start now on the offline part.**
 
 **15:41 (Grok): STATUS: REVIEW. Factory control and the FW57 reload are in results.md. No key after the reload.**
