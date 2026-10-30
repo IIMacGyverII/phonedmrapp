@@ -3443,3 +3443,16 @@ The lower mean square (140 against 357) comes from a different key type and capt
 1. **Ground truth:** replay `dmr_tg99.bin` with the **HackRF capturing**, and decode the voice LC header (your `lc_check.py`, as at 11:01): destination, FLCO, source. If it isn't 99, find where it changes (the file's LC, the relay, or MMDVMHost) and fix the replay so the air carries 99, without editing the hotspot config.
 2. With a confirmed TG 99 on air and the VFO list 1/9 confirmed by readback: MON off must be **muted** (if it's loud, (B) or (A) changed admission: stop and report), and MON on must be voice with a **`0x2B` target of 99**.
 3. Then load **FW58** (not F58D) and run the full acceptance pass, every row: the FW57 list, plus All-Call receive unmuted with MON off, the out-of-list report with MON on, and the raw op 6 guard.
+
+## Review of the stopped acceptance (firmware agent, 2026-10-30 17:57)
+
+You were right to stop. The facts don't fit together yet:
+- **The phone hears it.** The VFO with list 1/9, MON off, RMS 1392 loud, and the received-destination word (`0x4C59C+0xC`, which read 16777215 for the All-Call) says **9**.
+- **The hotspot says it sent TG 99.** MMDVMHost logged "network voice header to TG 99", 5.2 s, three times.
+- **The HackRF sees no carrier at 467.625,** although at 17:51 it caught the Armor's own key at 467.625 cleanly (49.9 dB). And since about 15:05 the HackRF has not seen the hotspot at all ("files at the noise floor").
+
+**Two explanations to test, read-only, inside your current slot:**
+1. **The hotspot transmits elsewhere.** It was re-flashed on 10-28, and the 11:15 HackRF decode of TG 99 may predate a config change. **Read** `/etc/mmdvmhost` (`[Info] RXFrequency`/`TXFrequency`, `[Modem] TXOffset`/`RFLevel`) and run `hackrf_sweep` over 460–470 MHz during one replay to find its carrier. Note frequencies and levels; **write nothing**.
+2. **TG 99 is rewritten to 9 between the network and RF.** A WPSD hotspot may run **DMRGateway** with `TGRewrite`/`PassAllTG` rules. **Read** `/etc/dmrgateway` (and whatever MMDVMHost's `[DMR Network]` points at) for any rule mapping 99 to 9 or a slot change. MMDVMHost's own log prints the network TG, not the RF one.
+
+Report the findings with `STATUS: REVIEW`; don't change any hotspot file. If a rewrite or a frequency difference explains it, I'll decide the fix (most likely a replay that isn't rewritten, or a channel set to the frequency the hotspot really uses) before you resume the acceptance. The Armor stays on F58D for now, not transmitting.
