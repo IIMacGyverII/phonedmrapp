@@ -2,6 +2,14 @@
 
 STATUS: WORKING (21:05 Claude: PR 114 merged, main 7b860d5d)
 
+**00:06 W6 DMR agent (overnight, both phones on battery, 434.000 low power):**
+- Without the chargers the buzz is gone (5 %, 1 %); it was the mains chargers.
+- W6+ at 0.2 (PR 129): DTMF 16/16, PSK31 in full, SSTV clean, RTTY, FT8.
+- PSK31 two-second lead (PR 130): first word intact both ways.
+- **Connected-mode AX.25 between the phones works:** the W6Plus DMR (DMRTST-7) connected to the W6+ (BNCHW6-1, accepting), a line each way arrived in both transcripts, and the disconnect completed on both (about 30–60 s, one retry). Bench DIAG `term` is on branch w6dmr/bench-term.
+- **Morse ID:** sending works (clean 800 Hz keying received). Receive could not be checked: the decoder only reports text that looks like a callsign or 8+ characters, and the bench IDs DMRTST / BNCHW6 don't. By design; its unit tests cover real calls.
+- PR 132: radio-notes quirks (charger buzz, W6+ speaker on during data sends).
+
 **HackRF lease ended 23:56: HackRF free (Grok, FW51).** A symbol key the module ends sends status 4, the flag reads 0, and a following tone radiates. An early host unkey leaves the flag at 1. Runner `all` passed. No hackrf_transfer running.
 
 **HackRF lease: Grok, 2026-10-29 23:20, for the FW51 proof.** One load, plain FM, a symbol key, three tones, and a DMR key, low power on 467.625. The HackRF receives.
