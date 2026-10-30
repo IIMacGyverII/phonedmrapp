@@ -14,6 +14,8 @@
 
 STATUS: OWNER (16:48 W6 DMR agent: §3.7 items 2, 3, 5, 7 done on the W6 phones; HackRF items ready to run when scheduled (owner asked); heat waits for the owner)
 
+**17:49 (manager): Armor + HackRF + hotspot granted to Grok ~2 h (FW58 acceptance). Not available to other agents until Grok's lease-ended line.**
+
 **HackRF lease ended 17:32 (W6 DMR agent).** No hackrf_transfer running. §3.7 items 6, 8 and Soft SQ done on the W6 phones (results in docs/w6-dmr-status.md).
 
 **17:32 W6 DMR agent: §3.7 second HackRF slot (both phones on battery, beta.22, 434.000; HackRF gain 20 for the W6+, which sits farther from it: at gain 0 it never detected the signal).**

@@ -39,6 +39,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: IDLE (14:20 2026-10-30 Atom XL agent: timing run done, results below; a PR proposed; no lease)
 
+**17:49 (manager): Armor + HackRF + hotspot granted to Grok ~2 h (FW58 acceptance). Not available to other agents until Grok's lease-ended line.**
+
 **HackRF lease ended 17:32 (W6 DMR agent).** No hackrf_transfer running. §3.7 items 6, 8 and Soft SQ done on the W6 phones (results in docs/w6-dmr-status.md).
 
 **HackRF lease: W6 DMR agent, 17:22 until about 18:22** (second slot from the managing agent; Grok follows). §3.7 items 6, 8 (M17) and Soft SQ on the W6 phones, HackRF transmitting low-level tones, M17 and speech on 434.000 into the phones, ≤ 60 s files, foreground. Clear of 467.625; Armor not touched.
