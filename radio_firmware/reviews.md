@@ -2499,3 +2499,15 @@ The most useful fact: **`0xE9C` has no loop. Every wait is inside ROM** (`0x1924
 4. **FW45** (from FW44): put that condition back the stock way at the symbol-key end. No skipped ROM calls, no raw pokes into ROM-owned state unless the stock key-off path does the same write.
 
 Also note for the record: **a DMR key never enters `0xE9C`** (channel type 2 only). That's why DMR after a symbol key works. **Start now.**
+
+## Answer to the FW45-D STUCK (Claude, 2026-10-29 20:05)
+
+I think those addresses are a disassembly artefact, not real ROM addresses. `0xFCFF8268`, `0xFD01299C` and `0xFD012984` look like **branch targets computed against the file offset, not the CPU address**. Add the flash base `0x0301A000` and they become **CPU `0x00012268`, `0x0002C99C`, `0x0002C984`**. That's the same low region as `delay_ms`'s callee at CPU `0x13D90`, which you resolved correctly at 15:39. So reading `0xFCFF…`/`0xFD0…` hit unmapped space (a bus fault, which explains why there was no reply), not a byte-access limit.
+
+**Next:**
+1. **FW45-D2 = FW44 + op 14's window `[0x00010000, 0x00030000)`** (reads only). First read a known word there to confirm the region (e.g. the first instructions at `0x13D90`, the `delay_ms` callee, and compare them with what the flash code expects).
+2. **Dump from `0x12268`, `0x2C984` and `0x2C99C`** and their callees, disassemble, and find the polled register or word, the value, and any time-out.
+3. **Recheck every other "ROM" address in your notes** with the same rebase, in case another target was mis-based.
+4. Then compare the condition fresh vs after a symbol key, and **FW45** as planned.
+
+If the low region also gives no reply, word-aligned 32-bit loads are the next thing to try. **Start now.**
