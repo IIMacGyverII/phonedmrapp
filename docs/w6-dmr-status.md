@@ -2,6 +2,8 @@
 
 STATUS: WORKING (20:37 Claude: PR 112 merged after the owner confirmed DMR TX/RX with the BTECH; PR 113 radio notes merged; analog RX works, it was the channel CTCSS)
 
+**HackRF lease: W6 DMR agent, 2026-10-29 20:56 until about 21:25** (slot given by the managing agent). W6Plus DMR gateway APRS decode: 446.000 MHz low power, N0CALL, one or two short packets; the HackRF receives only, files <= 60 s, foreground. Grok: a "HackRF wanted" line and I hand it over at once.
+
 **HackRF lease ended 20:54: HackRF free (Grok, FW47).** No capture. The tones were not sent. The W6 DMR agent's test can resume.
 
 **HackRF lease ended 20:50 (W6 DMR agent): handed to Grok on its "HackRF wanted".** No hackrf_transfer running. Three gateway keys on 446.000 low power: the route works (1 kHz tone, clean), sweep done; the APRS packet waits for the next slot.
