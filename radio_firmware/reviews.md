@@ -2985,3 +2985,30 @@ Report as a regression table: rows × FW54, FW55, FW57.
 **Correction to the 09:40 task (firmware agent, 09:55).** FW54's opcode 14 reads only `[0x18000000, 0x18010000)` (`movih` 6144/6145 at `0x5C0CE`/`0x5C0D6`), so it cannot read `0x4DAAC` or `0x38875`. For proof step 1, also build two **bench-only diagnostic twins**, as FW4D and F49L did: **F54D** = FW54 and **F57D** = FW57, each with those two immediates set to 3 and 5 (window `[0x30000, 0x50000)`), tags `DMR003.F54D.V022` and `DMR003.F57D.V022`. These are never released and never used for the acceptance pass.
 - Step 1 runs on F54D (expect `0x4DAAC` = 1 after a plain analog key), then factory plus one key, then F57D (expect 0, and a second key acked).
 - Then load FW57 itself for steps 2–4.
+
+## Queued after the FW57 proof: the first-key group slot 0 fault, by hook bisect (firmware agent, 10:15)
+
+FW55 has factory `0x26` sites and still fails this key, so the fault is not on the key path. **FW55 differs from the factory image outside the tail in exactly these bytes** (byte diff, factory vs FW55):
+
+| Site | Factory bytes | What our hook does |
+|---|---|---|
+| `0x37F8` | `zextb r4,r0; mov r0,r14` | close guard → `0x5BDAA` (one-shot at `0x4B376`, armed only by the module-end drop) |
+| `0x7C56` | `bsr 0x2B0C` | pend wrapper → `0x5C040` (timeout 1 and a countdown while `0x4B368` ≠ 0; only the dead opcode 16 body wrote it) |
+| `0xA890` | `bsr 0x90B0` | `0x2B` caller info → `0x5C4E2` (11-byte reply while promiscuous `0x4B364` = 1) |
+| `0xC1BA`, `0xC244` | `bsr 0x2404` | receive admit → `0x5C4C8` (admits all while `0x4B364` = 1) |
+| `0x17E26` | `andi r2,r2,15` | colour code → `0x5C518` (sets bit 8 of `0x11000384` while `0x4B364` = 1; the stock mode-4 branch at `0x17DE6` sets bit 8 too) |
+| `0x18B68` | `bsr 0x18B70` | wake refill → `0x5B4D0` |
+| `0x382B8` | dispatch word | `0x40` handler |
+
+All seven are safe for `r15`: six replace a `bsr`, `0x37F8` sits after `0x37F4`'s `push r15`, and `0x17E26`'s function saves `r15` at `0x17B2E`. So the fault is the behaviour of one hook, or a RAM word one of them reads at a non-zero value.
+
+**Two cheap checks first,** on a diagnostic twin with the op 14 window `[0x30000, 0x50000)`:
+- Read `0x4B364`, `0x4B368` and `0x4B376` right after a module restart, after the digital channel write, and after the failing key.
+- A non-zero `0x4B364` would set colour-code bit 8 on that first write (`0x17E26`). That is the first suspect, because it runs on the channel write and the fault follows the channel write.
+
+**Then the bisect,** about 150 s per load, one test each: one digital channel write, then the first group slot 0 key, HackRF for sync. Every image is FW55 with hooks set back to their factory bytes; the tail stays and simply goes unused.
+- **(a)** all seven hooks back to factory. If it passes, it is a hook.
+- **(b)** only `0x17E26` and `0x7C56` back.
+- **(c)** narrow down from there.
+
+Restoring a hook to factory bytes is always safe: it is the factory instruction.
