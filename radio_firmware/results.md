@@ -4780,6 +4780,28 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**FW58 design (16:25). Not built.** Factory image for the mute reading. FW57 for the op 6 sites. No image, no radio.
+
+**The mute decision.** `0x11A34` switches on byte `0x34808+2`. The table at file `0x388AC` sends 0 to `0x11a94`, 4 to `0x11c40`. DMR uses 4. On that arm, `0x11d04` is the second-argument-3 case. It calls `0x23d54`. A return of 1 takes `0x11d18` (`bnez`) to `0x11d2e`, which stores 1 at `0x34808+0x1B` and through the pointer, then returns 1. The caller at `0x12532` sees the 1 and returns without the rest of the audio setup. A return of 0 falls into `0x180ec` with second argument 2, and mode 0 of that helper calls `0x17f20(0)`. `0x17f20(0)` clears bits 0 and 4 of `0x11000404`. That is the unmute. `0x23d54` returns 1 when byte `0x4C7BC+0x13` is set and both `0x4D318+slot+14` and `+16` are clear. The flag at `+14` is the match flag. An All-Call is not in the talkgroup list, so the flag stays clear, `0x23d54` returns 1, and the call takes the return-1 path. The same shape is at `0x11d80` for second argument 2, branching to `0x11d96`. The `0xFFFFFF` compares at `0x11b54` and `0x11bd0` are mode 0, not this arm. Each `bf` there also leads to the return-1 block. Nopping them would only change mode 0, so they are not the DMR patch.
+
+**The bytes to flip.** Do not nop `0x11d18`. That would unmute every unmatched talkgroup. The stub keeps the `bnez` test and adds one compare: the word at `0x4C59C+0xC` against `0xFFFFFF` (the same word mode 0 already uses). Equal takes `0x11d1c` (the `0x180ec` path). Anything else takes `0x11d2e`, as today. The twin uses `0x11d84` and `0x11d96`.
+
+**(A) Heard talkgroup.** `0x27f7c` argument 2, when byte 0 of the 12-byte buffer masked with `0x3F` is 0, writes the destination to the caller's frame−20 and the source to frame−24. The handler stores those words at `0x26f02` and `0x26f18` only when `0x4D318+slot+14` is 1, and it indexes with byte 0 of `0x4C7BC`. The reader at `0x14b4e` indexes with byte 2. The fail path starts at `0x26f24` (`subi r3, r8, 16`, four bytes). Replace those four bytes with a `bsr` to a stub that writes frame−20 and frame−24 into `0x4D318[(byte 2)+7]` and `[(byte 2)+9]`, then sets `r3` to `r8−16` and returns, so `0x26f28` is unchanged. Admission is not touched.
+
+**(C) Op 6 guard, on the FW57 image.** Apply `0x5B2CC`–`0x5B2D3` saves `0x11000100` to `0x4B000` with no test. Replace those eight bytes with a `bsr` and two nops. The stub saves only when byte `0x4B008` is 0, then sets that byte, and leaves `r4` equal to `0x11000100` so `0x5B2D4` still writes `0x80`. Release `0x5BD36`–`0x5BD3D` restores with no test. The same shape: restore only when `0x4B008` is 1, then clear it. `0x5BD3E` still branches to `0x5B2A8`.
+
+**Space.** All five stubs go in the free tail `0x5C59C`–`0x5C6FC` (352 bytes). About 120 bytes. Each stub's literal pool stays inside that range. Nothing else in `space_map.FREE` is used. FW57's retarget at `0x5BDF4` stays.
+
+| Stub | At | Live site | Bytes replaced |
+|---|---|---|---|
+| `rx_lc_ids` | `0x5C59C` | `0x26f24` | 4, the `subi` |
+| `allcall_3` | `0x5C5C4` | `0x11d18` | 4, the `bnez` |
+| `allcall_2` | `0x5C5E8` | `0x11d80` | 4, the `bnez` |
+| `op6_apply` | `0x5C60C` | `0x5B2CC` | 8, the unconditional save |
+| `op6_release` | `0x5C624` | `0x5BD36` | 8, the unconditional restore |
+
+**Guards.** Build from FW57. Tag `DMR003.FW58.V022`. `literal_guard` load, branch, never-written, and pointed-into. `space_map` gains five retarget windows and no other live bytes. A reclaimed range holds no literal and no branch target used from outside. (A) does not write the admit flag or `0xC1BA` / `0xC244`. (B) does not change the branch for a destination other than `0xFFFFFF`. The op 6 marker starts clear, so the first apply still saves. Not in this image: fast tune, the transmit time-out, and any change to who is admitted.
+
 **Factory control with the stored talkgroup 99 file (16:15).** The phone was on the PR 153 test build. Factory was loaded through the page: 370 / 370, 378,620 bytes, 2957 B/s, 2:08, 0 retries, then `Module answers — DMR003.UV4T.V022`. The listen channel was a VFO at 467.625 MHz, low power, colour code 1, slot 1, groups requested as 1 and 9. The status object did not return a groups list. The hotspot replayed `dmr_tg99.bin` (86 bursts, slot 2). The relay process was restarted so it would load that file. `/etc/mmdvmhost` was not written.
 
 | Replay | MON | `0x36` | `0x2B` | Clip |

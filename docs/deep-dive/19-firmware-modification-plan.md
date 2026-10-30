@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — FW58 is designed and not built.** The DMR All-Call mute is `0x11d18`: a return of 1 skips `0x17f20(0)`, which is what clears the mute bits. The patch unmutes only when the word at `0x4C59C+0xC` is `0xFFFFFF`, copies the heard talkgroup into the `0x2B` slot, and makes the op 6 hold save once. Details in `results.md`.
+
 **2026-10-30 — On the factory image the stored talkgroup 99 file is quiet with MON off and voice with MON on, and the caller report says target 9. The same file re-encoded as All-Call is type 2, target 16777215, and not quieter than the MON-off group clip. FW57 is loaded again and the published beta.22 is installed.** Details in `results.md`. The voice LC destination is bytes 3–5 of the 12-byte buffer; `0x4D318` is per slot, not the talkgroup-list index.
 
 **2026-10-30 — The factory image radiated, and the hotspot never printed a voice header, so the talkgroup 99 monitor clips were not taken. FW57 is loaded again. The `0x2B` target is the word copied from `0x4C7A0+4`, and that word was 0.** Details in `results.md`.
