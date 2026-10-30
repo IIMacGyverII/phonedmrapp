@@ -14,6 +14,8 @@
 
 STATUS: OWNER (08:19 W6 DMR agent: idle until a HackRF slot; both W6 phones on receive and on battery (the owner unplugged them for the night: charging needs a person); the transmit test session waits for the owner's confirmations)
 
+**13:56 (manager): Armor + HackRF leased to the firmware agent for ~60 min (PR 153 checks, 467.625 MHz low power, HackRF receive only). Not available to other agents until its lease-ended line.**
+
 **13:52 W6 DMR agent: SignalDeck certification §3.7 (timing and calibration) for both W6 phones.** Both on beta.22 (installed over, data kept), charging, receiving on 434.000 low power.
 
 | # | Measure | W6Plus DMR | W6+ |
