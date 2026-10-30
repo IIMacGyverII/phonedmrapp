@@ -4780,6 +4780,23 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**FW57 proof (09:08).** Loaded. Low power, 467.625 MHz. No HackRF on step 1. The rows after that used the HackRF as the receiver.
+
+Step 1. F54D after one plain key: `0x4DAAC` = 0, `0x38875` = 1. The expected flag of 1 was not there. The factory image keyed and released. F57D: the flag was 0 during the key and after it, `0x38875` stayed 1, and the second key was transmitting and then released, with four `0x26` log lines. `0x4B364`, `0x4B368` and `0x4B376` were 0 after the load, after the app restart, after one digital write, and after that key.
+
+| Row | FW57 |
+|---|---|
+| Plain FM ×3 | 2.54 s, 2.84 s, 2.85 s, each released, 1 kHz present |
+| CTCSS 67.0 Hz | 2.85 s, 67 Hz line 586 Hz of deviation, released |
+| SSTV Robot 8 | Carrier 11.48 s, released. The picture decoder locked 28 of 120 lines |
+| FT8 | No carrier. The app stayed transmitting until it was force-stopped |
+| RTTY | 3.58 s, released, text `FW57 OK` |
+| POCSAG 1200 | 2.26 s, released. Codewords not scored |
+| DMR | First group slot 0 key: no carrier, app transmitting. Second group slot 0, group slot 1, and private on both slots: 17–22 direct-mode bursts, bench source, then released |
+| M17 | A 3.55 s PTT on an M17 channel radiated and released. Not a scored symbol-stream key |
+
+Left on `DMR003.FW57.V022`, not transmitting. Heat at the end: battery 32.7 °C, `mtktsAP` 40.7 °C, `mtktsbtsmdpa` 38.8 °C.
+
 **FW57 built, not loaded (09:45).** Sha256 `5f16ef683ce92dc02ebf1f35d3d3cf5dca2ad4edfeee8e044ea75d9d3cda00f7`, tag `DMR003.FW57.V022`, from FW54. The only change besides the tag is `0x5BDF4`–`0x5BDFB`: `br 0x5BBE2; nop; nop` (`00e8f7fe 036c036c`), replacing `push r15; bsr 0x5BBE2; pop r15`. `0x5BDFC` stays `0x1494`. The four `0x26` sites still call `0x5B580` and `0x5B614`. `covered_loads`, `covered_branches`, `never_written`, `pointed_into` and `space_map.outside_free` are empty. Not loaded. Bench-only twins, same opcode 14 window `[0x30000, 0x50000)` (`movih` 3 and 5 at `0x5C0CE` and `0x5C0D6`): F54D sha256 `e9d040ecbca601a2e29f4adb269f33dfc10efada2f203461a85ec9aaa7cf8a5a`, F57D sha256 `b22ef25fbda06c4a999faf60f915a55b17e948ea4588c108d453f50d588b1b85`. Not for a release and not for the acceptance pass.
 
 Opcode 16 and 17: FW30's refuse is `movi r4, 0x8E7C; jsr r4`, an absolute jump to `0x00008E7C`. The ack routine's runtime address is `0x03022E7C`. FW27, before that refuse, answered both opcodes with `sr=0`. No later results row shows opcode 16 or 17 answered `sr=1`. The current SignalDeck tree does not send them. Treat them as a wild jump. The host must not send them. The fix is not in FW57; it is not an 8-byte change.

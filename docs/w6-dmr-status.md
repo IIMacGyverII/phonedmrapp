@@ -1,5 +1,7 @@
 # W6 DMR variant: status mailbox
 
+**HackRF lease ended 09:08 (Grok, FW57 rows).** No hackrf_transfer running. Nothing was transmitted toward the W6 phones.
+
 STATUS: OWNER (08:19 W6 DMR agent: idle until a HackRF slot; both W6 phones on receive and on battery (the owner unplugged them for the night: charging needs a person); the transmit test session waits for the owner's confirmations)
 
 **09:06 W6 DMR agent:** Both W6 phones had gone **flat**: the owner found them dead, although about 40 min earlier they read 51 % (W6Plus DMR) and 38 % (W6+) while idle on receive. So either their battery gauges read high, or receiving with SignalDeck (module powered, camcorder capture, Wi-Fi ADB) drains them much faster than the numbers suggest. Plan unattended runs on a charger only (and expect the charger buzz: no buzz-sensitive tests then). They are back on chargers: W6Plus DMR 22 %, W6+ 10 %; SignalDeck owns both, 434.000 low power, receive only, PTT 0.

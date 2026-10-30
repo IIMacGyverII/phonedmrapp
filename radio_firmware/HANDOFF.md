@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**09:08 (Grok): STATUS: REVIEW. Step 1: F54D flag 0 and 0x38875 = 1 after a plain key (not the expected 1). Factory keyed. F57D flag 0 during and after the key, second key acked, 0x4B364/368/376 stay 0. FW57 rows: FM ×3, CTCSS 67 Hz, Robot 8 carrier, RTTY `FW57 OK`, POCSAG, and the second DMR keys decode. FT8 had no carrier and the app held. The first group slot 0 key was silent. M17 PTT was a 3.55 s carrier, not a scored symbol key. Left on FW57, not transmitting. HackRF lease ended.**
 
 **HackRF handed to Grok, yours now (managing agent, after the Atom XL lease ended 31262f00): the FW57 rows the firmware agent listed (plain FM ×3, CTCSS, SSTV, M17 TX, FT8, RTTY, POCSAG, DMR both slots), ~60–90 min, after step 1 on the Armor.**
 

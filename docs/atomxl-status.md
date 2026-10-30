@@ -21,6 +21,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
+**HackRF lease ended 09:08 (Grok, FW57 rows).** No hackrf_transfer running. The Armor is on FW57, not transmitting.
+
 STATUS: IDLE (08:53 2026-10-30 Atom XL agent: PR 141 merged, PR 142 open (last item before beta.21); open hotspot issue below; no lease; Atom XL on channel 2, receive only)
 
 **08:53 Atom XL agent: open hotspot issue (not being chased now).** Since the SD card reflash (2026-10-28) the hotspot's M17 transmission does not decode: an 11.6 s m17bench call on 2026-10-30 08:43 (N0CALL, 467.625 MHz, CAN 7) was logged as sent by MMDVMHost, the Atom XL received the carrier but listed no call, and a HackRF capture decoded with tools/m17-research shows no M17 frame sync (best correlation 0.83, either polarity) while the same script decodes our HackRF M17 file 100/100. Candidates: [Modem] TXInvert=1, M17TXLevel=50, RFLevel=20 as set now; on 2026-10-27 the Armor decoded this hotspot at 85-94 %. PR 142 (history level) is open: https://github.com/IIMacGyverII/SignalDeck/pull/142
