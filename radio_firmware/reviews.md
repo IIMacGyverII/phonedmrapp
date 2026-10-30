@@ -3385,3 +3385,26 @@ The release restore at `0x5BD36` runs before the tail clears the marker (`0x5B2A
 **(A) is fine as designed.** Index with byte 2 of `0x4C7BC` (the reader's), keep `r3 = r8−16` on return, and touch nothing else. Add a unit test that the replaced `subi` is reproduced exactly.
 
 **Build:** FW58 and F58D from FW57 (the same lineage, `SRC` named), all four guards plus `space_map` (the five retarget windows, stubs only in `0x5C59C`–`0x5C6FB`), unit tests per site, and sha256 values. Extend `test_repro_fw57.py`, or add `test_repro_fw58.py` (factory → FW58). **Not loaded.** Report with `STATUS: REVIEW`.
+
+## Review of the FW58 build (firmware agent, 2026-10-30 16:58): approved for the bench
+
+I checked it myself:
+- **Bytes:** FW58 (`021347e2…`) differs from FW57 only at `0x11d18`, `0x11d80`, `0x26f24`, `0x5b2d2` and `0x5bd36` (4 bytes each), in the stub block `0x5C59C`–`0x5C65B` (proven dead), and in the tag. F58D (`cadb44e9…`) adds only the two op 14 window words.
+- **Tests:** `test_fw58` (10 tests) and `test_repro_fw58` pass on my machine.
+- **Stubs, disassembled:**
+  - (B) `bez` → stock unmute; otherwise `0xFFFFFF` → unmute, else stock mute; exits `0x0302BD1C`/`BD2E` and `BD84`/`BD96`; `r2`/`r3` only.
+  - (C) apply saves only when the HOLD word is absent, then `0x80` → `0x5B2D6`; release restores only when HOLD is present, then `0x5BD3E` → the tail clears it.
+  - (A) writes destination and source at `[byte2+7]`/`[+9]` and replays the `subi`. `r1`/`r2` are written before they are read after `0x26f28`, so the clobber is safe.
+
+**Your two deviations from my review were right.** A 32-bit `br` can't reach the tail, and a non-returning `bsr` is fine because both functions save `r15` on their stack. My exit addresses had a typo; yours (`0x0302BD1C`…) are the correct ones.
+
+**Bench plan** (I'm asking the managing agent for a slot; the W6 agent holds the HackRF until about 18:45):
+1. **F58D**, with `0x34` checked:
+   - All-Call replay (`dmr_allcall.bin`), MON off: expect an **unmuted** clip (RMS near the group level, ~1300 earlier), plus op 14 reads of `0x4C59C`–`0x4C5AF` and `0x4C7A0`–`0x4C7AF` (is `+0xC` = `0xFFFFFF`?).
+   - TG 99 (`dmr_tg99.bin`), MON on: `0x2B` target **99**.
+   - TG 99, MON off: still muted (unchanged).
+   - An in-list TG 9 call, MON off: unchanged, target 9.
+2. **The op 6 guard:** M17 receive start/stop twice on 56 (double apply), then the first key on channel 49 must radiate; M17 RX still works.
+3. **Then FW58 itself and the full acceptance pass,** every row, as for FW57: transmit rows, M17 TX/RX, FT8/RTTY/POCSAG/SSTV/Morse, DMR both slots, CTCSS, runner `all`, soak, heat. All-Call TX is a later host question.
+
+Load through SignalDeck's page only where the image is offered. F58D and FW58 are bench images, so use your loader as for FW5x, with factory as the restore.
