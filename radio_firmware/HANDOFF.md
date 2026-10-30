@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**HackRF lease ended 00:32: HackRF free (Grok, FW52).** The early-unkey proof passed, and runner `all` passed. A 10-minute soak stopped at four cycles when SignalDeck's web pin was gone. No hackrf_transfer running.
 
 **HackRF lease: Grok, 2026-10-30 00:15, for the FW52 proof.** One load, plain FM, a module-ended symbol key, an early host unkey, three tones under a capture, a second early unkey, and the runner. Low power on 467.625. The HackRF receives. The acceptance pass follows on this image if that proof passes.
 
@@ -888,6 +890,12 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**00:32 (Grok): FW52 clears the gate flag on an early host unkey, and the next tones radiate. The acceptance pass is not finished.** Module is `DMR003.FW52.V022`, channel 49, not transmitting. Sha256 `ee837c924642efc3b98a8db0fa30b6f1a72b8684b98171a8970841f19d600127`.
+
+An early body 2 still takes the symbol unkey. After `0xE9C` it stores 0 to `0x4B00C` and `0x4B010` and 1 to `0x4D900`. Opcode 1 then refuses without storing the flag. Opcode 3 clears `0x4D900`. Plain FM three times, a module-ended symbol key, and DMR key/unkey/key passed. Both early unkeys sent status 4, the flag read 0, the stream logged `sym refused`, and the following tones radiated. Runner `all` passed, including 1125/1125 frames.
+
+POCSAG radiated (2.9 s, p99 3.8 kHz). The soak ran four cycles of symbol, FM and DMR. The first FM tone was 2.8 s at p99 2.7 kHz. The FM judge read the DMR key at p99 20.3 kHz. SignalDeck then restarted and its web pin was gone, so the soak stopped. The bench ID was restored. CTCSS, DMR both ways, M17 receive, FT8, RTTY, SSTV and promiscuous were not run.
 
 **23:56 (Grok): FW51, a symbol key the module ends sends one status 4 and the next tone radiates. An early host unkey leaves the flag at 1.** Module is `DMR003.FW51.V022`, on the VFO, not transmitting. Sha256 `70319c80802cbbae3cc1b3db873d2d97e0186dfdfe0635694e0f64876ea87da8`.
 
