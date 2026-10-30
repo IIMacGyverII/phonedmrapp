@@ -78,3 +78,34 @@ the sheet works as today (marks, S-meter, peak hold, beep).
 - Defaults: Bearings on, Heat map on, Terrain off (download/battery). Grid 2 × 2 km, extended automatically when the
   estimate sits at the edge.
 - Units follow the region setting once that exists (km/mi), else the current choice.
+
+## 8. Better readings (owner 2026-10-29: add to the same project, built after the heat map)
+
+These improve the data every prediction layer uses.
+
+### 8.1 Offset-tuning attenuator (close-in)
+- Near the fox the RSSI saturates. SignalDeck retunes the receiver a few kHz off the fox frequency (this radio tunes in exact
+  500 Hz steps; the channel filter's skirt gives a repeatable loss), stepping the offset up as the reading nears the top of
+  its range and down as it falls. Readings are stored as "measured + attenuation", so marks stay comparable.
+- A one-time calibration table per profile (offset vs loss, measured with a HackRF carrier on the bench) lives with the
+  profile, and the radio notes record it (`measured`).
+- Respects the 0.7 s RSSI settle after a retune (CLAUDE.md fact): one reading per step, never mid-settle.
+- The sheet shows "Attenuation 20 dB" and the effective reading; off by default below a threshold, automatic above it.
+
+### 8.2 Spin to find the bearing (body-shadow sweep)
+- A "Spin" button: hold the phone against your chest and turn slowly through a full circle. SignalDeck samples RSSI with the
+  compass heading at ~2 Hz, fits the curve, and takes the bearing from the peak (or from the sharper null opposite it when
+  it is deeper), with a quality score from the peak-to-null depth and the sample spread.
+- Guidance on screen: a turn indicator ("slower", "keep going", 360° progress ring); a sweep with too little depth asks for a
+  retry instead of storing a poor bearing.
+- The stored mark carries the bearing and its quality; the bearing likelihood (section 4) uses the quality as its angular σ.
+
+### 8.3 Count only the fox's own transmissions
+- A "Fox signal" setting on the hunt: any signal, or only the fox's: its CTCSS/DCS on analog (the channel's tone squelch,
+  or decoded from the audio, as the existing CTCSS decoder does), its caller ID and colour code on DMR (0x2B caller info).
+- Readings are taken only while a matching reception is under way, after the settle delay, and not during squelch tails.
+  Marks taken meanwhile wait for the next matching transmission ("waiting for the fox").
+
+### Order inside the project
+PR 1 heat map + combined estimate + toggles (sections 1–6) → PR 2 terrain → PR 3 the fox-only filter (8.3) and auto-marks →
+PR 4 spin bearing (8.2) → PR 5 offset attenuator (8.1, needs a bench calibration slot). Each with tests, help and changelog.
