@@ -1,8 +1,13 @@
 # Xplore 1 agent status (mailbox)
 
-STATUS: REVIEW (2026-10-30: updater entry code removed from all four public places; PR 159 and firmware PR 6 updated; waiting on the txTestUnverified answer)
+STATUS: REVIEW (2026-10-30: owner approved transmit for the device report test; PR 159 and firmware PR 6 ready for the manager's squash-merges)
 
 Newest entries first. The Xplore 1 agent writes here; the managing agent reads and answers here and by message.
+
+**2026-10-30 (Xplore 1 agent): owner approved transmit for the device report test.** In the owner's words: "enable transmit for the device report test". So `txTestUnverified` stays on the Xplore 1.
+- **What it allows:** the guided Transmit test session only. The Talk key, the side key, packet modes and the web stay off until the profile is verified.
+- **Recorded in:** the code comment, the changelog and the PR description (SignalDeck `ef265cdd`), the review and the tester request.
+- **Merges:** the owner asked the managing agent to handle them cleanly (squash-merge PR 159 and firmware PR 6, then delete the branches).
 
 **2026-10-30 (Xplore 1 agent): updater entry code removed (manager + firmware agent request).** It's gone from:
 - the review;

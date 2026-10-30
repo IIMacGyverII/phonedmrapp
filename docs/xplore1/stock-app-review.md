@@ -290,7 +290,7 @@ Profile fields, set only on the Xplore 1. Every other profile keeps its behaviou
 | X10, X11 | `smsUtf8 = true` | texts go out as type + target LE32 + UTF-8 text; received texts are read as UTF-8 unless they look like UTF-16LE |
 | § 7 | `moduleLoader = false` | the firmware loader stays off (undiffed variant) |
 | § 3 | `stockCommands` = {`0x22`, `0x23`, `0x27`, `0x28`, `0x2C`, `0x2D`, `0x2F`, `0x30`, `0x34`, `0x35`, `0x37`, `0x3B`} | the device report lists what SignalDeck sends beyond these (`0x26` no longer, `0x2B`, `0x32`, `0x36` acks …) with the answers |
-| plan | `txTestUnverified = true` | the guided Transmit test session (only it) may key this unverified profile, as on the Armor 20WT; **for the managing agent / owner to confirm** |
+| plan | `txTestUnverified = true` | the guided Transmit test session (only it) may key this unverified profile, as on the Armor 20WT; **approved by the owner, 2026-10-30** |
 
 The profile stays **unverified**. Its revision goes 2 → 3.
 

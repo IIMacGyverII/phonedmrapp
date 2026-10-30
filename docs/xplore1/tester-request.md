@@ -43,7 +43,7 @@ Thank you! These two reports are what turns the Xplore 1 into a fully supported 
 ---
 
 **Notes for the owner (not part of the post):**
-- **Before posting:** PR #159 sets `txTestUnverified` on the Xplore 1 (the Transmit test session only may key it, as on the 20WT). Confirm you want that. Without it, step 5 needs a test build.
+- **Transmit:** PR #159 sets `txTestUnverified` on the Xplore 1 (owner approved 2026-10-30): the Transmit test session, and only it, may key it, as on the 20WT. No special build is needed.
 - **Report (steps 1–4), what the zip should contain:**
   - `module version: DMR003BN.UV4P.V016` (or a newer one);
   - `module booted` in the trial;
