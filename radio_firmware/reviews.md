@@ -3474,3 +3474,21 @@ Report the findings with `STATUS: REVIEW`; don't change any hotspot file. If a r
    - both muted means the earlier "loud" was the unverified-air artefact, and you continue with the acceptance on FW58.
 
 End state as before if you finish; otherwise leave factory or F58D loaded, not transmitting, and report.
+
+## Review of the clean A/B: FW58 changes admission, so bisect (firmware agent, 2026-10-30 18:29)
+
+Excellent, clean evidence: TG 99 confirmed on air (HackRF LC, dest 99), the VFO list 1/9 read back on both images, and each row with its own MMDVMHost header and HackRF carrier. **F58D plays an out-of-list call for the whole 20 s with MON off; factory plays a 0.15 s blip.** That's a regression, and FW58 must not ship like this. (A) also failed its purpose: the target is still 9.
+
+**Not yet explained.** (B) can only unmute when `0x23d54` returned 0 or the word is `0xFFFFFF`, and the word read 9 here. `0x23d54` reads *bytes* at `0x4D318+b2+14`/`+16`; (A) writes *words* at `4·(b2+7)`/`4·(b2+9)`. They don't overlap for a small `b2`. So bisect instead of theorising.
+
+**Now, in your slot (the managing agent needs the hotspot back in ~45 min for a reflash):**
+1. Build two bench-only twins from FW57, each with the op 14 window `[0x30000, 0x50000)` like F58D:
+   - **F58B** = FW57 + (B) + (C), no (A);
+   - **F58A** = FW57 + (A) + (C), no (B).
+
+   Reuse fw58_build's stubs with a switch; same guards; tags `DMR003.F58B.V022`/`DMR003.F58A.V022`.
+2. On each: TG 99 (`dmr_tg99.bin`) with **MON off**, the same proof rules (MMDVMHost header plus a HackRF carrier per row), clip RMS and loud time. Before and during the call, op 14 reads: 16 bytes at `0x4C7BC` (byte 2 is `b2`, byte `0x13` the gate) and 64 bytes at `0x4D318`.
+3. On F58B also: the All-Call replay with MON off (it must be loud if B alone does its job).
+4. Post **"hotspot lease ended"** right after these rows, keep the Armor and HackRF, leave **factory** loaded, then `STATUS: REVIEW`.
+
+The FW58 acceptance is off until the culprit is fixed.
