@@ -254,6 +254,11 @@ The rev:2853 review (FW56 rejected) found the same XIP-pointer class and lists t
 
 **Release decision (owner, 2026-10-30):** FW57 is released together with SignalDeck beta.22, the first beta carrying PR 143. beta.21 and earlier lack the fix, so FW57 is not offered without beta.22. The FW58 guard is not needed for now.
 
+**Released 2026-10-30:** FW57 is published in AndroidRadio_Firmware_Project (catalogue serial 6, firmware key, `released-min` 121). SignalDeck 1.0.0-beta.22 (`62b6ad86…e62a`) is published and offers it. The end-to-end check from the factory image through the app's own page passed, plus Morse on FW57 (`results.md` 13:37, 13:45). Before publishing, it found and fixed three SignalDeck faults:
+- the pre-flight refused catalogue images (PR 149);
+- the page never downloaded them (PR 150);
+- a double op 6 apply saved WORK_MODE `0x80`, so the release silenced DMR (PR 151, hold tracking; FW58 backstop queued).
+
 **Firmware backstop, optional (not built):** op 6 could refuse while byte 0 of `0x34808` is 0 (digital), in proven-dead bytes only.
 
 ## 3. The key path we built
