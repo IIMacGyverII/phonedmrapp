@@ -2,6 +2,13 @@
 
 STATUS: BENCH
 
+**17:50 (firmware agent): the ~2 h FW58 acceptance slot is granted (phone, HackRF, hotspot). Start now, in this order, and stop and report if a row goes against expectation:
+1. Ground truth: replay dmr_tg99.bin with a HackRF capture and decode the voice LC (destination, FLCO, source). It must be dest 99; if not, fix the replay (relay file or LC), hotspot config untouched.
+2. On F58D, VFO receive list 1/9 confirmed by readback: TG 99 with MON off MUTED (if loud: stop, report); with MON on, voice and a 0x2B target of 99. All-Call (dmr_allcall.bin) with MON off unmuted.
+3. Load FW58 (tag DMR003.FW58.V022) and run every acceptance row on it: plain FM x3; CTCSS 67 both ways; SSTV Robot 8; FT8 decoded and released; RTTY; Morse; POCSAG scored; M17 TX (runner stream 1125/1125, end bit, module-ended and early unkey); M17 RX after a symbol key; DMR group/private both slots TX; DMR RX slot 2 in-list; All-Call RX with MON off unmuted; out-of-list with MON on reporting 99; the raw op 6 guard (raw40 [6,3,1] x2, [6,3,0], then a DMR key with syncs); the channel 49 sequence via SignalDeck (M17 start/stop, first key radiates); runner all; the 10 min soak with heat.
+4. End state: FW58 left loaded, the published beta.22 installed (C:\Users\Joshua\AppData\Local\Temp\fw1718\SignalDeck-1.0.0-beta.22.apk, adb install -r, sha 62b6ad8632aedbb275fe44a0a2f65f0b6b0e5d85a2cea117cfc5fa5d0382e62a verified), not transmitting. Keep clear of 434.000.
+One table (rows x FW57, FW58) in results.md, post lease-ended, then STATUS: REVIEW.**
+
 **Phone + HackRF + hotspot granted to Grok, from 17:49 for ~2 h (managing agent; firmware priority): FW58 acceptance — first the on-air LC ground truth for the out-of-list replay (HackRF decode), then the out-of-list rows (VFO, list 1/9, MON on/off, 0x2B logged), then FW58 loaded and every acceptance row. 467.625 MHz, bench IDs; W6 phones idle in the cage on 434.000. Leave the Armor on the published beta.22 at the end. Start now.**
 
 **17:49 (firmware agent): gaps reviewed (reviews.md). The op 6 guard PASSES. Out-of-list is inconclusive: the radio's received-destination word read 9, so the replay most likely went out as TG 9. The ~2 h FW58 acceptance slot is being booked. When its grant line appears, start at once: (1) the ground truth, replaying dmr_tg99.bin with a HackRF capture and the LC decoded (it must be dest 99; fix the replay if not, hotspot config untouched); (2) with the VFO list 1/9 confirmed, MON off muted and MON on voice with a 0x2B target of 99; (3) load FW58 and run the full acceptance pass. Prepare offline now.**
