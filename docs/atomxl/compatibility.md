@@ -1,6 +1,6 @@
 # SignalDeck on the Unihertz Atom XL: compatibility
 
-**State as of:** 2026-10-29 14:40.
+**State as of:** 2026-10-29 19:00.
 
 **Bench phone:**
 - Unihertz Atom XL ATOMXL0000000737, Android 10 (Agold build), rooted.
@@ -58,9 +58,13 @@
    - A phone reboot always clears it. The exact trigger is still under investigation.
 2. **Capture drop-outs.** The bridge's USB audio sometimes stops for 2 s. The kernel then ends the stream, and only a
    bridge power-cycle restarts it, a few seconds without sound.
-   - With PR 92 this is rare and recovers.
-   - It seems to depend on the signal (some RTTY, speech and one M17 transmission; never a steady tone).
-   - The firmware update to V076 may help.
+   - **Cause found 2026-10-29: a command crossing the bridge's USB link while it streams breaks the stream.** The
+     S-meter's signal reading (0x32 every 0.5–2 s) was the only regular one. With no reading during a reception, 12 of
+     12 RTTY/speech receptions were clean, against 1 drop in 6 with it; two read-pattern variants copied from the stock
+     HAL (read on after EIO, 320-frame reads) dropped 2 and 3 in 8.
+   - SignalDeck PR 110: on the Atom XL the S-meter holds its last reading during a reception. Fox hunt, the coverage
+     log and the checks still read (and may cost a drop).
+   - With PR 92 a drop that still happens recovers with one bridge restart.
 3. **Charger noise.** With a charger on the USB socket the idle level rises to about −98 dBm (from −101 to −103).
    PR 97 keeps reception detection working.
 4. **USB while the radio is on.** The phone's only USB controller serves the radio, so a computer can't use the USB

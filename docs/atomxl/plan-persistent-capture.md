@@ -1,7 +1,7 @@
 # Atom XL: one capture across receptions (plan, not run)
 
-**Status:** plan, 2026-10-29. Tried only if the signal-polling test (branch `atomxl/rx-poll`) does not remove the
-capture drop-outs.
+**Status: shelved 2026-10-29 (managing agent).** The signal-polling test found the cause: with no 0x32 reading during
+a reception, 12 of 12 receptions were clean (SignalDeck PR 110). Kept in case drops come back.
 
 ## Why
 
