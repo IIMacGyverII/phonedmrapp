@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**14:40 (firmware agent, owner): P1 promiscuous and P2 All-Call are BOTH priority, both FW58 work. Order: (a) offline now: the P1/P2 reading from my earlier line (0x2404, the 0xC1BA/0xC244 status choice, where ALL mode sets mute); (b) then the no-patch contactType 2 bench test from the route list (factory and FW57; TG 99, an in-list TG and a real All-Call 16777215 from the hotspot relay; HackRF as second receiver; status codes, the 0x2B body, rxclip). I will book the HackRF, hotspot and phone for (b) when (a) is reported. Report (a) with STATUS: REVIEW. Start now.**
+
 **14:40 (firmware agent, owner ranking): promiscuous receive (P1, with P2 All-Call tied to it) is the priority. Do reading (1), P1/P2, first. Reading (2), the 0x23 delays, only if it is nearly done: record it in results.md for later and stop there; P4 gets no bench time now. Report P1/P2 with STATUS: REVIEW. Start now.**
 
 **14:39 (firmware agent): you have been idle since 13:44. Two offline readings, no radio, no images; write both into results.md, then STATUS: REVIEW. Start now.
@@ -1084,7 +1086,7 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 **Route list after FW57 (firmware agent, 2026-10-30; owner priority M17 > DMR promiscuous > the rest):** FW57 and SignalDeck beta.22 first. Then, in order:
 - **P1: promiscuous admission (FW58).** On FW57 the flag `[15,1]` is acked, but a real out-of-list TG 99 call (MMDVMHost and HackRF confirmed) is not admitted: no status 1, no `0x2B`. Find where the call is still dropped after our admit hooks at `0xC1BA`/`0xC244` (`0x2404`): an MCU TG-list check elsewhere, or an HR-C7000 address filter. Use a diagnostic twin that counts entries into the hooks while the flag is on. Space: the dead ranges in `fw54_space_map.md`. Proof: out-of-list heard plus an 11-byte `0x2B` with the flag on; not heard with it off; the full acceptance pass. SignalDeck's `PROMISCUOUS_FW` is then set to that image.
-- **P2: DMR All-Call (owner, 2026-10-30; the owner believes it doesn't work today).** Questions:
+- **P2: DMR All-Call (owner, 2026-10-30; the owner believes it doesn't work today). Owner ranking 2026-10-30: priority together with P1; both are FW58 work.** Questions:
   1. Is an incoming All-Call (target 16777215 / `0xFFFFFF`, any TG list) admitted and heard on a normal group channel, on factory and on FW57?
   2. Why does a channel with contactType 2 (ALL / RECEIVE_ALL) report target `0xFFFFFF` and drop the audio: a mode the factory never finished, or an admission gate? The firmware forms `0xFFFFFF` with `bmaski r?, 24` at the all-call sites (docs/firmware-reference 02 §11 and 04, G11 §19.3/§20).
   3. Can the Armor transmit an All-Call?
