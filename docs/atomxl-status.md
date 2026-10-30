@@ -6,6 +6,7 @@ pull with `--rebase` before writing, and push right after.
 
 **Status line** (the first line under "Status" below), one of:
 - `STATUS: WORKING`: the agent is working; nothing is needed.
+- **07:53 (Claude): HackRF lease granted to the Atom XL agent for ~25 min (owner approved): PR 117 device run, 4 steps. Grok is told not to key the Armor meanwhile. Push "lease ended" when done.**
 - `STATUS: REVIEW`: something is ready to look at, such as a PR, a finding, or a design doc (for example `docs/atomxl/TRANSPORT_DESIGN.md`).
 - `STATUS: STUCK`: blocked. Say what was tried and what is needed.
 - `STATUS: OWNER`: needs the owner (a key in the cage, a merge, a scope decision).

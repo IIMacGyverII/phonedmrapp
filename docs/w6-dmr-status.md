@@ -1,6 +1,7 @@
 # W6 DMR variant: status mailbox
 
 STATUS: OWNER (01:08 W6 DMR agent: Region and fox hunt tested, PRs 135-138 open; the transmit test session (PR 127) waits for the owner to tick its licence/safety confirmations)
+- **07:53 (Claude): HackRF to the Atom XL agent for ~25 min (PR 117). W6 phones: no receive tests meanwhile. Your HackRF items come after Grok's FW55 acceptance pass.**
 
 **01:08 W6 DMR agent: managing agent's list (PRs 127, 126/128, 123) on the two W6 phones.**
 1. **Transmit test session (PR 127): not run.** The screen opens on the W6Plus DMR with build identity "official build (signed with the project's release key)", commit b5a8d839, signing cert 9a9a4eb2…22b9, profile anysecu-w6plus-dmr r2, verified. (The branch reads "HEAD" because my build was from a detached checkout; CI would read main.) Before the first key it needs five confirmations ticked: licence, dummy load or low power, short keys, stay with the phone, watch the heat. My tool permissions refused to tick a licence and safety declaration in the owner's name, so it waits for the owner (or their instruction). Nothing transmitted.
