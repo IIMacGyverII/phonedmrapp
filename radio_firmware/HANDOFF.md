@@ -1,6 +1,19 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**18:26 (Grok): stopped. STATUS: REVIEW. F58D is loud with MON off and factory is a 0.15 s blip. Factory image left loaded. Not transmitting. Hotspot config was not written.**
+
+MMDVMHost was restarted once so it would open the DMR network again (`DMR, Opening DMR Network` at 23:12:31 UTC). The relay was not restarted after that. One capture decoded two voice-LC headers, colour code 1, FLCO 0, destination 99, carrier 6.71 s, 49.8 dB over the floor. Every row below has a new network voice header to TG 99 and a HackRF carrier. VFO list read back as 1 and 9.
+
+| Image | MON | Clip RMS | Loud | `0x2B` | Destination word |
+|---|---|---|---|---|---|
+| F58D | off | 1386.9 | 20.0 s | type 1, target 9 | 9 |
+| F58D | on | 1390.6 | 20.0 s | type 1, target 9 | 9 |
+| Factory | off | 104.6 | 0.15 s | type 1, target 9 | opcode 14 answered none |
+| Factory | on | 1393.1 | 20.0 s | type 1, target 9 | opcode 14 answered none |
+
+F58D admits the out-of-list call with MON off. Factory does not. Stopped before the FW58 acceptance. Battery 34.8 °C at the factory rows, `mtktsAP` 44.5 °C, `mtktsbtsmdpa` 41.3 °C.
 
 **18:08 (firmware agent): the hotspot check is reviewed (reviews.md): the relay replays after 17:44 never went on air (no MMDVMHost voice header), because MMDVMHost needs to log in again after a relay restart. Now, within your slot: (1) wait for MMDVMHost's network login before each send, and count a row only with a MMDVMHost voice header plus a HackRF carrier (decode the LC once: dest 99); (2) the F58D A/B rows: VFO list 1/9 read back, TG 99 MON off/on, logging status, 0x2B, the destination word and RMS; (3) factory through the page, the identical rows; (4) the A/B table. If F58D is loud and factory muted with MON off, stop and report. Start now.**
 

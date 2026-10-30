@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — F58D admits out-of-list talkgroup 99 with MON off.** The on-air voice LC destination is 99. F58D's clip is loud for 20 s. Factory, loaded from the page, is loud for 0.15 s. The `0x2B` target stays 9 on both. Details in `results.md`.
+
 **2026-10-30 — hotspot sweep.** RX and TX are 467.625 MHz, TXOffset 0, RFLevel 20. DMRGateway is not running and does not rewrite 99 to 9. A sweep during the replay shows no steady carrier at 467.625 MHz. Details in `results.md`.
 
 **2026-10-30 — FW58 acceptance stopped.** The talkgroup 99 file's LC is destination 99, and the hotspot logged TG 99, but the HackRF capture has no carrier at 467.625 MHz. The VFO row during that transmission is loud with MON off. FW58 was not loaded. Details in `results.md`.

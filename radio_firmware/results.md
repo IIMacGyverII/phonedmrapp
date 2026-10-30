@@ -4780,6 +4780,21 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**F58D against factory, out-of-list talkgroup 99 (18:26). Stopped. Factory left loaded. Not transmitting.**
+
+MMDVMHost was restarted once. Its log then says `DMR, Opening DMR Network` at 23:12:31 UTC. The relay was not restarted after that, and it was not written. One HackRF capture of the replay, after that open, has a carrier from 3.48 s to 10.19 s (6.71 s), 49.8 dB over the floor, 31 sync bursts. Two of them are voice-LC headers, colour code 1, FLCO 0, destination 99. MMDVMHost logged the network voice header to TG 99, 5.2 s, BER 0.8%.
+
+The VFO read back as digital, 467.625 MHz, low power, colour code 1, slot field 1, call 9, groups 1 and 9, on both images. Factory was loaded from the Module firmware page: Restore factory, confirm Load `DMR003.UV4T.V022`, tag read back at 18:24:36. Each row has its own later network voice header to TG 99 and a HackRF carrier (power ratio 32 to 44 against the quiet part of the same file).
+
+| Image | MON | Clip RMS | Peak | Loud time | `0x36` | `0x2B` | `0x4C59C+0xC` |
+|---|---|---|---|---|---|---|---|
+| F58D | off | 1386.9 | 5042 | 20.0 s | 1, 1, 1, 1 | 9 bytes, type 1, target 9 | 9 |
+| F58D | on | 1390.6 | 4812 | 20.0 s | 1, 1 | 9 bytes, type 1, target 9 | 9 |
+| Factory | off | 104.6 | 5046 | 0.15 s | 1, 1 | 9 bytes, type 1, target 9 | opcode 14 answered none |
+| Factory | on | 1393.1 | 4701 | 20.0 s | 1, 1, 1, 1 | 9 bytes, type 1, target 9 | opcode 14 answered none |
+
+The logged body, caller bytes hidden, is `01 xx xx xx xx 09 00 00 00` on every row. F58D plays the call for the whole clip with MON off. Factory plays 0.15 s and is quiet for the rest. That is the admission change. The FW58 acceptance was not started. Battery 34.8 °C, `mtktsAP` 44.5 °C, `mtktsbtsmdpa` 41.3 °C at the start of the factory rows.
+
 **Hotspot carrier and rewrite check (18:07). Read only. Acceptance not resumed.** Nothing in `/etc/mmdvmhost` or `/etc/dmrgateway` was written. The phone was not keyed.
 
 | Item | Value |
