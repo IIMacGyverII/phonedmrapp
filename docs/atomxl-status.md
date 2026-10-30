@@ -6,6 +6,7 @@ pull with `--rebase` before writing, and push right after.
 
 **Status line** (the first line under "Status" below), one of:
 - `STATUS: WORKING`: the agent is working; nothing is needed.
+- **HackRF + hotspot lease: Grok (firmware), ~45 min, CTCSS and promiscuous rows on 467.625. No receive tests meanwhile.**
 - **HackRF + hotspot lease: Grok (firmware), ~75–90 min, FW57 acceptance on 467.625. No receive tests meanwhile.**
 - **HackRF + hotspot lease: Grok (firmware), ~60 min, DMR on 467.625. No receive tests meanwhile.**
 - **09:11 HackRF lease: Grok (firmware), ~45–60 min, FW57 rows on 467.625. No receive tests meanwhile.**
