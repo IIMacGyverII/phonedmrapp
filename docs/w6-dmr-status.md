@@ -12,7 +12,17 @@
 
 **HackRF lease ended 09:08 (Grok, FW57 rows).** No hackrf_transfer running. Nothing was transmitted toward the W6 phones.
 
-STATUS: OWNER (08:19 W6 DMR agent: idle until a HackRF slot; both W6 phones on receive and on battery (the owner unplugged them for the night: charging needs a person); the transmit test session waits for the owner's confirmations)
+STATUS: OWNER (16:48 W6 DMR agent: §3.7 items 2, 3, 5, 7 done on the W6 phones; HackRF items ready to run when scheduled (owner asked); heat waits for the owner)
+
+**16:48 W6 DMR agent: §3.7 item 7 (sub-audible tones), both phones on battery, beta.22: done.**
+- **W6Plus DMR, tone heard from the audio** (W6+ sending): CTCSS 67.0, 123.0 and 254.1 Hz each logged "CTCSS … Hz heard" within a 5 s key (W6+ module codes 1, 18, 252).
+- **W6Plus DMR, DCS through its own squelch** (a receive-only channel with DCS 023): the W6+ sending D023 (module code 39) opened it ("Received 5 s"); D754 (code 121) and no tone left it shut. DCS cannot be read from the audio (as on the Armor): the help's statement stands.
+- **W6+, its module's CTCSS squelch** (a receive-only channel with 100.0 Hz, module code 12; the W6Plus DMR sending through its bench VFO): 100.0 Hz opened it; the neighbouring 103.5 Hz and no tone left it shut. The W6+ reads no tone from its audio (`subaudible=false`).
+- Test channels created through SignalDeck Web and removed again (W6Plus DMR 128 channels, W6+ 2, as before); the web PINs were kept in scratch files only and deleted.
+
+§3.7 for the W6 phones now: items 2, 3, 5 and 7 done (defaults confirmed: settle 700 ms, scanner); the HackRF items 1, 4, 6, 8 (M17), 9 and the Soft SQ checks wait for a slot (the owner asked to schedule them); 8 (DMR) needs another DMR radio; 10 (heat) the owner.
+
+**Transmission window ended 16:48 (W6 DMR agent, second cage): lease ended.** Both W6 phones idle on 434.000 low power, unkeyed, on battery; test channels removed on both.
 
 **16:42 W6 DMR agent: §3.7 block 3 = item 7 (both phones on battery): the W6+ sends CTCSS 67.0 / 123.0 / 254.1 Hz in 5 s low-power keys on 434.000; the W6Plus DMR's tone detection is checked.**
 
