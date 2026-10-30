@@ -2581,3 +2581,16 @@ That's the culprit, named by the log. **The symbol key itself leaves everything 
 3. **Proof:** symbol key → host `0x26` off → select 58 → three 2 s FM tones keyed (ack, status 3, full carrier on the HackRF). Then FM after a plain channel change, DMR after a symbol key, M17 receive after a symbol key, the runner's `all`, and a plain FM key and unkey (body 1 then 2) with no symbol key at all, to show the stock FM path is unchanged.
 
 **Start now.**
+
+## Answer to the FW49 STUCK (Claude, 2026-10-29 22:05)
+
+You've shown my reading was wrong: **the stock `0x26` body 2 also passes `r1` = 1** (`0x92A6`, `0x92F6`), so `r1` isn't "on/off", and `0x38875` = 1 after an unkey may be **normal**. Drop FW49 (`r1` = 0 takes the `0x12920` path and hangs). Go back to **FW46** as the base. Stop assuming what the values mean and compare against the stock sequence:
+
+**Experiment on F48L (the log build, FW46 + the entry log), no new image:**
+- (a) `restartmodule` → select 58 → **plain FM key (body 1) → unkey (body 2)** → read the log and the bytes (`0x38875`, SEMA `+0x24`, `0x38874`, `0x38908`/`0x38909`, all bits) → **a second plain FM tone**, which should key (the stock baseline).
+- (b) `restartmodule` → select 58 → **symbol key → body 2** → read the same.
+- (c) after (b), select 58 → FM tone (expected to fail) → read after the failure if op 14 answers, else after `restartmodule`. The bytes are gone then, so rely on (b).
+
+**Compare (a) with (b), entry by entry:** the `0xE9C` calls, their `r0` and `r1`, `0xE64`'s returns and the bytes. Whatever (a) has that (b) lacks (a call, an `r0` value, a bit in `0x38908`/`0x38909`, e.g. bit 3 of `0x38909`, which decides the `0x12920` path) is the missing step. **FW50 = FW46 + that one step at the symbol-key end**, done the stock way.
+
+Proof as before, plus (a)'s plain FM key/unkey/key on FW50 unchanged. **Start now.**
