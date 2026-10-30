@@ -4780,6 +4780,26 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**FW54 acceptance (06:41), and the factory first key.** Low power, 467.625 MHz. The HackRF was the second receiver except for the replay, where it transmitted and the phone listened.
+
+The factory image's first group slot 0 key, after the same bench-ID restart and channel select that leaves FW54 silent, radiated. Carrier 5.30 s, 52 dB over the floor, 18 direct-mode bursts, 4 rows from the bench ID. The app was transmitting during the key and not afterwards. A second key was not required. This is not stock behaviour.
+
+FW54 was loaded again. Tag `DMR003.FW54.V022`.
+
+| Row | Result |
+|---|---|
+| Plain FM | Carrier 2.53 s, 61.5 dB SNR, 1 kHz line present, 67 Hz absent. The app released. |
+| CTCSS 67.0 Hz | The VFO write was accepted. A 2 s test tone produced no carrier, with squelch 2 and again with squelch 0. Receive was not run. |
+| POCSAG 1200 | RIC 1001, text `FW54PAGE`. Carrier 2.27 s, 61 dB SNR. The app released. Codewords were not scored. |
+| DMR transmit | The first group slot 0 key after the bench-ID restart had a carrier (4.94 s, deviation p50 309 Hz) and no sync burst. The next group slot 0 key, group slot 1, and private on both slots each had 18 direct-mode bursts and 4 rows from the bench ID. The private slot 0 rows are addressed to the bench ID. Each key released. |
+| DMR receive | A replay of the factory capture above, transmitted at the capture centre so the carrier lands on 467.625, read −108 dBm and produced no receive start. |
+| Promiscuous | Monitor on reported the flag true. Monitor off reported it false. No call outside the receive list was sent. |
+| SSTV Robot 8 | The app answered "Sending the picture as Robot 8 BW" twice. Captures of 16 s and 20 s had no carrier. The app was not transmitting afterwards. |
+| 10 min soak | 06:27:56–06:37:53, 116 group slot 0 keys of about 2 s, bench ID set. Every key released. Battery 30.4 to 30.9 °C, `mtktsAP` 35.3 to 39.4 °C, `mtktsbtsmdpa` 34.5 to 38.4 °C. |
+| FT8 and RTTY | Already measured on this image: FT8 decoded `CQ N0CALL` at 1500 Hz and released. RTTY text `FW54 OK` at 2125 Hz and released. |
+
+M17 receive and the runner's `all` were not run. Left on FW54, 467.625 MHz, not transmitting. Heat at the end: battery 30.8 °C, `mtktsAP` 37.5 °C, `mtktsbtsmdpa` 37.0 °C.
+
 **FW54 (05:44), the RTTY text is `FW54 OK`, and group slot 0 decodes on the second key.** The RTTY capture from 04:45, clocked at 2125/2295 Hz with the encoder's bit timing (22 ms bits, 33 ms stop, a space leaving figures), reads `FW54 OK`. Carrier 3.58 s, median 2125 Hz, then not transmitting. The FW38 RTTY capture has no start bit. It is the steady tone near 1000 Hz already recorded, so this FW54 row is not that failure.
 
 Group slot 0, low power, 467.625 MHz, colour code 1, group 9, bench ID set and restored. The app's transmit flag was sampled one second into the key.

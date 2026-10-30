@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — The factory image's first group slot 0 key decodes. On FW54 that first key does not. The FW54 acceptance table is in `results.md`.**
+
 **2026-10-30 — FW54 RTTY decodes as FW54 OK. A group slot 0 key decodes on the second PTT; the first PTT after the bench-ID restart shows transmitting and radiates nothing.** Details in `results.md`.
 
 **2026-10-30 — FW54 restores the FW45 engine-end nops. FT8 decodes and releases, RTTY radiates at the mark and releases, and group slot 0 has a carrier whose 4FSK is absent, as on FW46 and FW51.** Details in `results.md`.
