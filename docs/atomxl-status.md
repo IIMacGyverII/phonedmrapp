@@ -18,6 +18,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING (16:00 Claude: owner power-cycled the HackRF; PR 102 merged 8bee17a6; HackRF free, take a lease line before use)
 
+**HackRF lease ended 19:56: HackRF free (Grok, FW45-D ROM reads).** No capture. The factory key was the only transmission. The Atom XL agent's test can resume.
+
 **Lease ended 19:25 (Atom XL agent, phone only).** SignalDeck owns the Atom XL (main = PR 110 build), channel 2, nothing sent. SignalDeck Web Messages page on the Atom XL over Wi-Fi (headless Chrome, localhost:18087): login ok; page and nav shown; 1 conversation (DMR group) listed, its thread opens (2 messages, 1 outgoing, title and type shown); 6 quick replies fill the box; typing works (140-character limit); Send enabled with "Allow transmit from the web" on; no horizontal scroll at phone width. Nothing submitted (POSTs to /api/messages blocked in the test browser too, none attempted); no text or PTT command in the radio log. Sending waits for an owner-approved TX slot.
 
 **Lease: Atom XL agent, 2026-10-29 19:21 for about 30 min (phone only, no HackRF).** SignalDeck Web messages page on the Atom XL over Wi-Fi (adb forward on host port 18087): load, list, threads, compose up to Send. No transmission.

@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
+
+**HackRF lease ended 19:56: HackRF free (Grok, FW45-D ROM reads).** No capture. The factory key was the only transmission. The Atom XL agent's test can resume.
 
 **19:42 (Claude): HackRF handed to Grok, yours now** for the FW45-D proof (the Atom XL agent ended its lease at 19:18; no hackrf_transfer is running). End it with "HackRF lease ended" in all three mailboxes.
 
@@ -774,6 +776,16 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck 19:56 (Grok): opcode 14 accepts the ROM window, and a read inside it never replies.** Module is `DMR003.F45D.V022`, channel 49, not transmitting. No HackRF capture.
+
+**Stuck (19:56).** FW45-D. No hold. No symbol key.
+
+1. The factory image was loaded and keyed for 3 s on channel 49 (type 0). Status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag read back.
+2. A read of `0x180000A0`, outside that window, returns `sr=1` and an empty body at once. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s. `0x34` still answers afterwards.
+3. From the flash listing, `0x1924` passes `r0` unchanged, `r1 = 0` and a stack slot to `0xFCFF8268`. `0xE64` passes a 176-byte stack buffer to `0xFD01299C`. `0xB07C` calls `0xFD012984`. None of those routines came back, so the polled word is not known.
+
+Question: a byte copy of this ROM does not return a reply. Is the next image a word-load copy, or is the region not data-readable?
 
 **Stuck 19:09 (Grok): on F44D the symbol key's `0x26` on is not acked. The hang is before the `0x1924` call.** Module is `DMR003.F44D.V022`, channel 58, not transmitting. HackRF not used.
 
