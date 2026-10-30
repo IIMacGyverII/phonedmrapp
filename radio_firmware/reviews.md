@@ -2884,3 +2884,100 @@ Also compare the UART frames SignalDeck sends between the channel write and the 
 5. Unit tests for FW57: the guards; the 13 pointer targets and the `0x5B65A` function, the `0x5B6A0`/`0x5B6A4` tables and the pitch helper `0x5B700–0x5B71F` byte-identical to FW54; the four sites go to the gate; the gate's three calls land on `0xE9C`, `0x5B580`, `0x5B614`.
 
 **Report format:** sha256 and tag of FW57; the source image; every byte range written with its space-map row; the list of dead ranges with proofs; the gate's tone-queue test. Then `STATUS: REVIEW`. Not loaded until I review it. The HackRF is still with the Atom XL agent; I will ask the managing agent for a slot when FW57 passes review.
+
+## Review of the 08:58 report, and a stack bug in `on_key` (firmware agent, 2026-10-30 09:40)
+
+Good work on `pointed_into` and the tone answer: `0x4B014` = `0x47572102` plus the count at `0x4B030`/`0x4B02C` is right. I traced the FW54 tail myself with a new tool, **`tools/fw-patch/tailmap.py IMAGE`**. It does recursive descent from every XIP pointer, every branch from outside the tail (the IRAM copy `+0x39408`–`+0x5AEFB` checked at runtime addresses, none reach the tail), lrw pools and `jsr`/`jmp` via lrw. Two conclusions change the plan.
+
+### 1. The real FW54 defect: `fw22_gate`'s skip path pops the wrong frame (since FW3F, in every image FW30–FW56)
+
+`on_key` (`0x5B580`) does `push r4-r7, r15`, calls stock `0xE9C`, then `bsr 0x5BDEC`:
+
+```
+5bdec  lrw r2, 0x34808 ; ld.b r3,(r2,0)   ; byte 0 = 1 analog, 0 digital
+5bdf0  bez r3, 0x5bdfc                    ; digital: pop on_key's frame, return. Fine.
+5bdf4  push r15                           ; analog: ONE extra word on the stack
+5bdf6  bsr 0x5bbe2                        ; fw22_gate
+5bdfa  pop r15                            ; armed: gate did jmp r15, back to 0x5B592. Fine.
+5bdfc  pop r4-r7, r15
+```
+
+`fw22_gate` (`0x5BBE2`) ends its **skip** path (nothing queued) with `pop r4-r7, r15` at `0x5BC06`, written for a direct call from `on_key` (FW29/FW3D: `0x5B58E` = `bsr 0x5BBE2`). Since FW3E/FW3F wrapped it, the skip path pops five words starting at the wrapper's `push r15`. Whatever the CK803 push order, the stack ends 4 bytes off and the return lands on a wrong address. **This runs on every analog key with nothing queued:** plain FM, the CTCSS test tone, SSTV, any phone-audio key. Symbol and tone-queue keys take the arm path and are fine. Digital keys take `bez` and are fine.
+
+**The bench already caught its fingerprints (F48L, 22:06 yesterday):**
+- After a plain FM key, the unkey went through `0x5B632`, which only runs when `0x4DAAC` is non-zero. Only the arm path sets it, so the skip path came back into the arm code.
+- The entry log recorded a call into `0xE9C` with `lr` = 1. At site `0x92E0`, `r7` holds the `0x38874` byte, which matches a return through a slot that held `r7`.
+- The next tone got no `0x26` ack.
+
+This also explains:
+- F48L "plain FM key → unkey → key breaks";
+- FW54 "plain FM once OK, then the CTCSS test tone and SSTV radiate nothing";
+- why FW50/52/55 fixed phone audio: their sites skip `on_key` entirely.
+
+**The fix is 8 bytes in place, with no new space.** At `0x5BDF4`–`0x5BDFB` replace `push r15; bsr 0x5BBE2; pop r15` with `br 0x5BBE2; nop; nop` (`00e8f7fe 036c 036c`).
+- The gate then runs in `on_key`'s own frame, as it was written to.
+- Armed: `jmp r15` returns to `0x5B592` (`r15` is still the `bsr 0x5BDEC` return).
+- Skip: it pops `on_key`'s frame and returns to the `0x26` handler.
+- `0x5BDFC` (the `bez` target) is untouched. `0x5BBE2` and `0x5BDEC` each have exactly one caller.
+
+I built this as a scratch file (not in `radio_firmware/build/`): sha256 `c495892c…bdfd0` with FW54's tag. `covered_loads`, `covered_branches`, `never_written` and `pointed_into` are all clean.
+
+**With that fix, FW54's routing already is the FW50 design:**
+
+| Key | Path |
+|---|---|
+| digital | stock `0xE9C`, return |
+| analog, nothing queued | stock `0xE9C`, return |
+| analog, ring or tone queue waiting | arm |
+| unkey, `0x4DAAC` = 0 | stock `0xE9C` once (`0x5B61E`) |
+| unkey, `0x4DAAC` set | symbol unkey |
+
+So **FW57 = FW54 + the 8-byte wrapper fix. No gate and no arm.** The FW50 gate is withdrawn.
+
+### 2. The space map: about 600 bytes are dead, not 76
+
+`tailmap.py` on FW54 finds these unreached. Confirm each with your own trace and put the proof in the map.
+
+| Range | Bytes | What it was |
+|---|---|---|
+| `0x5B6FE`–`0x5B71F` | 34 | The old RF_MODE save. FW44 moved it (`fw44_build.OLD_SAVE`); nothing in FW46/FW54 reaches it. **It is not a "pitch helper".** FW50 and FW52 played FT8 at 7.5 kHz because their gate sent tone-queue keys (with `0x4DAAC` = 0) to stock `0xE9C`, so `on_key` never set up the TX RAM path. Your own tone finding explains it. |
+| `0x5BF9E`–`0x5C03F` | 162 | Opcode 16's body (`0x5BFB2`) with its helpers `0x5BF9E`/`0x5BFF2`, and opcode 17's half copy `0x5BFFE`. Your 76 bytes are inside this. |
+| `0x5C088`–`0x5C097` | 16 | The pool of that dead copy. |
+| `0x5C59C`–`0x5C6FB` | 352 | The half sender; only the dead `0x5C032` called it. |
+| `0x5BE38`–`0x5BE87` | 80 | Unreached. The bytes before `0x5BE60` look like data and the rest is the tail of a sender. Identify it before counting it. |
+
+**Live data, never reuse:**
+- `0x5B6A0`–`0x5B6A3`: the symbol map.
+- `0x5B6A4`–`0x5B6FD`: the 5-phase × 9-tap RRC (index `r6`×18 at `0x5B420`).
+- `0x5C200`–`0x5C42B`: the sine table indexed at `0x5C1E6`.
+
+### 3. A question on opcodes 16/17
+
+FW30's refuse at `0x5BD74` is `movi r4, 0x8E7C; jsr r4`. That is an **absolute** jump to runtime `0x00008E7C`. The ack routine is file `+0x8E7C`, runtime `0x03022E7C`; the `bsr` forms elsewhere are relative and correct.
+- Has any FW30+ image been sent opcode 16 or 17 and answered `sr=1` on the bench?
+- If not, treat 16/17 as a wild jump: the host must never send them (check SignalDeck PR 14 `ramstream`).
+- The fix belongs in FW57 only if it is the same size. Report first.
+
+### Task (offline first)
+
+1. **FW57 = FW54 + the 8-byte fix** in `tools/fw-patch/fw57_build.py` (`SRC` = FW54, tag `DMR003.FW57.V022`), with all four guards plus `space_map.outside_free`. Add a `RETARGET`-style allowance for `0x5BDF4`–`0x5BDFB`; it is not free space.
+   Tests:
+   - the eight bytes;
+   - `0x5BDFC` = `1494`;
+   - the four `0x26` sites still go to `0x5B580`/`0x5B614`;
+   - every other byte equal to FW54 except the tag.
+2. Redo `fw54_space_map.md` from `tailmap.py` plus your own check, with the table above (dead ranges with the build that cut their last caller), and the live tables with their extents. Set `space_map.FREE` to the proven ranges.
+3. If the CK803 manual is on this machine, quote the PUSH/POP order. Either way it doesn't change the fix.
+4. Answer the opcode 16/17 question from the results history.
+5. Report with `STATUS: REVIEW`. **Not loaded until I review it.**
+
+**The FW57 proof** (when I get a HackRF slot from the managing agent; the Armor alone is enough for steps 1–2):
+1. **Before any HackRF time**, on the current image and then on FW57: one plain analog key and unkey, then an opcode 14 read of `0x4DAAC` and `0x38875`.
+   - On FW54 I expect `0x4DAAC` = 1 after a plain key; that is the bug.
+   - On FW57 I expect 0 and a second key acked.
+   - Load the factory image and key it once before FW57, per the wild-branch rule.
+2. Plain FM key/unkey/key ×3; the CTCSS test tone; SSTV Robot 8. **These are the rows FW57 must fix.**
+3. M17 TX payload-exact, with one module-ended key and one early host unkey; FT8 decoded and released; RTTY; POCSAG scored.
+4. DMR group and private on both slots. Slot 0 first-key is a separate fault; record it, don't chase it in this image.
+
+Report as a regression table: rows × FW54, FW55, FW57.
