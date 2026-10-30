@@ -763,9 +763,9 @@ halfstep:
 # in this section, below 0x5C6FC: a 16-bit lrw cannot reach a pool 3.8 KiB
 # away, and a 32-bit lrw only loads the value when the literal is linked
 # in the same section.
-# A acked empty. B read 0x000F1010. C wrote bits 15:8. D lowers AT1846S
-# 0x44 bits 7:4 (the receive DAC gain) and restores 0x0AD1 when mode 5 ends.
-STAGE = "D"
+# A acked empty (d8a3aa19). B read 0x11000504 and replied 0x000F1010
+# (4a0a34f8). C writes bits 15:8 and acks.
+STAGE = "C"
 V6_AT = 0x5B81C
 POOL_AT = 0x5C6E0
 FILT_AT = 0
@@ -918,68 +918,7 @@ fw27_v6_code_end:
 fw27_v6_pool:
 	.literals
 """
-V6_ASM_D = r"""
-	.text
-/* Value other than 1 arrives from 0x5B2BE. Value 1 returns to 0x5B2C2.
- * Variant 6 acks. Variant 7 writes AT1846S 0x44 with bits 11:8 kept at 0xA
- * and the value byte as the low byte. Anything else goes to 0x5B308. */
-	.global	fw27_filt
-fw27_filt:
-	cmpnei	r3, 1
-	bt	.Fnot1
-	.short	0xE800, 0xC25B
-.Fnot1:
-	cmpnei	r1, 6
-	bt	.Fnot6
-	bsr	fw27_var6
-	br	.Fpop
-.Fnot6:
-	cmpnei	r1, 7
-	bt	.Fgo
-	bsr	fw27_var7
-.Fpop:
-	addi	r14, 4
-	pop	r4-r7, r15
-.Fgo:
-	.short	0xE800, 0x085B
-
-	.global	fw27_var6
-fw27_var6:
-	push	r15
-.Vack:
-	ld.b	r0, (r7, 1)
-	movi	r1, 0
-	.short	0xE000, 0x7C8E
-	pop	r15
-
-/* The value byte is 0x44's low byte. Bits 11:8 stay 0xA. The write
- * returns here and the ack is var6's, so the hole does not grow. */
-	.global	fw27_var7
-fw27_var7:
-	push	r15
-	ld.b	r1, (r7, 10)
-	movi	r2, 10
-	lsli	r2, r2, 8
-	or	r1, r2
-	movi	r0, 68
-	.short	0xE000, 0x0B22
-	br	.Vack
-
-/* Mode 5 off: put 0x58 back to 0x8405 and 0x44 back to the tune word. */
-	.global	fw27_restore
-fw27_restore:
-	push	r15
-	movi	r0, 88
-	movi	r1, 33797
-	.short	0xE000, 0x0B22
-	movi	r0, 68
-	movi	r1, 2769
-	.short	0xE000, 0x0B22
-	pop	r15
-	.global	fw27_v6_code_end
-fw27_v6_code_end:
-"""
-V6_ASM = {"A": V6_ASM_A, "B": V6_ASM_B, "C": V6_ASM_C, "D": V6_ASM_D}[STAGE]
+V6_ASM = {"A": V6_ASM_A, "B": V6_ASM_B, "C": V6_ASM_C}[STAGE]
 
 
 def link_wrap():
@@ -1025,28 +964,18 @@ def link_v6():
         raise SystemExit("variant 6 has no code end")
     if code_end > 0x5B876:
         raise SystemExit("variant 6 code ends at %X, past the opcode-13 hole" % code_end)
-    # The third field is the IRAM flag. 0x2B220 is the AT1846S write in
-    # IRAM, so the branch PC is the XIP address. A file-offset PC lands
-    # at XIP+0x2B220 and the handler never returns. 0x8E7C is in flash.
     tokens = {
-        "A": ((bytes.fromhex("00e08e7c"), 0x8E7C, False),),
-        "B": ((bytes.fromhex("00e08e5c"), 0x8E5C, False),
-              (bytes.fromhex("00e07de8"), 0x7DE8, False)),
-        "C": ((bytes.fromhex("00e05cf8"), 0x5C0F8, False),),
-        "D": ((bytes.fromhex("00e08e7c"), 0x8E7C, False),
-              (bytes.fromhex("00e0220b"), 0x2B220, True)),
+        "A": ((bytes.fromhex("00e08e7c"), 0x8E7C),),
+        "B": ((bytes.fromhex("00e08e5c"), 0x8E5C),
+              (bytes.fromhex("00e07de8"), 0x7DE8)),
+        "C": ((bytes.fromhex("00e05cf8"), 0x5C0F8),),
     }[STAGE]
     limit = code_end - V6_AT
-    for token, target, iram in tokens:
-        at = 0
-        found = code.find(token, at, limit)
+    for token, target in tokens:
+        found = code.find(token, 0, limit)
         if found < 0:
             raise SystemExit("variant 6 missing %s" % token.hex())
-        while found >= 0:
-            pc = (V6_AT + found) + (XIP if iram else 0)
-            code[found:found + 4] = fw23_build.encode_bsr(pc, target)
-            at = found + 4
-            found = code.find(token, at, limit)
+        code[found:found + 4] = fw23_build.encode_bsr(V6_AT + found, target)
     if pool_at is None:
         return code[:code_end - V6_AT], b"", FILE_END
     if not (0x5C590 <= pool_at < FILE_END):
@@ -1190,7 +1119,7 @@ def build():
     if v6_pool:
         img[pool_at:pool_at + len(v6_pool)] = v6_pool
     v6names = subprocess.check_output([str(NM), str(OUT / "fw27_v6.elf")], text=True)
-    var6_at = coef_at = filt_at = restore_at = None
+    var6_at = coef_at = filt_at = None
     for line in v6names.splitlines():
         parts = line.split()
         if len(parts) < 3:
@@ -1201,12 +1130,8 @@ def build():
             coef_at = int(parts[0], 16)
         elif parts[2] == "fw27_filt":
             filt_at = int(parts[0], 16)
-        elif parts[2] == "fw27_restore":
-            restore_at = int(parts[0], 16)
-    if None in (period_at, half_at, var6_at, filt_at) or (coef_at is None and STAGE not in ("C", "D")):
+    if None in (period_at, half_at, var6_at, filt_at) or (coef_at is None and STAGE != "C"):
         raise SystemExit("missing period, half, var6, coef or filt")
-    if STAGE == "D" and restore_at is None:
-        raise SystemExit("missing restore")
 
     def patch_token(token, target, start=None, stop=None):
         raw = bytes.fromhex(token)
@@ -1254,13 +1179,12 @@ def build():
         if found < 0:
             raise SystemExit("filter branch %s missing" % token)
         img[found:found + 4] = encode_br(found, target)
-    global VAR6_AT, VAR6_END, COEF_AT, DONE_AT, POOL_AT, POOL_END, FILT_AT, RESTORE_AT
+    global VAR6_AT, VAR6_END, COEF_AT, DONE_AT, POOL_AT, POOL_END, FILT_AT
     VAR6_AT = var6_at
     VAR6_END = V6_AT + len(v6)
     COEF_AT = coef_at
     DONE_AT = done_at
     FILT_AT = filt_at
-    RESTORE_AT = restore_at if restore_at else 0
     POOL_AT = pool_at
     POOL_END = POOL_AT + len(v6_pool)
     if POOL_END > FILE_END:
@@ -1279,11 +1203,6 @@ def build():
     # the value-1 continuation, stays. Value 0 still leaves at 0x5B2A8.
     img[0x5B2BE:0x5B2C2] = encode_br(0x5B2BE, filt_at)
     img[0x5B2A8:0x5B2AC] = fw23_build.encode_bsr(0x5B2A8, TRAMP + REST_OFF)
-    if STAGE == "D":
-        # 0x5BD68 was movi r0, 88; movi r1, 0x8405; bsr i2c. Call the hole
-        # helper instead, and skip the leftover bytes to the pop at 0x5BD72.
-        img[0x5BD68:0x5BD6C] = fw23_build.encode_bsr(0x5BD68, restore_at)
-        img[0x5BD6C:0x5BD70] = encode_br(0x5BD6C, 0x5BD72)
     dest = ROOT / "radio_firmware" / "build" / "DMR003.FW27.V022.bin"
     dest.write_bytes(img)
     import hashlib

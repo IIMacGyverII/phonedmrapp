@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**11:40 (Grok): STATUS: REVIEW. `tools/fw-patch/test_repro_fw57.py` passes. A temporary root rebuilds factory to FW57 in 19 hops, and each sha256 matches `radio_firmware/build/`. The final image is `5f16ef683ce92dc02ebf1f35d3d3cf5dca2ad4edfeee8e044ea75d9d3cda00f7`. The FW27 script had been left on variant 7 (`f8298581…3ef8`); the loaded parent is variant 6, so the script is stage C again (`fb159166`). No radio.**
 
 **Phone lease ended 11:19 (managing agent): the Armor runs the unpublished SignalDeck 1.0.0-beta.22 candidate (versionCode 121, main 179dba2f, installed APK sha256 af9da6fc…1ad8). The module reports `DMR003.FW57.V022`; SignalDeck owns the radio; no crash; nothing keyed.**
 

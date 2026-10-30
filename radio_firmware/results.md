@@ -4780,6 +4780,34 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**FW57 reproduces from the factory image (11:40).** `tools/fw-patch/test_repro_fw57.py` copies `tools/fw-patch` and `radio_firmware/DMR003.UV4T.V022-ORIGINAL.bin` into a temporary root and builds there. It does not write `radio_firmware/build/`. Every hop matches the image that was loaded. The final sha256 is `5f16ef683ce92dc02ebf1f35d3d3cf5dca2ad4edfeee8e044ea75d9d3cda00f7`.
+
+The FW27 script on main was stage D, variant 7, sha256 `f8298581…3ef8`. That image was not the parent of FW28. The loaded FW27 is variant 6, stage C, from `fb159166`. The script is that revision again.
+
+| Hop | Script | sha256 |
+|---|---|---|
+| FW25 | `fw23_build.main` | `f0759b7d3bce21471f82957cc488553b81dbf8bc01aeb6861a7832bec08c116a` |
+| FW26 | `fw26_build.main` | `71949d24910d214dd0a98be7d5da0dd87aeb6ce3b228ef27e7b3d3891357a34e` |
+| FW27 | `fw27_build.build` | `7126749f5c3bc077b04935901af7f62dc550d6e94761df369e56daef2689b779` |
+| FW28 | `fw28_build.build` | `518345e89a752fa3932e02c0a33d297bae6a46c26dd754eb6aaf14ec0920abe3` |
+| FW29 | `fw29_build.build` | `de10d5c5961bf089f3b2ecc3875e5f3a759e965fb242759e48cfd454e8d7657b` |
+| FW3D | `fw3b_bisect.build_fw3d` | `585bde05bb0a1f83273a8fde2aafe3f2e6922237586dbc41cfa7df86eb0165d3` |
+| FW3E | `fw3b_bisect.build_fw3e` | `018d32afbe19cb755d4ebaf72b743d793ff8af4af0ce90c5b55a5dabbdf89313` |
+| FW3F | `fw3b_bisect.build_fw3f` | `4b6bbf420f6045d8855b4910a6e70ad1bbe1c76c99178204bca05824371f710f` |
+| FW3H | `fw3b_bisect.build_fw3h` | `6d36e82ca95a08728736c08956709a02209fa7b838184cbee29b1c29fa6d55da` |
+| FW3J | `fw3b_bisect.build_fw3j` | `808faed59b5eb55d9a6a72b972a03502fd1bdfda587e7102e9570544c6f0b7a4` |
+| FW3K | `fw3b_bisect.build_fw3k` | `e8b2c89fe99bad679f8aa9336742e777d41bdffb21ab00ae9cc7b853426f7494` |
+| FW30 | `fw3b_bisect.build_fw30_retag` | `aaccf03d47eaf90341b150c046735a67c99af0957bbf1a39d21959bdb1fe0005` |
+| FW36 | `fw36_build.build` | `dab18acd498586d231536b3254caec487797c4d997f05198a9813fc2074118fa` |
+| FW37 | `fw37_build.build` | `8a5d16dc5f8c1bbacd6e872d24db89b9fe6415c785b53240b83a1b3ae57ab0ca` |
+| FW44 | `fw44_build.build` | `0d41961ae23d20b2c7f10a3eba57c09bcdaee901d9c43c059731488949ab464d` |
+| FW45 | `fw45_build.build` | `b7bbe9a7bb8e03f2e7ec72dbfda2bdb6b1547e208c9f937b1cdba56bd840fd84` |
+| FW46 | `fw46_build.build` | `86d6b4c4c84210dce7ff2582166ecb9be05d5042021447a513c699520660f8ab` |
+| FW54 | `fw54_build.build` | `f1d6e567e75b8d07c342e1d1ebfec3829f5ccee6cd9bc207c68ef4dfd0a070f6` |
+| FW57 | `fw57_build.build` | `5f16ef683ce92dc02ebf1f35d3d3cf5dca2ad4edfeee8e044ea75d9d3cda00f7` |
+
+FW25 is the factory image plus `c7000-fw20-drop` and `c7000-tot-120`, then the extension in `fw23_build`. FW21 and FW22 stay on `test_repro.py`. No radio.
+
 **FW57 CTCSS receive and out-of-list promiscuous (11:15).** FW57 stayed loaded. SignalDeck PR 143 stayed installed. The factory image was not loaded. M17 receive was off. Slot 1 is not covered. `/etc/mmdvmhost` matched its backup before and after (the file was not edited). The relay was restarted on the rebuilt call and then put back on the saved call it had before this pass. Left on `DMR003.FW57.V022`, channel 56, not transmitting.
 
 | Row | FW57 |
