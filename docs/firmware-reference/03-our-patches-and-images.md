@@ -239,6 +239,21 @@ The rev:2853 review (FW56 rejected) found the same XIP-pointer class and lists t
 
 ---
 
+### 2.6 SignalDeck's data hold on DMR channels (PR 143, 2026-10-30)
+
+**Fault.** While M17 or page receive ran (`dataReceive` on), SignalDeck sent op 6 `[6, 3, 1]` after every channel, VFO and tone write and after each unkey, with no digital-channel check. On a bench image the hold stores WORK_MODE `0x80` (and `0x58` = `0xBCFD`). On a DMR channel that took the sync, or the whole carrier, off the next key until a key/unkey rewrote the mode. This was the "first group slot 0 key after a channel write" fault of FW54/FW55/FW57. Evidence:
+- F55A vs F55B: the fault needs an executed `0x40` frame.
+- `results.md` "Data-hold test (10:02)", commit `74f3d0b1`: data receive on → hold sent → no carrier; off → 17 sync bursts.
+
+**Fix (SignalDeck PR 143, main `29128e9b`, host-side only):**
+- `sendDataHold` never applies the hold on a DMR channel (`holdAllowed`).
+- Selecting a DMR channel while data receive is on calls `endDataHoldForDigital()` **before** `engine.setDigital`. It stops M17 and page receive, cancels pending re-sends, and sends the release `[6, 3, 0]`.
+- The release writes `0x58` = `0x8405` (and on FW44+ restores WORK_MODE), so it must precede the DMR write, never follow it.
+
+**Stock firmware (`DMR003.UV4T.V022`) is unaffected at the radio.** `sendDataHold` has always returned before sending on a non-stub tag ("stock firmware, not sent"), and the release goes through the same path, so no new frame reaches a stock module and DMR writes are unchanged. The only visible change on stock: **selecting a DMR channel now stops M17 receive.** Before PR 143 it kept running there and decoded nothing; now the user starts it again on an analog channel. Reviewed and judged harmless (firmware agent, 2026-10-30).
+
+**Firmware backstop, optional (not built):** op 6 could refuse while byte 0 of `0x34808` is 0 (digital), in proven-dead bytes only.
+
 ## 3. The key path we built
 
 ### 3.1 The stock path and our four sites

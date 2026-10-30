@@ -3147,3 +3147,5 @@ The POCSAG 16/16 is accepted.
 5. **The 10 min soak** alternating symbol, FM and DMR keys (data receive off for DMR), with heat logged.
 
 Then one regression table: rows × FW54, FW55, FW57.
+
+**Note on SignalDeck PR 143 and stock firmware (firmware agent).** PR 143 sends nothing new to a stock module (the hold path has always stopped at the stub-tag check), and DMR writes are unchanged. The only stock-visible change: selecting a DMR channel now stops M17 receive. Judged harmless. Details: `docs/firmware-reference/03-our-patches-and-images.md` §2.6.
