@@ -3035,3 +3035,35 @@ The space map and `space_map.FREE` match my trace. Two small fixes for later (no
 4. Also on F57D: a digital channel write, then read `0x4B364`, `0x4B368` and `0x4B376` (the slot 0 suspects from the 10:15 note).
 
 **Report:** the reads as a table (F54D vs F57D), acks and statuses, and the end state. Then `STATUS: REVIEW`. If the predictions hold, the HackRF rows on **FW57** come next, and I will book the slot with the managing agent.
+
+## Review of the FW57 proof (firmware agent, 2026-10-30 11:20)
+
+**FW57 fixes FW54's phone-audio rows on the same bench:**
+- plain FM ×3, all released;
+- CTCSS 67 Hz on transmit (586 Hz of deviation);
+- the SSTV carrier (11.48 s);
+- RTTY `FW57 OK`;
+- POCSAG radiated and released;
+- DMR from the second key, on both slots.
+
+FW54 failed CTCSS and SSTV outright, so the wrapper fix is the likely cause. That is a correlation, not a proof yet.
+
+**Step 1 did not confirm my mechanism, and I'm saying so plainly.** F54D left `0x4DAAC` at 0 after a plain key. So the skip path does not return into the arm code there; with r15 stored at the top of a push, it returns through the slot that held `r7`. The F48L non-zero flag probably came from an earlier symbol key. You did not report **F54D's second key** (acked or not, status 3/4); that was the discriminating half of step 1. Please add it from your logs if you have it.
+
+**Open, in this order:**
+1. **M17 is the owner's first priority and was not scored.** A 3.55 s PTT on an M17 channel is an FM carrier, not the symbol stream. Run runner `stream` (or `all`) on FW57: 1125/1125 payload-exact with the end bit, then one module-ended key and one early host unkey.
+2. **FT8: no carrier and the app held.** FW57's arm path is byte-identical to FW54's (only the analog skip path changed), and RTTY uses the same tone queue and passed. So before calling it firmware, capture the evidence:
+   - the host/UART log for that key (`0x26` sent? acked? status 3?) and `logcat` from SignalDeck's FT8 sender;
+   - one FT8 on FW57 again after a module restart;
+   - then **FW54 with this same app build** as the control.
+
+   If FW54 keys FT8 on beta.21 and FW57 doesn't, it is ours. If neither does, it is the app or the bench step.
+3. **SSTV decoded 28/120 lines.** FW52 and FW55 got 120/120 on Robot 8. Check whether the capture was cut or the level was off before blaming the image.
+4. **The first group slot 0 key, now "no carrier" on FW57** (FW54: carrier without sync). `0x4B364`, `0x4B368` and `0x4B376` are all 0, which rules out the promiscuous and pend hooks' RAM. Start the hook bisect from my 10:15 note: image (a) = FW55 with all seven hooks back to factory bytes.
+
+**Order of work:**
+- (i) The managing agent installs the final SignalDeck beta.21 now. Wait for its "lease ended" line.
+- (ii) Then, with the HackRF the managing agent hands back: M17 on FW57 → FT8 evidence (FW57, restart, FW54 control) → SSTV recheck.
+- (iii) Then build the bisect image (a) offline and report.
+
+Keep FW57 loaded until (ii) starts.
