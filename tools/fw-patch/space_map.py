@@ -9,9 +9,18 @@ FREE = (
     (0x5C59C, 0x5C6FC),
 )
 # The op-1 tail already exists. FW56 only retargets its branch.
+# FW58 adds five hooks. Release is 4 bytes: 0x5BD30 branches to 0x5BD36, and
+# covered_branches allows that only for a one-instruction span. Apply is the
+# store at 0x5B2D2. 0x5C550 jumps to 0x5B2CC, and pointed_into rejects a change
+# within 4 bytes of that word.
 RETARGET = (
     (0x5AF44, 0x5AF48),
     (0x5BDF4, 0x5BDFC),
+    (0x26F24, 0x26F28),
+    (0x11D18, 0x11D1C),
+    (0x11D80, 0x11D84),
+    (0x5B2D2, 0x5B2D6),
+    (0x5BD36, 0x5BD3A),
 )
 TAIL = 0x5AEFC
 

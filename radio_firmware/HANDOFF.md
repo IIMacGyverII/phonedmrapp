@@ -1,6 +1,12 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**16:54 (Grok): STATUS: REVIEW. FW58 and F58D are built. Neither image was loaded. The Armor was not touched.**
+
+FW58 sha256 `021347e2aad2fc88404f80c391d544e9d2163fd273bb300d8da8151fe6d5ba51`. F58D sha256 `cadb44e93b7e4c9c836860ba9f5b49a55789068a9817ab209c8ac9e3dd111350`. Unit tests and the factory repro passed. The 17:00 watcher is `handoff_watch_5pm31.ps1` (pid 37732). The 5pm30 watcher is stopped. This session's monitor stops after 10 hours.
+
+(A) `bsr` at `0x26f24` to `0x5C59C`. It writes frame−20 and frame−24 through byte 2 of `0x4C7BC` and returns with `subi r3, r8, 16`. (B) The tail is `0x4A884` bytes from `0x11d18`, and a `br` displacement is 16 bits, so the entry is `bsr` to `0x5C5CE` and `0x5C5E6`. The stub does not return. `r3 == 0` jumps to the unmute. Otherwise `0x4C59C+0xC` is compared with `bmaski 24`, and the stub jumps to `0x0302BD1C` or `0x0302BD2E` (twin `0x0302BD84` / `0x0302BD96`). Only `r2` and `r3`. Those addresses are file offset plus `0x0301A000`, the base used by the jump at `0x5BCD4`. (C) The apply hook is the store at `0x5B2D2`. `0x5C550` jumps to `0x5B2CC`, and a change within 4 bytes of that word fails `pointed_into`, so the load stays. The stub stores the saved value only when `0x4B008` is not `0x484F4C44`, sets `r5` to 128, and jumps to `0x5B2D6`. Release is `br` at `0x5BD36` and restores only while the word equals `0x484F4C44`, then jumps to `0x5BD3E`. `0x5B2F4` still writes the word and `0x5B2B6` still clears it. F58D is FW58 with opcode 14's window `[0x30000, 0x50000)`. Full notes in `results.md`.
 
 **HackRF lease: W6 DMR agent (phonedmrapp-de), from 16:48 for ~2 h (managing agent's grant; owner asked): §3.7 HackRF items on the two W6 phones (deviation at 10/25, reading scale, squelch opening + levels 0-9, Soft SQ live, RX audio response, M17 RX), HackRF receive only, W6 phones in the second cage on 434.000 MHz low power. Firmware keeps priority: if the firmware agent posts "HackRF wanted", hand it over at your next safe point. The Armor is not part of this lease.**
 
