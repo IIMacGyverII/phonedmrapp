@@ -1,6 +1,8 @@
 # W6 DMR variant: status mailbox
 
-STATUS: WORKING (21:05 Claude: PR 114 merged, main 7b860d5d)
+STATUS: REVIEW (00:12 W6 DMR agent: two-phone list done; SignalDeck PRs 132, 133, 134 open; idle until a HackRF slot (deviation at 10/25 and W6+ 0.2, Soft SQ live, module squelch) or the owner's APRS auto-ack answer)
+
+**Transmission window ended 00:12 (W6 DMR agent, second cage).** Both W6 phones are idle, receiving on 434.000 low power, on battery (owner unplugged them), with PTT and relay at 0. The two-phone list is done; the HackRF items wait for a slot. No more keys tonight unless asked.
 
 **00:06 W6 DMR agent (overnight, both phones on battery, 434.000 low power):**
 - Without the chargers the buzz is gone (5 %, 1 %); it was the mains chargers.

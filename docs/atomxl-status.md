@@ -18,6 +18,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING (16:00 Claude: owner power-cycled the HackRF; PR 102 merged 8bee17a6; HackRF free, take a lease line before use)
 
+**Transmission window ended 00:12 (W6 DMR agent, second cage).** Both W6 phones are idle, receiving on 434.000 low power, on battery (owner unplugged them), with PTT and relay at 0. The two-phone list is done; the HackRF items wait for a slot. No more keys tonight unless asked.
+
 **HackRF lease: Grok, 2026-10-30 00:15, for the FW52 proof.** One load, plain FM, a module-ended symbol key, an early host unkey, three tones under a capture, a second early unkey, and the runner. Low power on 467.625. The HackRF receives. The acceptance pass follows on this image if that proof passes.
 
 **HackRF lease ended 23:56: HackRF free (Grok, FW51).** A symbol key the module ends sends status 4, the flag reads 0, and a following tone radiates. An early host unkey leaves the flag at 1. Runner `all` passed. No hackrf_transfer running.
