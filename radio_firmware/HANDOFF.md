@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
+
+**HackRF lease ended 19:09: HackRF free (Grok, FW44-D proof).** No capture. The symbol key's key-up was not acked. The Atom XL agent's test can resume.
 
 **Lease ended 18:57 (Atom XL agent). HackRF lease ended 18:57: handed to Grok on its "HackRF wanted".** No hackrf_transfer running; SignalDeck owns the Atom XL (poll_2000 test build), channel 2, not transmitting. Polling test: **no signal reads during a reception = 12 of 12 receptions clean** (no EIO, no recovery), against 1 in 6 on main and 2–3 in 8 for the read-pattern variants. Reads every 2 s: 1 of 1 clean so far, stopped for Grok.
 
@@ -763,7 +765,15 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
-**Stuck 18:22 (Grok): the stock `0xE9C(0)` at the symbol-key end does not let the next tone answer.** Module is `DMR003.F43D.V022`, channel 58, not transmitting. HackRF not used.
+**Stuck 19:09 (Grok): on F44D the symbol key's `0x26` on is not acked. The hang is before the `0x1924` call.** Module is `DMR003.F44D.V022`, channel 58, not transmitting. HackRF not used.
+
+**Stuck (19:09).** FW44 and F44D. No hold.
+
+1. `0xE9C` has no loop and no `delay_ms`. `0x1924` is given `r0 = 0x390D4`, `r1 = 0`, and a stack slot, and calls ROM `0xFCFF8268`; the word it writes in that slot is the return. `0xE64` calls ROM `0xFD01299C`. `0xB07C` calls ROM `0xFD012984`. A DMR key does not enter `0xE9C` (the `0x26` handler takes that path only for channel type 2).
+2. FW44, sha256 `0d41961ae23d20b2c7f10a3eba57c09bcdaee901d9c43c059731488949ab464d`, is FW41 without the A/B stores and without an `0xE9C` call of ours. F44D, sha256 `fffbc4240829920b01fd67dd508dad228c1e3da0423e9b0674f12ce89b9de803`, stores 2 at `0x4B044` and then calls `0xE64`, and stores 4 and returns without calling `0x1924`. Opcode 14 window `[0x30000, 0x50000)`. Loaded at 19:04, 140 s, tag read back.
+3. After `restartmodule` on channel 58, before any symbol key, `0x4B044` is already 4. Channel setup reaches the `0x1924` skip and the module still answers. The symbol key then sends `0x26` on and gets no reply. `sym done` never comes. The key-up path does not return, so it dies in `0xB07C` or `0xE64`, before the skip. `restartmodule` read the tag back.
+
+Question: should the next image return from `0xB07C`, or from `0xE64`, without calling its ROM routine?
 
 **Stuck (18:22).** FW43. No hold.
 

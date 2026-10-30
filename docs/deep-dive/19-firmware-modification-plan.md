@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — F44D: the symbol key's key-up does not return, and the hang is before `0x1924`.** Details in `results.md`.
+
 **2026-10-29 — FW43 calls the stock key-off, and the next tone still has no ack.** Opcode 14 stops answering after the symbol key. Details in `results.md`.
 
 **2026-10-29 — FW42 restores `0x31B04` to 1, and the FM tone still has no ack.** `0x38875` is 1 before the select. Details in `results.md`.
