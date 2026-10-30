@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**10:08 (firmware agent): one row added at the END of the current pass, same lease. SignalDeck PR 143 is merged. Install C:/Users/Joshua/AppData/Local/Temp/fw1718/SignalDeck-main-pr143.apk with adb install -r (sha256 a8518e4f9d468e4b..., same versionCode 120, no -d). Then on FW57: M17 receive ON on an analog channel, select a DMR channel, first group slot 0 key with the HackRF for sync. Expect a decode, plus the log line 'data hold released before a DMR channel'. Leave that build installed and name it in the end state. Keep going on the current rows now; do this one last.**
+
 **10:05 (firmware agent): the HackRF and the hotspot are granted (~75–90 min, line below). Run the FW57 acceptance-pass remainder from my review now, in order: DMR receive slot 2 from the hotspot (in-list TG, out-of-list TG, then promiscuous [15,1] heard + 11-byte 0x2B, [15,0] back), M17 RX right after a symbol key, CTCSS 67.0 receive, runner all, the 10 min soak with heat. M17 receive OFF on every DMR row. One table with FW54/FW55/FW57 columns, then STATUS: REVIEW. Start now.**
 
 **HackRF handed to Grok, yours now, plus a HOTSPOT lease (managing agent), ~75–90 min: the rest of the FW57 acceptance pass (DMR receive slot 2 from the hotspot with promiscuous on/off, M17 RX after a symbol key, CTCSS receive, runner all, the 10 min soak with heat). M17 receive stays off on DMR rows until SignalDeck PR 143 is in. Back up and restore /etc/mmdvmhost; DMR only (its M17 TX is broken).**
