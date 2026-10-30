@@ -41,7 +41,7 @@
 | SignalDeck Web audio | **works** | 2026-10-29 | 86 | 53 of 60 s during MON on a healthy line |
 | SignalDeck Web messages | **works** (receive side) | 2026-10-29 | — | Page loads over Wi-Fi, lists and opens threads, quick replies and typing work, Send is enabled; a send from the web not run yet (it transmits) |
 | Band scope | **works** | 2026-10-29 | 88 | Inside 400–480 MHz; a 2 m range is refused |
-| Fox hunt, coverage log | **works** (no logged point yet) | 2026-10-29 | 110 | With a test GPS position: fox hunt readout, compass, map, a Mark at the position and Clear marks; Map around the position (49 repeaters from the online list), the Coverage maps introduction, Log coverage on/off, "0 readings" shown. A measured reading during a reception works (Diagnostics RSSI, 2 of 2). A stored coverage point needs a carrier on a channel with a location (a HackRF slot) |
+| Fox hunt, coverage log | **works** | 2026-10-29 | 110 | With a test GPS position: fox hunt readout, compass, map, a Mark at the position and Clear marks; Map around the position (49 repeaters from the online list), the Coverage maps introduction, Log coverage on/off, "0 readings" shown. A measured reading during a reception works (Diagnostics RSSI, 2 of 2). A coverage point stored: 3 readings at the test position from one carrier (2026-10-29 21:51) |
 | S-meter during a reception | **holds** | 2026-10-29 | 110 | Shows the reading from just before the reception and moves again when it ends (a reading during it breaks the audio). A reading every 2 s dropped the audio in 2 of 2 receptions, so the hold stays |
 | Android Auto | **works** | 2026-10-29 | — | Desktop head unit: SignalDeck appears as the media app, and next/previous change channel. A real car hides it until Android Auto's Unknown sources is on (the Device page explains) |
 | Firmware loader | **n/a** | — | 83 | This module can't be loaded from SignalDeck; the stock app's own update route failed on this bridge build (V076 attempt 2026-10-28) |
@@ -100,8 +100,8 @@ Open on the SignalDeck side:
    at midday and 0 of 3 in the evening (2026-10-29), so the trigger is rare and the recovery needs a natural case.
 3. **S-meter frozen during receptions** (PR 110). By design: a reading every 2 s dropped the audio in 2 of 2
    receptions (2026-10-29), so any reading during the stream is too many.
-4. **Coverage:** dialogs and fox hunt work with a GPS position (2026-10-29); one stored coverage point (carrier on a
-   channel with a location) is still to do.
+4. **Coverage:** done (dialogs, fox hunt and a stored point, 2026-10-29). One reading was stored during the bridge
+   restart its own reads caused (-109 dBm); a candidate to skip readings while the bridge restarts.
 5. **Not yet exercised on this phone:** a DMR text sent from SignalDeck Web (it transmits; needs a TX slot); Android
    Auto in a real car (only the desktop head unit).
 6. **Profile:** revision 2, verified with transmit (owner, 2026-10-28). Today's fixes are all in SignalDeck code, so
@@ -130,7 +130,7 @@ coverage readings during a reception may cut the audio for a few seconds; a tran
 no M17 transmit, POCSAG or firmware loading on this module; Agold App block must be off (SignalDeck opens the page).
 
 **Partial or untested:** M17 receive is partial (needs a real M17 station to self-calibrate); a DMR text sent from
-SignalDeck Web (it transmits, needs a TX OK); Android Auto in a real car; a stored coverage point; the stuck-line
+SignalDeck Web (it transmits, needs a TX OK); Android Auto in a real car; the stuck-line
 recovery is proven once (the trigger is rare).
 
 **Profile:** unihertz-atomxl revision 2, verified with transmit (owner, 2026-10-28); no profile change needed for
