@@ -4780,6 +4780,18 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**FW54 (05:44), the RTTY text is `FW54 OK`, and group slot 0 decodes on the second key.** The RTTY capture from 04:45, clocked at 2125/2295 Hz with the encoder's bit timing (22 ms bits, 33 ms stop, a space leaving figures), reads `FW54 OK`. Carrier 3.58 s, median 2125 Hz, then not transmitting. The FW38 RTTY capture has no start bit. It is the steady tone near 1000 Hz already recorded, so this FW54 row is not that failure.
+
+Group slot 0, low power, 467.625 MHz, colour code 1, group 9, bench ID set and restored. The app's transmit flag was sampled one second into the key.
+
+| Key | After the bench-ID restart | Air |
+|---|---|---|
+| First | App transmitting. | No carrier (peak 1.2 dB). A repeat of that first key did the same. One earlier first key was a carrier with deviation p50 331 Hz and no sync burst. |
+| Second, same VFO, no restart | App transmitting, then not. | Deviation p50 2494 Hz, sync correlation 0.998, 18 bursts, direct-mode MS sync, 4 rows from the bench ID. An earlier second key was p50 2506 Hz, correlation 0.998, 17 bursts. |
+| Slot 1 after a decoded slot 0 key | Then not transmitting. | Deviation p50 2566 Hz, correlation 0.997, 17 bursts, 4 rows from the bench ID. |
+
+Waiting 50 s after the restart, which is what the bench-ID script asks, did not make the first key radiate. Left on FW54, not transmitting. Heat around the keys: battery 38 °C, `mtktsAP` about 47 to 52 °C, `mtktsbtsmdpa` about 46 to 51 °C. The acceptance pass was not started.
+
 **FW54 (04:46) releases a decoded FT8 message. Group slot 0 keys a carrier and does not send 4FSK.** Sha256 `f1d6e567e75b8d07c342e1d1ebfec3829f5ccee6cd9bc207c68ef4dfd0a070f6`, tag `DMR003.FW54.V022`. Built from FW46. The six bytes at `0x5B756` are FW45's again: `movi r1, 1` and two nops, so the engine end does not call `0xE9C`. The drop at `0x5B748`, the TX-bit clear, and the branch to `0x5BD06` stay. `0x5B700` and `0x5B74C`–`0x5B755` stay FW46. FW53, sha256 `9a4fee7cae7e4ee47ce562a4a7f33c08adff3f10e234c97ee272ec9d47161e4d`, had branched `0x5B748` to the pop at `0x5B77A`. Its FT8 carrier was 8.75 s, 47 of 49 windows near 1500 Hz, median 1512 Hz, and the app was still transmitting, so SignalDeck was force-stopped.
 
 The factory image was loaded and keyed once before FW54 (carrier 2.84 s, 61 dB SNR, then not transmitting). FW54 then, low power, 467.625 MHz, HackRF receive:
