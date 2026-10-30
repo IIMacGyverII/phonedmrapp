@@ -2,6 +2,15 @@
 
 STATUS: WORKING (21:05 Claude: PR 114 merged, main 7b860d5d)
 
+**22:55 W6 DMR agent: two-phone results so far (second cage, 434.000 low power, window open until ~01:00).**
+- W6+ → W6Plus DMR: RTTY decoded in full; SSTV Robot 24 decoded but noisy (109 lines, speckle); FT8 CQ BNCHW6 decoded (−11 dB, dt −0.3 s).
+- FT8 contact BNCHW6 ↔ DMRTST completed after two FT8 fixes (SignalDeck PR 124: a non-standard caller's two-call reply was ignored, and a non-standard call could not send a report; `<CALL>` now packs as a hash).
+- History fix (PR 125): data keys were logged "Voice TX", and on the W6+ each one gave a false "120 s time-out" warning.
+- DTMF W6Plus DMR → W6+: all 16 digits decoded. PSK31 W6Plus DMR → W6+: decoded (first character garbled).
+- **APRS auto-ack:** messages between the phones arrive (W6+ decoded `DMRTST-7: :BNCHW6-1 :Bench msg 1…{1`) but are never acked: auto-ack runs only in APRS monitoring mode, which parks on the region's 2 m APRS frequency and is out of band on these UHF-only phones. Owner decision: allow auto-ack on a UHF-only phone (or from passive decode on an amateur channel)?
+- **120 Hz buzz since both phones went on chargers (~22:20):** a harmonic comb of 120 Hz in the over-the-air audio in both directions (85 % of a silent W6+ key, 24 % of a W6Plus DMR tone), where the same paths were clean at 22:00 (3 %, 0 %). DTMF and PSK31 from the W6+ fail under it; RTTY/FT8/APRS pass. Probably charger ripple; owner asked to try another charger or unplug one phone briefly.
+- The W6+'s ext_pa_en ignores a write of 0 (it reads 1 before, after and a second later), so the gateway cannot switch its speaker amp off.
+
 **HackRF lease: Grok, 2026-10-29 22:24, for the FW50 proof.** One load, then plain FM key/unkey/key three times, a DMR key/unkey/key, a symbol key, channel 58, and three low-power tones on 467.625, then M17 receive and the runner. Low power.
 
 **Lease ended 22:21 (Atom XL agent). HackRF lease ended 22:21: HackRF free.** No hackrf_transfer running; SignalDeck owns the Atom XL (PR 117 build), channel 2, receive only. Results: (1) killed capture on a normal reception recovers (held to the end of the reception, then a power-cycle; passes). (2) Off-channel carriers can make the reading rise with the line silent at -x 47 with the amplifier (+20 to +30 kHz: 0x40-0x42, line silent; +8 to +15 kHz: the module's squelch often opens too). PR 117 skipped the restart twice (22:12:17, 22:12:52) but **is not ready**: its "signal-only" flag is taken once when the capture opens, so (a) at 22:12:50 the line reported the reception 25 ms later and the skip still applied, and the next real reception got no audio and needed a restart; (b) at 22:19:54 a signal-only burst was restarted anyway (the capture was probably still open from the previous reception, keeping the old flag). Long signal-only bursts also restart through the stuck-line count (22:20:37, as designed). Asked the managing agent to hold PR 117; reworking it offline. Idle reading after the owner moved the phone: 0x21-0x23 (was 0x2C).
