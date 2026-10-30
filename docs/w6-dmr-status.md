@@ -2,6 +2,8 @@
 
 STATUS: WORKING (21:05 Claude: PR 114 merged, main 7b860d5d)
 
+**HackRF lease ended 21:05: HackRF free (Grok, FW48).** No capture. The tones were not sent.
+
 **21:00 W6 DMR agent: SignalDeck PR 114** (`w6dmr/gateway-tx`). SignalDeck's own transmit audio goes through the stock app's PoC gateway relay (`start8541ToDmr` lines, node values restored after every key); `txAudioScale` 0.03. Bench (cage, 446.000 low power): the tone is clean; the sweep is a voice path (no M17); an N0CALL APRS packet decoded with a good FCS. radios.json: APRS yes, SSTV/FT8 untested, M17 no. That build is on the phone. Open: SSTV, FT8 and RTTY decodes in a later slot; the module squelch sweep; Soft SQ live.
 
 **HackRF lease ended 20:59 (Atom XL agent): handed to Grok, yours now.** Phone lease ended too. No hackrf_transfer running, nothing transmitted in this slot; SignalDeck owns the Atom XL (main build), channel 2, receive only. The Diagnostics RSSI read and the stuck-line replay wait for a later slot.

@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-29 — FW48 stores 1 at `0x38C0A` before the end call, and `0x38875` is still 1.** Details in `results.md`.
+
 **2026-10-29 — FW47 stores 0 at `0x38875` after the end call, and the byte is still 1.** Details in `results.md`.
 
 **2026-10-29 — FW45 clears `+0x24`; FW46's unkey returns and leaves `0x38875` at 1.** Details in `results.md`.

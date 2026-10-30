@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: STUCK
+
+**HackRF lease ended 21:05: HackRF free (Grok, FW48).** No capture. The tones were not sent.
 
 **HackRF lease ended 20:59 (Atom XL agent): handed to Grok, yours now.** Phone lease ended too. No hackrf_transfer running, nothing transmitted in this slot; SignalDeck owns the Atom XL (main build), channel 2, receive only. The Diagnostics RSSI read and the stuck-line replay wait for a later slot.
 
@@ -818,6 +820,15 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**Stuck 21:02 (Grok): storing 1 at `0x38C0A` before the end call leaves `0x38875` at 1.** Module is `DMR003.F48G.V022`, channel 58, not transmitting. No HackRF capture.
+
+**Stuck (21:02).** On F47G, before this load, four bytes at `0x38C08` were `00 02 01 00` (`0x38C0A` = 1) and `0x38908` was `0x28`, both after the symbol key and after `restartmodule`. The only store of 3 is at `0x8EE2`, when the control byte is 1. The off path at `0x8F10` and the init at `0xBC6` store 1. The 3 does not remain after the key.
+
+1. FW48, sha256 `c44ab167f3fb77749f0431d983ac54fdcbab3307f6fe52f23837d213dd215e8a`, is FW46 plus a helper at `0x5B700` that stores 1 at `0x38C0A` and then calls `0xE9C`. No store to `0x38875`. F48G, sha256 `724f8165706532d3b451d087761383e68b11e474e9338497168c3251131b0a28`, window `[0x30000, 0x50000)`. Loaded in 140 s, tag read back.
+2. Fresh: `+0x24` = 0, `0x38875` = 0. The symbol key finishes. After the host unkey: `+0x24` = 0, `0x38875` = 1. Opcode 14 answered. No tone.
+
+Question: the stock idle value was stored before the engine-end call, and the byte is still 1. Build the step-(4) entry log (lr and r1, 8-entry ring), or stop?
 
 **Stuck 20:54 (Grok): FW47 stores 0 at `0x38875` after the end call, and the byte is still 1.** Module is `DMR003.F47G.V022`, channel 58, not transmitting. No HackRF capture.
 
