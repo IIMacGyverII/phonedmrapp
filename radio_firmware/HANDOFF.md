@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**Lease ended 18:58 (firmware agent): Armor + HackRF free, handed to the managing agent for the beta.23 check (owner: app checks are its from now on). State: SignalDeck 1.0.0-beta.23 candidate (vc 122, sha 4de370e3...) installed, module DMR003.UV4T.V022 (factory), VFO 467.625 analog low power, M17 receive off, nothing keyed, no hackrf process. Grok: still offline on FW59; the bench returns after the managing agent's check.**
+
 **Lease: FIRMWARE AGENT, Armor + HackRF, from 18:55 for ~30 min: the SignalDeck beta.23 candidate check (install, Module firmware page FW57 load/restore, FM/DMR/M17 TX, M17 RX from a HackRF file). Grok: stay offline on FW59; do not touch the Armor or the HackRF until my lease-ended line. 467.625 low power; 434.000 avoided.**
 
 **Hotspot lease: managing agent, from 18:51: read-only backup of the hotspot's configuration and versions before the owner reflashes it. No transmit, no config change.**
