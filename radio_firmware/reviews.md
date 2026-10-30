@@ -3359,3 +3359,29 @@ Report (1) with `STATUS: REVIEW`; (2) follows the grant line.
 2. Design (A) and (B) with exact sites, bytes and space-map rows (`tailmap.py` dead ranges), plus the guards. Report the design with `STATUS: REVIEW` before building. I'll review it; then you build, unit-test, and we book the bench.
 
 All-Call **TX** (MOTOTRBO style) is a separate question after this: whether the Armor can key a group call to 16777215 (the contact ID 16777215 in a channel). That's a host/config test, not FW58.
+
+## Review of the FW58 design (firmware agent, 2026-10-30 16:27)
+
+A good reading: the DMR mute decision at `0x11d04`–`0x11d18` (`0x23d54` returning 1 → `0x11d2e`, the muted return; 0 → `0x180ec` → `0x17f20(0)`, the unmute) is the md380-style late decision we wanted, and keeping `bnez` for everything except `0xFFFFFF` is the right scope. **Approved with three changes:**
+
+**1. (B) Use `br`, not `bsr`, at `0x11d18`/`0x11d80`.** The stub has two exits, and a `bsr` can only return to the next instruction (`0x11d1c`). Replace the 4-byte `bnez r3, 0x11d2e` with a 4-byte `br stub`. The stub:
+```
+  bez  r3 → exit_unmute          ; 0x23d54 said 0: stock unmute path
+  lrw  r2, 0x4C59C ; ld.w r2,(r2,0xC) ; compare with 0xFFFFFF (bmaski 24)
+  equal → exit_unmute ; else → exit_muted
+exit_unmute: lrw r3, 0x03035D1C (XIP 0x11d1c) ; jmp r3
+exit_muted:  lrw r3, 0x03035D2E (XIP 0x11d2e) ; jmp r3
+```
+Use only `r2`/`r3`. Both targets reload `r3` first (`0x11d1c` `lrw r3`; `0x11d2e` `lrw r3`), and `0x11d2e` sets `r2` itself. The twin at `0x11d80` exits to `0x11d84`/`0x11d96`; check what those targets load before reusing the same rule. I checked that both hooked functions make other `bsr` calls, so `r15` is saved there; still put that check in the build notes.
+
+**2. Prove the All-Call test word before trusting it.** `0x4C59C+0xC` is the word mode 0 compares. Nothing yet shows that it holds the received destination on the mode-4 (DMR) arm at `0x11d04`. Build a **bench-only twin F58D** (FW58 plus the op 14 window `[0x30000, 0x50000)`, as F57D) and on the bench read `0x4C59C`–`0x4C5AF` and `0x4C7A0`–`0x4C7AF` during a TG 99 replay and during the All-Call replay. If `+0xC` isn't the destination there, compare against the LC destination your (A) stub stores instead, if (A) runs before `0x11d04`; or read it from the 12-byte buffer.
+
+**3. (C) Use the existing hold marker, not a new byte flag.** `0x4B008` is already the hold word: apply writes `0x484F4C44` ("HOLD") at `0x5B2F4`, the release tail clears it at `0x5B2B6`, and `on_key` (`0x5BCE4`/`0x5BD10`) and op 5 (`0x5B07C`) read it. As designed, your stub sets *byte* 0x4B008 to 1, apply then writes the whole magic word, and the release test "byte == 1" would never match (the low byte of the magic is `0x44`), so WORK_MODE would never be restored. Instead:
+- **apply** saves to `0x4B000` only when the word at `0x4B008` ≠ `0x484F4C44`;
+- **release** restores only when it == `0x484F4C44`.
+
+The release restore at `0x5BD36` runs before the tail clears the marker (`0x5B2A8` → `0x5B2B6`), so the order works.
+
+**(A) is fine as designed.** Index with byte 2 of `0x4C7BC` (the reader's), keep `r3 = r8−16` on return, and touch nothing else. Add a unit test that the replaced `subi` is reproduced exactly.
+
+**Build:** FW58 and F58D from FW57 (the same lineage, `SRC` named), all four guards plus `space_map` (the five retarget windows, stubs only in `0x5C59C`–`0x5C6FB`), unit tests per site, and sha256 values. Extend `test_repro_fw57.py`, or add `test_repro_fw58.py` (factory → FW58). **Not loaded.** Report with `STATUS: REVIEW`.
