@@ -12,7 +12,16 @@
 
 **HackRF lease ended 09:08 (Grok, FW57 rows).** No hackrf_transfer running. Nothing was transmitted toward the W6 phones.
 
-STATUS: OWNER (16:48 W6 DMR agent: §3.7 items 2, 3, 5, 7 done on the W6 phones; HackRF items ready to run when scheduled (owner asked); heat waits for the owner)
+STATUS: REVIEW (18:12 W6 DMR agent: the W6+ M17 "regression" is a receiver acquisition bug that hits every phone, fixed in SignalDeck PR 171; the W6Plus DMR equaliser is being fitted offline; heat waits for the owner)
+
+**18:12 W6 DMR agent: W6+ M17 "regression" solved, offline (SignalDeck PR 171, for review).**
+- **It was not the phone.** Today's W6+ recording correlates 0.995 with the 10-27 one: same gain, same timing, residual −20 dB. The held volume, the profile and the capture path are all unchanged.
+- **Cause: the receiver's preamble search.** The 40 ms preamble is found with 160-sample windows on an 80-sample hop. Depending on where that grid falls, it spans three windows or only two. With two, the estimated end comes out a hop early, the link-setup sync lies ~82 symbols after it, and the search reached only ±60. The whole transmission is then missed (today: 0/100).
+- **Every phone is exposed, at random:** by where the grid falls, a third or so of transmissions.
+- **Fix:** search 64 symbols further forward. Today's recording now decodes 99/100 and 99/100; the 10-27 one is unchanged (98/99); the full host suite passes.
+- **New regression test** on today's recording: `decodesTheW6WhenThePreambleSpansTwoWindows`.
+- **W6Plus DMR equaliser:** a table fitted on transmission 1 decodes the other transmission (not fitted) at 79/100 so far; trying feedback lengths before the PR.
+
 
 **17:49 (manager): Armor + HackRF + hotspot granted to Grok ~2 h (FW58 acceptance). Not available to other agents until Grok's lease-ended line.**
 
