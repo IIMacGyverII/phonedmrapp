@@ -4780,6 +4780,19 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**FW57 acceptance remainder (10:46).** FW54 and FW55 were not loaded again. M17 receive was off for every DMR row until the PR 143 step. Slot 1 is not covered. The hotspot config was not changed. End state: SignalDeck PR 143, file sha256 `a8518e4f9d468e4b3e6ff524a4f659440c44eb5e2d73e3c0ca94255b5fb19337`, installed with `adb install -r`, module `DMR003.FW57.V022`, not transmitting.
+
+| Row | FW57 |
+|---|---|
+| DMR slot 2, in-list TG 9, from the hotspot | Heard. Status 1, `0x2B` length 9. HackRF carrier 5.98 s, 29 sync bursts |
+| DMR slot 2, out-of-list | Not scored. The phone's TG 99 key was on the HackRF (15 sync bursts) and the hotspot did not log it. A replay with the destination changed to 99 was refused as an invalid source and did not radiate |
+| Promiscuous on / off | The flag answered `sr=0` (`flag=1`, then `flag=0`). No out-of-list carrier, so heard / 11-byte `0x2B` was not measured |
+| M17 RX after a symbol key | Symbol key carrier 8.42 s, released. Then one call, 17 frames, 16 good |
+| CTCSS 67.0 receive | Hearing stayed false for 67 Hz at 1500 Hz deviation and for 1 kHz with no tone. RSSI −87 both times |
+| Runner `all` | Boot silent. Tone p99 2527 Hz. Stream 1125/1125, end bit, p99 2895 Hz. Receive clip −19.1 dBFS. Heat no stop, AP 44.7 to 46.1 °C, battery 35.6 to 36.0 °C |
+| 10 min soak | 8 cycles of symbol, FM, and DMR. Every key released. Battery 36.0 to 36.3 °C, AP about 45 °C, PA about 43 °C. No heat stop |
+| PR 143 first slot 0 key | Log `data hold action=0 sr=0` and `data hold released before a DMR channel`. Carrier 4.94 s, 17 sync bursts, 4 bench rows |
+
 **Data-hold test (10:02).** FW57, low power, 467.625 MHz. The pager was not listening. M17 receive was turned on while the VFO was analog, then each row was one digital write and the first group slot 0 key.
 
 | State | After the write | First key |

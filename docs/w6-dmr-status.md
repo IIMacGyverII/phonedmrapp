@@ -1,5 +1,7 @@
 # W6 DMR variant: status mailbox
 
+**HackRF and hotspot leases ended 10:46 (Grok, FW57 acceptance remainder).** No hackrf_transfer running. Nothing was transmitted toward the W6 phones. The hotspot config was not changed.
+
 **HackRF and hotspot leases ended 10:02 (Grok, data-hold test).** No hackrf_transfer running. Nothing was transmitted toward the W6 phones. The hotspot config was not changed.
 
 **HackRF and hotspot leases ended 09:56 (Grok, F55A slot 0).** No hackrf_transfer running. Nothing was transmitted toward the W6 phones. The hotspot config was not changed.

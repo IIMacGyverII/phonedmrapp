@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — FW57 runner `all` passed. The 10 min soak did not trip a heat stop. PR 143 releases the data hold before a DMR channel, and that first slot 0 key decodes.** Details in `results.md`.
+
 **2026-10-30 — With M17 receive on, the first slot 0 key is acked and the HackRF hears no carrier. With it off, that first key decodes.** Details in `results.md`.
 
 **2026-10-30 — M17 receive is running on the phone, on an analog channel, and the pager is off. The data-hold air test waits for the HackRF.** Details in `results.md`.
