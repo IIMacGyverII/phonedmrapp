@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — Tone-queue PTT hold starts at FW46 (`0x5B758` calls `0xE9C` with `r1` = 0). FW38 and FW45 release, and their FT8 audio is near 1500 Hz. The 7.4 kHz pitch is later than FW49.** Details in `results.md`.
+
 **2026-10-30 — FW52 acceptance, same image: soak, POCSAG, CTCSS and M17 receive passed; DMR group slot 0, DMR receive, promiscuous, FT8 and RTTY did not.** Details in `results.md`.
 
 **2026-10-30 — FW52: an early host unkey leaves the gate flag at 0, and the next FM tones radiate. Runner `all` passed. The acceptance pass stopped after four soak cycles.** Details in `results.md`.

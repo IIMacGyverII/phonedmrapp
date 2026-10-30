@@ -903,6 +903,10 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 
 ## Last report
 
+**02:54 (Grok): the tone-queue PTT hold starts at FW46. The 7.4 kHz pitch is later.** Module is `DMR003.FW46.V022`, channel 56, not transmitting. Factory was keyed once before these loads (carrier 2.85 s, then idle).
+
+FW38 and FW45 release after one FT8 message, and the audio is near 1500 Hz. FW38 decoded `CQ N0CALL` at 1500 Hz. FW46, FW47 and FW49 keep PTT down until SignalDeck is force-stopped. Their audio is still near 1500 Hz. FW46 puts `0xE9C` back at `0x5B758` with `r1` = 0; FW45 had nop'd that call. RTTY on FW38 was a steady tone near 1000 Hz and it did release. DMR group slot 0 and DMR receive are not compared yet. The table is in `results.md`.
+
 **02:20 (Grok): FW52 acceptance, same image. Several rows passed. DMR group slot 0, DMR receive, promiscuous, FT8 and RTTY did not.** Module is `DMR003.FW52.V022`, channel 56, 467.625 MHz, not transmitting. Sha256 `ee837c924642efc3b98a8db0fa30b6f1a72b8684b98171a8970841f19d600127`.
 
 The 10-minute soak ran 27 cycles and stayed on the UART. POCSAG 1200 decoded 16 of 16. CTCSS 67.0 Hz passed both ways. M17 receive was 19 of 20, including straight after a symbol key. Group slot 1 and both private DMR transmits decoded. Group slot 0 reported transmit start and stop and radiated nothing. A DMR replay on 467.625 at about −84 dBm produced no receive start, so promiscuous was not compared. SSTV Robot 8 showed a 1900 Hz leader, VIS code 2, and 1500/2300 Hz pixels. FT8 was queued and the tone queue then held PTT until SignalDeck was force-stopped. The carrier was gone after that, and the app was started again. RTTY was a steady tone near 1000 Hz and the text was not recovered. The table is in `results.md`.

@@ -4780,6 +4780,19 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**FW46 is the first image whose tone-queue key does not release (02:53).** Factory was loaded after FW52 held PTT, keyed once on 467.625 low power (carrier 2.85 s, 61 dB SNR, then not transmitting), then the comparison images. One FT8 message each, HackRF capture, then whether the app was still transmitting.
+
+| Image | FT8 audio | PTT after the message |
+|---|---|---|
+| FW38 | Decoded `CQ N0CALL` at 1500 Hz, −8 dB, dt +1.1 s. Carrier 14.0 s. | Released |
+| FW45 | 80 of 82 symbol windows between 1400 and 1600 Hz, median 1512 Hz. Carrier 14.1 s. | Released |
+| FW46 | 80 of 82 windows in that same span, median 1512 Hz. Carrier 20.0 s. | Held. Force-stopped. Carrier gone, app started again. |
+| FW47 | Held. Force-stopped. | Held |
+| FW49 | 79 of 81 windows near 1500 Hz. Carrier 31.1 s. | Held. Force-stopped. |
+| FW52 | Audio near 7.4 kHz. Not decoded. | Held until force-stop (the acceptance pass). |
+
+FW45 is two nops at `0x5B758`, where the engine end had called `0xE9C` with `r1` = 1 (`tools/fw-patch/fw45_build.py`). FW46 puts that call back as `movi r1, 0` then `bsr 0xE9C` (`fw46_build.py`). `r1` = 0 is the unkey that does not return. The 7.4 kHz pitch is later than FW49. RTTY on FW38 was a steady tone near 1000 Hz, carrier 4.8 s, and it did release. Left on FW46, not transmitting.
+
 **FW52 acceptance (02:20), same image.** Tag `DMR003.FW52.V022`, sha256 `ee837c924642efc3b98a8db0fa30b6f1a72b8684b98171a8970841f19d600127`. Low power, 467.625 MHz. The HackRF was the second receiver.
 
 | Row | Result |
