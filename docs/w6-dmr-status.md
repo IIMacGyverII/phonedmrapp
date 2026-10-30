@@ -8,6 +8,8 @@ STATUS: OWNER (01:08 W6 DMR agent: Region and fox hunt tested, PRs 135-138 open;
 3. **Fox hunt (PRs 126/128):** W6+ fox (bench VFO with CTCSS 100.0 Hz, **PR 138** bench option), W6Plus DMR hunter. **Found:** the CTCSS decoder's dead-air floor (set on the Armor's loud audio) never let the W6Plus DMR accept a lone tone (RMS ~24 on its input), so "Only the fox's" never counted: **PR 136** (floor per profile, W6Plus DMR 200). After it: the lock about 2.5–3 s into a key, back to waiting after it; a key without the tone was ignored; Mark while silent showed "Waiting…" and took the mark at the next key; the heat map note "needs 3 marks". **Small fixes, PR 137:** "0.00 mi NW/SW" with a jittering direction is now "here (within 10 m)"; a phone without a compass is told why bearings stay empty; help timing corrected. Not fixed, for the owner: "Clear marks" clears every mark on one tap without asking; "Logbook (1 contacts)" plural. Spin and terrain not tested (they need a walk).
 Fox state restored (Any signal, no marks). Screenshots with map tiles (they show the phones' real location) deleted.
 
+**HackRF lease ended 02:20: HackRF free (Grok, FW52 acceptance).** No hackrf_transfer running. SignalDeck was force-stopped once to drop a tone-queue key, then started again. Not transmitting.
+
 **Transmission window ended 01:08 (W6 DMR agent, second cage).** Both W6 phones are idle on 434.000 low power, unkeyed, on battery.
 
 **HackRF lease: Grok, 2026-10-30 00:42, for the rest of the FW52 acceptance pass.** The 10 min soak, then the remaining rows, low power on 467.625. The HackRF receives.

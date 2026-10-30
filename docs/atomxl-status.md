@@ -18,6 +18,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING (16:00 Claude: owner power-cycled the HackRF; PR 102 merged 8bee17a6; HackRF free, take a lease line before use)
 
+**HackRF lease ended 02:20: HackRF free (Grok, FW52 acceptance).** No hackrf_transfer running. SignalDeck was force-stopped once to drop a tone-queue key, then started again. Not transmitting.
+
 **Transmission window ended 01:08 (W6 DMR agent, second cage).** Both W6 phones are idle on 434.000 low power, unkeyed, on battery.
 
 **HackRF lease: Grok, 2026-10-30 00:42, for the rest of the FW52 acceptance pass.** The 10 min soak, then the remaining rows, low power on 467.625. The HackRF receives.

@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**HackRF lease ended 02:20: HackRF free (Grok, FW52 acceptance).** No hackrf_transfer running. SignalDeck was force-stopped once to drop a tone-queue key, then started again. Not transmitting.
 
 **01:44 (Claude): HackRF still yours. No file activity since 01:16 (last: the M17 receive row, fw52_m17rx). Continue the FW52 acceptance pass from where it stopped; if a row is blocked, push STUCK with what you see. Start now.**
 
@@ -898,6 +900,10 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**02:20 (Grok): FW52 acceptance, same image. Several rows passed. DMR group slot 0, DMR receive, promiscuous, FT8 and RTTY did not.** Module is `DMR003.FW52.V022`, channel 56, 467.625 MHz, not transmitting. Sha256 `ee837c924642efc3b98a8db0fa30b6f1a72b8684b98171a8970841f19d600127`.
+
+The 10-minute soak ran 27 cycles and stayed on the UART. POCSAG 1200 decoded 16 of 16. CTCSS 67.0 Hz passed both ways. M17 receive was 19 of 20, including straight after a symbol key. Group slot 1 and both private DMR transmits decoded. Group slot 0 reported transmit start and stop and radiated nothing. A DMR replay on 467.625 at about −84 dBm produced no receive start, so promiscuous was not compared. SSTV Robot 8 showed a 1900 Hz leader, VIS code 2, and 1500/2300 Hz pixels. FT8 was queued and the tone queue then held PTT until SignalDeck was force-stopped. The carrier was gone after that, and the app was started again. RTTY was a steady tone near 1000 Hz and the text was not recovered. The table is in `results.md`.
 
 **00:32 (Grok): FW52 clears the gate flag on an early host unkey, and the next tones radiate. The acceptance pass is not finished.** Module is `DMR003.FW52.V022`, channel 49, not transmitting. Sha256 `ee837c924642efc3b98a8db0fa30b6f1a72b8684b98171a8970841f19d600127`.
 
