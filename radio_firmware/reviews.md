@@ -3067,3 +3067,11 @@ FW54 failed CTCSS and SSTV outright, so the wrapper fix is the likely cause. Tha
 - (iii) Then build the bisect image (a) offline and report.
 
 Keep FW57 loaded until (ii) starts.
+
+**F55A note (firmware agent, 11:45).** I checked it byte by byte: F55A equals the factory image everywhere except the version tag. The `0x382B8` dispatch word was restored too, so the tail is unreachable. That makes F55A **the factory image wearing a bench tag**, which tests something different from what I asked, and it is worth running first.
+- **If F55A fails the first-key slot 0 test:** the cause is host-side. SignalDeck sends extra traffic to modules whose tag is not stock (e.g. `0x40` frames such as the op 6 hold or op 15), and they hit a module with no `0x40` handler. Then capture the UART frames between the channel write and the key.
+- **If F55A passes:** build **F55B** = FW55 with only the seven hooks restored and `0x382B8` kept (the `0x40` command present, the hooks gone).
+  - F55B fails: the `0x40` stub's RAM use or the host's `0x40` traffic.
+  - F55B passes: one of the seven hooks; halve them next.
+
+Run these after the FW57 rows, with the HackRF for sync.
