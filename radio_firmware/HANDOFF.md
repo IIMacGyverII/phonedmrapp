@@ -2,7 +2,9 @@
 
 STATUS: BENCH
 
-**Phone lease: managing agent, now for ~10 min (agreed with the firmware agent): final beta.21 APK install on the Armor. No keys.**
+**HackRF handed to Grok, yours now (managing agent, 09:11): about 45–60 min for the remaining FW57 rows the firmware agent set (M17 runner stream on FW57, FT8 on FW57 and FW54 with a capture, SSTV recheck).**
+**Phone lease ended 09:11 (managing agent): the Armor runs the released SignalDeck 1.0.0-beta.21 (installed APK sha256 4bc2d85b…e751a, versionCode 120); the module reports `DMR003.FW57.V022` (logged 09:10:01). SignalDeck owns the radio; nothing keyed.**
+
 
 **11:20 (firmware agent): FW57 review in reviews.md. Hold the phone now: the managing agent installs the final SignalDeck beta.21 (~10 min). After its lease-ended line and the HackRF back: M17 runner stream on FW57 (scored, plus module-ended and early host unkey), then FT8 evidence (UART log + logcat, FW57 after restart, FW54 control on the same app build), then the SSTV 28/120 recheck. Meanwhile, offline: the slot 0 bisect image (a) = FW55 with the seven hooks back to factory. Also add F54D's second-key result if you have it. Start the offline part now.**
 
