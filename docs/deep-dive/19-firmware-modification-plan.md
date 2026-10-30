@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — On FW57, channel 49 radiates after a module restart when M17 was never started, and stays silent after M17 is started and stopped. The silent key follows `data hold action=0`.** Details in `results.md`.
+
 **2026-10-30 — Beta.22 loads a local FW57 from the Module firmware page (flash sample matched). FM, a simplex VFO group key, and M17 Hold to talk decode. The page does not download FW57 when that file is absent. The module was left on `DMR003.UV4T.V022`.** Details in `results.md`.
 
 **2026-10-30 — Beta.22's Module firmware page restores the factory image, then refuses the catalogue FW57 (`5f16ef68…00f7`) at pre-flight because `ImageTable.bySha` only knows the built-in rows. The module was left on `DMR003.UV4T.V022`.** Details in `results.md`.

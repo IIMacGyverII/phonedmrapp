@@ -4780,6 +4780,16 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Channel 49 control on FW57 (12:58).** The page loaded the local file again: 370 / 370, 2836 B/s, 2:13, result `DMR003.FW57.V022 · flash sample matched` (`stepd2_21_fw57_done.png`). M17 was off. Channel 49 was selected, the module was restarted, and channel 49 was selected again before the first key. Row (a) is that key. Row (b) is the next key, after M17 was started and stopped on channel 56. Row (c) was not run.
+
+| Row | Setup | HackRF | Log |
+|---|---|---|---|
+| (a) | Module restart. M17 had not been started since that restart. Select channel 49. First key | Carrier 4.22 s, 55.9 dB. 15 sync bursts (11 MS voice, 4 MS data). Voice LC header and a terminator, colour code 1, group, destination 9 | No `data hold` line. `0x26` on acked, status 3, unkey, status 4 |
+| (b) | Start M17 on channel 56, stop it, select channel 49. First key | No carrier. Peak 1.1 dB over the floor | `data hold action=1 sr=0` twice, then `data hold action=0 sr=0` twice. Then `0x26` on acked, status 3, unkey, status 4 |
+| (c) | Factory image | Not run. (a) radiated | |
+
+Left on `DMR003.FW57.V022`, channel 49, 467.625 MHz, low power, not transmitting. Battery 36.1 °C, `mtktsAP` 43.5 °C, `mtktsbtsmdpa` 42.0 °C.
+
 **Step (d) restarted on the fixed beta.22 (12:42).** SignalDeck `1.0.0-beta.22`, versionCode 121, main `ad8cb179`. The module was already `DMR003.UV4T.V022`, so factory was not flashed again before the first load. There is still no catalogue-refresh control once the factory backup is verified. The catalogue row offered `DMR003.FW57.V022` between FW22 and B3G1, with the release summary and hash `5f16ef683ce92dc02ebf1f35d3d3cf5dca2ad4edfeee8e044ea75d9d3cda00f7`, and it said the file was on the phone. Pre-flight was green, including "This phone — Ulefone Armor 26 Ultra". Confirming Load transferred 370 / 370 blocks, 378,620 bytes, 2841 B/s, 2:13 elapsed, 0 retries. The result was `DMR003.FW57.V022 · flash sample matched`, and the module answered that tag.
 
 | Check | Result |
