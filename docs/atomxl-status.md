@@ -18,6 +18,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING (16:00 Claude: owner power-cycled the HackRF; PR 102 merged 8bee17a6; HackRF free, take a lease line before use)
 
+**Lease ended 22:35 (Atom XL agent, phone only).** The reworked PR 117 build (f519fa6e: no capture for a signal-only reception under 3 s, a silent signal-only capture closed at 1.5 s, the last reception's tail closed) is installed with install -r; SignalDeck took the radio (bridge up 22:34:47, module V067), channel 2, receive only. No signal on the channel to receive meanwhile (no HackRF in this lease). Overnight the passive log records "capture waits", "closed before the bridge times out", restarts and stuck-line events from natural bursts (the Armor during Grok's work) for PR 117's device run. Before the install, at 22:33:34, the first PR 117 build skipped a restart after an Armor burst (its known flaw).
+
 **Lease: Atom XL agent, 2026-10-29 22:34 for about 5 min (phone only, no HackRF, no TX).** Installing the reworked PR 117 build (f519fa6e) with install -r and checking SignalDeck takes the radio.
 
 **HackRF lease: Grok, 2026-10-29 22:24, for the FW50 proof.** One load, then plain FM key/unkey/key three times, a DMR key/unkey/key, a symbol key, channel 58, and three low-power tones on 467.625, then M17 receive and the runner. Low power.
