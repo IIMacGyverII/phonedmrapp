@@ -2788,3 +2788,64 @@ Promiscuous on/off was not compared; it needs a working DMR receive first.
 - runner `all`.
 
 **Rule from tonight:** every image runs **all** rows. Each fix so far broke something an earlier image had passed (FW46 tone hold, FW50 pitch, FW52 slot 0, FW54 app audio).
+
+## Firmware state brief (Claude, 2026-10-30 08:30, read before the next image)
+
+I re-read the build chain (`tools/fw-patch/fw3x–fw55_build.py`, `stubs/c7000_cmd40_sym.S`, `test_patches.py`). Five things decide what FW56 has to be.
+
+**1. Where the four 0x26 sites point** (checked with `bsr_target` on each image):
+
+| Image | body 1 (0x92C8, 0x92E0) | body 2 (0x92AA, 0x92FA) |
+|---|---|---|
+| factory | 0xE9C | 0xE9C |
+| FW46, FW54 | 0x5B580 (pre_key → on_key) | 0x5B614 (→ 0x5BE14 save/restore → on_unkey) |
+| FW50–52 | 0x5B65C gate | 0x5B660 gate |
+| **FW55** | **0xE9C** | **0xE9C** |
+
+**FW53, FW54 and FW55 are built on FW46, not on FW52.** The FW50 gate is not in any of them.
+
+**2. FW55 cannot send M17, POCSAG or anything from the tone queue.** `c7000_cmd40_sym.S` says it plainly: "Nothing in this command keys." The symbol ring and the tone queue are played only from `on_key`, reached from the host's 0x26 body 1. `on_key` calls the stock 0xE9C first and then, when the ring or a tone queue is waiting, arms TX RAM:
+- RF_MODE 0x10E0;
+- WORK_MODE 0x80;
+- AT1846S 0x30 and 0x58 = 0xBCFD;
+- the 0x4DAAC flag.
+
+FW55 sends body 1 straight to 0xE9C, so an M17 key keys a plain FM carrier and the ring never plays. FW55's proof did not include M17, FT8, RTTY or POCSAG, which is why it looked good. **FW55 is a diagnostic, not a candidate. Do not run the acceptance pass on it.**
+
+**3. FW50's design was right. Its failures were placement collisions.**
+- FW50 overwrote 0x5B700–0x5B71F, the tone-queue pitch helper, which gave FT8 at 7.5 kHz.
+- FW52 overwrote 0x5B74C–0x5B755, the live unkey, which silenced group slot 0.
+
+The literal and branch guards did not catch either, because both ranges are reached through paths the guard doesn't trace.
+
+**FW56 = FW54 + the FW50 gate in genuinely free bytes:**
+- When a symbol transfer is active (the ring is queued, a tone queue is live, or 0x4DAAC is set), body 1 goes to `on_key` and body 2 to `on_unkey`, the FW46 path.
+- Otherwise both bodies call the stock 0xE9C once, exactly as the factory does.
+
+That keeps FW55's win (phone-audio keys and plain FM take the factory path) and keeps M17, POCSAG and the tone queue keyed through our engine. Bring over FW51's single stock unkey per symbol key and FW52's early-unkey clear (0x4DAAC to 0, countdown to 0, refusal latch 0x4D900, cleared by op 3), also in free bytes.
+
+**4. Before any byte is reused: a space map.** Write `radio_firmware/fw54_space_map.md` covering the tail 0x5AEFC–0x5C6FB (and any other range we write):
+- every range, its owner (stub or symbol name), and what reaches it (bsr/br/jsr targets, `lrw` pools, computed jumps found by disassembly, dispatcher tables);
+- **only unreferenced bytes count as free**, and our own earlier stubs are live until a trace proves them dead.
+
+Then add a check to `literal_guard.py`: new bytes must fall inside the map's free ranges, and the build refuses otherwise. That would have stopped FW50 and FW52.
+
+**5. The first-key group slot 0 fault is not in the 0x26 sites.** FW55 has factory sites and still fails it, so the difference is on the channel-write path, or in host traffic that only stub tags get.
+
+Don't theorise; **bisect this one test**: one channel write, then the first group slot 0 key on 467.625, low power, HackRF capture for sync. At ~150 s per load, five loads cover factory → FW20 → FW26 → FW30 → FW37 → FW44 → FW46.
+
+Also compare the UART frames SignalDeck sends between the channel write and the key on factory versus FW55, with the same app build:
+- the app sends op 15 (promiscuous) on digital channels only with MON;
+- it sends the op 6 data hold only while M17/data receive is on;
+- if any extra frame appears on a stub tag, repeat the test with it suppressed.
+
+**Order of work** (M17 first, owner's priority):
+1. the space map and the guard;
+2. FW56 (FW54 + gate in free space);
+3. the FW56 proof: M17 TX payload-exact and a module-ended plus an early host unkey, then FM ×3 → FT8 decoded and released → RTTY → a CTCSS tone and SSTV (phone audio) → POCSAG → DMR group/private on both slots;
+4. the slot 0 bisect;
+5. the full acceptance pass.
+
+**DMR receive:** two replays failed (−108 and −105 dBm). Use the **hotspot as the DMR transmitter**: allowed for receive rows, with a lease line. Or ask me for the W6Plus DMR. Stop tuning the replay.
+
+**Report** with a per-image regression table in results.md (rows × FW46, FW52, FW54, FW55, FW56) so every change shows what it fixed and what it broke.

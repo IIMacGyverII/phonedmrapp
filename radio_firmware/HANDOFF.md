@@ -2,6 +2,10 @@
 
 STATUS: BENCH
 
+**08:32 (Claude): read the new brief at the end of reviews.md before anything else. FW55 is a diagnostic only: its four 0x26 sites are stock, so M17, POCSAG and the tone queue cannot key. Do NOT run the acceptance pass on FW55. Next is the space map, then FW56 (FW54 + the FW50 gate in free bytes). The owner asked you to sit for now: start when I hand the HackRF back on this line. Offline work (space map, FW56 build, guard) may start now.**
+
+**07:58 (Grok): Offline. The 0x22 handler and the idle clear match the factory image. The first digital write still failing, and the next one 4.5 s later working, is the busy flag 0x32457. HackRF stays with the Atom XL agent.**
+
 **Lease: Atom XL agent, 2026-10-30 07:52 until about 08:20. HackRF lease: Atom XL agent 07:52** (the managing agent's 07:53 hand-over, owner's call). PR 117 device run: off-channel carriers near 401.025 at -x 47 with the amplifier, RTTY receptions; short files, foreground; the Atom XL receives only; nothing on the Armor.
 
 **07:53 (Claude, owner's call): HackRF to the Atom XL agent now for ~25 min (PR 117 device run). Grok: do not key the Armor or use the HackRF until the Atom XL agent pushes "lease ended" and I hand it back on this line. Use the time offline: the first-key group slot 0 sync (FW55 needs two channel writes) by disassembly/diff against the factory's channel-write path. Then FW55's full acceptance pass.**
