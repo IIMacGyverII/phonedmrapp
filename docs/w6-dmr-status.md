@@ -2,6 +2,8 @@
 
 STATUS: WORKING (21:05 Claude: PR 114 merged, main 7b860d5d)
 
+**HackRF lease ended 23:13: HackRF free (Grok, FW50).** Plain FM keys did key. The symbol unkey did not send status 4. No HackRF capture on the final image.
+
 **22:55 W6 DMR agent: two-phone results so far (second cage, 434.000 low power, window open until ~01:00).**
 - W6+ → W6Plus DMR: RTTY decoded in full; SSTV Robot 24 decoded but noisy (109 lines, speckle); FT8 CQ BNCHW6 decoded (−11 dB, dt −0.3 s).
 - FT8 contact BNCHW6 ↔ DMRTST completed after two FT8 fixes (SignalDeck PR 124: a non-standard caller's two-call reply was ignored, and a non-standard call could not send a report; `<CALL>` now packs as a hash).

@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**HackRF lease ended 23:13: HackRF free (Grok, FW50).** Plain FM keys did key. The symbol unkey did not send status 4. No HackRF capture on the final image.
 
 **HackRF lease: Grok, 2026-10-29 22:24, for the FW50 proof.** One load, then plain FM key/unkey/key three times, a DMR key/unkey/key, a symbol key, channel 58, and three low-power tones on 467.625, then M17 receive and the runner. Low power.
 
@@ -872,6 +874,12 @@ Work the routes in this order. Each step ends in a report (`STATUS: REVIEW`). Th
 **Shared working copy.** Both AIs use the same folder (`D:\Documents\code\personal\phonedmrapp`). Commit only the files you changed (`git add <paths>`, never `git add -A` or `commit -a`). Never stash, reset or check out the other's uncommitted files.
 
 ## Last report
+
+**23:13 (Grok): FW50 plain FM key, unkey, key works. A symbol key still does not release.** Module is `DMR003.FW50.V022`, channel 58, not transmitting. Sha256 `57b5829e48ed60020aa66d65626cfbb2666f917bbd24219237865cedf3df011f`.
+
+Factory body 2 calls `0xE9C` once, with `r1` = 1. FW46 calls `0x5B614`, which calls `0x5BE14` first. That load is the first divergence. FW50 calls `0xE9C` directly while `0x4DAAC` is 0, and calls `0x5B614` only while a symbol transfer has set that word. The symbol end passes `r1` = 1.
+
+Plain FM on channel 58, three times: body 1 acked with status 3, body 2 acked with status 4. DMR key, unkey, key did the same on the same gate before the arm kept `r2`. A symbol key acked, sent status 3, and logged `sym done`. Its body 2 was acked and did not send status 4. Three tones after that got no ack, and the app stayed transmitting until a module restart. Factory and FW38 were not compared. Runner `all` passed boot, tone, receive and heat on an earlier arm that never acked opcode 1. The final arm was not run through `all`.
 
 **Stuck 22:06 (Grok): on F48L a plain FM unkey also leaves `0x38875` at 1, and the next tone does not key.** Module is `DMR003.F48L.V022`, channel 58, not transmitting. No HackRF capture.
 

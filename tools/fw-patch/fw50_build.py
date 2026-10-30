@@ -64,17 +64,20 @@ unkey_gate:
 	pop	r15
 """
 
+# r2 is live across the op 1 call: 0x5BDFE jumps to 0x5AF52, which does subi r2, 1.
 ARM_ASM = """
 	.text
 	.global	arm_flag
 arm_flag:
-	push	r15
+	subi	sp, 4
+	st.w	r2, (sp, 0)
 	movih	r2, 4
 	ori	r2, r2, 0xdaac
 	movi	r3, 1
 	st.w	r3, (r2, 0)
-	.long	0x44444444
-	pop	r15
+	ld.w	r2, (sp, 0)
+	addi	sp, 4
+	.long	0x55555555
 """
 
 
@@ -165,7 +168,10 @@ def build():
     if GATE_AT + len(gate) > HOLE_END:
         raise SystemExit("gate %d at %X" % (len(gate), GATE_AT))
     arm = _linked(ARM_ASM, WRAP, "fw50a")
-    _call(arm, WRAP, 0x44444444, APPEND)
+    slot = arm.find(struct.pack("<I", 0x55555555))
+    if slot < 0:
+        raise SystemExit("arm branch")
+    arm[slot:slot + 4] = fw30_build.encode_br(WRAP + slot, APPEND)
     if WRAP + len(arm) > ARM_END:
         raise SystemExit("arm %d" % len(arm))
     if arm.find(struct.pack("<I", FLAG)) >= 0:
