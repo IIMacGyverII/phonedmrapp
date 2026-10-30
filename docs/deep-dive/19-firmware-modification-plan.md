@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — The FW55 `0x22` handler matches the factory image. The first digital write missing, and the next one 4.5 s later applying, fits the busy flag `0x32457`.** Details in `results.md`.
+
 **2026-10-30 — FW55 sends the four 0x26 sites to stock 0xE9C. Phone-audio keys radiate again. The first group slot 0 key after a single channel write still has no sync.** Details in `results.md`.
 
 **2026-10-30 — The factory image's first group slot 0 key decodes. On FW54 that first key does not. The FW54 acceptance table is in `results.md`.**
