@@ -38,8 +38,8 @@ LOG_ASM = """
 	.global	log_e9c
 log_e9c:
 	ld.w	r2, (r14, 12)
-	movih	r3, 0x4d
-	ori	r3, r3, 0x900
+	movih	r3, 4
+	ori	r3, r3, 0xd900
 	ld.w	r4, (r3, 0)
 	addi	r4, 1
 	st.w	r4, (r3, 0)
