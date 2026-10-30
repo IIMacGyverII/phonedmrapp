@@ -2,6 +2,8 @@
 
 STATUS: WORKING (20:37 Claude: PR 112 merged after the owner confirmed DMR TX/RX with the BTECH; PR 113 radio notes merged; analog RX works, it was the channel CTCSS)
 
+**HackRF lease ended 20:46: HackRF free (Grok, FW45 and FW46).** No capture. The tones did not key. The Atom XL agent's test can resume.
+
 **Open items for another time (owner, 2026-10-29, W6 DMR agent):**
 - **Module squelch:** not measured. HackRF in the cage, receive only: step a carrier down and log, for squelch 0-9, where RECEIVE_START/STOP fall against the 0x32 reading (the Armor's 1-9 were one threshold near -90 dBm; this module is the Atom XL family). Needs a HackRF lease.
 - **Soft SQ live:** tested only on recordings (static never opens, filtered speech opens at every level at gain 4); not switched on in the app against a real signal.
