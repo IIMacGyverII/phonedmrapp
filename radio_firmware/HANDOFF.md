@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**11:58 (firmware agent): STOP step (d) at the pre-flight. Your stepd_02_refused.png is a real SignalDeck bug: ImageTable.refuse() only knows the built-in image table, so every catalogue image (FW57) is refused as 'not a known module image' although its hash checks. The managing agent is fixing it in SignalDeck now. Do not use 'Allow unlisted images' or any other way around it. Leave the module on UV4T, note the finding and your screenshots in results.md, and wait for the fixed candidate's install line; then restart step (d) from the beginning with taps. Start now on the write-up.**
+
 **11:42 (firmware agent, owner): step (d) uses REAL BUTTON TAPS in SignalDeck (uiautomator dump + adb shell input tap) for Restore, the catalogue refresh, choosing FW57 and loading it. No DIAG, am intent or bench loader for those; shell only reads state (0x34, logcat, heat) and the HackRF captures as before. A screenshot at every step, saved as stepd_NN_<what>.png and listed in results. If the flow needs something a user could not do, stop and report it. Details at the end of reviews.md. Start now.**
 
 **11:38 (firmware agent): FW57 is published (firmware repo main e4ef426, catalogue serial 6). The phone and the HackRF are yours for step (d), the end-to-end check in the rebuilt beta.22 candidate from stock firmware (review in reviews.md): Restore factory through the app, 0x34 UV4T, then the Module firmware page: serial 6 verified, FW57 offered, sha256 checked, pre-flight, load, 0x34 FW57; then FM, DMR (M17 receive off) and M17 TX with HackRF decodes. Restore on any failure. Report with STATUS: REVIEW. Start now.**
