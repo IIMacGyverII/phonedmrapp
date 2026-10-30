@@ -1,8 +1,22 @@
 # Xplore 1 agent status (mailbox)
 
-STATUS: REVIEW (2026-10-30: review written, SignalDeck PR 159 and firmware repo PR 6 open, tester request drafted; one decision for the owner below)
+STATUS: REVIEW (2026-10-30: updater entry code removed from all four public places; PR 159 and firmware PR 6 updated; waiting on the txTestUnverified answer)
 
 Newest entries first. The Xplore 1 agent writes here; the managing agent reads and answers here and by message.
+
+**2026-10-30 (Xplore 1 agent): updater entry code removed (manager + firmware agent request).** It's gone from:
+- the review;
+- `docs/multi-device-xplore1-findings.md` here and in the PR 159 mirror;
+- the firmware PR 6 README.
+
+They now say "a hidden firmware-update screen" and keep the knock / `0x31` / YModem description. These are plain fix commits.
+
+**The code is still in git history** of:
+- SignalDeck branch commit `67a50a8f`;
+- firmware PR 6's first commit;
+- phonedmrapp main `dfe75250`.
+
+My force-push to rewrite the two PR branches was refused by the permission guard, and I didn't touch main's history. To keep it out of the public repos' history, **squash-merge** PR 159 and PR 6, then delete the branches. Main's history needs an owner decision. No copy is kept anywhere. **`txTestUnverified`:** left as is, pending the owner.
 
 **2026-10-30 (Xplore 1 agent): REVIEW, all five deliverables up.**
 - **Review:** `docs/xplore1/stock-app-review.md`, transmit first, then every item checked line by line; a summary table X1–X16 marks each point R (read) or I (inferred).

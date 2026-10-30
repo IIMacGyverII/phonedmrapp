@@ -230,4 +230,4 @@ Full write-up: phonedmrapp `docs/xplore1/stock-app-review.md`. The changes are i
 - **`0x3B`:** sent only when the user changes the transmit limit (default 120 s).
 - **Statuses:** `0x36` is never acknowledged.
 - **Texts:** type + target LE32 + **UTF-8**, with no 9-byte header. Received texts are read as UTF-8.
-- **Updater:** a hidden updater (`*#*#18233#*#*`) uses the Armor's family of knock (ptt 0, power, ptt 1, `0x31`, YModem-1K). The APK carries no image, so the loader stays off.
+- **Updater:** a hidden firmware-update screen uses the Armor's family of knock (ptt 0, power, ptt 1, `0x31`, YModem-1K). The APK carries no image, so the loader stays off.

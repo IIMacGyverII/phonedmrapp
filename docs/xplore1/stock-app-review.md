@@ -259,7 +259,7 @@ A detail with no effect on SignalDeck: `lenH` is `(len & 0xFF00)` cast to a byte
 - **`intercom_factory_test`:** never read or written by QuickChat (R).
 - **Detect IRQ:** kernel only; the app logs nothing about it (R).
 - **Firmware update** (`UpdateDmrAcitivity`, R):
-  - **Reached by** the secret code `*#*#18233#*#*` (`KeyCodeReceiver`), which sets `upgrade_flag` and opens the app.
+  - **Reached by** a hidden entry the app's `KeyCodeReceiver` handles (not published here), which sets `upgrade_flag` and opens the app.
   - **The knock:**
     1. ptt line 0;
     2. 55 ms later, power and pwd 1;
