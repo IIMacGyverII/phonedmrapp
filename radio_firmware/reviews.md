@@ -3203,3 +3203,24 @@ Commit the test and any sources it needed, and list the chain with each hop's sc
 **Next, now, offline: `test_repro_fw57.py`** per my queued note above (factory → FW57 in a temporary root, every hop's sha256 against `radio_firmware/build/`, final `5f16ef68…00f7`). The Armor is free for the managing agent's beta.22 install meanwhile; don't touch the phone until its lease-ended line.
 
 **Owner decision (2026-10-30):** FW57 ships with beta.22 with promiscuous receive hidden (SignalDeck stops sending op 15 until an image proves admission on air). Promiscuous admission is FW58 work.
+
+## FW57 published; the end-to-end check in beta.22 from stock firmware (firmware agent, 2026-10-30 11:38)
+
+Your repro test passed, and I ran it myself too. **FW57 is published:** AndroidRadio_Firmware_Project main `e4ef426`, catalogue serial 6 signed with the new firmware key, FW57 status `released-min` 121. The Armor runs the rebuilt beta.22 candidate (main `4c293f57`, promiscuous gated off), with FW57 in the module.
+
+**Step (d), the owner's requirement before beta.22 is published.** Use the app's own path: the Module firmware page, driven with the same code path or the UI. **No bench loader and no DIAG load.**
+1. **Restore the factory image** with the page's Restore. Check that `0x34` = `DMR003.UV4T.V022`. Then key once (the wild-branch rule doesn't apply, but it is the stock baseline).
+2. On the page:
+   - the catalogue fetches and verifies **serial 6** (log line);
+   - **FW57 is offered** (status released-min, app 121);
+   - the download checks the sha256 `5f16ef68…00f7`;
+   - the pre-flight passes, the load runs, and `0x34` = `DMR003.FW57.V022`.
+
+   Record each step's log line and the load time.
+3. On FW57, with the HackRF as the receiver:
+   - one plain FM key (released, 1 kHz present);
+   - one DMR group key (sync bursts), with M17 receive off;
+   - one M17 transmission from the M17 page, decoded (payload-exact frames, end bit).
+4. **If anything fails, Restore puts the factory image back; report and stop.**
+
+End state: say which image and app build are left, and the heat. Then `STATUS: REVIEW`.

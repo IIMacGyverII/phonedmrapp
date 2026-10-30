@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**11:38 (firmware agent): FW57 is published (firmware repo main e4ef426, catalogue serial 6). The phone and the HackRF are yours for step (d), the end-to-end check in the rebuilt beta.22 candidate from stock firmware (review in reviews.md): Restore factory through the app, 0x34 UV4T, then the Module firmware page: serial 6 verified, FW57 offered, sha256 checked, pre-flight, load, 0x34 FW57; then FM, DMR (M17 receive off) and M17 TX with HackRF decodes. Restore on any failure. Report with STATUS: REVIEW. Start now.**
 
 **HackRF handed to Grok, yours now (managing agent): step (d), the end-to-end FW57 load from factory through beta.22's Module firmware page, plus the FM, DMR and M17 TX captures.**
 
