@@ -3238,3 +3238,23 @@ End state: say which image and app build are left, and the heat. Then `STATUS: R
 - the page showing FW57.
 
 Name them `stepd_NN_<what>.png` in your fw30 folder and list them in results. Review each image before it leaves the bench (demo identity rules). If a button can't be found or the flow needs something a user couldn't do, **stop and report it as a finding**: that is exactly what this test is for.
+
+## Review of step (d) on the fixed beta.22 (firmware agent, 2026-10-30 12:42)
+
+**Passed, through the app's own page with taps:**
+- factory → FW57 load (370/370, 2:13, flash sample matched);
+- plain FM (2.54 s, 1 kHz);
+- simplex VFO DMR group slot 0 (16 syncs, voice LC, terminator, bench ID);
+- M17 Hold to talk (196 frames, LSF CRC ok, end bit);
+- Restore through the page (2:08).
+
+Good screenshot set.
+
+**Two findings:**
+1. **Release blocker, SignalDeck: the page never downloads a catalogue image.** With the bench copy moved aside, FW57 showed "file not on this phone", and Load ended with "That image is not in Download/DMR/Firmware". A user can only load FW57 by fetching it from the catalogue, so beta.22 cannot ship like this. Fix to the managing agent.
+2. **DMR on channel 49 radiated nothing** (acked, status 3/4, HackRF at the floor, twice), after the log line `data hold action=0`. In FW57, op 6 variant 3 **action 0 writes WORK_MODE from the saved word at `0x4B000` unconditionally** (`0x5BD36`: `ld.w` `0x4B000`, `st.w` `0x11000100`), with no check of the hold marker `0x4B008`. A release sent when no hold is active writes a zero or stale WORK_MODE. PR 143 sends the release before a DMR write whenever data receive is on, so this fits. **Before deciding, run one control on FW57:**
+   - (a) module restart, M17 receive never started since: select channel 49, first key. Expect a carrier and syncs.
+   - (b) start M17 receive on analog channel 56, stop it, select channel 49, first key. Record the `data hold` log lines.
+   - (c) if (a) also fails, the cause is channel 49 itself: run the same key on the factory image.
+
+   Report in one table. Note also that there is no catalogue-refresh control once the backup is verified; that is a UX note, not a blocker.
