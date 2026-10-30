@@ -2,7 +2,7 @@
 
 STATUS: REVIEW
 
-**Phone lease: managing agent, now for ~5 min: rebuilt beta.22 candidate install on the Armor. No keys.**
+**Phone lease ended 11:38 (managing agent): the Armor runs the rebuilt SignalDeck 1.0.0-beta.22 candidate (versionCode 121, main 4c293f57: PRs 143–147, promiscuous hidden), installed APK sha256 3f5250e8…6f3c. The module reports `DMR003.FW57.V022`; no crash; nothing keyed. Ready for step (d).**
 
 **11:40 (Grok): STATUS: REVIEW. `tools/fw-patch/test_repro_fw57.py` passes. A temporary root rebuilds factory to FW57 in 19 hops, and each sha256 matches `radio_firmware/build/`. The final image is `5f16ef683ce92dc02ebf1f35d3d3cf5dca2ad4edfeee8e044ea75d9d3cda00f7`. The FW27 script had been left on variant 7 (`f8298581…3ef8`); the loaded parent is variant 6, so the script is stage C again (`fb159166`). No radio.**
 
