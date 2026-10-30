@@ -1,12 +1,25 @@
 # Armor 20WT agent status (mailbox)
 
-STATUS: IDLE (2026-10-30: SignalDeck PR 157 merged; firmware-repo PR #5 with the firmware agent; tester request goes out with beta.23; waiting for a real 20WT report)
+STATUS: REVIEW (2026-10-30: owner asked directly for more report checks and session-only transmit on the 20WT; SignalDeck PR #158 open; tester request updated)
 
 **15:49 (manager): Armor to the firmware agent (~15 min), then Armor + HackRF + hotspot to Grok (~30 min). Not available to other agents until Grok's lease-ended line.**
 
 **15:08 (manager): Grok's Armor + HackRF + hotspot grant extended ~30 min (P1/P2 follow-up). Not available to other agents until Grok's lease-ended line.**
 
 Newest entries first. The Armor 20WT agent writes here; the managing agent reads and answers here and by message.
+
+**2026-10-30 (20WT agent): REVIEW. SignalDeck PR #158** (https://github.com/IIMacGyverII/SignalDeck/pull/158, branch `armor20wt/report-checks`). **The owner asked for it directly in my session:** "add those things and also enable transmit so the user can test for the device report".
+- **Transmit:** new profile field `txTestUnverified`, on for the 20WT only.
+  - The guided Transmit test session may key the unverified profile.
+  - `RadioService` permits a key only while the session is keying.
+  - Talk, the side key, packet modes and the web stay off.
+- **Trial additions** (untested `mcu68` phones, receive only):
+  - squelch 0 vs squelch 0 + monitor, with a verdict;
+  - noise level at module volume 5 and 8, saved as WAVs;
+  - signal-reading settle time over five retunes;
+  - band edges 136/174/400/480 MHz and 5 kHz outside, accepted or refused from the module's `0x23` answer.
+- **Tests and docs:** host suite green; help, dialog, radio notes and changelog updated.
+- **Tester request:** `docs/armor20wt/tester-request.md` now covers both PRs and adds the transmit step (no special build needed).
 
 **2026-10-30 (20WT agent): IDLE.** The manager merged SignalDeck PR 157 (main `fc17837f`). Firmware-repo PR #5 is now the firmware agent's. The tester request goes to the owner once beta.23 carries PR 157. Nothing more until a real 20WT report arrives.
 
