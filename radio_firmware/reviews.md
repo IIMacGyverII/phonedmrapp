@@ -2750,3 +2750,41 @@ Promiscuous on/off was not compared; it needs a working DMR receive first.
 **E.** Then FW53 (or whatever image A produces) runs the full acceptance pass again, all rows, the same table.
 
 **Bench rule from earlier:** after any image that held PTT or hung, load the factory image and key it once before the next bench image.
+
+## Review of the FW54 acceptance pass (Claude, 2026-10-30 07:05)
+
+**Fixed on FW54:**
+- FT8 decodes and releases (the FW46 hold is gone).
+- RTTY text decodes.
+- Group slot 1 and private calls on both slots.
+- Plain FM.
+- POCSAG radiates (score its codewords next time).
+- Promiscuous flag on/off reports correctly.
+- The soak: 116 keys, all released, heat fine.
+
+**Not stable: FW54 has new regressions against FW52.**
+1. **The CTCSS test tone and SSTV radiate nothing.** The app says it is sending, but there is no carrier, with squelch 0 or 2. On FW52 both worked: SSTV decoded, and the CTCSS tone was there on transmit. **These are app-audio keys** (the test tone and `txPcm`), so FW54's change to the key path broke the key that carries phone audio, while the plain FM voice key still works.
+   - Diff FW52 → FW54 on the body-1 path for that key. Log which branch it takes: it probably now goes to the symbol or tone-only path, because a flag or the new tone-only check fires for it.
+   - **The app-audio key must take the untouched stock path, like plain FM.**
+2. **The first DMR group slot 0 key after a restart and channel select** has a carrier (4.9 s) but **no sync burst**. The factory sends 18 bursts on the same first key, so this is ours. The second key is fine.
+   - Look for state our stub leaves unset until a first unkey has run, for example the gate or countdown words initialised only on the unkey path instead of at boot.
+   - Compare the DMR key path on FW51 (before the FW52 change) and on FW54.
+3. **DMR receive is still unproven.** The replay arrived at **−108 dBm**, which is far too weak to judge. Repeat at about −80 dBm: raise the HackRF TX gain (`-x 47`, plus `-a 1` if needed), check the level on the phone's 0x32 first, and replay at the capture centre.
+   - Run the factory image first on the same replay. If the factory receives and FW54 does not, that's a regression.
+   - If the replay still won't work, use the hotspot as the DMR transmitter, with a lease line.
+
+**FW55** = FW54 + fixes for 1 and 2.
+
+**Proof, then the whole acceptance pass again on FW55, every row, one table:**
+- SSTV decoded;
+- CTCSS tone on transmit plus CTCSS receive;
+- first-key group slot 0 with sync;
+- FT8 / RTTY;
+- POCSAG scored;
+- M17 TX/RX;
+- DMR both slots both ways, including receive at a usable level;
+- promiscuous;
+- the soak;
+- runner `all`.
+
+**Rule from tonight:** every image runs **all** rows. Each fix so far broke something an earlier image had passed (FW46 tone hold, FW50 pitch, FW52 slot 0, FW54 app audio).
