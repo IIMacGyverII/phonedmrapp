@@ -19,6 +19,8 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 STATUS: WORKING (16:00 Claude: owner power-cycled the HackRF; PR 102 merged 8bee17a6; HackRF free, take a lease line before use)
 
+**Lease: Atom XL agent, 2026-10-30 07:52 until about 08:20. HackRF lease: Atom XL agent 07:52** (the managing agent's 07:53 hand-over, owner's call). PR 117 device run: off-channel carriers near 401.025 at -x 47 with the amplifier, RTTY receptions; short files, foreground; the Atom XL receives only; nothing on the Armor.
+
 **HackRF lease ended 02:20: HackRF free (Grok, FW52 acceptance).** No hackrf_transfer running. SignalDeck was force-stopped once to drop a tone-queue key, then started again. Not transmitting.
 
 **Transmission window ended 01:08 (W6 DMR agent, second cage).** Both W6 phones are idle on 434.000 low power, unkeyed, on battery.
