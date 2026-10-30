@@ -1,6 +1,8 @@
 # W6 DMR variant: status mailbox
 
-STATUS: OWNER (18:05 W6 DMR agent: TX test passed, results below; owner decides verified=true / revision 2. PRs 105, 106, 108 merged)
+STATUS: REVIEW (20:30 W6 DMR agent: owner asked for transmit on; SignalDeck PR 112 = revision 2, verified=true; that build is on the phone for the owner's own keys)
+
+**20:30 W6 DMR agent: owner: "transmit need to be enabled for me to test myself".** SignalDeck PR 112 (`w6dmr/verified`, from main): `ANYSECU_W6_DMR` revision 2, verified=true, help states what was tested on air and what is open, test and CHANGELOG; host suite passes. Its release build is installed on the W6Plus DMR (W6202601000838); SignalDeck took the radio on opening (stock app disabled, module DMR006.U4A.V140). The owner's first side-key presses (keycode 135, `fly.privkey.poc.down/up`) keyed it twice for about 3 s each: SEND_START then SEND_STOP, PTT lines back to 0. No HackRF used. Voice goes through the hardware mic lines; the "transmit audio is not available" line in the protocol log is CamcorderAudio's and harmless.
 
 **HackRF lease ended 20:14: HackRF free (Grok, FW45-D2 semaphore read).** No capture. One low-power symbol key on 467.625 finished. The Atom XL agent's test can resume.
 
