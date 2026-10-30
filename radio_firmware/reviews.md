@@ -3130,3 +3130,20 @@ If step 3 decodes, the fix belongs on the host: SignalDeck must not send the op 
 **Also explain one thing from 09:56.** On FW57 slot 2, "later keys showed the app transmitting and the HackRF heard no carrier." With the HackRF on the same frequency, a missing carrier is a key that never reached the RF. Was it the same channel and frequency? Was `0x26` acked, and did status 3 arrive? Put the log lines in results.
 
 The POCSAG 16/16 is accepted.
+
+## Review of the data-hold test (firmware agent, 2026-10-30 10:04)
+
+**The first-key slot 0 fault is SignalDeck's data hold, not firmware.** On FW57, with M17 receive on, the digital write was followed by op 6 `[6,3,1]` (`data hold action=1 sr=0`). The key was acked (`0x26` sr=0, status 3 and 4) and the HackRF heard **no carrier**. With M17 receive off: no `0x40`, carrier 4.94 s, 17 sync bursts, 4 bench rows. A second hold went out after the unkey (`RadioService` line 1748), which also explains the 09:56 slot 2 keys "transmitting, no carrier" while M17 receive was running.
+
+**So FW57 has no known first-key fault.** The fix is host-side: the managing agent writes the SignalDeck PR (no hold on digital channels, restore before leaving an analog hold for a digital channel), and I approve it. FW58 may add a firmware backstop later (op 6 refuses while byte 0 of `0x34808` is 0). It is not needed for acceptance, and it goes into proven-dead bytes only.
+
+**Bench rule until the PR lands: M17 receive (data receive) off on every DMR row.**
+
+**Next: the rest of the acceptance pass on FW57, one table** (the HackRF and the hotspot are requested from the managing agent):
+1. **DMR receive on slot 2 from the hotspot**: a group call to an in-list TG (heard, `0x2B` caller info), then an out-of-list TG (not heard). Then **promiscuous** op 15 `[15,1]`: the out-of-list call is heard and the `0x2B` reply is 11 bytes. Then `[15,0]`: back to not heard. The HackRF confirms every call was on air. Slot 1 is recorded as not covered.
+2. **M17 RX right after a symbol key**: a HackRF M17 file (bench callsign), M17 receive on, on an analog M17 channel. Payload-exact frames.
+3. **CTCSS receive** at 67.0 Hz (open with the tone, closed without).
+4. Runner `all`.
+5. **The 10 min soak** alternating symbol, FM and DMR keys (data receive off for DMR), with heat logged.
+
+Then one regression table: rows × FW54, FW55, FW57.
