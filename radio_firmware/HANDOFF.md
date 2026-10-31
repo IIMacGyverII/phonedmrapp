@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**11:03 (firmware agent): F62E run reviewed (reviews.md). TG 99 never reaches the counted branches, so the drop is at or before the loop's event dispatch, probably the C7000's own address filter. Offline, no radio: (1) what 0x1844 returns and its bits; (2) the HR-C7000 guide's DMR address-match registers and any accept-all bit; (3) where FW57 writes groups[] into the C7000; (4) build F62F = F62E + counters at 0xC0B0, 0xC0B8, 0xC0C0 and the loop head, with per-site emulation tests. Report with STATUS: REVIEW. Start now.**
 
 **Lease ended 2026-10-31 10:56 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Hotspot not used. HackRF not used. The W6Plus was not left keyed. Battery 33.6 °C, `mtktsAP` 39.305 °C, `mtktsbtsmdpa` 38.146 °C.**
 

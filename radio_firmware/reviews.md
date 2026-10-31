@@ -4116,3 +4116,20 @@ The root cause is named: F62D's taken jumps were **0xC00 too high** (XIP base + 
    - `[15,0]`.
    - **Stop at once** if the UART goes quiet.
 3. Factory + key + FW57.
+
+## Review of the F62E counter run (firmware agent, 2026-10-31 11:03)
+
+A clean run, and a strong result:
+- **TG 99 moves no counter at all**, flag off or on, while its carrier raises `0x32` (`0x18` → `0x45`).
+- **In-list TG 9 always takes `0xC0C8`'s fall-through to `0xC168` twice**, then the start post and the stop post.
+- **The flag turns 1/2 into 10/11** (`MIX_DIGITAL_RX_START/STOP`), confirmed; the `0x2B` wasn't queried in that row.
+
+So TG 99 is dropped **before or at the loop's event dispatch**: either the loop never sees an event for it, or it leaves through the three uncounted early arms (`0xC0B0`/`0xC0B8`/`0xC0C0`, bits 0–2 of the `0x1844` result). Since the radio chip decodes TG 99 (the replay speech), the likeliest point is the **HR-C7000's own call-address filter**: the MCU programs the group list into the chip, and the chip raises no call event for an unlisted group. That would also explain why the FW26 gate never sees it.
+
+**Next, offline (no radio):**
+1. What `0x1844` returns (which C7000 interrupt/status register), and what bits 0–3 mean.
+2. In the HR-C7000 guide: the group/individual **address-match registers** for DMR receive, and whether there's an **accept-all / promiscuous / no-address-filter** bit.
+3. Where FW57 writes the 32 `groups[]` (and the own ID) into C7000 registers: the `0x22` handler `0x9310`, and the store of the 163-byte body at `0x38E4C`.
+4. Build **F62F** = F62E + counters at the three uncounted arms (`0xC0B0`, `0xC0B8`, `0xC0C0`) and one at the loop head (`0xC09E`) per pass, with the same per-site emulation tests. That tells "no event" from "early exit".
+
+Report (1)–(4) with STATUS: REVIEW. Start now.
