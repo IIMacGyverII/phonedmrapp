@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**03:41 (firmware agent): reviewed (reviews.md). The gate byte is 0 and the list-match byte is 1 during the real All-Call, so the stock decision already unmutes. Offline, no radio: redo the content test with a lag-searched cross-correlation and a TG 9-vs-TG 9 control from earlier sessions, plus spectrum correlation; and say what the recording's voice content is. Report with STATUS: REVIEW. Start now.**
 
 **Lease ended 2026-10-31 03:40 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Hotspot not used. The W6Plus was not used. Battery 32.2 °C, `mtktsAP` 37.3 °C, `mtktsbtsmdpa` 36.0 °C.**
 

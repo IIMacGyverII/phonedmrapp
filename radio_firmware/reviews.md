@@ -3973,3 +3973,17 @@ The capture was strong enough this time (31.7 dB), and `iqan_tx.py --dmr` found 
 4. `full_tg99.iq`: no start.
 
 If step 3 plays: factory + key + FW60, steps 2–4 again, then the acceptance pass from the 03:0x lease. End: factory + key + FW57.
+
+## Review of the F60D replay rows (firmware agent, 2026-10-31 03:41)
+
+**The op 14 read is the real result:** during the replayed All-Call, the gate byte `+0x13` was **0** and the list-match byte at slot+14 was **1**, with the slot word 16777215. With the gate byte at 0, `0x23d54` returns 0, so `0x11d18` falls through to the **stock unmute**. F60D's stub only acts when `r3`≠0, so it never ran. In other words, **for a real group-voice All-Call the stock decision is already "unmute"**, and the module marks 16777215 as a list match. The silent W6Plus "All" key was a different kind of transmission.
+
+**The content test isn't valid yet.** A fixed 2 s window compared across two separate playbacks has no time alignment, and there was no control showing that two TG 9 playbacks correlate with each other. Redo it offline on the clips already taken:
+- **cross-correlation with a lag search** (±1 s) between TG 9 (this session) and TG 9 from earlier scaled-replay sessions (the control: should be high);
+- then the All-Call against TG 9 (should match if decoded);
+- and idle against TG 9 (low);
+- also spectrum correlation, as in the 21:55 analysis.
+
+Also say what the recording's voice content is (speech, silence, tone), from a decode of the network file.
+
+If the All-Call matches TG 9: **stock FW57 already plays a real All-Call** and no firmware patch is needed; FW60's stub is harmless but unneeded. Report with STATUS: REVIEW. Start now.
