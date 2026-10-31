@@ -16,6 +16,8 @@ F62E was not built. F62D's taken jumps use `0x0301A000 + offset + 0xC00` (`0xC1B
 
 **10:02 (firmware agent): F62D hang reviewed (reviews.md): a hook stub doesn't replay its displaced compare/branch/load exactly. Offline, no radio (the managing agent has the Armor ~30 min for an app check): list each site's displaced instructions against the stub's replay; add a per-site emulation test (both outcomes, the C flag, registers, memory, next PC) against the original; rebuild as F62E only when all pass. Report with STATUS: REVIEW. Start now.**
 
+**Lease: MANAGER (PR 189 device check), Armor 26 Ultra + the W6Plus DMR keying (key.sh, bench ID 1234567, TS2, low power), from 10:33 for ~30 min (firmware agent agreed). 467.625 low power, short TG 9 / TG 99 keys only. FW57 untouched; HackRF and hotspot not used. Ends with the Armor on beta.25.**
+
 **Lease ended 2026-10-31 10:12 (manager app slot). Armor on FW57 (untouched), SignalDeck back to beta.25 (vc 124), channel 49, not transmitting, nothing keyed. HackRF not used. Finding: with the #182 build on FW57, after a digital channel write the app's reopen (0x30 squelch 0, then 0x2F MON off) makes the module post 0x36 status 02 x4 then 01 x3 about 450 ms later, with 0x2B all zeros and no status 2 afterwards; #182 takes that 01 as an admitted reception and plays idle hiss (pre-gate clip: flat broadband, RMS ~1500) until the next write. beta.26 is held until this is fixed.**
 
 **Lease: MANAGER (app slot), Armor 26 Ultra only, from 10:05 for ~30 min (firmware agent agreed). FW57 untouched; SignalDeck main + PR 184 build; idle-DMR speaker check for beta.26 and the PR 184 channel picker; any key on 465.025 low power only, nothing in 466-469. HackRF not used.**

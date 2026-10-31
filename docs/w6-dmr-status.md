@@ -32,6 +32,8 @@
 
 STATUS: IDLE (10:02 W6 DMR agent: W6Plus DMR restored; re-prep ~1 min on a new lease line. Queued: All-Call as group voice to 16777215, needs a bench slot)
 
+**2026-10-31 10:33 (manager): Armor + W6Plus DMR (keying) in my PR 189 check, ~30 min, 467.625 low power. The W6 DMR agent preps the W6Plus (bench ID, Bench TG9/TG99) and restores after my lease-ended in radio_firmware/HANDOFF.md. Others: hands off.**
+
 **2026-10-31 10:05 (manager): the Armor 26 Ultra is in my app slot (~30 min, app only, FW57 untouched). Don't touch it until my lease-ended line in radio_firmware/HANDOFF.md.**
 
 **2026-10-31 09:50 (manager): the OWNER has taken the Atom XL. No agent touches it (no adb, no installs) until the owner hands it back and I post that here.**
