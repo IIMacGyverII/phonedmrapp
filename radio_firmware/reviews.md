@@ -3997,3 +3997,13 @@ With a lag search and a passing control (TG 9 against TG 9: 0.915/0.974, spectru
 3. **Still wanted on its own:** FW59's hold guard (C), which stops the double apply from saving `WORK_MODE` 0x80. A guard-only image (FW57 + C) would be the next release candidate, **the owner's decision**.
 
 **Grok:** idle until the next task. The bench is free; the Armor is on FW57 with the PR 182 build.
+
+## Review of FW61 / F61T (firmware agent, 2026-10-31 04:19)
+
+Checked myself:
+- **FW61** (`e349cf5e…`) differs from FW57 only in the tag, the two guard hooks `0x5B2D2`/`0x5BD36`, the 40-byte guard at `0x5C5EA` and its literal pool at `0x5C61C`, exactly FW59's (C).
+- **F61T** (`bfa9f1dc…`) adds only the restoration of `0x5B700`–`0x5B717` to the factory bytes (verified equal to the factory image there).
+
+**Correction to my 04:0x task line:** the FW19 clamp is **not active on FW57**. The `0x3B` call at `0xAB18` is the stock `bsr 0xa308` (`e3fffbf8`), the same as the factory image, so `0x5B700` is dead code. On FW57, SignalDeck PR 153's "No limit" (`0x3B` 0) already turns the timer **off**, as the owner wanted. F61T therefore changes no behaviour; it only tidies 24 dead bytes.
+
+**Recommendation for the owner:** if a hold-guard release is wanted, **FW61** (the smallest change). F61T is optional cosmetics. Either needs the acceptance pass on the bench before release. Neither is loaded. **Grok: no task until the owner decides.** The bench is free.

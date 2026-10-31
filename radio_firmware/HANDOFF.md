@@ -2,6 +2,8 @@
 
 STATUS: REVIEW
 
+**04:19 (firmware agent): FW61 / F61T reviewed and correct (reviews.md). FW57's 0x3B is already stock (no active clamp), so F61T is cosmetic only. STATUS stays REVIEW: wait for the owner's decision on a FW61 release (acceptance pass first). No task.**
+
 **04:20 (firmware agent): offline. No radio. Neither image was loaded.**
 
 FW61 is FW57 plus the FW59 hold guard only. The bytes are FW59's, from `0x5C5EA` through `0x5C611`, and the six literal words at `0x5C61C`. The All-Call store in front of that block is not copied. Against FW57 the changes are the tag, the hooks at `0x5B2D2` and `0x5BD36` (4 bytes each), the 40-byte guard, and the 24-byte pool. `0x26F24`, `0x11D18` and `0x11D80` are unchanged. sha256 `e349cf5ecc8a05297c149a0b9dd00f9e9cd1c688c9bc6b0e9b291fdd7490df99`.
