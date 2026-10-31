@@ -4780,6 +4780,25 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Full-file rows (21:20). FW57 restored. Not transmitting.**
+
+`dmr_tg99.bin` and `dmr_allcall.bin` keep destination 9 in every embedded LC (14 superframes, FLCO 0). The voice header and the terminator were the only bursts rewritten, which is why the earlier All-Call and talkgroup 99 rows were mixed calls. `tools/fw-bench/full_lc.py` rebuilt `dmr_tg99_full.bin` and `dmr_allcall_full.bin` (56 fragments each). An independent decode, which does not call the encoder, reads one destination: 99, and 16777215. `dmr_last.bin` was already destination 9 and was left as the talkgroup 9 control. On the air the superframe is one voice sync and then LCSS 1, 3, 3, 2, 0, six slot periods apart (1728 symbols).
+
+The rows that count were taken after a factory load and a 3 s stock PTT on channel 49. Status 3 was in the log, the status API stayed transmitting for the hold, and it was clear afterwards. VFO 467.625, low power, colour code 1, slot 1, receive list 1 and 9, MON off, promiscuous off. Each counted row has a new MMDVMHost voice header and a HackRF carrier, and the capture's embedded LC is the one destination.
+
+| Image | Call | MON | RMS | Loud | Embedded LC | On air |
+|---|---|---|---|---|---|---|
+| FW57 | All-Call full | off | 1.7 | 0.00 s | 12 × 16777215 | yes |
+| FW57 | talkgroup 9 | off | 18.2 | 0.00 s | 13 × 9 | yes |
+| FW57, channel 49 | talkgroup 9 | off | 22.7 | 0.00 s | 13 × 9 | yes |
+| F59D | All-Call full | off | 22.1 | 0.00 s | 13 × 16777215 | yes |
+
+Channel 49's list contains 9. Peak on that row was 1490, the short blip, not the RMS ~1390 of an open speaker. F59D stored 16777215 at slot index 8 (byte 2 of `0x4C7BC` was 1). The gate byte was 0. The speaker stayed closed.
+
+Before that factory key, with FW57 still carrying the previous session, the same full files were loud for talkgroup 99 (RMS 1392.6, 13 embedded LCs all 99) and for All-Call (RMS 1391.9 off, 1392.0 on) and quiet for talkgroup 9 (RMS 1.4). That pass is leftover state. The clean FW57 rows do not repeat it. F59F was not loaded.
+
+`fm.demod` no longer uses the wideband RMS against the quietest second. A carrier is the loudest second of the offset ±6 kHz band at least 10 dB above the median of a same-width band 100 kHz away. `test_fm_nocarrier.py`: noise is no carrier; a continuous tone buried in the wideband noise, which fails the old 6 dB test, is a carrier; a tone 300 kHz off the offset is not. The runner stream on the restored FW57 is 1125/1125, carrier 45.41 s, p99 2873 Hz, clip 0, end bit set. Battery 35.1 °C, `mtktsAP` 41.7 °C, `mtktsbtsmdpa` 40.5 °C. Not transmitting. Hotspot config was not written.
+
 **A versus A′ (20:26). F59F built. Not loaded. No radio.**
 
 **(1)** A, at `0x5C59C` on F58D, stores frame−20 and frame−24 on every entry to the fail path. A′ adds two skips: the byte at r8−2 masked with 63 must be 0, and the word at r8−20 must be `0xFFFFFF`. The stores and the return are the same. A therefore stores on any fail-path LC whose destination is not `0xFFFFFF`, including a group-voice LC left at the old destination. A′ skips that LC at the destination compare. The FLCO test would not.

@@ -1,6 +1,18 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**Lease ended 2026-10-30 21:20 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Hotspot config was not written. F59F was not loaded.**
+
+The rebuilt files check out. Every embedded LC in `dmr_tg99_full.bin` is destination 99, every one in `dmr_allcall_full.bin` is 16777215, and `dmr_last.bin` is destination 9. FLCO 0. One voice sync, then LCSS 1, 3, 3, 2, 0.
+
+Clean FW57, after the factory image and a 3 s digital key with status 3: All-Call full with MON off is quiet (RMS 1.7, 12 embedded LCs all 16777215, on air). Talkgroup 9 full with MON off is quiet too, on the VFO (RMS 18.2) and on channel 49 (RMS 22.7, peak 1490; that list contains 9). The in-list call did not open the speaker, so the All-Call mute is not by itself a list decision.
+
+F59D, after its own factory key: All-Call full with MON off is quiet (RMS 22.1, loud 0.00 s). The capture's embedded LC is 16777215 only, and that word is in the call slot. The gate byte is 0.
+
+A pass on FW57 before this factory key played talkgroup 99 and All-Call (RMS about 1392) and muted talkgroup 9. That was leftover module state. It did not repeat after the factory key.
+
+`fm.demod` now calls a carrier from the offset ±6 kHz band against a same-width band 100 kHz away (10 dB). The unit test covers a weak continuous tone, which the old quietest-second rule misses, and noise. The runner stream on this FW57 is 1125/1125, carrier 45.41 s, p99 2873 Hz, clip 0, end bit set. Battery 35.1 °C, `mtktsAP` 41.7 °C, `mtktsbtsmdpa` 40.5 °C.
 
 **Lease: GROK (firmware), Armor + HackRF + hotspot, from 20:28 for ~1.5 h. 467.625 low power; 434.000 avoided; hotspot config never written.**
 

@@ -17,17 +17,12 @@ def demod(cfg, iq_path):
     z = iq[0::2].astype(np.float32) + 1j * iq[1::2].astype(np.float32)
     clip = float(np.mean(np.abs(iq) >= 126))
     del iq
-    # A floor-only capture is within 6 dB of its quietest second. Report that
-    # as no carrier; the old path called the whole file keyed.
-    sec = int(fs)
-    nsec = len(z) // sec
-    if nsec >= 1:
-        quiet = min(float(np.sqrt(np.mean(np.abs(z[i * sec:(i + 1) * sec]) ** 2))) for i in range(nsec))
-        whole = float(np.sqrt(np.mean(np.abs(z) ** 2)))
-    else:
-        whole = float(np.sqrt(np.mean(np.abs(z) ** 2)))
-        quiet = whole
-    no_carrier = quiet <= 0 or whole <= quiet * (10 ** (6.0 / 20.0))
+    # A low-power carrier is ~30 dB above the noise inside ±6 kHz and still
+    # invisible to the wideband RMS. A continuous carrier also fills the
+    # quietest second, so that second is not a noise reference. Compare the
+    # loudest second of the offset ±6 kHz band with a same-width band 100 kHz
+    # away. 10 dB is the carrier; noise-only stays near 0 dB.
+    present, carrier_db = in_channel_carrier(z, fs, off)
     out = []
     for s0 in range(0, len(z) - dec, fs):
         seg = z[s0:s0 + fs]
@@ -45,7 +40,7 @@ def demod(cfg, iq_path):
     mins = [float(np.median(pw[i:i + win])) for i in range(0, max(1, len(pw) - win + 1), win)]
     floor = min(mins) if mins else float(np.percentile(pw, 10))
     on = pw > max(floor * 20, 1e-6)
-    if no_carrier or not on.any():
+    if not present or not on.any():
         i0, i1 = 0, 0
     else:
         i0 = int(np.argmax(on)); i1 = int(len(on) - np.argmax(on[::-1]))
@@ -54,8 +49,38 @@ def demod(cfg, iq_path):
     dev = dev - (0 if np.isnan(offset) else offset)
     info = {"clip_frac": clip, "snr_db": float(snr), "offset_hz": offset,
             "keyed_s": 0.0 if i1 <= i0 else (i1 - i0) / fa,
-            "i0": i0, "i1": i1, "fs": fa, "no_carrier": bool(no_carrier)}
+            "i0": i0, "i1": i1, "fs": fa, "no_carrier": (not present),
+            "carrier_db": round(carrier_db, 1)}
     return dev, info
+
+
+def band_powers(z, fs, freq, half_bw=6000.0):
+    """Per-second mean power in [freq − half_bw, freq + half_bw].
+
+    A boxcar of length fs / (2·half_bw) is a ±half_bw low-pass after the mix.
+    """
+    dec = max(1, int(round(fs / (2.0 * half_bw))))
+    sec = int(fs)
+    out = []
+    for s0 in range(0, len(z) - sec + 1, sec):
+        m = (sec // dec) * dec
+        ph = np.exp((-2j * np.pi * freq / fs) * np.arange(s0, s0 + m)).astype(np.complex64)
+        mixed = (z[s0:s0 + m] * ph).reshape(-1, dec).mean(axis=1)
+        out.append(float(np.mean(np.abs(mixed) ** 2)))
+    return out
+
+
+def in_channel_carrier(z, fs, offset_hz, half_bw=6000.0):
+    """True when the offset ±6 kHz band is at least 10 dB above a band 100 kHz away."""
+    inn = band_powers(z, fs, offset_hz, half_bw)
+    ref = band_powers(z, fs, offset_hz + 100000.0, half_bw)
+    if not inn or not ref:
+        return False, 0.0
+    floor = float(np.median(ref))
+    if floor <= 0:
+        return False, 0.0
+    db = 10.0 * np.log10(max(inn) / floor)
+    return bool(db >= 10.0), float(db)
 
 
 def goertzel(x, fs, f0):
