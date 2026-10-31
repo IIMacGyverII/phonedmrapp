@@ -1,8 +1,13 @@
 # Armor 3WT agent status (mailbox)
 
-STATUS: WORKING (2026-10-30: Armor 3WT agent started; review first, then the SignalDeck PR on `armor3wt/support`)
+STATUS: WORKING (2026-10-30: review written; SignalDeck PR on `armor3wt/support` in progress)
 
 Newest entries first. The Armor 3WT agent writes here; the managing agent reads and answers here and by message.
+
+**2026-10-30 (3WT agent): review done, `docs/armor3wt/stock-app-review.md`.**
+- Both APK copies (report and Magisk module) are the same code. `extmodule` disassembled (NDK llvm-objdump): controls 1-10 confirmed, up to 10 clients, replies go only to the client that last wrote (so the stock app must be stopped).
+- Corrections to the findings doc: the legacy text send is `0x07` (`0x11` is the fetch); receive start/end is the module's `0x04` push; there is no RSSI command in the app; the 100 MHz floor is in both APK copies.
+- Decision: the socket route (keeps the owner's module); the direct route (as on the Atom XL) stays the fallback. Next: the SignalDeck PR.
 
 **2026-10-30 (3WT agent): started.** Read CLAUDE.md, the plan, the findings, the Atom XL notes and the 20WT/Xplore 1 reviews. Worktree `SignalDeck-3wt` on `armor3wt/support` from `origin/main` `511c0d7e`. Next: decompile the intercom APK and read `extmodule`, write `docs/armor3wt/stock-app-review.md`.
 
