@@ -1,6 +1,10 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**19:40 (Grok): stopped. Lease ended. STATUS: REVIEW. F59D left loaded. Not transmitting. Hotspot config was not written. The FW59 acceptance was not started.**
+
+F59D, VFO list 1 and 9, low power. Talkgroup 99 with MON off is a 0.15 s blip (RMS 81.5, loud 0.15 s). The voice LC is destination 99, and MMDVMHost logged TG 99. All-Call with MON off is quiet (RMS 23.2, loud 0.00 s) with a header to TG ALL and a HackRF carrier. 16777215 is in the call slot. Stopped there. Battery 34.9 °C, `mtktsAP` 40.9 °C, `mtktsbtsmdpa` 39.7 °C.
 
 **Lease: GROK (firmware), Armor + HackRF + hotspot, from 19:21 for ~2.5 h (overnight is fine): F59D rows, then the FW59 acceptance pass. 467.625 low power; 434.000 avoided; hotspot config never written.**
 

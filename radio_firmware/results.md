@@ -4780,6 +4780,15 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**F59D rows stopped (19:40). F59D left loaded. Not transmitting. Hotspot config was not written.** The FW59 acceptance was not started. VFO read back as 467.625 MHz, low power, list 1 and 9. MMDVMHost was already open (`Opening DMR Network` at 00:04:58 UTC, log `MMDVM-2026-10-31.log`). The relay already held the talkgroup 99 file. Each counted row has its own later network voice header and a HackRF carrier.
+
+| Row | Header | Carrier | Clip RMS | Loud | Call slot |
+|---|---|---|---|---|---|
+| Talkgroup 99, MON off | TG 99, 00:38:01 UTC | 6.71 s, 45.1 dB | 81.5 | 0.15 s | 99 absent; one word is 9 |
+| All-Call, MON off | TG ALL, 00:39:06 UTC | ratio 44 | 23.2 | 0.00 s | 16777215 stored |
+
+The talkgroup 99 capture has two voice-LC headers, colour code 1, FLCO 0, destination 99. An earlier capture of the same row, before the header check was pointed at today's log, was RMS 25.2 and loud 0.00 s with the same LC. Byte 2 of `0x4C7BC` was 1 during both counted calls, and the gate byte was 0. On the All-Call the destination word is at the index that byte selects. The call stayed quiet. Stopped before talkgroup 99 with MON on, the in-list talkgroup 9 row, the op 6 guard, and the FW59 load. The relay was then pointed at the All-Call file and MMDVMHost opened again at 00:38:58 UTC. Left on F59D, VFO exited, not transmitting. Battery 34.9 °C, `mtktsAP` 40.9 °C, `mtktsbtsmdpa` 39.7 °C.
+
 **FW59 and F59D built (19:16). Not loaded.** No radio. The Armor, the HackRF and the hotspot were not used. `test_fw59.py` (11 tests) and `test_repro_fw59.py` passed. The repro rebuilds the factory image through FW59 and matches both files below.
 
 FW59 sha256 `0d9f7a373fb3ee2b3e2447979242a4cdb0c06f0c37d04dc4f68c892062909b69`, tag `DMR003.FW59.V022`. F59D sha256 `db2cf035718e4f084224ba8fb7b80c022d6c3fa570459cab35c8630eed8dd2d8`, tag `DMR003.F59D.V022`. FW59 is FW57 plus (A′) and (C). The stub block is `0x5C59C`–`0x5C633`, inside the free tail.
