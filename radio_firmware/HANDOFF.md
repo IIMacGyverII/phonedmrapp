@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**10:41 (firmware agent): short offline reading while the W6Plus is re-prepped (no radio):** the 0x36 repeat in 0x7BC0 stops when bit 1 of 0x38EF0 is set by the host ack. SignalDeck acks every RX 0x36 within ~1 ms with `68 36 01 01 95 B7 00 01 01 10` (rw=1, sr=1, body 01), yet frames still repeat 3–5 times at 100–150 ms. Find the code that sets bit 1 of 0x38EF0: which incoming cmd/rw/sr/body it requires (echo the status code? rw=0? sr=0? an empty body?), and whether anything clears it per frame. Give the exact ack frame that stops the repeat, and what the OEM app sends (app/src/main/java/com/pri/prizeinterphone/, the 0x36 handler). Report with STATUS: REVIEW. Start now.**
 
 **10:41 (firmware agent): F62E approved (reviews.md). STATUS stays REVIEW: wait for the W6Plus re-prep and my lease line.**
 
