@@ -245,3 +245,135 @@ Safety text gets a second careful pass (plan §4). These renderings must stay th
 | date | 30.10.2026 / 30. Okt. 2026 | |
 | → (menu path) | → | Kept: "Gerät → Funkeinstellungen". |
 | "…" quotes | „…“ | German typographic quotes, never in titles (Orbitron lacks „). |
+
+## 8. Terms settled during the draft (2026-10-31)
+
+Added after the German draft: the terms the eleven translators needed beyond §1–7, and the choices made in the
+consistency pass where they had rendered one English term in several ways. The draft now uses the German in the second
+column everywhere (screens, SignalDeck Web, the guide). Rows marked **❓** are real choices for the reviewer.
+
+### App features and screens
+
+| English | German | Notes | Reviewer |
+|---|---|---|---|
+| the Intercom page (in prose) | Funkseite | One word, never "Funk-Seite". The tab stays "Funk" (§1). | |
+| Radio controls (car screen) | Funkbedienung | Also "Vollbild-Funkbedienung im Auto". | |
+| Parrot (simplex repeater) | Papagei | The app's feature. BrandMeister's echo service (private call 9990) stays "Parrot". ❓ Keep "Parrot" for both? | |
+| Voice keyer | Sprachspeicher | | |
+| Net preamble / My ID (keyer slots) | Rundeneröffnung / Meine Kennung | | |
+| ID timer | Kennungs-Timer | Never "ID-Timer". | |
+| ID reminder | Kennungs-Erinnerung | | |
+| Morse ID | Morse-Kennung | Also the DTMF command label. | |
+| Fox beacon | Fuchssender | The established German fox-hunt word; an exception to §3 "beacon → Bake". ❓ | |
+| Be the fox | Selbst Fuchs sein | | |
+| bearing / Spin for the bearing | Peilung / Drehpeilung | | |
+| mark (fox hunt) | Markierung (prose) · Punkt (buttons: „Punkt speichern“, „Punkte löschen“) | The buttons are a third of a row wide. ❓ One word for both? | |
+| Download terrain / Terrain | Gelände herunterladen / Gelände | "Herunterladen" per §2 (Download). | |
+| Terrain prediction | Geländevorhersage | Never "Geländeprognose". | |
+| Key-ups (coverage layer) | Auftasten | | |
+| Mapping coverage | Reichweite wird erfasst | Notification and widget text. | |
+| Log coverage in the car | Reichweite im Auto protokollieren | | |
+| Nearby repeaters | Relais in der Nähe | | |
+| Nets near you | Funkrunden in der Nähe | Short form "Runde" only where the net is already named. | |
+| On the air near you / Elsewhere on the air | In deiner Nähe auf Sendung / Anderswo auf Sendung | | |
+| Nets on this channel (editor section) | Funkrunden hier | Comment asks for one or two words. | |
+| Add a net | Funkrunde hinzufügen | | |
+| check-in (net control) | Check-in, verb einchecken; button „Einchecken“ | "Anmeldung" also means log-in on SignalDeck Web. ❓ "Anmeldung" is the older German net word. | |
+| traffic (net flag) | Verkehr | | |
+| Late / Out (net flags) | Verspätet / Abgemeldet | Report lines: "verspätet", "abgemeldet". | |
+| Scheduled operations / schedule | Geplante Aktionen / Zeitplan | „Zeitplan hinzufügen“. | |
+| APRS monitoring | APRS-Mithören (das) | Never "Überwachung" (reads as surveillance). | |
+| Pager monitor | Pager-Mithören | | |
+| Monitor APRS (button) | APRS mithören | Verb form on buttons only. | |
+| Packet finder | Packet-Suche | | |
+| page (POCSAG message) | Funkruf / Pager-Nachricht | Both are in the draft. ❓ Pick one. | |
+| Hear pages | Pager empfangen | | |
+| Winlink e-mail / Check Winlink mail | Winlink-E-Mail / Winlink-Mail abrufen | Never "Winlink-Post". | |
+| Session log / Detailed diagnostic log | Sitzungsprotokoll / Ausführliches Diagnoseprotokoll | | |
+| Two-way iGate | Zwei-Wege-iGate | | |
+| Packet lead-in | Packet-Vorlauf | | |
+| Beacon via ISS | Bake über die ISS | | |
+| Record each pass | Jeden Überflug aufnehmen | | |
+| satellite pass | Satellitenüberflug | One word. | |
+| orbit data | Bahndaten | | |
+| Text modes | Textbetriebsarten | | |
+| Any mode (SSTV decoder) | Jeder Modus | An SSTV mode (Martin, Scottie), not a §3 Betriebsart. | |
+| Combine (SSTV) / In / Left out | Kombinieren / Dabei / ausgelassen | | |
+| Voice announcements | Sprachansagen | | |
+| keyword alerts | Stichwort-Alarme | | |
+| Contribute | Mitwirken | | |
+| Help support this phone | Hilf mit, dieses Telefon zu unterstützen | "Help us support this phone" (first-launch title): „Hilf uns, dieses Telefon zu unterstützen“. | |
+| Radio audio check | Funkaudio-Prüfung | | |
+| Listen check / Second radio test | Hörprüfung / Test mit zweitem Funkgerät | | |
+| Transmit test session | Sendetest-Sitzung | | |
+| Bring radio up (diagnostics) | Funk starten | Four buttons in a row. | |
+| Probe + power pulse | Abfrage + Stromimpuls | | |
+| Restore factory (firmware button) | Werkszustand | One of three buttons in a row. | |
+| POTA activation / On the air now | Aktivierung / Jetzt QRV | | |
+| contact (logbook) | Verbindung | A DMR contact stays "Kontakt" (§4); „Verbindung eintragen“, „Erneut loggen“. | |
+| Log heard | Gehörte loggen | | |
+| Exam practice: Study a subelement / Missed | Abschnitt lernen / Falsch | Topic label per §1: "US-Prüfung (englisch)". | |
+| Hold to talk (M17) | Zum Sprechen halten | | |
+| Open in maps | In Maps öffnen | | |
+
+### Firmware and the phone
+
+| English | German | Notes | Reviewer |
+|---|---|---|---|
+| phone | Telefon | Never "Handy" (§3 follows Android's German UI). | |
+| bench firmware / bench image | Labor-Firmware / Labor-Image | Never "Bench-" or "Prüfstand-Firmware". "auf dem Prüfstand" stays for measurements. ❓ | |
+| stock firmware / factory image | Werks-Firmware | As §6 "factory image". | |
+| stock version (SignalDeck Web) | Werksversion | | |
+| factory backup / factory copy | Werks-Sicherung / Werks-Kopie | With hyphen. | |
+| stock ROM (Android) | Original-ROM | Not firmware; "Stock-ROM" is also common. ❓ | |
+| symbol engine / tone generator | Symbol-Engine / Tongenerator | | |
+| Own the radio at boot | Funkmodul beim Start übernehmen | §1 "Funkmodul übernehmen". | |
+| Keep access after reboot | Zugriff nach Neustart behalten | | |
+| Turn the radio off and exit | Funkmodul ausschalten und beenden | | |
+| Hand back to the stock app and exit | An die Hersteller-App zurückgeben und beenden | | |
+| Radio busy, loading firmware | Funkgerät belegt, Firmware wird geladen | | |
+| Allow unlisted images | Nicht gelistete Images erlauben | | |
+| Web access / Allow transmit from the web | Web-Zugriff / Senden aus dem Web erlauben | | |
+| amber (UI colour) | orange | "orangefarben" where an inflected adjective is needed. | |
+
+### Channel editor and lists
+
+| English | German | Notes | Reviewer |
+|---|---|---|---|
+| All / Private / Group (call type choice) | Alle / Einzel / Gruppe | Short forms of §4 Gruppenruf / Einzelruf, for pills. | |
+| All call (contact type) | Sammelruf | | |
+| Relay (repeater) | Relais (Repeater) | | |
+| Call number from / call number | Quelle der Rufnummer / Rufnummer | | |
+| Channel access number (M17) | Kanalzugangsnummer | | |
+| Double slot | Doppelslot | | |
+| Interrupt transmission | Sendeunterbrechung | | |
+| RX tone type / TX tone type | Empfangston-Art / Sendeton-Art | | |
+| None (tone) | Kein | | |
+| High / Low power (choices) | Hoch / Niedrig | §3. | |
+| Enabled / Disabled (choices) | Aktiviert / Deaktiviert | | |
+| Latitude / Longitude | Breitengrad / Längengrad | | |
+| Destination (@ALL or a callsign) | Ziel (@ALL oder Rufzeichen) | | |
+| NOT TUNABLE (badge) | AUSSERHALB | Badge cut off at 16 characters on a 480 px screen. ❓ | |
+| RX ONLY (badge) | NUR RX | | |
+| Not legal here | Hier nicht erlaubt | | |
+| Show all lists | Alle Listen zeigen | | |
+| Star (button) | Favorit | The icon is still "Stern" in prose. | |
+| Out of zone (button) | Aus Zone | Four buttons share a row. | |
+| Zone name | Zonenname | | |
+| Marine VHF | Seefunk (UKW) | | |
+| NOAA weather | NOAA-Wetterfunk | | |
+| Home (contact location) | Zuhause | | |
+
+### Wording rules settled
+
+| English | German | Notes | Reviewer |
+|---|---|---|---|
+| Stop … (button) | … stoppen | §2 Start/Stop. "Beenden" only for End (a net, a session, the app). | |
+| Halt TX | TX stoppen | | |
+| Try again | Erneut versuchen | §2 Retry. | |
+| Loading… / Sending… | Wird geladen… / wird gesendet… | No space before the ellipsis, as in English. | |
+| Set your callsign first | Trage zuerst dein Rufzeichen ein | "Trage", not "Trag" or "Stelle … ein". | |
+| Coverage logging is on | Reichweiten-Protokoll ist an | "an/aus" in sentences, "Ein/Aus" on switch labels (§2). | |
+| No position fix yet | Noch keine Position | | |
+| Key legends SCAN, ZONE, TXT, SOFT SQ, MON, REC, VFO, PKT | unchanged | Checked across all files: no legend is translated. "Soft-SQ-Stufe" keeps the name in a compound (style §4). The car screen's own Scan button is "Suchlauf". | |
+| weekday buttons (one letter) | M D M D F S S | German calendar convention, as Android's. Three-letter days: Mo. Di. Mi. Do. Fr. Sa. So. | |
