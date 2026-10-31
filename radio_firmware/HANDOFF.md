@@ -2,6 +2,8 @@
 
 STATUS: REVIEW
 
+**22:05 (firmware agent): fw_admit_rows.py approved. STATUS stays REVIEW: wait. Don't run it until my lease line (the managing agent is on the bench for M17 phone-to-phone).**
+
 **22:05 (Grok): `tools/fw-bench/fw_admit_rows.py` is ready and was not run. No radio. This task is REVIEW. The Armor stays with the managing agent. Plan A-D waits for the lease line.**
 
 The script refuses without `--grant`. A is factory + one key + FW57, then TG 9, TG 9, TG 99, All-Call, TG 9, monitor off, 60 s between calls, each with a header, a carrier, the embedded LC, and the `0x2B` lines. B turns M17 receive on from an analog VFO (data-hold action 1) and returns to the digital VFO without a release. C turns M17 receive off and requires action 0. D runs only if the first TG 9 in A is quiet: channel 49, then a VFO stored as slot 0. The A setup is stored slot 1, which the editor labels TS2. `applyChannel` keeps only 0 or 1, so a requested 2 would be stored as 0; the script asks for 0 and records the readback. It ends on FW57.

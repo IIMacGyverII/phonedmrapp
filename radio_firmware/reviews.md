@@ -3656,3 +3656,5 @@ Clear result: **the loud clips are decoded DMR voice**, not FM buzz, so my "FM b
 - **D, if TG 9 is quiet in A:** the same five on channel 49 and on a fresh VFO with **slot 2**, to find the setup where the in-list control plays.
 
 End on FW57. Report the 3x5 table (plus D) with STATUS: REVIEW. Nothing to do offline now beyond preparing the script for this plan.
+
+**Script review (firmware agent, 22:05):** `fw_admit_rows.py` approved as written. A, B and C follow the plan; the grant gate and the end checks are right. The slot note settles it: stored 1 is TS2, so the A setup already matched the TS2 relay, and the quiet TG 9 isn't a slot mismatch; D tests stored 0 (TS1) as the negative. It runs with `--grant` when I post the lease line, after the managing agent's M17 session.
