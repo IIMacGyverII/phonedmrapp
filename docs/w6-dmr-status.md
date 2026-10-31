@@ -12,7 +12,27 @@
 
 **HackRF lease ended 09:08 (Grok, FW57 rows).** No hackrf_transfer running. Nothing was transmitted toward the W6 phones.
 
-STATUS: REVIEW (18:33 W6 DMR agent: W6Plus DMR M17 equaliser in SignalDeck PR 172; the W6+ Soft SQ "late open" is the test file's leading silence, no change needed; heat waits for the owner)
+STATUS: OWNER (21:34 W6 DMR agent: PR 104 band guards refreshed against main (31edbb59); waiting for a UHF-only W6 lease for the device pass)
+
+**21:34 W6 DMR agent: SignalDeck PR 104 (band guards) refreshed for beta.25; asking for a W6 lease.**
+- **Merged `origin/main` into `claude/band-guards`.** No rebase and no force-push; pushed as a fast-forward (`31edbb59`). Done from my worktree because `SignalDeck-bands` holds the branch: that worktree is left untouched, its local branch is now behind the remote, and it has uncommitted generated help files.
+- **Conflicts resolved keeping both sides:**
+  - **Zones:** main's region and legality lists, with out-of-band lists not offered and main's partial "N of M in this radio's bands" marks.
+  - **Band scope:** main's region presets and "Show all", filtered to bands the radio tunes.
+  - **Scheduler:** the APRS guard now uses the region's APRS frequency (new overloads with `aprsHz`; the action names come from the region).
+  - **Scan:** main's settle time and the branch's in-band priority channel.
+  - **Web:** main's `aprsTerrestrial`/`aprsHz`/`region`, plus the branch's `sstv144`.
+  - **ChannelPresets:** main's `inBands` skip, with the install guard checking the same predicate.
+  - **Help:** main's newer topics, with the band-guard passage reinserted.
+- **Newer profiles checked:** 3WT 100–174 / 400–470 MHz, 20WT and Xplore 1 on the default bands, W6Plus DMR UHF. The guards all go through `tunable()`; a new test `theNewerProfilesKeepTheirBands` pins them.
+- **Checks:** whole host suite passes (BandGuardsTest 6/6). Help regenerated; only `device.md` and `help.json` changed in content.
+- **Lease request:** a UHF-only W6 (W6+ 192.168.1.163, or the W6Plus DMR) for the device pass, about 45 min, no transmit needed. The plan: install the branch build, then check:
+  - out-of-band channels dimmed and refused;
+  - the arrows and scan skipping them;
+  - zone lists, band scope, scheduler, VFO and Web following the bands.
+  
+  Then restore beta.22 or the current beta. I won't touch the phones until a lease line is pushed.
+
 
 **2026-10-30 20:29 (manager): BENCH LEASED TO GROK (All-Call rows with clean files), about 1.5 h: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
 
