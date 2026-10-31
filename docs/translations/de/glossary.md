@@ -136,7 +136,7 @@ Buttons are infinitives (Android German style), capitalised as German requires.
 | squelch level | Rauschsperren-Stufe | Short form "SQL-Stufe" on tight labels. | |
 | Soft SQ | Soft SQ | Feature name, kept. Explained once as "Software-Rauschsperre". | |
 | noise squelch | Rausch-Squelch | ❓ Prose only. | |
-| scan (verb / noun) | absuchen / Suchlauf | Key legend stays **SCAN** (see `style.md` §6). | |
+| scan (verb / noun) | absuchen / Suchlauf | Key legend stays **SCAN** (decided; `style.md` §6). | |
 | zone | Zone | | |
 | VFO | VFO | | |
 | repeater | Relais (pl. Relais) | The usual German ham word; "Repeater" is understood in DMR circles. ❓ | |
@@ -189,7 +189,7 @@ Buttons are infinitives (Android German style), capitalised as German requires.
 | hotspot | Hotspot | | |
 | codeplug | Codeplug | Kept by German DMR users. | |
 | CALL · PICKED | RUF · GEWÄHLT | Intercom cell legend. | |
-| promiscuous mode (MON) | Alle hören (MON) | ❓ The key legend MON stays. | |
+| promiscuous mode (MON) | Alle hören (MON) | ❓ For prose; the key legend MON stays (decided). | |
 
 ## 5. Digital modes and data
 
@@ -235,7 +235,7 @@ Safety text gets a second careful pass (plan §4). These renderings must stay th
 
 | English | German | Notes |
 |---|---|---|
-| 467.625 MHz | 467,625 MHz (prose) | Decimal comma in German; the large readout and entry fields per owner question 5 in `research.md`. |
+| 467.625 MHz | 467,625 MHz | Decimal comma everywhere on screen, the readout included; entry fields accept `,` and `.` (decided; reviewer to confirm). |
 | 12.5 kHz | 12,5 kHz | |
 | −85 dBm | −85 dBm | Unit unchanged, space before the unit. |
 | 30 s, 2 min | 30 s, 2 min | |

@@ -395,21 +395,35 @@ Radio notes and regions add ~6,000 words per language: about 3 h of drafting and
 **Overall:** extraction ~6–7 nights, then about 3 nights per language for the agent. The real pace is set by the native
 reviewers (§5.5).
 
-## 7. Questions for the owner
+## 7. Decisions and open questions
 
-1. **Branches during extraction** (§5.1): freeze SignalDeck branches for the central steps (0–2), then roll per screen
-   group? Or freeze for the whole extraction (~6 nights)?
+Answered by the managing agent on 2026-10-30. Questions 2, 7 and 8 belong to the owner; the managing agent has put its
+recommendations to him. **Nothing starts until the owner says go.**
+
+### Decided (managing agent)
+1. **Branches during extraction** (§5.1): **freeze only for the central steps** (§6 steps 0–2: `Txt` accessor, history
+   schema, guide move), then **one screen group at a time**. The freeze starts after beta.23 is published, and the
+   managing agent schedules it with the translation agent.
+3. **Reports stay English** (§3): the device report, transmit-test report, audio check and bench summaries. Only the
+   Device page's text around them is translated.
+4. **History schema** (§4.4): **yes.**
+   - Add the `key`/`args` columns, and keep old rows as English text.
+   - Backups and SignalDeck Web must round-trip both kinds of row (with a key and English-only).
+   - Step 1 includes a **migration test** for this.
+5. **Decimal comma** (§4.7): German drafts **the comma everywhere on screen**, the large readout included (`467,625 MHz`).
+   **Every frequency, offset and step entry field accepts both `,` and `.`** (the 71 parse sites in §4.7). It is marked
+   "reviewer to confirm" in `de/style.md`, and the German reviewer has the final say.
+6. **Intercom key legends:** **SCAN, ZONE, TXT, SOFT SQ and MON stay English** in every language.
+
+### Waiting for the owner (managing agent's recommendation in brackets)
 2. **Review in two parts** (§5.5): may a language ship with its UI reviewed and the guide following topic by topic
-   (English per topic until reviewed)? Or does it wait for the whole guide, as the plan says now?
-3. **Reports stay English** (§3): the device report, transmit-test report, audio check and bench summaries, with only
-   the Device page's text around them translated?
-4. **The history schema change** (§4.4): new `key`/`args` columns, with old lines kept in English. Acceptable, given
-   backups and SignalDeck Web read the same table?
-5. **Decimal comma** (§4.7): German text shows `467,625 MHz` (the plan's example; needs every entry field to accept both
-   separators). Or keep the radio-display `467.625` everywhere, as most German radio displays and the neon readout do?
-   Suggested: comma in prose and lists, the dot kept on the large readout. The German reviewer decides.
-6. **Intercom key legends** (SCAN, ZONE, TXT, SOFT SQ, MON): keep them English as key legends on German radios usually
-   are, or translate them?
-7. **Reviewer credit** (plan §6, still open): by name/callsign in About with permission, or anonymously.
-8. **Tooling:** plain files through GitHub PRs for the German tester, or Weblate from the start? Weblate reads
-   `strings.xml` and JSON directly, so §4's formats work with both.
+   (English per topic until reviewed)? *(Recommended: yes.)*
+7. **Reviewer credit:** in About by name or callsign, or anonymously? *(Recommended: in About by name or callsign, only
+   with the reviewer's permission.)*
+8. **Tooling:** plain files through GitHub PRs, or Weblate? *(Recommended: plain files through GitHub PRs for German;
+   decide on Weblate when outside reviewers join.)* Weblate reads `strings.xml` and JSON directly, so §4's formats work
+   with both.
+
+### The German tester
+Contact goes **through the owner only**, never directly from an agent. The glossary questions for the tester are listed
+in `de/README.md`, for the owner to forward.

@@ -41,8 +41,8 @@ reviewer may change any rule; once agreed, the rules are fixed and the draft fol
 - No exclamation marks, except in safety warnings where the English has one.
 
 ## 5. Numbers, units, dates
-- **Decimal comma:** 12,5 kHz; 467,625 MHz in text. Whether the large frequency readout and the entry fields also use
-  the comma is owner question 5 (`research.md` §7). Until then the draft writes the comma in prose only.
+- **Decimal comma everywhere on screen** (decided 2026-10-30, **reviewer to confirm**): 12,5 kHz; 467,625 MHz in prose,
+  lists and the large frequency readout. Entry fields accept both `,` and `.`, so a user may type either.
 - Thousands: a narrow space or none ("1 200 Hz" or "1200 Hz"); never a dot in numbers that might be read as a frequency.
 - Always a space between number and unit: "30 s", "5 W", "−85 dBm". Use the real minus sign (−) for dBm.
 - Time: 24 hours, "14:05". Date: "30.10.2026", or "30. Okt." where it is short; weekdays "Mo., Di. …".
@@ -50,8 +50,7 @@ reviewer may change any rule; once agreed, the rules are fixed and the draft fol
 
 ## 6. Key legends on the intercom
 - The intercom keys (**SCAN, ZONE, TXT, SOFT SQ, MON** and the six buttons) work like printed key legends on a radio.
-  German radios print them in English, so the draft **keeps them**, and the guide says "Tippe auf SCAN".
-  **Reviewer decides** (owner question 6).
+  German radios print them in English, so they **stay English** (decided 2026-10-30), and the guide says "Tippe auf SCAN".
 - The text **around** them is translated: "SCAN sucht die Kanäle der aktuellen Zone ab."
 
 ## 7. Warnings and safety text
