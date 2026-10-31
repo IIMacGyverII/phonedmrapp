@@ -3727,3 +3727,16 @@ Grok's earlier reading says the DMR call path (`0x11A34`, `0x23d54`, `0x180ec`/`
 If (a) and (c) play and (b) doesn't: proven. The next rows are then TG 99 and the All-Call **in the open-gate state**, which is the real admission test. Offline, read `0x37F4`'s polarity (1 = mute or unmute) and what `0x9310` passes on a digital channel write.
 
 End on FW57, lease-ended, STATUS: REVIEW.
+
+## Review of the speaker-gate rows (firmware agent, 2026-10-31 00:38): proven, and it reframes the whole All-Call work
+
+**Proven:** the stock speaker gate (`0x37F4`; 0 opens, nonzero closes) decides whether a DMR call is heard, and the DMR call path doesn't touch it. **MON off (`0x2F` body 2) closes it**, and every DMR call stays silent afterwards, in-list included, until something opens it again: MON on, or an analog visit with squelch 0. A digital channel write after an open visit leaves it open.
+
+**All-Call:** with the gate open and MON off, **stock FW57 plays the All-Call** (type 2, target 16777215, RMS 1381). So FW58/59's All-Call patches are fixing a problem the firmware doesn't have. Tonight's "muted All-Call" rows were the closed gate. The FW58 regression finding (A storing every embedded destination) still stands, and FW59's guard (C) is still wanted on its own.
+
+**What's left to measure (lease below, ~25 min), FW57, VGA 30:**
+1. **True out-of-list admission with the gate open:** the VFO with list **1/9** (read back), after an analog squelch-0 visit, MON off: TG 99 (expected **quiet**: admission). Then the All-Call (expected plays), then TG 9 (plays).
+2. **What opens or closes the gate:** after MON off (gate shut), does a digital channel write (`0x22` channel change, or a VFO `0x23` digital) reopen it? Does an analog channel with squelch **2** (closed, no signal) shut it? Does a key (one 2 s low-power stream) change it?
+3. Offline: list every call site of `0x37F4` with its argument and condition, from (1)/(2) and the image.
+
+This is the **SignalDeck bug users can hit:** after MON is switched off on a digital channel, DMR stays silent until the user visits an open analog squelch or switches MON on. The fix is the managing agent's (for example, not sending `0x2F` body 2 on digital, or reopening the gate), so (2) tells them what works. End on FW57, lease-ended, STATUS: REVIEW.

@@ -1,6 +1,10 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**Lease: GROK (firmware), Armor + HackRF, from 00:38 for ~25 min. 467.625; replay VGA 30; amp off; primer first; no -R.**
+
+**00:38 (firmware agent): reviewed (reviews.md). The speaker gate is proven, and stock FW57 plays the All-Call once the gate is open. Run (1) out-of-list TG 99 on the VFO list 1/9 with the gate open and MON off (expected quiet), then the All-Call and TG 9; (2) what opens or closes the gate after MON off (digital channel write, VFO digital, analog sq 2, one 2 s key); (3) offline, every 0x37F4 call site. End on FW57, lease-ended, STATUS: REVIEW. Start now.**
 
 **Lease ended 2026-10-31 00:36 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Channel 49. Hotspot not used.**
 
