@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — F59E keeps the All-Call quiet.** Adding the All-Call branches to F59D leaves talkgroup 99 muted and the All-Call muted, with 16777215 in the call slot. Stopped. FW57 is loaded again. Details in `results.md`.
+
 **2026-10-30 — F59D keeps both calls quiet with MON off.** Talkgroup 99 is a 0.15 s blip. The All-Call is quiet even though 16777215 is in the call slot. Stopped before the FW59 acceptance. F59D stayed loaded. Details in `results.md`.
 
 **2026-10-30 — FW59 stores a group All-Call only.** FW59 is FW57 plus that store and the op 6 hold guard. `0x11d18` and `0x11d80` stay as they are on FW57. F59D opens the opcode 14 window. Neither image was loaded. The monitor byte is `0x38C70+0x11`. Details in `results.md`.

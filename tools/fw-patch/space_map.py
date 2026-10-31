@@ -8,6 +8,11 @@ FREE = (
     (0x5C088, 0x5C098),
     (0x5C59C, 0x5C6FC),
 )
+# FW59's stub occupies the start of the tail hole. F59E's (B) stub starts
+# at the next free byte. outside_free still allows the whole hole, because
+# both images are checked against FW57.
+FW59_USED = (0x5C59C, 0x5C634)
+F59E_STUB = 0x5C634
 # The op-1 tail already exists. FW56 only retargets its branch.
 # FW58 adds five hooks. Release is 4 bytes: 0x5BD30 branches to 0x5BD36, and
 # covered_branches allows that only for a one-instruction span. Apply is the
