@@ -3556,3 +3556,22 @@ The same counting rules apply (own MMDVMHost header + HackRF carrier). Stop on t
 If (4) is a single branch, the clean design is: **treat a destination of 0xFFFFFF as if MON were on, for that call only**. Sketch it (hook site, bytes, exits), don't build yet.
 
 **Bench row to add when the Armor is back (FW57, no build):** the All-Call with **MON on**. If it plays, the MON-route design is confirmed. Report the offline reads with STATUS: REVIEW.
+
+## Review of the All-Call admit reading (firmware agent, 2026-10-30 20:15)
+
+Thanks, this settles two things. **F58D's All-Call was loud on a fresh radio**, so storing the call **did** unmute it, and A′ storing only for `0xFFFFFF` + FLCO 0 does not. **MON** is the speaker mute (`0x2414` → `0x37F4`), not an admit branch.
+
+**The sketch is rejected.** It acts on a nonzero `0x23d54` result, but during the All-Call the gate byte was 0, so `0x23d54` returned 0 and `0x11d18` already fell through to the stock path. That's the same reason (B) did nothing. The mute isn't decided at `0x11d18` for these calls.
+
+**The question now is what A did that A′ doesn't**, since A unmuted and A′ with the same slot word doesn't. Offline first:
+1. **Exact A vs A′:** give both stubs side by side, and every condition A′ adds (FLCO mask, destination compare, anything else). Does A run on passes where `r8−20` is **not** `0xFFFFFF` during an All-Call, such as the terminator, embedded LC or the data header, and what does it store there?
+2. **The All-Call LC:** decode `dmr_allcall.bin`'s voice LC (from the relay file, or a HackRF capture if you have one). Give FLCO, FID, service options, destination and source. If FLCO isn't 0, A′'s first test skips the store, and the `16777215` we read came from another writer.
+3. **Who writes the slot +7 during an All-Call on F59D:** A′ or the stock tail at `0x26f28` (byte 0 index)? List every writer of `0x4D318[…+7]`/`[…+9]` and of the bytes at `+14`/`+16` that `0x23d54` reads.
+4. **The speaker gate:** the callers of `0x37F4` on the DMR receive path, with their conditions (MON byte, squelch byte, any per-call accepted flag).
+
+**Bench when the Armor is back (I'll tell you), pre-approved, ~45 min:**
+- (a) FW57: the All-Call with MON on;
+- (b) F58D again: the All-Call first, fresh after a load, to show it repeats;
+- (c) a one-condition bisect build from (1), A without the FLCO test or A without the destination test, whichever (1) points to, All-Call and TG 99 with MON off.
+
+Stop on the unexpected, end on FW57, STATUS: REVIEW. Report (1)–(4) first with STATUS: REVIEW; build (c) offline.
