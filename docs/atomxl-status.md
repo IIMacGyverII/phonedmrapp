@@ -25,6 +25,11 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
+**2026-10-31 (translation agent): LEASE REQUEST, Atom XL, UI only, ~45 min: German screen check round 2 of #181**, after its layout, date and decimal-comma fixes.
+- Same routine as round 1.
+- Restore afterwards: the build that is installed then, with the phone's language and the VFO/M17 settings you give me.
+- No transmit.
+
 **2026-10-31 (translation agent): ATOM XL LEASE ENDED.**
 - **Restored as asked:** the PR 180 build (`install -r` of `SignalDeck-pr180.apk`, beta.24), the app language back to the phone's (override cleared), `DIAG vfo 465025000` (the VFO on 465.0250, FM, low power), and `DIAG m17 on`. M17 shows "listening".
 - No transmit.

@@ -1,6 +1,6 @@
 # Translation agent status (mailbox)
 
-STATUS: REVIEW (2026-10-31: #181 up as a draft, stacked on #179: extraction complete and German draft; German screen check next, Atom XL lease requested)
+STATUS: WORKING (2026-10-31: #179 up to date with beta.25, waiting for review; #181 at baseline 0 with the screen-check fixes; German check round 2 next; es/fr/pt-BR/it glossaries drafted)
 
 Newest entries first. The translation agent writes here; the managing agent reads and answers here and by message.
 
@@ -13,6 +13,18 @@ Newest entries first. The translation agent writes here; the managing agent read
 **2026-10-30 21:50 (manager): OWNER SAYS GO.** Start the work per the brief and the updated plan, in your own worktree from origin/main (889312e1). Draft PRs; the manager holds other merges once the central PR is up (PR #104 band guards lands first). Atom XL for screen checks by lease here or in docs/atomxl-status.md (currently on the manager's M17 lease).
 
 **2026-10-30 20:29 (manager): BENCH LEASED TO GROK (All-Call rows with clean files), about 1.5 h: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
+
+**2026-10-31 (translation agent): #179 merged with beta.25; #181 at baseline 0; German round 1 fixed.**
+- **#179** (`i18n/extraction`, ad37f778) has beta.25 merged. PR 180's M17 sentence is carried into `en.json`, and the suite passes.
+- **One permission refusal:** my session's permission check refused `gh pr ready 179` ("Unrequested Commit in a Connected App"). I did not work around it. The managing agent or the owner marks #179 ready.
+- **#181** (`i18n/screens`, 66bfcd4f) has beta.25 merged. **English literals left in code: 0.** M17Receiver's reasons turned out to be diagnostic labels and are marked stays-English.
+- **Round 1 fixes, written up in `de/screen-check.md`:**
+  - no break inside a word (`Neo.fit(t, keepIcon)` on every shared button row);
+  - header titles shrink before they are cut off;
+  - dates in the app's language (`Txt.dates`);
+  - decimal comma on screen (`Txt.decimal`/`freqMhz`), with entry fields accepting a comma.
+- **German consistency pass:** 310 strings, so one German name per English label. The glossary gained §8 (106 rows, 9 open), and the back-check notes are in `de/backcheck/`.
+- **Next languages:** glossary, style guide and reviewer questions are drafted for **es, fr, pt-BR, it**, in their folders. Their string drafts start once German passes round 2. Japanese follows.
 
 **2026-10-31 (translation agent): REVIEW. #181 is up** (https://github.com/IIMacGyverII/SignalDeck/pull/181, draft, stacked on #179, `i18n/screens`).
 - **Extraction is complete:** baseline 6,919 → 8. The 8 are in M17Receiver, which waits for #180.
