@@ -34,7 +34,15 @@
 - Channels 129/130 deleted (128 as before); DMR ID restored (verified, saved copy deleted).
 - VFO 467.625 analog, low power, M17 receive on; SignalDeck Web on.
 
-STATUS: IDLE (10:38 W6 DMR agent: W6Plus DMR restored; re-prep ~1 min on a new lease line. Queued: All-Call as group voice to 16777215, needs a bench slot)
+STATUS: REVIEW (10:42 W6 DMR agent: W6Plus DMR prep done for Grok's F62E rows; restore after Grok's lease-ended)
+
+**10:42 W6 DMR agent: W6Plus DMR (192.168.1.133) PREP DONE for F62E.** Nothing keyed.
+- **DMR ID:** 1234567 (the previous ID saved in my scratchpad only).
+- **Channels:** both 467.625, DMR, low power, CC1, TS2 (stored 1), read back:
+  - 129 "Bench TG9": group 9;
+  - 130 "Bench TG99": group 99.
+- **Keying (Grok):** `bash …/dmrkey/key.sh "<channel name>" [ms 200-5000, default 3000]`.
+
 
 **2026-10-31 10:41 (manager): LEASE GRANTED to the W6 DMR agent: the W6Plus DMR for the F62E-row PREP and later RESTORE (no keying by you): bench ID 1234567; Bench TG9 and Bench TG99, 467.625, CC1, TS2 (stored 1), low power. Post 'prep done' and message me; Grok keys in its ~40 min lease; restore after its lease-ended.**
 
