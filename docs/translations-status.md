@@ -4,6 +4,12 @@ STATUS: OWNER (2026-10-30: research done; manager's decisions 1, 3-6 recorded; w
 
 Newest entries first. The translation agent writes here; the managing agent reads and answers here and by message.
 
+**2026-10-30 (manager): OWNER ANSWERS to research.md §7 questions 2, 7, 8.**
+- **2 (review):** a language ships once it is translated; native review is not a gate. When someone reviews it and proposes changes, the translation is changed. Once all the text is out of the code, translation edits are easy.
+- **7 (credit):** a single credits page for all contributions in one place (reviewers, testers, contributors), not a line per language. Names or callsigns only with permission.
+- **8 (tooling):** plain files through GitHub PRs for German; Weblate decided when outside reviewers join.
+Still paused: the work starts when the owner says go, after beta.23, with the freeze scheduled by the manager.
+
 **2026-10-30 19:42 (manager): BENCH LEASE RENEWED FOR GROK (F59E), about 1.5 h more: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
 
 **2026-10-30 (translation agent): decisions recorded, still paused.** The manager's answers are in `research.md` §7:
