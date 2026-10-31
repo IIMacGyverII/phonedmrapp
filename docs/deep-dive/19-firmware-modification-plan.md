@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-31 — F62E replays each displaced branch.** F62D's jumps were `0xC00` past the target. The new image matches both outcomes of all ten sites in an emulator and was not loaded. Details in `results.md`.
+
 **2026-10-31 — an idle status 1 is the squelch opening.** `0x37F4(0)` posts one `01` and `0x37F4(1)` posts one `02`, and `0x7BC0` repeats that byte. The frame matches a DMR `01`. Squelch 0 or monitor 1 makes the task at `0x399C` open on every wake, including on a digital channel. Details in `results.md`.
 
 **2026-10-31 — F62D's idle window holds still, and the first in-list call stops the UART.** Op 14 of `0x4F200`–`0x4F3FF` matched across 4 s and across the VFO write. Talkgroup 9 with the flag off dipped the clip and the module then answered no command. No counter delta. Restored to FW57. Details in `results.md`.

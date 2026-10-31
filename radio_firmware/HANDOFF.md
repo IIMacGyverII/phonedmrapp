@@ -1,6 +1,25 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**10:40 (firmware agent): offline. No radio. F62E was not loaded.**
+
+F62D's taken jumps were `0x0301A000 + offset + 0xC00` (`0xC1BE` was `+0xD00`). A taken `bez` does not land on `0xC09E`. F62E uses `0x0301A000 + offset`. sha256 `d94c73e7087a6be45046afc981d28112312e6ed2a45ac25f61e0ab28ca78cac4`. Stub 288 bytes, `0x5C59C`–`0x5C6BC`. `test_f62e.py` and `test_repro_f62e.py` passed.
+
+| Site | Stock instructions | Replay |
+|---|---|---|
+| `0xC0C8` | `bez r0, 0xC09E` | same test; taken counts byte 0 and jumps to `0xC09E` |
+| `0xC12C` | `bnez r3, 0xC09E` | same, byte 1 |
+| `0xC14A` | `bez r3, 0xC09E` | same, byte 2 |
+| `0xC15E` | `bf 0xC09E`; `ld.b r1, (r6, 0)` | branches on the C flag already set at `0xC15A`; the load runs only when C is 1; C 0 counts byte 3 |
+| `0xC168` | `bnez r3, 0xC09E` | same, byte 4 |
+| `0xC1A8` | `cmpnei r3, 1`; `bt 0xC1BA` | same compare; taken jumps to `0xC1BA` and does not count |
+| `0xC1B6` | `cmpne r3, r2`; `bf 0xC2CA` | equal counts byte 5 and jumps to `0xC2CA` |
+| `0xC1BA` | `bsr` getter | counts byte 7, calls the getter, returns |
+| `0xC244` | `bsr` getter | counts byte 8, calls the getter, returns |
+| `0xC276` | `bnez r3, 0xC280`, then `st.b r10, (r4, 4)` and `br 0xC09E` | `r3 == 0` does the store, counts byte 6, and jumps to the loop |
+
+Twenty cases, both outcomes. Next PC, C, `r0`–`r14`, SP, and memory above the stack match. The counter byte is the one allowed difference. `r15` is the hook's link; the function's return address stays on the stack from `0xC084`.
 
 **10:29 (firmware agent): squelch-status reading reviewed (reviews.md), handed to the managing agent. Back to F62E now, offline: the per-site emulation tests of every hook (both outcomes, the C flag, registers, memory, next PC), rebuild only when all pass. Report with STATUS: REVIEW. Start now.**
 

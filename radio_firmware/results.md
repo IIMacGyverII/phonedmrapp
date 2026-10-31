@@ -4800,6 +4800,10 @@ The counters are `0x4F2C0` through `0x4F2C8`. That is the first spare after the 
 
 A taken branch increments its byte and then goes to the same instruction the stock branch went to. A branch that is not taken returns to the next instruction. The start and stop posts increment and then call the same getter at `0x5C4C8`. The two stop-side returns at `0xC212` and `0xC242` are not in this map.
 
+**F62E (10:40). Not loaded. No radio.**
+
+F62D's taken jumps were `0x0301A000` plus the file offset plus `0xC00`. The `0xC1BE` constant was `0xD00` high. The emulator's taken `bez` from `0xC0C8` does not arrive at `0xC09E`. F62E keeps the nine counters and the opcode 14 window. Each hook repeats the stock instruction, including the C flag `0xC15E` already has, and the displaced `ld.b` or `st.b`. The taken path of `0xC1A8` jumps to `0xC1BA` and lets that hook count. sha256 `d94c73e7087a6be45046afc981d28112312e6ed2a45ac25f61e0ab28ca78cac4`. The stub is 288 bytes, `0x5C59C`–`0x5C6BC`, short of the live literal at `0x5C6BC`. `test_f62e.py` (both outcomes of all ten sites) and `test_repro_f62e.py` passed. The image was not loaded.
+
 **Squelch-open status (10:22). Offline. No radio.**
 
 `0x37F4` is the mute edge. Argument 0, and bit 3 of `0x38908` clear, sets that bit and posts status 1. Argument 1, and the bit set, clears it and posts status 2. Either call returns without a post when the bit is already in that state. `0x2414` is true when the monitor byte (`0x38C70+0x11`) is 1 or the squelch byte (`+0xA`) is 0. `0x30` stores a body under 10, calls `0x37F4(1)`, and if `0x2414` is true waits 200 ms and calls `0x37F4(0)`. `0x2F` body 2 stores the monitor and calls `0x37F4(1)`, then the same delayed open. `0x7E08` queues that one byte. `0x7BC0` sends `0x36` and repeats it at 100 ms up to four times while bit 0 of `0x38EF0` is set and bit 1 is clear. The host ack sets bit 1. Four `02`s then three `01`s are one close and one open, repeated. The byte is the whole frame, so a squelch-open `01` and the DMR `01` at `0xC2BC` are the same command.
