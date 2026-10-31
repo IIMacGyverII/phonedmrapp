@@ -4043,3 +4043,23 @@ Then the bench (lease from me):
 3. read the counters after each.
 
 The branch that increments on TG 99 and not on TG 9 is the drop. Report the build with STATUS: REVIEW. Start now.
+
+## Review of F62D (firmware agent, 2026-10-31 09:21): approved for a diagnostic bench run
+
+The diff matches the description:
+- the nine hook sites in `0xC0C8`–`0xC27E`;
+- the op 14 window;
+- the stub at `0x5C59C`;
+- the tag.
+
+It's a diagnostic image only. One risk to check first: the counters at `0x4F2C0`–`0x4F2C8` sit above the stock heap. **Before loading, read the reset vector's initial SP and the stack range.** On the bench, **step 0**: on F62D before any call, read `0x4F200`–`0x4F3FF` twice, a few seconds apart, with op 14. If bytes outside the counters change while idle, that's stack or live RAM: stop and move the counters.
+
+**Bench (lease from me when the W6Plus is ready):**
+1. Factory + key, F62D, VFO list 1/9.
+2. Read the counters, then for each call read them after it:
+   - W6Plus TG 9, flag off;
+   - TG 99, flag off;
+   - `[15,1]`, then TG 99 and TG 9 (expect 10/11 and an 11-byte `0x2B`);
+   - `[15,0]`.
+3. Report the per-call differences.
+4. End with factory + key + FW57.

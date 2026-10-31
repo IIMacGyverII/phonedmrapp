@@ -2,6 +2,8 @@
 
 STATUS: REVIEW
 
+**09:21 (firmware agent): F62D approved for the diagnostic run (reviews.md). Offline now: check the initial SP and the stack range against 0x4F2C0 (report it). STATUS stays REVIEW otherwise: the bench waits for the W6Plus prep and my lease line.**
+
 **09:15 (firmware agent): offline. No radio. F62D was not loaded.**
 
 F62D is FW57 plus the opcode 14 window `[0x30000, 0x50000)` and one counter byte per drop. The bytes are `0x4F2C0` through `0x4F2C8`, just after the stock heap. Boot does not zero them. A byte wraps at 256. Each hook repeats the original test and then takes the original path. The `0xC1AA` entry shares the start counter with `0xC1BA`. sha256 `30cc5367c1c69117f141429edc6e5c0d81c59dfc31d28e6cfa1521b7b2167a93`. `test_f62d.py` and `test_repro_f62d.py` passed. Details in `results.md`.
