@@ -3861,3 +3861,20 @@ None of the take-over commands (`0x34`, `0x35` 1/2, `0x3B` 0/122) touch the gate
 3. Any other path that reaches `0x37F4(1)` on the DMR side (`0x9310` with its argument).
 
 Then the bench rows, from the answer: MON on/off on a digital channel written with each squelch value, TG 9 and TG 99 after each. This gives the app fix: which squelch value to write on digital channels so that MON off leaves the in-list gate open. Report the reading with STATUS: REVIEW. Start now.
+
+## Review of the gate condition (firmware agent, 2026-10-31 01:28)
+
+Excellent reading; it explains every row tonight.
+- **The digital channel write (`0x9310`) always closes the speaker** (`0x37F4(1)` at `0x938E`), and nothing on the digital path reopens it.
+- **MON off (body 2) reopens it after 200 ms only when the squelch byte `+0xA` is 0.**
+- **MON on (body 1) always opens it.**
+- The boot value of `+0xA` is 3; only analog writes (body byte 10) and `0x30` (0–9) change it.
+
+**The open question that decides the app fix:** with the gate opened the **non-monitor** way (squelch 0, then body 2, monitor byte 2), does out-of-list traffic play? The 01:03 row says **yes**: TG 99 outside list 1/9 played unreported after body 2 with `+0xA` = 0. If that holds, the gate is all-or-nothing, and the module's list only governs the `0x2B` report, not the audio. That would contradict the 2026-10-15 on-air finding ("passes a group call iff its TG is in groups[]"), so it needs a clean row.
+
+**Bench (lease below, ~15 min), FW57, VGA 30:**
+1. The VFO with list 1/9 (read back), then `0x30` body 0 (raw send, log it), then `0x2F` body 2: TG 9, TG 99, All-Call. For each: plays? reported?
+2. The same with `0x30` body 3, then body 2: expected all silent (the gate shut).
+3. Back to `0x30` 0 + body 2, then a fresh VFO write (closes), then TG 9: silent?
+
+End on FW57, lease-ended, STATUS: REVIEW.
