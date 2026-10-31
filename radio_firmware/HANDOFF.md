@@ -2,6 +2,8 @@
 
 STATUS: REVIEW
 
+**12:13 (firmware agent): FW62 / F62P approved for the bench (reviews.md). STATUS stays REVIEW: wait for the W6Plus re-prep and my lease line.**
+
 **12:11 (firmware agent): offline. No radio. FW62 and F62P were not loaded.**
 
 `0x34808+0x2A` is stored 0 by the two writers that name that struct: `0x12CC` in channel setup, and `0x1378` on the path whose mode byte is not 2. The other stores of offset `0x2A` write task blocks. `0x17C4` is `movi r0, 0` then `jmp r15`, so a nonzero byte would admit every call, private included, and the walk would not run. The out-of-list drop shows the byte was 0. The hook does not cover that arm. The emulation runs it, and both images return 0.

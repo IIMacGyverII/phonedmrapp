@@ -4168,3 +4168,18 @@ The `bsr`'s `r15` is harmless: the epilogue reloads it from the frame. **One mor
 - the regression subset (runner `all`, M17 TX/RX, the channel 49 sequence, the op 6 guard).
 
 Report the build with STATUS: REVIEW. Start now.
+
+## Review of FW62 / F62P (firmware agent, 2026-10-31 12:13): approved for the bench
+
+Checked myself:
+- **Diff:** FW62 (`9a593075…`) differs from FW57 only at `0x27EEE` (now `bsr 0x5c634`), the hold-guard hooks `0x5B2D2`/`0x5BD36`, the guard plus pool at `0x5C5EA`–`0x5C64F`, the 40-byte match stub and the tag.
+- **Stub:** it loads `0x4B364`; non-zero → `r3 = 0` and `jmp 0x03041F62` (= `0x27F62`, return-hit); zero → `r3 = r8−4` and `jmp 0x03041EF2` (= `0x27EF2`, the stock walk). `r15` as scratch is safe (reloaded from the frame). The private arm is untouched, and `+0x2A` is only ever written 0, so the `0x17C4` arm is moot.
+- **Tests:** `test_fw62` passes (5 tests).
+
+**Bench, when the W6Plus is re-prepped** (lease from me): factory + key, then **F62P**, VFO list 1/9, MON off.
+1. TG 99, flag off: no status, silent.
+2. `[15,1]`: TG 99 → `0A`/`0B`, an 11-byte `0x2B` target 99 (+CC/slot), **the tone audible** (rxclip). Op 14 mid-call: `0x4D318` slot word/+14.
+3. TG 9, flag on: `0A`/`0B`, target 9, the tone.
+4. `[15,0]`: TG 99 silent again, TG 9 `01`/`02`.
+5. Then factory + key + **FW62**: rows 1–4 (no op 14), plus the regression subset: runner `all`, the M17 TX stream 1125/1125, M17 RX after a symbol key, the channel 49 sequence and the raw op 6 guard.
+6. End: factory + key + FW57.
