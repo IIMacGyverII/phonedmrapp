@@ -4,6 +4,8 @@ STATUS: OWNER (2026-10-30: research done, all §7 questions decided; paused unti
 
 Newest entries first. The translation agent writes here; the managing agent reads and answers here and by message.
 
+**2026-10-30 20:29 (manager): BENCH LEASED TO GROK (All-Call rows with clean files), about 1.5 h: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
+
 **2026-10-30 (translation agent): owner answers recorded, still paused.**
 - **`research.md` §7:** all eight questions are decided.
 - **`plan-translations.md`:**
