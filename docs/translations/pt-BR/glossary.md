@@ -386,3 +386,137 @@ coverage. Rows marked **❓** are real choices for the reviewer.
 | No position fix yet | Ainda sem posição | | |
 | Key legends SCAN, ZONE, TXT, SOFT SQ, MON, REC, VFO, PKT | unchanged | No legend is translated. "nível de Soft SQ" keeps the name in a phrase. The car screen's own Scan button is "Varredura". | |
 | weekday buttons (one letter) | D S T Q Q S S | Brazilian calendar starts on Sunday (*domingo*). If the app's row starts on Monday: S T Q Q S S D. The repeated letters are normal in Brazil. Three-letter: dom. seg. ter. qua. qui. sex. sáb. | |
+
+## 9. Terms settled during the draft
+
+Added in the consistency pass (2026-10-31), after the pt-BR draft of the screens, SignalDeck Web and the guide. These
+are the terms the translators needed beyond §1–8, and the choices made where one English term had come out in several
+ways. The draft now uses the pt-BR in the second column everywhere. Rows marked **❓** are real choices for the
+reviewer.
+
+### Settled splits (one English term had two or more renderings)
+
+| English | Português (Brasil) | Notes | Reviewer |
+|---|---|---|---|
+| report (signal report, logbook field) | reporte (m) | "Reporte enviado / Reporte recebido"; FT8 exchange "locator, reporte, R-reporte, RR73, 73". *Reportagem* means a news report and was replaced. | |
+| grid square / grid (logbook, FT8, Winlink) | locator | One word everywhere, as §3, the FT8 strings included ("locators trabalhados"). ❓ FT8 operators also say "grid". | |
+| track / tracking (satellite pass) | acompanhar / acompanhamento | "Acompanhando %s", "Acompanhamento parado". *Rastrear* (web draft) was replaced. | |
+| Stop tracking | Parar acompanhamento | Phone, web and guide. | |
+| Morse trainer | Treino de Morse | Web and guide had "Treino de CW". Morse IDs stay "identificação em CW" (§8). ❓ "CW" throughout? | |
+| Morse decoder | Decodificador de Morse | Web had "Decodificador de CW". | |
+| VHF/UHF conditions | Condições VHF/UHF | Not "Condições em VHF/UHF". | |
+| Decode a recording | Decodificar gravação | Panel and guide heading. | |
+| Upload a recording… (phone) | Importar gravação… | "Enviar" reads as transmit. The web's own "Upload…" button is "Enviar arquivo…". | |
+| Coming up (nets list section) | Próximas | Agrees with *rodas*; the phone had "Em breve". | |
+| Last heard (contact's location field) | Última escuta | The Last heard tab stays "Últimos ouvidos". | |
+| Check for updates | Verificar atualizações | | |
+| KISS TNC | TNC KISS | | |
+| 2 m FM simplex (band scope preset) | FM simplex de 2 m | The band-plan list keeps its own "2 m: …" format. | |
+| Add contact (logbook) | Adicionar QSO | The web heading "Log a contact" is "Registrar QSO". | |
+| New contact (logbook) | Novo QSO | | |
+| %s logged (logbook, POTA) | QSO com %s registrado | Avoids "the callsign was registered" (licensing sense). | |
+| Run a net | Coordenar roda; prose "Coordene uma roda" | Not *conduzir*. | |
+| Mission Statement | Missão | Phone, web and guide (the web had "Nossa missão"). | |
+| Custom range… (band scope) | Faixa personalizada… | The web had "Faixa própria". | |
+| Winlink password | Senha do Winlink | | |
+| Check Winlink mail (radio gateway) | Verificar e-mail Winlink (gateway por rádio) | Matches "Conectar a um gateway por rádio". | |
+| Double-press (wheel Next) | Dois toques | Was also "Duplo toque". | |
+| Hold (wheel Next) | Segurar | | |
+| Car (as a call) | Carro (como chamada) | | |
+| Steering-wheel Next talks / Next (media key) | Próxima do volante transmite / Próxima | Feminine, as *próxima faixa*; the guide head is "Próxima como tecla de transmissão". ❓ Check against Android Auto pt-BR. | |
+| Home widget / Home-screen widget | Widget da tela inicial | | |
+| Channel changes, caller names, keyword alerts | Troca de canal, nomes de quem chama, alertas de palavra-chave | | |
+| Listening (state, web card) | Escutando | Not "Ouvindo". | |
+| Listen to a channel (scheduled operation) | Escutar um canal | | |
+| Relay (repeater) (editor field) | Repetidora | As §8; phone and web. | |
+| High power / Low power (editor choices) | Potência alta / Potência baixa | The web had "Alta / Baixa". | |
+| Enabled / Disabled (encryption) | Ativada / Desativada | Agrees with *criptografia*. | |
+| Private (Contacts page type) | Privado | A contact (m); the call type in the editor stays "Privada" (§8). | |
+| heard (logbook row kind) | ouvida | Agrees with *estação* / *entrada*. | |
+| Not while transmitting | Não é possível durante a transmissão | | |
+| Too long to send | Longo demais para enviar | Title and history lines. | |
+| Back to the channel | Voltar ao canal | | |
+| login required | login necessário | | |
+| No position fix on the phone | O celular está sem posição GPS | | |
+| not connected | sem conexão | | |
+| No channel %d / No such zone / No zones yet | Canal %d não existe / Essa zona não existe / Nenhuma zona ainda | | |
+| Nothing to send | Nada para enviar | | |
+| Notes (logbook) | Notas | Was "Observações". | |
+| Check the numbers | Confira os números | | |
+| You are on the latest version | Você já está na versão mais recente | | |
+| Your decision (2 of 2) | A decisão é sua (2 de 2) | | |
+| Zoom in / Zoom out | Aumentar zoom / Diminuir zoom | | |
+| M17 receive | Recepção M17 | "a recepção de M17" in prose. | |
+| packet (APRS frame kind) | packet | Not "pacote" on the label; "pacote" stays in prose for one frame. | |
+| The channel the radio is on | O canal em que o rádio estiver | | |
+| Satellite passes (PKT tool) | Passagens de satélite | Singular *satélite*. | |
+| Talk (button) | Falar | "o botão Falar" in prose. | |
+| trial (receive-only take-over in the checks) | teste prático | Progress lines "Teste prático: …"; the button "Verificações + teste". Device part B had "Ensaio". | |
+| Run all checks / checks | Executar todas as verificações / verificações | Not "Rodar", not "testes". | |
+| monitor (squelch open, in prose) | monitor | "squelch 0 e monitor", "comando de monitor"; never *monitoração*. | |
+| ZONE · name (car now-playing picture) | ZONA · nome | Names the zone, not the ZONE key legend. | |
+| ended early (heat, history line) | "%s parou antes do fim" | A verb, so no gender agreement with the mode's name. | |
+
+### Terms added by the translators
+
+| English | Português (Brasil) | Notes | Reviewer |
+|---|---|---|---|
+| Radio probe (title) / Radio probe (root) | Sondagem do rádio / Sondar o rádio (root) | | |
+| pre-flight checks | Verificações prévias | | |
+| Checks + trial / Checks only | Verificações + teste / Só verificações | | |
+| static (recorded noise) | chiado | | |
+| advisory overridden | Ignorado por você | ❓ *Desconsiderado*. | |
+| In effect (advisory) | Em vigor | | |
+| lapses (advisory) | expira | | |
+| Boot persistence | Persistência na inicialização | | |
+| Phone profile / built-in profile / updated profiles | Perfil do celular / perfil embutido / perfis atualizados | | |
+| Learn a PTT key / Custom PTT key | Ensinar uma tecla PTT / Tecla PTT personalizada | | |
+| Volume-up transmits / volume up, down | Volume + transmite / Volume +, Volume − | | |
+| Steering-wheel play/pause talks | Play/pause do volante transmite | | |
+| Steering-wheel microphone | Microfone para o volante | | |
+| hands-free link | conexão viva-voz | | |
+| DMR roaming | Roaming DMR | | |
+| Back up (tile) / Re-import | Backup / Reimportar | | |
+| GitHub issue | issue no GitHub (f) | Kept English, as Brazilian GitHub users say. | |
+| Intercom layout / Regular / Compact | Layout da página Rádio / Normal / Compacto | | |
+| fingerprint (certificate, file) | impressão digital | | |
+| New firmware variant | Nova variante de firmware | | |
+| handheld | HT | | |
+| stock version / take as stock | versão de fábrica / Adotar a versão atual como de fábrica | | |
+| handshake log | Registro do handshake | | |
+| read-back / flash sample | releitura / amostra da flash | | |
+| unlisted image | imagem não listada | | |
+| Release / Beta (update paths) | Estável / Beta | "a versão estável" in prose. | |
+| Updates (tile) / Update (button) | Atualizações / Atualizar | | |
+| power-cycle the module | Reiniciar módulo; "Desligar e religar o módulo de rádio?" | | |
+| backup round trip | Ida e volta do backup | | |
+| firmware load stages | Preparo, Atualiz., Contato, Apagando, Envio, Fim, Reinício, Conferir | Short pills. | |
+| headset | fone | | |
+| radio zone (thermal sensor) | zona do rádio | | |
+| tone queue | fila de tons | | |
+| USB bridge (radio) | ponte USB | | |
+| pager waveform | forma de onda do pager | | |
+| frames (M17) | quadros | | |
+| equaliser taps / fit / not kept | coeficientes / ajuste / ajuste descartado | | |
+| locked / no lock (M17 link setup) | sincronizado / sem sincronismo | "link setup" kept. | |
+| skipped (scheduled operation) | ignorado | | |
+| Weekdays / Weekends | Dias úteis / Fins de semana | | |
+| net control (in a notification) | coordenação %s | | |
+| Beep / Two-tone / Morse K (roger beep) | Bipe / Dois tons / K em CW | | |
+| Small / Better / Best / Max (speech models) | Pequeno / Melhor / Ótimo / Máximo | | |
+| billing / quota (Google Cloud) | faturamento / cota | | |
+| engine (captions, packet) / on-device | motor / no aparelho | "motor Google", "motor no aparelho", "motor de packet". | |
+| Ch (notification, short) | Can. | | |
+| Receive here (SSTV) | Receber aqui | | |
+| Running now (packet tools) | Rodando agora | ❓ *Em execução* is the Android word. | |
+| Digital voice (packet tools section) | Voz digital | | |
+| Your own (zone of your channels) | Seus canais | | |
+| Unknown sources (Android Auto developer setting) | Fontes desconhecidas | ❓ Confirm against Android Auto pt-BR. | |
+| Settings → App block (Agold ROM path) | kept in English | The ROM's own labels. ❓ Change if a pt-BR ROM shows Portuguese. | |
+| camcorder input (audio source) | entrada camcorder; "entrada de filmadora" in the guide | ❓ One form? | |
+| Cellular (phone panel block) | Rede móvel | Not "Celular", which is the phone. | |
+| DUPE (logbook flag) | DUPE | Kept. | |
+| Missed questions / Missed | Erradas | Exam practice. | |
+| Practice exam | Simulado; button "Fazer simulado" | Guide heading "Simulado". | |
+| Sounds like a net | Parece uma roda | | |
+| the release check / heat-up (transmit test) | o teste de soltar / aquecimento | ❓ For a native reviewer. | |

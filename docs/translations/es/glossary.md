@@ -385,3 +385,111 @@ them settled. Rows marked **❓** are real choices for the reviewer.
 | weekday buttons (one letter) | L M X J V S D | Monday first; **X** for *miércoles* so it is not confused with *martes*. Spain's convention; Latin American Android often starts on Sunday with "D L M M J V S". ❓ Three-letter days: lun. mar. mié. jue. vie. sáb. dom. | |
 | "%1$d min ago" | hace %1$d min | "hace" goes first. | |
 | "Could not …: %1$s" | No se pudo …: %1$s | Impersonal, as Android writes errors: "No se pudo guardar: %1$s". | |
+
+## 9. Terms settled during the draft (2026-10-31)
+
+Added after the Spanish draft: the terms the translators needed beyond §1–8, and the choices made in the consistency
+pass where one English term had been rendered in several ways. The draft now uses the Spanish in the second column
+everywhere (screens, SignalDeck Web, the guide). Rows marked **❓** are real choices for the reviewer.
+
+### Names settled in the consistency pass
+
+| English | Spanish | Notes | Reviewer |
+|---|---|---|---|
+| Band scope (label, web page, guide topic) | Espectro | One name everywhere (§1); "visor de espectro" stays for prose. The web heading and the guide topic said *Espectro de banda*. | |
+| Gateway (Winlink, packet, internet) | pasarela (pl. pasarelas) | Feminine: "la pasarela", "Indicativo de la pasarela". The web table and three service lines had *gateway*. ❓ Many Winlink users say *gateway*. | |
+| Check Winlink mail (radio gateway) | Consultar correo Winlink (pasarela por radio) | Same text in the schedule list and on the web. | |
+| Inbox / Outbox / Sent (Winlink folders) | Entrada / Salida / Enviados | Phone and web alike (the web had *Bandeja de entrada / salida*). In prose: "la bandeja de salida". | |
+| Packet terminal | Terminal packet | Masculine in prose: "el terminal packet". Guide section head too. | |
+| Decode a recording | Decodificar grabación | Button, web panel, guide section. | |
+| Morse decoder | Decodificador de Morse | | |
+| Check (score the typed answer) | Verificar | Style §2: *verificar*, never *comprobar*; the guide's prose follows it too. | |
+| Sending practice (Morse trainer) | Práctica de manipulación | Keying practice: nothing is transmitted, so not *transmisión*. ❓ | |
+| KEY (Morse trainer key) | MANIP. | Short for *manipulador*. | |
+| Mission Statement | Declaración de propósito | Device button, its sheet, the web heading (was *Nuestra misión*) and the guide section. ❓ *Nuestra misión* reads warmer. | |
+| Licence exam practice (heading) | Práctica de examen de licencia | Phone and web. The guide topic stays *Práctica de examen*; the pools are described as the US exam in English (§1). ❓ | |
+| Re-import (tool) | Reimportar | Also where the web text names it ("Dispositivo → Reimportar"). | |
+| M17 receive | Recepción M17 | Mode name and PKT button alike. | |
+| heard (chips, counts, "nothing heard yet") | escuchado / escuchada | Agrees with its noun; never *oído*. "Aún no se ha escuchado nada". | |
+| Not while transmitting | No mientras se transmite | Impersonal, as the service reply. | |
+| Receive-only channel / This channel is receive-only | Canal solo de recepción / Este canal es solo de recepción | §3 "solo recepción"; *de solo recepción* removed from labels. | |
+| Repeater identification | Identificación del repetidor | History kind and alert title. | |
+| Take over the radio first | Primero toma el control del módulo de radio | §1 prose form. | |
+| Message forms | Formularios de mensaje | Also in "Abre PKT → Formularios de mensaje". | |
+| APRS settings (in prose and paths) | Ajustes de APRS | "PKT → Ajustes de APRS", "en los ajustes de APRS"; *Ajustes APRS* removed. | |
+| Save as channel (VFO) | Guardar canal | Button and dialog title; the guide names it so. | |
+| High (default) / Low (APRS power) | Alta (predet.) / Baja | The guide quotes the pills as they are. | |
+| VHF/UHF conditions | Condiciones VHF/UHF | Screen title and guide section. | |
+| DTMF remote control | Control remoto DTMF | Screen title and guide section. | |
+| Show NOAA weather alerts (button) | Ver alertas NOAA | Half-row button; the guide quotes it. | |
+| 2 m FM simplex (scope band) | FM símplex 2 m | As the band list shows it. The band-plan line stays "2 m: FM símplex". | |
+| Car (as a call) (wheel microphone) | Vehículo (llamada) | Chip text; the subtitle, the web and the guide quote it. | |
+| Steering-wheel microphone | Micrófono para el volante | | |
+| SignalDeck: talking (car call name) | SignalDeck: hablando | The guide quotes the car's call name. | |
+| Developer settings (Android Auto) | Configuración para desarrolladores | Android Auto's own menu name; Android's phone menu stays *Opciones para desarrolladores*. | |
+| Unknown sources (Android Auto) | Fuentes desconocidas | | |
+| on now (net state) | en el aire | Nets page and guide summary. *en curso* stays for "running" (a session, a net you run). | |
+| Remind me / Tell me when a net starts | Recordármelo / Avisarme cuando empiece una rueda | | |
+| Coming up (nets) | Próximas | | |
+| Add a net to a channel | Agregar una rueda a un canal | | |
+| grid squares worked (logbook) | localizadores trabajados | "%1$d localizador trabajado". §3 *localizador*; *cuadrícula* only for the fox-hunt computation grid. ❓ | |
+| coverage square (150 m map cell) | cuadro | "cuadros medidos", "toca un cuadro". Not *cuadrícula*. | |
+| ZONE (car now-playing line) | ZONE | Names the ZONE key, so it stays English (as German). | |
+| Live (APRS tab) / Live (web top bar) / LIVE (phone panel chip) | EN VIVO / En línea / ACTUALIZADO | Three meanings, three words: the live list, the connection, "values up to date". ❓ §1 prefers *en tiempo real*, too long for a tab. | |
+| long-press / press | mantener presionado / presionar | *pulsar* removed (style §2). "Presiona reproducir" on the car's media card. | |
+| fill in (a form, a field) | completar | *rellenar* removed (reads Peninsular); *relleno* stays as a noun (fill-in digipeater, POCSAG padding). | |
+| Radios that do less (guide section) | Equipos con menos funciones | Cross-references use this title. | |
+
+### Terms the translators added
+
+| English | Spanish | Notes | Reviewer |
+|---|---|---|---|
+| Run all checks | Ejecutar todas las pruebas | | |
+| checks / trial (first-run check) | pruebas / ensayo | Kept apart so "Checks + trial" reads "Pruebas + ensayo". ❓ | |
+| Factory backup | Copia de seguridad de fábrica | §8. | |
+| Download factory image | Descargar imagen de fábrica | | |
+| Firmware stages: Prepare, FW mode, Link, Erase, Send, Finish, Reboot, Verify | Preparar, Modo FW, Enlace, Borrado, Envío, Cierre, Reinicio, Verific. | Progress labels under the bar; short. | |
+| Release now (transmit test) | Soltar ya | | |
+| Start the session | Iniciar la sesión | | |
+| Round-trip copy (test) | Probar copia ida y vuelta | | |
+| Use the bundled profile | Usar el perfil incluido | | |
+| Handshake log | Log del handshake | Diagnostic name, close to the English. ❓ | |
+| GitHub issue (button) | Issue en GitHub | "un issue de GitHub" in prose. ❓ *incidencia*? | |
+| a cheap walkie-talkie (second radio) | un walkie-talkie barato | *portátil* alone reads as laptop. | |
+| factory copy (the stock app's copy) | copia de la app del fabricante | Not the factory image itself. | |
+| Lookup / Look up callsign | Consulta / Consultar el indicativo | | |
+| Add QSO / Log QSO / Log a contact | Agregar QSO / Anotar QSO / Anotar QSO | | |
+| In / Out (SSTV combine) | Entrada / Salida | | |
+| Own range (band scope) | Rango propio | | |
+| Beep: on (fox hunt) | Pitido: sí | | |
+| Mark / Auto marks (fox hunt) | Marca / Marcas auto | §8. | |
+| Shift freq. | Desplazar frec. | | |
+| Compute now | Calcular ya | | |
+| Last call (fox target) | Última llamada | | |
+| I identified (ID timer) | Ya me identifiqué | | |
+| Identify now (ID due) | IDENTIFÍCATE AHORA | *toca* would read as "tap". | |
+| %1$d:%2$s left to identify | Quedan %1$d:%2$s para identificarte | Not a clock time. | |
+| Voice keyer & ID timer (heading) | Memorias de voz y temporizador ID | §8 short form. | |
+| Last heard (contact field) | Última escucha | The page stays *Últimos escuchados* (§1). | |
+| Unknown (coverage pill) | Desconocida | The hint names the pill the same way. | |
+| PACKETS / STATIONS / FOR YOU / LAST / MESSAGES / NEW (APRS) | PAQUETES / ESTACIONES / PARA TI / ÚLTIMO / MENSAJES / NUEVO | Written in capitals in the strings. | |
+| LISTEN / NOT UPDATED (web phone panel) | ESCUCHAR / SIN ACTUALIZAR | | |
+| CELL (web phone panel) | RED MÓVIL | *móvil* alone is the Spanish phone. | |
+| Heard signal / Repeater reached (coverage, web) | Señal escuchada / Repetidor alcanzado | | |
+| Show all | Ver todo | | |
+| Back up now | Crear copia ahora | | |
+| Detailed diagnostic log (web) | Registro de diagnóstico | Short form. | |
+| failed (message state) | fallido | | |
+| Terminal (packet finder action) | Terminal (BBS, nodo) | | |
+| Schedule (one entry) | Programación | §8. | |
+| Remove (APRS object) / Remove (net station) | Retirar / Quitar | An object is withdrawn from the air; a station is taken off a list. | |
+| Choose your region | Elegir tu región (button) / Elige tu región (picker title) | | |
+| Region: Belgium (from your SIM) | Región: Bélgica (de tu SIM) | | |
+| Hold to send (emergency) / Hold to talk (M17) | MANTÉN PARA ENVIAR / Mantén para hablar | §8 imperative on hold buttons. | |
+| Longest transmission / No limit | Transmisión máxima / Sin límite | | |
+| Heat map | Mapa de calor | | |
+| Got it | Entendido | | |
+| Not sure (answer) | No estoy seguro | ❓ agrees with a male speaker; *No lo sé* would be neutral. | |
+| Recordings / Captions / Activity (Last heard buttons) | Grabaciones / Subtítulos / Actividad | | |
+| Classic FM (channel type) | FM clásica | Not *de toda la vida*. | |
+| SSID hints (7 = handheld, 9 = mobile) | 7 = portátil, 9 = móvil | APRS convention; *móvil* here is the vehicle station. | |
