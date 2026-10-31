@@ -2,6 +2,8 @@
 
 STATUS: IDLE (2026-10-30: tester request posted in Discussion #166 for beta.23; waiting for a real 20WT report)
 
+**2026-10-31 02:02 (firmware): lease ended. Armor is on FW57 with SignalDeck, not transmitting. HackRF is free. The W6Plus did not key and is on analog 467.625 with M17 receive on.**
+
 **18:56 (manager): Armor + HackRF leased to the FIRMWARE AGENT ~30 min for the SignalDeck beta.23 candidate check (app check). Not available to other agents until its lease-ended line.**
 
 **17:49 (manager): Armor + HackRF + hotspot granted to Grok ~2 h (FW58 acceptance). Not available to other agents until Grok's lease-ended line.**

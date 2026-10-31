@@ -4780,6 +4780,22 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Caller-info timing, the stock app, and the W6Plus (02:02). FW57. Not transmitting.**
+
+The gate was opened with `0x30` body 0 and `0x2F` body 2 on the VFO, list 1 and 9. VGA 30 unless noted. An idle capture with that gate open and no transmission stays near RMS 1500, the same level as the clips taken during a call, so the level does not show decoded voice. Receive start and the `0x2B` are the evidence.
+
+Talkgroup 9, three times at VGA 30 and twice at VGA 20, and one All-Call at VGA 30: receive start to receive stop is 5.16 s. The module does not push a `0x2B` at the start. It answers a query. The replies sit about 7 ms after queries at 0.31 s, 1.21 s, and the stop. Talkgroup 9 is type 1, target 9. The All-Call is type 2, target 16777215. A lone talkgroup 99 raised the signal reading to raw 60 and produced no receive start and no `0x2B`.
+
+Queries meant for 40, 80, 150 and 300 ms after receive start were sent at 94, 159, 250 and 304 ms, because the status line was seen late. Each reply was talkgroup 9, 6 to 8 ms later. None was empty.
+
+Talkgroup 9 followed 1.30 s later by talkgroup 99 (the gap includes the 0.2 s primer): one receive start and one stop, at 5.16 s. There is no second start. Queries through 16 s, including the talkgroup 99 transmission, still return talkgroup 9. The capture does not go quiet between them.
+
+The stock app, after Hand back, reported receive start and a `0x2B` for talkgroup 9, talkgroup 99 and the All-Call, signal raw 60. No saved channel has the receive list 1 and 9 alone. Channel 49 is 1, 9 and 99, and its squelch in SignalDeck's copy is 0. The screen dump was empty, so the stock screen's squelch and monitor were not read. SignalDeck took the radio back. The stock app is disabled. The speaker level was not measured in the stock app.
+
+The W6Plus refused the key: transmit from the web is off. The bench identity was not left in place. It is on the analog VFO at 467.625, low power, M17 receive on, not transmitting.
+
+**Admit-path sketch, not built.** `0x11d18` branches to `0x11d2e` when `0x23d54` returns nonzero, and falls through to `0x11d1c` otherwise. `0x11d80` does the same with `0x11d96` and `0x11d84`. The fall-through calls `0x180ec` (`bsr` at `0x11d26` and `0x11d8e`), which is the path to `0x17f20`. The reject blocks store 1 at `0x34808+0x1B` and return 1. None of these call `0x37F4`. A stub in place of each `bsr` would save `r0` and `r1`, call `0x37F4(0)`, restore them, and continue at `0x180ec`. The reject blocks would call `0x37F4(1)`, or `0x37F4(0)` when the destination is 16777215, then do the stores they do now and branch to `0x12114`. An admitted call would leave the gate open until a receive stop or a channel write (`0x9310` already closes). The receive-stop site was not pinned. The squelch task also calls `0x37F4`.
+
 **Squelch byte and the open gate (01:37). FW57. VGA 30. Not transmitting.**
 
 The VFO read back as list 1 and 9. The app's monitor flag was off, so the VFO writes were a `0x22` with no following `0x2F`. Raw about 60.

@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-31 — a caller-info query is answered about 7 ms after it is sent, and a following talkgroup 99 does not replace talkgroup 9.** The stock app reported all three calls. The W6Plus did not key. A speaker-gate stub is sketched and was not built. Details in `results.md`.
+
 **2026-10-31 — squelch 0 with monitor off plays an out-of-list talkgroup, and a fresh channel write mutes an in-list one.** Talkgroup 99 played and was not reported. After the next VFO write, talkgroup 9 was reported and silent. Squelch 3 left no report. Details in `results.md`.
 
 **2026-10-31 — monitor off leaves the speaker open only when the analog squelch byte is 0.** A digital channel write does not set that byte, and it closes the gate. Boot stores squelch 3. Details in `results.md`.

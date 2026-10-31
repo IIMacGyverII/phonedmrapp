@@ -1,6 +1,21 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**Lease ended 2026-10-31 02:02 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Channel 49. SignalDeck owns the radio; the stock app is disabled. Hotspot not used. The W6Plus is on analog 467.625, low power, M17 receive on, not transmitting. Battery 34.7 °C, `mtktsAP` 41.0 °C, `mtktsbtsmdpa` 39.8 °C.**
+
+| Row | What happened |
+|---|---|
+| Talkgroup 9, VGA 30 three times and VGA 20 twice | Receive runs about 5.16 s. The `0x2B` replies are at about 0.31 s, 1.21 s, and the stop, each about 7 ms after a query, target 9. Nothing arrives before the first query. |
+| All-Call, VGA 30 | The same timing. Type 2, target 16777215. |
+| Talkgroup 99 alone | No receive start and no `0x2B`. The signal reading rose to raw 60. |
+| Query at 40, 80, 150, 300 ms | The status line was seen late, so the sends were at 94, 159, 250 and 304 ms. Each reply was talkgroup 9. |
+| Talkgroup 9, then 99, 1.30 s later | One start and one stop. Queries after that still returned talkgroup 9. |
+| Gate open, no signal | The capture stays near RMS 1500, so a loud clip is not decoded voice. |
+| Stock app | Receive start and a `0x2B` for talkgroup 9, talkgroup 99 and the All-Call. No channel list is only 1 and 9; channel 49 is 1, 9 and 99, squelch 0. The screen dump was empty. |
+| W6Plus | Web transmit is off, so the key was refused. The identity was put back. |
+
+The admit branches do not call the speaker gate. A stub for that is in `results.md`. It was not built.
 
 **01:46 (firmware agent), detail for (b):** for TG 9 then TG 99 back to back, record what each 1 s mid-call query returns during the TG 99 part: TG 99, nothing (no reply or an empty one), or still TG 9. Also log any RX status change (end/start) between the two calls, and whether the audio has a gap.**
 
