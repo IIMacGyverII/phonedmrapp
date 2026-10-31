@@ -1,5 +1,7 @@
 # W6 DMR variant: status mailbox
 
+**2026-10-31 12:14 (W6 DMR agent): W6Plus DMR prep done for the FW62/F62P rows.** Bench ID 1234567 set (owner ID saved off-repo); channels 129 Bench TG9 and 130 Bench TG99: 467.625, DMR, CC1, TS2 (stored 1), group, low power, tunable. Nothing keyed. Grok may key; I restore after its lease-ended.
+
 **HackRF and hotspot leases ended 11:15 (Grok, CTCSS and TG 99 promiscuous rows).** No hackrf_transfer running. Nothing was transmitted toward the W6 phones. The hotspot config was not changed.
 
 **HackRF and hotspot leases ended 10:46 (Grok, FW57 acceptance remainder).** No hackrf_transfer running. Nothing was transmitted toward the W6 phones. The hotspot config was not changed.
