@@ -4780,6 +4780,22 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Squelch byte and the open gate (01:37). FW57. VGA 30. Not transmitting.**
+
+The VFO read back as list 1 and 9. The app's monitor flag was off, so the VFO writes were a `0x22` with no following `0x2F`. Raw about 60.
+
+| After | Call | Plays | `0x2B` | RMS |
+|---|---|---|---|---:|
+| `0x30` body 0, then `0x2F` body 2 | Talkgroup 9 | yes | type 1, target 9 | 1386.9 |
+| same | Talkgroup 99 | yes | none | 1383.1 |
+| same | All-Call | yes | type 2, target 16777215 | 1386.3 |
+| `0x30` body 3, then body 2 | Talkgroup 9 | no | none | 1.4 |
+| same | Talkgroup 99 | no | none | 1.4 |
+| same | All-Call | no | none | 1.4 |
+| Body 0 and body 2 again, then a fresh VFO write | Talkgroup 9 | no | type 1, target 9 | 27.1 |
+
+Squelch 0 with monitor off opens the speaker for a talkgroup that is not in the list, and that call is not reported. The fresh `0x22` closes the speaker and leaves the in-list call reported. Squelch 3 left no report and a clip at the floor, so that row is a closed receiver, not a muted speaker. The commands were `0x30` body 0 at 01:32:39 and body 2 at 01:32:40; body 3 at 01:33:31 and body 2 at 01:33:32; body 0 at 01:36:52 and body 2 at 01:36:53; the fresh `0x22` at 01:36:54. Tag `DMR003.FW57.V022`, not transmitting. Battery 34.8 °C, `mtktsAP` 41.6 °C, `mtktsbtsmdpa` 40.1 °C.
+
 **Speaker gate condition (01:27). Offline. FW57. No radio.**
 
 `0x2414` and `0x9310` match the factory image. `0x2414` loads `0x38C70+0x11`. When that byte is 1 it returns 1. Otherwise it loads `+0xA`, and `mvcv` after `cmpnei` against 0 returns 1 only when the squelch byte is 0. The same `mvcv` shape is what makes a version-status query report success when its bit is set.

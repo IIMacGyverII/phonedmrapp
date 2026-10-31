@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-31 — squelch 0 with monitor off plays an out-of-list talkgroup, and a fresh channel write mutes an in-list one.** Talkgroup 99 played and was not reported. After the next VFO write, talkgroup 9 was reported and silent. Squelch 3 left no report. Details in `results.md`.
+
 **2026-10-31 — monitor off leaves the speaker open only when the analog squelch byte is 0.** A digital channel write does not set that byte, and it closes the gate. Boot stores squelch 3. Details in `results.md`.
 
 **2026-10-31 — the take-over commands other than the channel select left the gate open.** Time-out 122 and 0, both interrupt values, and a version query did not stop monitor audio. Selecting channel 49 sent monitor off and the audio stopped. Details in `results.md`.

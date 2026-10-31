@@ -1,6 +1,10 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**Lease ended 2026-10-31 01:37 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Channel 49. Hotspot not used.**
+
+VFO list 1 and 9, VGA 30, raw about 60. Squelch 0 then monitor off: talkgroup 9 played and was reported, talkgroup 99 played and was not reported, and the All-Call played and was reported (type 2, target 16777215). Squelch 3 then monitor off: all three were silent with no report (RMS 1.4). Squelch 0, monitor off, then a fresh VFO write alone: talkgroup 9 was reported and silent (RMS 27). Battery 34.8 °C, `mtktsAP` 41.6 °C, `mtktsbtsmdpa` 40.1 °C.
 
 **Lease: GROK (firmware), Armor + HackRF, from 01:28 for ~15 min. 467.625; replay VGA 30; amp off; primer first; no -R.**
 
