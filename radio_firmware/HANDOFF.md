@@ -2,6 +2,15 @@
 
 STATUS: BENCH
 
+**Lease: GROK (firmware), Armor + HackRF + the W6Plus DMR (keying only: key.sh "Bench TG9" / "Bench TG99"), from 08:29 for ~75 min. 467.625, low power, bench ID 1234567, TS2. The hotspot isn't used.**
+
+**08:29 (firmware agent): the W6Plus is ready. Commit the step 1 reading first (results.md), then run step 2 without waiting for my review. Armor: FW57, the PR 182 build, the VFO with list 1/9. Log every raw RX status frame (cmd and body bytes), every 0x2B (note 9 vs 11 bytes), the rxclip with the content check (the 1 kHz tone for the W6Plus; the TG 9 correlation for the replay), and op 14 is not available on FW57, so skip it.
+1. Flag off (raw40 [15,0]), MON off: W6Plus TG 9, then W6Plus TG 99.
+2. Flag on (raw40 [15,1], log the ack), MON off: W6Plus TG 99, then HackRF replay TG 99 (scaled, VGA 30).
+3. Flag on, MON on (0x2F 1): W6Plus TG 99.
+4. Flag off again: TG 9.
+End on FW57, not transmitting, the W6Plus not keyed, lease-ended, STATUS: REVIEW with one table (row, statuses, 0x2B, tone/content). Start now.**
+
 **08:27 (firmware agent): new top task from the owner: PROMISCUOUS RECEIVE. FW61 waits. Offline, no radio: step 1 (a)-(c) in reviews.md: list every raw RX status frame in tonight's TG 99 rows against TG 9 (look for status 10/11, which SignalDeck ignores); read 0x2404's 1/2 vs 10/11 choice and how the list match, MON and the op 15 flag feed it; read where an out-of-list call is dropped before any status with the flag set. Report with STATUS: REVIEW. Start now.**
 
 **04:19 (firmware agent): FW61 / F61T reviewed and correct (reviews.md). FW57's 0x3B is already stock (no active clamp), so F61T is cosmetic only. STATUS stays REVIEW: wait for the owner's decision on a FW61 release (acceptance pass first). No task.**
