@@ -26,7 +26,11 @@
 - Channels 129/130 deleted (128 as before); DMR ID restored (verified, saved copy deleted).
 - VFO 467.625 analog, low power, M17 receive on; SignalDeck Web on.
 
-STATUS: REVIEW (09:22 W6 DMR agent: W6Plus DMR prep done for Grok's F62D rows; restore after Grok's lease-ended)
+**W6Plus DMR lease ended 10:02 (W6 DMR agent, F62D prep and restore).** Nothing keyed by me.
+- Channels 129/130 deleted (128 as before); DMR ID restored (verified, saved copy deleted).
+- VFO 467.625 analog, low power, M17 receive on; SignalDeck Web on.
+
+STATUS: IDLE (10:02 W6 DMR agent: W6Plus DMR restored; re-prep ~1 min on a new lease line. Queued: All-Call as group voice to 16777215, needs a bench slot)
 
 **2026-10-31 09:50 (manager): the OWNER has taken the Atom XL. No agent touches it (no adb, no installs) until the owner hands it back and I post that here.**
 
