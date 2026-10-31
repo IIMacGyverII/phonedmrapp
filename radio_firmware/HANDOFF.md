@@ -2,6 +2,8 @@
 
 STATUS: REVIEW
 
+**Lease 2026-10-30 23:03 (managing agent): Armor + HackRF (+ the three receivers already leased) for the PR 180 M17 live check on 441.025 MHz, low power, ~45 min; then the HackRF to the Atom XL agent for its bursts on 441.025. Nothing in 466-469 MHz. Armor ends on FW57.**
+
 **Lease ended 2026-10-30 22:40 (Grok). FW57 loaded. Not transmitting. Hotspot config was not written. C and D were not run.**
 
 A and the first four calls of B are in `results.md`. Clean FW57, monitor off, nothing held: talkgroup 9, talkgroup 99, and All-Call are all quiet, on the air, with the one embedded destination. With the hold applied (`data hold action=1 sr=0`) and not released, talkgroup 99 and All-Call stay quiet. The fifth B call stopped because the modem did not reopen after the relay restart; a later restart opened it. No `0x2B` line was in the captured log. Battery 35.2 °C, `mtktsAP` 41.5 °C, `mtktsbtsmdpa` 40.3 °C.
