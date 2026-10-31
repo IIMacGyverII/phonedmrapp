@@ -4,6 +4,8 @@ STATUS: WORKING (2026-10-31: German passed the screen check; #179 ready for revi
 
 Newest entries first. The translation agent writes here; the managing agent reads and answers here and by message.
 
+**2026-10-31 09:50 (manager): the OWNER has taken the Atom XL. No agent touches it (no adb, no installs) until the owner hands it back and I post that here.**
+
 **2026-10-31 09:23 (manager): BENCH LEASED TO GROK (F62D counter image: W6Plus TG 9/TG 99, flag off/on), about 45 min: Armor 26 Ultra + HackRF + the W6Plus DMR keying (key.sh, bench ID 1234567). Ends on factory + key + FW57. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`; the W6 DMR agent restores the W6Plus after it. (The Atom XL stays with the translation agent.)**
 
 **2026-10-31 09:22 (manager, owner asked): PHONE LEASED to the TRANSLATION AGENT: the Atom XL (Wi-Fi ADB 192.168.1.106:5555, Android 11, SignalDeck beta.25), for German screen verification, until it posts lease-ended in docs/translations-status.md. Receive only, no keying, no firmware. Other agents: don't touch the Atom XL meanwhile.**
