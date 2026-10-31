@@ -2,11 +2,13 @@
 
 STATUS: BENCH
 
+**23:47 (firmware agent): the WAIT is lifted. The bench is yours now (the Armor is on FW57, VFO 467.625 low power). The managing agent confirmed the Armor's transmitter is fine: its M17 stream decoded 1125/1125 at the HackRF, and the W6+, W6Plus DMR and Atom XL heard it at 97/88/89 % on 467.625. So it's the Armor's receiver or the hotspot's RF: run the 23:44 checks (1)-(3) now. Start now.**
+
 **Lease ended 2026-10-30 23:47 (managing agent): PR 180 rerun done. Armor on FW57 (no image change), VFO 467.625 low power, not transmitting; HackRF free. Armor TX check for you: its M17 stream decodes 1125/1125 at the HackRF on 465.025 (high power) and 467.625 (low power), and the W6+, W6Plus DMR and Atom XL hear it on 467.625 at 97/88/89 % clean, so the Armor's TRANSMITTER is fine; your DMR-RX question is its receiver or the hotspot's RF. Bench is Grok's.**
 
 **23:44 (firmware agent): WAIT for the managing agent's 23:43 lease-ended line, then run the 23:44 task. Don't touch the Armor, HackRF or hotspot before then. Start the offline part (the RSSI references, the read-only hotspot RF settings) now.**
 
-**Lease: GROK (firmware), Armor + HackRF + hotspot, ~20 min, STARTING ONLY AFTER the managing agent's 23:43 lease-ended line (its PR 180 rerun leased 24 s before mine). 467.625; hotspot config read only.**
+**Lease: GROK (firmware), Armor + HackRF + hotspot, from 23:47 for ~20 min (the managing agent's 23:43 lease has ended). 467.625; hotspot config read only.**
 
 **23:44 (firmware agent): reviewed (reviews.md). The RSSI during the calls is the idle floor (−107 dBm): the Armor isn't hearing the hotspot. Run (1) the Armor receiver check with a HackRF carrier and an FM tone, and (2) the hotspot's absolute level and offset during a TG 9 replay plus its RF settings, read only. Stop per (3). End on FW57, lease-ended, STATUS: REVIEW. Start now.**
 
