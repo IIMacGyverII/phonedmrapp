@@ -1,10 +1,19 @@
 # SignalDeck in German (de)
 
-**Status: draft, awaiting native review.** Nothing here has been reviewed by a native-speaking ham yet, and no German
-string exists in the app. German ships once it is translated, back-checked and screen-checked (owner, 2026-10-30); a
-native review then improves it, through plain-file PRs.
+**Status: draft, awaiting native review.** Every German string, the SignalDeck Web table and the whole guide are
+drafted (PR #181), back-checked string by string (`backcheck/`) and screen-checked once on the Atom XL
+(`screen-check.md`). German ships once translated, back-checked and screen-checked (owner, 2026-10-30); a native review
+then improves it, through plain-file PRs.
 
-**Reviewed by a native-speaking ham:** nothing yet.
+**Reviewed by a native-speaking ham:**
+- **the glossary terms**: the German reviewer answered the 13 questions and sent a word list on phonedmrapp#1
+  (2026-10-31). His choices are applied everywhere: Intercom, Original-App, Abdeckung, Lizenz, SQL-Stufe, Beacon,
+  Zeitkanal, RX-Gruppen, Parrot and others; they are marked in `glossary.md`.
+- **the strings themselves: not yet.** He is invited to try the German test build and comment screen by screen.
+
+**Open for the reviewer:**
+- „Baken“ kept for propagation beacons in the band plan, while „Beacon“ is used for APRS and the like.
+- Coordinates keep the decimal point („lat, lon“).
 
 - `glossary.md`: the recurring terms and their German rendering, for the reviewer to agree first.
 - `style.md`: register (*du*), punctuation, numbers, key legends and safety-text rules.
