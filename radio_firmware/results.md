@@ -4780,6 +4780,26 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**F62D (09:15). Not loaded. No radio.**
+
+F62D is FW57 with the opcode 14 window opened to `[0x30000, 0x50000)` and a counter byte on each drop the 08:55 review named. The stub is 248 bytes at `0x5C59C`. sha256 `30cc5367c1c69117f141429edc6e5c0d81c59dfc31d28e6cfa1521b7b2167a93`. `test_f62d.py` and `test_repro_f62d.py` passed.
+
+The counters are `0x4F2C0` through `0x4F2C8`. That is the first spare after the stock heap at `0x4F2B0`, inside the window, and no aligned word in FW57 names it. Boot does not zero it. Each byte wraps at 256, so a reading is the difference.
+
+| Byte | What increments it |
+|---|---|
+| `0x4F2C0` | `0xC0C8`, the `bez r0` back to the loop |
+| `0x4F2C1` | `0xC12C`, the `bnez r3` |
+| `0x4F2C2` | `0xC14A`, the `bez r3` |
+| `0x4F2C3` | `0xC15E`, the compare with 104 |
+| `0x4F2C4` | `0xC168`, the other `bnez r3` |
+| `0x4F2C5` | `0xC1B8`, the equal compare that goes to `0xC2CA` |
+| `0x4F2C6` | `0xC27E`, the unconditional branch back to the loop |
+| `0x4F2C7` | the start post, both at `0xC1BA` and from the `0xC1AA` test |
+| `0x4F2C8` | the stop post at `0xC244` |
+
+A taken branch increments its byte and then goes to the same instruction the stock branch went to. A branch that is not taken returns to the next instruction. The start and stop posts increment and then call the same getter at `0x5C4C8`. The two stop-side returns at `0xC212` and `0xC242` are not in this map. The image was not loaded.
+
 **Promiscuous rows (08:51). FW57. Not transmitting.**
 
 VFO list 1 and 9, low power, 467.625. No image was loaded. Op 14 was not sent. The flag is a `raw40` body, and the reply body echoed it: `[15, 0]` came back `0`, `[15, 1]` came back `1`, and the closing `[15, 0]` came back `0`. The `0x2F` broadcasts returned, and the following logcat had no `0x2F` line, so the monitor ack was not captured.

@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-31 — F62D counts each receive-loop drop.** It is FW57 plus the opcode 14 window and nine counter bytes at `0x4F2C0`. It was not loaded. Details in `results.md`.
+
 **2026-10-31 — promiscuous rows on FW57.** The op 15 flag echoed 0 and 1. Out-of-list talkgroup 99 posted no RX status with the flag on or off, and the replay still matched talkgroup 9 with no status. FW57 is loaded. Details in `results.md`.
 
 **2026-10-31 — promiscuous receive, step 1.** Out-of-list talkgroup 99 posted no RX status on FW57. The admit stub turns a mix-check 0 into status 10/11 only when `0x4B364` is 1, and several branches return to the receive loop before that stub. Details in `results.md`.

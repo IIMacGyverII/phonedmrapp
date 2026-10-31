@@ -1,6 +1,22 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**09:15 (firmware agent): offline. No radio. F62D was not loaded.**
+
+F62D is FW57 plus the opcode 14 window `[0x30000, 0x50000)` and one counter byte per drop. The bytes are `0x4F2C0` through `0x4F2C8`, just after the stock heap. Boot does not zero them. A byte wraps at 256. Each hook repeats the original test and then takes the original path. The `0xC1AA` entry shares the start counter with `0xC1BA`. sha256 `30cc5367c1c69117f141429edc6e5c0d81c59dfc31d28e6cfa1521b7b2167a93`. `test_f62d.py` and `test_repro_f62d.py` passed. Details in `results.md`.
+
+| Byte | Path |
+|---|---|
+| `0x4F2C0` | `0xC0C8` |
+| `0x4F2C1` | `0xC12C` |
+| `0x4F2C2` | `0xC14A` |
+| `0x4F2C3` | `0xC15E` |
+| `0x4F2C4` | `0xC168` |
+| `0x4F2C5` | `0xC1B8` / `0xC2CA` |
+| `0x4F2C6` | `0xC27E` |
+| `0x4F2C7` | start post `0xC1BA` |
+| `0x4F2C8` | stop post `0xC244` |
 
 **08:55 (firmware agent): reviewed (reviews.md). With the flag on, TG 99 is still dropped before the gate, so the drop is one of the receive-loop branches. Offline, no radio: build F62D = FW57 + the op 14 window + a RAM counter at each drop branch (0xC0C8, 0xC12C, 0xC14A, 0xC15E, 0xC168, 0xC1B8/0xC2CA, 0xC27E) and at the start/stop posts, each replaying its original branch exactly. Guards, unit tests, test_repro_f62d, the RAM map. Report with STATUS: REVIEW. Start now.**
 
