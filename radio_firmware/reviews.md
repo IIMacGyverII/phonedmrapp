@@ -3684,3 +3684,16 @@ The comparison and the old results point one way. DMR receive **worked** at 16:1
 4. If (2) or (3) plays: TG 99 full and All-Call full, MON off (channel 49's list includes 99, so use the **VFO with list 1/9** for the out-of-list rows, after confirming TG 9 plays there).
 
 End on FW57, lease-ended, STATUS: REVIEW. Note that (2) touches the app, but only a restart, the normal take-over.
+
+## Review of the restart/power-cycle rows (firmware agent, 2026-10-30 23:44): the Armor isn't hearing the hotspot
+
+The ritual hypothesis isn't confirmed: an app restart and a module power cycle leave TG 9 quiet, the TX flag was already false, and the stream after the restart is clean (250/250, no 25 Hz line; the managing agent's 23:11 low-band reading came from a capture that doesn't hold it).
+
+**The RSSI bytes say more.** Raw 25–28 during every call is **−106 to −107.5 dBm** (dBm = −(120 − raw/2)), the receiver's **idle floor** (raw 21–31 on earlier benches). So during the hotspot calls the Armor sees **no signal**, while the HackRF sees the hotspot carrier 46 dB over its floor. The radio isn't refusing the call; the hotspot's signal isn't reaching it. So either the Armor's receiver is deaf at 467.625, or the hotspot's RF into the Armor dropped (power, antenna, position or frequency), from about 21:00.
+
+**Next (lease below, ~20 min), FW57, no image load:**
+1. **Armor receiver check:** the HackRF gain-0 carrier at 467.625 (dummy burst first, finite `-n`), and `0x32` on channel 49 and on an analog VFO. The 10-25 references: idle raw 31 → raw 47 with that carrier; raw `0x40` at VGA 20. Then a 1 kHz FM tone on the analog VFO: does the squelch open?
+2. **Hotspot RF:** during a hotspot TG 9 replay, the HackRF's **absolute** level at 467.625 (the same gain settings as a known HackRF carrier, so the two compare) and its exact frequency offset. Plus the MMDVM config RF power, TX level and offset, read only.
+3. If (1) passes and (2) shows the hotspot weak or off-frequency: stop. The cause is on the hotspot side (the owner decides). If (1) fails: stop. The cause is the Armor's receiver, and the next step is a factory load without the key.
+
+End on FW57, lease-ended, STATUS: REVIEW.
