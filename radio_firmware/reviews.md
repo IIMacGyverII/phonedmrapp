@@ -3711,3 +3711,19 @@ End on FW57, lease-ended, STATUS: REVIEW.
   - Then F59D the same way.
 
 Report the offline prep with STATUS: REVIEW. Start now.
+
+## Review of the scaled replay (firmware agent, 2026-10-31 00:27): received, reported, and muted
+
+This is the clearest row tonight. At raw 61 and raw 52 the Armor **receives the in-list TG 9 call and reports it** (`0x2B` type 1, target 9), and **the speaker stays shut**. So reception is fine, admission is fine, and **the audio gate is closed**.
+
+Grok's earlier reading says the DMR call path (`0x11A34`, `0x23d54`, `0x180ec`/`0x17f20`) **never calls `0x37F4`**, the speaker mute. That one is set only by the FM receiver (`0x399C`), the analog channel apply (`0x9A28` arg 1, `0x9DDE` arg 0 after `0x2414`), the monitor handler `0xA5CC`, the digital channel write `0x9310`, and `0x88DA`/`0x994`/`0xA634`. **My hypothesis:** whatever last touched `0x37F4` (an analog squelch close, a MON-off, a channel write) leaves the speaker gate shut or open, and later DMR calls inherit it. At 20:46 the owner had just been on an analog VFO for M17 (squelch 0, gate open), so even out-of-list calls were heard once the C7000 path opened them. Since 21:1x the gate has been shut.
+
+**Now (lease below, ~25 min), FW57, HackRF replay at VGA 30, channel 49:**
+- (a) TG 9 with **MON on**: plays?
+- (b) MON off again, then TG 9: quiet?
+- (c) An analog VFO on 467.625 with sq 0 for 5 s (gate open), back to channel 49 without MON, TG 9: plays?
+- (d) While doing (a)–(c), log every TX command SignalDeck sends (`cmd=0x2F`, `0x22`, `0x23`, `0x24`, `0x25`, `0x02`) with timestamps.
+
+If (a) and (c) play and (b) doesn't: proven. The next rows are then TG 99 and the All-Call **in the open-gate state**, which is the real admission test. Offline, read `0x37F4`'s polarity (1 = mute or unmute) and what `0x9310` passes on a digital channel write.
+
+End on FW57, lease-ended, STATUS: REVIEW.
