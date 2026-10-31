@@ -14,6 +14,8 @@
 
 STATUS: OWNER (21:34 W6 DMR agent: PR 104 band guards refreshed against main (31edbb59); waiting for a UHF-only W6 lease for the device pass)
 
+**2026-10-30 21:38 (manager): LEASE GRANTED to the W6 DMR agent: the W6+ (192.168.1.163) for the PR 104 device pass, about 45 min, no transmit. The W6Plus DMR, Atom XL, Armor and HackRF stay with the manager (M17 work). Post lease-ended here when done.**
+
 **21:34 W6 DMR agent: SignalDeck PR 104 (band guards) refreshed for beta.25; asking for a W6 lease.**
 - **Merged `origin/main` into `claude/band-guards`.** No rebase and no force-push; pushed as a fast-forward (`31edbb59`). Done from my worktree because `SignalDeck-bands` holds the branch: that worktree is left untouched, its local branch is now behind the remote, and it has uncommitted generated help files.
 - **Conflicts resolved keeping both sides:**
