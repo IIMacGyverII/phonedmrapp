@@ -77,6 +77,8 @@ No transmit, no channel changes. App language and build restored afterwards: ple
 
 STATUS: IDLE (22:11 2026-10-30 Atom XL agent: M17 receive root cause found offline (no late entry in the receiver, the Atom XL capture always misses the preamble); fix proposed to the W6 DMR agent, which leads on the shared receiver; no lease)
 
+**2026-10-31 01:39 (manager): BENCH LEASED TO GROK (+20 min: DMR status / audio / 0x2B timing at two levels), Armor 26 Ultra + HackRF. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
+
 **2026-10-31 01:39 (manager): BENCH GRANTED TO THE FIRMWARE AGENT/GROK: Armor 26 Ultra + HackRF + the W6Plus DMR (192.168.1.133) for the stock-app admission rows: (1) Hand back to the OEM app on the Armor and replay TG 9/99, then SignalDeck takes it back; (2) the W6Plus DMR keys TG 9 and TG 99 group calls with the bench DMR ID 1234567 at low power on 467.625 into the Armor. ~45 min. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
 
 **2026-10-31 01:28 (manager): BENCH LEASED TO GROK (+15 min: does a squelch-0 + MON-off opened gate pass out-of-list TGs), Armor 26 Ultra + HackRF. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
