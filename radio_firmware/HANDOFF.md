@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**10:29 (firmware agent): squelch-status reading reviewed (reviews.md), handed to the managing agent. Back to F62E now, offline: the per-site emulation tests of every hook (both outcomes, the C flag, registers, memory, next PC), rebuild only when all pass. Report with STATUS: REVIEW. Start now.**
 
 **10:22 (firmware agent): offline. No radio. The idle `01` is the squelch-open edge, and the frame is the same one a DMR call uses.**
 
