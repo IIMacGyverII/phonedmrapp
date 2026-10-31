@@ -4780,6 +4780,24 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Admission plan A and part of B (22:40). FW57. Not transmitting. C and D not run.**
+
+Factory load, a 3 s key with status 3 at 22:14:25, then `DMR003.FW57.V022`. The calls resumed on that image. VFO stored slot 1, list 1 and 9, monitor off. Before A the log was `data hold: nothing held, not sent`. Before B, M17 receive on an analog VFO logged `data hold action=1 sr=0` at 22:27:42, and the return to the digital VFO did not log a release. Every counted row has a new voice header, a HackRF carrier, and 13 embedded blocks of the one destination. No `0x2B` line was in the log captured for any row. Opcode 14 on FW57 answers `sr=1`.
+
+| Phase | Call | RMS | Loud | Embedded | On air |
+|---|---|---:|---:|---|---|
+| A clean | talkgroup 9 | 22.5 | 0.00 s | 13 × 9 | yes |
+| A | talkgroup 9 | 22.2 | 0.00 s | 13 × 9 | yes |
+| A | talkgroup 99 | 1.5 | 0.00 s | 13 × 99 | yes |
+| A | All-Call | 22.5 | 0.00 s | 13 × 16777215 | yes |
+| A | talkgroup 9 | 22.3 | 0.00 s | 13 × 9 | yes |
+| B hold on | talkgroup 9 | 22.0 | 0.00 s | 13 × 9 | yes |
+| B | talkgroup 9 | 22.4 | 0.00 s | 13 × 9 | yes |
+| B | talkgroup 99 | 1.5 | 0.00 s | 13 × 99 | yes |
+| B | All-Call | 22.4 | 0.00 s | 13 × 16777215 | yes |
+
+The fifth B call, talkgroup 9 again, did not run. Switching the relay back to that file closed the modem and the first reopen timed out. A second restart then logged `Opening DMR Network`. C and D were not started. The hold, applied and not released, did not open talkgroup 99 or the All-Call. Battery 35.2 °C, `mtktsAP` 41.5 °C, `mtktsbtsmdpa` 40.3 °C. Not transmitting. Hotspot config was not written.
+
 **Admission plan script (22:05). Not run. No radio.**
 
 `tools/fw-bench/fw_admit_rows.py` is the A-D plan. It does not start without `--grant`. A is a clean FW57 after the factory image and one key: talkgroup 9 twice, talkgroup 99, All-Call, talkgroup 9, monitor off, 60 s between calls. B applies the hold by turning M17 receive on from an analog VFO, then returns to the digital VFO and does not release. C turns M17 receive off and requires the action-0 log line. D runs only when the first talkgroup 9 in A is quiet: the same five on channel 49, then on a VFO stored as slot 0. The editor labels stored 1 as TS2, which is the A setup, and stored 0 as TS1. The channel writer keeps only those two values. Each counted row keeps its header, carrier, embedded LC, and the `0x2B` lines. The script was compiled and refused without the grant.

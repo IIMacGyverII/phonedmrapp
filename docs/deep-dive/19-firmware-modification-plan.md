@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — clean FW57 and the held path both stay quiet.** Talkgroup 9, talkgroup 99, and All-Call are muted with the hold off and with it applied. The release phase and the search for a setup where talkgroup 9 plays were not run; the modem did not reopen. Details in `results.md`.
+
 **2026-10-30 — the admission plan script is ready and was not run.** `tools/fw-bench/fw_admit_rows.py` does clean FW57, hold on, and hold off, five calls each, and looks for a setup where talkgroup 9 plays only if it was quiet. Details in `results.md`.
 
 **2026-10-30 — the loud full-file clips match decoded voice.** Spectrum correlation with the admitted F58D clip is 0.84–0.91 and the waveform correlation is 0.46–0.58. The quiet talkgroup 9 row in that pass is 20:54:38, 18 minutes after the last hold apply, with no release recorded. Details in `results.md`.

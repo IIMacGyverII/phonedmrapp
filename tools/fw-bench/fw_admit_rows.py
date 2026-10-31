@@ -49,7 +49,7 @@ def phase(cfg, phone, web, doc, tag):
             time.sleep(GAP_S)
 
 
-def m17(cfg, phone, web, on):
+def m17(cfg, phone, web, on, already_off_ok=False):
     phone.adb("shell", "logcat", "-c")
     try:
         web.call("/api/m17", {"on": on})
@@ -60,9 +60,15 @@ def m17(cfg, phone, web, on):
     lines = hold_lines(text)
     for ln in lines:
         fr.say(cfg, ln)
-    want = "action=1" if on else "action=0"
-    if not any(want in ln for ln in lines):
-        raise SystemExit("data hold %s was not logged" % want)
+    if on:
+        if not any("action=1" in ln for ln in lines):
+            raise SystemExit("data hold action=1 was not logged")
+    elif any("action=0" in ln for ln in lines):
+        return lines
+    elif already_off_ok and any("nothing held" in ln for ln in lines):
+        return lines
+    else:
+        raise SystemExit("data hold action=0 was not logged")
     return lines
 
 
@@ -119,10 +125,17 @@ def main():
         if hackrf_running():
             raise SystemExit("hackrf already running")
         gaps.base.heat_ok(cfg, phone)
-        web = fr.factory_then(cfg, phone, fr.FW57, fr.FW57_TAG)
+        if "--resume" in sys.argv and phone.tag() == fr.FW57_TAG:
+            fr.say(cfg, "resume on %s, factory key already done this session" % phone.tag())
+            phone.wake()
+            phone.adb("shell", "am", "start", "-n", "com.macdmr.radio/.MainActivity")
+            time.sleep(2)
+            web = fr.open_web(phone)
+        else:
+            web = fr.factory_then(cfg, phone, fr.FW57, fr.FW57_TAG)
         doc["tag"] = phone.tag()
         enter(cfg, web, 1)
-        doc["hold_A"] = m17(cfg, phone, web, False)
+        doc["hold_A"] = m17(cfg, phone, web, False, already_off_ok=True)
         doc["before_header"] = fr.rows.last_header(cfg)
         phase(cfg, phone, web, doc, "A")
         time.sleep(GAP_S)
@@ -160,8 +173,15 @@ def main():
                 web = fr.open_web(phone)
                 if web.call("/api/status").get("transmitting"):
                     web.call("/api/ptt", {"down": False})
+                    fr.say(cfg, "unkeyed in cleanup")
             except Exception as exc:
                 fr.say(cfg, "unkey failed %s" % type(exc).__name__)
+            try:
+                if phone.tag() not in ("", fr.FW57_TAG):
+                    fr.say(cfg, "restoring FW57 after a stop")
+                    fr.factory_then(cfg, phone, fr.FW57, fr.FW57_TAG)
+            except Exception as exc:
+                fr.say(cfg, "restore failed %s" % type(exc).__name__)
 
 
 if __name__ == "__main__":
