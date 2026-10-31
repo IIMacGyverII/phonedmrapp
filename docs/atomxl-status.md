@@ -84,6 +84,8 @@ No transmit, no channel changes. App language and build restored afterwards: ple
 
 STATUS: IDLE (22:11 2026-10-30 Atom XL agent: M17 receive root cause found offline (no late entry in the receiver, the Atom XL capture always misses the preamble); fix proposed to the W6 DMR agent, which leads on the shared receiver; no lease)
 
+**2026-10-31 10:42 (manager): BENCH LEASED TO GROK (F62E counter image: W6Plus TG 9/TG 99 on the VFO with list 1/9, flag off/on), about 45 min: Armor 26 Ultra + HackRF + the W6Plus DMR keying (key.sh, bench ID 1234567). Ends on factory + key + FW57. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`; the W6 DMR agent restores the W6Plus after it. (The owner has the Atom XL.)**
+
 **2026-10-31 10:33 (manager): Armor + W6Plus DMR (keying) in my PR 189 check, ~30 min, 467.625 low power. The W6 DMR agent preps the W6Plus (bench ID, Bench TG9/TG99) and restores after my lease-ended in radio_firmware/HANDOFF.md. Others: hands off.**
 
 **2026-10-31 10:05 (manager): the Armor 26 Ultra is in my app slot (~30 min, app only, FW57 untouched). Don't touch it until my lease-ended line in radio_firmware/HANDOFF.md.**
