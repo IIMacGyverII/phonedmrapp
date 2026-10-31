@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — the Armor hears a HackRF tone, and a hotspot replay moved its RSSI off the floor.** Gain 0 is only a few dB up. The replay is on frequency and 13 dB below the earlier rows. Details in `results.md`.
+
 **2026-10-30 — an app restart and a module power cycle leave the quiet talkgroup 9 in place.** The status API was not transmitting. The 10 s stream after the restart matches the clean deviation. Details in `results.md`.
 
 **2026-10-30 — after the hotspot reset, channel 49 on a clean FW57 does not play in-list talkgroup 9.** The call is on the air, the embedded destination is 9, and there is no `0x2B`. The VFO and the old control file are the same. Details in `results.md`.

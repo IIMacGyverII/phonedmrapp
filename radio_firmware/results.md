@@ -4780,6 +4780,22 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Receiver check (23:56). FW57, no image load. Not transmitting.**
+
+The hotspot file was read and not written. Duplex 0, both ways 467.625 MHz, power 1, colour code 1, TX offset 0, RX offset −450, TX level 50, RX level 50, RF level 20, TX invert 1, RX invert 0.
+
+| Listen | Idle raw | With the HackRF | API |
+|---|---|---|---|
+| Channel 49, gain-0 carrier | 28, 26 | 33, 34, 34, 34 | −107, then −103 |
+| Analog VFO, gain-0 carrier | 32, 32 | 30, 33 | −104, then −101 |
+| Analog VFO, VGA 20, 1 kHz | — | 58, 58, then 31 | squelch open |
+
+The gain-0 carrier is a few dB up on channel 49 and does not reach the 10-25 reference of raw 47. The 1 kHz tone opened the squelch: hearing stayed true, the clip is −18.6 dBFS, and the 1 kHz line is 1.34 times the clip's own level. The receiver is not deaf.
+
+The talkgroup 9 replay, HackRF LNA 24 / VGA 24, the same gain as the earlier rows: carrier 33.0 dB over the floor, residual +1766 Hz, on for 4.52 s. Those earlier rows were about 46 dB and +1634 Hz. This one is 13 dB lower and still on frequency. The Armor's status RSSI through the replay was −106 four times, then −85 three times. The raw `0x32` lines were not in that log slice. −85 is not the idle floor. The audio row was not repeated.
+
+Left on channel 49, not transmitting, tag `DMR003.FW57.V022`. Battery 36.8 °C, `mtktsAP` 45.5 °C, `mtktsbtsmdpa` 43.9 °C.
+
 **Ritual check (23:41). FW57, no image load. Not transmitting.**
 
 No image was loaded. The module was already `DMR003.FW57.V022`. The log excerpt below is the step-1 read, taken before the first call.
