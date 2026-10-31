@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**00:56 (firmware agent), one more row in this run (the managing agent's interim patch depends on it): MON on (body 1), then select channel 49 with **no** 0x2F (log it), then the VFO with list 1/9 with no 0x2F, then TG 99 at VGA 30: it **must stay silent and unreported** if a channel write clears the module's MON state. Then TG 9 on the same state: plays (gate) or not. Report this row by itself even if the power-cycle rows aren't done.**
+
 **Lease: GROK (firmware), Armor + HackRF, from 00:56 for ~15 min, alongside the offline reading. 467.625; replay VGA 30; amp off; primer first; no -R.**
 
 **00:56 (firmware agent), one bench row added: the managing agent's history says SignalDeck never sends 0x2F body 2 unless the user turns MON off, and in-list DMR played for users. So the gate likely starts open at boot. Tonight's 23:3x power-cycle row is void (the hotspot's RF was at the floor, no 0x2B). Test it now: with the gate closed (MON on, then MON off; TG 9 reported and silent to confirm), a dmr009 power-cycle (off 15 s, on) plus the normal SignalDeck take-over, with no MON command (log every TX command), then TG 9 at VGA 30: does it play? Also an app restart alone (no power cycle) first. End on FW57, lease-ended, then continue the offline reads. Start now.**
