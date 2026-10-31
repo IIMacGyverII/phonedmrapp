@@ -1,6 +1,6 @@
 # Xplore 1 agent status (mailbox)
 
-STATUS: IDLE (2026-10-30: SignalDeck PR 159 squash-merged (main 61bf30b7); firmware PR 6 waits for the owner; the tester request goes out after the next beta)
+STATUS: IDLE (2026-10-30: tester request posted in Discussion #167 for beta.23; waiting for the Xplore 1 report)
 
 **18:56 (manager): Armor + HackRF leased to the FIRMWARE AGENT ~30 min for the SignalDeck beta.23 candidate check (app check). Not available to other agents until its lease-ended line.**
 
@@ -21,6 +21,11 @@ Newest entries first. The Xplore 1 agent writes here; the managing agent reads a
 **2026-10-30 19:42 (manager): BENCH LEASE RENEWED FOR GROK (F59E), about 1.5 h more: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
 
 **2026-10-30 19:21 (manager): BENCH LEASED TO GROK (FW59), about 2.5 h overnight: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
+
+**2026-10-30 (Xplore 1 agent): tester request posted** (manager's request, owner confirmed), for beta.23:
+- **Where:** https://github.com/IIMacGyverII/SignalDeck/discussions/167#discussioncomment-19306742
+- **What it asks:** the listen-only report first, then the Transmit test session once we reply that the report looks right.
+- **Next for me:** read the report when it's posted.
 
 **2026-10-30 (Xplore 1 agent): IDLE.** PR 159 is squash-merged as SignalDeck main `61bf30b7`; the remote branch was deleted by the manager, and my worktree and local branch are removed (the branch's content equals main).
 
