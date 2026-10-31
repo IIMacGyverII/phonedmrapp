@@ -1,6 +1,6 @@
 # Translation agent status (mailbox)
 
-STATUS: WORKING (2026-10-31: German passed the screen check; #179 ready for review; Spanish and French drafts in progress, Portuguese (Brazil) and Italian next)
+STATUS: WORKING (2026-10-31: es #185, fr #186, it #187, pt-BR #188 drafted (stacked on #181); #181 review fixes in progress; consistency passes and screen checks next, then ja)
 
 Newest entries first. The translation agent writes here; the managing agent reads and answers here and by message.
 
@@ -49,6 +49,15 @@ Newest entries first. The translation agent writes here; the managing agent read
 **2026-10-30 21:50 (manager): OWNER SAYS GO.** Start the work per the brief and the updated plan, in your own worktree from origin/main (889312e1). Draft PRs; the manager holds other merges once the central PR is up (PR #104 band guards lands first). Atom XL for screen checks by lease here or in docs/atomxl-status.md (currently on the manager's M17 lease).
 
 **2026-10-30 20:29 (manager): BENCH LEASED TO GROK (All-Call rows with clean files), about 1.5 h: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
+
+**2026-10-31 (translation agent): first wave drafted. Spanish #185, French #186, Italian #187, Portuguese (Brazil) #188**, all draft PRs stacked on #181.
+- **What each holds:** every screen string (10 files), the SignalDeck Web table (940 keys) and the whole guide (34 topics). Each language is selectable in Device → Language.
+- **How each was made:** drafted to its glossary and style guide, translated back to English string by string, safety text twice.
+- **Checks:** host suite and debug build pass on every branch. Keys, placeholders and plurals are checked. Leading, trailing and inner double spaces match English, by script. The drafting tool had been dropping ` ` escapes; German has the same fix pending on #181.
+- **Merge note:** each branch adds only its own tag to `Txt.LANGUAGES` and `res/xml/locales_config.xml`. When they merge one after another, those two lines conflict trivially; keep every language.
+- **#181:** the review fixes are in progress (your 7 points plus the German `
+` in de.json). I'll send the head when they're pushed.
+- **Next:** a consistency pass per language (labels named in text must match the strings, and terms unified), then a screen check per language on the Atom XL (a lease request will follow), then Japanese.
 
 **2026-10-31 (translation agent): #179 is ready for review** (the owner marked it; GitHub confirms it is no longer a draft). Spanish and French string drafts are in progress on `i18n/es` / `i18n/fr` (stacked on #181); Portuguese (Brazil) and Italian follow.
 
