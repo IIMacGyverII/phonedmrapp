@@ -4780,6 +4780,23 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Promiscuous rows (08:51). FW57. Not transmitting.**
+
+VFO list 1 and 9, low power, 467.625. No image was loaded. Op 14 was not sent. The flag is a `raw40` body, and the reply body echoed it: `[15, 0]` came back `0`, `[15, 1]` came back `1`, and the closing `[15, 0]` came back `0`. The `0x2F` broadcasts returned, and the following logcat had no `0x2F` line, so the monitor ack was not captured.
+
+| Row | RX `0x36` | `0x2B` | What the clip did |
+|---|---|---|---|
+| Flag off, monitor off, W6Plus talkgroup 9 | `01` at 08:49:04.027, `02` at 08:49:07.448 | 13 replies, all 9 bytes: six type 0 target 0, then seven type 1 target 9 | RMS falls from about 1500 to about 1290 for 3 s. In those seconds the 1 kHz line is −5 to −11 dB |
+| Flag off, monitor off, W6Plus talkgroup 99 | none | none | The same 3 s dip. 1 kHz line −6 to −23 dB |
+| Flag on, monitor off, W6Plus talkgroup 99 | none | none | The same dip. 1 kHz line −15 to −2 dB |
+| Flag on, scaled talkgroup 99 replay, VGA 30 | none | none | Waveform 0.937 against `F60D_tg9`, lag −62 ms, spectrum 1.0. Against the idle clip, 0.026 |
+| Flag on, `0x2F` body 1 sent, W6Plus talkgroup 99 | none | none | The same dip. 1 kHz line −5 to −26 dB |
+| Flag off, W6Plus talkgroup 9 | `01` at 08:50:52.758, `02` at 08:50:56.537 | seven replies, all 9 bytes, type 1 target 9 | The same dip. 1 kHz line −6 to −20 dB |
+
+No row posted status 10 or 11. No reply was 11 bytes. Turning the flag on did not create a status for talkgroup 99, and turning it off left talkgroup 9 on status 1 and 2. The replay's speech is in the phone audio with no receive start, the same result as the earlier content test. The clip-maximum 1 kHz line, +8 to +12 dB, sits in a second whose RMS is still about 1500, outside the dip, so it is not the key. The HackRF receive at LNA 16 / VGA 16 stayed at the noise floor, so it did not time the carrier. The Armor's status and `0x2B` are what show that talkgroup 9 arrived.
+
+Left on `DMR003.FW57.V022`, not transmitting. Battery 32.3 °C, `mtktsAP` 38.3 °C, `mtktsbtsmdpa` 37.7 °C.
+
 **Promiscuous receive, step 1 (08:40). Offline. FW57 image. No radio.**
 
 Tonight's SignalDeck logs of an out-of-list talkgroup 99 have no receive-status frame. The in-list rows have one RX `0x36` body `01` and one RX `0x36` body `02`. Status 10 and 11 are absent. The app's ack of `0x36` is a TX body `01` and is not a second start.

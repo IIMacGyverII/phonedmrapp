@@ -342,7 +342,8 @@ def main():
         return
     if "--grant" not in sys.argv:
         raise SystemExit("refusing without --grant")
-    if not Path(listen.KEY).is_file():
+    key_win = Path(r"C:\Users\Joshua\AppData\Local\Temp\claude\D--Documents-code-personal-phonedmrapp\5950190b-2f56-47ee-ae7d-d56c8c611e78\scratchpad\v69\dmrkey\key.sh")
+    if not key_win.is_file():
         raise SystemExit("key.sh missing")
     cfg = Config()
     if cfg.serial != "192.168.1.125:5555":

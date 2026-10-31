@@ -1,6 +1,19 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**Lease ended 2026-10-31 08:51 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Hotspot not used. The W6Plus was not left keyed. Battery 32.3 °C, `mtktsAP` 38.3 °C, `mtktsbtsmdpa` 37.7 °C.**
+
+The op 15 reply body echoed the flag: 0, then 1, then 0. An out-of-list talkgroup 99 posted no RX status with the flag off, with the flag on, or after the monitor command. No 11-byte `0x2B`. Talkgroup 9 posted one RX body `01` and one `02` both times the flag was off. The replay matches the earlier talkgroup 9 clip (waveform 0.937, spectrum 1.0) and not idle (0.026), with no status. The `0x2F` ack line was not in the log. Details in `results.md`.
+
+| Row | RX status | `0x2B` | Content |
+|---|---|---|---|
+| Flag off, monitor off, W6Plus talkgroup 9 | `01` 08:49:04.027, `02` 08:49:07.448 | 9 bytes, type 1 target 9 | RMS dips for 3 s; 1 kHz line −5 to −11 dB in that window |
+| Flag off, monitor off, W6Plus talkgroup 99 | none | none | same dip; 1 kHz line −6 to −23 dB |
+| Flag on, monitor off, W6Plus talkgroup 99 | none | none | same dip; 1 kHz line −15 to −2 dB |
+| Flag on, replay talkgroup 99 | none | none | 0.937 against talkgroup 9, −62 ms, spectrum 1.0 |
+| Flag on, monitor command sent, W6Plus talkgroup 99 | none | none | same dip; 1 kHz line −5 to −26 dB |
+| Flag off, W6Plus talkgroup 9 | `01` 08:50:52.758, `02` 08:50:56.537 | 9 bytes, type 1 target 9 | same dip; 1 kHz line −6 to −20 dB |
 
 **Lease: GROK (firmware), Armor + HackRF + the W6Plus DMR (keying only: key.sh "Bench TG9" / "Bench TG99"), from 08:29 for ~75 min. 467.625, low power, bench ID 1234567, TS2. The hotspot isn't used.**
 
