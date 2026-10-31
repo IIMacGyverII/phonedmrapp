@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — an app restart and a module power cycle leave the quiet talkgroup 9 in place.** The status API was not transmitting. The 10 s stream after the restart matches the clean deviation. Details in `results.md`.
+
 **2026-10-30 — after the hotspot reset, channel 49 on a clean FW57 does not play in-list talkgroup 9.** The call is on the air, the embedded destination is 9, and there is no `0x2B`. The VFO and the old control file are the same. Details in `results.md`.
 
 **2026-10-30 — the 20:46 pass and tonight's A used the same VFO and the same row function.** Neither saved a real group-call `0x2B`. Tonight had just keyed channel 49; 20:46 had not reloaded, and the hold was still applied. Details in `results.md`.

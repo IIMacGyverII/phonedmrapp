@@ -4780,6 +4780,26 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Ritual check (23:41). FW57, no image load. Not transmitting.**
+
+No image was loaded. The module was already `DMR003.FW57.V022`. The log excerpt below is the step-1 read, taken before the first call.
+
+Status API at 23:36: transmitting false, hearing false, ready true, monitor false, promiscuous false, VFO true, tx inhibited false, web transmit true, RSSI −106. The VFO read back digital, 467.625 MHz, low power, slot 1, colour code 1. `pttDown` is not a field of `/api/status`. The last 4000 `RadioService` lines contained no `cmd=0x26`, no `cmd=0x36`, no PTT line and no `SEND_` / `RECEIVE_` line. The factory-key logs from 21:1x, 22:14 and 23:18 are not in the buffer any more. What those runs saved at the time is unchanged: during the 3 s key the status API stayed transmitting, and the status bytes were 3 then 1.
+
+| Step | RMS | Peak | Loud | Carrier | `0x2B` | RSSI bytes |
+|---|---:|---:|---:|---|---|---|
+| As it was, channel 49, talkgroup 9 | 22.2 | 1622 | 0.00 s | ratio 60.3, 46.4 dB | 0 | 27, 26, 26, 28, 27, 25 |
+| After force-stop and start | 21.8 | 1546 | 0.00 s | ratio 59.7, 46.4 dB | 0 | 26, 28, 26, 26, 25, 27 |
+| After `dmr009` off 15 s, then on, and the app started again | 22.1 | 1419 | 0.00 s | ratio 59.6, 46.3 dB | 0 | 26, 25, 26, 27, 26, 25 |
+
+Each row had a new Slot 2 voice header and 13 embedded blocks of destination 9. The power-cycle readback was `pwd :0`, then `pwd :1`, and the tag came back `DMR003.FW57.V022`. Talkgroup 9 did not play, so the out-of-list rows were not run. Restarting the app and cycling the module power did not restore receive. The transmitting flag was already false, so that flag is not what is gating the audio.
+
+The 10 s stream after the restart: 250/250, end bit set, carrier 10.43 s, runner p99 2863 Hz, clip 0, carrier 30.1 dB over the floor. The saved 21:24 stream, whose capture is no longer on disk, is p99 2892 Hz and 1125/1125. The new 40–250 Hz power is 10.3 dB below the 300–3000 Hz power. Those bands are 210 Hz and 2700 Hz wide, so this is about the width, not a raised low band. The strongest envelope bin from 20 to 30 Hz is 20.9 Hz, on the edge of that search, not a 25 Hz line.
+
+The capture still filed as the 23:11 stream is 53 s at 467.385 MHz. At the bench offset it is 1.9 dB under the reference band. Away from DC the strongest bin is an 800 kHz spur, 18 dB over the median. That file does not hold the low-band comparison.
+
+Left on channel 49, 467.625 MHz, low power, not transmitting. Battery 35.5 °C, `mtktsAP` 42.5 °C, `mtktsbtsmdpa` 41.3 °C. Hotspot config was not written.
+
 **Channel 49 after the hotspot reset (23:23). FW57. Not transmitting.**
 
 The owner's reset replaced the modem log. `sudo journalctl -u mmdvmhost` since midnight returned one line, and that line does not name a start or a stop, so the journal does not say who restarted it. The new log's only opening is 2026-10-31 04:13:00.092 UTC, with no closing line. That opening was already there before the first call.
