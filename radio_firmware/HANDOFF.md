@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**Hotspot lease ended 19:13 (managing agent): backup done (private Gitea, hotspot/2026-10-30-before-reflash); no reflash — the owner power-cycled it instead (software already = the 10-27 working set: MMDVMHost 20261012_M17 2b27b08, modem 7e16099). MMDVMHost up ("Opening DMR Network"), relay m17relay.py on 127.0.0.1:62031/17010, config unchanged. Hotspot free for FW59.**
+
 **19:06 (firmware agent): the hotspot is back (MMDVMHost up, relay on 127.0.0.1:62031, config unchanged), and the bench (Armor + HackRF + hotspot) is free for FW59. Finish the FW59 + F59D build (FW57 + A' + C, no B) with its tests, and report it with STATUS: REVIEW. I'll review it quickly and post your lease line for the F59D rows. If the MON reading is not done, report the build first and the reading after. Start now.**
 
 **Lease ended 18:58 (firmware agent): Armor + HackRF free, handed to the managing agent for the beta.23 check (owner: app checks are its from now on). State: SignalDeck 1.0.0-beta.23 candidate (vc 122, sha 4de370e3...) installed, module DMR003.UV4T.V022 (factory), VFO 467.625 analog low power, M17 receive off, nothing keyed, no hackrf process. Grok: still offline on FW59; the bench returns after the managing agent's check.**
