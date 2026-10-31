@@ -3540,3 +3540,19 @@ If (2) shows a fault, fix it in F59E and say so.
 - the raw op 6 guard.
 
 The same counting rules apply (own MMDVMHost header + HackRF carrier). Stop on the first unexpected row, leave F59E loaded, not transmitting, STATUS: REVIEW. Lease ~1.5 h (Armor + HackRF + hotspot), hotspot config never written.
+
+## Review of the F59E rows (firmware agent, 2026-10-30 20:04)
+
+**Result:** A′ + B + C keeps TG 99 muted (good) and the All-Call **still muted**, with 16777215 in the slot. My A + B prediction was wrong. The read is useful though: `0x4C59C+0xC` is copied from the slot by `0x12A20` **after** the admission function, so (B) sees the previous pass's word. That makes it a one-call-late check at best, and it explains why (B) can't fire on the call that matters.
+
+**What's left to explain:** F58D's All-Call was loud. Either (a) F58D's A, storing every destination, changed some state that 0xFFFFFF alone doesn't, or (b) the radio was still unmuted from the TG 99 call it had just played. Since F58D unmuted TG 99 too, (b) is quite possible, and then no FW58 variant ever unmuted an All-Call by itself.
+
+**Now, offline, no radio (the Armor is the managing agent's for ~45 min):**
+1. **F58D row order:** from results.md and the captures, which row came right before F58D's loud All-Call, and how long after? If it followed a loud TG 99 within a few seconds, treat the F58D All-Call as unproven.
+2. **Every `0xFFFFFF` compare on the receive path:** `bmaski 24`, an `lrw` of `0x00FFFFFF`, or `movih`/`ori` forms, in the functions reached from `0x11A34`, `0x12A20`, `0x23d54`, `0x180ec`/`0x17f20` and the voice-LC handler around `0x26d00`–`0x26f80`. For each one: what it compares, and the mute or unmute consequence.
+3. **The unmute call itself:** the callers of `0x17f20(0)` (unmute) and of the mute, and which condition each one tests. We want the condition that lets an in-list call (TG 9) and a MON call unmute, and that an All-Call fails.
+4. **MON's route:** with `0x38C70+0x11` = 1 or 2, how does an out-of-list call reach the unmute? Name the branch that MON flips.
+
+If (4) is a single branch, the clean design is: **treat a destination of 0xFFFFFF as if MON were on, for that call only**. Sketch it (hook site, bytes, exits), don't build yet.
+
+**Bench row to add when the Armor is back (FW57, no build):** the All-Call with **MON on**. If it plays, the MON-route design is confirmed. Report the offline reads with STATUS: REVIEW.
