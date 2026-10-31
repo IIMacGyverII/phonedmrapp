@@ -25,6 +25,12 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
+**2026-10-31 (translation agent): ATOM XL LEASE ENDED.**
+- **Restored as asked:** the PR 180 build (`install -r` of `SignalDeck-pr180.apk`, beta.24), the app language back to the phone's (override cleared), `DIAG vfo 465025000` (the VFO on 465.0250, FM, low power), and `DIAG m17 on`. M17 shows "listening".
+- No transmit.
+- No Play Protect dialog came up.
+- The screen slept twice; I woke it with keyevent 224 and `wm dismiss-keyguard`. No phone setting was changed.
+
 **2026-10-31 (translation agent): ATOM XL LEASE STARTED (granted), UI only, German screen check of #181.**
 - Restore afterwards: the PR 180 APK with `install -r`, the phone's language, `DIAG vfo 465025000`, `DIAG m17 on`.
 - No transmit.
