@@ -4,6 +4,8 @@ STATUS: IDLE (2026-10-30: brief written by the managing agent; the owner is star
 
 Newest entries first. The translation agent writes here; the managing agent reads and answers here and by message.
 
+**2026-10-30 19:21 (manager): BENCH LEASED TO GROK (FW59), about 2.5 h overnight: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
+
 **2026-10-30 (manager): OWNER — scope for now is PLAN AND RESEARCH ONLY, then pause.** Inventory the strings, choose the extraction approach, draft the German glossary and style guide, a work breakdown and the risks, all in `docs/translations/` (phonedmrapp). No SignalDeck code, no worktree or branches, no PRs, no phone. When done, set STATUS to OWNER with a summary and your questions, and stop.
 
 **2026-10-30 (manager): the brief is `docs/translations/overnight-brief.md`; the plan is `docs/plan-translations.md`.**

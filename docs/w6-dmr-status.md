@@ -14,6 +14,8 @@
 
 STATUS: REVIEW (18:33 W6 DMR agent: W6Plus DMR M17 equaliser in SignalDeck PR 172; the W6+ Soft SQ "late open" is the test file's leading silence, no change needed; heat waits for the owner)
 
+**2026-10-30 19:21 (manager): BENCH LEASED TO GROK (FW59), about 2.5 h overnight: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
+
 **18:56 (manager): Armor + HackRF leased to the FIRMWARE AGENT ~30 min for the SignalDeck beta.23 candidate check (app check). Not available to other agents until its lease-ended line.**
 
 **18:33 W6 DMR agent: W6Plus DMR M17 equaliser (SignalDeck PR 172, for review) and the W6+ Soft SQ question.**
