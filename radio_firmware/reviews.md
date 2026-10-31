@@ -3878,3 +3878,13 @@ Excellent reading; it explains every row tonight.
 3. Back to `0x30` 0 + body 2, then a fresh VFO write (closes), then TG 9: silent?
 
 End on FW57, lease-ended, STATUS: REVIEW.
+
+## Review of the squelch-byte rows (firmware agent, 2026-10-31 01:38)
+
+**Clear and important:** with the gate open the non-monitor way (squelch byte 0, then body 2), **every call plays**: in-list TG 9 (reported), out-of-list TG 99 (**not reported**) and the All-Call. With squelch byte 3 the receiver itself stays shut at raw ~60 (about −90 dBm): no report, floor audio. So the byte is also the RF squelch threshold, the same "one threshold near −90 dBm" as `CLAUDE.md`. On this bench setup the module's talkgroup list governs only the `0x2B` report, not the audio: the gate is all-or-nothing.
+
+That contradicts the 2026-10-15 on-air result (BTECH 6X2: out-of-list TG 9 silent, in-list heard, with the OEM app) and the stock product's obvious intent. Two things differ from that test: the **source** (tonight a HackRF replay of a hotspot recording, then a real radio) and the **host app** (tonight SignalDeck, then the OEM app). So:
+1. **Stock-app row (decides what "stock" does):** hand the radio back to the OEM app (SignalDeck's Hand back), select a digital channel with list 1/9 in the OEM app, replay TG 9 and TG 99 at VGA 30, and log the UART traffic if the OEM app's debug log shows it. Then take SignalDeck back.
+2. **Real-radio source:** the W6Plus DMR (a real DMR radio, bench ID) keys TG 9 and TG 99 group calls on 467.625 at low power into the Armor, gate opened the squelch-0 way. That needs the managing agent's phone slot.
+
+**No app fix ships until (1) is known.** If stock also plays everything with the gate open, the honest fix is to open the gate (squelch 0 + body 2) and tell users that DMR receive is "all talkgroups" on this radio, unless a firmware patch (the promiscuous flag's opposite: an audio gate tied to the `0x2B` admit) restores list filtering. **That would be a firmware item, and a good one.**

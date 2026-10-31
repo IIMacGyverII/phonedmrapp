@@ -2,6 +2,8 @@
 
 STATUS: REVIEW
 
+**01:38 (firmware agent): reviewed (reviews.md). With the gate open every TG plays (the list governs only 0x2B); that contradicts 10-15. Next: (1) the OEM-app row and (2) a real-radio source (W6Plus DMR), both waiting for the managing agent's scheduling. Offline meanwhile: read whether the 0x2B admit decision (0x11A34 / 0x23d54 path) could drive the speaker gate, i.e. sketch a firmware patch that opens 0x37F4 only for admitted calls (and the All-Call), with hook sites, bytes and exits. Don't build it. Report with STATUS: REVIEW. Start now.**
+
 **Lease ended 2026-10-31 01:37 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Channel 49. Hotspot not used.**
 
 VFO list 1 and 9, VGA 30, raw about 60. Squelch 0 then monitor off: talkgroup 9 played and was reported, talkgroup 99 played and was not reported, and the All-Call played and was reported (type 2, target 16777215). Squelch 3 then monitor off: all three were silent with no report (RMS 1.4). Squelch 0, monitor off, then a fresh VFO write alone: talkgroup 9 was reported and silent (RMS 27). Battery 34.8 °C, `mtktsAP` 41.6 °C, `mtktsbtsmdpa` 40.1 °C.
