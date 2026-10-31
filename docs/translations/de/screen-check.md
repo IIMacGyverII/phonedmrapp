@@ -39,6 +39,27 @@ agent. No transmit. The phone was restored afterwards.
 4. **Decimal comma:** frequencies and decimal values shown on screen (`Txt.freq`, `Txt.decimal`), while entry fields
    keep accepting both separators.
 
+## Round 1 fixes (on #181, 2026-10-31; to verify in round 2)
+1. **No break inside a word.** `Neo.fit(t, keepIcon)` on every row of shared buttons:
+   - Last heard, the link card, the channel selection bar and channel menu, the contact type and contact menu, the
+     firmware loader, FT8, logbook, map, Morse trainer, nets, schedule, SSTV, terminal, text modes, repeaters, VFO.
+   - A label that fits is unchanged.
+   - Otherwise the label wraps between words onto at most two lines, then drops its icon. It shrinks only as a last
+     resort (down to 10 sp), as the managing agent asked.
+   - Shorter German where natural: the channel menu's „Einstellen“ became „Wählen“.
+   - „Bearbeiten“ stays: it is the app-wide „Edit“, the same as Android.
+   - Labels that may still shrink, to judge in round 2: Aufnahmen / Untertitel / Aktivität (Last heard), Werkszustand
+     (firmware), Kombinieren (SSTV), Nachricht / Bearbeiten (contact menu).
+2. **The header title** shrinks (to 11 sp) before it is cut off with „…“.
+3. **Dates** follow the app's language (`Txt.dates`): English stays exactly as before, German gets „28. Okt., 22:44“.
+   Files, logs and the web API keep their fixed formats.
+4. **Decimal comma** on screen (`Txt.decimal`, `Txt.freqMhz`): the intercom readout, the channel list, PKT, VFO pills,
+   band scope, map, satellites, POTA, Winlink, chips such as „1,5 s“.
+   - Entry fields still show a point and accept a comma too (channel editor, VFO, logbook, pager).
+   - Stored history text, files, shared text and the web API stay as they are.
+   - Open: coordinates shown as „lat, lon“ keep the point, because a comma between them would be ambiguous. The
+     reviewer decides.
+
 ## Not checked in this round (next round)
 - Every sheet, dialog and toast of the tools (Fuchsjagd, Winlink, SSTV, FT8, M17, Satelliten, POTA, Logbuch,
   Prüfungstraining, Morse, Pager), the firmware loader, the first-run check, Android Auto, the widget and
