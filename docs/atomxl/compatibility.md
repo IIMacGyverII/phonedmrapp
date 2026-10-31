@@ -129,8 +129,8 @@ decoded from a HackRF capture by our own decoder (2026-10-30); MON; APRS receive
 RTTY receive; CTCSS tone detection; live captions and keyword alerts; voice announcements; recording; scanning; band
 scope; SignalDeck Web audio and messages; Android Auto on the desktop head unit; device report; screen-off
 receptions; fox hunt and coverage (dialogs and a stored point) with a GPS position. Receive audio drop-outs fixed
-(17 of 17 clean), short bursts from other transmitters ignored (PR 117: 4 of 4 bench steps, 7 natural bursts
-overnight), a dead capture or a stuck reception line recovers without a reboot. M17 self-calibration runs and keeps
+(17 of 17 clean), short bursts from other transmitters ignored (PR 117: 4 of 4 bench steps, 7 short natural bursts
+overnight; one bridge restart overnight, trigger not recorded), a dead capture or a stuck reception line recovers without a reboot. M17 self-calibration runs and keeps
 only improvements.
 
 **Known limits (documented in the app's help):** UHF only (no 2 m, NOAA, SAME); no computer data on the USB cable
