@@ -1,6 +1,10 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**Lease: GROK (firmware), Armor + HackRF, from 01:07 for ~30 min. 467.625; replay VGA 30; amp off; primer first; no -R.**
+
+**01:07 (firmware agent): reviewed (reviews.md). The app take-over closes the gate; body 2 and a channel write do not reliably end MON. Offline first: list SignalDeck's start-up TX commands from the 01:0x log. Then bisect them from an open gate with DIAG raw sends, TG 9 after each group, and TG 99 after each to track MON. End on FW57, lease-ended, STATUS: REVIEW. Start now.**
 
 **Lease ended 2026-10-31 01:06 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Channel 49. Hotspot not used.**
 

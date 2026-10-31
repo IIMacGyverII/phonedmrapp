@@ -3766,3 +3766,88 @@ End on FW57, lease-ended, STATUS: REVIEW.
 4. From tonight's logs: the exact command sequence before the 00:34 row that played with MON off (between 00:33:58 and the call).
 
 Report with STATUS: REVIEW. Start now.
+
+## Review of the restart / power-cycle rows (firmware agent, 2026-10-31 open)
+
+This turns the picture around:
+- **Body 2 on a channel change did not end MONs
+## Review of the restart / power-cycle rows (firmware agent, 2026-10-31 audio:**)
+
+This turns the picture around:
+- **Body 2 on a channel change did not end MONs
+## Review of the restart / power-cycle rows (firmware agent, 2026-10-31 out-of-list)
+
+This turns the picture around:
+- **Body 2 on a channel change did not end MONs
+## Review of the restart / power-cycle rows (firmware agent, 2026-10-31 TG)
+
+This turns the picture around:
+- **Body 2 on a channel change did not end MONs
+## Review of the restart / power-cycle rows (firmware agent, 2026-10-31 99)
+
+This turns the picture around:
+- **Body 2 on a channel change did not end MONs
+## Review of the restart / power-cycle rows (firmware agent, 2026-10-31 still)
+
+This turns the picture around:
+- **Body 2 on a channel change did not end MONs
+## Review of the restart / power-cycle rows (firmware agent, 2026-10-31 played,)
+
+This turns the picture around:
+- **Body 2 on a channel change did not end MONs
+## Review of the restart / power-cycle rows (firmware agent, 2026-10-31 unreported.)
+
+This turns the picture around:
+- **Body 2 on a channel change did not end MONs
+## Review of the restart / power-cycle rows (firmware agent, 2026-10-31 So)
+
+This turns the picture around:
+- **Body 2 on a channel change did not end MONs
+## Review of the restart / power-cycle rows (firmware agent, 2026-10-31 a)
+
+This turns the picture around:
+- **Body 2 on a channel change did not end MONs
+## Review of the restart / power-cycle rows (firmware agent, 2026-10-31 channel)
+
+This turns the picture around:
+- **Body 2 on a channel change did not end MONs
+## Review of the restart / power-cycle rows (firmware agent, 2026-10-31 write)
+
+This turns the picture around:
+- **Body 2 on a channel change did not end MONs
+## Review of the restart / power-cycle rows (firmware agent, 2026-10-31 does)
+
+This turns the picture around:
+- **Body 2 on a channel change did not end MONs
+## Review of the restart / power-cycle rows (firmware agent, 2026-10-31 **not**)
+
+This turns the picture around:
+- **Body 2 on a channel change did not end MONs
+## Review of the restart / power-cycle rows (firmware agent, 2026-10-31 clear)
+
+This turns the picture around:
+- **Body 2 on a channel change did not end MONs
+## Review of the restart / power-cycle rows (firmware agent, 2026-10-31 MON,)
+
+This turns the picture around:
+- **Body 2 on a channel change did not end MONs
+## Review of the restart / power-cycle rows (firmware agent, 2026-10-31 and)
+
+This turns the picture around:
+- **Body 2 on a channel change did not end MONs
+## Review of the restart / power-cycle rows (firmware agent, 2026-10-31 body)
+
+This turns the picture around:
+- **Body 2 on a channel change did not end MONs
+## Review of the restart / power-cycle rows (firmware agent, 2026-10-31 2)
+
+This turns the picture around:
+- **Body 2 on a channel change did not end MONs
+## Review of the restart / power-cycle rows (firmware agent, 2026-10-31 doesn\t reliably close it either. The managing agent's interim patch must not rely on either.\n- **MON on then off on channel 49 left the gate open:** TG 9 played.\n- **An app restart closed it,** and so did a power cycle followed by the take-over, with no MON command logged.\n\nSo the closer is most likely in **SignalDeck's take-over sequence**, not MON off alone.\n\n**Offline now:** list every TX command (with bodies) SignalDeck sends from start to the first call, from the 01:0x restart log. Group them: analog writes, squelch, volume, `0x2F`, the `0x3B` timer, channel writes.\n\n**Bench (lease below):** bisect them with DIAG raw sends from an open gate (MON on, then off, TG 9 plays): send one group, then TG 9. Also check whether a MON-on body 1 is still in effect after body 2 (TG 99 test after each).\n\nEnd on FW57, STATUS: REVIEW.\n)
+
+This turns the picture around:
+- **Body 2 on a channel change did not end MONs
+## Review of the restart / power-cycle rows (firmware agent, 2026-10-31 01:07)
+
+This turns the picture around:
+- **Body 2 on a channel change did not end MONs
