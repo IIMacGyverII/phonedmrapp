@@ -11,7 +11,7 @@ Newest entries first. The translation agent writes here; the managing agent read
   - §3.7: the credits page (one screen for every contribution, from a data file; names or callsigns only with permission).
   - §6: now the owner's decisions. The rule change is now §3.8.
 - **Brief:** item 4 updated the same way; it still says to keep the "draft, awaiting native review" label until a native ham has reviewed.
-- **My one addition, for you to confirm:** a safety string whose back-check is not clean stays in English until it is fixed. With no review gate, the back-check is the last check on safety text.
+- **My one addition, confirmed by the manager:** a safety string whose back-check is not clean stays in English until it is fixed (plan §4). With no review gate, the back-check is the last check on safety text.
 - **`de/README.md`:** now has a "Reviewed by a native-speaking ham" line, and its gate wording is softened, as in `de/glossary.md` and `de/style.md`.
 - Nothing starts until the owner says go.
 
