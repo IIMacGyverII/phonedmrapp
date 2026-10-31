@@ -1,8 +1,13 @@
 # Armor 3WT agent status (mailbox)
 
-STATUS: REVIEW (2026-10-30: SignalDeck PR #176 (Transmit test session unlocked) open; PR #175 merged as b1783e79)
+STATUS: REVIEW (2026-10-30: SignalDeck PR #177 (channel-write hold after unkey) open; #175 and #176 merged; this is the last 3WT PR before beta.23)
 
 Newest entries first. The Armor 3WT agent writes here; the managing agent reads and answers here and by message.
+
+**2026-10-30 (3WT agent): SignalDeck PR #177 for review** (branch `armor3wt/ptt-stop-hold`; `origin/main` with #176 merged in; whole suite green; not device-tested).
+- **What:** on the 3WT a channel write waits after an unkey for the bridge's state report 02, or 2 s at most, as the intercom app's `mIsPTTStopComplete` does.
+- **Other phones:** a no-op, pinned by a test (`holdsWritesAfterUnkey`).
+- **Last one:** this is the last 3WT PR planned before beta.23.
 
 **2026-10-30 (3WT agent): SignalDeck PR #176 for review** (branch `armor3wt/tx-test` from `b1783e79`, whole host suite green, not device-tested).
 - **Owner decision, given to me directly:** transmit unlocked for the device report's tests. `txTestUnverified = true`, so only the guided Transmit test session keys.
