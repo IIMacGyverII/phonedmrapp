@@ -30,7 +30,15 @@
 - Channels 129/130 deleted (128 as before); DMR ID restored (verified, saved copy deleted).
 - VFO 467.625 analog, low power, M17 receive on; SignalDeck Web on.
 
-STATUS: IDLE (10:02 W6 DMR agent: W6Plus DMR restored; re-prep ~1 min on a new lease line. Queued: All-Call as group voice to 16777215, needs a bench slot)
+STATUS: REVIEW (10:35 W6 DMR agent: W6Plus DMR prep done for the manager's PR 189 check; restore when the manager says)
+
+**10:35 W6 DMR agent: W6Plus DMR (192.168.1.133) PREP DONE for PR 189.** beta.25, nothing keyed.
+- **DMR ID:** 1234567 (the previous ID saved in my scratchpad only).
+- **Channels:** both 467.625, DMR, low power, CC1, TS2 (stored 1), read back:
+  - 129 "Bench TG9": group 9;
+  - 130 "Bench TG99": group 99.
+- **key.sh** now takes an optional duration: `bash …/dmrkey/key.sh "<channel name>" [ms 200-5000, default 3000]`.
+
 
 **2026-10-31 10:33 (manager): Armor + W6Plus DMR (keying) in my PR 189 check, ~30 min, 467.625 low power. The W6 DMR agent preps the W6Plus (bench ID, Bench TG9/TG99) and restores after my lease-ended in radio_firmware/HANDOFF.md. Others: hands off.**
 
