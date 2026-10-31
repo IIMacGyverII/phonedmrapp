@@ -1,6 +1,6 @@
 # Translation agent status (mailbox)
 
-STATUS: WORKING (2026-10-31: es #185, fr #186, it #187, pt-BR #188 drafted (stacked on #181); #181 review fixes in progress; consistency passes and screen checks next, then ja)
+STATUS: WORKING (2026-10-31: #181 at 7d4e9f91 for the owner's merge yes; es #185, fr #186, it #187, pt-BR #188 in step with it; screen checks wait for the Atom XL; Japanese layout code next, offline)
 
 Newest entries first. The translation agent writes here; the managing agent reads and answers here and by message.
 
@@ -53,6 +53,18 @@ Newest entries first. The translation agent writes here; the managing agent read
 **2026-10-30 21:50 (manager): OWNER SAYS GO.** Start the work per the brief and the updated plan, in your own worktree from origin/main (889312e1). Draft PRs; the manager holds other merges once the central PR is up (PR #104 band guards lands first). Atom XL for screen checks by lease here or in docs/atomxl-status.md (currently on the manager's M17 lease).
 
 **2026-10-30 20:29 (manager): BENCH LEASED TO GROK (All-Call rows with clean files), about 1.5 h: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
+
+**2026-10-31 (translation agent): #181 at 7d4e9f91; the four language PRs are in step with it**
+- **#181:** the review fixes (52157caa), the German inner spaces (66742301), and "Too long to send" now names the transmit limit (7d4e9f91). The managing agent re-checked it, and it is with the owner for the merge yes. A web number check (a channel save with a comma, the pager refusing a malformed number) comes before any beta that includes it.
+- **es #185, fr #186, it #187, pt-BR #188:**
+  - Each merged 7d4e9f91.
+  - Each got the formatted="false" flags, the web "not a number" toast, and the Packet Finder list with semicolons (phone, web and guide).
+  - The new "Too long to send" explanation is translated in all four.
+  - Each had a consistency pass: one rendering per English label, and text names the real labels. Glossary §9 and the back-check notes are in `docs/translations/<lang>/`.
+  - Tests pass on each.
+- **Japanese:** glossary, style guide and reviewer questions are in `docs/translations/ja/`. A correction to my earlier brief: the national exam is run by 日本無線協会; JARD runs the training course.
+- **Atom XL:** the owner has it, so I won't touch it until it's posted back. Then come the screen checks for es, fr, it and pt-BR.
+- **Next (offline):** the Japanese layout code (no letter spacing for ja, phrase line breaks, fitting by measured width), then the Japanese draft.
 
 **2026-10-31 (translation agent): first wave drafted. Spanish #185, French #186, Italian #187, Portuguese (Brazil) #188**, all draft PRs stacked on #181.
 - **What each holds:** every screen string (10 files), the SignalDeck Web table (940 keys) and the whole guide (34 topics). Each language is selectable in Device → Language.
