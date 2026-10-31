@@ -1,6 +1,6 @@
 # Armor 3WT tester request (draft for the owner to post)
 
-**Where:** the Armor 3WT's own Discussions thread, https://github.com/IIMacGyverII/SignalDeck/discussions/168 (the index of all phone threads is #170). **Post after** the beta that carries SignalDeck PR #175 is published (beta.23 if it is merged before). Fill in the beta link below.
+**Where:** the Armor 3WT's own Discussions thread, https://github.com/IIMacGyverII/SignalDeck/discussions/168 (the index of all phone threads is #170). **Post after** the beta that carries SignalDeck PRs #175 and #176 is published (beta.23 if it is merged before). Fill in the beta link below.
 
 ---
 
@@ -14,7 +14,7 @@ SignalDeck now knows the Armor 3WT's radio on paper. We read the phone's interco
 
 That's what this request is for.
 
-**You need:** an Armor 3WT with Magisk root, your Magisk module that installs the intercom app and `extmodule` (keep it as it is: SignalDeck uses it), about 15 minutes, and no other app using the radio. **Nothing is transmitted:** on the 3WT SignalDeck only listens until the phone is verified.
+**You need:** an Armor 3WT with Magisk root, your Magisk module that installs the intercom app and `extmodule` (keep it as it is: SignalDeck uses it), about 15 minutes, and no other app using the radio. **Nothing is transmitted** in steps 1–5.
 
 1. Install SignalDeck **1.0.0-beta.N** (link) over any earlier build.
 2. **Open the intercom app once,** let it come up on a channel, then close it.
@@ -26,6 +26,13 @@ That's what this request is for.
 5. Post the zip in **this thread** (https://github.com/IIMacGyverII/SignalDeck/discussions/168): tap **Send** and save or share the zip, then attach it to a reply here.
    - The report blanks radio IDs and personal details.
    - Please still check it before you share it.
+
+6. **Transmit test, only once the steps above went fine** and only if you're licensed for the frequency you'll use (a dummy load or low power on a simplex frequency you may use):
+   - In SignalDeck, tap **Take over** on the Device page.
+   - Open **Device → Device report → Transmit test session**, switch on each safety rule, and follow the steps. It makes a few short keys (FM, and DMR on a DMR channel) and records what the radio does.
+   - If you have a second radio, listen with it, and for DMR tell us whether it heard the call (this phone's radio chooses the time slot itself).
+   - Then post the new zip in this thread too.
+   - On the 3WT this session is the only way SignalDeck transmits until the phone is verified. The Talk key and the side key stay off.
 
 Please also tell us in your reply:
 - whether the intercom app still works normally afterwards;
@@ -48,5 +55,5 @@ Thank you! Every report brings the 3WT closer to full support. Reports and quest
   - `module version:` (expected `ver0.5.4_470M_TONE`);
   - `stock_serial.txt` / the intercom app's log from the 15 s watch;
   - the PTT key capture: whether keycode 183 (`PROG_RED`) reached the app, and the `getevent` line `00f9`.
-- **Transmit:** the profile is unverified with `txTestUnverified` **off**, so even the Transmit test session refuses on this phone. If the owner wants the guided Transmit test session for the 3WT (as for the 20WT and the Xplore 1), it is one profile flag (`ARMOR_3WT.txTestUnverified = true`) plus a step 6 like the 20WT request's. The flag is not set until the owner approves it.
+- **Transmit:** the owner unlocked the Transmit test session for the 3WT (2026-10-30, SignalDeck PR #176: `txTestUnverified`, plus the intercom app's 500 ms release hold). What to read in `tx-report.json`: whether each key shows the radio transmitting on the second radio, whether the last word was cut, and for DMR whether the second radio heard the call (the slot is the module's choice).
 - **If the trial says the radio did not come up:** check the `extmodule` line first. On a ROM without the owner's module, nothing listens on 9980 and the profile is not even selected (detection requires `/system/bin/extmodule`).

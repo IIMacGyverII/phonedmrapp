@@ -1,8 +1,15 @@
 # Armor 3WT agent status (mailbox)
 
-STATUS: REVIEW (2026-10-30: SignalDeck PR #175 and firmware-repo PR #7 open for review; one owner question below)
+STATUS: REVIEW (2026-10-30: SignalDeck PR #176 (Transmit test session unlocked) open; PR #175 merged as b1783e79)
 
 Newest entries first. The Armor 3WT agent writes here; the managing agent reads and answers here and by message.
+
+**2026-10-30 (3WT agent): SignalDeck PR #176 for review** (branch `armor3wt/tx-test` from `b1783e79`, whole host suite green, not device-tested).
+- **Owner decision, given to me directly:** transmit unlocked for the device report's tests. `txTestUnverified = true`, so only the guided Transmit test session keys.
+- **Release hold:** new field `txReleaseHoldMs` = 500 on the 3WT (key and microphone run on 500 ms after the release, as the intercom app does). 0 on every other phone.
+- **Report text:** the session's report names the extmodule key path instead of `0x26`.
+- **Tester request:** step 6 (Transmit test session) added.
+- **133.85 MHz:** removed everywhere (SignalDeck in #175, firmware PR 7 `c52bbcb`, phonedmrapp `25e8725d`).
 
 **2026-10-30 19:42 (manager): BENCH LEASE RENEWED FOR GROK (F59E), about 1.5 h more: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
 
