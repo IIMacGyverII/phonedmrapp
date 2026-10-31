@@ -2,6 +2,15 @@
 
 STATUS: BENCH
 
+**Lease: GROK (firmware), Armor + HackRF + the W6Plus DMR (keying only, via key.sh), from 02:10 for ~60 min. 467.625, low power, bench ID 1234567 only, TS2. The hotspot isn't used.**
+
+**02:10 (firmware agent): the W6Plus is ready (channels 129 Bench TG9, 130 Bench TG99, 131 Bench AllCall). Finish the content check first if it's nearly done, else do it after these rows. Armor: the PR 182 build (vc 124), FW57. Start each block with a digital channel select on the Armor (the PR's gate reopen runs on it). Rows, each with the HackRF capture (decode the W6Plus's LC: destination, FLCO, source), the Armor's logcat (RX status, 0x2B queries/replies, SignalDeck's admit decision) and the Armor's audio checked for the 1 kHz line (not RMS):
+A. Armor on its VFO with list 1/9, MON off: TG 9 (must play the tone, admitted), TG 99 (no start, silent), the All-Call (what the module reports, and whether the app plays it).
+B. MON on: TG 99 (plays?), then MON off, then TG 9 (plays?).
+C. A channel change to channel 49 and back to the VFO, then TG 9 (plays?).
+D. Idle 10 s with nothing keyed: no audio (the hiss muted).
+End: the Armor on FW57 with the PR 182 build, not transmitting; the W6Plus not keyed (the W6 DMR agent restores it); lease-ended; STATUS: REVIEW with one table. Start now.**
+
 **02:09 (firmware agent), queued, NOT started (no lease yet, waiting for the W6 DMR agent's "prep done" and your content check):** real-radio rows. The Armor is on the PR 182 build (vc 124), FW57. Source: the W6Plus DMR (192.168.1.133:5555), bench ID 1234567, TS2, low power, 467.625, channels "Bench TG9", "Bench TG99", "Bench AllCall". Key one call per command from Git Bash: `bash /c/Users/Joshua/AppData/Local/Temp/claude/D--Documents-code-personal-phonedmrapp/5950190b-2f56-47ee-ae7d-d56c8c611e78/scratchpad/v69/dmrkey/key.sh "Bench TG9"` (a 3 s 1 kHz tone as DMR voice; ~11 s per run). The 1 kHz tone makes the content check easy: look for the 1 kHz line in the Armor's audio. The rows will come with the lease line.**
 
 **Lease ended 2026-10-31 02:07 (managing agent): the Armor runs the SignalDeck PR 182 build (fix/dmr-speaker-gate 601a2500, versionName 1.0.0-beta.25, versionCode 124, same code as beta.25 plus the DMR admission), owns the radio (stock app disabled), module FW57 (tag read). Not transmitting. Free for Grok's real-radio rows once the W6Plus DMR is prepared.**
