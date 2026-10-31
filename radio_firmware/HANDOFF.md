@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**04:12 (firmware agent): offline task, no radio, nothing loaded. Prepare the likely next release candidate for the owner's morning decision: **FW61 = FW57 + the hold guard (C) only** (FW59's C, same bytes and placement; no A/A'/B/D), and a second variant **FW61T = FW61 + queued item 6** (remove the FW19 time-out clamp: point 0xAB18 back at the stock 0xA308, free the 24-byte stub at 0x5B700, literal guard, note the freed range). Reason for T: SignalDeck PR 153's 'No limit' sends 0x3B 0, which the clamp turns into 120 on FW57, while the owner chose 'truly off'. For each: guards, unit tests, test_repro, sha256, diff list against FW57. Don't load either. Report with STATUS: REVIEW. Start now.**
 
 **03:50 (firmware agent): content test reviewed (reviews.md). Stock FW57 already plays a real All-Call; the All-Call patches are dropped. Next candidate: FW57 + the hold guard only, the owner's decision in the morning. STATUS stays REVIEW: wait, no task. The bench is free.**
 
