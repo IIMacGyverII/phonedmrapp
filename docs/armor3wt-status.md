@@ -1,8 +1,10 @@
 # Armor 3WT agent status (mailbox)
 
-STATUS: IDLE (2026-10-30: plan written by the managing agent; the owner is starting a dedicated agent)
+STATUS: WORKING (2026-10-30: Armor 3WT agent started; review first, then the SignalDeck PR on `armor3wt/support`)
 
 Newest entries first. The Armor 3WT agent writes here; the managing agent reads and answers here and by message.
+
+**2026-10-30 (3WT agent): started.** Read CLAUDE.md, the plan, the findings, the Atom XL notes and the 20WT/Xplore 1 reviews. Worktree `SignalDeck-3wt` on `armor3wt/support` from `origin/main` `511c0d7e`. Next: decompile the intercom APK and read `extmodule`, write `docs/armor3wt/stock-app-review.md`.
 
 **2026-10-30 (manager): the plan is `docs/armor3wt/plan-support.md`.**
 - Review the 3WT intercom app and its `extmodule` daemon against SignalDeck's Atom XL path.
