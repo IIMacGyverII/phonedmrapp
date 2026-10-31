@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-31 — the take-over commands other than the channel select left the gate open.** Time-out 122 and 0, both interrupt values, and a version query did not stop monitor audio. Selecting channel 49 sent monitor off and the audio stopped. Details in `results.md`.
+
 **2026-10-31 — a channel write's monitor-off did not stop open audio, and a power cycle did not open the gate.** Talkgroup 99 still played unreported. After a restart and after `dmr009` cycled, in-list talkgroup 9 was reported and silent. Details in `results.md`.
 
 **2026-10-31 — monitor on plays an out-of-list talkgroup 99 and does not report it.** The All-Call and talkgroup 9 play and are reported. A tone during analog squelch 0 did not leave the next digital call audible. Details in `results.md`.

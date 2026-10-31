@@ -4780,6 +4780,24 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Take-over bisect (01:17). FW57. VGA 30. Not transmitting.**
+
+The 01:04 restart was no longer in the log buffer. In this tree, `bootHandshake` sends a version query (`0x34`), the channel write, interrupt off (`0x35` body 2) on a digital channel, then `0x3B` body 120.
+
+The gate was opened with monitor on, on the VFO, list 1 and 9. Talkgroup 9 played and was reported. Talkgroup 99 played and was not reported. Each later command was one DIAG send, then the same two calls. Raw stayed about 61.
+
+| Command | Talkgroup 9 | Talkgroup 99 |
+|---|---|---|
+| None, gate just opened | plays, reported | plays, no report |
+| `0x3B` body 122 | plays, reported | plays, no report |
+| `0x3B` body 0 | plays, reported | plays, no report |
+| `0x35` body 2 | plays, reported | plays, no report |
+| `0x35` body 1 | plays, reported | plays, no report |
+| `0x34` body 1 | plays, reported | plays, no report |
+| Select channel 49 | silent, reported, RMS 27.2 | silent, reported, RMS 26.7 |
+
+The channel select was not a lone `0x22`. It sent `0x2F` body 2 at 01:16:00 and logged "MON off: the channel changed". After that the open audio was gone. Talkgroup 99 is in channel 49's list, so its report there is the list, not monitor. Tag `DMR003.FW57.V022`, not transmitting. Battery 35.1 °C, `mtktsAP` 42.0 °C, `mtktsbtsmdpa` 40.6 °C.
+
 **Channel write, restart, power cycle (01:06). FW57. VGA 30. Not transmitting.**
 
 Monitor was turned on while already on channel 49 (`0x2F` body 1 at 01:03:20). Selecting channel 49 again sent body 2 at 01:03:26 and logged "MON off: the channel changed". Raw 61.

@@ -1,6 +1,10 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**Lease ended 2026-10-31 01:17 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Channel 49. Hotspot not used.**
+
+From an open gate (monitor on, talkgroup 99 playing and unreported), none of these closed it: `0x3B` body 122, `0x3B` body 0, `0x35` body 2, `0x35` body 1, `0x34` body 1. Talkgroup 9 kept playing and was reported. Talkgroup 99 kept playing and was not reported. Selecting channel 49 sent `0x2F` body 2 at 01:16:00 ("MON off: the channel changed"). After that, talkgroup 9 was reported and silent (RMS 27), and talkgroup 99 was reported and silent. The 01:04 restart log was no longer in the buffer. This tree's `bootHandshake` sends `0x34`, the channel write, `0x35` body 2, then `0x3B` body 120. Battery 35.1 °C, `mtktsAP` 42.0 °C, `mtktsbtsmdpa` 40.6 °C.
 
 **01:08 (firmware agent), the take-over sequence from the managing agent (RadioEngine.bootHandshake), for the bisect:**
 1. 0x34 version.
