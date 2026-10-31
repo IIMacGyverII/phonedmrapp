@@ -380,3 +380,125 @@ Every term of the German §8, with the Italian rendering. Rows marked **❓** ar
 | No position fix yet | Posizione non ancora disponibile | | |
 | Key legends SCAN, ZONE, TXT, SOFT SQ, MON, REC, VFO, PKT | unchanged | No legend is translated. Compounds keep the name: "livello Soft SQ". The car screen's own Scan button is *Scansione*. | |
 | weekday buttons (one letter) | L M M G V S D | Italian calendar, Monday first, as Android's. Three-letter days: lun mar mer gio ven sab dom. | |
+
+## 9. Terms settled during the draft
+
+Added after the Italian draft (consistency pass, 2026-10-31): the terms the translators needed beyond §1–8, and the
+choices made where one English term had been rendered in several ways. The draft now uses the Italian in the second
+column everywhere (screens, SignalDeck Web, the guide). Rows marked **❓** are real choices for the reviewer.
+
+### Names settled in the consistency pass
+
+| English | Italian | Notes | Reviewer |
+|---|---|---|---|
+| Encrypt / Encrypt key (channel editor) | Crittografia / Chiave di crittografia (8 caratteri) | The web editor and two guide lines had *cifratura*. One word everywhere. ❓ *Cifratura* is the more technical term. | |
+| Channel name (editor field) | Nome canale | Phone and web; follows "Nome zona". The phone had *Nome del canale*. | |
+| Squelch level (editor field, classic page) | Livello di squelch | §3 form, now on the labels too (the phone had *Livello squelch*). | |
+| High / Low power (editor choices) | Alta potenza / Bassa potenza | Full form on phone and web, as the editor help text uses it; replaces the §8 short forms *Alta / Bassa*. | |
+| Wide / Narrow band (editor choices) | Banda larga / Banda stretta | As above; the web had *Larga / Stretta*. | |
+| Help & how-to | Aiuto e istruzioni | Tool tile and Help page title alike (the title had *Aiuto e guida*). | |
+| Mission Statement | La nostra missione | Button, sheet, web panel and guide. The phone had *Dichiarazione d’intenti*, the guide kept the English. ❓ | |
+| About and license (guide) | Informazioni e licenza | Software licence: *licenza*. The ham licence stays *patente* (§3). | |
+| Inbox / Outbox (Winlink folders) | In arrivo / In uscita | Folder names on phone and web; "posta in uscita" in prose. | |
+| In the Winlink outbox | Nella posta in uscita di Winlink | Same on phone and web. | |
+| ID timer idle | Timer ID fermo | Short form for the status (phone large text, web chip). The feature stays *Timer identificativo* (§8). | |
+| Licence exam practice (PKT heading, web panel) | Esercitazione esame (USA) | Shorter than the topic label *Esame USA (in inglese)*; both headings now agree. | |
+| Exam practice (feature) | Esercitazione esame | Guide topic title: *Esame USA (in inglese)* (§1). | |
+| M17 receive (button, mode, picker) | Ricezione M17 | The PKT button had *Ricevi M17*. | |
+| Message forms | Moduli di messaggio | Sheet title, PKT heading, service line. | |
+| Morse trainer | Allenamento Morse | *Allenatore* is a coach. Sheet title, button, guide. | |
+| Morse decoder (setting) | Decoder Morse | The web had *Decoder CW*. | |
+| Stop tracking (satellite pass) | Interrompi inseguimento | *Inseguimento* is the noun used throughout ("Inseguimento interrotto"); the phone and guide had *Smetti di seguire*. | |
+| Update orbits | Aggiorna dati orbitali | §8 "orbit data". Phone, web, guide. | |
+| Stop listening / Stop monitoring | Interrompi ascolto | §8 Stop → *Interrompi*. | |
+| Stop scan | Interrompi scansione | The notification action had *Ferma scansione*. | |
+| Stop the parrot | Interrompi il pappagallo | *Ferma* only for Halt (§8). | |
+| Parrot off | Pappagallo disattivato | Also the history line. | |
+| Not listening (text modes) | Non in ascolto | The web had *Ascolto spento*. | |
+| Listening on … / Monitoring … | In ascolto su … | Toasts, status line and web replies alike. | |
+| Nothing heard yet | Ancora niente ascoltato | Car screen, Last heard sheet, packet finder, web. | |
+| Receive-only channel (title, refusal) | Canale solo ricezione | Label form; the refusal toast had *solo in ricezione*. | |
+| … is receive-only (in a sentence) | è solo in ricezione | Predicate form: "questo canale è solo in ricezione", "sono sempre solo in ricezione". | |
+| Too long to send (refusal) | Troppo lungo da trasmettere | History lines now match the Last heard title. | |
+| Pass recording | Registrazione del passaggio | Phone list and web decode list. | |
+| ISS SSTV stopped | SSTV ISS interrotta | Both toasts (one had *interrotto*). | |
+| Clear the stations found? | Svuotare l’elenco delle stazioni trovate? | Phone and web. | |
+| Frequencies must be inside … | Le frequenze devono stare entro … | Phone and web. | |
+| Grid square like JO01 … | Locatore nel formato JO01 o JO01ab | Phone and web. | |
+| Include the messages' data in that log | Includi nel log i dati dei messaggi | Phone and web. | |
+| The channel the radio is on (schedule) | Il canale su cui si trova la radio | Phone and web. | |
+| Tuning … MHz, connecting in a few seconds | Sintonizzazione su … MHz, connessione tra pochi secondi | The web had *Sintonia su*. | |
+| … logged (POTA reply) | … registrato | The web reply had *nel log*. | |
+| Log a contact (web panel) | Registra collegamento | §8 "contact (logbook)". | |
+| No position fix on the phone | Il telefono non ha una posizione GPS | Web reply and chip alike. | |
+| Change (DMR ID button) | Cambia | Same as the Region chip; the ID button had *Modifica*. | |
+| empty (voice keyer slot) | vuoto | Agrees with *slot*; the web had *vuota*. | |
+| untested (profile) | non collaudato | Dialog title, status, notes and checks (five strings had *non provato*). | |
+| bench receiver | ricevitore di laboratorio | §8 bench → *laboratorio*. | |
+| intercom app (the phone maker's app, guide) | app originale | §1 stock app; the guide had *app interfono* six times. | |
+| amateur licence exams (US) | esami della patente di radioamatore degli Stati Uniti | Exam topic summary; *licenza* only for non-amateur services (GMRS, Business, licence-free). | |
+| weather alerts (NOAA, SAME) | allerte meteo | Feminine. The guide had *allarmi meteo* in seven places. | |
+| Coming up (Nets near you section) | Prossime | The section title in the app; the guide had *In arrivo* (which is the Winlink inbox). | |
+| Your own values (Region) | I tuoi valori | Guide section title now matches the sheet. | |
+| from your SIM (Region source) | dalla tua SIM | Quoted in the guide as on screen. | |
+| Wi-Fi debugging (web setting) | Debug wireless | Android's Italian name; also in the guide. | |
+| new intercom look (setting) | Nuova grafica della pagina Radio | *Grafica* everywhere (the guide had *nuovo aspetto*). The layout setting stays *Aspetto della pagina Radio*. | |
+| Classic intercom look | Grafica classica della pagina Radio | | |
+| Animated panel when quiet | Pannello animato a canale libero | The guide now uses the setting name. | |
+| Volume-up transmits | Volume su trasmette | Setting name, also in the guide list. | |
+| Forget the learned key | Dimentica il tasto memorizzato | The guide had *appreso*. | |
+| Keyword alerts (TXT menu) | Avvisi parole chiave | The real menu entry; the Last heard text had "→ Parole chiave". | |
+| Run all checks / Checks + trial | Esegui tutte le verifiche / Verifiche + prova | The guide had *controlli*. | |
+| GitHub issue (button) | Issue su GitHub | | |
+| Radio firmware files | File di firmware radio | | |
+| Download factory image | Scarica il firmware di fabbrica | §6 factory image. | |
+| Check backup round trip | Verifica andata e ritorno del backup | | |
+| Firmware load phases: Prepare, Update, Hello, Erasing, Transfer, Finish, Restart, Verify | Prepara, Aggiorna, Saluto, Cancella, Invio, Chiusura, Riavvio, Verifica | Eight characters at most under each bar segment; the guide now names them the same. ❓ Nouns (*Preparazione*, *Trasferimento*) read better but do not fit. | |
+| SSTV pictures (every mode) | Immagini SSTV (tutti i modi) | Web decode choice, also in the guide. | |
+| DTMF heard | DTMF ricevuti | Log title, button and guide. | |
+| KISS TNC | KISS TNC | Kept as on the PKT button, never *TNC KISS*. | |
+
+### Terms the translators added
+
+| English | Italian | Notes | Reviewer |
+|---|---|---|---|
+| Satellite passes | Passaggi satellitari | Sheet title, PKT button, web, guide, service line. | |
+| tracking (a satellite pass) | inseguimento | "Inseguimento di %1$s in corso". ❓ *Tracciamento* is also used. | |
+| Simplex repeater (parrot) | Ripetitore simplex (pappagallo) | The established term; elsewhere a repeater is a *ponte* (§3). | |
+| Two-tone / Morse K (roger beep) | Bitonale / K in CW | | |
+| Beeper on (fox) | Bip attivo | | |
+| Fox signal | Segnale della volpe | | |
+| Slower / Keep going (spin for the bearing) | Più piano / Così, continua | | |
+| I just identified (keyer) | Mi sono identificato | Masculine; the button speaks for the user. ❓ *Identificazione fatta* is neutral (style §8). | |
+| Clear peaks (band scope) | Cancella picchi | | |
+| Show everything (map) | Mostra tutto | | |
+| ON AIR (channel list) | IN ONDA | | |
+| PRIORITY (badge) | PRIORITÀ | | |
+| Add a zone | Aggiungi una zona | | |
+| Talkgroup lists | Liste di talkgroup | | |
+| Send by DMR text | Invia come testo DMR | | |
+| Back up now (web) | Fai il backup ora | | |
+| Download log (web) | Scarica il log | | |
+| Steering-wheel microphone | Microfono per i comandi al volante | | |
+| Stop when I stop talking | Interrompi quando smetto di parlare | | |
+| Not sure (listen check answer) | Non saprei | Gender-neutral (style §8), not *Non sono sicuro*. | |
+| Release (stock app on) (diagnostics) | Rilascia all’app originale | | |
+| Handshake log | Log dell’handshake | | |
+| Check for new firmware | Cerca nuovo firmware | | |
+| Advanced | Avanzate | | |
+| Vosk model sizes: Small, Better, Best, Largest | Piccolo, Buono, Ottimo, Massimo | Order kept readable (*Migliore* above *Ottimo* read as wrong). | |
+| Unknown sources (Android Auto developer setting) | Origini sconosciute | Android Auto's own Italian name. | |
+| ✓✓ delivered | ✓✓ consegnato | | |
+| Captions are made on the phone | I sottotitoli vengono creati sul telefono | | |
+| received (SSTV pictures, counter) | ricevute | Agrees with *immagini*; a mode name takes the masculine ("SSTV non inviato"). | |
+| sent (FT8, Winlink, M17) | inviati / inviata / inviato | Agrees with what was sent (messages, the e-mail, a text). | |
+| Idle (web intercom state) | PRONTO | The radio is ready; the device check says *inattiva*, SSTV *inattivo*. | |
+| RECEIVING / TRANSMITTING (car picture badge) | RICEZIONE / TRASMISSIONE | 12 characters at most; elsewhere *In ricezione / In trasmissione*. | |
+| ZONE · name (car picture top line) | ZONA · nome | Names the zone, not the ZONE key, so translated. ❓ German keeps *ZONE*. | |
+| Scanning … (widget status) | Scansione … | The zone name may be empty there; the toast says *Scansione di …*. | |
+| Use (caption model / channel menu) | Usa / Sintonizza | Two buttons with different jobs; *Sintonizza* tunes the channel (§2). | |
+| Decode a recording (PKT button) | Decodifica registrazione | Two buttons share the row; the SSTV button and the web panel say *Decodifica una registrazione*. | |
+| Back to the channel (web reply / editor button) | Di nuovo sul canale / Torna al canale | Reply after leaving the VFO vs the button that leaves it. | |
+| NEW (feature badge) / New (button) | Novità / Nuovo | Different meanings. | |
+| Page (thread hint) / PAGE (chip) | Messaggio pager / PAGER | §8 *messaggio pager*; the chip is very short. | |
+| Hey Google, play … on SignalDeck (car voice example) | Hey Google, riproduci … su SignalDeck | ❓ Not checked against the Italian Assistant. | |
