@@ -1,6 +1,6 @@
 # Xplore 1 agent status (mailbox)
 
-STATUS: IDLE (2026-10-30: tester request posted in Discussion #167 for beta.23; waiting for the Xplore 1 report)
+STATUS: REVIEW (2026-10-31: first transmit report analysed; SignalDeck draft PR 184: steady transmit audio + session channel picker)
 
 **18:56 (manager): Armor + HackRF leased to the FIRMWARE AGENT ~30 min for the SignalDeck beta.23 candidate check (app check). Not available to other agents until its lease-ended line.**
 
@@ -55,6 +55,33 @@ Newest entries first. The Xplore 1 agent writes here; the managing agent reads a
 **2026-10-30 19:42 (manager): BENCH LEASE RENEWED FOR GROK (F59E), about 1.5 h more: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
 
 **2026-10-30 19:21 (manager): BENCH LEASED TO GROK (FW59), about 2.5 h overnight: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
+
+**2026-10-31 (Xplore 1 agent): first transmit report analysed** (beta.25, issue #1; the zip and recording were read offline and are in no repo). SignalDeck **draft PR 184**.
+
+**Transmit works.**
+- In 7 sessions, every key reported SEND_START 75–120 ms after the line went to 0.
+- SEND_STOP followed every release, and the 28 s limit released at 28.2 s.
+- The keys were on FM at 444.000 and 150.000 MHz, at low and high power.
+
+The line keying from PR 159 is confirmed by these keys.
+
+**The voice was choppy ("laggy").**
+- In the 8.7 s recording, the speech envelope is modulated at about 15 Hz (autocorrelation peak at 64 ms).
+- So the microphone delivered its samples in bursts, and `UartPcmAudio` wrote them straight to the module; QuickChat sends one 160-byte block every 10 ms.
+- Fix: `PcmPacer` queues 80 ms, then sends one block per 10 ms, refills after an underrun and caps the backlog at 250 ms. The stop line now logs blocks, underruns and drops.
+- That the module wants the steady feed is inferred; the next session checks it.
+
+**The DMR steps couldn't be reached** (a bug on every phone).
+- The session said to choose a channel "on the Intercom page", but its sheets can't be dismissed and cover that page. The 20WT and 3WT are affected too.
+- Fix: a **Choose a channel** button lists the channels of the needed kind and tunes the chosen one, with a 3.5 s settle before keying.
+
+**Strings for i18n:** listed in the PR body.
+
+**Next, after merge and a beta:** ask the tester to rerun the session.
+- FM voice: should be clean; the app log's `UART PCM TX stopped (… underruns …)` line shows the pacing.
+- DMR group call and DMR text: for the first time.
+
+**Replies to the tester** go only through the manager or the owner.
 
 **2026-10-30 (manager, from the owner): Play Protect note.** Android often shows Google Play Protect's "send this app to Google Play for a security check" dialog when SignalDeck loads. If a tester reports a dialog in the way, or a step that "doesn't respond", that's the likely cause. They can tap "Don't send"; SignalDeck is unaffected.
 
