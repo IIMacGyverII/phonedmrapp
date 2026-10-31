@@ -4780,6 +4780,16 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**All-Call mute (02:24). Offline. FW57. No radio.**
+
+`0x11A34`'s DMR arm is the byte `0x34808+2` selecting `0x11c40`. The voice state is the byte at `r8−20` equal to 3. That state calls `0x23d54`. A nonzero return takes `0x11d18` to `0x11d2e`, which stores 1 and returns 1, and the caller skips the rest of the setup. A zero return falls into `0x11d1c`, which calls `0x180ec` with the mode byte and argument 2. That is the unmute, and it is what reaches `0x17f20`. The twin for state 2 is `0x11d80`, unmute `0x11d84`, mute `0x11d96`.
+
+`0x23d54` returns 1 only when `0x4C7BC+0x13` is set, the byte at `0x4D318+slot+14` is clear, and the byte at `+16` is clear. The byte at `+14` is the list match. An All-Call is not in the list, so the match stays clear and the return is 1. The unmute is skipped. A listed talkgroup sets the match and returns 0, so it plays. Talkgroup 99 does not reach this arm: it never starts a receive.
+
+The report is a different path. When bit 1 of the word at `r8−8` is set, `0x14b48` loads `0x4D318[(slot+7)]` as a word and `0x14b4e` stores it at `0x4C7A0+4`. That is the `0x2B` target. During the All-Call it was 16777215, with type 2. The audio decision does not read it.
+
+The smallest patch is not built. Replace the 4-byte `bnez` at `0x11d18` (`e923000b`) and the one at `0x11d80` with a `bsr` to one stub. The stub keeps the old exits. `r3 == 0` goes to the unmute (`0x11d1c` or `0x11d84`). Otherwise it loads the same word, `0x4D318[(byte at 0x4C7BC+2)+7]`. Equal to 16777215 goes to the unmute. Any other value goes to the mute (`0x11d2e` or `0x11d96`). Those four labels reload `r3`, so the stub may use `r2` and `r3`. It must leave `r8` alone. The exits in the running image are file offset plus `0x0301A000`: `0x0302BD1C`, `0x0302BD2E`, `0x0302BD84`, `0x0302BD96`. This does not call `0x37F4`. A listed talkgroup is unchanged. An unmatched talkgroup stays muted.
+
 **W6Plus rows on the PR 182 build (02:17). FW57. Not transmitting.**
 
 The app is `1.0.0-beta.25`, versionCode 124. Each block began with a select of channel 49, then the VFO, list 1 and 9. The W6Plus sent a 3 s 1 kHz tone. A tone in the Armor audio is a 1 kHz bin at least 6 dB above the neighbouring bins.

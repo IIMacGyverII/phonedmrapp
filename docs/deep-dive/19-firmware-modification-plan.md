@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-31 — an All-Call skips the voice unmute because it is not in the receive list.** The report still carries target 16777215. A four-byte branch at the two admit sites would send that one call down the unmute. Not built. Details in `results.md`.
+
 **2026-10-31 — on the PR 182 build, talkgroup 9 from the W6Plus plays the 1 kHz tone and talkgroup 99 does not.** The All-Call is reported and the tone is absent. The idle hiss is not muted. Details in `results.md`.
 
 **2026-10-31 — a caller-info query is answered about 7 ms after it is sent, and a following talkgroup 99 does not replace talkgroup 9.** The stock app reported all three calls. The W6Plus did not key. A speaker-gate stub is sketched and was not built. Details in `results.md`.
