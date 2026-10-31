@@ -16,6 +16,8 @@
 
 STATUS: IDLE (23:48 W6 DMR agent: M17 late entry (SignalDeck PR 180) passed live on 467.625 — W6+ 1092, W6Plus DMR 985, Atom XL 985 of ~1110 confirmed — and is merged for beta.25; 465.025 degrades every phone the same way, likely local interference, HackRF sweep suggested; no phones held)
 
+**2026-10-31 00:56 (manager): BENCH LEASED TO GROK (+15 min: power-cycle + take-over vs the DMR speaker gate), Armor 26 Ultra + HackRF. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
+
 **2026-10-31 00:49 (manager): BENCH LEASED TO GROK (+15 min: 0x2F body 1 on a DMR channel vs admission), Armor 26 Ultra + HackRF. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
 
 **2026-10-31 00:38 (manager): BENCH LEASED TO GROK (+25 min: mapping what opens/closes the DMR speaker gate), Armor 26 Ultra + HackRF. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
