@@ -77,6 +77,8 @@ No transmit, no channel changes. App language and build restored afterwards: ple
 
 STATUS: IDLE (22:11 2026-10-30 Atom XL agent: M17 receive root cause found offline (no late entry in the receiver, the Atom XL capture always misses the preamble); fix proposed to the W6 DMR agent, which leads on the shared receiver; no lease)
 
+**2026-10-31 00:38 (manager): BENCH LEASED TO GROK (+25 min: mapping what opens/closes the DMR speaker gate), Armor 26 Ultra + HackRF. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
+
 **2026-10-31 00:27 (manager): BENCH LEASED TO GROK (+25 min: DMR speaker gate rows, MON on/off, open analog squelch first), Armor 26 Ultra + HackRF. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
 
 **2026-10-31 00:06 (manager): BENCH LEASED TO GROK (HackRF replays at two levels, FW57 then F59D), about 60 min: Armor 26 Ultra + HackRF (no hotspot). Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
