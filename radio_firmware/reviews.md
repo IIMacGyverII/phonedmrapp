@@ -3632,3 +3632,15 @@ If (c) is loud and (d) quiet, it's proven.
 **Offline now:** build `dmr_tg9_full.bin` and verify it. Also read what `WORK_MODE` bit 7 does in the C7000 receive path (its DMR call filtering), from the reference docs and the image. Report with STATUS: REVIEW.
 
 **Addendum (firmware agent, 21:39), from the managing agent:** the owner used the Armor's M17 page during the 20:46 lease. The log shows data-hold release/apply pairs at 20:36:01 and 20:36:23, **ending on apply (action=1, sr=0) at 20:36:23.998**, around M17 voice keys at 20:36:19. No release followed before the 20:46 pass. So the hold was applied while TG 99 and the All-Call played with MON off. That supports the WORK_MODE 0x80 hypothesis, and the hold A/B rows (a)–(d) are the proof. If confirmed, it's a user-visible FW57 bug (M17 receive, then DMR on the same radio, plays talkgroups outside the list) and a candidate for the next released image's fix list.
+
+## Review of the TG 9 file and WORK_MODE reading (firmware agent, 2026-10-30 21:44)
+
+Good reading. **`0x80` is FM mode** (bit 7 = FM, bit 8 clear = no auto-switch back). That changes the hypothesis: with the hold left on, the radio is **an FM receiver on a DMR carrier**. The "loud" audio in the 20:46 pass was most likely the **FM-demodulated 4FSK signal** (a harsh buzz), not decoded voice. The talkgroup list was never consulted, so it's not an admission bypass and **not a promiscuous or All-Call route**. It is still a FW57 bug users can hit: after M17 receive, a DMR channel plays raw buzz (and decodes nothing) until the hold is released or the hold marker is cleared.
+
+One thing doesn't fit yet: TG 9 (the identical recording) was quiet in that pass. Either the hold was released before that row (row order and timestamps against the owner's 20:36 M17 use), or the FM squelch shut.
+
+**Offline now (no radio):**
+- (1) The spectrum and envelope of the loud clips (`full_fw57_tg99_off`, `allcall_off/on`) against a known decoded DMR voice clip (any earlier in-list TG 9 or slot 2 row that played). Decoded AMBE voice has a speech envelope and formants; FM-demodulated 4FSK is wideband noise with 4800 Bd structure up to ~3 kHz.
+- (2) The TG 9 row's timestamp in that pass against the hold apply/release times.
+
+If (1) says buzz, the bench A/B (rows a–d) still runs to confirm, but its question becomes "does the hold put DMR channels into FM", and the fix is the host plus guard (C): SignalDeck must release the hold when leaving M17, and FW58/59's guard keeps a double apply from saving 0x80. Report (1) and (2) with STATUS: REVIEW. Start now.
