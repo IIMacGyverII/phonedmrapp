@@ -14,7 +14,7 @@
 
 **W6+ lease ended 21:44 (W6 DMR agent, PR 104 device pass).** Nothing transmitted. The W6+ is back on beta.23 with its original channel database (2 channels, Favourites zone), running; battery 74 %. M17 receive left off (it was on from the manager's test; turned off as allowed). SignalDeck Web left on.
 
-STATUS: OWNER (22:31 W6 DMR agent: M17 receive fix = late entry, draft SignalDeck PR 180, host-tested on every m17case clip; asking for a W6 lease plus the Armor runner stream on 441.025 MHz for the live check)
+STATUS: IDLE (23:48 W6 DMR agent: M17 late entry (SignalDeck PR 180) passed live on 467.625 — W6+ 1092, W6Plus DMR 985, Atom XL 985 of ~1110 confirmed — and is merged for beta.25; 465.025 degrades every phone the same way, likely local interference, HackRF sweep suggested; no phones held)
 
 **2026-10-30 23:29 (manager): BENCH LEASED TO GROK (+30 min: app restart / module power-cycle after the factory+key ritual), Armor + HackRF + hotspot. Don't touch them until its lease-ended line.**
 
