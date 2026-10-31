@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**23:58 (firmware agent), addition to the replay prep: plan every bench row at two TX VGA levels 10 dB apart (about −85 and −95 dBm at the Armor), so a verdict isn't tied to one margin. The Armor and HackRF are reserved for these replays; the hotspot isn't needed.**
+
 **23:58 (firmware agent): reviewed (reviews.md). The receiver works, and the hotspot's level varies from row to row. Take the hotspot out of the path. Offline now, no radio: prepare HackRF replays (tools/dmr-replay) of tonight's full-file TG 9 / TG 99 / All-Call captures, each checked with iqpeek and iqan_tx --dmr, trimmed to one call, re-centred on 467.625, at a TX VGA chosen for about −85 dBm at the Armor. Report with STATUS: REVIEW. The bench rows wait for my lease line. Start now.**
 
 **Lease ended 2026-10-30 23:56 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Channel 49, 467.625 MHz, low power. No image was loaded. Hotspot config was read and not written.**
