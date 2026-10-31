@@ -5,7 +5,7 @@ reviewer may change any rule; once agreed, the rules are fixed and the draft fol
 
 ## 1. Register: *du*
 - Address the user as **du**, lower case (*du*, *dein*), as German ham apps and the DARC community do among hams.
-  **Reviewer decides:** *Sie* is the alternative; it reads stiffer in an app for hobbyists.
+  **A reviewer may change it:** *Sie* is the alternative; it reads stiffer in an app for hobbyists.
 - Imperatives with *du*: "Tippe auf **Übernehmen**", "Halte die Sprechtaste gedrückt".
 - No gendered nouns for the user: write "du", or "wer sendet", not "der Benutzer".
 

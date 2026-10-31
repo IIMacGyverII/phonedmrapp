@@ -2,7 +2,8 @@
 
 **Status: draft, awaiting native review.** Written by the translation agent on 2026-10-30 from the English UI on
 `origin/main`, before any string was extracted. It is for the German reviewer (the tester who asked for German) to agree
-or correct, **before any German string is drafted**. Every later German string follows this table, so one English word
+or correct, ideally **before any German string is drafted**. Review does not gate the release (owner, 2026-10-30): if
+answers come later, the draft is changed to match. Every later German string follows this table, so one English word
 is never rendered three ways.
 
 - **How to review:** for each row, keep it or write the better term in the last column. Rows marked **❓** are real

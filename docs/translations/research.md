@@ -12,7 +12,8 @@ narrowed scope, relayed by the managing agent). Surveyed `origin/main` at `5ab5a
   - the guide (`HelpView.TOPICS`): **~31,700 words**, the biggest single piece;
   - SignalDeck Web: ~8,000 words.
 
-  The guide alone is the length of a short novel, and it sets the native-review effort (§7).
+  The guide alone is the length of a short novel. Native review no longer gates a release (owner, §7), so it does not
+  set the pace.
 - **Text from outside the app** adds ~6,000 words per language:
   - radio notes (`radios.json`): ~3,100;
   - regions (`regions.json`): ~3,000 of its ~5,500;
@@ -157,7 +158,7 @@ Activities and views use the same calls, so there is one path. This also fixes t
   - Both must read the English JSON instead, with slugs from the ids, so the website URLs stay the same.
   - A translated guide can then be exported per language (`docs/help/de/…`) when one ships.
 - **The CLAUDE.md help rule** ("update `HelpView.java` TOPICS in the same change") then points at
-  `assets/guide/en.json`. That is part of the §3.7 rule change to propose to the managing agent.
+  `assets/guide/en.json`. That is part of the plan §3.8 rule change to propose to the managing agent.
 - **`ChannelEditorView` `H_*`:** the 30 field texts go in `strings_channel_editor.xml` (they are short and tied to one
   screen), not the guide file.
 
@@ -178,7 +179,7 @@ Activities and views use the same calls, so there is one path. This also fixes t
     `Txt.freq(hz)` helper.
   - Every frequency, offset and step entry field then has to accept both `,` and `.` (71 `parseDouble/parseFloat` sites
     to review).
-  - Owner/reviewer question 5 decides whether German shows the comma or keeps the radio-display dot.
+  - Decided (§7.5): German shows the comma everywhere on screen, and entry fields accept both; reviewer to confirm.
 - **Dates:** times are `HH:mm` (fine everywhere). The ~10 formats with day and month names (`"EEE d MMM, HH:mm"`) use
   `Locale.US` and must take the app's locale.
 - **Upper case:** `Neo.caps/title/chip` uppercase with `Locale.US`. For German that is right (ß → SS). Turkish would need
@@ -213,7 +214,7 @@ downloaded.
   - Inline rather than a separate file: the list has to stay one signed unit, and an advisory and its translations are
     published together.
   - **Safety rule:** advisories and firmware-loader text are safety text. A **new advisory is never held back waiting for
-    a translation:** it goes out in English, and translations are added in a later serial once reviewed.
+    a translation:** it goes out in English, and translations are added in a later serial once back-checked.
   - When a translation is shown, the Device page shows the English original under it (one tap), because a stale
     translation of a transmit restriction is worse than none.
 - **Bundled, hand-edited data (radio notes, regions): a per-language overlay file,** `radios.<lang>.json` and
@@ -323,7 +324,7 @@ numbered arguments. Units go inside the string (`%1$s MHz`); numbers are formatt
   (*Sendeleistungseinstellung*) are long single words, so `fit` shrinks them rather than wrapping, and the glossary
   prefers short forms. The compact intercom layout on 480 × 854 phones is the hardest case and is checked first.
 - **Intercom key labels** (SCAN, ZONE, TXT, SOFT SQ, MON, the six buttons): the German glossary suggests keeping SCAN
-  and ZONE as key legends, as German radios do. The reviewer decides.
+  and ZONE as key legends, as German radios do. Decided (§7.6): the key legends stay English.
 
 ### 5.4 Fonts (low for wave 1, medium for Japanese)
 - Rajdhani and Share Tech Mono have every letter for de/es/fr/pt-BR/it.
@@ -333,17 +334,19 @@ numbered arguments. Units go inside the string (`%1$s MHz`); numbers are formatt
   the size to be checked. Japanese also needs line-break checks (no spaces), which `Neo.fit`'s word count does not
   handle.
 
-### 5.5 Review effort (high, owner question 2)
+### 5.5 Review effort (settled by the owner: review is not a gate)
 - ~60,000 words per language, more than half of it the guide. A careful native reviewer manages perhaps 1,500–2,500
   words an hour on a technical text, so **25–40 hours per language**, before the in-context screen review.
-- That is a lot to ask of one volunteer. Suggested split: the UI ships first once reviewed (~25,000 words), and the guide
-  follows topic by topic, falling back to English per topic until reviewed. This needs the owner's consent, because the
-  plan says a language is done only with the whole guide.
+- **Owner, 2026-10-30:** a language ships once it is translated, back-checked and screen-checked. Native review improves
+  it afterwards, as plain-file PRs, so a volunteer can review one screen or one guide topic at a time.
+- What that puts on the agent: the back-check and screen check are the quality gate, so they have to be thorough,
+  especially for safety text (plan §4: a safety string with a back-check that is not clean stays English until fixed).
+- Each language's README keeps a list of what a native ham has reviewed, so users and later reviewers can see it.
 
 ### 5.6 Ongoing cost for the other agents (medium)
 - After extraction, every change with UI text edits `strings*.xml` instead of a literal, and every help change edits
   `guide/en.json`.
-- Other languages must be marked as needing translation (plan §3.7). The simplest mechanism is a per-language
+- Other languages must be marked as needing translation (plan §3.8). The simplest mechanism is a per-language
   `untranslated.txt` written by the key test, rather than hand-marking.
 - The CLAUDE.md/GROK.md rule must say this, and the guard test enforces it.
 
@@ -388,41 +391,41 @@ Per language, once extraction is merged:
 | Back-check (independent pass) | 4 h | 4 h | 5 h |
 | Screen check (every screen, Atom XL + browser) + fixes | 4–5 h | 3–4 h | 6–8 h (line breaks) |
 | **Agent total** | **~25–30 h** | **~25 h** | **~35–40 h** |
-| Native review (human) | 25–40 h | 25–40 h | 25–40 h |
+| Native review (human, after shipping, not a gate) | 25–40 h | 25–40 h | 25–40 h |
 
-Radio notes and regions add ~6,000 words per language: about 3 h of drafting and 3–4 h of native review.
+Radio notes and regions add ~6,000 words per language: about 3 h of drafting and 3–4 h of review.
 
-**Overall:** extraction ~6–7 nights, then about 3 nights per language for the agent. The real pace is set by the native
-reviewers (§5.5).
+The credits page (plan §3.7: one screen for reviewers, testers and contributors, from a data file) is about 2 h. It
+belongs with the Device/About group (step 5).
 
-## 7. Decisions and open questions
+**Overall:** extraction ~6–7 nights, then about 3 nights per language for the agent. Because review is not a gate, a
+language can reach a beta about 3 nights after the previous one; reviews then improve it at the reviewers' pace.
 
-Answered by the managing agent on 2026-10-30. Questions 2, 7 and 8 belong to the owner; the managing agent has put its
-recommendations to him. **Nothing starts until the owner says go.**
+## 7. Decisions
 
-### Decided (managing agent)
-1. **Branches during extraction** (§5.1): **freeze only for the central steps** (§6 steps 0–2: `Txt` accessor, history
-   schema, guide move), then **one screen group at a time**. The freeze starts after beta.23 is published, and the
-   managing agent schedules it with the translation agent.
-3. **Reports stay English** (§3): the device report, transmit-test report, audio check and bench summaries. Only the
-   Device page's text around them is translated.
-4. **History schema** (§4.4): **yes.**
+Engineering questions decided by the managing agent; questions 2, 7 and 8 decided by the owner, both on 2026-10-30.
+**Nothing starts until the owner says go.**
+
+1. **Branches during extraction** (§5.1), managing agent: **freeze only for the central steps** (§6 steps 0–2: `Txt`
+   accessor, history schema, guide move), then **one screen group at a time**. The freeze starts after beta.23 is
+   published, and the managing agent schedules it with the translation agent.
+2. **Review** (§5.5), owner: **a language ships once it is translated** (back-checked and screen-checked). Native
+   review is **not a gate**: when a reviewer proposes changes, the translation is changed. The plan's §4–5 and the brief
+   now say so.
+3. **Reports stay English** (§3), managing agent: the device report, transmit-test report, audio check and bench
+   summaries. Only the Device page's text around them is translated.
+4. **History schema** (§4.4), managing agent: **yes.**
    - Add the `key`/`args` columns, and keep old rows as English text.
    - Backups and SignalDeck Web must round-trip both kinds of row (with a key and English-only).
    - Step 1 includes a **migration test** for this.
-5. **Decimal comma** (§4.7): German drafts **the comma everywhere on screen**, the large readout included (`467,625 MHz`).
-   **Every frequency, offset and step entry field accepts both `,` and `.`** (the 71 parse sites in §4.7). It is marked
-   "reviewer to confirm" in `de/style.md`, and the German reviewer has the final say.
-6. **Intercom key legends:** **SCAN, ZONE, TXT, SOFT SQ and MON stay English** in every language.
-
-### Waiting for the owner (managing agent's recommendation in brackets)
-2. **Review in two parts** (§5.5): may a language ship with its UI reviewed and the guide following topic by topic
-   (English per topic until reviewed)? *(Recommended: yes.)*
-7. **Reviewer credit:** in About by name or callsign, or anonymously? *(Recommended: in About by name or callsign, only
-   with the reviewer's permission.)*
-8. **Tooling:** plain files through GitHub PRs, or Weblate? *(Recommended: plain files through GitHub PRs for German;
-   decide on Weblate when outside reviewers join.)* Weblate reads `strings.xml` and JSON directly, so §4's formats work
-   with both.
+5. **Decimal comma** (§4.7), managing agent: German drafts **the comma everywhere on screen**, the large readout
+   included (`467,625 MHz`). **Every frequency, offset and step entry field accepts both `,` and `.`** (the 71 parse
+   sites in §4.7). It is marked "reviewer to confirm" in `de/style.md`, and the German reviewer has the final say.
+6. **Intercom key legends**, managing agent: **SCAN, ZONE, TXT, SOFT SQ and MON stay English** in every language.
+7. **Credit**, owner: **one credits page** for every contribution in one place (translators and reviewers, testers,
+   contributors). Names or callsigns only with permission. Added to the plan as a screen (plan §3.7).
+8. **Tooling**, owner: **plain files through GitHub PRs** for German. A hosted tool (Weblate) is decided if outside
+   reviewers join. §4's formats work with both.
 
 ### The German tester
 Contact goes **through the owner only**, never directly from an agent. The glossary questions for the tester are listed

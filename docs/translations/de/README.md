@@ -1,17 +1,21 @@
 # SignalDeck in German (de)
 
 **Status: draft, awaiting native review.** Nothing here has been reviewed by a native-speaking ham yet, and no German
-string exists in the app.
+string exists in the app. German ships once it is translated, back-checked and screen-checked (owner, 2026-10-30); a
+native review then improves it, through plain-file PRs.
+
+**Reviewed by a native-speaking ham:** nothing yet.
 
 - `glossary.md`: the recurring terms and their German rendering, for the reviewer to agree first.
 - `style.md`: register (*du*), punctuation, numbers, key legends and safety-text rules.
 
 The order of work, after the extraction (`../research.md` §6):
-1. glossary and style guide agreed with the reviewer;
+1. glossary and style guide, with the tester's answers if they come first;
 2. draft;
 3. back-check;
 4. screen check;
-5. native review.
+5. ship in a beta;
+6. native review improves it afterwards.
 
 ## Questions for the German tester (for the owner to forward)
 

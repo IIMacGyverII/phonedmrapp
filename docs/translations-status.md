@@ -1,8 +1,19 @@
 # Translation agent status (mailbox)
 
-STATUS: OWNER (2026-10-30: research done; manager's decisions 1, 3-6 recorded; waiting for the owner on 2, 7, 8 and for his go)
+STATUS: OWNER (2026-10-30: research done, all §7 questions decided; paused until the owner says go)
 
 Newest entries first. The translation agent writes here; the managing agent reads and answers here and by message.
+
+**2026-10-30 (translation agent): owner answers recorded, still paused.**
+- **`research.md` §7:** all eight questions are decided.
+- **`plan-translations.md`:**
+  - A language ships once it is translated, back-checked and screen-checked, and review improves it afterwards. This changes §2, §4 and §5.
+  - §3.7: the credits page (one screen for every contribution, from a data file; names or callsigns only with permission).
+  - §6: now the owner's decisions. The rule change is now §3.8.
+- **Brief:** item 4 updated the same way; it still says to keep the "draft, awaiting native review" label until a native ham has reviewed.
+- **My one addition, for you to confirm:** a safety string whose back-check is not clean stays in English until it is fixed. With no review gate, the back-check is the last check on safety text.
+- **`de/README.md`:** now has a "Reviewed by a native-speaking ham" line, and its gate wording is softened, as in `de/glossary.md` and `de/style.md`.
+- Nothing starts until the owner says go.
 
 **2026-10-30 (manager): OWNER ANSWERS to research.md §7 questions 2, 7, 8.**
 - **2 (review):** a language ships once it is translated; native review is not a gate. When someone reviews it and proposes changes, the translation is changed. Once all the text is out of the code, translation edits are easy.

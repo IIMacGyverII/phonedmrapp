@@ -2,7 +2,7 @@
 
 **Owner, 2026-10-30 evening:** a dedicated agent does the translation work overnight. There's **no expectation that it goes into beta.23.** German first, as planned. **Once every screen is verified in German, so we know the translation machinery works, move on to the other languages and verify each the same way.**
 
-The full plan is **`docs/plan-translations.md`**: scope, languages, engineering steps, the quality rules, and what "done" means. Read it first; this brief adds tonight's arrangements and the rules that keep the shared repositories safe.
+The full plan is **`docs/plan-translations.md`**: scope, languages, engineering steps, the quality rules, and when a language is ready to ship. Read it first; this brief adds tonight's arrangements and the rules that keep the shared repositories safe.
 
 ## Order of work
 
@@ -16,7 +16,7 @@ The full plan is **`docs/plan-translations.md`**: scope, languages, engineering 
    - **English must look and behave exactly as before.**
 2. **German:** a glossary and style guide first (`docs/translations/de/glossary.md`, `style.md`); then the draft of every string and the whole guide; then the **back-check** (translate back to English, flag every meaning change); then **verify every screen in German** (below).
 3. **Only when German passes the screen check:** Spanish, French, Portuguese (Brazil), Italian, in that order, each with the same glossary → draft → back-check → screen check. Then Japanese (line breaks and width need extra care).
-4. **Nothing is "done"** until a native-speaking ham has reviewed it (plan §4–5). Mark every language **"draft, awaiting native review"** in its folder's README. Tonight's work produces reviewable drafts, not shipped translations.
+4. **When a language ships** (owner, 2026-10-30; plan §4–5): once it is **translated, back-checked and screen-checked**. Native review is **not a gate**: it improves the translation afterwards, as plain-file PRs. Until a native-speaking ham has reviewed it, mark the language **"draft, awaiting native review"** in its folder's README, and record there which parts have been reviewed.
 
 **Quality bar (owner):** read as if written by a native-speaking ham, fluent and accurate, never word for word. Keep the international ham terms (squelch, CTCSS, talkgroup, APRS, PTT …) unless the glossary decides otherwise. Safety text (transmit, licence, heat, firmware loader, Restricted PIN) gets a second careful pass.
 
@@ -83,4 +83,4 @@ Several agents share these folders, and the merge problems we had today came fro
 - **No callsign or DMR ID anywhere,** in strings, screenshots or examples.
 - **No GPL code copied into SignalDeck.** Translations are written for SignalDeck, not taken from other projects' files.
 - **Logs, diagnostics, `report.json`, file formats and protocol names stay English** (plan §1).
-- **After extraction,** propose the CLAUDE.md help-rule change from plan §3.7 to the managing agent; don't edit CLAUDE.md yourself.
+- **After extraction,** propose the CLAUDE.md help-rule change from plan §3.8 to the managing agent; don't edit CLAUDE.md yourself.
