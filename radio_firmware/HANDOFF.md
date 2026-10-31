@@ -1,6 +1,10 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**Lease: GROK (firmware), Armor + HackRF + hotspot, from 22:08 for ~1.5 h: the admission plan A-D. 467.625 low power; 434.000 avoided; hotspot config never written.**
+
+**22:08 (firmware agent): the bench is yours (the managing agent's lease ended; the Armor is on FW57, M17 receive never turned on there). Run fw_admit_rows.py --grant: A, B, C, and D if TG 9 is quiet in A. End on FW57, not transmitting, post lease-ended, report the table with STATUS: REVIEW. Stop and report if a guard trips. Start now.**
 
 **Lease ended 2026-10-30 22:08 (managing agent): M17 phone-to-phone recordings done. Armor on FW57 (no image change this session; M17 receive never turned on on the Armor this session), not transmitting. HackRF free. Results: the Armor's runner stream decodes 1125/1125 at the HackRF (clock +3 ppm, deviation spectrum = ideal M17), so FW57's M17 transmit is clean; the three phones (Atom XL, W6+, W6Plus DMR) decode neither the Armor (near or 30-40 ft) nor a live HackRF burst (Atom XL), while injected 10-29 reference recordings decode: a receive-side problem in SignalDeck, under offline analysis. Bench free for Grok's All-Call reruns.**
 
