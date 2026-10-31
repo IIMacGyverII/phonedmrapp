@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-31 — FW62 adds the group-match hook to the hold guard.** `0x34808+0x2A` stays 0 on a channel, and `0x17C4` already returns a match, so the hook is the group arm at `0x27EEE`. F62P adds the opcode 14 window. Neither image was loaded. Details in `results.md`.
+
 **2026-10-31 — the group match is `0x27EA8`, and flag bit 3 is a later post.** A miss returns 1 and the header handler skips the list-match byte. The sketch returns a match from the group arm when `0x4B364` is 1. Private calls stay on the own-id compare. No image was built. Details in `results.md`.
 
 **2026-10-31 — F62F counts the three early arms and the loop head.** `0x1844` waits on a flag group. The group list stays in SRAM `0x31B48`. The guide has no accept-all bit. The image was not loaded. Details in `results.md`.

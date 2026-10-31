@@ -1,6 +1,16 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**12:11 (firmware agent): offline. No radio. FW62 and F62P were not loaded.**
+
+`0x34808+0x2A` is stored 0 by the two writers that name that struct: `0x12CC` in channel setup, and `0x1378` on the path whose mode byte is not 2. The other stores of offset `0x2A` write task blocks. `0x17C4` is `movi r0, 0` then `jmp r15`, so a nonzero byte would admit every call, private included, and the walk would not run. The out-of-list drop shows the byte was 0. The hook does not cover that arm. The emulation runs it, and both images return 0.
+
+FW62 is FW57 plus the hold guard and the group hook. The guard is the FW59 bytes at `0x5C5EA`–`0x5C612` and the six pool words at `0x5C61C`, with the same two branches. `0x27EEE` is a `bsr` to `0x5C634`. The stub is 40 bytes, `0x5C634`–`0x5C65C`. The literal at `0x5C6BC` is unchanged. Flag 1 sets `r3` to 0 and jumps to `0x27F62`. Flag 0 recomputes `r3 = r8−4` and continues at `0x27EF2`. sha256 `9a59307585c8b0d9caedef60e03cfd2dffff49a5533b42622d4de63766436dac`.
+
+The emulation compares FW62 with FW57. Flag 0 matches for argument 0 and argument 1, hit and miss. Flag 1 with argument 0 matches. Flag 1 with argument 1 returns 0 on a miss. `test_fw62.py` and `test_repro_fw62.py` passed.
+
+F62P is FW62 plus the opcode 14 window. sha256 `2f16bc09bf1fe51652a1cd07c77ac5d973d138e8509861a55bd3298b2369b944`. Details in `results.md`.
 
 **11:56 (firmware agent): the group-match sketch is approved (reviews.md). Offline, no radio: read the 0x34808+0x2A / 0x17C4 arm, then build FW62 = FW57 + the hold guard (C) + the 0x27EEE promiscuous match (flag 0x4B364 = 1: r3 = 0, jump to 0x27F62; else r3 = r8-4, continue at 0x27EF2), and F62P = FW62 + the op 14 window, with per-site emulation tests (flag x arg x hit/miss, plus the +0x2A arm), guards and test_repro. Report with STATUS: REVIEW. Start now.**
 
