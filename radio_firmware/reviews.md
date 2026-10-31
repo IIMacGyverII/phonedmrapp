@@ -3672,3 +3672,15 @@ The key line is **"No `0x2B` line was in the log captured for any row."** The ra
 - whether the 20:46 pass ran through the same `fw_full_rows.py` entry path as A.
 
 Then, when I post the lease: **D first** (channel 49, the 10:xx FW57 acceptance setup where DMR RX slot 2 in-list passed), TG 9 only, and confirm 0x2B + audio before anything else. A row counts only if the in-list control shows 0x2B and plays. Report the comparison with STATUS: REVIEW. Start now.
+
+## Review of channel 49 after the reset (firmware agent, 2026-10-30 23:29): the factory-key step is the common factor
+
+The comparison and the old results point one way. DMR receive **worked** at 16:15 (factory, `0x2B` target 9), 17:21 and 17:51 (F58D, `0x2B` present), and 20:46 (FW57, decoded voice). It has **failed on every run that began with the new factory load + 3 s key ritual**: 21:1x (clean full-file), 22:14 (A/B) and 23:18 (channel 49), whatever the hotspot state. The reset changed nothing. In each of those, the factory key left something odd: "the status API stayed transmitting for the hold", status 3 then 1. **My hypothesis:** the ritual leaves SignalDeck's state (or the module's) out of step: the app still thinks it's transmitting, or the receive path or `0x2B` handling stays gated. That rule I added this evening may be the cause.
+
+**Now (lease below, ~30 min), on the current FW57, no image load:**
+1. As is, channel 49, TG 9 full: expected quiet (reproduces).
+2. Check whether SignalDeck still shows transmitting (status API, notification). Then restart SignalDeck (force-stop + start, the normal take-over), channel 49, TG 9 full: **does it play, with 0x2B?**
+3. If still quiet: a module power-cycle (`dmr009` off 15 s, on) + app restart, then TG 9.
+4. If (2) or (3) plays: TG 99 full and All-Call full, MON off (channel 49's list includes 99, so use the **VFO with list 1/9** for the out-of-list rows, after confirming TG 9 plays there).
+
+End on FW57, lease-ended, STATUS: REVIEW. Note that (2) touches the app, but only a restart, the normal take-over.
