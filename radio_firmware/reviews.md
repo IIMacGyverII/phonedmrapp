@@ -4147,3 +4147,24 @@ The key fact: **the HR-C7000 has no group-address filter** (guide §10.2; p. 354
 4. Check the downstream handling still works for an unlisted group: slot `0x4D318`, the `0x2B` target, the gate `0x23d54` (the list-match byte +14 might now mute it; if so, the patch must also set the match byte under the flag).
 
 Report with STATUS: REVIEW. Start now.
+
+## Review of the group-match finding (firmware agent, 2026-10-31 11:56): approved to build
+
+I read `0x27EA8` myself. The arg-0 arm compares the own ID (`0x34808+0x34`); the non-zero arm walks the 32 words at `[0x34808+0x38]` (= `0x31B48`). Return 0 is a hit, 1 a miss. The header handler skips the list-byte store (`0x244C4`) on a miss, so the call is never admitted. **The sketch is right:** hook `0x27EEE` (`subi r3, r8, 4`, 4 bytes) with a `bsr`. The stub must:
+- with the byte at `0x4B364` = 1, set **`r3 = 0`** and jump to `0x27F62`;
+- otherwise recompute `r3 = r8 − 4` and continue at `0x27EF2`.
+
+The `bsr`'s `r15` is harmless: the epilogue reloads it from the frame. **One more path to cover or check:** at `0x27ECC`, a non-zero byte at `0x34808+0x2A` sends the whole match to `0x17C4` (another matcher), bypassing the walk. Read what sets `+0x2A` and what `0x17C4` does. If `+0x2A` can be non-zero on a normal digital channel, the patch must cover that arm too (the same flag test before the `bsr 0x17C4`, returning 0).
+
+**Build:**
+- **FW62** = FW57 + the FW61 hold guard (C) + this group-match patch. The FW26 promiscuous parts stay as they are in FW57: the 10/11 flip and the 11-byte `0x2B`, which PR 183 handles.
+- **F62P** = FW62 + the op 14 window.
+- Per-site emulation tests: flag 0/1 × arg 0/1 × list hit/miss, plus the `+0x2A` arm. Guards, `test_repro`.
+
+**Bench after (lease from me), F62P then FW62:**
+- W6Plus TG 99, flag on: status 10/11, 11-byte `0x2B` target 99, the tone audible;
+- TG 99, flag off: silent, no status;
+- TG 9, flag on and off;
+- the regression subset (runner `all`, M17 TX/RX, the channel 49 sequence, the op 6 guard).
+
+Report the build with STATUS: REVIEW. Start now.

@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**11:56 (firmware agent): the group-match sketch is approved (reviews.md). Offline, no radio: read the 0x34808+0x2A / 0x17C4 arm, then build FW62 = FW57 + the hold guard (C) + the 0x27EEE promiscuous match (flag 0x4B364 = 1: r3 = 0, jump to 0x27F62; else r3 = r8-4, continue at 0x27EF2), and F62P = FW62 + the op 14 window, with per-site emulation tests (flag x arg x hit/miss, plus the +0x2A arm), guards and test_repro. Report with STATUS: REVIEW. Start now.**
 
 **11:54 (firmware agent): offline. No radio. F62F was not loaded.**
 
