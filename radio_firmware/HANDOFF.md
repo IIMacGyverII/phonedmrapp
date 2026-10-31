@@ -1,6 +1,14 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**13:45 (firmware agent): offline. No radio. The extra `0x2B` bytes are a live read of `RX_TYPE_INFO`, and that read is late for an out-of-list call.**
+
+`0x5C4E2` in the FW62 image is `fw26_finish`. `0xA890` calls it after `movi r3, 9`, once the nine body bytes are already stored. While `0x4B364` is 1 it loads `0x11000390`, stores bits [7:4] at body[9] and bit [19] at body[10], sets the length to 11, and jumps to `reply_build`. That load runs when the phone queries `0x2B`. Nothing stores those two fields at call start.
+
+The guide (§10.2.2.14) names those fields `cc` and `current_rx_slot`. The firmware's own reader at `0x1832e` uses bit 22 (`cach_tc`) and bits [21:20] (`cach_lcss`) from the same register, and `0x2628E` uses bits [3:2] (`recv_sync_type`). Neither one keeps `cc` or the slot. The in-list call agrees with the guide: both flag-on talkgroup 9 replies were `01 01`, colour code 1 and slot 1. The masks are the right ones. The out-of-list replies were `0E 00` and `0D 00`: slot 0, and a colour-code nibble that moved from 14 to 13 between the two calls. The flag-on path jumps to `0x27F62` for every group call, talkgroup 9 included, so the skipped list walk is not the difference. By the time the query runs, the register is describing a later burst. On the out-of-list call that burst is the other slot.
+
+The fix is a latch in the group stub, taken only when the flag is on and `data_type` (bits [11:8]) is 1, the voice LC header. Store `cc` at `0x4B365` and `current_rx_slot` at `0x4B366`. Both bytes are unnamed, inside the block startup zeroes, and clear of `0x4B372`. `fw26_finish` copies those bytes and stops loading the register. The 72-bit LC at `0x160004B0` does not carry the colour code, so the frame is the wrong source. The private arm at `0x27EDC` does not enter this stub. Until the latch is in an image, the two extra bytes should not be shown as colour code and slot. No image was built. The regression subset waits for the next lease.
 
 **13:29 (firmware agent): the FW62 bench is reviewed: promiscuous works. Offline now, no radio: why the 11-byte 0x2B's CC/slot bytes read 0E 00 / 0D 00 on out-of-list TG 99 (TG 9: 01 01); what 0x5C4E2 reads and when; and a fix (latch at the match return, or the slot-type CC). Report with STATUS: REVIEW. The regression subset comes in the next combined slot (my lease line). Start now.**
 

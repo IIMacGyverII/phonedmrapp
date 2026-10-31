@@ -4804,6 +4804,16 @@ A taken branch increments its byte and then goes to the same instruction the sto
 
 F62D's taken jumps were `0x0301A000` plus the file offset plus `0xC00`. The `0xC1BE` constant was `0xD00` high. The emulator's taken `bez` from `0xC0C8` does not arrive at `0xC09E`. F62E keeps the nine counters and the opcode 14 window. Each hook repeats the stock instruction, including the C flag `0xC15E` already has, and the displaced `ld.b` or `st.b`. The taken path of `0xC1A8` jumps to `0xC1BA` and lets that hook count. sha256 `d94c73e7087a6be45046afc981d28112312e6ed2a45ac25f61e0ab28ca78cac4`. The stub is 288 bytes, `0x5C59C`–`0x5C6BC`, short of the live literal at `0x5C6BC`. `test_f62e.py` (both outcomes of all ten sites) and `test_repro_f62e.py` passed. The bench section below is the load.
 
+**Caller-report colour code (13:45). No radio. No image.**
+
+`0x5C4E2` in `DMR003.FW62.V022` is the FW26 finish stub. The `0x2B` builder at `0xA886` sets the length to 9 and calls it at `0xA890`. While `0x4B364` is 1 the stub loads `RX_TYPE_INFO` (`0x11000390`), writes bits [7:4] to body[9] and bit [19] to body[10], and sets the length to 11. The load is the query, not a value saved when the call started.
+
+Guide §10.2.2.14 names bit [19] `current_rx_slot` and bits [7:4] `cc`. Bits [14:12] are the voice-frame letter, bits [11:8] are `data_type`, and `data_type` 1 is the voice LC header. `0x1832e` keeps bit 22 and bits [21:20] of the same register, which are `cach_tc` and `cach_lcss`. `0x2628E` keeps bits [3:2], `recv_sync_type`. The colour code and the slot are not saved anywhere.
+
+Talkgroup 9, flag on, was `01 01` on both images: colour code 1, slot 1, the same answer the guide's fields give for that call. Talkgroup 99, flag on, was `0E 00` on F62P and `0D 00` on FW62. Slot 0, and the colour-code nibble changed by one between the calls. The flag-on group stub at `0x5C634` jumps to `0x27F62` for every group call, so talkgroup 9 skips the same list walk talkgroup 99 skips. The walk does not touch `0x11000390`. The query is the later sample. On the out-of-list call the modem's current slot is no longer the slot the header arrived on.
+
+The latch belongs in that stub, and only when the flag is on and bits [11:8] are 1. Store the colour code at `0x4B365` and the slot at `0x4B366`. The image names `0x4B364`, `0x4B372` and `0x4B373`, and it does not name the two bytes between them. Startup zeroes the block. The finish stub then copies the two bytes. The link-control buffer at `0x160004B0` is the 72-bit LC, which has no colour code. The private compare at `0x27EDC` returns without entering the stub, so a private call would not refresh the latch. No image was built.
+
 **FW62 bench (13:26). Both images loaded. Restored to FW57.**
 
 Factory and one key before F62P (tag at 13:00), and again before FW62 (tag at 13:19). VFO list 1 and 9, low power, 467.625. Monitor off. The flag echoed 0 and 1. Beta.25 does not ask for `0x2B` by itself, so each admitted call was queried with fetch 1 at status `0A` or `01`. Opcode 14 ran only on F62P, after `0A`, on the flag-on talkgroup 99 call: slot 1, word 99, list byte +14 = 1, +16 = 0.
