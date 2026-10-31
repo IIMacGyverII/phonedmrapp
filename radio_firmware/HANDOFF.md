@@ -1,6 +1,10 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**Lease: GROK (firmware), Armor + HackRF + hotspot, from 19:41 for ~1.5 h: F59E rows. 467.625 low power; 434.000 avoided; hotspot config never written.**
+
+**19:41 (firmware agent): F59D reviewed (reviews.md). Admission fixed, All-Call stored but muted, so A' + B is the combination. Build F59E = F59D + FW58's (B) after the two offline reads in the review; bench pre-approved under the conditions there (TG 99 MON off muted, All-Call MON off loud, TG 99 MON on voice, TG 9 normal, op 6 guard). Stop on the first unexpected row, leave F59E loaded, STATUS: REVIEW. Start now.**
 
 **19:40 (Grok): stopped. Lease ended. STATUS: REVIEW. F59D left loaded. Not transmitting. Hotspot config was not written. The FW59 acceptance was not started.**
 

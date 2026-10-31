@@ -3521,3 +3521,22 @@ Report with `STATUS: REVIEW`. **Bench later, after the owner's hotspot reflash**
 I checked it myself: FW59 (`0d9f7a37…`) differs from FW57 only at `0x26f24`, `0x5b2d2`, `0x5bd36`, the stub block `0x5C59C`–`0x5C633` and the tag; the FW58 branch hooks at `0x11d18`/`0x11d80` are gone. F59D (`db2cf035…`) adds only the op 14 window. The (A′) stub, disassembled, skips both stores unless FLCO&63 = 0 **and** the destination equals `0xFFFFFF`, always replays `subi r3, r8, 16`, and returns. (C) is the FW58 guard. `test_fw59` (11 tests, including the stub emulation over FLCO and destination cases) passes on my machine. The MON reading (the `0x2F` byte at `0x38C70+0x11`; the `0x2B` target taken from the slot only when bit 1 of r8−8 is set) is good groundwork for a later heard-TG image.
 
 **Bench:** the lease and the run order are in HANDOFF. The decisive row is TG 99 with MON off staying **muted** on F59D while the All-Call plays.
+
+## Review of the F59D rows (firmware agent, 2026-10-30 19:41)
+
+**Admission is fixed:** talkgroup 99 with MON off stays muted on F59D (0.15 s blip, RMS 81; the earlier pass gave 25), as on factory. **The All-Call is stored but still muted:** 16777215 sits at the slot that byte 2 selects, and the call stays quiet. So the store alone doesn't unmute, and (B) alone doesn't either (F58B). On F58D, though, A + B together unmuted both calls.
+
+**My reading:** (B) compares `0x4C59C+0xC` with `0xFFFFFF`. That word is most likely filled from the `0x4D318` slot that (A) writes, so (B) never saw `0xFFFFFF` without (A). On F58D, (A) stored every destination. TG 99 then reached (B)'s compare and was unmuted by its other exit, so (B)'s exits or the path it skips need checking. With (A′), only an All-Call puts `0xFFFFFF` in the slot, so A′ + B should give exactly what we want, if (B)'s mismatch exit is the stock path.
+
+**Next: F59E = F59D + (B) from FW58**, the same hooks at `0x11d18`/`0x11d80`, same stub bytes and exits. Place it in the free tail after FW59's block, update the space map, and keep every FW59 test plus the FW58 (B) tests. Before building, read offline:
+- (1) the stores into `0x4C59C+0xC`: is the source the `0x4D318` slot?
+- (2) (B)'s mismatch exit: does it return exactly to the stock instruction stream (the original two instructions replayed), for both twins?
+
+If (2) shows a fault, fix it in F59E and say so.
+
+**Bench, pre-approved if the diff from F59D is only (B)'s two hooks, its stub and the tag, and the tests pass:**
+- load F59E (check `0x34`);
+- TG 99 with MON off: **muted**; All-Call with MON off: **loud**; TG 99 with MON on: voice; TG 9 in-list: normal;
+- the raw op 6 guard.
+
+The same counting rules apply (own MMDVMHost header + HackRF carrier). Stop on the first unexpected row, leave F59E loaded, not transmitting, STATUS: REVIEW. Lease ~1.5 h (Armor + HackRF + hotspot), hotspot config never written.
