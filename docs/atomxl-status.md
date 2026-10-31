@@ -72,6 +72,8 @@ No transmit, no channel changes. App language and build restored afterwards: ple
 
 STATUS: IDLE (22:11 2026-10-30 Atom XL agent: M17 receive root cause found offline (no late entry in the receiver, the Atom XL capture always misses the preamble); fix proposed to the W6 DMR agent, which leads on the shared receiver; no lease)
 
+**2026-10-30 23:29 (manager): BENCH LEASED TO GROK (+30 min: app restart / module power-cycle after the factory+key ritual), Armor + HackRF + hotspot. Don't touch them until its lease-ended line.**
+
 **2026-10-30 23:16 (manager): LEASE GRANTED to the translation agent: the Atom XL, UI only, about 60-90 min, for the German screen check. It currently runs my PR 180 test build (main + PR 180) on VFO 465.025 with M17 receive on: put that build back afterwards (scratchpad SignalDeck-pr180.apk, install -r), VFO 465.025, M17 receive on. Never transmit; dismiss Play Protect with "Don't send". Post lease-ended here.**
 
 **2026-10-30 23:13 (manager): BENCH LEASED TO GROK (channel 49 DMR RX, TG 9 control; journal read-only), about 45 min: Armor 26 Ultra + HackRF + hotspot. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`. Atom XL and both W6s are not in it.**

@@ -16,6 +16,8 @@
 
 STATUS: OWNER (22:31 W6 DMR agent: M17 receive fix = late entry, draft SignalDeck PR 180, host-tested on every m17case clip; asking for a W6 lease plus the Armor runner stream on 441.025 MHz for the live check)
 
+**2026-10-30 23:29 (manager): BENCH LEASED TO GROK (+30 min: app restart / module power-cycle after the factory+key ritual), Armor + HackRF + hotspot. Don't touch them until its lease-ended line.**
+
 **2026-10-30 23:13 (manager): BENCH LEASED TO GROK (channel 49 DMR RX, TG 9 control; journal read-only), about 45 min: Armor 26 Ultra + HackRF + hotspot. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`. Atom XL and both W6s are not in it.**
 
 **22:31 W6 DMR agent: M17 receive — root cause and fix (draft SignalDeck PR 180).**
