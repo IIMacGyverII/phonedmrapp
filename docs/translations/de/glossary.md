@@ -1,6 +1,6 @@
-# German glossary (de): DRAFT, awaiting native review
+# German glossary (de): reviewed
 
-**Status: draft, awaiting native review.** Written by the translation agent on 2026-10-30 from the English UI on
+**Status: reviewed by the German reviewer (2026-10-31); the rows he decided carry "reviewer, 2026-10-31" (changed) or "kept (reviewer, 2026-10-31)" (confirmed).** Originally written by the translation agent on 2026-10-30 from the English UI on
 `origin/main`, before any string was extracted. It is for the German reviewer (the tester who asked for German) to agree
 or correct, ideally **before any German string is drafted**. Review does not gate the release (owner, 2026-10-30): if
 answers come later, the draft is changed to match. Every later German string follows this table, so one English word
@@ -17,7 +17,7 @@ is never rendered three ways.
 |---|---|---|---|
 | SignalDeck | SignalDeck | Product name, never translated. | |
 | SignalDeck Web | SignalDeck Web | Product name. | |
-| Intercom (tab, main page) | Funk | "Intercom" in German means a door intercom (*Gegensprechanlage*). "Funk" is short, clear on a tab, and what a German ham calls the main radio view. ❓ Alternatives: *Sprechfunk*, keep *Intercom*. | |
+| Intercom (tab, main page) | Intercom | Reviewer: keep the English name. Everything built on it follows: „Intercom-Seite“, „Intercom-Ansicht“, „Intercom-Layout“, „Intercom-Menü“, guide group „Auf der Intercom-Seite“. "Funk" in its normal meanings (Funkgerät, Funkmodul, Funkbedienung …) stays. | reviewer, 2026-10-31 |
 | Channels (tab) | Kanäle | Standard. | |
 | Contacts (tab) | Kontakte | Standard (DMR contacts too). | |
 | Messages (tab) | Nachrichten | Standard Android term. | |
@@ -28,16 +28,16 @@ is never rendered three ways.
 | Activity | Aktivität | | |
 | Activity statistics | Aktivitätsstatistik | | |
 | Alerts (list in Last heard) | Warnungen | The list holds warnings and refusals; *Meldungen* is too weak for "transmission refused". | |
-| Car and coverage | Auto und Reichweite | | |
+| Car and coverage | Auto und Abdeckung | Follows "coverage" → Abdeckung. | reviewer, 2026-10-31 |
 | Guide / Help | Anleitung | "Hilfe" for the menu entry, "Anleitung" for the guide itself. | |
 | Getting started | Erste Schritte | Standard. | |
 | Good to know | Gut zu wissen | | |
 | Take over (the radio) | Übernehmen | "Funkmodul übernehmen" in prose. | |
 | Hand back | Zurückgeben | Pair with *Übernehmen*. | |
-| Stock app (the phone maker's radio app) | Hersteller-App | "Stock" has no good German equivalent; *Original-App* is also fine. ❓ | |
+| Stock app (the phone maker's radio app) | Original-App | "Die originale Walkie-Talkie-App" where the English says "stock walkie-talkie app". The stock *firmware* stays Werks-Firmware. | reviewer, 2026-10-31 |
 | Device report | Gerätebericht | | |
 | Transmit test | Sendetest | | |
-| First-run check | Ersteinrichtungs-Test | ❓ *Erstprüfung* is shorter. | |
+| First-run check | Erster Gerätetest | No string uses the term yet: the screens call the checks „Prüfungen“ („Alle Prüfungen ausführen“ = Run all checks). | reviewer, 2026-10-31 |
 | Module firmware | Modul-Firmware | | |
 | Radio module | Funkmodul | | |
 | About this radio | Über dieses Funkgerät | | |
@@ -46,8 +46,8 @@ is never rendered three ways.
 | Recording(s) | Aufnahme(n) | | |
 | Recordings player | Aufnahmen-Player | | |
 | Transcript | Mitschrift | Natural German for a running text record. | |
-| Coverage logging | Reichweiten-Protokoll | "Reichweite" is what a ham checks with a repeater; "Abdeckung" sounds like mobile networks. ❓ | |
-| Coverage map | Reichweitenkarte | Follows the line above. | |
+| Coverage logging | Abdeckungs-Log (das) | „Abdeckung im Auto loggen“, „Abdeckung loggen“. The feature, its map layer, pill, menu entries and sheet: „Abdeckung“ („Karte & Abdeckung“, „Karte → Abdeckung“, „Abdeckungsfenster“, „Abdeckungsdaten“). "Reichweite" stays where plain range is meant (how far a radio or signal reaches, the prediction range). | reviewer, 2026-10-31 |
+| Coverage map | Abdeckungskarte | Guide topic „Abdeckungskarten“. | reviewer, 2026-10-31 |
 | Map | Karte | | |
 | Band scope | Bandscope | Used as-is by German hams (Icom/Yaesu DE manuals say "Bandscope"); *Spektrumanzeige* in prose where it helps. | |
 | Fox hunt | Fuchsjagd | The established German term (ARDF: *Amateurfunkpeilen*). | |
@@ -55,11 +55,11 @@ is never rendered three ways.
 | Net control | Rundenleitung | | |
 | Logbook | Logbuch | | |
 | Exam practice | Prüfungstraining | The pools are the US exam in English: label the topic "US-Prüfung (englisch)". | |
-| Conditions (propagation) | Ausbreitungsbedingungen | Short form on tight labels: *Bedingungen*. | |
+| Conditions (propagation) | Bedingungen | „VHF/UHF-Bedingungen“. | reviewer, 2026-10-31 |
 | Satellites | Satelliten | | |
 | Pass (satellite) | Überflug | | |
 | Emergency | Notfall | | |
-| Restricted mode | Sperrmodus | A voluntary PIN lock; *Eingeschränkter Modus* reads like an Android system state. ❓ | |
+| Restricted mode | Sperrmodus | A voluntary PIN lock; *Eingeschränkter Modus* reads like an Android system state. | kept (reviewer, 2026-10-31) |
 | Widget | Widget | Android standard. | |
 | Android Auto | Android Auto | Product name. | |
 | Zone | Zone | Same word on German DMR radios. | |
@@ -122,7 +122,7 @@ Buttons are infinitives (Android German style), capitalised as German requires.
 | ham, radio amateur | Funkamateur | Gender-neutral alternative where it matters: "wer Amateurfunk betreibt". | |
 | amateur radio | Amateurfunk | | |
 | callsign | Rufzeichen | | |
-| licence | Zulassung (Amateurfunkzulassung) | Germany issues a *Zulassung zur Teilnahme am Amateurfunkdienst*; "Lizenz" is common colloquially. ❓ | |
+| licence | Lizenz (Amateurfunklizenz) | Safety text: keep its strength. | reviewer, 2026-10-31 |
 | channel | Kanal (pl. Kanäle) | | |
 | frequency | Frequenz | | |
 | transmit (verb) | senden | | |
@@ -133,19 +133,19 @@ Buttons are infinitives (Android German style), capitalised as German requires.
 | talk key (the big round button) | Sprechtaste | | |
 | PTT | PTT | Kept; "PTT-Taste" in prose. | |
 | side PTT button | seitliche PTT-Taste | | |
-| squelch | Rauschsperre | The term German manuals use; hams also say "Squelch". The feature name **Soft SQ** stays. ❓ | |
-| squelch level | Rauschsperren-Stufe | Short form "SQL-Stufe" on tight labels. | |
+| squelch | Rauschsperre | The correct word (reviewer); "SQL" is fine too. The feature name **Soft SQ** stays. | kept (reviewer, 2026-10-31) |
+| squelch level | SQL-Stufe | Everywhere, labels and prose ("SQL-Stufe 0"). | reviewer, 2026-10-31 |
 | Soft SQ | Soft SQ | Feature name, kept. Explained once as "Software-Rauschsperre". | |
 | noise squelch | Rausch-Squelch | ❓ Prose only. | |
 | scan (verb / noun) | absuchen / Suchlauf | Key legend stays **SCAN** (decided; `style.md` §6). | |
 | zone | Zone | | |
 | VFO | VFO | | |
-| repeater | Relais (pl. Relais) | The usual German ham word; "Repeater" is understood in DMR circles. ❓ | |
+| repeater | Relais (pl. Relais) | Reviewer: "Relais" and "Repeater" are both fine; the draft keeps Relais. | kept (reviewer, 2026-10-31) |
 | repeater offset / shift | Ablage | Established term (*Relaisablage*). | |
 | simplex / duplex | Simplex / Duplex | | |
 | CTCSS | CTCSS | "CTCSS-Ton" in prose; *Subton* is also understood. | |
 | DCS | DCS | | |
-| tone (CTCSS) | Ton | "Empfangston" / "Sendeton" for RX/TX tone. | |
+| tone (CTCSS) | Ton | "Empfangston" / "Sendeton" for RX/TX tone. | kept (reviewer, 2026-10-31) |
 | power (transmit) | Sendeleistung | Short labels: "Leistung". | |
 | high / low (power) | Hoch / Niedrig | | |
 | bandwidth wide / narrow | Breit / Schmal | With values: 25 kHz / 12,5 kHz. | |
@@ -168,11 +168,11 @@ Buttons are infinitives (Android German style), capitalised as German requires.
 | VHF / UHF | VHF / UHF | Germans also say 2 m / 70 cm: use those in prose where the band is meant. | |
 | propagation | Ausbreitung | | |
 | antenna | Antenne | | |
-| dummy load | Kunstantenne | | |
+| dummy load | Ersatzlast | | reviewer, 2026-10-31 |
 | interference | Störung | | |
 | identification (repeater ID) | Kennung | | |
 | Morse | Morse / CW | | |
-| beacon | Bake | APRS: "APRS-Bake". | |
+| beacon | Beacon (das, pl. Beacons) | Stays English. „APRS-Beacon“, „Positions-Beacon“, „Internet-Beacon“, „Beacon-Kommentar“. The fox transmitter stays „Fuchssender“. Propagation beacons in the band plan and the band scope stay „Baken“. | reviewer, 2026-10-31 |
 | heard station | gehörte Station | | |
 
 ## 4. DMR
@@ -182,15 +182,15 @@ Buttons are infinitives (Android German style), capitalised as German requires.
 | DMR | DMR | | |
 | talkgroup | Sprechgruppe (TG) | BrandMeister DE and DARC use *Sprechgruppe*. On tight labels "TG". | |
 | colour code | Colorcode (CC) | German DMR usage keeps the English word. | |
-| time slot | Zeitschlitz (TS) | | |
+| time slot | Zeitkanal (TS) | „Zeitkanal 1“, pl. „Zeitkanäle“; TS stays the abbreviation. | reviewer, 2026-10-31 |
 | private call / group call | Einzelruf / Gruppenruf | | |
 | DMR ID | DMR-ID | (Never a real ID in examples.) | |
 | contact | Kontakt | | |
-| receive group list | Empfangsgruppenliste | Long; short form "RX-Gruppen". ❓ | |
+| receive group list | RX-Gruppen | Also for "RX list" / "receive list" (the same list). | reviewer, 2026-10-31 |
 | hotspot | Hotspot | | |
 | codeplug | Codeplug | Kept by German DMR users. | |
 | CALL · PICKED | RUF · GEWÄHLT | Intercom cell legend. | |
-| promiscuous mode (MON) | Alle hören (MON) | ❓ For prose; the key legend MON stays (decided). | |
+| promiscuous mode (MON) | Alles hören (MON) | For prose; the key legend MON stays. | reviewer, 2026-10-31 |
 
 ## 5. Digital modes and data
 
@@ -219,7 +219,7 @@ Safety text gets a second careful pass (plan §4). These renderings must stay th
 | Warning | Warnung | | |
 | Caution | Achtung | | |
 | Transmitting legally | Legal senden | Guide section title. | |
-| You need a licence to transmit on this frequency. | Für das Senden auf dieser Frequenz brauchst du eine Amateurfunkzulassung. | The pattern for licence notes. | |
+| You need a licence to transmit on this frequency. | Für das Senden auf dieser Frequenz brauchst du eine Amateurfunklizenz. | The pattern for licence notes. | reviewer, 2026-10-31 |
 | transmit limit / time limit | Sendezeitbegrenzung | | |
 | Longest transmission | Längste Aussendung | Device setting. | |
 | heat guard | Überhitzungsschutz | | |
@@ -227,7 +227,7 @@ Safety text gets a second careful pass (plan §4). These renderings must stay th
 | transmit refused | Senden abgelehnt | | |
 | Not sent | Nicht gesendet | | |
 | advisory (from the profile list) | Warnhinweis | | |
-| firmware loader | Firmware-Lader | | |
+| firmware loader | Firmware laden | As a label, in quotes in prose: „Firmware laden“ gibt es nur auf dem Telefon. | reviewer, 2026-10-31 |
 | factory image | Werks-Firmware | | |
 | do not switch off | nicht ausschalten | Firmware loading: always in bold, never softened. | |
 | emergency | Notfall | | |
@@ -236,7 +236,7 @@ Safety text gets a second careful pass (plan §4). These renderings must stay th
 
 | English | German | Notes |
 |---|---|---|
-| 467.625 MHz | 467,625 MHz | Decimal comma everywhere on screen, the readout included; entry fields accept `,` and `.` (decided; reviewer to confirm). |
+| 467.625 MHz | 467,625 MHz | Decimal comma everywhere on screen, the readout included; entry fields accept `,` and `.` (decided; confirmed by the reviewer 2026-10-31). |
 | 12.5 kHz | 12,5 kHz | |
 | −85 dBm | −85 dBm | Unit unchanged, space before the unit. |
 | 30 s, 2 min | 30 s, 2 min | |
@@ -256,23 +256,23 @@ column everywhere (screens, SignalDeck Web, the guide). Rows marked **❓** are 
 
 | English | German | Notes | Reviewer |
 |---|---|---|---|
-| the Intercom page (in prose) | Funkseite | One word, never "Funk-Seite". The tab stays "Funk" (§1). | |
-| Radio controls (car screen) | Funkbedienung | Also "Vollbild-Funkbedienung im Auto". | |
-| Parrot (simplex repeater) | Papagei | The app's feature. BrandMeister's echo service (private call 9990) stays "Parrot". ❓ Keep "Parrot" for both? | |
+| the Intercom page (in prose) | Intercom-Seite | Always with a hyphen. The tab is "Intercom" (§1). | reviewer, 2026-10-31 |
+| Radio controls (car screen) | Funkbedienung | Also "Vollbild-Funkbedienung im Auto". | kept (reviewer, 2026-10-31) |
+| Parrot (simplex repeater) | Parrot / Parrot-Relais | A name: "Parrot" on labels and events, „das Parrot-Relais“ in prose. BrandMeister's echo service (private call 9990) stays "Parrot". | reviewer, 2026-10-31 |
 | Voice keyer | Sprachspeicher | | |
 | Net preamble / My ID (keyer slots) | Rundeneröffnung / Meine Kennung | | |
 | ID timer | Kennungs-Timer | Never "ID-Timer". | |
 | ID reminder | Kennungs-Erinnerung | | |
 | Morse ID | Morse-Kennung | Also the DTMF command label. | |
-| Fox beacon | Fuchssender | The established German fox-hunt word; an exception to §3 "beacon → Bake". ❓ | |
-| Be the fox | Selbst Fuchs sein | | |
+| Fox beacon | Fuchssender | The established German fox-hunt word (§3 beacon → Beacon does not apply). | kept (reviewer, 2026-10-31) |
+| Be the fox | Sei der Fuchs | | reviewer, 2026-10-31 |
 | bearing / Spin for the bearing | Peilung / Drehpeilung | | |
 | mark (fox hunt) | Markierung (prose) · Punkt (buttons: „Punkt speichern“, „Punkte löschen“) | The buttons are a third of a row wide. ❓ One word for both? | |
 | Download terrain / Terrain | Gelände herunterladen / Gelände | "Herunterladen" per §2 (Download). | |
 | Terrain prediction | Geländevorhersage | Never "Geländeprognose". | |
 | Key-ups (coverage layer) | Auftasten | | |
-| Mapping coverage | Reichweite wird erfasst | Notification and widget text. | |
-| Log coverage in the car | Reichweite im Auto protokollieren | | |
+| Mapping coverage | Abdeckung wird erfasst | Notification and widget text. | reviewer, 2026-10-31 |
+| Log coverage in the car | Abdeckung im Auto loggen | | reviewer, 2026-10-31 |
 | Nearby repeaters | Relais in der Nähe | | |
 | Nets near you | Funkrunden in der Nähe | Short form "Runde" only where the net is already named. | |
 | On the air near you / Elsewhere on the air | In deiner Nähe auf Sendung / Anderswo auf Sendung | | |
@@ -292,10 +292,10 @@ column everywhere (screens, SignalDeck Web, the guide). Rows marked **❓** are 
 | Session log / Detailed diagnostic log | Sitzungsprotokoll / Ausführliches Diagnoseprotokoll | | |
 | Two-way iGate | Zwei-Wege-iGate | | |
 | Packet lead-in | Packet-Vorlauf | | |
-| Beacon via ISS | Bake über die ISS | | |
+| Beacon via ISS | Beacon über die ISS | | reviewer, 2026-10-31 |
 | Record each pass | Jeden Überflug aufnehmen | | |
 | satellite pass | Satellitenüberflug | One word. | |
-| orbit data | Bahndaten | | |
+| orbit data | Orbitdaten | „Satelliten-Orbitdaten“, „ISS-Orbitdaten“. | reviewer, 2026-10-31 |
 | Text modes | Textbetriebsarten | | |
 | Any mode (SSTV decoder) | Jeder Modus | An SSTV mode (Martin, Scottie), not a §3 Betriebsart. | |
 | Combine (SSTV) / In / Left out | Kombinieren / Dabei / ausgelassen | | |
@@ -330,11 +330,11 @@ column everywhere (screens, SignalDeck Web, the guide). Rows marked **❓** are 
 | Own the radio at boot | Funkmodul beim Start übernehmen | §1 "Funkmodul übernehmen". | |
 | Keep access after reboot | Zugriff nach Neustart behalten | | |
 | Turn the radio off and exit | Funkmodul ausschalten und beenden | | |
-| Hand back to the stock app and exit | An die Hersteller-App zurückgeben und beenden | | |
+| Hand back to the stock app and exit | An die Original-App zurückgeben und beenden | | reviewer, 2026-10-31 |
 | Radio busy, loading firmware | Funkgerät belegt, Firmware wird geladen | | |
 | Allow unlisted images | Nicht gelistete Images erlauben | | |
 | Web access / Allow transmit from the web | Web-Zugriff / Senden aus dem Web erlauben | | |
-| amber (UI colour) | orange | "orangefarben" where an inflected adjective is needed. | |
+| amber (UI colour) | orange | "orangefarben" where an inflected adjective is needed. | reviewer, 2026-10-31 |
 
 ### Channel editor and lists
 
@@ -362,7 +362,7 @@ column everywhere (screens, SignalDeck Web, the guide). Rows marked **❓** are 
 | Zone name | Zonenname | | |
 | Marine VHF | Seefunk (UKW) | | |
 | NOAA weather | NOAA-Wetterfunk | | |
-| Home (contact location) | Zuhause | | |
+| Home (contact location) | Home | The field and the guide; "home location" → „Home-Standort“. "dein Zuhause" stays where a person's real home is meant. | reviewer, 2026-10-31 |
 
 ### Wording rules settled
 
@@ -373,7 +373,7 @@ column everywhere (screens, SignalDeck Web, the guide). Rows marked **❓** are 
 | Try again | Erneut versuchen | §2 Retry. | |
 | Loading… / Sending… | Wird geladen… / wird gesendet… | No space before the ellipsis, as in English. | |
 | Set your callsign first | Trage zuerst dein Rufzeichen ein | "Trage", not "Trag" or "Stelle … ein". | |
-| Coverage logging is on | Reichweiten-Protokoll ist an | "an/aus" in sentences, "Ein/Aus" on switch labels (§2). | |
+| Coverage logging is on | Abdeckungs-Log ist an | "an/aus" in sentences, "Ein/Aus" on switch labels (§2). | reviewer, 2026-10-31 |
 | No position fix yet | Noch keine Position | | |
 | Key legends SCAN, ZONE, TXT, SOFT SQ, MON, REC, VFO, PKT | unchanged | Checked across all files: no legend is translated. "Soft-SQ-Stufe" keeps the name in a compound (style §4). The car screen's own Scan button is "Suchlauf". | |
 | weekday buttons (one letter) | M D M D F S S | German calendar convention, as Android's. Three-letter days: Mo. Di. Mi. Do. Fr. Sa. So. | |

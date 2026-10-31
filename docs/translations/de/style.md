@@ -1,11 +1,11 @@
-# German style guide (de): DRAFT, awaiting native review
+# German style guide (de): reviewed
 
-**Status: draft, awaiting native review.** The rules every German string follows, together with `glossary.md`. The
-reviewer may change any rule; once agreed, the rules are fixed and the draft follows them.
+**Status: reviewed by the German reviewer (2026-10-31).** The rules every German string follows, together with
+`glossary.md`. The rules below are agreed; the draft follows them.
 
 ## 1. Register: *du*
 - Address the user as **du**, lower case (*du*, *dein*), as German ham apps and the DARC community do among hams.
-  **A reviewer may change it:** *Sie* is the alternative; it reads stiffer in an app for hobbyists.
+  **Confirmed by the reviewer (2026-10-31).**
 - Imperatives with *du*: "Tippe auf **Übernehmen**", "Halte die Sprechtaste gedrückt".
 - No gendered nouns for the user: write "du", or "wer sendet", not "der Benutzer".
 
@@ -21,6 +21,9 @@ reviewer may change any rule; once agreed, the rules are fixed and the draft fol
 - **Anglicisms:** keep the international ham terms the glossary keeps (PTT, CTCSS, Colorcode, APRS …). Don't invent
   German for terms German hams don't use, and don't keep English where a normal German word exists ("Einstellungen",
   not "Settings").
+- **English names the reviewer chose to keep (2026-10-31):** Intercom (the tab and page: „Intercom-Seite“), Beacon
+  (das Beacon, pl. Beacons), Parrot („das Parrot-Relais“ in prose), Home (the contact location). Treat them as German
+  nouns: capitalised, with German articles and endings, hyphenated in compounds („APRS-Beacon“, „Intercom-Menü“).
 
 ## 3. Labels and capitalisation
 - German grammar rules capitalisation: nouns are capitalised, everything else is not. There is no English-style title
@@ -34,14 +37,17 @@ reviewer may change any rule; once agreed, the rules are fixed and the draft fol
 ## 4. Punctuation and typography
 - Quotes: „so“ (German low-high quotes). Nested quotes: ‚so‘.
 - Dash: spaced en dash " – " for a pause; a hyphen only inside compounds.
-- **Compounds with abbreviations take a hyphen:** DMR-Kanal, CTCSS-Ton, APRS-Bake, PTT-Taste, S-Meter.
+- **Compounds with abbreviations take a hyphen:** DMR-Kanal, CTCSS-Ton, APRS-Beacon, PTT-Taste, S-Meter,
+  SQL-Stufe. A German noun after an English one also takes a hyphen („Abdeckungs-Log“); all-German compounds are
+  written as one word („Abdeckungskarte“, „Abdeckungsfenster“).
 - Ellipsis "…" on buttons that open a dialog, as in English.
 - The arrow for menu paths stays: "Gerät → Funkeinstellungen → Intercom-Layout". These come from `{@label}` references,
   never typed by hand (`research.md` §4.4).
 - No exclamation marks, except in safety warnings where the English has one.
 
 ## 5. Numbers, units, dates
-- **Decimal comma everywhere on screen** (decided 2026-10-30, **reviewer to confirm**): 12,5 kHz; 467,625 MHz in prose,
+- **Decimal comma everywhere on screen** (decided 2026-10-30, **confirmed by the reviewer 2026-10-31**: both separators are fine because
+  the fields accept both): 12,5 kHz; 467,625 MHz in prose,
   lists and the large frequency readout. Entry fields accept both `,` and `.`, so a user may type either.
 - Thousands: a narrow space or none ("1 200 Hz" or "1200 Hz"); never a dot in numbers that might be read as a frequency.
 - Always a space between number and unit: "30 s", "5 W", "−85 dBm". Use the real minus sign (−) for dBm.
@@ -55,7 +61,7 @@ reviewer may change any rule; once agreed, the rules are fixed and the draft fol
 
 ## 7. Warnings and safety text
 - **As clear as the English.** Never soften: "darf nicht", "nicht ausschalten", "Senden ist nur mit
-  Amateurfunkzulassung erlaubt".
+  Amateurfunklizenz erlaubt" (licence → Lizenz, reviewer 2026-10-31).
 - The negation goes early in the sentence, where it cannot be missed.
 - Start with the consequence, then the reason: "Senden abgelehnt: Dieser Kanal ist nur für den Empfang."
 - Firmware loading, transmit limits, heat, licence and the Sperr-PIN get a **second pass** and are marked in the
