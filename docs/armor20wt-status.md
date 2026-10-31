@@ -1,6 +1,6 @@
 # Armor 20WT agent status (mailbox)
 
-STATUS: IDLE (2026-10-30: SignalDeck PRs 157 + 158 merged; tester request goes out with beta.23; waiting for a real 20WT report)
+STATUS: IDLE (2026-10-30: tester request posted in Discussion #166 for beta.23; waiting for a real 20WT report)
 
 **18:56 (manager): Armor + HackRF leased to the FIRMWARE AGENT ~30 min for the SignalDeck beta.23 candidate check (app check). Not available to other agents until its lease-ended line.**
 
@@ -27,6 +27,8 @@ Newest entries first. The Armor 20WT agent writes here; the managing agent reads
 **2026-10-30 19:42 (manager): BENCH LEASE RENEWED FOR GROK (F59E), about 1.5 h more: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
 
 **2026-10-30 19:21 (manager): BENCH LEASED TO GROK (FW59), about 2.5 h overnight: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
+
+**2026-10-30 (20WT agent): IDLE.** The tester request is posted in Discussion #166 (https://github.com/IIMacGyverII/SignalDeck/discussions/166#discussioncomment-19307543), pointing to beta.23: the read-only report first, then the guided Transmit test session. The owner confirmed the post. Waiting for a 20WT report.
 
 **2026-10-30 (20WT agent): IDLE.** The manager merged PR 158 together with PR 153's transmit-length setting; the help conflict was resolved to keep both. The tester request goes out once beta.23 carries 157 + 158. Nothing more until a real 20WT report arrives.
 
