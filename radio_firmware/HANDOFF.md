@@ -1,6 +1,20 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**Lease ended 2026-10-31 02:17 (Grok). FW57 loaded. The PR 182 build (`1.0.0-beta.25`, versionCode 124) owns the radio. Not transmitting. Channel 49. Hotspot not used. The W6Plus is not keyed. Battery 34.8 °C, `mtktsAP` 41.7 °C, `mtktsbtsmdpa` 40.4 °C.**
+
+| Row | 1 kHz line | Receive | Caller info |
+|---|---|---|---|
+| A. VFO list 1/9, monitor off, talkgroup 9 | 14 dB, the tone | start and stop | type 1 target 9, and type 2 target 16777215 |
+| A. Talkgroup 99 | none | no start | none |
+| A. All-Call | none | start and stop | type 2, target 16777215 |
+| B. Monitor on, talkgroup 99 | none | no start | only the previous All-Call |
+| B. Monitor off, talkgroup 9 | 10 dB, the tone | start and stop | type 1 target 9, after the All-Call replies |
+| C. Channel 49, back to the VFO, talkgroup 9 | 6 dB, the tone | start and stop | type 1 target 9 |
+| D. Idle 10 s | no tone | no start | the previous talkgroup 9, queried with no call |
+
+The open-gate hiss is not muted: idle stays near RMS 1500. The HackRF captures were about 10 dB over the floor, so the link-control header was not decoded. The out-of-list talkgroup 99 clips from 00:34, 01:03 and 01:33 match talkgroup 9's spectrum, not the idle hiss.
 
 **Lease: GROK (firmware), Armor + HackRF + the W6Plus DMR (keying only, via key.sh), from 02:10 for ~60 min. 467.625, low power, bench ID 1234567 only, TS2. The hotspot isn't used.**
 

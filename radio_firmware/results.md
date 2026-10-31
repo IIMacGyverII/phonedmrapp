@@ -4780,6 +4780,24 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**W6Plus rows on the PR 182 build (02:17). FW57. Not transmitting.**
+
+The app is `1.0.0-beta.25`, versionCode 124. Each block began with a select of channel 49, then the VFO, list 1 and 9. The W6Plus sent a 3 s 1 kHz tone. A tone in the Armor audio is a 1 kHz bin at least 6 dB above the neighbouring bins.
+
+| Row | 1 kHz | Receive | `0x2B` |
+|---|---|---|---|
+| Monitor off, talkgroup 9 | 14.2 dB | start, stop | 10 replies type 2 target 16777215, then 7 replies type 1 target 9 |
+| Monitor off, talkgroup 99 | 0.5 dB | none | none |
+| Monitor off, All-Call | −1.6 dB | start, stop | 7 replies type 2 target 16777215 |
+| Monitor on, talkgroup 99 | 0.4 dB | none | 13 replies, still the All-Call |
+| Monitor off again, talkgroup 9 | 9.7 dB | start, stop | 6 All-Call replies, then 7 of type 1 target 9 |
+| Channel 49, back to the VFO, talkgroup 9 | 6.1 dB | start, stop | 13 replies, type 1 target 9 |
+| Idle 10 s, nothing keyed | 5.4 dB | none | 14 replies, still talkgroup 9 |
+
+Talkgroup 9 plays the tone with the monitor off, including after the channel change. Talkgroup 99 does not, with the monitor on or off, and it does not start a receive. The All-Call is reported and the tone is not in the audio. Idle audio stays at RMS 1502, so the hiss is not muted. No log line named an admit decision. The HackRF captures peaked about 10 dB over the floor and did not yield a link-control header.
+
+The open-gate clips compared by spectrum, one second from the middle, 16 bins: idle flatness 0.66 and the new idle 0.66; talkgroup 9 at 01:32 is 0.29. Talkgroup 99 at 00:34 (monitor on) is 0.25, at 01:03 is 0.26, at 01:33 is 0.25, and the lone 01:49 clip is 0.31. Those match the voice clip, not the hiss. The squelch-3 talkgroup 99 clip is RMS 1.
+
 **Caller-info timing, the stock app, and the W6Plus (02:02). FW57. Not transmitting.**
 
 The gate was opened with `0x30` body 0 and `0x2F` body 2 on the VFO, list 1 and 9. VGA 30 unless noted. An idle capture with that gate open and no transmission stays near RMS 1500, the same level as the clips taken during a call, so the level does not show decoded voice. Receive start and the `0x2B` are the evidence.

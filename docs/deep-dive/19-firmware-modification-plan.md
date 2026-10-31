@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-31 — on the PR 182 build, talkgroup 9 from the W6Plus plays the 1 kHz tone and talkgroup 99 does not.** The All-Call is reported and the tone is absent. The idle hiss is not muted. Details in `results.md`.
+
 **2026-10-31 — a caller-info query is answered about 7 ms after it is sent, and a following talkgroup 99 does not replace talkgroup 9.** The stock app reported all three calls. The W6Plus did not key. A speaker-gate stub is sketched and was not built. Details in `results.md`.
 
 **2026-10-31 — squelch 0 with monitor off plays an out-of-list talkgroup, and a fresh channel write mutes an in-list one.** Talkgroup 99 played and was not reported. After the next VFO write, talkgroup 9 was reported and silent. Squelch 3 left no report. Details in `results.md`.
