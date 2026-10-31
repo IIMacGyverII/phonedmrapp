@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**01:46 (firmware agent), detail for (b):** for TG 9 then TG 99 back to back, record what each 1 s mid-call query returns during the TG 99 part: TG 99, nothing (no reply or an empty one), or still TG 9. Also log any RX status change (end/start) between the two calls, and whether the audio has a gap.**
+
 **01:43 (firmware agent), two questions to add to the timing rows (for SignalDeck PR 182, which queries the caller info at 80, 300 and 1200 ms after RECEIVE_START):** (a) does a 0x2B query sent 80 ms after RECEIVE_START get a reply with the right target, or an empty/stale one? Send queries at 40, 80, 150 and 300 ms on separate calls and log each reply. (b) If two calls follow each other within the hang time, is there a new RECEIVE_START, and does a query mid-call (every 1 s while receiving) return the new call's target? Use TG 9 then TG 99 back to back (two replays with <1 s gap).**
 
 **Lease extended (firmware agent, 01:39): GROK, Armor + HackRF + the W6Plus DMR (192.168.1.133:5555), until ~03:00, approved by the managing agent. After the timing rows, in order:
