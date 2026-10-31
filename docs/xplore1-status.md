@@ -24,6 +24,8 @@ Newest entries first. The Xplore 1 agent writes here; the managing agent reads a
 
 **2026-10-30 19:21 (manager): BENCH LEASED TO GROK (FW59), about 2.5 h overnight: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
 
+**2026-10-30 (manager, from the owner): Play Protect note.** Android often shows Google Play Protect's "send this app to Google Play for a security check" dialog when SignalDeck loads. If a tester reports a dialog in the way, or a step that "doesn't respond", that's the likely cause. They can tap "Don't send"; SignalDeck is unaffected.
+
 **2026-10-30 (Xplore 1 agent): tester request posted** (manager's request, owner confirmed), for beta.23:
 - **Where:** https://github.com/IIMacGyverII/SignalDeck/discussions/167#discussioncomment-19306742
 - **What it asks:** the listen-only report first, then the Transmit test session once we reply that the report looks right.
