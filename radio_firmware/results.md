@@ -4804,6 +4804,25 @@ A taken branch increments its byte and then goes to the same instruction the sto
 
 F62D's taken jumps were `0x0301A000` plus the file offset plus `0xC00`. The `0xC1BE` constant was `0xD00` high. The emulator's taken `bez` from `0xC0C8` does not arrive at `0xC09E`. F62E keeps the nine counters and the opcode 14 window. Each hook repeats the stock instruction, including the C flag `0xC15E` already has, and the displaced `ld.b` or `st.b`. The taken path of `0xC1A8` jumps to `0xC1BA` and lets that hook count. sha256 `d94c73e7087a6be45046afc981d28112312e6ed2a45ac25f61e0ab28ca78cac4`. The stub is 288 bytes, `0x5C59C`–`0x5C6BC`, short of the live literal at `0x5C6BC`. `test_f62e.py` (both outcomes of all ten sites) and `test_repro_f62e.py` passed. The bench section below is the load.
 
+**FW62 bench (13:26). Both images loaded. Restored to FW57.**
+
+Factory and one key before F62P (tag at 13:00), and again before FW62 (tag at 13:19). VFO list 1 and 9, low power, 467.625. Monitor off. The flag echoed 0 and 1. Beta.25 does not ask for `0x2B` by itself, so each admitted call was queried with fetch 1 at status `0A` or `01`. Opcode 14 ran only on F62P, after `0A`, on the flag-on talkgroup 99 call: slot 1, word 99, list byte +14 = 1, +16 = 0.
+
+| Image | Flag | Talkgroup | Status | Report | 1 kHz | Clip RMS |
+|---|---|---|---|---|---|---|
+| F62P | 0 | 99 | none | none | −4.9 dB | 1.5 |
+| F62P | 1 | 99 | 0A / 0B | 11 bytes, group, target 99, extra `0E 00` | 80.3 dB | 930.7 |
+| F62P | 1 | 9 | 0A / 0B | 11 bytes, group, target 9, extra `01 01` | 80.0 dB | 930.7 |
+| F62P | 0 | 99 | none | none | 3.7 dB | 1.5 |
+| F62P | 0 | 9 | 01 / 02 | 9 bytes, group, target 9 | 67.5 dB | 874.8 |
+| FW62 | 0 | 99 | none | none | −0.5 dB | 1.5 |
+| FW62 | 1 | 99 | 0A / 0B | 11 bytes, group, target 99, extra `0D 00` | 65.3 dB | 849.8 |
+| FW62 | 1 | 9 | 0A / 0B | 11 bytes, group, target 9, extra `01 01` | 69.1 dB | 927.1 |
+| FW62 | 0 | 99 | none | none | 13.0 dB | 1.4 |
+| FW62 | 0 | 9 | 01 / 02 | 9 bytes, group, target 9 | 81.5 dB | 967.2 |
+
+A quiet clip is RMS about 1.5. The 13 dB figure on the second FW62 talkgroup 99 row is that floor, not the tone. The tone rows are above 65 dB. Flag off leaves the report at 9 bytes. Flag on adds two bytes. On talkgroup 9 those bytes are `01 01` on both images, colour code 1 and slot 1. On talkgroup 99 they were `0E 00` on F62P and `0D 00` on FW62. Runner `all`, the channel 49 sequence, and the opcode 6 guard were not started: the rows ended at 13:20. M17 receive was not run. This lease had no M17 source, and the hotspot was not used. The factory image and one key, then FW57, finished at 13:26. The phone was not transmitting. Battery 30.2 °C, AP 35.0 °C, PA 34.0 °C.
+
 **FW62 and F62P (12:11). Not loaded. No radio.**
 
 The byte at `0x34808+0x2A` is written 0 by `0x12CC` and `0x1378`, the two stores whose base is that struct. `0x17C4` returns 0 for every argument, so a nonzero byte would admit a private call as well as a group call. The hook is the group arm only. FW62 is FW57 plus the hold guard (`0x5C5EA`–`0x5C612`, pool `0x5C61C`) and a `bsr` at `0x27EEE` to a 40-byte stub at `0x5C634`. Flag 1 returns a match through `0x27F62`. Flag 0 continues the walk at `0x27EF2`. sha256 `9a59307585c8b0d9caedef60e03cfd2dffff49a5533b42622d4de63766436dac`. Against FW57, flag 0 matches on both arguments and both outcomes, flag 1 with argument 0 matches, and flag 1 with argument 1 returns 0 on a miss. The `+0x2A` arm returns 0 on both images. F62P adds the opcode 14 window. sha256 `2f16bc09bf1fe51652a1cd07c77ac5d973d138e8509861a55bd3298b2369b944`. `test_fw62.py` and `test_repro_fw62.py` passed. Neither image was loaded.

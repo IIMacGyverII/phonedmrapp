@@ -1,6 +1,27 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**13:26 (firmware agent): the FW62 rows are done. Lease ended. The phone is FW57 and is not transmitting. The W6Plus was not keyed after the last row.**
+
+Factory, one key, then F62P at 13:00. The same sequence, then FW62 at 13:19. VFO list 1 and 9, low power, 467.625. Monitor off (`0x2F` body 2, no ack line). The flag echoed `[0]` and `[1]` on both images. Beta.25 did not ask for `0x2B` on its own. Each admitted call was queried with fetch 1 when status `0A` or `01` appeared. Opcode 14 ran only on F62P, after that status, on the flag-on talkgroup 99 call.
+
+| Image | Row | Flag | Talkgroup | Status | Report | 1 kHz | Clip RMS |
+|---|---|---|---|---|---|---|---|
+| F62P | 1 | 0 | 99 | none | none | −4.9 dB | 1.5 |
+| F62P | 2 | 1 | 99 | 0A / 0B | 11 bytes, group, target 99, extra `0E 00` | 80.3 dB | 930.7 |
+| F62P | 3 | 1 | 9 | 0A / 0B | 11 bytes, group, target 9, extra `01 01` | 80.0 dB | 930.7 |
+| F62P | 4 | 0 | 99 | none | none | 3.7 dB | 1.5 |
+| F62P | 5 | 0 | 9 | 01 / 02 | 9 bytes, group, target 9, four replies | 67.5 dB | 874.8 |
+| FW62 | 1 | 0 | 99 | none | none | −0.5 dB | 1.5 |
+| FW62 | 2 | 1 | 99 | 0A / 0B | 11 bytes, group, target 99, extra `0D 00` | 65.3 dB | 849.8 |
+| FW62 | 3 | 1 | 9 | 0A / 0B | 11 bytes, group, target 9, extra `01 01` | 69.1 dB | 927.1 |
+| FW62 | 4 | 0 | 99 | none | none | 13.0 dB | 1.4 |
+| FW62 | 5 | 0 | 9 | 01 / 02 | 9 bytes, group, target 9, four replies | 81.5 dB | 967.2 |
+
+The tone is the rows above 65 dB. A quiet clip sits near RMS 1.5, and a bin ratio on that floor can still print 13 dB. An earlier FW62 pass stopped on that ratio (14 dB at RMS 1.4, no status). Row 1 of the FW62 block is the rerun. The F62P slot read, taken after `0A`, was slot 1, word 99, list byte +14 = 1, +16 = 0. Flag off keeps the 9-byte report. Flag on grows it to 11. On talkgroup 9 the two extra bytes are `01 01`, colour code 1 and slot 1. On talkgroup 99 they were `0E 00` on F62P and `0D 00` on FW62.
+
+Runner `all`, the channel 49 key, and the opcode 6 guard were not started. The rows finished at 13:20, and that set would not finish before the restore. M17 receive was not run. This lease had no M17 source. The hotspot was not used. Heat at the restore: battery 30.2 °C, AP 35.0 °C, PA 34.0 °C. The image hashes are in the 12:11 note.
 
 **Lease: GROK (firmware), Armor + HackRF + the W6Plus DMR (keying only: key.sh "Bench TG9" / "Bench TG99" 3000), from 12:14 for ~75 min. 467.625, low power, bench ID 1234567, TS2. The app stays beta.25 (the managing agent checks PR 183 after).**
 
