@@ -2,6 +2,8 @@
 
 STATUS: REVIEW
 
+**Lease 2026-10-30 23:28 (managing agent): Armor + HackRF + both W6 for the PR 180 M17 rerun on 465.025 MHz (Armor HIGH power, HackRF capture on 465.025), ~30 min. Nothing in 466-469. Armor ends on FW57.**
+
 **Lease ended 2026-10-30 23:23 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. The VFO is still up at 467.625 MHz, low power, list 1 and 9. Hotspot config was not written. Talkgroup 99 and All-Call were not run.**
 
 `sudo journalctl -u mmdvmhost` since midnight returned one line and no start or stop, so it does not say who restarted the modem. The owner's reset replaced the MMDVM log. Its only opening is 2026-10-31 04:13:00.092 UTC, with no closing line, and that opening was already there before the first call.
