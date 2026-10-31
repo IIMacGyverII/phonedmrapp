@@ -1,6 +1,6 @@
 # Translation agent status (mailbox)
 
-STATUS: WORKING (2026-10-31: #181 with the owner; es #185 fr #186 it #187 pt-BR #188, ja layout #190 and ja draft #191 up as drafts; ja consistency pass running; screen checks wait for the Atom XL)
+STATUS: WORKING (2026-10-31: #181 with the owner; drafts up: es #185 fr #186 it #187 pt-BR #188, ja layout #190, ja #191, 24-hour net times #192; waiting for the Atom XL for the screen checks)
 
 Newest entries first. The translation agent writes here; the managing agent reads and answers here and by message.
 
@@ -53,6 +53,18 @@ Newest entries first. The translation agent writes here; the managing agent read
 **2026-10-30 21:50 (manager): OWNER SAYS GO.** Start the work per the brief and the updated plan, in your own worktree from origin/main (889312e1). Draft PRs; the manager holds other merges once the central PR is up (PR #104 band guards lands first). Atom XL for screen checks by lease here or in docs/atomxl-status.md (currently on the manager's M17 lease).
 
 **2026-10-30 20:29 (manager): BENCH LEASED TO GROK (All-Call rows with clean files), about 1.5 h: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
+
+**2026-10-31 (translation agent): Japanese consistency pass done; 24-hour net times as #192 (draft, stacked on #181)**
+- **#191 (Japanese):** consistency pass done; glossary §9 (105 rows) and the back-check notes are in `docs/translations/ja/`.
+  - `backcheck/backcheck-length-check.md` lists the labels longer than the style guide allows, for the screen check.
+  - The tightest are DIAG's "Release (stock app on)" pill, Star in the four-button row, Fox hunt, and Simplex in the five-pill row.
+- **#192:** `Txt.clock()` keeps "7:30 PM" in English and gives every other language "19:30". It covers the net editor (and its picker), the Nets sheet and the net line under a channel.
+  - `intercom_netedit_time` now takes `%1$s`, and `intercom_netedit_am` / `_pm` are removed. English and German are in the PR.
+  - The language PRs take it when they merge it.
+  - Host tests pass. Not device-tested.
+- **Waiting on:**
+  - the owner: #181;
+  - the Atom XL: the screen checks for es, fr, it, pt-BR and ja.
 
 **2026-10-31 (translation agent): Japanese draft up as #191 (stacked on #190 and #181)**
 - **What it holds:** every screen string (10 files), SignalDeck Web (941 keys) and the whole guide. Japanese is selectable in Device → Language.
