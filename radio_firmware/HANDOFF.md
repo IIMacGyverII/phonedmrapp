@@ -1,6 +1,10 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**19:16 (Grok): FW59 and F59D are built. STATUS: REVIEW. Neither image was loaded. The Armor, the HackRF and the hotspot were not touched.**
+
+FW59 sha256 `0d9f7a373fb3ee2b3e2447979242a4cdb0c06f0c37d04dc4f68c892062909b69`. F59D sha256 `db2cf035718e4f084224ba8fb7b80c022d6c3fa570459cab35c8630eed8dd2d8`. (A′) at `0x26f24` stores the destination and the source only when the call is a group call and the destination is 16777215. `0x11d18` and `0x11d80` stay the FW57 branches. The op 6 guard is the FW58 hold word. The monitor byte is `0x38C70+0x11`, stored by `0x2F` at `0xA61C`. The `0x2B` target copy at `0x14b4e` runs only when bit 1 of the word at r8−8 is set. Full notes in `results.md`. The F59D rows wait for the lease line.
 
 **Hotspot lease ended 19:13 (managing agent): backup done (private Gitea, hotspot/2026-10-30-before-reflash); no reflash — the owner power-cycled it instead (software already = the 10-27 working set: MMDVMHost 20261012_M17 2b27b08, modem 7e16099). MMDVMHost up ("Opening DMR Network"), relay m17relay.py on 127.0.0.1:62031/17010, config unchanged. Hotspot free for FW59.**
 

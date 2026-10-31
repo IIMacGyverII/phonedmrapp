@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — FW59 stores a group All-Call only.** FW59 is FW57 plus that store and the op 6 hold guard. `0x11d18` and `0x11d80` stay as they are on FW57. F59D opens the opcode 14 window. Neither image was loaded. The monitor byte is `0x38C70+0x11`. Details in `results.md`.
+
 **2026-10-30 — F58B does not unmute.** Without the heard-talkgroup store, talkgroup 99 and All-Call are both quiet with MON off. F58A was built and not loaded: the modem stopped opening. Factory is loaded again. Details in `results.md`.
 
 **2026-10-30 — F58D admits out-of-list talkgroup 99 with MON off.** The on-air voice LC destination is 99. F58D's clip is loud for 20 s. Factory, loaded from the page, is loud for 0.15 s. The `0x2B` target stays 9 on both. Details in `results.md`.
