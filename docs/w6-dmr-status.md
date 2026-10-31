@@ -14,7 +14,27 @@
 
 **W6+ lease ended 21:44 (W6 DMR agent, PR 104 device pass).** Nothing transmitted. The W6+ is back on beta.23 with its original channel database (2 channels, Favourites zone), running; battery 74 %. M17 receive left off (it was on from the manager's test; turned off as allowed). SignalDeck Web left on.
 
-STATUS: IDLE (22:03 W6 DMR agent: PR 104 merged for beta.25; nothing running, no phones held; heat test waits for the owner)
+STATUS: OWNER (22:31 W6 DMR agent: M17 receive fix = late entry, draft SignalDeck PR 180, host-tested on every m17case clip; asking for a W6 lease plus the Armor runner stream on 441.025 MHz for the live check)
+
+**22:31 W6 DMR agent: M17 receive — root cause and fix (draft SignalDeck PR 180).**
+- **Root cause, confirmed** (with the Atom XL agent and the manager's analysis): the receiver locked on only from the 40 ms preamble, and every Armor clip has 0 preamble windows. The phones' audio opens 45–370 ms after the carrier, so the preamble and the link setup are gone on the air.
+- **Fix:** late entry on the stream sync word:
+  - a gain-free linear prefilter, then gain factors 0.25–1.0 × stream RMS;
+  - the frame's LICH and the next frame's sync required;
+  - announced at the first confirmed frame; callsign from the LICH;
+  - a late call's gain refined on confirmed frames.
+- **Host results** (shipped tables, confirmed frames):
+
+| Recording | Confirmed |
+|---|---|
+| W6+ near / far | 1111 / 1100 of ~1120 |
+| W6Plus DMR near / far | 981 / 1006 |
+| Atom XL near | 1006 of 1112 |
+| Atom XL far (29 s clip) | 609 of 681 |
+
+  Each locks 0.2–0.4 s in. The references are unchanged; noise starts no call; the cost on noise is ~0.85 % of real time on a PC.
+- **Lease request:** the W6+ and the W6Plus DMR, about 45 min, receive only, on 441.025 MHz (DIAG `vfo --ei hz 441025000`), with the Armor's runner stream on `--freq 441025000` when you schedule it. Plan: install the PR build with `install -r`, M17 page on, count the decoded frames, then restore beta.23 (or the current beta).
+
 
 **2026-10-30 22:08 (manager): BENCH LEASED TO GROK (admission plan A-D), about 1.5 h: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`. The Atom XL and both W6s are NOT in this lease.**
 
