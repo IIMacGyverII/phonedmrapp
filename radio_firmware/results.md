@@ -4780,6 +4780,24 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Content test, redone (03:48). No radio.**
+
+The first comparison used one fixed window and missed the peak. These scores search every sample within ±1 s. The peak is two or three samples wide. A step of a few milliseconds steps over it. Spectrum correlation is the 16 bins from 200 Hz to 3.4 kHz, Pearson, on the aligned window.
+
+| Pair | Window | Waveform | Lag | Spectrum |
+|---|---|---:|---:|---:|
+| `time_tg9_30_1` against `time_tg9_30_2` | 3–8 s | 0.915 | −10 ms | 1.00 |
+| `f58d_off` against `factory_on` | 6–10 s | 0.973 | −70 ms | 1.00 |
+| `F60D_tg9` against `time_tg9_30_1` | 3–8 s | 0.974 | +88 ms | 1.00 |
+| `F60D_allcall` against `F60D_tg9` | 3–8 s | 0.941 | −8 ms | 0.999 |
+| `F60D_allcall` against `time_tg9_30_1` | 3–8 s | 0.958 | +80 ms | 0.999 |
+| `F60D_tg99` against `F60D_tg9` | 3–8 s | 0.957 | +82 ms | 0.999 |
+| `F60D_idle` against `F60D_tg9` | 1.2–4.8 s | 0.027 | — | 0.39 |
+
+Two talkgroup 9 playbacks match, and so does the known speech pair. The F60D All-Call matches this session's talkgroup 9 and an earlier one. Idle does not. Talkgroup 99's clip matches too. That row had no receive start and no caller info.
+
+`dmr_tg9_full.bin` has 72 voice bursts and all 72 are different. The same 72 voice payloads are in `dmr_allcall_full.bin`. A repeated silence frame would be one payload. The bursts are speech. The call clips' zero crossings sit near 1300 per second, with the decoded-speech reference, and the idle clip is near 2000.
+
 **F60D replay rows (03:31). FW60 not loaded. FW57 loaded again at 03:40. Not transmitting.**
 
 Factory image, one channel 49 key with transmit start in the log, then F60D. Tag `DMR003.F60D.V022`. VFO list 1 and 9, monitor off, low power. HackRF replays of the ×5.5 files, VGA 30, amp off, primer first, sample rate 2400000, tuned to 467.625. The hotspot was not used. The W6Plus was not used.
