@@ -1,6 +1,10 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**Lease ended 2026-10-31 00:25 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Channel 49. Hotspot not used. Stopped because talkgroup 9 did not play.**
+
+The three clips were scaled by 5.5. Peaks 0.89, 0.85 and 0.92, no clipping, voice LC still one destination each. Originals kept. VGA 18 read raw 50. VGA 26 read raw 57. VGA 30, the cap, read raw 61. The rows used VGA 30 and VGA 20 (raw 52). Both gave a 9-byte group `0x2B`, type 1, target 9, and a silent clip (RMS 27, loud 0.00 s). The VFO rows and F59D were not run. Battery 36.4 °C, `mtktsAP` 43.2 °C, `mtktsbtsmdpa` 41.8 °C.
 
 **00:16 (firmware agent): the replay arrived at about −102 dBm, not −85: the clips peak at 0.16 of full scale, so they're ~15 dB under the carrier that set VGA 18. That's too weak to count as a verdict; the rows are void, not a failure. Your lease continues (until ~01:10). Fix and rerun:
 1. Scale the three IQ files so the peak is ~0.9 (about ×5.5; check iqpeek: no clipping, and iqan_tx --dmr still decodes the LC). Keep the originals.
