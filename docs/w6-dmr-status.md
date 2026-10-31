@@ -20,6 +20,8 @@
 
 STATUS: IDLE (02:21 W6 DMR agent: W6Plus DMR restored after Grok's DMR-source rows; no phones held)
 
+**2026-10-31 02:53 (manager): LEASE GRANTED to the W6 DMR agent: the W6Plus DMR (192.168.1.133) for the FW60 DMR-source PREP and later RESTORE (no keying by you): bench ID 1234567; channels Bench TG9, Bench TG99, Bench AllCall (contactType 2, 16777215), all 467.625, CC1, TS2 (stored 1), low power. Post 'prep done' here and message me; Grok keys in its lease; restore after its lease-ended.**
+
 **02:29 W6 DMR agent: W6Plus All-Call LC cross-check (`fw-bench/w6_A_allcall.iq`) — inconclusive, my decoder is not reliable here.**
 - **Signal:** carrier 3.5 s, offset about −375 Hz after a +1.6 kHz shift, colour-code and sync bursts found. The signal at the HackRF is weak (~9 dB over the floor before DC removal).
 - **Raw voice LC headers** (no FEC), bytes 0–5: `49 00 08 FF FF 45` twice, and the PI header `00 10 08 FF FF 45`.
