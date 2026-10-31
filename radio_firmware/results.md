@@ -4780,6 +4780,20 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**HackRF replay prep (2026-10-31). No radio.**
+
+The hotspot stays out of the next rows. Three captures were trimmed to the one call and shifted so the carrier is at 0 Hz. A replay at 467.625 MHz, sample rate 2400000, amp off, puts that carrier on 467.625. The files are `tools/dmr-replay/library/full_tg9.iq`, `full_tg99.iq` and `full_allcall.iq` (local only, not in git).
+
+| Clip | Source capture | Removed | After the shift | Voice LC | Terminator |
+|---|---|---:|---|---|---|
+| Talkgroup 9 | `full_ch49_tg9_off1.iq` | +1634 Hz | −2 Hz, peak 0.162, clip share 0 | 8 × 9 | 3 × 9 |
+| Talkgroup 99 | `full_A_tg99_off1.iq` | +1625 Hz | +3 Hz, peak 0.155, clip share 0 | 8 × 99 | 3 × 99 |
+| All-Call | `full_A_allcall_off1.iq` | +1602 Hz | +1 Hz, peak 0.167, clip share 0 | 8 × 16777215 | 3 × 16777215 |
+
+Each is 7.21 s and 31 sync bursts. iqpeek says not clipping. One All-Call voice header has a source word one count away from the others; its destination is still 16777215. The idle bursts are not the call.
+
+TX level, from the VGA 0 carrier that read raw 34 on channel 49 (−103 dBm). HackRF TX VGA is 1 dB a step. VGA 18 is about −85 dBm (raw 70). VGA 8 is about −95 dBm (raw 50). Every planned row uses both, amp off, the primer first, and no repeat flag. `dmrplay.sh` must be given sample rate 2400000; its default is 2000000.
+
 **Receiver check (23:56). FW57, no image load. Not transmitting.**
 
 The hotspot file was read and not written. Duplex 0, both ways 467.625 MHz, power 1, colour code 1, TX offset 0, RX offset −450, TX level 50, RX level 50, RF level 20, TX invert 1, RX invert 0.

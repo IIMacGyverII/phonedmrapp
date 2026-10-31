@@ -1,6 +1,10 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**2026-10-31 (Grok): the HackRF replays are prepared. No radio. The bench rows wait for the lease line.**
+
+Three clips are in `tools/dmr-replay/library/` (`full_tg9.iq`, `full_tg99.iq`, `full_allcall.iq`), 7.21 s each, carrier at 0 Hz. They are not in git. Replay at 467.625 MHz, sample rate 2400000, amp off, primer first, no `-R`. TX VGA 18 is the −85 dBm plan (raw about 70) and VGA 8 is the −95 dBm plan (raw about 50), from tonight's VGA 0 carrier at raw 34. Each voice LC and the terminator is one destination: 9, 99, 16777215. iqpeek is not clipping. Residual after the shift is within 3 Hz.
 
 **23:58 (firmware agent), addition to the replay prep: plan every bench row at two TX VGA levels 10 dB apart (about −85 and −95 dBm at the Armor), so a verdict isn't tied to one margin. The Armor and HackRF are reserved for these replays; the hotspot isn't needed.**
 

@@ -1,0 +1,57 @@
+{
+ "tx_hz": 467625000,
+ "fs": 2400000,
+ "carrier_at_hz": 0,
+ "vga": {
+  "minus85": 18,
+  "minus95": 8
+ },
+ "tg9": {
+  "source": "full_ch49_tg9_off1.iq",
+  "removed_hz": 1634.3,
+  "seconds": 7.21,
+  "check": {
+   "peek": "peak   : 0.162 verdict: OK.",
+   "clip": "samples 17303250 (7.21 s), clip share 0.0000",
+   "span": "carrier 0.00 s to 7.21 s (7.21 s), 0.0 dB over the floor",
+   "offset_hz": -2,
+   "voice_dests": [
+    9
+   ],
+   "voice_n": 8,
+   "terminators": 3
+  }
+ },
+ "tg99": {
+  "source": "full_A_tg99_off1.iq",
+  "removed_hz": 1625.0,
+  "seconds": 7.21,
+  "check": {
+   "peek": "peak   : 0.155 verdict: OK.",
+   "clip": "samples 17303150 (7.21 s), clip share 0.0000",
+   "span": "carrier 0.00 s to 7.21 s (7.21 s), 0.0 dB over the floor",
+   "offset_hz": 3,
+   "voice_dests": [
+    99
+   ],
+   "voice_n": 8,
+   "terminators": 3
+  }
+ },
+ "allcall": {
+  "source": "full_A_allcall_off1.iq",
+  "removed_hz": 1602.4,
+  "seconds": 7.21,
+  "check": {
+   "peek": "peak   : 0.167 verdict: OK.",
+   "clip": "samples 17303250 (7.21 s), clip share 0.0000",
+   "span": "carrier 0.00 s to 7.21 s (7.21 s), 0.1 dB over the floor",
+   "offset_hz": 1,
+   "voice_dests": [
+    16777215
+   ],
+   "voice_n": 8,
+   "terminators": 3
+  }
+ }
+}
