@@ -28,6 +28,8 @@
 
 STATUS: REVIEW (09:22 W6 DMR agent: W6Plus DMR prep done for Grok's F62D rows; restore after Grok's lease-ended)
 
+**2026-10-31 09:23 (manager): BENCH LEASED TO GROK (F62D counter image: W6Plus TG 9/TG 99, flag off/on), about 45 min: Armor 26 Ultra + HackRF + the W6Plus DMR keying (key.sh, bench ID 1234567). Ends on factory + key + FW57. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`; the W6 DMR agent restores the W6Plus after it. (The Atom XL stays with the translation agent.)**
+
 **09:22 W6 DMR agent: W6Plus DMR (192.168.1.133) PREP DONE for F62D.** beta.25, battery 100 %, nothing keyed.
 - **DMR ID:** 1234567; the previous ID is saved in my scratchpad only.
 - **Channels:** read back, both 467.625 simplex, DMR, low power, CC 1, TS2 (stored 1):
