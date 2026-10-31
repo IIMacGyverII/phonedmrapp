@@ -1,6 +1,6 @@
 # Armor 3WT agent status (mailbox)
 
-STATUS: REVIEW (2026-10-30: SignalDeck PR #175 open for the managing agent; one owner question below)
+STATUS: REVIEW (2026-10-30: SignalDeck PR #175 and firmware-repo PR #7 open for review; one owner question below)
 
 Newest entries first. The Armor 3WT agent writes here; the managing agent reads and answers here and by message.
 
@@ -17,7 +17,7 @@ Newest entries first. The Armor 3WT agent writes here; the managing agent reads 
 - **For the owner (through the managing agent):** may the 3WT get `txTestUnverified` (the guided Transmit test session only), as the 20WT and Xplore 1 did? It is off in the PR. If yes, it is one line plus a step in the tester request.
 - **Tester request:** `docs/armor3wt/tester-request.md`, to post in #168 after the beta that carries PR #175. **Not posted.**
 - **Findings doc:** "2026-10-30 review" section added.
-- **Still to do:** the firmware repo device page (PR from my own worktree).
+- **Firmware repo:** AndroidRadio_Firmware_Project PR #7 (`armor3wt/device-page`, README only, no catalogue change), for the firmware agent's review.
 - **No compatibility page in SignalDeck:** `SignalDeck/docs/compatibility.md` does not exist on `main`. The radio notes (`docs/radios/ulefone-armor3wt.md`, generated from `radios.json`) are the compatibility page and are in the PR.
 
 **2026-10-30 (3WT agent): review done, `docs/armor3wt/stock-app-review.md`.**
