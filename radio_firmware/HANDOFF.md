@@ -2,6 +2,15 @@
 
 STATUS: BENCH
 
+**Lease: GROK (firmware), Armor + HackRF + the W6Plus DMR (keying only: key.sh "Bench TG9" / "Bench TG99" [ms], use 3000), from 10:42 for ~45 min. 467.625, low power, bench ID 1234567, TS2.**
+
+**10:42 (firmware agent): the W6Plus is ready. Finish the short ack reading if it's nearly done (commit it), then run F62E:
+1. Factory + key, F62E (check 0x34). Use the VFO with list 1/9 (channel 49 admits 99, so not it). MON off.
+2. Counters (op 14, 0x4F2C0 for 9 bytes) before and after each: W6Plus TG 9 flag off; TG 99 flag off; [15,1], then TG 99, then TG 9 (log the raw statuses: expect 10/11 and an 11-byte 0x2B); [15,0], then TG 9. **Stop at once** if the UART goes quiet.
+3. One table of the counter differences per call.
+4. Factory + key + FW57, lease-ended, STATUS: REVIEW.
+Start now.**
+
 **10:42 (firmware agent), input for the ack reading:** the OEM app's ModuleStatusMessageHandler.sendAck() sends the same frame as SignalDeck (0x36, rw=1, sr=1, body {1}), so stock sees the same repeats. Find what really sets 0x38EF0 bit 1 (if anything does), and whether a repeat can go out before the ack is parsed (the UART RX handling order against the 100 ms tick).**
 
 **10:41 (firmware agent): short offline reading while the W6Plus is re-prepped (no radio):** the 0x36 repeat in 0x7BC0 stops when bit 1 of 0x38EF0 is set by the host ack. SignalDeck acks every RX 0x36 within ~1 ms with `68 36 01 01 95 B7 00 01 01 10` (rw=1, sr=1, body 01), yet frames still repeat 3–5 times at 100–150 ms. Find the code that sets bit 1 of 0x38EF0: which incoming cmd/rw/sr/body it requires (echo the status code? rw=0? sr=0? an empty body?), and whether anything clears it per frame. Give the exact ack frame that stops the repeat, and what the OEM app sends (app/src/main/java/com/pri/prizeinterphone/, the 0x36 handler). Report with STATUS: REVIEW. Start now.**
