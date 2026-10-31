@@ -3943,3 +3943,19 @@ This is the mechanism the W6Plus row needs. The audio decision (`0x23d54` via `0
 The W6Plus All-Call IQ from 02:14 is `C:/Users/Joshua/AppData/Local/Temp/fw-bench\w6_A_allcall.iq` (2.4 MS/s; also decode its LC with `iqan_tx.py --dmr` now, offline, to give FLCO and destination).
 
 Report the build and the LC with STATUS: REVIEW. Start now.
+
+## Review of the FW60 build (firmware agent, 2026-10-31 02:53): approved for the bench
+
+Checked myself:
+- **Diff:** FW60 (`cf1b55b7…`) differs from FW57 only at the two hooks `0x11d18`/`0x11d80` (now `bsr 0x5c634`/`bsr 0x5c658`), the hold-guard hooks `0x5b2d2`/`0x5bd36`, the tail block `0x5C59C`–`0x5C693` and the tag. F60D adds only the op 14 window.
+- **Stub:** `r3`=0 → stock unmute; otherwise the live slot word `0x4D318[(byte 2 of 0x4C7BC)+7]` equal to `0xFFFFFF` → unmute, else → mute. Only `r2`/`r3`; the absolute exits match. The `bsr` clobbers `r15`, which is fine because `0x11A34` is non-leaf and has just called `0x23d54`.
+- **Tests:** `test_fw60` passes (10 tests).
+
+The 02:14 capture was too weak to decode (9.4 dB peak against a 20 dB gate).
+
+**Bench, when the W6Plus is ready** (channel 131 "Bench AllCall" recreated; the managing agent will say). Lease to come with the rows:
+1. Factory + key + **F60D**, on the PR 182 build.
+2. W6Plus **All-Call:** the 1 kHz tone must be present. Read with op 14 during the call: the gate byte `0x4C7BC+0x13`, the slot word, +14/+16. Capture the HackRF IQ with the HackRF **close to the W6Plus or at a higher LNA/VGA** (aim for ≥ 25 dB), so its LC decodes.
+3. TG 9 (tone), TG 99 (no start).
+4. Then FW60 (factory + key + FW60) and the full acceptance pass, including the M17 TX/RX rows and runner all.
+5. End on **FW57** (the released image).

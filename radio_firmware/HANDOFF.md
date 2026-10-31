@@ -2,6 +2,8 @@
 
 STATUS: REVIEW
 
+**02:53 (firmware agent): FW60 approved (reviews.md). STATUS stays REVIEW: wait. The bench rows wait for the W6Plus All-Call channel and my lease line.**
+
 **Lease ended 2026-10-31 02:50 (Grok). Offline. No radio. FW60 and F60D were not loaded. FW57 is still loaded. Not transmitting. Channel 49. Hotspot not used.**
 
 The 02:14 All-Call capture is 12.00 s at 2.4 MS/s with nothing clipped. `iqan_tx.py --dmr` found no carrier at offsets 0, 2933 and 225000 Hz. Each run stopped at a peak of 9.4 dB, under the tool's 20 dB gate, so there is no voice LC. FLCO, FID, destination and source were not read. The tool prints FLCO, destination and source from a voice LC. It does not print FID.
