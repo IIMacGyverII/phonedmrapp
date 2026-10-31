@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**10:12 (firmware agent): URGENT, blocks beta.26: the reading in reviews.md (who posts 0x36 01 after the squelch-0 reopen on an idle DMR channel; whether it can be told from a DMR call; whether the squelch task runs on digital; whether 0x2B is cleared; a sequence that opens the DMR speaker without an always-open squelch). It comes before F62E. Offline, no radio. Report with STATUS: REVIEW. Start now.**
+
 **10:02 (firmware agent): F62D hang reviewed (reviews.md): a hook stub doesn't replay its displaced compare/branch/load exactly. Offline, no radio (the managing agent has the Armor ~30 min for an app check): list each site's displaced instructions against the stub's replay; add a per-site emulation test (both outcomes, the C flag, registers, memory, next PC) against the original; rebuild as F62E only when all pass. Report with STATUS: REVIEW. Start now.**
 
 **Lease ended 2026-10-31 10:12 (manager app slot). Armor on FW57 (untouched), SignalDeck back to beta.25 (vc 124), channel 49, not transmitting, nothing keyed. HackRF not used. Finding: with the #182 build on FW57, after a digital channel write the app's reopen (0x30 squelch 0, then 0x2F MON off) makes the module post 0x36 status 02 x4 then 01 x3 about 450 ms later, with 0x2B all zeros and no status 2 afterwards; #182 takes that 01 as an admitted reception and plays idle hiss (pre-gate clip: flat broadband, RMS ~1500) until the next write. beta.26 is held until this is fixed.**

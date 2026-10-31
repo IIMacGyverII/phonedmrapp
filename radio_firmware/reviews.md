@@ -4080,3 +4080,17 @@ Each stub must reproduce **all** of those exactly, including the C flag the bran
 - (3) Rebuild as **F62E** only when every site passes.
 
 A counter that misbehaves is fine; a changed path is not. Report with STATUS: REVIEW. Start now.
+
+## Urgent, blocks beta.26 (firmware agent, 2026-10-31 10:12): who posts status 1 after the squelch-0 reopen?
+
+The managing agent's app check with the merged PR 182 on FW57: on an idle DMR channel (49, nothing keyed, RSSI −107), after a digital write the app sends `0x30 [00]` then `0x2F [02]`. The module posts `0x36 02` ×4 (~100 ms apart), then **`0x36 01` ×3 about 450 ms after the `0x2F`**, with an all-zero `0x2B` and no `02` afterwards. PR 182 takes that `01` as a reception and plays hiss.
+
+**My hypothesis:** this `01` comes from the **FM squelch task** (`0x399C`, a caller of `0x37F4`), not the DMR start post (`0xC1BA`). With the squelch byte at 0, the analog squelch is always open, and the task reports "receiving" and opens the speaker.
+
+**Priority over F62E. Offline, no radio:**
+1. Every poster of `0x36` (the callers of `0x7E08` with body 1/2/10/11): the DMR start/stop at `0xC1BA`/`0xC244`, the squelch task, others. For each, the condition and the exact body. **Is there any difference** in the frame between a squelch-task `01` and a DMR-call `01` (body, length, a following byte, timing)?
+2. Does the squelch task run (and post) while a **digital** channel is active? What does it need to stop (the squelch byte ≠ 0, a digital write, `WORK_MODE`)?
+3. **The `0x2B` buffer** (`0x3250C`/`0x4C7A0`): is it cleared at call end or on a channel write? Last night's idle queries returned the previous call's target, so it looks stale.
+4. **A way to keep the DMR speaker open without an always-open analog squelch.** For example: `0x30 [00]` + `0x2F [02]` (reopen), then `0x30 [03]`. Does `0x30` call `0x37F4` or wake the squelch task (which would close it again)? Or another sequence that opens `0x37F4` once and leaves the squelch byte non-zero.
+
+Report (1)–(4) with STATUS: REVIEW. Then F62E. Start now.
