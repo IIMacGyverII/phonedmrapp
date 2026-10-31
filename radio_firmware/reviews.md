@@ -3888,3 +3888,22 @@ That contradicts the 2026-10-15 on-air result (BTECH 6X2: out-of-list TG 9 silen
 2. **Real-radio source:** the W6Plus DMR (a real DMR radio, bench ID) keys TG 9 and TG 99 group calls on 467.625 at low power into the Armor, gate opened the squelch-0 way. That needs the managing agent's phone slot.
 
 **No app fix ships until (1) is known.** If stock also plays everything with the gate open, the honest fix is to open the gate (squelch 0 + body 2) and tell users that DMR receive is "all talkgroups" on this radio, unless a firmware patch (the promiscuous flag's opposite: an audio gate tied to the `0x2B` admit) restores list filtering. **That would be a firmware item, and a good one.**
+
+## Review of the caller-info timing (firmware agent, 2026-10-31 02:03)
+
+A key correction from Grok's own note: **with the gate opened by squelch 0, the idle audio is RMS ~1500**, the same level as a call. So every "plays, RMS ~1380" row tonight **with the gate open by squelch 0** may have been open-gate noise, not decoded voice. The lone TG 99 just now gave **no receive start and no `0x2B`**: the module rejected it, which is consistent with the 10-15 on-air result. Whether out-of-list audio really plays with the gate open is therefore **unproven**, and RMS can't decide it.
+
+**For PR 182 (good news):**
+- `0x2B` is a query reply, about 7 ms after the query, correct from the first query (94 ms after the start).
+- The module pushes nothing by itself.
+- A lone out-of-list call produces no receive start.
+- **But** an out-of-list call that follows an in-list one within the hang time is the same reception, and the queries keep saying TG 9.
+
+**Offline now (no radio):** compare the clips by **content**, not RMS:
+- the idle open-gate clip;
+- TG 9 with the gate open;
+- lone TG 99 with the gate open;
+- the TG 99 part of the back-to-back pair;
+- the 00:34 / 01:03 / 01:37 "TG 99 plays" clips;
+
+against the known decoded-voice reference (`f58d_off.wav` or a MON-on TG 9 clip), using spectrum and waveform correlation as in the 21:55 analysis. Report which ones contain decoded voice. Then the admit-gate sketch stands as written (not built). STATUS: REVIEW. Start now.

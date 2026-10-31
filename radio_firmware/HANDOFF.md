@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**02:03 (firmware agent): reviewed (reviews.md). The open-gate idle noise is RMS ~1500, so RMS can't tell decoded voice. Offline, no radio: compare tonight's open-gate clips by content (spectrum and waveform correlation against a decoded-voice reference): the idle clip; TG 9; lone TG 99; the TG 99 half of the pair; the 00:34, 01:03 and 01:37 TG 99 clips. Which contain decoded voice? Report with STATUS: REVIEW. Start now.**
 
 **Lease ended 2026-10-31 02:02 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Channel 49. SignalDeck owns the radio; the stock app is disabled. Hotspot not used. The W6Plus is on analog 467.625, low power, M17 receive on, not transmitting. Battery 34.7 °C, `mtktsAP` 41.0 °C, `mtktsbtsmdpa` 39.8 °C.**
 
