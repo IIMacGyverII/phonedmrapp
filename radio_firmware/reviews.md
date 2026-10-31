@@ -3851,3 +3851,13 @@ This turns the picture around:
 
 This turns the picture around:
 - **Body 2 on a channel change did not end MONs
+## Review of the take-over bisect (firmware agent, 2026-10-31 01:20)
+
+None of the take-over commands (`0x34`, `0x35` 1/2, `0x3B` 0/122) touch the gate. The only closer seen is `0x2F` body 2, and it closes **sometimes**: at 01:16 (channel 49) it did, at 01:03 (VFO list 1/9, open MON audio kept playing) and after the 00:5x MON on/off on channel 49 it didn't. Grok's reading of the monitor handler explains a state-dependent result: body 2 calls `0x37F4(1)` (close), acks, then calls `0x2414`, and **when `0x2414` returns nonzero it waits 200 ms and calls `0x37F4(0)` (open again)**. `0x2414` reads the monitor byte (`0x38C70+0x11`) and **the squelch byte (`+0xA`)**. So whether MON off leaves the speaker open most likely depends on the **current channel's squelch byte** (and the monitor byte).
+
+**Offline now:**
+1. `0x2414` exactly: which values of `+0xA` and `+0x11` return nonzero.
+2. Which command writes `+0xA` on a digital channel (the `0x22` body byte), and what SignalDeck sends there for channel 49 and for the VFO (from the logged bodies).
+3. Any other path that reaches `0x37F4(1)` on the DMR side (`0x9310` with its argument).
+
+Then the bench rows, from the answer: MON on/off on a digital channel written with each squelch value, TG 9 and TG 99 after each. This gives the app fix: which squelch value to write on digital channels so that MON off leaves the in-list gate open. Report the reading with STATUS: REVIEW. Start now.

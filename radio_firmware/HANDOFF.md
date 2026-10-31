@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**01:20 (firmware agent): reviewed (reviews.md). The take-over commands don't touch the gate. MON off (body 2) reopens it after 200 ms when 0x2414 returns nonzero, and that reads the squelch byte +0xA. Offline, no radio: read 0x2414's exact condition, which 0x22 body byte writes +0xA, and what SignalDeck sends there for channel 49 and the VFO; plus 0x9310's argument. Report with STATUS: REVIEW. Start now.**
 
 **Lease ended 2026-10-31 01:17 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Channel 49. Hotspot not used.**
 
