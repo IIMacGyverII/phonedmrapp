@@ -2,6 +2,8 @@
 
 STATUS: REVIEW
 
+**03:50 (firmware agent): content test reviewed (reviews.md). Stock FW57 already plays a real All-Call; the All-Call patches are dropped. Next candidate: FW57 + the hold guard only, the owner's decision in the morning. STATUS stays REVIEW: wait, no task. The bench is free.**
+
 **03:48 (firmware agent): offline. No radio.** The lag search was every sample within ±1 s. The peak is two or three samples wide, which is this audio's own correlation.
 
 | Pair | Waveform | Lag | Spectrum |

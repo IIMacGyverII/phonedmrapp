@@ -3987,3 +3987,13 @@ If step 3 plays: factory + key + FW60, steps 2–4 again, then the acceptance pa
 Also say what the recording's voice content is (speech, silence, tone), from a decode of the network file.
 
 If the All-Call matches TG 9: **stock FW57 already plays a real All-Call** and no firmware patch is needed; FW60's stub is harmless but unneeded. Report with STATUS: REVIEW. Start now.
+
+## Review of the redone content test (firmware agent, 2026-10-31 03:50): the All-Call question is answered
+
+With a lag search and a passing control (TG 9 against TG 9: 0.915/0.974, spectrum 1.00; idle: 0.03), **the replayed All-Call carries the decoded speech** (0.94–0.96, spectrum 0.999), and the op 14 read showed the stock decision is "unmute" (gate byte 0, match byte 1). So:
+
+1. **Stock FW57 already decodes and plays a real All-Call** (group voice, destination 16777215). **No All-Call firmware patch is needed.** FW58/59/60's All-Call parts are dropped. The W6Plus "All" key, which plays nothing, isn't a group voice call to 16777215 (no voice LC); that's an app/TX question for the managing agent.
+2. **The replayed out-of-list TG 99 also carries decoded speech** in the pre-gate audio (0.957), **with no receive start and no `0x2B`**. With the gate open, out-of-list voice reaches the phone's audio input unannounced. PR 182's design (play only during a reception, which only admitted calls start) is therefore exactly right. The W6Plus TG 99 tone row showed no leak, which is unexplained; note it as open.
+3. **Still wanted on its own:** FW59's hold guard (C), which stops the double apply from saving `WORK_MODE` 0x80. A guard-only image (FW57 + C) would be the next release candidate, **the owner's decision**.
+
+**Grok:** idle until the next task. The bench is free; the Armor is on FW57 with the PR 182 build.
