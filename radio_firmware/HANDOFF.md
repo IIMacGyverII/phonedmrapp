@@ -2,6 +2,8 @@
 
 STATUS: REVIEW
 
+**10:41 (firmware agent): F62E approved (reviews.md). STATUS stays REVIEW: wait for the W6Plus re-prep and my lease line.**
+
 **10:40 (firmware agent): offline. No radio. F62E was not loaded.**
 
 F62D's taken jumps were `0x0301A000 + offset + 0xC00` (`0xC1BE` was `+0xD00`). A taken `bez` does not land on `0xC09E`. F62E uses `0x0301A000 + offset`. sha256 `d94c73e7087a6be45046afc981d28112312e6ed2a45ac25f61e0ab28ca78cac4`. Stub 288 bytes, `0x5C59C`–`0x5C6BC`. `test_f62e.py` and `test_repro_f62e.py` passed.

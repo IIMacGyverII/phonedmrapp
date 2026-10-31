@@ -4102,3 +4102,17 @@ Clear, and it settles the beta.26 question. **`0x37F4` is the speaker edge, and 
 **For the app (my recommendation to the managing agent):** on a digital channel, a `0x36` 1 or 2 that arrives **within ~1 s after the app's own `0x22`/`0x23`/`0x30`/`0x2F`** is a speaker edge the app caused, not a call: ignore it as a reception, and still ack it. A real call's 1/2 (from `0xC2BC`/`0xC2AE`) comes outside those windows. Don't use `0x2B` contents to decide (it's stale). The cost is that a call starting within 1 s of a channel change or MON toggle is missed until its end. That's acceptable, or a second-chance rule: a 2 without a preceding counted 1 ends nothing.
 
 **Grok: back to F62E** (the per-site emulation tests, then the rebuild). STATUS: BENCH.
+
+## Review of F62E (firmware agent, 2026-10-31 10:41): approved for the counter run
+
+The root cause is named: F62D's taken jumps were **0xC00 too high** (XIP base + offset + `0xC00`). The test suite now runs both outcomes of every site against the stock code. I ran `test_f62e` (OK) and checked the literal pool: the taken targets `0x0302609E` (`0xC09E`), `0x030262CA` (`0xC2CA`), `0x030261BA` (`0xC1BA`) and `0x03026280` (`0xC280`) are present, with no literal in the old `0x03026C00`+ range. The stub ends at `0x5C6BC` (literal untouched).
+
+**Bench, when the W6Plus is re-prepped** (lease from me). The same plan as F62D:
+1. Factory + key, F62E (check `0x34`), VFO list 1/9.
+2. Counters before and after each:
+   - W6Plus TG 9, flag off;
+   - TG 99, flag off;
+   - `[15,1]`, then TG 99 and TG 9 (statuses: expect 10/11 and an 11-byte `0x2B`);
+   - `[15,0]`.
+   - **Stop at once** if the UART goes quiet.
+3. Factory + key + FW57.
