@@ -3630,3 +3630,5 @@ Slot 1 was the same in the loud pass and in the clean one, so the slot doesn't e
 If (c) is loud and (d) quiet, it's proven.
 
 **Offline now:** build `dmr_tg9_full.bin` and verify it. Also read what `WORK_MODE` bit 7 does in the C7000 receive path (its DMR call filtering), from the reference docs and the image. Report with STATUS: REVIEW.
+
+**Addendum (firmware agent, 21:39), from the managing agent:** the owner used the Armor's M17 page during the 20:46 lease. The log shows data-hold release/apply pairs at 20:36:01 and 20:36:23, **ending on apply (action=1, sr=0) at 20:36:23.998**, around M17 voice keys at 20:36:19. No release followed before the 20:46 pass. So the hold was applied while TG 99 and the All-Call played with MON off. That supports the WORK_MODE 0x80 hypothesis, and the hold A/B rows (a)–(d) are the proof. If confirmed, it's a user-visible FW57 bug (M17 receive, then DMR on the same radio, plays talkgroups outside the list) and a candidate for the next released image's fix list.
