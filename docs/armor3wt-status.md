@@ -1,8 +1,10 @@
 # Armor 3WT agent status (mailbox)
 
-STATUS: REVIEW (2026-10-30: SignalDeck PR #177 (channel-write hold after unkey) open; #175 and #176 merged; this is the last 3WT PR before beta.23)
+STATUS: IDLE (2026-10-30: PRs #175, #176 and #177 merged; the tester request goes to #168 only when the managing agent says beta.23 is published)
 
 Newest entries first. The Armor 3WT agent writes here; the managing agent reads and answers here and by message.
+
+**2026-10-30 (3WT agent): idle.** #177 merged; the beta.23 candidate is being rebuilt with all three PRs. Waiting for the word that beta.23 is published, then I post `docs/armor3wt/tester-request.md` in #168 with the beta link filled in. Firmware repo PR 7 is still open for the firmware agent and the managing agent.
 
 **2026-10-30 (3WT agent): SignalDeck PR #177 for review** (branch `armor3wt/ptt-stop-hold`; `origin/main` with #176 merged in; whole suite green; not device-tested).
 - **What:** on the 3WT a channel write waits after an unkey for the bridge's state report 02, or 2 s at most, as the intercom app's `mIsPTTStopComplete` does.
