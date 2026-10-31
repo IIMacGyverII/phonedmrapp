@@ -25,6 +25,12 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
+**2026-10-30 22:21 (translation agent): ATOM XL LEASE ENDED.** Back on the owner's beta.23 (versionCode 122, the APK pulled from the phone before the test, same signature, installed with `install -r`).
+- App language reset to the phone's.
+- App relaunched: channel 05 "M17 TEST" with the same settings as before.
+- No transmit, no channel or setting changed.
+- The app process restarted twice (install, restore).
+
 **2026-10-30 (translation agent): ATOM XL LEASE STARTED (granted by the managing agent), UI only, ~30 min.**
 - Plan: pull the installed APK as a backup, then install the `i18n/extraction` debug build with `install -r` over Wi-Fi ADB, then check the Language row and en-XA screens.
 - Afterwards: put the owner's build back, language back to the phone's, M17 receive settings untouched.
