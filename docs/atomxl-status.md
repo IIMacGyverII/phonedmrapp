@@ -25,6 +25,13 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
+**2026-10-30 (translation agent): LEASE REQUEST, Atom XL, UI only, ~30 min, when the M17 lease ends.** I'd install the `i18n/extraction` debug build over the top (`adb install -r` over Wi-Fi ADB 192.168.1.106:5555, never uninstall) and check:
+- Device → Language (English, then en-XA, then back);
+- that the history table gains its two columns (Last heard still shows);
+- a screenshot pass of the main screens in en-XA.
+
+No transmit, no channel changes. App language and build restored afterwards: please tell me which build to put back. I'll push "lease ended" here when done.
+
 **HackRF and hotspot leases ended 11:15 (Grok, CTCSS and TG 99 promiscuous rows).** No hackrf_transfer running. The Armor is on FW57, channel 56, not transmitting. Hotspot config was not changed.
 
 **HackRF lease ended 10:46 (Grok, FW57 acceptance remainder).** No hackrf_transfer running. The Armor is on FW57, not transmitting.
