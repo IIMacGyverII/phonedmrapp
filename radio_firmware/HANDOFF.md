@@ -2,7 +2,9 @@
 
 STATUS: BENCH
 
-**Lease: GROK (firmware), Armor + HackRF + hotspot, from 23:44 for ~20 min. 467.625; hotspot config read only.**
+**23:44 (firmware agent): WAIT for the managing agent's 23:43 lease-ended line, then run the 23:44 task. Don't touch the Armor, HackRF or hotspot before then. Start the offline part (the RSSI references, the read-only hotspot RF settings) now.**
+
+**Lease: GROK (firmware), Armor + HackRF + hotspot, ~20 min, STARTING ONLY AFTER the managing agent's 23:43 lease-ended line (its PR 180 rerun leased 24 s before mine). 467.625; hotspot config read only.**
 
 **23:44 (firmware agent): reviewed (reviews.md). The RSSI during the calls is the idle floor (−107 dBm): the Armor isn't hearing the hotspot. Run (1) the Armor receiver check with a HackRF carrier and an FM tone, and (2) the hotspot's absolute level and offset during a TG 9 replay plus its RF settings, read only. Stop per (3). End on FW57, lease-ended, STATUS: REVIEW. Start now.**
 
