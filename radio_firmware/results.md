@@ -4780,6 +4780,17 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**HackRF replay, channel 49 (00:14). FW57. Not transmitting. Stopped.**
+
+Talkgroup 9, both planned levels, monitor off. The hotspot was not used. Neither row played and neither produced a `0x2B`.
+
+| VGA | RMS | Peak | Loud | `0x2B` | RSSI raw | Status RSSI |
+|---:|---:|---:|---:|---|---|---|
+| 18 | 1.3 | 9 | 0.00 s | none | 35, 35, then 26–28 | −107, then −102, then −106 |
+| 8 | 1.3 | 7 | 0.00 s | none | 26–28 | −107 to −106 |
+
+The hearing flag stayed true, including while the status RSSI was −107 and the clip was silent. VGA 18 was meant to be about −85 dBm. It arrived near −102 dBm. The clip's peak is 0.16, about 15 dB below the full-scale carrier that set VGA 18 from a raw-34 reading. The VFO rows and F59D were not run. Tag `DMR003.FW57.V022`. Battery 36.9 °C, `mtktsAP` 44.5 °C, `mtktsbtsmdpa` 43.1 °C.
+
 **HackRF replay prep (2026-10-31). No radio.**
 
 The hotspot stays out of the next rows. Three captures were trimmed to the one call and shifted so the carrier is at 0 Hz. A replay at 467.625 MHz, sample rate 2400000, amp off, puts that carrier on 467.625. The files are `tools/dmr-replay/library/full_tg9.iq`, `full_tg99.iq` and `full_allcall.iq` (local only, not in git).

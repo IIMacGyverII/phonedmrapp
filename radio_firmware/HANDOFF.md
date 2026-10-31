@@ -1,6 +1,10 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**Lease ended 2026-10-31 00:14 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Channel 49, 467.625 MHz, low power. Hotspot not used. Stopped after step 1.**
+
+Channel 49, talkgroup 9, did not play at either level, and there was no `0x2B`. VGA 18: clip RMS 1.3, RSSI raw 35 then the floor, status about −102 dBm. VGA 8: RMS 1.3, RSSI on the floor (−106). The status hearing flag was already true at −107, and the clip was silent, so that flag is not audio. The VFO rows and F59D were not run. The replay file peaks at 0.16, about 15 dB below the full-scale carrier the VGA choice used, so VGA 18 did not reach the planned −85 dBm. Battery 36.9 °C, `mtktsAP` 44.5 °C, `mtktsbtsmdpa` 43.1 °C.
 
 **Lease: GROK (firmware), Armor + HackRF, from 00:06 for ~60 min (the hotspot isn't used). 467.625; amp off; primer first; no -R; sample rate 2400000.**
 

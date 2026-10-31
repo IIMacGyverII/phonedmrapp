@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-31 — channel 49 did not play the HackRF talkgroup 9 replay at VGA 18 or VGA 8.** No `0x2B`. VGA 18 reached about −102 dBm, not −85. The other rows were not run. Details in `results.md`.
+
 **2026-10-31 — three HackRF replays are ready, with the carrier moved onto 467.625.** Talkgroup 9, talkgroup 99 and All-Call, each at TX VGA 18 and VGA 8. No radio. Details in `results.md`.
 
 **2026-10-30 — the Armor hears a HackRF tone, and a hotspot replay moved its RSSI off the floor.** Gain 0 is only a few dB up. The replay is on frequency and 13 dB below the earlier rows. Details in `results.md`.
