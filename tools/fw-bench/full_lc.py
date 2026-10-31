@@ -347,10 +347,13 @@ def main():
     report(HERE / "dmr_allcall.bin")
     n99, _ = rewrite(HERE / "dmr_tg99.bin", HERE / "dmr_tg99_full.bin", 99)
     nall, _ = rewrite(HERE / "dmr_allcall.bin", HERE / "dmr_allcall_full.bin", ALL)
-    print("rewrote fragments", n99, nall)
+    # Same recording and source as the talkgroup 99 file, destination 9.
+    n9, _ = rewrite(HERE / "dmr_tg99.bin", HERE / "dmr_tg9_full.bin", 9)
+    print("rewrote fragments", n99, nall, n9)
     print("after")
     report(HERE / "dmr_tg99_full.bin")
     report(HERE / "dmr_allcall_full.bin")
+    report(HERE / "dmr_tg9_full.bin")
 
 
 if __name__ == "__main__":

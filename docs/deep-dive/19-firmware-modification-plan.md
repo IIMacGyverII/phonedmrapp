@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — `WORK_MODE` `0x80` is FM mode, not a DMR admit bypass.** Bit 7 selects FM and bit 8 is clear, so the chip does not return to the DMR decoder. `dmr_tg9_full.bin` is the same recording as the other full files with every LC set to 9, and it matches `dmr_last.bin`. Details in `results.md`.
+
 **2026-10-30 — the loud full-file pass was FW57, VFO slot 1, MON off, and op 15 was not sent.** The image was already `DMR003.FW57.V022`. The session under it was F59E on that same VFO, then the FW57 reload. Details in `results.md`.
 
 **2026-10-30 — a real All-Call stays quiet on clean FW57 and on F59D.** The rebuilt files carry one embedded destination. After a factory key, FW57 mutes that All-Call and also mutes in-list talkgroup 9, and F59D stores 16777215 and stays quiet. A loud pass before the factory key was leftover state. Details in `results.md`.
