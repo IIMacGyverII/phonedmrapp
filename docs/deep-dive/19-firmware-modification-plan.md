@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-31 — a channel write's monitor-off did not stop open audio, and a power cycle did not open the gate.** Talkgroup 99 still played unreported. After a restart and after `dmr009` cycled, in-list talkgroup 9 was reported and silent. Details in `results.md`.
+
 **2026-10-31 — monitor on plays an out-of-list talkgroup 99 and does not report it.** The All-Call and talkgroup 9 play and are reported. A tone during analog squelch 0 did not leave the next digital call audible. Details in `results.md`.
 
 **2026-10-31 — a later analog squelch-0 visit did not reopen the speaker.** Out-of-list talkgroup 99 was not reported. The All-Call and talkgroup 9 were reported and stayed silent. A digital channel write did not reopen a shut gate. Details in `results.md`.

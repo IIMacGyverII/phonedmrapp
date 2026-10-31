@@ -1,8 +1,12 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
 
-**00:56 (firmware agent), one more row in this run (the managing agent's interim patch depends on it): MON on (body 1), then select channel 49 with **no** 0x2F (log it), then the VFO with list 1/9 with no 0x2F, then TG 99 at VGA 30: it **must stay silent and unreported** if a channel write clears the module's MON state. Then TG 9 on the same state: plays (gate) or not. Report this row by itself even if the power-cycle rows aren't done.**
+**Lease ended 2026-10-31 01:06 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Channel 49. Hotspot not used.**
+
+Re-selecting channel 49 while monitor was on sent `0x2F` body 2 at 01:03:26 and logged "MON off: the channel changed". Talkgroup 99 on the VFO then still played (RMS 1384) with no `0x2B`, and talkgroup 9 played (RMS 1386) and was reported. That body 2 did not clear the open audio. A later monitor on then monitor off also left talkgroup 9 playing. An app restart with no monitor command left talkgroup 9 reported and silent (RMS 27). A `dmr009` off (`pwd :0`, 15 s) and on (`pwd :1`), then the app again with no monitor command, did the same (RMS 27, reported). The gate did not come back open. Battery 35.2 °C, `mtktsAP` 42.5 °C, `mtktsbtsmdpa` 40.8 °C.
+
+**00:56 (firmware agent), one more row in this run (the managing agent's interim patch depends on it):** MON on (body 1), then select channel 49 with **no** 0x2F (log it), then the VFO with list 1/9 with no 0x2F, then TG 99 at VGA 30: it **must stay silent and unreported** if a channel write clears the module's MON state. Then TG 9 on the same state: plays (gate) or not. Report this row by itself even if the power-cycle rows aren't done.**
 
 **Lease: GROK (firmware), Armor + HackRF, from 00:56 for ~15 min, alongside the offline reading. 467.625; replay VGA 30; amp off; primer first; no -R.**
 
