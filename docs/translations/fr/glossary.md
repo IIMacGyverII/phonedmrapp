@@ -378,3 +378,133 @@ marked **❓** are real choices for the reviewer.
 | Key legends SCAN, ZONE, TXT, SOFT SQ, MON, REC, VFO, PKT | unchanged | No legend is translated. In prose, the legend is a name: « la touche SCAN », « le niveau SOFT SQ ». The car screen's own Scan button is "Balayage". | |
 | weekday buttons (one letter) | L M M J V S D | French calendar convention, week starts on Monday. Three-letter days: lun. mar. mer. jeu. ven. sam. dim. | |
 | months (short) | janv. févr. mars avr. mai juin juil. août sept. oct. nov. déc. | As Android's French locale. | |
+
+## 9. Terms settled during the draft
+
+Added on 2026-10-31 after the French draft (strings, web table, guide) and its consistency pass: the terms the
+translators needed beyond §1–8, and the splits settled so that one English label has one French rendering on the
+phone, in SignalDeck Web and in the guide. Rows marked **❓** are real choices for the reviewer.
+
+### Settled in the consistency pass
+
+| English | French | Notes | Reviewer |
+|---|---|---|---|
+| Last heard (contact sheet line, channel history, parrot tile) | Dernière réception | « Dernière écoute » read as "when you listened" and was dropped. The tab and the car list stay « Derniers entendus » (§1). | |
+| Heard (coverage map layer) | Réception | Layer name, also in the guide. A heard station elsewhere is « entendu(e) ». ❓ | |
+| ✓✓ delivered (message mark) | ✓✓ remis | Phone, web and guide; « distribué » dropped. ❓ | |
+| ✓ sent (message mark) | ✓ envoyé | FT8's own list of what you sent is « Émis ». | |
+| End / End the net / End {name}? | Terminer / Terminer le réseau / Terminer {name} ? | §2 (End a net = Terminer); « Clore » dropped from the buttons, the dialog, the web and the guide. ❓ « Clore le réseau » is also natural. | |
+| Call CQ (FT8 button) | Lancer un CQ | Phone, web and guide. | |
+| TX 1st (:00 :30) / TX 2nd (:15 :45) | TX 1 (:00 :30) / TX 2 (:15 :45) | A bare ordinal (« TX 1re ») lacks its noun; third of a row on the phone, so no « période ». ❓ | |
+| VHF/UHF conditions | Propagation VHF/UHF | Screen title, PKT tile, web heading and guide head now agree. ❓ « Conditions VHF/UHF » | |
+| Aurora (card, tile) | Aurores | Plural on the phone and the web. | |
+| Meteor showers | Essaims de météores | | |
+| New intercom look (setting) | Nouvelle page Radio | The dialog button "New look" is « Nouvelle page »; the classic one « Page Radio classique ». « nouveau design / nouveau look / nouvel aspect » dropped. ❓ | |
+| Radios that do less (guide section) | Radios aux fonctions réduites | Named so in the VFO topic too. | |
+| FT8 over FM | FT8 en FM | Never « sur FM ». | |
+| DTMF heard | DTMF entendus | « les DTMF entendus » in prose. | |
+| Morse trainer | Entraînement au Morse | « l'apprentissage du Morse » dropped. | |
+| ISS frequencies | Fréquences de l'ISS | | |
+| Talk key (in prose) | touche d'émission | As §3. The Talk button of the car screen, media app and widget is « Parler » / « PARLER ». | |
+| Type (into a field) | saisir | « Saisissez … » as Android French (§8); « Tapez » dropped from the Morse trainer, the packet terminal and the web. | |
+| stock firmware | firmware d'usine | §6 and §8; five « firmware d'origine » aligned. | |
+| stock version (module firmware sheet) | version d'usine | As SignalDeck Web (§8). | |
+| stock app | application d'origine · appli d'origine | §1, unchanged: « appli » only on tight labels. | |
+| Band (channel editor field) | Largeur de bande | The web editor follows the phone; the scope's band choice stays « Bande ». | |
+| High power / Low power (choices) | Haute / Basse | Web choices aligned with the phone pills (§8). | |
+| Narrow band / Wide band (choices) | Étroite / Large | Same. | |
+| Location (channel editor section) | Emplacement | Web aligned (was « Position »). GPS position stays « position » (§3). | |
+| Channel access number (field) | Numéro d'accès au canal | Phone and web without "(CAN)"; « (CAN) » only in prose (§8). | |
+| Encrypt key (8 characters) | Clé de chiffrement (8 caractères) | Error: « doit comporter exactement 8 caractères ». | |
+| Check the numbers | Vérifiez les valeurs | Toasts and web errors; « nombres » and « valeurs numériques » dropped. | |
+| Frequencies must be inside %1$s | Les fréquences doivent être comprises dans %1$s | | |
+| Not while transmitting | Impossible pendant l'émission | | |
+| No map app | Aucune application de cartographie | | |
+| Not listening | Écoute arrêtée | Phone and web text-mode list. | |
+| Pager monitor off | Écoute pager désactivée | | |
+| Parrot on / Parrot off | Perroquet activé / Perroquet désactivé | Toast and DTMF command. | |
+| ID timer idle | Minuterie d'ID inactive | Section titles keep « minuterie d'identification » (§8). | |
+| ISS SSTV stopped | SSTV ISS arrêtée | *la SSTV* (f.) throughout. | |
+| repeater identification | identification du relais | History kind and sheet title. | |
+| Stop when I stop talking | Arrêter quand je ne parle plus | Phone setting and web setting. | |
+| The channel the radio is on | Le canal sur lequel est la radio | | |
+| Via digipeaters (optional) | Via des digipeaters (facultatif) | | |
+| Mission statement | Mission du projet | « Notre mission » did not fit the first-person text. | |
+| New ICS-213 | Nouvel ICS-213 | Elision before a vowel sound. | |
+| No forms yet | Aucun formulaire | | |
+| No list imported yet | Aucune liste importée | | |
+| No zones yet | Aucune zone pour l'instant | | |
+| No such zone | Cette zone n'existe pas | | |
+| No position fix on the phone | Pas de position sur le téléphone | | |
+| Sending to %1$d RICs | Envoi à %1$d RIC | RIC is invariable. | |
+| Disconnect (terminal button) | Se déconnecter | The DMR relay option stays « Déconnexion ». | |
+| Upload / Uploaded | Importer / Importé | « Envoyé » means "sent". | |
+| What (schedule form field) | Action | | |
+| quiet (nothing received) | calme · CALME | Volume state, S-meter text, Kp class. | |
+| best before dawn (meteors) | au mieux avant l'aube | | |
+| Captions are made on the phone | Les sous-titres sont générés sur le téléphone | | |
+| %1$d days ago | il y a %1$d jours | | |
+
+### Terms the translators added
+
+| English | French | Notes | Reviewer |
+|---|---|---|---|
+| DMR roaming | Itinérance DMR | (f.): activée / désactivée. History line « Itinérance ». | |
+| Start empty (first import) | Commencer à vide | | |
+| Save as channel (VFO) | Enregistrer en canal | | |
+| ALL channels (built-in zone) | TOUS les canaux | Capitals mark the built-in zone, as in English. | |
+| Auto-ack / acknowledge (APRS) | Auto-ack / acquitter | | |
+| DTMF remote control | Commande à distance DTMF | History prefix « Commande DTMF : ». | |
+| NOAA weather alerts | Alertes météo NOAA | | |
+| NOAA Weather (zone list name), NOAA Weather Radio | NOAA Weather · NOAA Weather Radio | US service names kept; the car message and scope preset say « Météo NOAA » (§8). | |
+| Send my callsign in Morse | Émettre mon indicatif en Morse | | |
+| Morse ID after I talk (setting) | Indicatif en Morse après mes passages | | |
+| KEY (Morse key legend) | MANIP | Short for *manipulateur*. ❓ | |
+| Run a net | Animer un réseau | | |
+| Report (net) | Compte rendu | | |
+| Share the report / Share the report zip | Partager le rapport / Partager le zip du rapport | | |
+| %1$d following (net) | abonnés : %1$d | A count in a non-plural string goes after a colon, so it reads right for 0 and 1 (also « trouvées : %1$d », « nouveaux : %1$d »). | |
+| Talking: %1$s (car, the caller) | Au micro : %1$s | « En émission » read as you transmitting. | |
+| RADIO OFF (car art badge) | ÉTEINTE | Badge of about 12 characters. | |
+| Send text (FT8) | Envoyer texte | | |
+| Sent (FT8 list) | Émis | | |
+| Stop FT8 / Stop M17 | Arrêter FT8 / Arrêter M17 | | |
+| Your own (zone list group) | Les vôtres | | |
+| Analog (quick share pill) | Analog. | Abbreviated in a pill; « Analogique » elsewhere. ❓ | |
+| Mark / Waiting… / Waiting for the fox (fox hunt) | Marquer / Attente… / Attente du renard | | |
+| Heat / heat map (fox layer) | Chaleur / carte de chaleur | | |
+| Bearings / Fox estimate | Relèvements / Estimation du renard | | |
+| Live (APRS list) | DIRECT | The web's live indicator is « En direct ». ❓ | |
+| M17 destination | Destinataire M17 | | |
+| Type a line (terminal hint) | Saisissez une ligne | | |
+| Position is approximate | Position approximative | | |
+| ON AIR (channel badge) | ACTIF | ❓ « QRV » | |
+| Incoming: accept / refuse (packet terminal) | Entrantes : acceptées / Entrantes : refusées | | |
+| Packet terminal | Terminal packet | | |
+| Gateways (Winlink) | Passerelles | | |
+| Message forms | Formulaires de message | | |
+| Satellite passes | Passages de satellites | | |
+| ARISS status | État ARISS | | |
+| Custom range (scope) | Plage personnalisée | | |
+| waterfall | cascade | Scope and FT8. | |
+| Volume-up transmits | Volume + pour émettre | | |
+| Custom PTT key / Side PTT key | Touche PTT personnalisée / Touche PTT latérale | | |
+| Animated panel when quiet | Panneau animé au repos | | |
+| Run all checks | Lancer tous les tests | « les tests » in prose, not « vérifications ». | |
+| Diagnostics | Diagnostic | | |
+| Check for updates | Rechercher des mises à jour | | |
+| Stable / Beta (update paths) | Stable / Bêta | | |
+| Captions / Recordings / Activity (Last heard buttons) | Sous-titres / Enregistrements / Activité | | |
+| Start the activation / End the activation | Démarrer l'activation / Terminer l'activation | | |
+| Shift (keyboard key) | Maj | As French keyboards. | |
+| Previous / Next (widget, car) | Précédent / Suivant | | |
+| classic intercom page | page Radio classique | | |
+| e-mail address | adresse e-mail | The service stays « Courriel Winlink » (§8). ❓ « adresse électronique » | |
+| DMR text | texte DMR (labels) · message DMR (prose) | History kind and message type say « texte DMR »; guide prose « un message DMR ». ❓ One of the two everywhere. | |
+| ON / OFF (channel editor interrupt pills, capitals) | ON / OFF | §2 allows it; switches elsewhere say « Activé / Désactivé ». ❓ | |
+| ON / OFF (packet sheet state pills) | OUI / NON | Very short pills. | |
+| Monitor (APRS, pager button) / monitoring (chip) | Écouter / Écoute | Never *surveillance* (§8). | |
+| uploaded (recording, web) | importé | « %1$s importé, décodage en cours ». | |
+| skipped (restore) | non restaurés : %1$d | | |
+| duplicates (preset add) | en double | Invariable. | |
+| Got it (button) | J'ai compris | The PTT-learn sentence "Got it." is « C'est noté. » | |
