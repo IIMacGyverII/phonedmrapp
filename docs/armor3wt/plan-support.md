@@ -25,7 +25,7 @@
   - **The phone side:** scancode `0xf9` on `/dev/input/event1`. The owner's `service.sh` turns it into a broadcast only the stock app receives.
   - **The key layout:** maps 249 to `PROG_RED` (keycode 183) if the GSI loads it.
   - **So SignalDeck needs** keycode 183, or a root `getevent` reader for `0xf9`.
-- **Frequencies:** the app accepts 100–470 MHz (owner-widened). The tester gets the best reception around 133.85 MHz, so the module may tune below 136 MHz. Unconfirmed.
+- **Frequencies:** the app accepts 100–470 MHz (owner-widened). Whether the module tunes below 136 MHz is unconfirmed.
 - **Firmware:** no DMR module image exists anywhere (stock ROM checked). The tester asked for **no firmware changes; support the hardware as-is**. SignalDeck's loader stays **off** (PR 161: uncertified).
 
 ## Inputs (private: never commit vendor code, binaries or tester data)
@@ -71,7 +71,7 @@
    - MCU build date and module version (`0x25`);
    - the commands the stock app doesn't use, with the module's answers (`stockCommands`);
    - the receive audio path;
-   - the band edges, including **below 136 MHz** (133.85), receive only;
+   - the band edges, including **below 136 MHz**, receive only;
    - the PTT key path (whether keycode 183 arrives).
 4. **Tester request:** `docs/armor3wt/tester-request.md`, for the 3WT tester. Post in Discussions **#168** (the 3WT thread); index #170. It goes out after the beta that carries it.
 5. **Docs:** a "2026-10-30 review" section in the findings doc. Update `SignalDeck/docs/compatibility.md` and the firmware repo's `devices/ulefone-armor-3wt/README.md`, the latter through a PR from your own worktree of `AndroidRadio_Firmware_Project`, never the shared folder.
