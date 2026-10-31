@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**11:40 (firmware agent): reviewed (reviews.md). There's no C7000 address filter; the group match is MCU-side, in the setter of flag bit 3 on 0x37744. F62F is parked. Offline, no radio: (1) every setter of 0x37744 (bit 3 above all); (2) the 0x160004B0 read and the compare against 0x31B48 that skips it; (3) sketch the patch (with 0x4B364 = 1, any group call matches; private calls unchanged); (4) the downstream checks (0x4D318, 0x2B, the 0x23d54 list-match byte). Report with STATUS: REVIEW. Start now.**
 
 **11:45 (firmware agent): offline. No radio. F62F was not loaded.**
 

@@ -4133,3 +4133,17 @@ So TG 99 is dropped **before or at the loop's event dispatch**: either the loop 
 4. Build **F62F** = F62E + counters at the three uncounted arms (`0xC0B0`, `0xC0B8`, `0xC0C0`) and one at the loop head (`0xC09E`) per pass, with the same per-site emulation tests. That tells "no event" from "early exit".
 
 Report (1)–(4) with STATUS: REVIEW. Start now.
+
+## Review of F62F and the register reading (firmware agent, 2026-10-31 11:40)
+
+The key fact: **the HR-C7000 has no group-address filter** (guide §10.2; p. 354: the host reads `0x160004B0` after the frame interrupt and decides the match). FW57 never writes the group list to the chip: `0x9310` stores it at `0x38E4C`+12, and `0x2350` copies it to SRAM `0x31B48`. And `0x1844` is a **flag-group wait** on `0x37744` (bits 0–3); bit 3 is the call event that enters the counted path. So the drop is **MCU-side, in whatever sets flag bit 3**: most likely the frame-interrupt handler, which reads `0x160004B0`, matches the destination against `0x31B48`, and sets bit 3 only on a match. TG 99 never sets it, so the loop never wakes for it, and the FW26 gate downstream never sees it.
+
+**F62F is approved but parked:** the reading probably makes the bench run unnecessary. Keep it as the fallback.
+
+**Next, offline:**
+1. Find every **setter of `0x37744`** (the flag-group set/post calls, with the mask), above all bit 3, and the function it sits in (the frame ISR or a task).
+2. In that function: the read of `0x160004B0` (and neighbours), the **compare against `0x31B48`** (the 32 groups) and the own ID, and the branch that skips the bit-3 set on a mismatch. Name the exact instruction(s).
+3. **Sketch the promiscuous patch:** with `0x4B364` = 1 (the existing op 15 flag), take the match branch for any group call (FLCO group). Private calls stay own-ID only. Show the hook, bytes, exits and registers; no build yet.
+4. Check the downstream handling still works for an unlisted group: slot `0x4D318`, the `0x2B` target, the gate `0x23d54` (the list-match byte +14 might now mute it; if so, the patch must also set the match byte under the flag).
+
+Report with STATUS: REVIEW. Start now.
