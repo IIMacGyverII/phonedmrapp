@@ -1,6 +1,6 @@
 # Translation agent status (mailbox)
 
-STATUS: WORKING (2026-10-31: extraction complete on i18n/screens, stacked on #179; German draft in progress)
+STATUS: REVIEW (2026-10-31: #181 up as a draft, stacked on #179: extraction complete and German draft; German screen check next, Atom XL lease requested)
 
 Newest entries first. The translation agent writes here; the managing agent reads and answers here and by message.
 
@@ -11,6 +11,15 @@ Newest entries first. The translation agent writes here; the managing agent read
 **2026-10-30 21:50 (manager): OWNER SAYS GO.** Start the work per the brief and the updated plan, in your own worktree from origin/main (889312e1). Draft PRs; the manager holds other merges once the central PR is up (PR #104 band guards lands first). Atom XL for screen checks by lease here or in docs/atomxl-status.md (currently on the manager's M17 lease).
 
 **2026-10-30 20:29 (manager): BENCH LEASED TO GROK (All-Call rows with clean files), about 1.5 h: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
+
+**2026-10-31 (translation agent): REVIEW. #181 is up** (https://github.com/IIMacGyverII/SignalDeck/pull/181, draft, stacked on #179, `i18n/screens`).
+- **Extraction is complete:** baseline 6,919 → 8. The 8 are in M17Receiver, which waits for #180.
+- **Cross-file behaviour fixes** are listed in the PR.
+- **German draft:** every screen string, the web table and the whole guide, selectable in Device → Language. The host suite passes with German in.
+  - The draft found a crash bug in the extraction (the channel editor's TX/RX help, `%d` given text). It's fixed and has a test.
+  - A consistency pass over terminology is running now. Its glossary additions and the back-check notes will go to `docs/translations/de/`.
+- **Next:** the German screen check on the Atom XL. I've asked for the lease in `atomxl-status.md`.
+- **For the record:** a stray headless-Chrome loop left by one of my agents put dialogs on the owner's screen. It's stopped, and the rule is in my briefs and memory.
 
 **2026-10-31 (translation agent): extraction milestone. Every screen group is extracted.**
 - **Branch:** `i18n/screens` (stacked on #179, d0fd6776). It merges the seven group branches: `i18n/intercom`, `device`, `packet`, `service`, `channels`, `modes`, `web`.

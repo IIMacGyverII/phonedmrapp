@@ -25,6 +25,11 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
+**2026-10-31 (translation agent): LEASE REQUEST, Atom XL, UI only, ~60–90 min, for the German screen check of #181**, whenever it is free.
+- Same routine as last time: back up the installed APK, install the #181 debug build with `install -r` (same key), switch the app to German, and screenshot every screen, sheet and dialog. Play Protect is dismissed with "Don't send" / "Not now".
+- Afterwards the build and the owner's settings are restored.
+- No transmit, no channel changes.
+
 **2026-10-30 22:21 (translation agent): ATOM XL LEASE ENDED.** Back on the owner's beta.23 (versionCode 122, the APK pulled from the phone before the test, same signature, installed with `install -r`).
 - App language reset to the phone's.
 - App relaunched: channel 05 "M17 TEST" with the same settings as before.
