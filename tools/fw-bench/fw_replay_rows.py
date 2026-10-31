@@ -157,15 +157,16 @@ def enter_vfo(cfg, web):
         raise SystemExit("vfo refused")
 
 
-def replay(cfg, phone, web, doc, image, kind, vga, mon):
+def replay(cfg, phone, web, doc, image, kind, vga, mon, set_mon=True):
     if web.call("/api/status").get("transmitting"):
         raise SystemExit("phone is transmitting")
     if hackrf_running():
         raise SystemExit("hackrf already running")
-    web.monitor(mon)
-    time.sleep(0.3)
-    if bool(web.call("/api/status").get("monitor")) != bool(mon):
-        raise SystemExit("monitor did not take")
+    if set_mon:
+        web.monitor(mon)
+        time.sleep(0.3)
+        if bool(web.call("/api/status").get("monitor")) != bool(mon):
+            raise SystemExit("monitor did not take")
     name = "%s_%s_%s_%s" % (image, kind, "on" if mon else "off", vga)
     gaps.base.heat_ok(cfg, phone)
     phone.adb("shell", "logcat", "-c")

@@ -4780,6 +4780,30 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Gate follow-up (00:47). FW57. VGA 30. Not transmitting.**
+
+An analog squelch of 0, read back 0, then the digital VFO with list 1 and 9. No `0x2F` was sent between that visit and these three calls. Raw 61 on each.
+
+| Call | `0x2B` | RMS | Plays |
+|---|---|---:|---|
+| Talkgroup 99 | none | 1.6 | no |
+| All-Call | type 2, target 16777215 | 26.9 | no |
+| Talkgroup 9 | type 1, target 9 | 26.9 | no |
+
+Talkgroup 99 is outside that list and was not reported. The All-Call and talkgroup 9 were reported, and the speaker stayed shut. The open-gate audio from 00:34 did not repeat.
+
+| After | Talkgroup 9 |
+|---|---|
+| Monitor off, then `0x22` back to channel 49, no later `0x2F` | reported, RMS 26.8, silent |
+| Monitor on, then the channel change sends `0x2F` body 2 | reported, RMS 27.1, silent |
+| Analog squelch 0, then `0x22` to channel 49, no `0x2F` | reported, RMS 27.3, silent |
+| Analog squelch 2, read back 2, then channel 49 | reported, RMS 27.0, silent |
+| Monitor off, then a 2 s low-power key | reported, RMS 26.6, silent |
+
+A digital write does not reopen a shut gate. The channel-change monitor-off leaves it shut. Squelch 2 and a key do not open it either. `0x2F` body 2 went out at 00:43:37, 00:44:39 and 00:46:32. Body 1 at 00:45:13 was followed at 00:45:14 by body 2. No `0x24`, `0x25`, or `0x02`.
+
+Recorded callers of `0x37F4`, not a new disassembly: the squelch task `0x399C` (0 or 1), the analog apply `0x9A28` with 1 and `0x9DDE` with 0, the monitor handler `0xA5CC` (body 2 calls it with 1; body 1 can call it with 0 after 200 ms), the digital write `0x9310`, and `0x88DA`, `0x994`, `0xA634`. Argument 0 opens. A nonzero argument closes. Tag `DMR003.FW57.V022`, not transmitting. Battery 35.6 °C, `mtktsAP` 42.5 °C, `mtktsbtsmdpa` 41.0 °C.
+
 **Speaker gate (00:36). FW57. VGA 30. Not transmitting.**
 
 HackRF replay of the scaled clips, raw 61 during each call. The hotspot was not used.

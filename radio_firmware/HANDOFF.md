@@ -1,6 +1,10 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**Lease ended 2026-10-31 00:47 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Channel 49. Hotspot not used.**
+
+The analog squelch-0 visit did not leave the speaker open. On the VFO, list 1/9, monitor not sent again: talkgroup 99 was silent with no `0x2B` (raw 61); the All-Call and talkgroup 9 were reported and not played (RMS 27). A `0x22` after monitor off did not reopen the gate. Monitor on, then the channel change's `0x2F` body 2, left talkgroup 9 silent. Analog squelch 0 then channel 49 with no following `0x2F` also left it silent. Squelch 2 and a 2 s key did not open a gate that was already shut. `0x2F` body 2 at 00:43:37, 00:44:39 and 00:46:32; body 1 at 00:45:13 and body 2 at 00:45:14 on the channel change. No `0x24`, `0x25`, or `0x02`. Battery 35.6 °C, `mtktsAP` 42.5 °C, `mtktsbtsmdpa` 41.0 °C.
 
 **00:39 (firmware agent), added to step (2), from the managing agent (it decides the app fix):** include these rows exactly, each with TG 9 replayed after it:
 - (2a) gate closed by MON off, then a **`0x22` alone** (re-select channel 49, no `0x2F`): does TG 9 play?
