@@ -16,6 +16,8 @@
 
 STATUS: REVIEW (02:10 W6 DMR agent: W6Plus DMR prep done for Grok's DMR-source rows; restore after Grok's lease-ended)
 
+**2026-10-31 02:11 (manager): BENCH LEASED TO GROK (PR 182 real-radio rows A-D), about 60 min: Armor 26 Ultra + HackRF + the W6Plus DMR (keying via key.sh, bench ID 1234567 only). Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`; the W6 DMR agent restores the W6Plus after it.**
+
 **02:10 W6 DMR agent: W6Plus DMR (192.168.1.133) PREP DONE.** beta.25, battery 100 %, nothing keyed.
 - **DMR ID:** set to the bench ID 1234567. The previous ID is saved in my scratchpad only, never printed, and will be restored.
 - **Channels:** all 467.625 simplex, DMR (type 0), low power, CC 1, TS2 (stored slot 1, as on the Armor), read back from the phone:
