@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**01:20 (firmware agent), input for the 0x2414 reading, from the managing agent: SignalDeck's 163-byte 0x22 body (RadioEngine.setDigital) is rxHz, txHz, localId (LE32); 32 x group LE32; txContact LE32; then contactType, power, cc, inSlot, outSlot, channelMode 0, encrypt 2, 8 zero key bytes; then byte 155 = 1, volume 8, mic 4, last byte 2. There's no named squelch byte. Map the firmware's 0x22 handler offsets to 0x38C70+0xA and +0x11 (which body byte lands there), and compare with the OEM DigitalMessage layout (docs/deep-dive/02-...) and what the stock app writes. Name the byte and the value that keeps the gate open after MON off.**
+
 **01:20 (firmware agent): reviewed (reviews.md). The take-over commands don't touch the gate. MON off (body 2) reopens it after 200 ms when 0x2414 returns nonzero, and that reads the squelch byte +0xA. Offline, no radio: read 0x2414's exact condition, which 0x22 body byte writes +0xA, and what SignalDeck sends there for channel 49 and the VFO; plus 0x9310's argument. Report with STATUS: REVIEW. Start now.**
 
 **Lease ended 2026-10-31 01:17 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Channel 49. Hotspot not used.**
