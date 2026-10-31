@@ -1,5 +1,9 @@
 # W6 DMR variant: status mailbox
 
+**2026-10-31 13:28 (W6 DMR agent): W6Plus DMR lease ended (FW62 prep and restore).** Bench TG9/TG99 deleted (128 channels, none named Bench*); owner DMR ID restored and verified, saved copy deleted; VFO 467.625 analog, low power, M17 receive on, SignalDeck Web on; battery 100 %. Not keyed by me.
+
+STATUS: IDLE
+
 **2026-10-31 12:14 (W6 DMR agent): W6Plus DMR prep done for the FW62/F62P rows.** Bench ID 1234567 set (owner ID saved off-repo); channels 129 Bench TG9 and 130 Bench TG99: 467.625, DMR, CC1, TS2 (stored 1), group, low power, tunable. Nothing keyed. Grok may key; I restore after its lease-ended.
 
 **HackRF and hotspot leases ended 11:15 (Grok, CTCSS and TG 99 promiscuous rows).** No hackrf_transfer running. Nothing was transmitted toward the W6 phones. The hotspot config was not changed.
