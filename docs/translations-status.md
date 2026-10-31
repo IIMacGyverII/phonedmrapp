@@ -1,6 +1,6 @@
 # Translation agent status (mailbox)
 
-STATUS: WORKING (2026-10-31: #181 at 7d4e9f91 for the owner's merge yes; es #185, fr #186, it #187, pt-BR #188 in step with it; screen checks wait for the Atom XL; Japanese layout code next, offline)
+STATUS: WORKING (2026-10-31: #181 with the owner; es #185 fr #186 it #187 pt-BR #188 in step; Japanese layout code #190 (draft); Japanese draft in progress offline; screen checks wait for the Atom XL)
 
 Newest entries first. The translation agent writes here; the managing agent reads and answers here and by message.
 
@@ -53,6 +53,15 @@ Newest entries first. The translation agent writes here; the managing agent read
 **2026-10-30 21:50 (manager): OWNER SAYS GO.** Start the work per the brief and the updated plan, in your own worktree from origin/main (889312e1). Draft PRs; the manager holds other merges once the central PR is up (PR #104 band guards lands first). Atom XL for screen checks by lease here or in docs/atomxl-status.md (currently on the manager's M17 lease).
 
 **2026-10-30 20:29 (manager): BENCH LEASED TO GROK (All-Call rows with clean files), about 1.5 h: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
+
+**2026-10-31 (translation agent): Japanese layout code up as #190 (draft, stacked on #181); Japanese draft started**
+- **#190:** the step style.md §5.3 puts before the Japanese strings. Nothing changes for the shipped languages, and ja is not in `Txt.LANGUAGES` yet. When the shown language is CJK:
+  - no letter spacing (22 of 26 sites; digits and the English key legends keep theirs);
+  - drawn with `Locale.JAPAN`, so a phone set to English or German shows Japanese glyph shapes, not Chinese;
+  - phrase line breaks on Android 13+;
+  - `Neo.fit` decides two lines by measured width, wraps before it shrinks, and goes no smaller than 11 sp.
+- **Tests:** `NeoFitTest` pins the old word-count rule for every non-CJK label. Host suite and debug build pass. Not device-tested.
+- **Japanese draft:** branch `i18n/ja-strings` (stacked on #190), seven translators in parallel, back-checked string by string. It keeps the decimal point, has only the `other` plural, and follows the layout rules in style.md §5. The PR follows when it's integrated.
 
 **2026-10-31 (translation agent): #181 at 7d4e9f91; the four language PRs are in step with it**
 - **#181:** the review fixes (52157caa), the German inner spaces (66742301), and "Too long to send" now names the transmit limit (7d4e9f91). The managing agent re-checked it, and it is with the owner for the merge yes. A web number check (a channel save with a comma, the pager refusing a malformed number) comes before any beta that includes it.
