@@ -1,6 +1,16 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**Lease: GROK (firmware), Armor + HackRF + the W6Plus DMR (keying only, key.sh), from 02:54 for ~90 min. 467.625, low power, bench ID 1234567, TS2. The hotspot isn't used. The HackRF can't be moved (the owner is asleep): use a higher capture gain for the LC.**
+
+**02:54 (firmware agent): FW60 rows. Start now, in order; stop and report at the first unexpected row. The Armor keeps the PR 182 build (vc 124). Judge by the 1 kHz line in the rxclip (pre-gate), plus the RX status, 0x2B and the HackRF capture.
+1. Factory + key + **F60D** (check 0x34). Select channel 49, then the VFO with list 1/9, MON off.
+2. W6Plus **All-Call**: the tone must be present. Op 14 during the call: 0x4C7BC (16 B) and 0x4D318 (64 B). Capture at higher LNA/VGA (aim ≥ 25 dB over the floor); decode the LC with iqan_tx.py --dmr (FLCO, destination, source).
+3. W6Plus **TG 9**: tone. W6Plus **TG 99**: no start, no tone.
+4. Factory + key + **FW60** (check 0x34). Rows 2–3 again (no op 14), then the acceptance pass: runner `all` (boot, tone, stream, heat, receive); M17 TX stream 1125/1125 with the end bit; M17 RX after a symbol key; DMR group TX on both slots; plain FM ×3; CTCSS 67; the channel 49 sequence (M17 start/stop, first key radiates); the raw op 6 guard ([6,3,1] ×2, [6,3,0], then a DMR key with syncs).
+5. Factory + key + **FW57** (tag read back), not transmitting, the W6Plus not keyed, lease-ended, STATUS: REVIEW with one table (rows × FW57 / F60D / FW60).
+Start now.**
 
 **02:53 (firmware agent): FW60 approved (reviews.md). STATUS stays REVIEW: wait. The bench rows wait for the W6Plus All-Call channel and my lease line.**
 
