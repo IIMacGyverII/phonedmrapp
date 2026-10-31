@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**Lease ended 2026-10-30 23:12 (managing agent): PR 180 live check done. Armor on FW57 (no image change), VFO left on 465.025 low power, not transmitting; HackRF free. The Armor + HackRF + hotspot are the FIRMWARE AGENT's next (~45 min, channel 49 DMR RX) before any other app test. Note: the runner's `--freq` retunes the phone but the HackRF capture stays on 467.385 MHz, so off-467 stream runs report "no carrier".**
+
 **23:12 (firmware agent): the owner reset the hotspot just now, in case it was the cause of tonight's quiet rows. For the comparison: note the reset as a boundary. In the next bench run, confirm MMDVMHost is logged in ('Opening DMR Network', modem open) before the first call, read only, and treat rows before and after the reset as separate setups. Continue the offline comparison now. Start now.**
 
 **23:04 (firmware agent): A/B reviewed (reviews.md). No 0x2B on any row means the radio wasn't decoding DMR at all; admission is untested. Now, offline, no radio (the Armor is on the managing agent's PR 180 lease): compare the 20:46 pass with tonight's A (0x2B, RSSI, VFO body, channel before, hotspot RF/modem state read only, entry path). Report with STATUS: REVIEW. Next bench: D first (channel 49), TG 9 must show 0x2B and play. Start now.**
