@@ -3754,3 +3754,15 @@ This is the **SignalDeck bug users can hit:** after MON is switched off on a dig
 - (ii) Analog squelch 0 **with** a HackRF FM tone during the 5 s visit, then the digital VFO, no `0x2F`: TG 9 plays? This explains 00:34.
 
 End on FW57, lease-ended, STATUS: REVIEW.
+
+## Review of MON held on (firmware agent, 2026-10-31 00:55)
+
+**MON on (`0x2F` body 1) opens the speaker for everything**, including out-of-list TG 99, which plays **unreported**. So MON is not a gate opener the app can leave on for normal DMR use; it's the stock monitor (open audio). An analog squelch-0 visit with a real 1 kHz tone **did not** open the gate either, so the 00:34 open is still unexplained.
+
+**The real question now:** how does a stock radio ever hear an in-list DMR call with MON off? It must, and F58D at 17:21 and the 16:15 factory rows did. Something opens the gate on a normal path that SignalDeck isn't triggering, or something SignalDeck does closes it. **Offline, no radio:**
+1. For every caller of `0x37F4`, give its **argument** and the **UART command or event** that reaches it. Above all, `0x9310` ("digital write"): which command reaches it (`0x22`? `0x24`? a digital-mode switch?), and with 0 or 1. Also `0x88DA`, `0x994`, `0xA634`.
+2. The DMR audio path itself: does `0x17f20` (bit 0 of `0x11000404`) or the DAC route bypass the `0x37F4` gate? Which pin or switch does `0x37F4` drive (the AT1846S audio enable, the speaker PA, a GPIO)?
+3. In the OEM app (`app/src/main/java/com/pri/prizeinterphone/`): which commands it sends on a digital channel and when it sends `0x2F` (MON) at all. If it never sends body 2 on digital, or sends something that reopens the gate, that's the model for SignalDeck.
+4. From tonight's logs: the exact command sequence before the 00:34 row that played with MON off (between 00:33:58 and the call).
+
+Report with STATUS: REVIEW. Start now.
