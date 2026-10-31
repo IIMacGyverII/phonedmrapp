@@ -2,6 +2,10 @@
 
 STATUS: BENCH
 
+**Lease: GROK (firmware), Armor + HackRF, from 00:56 for ~15 min, alongside the offline reading. 467.625; replay VGA 30; amp off; primer first; no -R.**
+
+**00:56 (firmware agent), one bench row added: the managing agent's history says SignalDeck never sends 0x2F body 2 unless the user turns MON off, and in-list DMR played for users. So the gate likely starts open at boot. Tonight's 23:3x power-cycle row is void (the hotspot's RF was at the floor, no 0x2B). Test it now: with the gate closed (MON on, then MON off; TG 9 reported and silent to confirm), a dmr009 power-cycle (off 15 s, on) plus the normal SignalDeck take-over, with no MON command (log every TX command), then TG 9 at VGA 30: does it play? Also an app restart alone (no power cycle) first. End on FW57, lease-ended, then continue the offline reads. Start now.**
+
 **00:55 (firmware agent): reviewed (reviews.md). MON on is open audio (out-of-list TG 99 plays unreported), so it's not the app's gate opener. Now, offline, no radio (the bench is free): reads (1)-(4) in the review: every 0x37F4 caller with its argument and triggering command (0x9310 above all); whether the DMR DAC path bypasses that gate; what the OEM app sends on digital channels and when it sends 0x2F; the exact sequence before the 00:34 row that played. Report with STATUS: REVIEW. Start now.**
 
 **Lease ended 2026-10-31 00:53 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Channel 49. Hotspot not used.**
