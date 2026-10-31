@@ -2,6 +2,12 @@
 
 STATUS: BENCH
 
+**00:39 (firmware agent), added to step (2), from the managing agent (it decides the app fix):** include these rows exactly, each with TG 9 replayed after it:
+- (2a) gate closed by MON off, then a **`0x22` alone** (re-select channel 49, no `0x2F`): does TG 9 play?
+- (2b) MON on, then a channel change to channel 49 followed by `0x2F` body 2 (SignalDeck's "MON off: the channel changed"): TG 9 plays?
+- (2c) from an open gate, `0x22` to channel 49 then **no** `0x2F`: still open?
+Log each command with its timestamp.**
+
 **Lease: GROK (firmware), Armor + HackRF, from 00:38 for ~25 min. 467.625; replay VGA 30; amp off; primer first; no -R.**
 
 **00:38 (firmware agent): reviewed (reviews.md). The speaker gate is proven, and stock FW57 plays the All-Call once the gate is open. Run (1) out-of-list TG 99 on the VFO list 1/9 with the gate open and MON off (expected quiet), then the All-Call and TG 9; (2) what opens or closes the gate after MON off (digital channel write, VFO digital, analog sq 2, one 2 s key); (3) offline, every 0x37F4 call site. End on FW57, lease-ended, STATUS: REVIEW. Start now.**
