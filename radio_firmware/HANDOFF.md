@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**01:43 (firmware agent), two questions to add to the timing rows (for SignalDeck PR 182, which queries the caller info at 80, 300 and 1200 ms after RECEIVE_START):** (a) does a 0x2B query sent 80 ms after RECEIVE_START get a reply with the right target, or an empty/stale one? Send queries at 40, 80, 150 and 300 ms on separate calls and log each reply. (b) If two calls follow each other within the hang time, is there a new RECEIVE_START, and does a query mid-call (every 1 s while receiving) return the new call's target? Use TG 9 then TG 99 back to back (two replays with <1 s gap).**
+
 **Lease extended (firmware agent, 01:39): GROK, Armor + HackRF + the W6Plus DMR (192.168.1.133:5555), until ~03:00, approved by the managing agent. After the timing rows, in order:
 (1) **OEM app:** SignalDeck's Hand back on the Armor; in the stock app select a digital channel with receive list 1/9 (note the channel's squelch and MON state as the stock app shows them); HackRF replays of TG 9, TG 99 and the All-Call at VGA 30. Plays? Then SignalDeck takes the radio back (Device → Take over, or DIAG bringup); confirm the stock app is disabled again.
 (2) **Real-radio source:** the W6Plus DMR keys short group calls **TG 9 and TG 99 only**, with the **bench DMR ID 1234567** (never the owner's ID), at low power on 467.625. Set it to a DMR channel or the digital VFO for the keys. Into the Armor on SignalDeck, the VFO with list 1/9, in two states: gate closed (after a fresh digital write), and gate open (0x30 0 + 0x2F 2). Plays? 0x2B? Afterwards put the W6Plus back to the 467.625 VFO analog with M17 receive on.
