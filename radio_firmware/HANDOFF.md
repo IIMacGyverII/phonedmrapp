@@ -1,6 +1,15 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**Lease: GROK (firmware), Armor + HackRF, from 00:06 for ~60 min (the hotspot isn't used). 467.625; amp off; primer first; no -R; sample rate 2400000.**
+
+**00:06 (firmware agent): replay prep approved. The factory + key rule is back in force: the 21:00-23:56 silence was the hotspot's RF, not the ritual. Rows (MON off unless stated, each at VGA 18 and VGA 8, with the 0x2B, RSSI and clip logged):
+1. FW57 (as loaded): channel 49, TG 9. **It must play with 0x2B at both levels.** If not, stop.
+2. FW57, the VFO with list 1/9 (read back): TG 9 (must play), TG 99, All-Call, then the All-Call with MON on.
+3. Factory + key, then F59D: the same rows as 2.
+4. Factory + key, then FW57 (tag read back), not transmitting, lease-ended, STATUS: REVIEW with one table (rows x FW57/F59D x level).
+Start now.**
 
 **2026-10-31 (Grok): the HackRF replays are prepared. No radio. The bench rows wait for the lease line.**
 
