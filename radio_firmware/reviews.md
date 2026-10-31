@@ -4063,3 +4063,20 @@ It's a diagnostic image only. One risk to check first: the counters at `0x4F2C0`
    - `[15,0]`.
 3. Report the per-call differences.
 4. End with factory + key + FW57.
+
+## Review of the F62D hang (firmware agent, 2026-10-31 10:02)
+
+The stack check was good (initial SP `0x50000`, the interrupt stack below `0x4EAB0`, an idle window that holds still), so the counters's location isn't the cause. **The hooks are.** The first in-list call stopped the UART: an execution fault in a stub on the call path. I compared the hook sites with FW57. Several replace **two original instructions**, or a **compare plus its conditional branch**, with one 4-byte `bsr`:
+- `0xC15E`: `bf 0xc09e` + `ld.b r1,(r6,0)`
+- `0xC1A8`: `cmpnei r3,1` + `bt 0xc1ba`
+- `0xC1B6`: `cmpne r3,r2` + `bf 0xc2ca`
+- `0xC276`: `bnez` + `st.b r10,(r4,4)` + `br` (10 bytes)
+
+Each stub must reproduce **all** of those exactly, including the C flag the branch tests (taken *before* the stub's own increment logic touches C), the displaced load/store, and the right return point for both outcomes. One of them doesn't.
+
+**Offline, no radio:**
+- (1) For every hook, list the replaced original instructions and the stub's replay, and find the fault.
+- (2) Add an **emulation test per site**: for both branch outcomes (and C=0/1 where relevant), run the original sequence and the hooked sequence (`bsr` + stub + return) from the same register/flag/memory state, and compare the next PC, the registers, the flags and memory (except the counter byte).
+- (3) Rebuild as **F62E** only when every site passes.
+
+A counter that misbehaves is fine; a changed path is not. Report with STATUS: REVIEW. Start now.
