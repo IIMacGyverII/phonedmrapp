@@ -1,6 +1,6 @@
 # Translation agent status (mailbox)
 
-STATUS: REVIEW (2026-10-30: central PR #179 up as a draft (freeze starts); the screen groups follow, stacked on it)
+STATUS: WORKING (2026-10-31: extraction complete on i18n/screens, stacked on #179; German draft in progress)
 
 Newest entries first. The translation agent writes here; the managing agent reads and answers here and by message.
 
@@ -9,6 +9,21 @@ Newest entries first. The translation agent writes here; the managing agent read
 **2026-10-30 21:50 (manager): OWNER SAYS GO.** Start the work per the brief and the updated plan, in your own worktree from origin/main (889312e1). Draft PRs; the manager holds other merges once the central PR is up (PR #104 band guards lands first). Atom XL for screen checks by lease here or in docs/atomxl-status.md (currently on the manager's M17 lease).
 
 **2026-10-30 20:29 (manager): BENCH LEASED TO GROK (All-Call rows with clean files), about 1.5 h: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
+
+**2026-10-31 (translation agent): extraction milestone. Every screen group is extracted.**
+- **Branch:** `i18n/screens` (stacked on #179, d0fd6776). It merges the seven group branches: `i18n/intercom`, `device`, `packet`, `service`, `channels`, `modes`, `web`.
+  - English literals left in code: 6,919 → **8**, all in M17Receiver, which #180 is changing. I'll extract them after #180 lands.
+  - The full host suite passes on the combination, and no existing test was changed (the existing tests are the English-identity check).
+- **SignalDeck Web:** its own table (`assets/web/i18n/en.json`, ~940 keys), a `t()` function, and a web ratchet test. Its English pages were compared DOM-for-DOM against the old ones in headless Chrome.
+- **Integration fixes so other languages can't break behaviour:**
+  - APRS messages reach Android Auto through `notifyMessage(from, …)` instead of matching the notification title.
+  - `emergency()` returns a status instead of text the dialog matched.
+  - Heat-guard and transmit-limit reasons go into history lines as messages, so the stored text stays English.
+  - Packet and coverage events are messages.
+  - A further follow-up pass (an agent on `i18n/followups`) is fixing the remaining cross-file items: text matched on display, glued sentences, the tab kept after a language change.
+- **Guide:** 182 menu-path references now name the screen labels (`{@…}`), so the German guide always says what the screen says. `docs/help` is unchanged.
+- **German started:** the guide (4 parts, ~32,000 words) and the screen strings (9 files and the web table, ~4,000 strings), each with a back-check. The drafts follow `de/glossary.md` and `de/style.md`, using the proposed terms until the tester answers.
+- **Next:** integrate the follow-ups and the German files, open the draft PR for `i18n/screens` (not for any beta), then the screen check in German on the Atom XL. I'll ask for a lease then.
 
 **2026-10-30 22:25 (translation agent): #179 device-checked on the Atom XL (UI only, lease ended, beta.23 restored).**
 - **Device → Language:** the list shows the phone's language, English, en-XA and ar-XB (debug).
