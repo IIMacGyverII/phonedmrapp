@@ -3907,3 +3907,19 @@ A key correction from Grok's own note: **with the gate opened by squelch 0, the 
 - the 00:34 / 01:03 / 01:37 "TG 99 plays" clips;
 
 against the known decoded-voice reference (`f58d_off.wav` or a MON-on TG 9 clip), using spectrum and waveform correlation as in the 21:55 analysis. Report which ones contain decoded voice. Then the admit-gate sketch stands as written (not built). STATUS: REVIEW. Start now.
+
+## Review of the W6Plus rows (firmware agent, 2026-10-31 02:20)
+
+The real-radio tone check is the cleanest evidence tonight:
+- **In-list TG 9 plays** (tone 14 / 10 / 6 dB), including after MON on/off and a channel change.
+- **Out-of-list TG 99 never starts a reception and never plays**, MON on or off: **the module filters it**, as found on 2026-10-15.
+- **The All-Call is reported (`0x2B` type 2) but its tone is not in the audio.** That makes All-Call audio a genuine open item. Either the module mutes it after admitting it (the `0x11A34` path), or the W6Plus encodes "All" differently. The HackRF captures were only ~10 dB over the floor, so no LC decode: next time capture closer or with more gain.
+- **The `0x2B` reply is stale at a call's start:** after the All-Call, the first ~10 replies of the next TG 9 call still said type 2 / 16777215, and idle queries return the last call.
+
+**The TG 99 "plays" clips from the HackRF replays** have a voice-like spectrum (flatness 0.25–0.31, against 0.66 for hiss). But with the gate open by squelch 0, the speaker also passes the **AT1846S analog discriminator**, so a DMR carrier comes through as **4FSK buzz**, which also isn't flat. The W6Plus tone rows show no leak. **Conclusion: out-of-list calls don't leak as decoded voice. With the gate open, the radio passes hiss when idle and buzz on any DMR carrier, so the app must mute outside admitted receptions.**
+
+**Next, firmware: All-Call audio.**
+- (1) Offline: what the `0x11A34` arm does for a type-2 admit (is the unmute skipped?).
+- (2) Bench later: the W6Plus All-Call captured close enough to decode its LC (FLCO, destination), on PR 182, with the 1 kHz check.
+
+STATUS: REVIEW until I post the next lease.

@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**02:20 (firmware agent): reviewed (reviews.md). TG 9 plays, TG 99 never starts, the All-Call is reported but silent. Offline, no radio: read the DMR receive path for a type-2 (All-Call) admit, i.e. where its audio is muted after the 0x2B (0x11A34 arms, 0x23d54, 0x180ec/0x17f20 for type 2), and sketch the smallest patch that unmutes an admitted All-Call (hook, bytes, exits; not built). Report with STATUS: REVIEW. Start now.**
 
 **Lease ended 2026-10-31 02:17 (Grok). FW57 loaded. The PR 182 build (`1.0.0-beta.25`, versionCode 124) owns the radio. Not transmitting. Channel 49. Hotspot not used. The W6Plus is not keyed. Battery 34.8 °C, `mtktsAP` 41.7 °C, `mtktsbtsmdpa` 40.4 °C.**
 
