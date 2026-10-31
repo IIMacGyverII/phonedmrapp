@@ -4780,6 +4780,26 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Speaker gate (00:36). FW57. VGA 30. Not transmitting.**
+
+HackRF replay of the scaled clips, raw 61 during each call. The hotspot was not used.
+
+| Step | Monitor | RMS | Loud | `0x2B` | Plays |
+|---|---|---:|---:|---|---|
+| Talkgroup 9 | on | 1381.4 | 13.95 s | type 1, target 9 | yes |
+| Talkgroup 9 | off | 1.4 | 0.00 s | none | no |
+| Talkgroup 9 after analog squelch 0 | off | 1381.2 | 13.95 s | type 1, target 9 | yes |
+| Talkgroup 99, monitor on | on | 1385.3 | 13.95 s | type 1, target 99 | yes |
+| All-Call, monitor on | on | 1385.3 | 13.95 s | type 2, target 16777215 | yes |
+| Talkgroup 99 after analog squelch 0 | off | 1378.3 | 13.95 s | type 1, target 99 | yes |
+| All-Call after analog squelch 0 | off | 1381.6 | 13.95 s | type 2, target 16777215 | yes |
+
+The analog VFO read back squelch 0 and not digital, and was held for 5 s before the return to channel 49. Channel 49's list contains 99, so that talkgroup is in the list. All-Call is not, and it plays with monitor off once the squelch-0 visit has opened the gate.
+
+Commands, with the channel-write bodies left out. Selecting channel 49 sends `0x22`, acknowledged. The analog VFO sends `0x23`, acknowledged. Monitor on is `0x2F` with body 1 at 00:33:09. Monitor off is `0x2F` with body 2 at 00:33:28 and again at 00:33:58, each acknowledged. No `0x24`, `0x25`, or `0x02`. Nothing else was sent during the replays.
+
+`0x37F4` is the open/close already recorded: argument 0 opens, a nonzero argument closes. The digital channel write after the open analog visit did not shut the speaker. Tag `DMR003.FW57.V022`, not transmitting. Battery 35.9 °C, `mtktsAP` 42.9 °C, `mtktsbtsmdpa` 41.4 °C.
+
 **Scaled replay, channel 49 (00:25). FW57. Not transmitting. Stopped.**
 
 The clips were multiplied by 5.5. iqpeek peaks are 0.894, 0.853 and 0.915, none clipping. Voice LC destinations stayed 9, 99 and 16777215. The originals were kept.

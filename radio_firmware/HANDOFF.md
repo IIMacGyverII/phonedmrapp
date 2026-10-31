@@ -1,6 +1,10 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**Lease ended 2026-10-31 00:36 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Channel 49. Hotspot not used.**
+
+The speaker gate is the difference. VGA 30, raw 61. Monitor on, talkgroup 9 plays (RMS 1381, group `0x2B` target 9). Monitor off, the same call is silent (RMS 1.4, no `0x2B`). An analog VFO at squelch 0 for 5 s, then channel 49 with monitor off, plays again (RMS 1381, target 9). In both open states, talkgroup 99 and All-Call also play (RMS about 1380). Talkgroup 99 is in channel 49's list. All-Call is not, and it plays with monitor off after the squelch-0 visit (`0x2B` type 2, target 16777215). Commands: `0x22` on the channel select, `0x23` on the analog VFO (read back squelch 0), `0x2F` body 1 for monitor on and body 2 for monitor off, each acknowledged. No `0x24`, `0x25`, or `0x02`. The existing reading of `0x37F4` is unchanged: argument 0 opens, a nonzero argument closes. Battery 35.9 °C, `mtktsAP` 42.9 °C, `mtktsbtsmdpa` 41.4 °C.
 
 **Lease: GROK (firmware), Armor + HackRF, from 00:27 for ~25 min. 467.625; HackRF replay VGA 30; amp off; primer first; no -R.**
 
