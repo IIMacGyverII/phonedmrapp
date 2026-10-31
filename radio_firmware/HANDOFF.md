@@ -1,6 +1,12 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**04:20 (firmware agent): offline. No radio. Neither image was loaded.**
+
+FW61 is FW57 plus the FW59 hold guard only. The bytes are FW59's, from `0x5C5EA` through `0x5C611`, and the six literal words at `0x5C61C`. The All-Call store in front of that block is not copied. Against FW57 the changes are the tag, the hooks at `0x5B2D2` and `0x5BD36` (4 bytes each), the 40-byte guard, and the 24-byte pool. `0x26F24`, `0x11D18` and `0x11D80` are unchanged. sha256 `e349cf5ecc8a05297c149a0b9dd00f9e9cd1c688c9bc6b0e9b291fdd7490df99`.
+
+FW61T is that image with `0x5B700`–`0x5B717` restored to the factory bytes. `0xAB18` on FW57 already branches to the stock handler at `0xA308`, and it is unchanged. The version field holds 16 characters, so the tag is `DMR003.F61T.V022`. sha256 `bfa9f1dc509770a32f8a28c04e0791c16161388247614227cc5cb9f70515da8e`. `test_fw61.py` and `test_repro_fw61.py` passed. Details in `results.md`.
 
 **04:12 (firmware agent): offline task, no radio, nothing loaded. Prepare the likely next release candidate for the owner's morning decision: **FW61 = FW57 + the hold guard (C) only** (FW59's C, same bytes and placement; no A/A'/B/D), and a second variant **FW61T = FW61 + queued item 6** (remove the FW19 time-out clamp: point 0xAB18 back at the stock 0xA308, free the 24-byte stub at 0x5B700, literal guard, note the freed range). Reason for T: SignalDeck PR 153's 'No limit' sends 0x3B 0, which the clamp turns into 120 on FW57, while the owner chose 'truly off'. For each: guards, unit tests, test_repro, sha256, diff list against FW57. Don't load either. Report with STATUS: REVIEW. Start now.**
 

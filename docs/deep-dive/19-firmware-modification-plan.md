@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-31 — FW61 is FW57 plus the hold guard, and FW61T also frees the old time-out slot.** Neither image was loaded. Details in `results.md`.
+
 **2026-10-31 — a sample-by-sample lag search matches the F60D All-Call clip to talkgroup 9.** The same match is in the talkgroup 99 clip. The network file is speech. No radio. Details in `results.md`.
 
 **2026-10-31 — the replayed All-Call is reported on F60D and its audio does not match talkgroup 9.** Talkgroup 99 does not start. FW60 was not loaded. FW57 is loaded again. Details in `results.md`.

@@ -4780,6 +4780,23 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**FW61 and FW61T (04:20). Not loaded. No radio.**
+
+FW61 is FW57 plus the FW59 hold guard and nothing else. The guard code is the FW59 bytes `0x5C5EA`–`0x5C611`. The six literal words at `0x5C61C` are `0x4B008`, the hold word, the apply exit, `0x4B000`, `0x11000100`, and the release exit. The All-Call store that sits in front of this block in FW59 is not copied.
+
+Against FW57, apart from the tag:
+
+| Range | Bytes | What |
+|---|---:|---|
+| `0x5B2D2`–`0x5B2D5` | 4 | branch to the apply guard |
+| `0x5BD36`–`0x5BD39` | 4 | branch to the release guard |
+| `0x5C5EA`–`0x5C611` | 40 | the guard |
+| `0x5C61C`–`0x5C633` | 24 | its literal pool |
+
+`0x26F24`, `0x11D18` and `0x11D80` are unchanged. sha256 `e349cf5ecc8a05297c149a0b9dd00f9e9cd1c688c9bc6b0e9b291fdd7490df99`.
+
+FW61T restores `0x5B700`–`0x5B717` to the factory image. That is the leftover time-out stub. Nothing branches to it. `0xAB18` on FW57 already branches to the stock handler at `0xA308`, and FW61T leaves that call as it is. The version field holds 16 characters, so the tag is `DMR003.F61T.V022`. sha256 `bfa9f1dc509770a32f8a28c04e0791c16161388247614227cc5cb9f70515da8e`. `test_fw61.py` and `test_repro_fw61.py` passed. Neither image was loaded.
+
 **Content test, redone (03:48). No radio.**
 
 The first comparison used one fixed window and missed the peak. These scores search every sample within ±1 s. The peak is two or three samples wide. A step of a few milliseconds steps over it. Spectrum correlation is the 16 bins from 200 Hz to 3.4 kHz, Pearson, on the aligned window.
