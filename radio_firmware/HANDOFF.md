@@ -1,6 +1,18 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**Lease ended 2026-10-31 03:40 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Hotspot not used. The W6Plus was not used. Battery 32.2 °C, `mtktsAP` 37.3 °C, `mtktsbtsmdpa` 36.0 °C.**
+
+F60D replay rows. The All-Call starts and is reported, and its clip does not match the talkgroup 9 clip, so FW60 was not loaded.
+
+| Row | What happened |
+|---|---|
+| Talkgroup 9 | start, type 1 target 9, clip near RMS 1400 |
+| All-Call | start, type 2 target 16777215, same-window correlation with talkgroup 9 about 0 |
+| Talkgroup 99 | no start, no caller info |
+
+Op 14 two seconds into the All-Call: slot 1, gate byte 0, match byte 1, the following match byte 0, slot word 16777215. Idle on the same VFO had no start, and queries still said target 9. Details in `results.md`.
 
 **Lease: GROK (firmware), Armor + HackRF, from 03:20 for ~75 min. 467.625; HackRF replays (scaled ×5.5) at VGA 30; amp off; primer first; no -R. The W6Plus isn't used (it's being restored).**
 

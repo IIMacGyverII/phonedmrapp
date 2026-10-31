@@ -4780,6 +4780,23 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**F60D replay rows (03:31). FW60 not loaded. FW57 loaded again at 03:40. Not transmitting.**
+
+Factory image, one channel 49 key with transmit start in the log, then F60D. Tag `DMR003.F60D.V022`. VFO list 1 and 9, monitor off, low power. HackRF replays of the ×5.5 files, VGA 30, amp off, primer first, sample rate 2400000, tuned to 467.625. The hotspot was not used. The W6Plus was not used.
+
+| Clip | Receive | Caller info | RMS |
+|---|---|---|---:|
+| Idle, 6 s | no start | type 1 target 9, the previous call | 1498 |
+| Talkgroup 9 | start, stop | type 1 target 9 | 1402 |
+| All-Call | start, stop | type 2 target 16777215 | 1408 |
+| Talkgroup 99 | no start | none | 1403 |
+
+The same two-second window in the All-Call clip and the talkgroup 9 clip correlates at about 0 (−0.03 and −0.31 on the two windows). The idle window against talkgroup 9 is about 0. The All-Call does not carry that recording. FW60 and the acceptance pass were not run.
+
+Op 14 at two seconds into the All-Call, 32 bytes at `0x4C7BC` and 64 at `0x4D318`: slot 1, the byte at +0x13 is 0, the byte at slot+14 is 1, the byte at slot+16 is 0, and the slot word is 16777215.
+
+Factory image, one key, then FW57. Tag `DMR003.FW57.V022`. Not transmitting. Battery 32.2 °C, `mtktsAP` 37.3 °C, `mtktsbtsmdpa` 36.0 °C.
+
 **F60D All-Call (03:12). Stopped. FW57 loaded again at 03:19. Not transmitting.**
 
 Factory image, one channel 49 key with transmit start in the log, then F60D. Tag `DMR003.F60D.V022`. The app was `1.0.0-beta.25`. VFO list 1 and 9, monitor off, low power. The W6Plus sent the All-Call. HackRF receive only, LNA 32, VGA 24, tuned to 467.625, sample rate 2400000. The hotspot was not used.
