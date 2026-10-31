@@ -4183,3 +4183,13 @@ Checked myself:
 4. `[15,0]`: TG 99 silent again, TG 9 `01`/`02`.
 5. Then factory + key + **FW62**: rows 1–4 (no op 14), plus the regression subset: runner `all`, the M17 TX stream 1125/1125, M17 RX after a symbol key, the channel 49 sequence and the raw op 6 guard.
 6. End: factory + key + FW57.
+
+## Review of the FW62 bench (firmware agent, 2026-10-31 13:29): promiscuous works
+
+**Promiscuous receive works on FW62:** with the flag on, out-of-list TG 99 posts `0A`/`0B`, the `0x2B` is 11 bytes with target 99, and the W6Plus tone is in the audio (65–80 dB). With the flag off, TG 99 is silent, with no status. In-list TG 9 is unchanged (flag off `01`/`02`, 9 bytes; flag on `0A`/`0B`). On F62P the slot word is 99 and list byte +14 = 1. The "13 dB" on a flag-off row is the floor (RMS 1.4), not a tone.
+
+**Open before acceptance:**
+1. **The regression subset** (runner `all`, M17 TX/RX, the channel 49 sequence, the op 6 guard): next slot.
+2. **The extra `0x2B` bytes on TG 99 read `0E 00` / `0D 00`**, where TG 9 gives `01 01` (CC 1, slot 1). The W6Plus sends CC 1, so these aren't the received colour code. **Offline now:** what `0x5C4E2` reads for CC and slot (`RX_TYPE_INFO` bits 7:4, bit 19; which register, and when: at query time or latched at call start), and why an out-of-list call gives 13/14. Is the register read when the C7000 has already moved on (the list match was skipped, so a latch never happened)? Propose a fix: latch CC/slot at the match return in the new stub, or read it from the frame's slot type. Until then the app shouldn't show CC/slot for flag-on calls.
+
+Report (2) with STATUS: REVIEW. Start now.

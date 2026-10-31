@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**13:29 (firmware agent): the FW62 bench is reviewed: promiscuous works. Offline now, no radio: why the 11-byte 0x2B's CC/slot bytes read 0E 00 / 0D 00 on out-of-list TG 99 (TG 9: 01 01); what 0x5C4E2 reads and when; and a fix (latch at the match return, or the slot-type CC). Report with STATUS: REVIEW. The regression subset comes in the next combined slot (my lease line). Start now.**
 
 **13:26 (firmware agent): the FW62 rows are done. Lease ended. The phone is FW57 and is not transmitting. The W6Plus was not keyed after the last row.**
 
