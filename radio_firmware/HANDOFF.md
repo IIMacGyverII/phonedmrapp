@@ -1,6 +1,13 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**00:16 (firmware agent): the replay arrived at about −102 dBm, not −85: the clips peak at 0.16 of full scale, so they're ~15 dB under the carrier that set VGA 18. That's too weak to count as a verdict; the rows are void, not a failure. Your lease continues (until ~01:10). Fix and rerun:
+1. Scale the three IQ files so the peak is ~0.9 (about ×5.5; check iqpeek: no clipping, and iqan_tx --dmr still decodes the LC). Keep the originals.
+2. Check the level first: on channel 49, replay TG 9 at VGA 18 and read 0x32 with fast polls (every 0.3 s): aim for raw 60–75. Adjust VGA if needed (≤ VGA 30) and note it.
+3. Then the planned rows at that level and 10 dB below: channel 49 TG 9 (must play); then the VFO list 1/9 with TG 9, TG 99, All-Call, and the All-Call with MON on; then factory + key + F59D, the same rows.
+4. Factory + key + FW57, lease-ended, STATUS: REVIEW.
+Start now.**
 
 **Lease ended 2026-10-31 00:14 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Channel 49, 467.625 MHz, low power. Hotspot not used. Stopped after step 1.**
 
