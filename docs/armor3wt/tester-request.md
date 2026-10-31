@@ -1,4 +1,4 @@
-# Armor 3WT tester request (draft for the owner to post)
+# Armor 3WT tester request (posted 2026-10-30 in #168 for beta.23: https://github.com/IIMacGyverII/SignalDeck/discussions/168#discussioncomment-19306112)
 
 **Where:** the Armor 3WT's own Discussions thread, https://github.com/IIMacGyverII/SignalDeck/discussions/168 (the index of all phone threads is #170). **Post after** the beta that carries SignalDeck PRs #175 and #176 is published (beta.23 if it is merged before). Fill in the beta link below.
 
