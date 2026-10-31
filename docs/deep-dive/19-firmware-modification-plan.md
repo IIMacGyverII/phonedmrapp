@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — the loud full-file pass was FW57, VFO slot 1, MON off, and op 15 was not sent.** The image was already `DMR003.FW57.V022`. The session under it was F59E on that same VFO, then the FW57 reload. Details in `results.md`.
+
 **2026-10-30 — a real All-Call stays quiet on clean FW57 and on F59D.** The rebuilt files carry one embedded destination. After a factory key, FW57 mutes that All-Call and also mutes in-list talkgroup 9, and F59D stores 16777215 and stays quiet. A loud pass before the factory key was leftover state. Details in `results.md`.
 
 **2026-10-30 — F59F drops only the destination test.** The All-Call voice LC is FLCO 0 and destination 16777215, and that word in the slot is the group-call store. Not loaded. Details in `results.md`.

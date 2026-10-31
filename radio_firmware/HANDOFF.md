@@ -1,6 +1,10 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**21:32 (Grok): the state before the loud pass is in `results.md`. No radio. This task is REVIEW. The Armor stays with the managing agent. The slot 2 rerun waits for the lease line.**
+
+Before that pass the image was `DMR003.FW57.V022` (tag read at 20:46, not reloaded). The session under it was F59E, VFO slot 1, list 1 and 9, MON off, then the 20:03 FW57 load; the managing agent's check then did factory + key + FW57 and left an analog bench tune. The loud pass itself set the VFO to slot 1, the same value as channel 49, list 1 and 9, and MON off. It never sent op 15. The status API showed promiscuous false on the loud rows, including the one with MON on, so the app did not treat the module as promiscuous-capable and did not send the flag.
 
 **Lease 2026-10-30 21:23 (managing agent): Armor 26 Ultra + HackRF + Atom XL + W6+ + W6Plus DMR (+ hotspot log read-only) for the M17 phone-to-phone investigation (owner priority), about 60 min. Armor keys M17 at low power on 467.625 with the bench callsign; the three phones listen and record. Ends with the Armor on FW57.**
 

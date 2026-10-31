@@ -4780,6 +4780,21 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**State before the loud full-file pass (21:32). No radio.**
+
+The pass that played talkgroup 99 and the All-Call started at 20:46 with the tag already `DMR003.FW57.V022`. That script did not load an image.
+
+| Item | What was set |
+|---|---|
+| Last image | `DMR003.FW57.V022`, read at 20:46:02. The managing agent's 20:28 note had just put that image on with a factory load, one key, and the FW57 reload. Under that, the previous bench image was F59E, loaded back to FW57 at 20:03. |
+| F59E's own rows | VFO, 467.625, low power, list 1 and 9, slot 1 (the same body the later pass used). Talkgroup 99 with MON off, then All-Call with MON off. Both quiet. Stopped there. F59E's tag is not `FW` plus digits, so MON on that image does not send op 15. |
+| Channel for the loud pass | Not a numbered channel. The script entered the VFO and the readback passed before the first row: digital, 467.625, low power, colour code 1, slot 1, call 9, list 1 and 9. |
+| Slot | 1, the value `vfo_body` sends and `vfo_ok` requires. Channel 49 reads back the same slot value. Nothing in this pass wrote slot 2. |
+| MON | Off for the talkgroup 99 and All-Call rows that were loud, and for the quiet talkgroup 9 row. One All-Call row set MON on and was also loud (RMS 1392.0). |
+| Op 15 | Not sent by the script. The status API reported promiscuous false on every logged row of the pass, including the MON-on row. That flag in the API is monitor and "FW26 or later", so promiscuous false while MON was true means the app did not count this module and did not send `[15, 1]` or `[15, 0]`. |
+
+The loud rows are `full_fw57_tg99_off`, `full_fw57_tg99_offb`, `full_fw57_allcall_off`, and `full_fw57_allcall_on`. The slot 2 rerun has not been run.
+
 **Full-file rows (21:20). FW57 restored. Not transmitting.**
 
 `dmr_tg99.bin` and `dmr_allcall.bin` keep destination 9 in every embedded LC (14 superframes, FLCO 0). The voice header and the terminator were the only bursts rewritten, which is why the earlier All-Call and talkgroup 99 rows were mixed calls. `tools/fw-bench/full_lc.py` rebuilt `dmr_tg99_full.bin` and `dmr_allcall_full.bin` (56 fragments each). An independent decode, which does not call the encoder, reads one destination: 99, and 16777215. `dmr_last.bin` was already destination 9 and was left as the talkgroup 9 control. On the air the superframe is one voice sync and then LCSS 1, 3, 3, 2, 0, six slot periods apart (1728 symbols).
