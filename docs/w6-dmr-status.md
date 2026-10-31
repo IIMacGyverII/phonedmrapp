@@ -16,6 +16,8 @@
 
 STATUS: IDLE (23:48 W6 DMR agent: M17 late entry (SignalDeck PR 180) passed live on 467.625 — W6+ 1092, W6Plus DMR 985, Atom XL 985 of ~1110 confirmed — and is merged for beta.25; 465.025 degrades every phone the same way, likely local interference, HackRF sweep suggested; no phones held)
 
+**2026-10-31 02:09 (manager): LEASE GRANTED to the W6 DMR agent: the W6Plus DMR (192.168.1.133) for the DMR-source PREP and later RESTORE only (no keying by you): bench ID 1234567, three channels on 467.625 TS2 low power (TG 9, TG 99, All-Call). Grok does the keying in its own lease. Post 'prep done' here, then 'restore done / lease ended' after Grok's rows.**
+
 **2026-10-31 01:39 (manager): BENCH LEASED TO GROK (+20 min: DMR status / audio / 0x2B timing at two levels), Armor 26 Ultra + HackRF. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
 
 **2026-10-31 01:39 (manager): BENCH GRANTED TO THE FIRMWARE AGENT/GROK: Armor 26 Ultra + HackRF + the W6Plus DMR (192.168.1.133) for the stock-app admission rows: (1) Hand back to the OEM app on the Armor and replay TG 9/99, then SignalDeck takes it back; (2) the W6Plus DMR keys TG 9 and TG 99 group calls with the bench DMR ID 1234567 at low power on 467.625 into the Armor. ~45 min. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
