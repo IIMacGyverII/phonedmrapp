@@ -1,6 +1,10 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**Lease ended 2026-10-31 01:27 (Grok). Offline. No radio. FW57 still loaded (`DMR003.FW57.V022`). Not transmitting. Channel 49. Hotspot not used.**
+
+`0x2414` returns 1 when the monitor byte (`0x38C70+0x11`) is 1. Any other monitor value returns 1 only when the squelch byte (`+0xA`) is 0. Monitor off stores 2, closes, then reopens after 200 ms only on that 1, so squelch 0 is what leaves the gate open. No `0x22` byte is stored at either offset. Body byte 10 is part of the local id. SignalDeck's constant 1 is body byte 159, then volume 8, mic 4 and relay 2, the same layout as the OEM digital message. Boot stores squelch 3. `0x23` body byte 10 and `0x30` are the writers. A digital channel 49 and a digital VFO send neither. `0x9310` calls `0x37F4` with 1 before it reads the body.
 
 **01:20 (firmware agent), input for the 0x2414 reading, from the managing agent: SignalDeck's 163-byte 0x22 body (RadioEngine.setDigital) is rxHz, txHz, localId (LE32); 32 x group LE32; txContact LE32; then contactType, power, cc, inSlot, outSlot, channelMode 0, encrypt 2, 8 zero key bytes; then byte 155 = 1, volume 8, mic 4, last byte 2. There's no named squelch byte. Map the firmware's 0x22 handler offsets to 0x38C70+0xA and +0x11 (which body byte lands there), and compare with the OEM DigitalMessage layout (docs/deep-dive/02-...) and what the stock app writes. Name the byte and the value that keeps the gate open after MON off.**
 

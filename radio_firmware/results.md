@@ -4780,6 +4780,20 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Speaker gate condition (01:27). Offline. FW57. No radio.**
+
+`0x2414` and `0x9310` match the factory image. `0x2414` loads `0x38C70+0x11`. When that byte is 1 it returns 1. Otherwise it loads `+0xA`, and `mvcv` after `cmpnei` against 0 returns 1 only when the squelch byte is 0. The same `mvcv` shape is what makes a version-status query report success when its bit is set.
+
+Monitor off (`0xA5CC`) stores the body at `+0x11` first. Body 2 then calls `0x37F4(1)`. Both body 1 and body 2 ack and call `0x2414`. A nonzero return waits 200 ms and calls `0x37F4(0)`. After body 2 the monitor byte is 2, so the gate stays open only when squelch is 0. Squelch 3, the boot value, leaves the close in place. Body 1 returns 1 without looking at squelch, so monitor on opens either way.
+
+Nothing in `0x9310` loads `0x38C70`. The 163-byte copy goes to `0x38E4C`. Body byte 10 is assembled into the local-id word at `0x93D2`. It is not the squelch byte. The constant 1 in SignalDeck's `setDigital` is body byte 159 (power-save), then volume 8, mic 4 and relay 2. Byte 155 is one of the eight zero key bytes. That is the OEM `DigitalMessage` layout. The stock app has no squelch field on a digital write. On the Armor profile `globalSquelch` is false, and `0x30` is sent only from the analog and M17 branches, so channel 49 and a digital VFO do not write `+0xA`.
+
+The writers of `+0xA` are the boot store of 3 at `0xBF2` (volume 8 at `+0x10` beside it), the analog repack at `0x9C3E` (body byte 10, unchanged), and `0x30` at `0xA662` when the body is 0–9. `+0x11` is written by `0x2F` and by the analog repack from body byte 17. The store at `0x8F3C` is `0x3244C+0xA`, not this image.
+
+`0x9310` does `movi r0, 1` and calls `0x37F4` at `0x938E`, before the body is checked, and it never calls `0x37F4` or `0x2414` again. On FW57 the four changed bytes at `0x37F8` are a call to `0x5BDAA`. That guard forces the argument to 0 only when `0x4B376` is 1 and the next byte is `0xA5` and the argument is already 1. A channel write does not arm that flag, so the call still closes. An analog write can reopen afterwards, because `0x9DCE` calls `0x2414` and opens when it returns 1. A digital write cannot.
+
+That accounts for the earlier rows without a new measurement. Analog squelch 0 leaves `+0xA` at 0, so a later monitor off closes and then opens again (01:03). The `dmr009` cycle runs the boot store of 3, and the digital take-over does not change it, so the 01:16 monitor off stayed closed. A digital write by itself closes and does not reopen (the silent row after squelch 0 with no following `0x2F`).
+
 **Take-over bisect (01:17). FW57. VGA 30. Not transmitting.**
 
 The 01:04 restart was no longer in the log buffer. In this tree, `bootHandshake` sends a version query (`0x34`), the channel write, interrupt off (`0x35` body 2) on a digital channel, then `0x3B` body 120.
