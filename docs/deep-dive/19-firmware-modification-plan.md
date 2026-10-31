@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-31 — monitor on plays an out-of-list talkgroup 99 and does not report it.** The All-Call and talkgroup 9 play and are reported. A tone during analog squelch 0 did not leave the next digital call audible. Details in `results.md`.
+
 **2026-10-31 — a later analog squelch-0 visit did not reopen the speaker.** Out-of-list talkgroup 99 was not reported. The All-Call and talkgroup 9 were reported and stayed silent. A digital channel write did not reopen a shut gate. Details in `results.md`.
 
 **2026-10-31 — the speaker gate, not the decoder, was keeping talkgroup 9 quiet.** Monitor on plays it. Monitor off is silent. An analog squelch of 0, then the digital channel, plays it again, and All-Call plays in that state with monitor off. Details in `results.md`.

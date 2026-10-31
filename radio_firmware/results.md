@@ -4780,6 +4780,20 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Monitor held on (00:53). FW57. VGA 30. Not transmitting.**
+
+The VFO read back list 1 and 9. Monitor on was `0x2F` body 1 at 00:51:45. The next `0x2F` was body 2 at 00:52:37, after these three calls.
+
+| Call | Plays | `0x2B` | RMS |
+|---|---|---|---:|
+| Talkgroup 99 | yes | none | 1384.6 |
+| All-Call | yes | type 2, target 16777215 | 1384.9 |
+| Talkgroup 9 | yes | type 1, target 9 | 1380.7 |
+
+Raw 61 on each. Talkgroup 99 is outside the list. It played and was not reported.
+
+Then monitor off, an analog squelch of 0, and a 1 kHz tone for 4.5 s. The VFO read back squelch 0. The digital VFO after that sent no further `0x2F`. Talkgroup 9 was reported (type 1, target 9) and did not play (RMS 27.0, raw 61). Tag `DMR003.FW57.V022`, not transmitting. Battery 35.4 °C, `mtktsAP` 42.1 °C, `mtktsbtsmdpa` 40.8 °C.
+
 **Gate follow-up (00:47). FW57. VGA 30. Not transmitting.**
 
 An analog squelch of 0, read back 0, then the digital VFO with list 1 and 9. No `0x2F` was sent between that visit and these three calls. Raw 61 on each.

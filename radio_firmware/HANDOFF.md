@@ -1,6 +1,10 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**Lease ended 2026-10-31 00:53 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Channel 49. Hotspot not used.**
+
+Monitor on, body 1 at 00:51:45 and nothing after it, on the VFO with list 1/9: talkgroup 99 plays (RMS 1385) with no `0x2B`; the All-Call plays (RMS 1385, type 2, target 16777215); talkgroup 9 plays (RMS 1381, type 1, target 9). Raw 61. A 1 kHz tone during analog squelch 0, then the digital VFO with no `0x2F` after the tone, left talkgroup 9 reported and silent (RMS 27). Battery 35.4 °C, `mtktsAP` 42.1 °C, `mtktsbtsmdpa` 40.8 °C.
 
 **Lease: GROK (firmware), Armor + HackRF, from 00:49 for ~15 min. 467.625; replay VGA 30; amp off; primer first; no -R.**
 
