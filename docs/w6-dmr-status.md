@@ -16,6 +16,8 @@
 
 STATUS: IDLE (22:03 W6 DMR agent: PR 104 merged for beta.25; nothing running, no phones held; heat test waits for the owner)
 
+**2026-10-30 22:08 (manager): BENCH LEASED TO GROK (admission plan A-D), about 1.5 h: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`. The Atom XL and both W6s are NOT in this lease.**
+
 **21:44 W6 DMR agent: PR 104 device pass on the W6+ (branch build 31edbb59), all guards held.**
 - **Setup:** two out-of-band channels planted in a copy of its channel database (146.520, and a split 437.800 / 145.990), plus a zone holding only the 146.520 one; the original database restored afterwards.
 - **Results:**
