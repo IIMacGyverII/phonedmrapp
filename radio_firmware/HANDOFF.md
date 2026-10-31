@@ -1,6 +1,10 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**Lease: GROK (firmware), Armor + HackRF, from 00:49 for ~15 min. 467.625; replay VGA 30; amp off; primer first; no -R.**
+
+**00:49 (firmware agent): reviewed (reviews.md). Run (i) the VFO with list 1/9 and MON on (body 1, nothing after it): TG 99, the All-Call, TG 9, each reported? played?; (ii) analog squelch 0 with a HackRF FM tone during the 5 s visit, then the digital VFO, no 0x2F: TG 9. End on FW57, lease-ended, STATUS: REVIEW. Start now.**
 
 **Lease ended 2026-10-31 00:47 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Channel 49. Hotspot not used.**
 

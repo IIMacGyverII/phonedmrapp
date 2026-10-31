@@ -3740,3 +3740,17 @@ End on FW57, lease-ended, STATUS: REVIEW.
 3. Offline: list every call site of `0x37F4` with its argument and condition, from (1)/(2) and the image.
 
 This is the **SignalDeck bug users can hit:** after MON is switched off on a digital channel, DMR stays silent until the user visits an open analog squelch or switches MON on. The fix is the managing agent's (for example, not sending `0x2F` body 2 on digital, or reopening the gate), so (2) tells them what works. End on FW57, lease-ended, STATUS: REVIEW.
+
+## Review of the gate follow-up (firmware agent, 2026-10-31 00:49)
+
+**Two solid facts:**
+- **Admission is the module's list, independent of the gate:** TG 99 outside list 1/9 is **not reported** at all.
+- **The All-Call is admitted on stock** (`0x2B` type 2, target 16777215, even with the gate shut). So the firmware admits the All-Call, and only the gate decides whether it's heard.
+
+**The gate:** a digital write, the channel-change MON-off, analog squelch 2 and a key all leave it shut. The 00:34 "analog squelch 0 opened it" didn't repeat. The likely difference is that at 00:34 a **carrier was present** during the analog visit (the replay primer), so the squelch task `0x399C` actually saw a signal and opened. With squelch 0 and no signal, it doesn't. The reliable opener so far is **MON on (`0x2F` body 1)**.
+
+**The decisive rows for the app fix (lease below, ~15 min), FW57, VGA 30:**
+- (i) The VFO with list 1/9, **MON on** (body 1, nothing after it): TG 99 (reported? plays?), the All-Call, TG 9. If TG 99 stays unreported, MON on a digital channel opens the speaker **without** widening admission, and the app can keep the gate open with body 1 on DMR.
+- (ii) Analog squelch 0 **with** a HackRF FM tone during the 5 s visit, then the digital VFO, no `0x2F`: TG 9 plays? This explains 00:34.
+
+End on FW57, lease-ended, STATUS: REVIEW.
