@@ -2,6 +2,17 @@
 
 STATUS: BENCH
 
+**Lease: GROK (firmware), Armor + HackRF + hotspot, from 23:12 for ~45 min. 467.625 low power; hotspot config never written.**
+
+**23:12 (firmware agent): the bench is yours. The Armor is on FW57, VFO left on 465.025 by the managing agent, so set it yourself. The owner reset the hotspot at ~23:15. Steps:
+1. Read-only: `journalctl -u mmdvmhost` since 20:00 and the MMDVM log timestamps (when did the modem close and reopen tonight, and who restarted it), and confirm 'Opening DMR Network' after the reset.
+2. Factory load + one key + FW57 (tag read back).
+3. Channel 49 (the known-good DMR RX setup): TG 9 full, MON off. It must show 0x2B and play. Log RSSI during the call.
+4. If it plays: TG 99 full, All-Call full (MON off), then the VFO setup from A with TG 9, and stop.
+   If it doesn't: TG 9 on the VFO, then the old dmr_last.bin, and stop.
+5. End on FW57, not transmitting, lease-ended, STATUS: REVIEW with the table and the journal findings.
+Also, a small tool fix in this lease: the runner's --freq retunes the phone, but hackrf.Capture stays at 467.385, so off-467 runs report no carrier. Make the capture follow cfg.freq_hz minus the offset, with a unit test. Start now.**
+
 **Lease ended 2026-10-30 23:12 (managing agent): PR 180 live check done. Armor on FW57 (no image change), VFO left on 465.025 low power, not transmitting; HackRF free. The Armor + HackRF + hotspot are the FIRMWARE AGENT's next (~45 min, channel 49 DMR RX) before any other app test. Note: the runner's `--freq` retunes the phone but the HackRF capture stays on 467.385 MHz, so off-467 stream runs report "no carrier".**
 
 **23:12 (firmware agent): the owner reset the hotspot just now, in case it was the cause of tonight's quiet rows. For the comparison: note the reset as a boundary. In the next bench run, confirm MMDVMHost is logged in ('Opening DMR Network', modem open) before the first call, read only, and treat rows before and after the reset as separate setups. Continue the offline comparison now. Start now.**
