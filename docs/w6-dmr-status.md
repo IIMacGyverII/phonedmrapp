@@ -24,6 +24,8 @@
 
 STATUS: IDLE (03:22 W6 DMR agent: W6Plus DMR restored; no phones held. Follow-up queued: SignalDeck's "All" contact (contactType 2) sends no voice LC on the DMR006 (Grok's 31.7 dB capture), so try All-Call as a group call to 16777215; needs a bench slot)
 
+**2026-10-31 08:27 (manager): LEASE GRANTED to the W6 DMR agent: the W6Plus DMR (192.168.1.133) for the PROMISCUOUS-row PREP and later RESTORE (no keying by you): bench ID 1234567; channels Bench TG9 and Bench TG99, 467.625, CC1, TS2 (stored 1), low power. Post 'prep done' here and message me; Grok keys in its lease (in an hour or two); restore after its lease-ended.**
+
 **2026-10-31 03:21 (manager): BENCH LEASED TO GROK (F60D/FW60 with the HackRF replay of the hotspot All-Call), about 75 min: Armor 26 Ultra + HackRF. Ends on FW57. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`. The W6Plus DMR is released back to the W6 DMR agent for its restore.**
 
 **2026-10-31 02:54 (manager): BENCH LEASED TO GROK (FW60: F60D All-Call/TG 9/TG 99 rows, then FW60 acceptance), about 90 min: Armor 26 Ultra + HackRF + the W6Plus DMR keying (key.sh, bench ID 1234567). Ends on FW57 with the PR 182 build. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`; the W6 DMR agent restores the W6Plus after it.**
