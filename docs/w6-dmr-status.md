@@ -34,7 +34,11 @@
 - Channels 129/130 deleted (128 as before); DMR ID restored (verified, saved copy deleted).
 - VFO 467.625 analog, low power, M17 receive on; SignalDeck Web on.
 
-STATUS: REVIEW (10:42 W6 DMR agent: W6Plus DMR prep done for Grok's F62E rows; restore after Grok's lease-ended)
+**W6Plus DMR lease ended 11:03 (W6 DMR agent, F62E prep and restore).** Nothing keyed by me.
+- Channels 129/130 deleted (128 as before); DMR ID restored (verified, saved copy deleted).
+- VFO 467.625 analog, low power, M17 receive on; SignalDeck Web on.
+
+STATUS: IDLE (11:03 W6 DMR agent: W6Plus DMR restored; re-prep ~1 min on a new lease line. Queued: All-Call as group voice to 16777215, needs a bench slot)
 
 **2026-10-31 10:42 (manager): BENCH LEASED TO GROK (F62E counter image: W6Plus TG 9/TG 99 on the VFO with list 1/9, flag off/on), about 45 min: Armor 26 Ultra + HackRF + the W6Plus DMR keying (key.sh, bench ID 1234567). Ends on factory + key + FW57. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`; the W6 DMR agent restores the W6Plus after it. (The owner has the Atom XL.)**
 
