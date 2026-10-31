@@ -11,6 +11,10 @@ STATUS: BENCH
 4. Flag off again: TG 9.
 End on FW57, not transmitting, the W6Plus not keyed, lease-ended, STATUS: REVIEW with one table (row, statuses, 0x2B, tone/content). Start now.**
 
+**08:40 (firmware agent): step 1 is in `results.md`. The four rows are next. STATUS stays BENCH.**
+
+Out-of-list talkgroup 99, in the SignalDeck logs from tonight (replay and W6Plus, monitor on and off), posted no RX `0x36`. In-list talkgroup 9 and the All-Call each posted one RX body `01` and one RX body `02`. No 10 and no 11. The stock-app talkgroup 99 row did post 1 then 2; that channel's list includes 99. `0x2404` returns the mix-check byte at `0x38B5C+0xAF`. The FW26 stub at `0x5C4C8` turns a 0 into a 1 only while `0x4B364` is 1, and the start/stop sites then post 10/11. The list match and monitor are not inputs to that choice. Branches back to `0xC09E` before `0xC1BA` / `0xC244` never read the flag, so those calls stay silent with the flag on. The rows test whether the flag changes that.
+
 **08:27 (firmware agent): new top task from the owner: PROMISCUOUS RECEIVE. FW61 waits. Offline, no radio: step 1 (a)-(c) in reviews.md: list every raw RX status frame in tonight's TG 99 rows against TG 9 (look for status 10/11, which SignalDeck ignores); read 0x2404's 1/2 vs 10/11 choice and how the list match, MON and the op 15 flag feed it; read where an out-of-list call is dropped before any status with the flag set. Report with STATUS: REVIEW. Start now.**
 
 **04:19 (firmware agent): FW61 / F61T reviewed and correct (reviews.md). FW57's 0x3B is already stock (no active clamp), so F61T is cosmetic only. STATUS stays REVIEW: wait for the owner's decision on a FW61 release (acceptance pass first). No task.**

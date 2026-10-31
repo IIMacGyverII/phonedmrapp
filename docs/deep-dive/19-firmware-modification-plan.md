@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-31 — promiscuous receive, step 1.** Out-of-list talkgroup 99 posted no RX status on FW57. The admit stub turns a mix-check 0 into status 10/11 only when `0x4B364` is 1, and several branches return to the receive loop before that stub. Details in `results.md`.
+
 **2026-10-31 — FW61 is FW57 plus the hold guard, and FW61T also frees the old time-out slot.** Neither image was loaded. Details in `results.md`.
 
 **2026-10-31 — a sample-by-sample lag search matches the F60D All-Call clip to talkgroup 9.** The same match is in the talkgroup 99 clip. The network file is speech. No radio. Details in `results.md`.

@@ -4780,6 +4780,38 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Promiscuous receive, step 1 (08:40). Offline. FW57 image. No radio.**
+
+Tonight's SignalDeck logs of an out-of-list talkgroup 99 have no receive-status frame. The in-list rows have one RX `0x36` body `01` and one RX `0x36` body `02`. Status 10 and 11 are absent. The app's ack of `0x36` is a TX body `01` and is not a second start.
+
+| Log | RX `0x36` body | Times |
+|---|---|---|
+| `F60D_tg9` | `01`, then `02` | 03:30:58.479, 03:31:03.639 |
+| `time_tg9_30_1`, `_2`, `_3`, `time_tg9_20_4`, `_5` | `01`, then `02` | 01:47:19 through 01:48:39, each call about 5.16 s |
+| `w6_A_tg9`, `w6_B_tg9_off`, `w6_C_tg9` | `01`, then `02` | 02:13:59.025 / 02:14:02.804, 02:15:38.364 / 02:15:41.785, 02:16:09.954 / 02:16:13.374 |
+| `F60D_allcall`, `time_allcall_30_1`, `w6_A_allcall`, `w6_F60D_allcall` | `01`, then `02` | 03:31:17.175 / 03:31:22.335, 01:48:53.084 / 01:48:58.242, 02:14:42.904 / 02:14:46.323, 03:11:47.662 / 03:11:51.081 |
+| `F60D_tg99`, `time_tg99_30_1`, `w6_A_tg99`, `w6_B_tg99_mon` | none | — |
+
+Every `0x2B` reply in those SignalDeck logs is 9 bytes. `w6_B_tg99_mon` keeps answering the previous All-Call (type 2, target 16777215) and posts no `0x36`. The stock-app log `oem_tg99` does post one status 1 at 01:57:05.877 and one status 2 at 01:57:10.960 (each line printed twice, once as the decode and once as the read). That row is in the list: channel 49's receive list is 1, 9 and 99. Its `0x2B` is 9 bytes, type 1, target 99.
+
+`0x2404` on this image is `lrw r3, 0x38B5C`; `ld.b r0, (r3, 0xAF)`; `jmp r15`. It returns the mix-check byte. It does not read the receive list, the monitor command, or `0x4B364`. The gates at `0xC1BA` and `0xC244` are `bsr 0x5C4C8`. That stub calls `0x2404` and keeps a nonzero result. A zero becomes 1 only when the byte at `0x4B364` is 1, and stays 0 when the flag is any other value. The start site posts body 1 when the stub returns 0 (`0xC1BE` to `0xC2BC`) and body 10 when it returns nonzero (`0xC1C4`). The stop site posts 2 or 11 the same way (`0xC248`, `0xC2AE`, `0xC250`). Both posts are `bsr 0x7E08`. The flag can turn a would-be 1/2 into a 10/11. It cannot turn a 10 back into a 1. `0x5C4E2` appends colour code and slot and sets the length to 11 only while the flag is 1, then jumps to the reply builder. With the flag off the reply stays 9 bytes, which is what these logs show.
+
+The receive function starts at `0xC084`. The loop head is `0xC09E`. The flag is loaded only inside `0x5C4C8`, so a branch that returns to `0xC09E` before `0xC1BA` or `0xC244` posts nothing even when the flag is set. Those branches, on this image:
+
+| Site | What sends it back to the loop |
+|---|---|
+| `0xC0C8` | The low bits from `0x1844` do not include bit 3 |
+| `0xC12C` | `0x38908` bit 0 is set, after the ROM call at `0xC122` |
+| `0xC14A` | The byte at `0x32504+4` is 0 |
+| `0xC15E` | The byte at `0x38C0C` equals 104 |
+| `0xC168` | `0x38908` bit 1 is set |
+| `0xC212` | On the stop side, `0x38908` bit 1 is clear |
+| `0xC242` | On the stop side, the word at `0x3250C+8` equals the constant from `movih r2, 128` and `addi r2, 153` (`0x800099`) |
+| `0xC1B8` to `0xC2CA` | On the start side, the word at `0x3250C+4` is 1 and the word at `+8` equals that same constant. `0x6354` runs, then the loop. The getter is not called |
+| `0xC27E` | The bit-2 arm stores 1 at `0x32504+4` and returns to the loop |
+
+`0x2348`, `0x118`, `0xF54`, `0x23A4`, `0x62C8` and `0x15280` run on the way to the getter. This reading does not name them. The four bench rows have not been run.
+
 **FW61 and FW61T (04:20). Not loaded. No radio.**
 
 FW61 is FW57 plus the FW59 hold guard and nothing else. The guard code is the FW59 bytes `0x5C5EA`–`0x5C611`. The six literal words at `0x5C61C` are `0x4B008`, the hold word, the apply exit, `0x4B000`, `0x11000100`, and the release exit. The All-Call store that sits in front of this block in FW59 is not copied.
