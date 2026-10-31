@@ -1,6 +1,18 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**Lease ended 2026-10-31 03:19 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. The PR 182 build (`1.0.0-beta.25`) owns the radio. Channel was returned through the factory key. Hotspot not used. The W6Plus was not left keyed. Battery 33.6 °C, `mtktsAP` 38.6 °C, `mtktsbtsmdpa` 37.5 °C.**
+
+Stopped at the first unexpected row. F60D's All-Call does not carry the 1 kHz tone. TG 9, TG 99, FW60 and the acceptance pass were not run.
+
+| Row | FW57 (02:17) | F60D | FW60 |
+|---|---|---|---|
+| All-Call | start and stop, no 1 kHz line, type 2 target 16777215 | start and stop, no 1 kHz line during the carrier, type 2 target 16777215 and type 0 target 0 | not run |
+| Talkgroup 9 | 1 kHz line, start and stop | not run | not run |
+| Talkgroup 99 | no start, no tone | not run | not run |
+
+F60D after a factory key. VFO list 1 and 9, monitor off. The carrier was 3.5 s at 31.7 dB over the floor (LNA 32, VGA 24, a little clipping). In those seconds the 1 kHz line was about −12 to +1 dB, and the clip stayed near RMS 1300. Op 14 at the start of the carrier: slot 0, the match bytes at +14 and +16 were 0, and the slot word was 0. The 16-byte read does not include the gate byte at +0x13. No voice LC header. Details in `results.md`.
 
 **Lease: GROK (firmware), Armor + HackRF + the W6Plus DMR (keying only, key.sh), from 02:54 for ~90 min. 467.625, low power, bench ID 1234567, TS2. The hotspot isn't used. The HackRF can't be moved (the owner is asleep): use a higher capture gain for the LC.**
 
