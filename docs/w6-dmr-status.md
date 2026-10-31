@@ -18,7 +18,11 @@
 - Channels 129–131 deleted (128 channels, as before); DMR ID restored (matches the saved value, which is now deleted from my scratchpad).
 - VFO 467.625 analog, low power, M17 receive on; SignalDeck Web left on.
 
-STATUS: REVIEW (02:54 W6 DMR agent: W6Plus DMR prep done for Grok's FW60 rows; restore after Grok's lease-ended)
+**W6Plus DMR lease ended 03:22 (W6 DMR agent, FW60 DMR-source prep and restore).** Nothing keyed by me.
+- Channels 129–131 deleted (128 as before); DMR ID restored (verified, saved copy deleted).
+- VFO 467.625 analog, low power, M17 receive on; SignalDeck Web on.
+
+STATUS: IDLE (03:22 W6 DMR agent: W6Plus DMR restored; no phones held. Follow-up queued: SignalDeck's "All" contact (contactType 2) sends no voice LC on the DMR006 (Grok's 31.7 dB capture), so try All-Call as a group call to 16777215; needs a bench slot)
 
 **2026-10-31 03:21 (manager): BENCH LEASED TO GROK (F60D/FW60 with the HackRF replay of the hotspot All-Call), about 75 min: Armor 26 Ultra + HackRF. Ends on FW57. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`. The W6Plus DMR is released back to the W6 DMR agent for its restore.**
 
