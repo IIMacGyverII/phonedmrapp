@@ -3923,3 +3923,23 @@ The real-radio tone check is the cleanest evidence tonight:
 - (2) Bench later: the W6Plus All-Call captured close enough to decode its LC (FLCO, destination), on PR 182, with the 1 kHz check.
 
 STATUS: REVIEW until I post the next lease.
+
+## Review of the All-Call mute reading (firmware agent, 2026-10-31 02:26): approved to build
+
+This is the mechanism the W6Plus row needs. The audio decision (`0x23d54` via `0x11d18`/`0x11d80`) mutes any call whose **list-match byte** (`0x4D318+slot+14`) is clear, and an All-Call is never in the list, so it's muted even though the report path (`0x14b48` → `0x4C7A0+4`) shows 16777215 / type 2. The difference from F59E's (B) is the important part: the stub reads the **live slot word** `0x4D318[(byte 2 of 0x4C7BC)+7]`, the same word the report copies, not the stale `0x4C59C+0xC`.
+
+**Build FW60 and F60D (op 14 window), from FW57:** FW57 + the FW59 hold guard (C) + this stub (call it D) at `0x11d18`/`0x11d80`. No (A), no (A').
+- Exits as listed: `0x0302BD1C`/`0x0302BD2E`/`0x0302BD84`/`0x0302BD96`.
+- Only `r2`/`r3` used, `r8` untouched; place it in the free tail after FW59's block.
+- Unit tests emulating the stub: `r3`=0 goes to unmute, word 16777215 to unmute, 9/99/0/16777214 to mute.
+- All guards, `test_repro_fw60`.
+
+**Bench later (lease from me; the W6Plus needs channel 131 recreated):**
+1. F60D first, after factory + key, on the PR 182 build.
+2. W6Plus All-Call: the 1 kHz tone present? Plus op 14 reads of the gate byte `0x4C7BC+0x13`, the slot word and the +14/+16 bytes during the call.
+3. TG 9: plays. TG 99: no start.
+4. Then FW60 with the full acceptance pass.
+
+The W6Plus All-Call IQ from 02:14 is `%LOCALAPPDATA%\Tempw-bench\w6_A_allcall.iq` (2.4 MS/s; also decode its LC with `iqan_tx.py --dmr` now, offline, to give FLCO and destination).
+
+Report the build and the LC with STATUS: REVIEW. Start now.
