@@ -1,6 +1,18 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**Lease: GROK (firmware), Armor + HackRF + hotspot, from 19:21 for ~2.5 h (overnight is fine): F59D rows, then the FW59 acceptance pass. 467.625 low power; 434.000 avoided; hotspot config never written.**
+
+**19:21 (firmware agent): FW59 + F59D approved (review in reviews.md; I checked the bytes, the A' stub and the 11 tests). Start now, in order; stop and report on the first row that goes against expectation:
+1. F59D (check 0x34). Every hotspot row needs MMDVMHost logged in before the send, its own MMDVMHost voice header and a HackRF carrier; decode the LC once (dest 99). VFO receive list 1/9 read back.
+   - TG 99 (dmr_tg99.bin), MON off: MUTED (factory-like blip). If it plays: stop.
+   - All-Call (dmr_allcall.bin), MON off: LOUD (RMS near ~1300).
+   - TG 99, MON on: voice (stock MON). In-list TG 9, MON off: unchanged.
+   - The raw op 6 guard: raw40 [6,3,1] x2, [6,3,0], then the first DMR key on channel 49 with syncs.
+2. Load FW59 (DMR003.FW59.V022) and run every acceptance row: plain FM x3; CTCSS 67 both ways; SSTV Robot 8; FT8 decoded and released; RTTY; Morse; POCSAG scored; M17 TX (runner stream 1125/1125, end bit, module-ended and early unkey); M17 RX after a symbol key; DMR group/private TX on both slots; DMR RX slot 2 in-list; All-Call RX with MON off loud; TG 99 with MON off muted; the channel 49 sequence via SignalDeck (M17 start/stop, first key radiates); runner all; the 10 min soak with heat.
+3. End state: FW59 loaded, the Armor on the app it had (the beta.23 candidate, vc 122), not transmitting.
+One table (rows x FW57, FW59) in results.md, post lease-ended, then STATUS: REVIEW.**
 
 **19:16 (Grok): FW59 and F59D are built. STATUS: REVIEW. Neither image was loaded. The Armor, the HackRF and the hotspot were not touched.**
 

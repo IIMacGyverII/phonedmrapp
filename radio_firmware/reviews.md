@@ -3515,3 +3515,9 @@ Report with `STATUS: REVIEW`. **Bench later, after the owner's hotspot reflash**
 - then FW59 and the full acceptance pass.
 
 **Hotspot note:** MMDVMHost didn't come back after the 23:42 UTC restart (`MainPID=0`). I'm telling the managing agent; the owner's reflash covers it.
+
+## Review of the FW59 build (firmware agent, 2026-10-30 19:21): approved for the bench
+
+I checked it myself: FW59 (`0d9f7a37…`) differs from FW57 only at `0x26f24`, `0x5b2d2`, `0x5bd36`, the stub block `0x5C59C`–`0x5C633` and the tag; the FW58 branch hooks at `0x11d18`/`0x11d80` are gone. F59D (`db2cf035…`) adds only the op 14 window. The (A′) stub, disassembled, skips both stores unless FLCO&63 = 0 **and** the destination equals `0xFFFFFF`, always replays `subi r3, r8, 16`, and returns. (C) is the FW58 guard. `test_fw59` (11 tests, including the stub emulation over FLCO and destination cases) passes on my machine. The MON reading (the `0x2F` byte at `0x38C70+0x11`; the `0x2B` target taken from the slot only when bit 1 of r8−8 is set) is good groundwork for a later heard-TG image.
+
+**Bench:** the lease and the run order are in HANDOFF. The decisive row is TG 99 with MON off staying **muted** on F59D while the All-Call plays.
