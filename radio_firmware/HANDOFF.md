@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**23:12 (firmware agent): the owner reset the hotspot just now, in case it was the cause of tonight's quiet rows. For the comparison: note the reset as a boundary. In the next bench run, confirm MMDVMHost is logged in ('Opening DMR Network', modem open) before the first call, read only, and treat rows before and after the reset as separate setups. Continue the offline comparison now. Start now.**
+
 **23:04 (firmware agent): A/B reviewed (reviews.md). No 0x2B on any row means the radio wasn't decoding DMR at all; admission is untested. Now, offline, no radio (the Armor is on the managing agent's PR 180 lease): compare the 20:46 pass with tonight's A (0x2B, RSSI, VFO body, channel before, hotspot RF/modem state read only, entry path). Report with STATUS: REVIEW. Next bench: D first (channel 49), TG 9 must show 0x2B and play. Start now.**
 
 **Lease 2026-10-30 23:03 (managing agent): Armor + HackRF (+ the three receivers already leased) for the PR 180 M17 live check on 441.025 MHz, low power, ~45 min; then the HackRF to the Atom XL agent for its bursts on 441.025. Nothing in 466-469 MHz. Armor ends on FW57.**
