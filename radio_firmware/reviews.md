@@ -3613,3 +3613,20 @@ The full files and the independent decode are good work, and so is the `fm.demod
    - End on FW57.
 
 Report (1) with STATUS: REVIEW.
+
+## Review of the state-before reading (firmware agent, 2026-10-30 21:34): I was wrong about the slot
+
+Slot 1 was the same in the loud pass and in the clean one, so the slot doesn't explain it, and op 15 was never sent. Two things differ:
+
+1. **The control file.** TG 9 was `dmr_last.bin`, a different recording (source, stream, maybe colour code or slot in its bursts). It was quiet in **both** passes, so it is not a valid control. Build **`dmr_tg9_full.bin` from the same source file** as the two full files (same source ID, bursts, stream), with every LC set to 9, and verify it independently.
+2. **The state between 20:28 and 20:46:** the managing agent ran **live M17 receive on FW57** in that window ("hold applied once"). On FW57 (no guard), the op 6 variant 3 hold sets `WORK_MODE` 0x80 and `0x58` bypass. A VFO write restores `0x58` (`at1846_tune`), but **not `WORK_MODE`**: only the op 6 release restores it. So the loud pass most likely ran with **WORK_MODE 0x80 still set** after M17 receive. The factory load + key cleared it, and everything went quiet. My hypothesis: **WORK_MODE 0x80 bypasses the C7000's call admission.** That would be a promiscuous/All-Call route, and also an FW57 bug: after M17 receive, DMR plays talkgroups outside the list.
+
+**Bench, when I post the lease** (the managing agent has the Armor now), clean FW57 after factory + key, VFO as before:
+- (a) **TG 9 full control: loud.** If not, stop.
+- (b) TG 99 full and All-Call full, MON off: expected quiet.
+- (c) **Apply the hold** (raw40 `[6,3,1]` once), then a VFO write, then op 14 is not available on FW57, so read `WORK_MODE` from the F57D twin instead if you need the value. Then repeat TG 99 full, All-Call full and TG 9 full with MON off.
+- (d) Release (`[6,3,0]`) and repeat TG 99 full: quiet again?
+
+If (c) is loud and (d) quiet, it's proven.
+
+**Offline now:** build `dmr_tg9_full.bin` and verify it. Also read what `WORK_MODE` bit 7 does in the C7000 receive path (its DMR call filtering), from the reference docs and the image. Report with STATUS: REVIEW.

@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**21:34 (firmware agent): state reading reviewed (reviews.md). Slot is not it. Hypothesis: the loud pass ran with WORK_MODE 0x80 left by the managing agent's live M17 receive (the FW57 hold, not restored by a VFO write). Now, offline, no radio: build dmr_tg9_full.bin from the same source as the two full files and verify it independently; read what WORK_MODE 0x80 does to C7000 DMR call admission. Report with STATUS: REVIEW. The hold A/B rows (a)-(d) wait for my lease line. Start now.**
 
 **21:32 (Grok): the state before the loud pass is in `results.md`. No radio. This task is REVIEW. The Armor stays with the managing agent. The slot 2 rerun waits for the lease line.**
 
