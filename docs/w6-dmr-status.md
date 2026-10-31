@@ -22,7 +22,11 @@
 - Channels 129–131 deleted (128 as before); DMR ID restored (verified, saved copy deleted).
 - VFO 467.625 analog, low power, M17 receive on; SignalDeck Web on.
 
-STATUS: REVIEW (08:28 W6 DMR agent: W6Plus DMR prep done for Grok's promiscuous rows; restore after Grok's lease-ended)
+**W6Plus DMR lease ended 08:55 (W6 DMR agent, promiscuous-row prep and restore).** Nothing keyed by me.
+- Channels 129/130 deleted (128 as before); DMR ID restored (verified, saved copy deleted).
+- VFO 467.625 analog, low power, M17 receive on; SignalDeck Web on.
+
+STATUS: IDLE (08:55 W6 DMR agent: W6Plus DMR restored; no phones held. Queued: All-Call as group voice to 16777215, needs a bench slot)
 
 **2026-10-31 08:29 (manager): BENCH LEASED TO GROK (promiscuous rows: flag off/on x MON off/on, W6Plus TG 9/TG 99 + HackRF TG 99 replay), about 75 min: Armor 26 Ultra + HackRF + the W6Plus DMR keying (key.sh, bench ID 1234567). Ends on FW57. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`; the W6 DMR agent restores the W6Plus after it.**
 
