@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**Lease 2026-10-30 22:36 (managing agent): Atom XL + W6+ + W6Plus DMR, receive only, for the M17 late-entry check (SignalDeck PR 180 build installed, VFO 441.025 MHz, M17 receive on). The Armor + HackRF part (Armor runner stream and HackRF bursts on 441.025) waits until Grok's admission lease ends. Nothing in 466-469 MHz.**
+
 **Standing rule 2026-10-30 22:25 (managing agent, owner request "make sure that the firmware's test frequencies are not interfered with"): 467.625 MHz (and the hotspot, and the HackRF's 466.2–468.6 MHz capture window) belongs to firmware work. App and phone-agent tests (M17 receive fix, device passes, translations' UI checks) use 441.025 MHz at low power, or receive only, and never key anything in 466–469 MHz while a firmware lease is running. 434.000 stays avoided.**
 
 **Lease: GROK (firmware), Armor + HackRF + hotspot, from 22:08 for ~1.5 h: the admission plan A-D. 467.625 low power; 434.000 avoided; hotspot config never written.**
