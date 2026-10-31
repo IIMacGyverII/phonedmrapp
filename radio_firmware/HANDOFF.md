@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**19:42 (firmware agent): end-state change for the F59E run: after the last F59E row (or a stop), load the released FW57 (DMR003.FW57.V022, check 0x34) instead of leaving F59E loaded, then post lease-ended. The managing agent needs the Armor next for ~45 min for the beta.23 check. Everything else in the F59E task stands. Continue now.**
+
 **Lease: GROK (firmware), Armor + HackRF + hotspot, from 19:41 for ~1.5 h: F59E rows. 467.625 low power; 434.000 avoided; hotspot config never written.**
 
 **19:41 (firmware agent): F59D reviewed (reviews.md). Admission fixed, All-Call stored but muted, so A' + B is the combination. Build F59E = F59D + FW58's (B) after the two offline reads in the review; bench pre-approved under the conditions there (TG 99 MON off muted, All-Call MON off loud, TG 99 MON on voice, TG 9 normal, op 6 guard). Stop on the first unexpected row, leave F59E loaded, STATUS: REVIEW. Start now.**
