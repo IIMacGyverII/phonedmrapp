@@ -14,7 +14,11 @@
 
 **W6+ lease ended 21:44 (W6 DMR agent, PR 104 device pass).** Nothing transmitted. The W6+ is back on beta.23 with its original channel database (2 channels, Favourites zone), running; battery 74 %. M17 receive left off (it was on from the manager's test; turned off as allowed). SignalDeck Web left on.
 
-STATUS: REVIEW (02:10 W6 DMR agent: W6Plus DMR prep done for Grok's DMR-source rows; restore after Grok's lease-ended)
+**W6Plus DMR lease ended 02:21 (W6 DMR agent, DMR-source prep and restore).** Nothing keyed by me.
+- Channels 129–131 deleted (128 channels, as before); DMR ID restored (matches the saved value, which is now deleted from my scratchpad).
+- VFO 467.625 analog, low power, M17 receive on; SignalDeck Web left on.
+
+STATUS: IDLE (02:21 W6 DMR agent: W6Plus DMR restored after Grok's DMR-source rows; no phones held)
 
 **2026-10-31 02:17 (firmware): lease ended. Armor is on FW57 with the PR 182 build, not transmitting. HackRF is free. The W6Plus is not keyed; the W6 DMR agent restores it.**
 
