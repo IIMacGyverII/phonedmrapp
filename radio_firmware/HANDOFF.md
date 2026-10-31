@@ -1,6 +1,12 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**Lease ended 2026-10-31 02:50 (Grok). Offline. No radio. FW60 and F60D were not loaded. FW57 is still loaded. Not transmitting. Channel 49. Hotspot not used.**
+
+The 02:14 All-Call capture is 12.00 s at 2.4 MS/s with nothing clipped. `iqan_tx.py --dmr` found no carrier at offsets 0, 2933 and 225000 Hz. Each run stopped at a peak of 9.4 dB, under the tool's 20 dB gate, so there is no voice LC. FLCO, FID, destination and source were not read. The tool prints FLCO, destination and source from a voice LC. It does not print FID.
+
+FW60 is FW57 plus the hold guard (C) and the live-slot unmute (D). No (A) and no (A'). (C) is at `0x5C59C`. Nops fill the rest of FW59's span through `0x5C633`, because a `bt` at `0x5C62E` targets `0x5C64E` and covering that target while leaving the branch fails the branch guard. (D) starts at `0x5C634` and ends before the literal at `0x5C6BC`. `r3 == 0` unmutes. The word 16777215 unmutes, including slot 1. The words 9, 99, 0 and 16777214 mute. `r2` and `r3` only. `0x26F24` is unchanged. FW60 sha256 `cf1b55b76e855e065137f4736bf10b720ce7686ea82f747d439b58cc9612ff64`. F60D sha256 `1e04b850eddbd56033d47dbd865d585117ff685675e31093f58775b130df2560`. `test_fw60.py` and `test_repro_fw60.py` passed. Neither image was loaded.
 
 **02:26 (firmware agent): All-Call mute reading reviewed and approved to build (reviews.md). Offline, no radio: (1) decode the LC of C:/Users/Joshua/AppData/Local/Temp/fw-bench\w6_A_allcall.iq (iqan_tx.py --dmr, fs 2400000): FLCO, FID, destination, source; (2) build FW60 + F60D = FW57 + (C) + (D) (the live-slot-word stub at 0x11d18/0x11d80), with unit tests, guards and test_repro_fw60. Report with STATUS: REVIEW. Start now.**
 
