@@ -387,3 +387,129 @@ reviewer.
 | No position fix yet | 位置を取得していません | Short label: 位置未取得. | |
 | Key legends SCAN, ZONE, TXT, SOFT SQ, MON, REC, VFO, PKT | unchanged | No legend is translated. 「Soft SQ レベル」 keeps the name. The car screen's own Scan button is 「スキャン」. | |
 | weekday buttons (one letter) | 日 月 火 水 木 金 土 | Japanese calendars start on Sunday, as Android ja does; ❓ the app may start on Monday (月 火 水 木 金 土 日). One kanji is also the short form; no three-letter form. | |
+
+## 9. Terms settled during the draft (2026-10-31)
+
+Added after the Japanese draft: the terms the translators needed beyond §1–8, and the choices made in the consistency
+pass where one English term had been rendered in several ways, or where a name in the guide, the help texts or the web
+table did not match the label on the screen. The draft now uses the Japanese in the second column everywhere (screens,
+SignalDeck Web, the guide). Rows marked **❓** are real choices for the reviewer. Where a row here differs from §1–8,
+the draft follows this row.
+
+### Names settled in the consistency pass
+
+| English | Japanese | Notes | Reviewer |
+|---|---|---|---|
+| APRS settings (the screen) | APRS とパケットの設定 | The screen title. Prose that named it 「APRS 設定」 now quotes the title. | |
+| PKT → APRS settings (path) | PKT → 設定 | The PKT button is 設定; 「PKT → APRS 設定」 named no real button. SignalDeck Web's own card stays 「APRS 設定」 (its label). | |
+| Side PTT key (setting) / the phone's side PTT button | 側面の PTT キー | Replaces §3 「側面の PTT ボタン」: the setting, its subtitle, the capture prompt and the guide now all say キー, as the strings do. 「PTT ボタン」 stays for Bluetooth PTT buttons and the web's on-screen button. | |
+| Mission Statement (Device button, sheet, web card, guide section) | ミッション | One name. The web card and the guide section said ミッションステートメント (12 glyphs, too long for the button). ❓ 理念. | |
+| ON AIR (tag on the tuned channel) | 使用中 | Same word as a zone "in use"; オンエア could read as "transmitting". オンエア中 stays for nets on the air (近くでオンエア中). ❓ 選択中. | |
+| Exam practice (guide topic title) | 試験対策（米国） | Equals the sheet title; the PKT button stays 試験対策 (short). The topic text still says the pools are the US exam in English (style §10). Replaces §1's 「米国の試験（英語）」. | |
+| Licence exam practice (heading) | 免許試験対策（米国） | Phone and web (the web said 米国の免許試験対策（英語）). | |
+| Intercom (guide topic and group title) | 無線画面 | The tab is 無線; titles and prose say 無線画面 (§1, §8). Kept, not changed to the bare tab name. | |
+| Radios that do less (guide section) | 機能が少ない無線機 | The VFO topic had named it 機能が限られる無線機. | |
+| Good to know → Transmitting legally → Time limit | 知っておくと便利 → 送信と法令 → 送信時間制限 | Checked against the guide's group, topic and section titles. | |
+| About and license | 概要とライセンス | Guide section head now equals the label (was 情報とライセンス). | |
+| Phone profile | 端末プロファイル | Guide section head now equals the sheet title (was 端末のプロファイル). | |
+| What it sets (Region) | 設定される項目 | Guide section head = label. | |
+| Your own values (Region) | 自分で設定した値 | Guide section head = label. | |
+| DTMF remote control | DTMF リモートコントロール | Guide section head = sheet title (was DTMF リモコン). ❓ リモコン is shorter and common. | |
+| Satellite passes | 衛星パス | Checked in every file (strings, web, guide). | |
+| Record each pass | パスごとに録音 | Checked in every file. | |
+| Pass recording | パスの録音 | The web said パス録音. | |
+| tracking (a satellite pass) / Stop tracking | 追尾 / 追尾を停止 | The satellite word; 追跡 (23 places) replaced. | |
+| Connect: radio / Connect: internet | 接続：無線 / 接続：インターネット | Checked in modes, service, web and the guide. | |
+| Volume-up transmits | 音量アップで送信 | The guide's switch list said 音量アップで PTT. | |
+| Open Maps (channel editor) | マップで開く | The guide said マップを開く. | |
+| Sending practice (Morse trainer) | 送信練習 | Nothing is transmitted: keying practice on the phone. | |
+| KEY (Morse trainer key) | 電鍵 | The Japanese ham word; not a key legend. The guide now names it 「電鍵」. | |
+| Bring radio up (diagnostics) | 無線起動 | Four buttons in a row: particle dropped (style §5.2 step 1). Replaces §8's 無線を起動; the root hint's path follows. | |
+| Run a net | ロールコール運営 | Half-width button; 運営 (organising a net), not 運用 (operating a station). The hint and the guide say 「ロールコールを運営」. | |
+| FT8 period / 1st / 2nd period | 周期 / 前半 / 後半 | As Japanese FT8 operators say. The web said ピリオド and 第 1 ピリオド; now 「TX 前半（:00 :30）」 as on the phone. | |
+| All repeaters | 全レピーター | Map legend and the web drop-down. 「すべてのレピーター」 stays in prose and for "Any repeater". | |
+| Repeaters here | この付近のレピーター | Phone and web. | |
+| Clear (peaks, stations found) | クリア | §2; the web said 消去. 「マークを消去」 (fox hunt) stays. | |
+| Custom range… | カスタム範囲… | The web said 任意の範囲…. | |
+| Encrypt key | 暗号化キー | The web error said 暗号キー. | |
+| Start / End the activation | アクティベーションを開始 / アクティベーションを終了 | Phone and web. | |
+| Log again (duplicate contact) | 再度記録 | Short dialog button; replaces §8's もう一度記録 on buttons. The question stays 「もう一度記録しますか？」. ❓ | |
+| Report sent / Report received (log) | 送信レポート / 受信レポート | The web said 送ったレポート / 受けたレポート. | |
+| New ICS-213 / New radiogram | 新規 ICS-213 / 新規ラジオグラム | The web said 〜を作成. | |
+| New zone (dialog title) | 新規ゾーン | Was also 新しいゾーン. 「新しいゾーン」 stays in sentences. | |
+| Packet terminal | パケット端末 | The web said パケットターミナル. | |
+| Parrot on / Parrot off | パロット オン / パロット オフ | As the DTMF command labels. ❓ パロット：オン. | |
+| Pager monitor off | ページャーワッチを停止しました | Phone and web toast. | |
+| FT8 over FM | FM で FT8 | Topic title, PKT button and web heading. | |
+| Update orbits | 軌道データを更新 | §8 orbit data; the web said 軌道を更新. | |
+| Stop monitoring / Stop monitor | ワッチを停止 | §8 wording rule 〜を停止 on buttons. | |
+| FOR YOU (APRS counter) | 自局宛 | Very short (four share a row); the web follows. 自局宛て in sentences. | |
+| no signal | 信号なし | The web cell said 圏外 (a mobile-phone word). | |
+| QUIET / quiet (nothing received) | 受信なし | S-meter text and the web volume state (the web said 無音). 無音 stays for silence in audio. | |
+| Missed (exam) | 間違えた問題 | §8; the phone heading said 間違い. ❓ screen check: 6 glyphs. | |
+| ON / OFF (channel editor pill) | オン / オフ | §2; were left in Latin capitals. | |
+| RIC unreadable | RIC 読み取り不可 | Label form; the toast keeps 「RIC を読み取れません」. | |
+| Sending to N RICs | %1$d 個の RIC に送信中 | Counter 個, phone and web. | |
+| Nothing to program (repeaters) | 追加するものがありません | The web said 書き込むもの; channels are added, nothing is loaded into the radio. | |
+| No forms / zones / picture yet | フォームはまだありません / ゾーンがまだありません / まだ画像がありません | One wording per message, phone and web. | |
+| Home location (grid square or lat, lon) | 自宅の位置（グリッドロケーター、または緯度, 経度） | Phone and web. | |
+| Developer settings (Android Auto) | デベロッパー設定 | Android Auto's own menu, as the intercom help says; the guide said 開発者向け設定. ❓ check in the Japanese Android Auto app. Android's 開発者向けオプション is a different menu. | |
+| no sound from the radio | 無線機から音が出ない | Device report text and the guide. | |
+
+### Terms the translators added
+
+| English | Japanese | Notes | Reviewer |
+|---|---|---|---|
+| Got it (dialog button) | 了解 | ❓ OK. | |
+| Star / Unstar (selection bar) | お気に入り / ★解除 | 「お気に入り解除」 is too long for a four-button row; the star is the app's Favourites symbol. ❓ | |
+| All (talkgroup kind) | 一斉 | Short form of 一斉呼出 (§8 ❓ オールコール). | |
+| Contact type (channel editor) | 連絡先種別 | ❓ 呼出種別 reads more naturally. The web editor follows. | |
+| Normal / Direct (relay) | 標準 / 直接 | Phone and web editor. | |
+| Encrypt key (8 characters) | 暗号化キー（8 文字） | | |
+| No limit (longest transmission) | 制限なし | Safety: the guide warns about it. | |
+| Check (score the typed Morse) | 採点 | Morse trainer, phone and web. | |
+| Decode a recording | 録音をデコード | Button, web panel, guide section. | |
+| Morse decoder | モールスデコーダー | | |
+| Morse ID after I talk | 送信後に CW ID | §8 CW ID. | |
+| Packet lead-in (testing) | パケット前置き（テスト用） | §8 ❓ TXDELAY. | |
+| Auto-ack | 自動 ACK | | |
+| Voice keyer | ボイスメモリー | §8. | |
+| Parrot on this channel | このチャンネルでパロット | | |
+| Nets near you | 近くのロールコール | | |
+| Scheduled operations | 予約操作 | | |
+| Key-up test here | ここでアクセステスト | §3 key up. | |
+| Full-screen Radio controls in the car | 車で全画面の無線操作 | | |
+| Steering wheel | ハンドル | Everywhere (ハンドル送信のマイク, ハンドルの「次へ」で送信). | |
+| Wheel mic: phone / car (as a call) | 端末 / 車（通話として） | | |
+| Double press | ダブル押し | ❓ | |
+| Your own (channels) | 自分のチャンネル | Zone sheet. | |
+| Use my channels | 自分のチャンネルを使う | | |
+| Save as channel (VFO) | チャンネル保存 | Shortened for the row. | |
+| Loading (car button) | 書き込み中 | "Firmware" dropped to fit; the sentence form keeps 「無線機は使用中です（ファームウェア書き込み中）」. | |
+| Simplex (VFO pill) | シンプレックス | 7 glyphs in a five-pill row; only the legal 単信 is shorter. ❓ screen check. | |
+| Off-frequency (fox hunt) | 周波数をずらす | | |
+| Fit now (bearing) | 今すぐ算出 | | |
+| Heat map | ヒートマップ | | |
+| Beeper on / off | ビープ オン / ビープ オフ | | |
+| Fox signal / Last caller | フォックスの信号 / 最後の送信局 | | |
+| no reading | 測定値なし | | |
+| Linear transponder | リニアトランスポンダー | The usual Japanese satellite word. | |
+| IARU Region N | IARU 第 N 地域 | The Japanese way of naming IARU regions. | |
+| Marine VHF (band plan / scope preset) | 国際 VHF（船舶） / 国際 VHF | §8; the short form on the scope pill. | |
+| NOAA weather alerts | NOAA 気象警報 | | |
+| Release (stock app on) (diagnostics) | 解放（純正アプリ有効） | 11 glyphs in a four-button row; no natural shorter form keeps the meaning. ❓ screen check. | |
+| Version (module, diagnostics pill) | バージョン | The page already says module. | |
+| Help & how-to | ヘルプと使い方 | | |
+| Release / beta (update paths) | 正式版 / ベータ版 | | |
+| to be confirmed | 未確認 | | |
+| unlisted firmware | カタログにないファームウェア | | |
+| Back up now | 今すぐバックアップ | | |
+| Fit (map: show everything) | 全体を表示 | Web map. | |
+| Coverage: Heard / Transmit reached (web choice) | 受信 / 送信到達 | | |
+| LISTEN (web: play the radio) | 再生 | | |
+| Activity (Last heard button) | アクティビティ | §1; one of three buttons. ❓ screen check. | |
+| floor (meter: the noise floor value) | ノイズ | Short. | |
+| miles (net distance from code) | マイル | The code gives miles. | |
+| AM / PM (net times) | AM / PM | The code formats 12-hour time; style §7 wants 24-hour for ja (a code change, not a string). ❓ | |
+| Not sure (listen check answer) | わからない | | |
+| Activating %1$s (PKT button) | %1$s をアクティベーション中 | 13.5 glyphs in a two-button row. ❓ screen check. | |
