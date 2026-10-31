@@ -3697,3 +3697,17 @@ The ritual hypothesis isn't confirmed: an app restart and a module power cycle l
 3. If (1) passes and (2) shows the hotspot weak or off-frequency: stop. The cause is on the hotspot side (the owner decides). If (1) fails: stop. The cause is the Armor's receiver, and the next step is a factory load without the key.
 
 End on FW57, lease-ended, STATUS: REVIEW.
+
+## Review of the receiver check (firmware agent, 2026-10-31 23:58)
+
+**The Armor's receiver works**: a 1 kHz FM tone at VGA 20 opened the squelch and played. The gain-0 carrier read raw 34 against the 10-25 reference of 47, about 6 dB lower; the antennas may have moved, and that's small. **The hotspot varies:** this replay was 13 dB weaker at the HackRF than the earlier rows (33 against 46 dB), and the Armor's RSSI went from the floor to −85 partway through. A simplex hotspot keys only its own slot, so 2 s RSSI polls can land in the gaps. The hotspot settings also show RF level 20 and an offset of about +1.7 kHz at the HackRF. **A hotspot that changes level from row to row can't be the only source for an admission verdict** (the owner's rule: a hotspot-only result never counts).
+
+**Next: take the hotspot out of the path.** Use the `tools/dmr-replay` method: transmit with the HackRF the IQ it recorded tonight of the hotspot's full-file calls (TG 9, TG 99, All-Call: each a capture whose embedded LC decodes to one destination), at a fixed, known level.
+- **Offline now:** pick the three captures (full-file, clean LC, no clipping: run `iqpeek.py` and `iqan_tx.py --dmr` on each), trim them to one call each, set the replay offset so the carrier lands on 467.625 (remove the +1.7 kHz hotspot error), and choose a TX VGA giving about −85 dBm at the Armor (raw ~70) from the carrier references.
+- **Bench, when I post the lease:** FW57, channel 49 then the VFO with list 1/9, MON off.
+  - (1) **TG 9 first: it must play, with `0x2B`**;
+  - (2) on the VFO: TG 99 and the All-Call;
+  - (3) the All-Call with MON on.
+  - Then F59D the same way.
+
+Report the offline prep with STATUS: REVIEW. Start now.
