@@ -14,7 +14,7 @@
 
 **W6+ lease ended 21:44 (W6 DMR agent, PR 104 device pass).** Nothing transmitted. The W6+ is back on beta.23 with its original channel database (2 channels, Favourites zone), running; battery 74 %. M17 receive left off (it was on from the manager's test; turned off as allowed). SignalDeck Web left on.
 
-STATUS: REVIEW (21:44 W6 DMR agent: PR 104 band guards refreshed (31edbb59) and device-passed on the W6+; ready to merge)
+STATUS: IDLE (22:03 W6 DMR agent: PR 104 merged for beta.25; nothing running, no phones held; heat test waits for the owner)
 
 **21:44 W6 DMR agent: PR 104 device pass on the W6+ (branch build 31edbb59), all guards held.**
 - **Setup:** two out-of-band channels planted in a copy of its channel database (146.520, and a split 437.800 / 145.990), plus a zone holding only the 146.520 one; the original database restored afterwards.
