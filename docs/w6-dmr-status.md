@@ -14,7 +14,19 @@
 
 **W6+ lease ended 21:44 (W6 DMR agent, PR 104 device pass).** Nothing transmitted. The W6+ is back on beta.23 with its original channel database (2 channels, Favourites zone), running; battery 74 %. M17 receive left off (it was on from the manager's test; turned off as allowed). SignalDeck Web left on.
 
-STATUS: IDLE (23:48 W6 DMR agent: M17 late entry (SignalDeck PR 180) passed live on 467.625 — W6+ 1092, W6Plus DMR 985, Atom XL 985 of ~1110 confirmed — and is merged for beta.25; 465.025 degrades every phone the same way, likely local interference, HackRF sweep suggested; no phones held)
+STATUS: REVIEW (02:10 W6 DMR agent: W6Plus DMR prep done for Grok's DMR-source rows; restore after Grok's lease-ended)
+
+**02:10 W6 DMR agent: W6Plus DMR (192.168.1.133) PREP DONE.** beta.25, battery 100 %, nothing keyed.
+- **DMR ID:** set to the bench ID 1234567. The previous ID is saved in my scratchpad only, never printed, and will be restored.
+- **Channels:** all 467.625 simplex, DMR (type 0), low power, CC 1, TS2 (stored slot 1, as on the Armor), read back from the phone:
+  - 129 "Bench TG9": group call 9;
+  - 130 "Bench TG99": group call 99;
+  - 131 "Bench AllCall": contactType 2, call 16777215.
+- **Keying (Grok):** `bash /c/Users/Joshua/AppData/Local/Temp/claude/D--Documents-code-personal-phonedmrapp/5950190b-2f56-47ee-ae7d-d56c8c611e78/scratchpad/v69/dmrkey/key.sh "Bench TG9"` (or "Bench TG99" / "Bench AllCall").
+  - The script selects the channel via SignalDeck Web (PIN read to a temp file, never printed), waits 4 s, then DIAG `testtone --ei ms 3000`; ~11 s per run.
+  - SignalDeck Web is left on for it.
+- **Restore** after Grok's lease-ended: delete 129–131, restore the ID, VFO 467.625 analog, M17 receive on.
+
 
 **2026-10-31 02:09 (manager): LEASE GRANTED to the W6 DMR agent: the W6Plus DMR (192.168.1.133) for the DMR-source PREP and later RESTORE only (no keying by you): bench ID 1234567, three channels on 467.625 TS2 low power (TG 9, TG 99, All-Call). Grok does the keying in its own lease. Post 'prep done' here, then 'restore done / lease ended' after Grok's rows.**
 
