@@ -4804,6 +4804,14 @@ A taken branch increments its byte and then goes to the same instruction the sto
 
 F62D's taken jumps were `0x0301A000` plus the file offset plus `0xC00`. The `0xC1BE` constant was `0xD00` high. The emulator's taken `bez` from `0xC0C8` does not arrive at `0xC09E`. F62E keeps the nine counters and the opcode 14 window. Each hook repeats the stock instruction, including the C flag `0xC15E` already has, and the displaced `ld.b` or `st.b`. The taken path of `0xC1A8` jumps to `0xC1BA` and lets that hook count. sha256 `d94c73e7087a6be45046afc981d28112312e6ed2a45ac25f61e0ab28ca78cac4`. The stub is 288 bytes, `0x5C59C`–`0x5C6BC`, short of the live literal at `0x5C6BC`. `test_f62e.py` (both outcomes of all ten sites) and `test_repro_f62e.py` passed. The bench section below is the load.
 
+**F62F (11:45). Not loaded. No radio.**
+
+`0x1844` waits on the flag group at `0x37744`. The receive loop calls it with mask 15 and `r2 = 0`, which selects operation 264. `0xC5A8` returns the low 4 bits of the flag word at object+`0x20`. Bit 8 of 264 clears those bits on the way out. A zero result goes through `0xC752` instead of returning, so the loop head does not run again until a flag bit is set. Bit 0 leaves through `0xC0B0` to `0xC0EE`. Bit 1 leaves through `0xC0B8` to `0xC1FA` (the stop path). Bit 2 leaves through `0xC0C0` to `0xC25C`. Bit 3 clear is the counted return to the loop; bit 3 set enters the call. The guide's section 10.2 has no group-address register and no accept-all bit. Page 354 has the host read `0x160004B0` and decide the match after the frame interrupt.
+
+The 32 group IDs are stored in the channel image at `0x38E4C` from byte 12 by the loop at `0xCFA`, inside `0x9310`. `0x2350` copies them to SRAM `0x31B48`. The pointer is saved at `0x34808+0x38`. Nothing in that path writes a C7000 address register.
+
+F62F adds four counters to F62E: `0x4F2C9` the loop head `0xC09E`, `0x4F2CA` `0xC0B0`, `0x4F2CB` `0xC0B8`, `0x4F2CC` `0xC0C0`. The live literal at `0x5C6BC` is unchanged. The main stub is 272 bytes at `0x5C59C`. The four new entries and one far jump are 60 bytes at `0x5C6C0`. The other two far jumps sit at `0x5C6AC`. sha256 `ac458dca6c83ede1873c2d417181e1aa055d5f0c8167ee107a301d65506cbabe`. `test_f62f.py` (both outcomes, including the ten F62E sites) and `test_repro_f62f.py` passed. The image was not loaded.
+
 **F62E bench (10:56). FW57 loaded. Not transmitting.**
 
 Factory image, one key on channel 49 (statuses 3, 1, 4, 1, released), then F62E. Tag `DMR003.F62E.V022` at 10:49:15. `0x2F` body 2 was acknowledged with `sr=0` and an empty body. Flag `[15, 0]` came back `0`, `[15, 1]` came back `1`, and the closing `[15, 0]` came back `0`. VFO list 1 and 9, low power, 467.625. Each W6Plus key was 3 s (`tools/fw-bench/fw_f62e_rows.py`). Op 14 read 9 bytes at `0x4F2C0` before and after each call. Every read returned a body. The UART never went quiet. HackRF was not used.

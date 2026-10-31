@@ -1,6 +1,23 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**11:45 (firmware agent): offline. No radio. F62F was not loaded.**
+
+`0x1844` is the receive loop's flag wait, not a C7000 register read. The call at `0xC0A8` passes the flag group at `0x37744`, mask 15, and `r2 = 0`. `r2 = 0` selects operation 264 (`0x108`); a nonzero `r2` selects 260. `0xC5A8` checks the word `0x47414C46` at the start of that object and, for 264, returns the low 4 bits of the flag word at object+`0x20`. Bit 8 of 264 is the consume path (`0xC926` clears the matched bits). A zero result does not return at once: `0xC81E` goes through `0xC752` while the byte at `0x3FEF4` is 0. That is why an out-of-list call can leave every counter at zero. The loop uses the four bits as:
+
+| Bit | Arm | Where it goes |
+|---|---|---|
+| 0 | `0xC0B0` | `0xC0EE`, then `0x1890` clears mask 1 |
+| 1 | `0xC0B8` | `0xC1FA`, then `0x1890` clears mask 2. This is the stop path |
+| 2 | `0xC0C0` | `0xC25C`, then `0x1890` clears mask 4 |
+| 3 | `0xC0C8` | clear returns to the loop; set continues into the call. Flag value 8 is the same bit the BER scorer uses |
+
+The HR-C7000 guide's modem list (section 10.2) has `LOCAL_CC` at `0x384`, `RX_TYPE_INFO`, and `LAYER2_TXRX_CTRL`. It has no group-address table and no accept-all bit. The group-call receive steps (page 354) are blind receive: the frame interrupt comes first, then the host reads `RX_TYPE_INFO` and the link-control bytes at `0x160004B0`–`0x160004BB` and decides the address match itself.
+
+FW57 does not write `groups[]` into a C7000 register. `0x9310` stores the 32 IDs in the channel image at `0x38E4C` from byte offset 12 (the loop at `0xCFA`). `0x2350`, called from `0x12A2`, copies those 32 words from `0x38B5C` into SRAM `0x31B48` and the pointer is stored at `0x34808+0x38`. `0x160004B0` is the receive RAM the MCU reads the link control from (`0x2A4C`), not a group-list register.
+
+F62F is F62E's thirteen counters. Bytes `0x4F2C9`–`0x4F2CC` are the loop head `0xC09E`, then `0xC0B0`, `0xC0B8`, and `0xC0C0`. The index is held in `r12`; the receive function writes `r12` at `0xC2E6` before it reads it. sha256 `ac458dca6c83ede1873c2d417181e1aa055d5f0c8167ee107a301d65506cbabe`. `test_f62f.py` and `test_repro_f62f.py` passed. The image was not loaded. Details in `results.md`.
 
 **11:03 (firmware agent): F62E run reviewed (reviews.md). TG 99 never reaches the counted branches, so the drop is at or before the loop's event dispatch, probably the C7000's own address filter. Offline, no radio: (1) what 0x1844 returns and its bits; (2) the HR-C7000 guide's DMR address-match registers and any accept-all bit; (3) where FW57 writes groups[] into the C7000; (4) build F62F = F62E + counters at 0xC0B0, 0xC0B8, 0xC0C0 and the loop head, with per-site emulation tests. Report with STATUS: REVIEW. Start now.**
 
