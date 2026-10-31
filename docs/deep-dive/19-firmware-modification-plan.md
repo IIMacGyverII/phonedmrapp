@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — the loud full-file clips match decoded voice.** Spectrum correlation with the admitted F58D clip is 0.84–0.91 and the waveform correlation is 0.46–0.58. The quiet talkgroup 9 row in that pass is 20:54:38, 18 minutes after the last hold apply, with no release recorded. Details in `results.md`.
+
 **2026-10-30 — `WORK_MODE` `0x80` is FM mode, not a DMR admit bypass.** Bit 7 selects FM and bit 8 is clear, so the chip does not return to the DMR decoder. `dmr_tg9_full.bin` is the same recording as the other full files with every LC set to 9, and it matches `dmr_last.bin`. Details in `results.md`.
 
 **2026-10-30 — the loud full-file pass was FW57, VFO slot 1, MON off, and op 15 was not sent.** The image was already `DMR003.FW57.V022`. The session under it was F59E on that same VFO, then the FW57 reload. Details in `results.md`.

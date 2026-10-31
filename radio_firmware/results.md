@@ -4780,6 +4780,34 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Loud clips are decoded speech (21:55). No radio.**
+
+The reference is `f58d_off.wav`, the F58D monitor-off row, RMS 1386.9. That image admitted this recording. `factory_on.wav` agrees with it (spectrum correlation 0.92, waveform 0.56, zero crossings 1518 against 1552).
+
+| Clip | RMS | Spectrum vs reference | Waveform vs reference | Zero crossings |
+|---|---:|---:|---:|---:|
+| `full_fw57_tg99_off` | 1393.1 | 0.91 | 0.58 | 1486 |
+| `full_fw57_tg99_offb` | 1392.6 | 0.84 | 0.46 | 1670 |
+| `full_fw57_allcall_off` | 1391.9 | 0.85 | 0.48 | 1674 |
+| `full_fw57_allcall_on` | 1392.0 | 0.91 | 0.57 | 1496 |
+| `full_fw57_tg9_off` | 1.4 | 0.49 | 0.03 | — |
+| `full_f59d_allcall_off` | 22.1 | 0.49 | 0.05 | — |
+
+The loud rows match the decoded voice. They do not match the quiet clips. An FM demodulation of the 4FSK would not correlate with the vocoder waveform at 0.46–0.58.
+
+Times, local. The header clock is UTC minus 5 hours. The hold times are the managing agent's log.
+
+| Event | Local time |
+|---|---|
+| Hold apply, last one, action 1 | 20:36:23.998 |
+| Talkgroup 99, loud | 20:46:47 |
+| Talkgroup 99 again, loud | 20:51:47 |
+| All-Call, monitor off, loud | 20:52:53 |
+| All-Call, monitor on, loud | 20:53:32 |
+| Talkgroup 9, quiet | 20:54:38 |
+
+No hold release is recorded after 20:36:23, and the row script did not send one. The quiet talkgroup 9 is 18 minutes after that apply and about one minute after the last loud All-Call. A release before that row is not in the record.
+
 **Talkgroup 9 full file, and `WORK_MODE` bit 7 (21:45). No radio.**
 
 `dmr_tg9_full.bin` was built from `dmr_tg99.bin`, the same recording the talkgroup 99 and All-Call full files come from, with every link control set to destination 9. The decoder that does not call the encoder reads 14 embedded blocks, destination 9 only, FLCO 0, data types 1 and 2, and network destination 9. The file is the same length as `dmr_last.bin` and byte-identical to it. The voice bytes outside the link-control window match `dmr_tg99_full.bin` and `dmr_allcall_full.bin`, and the source matches both. The old talkgroup 9 control was already this recording, not a different stream.
