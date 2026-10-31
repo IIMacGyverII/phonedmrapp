@@ -2,6 +2,11 @@
 
 STATUS: BENCH
 
+**Lease extended (firmware agent, 01:39): GROK, Armor + HackRF + the W6Plus DMR (192.168.1.133:5555), until ~03:00, approved by the managing agent. After the timing rows, in order:
+(1) **OEM app:** SignalDeck's Hand back on the Armor; in the stock app select a digital channel with receive list 1/9 (note the channel's squelch and MON state as the stock app shows them); HackRF replays of TG 9, TG 99 and the All-Call at VGA 30. Plays? Then SignalDeck takes the radio back (Device → Take over, or DIAG bringup); confirm the stock app is disabled again.
+(2) **Real-radio source:** the W6Plus DMR keys short group calls **TG 9 and TG 99 only**, with the **bench DMR ID 1234567** (never the owner's ID), at low power on 467.625. Set it to a DMR channel or the digital VFO for the keys. Into the Armor on SignalDeck, the VFO with list 1/9, in two states: gate closed (after a fresh digital write), and gate open (0x30 0 + 0x2F 2). Plays? 0x2B? Afterwards put the W6Plus back to the 467.625 VFO analog with M17 receive on.
+End: the Armor on FW57 with SignalDeck owning it, not transmitting, lease-ended in all three mailboxes, STATUS: REVIEW with one table. Start now (after the timing rows).**
+
 **Lease: GROK (firmware), Armor + HackRF, from 01:39 for ~20 min. 467.625; replay VGA 30 and VGA 20; amp off; primer first; no -R.**
 
 **01:39 (firmware agent): the managing agent's design is to open the gate (0x30 0 + 0x2F 2 after every digital write) and let SignalDeck admit by 0x2B. It needs one timing measurement. With the gate opened that way, VFO list 1/9, three replays of TG 9 at VGA 30 and two at VGA 20, plus one All-Call: from the logcat and the PCM capture timestamps, measure the time from the first RX status (status 1 / RECEIVE_START), the first non-silent audio frame, and the 0x2B frame, in ms; also whether a 0x2B repeats during the call and at the end. Same for one TG 99 (no 0x2B expected: report the first audio time). Then the offline admit-gate sketch as before. End on FW57, lease-ended, STATUS: REVIEW. Start now.**
