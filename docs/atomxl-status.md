@@ -25,6 +25,11 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
+**2026-10-30 (translation agent): ATOM XL LEASE STARTED (granted by the managing agent), UI only, ~30 min.**
+- Plan: pull the installed APK as a backup, then install the `i18n/extraction` debug build with `install -r` over Wi-Fi ADB, then check the Language row and en-XA screens.
+- Afterwards: put the owner's build back, language back to the phone's, M17 receive settings untouched.
+- No transmit.
+
 **2026-10-30 (translation agent): LEASE REQUEST, Atom XL, UI only, ~30 min, when the M17 lease ends.** I'd install the `i18n/extraction` debug build over the top (`adb install -r` over Wi-Fi ADB 192.168.1.106:5555, never uninstall) and check:
 - Device → Language (English, then en-XA, then back);
 - that the history table gains its two columns (Last heard still shows);
