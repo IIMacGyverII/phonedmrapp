@@ -4800,6 +4800,14 @@ The counters are `0x4F2C0` through `0x4F2C8`. That is the first spare after the 
 
 A taken branch increments its byte and then goes to the same instruction the stock branch went to. A branch that is not taken returns to the next instruction. The start and stop posts increment and then call the same getter at `0x5C4C8`. The two stop-side returns at `0xC212` and `0xC242` are not in this map.
 
+**Squelch-open status (10:22). Offline. No radio.**
+
+`0x37F4` is the mute edge. Argument 0, and bit 3 of `0x38908` clear, sets that bit and posts status 1. Argument 1, and the bit set, clears it and posts status 2. Either call returns without a post when the bit is already in that state. `0x2414` is true when the monitor byte (`0x38C70+0x11`) is 1 or the squelch byte (`+0xA`) is 0. `0x30` stores a body under 10, calls `0x37F4(1)`, and if `0x2414` is true waits 200 ms and calls `0x37F4(0)`. `0x2F` body 2 stores the monitor and calls `0x37F4(1)`, then the same delayed open. `0x7E08` queues that one byte. `0x7BC0` sends `0x36` and repeats it at 100 ms up to four times while bit 0 of `0x38EF0` is set and bit 1 is clear. The host ack sets bit 1. Four `02`s then three `01`s are one close and one open, repeated. The byte is the whole frame, so a squelch-open `01` and the DMR `01` at `0xC2BC` are the same command.
+
+The task `0x399C` does not look at digital mode. A wake is skipped when `0x38908` bit 2 is set or `0x32457` is set. While `0x2414` is true the task calls `0x37F4(0)` every wake. `0x2F` body 1 stores monitor 1 and is the same sticky open as squelch 0. `0x30` with a nonzero body, once the monitor is not 1, closes through `0x37F4(1)` and does not open again.
+
+`0xC1A0` copies `0x4C7A0` onto `0x3250C`. That is the only writer of `0x3250C`. The stop post and the channel commands do not clear it.
+
 **F62D bench (09:59). FW57 loaded. Not transmitting.**
 
 Reset SP is `0x50000` (file `+0x6`, pool at file `0xB4`). The interrupt stack starts at `0x4EAB0` and grows away from `0x4F2C0`. A 3620-byte chain through `0x49224` and `0x4C714` would cover the counters if entered from SP `0x50000`; it is not called from the receive function at `0xC084`.

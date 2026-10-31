@@ -1,6 +1,14 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**10:22 (firmware agent): offline. No radio. The idle `01` is the squelch-open edge, and the frame is the same one a DMR call uses.**
+
+`0x37F4(0)` posts status 1 and `0x37F4(1)` posts status 2, each only when bit 3 of `0x38908` changes. `0x2414` returns nonzero when the monitor byte is 1 or the squelch byte is 0. `0x30` with a body under 10 stores that squelch, calls `0x37F4(1)`, acks, and if `0x2414` is nonzero waits 200 ms and calls `0x37F4(0)`. `0x2F` body 2 stores the monitor, calls `0x37F4(1)`, and takes the same delayed open. The sender at `0x7BC0` repeats the one queued byte up to four times, 100 ms apart, until the host ack sets bit 1 of `0x38EF0`. Four `02`s and then three `01`s are those repeats, not seven calls. Every poster uses `0x7E08`, which queues one byte. A squelch-open `01` and a DMR `01` are the same frame. A DMR call then copies `0x4C7A0` onto `0x3250C` at `0xC1A0` and later posts 2. The squelch open does not. That copy is the only writer of `0x3250C`; call end and a channel write do not clear it.
+
+The task at `0x399C` has no digital check. It skips a wake while `0x38908` bit 2 is set or `0x32457` is set. While `0x2414` is nonzero it calls `0x37F4(0)` every wake, and that posts only on the closed-to-open edge. `0x30` with a nonzero squelch, after monitor is not 1, calls `0x37F4(1)` and does not reopen, so the speaker ends muted. `0x2F` body 1 leaves the monitor at 1, which is the same sticky open as squelch 0. No command opens the mute once and leaves both of those bytes in the normal state.
+
+F62E was not built. F62D's taken jumps use `0x0301A000 + offset + 0xC00` (`0xC1BE` is `+0xD00`).
 
 **10:12 (firmware agent): URGENT, blocks beta.26: the reading in reviews.md (who posts 0x36 01 after the squelch-0 reopen on an idle DMR channel; whether it can be told from a DMR call; whether the squelch task runs on digital; whether 0x2B is cleared; a sequence that opens the DMR speaker without an always-open squelch). It comes before F62E. Offline, no radio. Report with STATUS: REVIEW. Start now.**
 
