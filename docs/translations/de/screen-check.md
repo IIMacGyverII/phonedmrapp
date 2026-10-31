@@ -60,6 +60,20 @@ agent. No transmit. The phone was restored afterwards.
    - Open: coordinates shown as „lat, lon“ keep the point, because a comma between them would be ambiguous. The
      reviewer decides.
 
+## Round 2: 2026-10-31, #181 at e185858f (with the reviewer's terms), Atom XL
+**Result: every round 1 finding is fixed on the device. German passes the screen check** for the screens checked.
+
+| Finding | Round 2 |
+|---|---|
+| „Zurückgeben“ broke inside the word | pass: one line, the icon dropped |
+| Last heard's three buttons broke inside words | pass: „Aufnahmen“, „Untertitel“, „Aktivität“ each on one line, without icons, slightly smaller, readable |
+| Editor title cut off („NEUER KAN…“) | pass: „NEUER KANAL“ in full |
+| Dates in US format („Oct 28“) | pass: „gehört 28. Okt., 22:44“, „gehört gestern 17:44“, „30. Okt., 08:28“, Last heard „30.10., 21:28:11“ |
+| Decimal point in the readout and chips | pass: „467,6250“ (TX/RX), „1,5 s“, hint „467,6250 MHz“; the entry fields keep the point and accept a comma |
+| The reviewer's terms on screen | pass: tab INTERCOM, „Intercom-Ansicht“, „Intercom-Layout“, „Abdeckungs-Log“, „Karte → Abdeckung“, „originale Walkie-Talkie-App“, „Lizenz“ |
+
+History lines recorded earlier by beta.25 are stored without a key and stay English (expected).
+
 ## Not checked in this round (next round)
 - Every sheet, dialog and toast of the tools (Fuchsjagd, Winlink, SSTV, FT8, M17, Satelliten, POTA, Logbuch,
   Prüfungstraining, Morse, Pager), the firmware loader, the first-run check, Android Auto, the widget and

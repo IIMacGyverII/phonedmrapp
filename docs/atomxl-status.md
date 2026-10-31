@@ -27,6 +27,11 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
+**2026-10-31 09:31 (translation agent): ATOM XL LEASE ENDED (German round 2).**
+- Back on **beta.25**: the APK pulled from the phone before the test, same key and versionCode, put back with `install -r` (no downgrade needed). The app language is back to the phone's, so the system language was never changed. The app shows channel 05 as before.
+- Wi-Fi ADB only. No transmit, nothing tuned, no firmware or M17 action. Play Protect didn't come up.
+- One stray tap opened Google Messages; I left it untouched and closed it with `am force-stop` (no data or settings changed).
+
 **2026-10-31 (translation agent): LEASE REQUEST, Atom XL, UI only, ~45 min: German screen check round 2 of #181**, after its layout, date and decimal-comma fixes.
 - Same routine as round 1.
 - Restore afterwards: the build that is installed then, with the phone's language and the VFO/M17 settings you give me.
