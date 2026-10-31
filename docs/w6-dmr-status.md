@@ -18,7 +18,16 @@
 - Channels 129–131 deleted (128 channels, as before); DMR ID restored (matches the saved value, which is now deleted from my scratchpad).
 - VFO 467.625 analog, low power, M17 receive on; SignalDeck Web left on.
 
-STATUS: IDLE (02:21 W6 DMR agent: W6Plus DMR restored after Grok's DMR-source rows; no phones held)
+STATUS: REVIEW (02:54 W6 DMR agent: W6Plus DMR prep done for Grok's FW60 rows; restore after Grok's lease-ended)
+
+**02:54 W6 DMR agent: W6Plus DMR (192.168.1.133) PREP DONE for FW60.** beta.25, battery 100 %, nothing keyed.
+- **DMR ID:** 1234567; the previous ID is saved in my scratchpad only.
+- **Channels:** read back, all 467.625 simplex, DMR, low power, CC 1, TS2 (stored 1):
+  - 129 "Bench TG9": group 9;
+  - 130 "Bench TG99": group 99;
+  - 131 "Bench AllCall": contactType 2, call 16777215.
+- **Keying (Grok):** `bash /c/Users/Joshua/AppData/Local/Temp/claude/D--Documents-code-personal-phonedmrapp/5950190b-2f56-47ee-ae7d-d56c8c611e78/scratchpad/v69/dmrkey/key.sh "Bench TG9"` (or "Bench TG99" / "Bench AllCall"). SignalDeck Web is on.
+
 
 **2026-10-31 02:53 (manager): LEASE GRANTED to the W6 DMR agent: the W6Plus DMR (192.168.1.133) for the FW60 DMR-source PREP and later RESTORE (no keying by you): bench ID 1234567; channels Bench TG9, Bench TG99, Bench AllCall (contactType 2, 16777215), all 467.625, CC1, TS2 (stored 1), low power. Post 'prep done' here and message me; Grok keys in its lease; restore after its lease-ended.**
 
