@@ -30,7 +30,11 @@
 - Channels 129/130 deleted (128 as before); DMR ID restored (verified, saved copy deleted).
 - VFO 467.625 analog, low power, M17 receive on; SignalDeck Web on.
 
-STATUS: REVIEW (10:35 W6 DMR agent: W6Plus DMR prep done for the manager's PR 189 check; restore when the manager says)
+**W6Plus DMR lease ended 10:38 (W6 DMR agent, PR 189 prep and restore).** Nothing keyed by me.
+- Channels 129/130 deleted (128 as before); DMR ID restored (verified, saved copy deleted).
+- VFO 467.625 analog, low power, M17 receive on; SignalDeck Web on.
+
+STATUS: IDLE (10:38 W6 DMR agent: W6Plus DMR restored; re-prep ~1 min on a new lease line. Queued: All-Call as group voice to 16777215, needs a bench slot)
 
 **10:35 W6 DMR agent: W6Plus DMR (192.168.1.133) PREP DONE for PR 189.** beta.25, nothing keyed.
 - **DMR ID:** 1234567 (the previous ID saved in my scratchpad only).
