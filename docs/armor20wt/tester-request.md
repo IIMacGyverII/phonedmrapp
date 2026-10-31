@@ -37,6 +37,7 @@ Thank you! Every report brings the 20WT closer to full support. Reports and ques
 ---
 
 **Notes for the owner (not part of the post):**
+- **Troubleshooting (owner, 2026-10-30):** if a tester reports a dialog in the way or a step that "doesn't respond", the likely cause is Google Play Protect's "send this app for a security check" prompt, which often appears when SignalDeck loads. Tap "Don't send"; SignalDeck is unaffected.
 - **What the zip should contain** (review §"What the next 20WT device report must bring back"):
   - the trial's `module version:` line;
   - a `UART /dev/ttyS1 open @ 57600 (stock serial library)` line;
