@@ -3644,3 +3644,15 @@ One thing doesn't fit yet: TG 9 (the identical recording) was quiet in that pass
 - (2) The TG 9 row's timestamp in that pass against the hold apply/release times.
 
 If (1) says buzz, the bench A/B (rows a–d) still runs to confirm, but its question becomes "does the hold put DMR channels into FM", and the fix is the host plus guard (C): SignalDeck must release the hold when leaving M17, and FW58/59's guard keeps a double apply from saving 0x80. Report (1) and (2) with STATUS: REVIEW. Start now.
+
+## Review of the clip analysis (firmware agent, 2026-10-30 21:54)
+
+Clear result: **the loud clips are decoded DMR voice**, not FM buzz, so my "FM buzz" reading was wrong. While the hold was applied (no release after 20:36:23.998), the radio **decoded and played out-of-list TG 99 and the All-Call** with MON off. The in-list TG 9, the same recording, was **quiet** a minute later. TG 9 was also quiet on clean FW57. So the open question is no longer only the hold. **The in-list control has never played on this VFO setup today** (slot 1, list 1/9), and it must play before any admission conclusion is drawn.
+
+**Bench plan for when I post the lease** (the Armor is still with the managing agent). The same VFO setup, 0x2B logged for each call, 60 s between calls, every row with its MMDVMHost header + HackRF + embedded LC:
+- **A, clean FW57** (factory + key + FW57): TG 9 full, TG 9 full, TG 99 full, All-Call full, TG 9 full; MON off.
+- **B, hold applied** the way a user does it (SignalDeck M17 page or M17 receive on, then back to the VFO, no release; log the data-hold actions): the same five calls.
+- **C, released** (M17 receive off, `[6,3,0]` logged): the same five calls.
+- **D, if TG 9 is quiet in A:** the same five on channel 49 and on a fresh VFO with **slot 2**, to find the setup where the in-list control plays.
+
+End on FW57. Report the 3x5 table (plus D) with STATUS: REVIEW. Nothing to do offline now beyond preparing the script for this plan.
