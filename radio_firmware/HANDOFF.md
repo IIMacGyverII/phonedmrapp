@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**08:55 (firmware agent): reviewed (reviews.md). With the flag on, TG 99 is still dropped before the gate, so the drop is one of the receive-loop branches. Offline, no radio: build F62D = FW57 + the op 14 window + a RAM counter at each drop branch (0xC0C8, 0xC12C, 0xC14A, 0xC15E, 0xC168, 0xC1B8/0xC2CA, 0xC27E) and at the start/stop posts, each replaying its original branch exactly. Guards, unit tests, test_repro_f62d, the RAM map. Report with STATUS: REVIEW. Start now.**
 
 **Lease ended 2026-10-31 08:51 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Hotspot not used. The W6Plus was not left keyed. Battery 32.3 °C, `mtktsAP` 38.3 °C, `mtktsbtsmdpa` 37.7 °C.**
 

@@ -4023,3 +4023,23 @@ Checked myself:
 - (c) Read where an out-of-list call is dropped before any status is posted (with the op 15 flag set): the call path from sync/LC through the admit getters `0xC1BA`/`0xC244` (FW26 hooks) to the status post, naming each branch that can drop it.
 
 Report with STATUS: REVIEW. **Step 2 (bench, lease from me after step 1):** FW57 with `[15,1]`, HackRF replay of TG 99, then the W6Plus TG 99 (it needs re-prep), logging every raw status, the 11-byte `0x2B`, and a content check.
+
+## Review of the promiscuous rows (firmware agent, 2026-10-31 08:55)
+
+Status-wise, it's clear: with the flag on (echo 1), a real W6Plus TG 99 **posts nothing**, with MON off or on. So the call is dropped **before** the FW26 gate at `0xC1BA`, at one of the loop-back branches in step 1's table, and the flag can't help there. Two gaps:
+- **Flag on with in-list TG 9 wasn't run.** Step 1 predicts status 10/11 and an 11-byte `0x2B`; that needs confirming, since it decides PR 183.
+- **The audio check was weak this run:** even the in-list TG 9 showed no clear 1 kHz line (−5 to −11 dB), where last night it was +14 dB. Treat this run's audio column as inconclusive. The statuses are solid.
+
+The replay TG 99 again put **decoded speech** in the phone audio with no status, so the C7000 decodes it and the MCU just doesn't announce it. That's strong evidence the drop is in the MCU's receive loop, not in the radio chip.
+
+**Next: find the drop branch by instrumentation (offline build, then a short bench).** Build **F62D** = FW57 + the op 14 window + a **counter per drop branch**: one byte per site in free RAM next to the op 14 window, at `0xC0C8`, `0xC12C`, `0xC14A`, `0xC15E`, `0xC168`, `0xC1B8`/`0xC2CA` and `0xC27E`, plus one counter each for the start post (`0xC1BA`) and the stop post (`0xC244`).
+- Each hook increments its byte and replays the original branch exactly; no other behaviour change.
+- All guards, unit tests and `test_repro_f62d`.
+- Report the free-RAM address map.
+
+Then the bench (lease from me):
+1. Zero the counters (op 14 can't write, so take the readings by difference);
+2. W6Plus TG 9 flag off, then TG 99 flag off, then TG 99 flag on, then TG 9 flag on (expect 10/11 and the 11-byte `0x2B`);
+3. read the counters after each.
+
+The branch that increments on TG 99 and not on TG 9 is the drop. Report the build with STATUS: REVIEW. Start now.
