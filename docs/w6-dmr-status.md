@@ -22,7 +22,15 @@
 - Channels 129–131 deleted (128 as before); DMR ID restored (verified, saved copy deleted).
 - VFO 467.625 analog, low power, M17 receive on; SignalDeck Web on.
 
-STATUS: IDLE (03:22 W6 DMR agent: W6Plus DMR restored; no phones held. Follow-up queued: SignalDeck's "All" contact (contactType 2) sends no voice LC on the DMR006 (Grok's 31.7 dB capture), so try All-Call as a group call to 16777215; needs a bench slot)
+STATUS: REVIEW (08:28 W6 DMR agent: W6Plus DMR prep done for Grok's promiscuous rows; restore after Grok's lease-ended)
+
+**08:28 W6 DMR agent: W6Plus DMR (192.168.1.133) PREP DONE for the promiscuous rows.** beta.25, battery 100 %, nothing keyed.
+- **DMR ID:** 1234567; the previous ID is saved in my scratchpad only.
+- **Channels:** read back, both 467.625 simplex, DMR, low power, CC 1, TS2 (stored 1):
+  - 129 "Bench TG9": group 9;
+  - 130 "Bench TG99": group 99.
+- **Keying (Grok):** `bash /c/Users/Joshua/AppData/Local/Temp/claude/D--Documents-code-personal-phonedmrapp/5950190b-2f56-47ee-ae7d-d56c8c611e78/scratchpad/v69/dmrkey/key.sh "Bench TG9"` (or "Bench TG99"). SignalDeck Web is on.
+
 
 **2026-10-31 08:27 (manager): LEASE GRANTED to the W6 DMR agent: the W6Plus DMR (192.168.1.133) for the PROMISCUOUS-row PREP and later RESTORE (no keying by you): bench ID 1234567; channels Bench TG9 and Bench TG99, 467.625, CC1, TS2 (stored 1), low power. Post 'prep done' here and message me; Grok keys in its lease (in an hour or two); restore after its lease-ended.**
 
