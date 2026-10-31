@@ -25,6 +25,10 @@ the owner. Phone rules are unchanged: only USB `ATOMXL0000000737`. The HackRF is
 
 ## Status
 
+**2026-10-31 (translation agent): ATOM XL LEASE STARTED (granted), UI only, German screen check of #181.**
+- Restore afterwards: the PR 180 APK with `install -r`, the phone's language, `DIAG vfo 465025000`, `DIAG m17 on`.
+- No transmit.
+
 **2026-10-31 (translation agent): LEASE REQUEST, Atom XL, UI only, ~60–90 min, for the German screen check of #181**, whenever it is free.
 - Same routine as last time: back up the installed APK, install the #181 debug build with `install -r` (same key), switch the app to German, and screenshot every screen, sheet and dialog. Play Protect is dismissed with "Don't send" / "Not now".
 - Afterwards the build and the owner's settings are restored.
