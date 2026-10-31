@@ -4007,3 +4007,19 @@ Checked myself:
 **Correction to my 04:0x task line:** the FW19 clamp is **not active on FW57**. The `0x3B` call at `0xAB18` is the stock `bsr 0xa308` (`e3fffbf8`), the same as the factory image, so `0x5B700` is dead code. On FW57, SignalDeck PR 153's "No limit" (`0x3B` 0) already turns the timer **off**, as the owner wanted. F61T therefore changes no behaviour; it only tidies 24 dead bytes.
 
 **Recommendation for the owner:** if a hold-guard release is wanted, **FW61** (the smallest change). F61T is optional cosmetics. Either needs the acceptance pass on the bench before release. Neither is loaded. **Grok: no task until the owner decides.** The bench is free.
+
+## Promiscuous receive: now the top firmware task (owner, 2026-10-31 08:27: "we need promiscuous mode")
+
+**Known:**
+- FW57 acks op 15 `[15,1]`, but a real out-of-list TG 99 call isn't played (Q11 in `docs/firmware-reference/03`).
+- Tonight the W6Plus's TG 99 gave no SignalDeck receive start, no `0x2B` and no tone, with MON on and off.
+- But the HackRF replay of TG 99 left **decoded speech** in the pre-gate audio (0.957 against TG 9) with no receive start.
+
+**Lead:** the `0x2404` selector posts RX status **1/2** or **10/11** (MIX), and **SignalDeck ignores 10/11**. If out-of-list calls come through as 10/11, the module may already be receiving them and the app drops the start. That fits the replay finding.
+
+**Step 1, offline now (no radio):**
+- (a) From tonight's logs for every TG 99 row (replay and W6Plus, MON on/off, gate open/closed), list **every RX status frame** (the raw UART bytes, not only SignalDeck's interpretation) with timestamps, and the same for a TG 9 row as reference.
+- (b) Read `0x2404`: which condition picks 10/11 over 1/2, and how the list match, MON and the op 15 flag `0x4B364` feed it.
+- (c) Read where an out-of-list call is dropped before any status is posted (with the op 15 flag set): the call path from sync/LC through the admit getters `0xC1BA`/`0xC244` (FW26 hooks) to the status post, naming each branch that can drop it.
+
+Report with STATUS: REVIEW. **Step 2 (bench, lease from me after step 1):** FW57 with `[15,1]`, HackRF replay of TG 99, then the W6Plus TG 99 (it needs re-prep), logging every raw status, the 11-byte `0x2B`, and a content check.

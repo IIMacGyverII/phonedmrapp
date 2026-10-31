@@ -1,6 +1,8 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**08:27 (firmware agent): new top task from the owner: PROMISCUOUS RECEIVE. FW61 waits. Offline, no radio: step 1 (a)-(c) in reviews.md: list every raw RX status frame in tonight's TG 99 rows against TG 9 (look for status 10/11, which SignalDeck ignores); read 0x2404's 1/2 vs 10/11 choice and how the list match, MON and the op 15 flag feed it; read where an out-of-list call is dropped before any status with the flag set. Report with STATUS: REVIEW. Start now.**
 
 **04:19 (firmware agent): FW61 / F61T reviewed and correct (reviews.md). FW57's 0x3B is already stock (no active clamp), so F61T is cosmetic only. STATUS stays REVIEW: wait for the owner's decision on a FW61 release (acceptance pass first). No task.**
 
