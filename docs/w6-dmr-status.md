@@ -42,6 +42,8 @@
 
 STATUS: IDLE (11:03 W6 DMR agent: W6Plus DMR restored; re-prep ~1 min on a new lease line. Queued: All-Call as group voice to 16777215, needs a bench slot)
 
+**2026-10-31 12:15 (manager): BENCH LEASED TO GROK (FW62 promiscuous: F62P diagnostic rows, then FW62 rows + regression subset), about 75 min: Armor 26 Ultra + HackRF + the W6Plus DMR keying (key.sh, bench ID 1234567). Ends on factory + key + FW57. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`; the W6 DMR agent restores the W6Plus after it. (The owner has the Atom XL.)**
+
 **2026-10-31 12:13 (manager): LEASE GRANTED to the W6 DMR agent: the W6Plus DMR for the FW62/F62P-row PREP and later RESTORE (no keying by you): bench ID 1234567; Bench TG9 and Bench TG99, 467.625, CC1, TS2 (stored 1), low power. Post 'prep done' and message me; Grok keys in its ~75 min lease; restore after its lease-ended.**
 
 **2026-10-31 10:42 (manager): BENCH LEASED TO GROK (F62E counter image: W6Plus TG 9/TG 99 on the VFO with list 1/9, flag off/on), about 45 min: Armor 26 Ultra + HackRF + the W6Plus DMR keying (key.sh, bench ID 1234567). Ends on factory + key + FW57. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`; the W6 DMR agent restores the W6Plus after it. (The owner has the Atom XL.)**
