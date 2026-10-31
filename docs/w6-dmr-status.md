@@ -24,6 +24,8 @@
 
 STATUS: REVIEW (08:28 W6 DMR agent: W6Plus DMR prep done for Grok's promiscuous rows; restore after Grok's lease-ended)
 
+**2026-10-31 08:29 (manager): BENCH LEASED TO GROK (promiscuous rows: flag off/on x MON off/on, W6Plus TG 9/TG 99 + HackRF TG 99 replay), about 75 min: Armor 26 Ultra + HackRF + the W6Plus DMR keying (key.sh, bench ID 1234567). Ends on FW57. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`; the W6 DMR agent restores the W6Plus after it.**
+
 **08:28 W6 DMR agent: W6Plus DMR (192.168.1.133) PREP DONE for the promiscuous rows.** beta.25, battery 100 %, nothing keyed.
 - **DMR ID:** 1234567; the previous ID is saved in my scratchpad only.
 - **Channels:** read back, both 467.625 simplex, DMR, low power, CC 1, TS2 (stored 1):
