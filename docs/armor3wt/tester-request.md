@@ -21,8 +21,8 @@ That's what this request is for.
 3. In SignalDeck, go to **Device → Device report → Run all checks** and choose **Checks + trial**.
    - When asked which walkie-talkie app to open, pick **Intercom** (`com.agold.intercom`).
    - Press the side PTT key a few times when it asks you to (10 s). Don't press it while the intercom app is open for its 15 seconds.
-   - The trial takes the radio for about two minutes, listening only. It checks that `extmodule` is running, asks the radio bridge and module who they are, listens to the receive stream for 5 seconds, writes receive-only channels at the band edges (100, 133.85, 136, 174, 400, 470 and 480 MHz) and asks the module two questions its intercom app never asks. Then it gives the radio back to the intercom app.
-4. *Optional:* if you have a spot where you can hear a local FM signal (a repeater output, NOAA weather, your 133.85 MHz airband station), add a channel for it in SignalDeck, tap **Take over** on the Device page and listen for a minute. Then make one more **Run all checks** (Checks only is enough) so the log shows the reception.
+   - The trial takes the radio for about two minutes, listening only. It checks that `extmodule` is running, asks the radio bridge and module who they are, listens to the receive stream for 5 seconds, writes receive-only channels at the band edges (100, 120, 130, 136, 174, 400, 470 and 480 MHz) and asks the module two questions its intercom app never asks. Then it gives the radio back to the intercom app.
+4. *Optional:* if you can hear a local signal, add a channel for it in SignalDeck, tap **Take over** on the Device page and listen for a minute. Then make one more **Run all checks** (Checks only is enough) so the log shows the reception.
 5. Post the zip in **this thread** (https://github.com/IIMacGyverII/SignalDeck/discussions/168): tap **Send** and save or share the zip, then attach it to a reply here.
    - The report blanks radio IDs and personal details.
    - Please still check it before you share it.
@@ -43,7 +43,7 @@ Thank you! Every report brings the 3WT closer to full support. Reports and quest
     - the `MCU-started report … seen`;
     - `ro.agold.extmodule.32k`;
     - `receive stream forced open 5 s: … per frame`: 1920 means 48 kHz, 1280 means 32 kHz; 0 frames means the daemon streams only during a reception;
-    - the band-edge list (accepted / refused / no answer), with 100 and 133.85 MHz the interesting lines;
+    - the band-edge list (accepted / refused / no answer), with the lines below 136 MHz the interesting ones;
     - the raw answers to `0x32` and `0x34`;
   - `module version:` (expected `ver0.5.4_470M_TONE`);
   - `stock_serial.txt` / the intercom app's log from the 15 s watch;

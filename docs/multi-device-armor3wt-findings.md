@@ -94,9 +94,7 @@ What SignalDeck would need on this phone (not started):
 - The decompiled build (the owner's modified one) accepts 100 MHz up to 470 MHz (480 MHz with the DMR09 module). Whether the module itself tunes below 136 MHz is unknown: the Armor 26's module rejects anything outside
   136–174 / 400–480 MHz and stays on the old frequency (`0x23` → `sr=1`). On this module the reply byte of `0x35`/`0x36`
   after a write below 136 MHz would tell.
-- The owner gets the most consistent airband reception around **133.85 MHz**. That only works if this module accepts
-  and tunes 133.85 MHz, so its range does reach below 136 MHz. If the receiver is an AT1846S (unconfirmed), 133.85
-  sits just below that chip's specified 134 MHz VHF edge.
+- The intercom app accepts 100–470 MHz; the module's own range is not measured.
 - Airband (108–137 MHz) is AM; this receiver is an FM discriminator, so AM is only heard by accident (a strong carrier
   slightly off-frequency gives some slope detection). 136.000–136.975 MHz is airband too and inside the usual VHF range,
   which may explain the rare receptions. A real AM path would need the receiver chip's AM mode, if it has one.

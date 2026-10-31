@@ -253,9 +253,9 @@ bridge (R, `0x4818`); the module gets **no key command** over the port. Limits: 
 - The channel editor accepts **100 000 000 – 470 000 000 Hz** (480 MHz with the DMR09 module) (R,
   `handleAddDone`; strings `channel_freq_range`). Both APK copies carry it, so whether the owner or the vendor widened it
   is not visible.
-- The module's own range is unknown. The version name says `470M` (I: a 400–470 MHz build). The tester's best reception
-  at 133.85 MHz says the receiver tunes there (I). The channel write's reply byte (`00`) is the only test the app offers;
-  the device report's trial now writes receive-only channels at the band edges and records it (§ SignalDeck below).
+- The module's own range is not measured. The version name says `470M` (I: a 400–470 MHz build). The channel write's
+  reply byte (`00`) is the only test the app offers; the device report's trial writes receive-only channels at band
+  edges and records it.
 
 ## 10. What differs from SignalDeck's Atom XL path, and what SignalDeck does about it
 
@@ -267,7 +267,7 @@ bridge (R, `0x4818`); the module gets **no key command** over the port. Limits: 
 | A9 | **Audio through the daemon socket** (`ExtModuleAudio`): 48 kHz, or 32 kHz when the property is set; receive stream opened per reception (audio control 3/4), as the stock app does | Same as the stock app; no ALSA helper needed. |
 | A10, A14 | **Transmit locked** (profile unverified, no `txTestUnverified` without the owner's OK). The key path is built (daemon control 3/4, audio control 1/2) and the side key is offered as the profile's default custom PTT key (`mtk-kpd`, scancode `00f9`), read with root `getevent` | The report shows the key at `getevent` and nothing at the app. |
 | A12 | `rssi = false` on this profile: no S-meter, band scope or fox hunt | No RSSI command is known for this module. |
-| A13 | Bands **100–174 and 400–470 MHz, receive below 136 MHz unverified**; the trial records the module's answer at the edges | Only the app's range is known. |
+| A13 | Bands **100–174 and 400–470 MHz**; the module's own range is not measured; the trial records the module's answer at the edges | Only the app's range is known. |
 | — | `moduleLoader` off; no firmware page actions | Uncertified (PR 161); no module image exists. |
 
 ## What the next 3WT device report must bring back
@@ -279,5 +279,5 @@ bridge (R, `0x4818`); the module gets **no key command** over the port. Limits: 
    the others answer at all, and what. The trial sends each once, on a receive-only channel, and lists the replies raw.
 4. **The receive audio path:** bytes and frames per second on 9985 during a reception, and the frame length (1920 or
    1280), so the rate is known.
-5. **The band edges,** receive only: the `0x35` reply at 100, 133.85, 136, 174, 400, 470 and 480 MHz.
+5. **The band edges,** receive only: the `0x35` reply at 100, 120, 130, 136, 174, 400, 470 and 480 MHz.
 6. **The key:** whether keycode 183 (`PROG_RED`) reaches an app, and the `getevent` line for the side key.
