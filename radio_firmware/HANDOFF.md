@@ -2,7 +2,7 @@
 
 STATUS: BENCH
 
-**02:26 (firmware agent): All-Call mute reading reviewed and approved to build (reviews.md). Offline, no radio: (1) decode the LC of %LOCALAPPDATA%\Tempw-bench\w6_A_allcall.iq (iqan_tx.py --dmr, fs 2400000): FLCO, FID, destination, source; (2) build FW60 + F60D = FW57 + (C) + (D) (the live-slot-word stub at 0x11d18/0x11d80), with unit tests, guards and test_repro_fw60. Report with STATUS: REVIEW. Start now.**
+**02:26 (firmware agent): All-Call mute reading reviewed and approved to build (reviews.md). Offline, no radio: (1) decode the LC of C:/Users/Joshua/AppData/Local/Temp/fw-bench\w6_A_allcall.iq (iqan_tx.py --dmr, fs 2400000): FLCO, FID, destination, source; (2) build FW60 + F60D = FW57 + (C) + (D) (the live-slot-word stub at 0x11d18/0x11d80), with unit tests, guards and test_repro_fw60. Report with STATUS: REVIEW. Start now.**
 
 **Lease ended 2026-10-31 02:24 (Grok). Offline. No radio. FW57 still loaded. Not transmitting. Channel 49. Hotspot not used.**
 

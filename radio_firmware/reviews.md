@@ -3940,6 +3940,6 @@ This is the mechanism the W6Plus row needs. The audio decision (`0x23d54` via `0
 3. TG 9: plays. TG 99: no start.
 4. Then FW60 with the full acceptance pass.
 
-The W6Plus All-Call IQ from 02:14 is `%LOCALAPPDATA%\Tempw-bench\w6_A_allcall.iq` (2.4 MS/s; also decode its LC with `iqan_tx.py --dmr` now, offline, to give FLCO and destination).
+The W6Plus All-Call IQ from 02:14 is `C:/Users/Joshua/AppData/Local/Temp/fw-bench\w6_A_allcall.iq` (2.4 MS/s; also decode its LC with `iqan_tx.py --dmr` now, offline, to give FLCO and destination).
 
 Report the build and the LC with STATUS: REVIEW. Start now.
