@@ -1,6 +1,28 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**Lease ended 2026-10-31 10:56 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Hotspot not used. HackRF not used. The W6Plus was not left keyed. Battery 33.6 °C, `mtktsAP` 39.305 °C, `mtktsbtsmdpa` 38.146 °C.**
+
+**10:56 (firmware agent): F62E answered every read. The UART stayed up through all five calls. The short ack reading was not started.**
+
+Factory image, one key on channel 49 (statuses 3, 1, 4, 1, released), then F62E. Tag `DMR003.F62E.V022` at 10:49:15. Monitor off (`0x2F` body 2, ack `sr=0`, empty body). Flag `[15, 0]` came back `0`. VFO list 1 and 9, low power, 467.625. Each W6Plus key was 3 s. Op 14 read 9 bytes at `0x4F2C0` before and after each call. The UART never went quiet. Each status frame below arrived once (`rw=2`, `sr=0`, length 1), and the app acked it at once.
+
+Counter bytes, in order: `0xC0C8`, `0xC12C`, `0xC14A`, `0xC15E`, `0xC168`, `0xC1B8`/`0xC2CA`, `0xC27E`, start `0xC1BA`, stop `0xC244`.
+
+| Row | Counter difference | RX `0x36` | `0x2B` |
+|---|---|---|---|
+| Flag off, talkgroup 9 | 0, 0, 0, 0, 2, 0, 0, 1, 1 | `01` 10:49:36.684, `02` 10:49:40.464 | three replies, 9 bytes, type 1, target 9 |
+| Flag off, talkgroup 99 | 0, 0, 0, 0, 0, 0, 0, 0, 0 | none | none |
+| Flag on (`[15, 1]` came back `1`), talkgroup 99 | 0, 0, 0, 0, 0, 0, 0, 0, 0 | none | none |
+| Flag still on, talkgroup 9 | 0, 0, 0, 0, 2, 0, 0, 1, 1 | `0A` 10:50:38.715, `0B` 10:50:42.494 | none; the app sent no `0x2B` query in that window |
+| Flag off again (`[15, 0]` came back `0`), talkgroup 9 | 0, 0, 0, 0, 2, 0, 0, 1, 1 | `01` 10:51:00.864, `02` 10:51:04.284 | three replies, 9 bytes, type 1, target 9 |
+
+Talkgroup 9 takes `0xC168` twice and the start and stop posts once, with the flag off or on. The flag changes the posted status from 1/2 to 10/11. The app logged `MIX_DIGITAL_RX_START` and `MIX_DIGITAL_RX_STOP` on the 10/11 pair. Talkgroup 99 incremented none of the nine counters and posted nothing, with the flag off or on. On the flag-off row the `0x32` samples sat near `0x18`–`0x1B` and rose to `0x3E` and `0x45`. On the flag-on row they rose to `0x39`, `0x3F` and `0x46`. The first counted site is `0xC0C8`. Above it, `0xC0B0`, `0xC0B8` and `0xC0C0` test bits 0, 1 and 2 of the word from `0x1844` and leave to `0xC0EE`, `0xC1FA` and `0xC25C`. Those three are not counted. A call that never entered `0xC084` would look the same, so which of those took talkgroup 99 is still open.
+
+The status frames in this pass did not repeat. That leaves the question of what sets bit 1 of `0x38EF0` unread.
+
+Factory image, one key (statuses 3, 1, still keyed at the log line; the helper released it), then FW57. Tag `DMR003.FW57.V022` at 10:56:22. Not transmitting. Details in `results.md`.
 
 **Lease: GROK (firmware), Armor + HackRF + the W6Plus DMR (keying only: key.sh "Bench TG9" / "Bench TG99" [ms], use 3000), from 10:42 for ~45 min. 467.625, low power, bench ID 1234567, TS2.**
 

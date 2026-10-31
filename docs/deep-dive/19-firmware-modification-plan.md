@@ -218,7 +218,9 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
-**2026-10-31 — F62E replays each displaced branch.** F62D's jumps were `0xC00` past the target. The new image matches both outcomes of all ten sites in an emulator and was not loaded. Details in `results.md`.
+**2026-10-31 — F62E's counters.** Talkgroup 9 increments `0xC168` by 2 and the start and stop posts by 1. The flag changes that status from 1/2 to 10/11. Talkgroup 99 increments nothing. Restored to FW57. Details in `results.md`.
+
+**2026-10-31 — F62E replays each displaced branch.** F62D's jumps were `0xC00` past the target. The new image matches both outcomes of all ten sites in an emulator. The bench line above is the load. Details in `results.md`.
 
 **2026-10-31 — an idle status 1 is the squelch opening.** `0x37F4(0)` posts one `01` and `0x37F4(1)` posts one `02`, and `0x7BC0` repeats that byte. The frame matches a DMR `01`. Squelch 0 or monitor 1 makes the task at `0x399C` open on every wake, including on a digital channel. Details in `results.md`.
 

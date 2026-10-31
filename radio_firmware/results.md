@@ -4802,7 +4802,25 @@ A taken branch increments its byte and then goes to the same instruction the sto
 
 **F62E (10:40). Not loaded. No radio.**
 
-F62D's taken jumps were `0x0301A000` plus the file offset plus `0xC00`. The `0xC1BE` constant was `0xD00` high. The emulator's taken `bez` from `0xC0C8` does not arrive at `0xC09E`. F62E keeps the nine counters and the opcode 14 window. Each hook repeats the stock instruction, including the C flag `0xC15E` already has, and the displaced `ld.b` or `st.b`. The taken path of `0xC1A8` jumps to `0xC1BA` and lets that hook count. sha256 `d94c73e7087a6be45046afc981d28112312e6ed2a45ac25f61e0ab28ca78cac4`. The stub is 288 bytes, `0x5C59C`–`0x5C6BC`, short of the live literal at `0x5C6BC`. `test_f62e.py` (both outcomes of all ten sites) and `test_repro_f62e.py` passed. The image was not loaded.
+F62D's taken jumps were `0x0301A000` plus the file offset plus `0xC00`. The `0xC1BE` constant was `0xD00` high. The emulator's taken `bez` from `0xC0C8` does not arrive at `0xC09E`. F62E keeps the nine counters and the opcode 14 window. Each hook repeats the stock instruction, including the C flag `0xC15E` already has, and the displaced `ld.b` or `st.b`. The taken path of `0xC1A8` jumps to `0xC1BA` and lets that hook count. sha256 `d94c73e7087a6be45046afc981d28112312e6ed2a45ac25f61e0ab28ca78cac4`. The stub is 288 bytes, `0x5C59C`–`0x5C6BC`, short of the live literal at `0x5C6BC`. `test_f62e.py` (both outcomes of all ten sites) and `test_repro_f62e.py` passed. The bench section below is the load.
+
+**F62E bench (10:56). FW57 loaded. Not transmitting.**
+
+Factory image, one key on channel 49 (statuses 3, 1, 4, 1, released), then F62E. Tag `DMR003.F62E.V022` at 10:49:15. `0x2F` body 2 was acknowledged with `sr=0` and an empty body. Flag `[15, 0]` came back `0`, `[15, 1]` came back `1`, and the closing `[15, 0]` came back `0`. VFO list 1 and 9, low power, 467.625. Each W6Plus key was 3 s (`tools/fw-bench/fw_f62e_rows.py`). Op 14 read 9 bytes at `0x4F2C0` before and after each call. Every read returned a body. The UART never went quiet. HackRF was not used.
+
+The nine differences are `0xC0C8`, `0xC12C`, `0xC14A`, `0xC15E`, `0xC168`, `0xC1B8`/`0xC2CA`, `0xC27E`, the start post, and the stop post. The bytes at the start of the first call were 80, 83, 255, 68, 242, 252, 90, 248, 226.
+
+| Row | Difference | RX `0x36` | `0x2B` | `0x32` during the key |
+|---|---|---|---|---|
+| Flag off, talkgroup 9 | 0, 0, 0, 0, 2, 0, 0, 1, 1 | `01` 10:49:36.684, `02` 10:49:40.464 | three replies, each 9 bytes, type 1, target 9 | — |
+| Flag off, talkgroup 99 | 0, 0, 0, 0, 0, 0, 0, 0, 0 | none | none | quiet samples `0x18`–`0x1B`; rose to `0x3E`, `0x45` |
+| Flag on, talkgroup 99 | 0, 0, 0, 0, 0, 0, 0, 0, 0 | none | none | rose to `0x39`, `0x3F`, `0x46` |
+| Flag on, talkgroup 9 | 0, 0, 0, 0, 2, 0, 0, 1, 1 | `0A` 10:50:38.715, `0B` 10:50:42.494 | none; no `0x2B` query in the 14 s window | `0x46`, `0x42` |
+| Flag off, talkgroup 9 | 0, 0, 0, 0, 2, 0, 0, 1, 1 | `01` 10:51:00.864, `02` 10:51:04.284 | three replies, each 9 bytes, type 1, target 9 | — |
+
+Each of those status frames is one RX line, `rw=2`, `sr=0`, length 1. The app acked each one at once. The 10/11 pair is what the app logged as `MIX_DIGITAL_RX_START` and `MIX_DIGITAL_RX_STOP`. Talkgroup 9 takes `0xC168` twice and posts start and stop once, and the flag is what changes 1/2 into 10/11. Talkgroup 99 incremented nothing. The first counted hook is `0xC0C8`. From the loop head, `0xC0AC` tests bit 0 of the `0x1844` result and `0xC0B0` leaves to `0xC0EE`; `0xC0B4` tests bit 1 and `0xC0B8` leaves to `0xC1FA`; `0xC0BC` tests bit 2 and `0xC0C0` leaves to `0xC25C`; `0xC0C4` tests bit 3 into the counted `0xC0C8`. Those three earlier branches are not counted. A call that never entered `0xC084` would give the same nine zeros.
+
+Factory image, one key (statuses 3, 1, still keyed at the log line; the helper released it), then FW57. Tag `DMR003.FW57.V022` at 10:56:22. Not transmitting. Heat: battery 33.6 °C, `mtktsAP` 39.305 °C, `mtktsbtsmdpa` 38.146 °C.
 
 **Squelch-open status (10:22). Offline. No radio.**
 
