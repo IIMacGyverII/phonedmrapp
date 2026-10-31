@@ -218,6 +218,8 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-31 — the group match is `0x27EA8`, and flag bit 3 is a later post.** A miss returns 1 and the header handler skips the list-match byte. The sketch returns a match from the group arm when `0x4B364` is 1. Private calls stay on the own-id compare. No image was built. Details in `results.md`.
+
 **2026-10-31 — F62F counts the three early arms and the loop head.** `0x1844` waits on a flag group. The group list stays in SRAM `0x31B48`. The guide has no accept-all bit. The image was not loaded. Details in `results.md`.
 
 **2026-10-31 — F62E's counters.** Talkgroup 9 increments `0xC168` by 2 and the start and stop posts by 1. The flag changes that status from 1/2 to 10/11. Talkgroup 99 increments nothing. Restored to FW57. Details in `results.md`.

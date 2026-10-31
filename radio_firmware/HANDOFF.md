@@ -1,6 +1,18 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**11:54 (firmware agent): offline. No radio. F62F was not loaded.**
+
+Flag bit 3 of `0x37744` has one setter. `0x27E30` does `movi r0, 8` and calls `0x1B84`. Its only caller is `0x18C16`, and that call runs when bit 11 of the word copied from `SYS_INTERP_LIST` (`0x11000398`) into `0x4C7E0` is set. The post is unconditional. That function does not read `0x160004B0` and does not look at `0x31B48`. The receive loop clears mask 8 itself at `0xC0D0` once it has seen the bit. The other posts through `0x1B84` are not bit 3: mask 1 at `0x14C1E` and `0x14FF8`, mask 2 at `0x14C5C` and `0x15082`, mask 4 at `0x14A96`, mask 16 at `0x13D98`, `0x141CA`, `0x141F4` and `0x147CC`, mask 32 at `0x12A18`, mask 64 at `0x1486A`, and the shifts of 128 at `0x14750`, `0x14D36`, `0x154C8`, `0x1559C`, `0x15692`, `0x1570E` and `0x15804` (bits 8–12 and 16–17). The loop waits on mask 15, so only bits 0–3 wake it.
+
+The group compare is `0x27EA8`, the next function. `r0 = 0` compares the id in `r1` with the own id at `0x34808+0x34` and returns 0 on a hit. Any other `r0` walks the 32 words at the pointer in `0x34808+0x38`. Channel setup stores that pointer from `0x2350`, which returns `0x31B48`, and stores 0 at `+0x2A` (`0x12CC`). A matching word returns 0. A zero word, or the index passing 32, returns 1. The header handler reads 9 bytes from `0x160004B0` at `0x2436C`, calls `0x27F7C` with argument 1, and `0x24390` branches to `0x25028` when that returns nonzero. The fall-through stores 1 at `0x4D318+slot+14` (`0x244C4`). For a group voice header the parser calls `0x27EA8` with `r0 = 1` when `0x34808+2` is not 2. The DMR arm is byte 4, so the walk runs. Private voice (FLCO 3) calls it with `r0 = 0`. An id above `0xFFFFEF` returns a match before the walk. If `+0x2A` is later nonzero, `0x27EA8` calls `0x17C4` and never reaches the walk.
+
+Sketch, not built. Replace the 4-byte `subi r3, r8, 4` at `0x27EEE` (the first instruction of the group arm) with `bsr` to a stub. The stub loads the byte at `0x4B364`. Zero runs the saved `subi` and branches to `0x27EF2`. One does `movi r3, 0` and branches to `0x27F62`, the existing `mov r0, r3` return, so the function returns a match. `r8` is the frame and the caller's return is already at `(r8, 4)`. The stub branches; it does not build a frame. The private arm at `0x27EDC` is not on this path. A set `+0x2A` still takes `0x17C4`, because that test is above the hook.
+
+Downstream. The same match return is what stores the list-match byte, so the sketch does not store it again. `0x23d54` returns 1 only when `0x4C7BC+0x13` is set and both `0x4D318+slot+14` and `+16` are clear. With `+14` set, that return is 0 and `0x11d18` falls through to the unmute. The voice handler writes the destination at `0x26F02` only when `+14` is already 1, indexed by byte 0 of `0x4C7BC`. `0x14B4E` copies `0x4D318[(byte 2 of 0x4C7BC)+7]` into `0x4C7A0+4`, the word the `0x2B` report uses. An in-list call already arrives there with its target, and this path is that same fall-through.
+
+No image was built. F62F was not loaded. Details in `results.md`.
 
 **11:40 (firmware agent): reviewed (reviews.md). There's no C7000 address filter; the group match is MCU-side, in the setter of flag bit 3 on 0x37744. F62F is parked. Offline, no radio: (1) every setter of 0x37744 (bit 3 above all); (2) the 0x160004B0 read and the compare against 0x31B48 that skips it; (3) sketch the patch (with 0x4B364 = 1, any group call matches; private calls unchanged); (4) the downstream checks (0x4D318, 0x2B, the 0x23d54 list-match byte). Report with STATUS: REVIEW. Start now.**
 
