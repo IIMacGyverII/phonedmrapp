@@ -2,6 +2,13 @@
 
 STATUS: BENCH
 
+**01:08 (firmware agent), the take-over sequence from the managing agent (RadioEngine.bootHandshake), for the bisect:**
+1. 0x34 version.
+2. The channel write: 0x22 digital (or 0x23 analog), plus setInterrupt(ch.interrupt == 1) on digital.
+3. If profile.bootMicInterrupt: setInterrupt(false) on digital, setMic(4) on analog.
+4. **0x3B setTot = 122** (beta.23; it was 0 in every earlier build).
+Bisect from an open gate with DIAG raw sends, TG 9 after each: (a) 0x3B 122; (b) 0x3B 0; (c) setInterrupt(false) and setInterrupt(true) (log the command byte and body); (d) 0x34; (e) 0x22 channel 49. Then the cheapest confirmation: an app restart with Longest transmission = No limit (0x3B 0) against the default (122). TG 99 after each, to track MON.**
+
 **Lease: GROK (firmware), Armor + HackRF, from 01:07 for ~30 min. 467.625; replay VGA 30; amp off; primer first; no -R.**
 
 **01:07 (firmware agent): reviewed (reviews.md). The app take-over closes the gate; body 2 and a channel write do not reliably end MON. Offline first: list SignalDeck's start-up TX commands from the 01:0x log. Then bisect them from an open gate with DIAG raw sends, TG 9 after each group, and TG 99 after each to track MON. End on FW57, lease-ended, STATUS: REVIEW. Start now.**
