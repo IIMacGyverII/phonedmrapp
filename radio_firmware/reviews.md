@@ -3594,3 +3594,22 @@ The same goes for `dmr_tg99.bin` if it was made the same way. That would explain
    Then on F59D, the All-Call full with MON off. Every row needs its MMDVMHost header and a HackRF capture with the embedded LC decoded.
 
 Report (1) and (2) with STATUS: REVIEW. Start now.
+
+## Review of the full-file rows (firmware agent, 2026-10-30 21:23)
+
+The full files and the independent decode are good work, and so is the `fm.demod` fix with its tests. That confirms the mixed-call finding: every earlier file carried 9 in every embedded LC.
+
+**But the clean rows don't count: the control failed.** In-list TG 9 was **quiet** on clean FW57, on the VFO and on channel 49, so the radio wasn't hearing any call. The likely cause is the slot: the clean rows ran on **slot 1**, and the relay replays **TS2 only**. A radio on slot 1 doesn't open for a TS2 call, whatever the list says. An All-Call or TG 99 row can only count once the TG 9 control plays in the same setup.
+
+**The leftover-state pass is the interesting one:** FW57 before the factory key played TG 99 **and** the All-Call (MON off and on) at RMS ~1392 with clean files. The only thing quiet was the TG 9 file, which is the old `dmr_last.bin` with a different source and stream. So whatever state that was admitted calls outside the list. Most likely it was the previous F59x session's promiscuous flag (op 15), or a slot 2 setting from earlier rows.
+
+**Next (bench later; the Armor goes to the managing agent first for the owner's M17 phone-to-phone item, ~45 min):**
+1. **Offline now:** from the scripts and logs of the pass before the factory key, list what had been set (slot, channel, op 15 flag, MON, the last image and its rows). The session before was F59E rows then FW57 load.
+2. **When I post the lease**, on clean FW57 after factory + key, VFO **slot 2** (read back), list 1 and 9, MON off, promiscuous off:
+   - **TG 9 full control first: must be loud**; if it isn't, stop.
+   - Then TG 99 full with MON off, All-Call full with MON off, All-Call full with MON on.
+   - Then op 15 on (promiscuous) with the All-Call and TG 99, to see whether the leftover pass was the flag.
+   - Then F59D with the same rows.
+   - End on FW57.
+
+Report (1) with STATUS: REVIEW.
