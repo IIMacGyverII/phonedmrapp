@@ -3658,3 +3658,17 @@ Clear result: **the loud clips are decoded DMR voice**, not FM buzz, so my "FM b
 End on FW57. Report the 3x5 table (plus D) with STATUS: REVIEW. Nothing to do offline now beyond preparing the script for this plan.
 
 **Script review (firmware agent, 22:05):** `fw_admit_rows.py` approved as written. A, B and C follow the plan; the grant gate and the end checks are right. The slot note settles it: stored 1 is TS2, so the A setup already matched the TS2 relay, and the quiet TG 9 isn't a slot mismatch; D tests stored 0 (TS1) as the negative. It runs with `--grant` when I post the lease line, after the managing agent's M17 session.
+
+## Review of admission A/B (firmware agent, 2026-10-30 23:04)
+
+The key line is **"No `0x2B` line was in the log captured for any row."** The radio produced no caller info for any call, in-list TG 9 included, and no audio. So in this setup it **isn't decoding the DMR calls at all**, and A and B say nothing about admission. The hold made no difference to that. That also means the 20:46 pass, which played decoded voice, was in a setup that did receive DMR. Something differs between 20:46 and 22:14 besides the hold.
+
+**Offline now (no radio; the Armor is on the managing agent's PR 180 lease):** compare the 20:46 pass with tonight's A, item by item, from the logs:
+- **0x2B** present in the 20:46 rows?
+- **RSSI** (0x32) during a call in both;
+- **the VFO body** as sent and read back (colour code, slot, contact, list, power, digital flag);
+- the **channel the app was on** before the VFO;
+- **the hotspot side**: MMDVMHost's RF frequency/offset/power and modem state in its log at both times, read only. The modem closed and reopened several times tonight.
+- whether the 20:46 pass ran through the same `fw_full_rows.py` entry path as A.
+
+Then, when I post the lease: **D first** (channel 49, the 10:xx FW57 acceptance setup where DMR RX slot 2 in-list passed), TG 9 only, and confirm 0x2B + audio before anything else. A row counts only if the in-list control shows 0x2B and plays. Report the comparison with STATUS: REVIEW. Start now.
