@@ -4780,6 +4780,10 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Admission plan script (22:05). Not run. No radio.**
+
+`tools/fw-bench/fw_admit_rows.py` is the A-D plan. It does not start without `--grant`. A is a clean FW57 after the factory image and one key: talkgroup 9 twice, talkgroup 99, All-Call, talkgroup 9, monitor off, 60 s between calls. B applies the hold by turning M17 receive on from an analog VFO, then returns to the digital VFO and does not release. C turns M17 receive off and requires the action-0 log line. D runs only when the first talkgroup 9 in A is quiet: the same five on channel 49, then on a VFO stored as slot 0. The editor labels stored 1 as TS2, which is the A setup, and stored 0 as TS1. The channel writer keeps only those two values. Each counted row keeps its header, carrier, embedded LC, and the `0x2B` lines. The script was compiled and refused without the grant.
+
 **Loud clips are decoded speech (21:55). No radio.**
 
 The reference is `f58d_off.wav`, the F58D monitor-off row, RMS 1386.9. That image admitted this recording. `factory_on.wav` agrees with it (spectrum correlation 0.92, waveform 0.56, zero crossings 1518 against 1552).

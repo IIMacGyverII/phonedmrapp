@@ -142,7 +142,7 @@ def enter_vfo(cfg, web):
         raise SystemExit("vfo refused")
 
 
-def one(cfg, phone, web, kind, mon, before_header, image_tag):
+def one(cfg, phone, web, kind, mon, before_header, image_tag, suffix=""):
     gaps.base.heat_ok(cfg, phone)
     if hackrf_running():
         raise SystemExit("hackrf already running")
@@ -154,8 +154,8 @@ def one(cfg, phone, web, kind, mon, before_header, image_tag):
     say(cfg, "status monitor %s promiscuous %s vfo %s" % (mon_now, bool(st.get("promiscuous")), bool(st.get("vfo"))))
     if mon_now != bool(mon):
         raise SystemExit("monitor did not take")
-    name = "full_%s_%s_%s" % (image_tag, kind, "on" if mon else "off")
-    if (cfg.out / "caps" / (name + ".iq")).exists():
+    name = "full_%s_%s_%s%s" % (image_tag, kind, "on" if mon else "off", suffix)
+    if not suffix and (cfg.out / "caps" / (name + ".iq")).exists():
         name = name + "b"
     phone.broadcast("rxclip", "--ei", "ms", "20000", "--es", "name", name)
     clip_t0 = time.time()
@@ -412,15 +412,16 @@ def finished(doc, image, kind, mon):
     return None
 
 
-def run_row(cfg, phone, web, doc, kind, mon, expect, image_tag):
-    hit = finished(doc, image_tag, kind, mon)
-    if hit is not None:
-        say(cfg, "keep %s %s" % (hit.get("name"), hit.get("verdict")))
-        return
+def run_row(cfg, phone, web, doc, kind, mon, expect, image_tag, suffix="", skip_done=True):
     """expect is 'muted', 'loud', or None when either result is the measurement."""
+    if skip_done:
+        hit = finished(doc, image_tag, kind, mon)
+        if hit is not None:
+            say(cfg, "keep %s %s" % (hit.get("name"), hit.get("verdict")))
+            return
     rows.arm(cfg, kind)
     before = doc["before_header"]
-    row = one(cfg, phone, web, kind, mon, before, image_tag)
+    row = one(cfg, phone, web, kind, mon, before, image_tag, suffix)
     doc["before_header"] = row["header"]
     if row["verdict"] == "not on air":
         doc["rows"].append(row)
