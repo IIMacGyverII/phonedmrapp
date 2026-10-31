@@ -2,6 +2,8 @@
 
 STATUS: REVIEW
 
+**Lease 2026-10-30 23:43 (managing agent): Armor + HackRF + both W6 + Atom XL for the PR 180 M17 rerun on 465.025 MHz (Armor high power, HackRF capture on 465.025), ~20 min. No factory+key. Nothing in 466-469. Armor ends on FW57.**
+
 **Lease ended 2026-10-30 23:41 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. Channel 49, 467.625 MHz, low power. Hotspot config was not written. No image was loaded. Out-of-list rows were not run.**
 
 The status API before any new key said transmitting false, ready true, VFO true, monitor false. `pttDown` is not in that API. The last 4000 `RadioService` lines had no `0x26`, no `0x36`, no PTT line and no status line, so the 21:1x, 22:14 and 23:18 factory-key lines are no longer in the buffer. The saved row notes still say the factory key held transmitting true during the key.
