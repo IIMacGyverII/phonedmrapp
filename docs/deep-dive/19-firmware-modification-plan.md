@@ -218,7 +218,9 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
-**2026-10-31 — F62D counts each receive-loop drop.** It is FW57 plus the opcode 14 window and nine counter bytes at `0x4F2C0`. It was not loaded. Details in `results.md`.
+**2026-10-31 — F62D's idle window holds still, and the first in-list call stops the UART.** Op 14 of `0x4F200`–`0x4F3FF` matched across 4 s and across the VFO write. Talkgroup 9 with the flag off dipped the clip and the module then answered no command. No counter delta. Restored to FW57. Details in `results.md`.
+
+**2026-10-31 — F62D counts each receive-loop drop.** It is FW57 plus the opcode 14 window and nine counter bytes at `0x4F2C0`. The build itself was not loaded; the bench line above is the load. Details in `results.md`.
 
 **2026-10-31 — promiscuous rows on FW57.** The op 15 flag echoed 0 and 1. Out-of-list talkgroup 99 posted no RX status with the flag on or off, and the replay still matched talkgroup 9 with no status. FW57 is loaded. Details in `results.md`.
 

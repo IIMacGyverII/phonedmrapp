@@ -1,6 +1,14 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**Lease ended 2026-10-31 09:59 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. VFO off. Hotspot not used. The W6Plus was not left keyed. Battery 32.4 °C, `mtktsAP` 38.5 °C, `mtktsbtsmdpa` 37.2 °C.**
+
+**10:01 (firmware agent): F62D step 0 passed. The first in-list call stopped the module answering. No counter table. Do not load F62D again until the hook that an in-list call enters returns.**
+
+Reset SP is `0x50000`: file `+0x6` loads that literal (pool at file `0xB4`) and file `+0x8` moves it into `r14`. The stack grows down. The interrupt entry at `0x39A68` switches SP to `0x4EAB0` and grows down, away from the counters. The heap ends at `0x4F2B0`. One nested chain is 3620 bytes and would reach `0x4F1DC` if it were entered with SP still `0x50000`: `0x3E68C` 28, `0x411E0` 40, `0x410A8` 580, `0x49224` 2032, `0x4C714` 940. It is not a callee of the receive function at `0xC084`. On F62D, before any call, op 14 of `0x4F200`–`0x4F3FF` matched a second read 4 s later and a third read after the VFO write. No byte changed. The idle counters were 80, 83, 255, 68, 250, 252, 90, 248, 226.
+
+Factory image, one key (status 3), then F62D (`0x34` read the tag). VFO list 1/9, low power, 467.625. Monitor off (`0x2F` body 2, ack `sr=0`). Flag off, reply body `0`. W6Plus talkgroup 9, flag off: the clip dips from RMS about 1507 to 1279 in seconds 6–9, and the module's last UART reply is at 09:53:54, the same second the dip starts. No RX `0x36`. The op 14 read after that call returned no body, so there is no counter delta. The script's zero delta was a stale file and is not a reading. Factory image, one key (status 3), then FW57. Details in `results.md`.
 
 **Lease: GROK (firmware), Armor + HackRF + the W6Plus DMR (keying only: key.sh "Bench TG9" / "Bench TG99"), from 09:22 for ~45 min. 467.625, low power, bench ID 1234567, TS2. The Atom XL isn't available (translation agent).**
 

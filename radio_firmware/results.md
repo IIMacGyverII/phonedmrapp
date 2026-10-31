@@ -4798,7 +4798,15 @@ The counters are `0x4F2C0` through `0x4F2C8`. That is the first spare after the 
 | `0x4F2C7` | the start post, both at `0xC1BA` and from the `0xC1AA` test |
 | `0x4F2C8` | the stop post at `0xC244` |
 
-A taken branch increments its byte and then goes to the same instruction the stock branch went to. A branch that is not taken returns to the next instruction. The start and stop posts increment and then call the same getter at `0x5C4C8`. The two stop-side returns at `0xC212` and `0xC242` are not in this map. The image was not loaded.
+A taken branch increments its byte and then goes to the same instruction the stock branch went to. A branch that is not taken returns to the next instruction. The start and stop posts increment and then call the same getter at `0x5C4C8`. The two stop-side returns at `0xC212` and `0xC242` are not in this map.
+
+**F62D bench (09:59). FW57 loaded. Not transmitting.**
+
+Reset SP is `0x50000` (file `+0x6`, pool at file `0xB4`). The interrupt stack starts at `0x4EAB0` and grows away from `0x4F2C0`. A 3620-byte chain through `0x49224` and `0x4C714` would cover the counters if entered from SP `0x50000`; it is not called from the receive function at `0xC084`.
+
+Factory image, channel 49 key, status 3, then F62D. Tag `DMR003.F62D.V022`. Before any call, op 14 read `0x4F200` for 240, `0x4F2F0` for 240 and `0x4F3E0` for 32. A second pass 4 s later matched, and a third pass after the VFO write matched. Nothing in `0x4F200`–`0x4F3FF` changed. The nine counter bytes were 80, 83, 255, 68, 250, 252, 90, 248, 226.
+
+VFO list 1 and 9, low power, 467.625. `0x2F` body 2 was acknowledged. Flag body `[15, 0]` came back `0`. W6Plus talkgroup 9 with the flag off: seconds 6–9 of the clip fall from RMS about 1507 to 1279, then the level is back near 1500. The module answered `0x32` and `0x2B` until 09:53:54 and then answered nothing. No RX `0x36`. The op 14 read of the counters after the call returned no body. There is no per-call delta. Factory image, channel 49 key, status 3, then FW57. Tag `DMR003.FW57.V022` read again at 10:01. Not transmitting. Heat at the restore key: battery 32.4 °C, `mtktsAP` 38.5 °C, `mtktsbtsmdpa` 37.2 °C.
 
 **Promiscuous rows (08:51). FW57. Not transmitting.**
 
