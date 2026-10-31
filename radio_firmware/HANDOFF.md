@@ -1,6 +1,14 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: BENCH
+STATUS: REVIEW
+
+**Lease ended 2026-10-30 23:23 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. The VFO is still up at 467.625 MHz, low power, list 1 and 9. Hotspot config was not written. Talkgroup 99 and All-Call were not run.**
+
+`sudo journalctl -u mmdvmhost` since midnight returned one line and no start or stop, so it does not say who restarted the modem. The owner's reset replaced the MMDVM log. Its only opening is 2026-10-31 04:13:00.092 UTC, with no closing line, and that opening was already there before the first call.
+
+Factory load, a 3 s key with status 3 at 23:18:11, then the FW57 tag back at 23:20:31. Channel 49, slot 1, colour code 1, monitor off: talkgroup 9 full is on the air (carrier ratio 60.4, 46.5 dB, 13 embedded blocks of destination 9) and does not play (RMS 22.5, loud 0.00 s, peak 1629). No `0x2B`. The `0x32` bytes during the call were 26, 26, 27, 28, 25, 26 and four more in the same range. The VFO is the same (RMS 22.7, peak 1304, ratio 59.2, no `0x2B`). The old talkgroup 9 file is the same bytes and the same result (RMS 23.0, peak 1633, no `0x2B`). The known-good channel does not decode this in-list call. Admission is still untested. The 20:46-versus-A comparison is in `results.md`; those two passes are before the reset, and this table is after it. Battery 35.9 °C, `mtktsAP` 42.3 °C, `mtktsbtsmdpa` 41.1 °C.
+
+`hackrf.Capture` now tunes to the phone frequency minus the offset. The unit test passed (2 tests). The old field stays 467.385 MHz.
 
 **Lease: GROK (firmware), Armor + HackRF + hotspot, from 23:12 for ~45 min. 467.625 low power; hotspot config never written.**
 

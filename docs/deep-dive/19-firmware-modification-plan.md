@@ -218,6 +218,10 @@ Things not to do: no flash writes; no edits to band limits or power; no patch bu
 
 ## 10. Progress log
 
+**2026-10-30 — after the hotspot reset, channel 49 on a clean FW57 does not play in-list talkgroup 9.** The call is on the air, the embedded destination is 9, and there is no `0x2B`. The VFO and the old control file are the same. Details in `results.md`.
+
+**2026-10-30 — the 20:46 pass and tonight's A used the same VFO and the same row function.** Neither saved a real group-call `0x2B`. Tonight had just keyed channel 49; 20:46 had not reloaded, and the hold was still applied. Details in `results.md`.
+
 **2026-10-30 — clean FW57 and the held path both stay quiet.** Talkgroup 9, talkgroup 99, and All-Call are muted with the hold off and with it applied. The release phase and the search for a setup where talkgroup 9 plays were not run; the modem did not reopen. Details in `results.md`.
 
 **2026-10-30 — the admission plan script is ready and was not run.** `tools/fw-bench/fw_admit_rows.py` does clean FW57, hold on, and hold off, five calls each, and looks for a setup where talkgroup 9 plays only if it was quiet. Details in `results.md`.

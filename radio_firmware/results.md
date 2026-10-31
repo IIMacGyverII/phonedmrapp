@@ -4780,6 +4780,38 @@ The symbol key's `0x26` on and off were acked, status 3 then 4. The 5 s tone sen
 
 **FW45-D (19:56), the ROM window accepts the address and the byte copy does not reply.** Factory image loaded, then a 3 s key on channel 49 (type 0), status 3, then not transmitting. F45D, sha256 `eaffa5def1f6df4d0338f2551c728b58128d2b4208152251c77265618a5c012e`, is FW44 with opcode 14's window `[0xFCFF0000, 0xFD020000)`. Loaded in 137 s, tag `DMR003.F45D.V022`. No hold. No symbol key. A read of `0x180000A0` returns `sr=1` and an empty body. Reads of `0xFCFF8268`, `0xFD01299C`, `0xFD012984` and `0xFD000000` send no reply for 5 s, and `0x34` still answers. The flash listing is unchanged: `0x1924` passes `r0`, `r1 = 0` and a stack slot to `0xFCFF8268`; `0xE64` passes a 176-byte stack buffer to `0xFD01299C`; `0xB07C` calls `0xFD012984`. The polled word is not known. Left on channel 49, not transmitting. Heat: battery 32.4 °C, `mtktsAP` 37.2 °C, `mtktsbtsmdpa` 36.7 °C. No HackRF capture.
 
+**Channel 49 after the hotspot reset (23:23). FW57. Not transmitting.**
+
+The owner's reset replaced the modem log. `sudo journalctl -u mmdvmhost` since midnight returned one line, and that line does not name a start or a stop, so the journal does not say who restarted it. The new log's only opening is 2026-10-31 04:13:00.092 UTC, with no closing line. That opening was already there before the first call.
+
+Factory load, a 3 s key with status 3 at 23:18:11 (the status list was 3 then 1, and the status API stayed transmitting for the hold), then `DMR003.FW57.V022` read back at 23:20:31. Channel 49 was already 467.625 MHz, digital, low power, slot 1, colour code 1. Monitor off. The modem stayed open on the 04:13:00 UTC session. Each row has a new Slot 2 voice header, a HackRF carrier, and 13 embedded blocks of destination 9. No `0x2B` frame was in the late log. The RSSI column is the first byte of each `0x32` reply during the call, in the phone's own units.
+
+| Setup | RMS | Peak | Loud | Carrier | `0x2B` | RSSI bytes |
+|---|---:|---:|---:|---|---|---|
+| Channel 49, talkgroup 9 full | 22.5 | 1629 | 0.00 s | ratio 60.4, 46.5 dB | 0 | 26, 26, 27, 28, 25, 26, 27, 28, 26, 26 |
+| VFO, list 1 and 9, talkgroup 9 full | 22.7 | 1304 | 0.00 s | ratio 59.2, 46.4 dB | 0 | 27, 27, 26, 26, 28, 26, 26, 27, 28, 27 |
+| VFO, the old talkgroup 9 file | 23.0 | 1633 | 0.00 s | ratio 59.2, 46.4 dB | 0 | 28, 26, 26, 25, 28, 27, 26, 26, 27, 26 |
+
+The old file is the same bytes as the full talkgroup 9 file. The branch that would have sent talkgroup 99 and All-Call did not run, because channel 49 did not play. A clean FW57 on the known-good channel still does not decode this in-list call, so admission is untested. The radio was left on that VFO, 467.625 MHz, low power, not transmitting. Battery 35.9 °C, `mtktsAP` 42.3 °C, `mtktsbtsmdpa` 41.1 °C. Hotspot config was not written.
+
+`hackrf.Capture` now uses the phone frequency minus the 240 kHz offset. The old `capture_hz` field stays 467.385 MHz. `test_capture_hz.py` passed, two tests.
+
+**20:46 pass against tonight's A (23:15). No radio.**
+
+| Item | 20:46 pass | Tonight's A, from 22:14 |
+|---|---|---|
+| `0x2B` | The early log has 9-byte frames, type 0, caller 0, target 0. That is not a group-call report. No end-of-call log was saved. | Early and late logs have no `0x2B` frame. |
+| RSSI | Not recorded. | Not recorded. |
+| HackRF | Talkgroup 99, carrier ratio 47, 44.7 dB over the floor. | Talkgroup 9, carrier ratio 63, 45.4 dB over the floor. |
+| VFO sent | `vfo_body`: digital, 467.625, low power, colour code 1, slot 1, call 9, list 1 and 9. | The same body, slot requested 1. |
+| VFO read back | `vfo_ok` passed: list 1 and 9, low power. | Slot read back 1. The same checks passed. |
+| Channel before the VFO | Not logged. The script did not select a channel. The M17 page at 20:36 requires an analog channel or an analog VFO, and that was the last known use. | Channel 49. The factory key selects it, the FW57 load follows, then the VFO is posted. |
+| Hotspot, read now | The file is duplex 0, 467.625 MHz both ways, power 1, colour code 1, slot 1 off, slot 2 on. It was not written by these scripts. | The same file. |
+| Modem at the row | Open. The header is `DMR Slot 2`. The last opening saved then was 00:59:56 UTC. | Open. The header is `DMR Slot 2`. The last opening saved then was 02:17:10 UTC. |
+| Entry | `fw_full_rows.py`. Tag already FW57, no factory load. First call was talkgroup 99. The row itself is `one()`. | `fw_admit_rows.py`, which calls that same `one()`. Factory load, channel 49 key, FW57, then the VFO. The log was `nothing held`. First call was talkgroup 9. |
+
+The current modem log file has been replaced and no longer contains those openings. The times above are the lines the row scripts saved. The air path of a row is the same function. What differs before it is the factory load and the channel 49 key tonight, against no reload and a hold left on at 20:46. Both of these passes are before the owner's reset. The channel 49 table after that reset is the section above.
+
 **Admission plan A and part of B (22:40). FW57. Not transmitting. C and D not run.**
 
 Factory load, a 3 s key with status 3 at 22:14:25, then `DMR003.FW57.V022`. The calls resumed on that image. VFO stored slot 1, list 1 and 9, monitor off. Before A the log was `data hold: nothing held, not sent`. Before B, M17 receive on an analog VFO logged `data hold action=1 sr=0` at 22:27:42, and the return to the digital VFO did not log a release. Every counted row has a new voice header, a HackRF carrier, and 13 embedded blocks of the one destination. No `0x2B` line was in the log captured for any row. Opcode 14 on FW57 answers `sr=1`.

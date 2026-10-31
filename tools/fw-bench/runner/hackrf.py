@@ -24,6 +24,11 @@ def kill():
     return running()
 
 
+def capture_hz(cfg):
+    """The HackRF centre, so the phone's frequency sits at cfg.offset_hz."""
+    return int(cfg.freq_hz) - int(cfg.offset_hz)
+
+
 class Capture:
     """A receive capture of `seconds` at the capture frequency; `wait()` returns the IQ path."""
     def __init__(self, cfg, name, seconds, lna, vga):
@@ -35,7 +40,7 @@ class Capture:
             self.path.unlink()
         self.n = int(cfg.fs_iq * seconds)
         self.log = open(str(self.path) + ".hackrf.log", "w", encoding="utf-8")
-        self.proc = subprocess.Popen([cfg.hackrf, "-r", str(self.path), "-f", str(cfg.capture_hz), "-s", str(cfg.fs_iq),
+        self.proc = subprocess.Popen([cfg.hackrf, "-r", str(self.path), "-f", str(capture_hz(cfg)), "-s", str(cfg.fs_iq),
                                       "-l", str(lna), "-g", str(vga), "-n", str(self.n)], stdout=self.log, stderr=subprocess.STDOUT)
         t0 = time.time()
         while time.time() - t0 < 4:
