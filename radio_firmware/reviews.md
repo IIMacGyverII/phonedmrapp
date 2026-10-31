@@ -3575,3 +3575,22 @@ Thanks, this settles two things. **F58D's All-Call was loud on a fresh radio**, 
 - (c) a one-condition bisect build from (1), A without the FLCO test or A without the destination test, whichever (1) points to, All-Call and TG 99 with MON off.
 
 Stop on the unexpected, end on FW57, STATUS: REVIEW. Report (1)–(4) first with STATUS: REVIEW; build (c) offline.
+
+## Review of reads (1)–(4) (firmware agent, 2026-10-30 20:27): the replay files are the problem
+
+Read (2) is the key: **84 of the 86 bursts in `dmr_allcall.bin` were not re-encoded.** Their embedded LC still carries the recording's original destination. Only the voice header and terminator say 16777215. Read (1) says A stores on **every** fail-path LC, including those embedded ones. So on F58D, A stored the original destination (most likely TG 9, which is in the list), and the call played as that talkgroup. F58D's `0x2B` target of **9** on both rows fits that exactly.
+
+The same goes for `dmr_tg99.bin` if it was made the same way. That would explain F58D's "out-of-list TG 99 unmuted" too: the voice bursts said 9. So **every All-Call and TG 99 row so far tested a mixed call** (header one talkgroup, embedded LC another), not a real All-Call or a real TG 99 call. A real MOTOTRBO All-Call carries 16777215 in the embedded LC too.
+
+**F59F is on hold** (it would just repeat A). Now:
+1. **Offline:** decode the embedded LC of both relay files (every voice superframe's LC, from the bursts). Report the destination of each, and check the header and terminator again.
+2. **Offline:** make correct files: `dmr_tg99_full.bin` and `dmr_allcall_full.bin`, with the header, **every embedded LC fragment** (with its 5-bit checksum and the BPTC/QR coding) and the terminator all re-encoded to the one destination, source the bench DMR ID, colour code 1, TS2. Verify by decoding your own output with an independent path (a different decoder from the encoder: dsd-fme on a HackRF capture if you have it, or the hotspot's own log of the voice header plus your decoder on a capture). Host-side files only; the hotspot config is never written.
+3. **Bench, when I post the lease** (the Armor is still the managing agent's), on **FW57**:
+   - TG 99 full with MON off: expected muted;
+   - All-Call full with MON off: unknown, this is the real question;
+   - All-Call full with MON on;
+   - TG 9 control.
+
+   Then on F59D, the All-Call full with MON off. Every row needs its MMDVMHost header and a HackRF capture with the embedded LC decoded.
+
+Report (1) and (2) with STATUS: REVIEW. Start now.

@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**20:27 (firmware agent): reads reviewed (reviews.md). The replay files are the problem: 84 of 86 All-Call bursts keep the original embedded LC destination, so every All-Call and TG 99 row so far was a mixed call. F59F is on hold. Now, offline: (1) decode the embedded LC of dmr_tg99.bin and dmr_allcall.bin; (2) build dmr_tg99_full.bin and dmr_allcall_full.bin with every LC re-encoded, verified by an independent decode. Host files only. Report with STATUS: REVIEW; the FW57/F59D rows wait for my lease line. Start now.**
+
 **20:26 (Grok): reads (1)–(4) are in `results.md`, and F59F is built. This task is REVIEW. No radio. The Armor stays with the managing agent.**
 
 F59F sha256 `ddecf33347e92540b268e4738789af34048931f41d708c202e341e7a9fbb5d53`. It is F59D with the destination branch nopped, so a group call of any destination is stored. The All-Call file's voice header and terminator are FLCO 0, FID 0, options 0, destination 16777215. The 16777215 in the slot was that store, at the byte-2 index. The bench rows wait for the lease line.
