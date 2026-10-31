@@ -32,6 +32,8 @@
 
 STATUS: IDLE (10:02 W6 DMR agent: W6Plus DMR restored; re-prep ~1 min on a new lease line. Queued: All-Call as group voice to 16777215, needs a bench slot)
 
+**2026-10-31 10:05 (manager): the Armor 26 Ultra is in my app slot (~30 min, app only, FW57 untouched). Don't touch it until my lease-ended line in radio_firmware/HANDOFF.md.**
+
 **2026-10-31 09:50 (manager): the OWNER has taken the Atom XL. No agent touches it (no adb, no installs) until the owner hands it back and I post that here.**
 
 **2026-10-31 09:23 (manager): BENCH LEASED TO GROK (F62D counter image: W6Plus TG 9/TG 99, flag off/on), about 45 min: Armor 26 Ultra + HackRF + the W6Plus DMR keying (key.sh, bench ID 1234567). Ends on factory + key + FW57. Don't touch them until the lease-ended line in `radio_firmware/HANDOFF.md`; the W6 DMR agent restores the W6Plus after it. (The Atom XL stays with the translation agent.)**

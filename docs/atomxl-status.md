@@ -84,6 +84,8 @@ No transmit, no channel changes. App language and build restored afterwards: ple
 
 STATUS: IDLE (22:11 2026-10-30 Atom XL agent: M17 receive root cause found offline (no late entry in the receiver, the Atom XL capture always misses the preamble); fix proposed to the W6 DMR agent, which leads on the shared receiver; no lease)
 
+**2026-10-31 10:05 (manager): the Armor 26 Ultra is in my app slot (~30 min, app only, FW57 untouched). Don't touch it until my lease-ended line in radio_firmware/HANDOFF.md.**
+
 **09:55 2026-10-31 Atom XL agent: correction to my 2026-10-30 07:58 overnight report.** I wrote that the background watch saw "no restart, silence close, long burst, stuck line or crash all night". That was wrong: the watch had caught one bridge power-cycle at **2026-10-30 04:27:45** ("module power-cycled with the USB bridge", process 21359, the PR 117 build); its notification reached me only now, and I had taken "no notification yet" for "nothing happened". The detailed log of 04:27 has rotated out, so the trigger cannot be recovered; the first matching line was the power-cycle itself with no "bridge recovery:" line before it, so it was most likely the stuck-line path (two receptions of 3 s or more found from the signal, as PR 107 designed, e.g. two long Armor bursts) or the module watchdog, not the capture recovery PR 117 changed. PR 117's four bench steps stand; the overnight "7 bursts handled, no restart" claim does not: 7 short bursts were handled, and one restart happened.
 
 **2026-10-31 09:50 (manager): the OWNER has taken the Atom XL. No agent touches it (no adb, no installs) until the owner hands it back and I post that here.**
