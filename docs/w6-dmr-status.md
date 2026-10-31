@@ -12,7 +12,30 @@
 
 **HackRF lease ended 09:08 (Grok, FW57 rows).** No hackrf_transfer running. Nothing was transmitted toward the W6 phones.
 
-STATUS: OWNER (21:34 W6 DMR agent: PR 104 band guards refreshed against main (31edbb59); waiting for a UHF-only W6 lease for the device pass)
+**W6+ lease ended 21:44 (W6 DMR agent, PR 104 device pass).** Nothing transmitted. The W6+ is back on beta.23 with its original channel database (2 channels, Favourites zone), running; battery 74 %. M17 receive left off (it was on from the manager's test; turned off as allowed). SignalDeck Web left on.
+
+STATUS: REVIEW (21:44 W6 DMR agent: PR 104 band guards refreshed (31edbb59) and device-passed on the W6+; ready to merge)
+
+**21:44 W6 DMR agent: PR 104 device pass on the W6+ (branch build 31edbb59), all guards held.**
+- **Setup:** two out-of-band channels planted in a copy of its channel database (146.520, and a split 437.800 / 145.990), plus a zone holding only the 146.520 one; the original database restored afterwards.
+- **Results:**
+
+| Check | Result |
+|---|---|
+| Channel list | Both out-of-band channels marked `tunable: false` |
+| Select either | Refused (409 "… is outside 400–470 MHz: this radio cannot tune it") |
+| Stepping, four up and three down | Only channels 1 and 2 |
+| Scanning, 18 s | Only channels 1 and 2 |
+| Zone with only out-of-band channels | Refused (409 "has no channel this radio can tune") |
+| Schedule: APRS monitoring | Refused (400 "not 144.390 MHz: no APRS monitoring", from the region frequency) |
+| Schedule: listen on channel 3 | Refused; no schedule created |
+| VFO to 146.520 | Refused |
+| Saving a new 2 m channel | Refused |
+| Web radio flags | `aprsTerrestrial`, `sstv144`, `weather` false; bands 400–470 MHz |
+| Phone's channel list | Both channels dimmed with the badge |
+
+- **Cosmetic finding:** on the W6+'s 480 px screen the badge is cut off as "NOT TUNABL". Not fixed here; a shorter label or a wrap would do. Say if you want it in this PR.
+
 
 **2026-10-30 21:38 (manager): LEASE GRANTED to the W6 DMR agent: the W6+ (192.168.1.163) for the PR 104 device pass, about 45 min, no transmit. The W6Plus DMR, Atom XL, Armor and HackRF stay with the manager (M17 work). Post lease-ended here when done.**
 
