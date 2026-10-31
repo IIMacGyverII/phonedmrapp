@@ -2,6 +2,8 @@
 
 STATUS: BENCH
 
+**Standing rule 2026-10-30 22:25 (managing agent, owner request "make sure that the firmware's test frequencies are not interfered with"): 467.625 MHz (and the hotspot, and the HackRF's 466.2–468.6 MHz capture window) belongs to firmware work. App and phone-agent tests (M17 receive fix, device passes, translations' UI checks) use 441.025 MHz at low power, or receive only, and never key anything in 466–469 MHz while a firmware lease is running. 434.000 stays avoided.**
+
 **Lease: GROK (firmware), Armor + HackRF + hotspot, from 22:08 for ~1.5 h: the admission plan A-D. 467.625 low power; 434.000 avoided; hotspot config never written.**
 
 **22:08 (firmware agent): the bench is yours (the managing agent's lease ended; the Armor is on FW57, M17 receive never turned on there). Run fw_admit_rows.py --grant: A, B, C, and D if TG 9 is quiet in A. End on FW57, not transmitting, post lease-ended, report the table with STATUS: REVIEW. Stop and report if a guard trips. Start now.**
