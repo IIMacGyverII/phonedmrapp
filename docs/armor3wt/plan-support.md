@@ -76,6 +76,46 @@
 4. **Tester request:** `docs/armor3wt/tester-request.md`, for the 3WT tester. Post in Discussions **#168** (the 3WT thread); index #170. It goes out after the beta that carries it.
 5. **Docs:** a "2026-10-30 review" section in the findings doc. Update `SignalDeck/docs/compatibility.md` and the firmware repo's `devices/ulefone-armor-3wt/README.md`, the latter through a PR from your own worktree of `AndroidRadio_Firmware_Project`, never the shared folder.
 
+## Branches, PRs and merges: exactly how (read before your first commit)
+
+Several agents share these folders. Today's merge problems all came from these mistakes: commits landing on someone else's branch, force-pushes, a stale base, help exports touching every file. Follow this every time.
+
+**SignalDeck (the app): your own worktree, your own branch, a PR, and the managing agent merges.**
+1. **Never commit in the shared checkout** `D:\Documents\code\personal\SignalDeck` (it may sit on another branch), nor in `SignalDeck-merge`, `SignalDeck-txlen` or `SignalDeck-xplore1`.
+2. **Make your own worktree once:**
+   `git -C D:/Documents/code/personal/SignalDeck fetch origin`
+   `git -C D:/Documents/code/personal/SignalDeck worktree add D:/Documents/code/personal/SignalDeck-3wt -b armor3wt/support origin/main`
+   - Work only in `SignalDeck-3wt`.
+   - `local.properties` isn't copied: copy it from the shared checkout if you need a signed `assembleRelease`; `assembleDebug` and the host tests don't need it.
+3. **Before opening the PR**, bring your branch up to date: `git fetch origin && git merge origin/main`.
+   - **Merge, don't rebase or force-push:** force-push is refused by our permission settings.
+   - **Resolve conflicts keeping both sides.**
+   - **Rerun the whole host suite:** `JAVA_HOME=/c/Users/Joshua/tools/jdk-17.0.20.1+1 ./gradlew -q testReleaseUnitTest`.
+4. **Generated docs:**
+   - **After any help change:** `./gradlew -q testReleaseUnitTest --tests '*HelpExportTest' -PexportHelp=true --rerun-tasks`.
+   - **After any `radios.json` change:** `./gradlew -q testReleaseUnitTest --tests '*RadioNotesExportTest' -PexportRadios=true --rerun-tasks`.
+   - **Then commit only the generated files whose content changed:** `git diff --ignore-cr-at-eol --name-only docs`. The export rewrites the line endings of every file; `git checkout -- docs/help docs/radios` the rest.
+5. **Push your branch and open the PR against `main`:**
+   - `git push -u origin armor3wt/support`;
+   - `gh pr create --base main --head armor3wt/support`, with a body that says what, why, tests, "not device-tested", and ends with the Claude Code line.
+6. **Don't merge, close or edit anyone's PR, and never push to `main`.** Set your mailbox to REVIEW and message the managing agent. It reviews, merges (squash when the branch history must stay out of main) and deletes the branch.
+7. **More changes after review:** new commits on the same branch, then push again. Never amend a pushed commit.
+
+**AndroidRadio_Firmware_Project (the 3WT device page):**
+- **Your own worktree:**
+  `git -C D:/Documents/code/personal/AndroidRadio_Firmware_Project worktree add D:/Documents/code/personal/AndroidRadio_Firmware_Project-3wt -b armor3wt/device-page origin/main`
+  The shared folder often sits on another agent's branch: never commit there.
+- **README only:** `devices/ulefone-armor-3wt/README.md`. **No catalogue changes** (`catalog/` is the firmware agent's, signed).
+- **Then a PR.** The firmware agent reviews it; the managing agent merges it with the owner's OK.
+
+**phonedmrapp (this repo: your review doc, tester request, mailbox):**
+- **Commit directly on `main`, your own files only,** then push: `git fetch -q origin && git rebase -q --autostash origin/main && git push -q origin HEAD:main`.
+- **Never `git reset --hard`; never `git checkout -- <file>`** on a file with uncommitted work; never touch other agents' files or mailboxes.
+
+**Commit messages** end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+
+**If a permission check refuses something** (push, merge, a PR edit): stop. Don't work around it, write it in your mailbox (STUCK) and message the managing agent.
+
 ## Rules
 
 - **No phone, radio, HackRF or hotspot:** there's no 3WT here, so this is reading and code only.
@@ -83,7 +123,7 @@
   - a `STATUS:` line (WORKING / REVIEW / STUCK / OWNER / IDLE), newest entries first;
   - push after each update with `git fetch -q origin && git rebase -q --autostash origin/main`;
   - never `git reset --hard`.
-- **SignalDeck changes:** in your own git worktree and branch from `origin/main`, as PRs for the managing agent; never push to main. Rebase before opening; main moves often (PRs 153–172 landed today).
+- **SignalDeck changes:** exactly as in *Branches, PRs and merges* above. Main moves often (PRs 153–173 landed today), so merge `origin/main` into your branch before opening the PR.
 - **Vendor material and tester data** (APK, decompiled code, `extmodule`, the report, the ROM) stay out of every repo. Never publish the hidden update path's entry points or file locations beyond what the findings doc already says.
 - **No owner callsign or DMR ID anywhere:** examples use N0CALL, DMRTST-7, 1234567, TG 9.
 - **Commits:** commit only your own files and match the surrounding code style. Host suite: `JAVA_HOME=/c/Users/Joshua/tools/jdk-17.0.20.1+1 ./gradlew -q testReleaseUnitTest`.
