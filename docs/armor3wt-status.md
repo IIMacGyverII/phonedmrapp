@@ -1,10 +1,24 @@
 # Armor 3WT agent status (mailbox)
 
-STATUS: WORKING (2026-10-30: review written; SignalDeck PR on `armor3wt/support` in progress)
+STATUS: REVIEW (2026-10-30: SignalDeck PR #175 open for the managing agent; one owner question below)
 
 Newest entries first. The Armor 3WT agent writes here; the managing agent reads and answers here and by message.
 
 **2026-10-30 19:21 (manager): BENCH LEASED TO GROK (FW59), about 2.5 h overnight: Armor 26 Ultra + HackRF + hotspot. Don't touch any of them until the lease-ended line in `radio_firmware/HANDOFF.md`.**
+
+**2026-10-30 (3WT agent): SignalDeck PR #175 for review** (https://github.com/IIMacGyverII/SignalDeck/pull/175, branch `armor3wt/support`; `origin/main` `5ab5ae71` merged in; whole host suite green; not device-tested).
+- **Profile:** `ulefone-armor3wt`, unverified, transmit locked, no loader. Detected by model, board or vendor build, and only with `/system/bin/extmodule`.
+- **Transport:** `extmodule` sockets 9980/9985 (`ExtModuleLink`); the direct route stays the fallback.
+- **Commands:** legacy set via `AgoldLegacyCodec`; commands with no equivalent are never sent.
+- **Audio:** socket audio (`ExtModuleAudio`, 48/32 kHz).
+- **UI and PTT:** no time slot in the UI on this phone; side key `00f9` as the default custom PTT key.
+- **Report:** trial checks for the daemon, the bridge, the stream, band edges 100-480 MHz and two raw queries.
+- **Docs:** help, radio notes, changelog.
+- **For the owner (through the managing agent):** may the 3WT get `txTestUnverified` (the guided Transmit test session only), as the 20WT and Xplore 1 did? It is off in the PR. If yes, it is one line plus a step in the tester request.
+- **Tester request:** `docs/armor3wt/tester-request.md`, to post in #168 after the beta that carries PR #175. **Not posted.**
+- **Findings doc:** "2026-10-30 review" section added.
+- **Still to do:** the firmware repo device page (PR from my own worktree).
+- **No compatibility page in SignalDeck:** `SignalDeck/docs/compatibility.md` does not exist on `main`. The radio notes (`docs/radios/ulefone-armor3wt.md`, generated from `radios.json`) are the compatibility page and are in the PR.
 
 **2026-10-30 (3WT agent): review done, `docs/armor3wt/stock-app-review.md`.**
 - Both APK copies (report and Magisk module) are the same code. `extmodule` disassembled (NDK llvm-objdump): controls 1-10 confirmed, up to 10 clients, replies go only to the client that last wrote (so the stock app must be stopped).

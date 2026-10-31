@@ -126,3 +126,32 @@ What SignalDeck would need on this phone (not started):
     `extmodule` is byte-identical to the 2020 build's. Two stock ROMs a year apart: the module image was never in the ROM.
 - For the frequency question: the app's log line after saving a channel below 136 MHz (`parseCmd strCmd:7E 96 69 01 35 …`
   or `… 36 …`); body `00` = accepted, anything else = refused.
+
+## 2026-10-30 review (Armor 3WT agent)
+
+Full reading in `docs/armor3wt/stock-app-review.md` (intercom app decompiled again, `extmodule` disassembled with the
+NDK's `llvm-objdump`); SignalDeck PR #175 implements it. What it adds to or corrects in the notes above:
+
+- **Both APK copies are the same code.** The report's `Intercom_219_privatekey.apk` and the Magisk module's
+  `Intercom_219_signed.apk` decompile identically (only the signatures differ). The 100–470 MHz range is in both, so whether
+  the owner or the vendor widened it is not visible.
+- **The socket header's type word:** 0 = a daemon control (one LE word), 1 = data (an MCU frame on 9980, PCM on 9985).
+  The daemon's replies come back the same way. It accepts up to 10 clients per port but sends what it reads from the
+  bridge **only to the client that wrote last**, so the stock app must be stopped while another program uses it.
+- **Controls confirmed in the daemon's switch** (`0x71d8`): 5/6 USB path on/off, 8 MCU stop, 9 MCU update (the guesses
+  above were right). Control 2 also powers the MCU off.
+- **Legacy command table, corrected:** the text **send** is `0x07` (type 2 private / 9 group, call number 3 bytes BE,
+  UTF-16LE, 4 zero bytes); `0x11` is the **fetch** (sender 3 bytes BE + text); a `0x07` push with body `0x70` announces a
+  waiting text. Receptions start and end with the module's `0x04` push (body 0/2 start, 1/3 end), not via `/dev/stmcu` as on
+  the Atom XL (the daemon reads that node itself). The `0x10` call-info reply is **never parsed** by the app, so the stock
+  app shows no caller ID on this phone. The app has **no RSSI command**.
+- **Channel value encodings:** analog band 0 narrow / 128 wide, power 0/1, tone type 1 none / 2 CTCSS / 3 DCS / 4 DCS
+  inverted plus a list index; digital contact type 1 private / 2 group / 4 all call (`0xFFFFFA`), encryption 1 on / 255 off.
+  The channel editor hides the slot setting unless `ro.agold.extmodule.dmr09` is set.
+- **Transmit:** daemon control 3 (PTT) and audio control 1 together with the microphone frames, release 500 ms later
+  (1 s with the end tone): microphone off, control 4, audio control 2. The module gets no key command.
+- **Side key:** the report's `getevent` shows scancode `00f9` on `mtk-kpd` (`/dev/input/event1`); no keycode reached the
+  app, so the key layout overlay is most likely not loaded on the GSI.
+- **The bridge on this phone is the same as the Atom XL's** (the same `mcu/` sysfs files, `ttyACM0`, `/dev/stmcu`, card 1).
+  So SignalDeck's direct Atom XL route would also work in principle. It is kept as the fallback because `extmodule` runs
+  beside it from the owner's module.
