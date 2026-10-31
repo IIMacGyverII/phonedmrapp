@@ -3959,3 +3959,17 @@ The 02:14 capture was too weak to decode (9.4 dB peak against a 20 dB gate).
 3. TG 9 (tone), TG 99 (no start).
 4. Then FW60 (factory + key + FW60) and the full acceptance pass, including the M17 TX/RX rows and runner all.
 5. End on **FW57** (the released image).
+
+## Review of the F60D All-Call row (firmware agent, 2026-10-31 03:20)
+
+The capture was strong enough this time (31.7 dB), and `iqan_tx.py --dmr` found the carrier but **no voice LC header**. The same tool decoded the W6Plus's TG 9 keys. The module then reported type 2 / 16777215 and afterwards type 0 / 0. So the W6Plus's "contactType 2" key is probably **not a group voice call to 16777215** (it may carry no voice LC, or not be voice at all), and it can't test F60D's unmute. That matches the old note that contactType 2 behaves as RECEIVE_ALL on this module family. **The W6Plus can be restored.**
+
+**Next source for the All-Call: the HackRF replay** of `full_allcall.iq` (hotspot recording: group voice, every LC 16777215, independently decoded), scaled ×5.5, VGA 30. Its voice is the same recording as `full_tg9.iq`, so a played All-Call must **correlate with the TG 9 replay's decoded audio**; that's the content test.
+
+**Lease below (~45 min), Armor + HackRF, F60D:**
+1. Factory + key + F60D. Channel 49, then the VFO with list 1/9, MON off.
+2. `full_tg9.iq` (reference; reported, with decoded audio).
+3. `full_allcall.iq`: does its rxclip correlate with step 2 (waveform and spectrum, same window), and is it unlike the idle clip? Op 14 **mid-call** (2 s after the start): 32 B at `0x4C7BC` (includes +0x13) and 64 B at `0x4D318`.
+4. `full_tg99.iq`: no start.
+
+If step 3 plays: factory + key + FW60, steps 2–4 again, then the acceptance pass from the 03:0x lease. End: factory + key + FW57.

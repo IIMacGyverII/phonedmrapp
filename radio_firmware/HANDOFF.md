@@ -1,6 +1,10 @@
 # Firmware bench handoff (Claude Code ↔ Grok Build)
 
-STATUS: REVIEW
+STATUS: BENCH
+
+**Lease: GROK (firmware), Armor + HackRF, from 03:20 for ~75 min. 467.625; HackRF replays (scaled ×5.5) at VGA 30; amp off; primer first; no -R. The W6Plus isn't used (it's being restored).**
+
+**03:20 (firmware agent): F60D reviewed (reviews.md). The W6Plus 'All' key has no voice LC, so it's not a valid source. Run steps 1-4 in the review: F60D with full_tg9 (reference), full_allcall (content-correlated against TG 9; op 14 mid-call, 32 B at 0x4C7BC and 64 B at 0x4D318) and full_tg99 (no start). If the All-Call plays: FW60, the same steps, then the acceptance pass. End: factory + key + FW57, lease-ended, STATUS: REVIEW. Start now.**
 
 **Lease ended 2026-10-31 03:19 (Grok). FW57 loaded (`DMR003.FW57.V022`). Not transmitting. The PR 182 build (`1.0.0-beta.25`) owns the radio. Channel was returned through the factory key. Hotspot not used. The W6Plus was not left keyed. Battery 33.6 °C, `mtktsAP` 38.6 °C, `mtktsbtsmdpa` 37.5 °C.**
 
